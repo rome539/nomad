@@ -1,0 +1,47 @@
+name = "nomad-server"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# The front door: nomadmud.com (workers.dev stays open as a side door).
+routes = [
+  { pattern = "nomadmud.com", custom_domain = true },
+  { pattern = "www.nomadmud.com", custom_domain = true },
+]
+
+# The proven NIP-46 client from nostr-district, served to the page as-is —
+# plus the generated Drive-vault bundle (npm run bundle:vault).
+[[rules]]
+type = "Text"
+globs = ["**/nip46-bunker.js", "**/vault-bundle.js"]
+fallthrough = true
+
+# One Durable Object per zone: authoritative room/mob state, tick via alarms.
+[durable_objects]
+bindings = [{ name = "ZONE", class_name = "ZoneDO" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ZoneDO"]
+
+# Create the DB with:  wrangler d1 create nomad
+# then paste the returned database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "nomad"
+database_id = "ea7a1945-4a31-429b-9cc8-f66e8964142d"
+
+# The dungeon forgets the forgettable: daily sweep of 30-day-idle,
+# nameless, empty-handed guests.
+[triggers]
+crons = ["17 4 * * *"]
+
+# Secrets (do NOT put these here — use `wrangler secret put` or .dev.vars):
+#   JWT_SECRET   - random string for signing session tokens
+#   GAME_SK_HEX  - 64-char hex EPOCH key (see scripts/mint-dungeon.mjs; the
+#                  root key never touches Cloudflare)
+#   RELAYS       - comma-separated wss:// urls; unset = relay door shut.
+#                  Launch set (rome, 2026-07-04): wss://nos.lol,
+#                  wss://relay.primal.net,wss://nostr.mom,wss://relay.mostr.pub
+#                  (mostr.pub bridges to the fediverse — the dungeon's voice
+#                  reaches Mastodon too.)

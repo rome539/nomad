@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><style>
+  html,body{margin:0;background:#222;}
+  canvas{display:block;margin:8px;}
+</style></head>
+<body>
+<canvas id="touch" width="180" height="180"></canvas>
+<canvas id="og" width="1200" height="630"></canvas>
+<script>
+const BLACK='#0B0908', AMBER='#E0B25C', AMBERH='#F6D488', DIM='#8A6D38', BONE='#D8D2C4', BLOOD='#A63226', GOLD='#F0C86A';
+
+// Draw the parting gate into ctx at given box (x,y,w,h scale reference 512)
+function gate(g, S){
+  // S = scale factor vs the 512 original
+  const L=156*S, R=356*S, base=404*S, apex=150*S, mid=256*S, GAP=9*S;
+  function archPath(){
+    g.beginPath();
+    g.moveTo(L, base); g.lineTo(L, 252*S);
+    g.quadraticCurveTo(L, apex, mid, apex);
+    g.quadraticCurveTo(R, apex, R, 252*S);
+    g.lineTo(R, base); g.closePath();
+  }
+  archPath(); g.fillStyle='#040302'; g.fill();
+  g.save(); archPath(); g.clip();
+  let bloom=g.createLinearGradient(mid-46*S,0,mid+46*S,0);
+  bloom.addColorStop(0,'rgba(224,178,92,0)'); bloom.addColorStop(.5,'rgba(230,186,100,0.35)'); bloom.addColorStop(1,'rgba(224,178,92,0)');
+  g.fillStyle=bloom; g.fillRect(mid-46*S, apex, 92*S, base-apex);
+  let slit=g.createLinearGradient(mid-GAP,0,mid+GAP,0);
+  slit.addColorStop(0,'rgba(224,178,92,0.15)'); slit.addColorStop(.5,AMBERH); slit.addColorStop(1,'rgba(224,178,92,0.15)');
+  g.fillStyle=slit; g.fillRect(mid-GAP, apex+2*S, GAP*2, base-apex-2*S);
+  let well=g.createRadialGradient(mid, base-8*S, 6*S, mid, base-8*S, 120*S);
+  well.addColorStop(0,'rgba(246,212,136,0.75)'); well.addColorStop(1,'rgba(246,212,136,0)');
+  g.fillStyle=well; g.fillRect(mid-120*S, base-140*S, 240*S, 140*S);
+  function door(side){
+    const inner=mid+side*GAP, outer=side<0?L:R;
+    g.beginPath();
+    if(side<0){ g.moveTo(outer,base); g.lineTo(outer,252*S); g.quadraticCurveTo(outer,apex+8*S, mid-1*S, apex+6*S); g.lineTo(inner,apex+6*S); g.lineTo(inner,base); }
+    else { g.moveTo(inner,base); g.lineTo(inner,apex+6*S); g.lineTo(mid+1*S,apex+6*S); g.quadraticCurveTo(outer,apex+8*S,outer,252*S); g.lineTo(outer,base); }
+    g.closePath();
+    let lg=g.createLinearGradient(outer,0,inner,0);
+    if(side<0){ lg.addColorStop(0,'#0d0b09'); lg.addColorStop(.82,'#211a13'); lg.addColorStop(1,'#3a2c1c'); }
+    else{ lg.addColorStop(0,'#3a2c1c'); lg.addColorStop(.18,'#211a13'); lg.addColorStop(1,'#0d0b09'); }
+    g.fillStyle=lg; g.fill();
+    g.strokeStyle='rgba(0,0,0,0.55)'; g.lineWidth=3*S;
+    for(let i=1;i<5;i++){ const yy=252*S+i*((base-252*S)/5);
+      g.beginPath(); g.moveTo(side<0?outer+8*S:inner+4*S, yy); g.lineTo(side<0?inner-4*S:outer-8*S, yy); g.stroke(); }
+    g.fillStyle='rgba(138,109,56,0.5)';
+    const rx=side<0?outer+16*S:outer-16*S;
+    for(let i=0;i<4;i++){ g.beginPath(); g.arc(rx,(300+i*46)*S,2.4*S,0,7); g.fill(); }
+  }
+  door(-1); door(1);
+  g.strokeStyle='rgba(246,212,136,0.85)'; g.lineWidth=1.5*S;
+  g.beginPath(); g.moveTo(mid-GAP,apex+8*S); g.lineTo(mid-GAP,base); g.stroke();
+  g.beginPath(); g.moveTo(mid+GAP,apex+8*S); g.lineTo(mid+GAP,base); g.stroke();
+  g.restore();
+  archPath(); g.strokeStyle=AMBER; g.globalAlpha=.55; g.lineWidth=2*S; g.stroke(); g.globalAlpha=1;
+}
+
+// ---- apple-touch-icon: 180x180, full-bleed, no ring (iOS rounds it) ----
+{
+  const cv=document.getElementById('touch'), g=cv.getContext('2d');
+  let bg=g.createRadialGradient(90,90,15,90,90,130);
+  bg.addColorStop(0,'#15100a'); bg.addColorStop(1,BLACK);
+  g.fillStyle=bg; g.fillRect(0,0,180,180);
+  // gate scaled to fill: original art box is 512; draw at S so arch spans nicely
+  g.save();
+  // center the 512-space drawing: arch spans x156-356 (mid 256), y150-404.
+  // We want it centered in 180: scale .52 -> arch w ~104, h ~132
+  const S=0.52;
+  g.translate(90-256*S, 92-277*S);
+  gate(g,S);
+  g.restore();
+  // faint scanlines
+  g.fillStyle='rgba(0,0,0,0.12)';
+  for(let y=0;y<180;y+=3) g.fillRect(0,y,180,1);
+}
+
+// ---- og-image: 1200x630, type-forward (no gate — the words are the pitch) ----
+{
+  const cv=document.getElementById('og'), g=cv.getContext('2d');
+  let bg=g.createRadialGradient(500,300,90,560,320,780);
+  bg.addColorStop(0,'#171009'); bg.addColorStop(1,BLACK);
+  g.fillStyle=bg; g.fillRect(0,0,1200,630);
+
+  const X=120;
+  g.textBaseline='alphabetic';
+
+  // wordmark, large, owning the card
+  g.fillStyle=AMBER;
+  g.font='bold 172px Menlo, monospace';
+  g.save(); g.shadowColor='rgba(224,178,92,0.5)'; g.shadowBlur=36;
+  g.fillText('NOMAD', X-8, 250); g.restore();
+  g.fillText('NOMAD', X-8, 250);
+
+  g.fillStyle=BONE;
+  g.font='36px Menlo, monospace';
+  g.fillText('a living text dungeon on Nostr', X, 312);
+
+  g.fillStyle=DIM;
+  g.font='29px Menlo, monospace';
+  g.fillText('your key is your character.', X, 398);
+  g.fillText('what you carry is provisional until the gate seals it.', X, 442);
+  g.fillStyle=BLOOD;
+  g.fillText('the dead stay dead.', X, 486);
+
+  g.fillStyle=GOLD;
+  g.font='bold 40px Menlo, monospace';
+  g.fillText('nomadmud.com', X, 566);
+
+  // frame + scanlines (keep the CRT texture)
+  g.strokeStyle='rgba(138,109,56,0.5)'; g.lineWidth=3;
+  g.strokeRect(24,24,1152,582);
+  g.fillStyle='rgba(0,0,0,0.14)';
+  for(let y=0;y<630;y+=3) g.fillRect(0,y,1200,1);
+}
+
+window.__done = true;
+</script>
+</body>
+</html>

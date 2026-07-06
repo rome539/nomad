@@ -1,0 +1,5 @@
+# Copy to `.dev.vars` for local `wrangler dev`. Never commit the real file.
+JWT_SECRET=dev-only-change-me
+# 64-char hex secret key the dungeon signs loot with.
+# Generate one:  node -e "import('nostr-tools').then(n=>console.log(Buffer.from(n.generateSecretKey()).toString('hex')))"
+GAME_SK_HEX=0000000000000000000000000000000000000000000000000000000000000000

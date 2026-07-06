@@ -1,0 +1,4 @@
+node_modules/
+# rendered outputs — the real deliverable is the base64 in game-server/src/assets.ts
+og.jpg
+apple-touch-icon.png
