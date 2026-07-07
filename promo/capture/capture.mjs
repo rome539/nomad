@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const FRAMES = join(here, "frames");
-const PAGE = "file://" + join(here, "..", "nomad-promo.html");
+const PAGE = "file://" + join(here, "..", process.argv[2] || "nomad-cut.html");
 mkdirSync(FRAMES, { recursive: true });
 
 const browser = await puppeteer.launch({

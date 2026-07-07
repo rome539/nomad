@@ -18,7 +18,7 @@ for (let i = 0; i < meta.length; i++) {
 lines.push(`file 'frames/${meta.at(-1).file}'`); // concat quirk: repeat last
 writeFileSync(join(here, "list.ffconcat"), lines.join("\n"));
 
-const out = join(here, "nomad-promo.mp4");
+const out = join(here, process.argv[2] || "nomad-promo.mp4");
 execFileSync(
   ffmpegPath,
   [

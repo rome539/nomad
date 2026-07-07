@@ -306,6 +306,105 @@ and the moment it's in a help file it stops being an egg.
 - More rooms/creatures for the Door — but content sprawl stays the
   enemy; systems first.
 
+## Tuning notes (quick, un-scheduled)
+
+- ~~Skeletons and grave hyenas shouldn't *join* a fight just from hearing
+  noise.~~ DONE (2026-07-07): `wakeListeners(..., fromNoise=true)` now skips
+  LISTENERS (skeleton/bone-knight) on combat din — they still wake to a
+  grudge or to movement (WAKE_ENTER/EXIT); lurkers still strike at sound.
+  SCAVENGERS (grave/dire-hyena) are excluded from `creatureNoise`, so noise
+  no longer pulls them across the map — they track corpse-scent and grudges
+  instead. (rome, 2026-07-06)
+
+## Combat & The Deep — 2026-07-07
+
+**Through-line:** difficulty and reward climb *together* with depth. The deep
+is where death and the good loot both live. **Gear must never equal safety.**
+Origin: an all-night run wiped the whole map (incl. the deep) with no trouble
+once geared — the power curve has no counter-pressure.
+
+### Done (local, unshipped — tsc green, awaiting sim test + ship)
+- **Relay flood fixed.** Idle creature *wandering* no longer publishes kind-24913
+  to the relays (it was firing two ephemeral events per step — leave + enter — in
+  empty rooms nobody watches; ~100% of the observed relay traffic). `roomFeed`
+  gained a `toRelay` flag; wandering is now local-WS-only. Fights, deaths,
+  arrivals, player actions, and combat-*flee* still relay. This unblocks scaling
+  populations — relay load now tracks notable events, not mob movement.
+
+### Phase 0 — The ceiling patch *(next, cheap, structural)*
+- **Curved / % armor mitigation**, replacing flat subtraction at
+  `zone.ts` (`dmg = max(1, dmg - equippedArmor)`). Flat armor can't span a power
+  range: once total armor ≥ a mob's hit, everything floors to 1 = immunity. Measured:
+  deep-dwellers hit 3–7; best-in-slot kit = 11 armor → every non-crit floored to 1.
+  Fresh player (~1 armor) stays ~unchanged; geared kit loses immunity.
+  **Prerequisite for the heat idea** (under flat armor a +1–3 bump does nothing to
+  the geared and only hurts the weak — the inverse of intent).
+
+### Phase 1 — The deep gets teeth *(threats that route around gear)*
+- **Player-side bleed** — cheapest bypass; mirror the existing mob-only bleed loop.
+- Then **poison** (stacking drain the longer you linger), deeper **seize**, **stun**,
+  and rare **true/%-HP** hits. Retune the three current deep-dwellers off
+  "soft-for-learning" — they're not the tutorial anymore.
+
+### Phase 2 — Expand the deep + populate the world *(content/data pass)*
+- **Deep is a kiddie pool** (a mouth, a root-vault, the throne + 3 soft mobs).
+  Make it a real layered descent (mouth → mid → drowned depths → throne), more
+  rooms, further from gates; dwellers worsen with depth; scarcest/best loot at the
+  bottom, far from safe banking (extraction tension by geography).
+- **Populate to themes** — named atmosphere rooms are ghost towns because their
+  seed count *is* their population cap: Hound Kennels = 2 (1 hyena + 1 rat),
+  Warden's Post = 1 warden, Broken Chapel = **0** (spawns nothing, ever). Seed each
+  to its theme (pack in the kennels, 2–3 wardens on watch, *an inhabitant for the
+  chapel — TBD by rome*). Modest +1–2 per room elsewhere. Safe now that the relay
+  flood is fixed.
+- **Faster respawns** — lower `MIGRATION_FACTOR` (20 → ~10). Solo refill is
+  respawn_secs×20 today (a rat ~10 min, a deep-dweller ~30), so cleared rooms stay
+  dead too long.
+- **Scarcity via a dungeon-aware item supply** (rome, 2026-07-07) — the primary
+  scarcity mechanism. Model item refills on the mob-migration system: each capped
+  item has a target count in the world; the dungeon refills *toward* the cap only
+  when supply runs short (not on a blind timer), placing restocks at themed homes.
+  Gives the gear economy a **bounded money supply** — a geared player has removed
+  that gear from circulation until it leaves play. Reuses the mob bones
+  (cap + `scheduleArrivals` + a `MIGRATION_FACTOR`-style speed), but counting
+  supply touches D1 (instances live across ground/caches/mob-carried/pack/lockbox/
+  vault). Generalizes the tarnished-key fix ("refill only when none exists").
+  - **Needs sinks or it fills once and freezes** — cap = ceiling, sinks = churn.
+    Drains mostly exist already: death-drops, rust/breakage, rot. Cap sets the
+    ceiling; those set the flow.
+  - **Per-item policy** (like a mob template's behavior): gear = capped & scarce;
+    food/junk = cheap/free regrow; **the rarest things get the tightest cap of
+    all** — barely restocked, if at all.
+  - Drop-table tuning (`gear_drop` / drop chances) is demoted to *one input* — how
+    fast the cap refills — not the whole mechanism.
+  - **Open decisions:** (a) does player-held loot (packs/lockboxes/vaults) count
+    against the cap? *Yes* = hoarders create scarcity for everyone (simulationist,
+    scarce); *No* = simpler but players just drain-and-bank. Leaning yes.
+    (b) which items are capped vs. free-regrow. *Pending rome.*
+- **Tarnished key** regrows every 10 min at the shrine (it's the undercroft door
+  key, kept obtainable so no one's soft-locked) — but it litters copies. Fix:
+  regrow only when none exists in the world. (Check first whether the door
+  *consumes* it.)
+
+### Phase 3 — The simulationist direction *(bigger, later)*
+- **Lethality / hit-location** (rome's "damage dire as real life — a hit to the
+  throat"): earned finishers on an opening (staggered/seized/bleeding) + armor as
+  *coverage* of body zones + telegraphed. Never random (that's a slot machine that
+  hurts fresh players worst). Could eventually *replace* the flat armor number.
+- **The Hunter / Nemesis** — targeted pressure: the world sends a named predator
+  after the too-successful player, who has to get out ahead of it. Reuses
+  grudges + `curious` tracking. (rome: "i love this.")
+- **Encumbrance → combat penalty** + weight-based pack (bones exist: `weight`
+  column, `wornWeight()` — today it only affects flee/dodge).
+- **Shallows heat map** — mobs get harder the faster they're farmed, decaying back
+  for fresh players. Gentle (+1–2). Works only *after* curved armor (or bump HP,
+  not damage). rome's idea; good for the shallows, weak for the deep.
+
+### Open inputs (from rome)
+- Chapel inhabitant + rough headcounts for the "populate to themes" pass.
+- Which mob-drop items are the "questionable" ones flooding gear.
+- How big is the deep expansion — a few rooms, or a whole sub-zone?
+
 ---
 
 *Sequencing logic: 1 protects players' identity before anything else

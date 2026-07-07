@@ -2,3 +2,9 @@ node_modules/
 # rendered outputs — the real deliverable is the base64 in game-server/src/assets.ts
 og.jpg
 apple-touch-icon.png
+# promo render byproducts (the source is nomad-cut.html; regenerate any time)
+frames/
+frames.json
+list.ffconcat
+audio.wav
+nomad-promo.mp4

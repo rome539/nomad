@@ -58,20 +58,19 @@ function gate(g, S){
 }
 
 // ---- apple-touch-icon: 180x180, full-bleed, no ring (iOS rounds it) ----
+// The wordmark's N as a monogram — a sibling to the type-only og card.
 {
   const cv=document.getElementById('touch'), g=cv.getContext('2d');
-  let bg=g.createRadialGradient(90,90,15,90,90,130);
-  bg.addColorStop(0,'#15100a'); bg.addColorStop(1,BLACK);
+  let bg=g.createRadialGradient(90,74,14,90,90,140);
+  bg.addColorStop(0,'#1c140b'); bg.addColorStop(1,BLACK);
   g.fillStyle=bg; g.fillRect(0,0,180,180);
-  // gate scaled to fill: original art box is 512; draw at S so arch spans nicely
-  g.save();
-  // center the 512-space drawing: arch spans x156-356 (mid 256), y150-404.
-  // We want it centered in 180: scale .52 -> arch w ~104, h ~132
-  const S=0.52;
-  g.translate(90-256*S, 92-277*S);
-  gate(g,S);
-  g.restore();
-  // faint scanlines
+  g.textAlign='center'; g.textBaseline='middle';
+  g.font='bold 152px Menlo, monospace';
+  g.fillStyle=AMBER;
+  g.save(); g.shadowColor='rgba(224,178,92,0.55)'; g.shadowBlur=28;
+  g.fillText('N', 91, 98); g.restore();
+  g.fillText('N', 91, 98);
+  // faint scanlines for the CRT texture
   g.fillStyle='rgba(0,0,0,0.12)';
   for(let y=0;y<180;y+=3) g.fillRect(0,y,180,1);
 }
