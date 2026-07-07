@@ -13,14 +13,14 @@ is where death and the good loot both live. **Gear must never equal safety.**
 Origin: an all-night run wiped the whole map (incl. the deep) with no trouble
 once geared — the power curve has no counter-pressure.
 
-### Phase 0 — The ceiling patch *(next, cheap, structural)*
-- **Curved / % armor mitigation**, replacing flat subtraction at
-  `zone.ts` (`dmg = max(1, dmg - equippedArmor)`). Flat armor can't span a power
-  range: once total armor ≥ a mob's hit, everything floors to 1 = immunity. Measured:
-  deep-dwellers hit 3–7; best-in-slot kit = 11 armor → every non-crit floored to 1.
-  Fresh player (~1 armor) stays ~unchanged; geared kit loses immunity.
-  **Prerequisite for the heat idea** (under flat armor a +1–3 bump does nothing to
-  the geared and only hurts the weak — the inverse of intent).
+### Phase 0 — The ceiling patch *(cheap, structural)* — ✅ DONE
+- ✅ **Curved / % armor mitigation** (`ARMOR_K=10`: `dmg × K/(armor+K)`), replacing
+  flat subtraction at all three hit paths in `zone.ts`. Flat armor couldn't span a
+  power range: once total armor ≥ a mob's hit, everything floored to 1 = immunity.
+  The curve gives diminishing returns and never reaches zero — a fresh player
+  (~1 armor) stays ~unchanged; a geared kit loses immunity but stays tanky.
+  **Prerequisite for the heat idea** (under flat armor a +1–3 bump did nothing to
+  the geared and only hurt the weak — the inverse of intent).
 
 ### Phase 1 — The deep gets teeth *(threats that route around gear)* — ✅ DONE
 - ✅ **Player-side bleed** — armor-ignoring wound; a fatal tick can drop you outright.
