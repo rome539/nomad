@@ -25,6 +25,7 @@ export type Verb =
   | "name"
   | "rest"
   | "eat"
+  | "bandage"
   | "carve"
   | "claim"
   | "stash"
@@ -87,6 +88,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   name: "name", rename: "name", callme: "name",
   rest: "rest", sleep: "rest", sit: "rest", camp: "rest",
   eat: "eat", consume: "eat", chew: "eat", devour: "eat",
+  bandage: "bandage", bind: "bandage", dress: "bandage", bandages: "bandage",
   carve: "carve", scratch: "carve", etch: "carve", inscribe: "carve", write: "carve",
   claim: "claim", seal: "claim", extract: "claim", sign: "claim",
   stash: "stash", store: "stash", box: "stash", stow: "stash",

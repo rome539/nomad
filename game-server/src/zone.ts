@@ -53,9 +53,10 @@ import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent } from "./signing";
 import { publishEvent, relayList } from "./relay";
 import * as gate from "./gate";
+import * as ai from "./ai";
 import {
   TICK_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
-  WEAPON_WEAR, ARMOR_WEAR, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT, 
+  WEAPON_WEAR, ARMOR_WEAR, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX, 
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, 
   PARTING_BLOW_CHANCE, STANCE, STAGGER_BONUS, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, 
@@ -64,20 +65,18 @@ import {
   CRUDE_DROP_ROOM, CRUDE_BAD_EXIT, DIR_ORDER,
   RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, SIM_STEP_MS, CATCHUP_CAP_MS, 
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
-  FLEE_BELOW, FLEE_CHANCE, MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, REGROW_MS, GRUDGE_MAX, 
-  FORGET_MS, FORGET_DEFAULT, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, 
-  ARMOR_SLOTS, BLEED_TICKS, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, CARVE_MAX_LEN, ROT_MS, 
-  MOVE_SOUNDS, TERRITORY_RADIUS, MOUTHS, PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, 
-  BROOD_CAP, BROOD_INTERVAL_MS, LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
-  SCAVENGERS, AGGRO_SCAVENGERS, CORPSE_TRACES, SCAVENGER_HEAL, SCAVENGER_BOLD_AT, 
-  BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, LURKERS, REVENANTS, 
-  REVIVE_FRAC, RISE_LIMIT, HURT_STYLE, PLAYER_HIT, CRIT_FLOURISH, CREATURE_HIT, BITERS, 
+  FLEE_BELOW, FLEE_CHANCE, REGROW_MS, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, 
+  ARMOR_SLOTS, BLEED_TICKS, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, CARVE_MAX_LEN, ROT_MS,
+  PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, 
+  LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
+  SCAVENGERS, AGGRO_SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
+  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, CRIT_FLOURISH, CREATURE_HIT, BITERS, 
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
   public world: World | null = null;
-  private sessions = new Map<string, Session>(); // pubkey -> session
+  public sessions = new Map<string, Session>(); // pubkey -> session
   private leftAt = new Map<string, number>(); // pubkey -> ms it last disconnected (a quick return is a reconnect, not an arrival)
   public creatures = new Map<string, Creature>();
   public ground = new Map<string, string[]>(); // roomId -> item template ids
@@ -88,9 +87,9 @@ export class ZoneDO implements DurableObject {
   private regrow: Regrow[] = [];
   private lastCombatRound = 0; // ms of the last tick blows actually landed (see COMBAT_ROUND_MS)
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
-  private arrivals = new Map<string, number>();
-  private openDoors = new Set<string>();
-  private traces = new Map<string, Trace[]>();
+  public arrivals = new Map<string, number>();
+  public openDoors = new Set<string>();
+  public traces = new Map<string, Trace[]>();
   private rot: RotEntry[] = [];
   private placedSpawns = new Set<string>(); // ground spawns already laid once
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
@@ -114,7 +113,7 @@ export class ZoneDO implements DurableObject {
   // variant→base bloodline map. Both built once at init; territory, the dark
   // mouths, and family-cap counting all lean on them.
   private roomDists = new Map<string, Map<string, number>>();
-  private variantBase = new Map<string, string>();
+  public variantBase = new Map<string, string>();
 
   private buildWorldMaps(world: World): void {
     for (const src of world.rooms.keys()) {
@@ -134,65 +133,11 @@ export class ZoneDO implements DurableObject {
     for (const v of world.mobVariants) this.variantBase.set(v.variantId, v.baseId);
   }
 
-  private roomDist(a: string, b: string): number {
+  public roomDist(a: string, b: string): number {
     return this.roomDists.get(a)?.get(b) ?? Number.POSITIVE_INFINITY;
   }
 
-  // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
-  // cousin. Shared by first-light seeding and migration refills.
-  private rollBloodline(tmpl: MobTemplate): MobTemplate {
-    const world = this.world!;
-    for (const v of world.mobVariants) {
-      if (v.baseId !== tmpl.id || !chance(v.chance)) continue;
-      const vt = world.mobTemplates.get(v.variantId);
-      if (vt) return vt;
-    }
-    return tmpl;
-  }
 
-  // Never carry more of a bloodline than its dens allow. A deploy that retires
-  // spawn rows (as the variant dens were) leaves their creatures alive in the
-  // saved state — and a brood-mother that lost her nest keeps birthing into it.
-  // This trims each overstocked bloodline back to its base cap on load, shedding
-  // the STRAYS first: whatever stands off any den, farthest out (an evicted
-  // fixture, a nest pup), and a variant before the plain stock. Den-standing
-  // population is untouched, so a healthy world no-ops. Returns the cull count.
-  private reconcilePopulation(world: World): number {
-    const caps = new Map<string, number>();
-    const dens = new Map<string, string[]>(); // bloodline base -> its den rooms
-    for (const s of world.mobSpawns) {
-      caps.set(s.template_id, (caps.get(s.template_id) ?? 0) + 1);
-      const list = dens.get(s.template_id) ?? [];
-      list.push(s.room_id);
-      dens.set(s.template_id, list);
-    }
-    const byLine = new Map<string, Creature[]>();
-    for (const c of this.creatures.values()) {
-      const line = this.variantBase.get(c.templateId) ?? c.templateId;
-      const list = byLine.get(line) ?? [];
-      list.push(c);
-      byLine.set(line, list);
-    }
-    let culled = 0;
-    for (const [line, list] of byLine) {
-      const cap = caps.get(line) ?? 0;
-      if (list.length <= cap) continue;
-      const homes = dens.get(line) ?? [];
-      const distToDen = (c: Creature) => homes.length
-        ? Math.min(...homes.map((h) => this.roomDist(c.roomId, h)))
-        : Number.POSITIVE_INFINITY;
-      // Most-removable first: farthest from a den, then variants before base.
-      const doomed = [...list].sort((a, b) => {
-        const da = distToDen(a), db = distToDen(b);
-        if (da !== db) return db - da;
-        const va = this.variantBase.has(a.templateId) ? 0 : 1;
-        const vb = this.variantBase.has(b.templateId) ? 0 : 1;
-        return va - vb;
-      }).slice(0, list.length - cap);
-      for (const c of doomed) { this.creatures.delete(c.id); culled++; }
-    }
-    return culled;
-  }
 
   private async init(zone: string): Promise<World> {
     if (this.world) return this.world;
@@ -241,7 +186,7 @@ export class ZoneDO implements DurableObject {
       }
       // Trim any bloodline the saved state overstocks (retired dens' creatures,
       // brood pups from an evicted nest) back to what the spawn table allows.
-      const culled = this.reconcilePopulation(world);
+      const culled = ai.reconcilePopulation(this, world);
       // Content added since this world's first light (e.g. new gear in a
       // migration) gets laid down once: any ground spawn we've never placed and
       // that isn't already on its floor. Keeps a live world from needing a reset.
@@ -269,7 +214,7 @@ export class ZoneDO implements DurableObject {
         if (!base) continue;
         // Even at first light, rare blood: a den is usually the ordinary
         // version, once in a while the mean cousin.
-        const tmpl = this.rollBloodline(base);
+        const tmpl = ai.rollBloodline(this, base);
         this.creatures.set(spawn.id, {
           id: spawn.id,
           templateId: tmpl.id,
@@ -320,17 +265,21 @@ export class ZoneDO implements DurableObject {
         c.hp = Math.min(tmpl.max_hp, c.hp + CREATURE_HEAL_PER_MIN * mins);
         if (!HOLLOW.has(c.templateId)) {
           c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * mins);
-          if (c.hunger >= HUNGRY_AT) this.creatureEatsHere(c, true, t);
+          if (c.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, c, true, t);
         }
-        if (c.nextWanderAt <= t && !tmpl.is_boss && c.hp >= tmpl.max_hp * FLEE_BELOW) {
+        // Same "stays put" rule as the live tick: the drowned holds its water and
+        // brooders keep their nest, so the offline sim can't drift them out of
+        // their dens and pile three grapplers into one room while no one watches.
+        if (c.nextWanderAt <= t && !tmpl.is_boss && c.hp >= tmpl.max_hp * FLEE_BELOW
+            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId)) {
           // Silent catch-up runs with no one connected, so no ambush fires here.
-          void this.creatureMoves(c, t, "wander", true);
+          void ai.creatureMoves(this, c, t, "wander", true);
         }
       }
       this.applyRot(t, true);
       this.applyRegrow(t, true);
-      this.applyArrivals(t, true);
-      this.scheduleArrivals(t);
+      ai.applyArrivals(this, t, true);
+      ai.scheduleArrivals(this, t);
     }
     this.pruneTraces(now);
     this.savedAt = now;
@@ -457,7 +406,7 @@ export class ZoneDO implements DurableObject {
     this.sendStatus(session);
     this.send(session, this.describeRoom(session, !reconnecting));
     this.sendCtx(session);
-    await this.provokeGrudges(session, false); // reconnect grace: no free first strike
+    await ai.provokeGrudges(this, session, false); // reconnect grace: no free first strike
     await this.persist();
     await this.ensureAlarm();
 
@@ -615,6 +564,7 @@ export class ZoneDO implements DurableObject {
       case "name": return this.cmdName(session, cmd.arg);
       case "rest": return this.cmdRest(session);
       case "eat": return this.cmdEat(session, cmd.arg);
+      case "bandage": return this.cmdBandage(session, cmd.arg);
       case "carve": return this.cmdCarve(session, cmd.arg);
       case "claim": return gate.cmdClaim(this, session, cmd.arg);
       case "stash": return gate.cmdStore(this, session, cmd.arg, "lockbox");
@@ -735,7 +685,7 @@ export class ZoneDO implements DurableObject {
       if (striker) {
         const stmpl = world.mobTemplates.get(striker.templateId)!;
         let pdmg = randInt(stmpl.dmg_min, stmpl.dmg_max);
-        pdmg = Math.max(1, pdmg - this.equippedArmor(session));
+        pdmg = Math.max(1, Math.round(pdmg * ARMOR_K / (this.equippedArmor(session) + ARMOR_K))); // % mitigation, never immunity
         pdmg = Math.max(1, Math.round(pdmg * STANCE[session.stance].def));
         session.hp -= pdmg;
         this.send(session, `The mail drags at you — ${stmpl.name} lands a parting blow for ${pdmg}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`);
@@ -747,7 +697,7 @@ export class ZoneDO implements DurableObject {
     }
     // Before you slip out, a dormant listener may hear you move for the door
     // and swing as you go — you still leave (if you live), but not always clean.
-    if (await this.wakeListeners(session, session.roomId, WAKE_EXIT, "hears you move — and swings as you slip past!")) {
+    if (await ai.wakeListeners(this, session, session.roomId, WAKE_EXIT, "hears you move — and swings as you slip past!")) {
       if (session.hp <= 0) return; // felled on the way out
     }
     session.target = null;
@@ -768,9 +718,9 @@ export class ZoneDO implements DurableObject {
     this.send(session, this.enterDescribe(session));
     this.refreshRoomCtx(from);
     this.refreshRoomCtx(session.roomId);
-    await this.provokeGrudges(session, true); // you walked in — a grudge-holder gets the jump
+    await ai.provokeGrudges(this, session, true); // you walked in — a grudge-holder gets the jump
     // …and a dormant listener might just catch the sound of your arrival.
-    await this.wakeListeners(session, session.roomId, WAKE_ENTER, "twists toward the sound of you and lunges!");
+    await ai.wakeListeners(this, session, session.roomId, WAKE_ENTER, "twists toward the sound of you and lunges!");
     await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
     await this.persist();
   }
@@ -788,8 +738,9 @@ export class ZoneDO implements DurableObject {
     const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
     // Initiative: strike something that hasn't marked you — no fight on, no
     // grudge held — and the first blow lands heavy, before it can answer.
-    const unaware = !creature.target && !this.remembers(creature, session.pubkey, Date.now());
+    const unaware = !creature.target && !ai.remembers(this, creature, session.pubkey, Date.now());
     session.target = creature.id;
+    creature.hidden = false; // a lurker you've struck is unseen no longer — reveal it (room, chip, study)
     if (unaware) {
       const weapon = this.equippedItem(session, "weapon");
       let dmg = Math.round(
@@ -801,7 +752,7 @@ export class ZoneDO implements DurableObject {
       // one-shots skeletons; unstacked, an ambush is strong, not a cannon.)
       dmg = Math.max(1, dmg - tmpl.armor);
       creature.hp -= dmg;
-      this.addGrudge(creature, session.pubkey);
+      ai.addGrudge(this, creature, session.pubkey);
       this.roomFeed(session.roomId, `${session.name} falls on ${tmpl.name} without warning!`, session.pubkey);
       this.combatNoise(session.roomId);
       if (weapon) await this.wear(session, weapon.carried, weapon.tmpl, HOLLOW.has(tmpl.id) ? WEAPON_WEAR_HOLLOW : WEAPON_WEAR);
@@ -813,12 +764,12 @@ export class ZoneDO implements DurableObject {
       }
       creature.target = session.pubkey;
       this.send(session, `You fall on ${tmpl.name} before it marks you — the first blow lands heavy for ${dmg}. (${this.condition(creature)})`, "dmgout big");
-      if (tmpl.is_boss) this.bossPhase(creature, tmpl, session);
+      if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
       await this.ensureAlarm();
       return;
     }
     if (!creature.target) creature.target = session.pubkey;
-    this.addGrudge(creature, session.pubkey);
+    ai.addGrudge(this, creature, session.pubkey);
     this.send(session, pick([
       `You square up against ${tmpl.name}.`,
       `You set your feet and turn on ${tmpl.name}.`,
@@ -828,7 +779,7 @@ export class ZoneDO implements DurableObject {
     this.roomFeed(session.roomId, `${session.name} attacks ${tmpl.name}!`, session.pubkey);
     // A fight is loud, but the blind sentinels sleep through the din now — only
     // a lurker in the room strikes at the sound (WAKE_NOISE, fromNoise).
-    await this.wakeListeners(session, session.roomId, WAKE_NOISE, "clatters awake at the noise and turns on you!", true);
+    await ai.wakeListeners(this, session, session.roomId, WAKE_NOISE, "clatters awake at the noise and turns on you!", true);
     await this.ensureAlarm();
   }
 
@@ -879,7 +830,7 @@ export class ZoneDO implements DurableObject {
       stooped = " You stoop for it under the swing — an opening.";
     }
     this.send(session, `You take ${tmpl.name}.` + readied + stooped);
-    this.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey);
+    this.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, (RARITY_RANK[tmpl.rarity] ?? 0) >= 2); // ordinary pickups local; rare+ still relays ("someone grabbed the legendary")
     this.refreshRoomCtx(session.roomId);
     await this.persist();
     await this.ensureAlarm();
@@ -940,7 +891,12 @@ export class ZoneDO implements DurableObject {
         ? this.creatures.get(session.target) ?? null
         : null;
     if (creature && creature.roomId !== session.roomId) creature = null;
-    if (!creature) return this.send(session, targetArg ? "Nothing by that name is here." : "Throw it at what?");
+    // Named a foe that isn't here: that's a miss of the tongue, not the arm.
+    if (!creature && targetArg) return this.send(session, "Nothing by that name is here.");
+    // No foe to hit: this is a NOISE-throw. Hurl something hard into the room to
+    // clatter and draw what's listening nearby (a distraction, a lure, a way to
+    // pull one thing off a pack). Soft things just thud and carry nothing.
+    if (!creature) return this.throwForNoise(session, carried, itmpl);
     const tmpl = world.mobTemplates.get(creature.templateId)!;
 
     // One throw per round: the arm owes its follow-through. (Without this, a
@@ -951,7 +907,8 @@ export class ZoneDO implements DurableObject {
     }
     session.nextThrowAt = nowMs + THROW_COOLDOWN_MS;
 
-    const unaware = !creature.target && !this.remembers(creature, session.pubkey, Date.now());
+    const unaware = !creature.target && !ai.remembers(this, creature, session.pubkey, Date.now());
+    creature.hidden = false; // hurling at a lurker outs it too — reveal it (room, chip, study)
     // Every attack is a gamble — thrown ones too. A wild throw still leaves
     // your hand (and still wakes what it nearly hit).
     if (chance(FUMBLE_CHANCE + (session.hp < session.maxHp * WOUNDED_FRACTION ? WOUNDED_FUMBLE_BONUS : 0))) {
@@ -961,7 +918,7 @@ export class ZoneDO implements DurableObject {
       this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
       if (itmpl.edible) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
       if (!creature.target) creature.target = session.pubkey;
-      this.addGrudge(creature, session.pubkey);
+      ai.addGrudge(this, creature, session.pubkey);
       session.target = creature.id;
       this.send(session, `Your throw sails wide — ${itmpl.name} cracks against the stone. ${cap(tmpl.name)} turns on you.`);
       this.roomFeed(session.roomId, `${session.name} hurls ${itmpl.name} — and misses.`, session.pubkey);
@@ -995,7 +952,7 @@ export class ZoneDO implements DurableObject {
     }
 
     creature.hp -= dmg;
-    this.addGrudge(creature, session.pubkey);
+    ai.addGrudge(this, creature, session.pubkey);
     session.target = creature.id;
     this.roomFeed(session.roomId, `${session.name} hurls ${itmpl.name} at ${tmpl.name}!`, session.pubkey);
     this.combatNoise(session.roomId);
@@ -1003,11 +960,47 @@ export class ZoneDO implements DurableObject {
     if (creature.hp > 0) {
       if (!creature.target) creature.target = session.pubkey;
       this.send(session, `You hurl ${itmpl.name} — it strikes ${tmpl.name} for ${dmg}${flourish} (${this.condition(creature)})${landing}`);
-      if (tmpl.is_boss) this.bossPhase(creature, tmpl, session);
+      // A blunt throw — a rock off the skull — can ring it senseless for a beat.
+      // Same rule as a melee stun: not the boss, and no chaining a reeling thing.
+      if (itmpl.stun > 0 && !tmpl.is_boss && !creature.stunned && chance(itmpl.stun)) {
+        creature.stunned = true;
+        this.send(session, `${cap(tmpl.name)} reels, stunned.`, "stun");
+        this.roomFeed(session.roomId, `${cap(tmpl.name)} staggers where it stands.`, session.pubkey);
+      }
+      if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
     } else {
       this.send(session, `You hurl ${itmpl.name} — it strikes ${tmpl.name} for ${dmg}${flourish}${landing}`);
       await this.onCreatureDeath(session, creature, tmpl);
     }
+    this.refreshRoomCtx(session.roomId);
+    await this.persist();
+    await this.ensureAlarm();
+  }
+
+  // A throw with no foe to hit: hurl something hard to make NOISE. It clatters
+  // off the stone, lies where it falls (yours to take back), and the sound
+  // carries — heard next door and drawing the idle curious your way. It can also
+  // rouse a lurker lying in wait right here, so it's a lure that can bite back.
+  private async throwForNoise(session: Session, carried: CarriedItem, itmpl: ItemTemplate): Promise<void> {
+    if (itmpl.edible) {
+      return this.send(session, `${cap(itmpl.name)} would land with a soft, wet thud — too quiet to draw anything. Throw something hard.`);
+    }
+    const nowMs = Date.now();
+    if (nowMs < session.nextThrowAt) {
+      return this.send(session, "Your arm is still following through — a beat, then throw again.");
+    }
+    session.nextThrowAt = nowMs + THROW_COOLDOWN_MS;
+    // It leaves your hand and lies where it falls — no target, so no shatter roll.
+    session.items.splice(session.items.indexOf(carried), 1);
+    await removeItemRow(this.env.DB, carried.rowId);
+    this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
+    this.send(session, `You hurl ${itmpl.name} into the dark. It cracks and clatters off the stone — the sound carries.`);
+    this.roomFeed(session.roomId, `${session.name} sends ${itmpl.name} clattering across the room.`, session.pubkey);
+    // The clatter: players next door hear it (WS-only, no relay flood), the idle
+    // curious drift in to look, and any lurker here may drop on the noise.
+    this.roomSound(session.roomId, "Something clatters {dir}.");
+    this.creatureNoise(session.roomId);
+    await ai.wakeListeners(this, session, session.roomId, WAKE_NOISE, "drops from the dark, roused by the clatter!", true);
     this.refreshRoomCtx(session.roomId);
     await this.persist();
     await this.ensureAlarm();
@@ -1233,7 +1226,8 @@ export class ZoneDO implements DurableObject {
     session.trading = mode === "trading";
     session.forging = mode === "forging";
     session.sorting = mode === "sorting";
-    session.resting = false;
+    // Rest survives a typed step-out (inventory/barter/forge) — healing pauses
+    // while away, resumes when you 'look' back into the world.
     session.target = null;
     // At a gate you step clean out of sight; sorting mid-dungeon (lockbox only)
     // you crouch in the open, still in reach. (trading/forging are gate-only.)
@@ -1303,11 +1297,14 @@ export class ZoneDO implements DurableObject {
   }
 
   // How many slots a set of carried items fills: each non-stacking item is one,
-  // and every distinct stacking KIND is one, however deep the pile.
+  // and every distinct stacking KIND is one, however deep the pile. What you
+  // WEAR rides on your body, not in the pack — equipped gear costs no slot, so
+  // arming up never eats your carrying room (and stripping down never strands you).
   public slotsUsed(items: CarriedItem[]): number {
     const kinds = new Set<string>();
     let loose = 0;
     for (const c of items) {
+      if (c.equipped) continue; // worn/wielded — on the body, not in the pack
       if (this.stackable(c.itemId, c.serial, c.journalId)) kinds.add(c.itemId);
       else loose++;
     }
@@ -1456,7 +1453,7 @@ export class ZoneDO implements DurableObject {
       "You find a wall to put your back to and go still. Blood stops where it was running — any effort ends it.",
       "You sink down where you stand and let the dark hold you a while. The hurt recedes — any effort ends it.",
     ]));
-    this.roomFeed(session.roomId, `${session.name} settles down to rest.`, session.pubkey);
+    this.roomFeed(session.roomId, `${session.name} settles down to rest.`, session.pubkey, false); // resting: local only, nobody spectates a nap
   }
 
   // Fishing: only off the Pocket of Air's dry shelf, a line dropped into the
@@ -1579,6 +1576,63 @@ export class ZoneDO implements DurableObject {
     await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
   }
 
+  // ---- wounds & dressings (Phase 1: the deep gets teeth) ----
+
+  // Claws and teeth open a wound the mail can't turn: armor-ignoring bleed that
+  // ticks until it clots (BLEED_TICKS) or you bind it. A fresh cut resets the
+  // clock and takes the worse dmg. Mirrors the mob-side wound, pointed at you.
+  private openWound(victim: Session, tmpl: MobTemplate): void {
+    if (!(tmpl.bleed > 0)) return; // undefined/NaN (unmigrated column) or 0: no wound — never leak NaN
+    const fresh = !victim.bleedTicks;
+    victim.bleedTicks = BLEED_TICKS;
+    victim.bleedDmg = Math.max(victim.bleedDmg ?? 0, tmpl.bleed);
+    if (fresh) this.send(victim, `${cap(tmpl.name)} tears you open — the wound won't stop on its own. (bind it, or bleed)`, "dmgin");
+  }
+
+  // The dressings a player carries, weakest first — the order both a manual
+  // `bandage` and the auto-bind reflex draw from. Sealed loot is never spent.
+  private carriedBandages(session: Session): CarriedItem[] {
+    const world = this.world!;
+    return session.items
+      .filter((c) => (world.itemTemplates.get(c.itemId)?.staunch ?? 0) > 0 && c.serial === null)
+      .sort((a, b) => world.itemTemplates.get(a.itemId)!.staunch - world.itemTemplates.get(b.itemId)!.staunch);
+  }
+
+  // Bind a wound: spend one dressing, clot the bleed, staunch some hp. Shared by
+  // the manual `bandage` and the auto-bind reflex so both do it identically.
+  private async applyBandage(session: Session, carried: CarriedItem, auto: boolean): Promise<void> {
+    const tmpl = this.world!.itemTemplates.get(carried.itemId)!;
+    session.items.splice(session.items.indexOf(carried), 1);
+    await removeItemRow(this.env.DB, carried.rowId);
+    const before = session.hp;
+    session.bleedTicks = 0; session.bleedDmg = 0; // the wound is bound
+    session.hp = Math.min(session.maxHp, session.hp + tmpl.staunch);
+    this.send(session, (auto
+      ? `Your hands move on their own — you bind the wound with ${tmpl.name}.`
+      : `You bind your wounds with ${tmpl.name}.`)
+      + (session.hp > before ? ` The bleeding stops. [${session.hp}/${session.maxHp} hp]` : " The bleeding stops."), "gain");
+    this.roomFeed(session.roomId, `${session.name} binds a wound.`, session.pubkey, false);
+    this.sendStatus(session);
+    this.sendCtx(session);
+    await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
+  }
+
+  private async cmdBandage(session: Session, arg: string): Promise<void> {
+    const dressings = this.carriedBandages(session);
+    if (dressings.length === 0) return this.send(session, "You carry nothing to bind a wound with.");
+    let carried: CarriedItem | null;
+    if (!arg) carried = dressings[0];
+    else {
+      carried = this.findCarried(session, arg);
+      if (!carried) return this.send(session, "You carry nothing like that.");
+      if ((this.world!.itemTemplates.get(carried.itemId)?.staunch ?? 0) <= 0)
+        return this.send(session, `${cap(this.world!.itemTemplates.get(carried.itemId)!.name)} won't dress a wound.`);
+    }
+    if (!session.bleedTicks && session.hp >= session.maxHp)
+      return this.send(session, "You've no wound to bind, and full blood — no sense wasting a dressing.");
+    await this.applyBandage(session, carried, false);
+  }
+
   // ---- instanced floor items (journals carry their pages onto the stones) ----
 
   private dropInstance(roomId: string, itemId: string, journalId: string): void {
@@ -1620,7 +1674,7 @@ export class ZoneDO implements DurableObject {
     if (this.inCombat(session)) { session.staggered = true; stooped = " You stoop for it under the swing — an opening."; }
     const pages = (await journalLoad(this.env.DB, inst.journalId)).length;
     this.send(session, `You take ${tmpl.name}.` + (pages ? ` Its pages are already ${pages > 8 ? "densely" : "half"} filled — someone else's hunting, now yours.` : "") + stooped);
-    this.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey);
+    this.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, (RARITY_RANK[tmpl.rarity] ?? 0) >= 2); // ordinary pickups local; rare+ still relays ("someone grabbed the legendary")
     this.refreshRoomCtx(session.roomId);
     await this.persist();
     await this.ensureAlarm();
@@ -1809,7 +1863,7 @@ export class ZoneDO implements DurableObject {
   // (`away`, so the bench actions work) but is still crouched in the room, in
   // reach of everything standing there. `away` means "a modal is up"; THIS means
   // "safe." Keep the two apart. (Same gate condition as `sheltered` healing.)
-  private outOfWorld(s: Session): boolean {
+  public outOfWorld(s: Session): boolean {
     return s.away && this.world!.entryRooms.has(s.roomId);
   }
 
@@ -1817,7 +1871,7 @@ export class ZoneDO implements DurableObject {
   // the fight AND creatures that storm in and get the jump. Returns true and
   // claims a slot if this player still has room to be hit this tick; false when
   // they're already fully pressed (the attacker keeps its target and waits).
-  private canLandBlow(pubkey: string): boolean {
+  public canLandBlow(pubkey: string): boolean {
     const n = this.blowsThisTick.get(pubkey) ?? 0;
     if (n >= DOGPILE_CAP) return false;
     this.blowsThisTick.set(pubkey, n + 1);
@@ -1910,6 +1964,13 @@ export class ZoneDO implements DurableObject {
         if (session.target) session.target = null;
         continue;
       }
+      // Rung senseless last beat: your swing is gone. It clears now — one hit,
+      // one lost round, same as when you stun a mob.
+      if (session.stunned) {
+        session.stunned = false;
+        this.send(session, "Your head still rings — the moment to swing slips past you.", "stun");
+        continue;
+      }
       const atkMult = STANCE[session.stance].atk;
       const alive = (c: Creature) => this.creatures.has(c.id);
       let primary = foes.find((c) => c.id === session.target && alive(c)) ?? foes.find(alive);
@@ -1936,7 +1997,7 @@ export class ZoneDO implements DurableObject {
             if (!alive(creature)) continue;
             const tmpl = world.mobTemplates.get(creature.templateId)!;
             if (!creature.target) creature.target = session.pubkey;
-            this.addGrudge(creature, session.pubkey);
+            ai.addGrudge(this, creature, session.pubkey);
             let dmg = Math.round((randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) + (weapon ? this.effDmg(weapon) : 0)) * atkMult);
             if (hurt) dmg = Math.round(dmg * WOUNDED_DMG_MULT);
             let flourish = ".";
@@ -1963,7 +2024,7 @@ export class ZoneDO implements DurableObject {
                 creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, weapon.tmpl.bleed);
               }
               this.combatNoise(session.roomId);
-              if (tmpl.is_boss) this.bossPhase(creature, tmpl, session);
+              if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
             } else {
               await this.onCreatureDeath(session, creature, tmpl);
             }
@@ -2013,15 +2074,25 @@ export class ZoneDO implements DurableObject {
         continue;
       }
       // A dire-hyena guarding a meal turns on anyone standing in the room with
-      // it — whether they walked in or the meal came to them (it went bold, or
-      // a corpse fell here). No grudge required; proximity to its kill is enough.
-      if (!creature.target && this.hyenaGuardsMeal(creature)) {
+      // it — whether they walked in, the meal came to them, or it went bold. No
+      // grudge required; proximity to its kill is enough. But it doesn't spring
+      // in a blink: it lifts its head, hackles up, and takes DIRE_ROUSE_MS to
+      // commit — a wind-up you can back out of the room to escape, or preempt by
+      // striking first (which puts it in a normal fight and cancels the tell).
+      if (!creature.target && ai.hyenaGuardsMeal(this, creature)) {
         const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
-        if (prey) {
+        if (!prey) {
+          creature.rouseAt = undefined; // the room emptied — it drops back to its meal
+        } else if (creature.rouseAt === undefined) {
+          creature.rouseAt = now + DIRE_ROUSE_MS; // first sight: begin the wind-up, no strike yet
+          this.send(prey, `${cap(tmpl.name)} lifts its bloodied muzzle and fixes on you, hackles rising — it hasn't sprung yet. (get out, or hit first)`);
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} rises from its kill, hackles up.`, prey.pubkey);
+        } else if (now >= creature.rouseAt) {
+          creature.rouseAt = undefined;
           creature.target = prey.pubkey;
           if (!prey.target) prey.target = creature.id;
-          this.send(prey, `${cap(tmpl.name)} lifts its bloodied muzzle and fixes on you.`);
-          this.roomFeed(creature.roomId, `${cap(tmpl.name)} turns from its kill to ${prey.name}.`, prey.pubkey);
+          this.send(prey, `${cap(tmpl.name)} springs from its kill — it's on you.`);
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} springs at ${prey.name}.`, prey.pubkey);
         }
       }
       // A drowned thing takes anyone who wades into its water — no grudge needed.
@@ -2038,6 +2109,7 @@ export class ZoneDO implements DurableObject {
         const victim = this.sessions.get(creature.target);
         if (!victim || this.outOfWorld(victim) || victim.roomId !== creature.roomId) {
           creature.target = null;
+          creature.rouseAt = undefined; // lost its prey — a dire-hyena winds up fresh next time
           continue;
         }
         // Keep a valid primary target for the UI: an attacker draws your focus
@@ -2052,8 +2124,8 @@ export class ZoneDO implements DurableObject {
         // chase. Brooders are the opposite: they never leave the nest.
         const wantsFlee = RUNNERS.has(tmpl.id)
           || (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
-        if (wantsFlee && !tmpl.is_boss && !this.scavengerBold(creature)) {
-          await this.creatureMoves(creature, now, "flee", false);
+        if (wantsFlee && !tmpl.is_boss && !ai.scavengerBold(this, creature)) {
+          await ai.creatureMoves(this, creature, now, "flee", false);
           continue;
         }
         // The dogpile cap: if this player already has a full press on them this
@@ -2095,7 +2167,7 @@ export class ZoneDO implements DurableObject {
           continue;
         }
         let dmg = randInt(tmpl.dmg_min, tmpl.dmg_max) + (tmpl.is_boss ? (creature.phase ?? 0) * 3 : 0);
-        if (this.scavengerBold(creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);
+        if (ai.scavengerBold(this, creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);
         // A drowned thing that already has hold of you drags harder.
         if (victim.seizedBy === creature.id) dmg = Math.round(dmg * SEIZE_DMG_MULT);
         if (cHurt) dmg = Math.max(1, Math.round(dmg * WOUNDED_DMG_MULT));
@@ -2112,15 +2184,25 @@ export class ZoneDO implements DurableObject {
         // Worn armor thins the blow — but never closes it; a hit always bites.
         // Then your stance: guarded soaks more, reckless leaves you open.
         const worn = this.equippedItem(victim, "armor");
-        dmg = Math.max(1, dmg - this.equippedArmor(victim));
+        dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
         dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
         victim.hp -= dmg;
+        // While a drowned thing has you under, it can drag you deeper — a lungful
+        // of black water no armor turns, a share of your very life, and it can be
+        // the end of you. The only answer is to break the grip. (Folds into the
+        // hp check below, so a fatal pull runs death like any killing blow.)
+        let drowned = 0;
+        if (victim.seizedBy === creature.id && DROWNERS.has(creature.templateId) && chance(SEIZE_DROWN_ODDS)) {
+          drowned = Math.max(1, Math.round(victim.maxHp * SEIZE_DROWN_FRACTION));
+          victim.hp -= drowned;
+        }
         if (victim.resting) {
           victim.resting = false;
           this.send(victim, "You are dragged from your rest.");
         }
         if (victim.hp > 0) {
           this.send(victim, `${cap(tmpl.name)} ${this.creatureHit(tmpl.id)} for ${dmg}${flourish} [${victim.hp}/${victim.maxHp} hp]`, flourish === "." ? "dmgin" : "dmgin big");
+          if (drowned) this.send(victim, `${cap(tmpl.name)} drags you under — black water fills your lungs for ${drowned}. (break free, or drown)`, "dmgin big");
           this.sendStatus(victim);
           this.combatNoise(victim.roomId);
           // A drowned thing that lands a blow can take hold — you're seized,
@@ -2128,6 +2210,14 @@ export class ZoneDO implements DurableObject {
           if (DROWNERS.has(creature.templateId) && !victim.seizedBy && chance(SEIZE_ODDS)) {
             victim.seizedBy = creature.id;
             this.send(victim, `${cap(tmpl.name)} closes cold arms around you — you're held fast. (break free: keep fighting, or it drags you under)`, "seize");
+          }
+          // Claws and teeth open a wound the mail can't turn.
+          this.openWound(victim, tmpl);
+          // A heavy dead blow can ring YOUR skull — you lose your next swing.
+          // One hit, one lost beat; you can't be stun-chained deeper.
+          if (tmpl.stun > 0 && !victim.stunned && chance(tmpl.stun)) {
+            victim.stunned = true;
+            this.send(victim, `${cap(tmpl.name)} lands like a falling stone — your skull rings and the room tilts.`, "stun");
           }
           // Eating a blow thins the mail a hair (provisional gear only).
           if (worn) await this.wear(victim, worn.carried, worn.tmpl, ARMOR_WEAR);
@@ -2147,7 +2237,7 @@ export class ZoneDO implements DurableObject {
               this.send(victim, `${cap(tmpl.name)} snatches ${it.name} and bolts! (kill it to get it back)`);
               this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears something from ${victim.name} and flees!`, victim.pubkey);
               this.sendCtx(victim);
-              await this.creatureMoves(creature, now, "flee", false);
+              await ai.creatureMoves(this, creature, now, "flee", false);
               continue;
             }
           }
@@ -2161,6 +2251,36 @@ export class ZoneDO implements DurableObject {
     for (const pk of heldBack) {
       const v = this.sessions.get(pk);
       if (v && v.hp > 0 && chance(0.25)) this.send(v, "The press around you is too thick — only so many can reach you at once.");
+    }
+
+    // Wounds weep between blows: armor-ignoring bleed, ticking down until it
+    // clots. A cut that would drop you SOMETIMES kills outright (BLEED_KILL_ODDS);
+    // otherwise you cling on at 1 hp — one beat to bind it or run, but the next
+    // tick rolls again. Gear turns a blow, never a wound.
+    if (combatRound) for (const session of this.sessions.values()) {
+      if (!session.bleedTicks || session.bleedTicks <= 0) continue;
+      if (this.outOfWorld(session)) { session.bleedTicks = 0; session.bleedDmg = 0; continue; } // safe at the gate; you bind it there
+      session.bleedTicks -= 1;
+      const bd = session.bleedDmg ?? 1;
+      if (session.hp - bd <= 0 && chance(BLEED_KILL_ODDS)) {
+        this.send(session, "The wound won't close. The dark comes up fast.", "death big");
+        await this.onPlayerDeath(session, null);
+        continue;
+      }
+      session.hp = Math.max(1, session.hp - bd);
+      if (session.bleedTicks <= 0) { session.bleedTicks = 0; session.bleedDmg = 0; }
+      this.send(session, `Your wound bleeds — ${bd}.${session.bleedTicks ? "" : " It clots."} [${session.hp}/${session.maxHp} hp]`, "dmgin");
+      this.sendStatus(session);
+    }
+
+    // Auto-bandage: a bleeding wanderer who drops to half binds a wound on
+    // reflex — if they carry a dressing. Clots the bleed, staunches a little.
+    // Out of dressings in the deep and the leaking just keeps on.
+    for (const session of this.sessions.values()) {
+      if (session.hp <= 0 || !session.bleedTicks) continue;
+      if (session.hp >= session.maxHp * BANDAGE_FRACTION) continue;
+      const dressing = this.carriedBandages(session)[0];
+      if (dressing) await this.applyBandage(session, dressing, true);
     }
 
     // Auto-eat: the blows have landed for this tick — anyone still on their feet
@@ -2202,7 +2322,7 @@ export class ZoneDO implements DurableObject {
       }
       // Time wears grudges away, each kind at its own pace (the boss never lets go).
       if (creature.grudges.length && !tmpl.is_boss) {
-        const ms = this.forgetMs(tmpl);
+        const ms = ai.forgetMs(this, tmpl);
         creature.grudges = creature.grudges.filter((g) => now - g.at < ms);
       }
       if (!creature.target) {
@@ -2211,16 +2331,16 @@ export class ZoneDO implements DurableObject {
         if (creature.hp >= tmpl.max_hp) creature.phase = 0; // whole again, seated again
         // A scavenger standing on the dead eats first of all — and drags off
         // any gear left lying where a body fell.
-        if (SCAVENGERS.has(creature.templateId)) { this.scavengerFeeds(creature, false); this.scavengerScoops(creature); }
+        if (SCAVENGERS.has(creature.templateId)) { ai.scavengerFeeds(this, creature, false); ai.scavengerScoops(this, creature); }
         // A brood-mother swells the nest while she's left alone.
-        if (BROODERS.has(creature.templateId)) this.broodBirths(creature, now);
-        if (creature.hunger >= HUNGRY_AT) this.creatureEatsHere(creature, false);
-        if (RUNNERS.has(creature.templateId) && this.playerPresent(creature.roomId)) {
+        if (BROODERS.has(creature.templateId)) ai.broodBirths(this, creature, now);
+        if (creature.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, creature, false);
+        if (RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)) {
           // Never settles while there's someone to run from — it keeps moving,
           // room to room, and you only land a blow the tick you have it cornered.
-          await this.creatureMoves(creature, now, "wander", false);
+          await ai.creatureMoves(this, creature, now, "wander", false);
         } else if (creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId)) {
-          await this.creatureMoves(creature, now, "wander", false);
+          await ai.creatureMoves(this, creature, now, "wander", false);
         }
       }
     }
@@ -2242,13 +2362,17 @@ export class ZoneDO implements DurableObject {
     // aside mid-dungeon with the lockbox is hiding, not healing.
     for (const session of this.sessions.values()) {
       const sheltered = session.away && world.entryRooms.has(session.roomId);
+      // Rest heals wherever you're still IN REACH — including the inventory modal
+      // in the dungeon, where you're crouched in the open and can be hit (just
+      // like reading a map or journal). Only a gate truly takes you out of the
+      // world, and there the gatehouse mends you whether you meant to rest or not.
       if ((session.resting || sheltered) && !this.inCombat(session) && session.hp < session.maxHp) {
         session.hp = Math.min(session.maxHp, session.hp + REST_REGEN_PER_TICK);
         this.sendStatus(session);
         if (session.hp >= session.maxHp) {
           if (session.resting) {
             session.resting = false;
-            this.send(session, "You feel whole again, and rise.");
+            this.send(session, session.away ? "Your wounds have closed — you are whole." : "You feel whole again, and rise.");
           } else {
             this.send(session, "In the gatehouse quiet, your wounds close. You are whole.");
           }
@@ -2271,8 +2395,8 @@ export class ZoneDO implements DurableObject {
 
     this.applyRot(now, false);
     this.applyRegrow(now, false);
-    this.applyArrivals(now, false);
-    this.scheduleArrivals(now);
+    ai.applyArrivals(this, now, false);
+    ai.scheduleArrivals(this, now);
     this.pruneTraces(now);
     this.syncCombatCtx();
 
@@ -2293,340 +2417,21 @@ export class ZoneDO implements DurableObject {
 
   // ---- creature behavior (shared by live tick and catch-up) ----
 
-  // How long this creature holds a grudge. The boss never forgets.
-  private forgetMs(tmpl: MobTemplate): number {
-    return tmpl.is_boss ? Infinity : (FORGET_MS[tmpl.id] ?? FORGET_DEFAULT);
-  }
 
-  // Does it still remember (and still hate) this pubkey? Expired grudges don't
-  // count even if they haven't been pruned from the array yet.
-  private remembers(creature: Creature, pubkey: string, now: number): boolean {
-    const ms = this.forgetMs(this.world!.mobTemplates.get(creature.templateId)!);
-    return creature.grudges.some((g) => g.pk === pubkey && now - g.at < ms);
-  }
 
-  private addGrudge(creature: Creature, pubkey: string): void {
-    const now = Date.now();
-    const existing = creature.grudges.find((g) => g.pk === pubkey);
-    if (existing) { existing.at = now; return; } // fresh blood renews the memory
-    creature.grudges.push({ pk: pubkey, at: now });
-    if (creature.grudges.length > GRUDGE_MAX) creature.grudges.shift();
-  }
 
-  // Sound wakes the blind sentinels. A dormant listener (a skeleton) in the
-  // room may catch your movement or your noise and lurch into a swing — one
-  // first strike, like being jumped. Grudge-holders are skipped (they wake on
-  // their own); a still, silent wanderer rolls nothing and is walked right past.
-  // Returns true if one woke (so a caller mid-exit can check for a killing blow).
-  private async wakeListeners(session: Session, roomId: string, odds: number, tell: string, fromNoise = false): Promise<boolean> {
-    if (session.away) return false;
-    const now = Date.now();
-    for (const c of this.creatures.values()) {
-      if (c.roomId !== roomId || c.target) continue;
-      const lurker = LURKERS.has(c.templateId);
-      if (!LISTENERS.has(c.templateId) && !lurker) continue;
-      // The din of a fight no longer rouses the bone-sleepers — they wake to
-      // movement (in or past) and to a grudge, not to noise alone. Blind lurkers
-      // still strike at sound; that's the whole of what they are.
-      if (fromNoise && !lurker) continue;
-      if (this.remembers(c, session.pubkey, now)) continue;
-      if (!chance(odds)) continue;
-      const tmpl = this.world!.mobTemplates.get(c.templateId)!;
-      c.target = session.pubkey;
-      c.hidden = false; // a lurker that strikes is unseen no longer
-      if (!session.target) session.target = c.id;
-      this.send(session, lurker ? `${cap(tmpl.name)} drops out of the dark and is on you!` : `${cap(tmpl.name)} ${tell}`);
-      this.roomFeed(roomId, `${cap(tmpl.name)} ${lurker ? "uncoils from the dark" : "lurches awake"}.`, session.pubkey);
-      await this.creatureFirstStrike(c, tmpl, session);
-      return true;
-    }
-    return false;
-  }
 
-  // A player walks in (or connects): anything here that remembers them attacks.
-  // `ambush` = the player just stepped into this room (their choice, their
-  // exposure), so a grudge-holder gets the first strike. On a reconnect
-  // (blinking back into being) it's false — no free hit for the reconnection.
-  public async provokeGrudges(session: Session, ambush: boolean): Promise<void> {
-    if (this.outOfWorld(session)) return; // out of the world at a gate — nothing can mark you
-    const now = Date.now();
-    let struck = false;
-    for (const creature of this.creatures.values()) {
-      if (creature.roomId !== session.roomId || creature.target) continue;
-      const remembers = this.remembers(creature, session.pubkey, now);
-      const guards = this.hyenaGuardsMeal(creature);
-      if (!remembers && !guards) continue;
-      const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
-      creature.target = session.pubkey;
-      if (!session.target) session.target = creature.id;
-      this.send(session, remembers
-        ? `${cap(tmpl.name)} remembers you — and comes for you.`
-        : `${cap(tmpl.name)} snarls over its kill — you came too close, and now you're prey.`);
-      this.roomFeed(session.roomId, `${cap(tmpl.name)} goes for ${session.name}.`, session.pubkey);
-      // The first one to reach you gets the jump; the rest merely engage.
-      if (ambush && !struck) {
-        struck = true;
-        await this.creatureFirstStrike(creature, tmpl, session);
-        if (session.hp <= 0) return; // felled by the ambush — already moved to a gate
-      }
-    }
-  }
 
-  // Move one room: wandering or fleeing. Creatures can't open locked doors,
-  // but walk through any door the players have left open. Wandering picks,
-  // in order: a noise worth investigating, a room that smells of food, the
-  // next stop on a patrol route, or wherever.
-  private async creatureMoves(creature: Creature, now: number, mode: "wander" | "flee", silent: boolean): Promise<void> {
-    const world = this.world!;
-    const tmpl = world.mobTemplates.get(creature.templateId)!;
-    let exits = (world.exits.get(creature.roomId) ?? []).filter(
-      (e) => !e.key_item || this.openDoors.has(`${creature.roomId}:${e.dir}`),
-    );
-    // Hideaways — a crack in the wall — let nothing in, not even the King. A
-    // fled foe who folds into one is out of reach until they step back out.
-    if (world.safeRooms.size) {
-      const open = exits.filter((e) => !world.safeRooms.has(e.to_room));
-      if (open.length) exits = open; // never strand (creatures are never inside one)
-    }
-    // Every gate is the dungeon's threshold — cold air and the way out. No
-    // ordinary creature holds a doorway, so a respawn is never spawn-camped
-    // where it appears. (The boss may go anywhere; it fears nothing.)
-    if (!tmpl.is_boss) {
-      const inner = exits.filter((e) => !world.entryRooms.has(e.to_room));
-      if (inner.length) exits = inner; // never strand a creature with no exits
-    }
-    // Territory: idle wandering keeps to the ground around the den. Beyond the
-    // edge (fled, or freshly walked in from a dark mouth), every idle step is
-    // a step home instead — this is what keeps the deep in the deep, and what
-    // carries a migrant from the mouth to its range. Fleeing ignores the edge
-    // (survival first; the next calm step starts the walk back). Patrollers
-    // are exempt — their route is their territory. Never strands.
-    if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id]) {
-      const d = this.roomDist(creature.roomId, creature.home);
-      if (d > TERRITORY_RADIUS) {
-        const closer = exits.filter((e) => this.roomDist(e.to_room, creature.home!) < d);
-        if (closer.length) exits = closer;
-      } else {
-        const within = exits.filter((e) => this.roomDist(e.to_room, creature.home!) <= TERRITORY_RADIUS);
-        if (within.length) exits = within;
-      }
-    }
-    // Idle drift avoids an already-packed room, so wandering doesn't stack the
-    // whole zone into one hub. (Answering a noise or fleeing still goes where it
-    // must; and we never strand a creature with no other way to turn.)
-    if (mode === "wander" && !creature.curious) {
-      const uncrowded = exits.filter((e) => this.creaturesIn(e.to_room) < CROWD_CAP);
-      if (uncrowded.length) exits = uncrowded;
-    }
-    if (exits.length === 0) return;
 
-    let exit = exits[randInt(0, exits.length - 1)];
-    let investigating = false;
-    if (mode === "flee") {
-      creature.curious = null;
-    } else if (creature.curious && creature.curious !== creature.roomId) {
-      const toward = exits.find((e) => e.to_room === creature.curious);
-      if (toward) { exit = toward; investigating = true; }
-      creature.curious = null; // one look is all it owes the noise
-    } else if (SCAVENGERS.has(tmpl.id)) {
-      // Follows the scent of the dead: toward a room that holds corpse-litter.
-      const scent = exits.find((e) =>
-        (this.traces.get(e.to_room) ?? []).some((tr) => CORPSE_TRACES.has(tr.kind)),
-      );
-      if (scent) exit = scent;
-      creature.curious = null;
-    } else if (creature.hunger >= HUNGRY_AT && !HOLLOW.has(tmpl.id)) {
-      const smells = exits.find((e) =>
-        (this.ground.get(e.to_room) ?? []).some((id) => world.itemTemplates.get(id)?.lure),
-      );
-      if (smells) exit = smells;
-      creature.curious = null;
-    } else {
-      creature.curious = null;
-      const route = PATROLS[tmpl.id];
-      if (route) {
-        let idx = creature.patrolIdx ?? 0;
-        if (route[idx % route.length] === creature.roomId) idx++;
-        const targetRoom = route[idx % route.length];
-        const toward = exits.find((e) => e.to_room === targetRoom);
-        if (toward) { exit = toward; creature.patrolIdx = idx + 1; }
-        // off-route: random steps until the rounds find it again
-      }
-    }
 
-    const from = creature.roomId;
-    creature.roomId = exit.to_room;
-    creature.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
-    // Beyond its territory a creature travels with purpose — the walk in from
-    // a dark mouth (or back from a rout) is minutes, not an afternoon.
-    if (creature.home && !tmpl.is_boss && this.roomDist(creature.roomId, creature.home) > TERRITORY_RADIUS) {
-      creature.nextWanderAt = now + randInt(8000, 25_000);
-    }
-    if (mode === "flee") {
-      creature.target = null;
-      for (const s of this.sessions.values()) {
-        if (s.target === creature.id) s.target = null;
-      }
-    }
-    if (!silent) {
-      // The hollow don't bleed — they come apart in their own way. A runner
-      // isn't wounded at all: it just darts, whole and gone.
-      const hurt = HURT_STYLE[tmpl.id];
-      const runner = RUNNERS.has(tmpl.id);
-      const outLine = mode !== "flee"
-        ? `${cap(tmpl.name)} ${tmpl.is_boss ? "moves" : "slips away"} ${exit.dir}.`
-        : runner ? `${cap(tmpl.name)} darts ${exit.dir} and is gone.`
-        : hurt ? `${cap(tmpl.name)} ${hurt.out.replace("{dir}", exit.dir)}`
-        : `${cap(tmpl.name)} flees ${exit.dir}, bleeding.`;
-      // Idle wandering stays LOCAL (off the relay) — that was the flood. A
-      // creature FLEEING is a beat in a fight a watcher's following, so that one
-      // still reaches the relay.
-      const toRelay = mode === "flee";
-      this.roomFeed(from, outLine, undefined, toRelay);
-      const inLine = mode !== "flee" ? "creeps in."
-        : runner ? "skitters in, already looking for the next way out."
-        : hurt ? hurt.in_ : "bursts in, bleeding.";
-      this.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`, undefined, toRelay);
-      this.roomSound(
-        creature.roomId,
-        mode === "flee"
-          ? (runner ? "Something small scrabbles away {dir}, fast." : HOLLOW.has(tmpl.id) ? "Something clatters away {dir}, broken." : "Something crashes away {dir}, wounded.")
-          : (MOVE_SOUNDS[tmpl.id] ?? "Something moves {dir}."),
-        from,
-      );
-      this.refreshRoomCtx(from);
-      this.refreshRoomCtx(creature.roomId);
-      // Walking into a room full of people it hates — or, for a dire-hyena,
-      // dragging a fresh kill in among them — it marks the first, and (unless
-      // it's fleeing) gets the jump on them, same as when you walk in.
-      for (const s of this.sessions.values()) {
-        if (s.roomId === creature.roomId && !this.outOfWorld(s) && !creature.target
-            && (this.remembers(creature, s.pubkey, now) || this.hyenaGuardsMeal(creature))) {
-          creature.target = s.pubkey;
-          this.send(s, this.remembers(creature, s.pubkey, now)
-            ? `${cap(tmpl.name)} remembers you — and comes for you.`
-            : `${cap(tmpl.name)} snarls over its kill — you're too close, and now you're prey.`);
-          // It gets the jump only if the player isn't already fully dogpiled this
-          // tick; otherwise it just marks them and swings in on the next round.
-          if (mode !== "flee" && this.canLandBlow(s.pubkey)) await this.creatureFirstStrike(creature, tmpl, s);
-          break;
-        }
-      }
-      // Came to investigate and found a fight: it joins. Noise has a price.
-      if (investigating && !creature.target) {
-        for (const s of this.sessions.values()) {
-          if (s.roomId === creature.roomId && this.inCombat(s)) {
-            creature.target = s.pubkey;
-            this.addGrudge(creature, s.pubkey);
-            this.send(s, `${cap(tmpl.name)} joins the fight, drawn by the noise!`);
-            this.roomFeed(creature.roomId, `${cap(tmpl.name)} joins the fight!`, s.pubkey);
-            break;
-          }
-        }
-      }
-    }
-  }
 
-  // Hungry creature eats the most fragrant thing on the floor.
-  private creatureEatsHere(creature: Creature, silent: boolean, at = Date.now()): void {
-    if (HOLLOW.has(creature.templateId)) return; // nothing inside to feed
-    const world = this.world!;
-    const here = this.ground.get(creature.roomId) ?? [];
-    const idx = here.findIndex((id) => world.itemTemplates.get(id)?.lure);
-    if (idx === -1) return;
-    const item = world.itemTemplates.get(here[idx])!;
-    here.splice(idx, 1);
-    const tmpl = world.mobTemplates.get(creature.templateId)!;
-    creature.hunger = 0;
-    creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
-    this.addTrace(creature.roomId, { kind: "scraps", at });
-    if (!silent) {
-      this.roomFeed(creature.roomId, `${cap(tmpl.name)} tears into ${item.name}.`);
-      this.roomSound(creature.roomId, "Wet tearing sounds drift {dir}.");
-      this.refreshRoomCtx(creature.roomId);
-    }
-  }
 
-  // A scavenger that has eaten enough of the dead loses its nerve: it stops
-  // fleeing and swings harder. The dungeon's own corpses arm it.
-  private scavengerBold(creature: Creature): boolean {
-    return SCAVENGERS.has(creature.templateId) && (creature.fed ?? 0) >= SCAVENGER_BOLD_AT;
-  }
 
-  private playerPresent(roomId: string): boolean {
-    for (const s of this.sessions.values()) if (s.roomId === roomId && !this.outOfWorld(s)) return true;
-    return false;
-  }
 
-  // A brood-mother births a scabby rat into her room on a slow clock, up to a
-  // cap — a living spawn source. She only breeds while unbothered (no target),
-  // so engaging her IS the way to stem the tide; leave her and the room fills.
-  private broodBirths(mother: Creature, now: number): void {
-    if (!mother.nextBirthAt) { mother.nextBirthAt = now + BROOD_INTERVAL_MS; return; }
-    if (now < mother.nextBirthAt) return;
-    mother.nextBirthAt = now + BROOD_INTERVAL_MS;
-    const ratTmpl = this.world!.mobTemplates.get("rat");
-    if (!ratTmpl) return;
-    let count = 0;
-    for (const c of this.creatures.values()) {
-      if (c.roomId === mother.roomId && c.templateId === "rat") count++;
-    }
-    if (count >= BROOD_CAP) return;
-    const pupId = uuid();
-    this.creatures.set(pupId, {
-      id: pupId,
-      templateId: "rat",
-      roomId: mother.roomId,
-      hp: ratTmpl.max_hp,
-      hunger: randInt(0, HUNGRY_AT - 10),
-      grudges: [],
-      nextWanderAt: now + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
-      target: null,
-      home: mother.roomId, // born to the nest; its ground is its mother's
-    });
-    const mtmpl = this.world!.mobTemplates.get(mother.templateId)!;
-    this.roomFeed(mother.roomId, `${cap(mtmpl.name)} shudders, and a fresh pup squirms free.`);
-    this.roomSound(mother.roomId, "A wet, squealing sound {dir}.");
-    this.refreshRoomCtx(mother.roomId);
-  }
-
-  // The mean subtype is guarding a meal when it's standing on a corpse, or it's
-  // already gorged bold. While guarding, it turns on anyone who walks in on it —
-  // no grudge needed. Disturb its dinner and you are the next course.
-  private hyenaGuardsMeal(creature: Creature): boolean {
-    if (!AGGRO_SCAVENGERS.has(creature.templateId)) return false;
-    if (this.scavengerBold(creature)) return true;
-    const list = this.traces.get(creature.roomId);
-    return !!list && list.some((tr) => CORPSE_TRACES.has(tr.kind));
-  }
-
-  // Eat one corpse (blood/remains litter) in the room: heal, sate, and grow
-  // bolder. Leaving the dead lying is what fattens a hyena into a real threat.
-  private scavengerFeeds(creature: Creature, silent: boolean): void {
-    const list = this.traces.get(creature.roomId);
-    if (!list) return;
-    const idx = list.findIndex((tr) => CORPSE_TRACES.has(tr.kind));
-    if (idx === -1) return;
-    list.splice(idx, 1);
-    if (list.length === 0) this.traces.delete(creature.roomId);
-    const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
-    creature.hunger = 0;
-    creature.hp = Math.min(tmpl.max_hp, creature.hp + SCAVENGER_HEAL);
-    const before = creature.fed ?? 0;
-    creature.fed = before + 1;
-    if (!silent) {
-      this.roomFeed(creature.roomId, `${cap(tmpl.name)} tears into the dead, feeding.`);
-      this.roomSound(creature.roomId, "Wet, cracking sounds drift {dir}.");
-      if (before < SCAVENGER_BOLD_AT && creature.fed >= SCAVENGER_BOLD_AT) {
-        this.roomFeed(creature.roomId, `${cap(tmpl.name)} lifts its head, gorged and unafraid.`);
-      }
-      this.refreshRoomCtx(creature.roomId);
-    }
-  }
 
   // ---- traces: the world's memory ----
 
-  private addTrace(roomId: string, trace: Trace): void {
+  public addTrace(roomId: string, trace: Trace): void {
     let list = this.traces.get(roomId);
     if (!list) { list = []; this.traces.set(roomId, list); }
     if (trace.kind === "passage") {
@@ -2741,140 +2546,8 @@ export class ZoneDO implements DurableObject {
     });
   }
 
-  // The dead stay dead — but the dungeon refills. When a population is below
-  // its cap, a migrant is already on its way; it arrives here.
-  private scheduleArrivals(now: number): void {
-    const world = this.world!;
-    const caps = new Map<string, number>();
-    for (const spawn of world.mobSpawns) {
-      caps.set(spawn.template_id, (caps.get(spawn.template_id) ?? 0) + 1);
-    }
-    // A variant counts against its bloodline's cap: a den holding a dire
-    // hyena is a hyena den held, not a hyena short (or the world would refill
-    // around every promotion and swell past its caps).
-    const alive = new Map<string, number>();
-    for (const c of this.creatures.values()) {
-      const line = this.variantBase.get(c.templateId) ?? c.templateId;
-      alive.set(line, (alive.get(line) ?? 0) + 1);
-    }
-    for (const [templateId, cap_] of caps) {
-      const short = cap_ - (alive.get(templateId) ?? 0) - (this.arrivals.has(templateId) ? 1 : 0);
-      if (short > 0 && !this.arrivals.has(templateId)) {
-        const tmpl = world.mobTemplates.get(templateId)!;
-        // Fodder refills faster the busier the zone; the boss keeps its clock.
-        const factor = tmpl.is_boss
-          ? MIGRATION_FACTOR
-          : Math.max(MIGRATION_MIN_FACTOR, MIGRATION_FACTOR / Math.max(1, this.sessions.size));
-        this.arrivals.set(templateId, now + tmpl.respawn_secs * 1000 * factor);
-      }
-    }
-  }
 
-  private applyArrivals(now: number, silent: boolean): void {
-    const world = this.world!;
-    for (const [templateId, at] of this.arrivals) {
-      if (at > now) continue;
-      this.arrivals.delete(templateId);
-      const baseTmpl = world.mobTemplates.get(templateId);
-      if (!baseTmpl) continue;
-      // Rare blood: what refills the ground is usually the ordinary version,
-      // once in a while the mean cousin. (Spawn rows belong to the base.)
-      const tmpl = this.rollBloodline(baseTmpl);
-      // Migrants respect the threshold too: nothing ordinary arrives AT a
-      // gate (same rule as wandering), or a rat could materialize on top
-      // of a respawn. Boss homes are wherever they are.
-      let homes = world.mobSpawns.filter((s) => s.template_id === templateId).map((s) => s.room_id);
-      if (!tmpl.is_boss) {
-        const inner = homes.filter((r) => !world.entryRooms.has(r));
-        if (inner.length) homes = inner;
-      }
-      // One mother to a room: a nest with two fountains is a meat grinder. Steer
-      // a respawning brood-mother to a home that hasn't already got one (fall
-      // back to her homes if every nest is taken).
-      if (BROODERS.has(tmpl.id)) {
-        const taken = new Set<string>();
-        for (const c of this.creatures.values()) {
-          if (c.templateId === tmpl.id) taken.add(c.roomId);
-        }
-        const open = homes.filter((r) => !taken.has(r));
-        if (open.length) homes = open;
-      }
-      const home = homes[randInt(0, Math.max(0, homes.length - 1))] ?? world.entryRoom;
-      // Migration is a walk, not a materialization: a walker surfaces at the
-      // dark mouth nearest its den and makes its way in (territory homing does
-      // the walking). The sessile — mothers, the drowned — and the boss simply
-      // are where they live.
-      let roomId = home;
-      if (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id)) {
-        let bestD = Number.POSITIVE_INFINITY;
-        for (const m of MOUTHS) {
-          if (!world.rooms.has(m)) continue;
-          const d = this.roomDist(m, home);
-          if (d < bestD) { bestD = d; roomId = m; }
-        }
-      }
-      const creature: Creature = {
-        id: uuid(),
-        templateId: tmpl.id,
-        roomId,
-        hp: tmpl.max_hp,
-        hunger: randInt(HUNGRY_AT - 20, HUNGRY_AT + 20), // travel works up an appetite
-        grudges: [],
-        // A fresh migrant starts its walk in promptly; the settled keep their idle clock.
-        nextWanderAt: now + (roomId === home ? randInt(WANDER_MIN_MS, WANDER_MAX_MS) : randInt(4000, 15_000)),
-        target: null,
-        carries: this.rollCarry(tmpl),
-        hidden: LURKERS.has(tmpl.id) || undefined,
-        home,
-      };
-      this.creatures.set(creature.id, creature);
-      if (tmpl.is_boss) {
-        // What lives behind the black door has reformed — and the door knows.
-        for (const [rid, exits] of world.exits) {
-          for (const e of exits) {
-            if (e.to_room === roomId && e.key_item) this.openDoors.delete(`${rid}:${e.dir}`);
-          }
-        }
-        if (!silent) this.roomFeedAll("Deep below, iron grinds shut. Something remembers its shape.");
-      } else if (!silent) {
-        this.roomFeed(roomId, `${cap(tmpl.name)} creeps out of the dark.`);
-        this.roomSound(roomId, "Something stirs {dir}.");
-        this.refreshRoomCtx(roomId);
-      }
-    }
-  }
 
-  // The King does not mind that you came — until you make him stand.
-  private bossPhase(creature: Creature, tmpl: MobTemplate, foe: Session): void {
-    const ratio = creature.hp / tmpl.max_hp;
-    const newPhase = ratio <= 1 / 3 ? 2 : ratio <= 2 / 3 ? 1 : 0;
-    if (newPhase <= (creature.phase ?? 0)) return;
-    creature.phase = newPhase;
-    if (newPhase === 1) {
-      this.roomFeed(creature.roomId, `${cap(tmpl.name)} rises from the throne. The dark rises with him.`);
-      this.send(foe, `${cap(tmpl.name)} rises from the throne. The dark rises with him.`);
-      this.roomSound(creature.roomId, "Stone scrapes {dir}; something vast has stood up.");
-      this.creatureNoise(creature.roomId);
-    } else {
-      this.roomFeedAll(`A voice rolls through the stone: ${cap(tmpl.name)} calls — and the dark answers.`);
-      const summoned: Creature = {
-        id: uuid(),
-        templateId: "rat",
-        roomId: creature.roomId,
-        hp: this.world!.mobTemplates.get("rat")?.max_hp ?? 8,
-        hunger: HUNGRY_AT,
-        grudges: [{ pk: foe.pubkey, at: Date.now() }],
-        nextWanderAt: Date.now() + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
-        target: foe.pubkey,
-        home: creature.roomId, // called out of the throne's dark; it stays near it
-      };
-      this.creatures.set(summoned.id, summoned);
-      this.roomFeed(creature.roomId, "Something scabby pours out of the dark beneath the throne.");
-      this.send(foe, "Something scabby pours out of the dark beneath the throne — and comes for you.");
-      this.refreshRoomCtx(creature.roomId);
-      this.creatureNoise(creature.roomId);
-    }
-  }
 
   // A swing gone wide. A provisional weapon leaves your hand — it is on the
   // stones now, mid-fight, anyone's to take. A sealed weapon is held to your
@@ -2978,7 +2651,7 @@ export class ZoneDO implements DurableObject {
     if (tmpl.is_boss) {
       this.roomFeedAll(`A cry rolls through the stone: ${tmpl.name} has fallen to ${killer.name}.`);
     }
-    this.scheduleArrivals(Date.now());
+    ai.scheduleArrivals(this, Date.now());
 
     // Drops are provisional: the dungeon signs nothing here. The seal waits
     // at the gate — that walk is the game.
@@ -3036,14 +2709,14 @@ export class ZoneDO implements DurableObject {
   // AMBUSH_MULT, before the round begins, before you can set your feet. No miss,
   // no crit; the surprise IS the punch. Armor and stance still turn what they
   // can, and a wounded attacker still hits softer.
-  private async creatureFirstStrike(creature: Creature, tmpl: MobTemplate, victim: Session): Promise<void> {
+  public async creatureFirstStrike(creature: Creature, tmpl: MobTemplate, victim: Session): Promise<void> {
     const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
     let dmg = randInt(tmpl.dmg_min, tmpl.dmg_max) + (tmpl.is_boss ? (creature.phase ?? 0) * 3 : 0);
-    if (this.scavengerBold(creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);
+    if (ai.scavengerBold(this, creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);
     dmg = Math.round(dmg * AMBUSH_MULT);
     if (cHurt) dmg = Math.max(1, Math.round(dmg * WOUNDED_DMG_MULT));
     const worn = this.equippedItem(victim, "armor");
-    dmg = Math.max(1, dmg - this.equippedArmor(victim));
+    dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
     dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
     victim.hp -= dmg;
     if (victim.resting) {
@@ -3054,19 +2727,23 @@ export class ZoneDO implements DurableObject {
     if (victim.hp > 0) {
       this.send(victim, `${cap(tmpl.name)} is on you before you're set — a first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`, "dmgin big");
       this.sendStatus(victim);
+      this.openWound(victim, tmpl); // an ambush by something with claws cuts deep
       if (worn) await this.wear(victim, worn.carried, worn.tmpl, ARMOR_WEAR);
     } else {
       await this.onPlayerDeath(victim, tmpl);
     }
   }
 
-  private async onPlayerDeath(victim: Session, tmpl: MobTemplate): Promise<void> {
+  private async onPlayerDeath(victim: Session, tmpl: MobTemplate | null): Promise<void> {
+    const slayer = tmpl ? tmpl.name : "their own wounds"; // tmpl null = bled out, no hand on the blow
     for (const c of this.creatures.values()) {
       if (c.target === victim.pubkey) c.target = null;
     }
     victim.target = null;
     victim.resting = false;
     victim.staggered = false;
+    victim.stunned = false;
+    victim.bleedTicks = 0; victim.bleedDmg = 0; // the gate returns you whole — no wound rides back
     victim.buying = undefined; // death ends any open trade; the counter clears
     victim.deaths += 1;
     await recordDeath(this.env.DB, victim.pubkey);
@@ -3095,8 +2772,8 @@ export class ZoneDO implements DurableObject {
     this.roomFeed(
       fell,
       scattered.length > 0
-        ? `${victim.name} is slain by ${tmpl.name}. Their pack scatters across the stones${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
-        : `${victim.name} is slain by ${tmpl.name}.`,
+        ? `${victim.name} is slain by ${slayer}. Their pack scatters across the stones${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
+        : `${victim.name} is slain by ${slayer}.`,
       victim.pubkey,
     );
     this.roomSound(fell, "A scream, cut short, {dir}.");
@@ -3111,11 +2788,15 @@ export class ZoneDO implements DurableObject {
           ? "Everything you carried lies where you fell — the gate's seals cracked as they left your hands. Only the lockbox and vault keep."
           : "Everything you carried lies where you fell."
         : "You carried nothing worth scattering.";
-    const end = pick([
+    const end = tmpl ? pick([
       `${cap(tmpl.name)} kills you.\nDarkness. Then the gate, again.`,
       `${cap(tmpl.name)} puts you down.\nThe dark takes you — and gives you back at the gate.`,
       `${cap(tmpl.name)} is the last thing you see.\nThen cold air, and the gate, and breath again.`,
       `You fall to ${tmpl.name}.\nSome while later — the gate, and you standing in it, whole and emptied.`,
+    ]) : pick([
+      `The bleeding doesn't stop.\nDarkness. Then the gate, again.`,
+      `You fold, the wound still weeping.\nThe dark takes you — and gives you back at the gate.`,
+      `The stones go red beneath you, then grey.\nThen cold air, and the gate, and breath again.`,
     ]);
     this.send(victim, `${end} ${fate}`, "death big");
     this.roomFeed(victim.roomId, `${victim.name} staggers back through the gate, pale.`, victim.pubkey);
@@ -3245,17 +2926,11 @@ export class ZoneDO implements DurableObject {
   // Carried loot lives ON the holder. An elite spawns bearing its gear (or not)
   // by a roll — so the prize is visible before the fight, and killing an armed
   // one always spills it. Fodder and pups bear nothing.
-  private rollCarry(tmpl: MobTemplate): string[] | undefined {
+  public rollCarry(tmpl: MobTemplate): string[] | undefined {
     if (tmpl.gear_item && chance(tmpl.gear_drop)) return [tmpl.gear_item];
     return undefined;
   }
 
-  // How many creatures stand in a room right now (for crowd/convergence caps).
-  private creaturesIn(roomId: string): number {
-    let n = 0;
-    for (const c of this.creatures.values()) if (c.roomId === roomId) n++;
-    return n;
-  }
 
   // Locked & full (openable) until the moment it's looted, then sprung and
   // empty until its refill clock runs out.
@@ -3263,29 +2938,6 @@ export class ZoneDO implements DurableObject {
     return Date.now() >= (this.cacheSpent.get(cache.id) ?? 0);
   }
 
-  // A scavenger alone in a room drags off gear left on the floor (a body's
-  // spoils) and carries it — recover it by running the thing down and killing
-  // it. It won't snatch loot from a player's feet: only an empty room is fair
-  // game, so your own fresh kill is safe while you're standing over it.
-  private scavengerScoops(creature: Creature): void {
-    if (!SCAVENGERS.has(creature.templateId)) return;
-    if (this.playerPresent(creature.roomId)) return;
-    const floor = this.ground.get(creature.roomId);
-    if (!floor?.length) return;
-    // Real gear only — it has no use for food (it eats that) or the free rock.
-    const idx = floor.findIndex((id) => {
-      const t = this.world!.itemTemplates.get(id);
-      return !!t && t.slot !== "" && t.id !== "loose-rock";
-    });
-    if (idx === -1) return;
-    const [id] = floor.splice(idx, 1);
-    this.ground.set(creature.roomId, floor);
-    (creature.carries ??= []).push(id);
-    const g = this.world!.itemTemplates.get(id);
-    const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
-    if (g) this.roomFeed(creature.roomId, `${cap(tmpl.name)} snatches up ${g.name} and drags it off into the dark.`);
-    this.refreshRoomCtx(creature.roomId);
-  }
 
   // The room-line clause for what a creature visibly bears: "clad in warden's
   // plate", "wielding a graveblade", "dragging a bone shiv". No leading article.
@@ -3591,7 +3243,7 @@ export class ZoneDO implements DurableObject {
   // A noisy event in one room is heard, degraded and directional, in every
   // room with an open exit toward it. Closed iron blocks sound. "{dir}" in
   // the template becomes "to the east" / "from below" for each listener.
-  private roomSound(sourceRoomId: string, template: string, excludeRoomId?: string): void {
+  public roomSound(sourceRoomId: string, template: string, excludeRoomId?: string): void {
     const world = this.world;
     if (!world) return;
     const heard = new Set<string>();
@@ -3624,12 +3276,12 @@ export class ZoneDO implements DurableObject {
   // Creatures have ears too. Player-made noise makes everything idle in
   // earshot curious — it comes to look, soon. Creature-made sounds never
   // attract (no feedback loops); quiet players attract nothing.
-  private creatureNoise(sourceRoomId: string): void {
+  public creatureNoise(sourceRoomId: string): void {
     const world = this.world;
     if (!world) return;
     // A room already full of the curious doesn't pull in more — that's what
     // turned the central hub into a black hole that swallowed the whole zone.
-    if (this.creaturesIn(sourceRoomId) >= CROWD_CAP) return;
+    if (ai.creaturesIn(this, sourceRoomId) >= CROWD_CAP) return;
     const now = Date.now();
     for (const c of this.creatures.values()) {
       if (c.target || c.roomId === sourceRoomId) continue;
@@ -3666,7 +3318,7 @@ export class ZoneDO implements DurableObject {
     if (toRelay) this.relayFeed("mudroom-" + roomId, text);
   }
 
-  private roomFeedAll(text: string): void {
+  public roomFeedAll(text: string): void {
     const frame = JSON.stringify({ v: 0, kind: 24913, room: "*", text });
     for (const s of this.sessions.values()) {
       try { s.ws.send(frame); } catch {}
@@ -3679,9 +3331,26 @@ export class ZoneDO implements DurableObject {
   private relayFeed(roomTag: string, text: string): void {
     if (!this.world || !isGameKeyConfigured(this.env) || relayList(this.env).length === 0) return;
     try {
-      const ev = signFeedEvent(this.env, roomTag, this.world.zone, text);
+      const ev = signFeedEvent(this.env, roomTag, this.world.zone, this.anonForRelay(text));
       this.state.waitUntil(publishEvent(this.env, ev));
     } catch {}
+  }
+
+  // The relay is a public feed anyone can subscribe to. A name on it lets a
+  // stream-sniper follow one wanderer room to room — and the world doesn't
+  // snitch. So every connected player's name is scrubbed to "a wanderer"
+  // before it leaves the box. People standing IN the room still read real
+  // names on their local socket; only the outbound relay is anonymized.
+  private anonForRelay(text: string): string {
+    let out = text;
+    for (const s of this.sessions.values()) {
+      if (!s.name) continue;
+      const esc = s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      out = out.replace(new RegExp(`\\b${esc}\\b`, "g"), "a wanderer");
+    }
+    // A name at the head of the line ("Irongate arrives") leaves a lowercase
+    // "a wanderer" at the sentence start — lift the first letter back up.
+    return out.length ? out[0].toUpperCase() + out.slice(1) : out;
   }
 }
 

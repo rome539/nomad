@@ -315,16 +315,27 @@ export const PAGE = `<!doctype html>
   #tnote { flex: 0 0 auto; color: var(--blood); font-size: 12.5px; }
   #tnote:empty { display: none; }
   #twant {
-    flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+    flex: 0 0 auto; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px;
     color: var(--bone); font-size: 12.5px;
     border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px;
   }
-  #twant .wname { color: var(--gold); }
+  #twant .wname { color: var(--gold); font-weight: 600; }
+  /* one cart line: the thing named, plus a small \\u2715 to take one copy back */
+  #twant .wrow {
+    display: inline-flex; align-items: center; gap: 4px; color: var(--cream);
+    border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px 2px 8px;
+  }
+  #twant .wprog { color: var(--gold); font-variant-numeric: tabular-nums; }
+  #twant .wrow button {
+    margin: 0; border: none; border-radius: 3px; padding: 1px 5px;
+    color: var(--dim); font-size: 11px; line-height: 1;
+  }
   #twant button {
     background: transparent; border: 1px solid var(--border); border-radius: 4px;
     color: var(--dim); font: inherit; font-size: 11.5px; padding: 3px 9px; cursor: pointer;
     margin-left: auto; white-space: nowrap;
   }
+  #twant .wrow button { margin-left: 0; }
   #twant button:hover { color: var(--blood); border-color: var(--blood); }
   #trade .bcols {
     flex: 1 1 auto; min-height: 0; padding-bottom: 14px;
@@ -367,6 +378,13 @@ export const PAGE = `<!doctype html>
     #trade .bbox { max-height: 92vh; }
     #trade .bcols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
     #trade .bcol { overflow-y: visible; min-height: 0; }
+    /* Finger-friendly tap targets: the cart's \\u2715, the tabs, and the
+       buy/offer buttons all grow to a comfortable touch size on phones. */
+    #twant .wrow { padding: 3px 4px 3px 10px; font-size: 13px; }
+    #twant .wrow button { padding: 6px 10px; font-size: 15px; }
+    #twant > button { padding: 8px 12px; font-size: 13px; }
+    #trade .ttabs button { padding: 8px 14px; font-size: 13px; }
+    #trade .bitem button { padding: 8px 14px; font-size: 13px; }
   }
   /* The gatehouse forge: same shell as the hatch, single column. Reads your
      pack and shows what the bench can make — cost in gold when you can afford
@@ -1609,7 +1627,10 @@ function fillBenchCol(el, title, items, cap, place) {
   h.className = "bcolh";
   var t = document.createElement("span"); t.textContent = title; h.appendChild(t);
   var c = document.createElement("span"); c.className = "cnt";
-  c.textContent = cap ? (items.length + "/" + cap) : String(items.length);
+  // What you wear rides on the body, not in the pack \\u2014 don't count equipped
+  // rows against the cap (matches the server's slot accounting).
+  var used = items.filter(function (it) { return !it.equipped; }).length;
+  c.textContent = cap ? (used + "/" + cap) : String(used);
   h.appendChild(c);
   el.appendChild(h);
   if (!items.length) {
@@ -1735,28 +1756,51 @@ function renderGoods() {
 
 function renderTrade(state) {
   tradeState = state;
-  tradeWant = state.want || null;
+  // The cart: a list of wants (buy the same thing twice and it lists twice),
+  // paid against their summed cost. Truthy only while something's on the counter
+  // \\u2014 that's what unlocks the offer buttons.
+  tradeWant = (state.want && state.want.items && state.want.items.length) ? state.want : null;
   tnote.textContent = state.note || "";
   twant.textContent = "";
   if (tradeWant) {
     var lbl = document.createElement("span");
-    lbl.textContent = "On the counter: ";
+    lbl.className = "wname";
+    lbl.textContent = "On the counter:";
     twant.appendChild(lbl);
-    var wn = document.createElement("span");
-    wn.className = "wname";
-    wn.textContent = tradeWant.name;
-    twant.appendChild(wn);
+    // Collapse duplicate wants into "name (x2)" rows, but remember one real
+    // index per kind so 'remove' can pull a single copy back.
+    var order = [];
+    var seen = {};
+    tradeWant.items.forEach(function (w, i) {
+      if (seen[w.name] == null) { seen[w.name] = order.length; order.push({ name: w.name, n: 1, idx: i }); }
+      else { order[seen[w.name]].n += 1; }
+    });
+    order.forEach(function (w) {
+      var row = document.createElement("span");
+      row.className = "wrow";
+      var nm = document.createElement("span");
+      nm.textContent = w.name + (w.n > 1 ? " (x" + w.n + ")" : "");
+      row.appendChild(nm);
+      var rm = document.createElement("button");
+      rm.type = "button";
+      rm.textContent = "\\u2715"; // pull one copy back off the counter
+      rm.title = "take one back";
+      rm.addEventListener("click", function () { tradeSend("unbuy", String(w.idx)); });
+      row.appendChild(rm);
+      twant.appendChild(row);
+    });
     var prog = document.createElement("span");
-    prog.textContent = " \\u2014 " + tradeWant.paid + " of " + tradeWant.cost + " paid";
+    prog.className = "wprog";
+    prog.textContent = tradeWant.paid + " of " + tradeWant.cost + " paid";
     twant.appendChild(prog);
     var cancel = document.createElement("button");
     cancel.type = "button";
-    cancel.textContent = "wave it off";
+    cancel.textContent = "wave it all off";
     cancel.addEventListener("click", function () { tradeSend("cancel"); });
     twant.appendChild(cancel);
   } else {
     var hint = document.createElement("span");
-    hint.textContent = "Name your want from his stock; then offer goods until he's square.";
+    hint.textContent = "Name your wants from his stock (buy as many as you like, the same twice if you want); then offer goods until he's square.";
     twant.appendChild(hint);
   }
   fillTradeCol(tstock, "His stock", state.stock || [], "stock");

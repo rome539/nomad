@@ -22,11 +22,17 @@ once geared — the power curve has no counter-pressure.
   **Prerequisite for the heat idea** (under flat armor a +1–3 bump does nothing to
   the geared and only hurts the weak — the inverse of intent).
 
-### Phase 1 — The deep gets teeth *(threats that route around gear)*
-- **Player-side bleed** — cheapest bypass; mirror the existing mob-only bleed loop.
-- Then **poison** (stacking drain the longer you linger), deeper **seize**, **stun**,
-  and rare **true/%-HP** hits. Retune the three current deep-dwellers off
-  "soft-for-learning" — they're not the tutorial anymore.
+### Phase 1 — The deep gets teeth *(threats that route around gear)* — ✅ DONE
+- ✅ **Player-side bleed** — armor-ignoring wound; a fatal tick can drop you outright.
+- ✅ **Bandages** (linen-dressing) — auto-apply at half health + manual `bandage`/`bind`/`dress`.
+- ✅ **Stun** — thrown rock + barrow-wight blow make you lose a swing.
+- ✅ **Seize → drowning-pull** — the-drowned drags you under for a share of max HP
+  (unmitigated). Softened to 0.15 / 0.10 after playtest.
+- ✅ **Retune** the three deep-dwellers off "soft-for-learning" (migration 032).
+
+**Parked — poison.** Stacking drain the longer you linger (the deep-lung idea):
+each round in a poisoned state adds a tick; ticks decay when you leave/rest. Held
+deliberately for a later pass — everything else in Phase 1 shipped without it.
 
 ### Phase 2 — Expand the deep + populate the world *(content/data pass)*
 - **Deep is a kiddie pool** (a mouth, a root-vault, the throne + 3 soft mobs).
@@ -89,7 +95,7 @@ once geared — the power curve has no counter-pressure.
 - Which mob-drop items are the "questionable" ones flooding gear.
 - How big is the deep expansion — a few rooms, or a whole sub-zone?
 
-## Population systems (gated on actual players)
+## Phase 7 — Population systems (gated on actual players) — NOT STARTED
 
 Do NOT build these before there are people; they emerge from density:
 
@@ -128,6 +134,20 @@ Do NOT build these before there are people; they emerge from density:
 Directions rome likes and wants held for later. Design only; no code
 until he says go.
 
+- **Connection stability — UNCONFIRMED.** rome *may* be seeing intermittent
+  connect/disconnect in prod; not yet confirmed it's real. Audit (2026-07-07):
+  the DO holds players on **in-memory** WebSockets (not the Hibernation API) and
+  there's **no heartbeat** anywhere. Likely everyday trigger if real = idle-timeout
+  reaping (NAT/proxy/mobile kill a silent socket after ~60–120s; ambient lines are
+  too sparse to keep it warm). Two fixes: (1) **quick** — a ~25s client heartbeat
+  (`{t:"ping"}`, server ignores) to keep the socket warm; ~15 lines, near-zero risk,
+  naturally player-gated (client-driven, and the tick already halts at 0 sessions).
+  (2) **proper** — migrate to the **Hibernation API** + `setWebSocketAutoResponse`
+  so sockets survive DO eviction/deploys; bigger (must rebuild in-memory session
+  state on wake). **First step: confirm it's actually happening** (server/DO logs,
+  or reproduce) before building either.
+- **Idle kick** (spun off the above) — optionally boot truly-AFK players after N
+  minutes of no commands, so a forgotten open tab doesn't hold a live session.
 - **Communication layer** — the thing that turns a dungeon into a
   social world. `say`/`tell`/`shout` (shout carries between rooms —
   combat sound already proves the primitive), channels (ooc/gossip),
@@ -168,6 +188,14 @@ so these rank above the MUD-flavor three when we build:
   long starts giving themselves away with sound (shifting, breathing,
   gear creak), so gate-campers can't lurk silently forever. Rides on the
   existing sound-carries primitive — stillness leaks, movement doesn't.
+- **Anonymize the relay feed (anti-stream-snipe) — DONE 2026-07-07, in the
+  working tree.** The public `24913` feed named players and their live room —
+  a real-time tracker letting a sniper subscribe to `mudroom-*` and follow one
+  wanderer room to room (the world snitching, which the design forbids). Fixed:
+  a centralized `anonForRelay(text)` scrub in `relayFeed` replaces every
+  connected player's name with "a wanderer" *on the relay only* (people in the
+  room still see real names on their local socket). Loses nothing — identity
+  here is already opt-in via the self-published 31573 sheets.
 
 ## Seasoning (slot anywhere, low cost)
 

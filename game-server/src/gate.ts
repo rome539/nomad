@@ -6,6 +6,7 @@
 // there's no runtime import cycle.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
+import { provokeGrudges } from "./ai";
 import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid } from "./rng";
@@ -99,7 +100,8 @@ export async function handleForge(z: ZoneDO, session: Session, frame: any): Prom
     if (bar) return z.send(session, bar);
     session.away = true;
     session.forging = true;
-    session.resting = false;
+    // Rest survives a trip to the forge — stepping out pauses the healing (the
+    // tick gates on !away), and closing the modal resumes it.
     session.target = null;
     for (const c of z.creatures.values()) {
       if (c.target === session.pubkey) c.target = null;
@@ -183,11 +185,23 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
   return z.send(session, lines.join("\n"));
 }
 
-// Name the want: opens the trade. Shared by the typed command and the modal.
+// Total tender a cart is asking for, honestly rounded.
+export function cartCost(trade: { wants: { cost: number }[] }): number {
+  return roundTender(trade.wants.reduce((sum, w) => sum + w.cost, 0));
+}
+
+// Name a want: opens the cart, or adds to it. The same thing can go on twice —
+// 'buy linen dressing' twice buys two. Shared by the typed command and the modal.
 export function startBuy(z: ZoneDO, session: Session, stock: { itemId: string; cost: number }): string {
   const t = z.world!.itemTemplates.get(stock.itemId)!;
-  session.buying = { itemId: stock.itemId, cost: stock.cost, paid: 0, escrow: [] };
-  return `The keeper taps the counter: ${t.name} runs ${stock.cost} in trade. Offer what you carry — he'll say when he's square.`;
+  const cart = session.buying ?? { wants: [], paid: 0, escrow: [] };
+  cart.wants.push({ itemId: stock.itemId, cost: stock.cost });
+  session.buying = cart;
+  const total = cartCost(cart);
+  if (cart.wants.length === 1) {
+    return `The keeper taps the counter: ${t.name} runs ${stock.cost} in trade. Offer what you carry — he'll say when he's square.`;
+  }
+  return `The keeper sets ${t.name} beside the rest — ${cart.wants.length} things now, ${total} in trade all told. Offer until he's square.`;
 }
 
 export function cmdBuy(z: ZoneDO, session: Session, arg: string): void {
@@ -228,7 +242,8 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   } else {
     line = `The keeper turns ${t.name} over and grunts.`;
   }
-  if (trade.paid < trade.cost) return `${line} (${trade.paid} of ${trade.cost}.)`;
+  const cost = cartCost(trade);
+  if (trade.paid < cost) return `${line} (${trade.paid} of ${cost}.)`;
   // Square. Re-tally the counter honestly (something offered may have been
   // dropped or moved since), then the goods change hands for good.
   const boxes = new Map<string, CarriedItem[]>([["", session.items]]);
@@ -244,8 +259,8 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   }
   trade.escrow = onCounter.map((o) => o.entry);
   trade.paid = roundTender(onCounter.reduce((sum, o) => sum + (world.itemTemplates.get(o.item.itemId)?.barter ?? 0), 0));
-  if (trade.paid < trade.cost) {
-    return `${line} The keeper re-counts and shakes his head — the counter's short. (${trade.paid} of ${trade.cost}.)`;
+  if (trade.paid < cost) {
+    return `${line} The keeper re-counts and shakes his head — the counter's short. (${trade.paid} of ${cost}.)`;
   }
   let cracked = false;
   for (const o of onCounter) {
@@ -259,21 +274,27 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
       if (idx !== -1) session.items.splice(idx, 1);
     }
   }
-  const bought = world.itemTemplates.get(trade.itemId)!;
-  // A fresh journal off the keeper's shelf gets a blank book — its own id, so
-  // whatever this wanderer writes in it is theirs to keep, lose, or bleed.
-  const jid = bought.id === JOURNAL_ITEM ? "jrn-" + uuid() : undefined;
-  // The trade's paid: the goods are gone off the counter (slots freed), so
-  // there's almost always room. If the pack is somehow still full, it lands at
-  // your feet at the gate rather than vanishing.
-  const got = await z.grantItem(session, bought.id, { journalId: jid });
-  if (!got) z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), bought.id]);
-  const change = trade.paid > trade.cost ? " He gives no change." : "";
+  // The counter clears; every want in the cart changes hands at once. A fresh
+  // journal off the shelf gets its own blank book (id), so whatever this
+  // wanderer writes in it is theirs to keep, lose, or bleed. The counter's
+  // slots are free now, so the pack almost always has room; if it's somehow
+  // still full, the piece lands at your feet at the gate rather than vanishing.
+  const slid: string[] = [];
+  for (const w of trade.wants) {
+    const bought = world.itemTemplates.get(w.itemId)!;
+    const jid = bought.id === JOURNAL_ITEM ? "jrn-" + uuid() : undefined;
+    const got = await z.grantItem(session, bought.id, { journalId: jid });
+    if (!got) z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), bought.id]);
+    slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}]${got ? "" : " (pack full — at your feet)"}`);
+  }
+  const change = trade.paid > cost ? " He gives no change." : "";
   const seals = cracked ? " He cracks the gate's seals without ceremony." : "";
-  const where = got ? "across the counter" : "across the counter — your pack is full, so it sits at your feet";
+  const goods = slid.length === 1
+    ? `The keeper slides ${slid[0]} across the counter.`
+    : `The keeper slides it all across the counter:\n  ${slid.join("\n  ")}`;
   session.buying = undefined;
   z.roomFeed(session.roomId, `${session.name} trades at the keeper's hatch.`, session.pubkey);
-  return `${line}${seals}\nThe keeper slides ${bought.name} ${where}.${change}${z.itemStat(bought)} [${bought.rarity}] (unclaimed — the gate can seal it)`;
+  return `${line}${seals}\n${goods}${change} (unclaimed — the gate can seal what it can)`;
 }
 
 export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -289,7 +310,7 @@ export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promis
     z.sendCtx(session);
     return z.send(session, "You wave the trade off. The keeper sweeps your goods back across the counter without a word.");
   }
-  if (!arg) return z.send(session, `You've laid ${trade.paid} of ${trade.cost} on the counter so far.`);
+  if (!arg) return z.send(session, `You've laid ${trade.paid} of ${cartCost(trade)} on the counter so far.`);
   // Search your keepings in order — pack, then lockbox, then vault — for the
   // first match not already on the counter, preferring an unsealed copy so the
   // trade never cracks a seal it doesn't need. Same reach as the modal's tabs.
@@ -335,7 +356,7 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
     if (!world.fenceStock.length) return z.send(session, "The hatch is shuttered, and stays that way.");
     session.away = true;
     session.trading = true;
-    session.resting = false;
+    // Rest survives a trip to the hatch — healing pauses while stepped out, resumes on close.
     session.target = null;
     for (const c of z.creatures.values()) {
       if (c.target === session.pubkey) c.target = null;
@@ -363,6 +384,21 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
       );
       const carried = candidates.find((c) => c.serial === null) ?? candidates[0];
       note = carried ? await offerCore(z, session, carried, src) : "You've nothing more like that to offer.";
+    }
+  } else if (action === "unbuy") {
+    // Take one thing back off the cart (by its position). If that empties the
+    // cart, it's the same as waving the whole trade off.
+    const cart = session.buying;
+    const idx = Number(frame.row);
+    if (cart && Number.isInteger(idx) && idx >= 0 && idx < cart.wants.length) {
+      const [dropped] = cart.wants.splice(idx, 1);
+      const dt = world.itemTemplates.get(dropped.itemId);
+      if (!cart.wants.length) {
+        session.buying = undefined;
+        note = "You clear the counter. The keeper sweeps your goods back without a word.";
+      } else {
+        note = `You take ${dt?.name ?? "it"} back off the counter. (${cartCost(cart)} in trade now.)`;
+      }
     }
   } else if (action === "cancel") {
     if (session.buying) {
@@ -401,26 +437,35 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
   // when you offer is the only appraisal. Sealed goods trade too (he
   // cracks the seal when the deal closes), so the vault's wealth counts.
   const tally = (pool: CarriedItem[]) => {
+    // Anchor each kind at its FIRST appearance in the pool (Map insertion order),
+    // then count only the copies not yet on the counter. Escrowed copies still
+    // register the kind's position, so laying one on the counter never reshuffles
+    // the list — the row just decrements, and vanishes when its last copy is offered.
     const goods = new Map<string, { id: string; name: string; rarity: string; n: number }>();
     for (const c of pool) {
-      if (session.buying?.escrow.some((e) => e.row === c.rowId)) continue;
       const t = world.itemTemplates.get(c.itemId);
       if (!t || (t.barter ?? 0) <= 0) continue;
-      const g = goods.get(t.id);
-      if (g) g.n += 1;
-      else goods.set(t.id, { id: t.id, name: t.name, rarity: t.rarity, n: 1 });
+      let g = goods.get(t.id);
+      if (!g) { g = { id: t.id, name: t.name, rarity: t.rarity, n: 0 }; goods.set(t.id, g); }
+      if (!session.buying?.escrow.some((e) => e.row === c.rowId)) g.n += 1;
     }
-    return [...goods.values()];
+    return [...goods.values()].filter((g) => g.n > 0);
   };
   const goods = {
     pack: tally(session.items),
     lockbox: tally(await loadContainer(z.env.DB, session.pubkey, "lockbox")),
     vault: tally(await loadContainer(z.env.DB, session.pubkey, "vault")),
   };
+  // The cart: every want named, its running total, and what's paid so far.
+  // `want` stays the payload key (the client reads it) but now carries a list.
   const buying = session.buying;
   const want = buying ? {
-    name: world.itemTemplates.get(buying.itemId)?.name ?? buying.itemId,
-    cost: buying.cost,
+    items: buying.wants.map((w) => ({
+      name: world.itemTemplates.get(w.itemId)?.name ?? w.itemId,
+      rarity: world.itemTemplates.get(w.itemId)?.rarity ?? "common",
+      cost: w.cost,
+    })),
+    cost: cartCost(buying),
     paid: buying.paid,
   } : null;
   const payload = {
@@ -656,7 +701,8 @@ export async function benchBurn(z: ZoneDO, session: Session, row: string): Promi
 
 export function enterBench(z: ZoneDO, session: Session): void {
     session.away = true;
-    session.resting = false;
+    // Rest survives opening the bench/keeping (inventory) — healing pauses while
+    // stepped out, resumes on close.
     session.target = null;
     if (z.world!.entryRooms.has(session.roomId)) {
       // At a gate you step clean out of the world: nothing holds you, nothing sees you.
@@ -676,7 +722,7 @@ export async function leaveBench(z: ZoneDO, session: Session): Promise<void> {
     session.away = false;
     try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
     z.roomFeed(session.roomId, `${session.name} steps back out, kit sorted.`, session.pubkey);
-    await z.provokeGrudges(session, false); // gates hold nothing; no free hit for closing the bench
+    await provokeGrudges(z, session, false); // gates hold nothing; no free hit for closing the bench
     z.send(session, z.enterDescribe(session));
     z.sendCtx(session);
     z.refreshRoomCtx(session.roomId);

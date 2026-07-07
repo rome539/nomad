@@ -17,6 +17,9 @@ export interface Session {
   stance: Stance; // how you fight: reckless / steady / guarded (persisted to D1)
   items: CarriedItem[]; // pack cache; D1 is truth. serial != null = gate-sealed
   staggered: boolean; // fumbled an opening; the next hit that lands costs more
+  stunned?: boolean; // a heavy dead blow rang you; you skip your next swing, then it clears
+  bleedTicks?: number; // open wound: armor-ignoring ticks left before it clots (claws/teeth in the deep)
+  bleedDmg?: number; // damage the current wound leaks each combat round
   resting: boolean;
   away: boolean; // out of the world, untouchable (bench modal, or the keeper's hatch)
   trading?: boolean; // which away it is: true = the keeper's hatch (modal or typed)
@@ -25,7 +28,7 @@ export interface Session {
   stepText?: boolean; // stepped out via a TYPED barter/forge/inventory (text, no modal)
   ctxCombat: boolean; // the combat state the last chip set was drawn for (see syncCombatCtx)
   seizedBy?: string; // DROWNER creature id that has hold of you — can't flee till you break free
-  buying?: { itemId: string; cost: number; paid: number; escrow: { row: string; from: string }[] }; // open trade at the keeper's hatch; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square
+  buying?: { wants: { itemId: string; cost: number }[]; paid: number; escrow: { row: string; from: string }[] }; // open cart at the keeper's hatch: wants = every thing named (duplicates allowed), paid against their summed cost; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square, then it all changes hands at once
   born: number; // created_at, unix seconds — wanderer age on the sheet
   kills: number; // tallies cached from D1; recordKill/recordDeath keep the truth
   deaths: number;
@@ -62,6 +65,7 @@ export interface Creature {
   stole?: string; // cutpurse: the item id it grabbed and ran with (dropped on death)
   carries?: string[]; // gear it visibly bears (worn/wielded at spawn, or scavenged) — spills on death
   fed?: number; // grave-hyena: corpses eaten; enough and it turns bold
+  rouseAt?: number; // dire-hyena guarding a meal: ms it commits to attacking — a wind-up you can flee or hit first
   nextBirthAt?: number; // brood-rat: ms epoch of its next birth
   stunned?: boolean; // a blunt blow rang it — skips its next action, then clears
   bleedTicks?: number; // ticks of open wound left (armor-ignoring); refreshed by fast hits

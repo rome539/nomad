@@ -24,6 +24,10 @@ export const FUMBLE_CHANCE = 0.05;
 // decays; the gate's seal freezes it whole.
 export const WEAPON_WEAR = 0.25; // per strike landed (~400 swings to wear out fresh)
 export const ARMOR_WEAR = 0.3;   // per hit turned away (~330 blows)
+// Armor mitigates by PERCENTAGE, not flat subtraction: a hit takes armor/(armor+K)
+// off, so gear always helps but never reaches immunity (flat subtraction let a
+// stacked kit floor every hit to 1). Higher K = armor weaker; lower = stronger.
+export const ARMOR_K = 10;
 export const RUST_PER_TICK = 0.001; // per 2s tick while carried in the damp (~55h to rust away)
 
 // Wounds are felt, not just counted — on BOTH sides of the blade. Below a
@@ -170,6 +174,13 @@ export const CROWD_CAP = 5; // a room this full stops drawing more (no wandering
 // too but pays in BLOCK, not soak; the weapon is worn for WEIGHT only.
 export const ARMOR_SLOTS = new Set(["armor", "helm", "feet", "cloak"]);
 export const BLEED_TICKS = 3; // how many ticks a fresh cut weeps before it clots
+// A wound that would drop you to 0 SOMETIMES kills outright; otherwise you cling
+// on at 1 hp, one more beat to bind it or run. Bleeding out is a coin-flip, not
+// a sentence — but with no dressing left, the flips keep coming.
+export const BLEED_KILL_ODDS = 0.5;
+// A dressing auto-binds the moment a bleeding wanderer drops to half — the reflex
+// that saves you, if you're carrying one. (Mirrors the auto-eat line.)
+export const BANDAGE_FRACTION = 0.5;
 
 // Traces: the world's memory, decaying at each kind's own pace.
 export const TRACE_LIFE_MS: Record<string, number> = {
@@ -267,6 +278,9 @@ export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena"]);
 // (or where it's already gorged bold) and it turns on you unprovoked. It also
 // hits harder and holds a grudge longer — a far worse thing to disturb.
 export const AGGRO_SCAVENGERS = new Set(["dire-hyena"]);
+// It doesn't spring the instant you're in reach — it lifts its head, hackles up,
+// and takes a beat to commit. That wind-up is your window to back out or hit first.
+export const DIRE_ROUSE_MS = 5000;
 export const CORPSE_TRACES = new Set(["blood", "remains"]);
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
 export const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
@@ -280,6 +294,11 @@ export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god"]);
 export const SEIZE_ODDS = 0.2;        // soft: a blow only sometimes takes hold
 export const SEIZE_BREAK_ODDS = 0.5;  // soft: about half the time you wrench loose each beat
 export const SEIZE_DMG_MULT = 1.25;   // it hits a little harder while it has you
+// While it HAS you under, a drowned thing can drag you deeper: a lungful of black
+// water that no armor turns — a bite of your very life (% of max hp), and it can
+// drown you outright. The counter is escape: break the grip before it lands.
+export const SEIZE_DROWN_ODDS = 0.10;     // rare per beat while seized
+export const SEIZE_DROWN_FRACTION = 0.15; // unmitigated, as a share of max hp
 // LURKERS wait UNSEEN — not in the room description at all — until they drop on
 // you. Blind, they wake to noise and to the careless walking in (they ride the
 // same wake odds as LISTENERS, WAKE_ENTER/WAKE_NOISE); stay quiet and still and

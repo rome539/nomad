@@ -34,6 +34,8 @@ export interface MobTemplate {
   armor: number; // hide/plate: flat damage turned per hit taken
   gear_item: string | null; // what it visibly wields/wears — droppable on death
   gear_drop: number; // odds the gear survives the fall (it arrives worn)
+  bleed: number; // claws/teeth: opens an armor-ignoring wound on the player it hits (0 = clean blow)
+  stun: number; // heavy dead things: chance per landing hit to make the player lose their next swing
 }
 
 export interface MobSpawn {
@@ -60,6 +62,7 @@ export interface ItemTemplate {
   block: number; // shields: chance to negate an incoming hit whole (works even weighed down)
   bleed: number; // fast weapons: armor-ignoring damage per tick while the wound is fresh
   barter: number; // what the gate keeper credits it at in trade; 0 = he waves it away
+  staunch: number; // a dressing: HP it binds back when applied (and it clots the wound); 0 = not a dressing
 }
 
 export interface GroundSpawn {
