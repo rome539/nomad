@@ -10,7 +10,7 @@ import { cap } from "./zone-util";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
-  RUNNERS, BROODERS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
+  RUNNERS, BROODERS, SENTINELS, FEARS_FIRE, FIRE_ITEMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS,
 } from "./zone-data";
@@ -301,8 +301,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
           break;
         }
       }
-      // Came to investigate and found a fight: it joins. Noise has a price.
-      if (investigating && !creature.target) {
+      // Came to investigate and found a fight: it joins. Noise has a price —
+      // except for the bone-sleepers. A skeleton drawn by the din still walks
+      // in, but it does NOT throw itself into the fight; it arrives dormant and
+      // strikes only if you MOVE while it's there (wakeListeners) or it already
+      // holds a grudge (handled just above). Creepier, and truer to what it is.
+      if (investigating && !creature.target && !LISTENERS.has(tmpl.id)) {
         for (const s of z.sessions.values()) {
           if (s.roomId === creature.roomId && z.inCombat(s)) {
             creature.target = s.pubkey;
@@ -345,6 +349,28 @@ export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
 export function playerPresent(z: ZoneDO, roomId: string): boolean {
     for (const s of z.sessions.values()) if (s.roomId === roomId && !z.outOfWorld(s)) return true;
     return false;
+  }
+
+  // Does this wanderer bear an open flame in hand? The single wire-up point for
+  // FEARS_FIRE. Pre-written for the Light & search phase: no lit-fire item exists
+  // yet, so FIRE_ITEMS is empty and this is always false — the moment a torch or
+  // burning-brand lands, add its id to FIRE_ITEMS (zone-data) and every
+  // fire-fearing creature starts bolting from anyone carrying it. Held or worn
+  // both count; a flame is a flame whether it's in your fist or hung at your hip.
+export function carriesFire(session: Session): boolean {
+    return session.items.some((c) => FIRE_ITEMS.has(c.itemId));
+  }
+
+  // A fire-fearing thing (the albino rat, for now) will not stand against an open
+  // flame: cornered by a fire-bearer it recoils, and the combat tick turns that
+  // into a flat flee whatever its health. Dormant until torches exist (carriesFire
+  // is false today). Returns true when it's recoiling, having said so.
+export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): boolean {
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    if (!FEARS_FIRE.has(tmpl.id) || !carriesFire(victim)) return false;
+    z.send(victim, `${cap(tmpl.name)} shrinks from your flame and breaks away.`);
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} shrinks from the flame.`, victim.pubkey);
+    return true;
   }
 
   // A brood-mother births a scabby rat into her room on a slow clock, up to a
@@ -501,7 +527,7 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
       // the walking). The sessile — mothers, the drowned — and the boss simply
       // are where they live.
       let roomId = home;
-      if (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id)) {
+      if (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id)) {
         let bestD = Number.POSITIVE_INFINITY;
         for (const m of MOUTHS) {
           if (!world.rooms.has(m)) continue;

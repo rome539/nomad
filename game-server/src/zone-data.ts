@@ -143,7 +143,7 @@ export const WANDER_MIN_MS = 45_000;
 export const WANDER_MAX_MS = 150_000;
 export const FLEE_BELOW = 0.25;
 export const FLEE_CHANCE = 0.5; // per tick once below the threshold
-export const MIGRATION_FACTOR = 20; // respawn_secs * this = how long an EMPTY/solo zone takes to refill
+export const MIGRATION_FACTOR = 10; // respawn_secs * this = how long an EMPTY/solo zone takes to refill (was 20; halved so leaner rooms don't feel dead)
 // A busy dungeon refills faster: more wanderers, more blood and disturbance,
 // more drawn up from the dark. The effective factor is divided by the number
 // of players in the zone (solo = unchanged), down to a floor so even a crowd
@@ -384,8 +384,33 @@ export const CREATURE_HIT = {
 } as const;
 // Which register a creature swings in. Order matters — first match wins.
 export const BITERS = new Set([
-  "rat", "fleet-rat", "brood-rat", "grave-hyena", "dire-hyena", "pale-crawler", "pale-stalker",
+  "rat", "fleet-rat", "brood-rat", "albino-rat", "grave-hyena", "dire-hyena", "pale-crawler", "pale-stalker",
+  "three-hound", // three sets of teeth at the throat of the deep
 ]);
+
+// SENTINELS hold their post. A guardian chained to one room: it never wanders
+// (live tick or offline sim), and noise doesn't lure it off station. The
+// three-headed hound holds the throat of the deep.
+export const SENTINELS = new Set(["three-hound"]);
+// A roused sentinel stays up this long. Asleep you slip past (and rouse it);
+// awake it bars the way down until it's killed or drops back to sleep. Every
+// fresh disturbance (a passer, a blow) resets the clock, so a busy deep keeps
+// its hound awake.
+export const HOUND_WAKE_MS = 900_000; // 15 minutes
+
+// FEARS_FIRE — a creature that will not face an open flame: cornered by a
+// fire-bearer it breaks and runs rather than fight. Pre-wired for the Light &
+// search phase (torches / the `light` property). It hangs on carriesFire()
+// (zone.ts), which reads whether a player holds any FIRE_ITEMS. No lit-fire item
+// exists YET, so FIRE_ITEMS is empty and this whole behaviour sleeps until the
+// light system lands — at which point one id in FIRE_ITEMS wakes it. The albino
+// rat is the first of the timid: strong enough to maul you in the dark, but it
+// remembers being a rat the instant it sees flame.
+export const FEARS_FIRE = new Set(["albino-rat"]);
+// Items that count as an open flame in hand. EMPTY until torches exist — add the
+// lit-torch / burning-brand id here (or switch carriesFire to a `light` item
+// property) when the Light & search phase ships, and FEARS_FIRE comes alive.
+export const FIRE_ITEMS = new Set<string>([]);
 
 // ---- the dungeon breathing: ambient atmosphere ----
 // A quiet, rate-limited flavour line surfaces to an idle wanderer now and then,

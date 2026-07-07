@@ -35,21 +35,22 @@ each round in a poisoned state adds a tick; ticks decay when you leave/rest. Hel
 deliberately for a later pass — everything else in Phase 1 shipped without it.
 
 ### Phase 2 — Expand the deep + populate the world *(content/data pass)*
-- **Deep is a kiddie pool** (a mouth, a root-vault, the throne + 3 soft mobs).
-  Make it a real layered descent (mouth → mid → drowned depths → throne). **+18
-  rooms** designed and approved 2026-07-07 (3 tiers: Drowned Reach ×4, Sunless
-  Deep ×9 as a branching loop off the silted-stair, King's Demesne ×5 wrapping
-  the throne; no hideaways counted). Dwellers worsen with depth; scarcest/best
-  loot at the bottom, far from safe banking (extraction tension by geography).
-  *Next concrete step: write the rooms-only migration in 021's voice/format.*
-- **Populate to themes** — named atmosphere rooms are ghost towns because their
-  seed count *is* their population cap: Hound Kennels = 2 (1 hyena + 1 rat),
-  Warden's Post = 1 warden, Broken Chapel = **0** (spawns nothing, ever). Seed each
-  to its theme (pack in the kennels, 2–3 wardens on watch, *an inhabitant for the
-  chapel — TBD by rome*). Modest +1–2 per room elsewhere.
-- **Faster respawns** — lower `MIGRATION_FACTOR` (20 → ~10). Solo refill is
-  respawn_secs×20 today (a rat ~10 min, a deep-dweller ~30), so cleared rooms stay
-  dead too long.
+The content/populate half SHIPPED 2026-07-07 (migrations 034–038). The one
+remaining piece is the scarcity/item-supply system below.
+- ✅ **Deep is a kiddie pool → +18 rooms** (migration 036). A real layered
+  descent: Drowned Reach ×4 (loop off the Black Canal), Sunless Deep ×9 (two
+  nested loops off the Silted Stair, bottoming at the Sunless Well), King's
+  Demesne ×5 (wrapping the throne). Geography verified reciprocal, no orphans.
+- ✅ **Populate to themes** (034 garrison/kennels/chapel + 037 deep population).
+  Dwellers by element — the-drowned (water), pale-crawler (dark), twice-dead
+  (bone) — density-graded, worsening toward the bottom; rare bloodline cousins
+  spike the threat deeper. Three coffers reward the descent (box-tide/relic/abyss),
+  the Sunless Well's abyssal coffer the best non-boss prize. Some rooms left empty
+  for dread. Plus the **three-headed hound** (035), a SENTINEL holding the descent
+  (sleeps/wakes/bars the way), and the **albino rat** (038) — a very rare, strong
+  bloodline cousin of the rat (floor 1 + deep) that's [[keep-zone-ts-lean|fire-fearing]]
+  (pre-wired, dormant).
+- ✅ **Faster respawns** — `MIGRATION_FACTOR` 20 → 10.
 - **Scarcity via a dungeon-aware item supply** (rome, 2026-07-07) — the primary
   scarcity mechanism. Model item refills on the mob-migration system: each capped
   item has a target count in the world; the dungeon refills *toward* the cap only
@@ -75,6 +76,10 @@ deliberately for a later pass — everything else in Phase 1 shipped without it.
   key, kept obtainable so no one's soft-locked) — but it litters copies. Fix:
   regrow only when none exists in the world. (Check first whether the door
   *consumes* it.)
+- **Balance watch — daggers may be too OP** (rome, 2026-07-07). Suspected
+  overpowered; revisit weapon tuning. Check dmg range / speed vs. other weapons
+  and whether the near-death fumble-only rule or armor curve favors fast light
+  weapons too much. Observation only — not yet confirmed with numbers.
 
 ### Phase 3 — The simulationist direction *(bigger, later)*
 - **Lethality / hit-location** (rome's "damage dire as real life — a hit to the
@@ -164,6 +169,12 @@ until he says go.
   exits, the `light` property gating what you can see/map, torch
   burnout. Fits the simulation direction; pairs with the maps/journal
   knowledge-as-loot line.
+  - **Fire-fear is PRE-WIRED (2026-07-07).** The `FEARS_FIRE` behaviour set
+    + `carriesFire()` (zone.ts) already ship, dormant: a fire-fearing creature
+    cornered by a flame-bearer breaks and runs. The albino rat is the first
+    member. To WAKE it, this phase only has to add the lit-fire item and put its
+    id in `FIRE_ITEMS` (zone-data) — or swap `carriesFire` to read a `light`
+    item property. No other wiring needed; the flee logic and flavour lines exist.
 
 Extraction-specific (rome, 2026-07-06) — the genre NOMAD actually is,
 so these rank above the MUD-flavor three when we build:

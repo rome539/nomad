@@ -67,7 +67,7 @@ import {
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, REGROW_MS, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, 
   ARMOR_SLOTS, BLEED_TICKS, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, CARVE_MAX_LEN, ROT_MS,
-  PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, 
+  PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, SENTINELS, HOUND_WAKE_MS,
   LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
   SCAVENGERS, AGGRO_SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, CRIT_FLOURISH, CREATURE_HIT, BITERS, 
@@ -271,7 +271,7 @@ export class ZoneDO implements DurableObject {
         // brooders keep their nest, so the offline sim can't drift them out of
         // their dens and pile three grapplers into one room while no one watches.
         if (c.nextWanderAt <= t && !tmpl.is_boss && c.hp >= tmpl.max_hp * FLEE_BELOW
-            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId)) {
+            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId)) {
           // Silent catch-up runs with no one connected, so no ambush fires here.
           void ai.creatureMoves(this, c, t, "wander", true);
         }
@@ -674,6 +674,27 @@ export class ZoneDO implements DurableObject {
       this.creatureNoise(session.roomId);
     }
 
+    // A SENTINEL guards the way deeper. Asleep, you can step over it — and that
+    // rouses it (you've opened the deep, and now it's up for whoever comes next).
+    // Awake, it bars the descent outright: the only way down is to put it down.
+    // Heading OUT toward the shallows is always free — it guards the descent, not
+    // the exit.
+    if (DEEP_ROOMS.has(exit.to_room)) {
+      const guard = [...this.creatures.values()].find(
+        (c) => c.roomId === session.roomId && SENTINELS.has(c.templateId),
+      );
+      if (guard) {
+        const gt = world.mobTemplates.get(guard.templateId)!;
+        if (this.sentinelAwake(guard)) {
+          return this.send(session, `${cap(gt.name)} is awake and bars the stair, all three heads low and watching. There is no slipping past it now — put it down, or turn back.`, "dmgin");
+        }
+        guard.wakeUntil = Date.now() + HOUND_WAKE_MS; // step over it and it stirs
+        this.send(session, `You pick your way over ${gt.name}, breath held. Behind you, three heads lift as one — the deep is open, and it is awake.`, "seize");
+        this.roomFeed(session.roomId, `${cap(gt.name)} wakes with a low, tripled growl.`, session.pubkey);
+        this.roomSound(session.roomId, "A low growl rolls up from {dir} — something big, and awake.");
+      }
+    }
+
     const wasFighting = this.inCombat(session);
     // Heavy mail turns blows, but it drags at the escape: leaving a fight in
     // weighted armor risks one parting strike on the way out. The quick flee
@@ -731,6 +752,25 @@ export class ZoneDO implements DurableObject {
     this.roomFeed(session.roomId, `${session.name} says, "${msg}"`, session.pubkey);
   }
 
+  // Pack animals: strike one hyena and the rest of the pack in the room turns on
+  // you as one. (The dire already hunts on sight, so this mostly gives the
+  // grave-hyenas their teeth — the lesson is never fight just one.)
+  private rousePack(session: Session, struck: Creature): void {
+    if (!SCAVENGERS.has(struck.templateId)) return;
+    let roused = 0;
+    for (const other of this.creatures.values()) {
+      if (other.id === struck.id || other.roomId !== session.roomId) continue;
+      if (!SCAVENGERS.has(other.templateId) || other.target) continue;
+      other.target = session.pubkey;
+      ai.addGrudge(this, other, session.pubkey);
+      roused++;
+    }
+    if (roused > 0) {
+      this.send(session, "The pack turns on you as one — hackles up, all teeth.", "dmgin");
+      this.roomFeed(session.roomId, `${session.name} has the whole pack now.`, session.pubkey);
+    }
+  }
+
   private async cmdAttack(session: Session, arg: string): Promise<void> {
     if (!arg) return this.send(session, "Attack what?");
     const creature = this.findCreatureIn(session.roomId, arg);
@@ -741,6 +781,8 @@ export class ZoneDO implements DurableObject {
     const unaware = !creature.target && !ai.remembers(this, creature, session.pubkey, Date.now());
     session.target = creature.id;
     creature.hidden = false; // a lurker you've struck is unseen no longer — reveal it (room, chip, study)
+    if (SENTINELS.has(creature.templateId)) creature.wakeUntil = Date.now() + HOUND_WAKE_MS; // a blow rouses a sleeping guardian
+    this.rousePack(session, creature); // hyenas: strike one and the pack turns on you
     if (unaware) {
       const weapon = this.equippedItem(session, "weapon");
       let dmg = Math.round(
@@ -909,6 +951,8 @@ export class ZoneDO implements DurableObject {
 
     const unaware = !creature.target && !ai.remembers(this, creature, session.pubkey, Date.now());
     creature.hidden = false; // hurling at a lurker outs it too — reveal it (room, chip, study)
+    if (SENTINELS.has(creature.templateId)) creature.wakeUntil = Date.now() + HOUND_WAKE_MS; // a thrown stone rouses a sleeping guardian too
+    this.rousePack(session, creature); // hyenas: a thrown blow turns the pack too
     // Every attack is a gamble — thrown ones too. A wild throw still leaves
     // your hand (and still wakes what it nearly hit).
     if (chance(FUMBLE_CHANCE + (session.hp < session.maxHp * WOUNDED_FRACTION ? WOUNDED_FUMBLE_BONUS : 0))) {
@@ -1761,6 +1805,7 @@ export class ZoneDO implements DurableObject {
     if (THIEVES.has(id)) return "A cutpurse. It fights to rob, not to win — one grab and it bolts.";
     if (RUNNERS.has(id)) return "It never stands and fights; it bolts the instant it can. Catch it on the break.";
     if (BROODERS.has(id)) return "A brood-mother. Nest-bound, and while it lives the room keeps filling with young.";
+    if (SENTINELS.has(id)) return "A sentinel. It guards one door and never leaves it — deaf to lures, it sleeps until the deep is opened, then wakes and bars the way. Getting past means going through.";
     if (DROWNERS.has(id)) return "A drowned thing. It holds its patch of water and seizes what wades in.";
     if (LURKERS.has(id)) return "It waits unseen and drops on the careless. Noise and movement draw it.";
     if (REVENANTS.has(id)) return "It does not stay down — put it to nothing and it rises again, weaker, to come once more.";
@@ -2095,6 +2140,25 @@ export class ZoneDO implements DurableObject {
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} springs at ${prey.name}.`, prey.pubkey);
         }
       }
+      // A SENTINEL sleeps at its post until roused (someone slips past, or a blow
+      // lands). Asleep it does nothing — you can tiptoe by. Awake it takes anyone
+      // in the room, like a drowned thing, and holds the door until it's put down
+      // or its wake-clock runs out and it drops back to sleep.
+      if (SENTINELS.has(creature.templateId)) {
+        if (!this.sentinelAwake(creature)) {
+          creature.target = null; // dead to the world while it sleeps
+          continue;
+        }
+        if (!creature.target) {
+          const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
+          if (prey) {
+            creature.target = prey.pubkey;
+            if (!prey.target) prey.target = creature.id;
+            this.send(prey, `${cap(tmpl.name)} fixes all three heads on you.`, "dmgin");
+            this.roomFeed(creature.roomId, `${cap(tmpl.name)} turns on ${prey.name}.`, prey.pubkey);
+          }
+        }
+      }
       // A drowned thing takes anyone who wades into its water — no grudge needed.
       if (!creature.target && DROWNERS.has(creature.templateId)) {
         const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
@@ -2122,7 +2186,11 @@ export class ZoneDO implements DurableObject {
         // health. You already swung this tick (the living go first), so your
         // blow lands as it breaks for the door; then it's gone and you give
         // chase. Brooders are the opposite: they never leave the nest.
-        const wantsFlee = RUNNERS.has(tmpl.id)
+        // A fire-fearing thing (the albino rat, for now) breaks and runs from a
+        // flame-bearer whatever its health — see ai.dreadsFire. Dormant until
+        // torches exist (carriesFire is false today).
+        const wantsFlee = ai.dreadsFire(this, creature, victim)
+          || RUNNERS.has(tmpl.id)
           || (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
         if (wantsFlee && !tmpl.is_boss && !ai.scavengerBold(this, creature)) {
           await ai.creatureMoves(this, creature, now, "flee", false);
@@ -2339,7 +2407,7 @@ export class ZoneDO implements DurableObject {
           // Never settles while there's someone to run from — it keeps moving,
           // room to room, and you only land a blow the tick you have it cornered.
           await ai.creatureMoves(this, creature, now, "wander", false);
-        } else if (creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId)) {
+        } else if (creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId)) {
           await ai.creatureMoves(this, creature, now, "wander", false);
         }
       }
@@ -2878,6 +2946,13 @@ export class ZoneDO implements DurableObject {
       // A lurker lying in wait is unseen — it isn't in the room until it strikes.
       if (LURKERS.has(creature.templateId) && creature.hidden && !creature.target) continue;
       const t = world.mobTemplates.get(creature.templateId)!;
+      // A sentinel reads by its state: asleep and steppable, or awake and barring the stair.
+      if (SENTINELS.has(creature.templateId)) {
+        lines.push(this.sentinelAwake(creature)
+          ? `${cap(t.name)} is awake, all three heads up and barring the way down.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`
+          : `${cap(t.name)} sprawls across the stair, all three heads asleep. For now.`);
+        continue;
+      }
       lines.push(`${cap(t.name)} is here${this.bearsClause(creature)}.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
     }
     for (const s of this.sessions.values()) {
@@ -2886,6 +2961,11 @@ export class ZoneDO implements DurableObject {
       }
     }
     return lines.join("\n");
+  }
+
+  // A sentinel is awake (and barring the way down) while its wake-clock runs.
+  public sentinelAwake(creature: Creature): boolean {
+    return !!creature.wakeUntil && Date.now() < creature.wakeUntil;
   }
 
   private condition(creature: Creature): string {
@@ -3288,6 +3368,7 @@ export class ZoneDO implements DurableObject {
       const tmpl = world.mobTemplates.get(c.templateId)!;
       if (tmpl.is_boss) continue; // the King waits; the noise comes to him
       if (DROWNERS.has(c.templateId)) continue; // it holds its water; noise doesn't move it
+      if (SENTINELS.has(c.templateId)) continue; // a guardian holds its post; noise doesn't draw it off the door
       if (SCAVENGERS.has(c.templateId)) continue; // hyenas track the scent of the dead, not the din of the living
       // Not every ear pricks up. A good majority come to look; the rest keep
       // to their own business — so a fight draws a crowd, not the whole zone.
