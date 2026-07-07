@@ -515,7 +515,8 @@ export async function cmdSalvage(z: ZoneDO, session: Session, arg: string): Prom
 export async function repairCore(z: ZoneDO, session: Session, carried: CarriedItem): Promise<string> {
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
   if (tmpl.slot === "") return `There's nothing to mend in ${tmpl.name}.`;
-  if (carried.serial !== null) return "The seal holds it as it is — frozen, wear and all.";
+  // Sealed gear wears now (slowly) — so it can be mended now too. The seal is
+  // title, not condition: hammering the wear out doesn't touch the serial.
   if (carried.condition >= 100) return `${cap(tmpl.name)} is sound already.`;
   const cost = REPAIR_COST[tmpl.rarity] ?? 1;
   const have = z.countLoose(session, SCRAP_ID);
@@ -583,7 +584,9 @@ export async function sealOne(z: ZoneDO, session: Session, carried: CarriedItem)
     const tmpl = world.itemTemplates.get(carried.itemId)!;
     const serial = await mintClaim(z.env.DB, carried.rowId, carried.itemId, tmpl.rarity, session.pubkey);
     carried.serial = serial;
-    // Freeze its condition at the moment of sealing — from here it never wears.
+    // Snapshot its condition at the moment of sealing. Sealing no longer freezes
+    // wear whole — sealed gear still ages, just far slower (SEALED_WEAR_MULT) —
+    // and can be mended at the bench like anything else.
     if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
     if (isGameKeyConfigured(z.env)) {
       const ev = signLootEvent(z.env, {
@@ -897,9 +900,11 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
       for (const c of held) {
         if (z.stackable(c.itemId, c.serial, c.journalId)) continue; // stacked above
         const t = world.itemTemplates.get(c.itemId);
-        const tag = c.serial !== null
-          ? ` — sealed #${c.serial}`
-          : (t && t.slot !== "" ? ` — ${z.conditionWord(c.condition) || "sound"}` : "");
+        // Sealed gear wears now (slower) — show the seal AND the wear together.
+        const bits: string[] = [];
+        if (c.serial !== null) bits.push(`sealed #${c.serial}`);
+        if (t && t.slot !== "") bits.push(z.conditionWord(c.condition) || "sound");
+        const tag = bits.length ? ` — ${bits.join(", ")}` : "";
         lines.push(`  ${t ? t.name : c.itemId}${z.itemStat(t)}${tag}`);
       }
       return z.send(session, lines.join("\n"));

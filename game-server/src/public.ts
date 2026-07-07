@@ -1559,7 +1559,8 @@ function benchItemNode(it, place) {
   if (it.stat) { var st = document.createElement("span"); st.className = "stat"; st.textContent = " (" + it.stat + ")"; nm.appendChild(st); }
   if (it.equipped) { var eq = document.createElement("span"); eq.className = "worn"; eq.textContent = " \\u2014 " + (it.slot === "weapon" ? "wielded" : "worn"); nm.appendChild(eq); }
   if (it.sealed) { var sp = document.createElement("span"); sp.className = "seal"; sp.textContent = " \\u2014 sealed #" + it.serial; nm.appendChild(sp); }
-  else if (it.condWord) { var cw = document.createElement("span"); cw.className = "cond"; cw.textContent = " \\u2014 " + it.condWord; nm.appendChild(cw); }
+  // Gear shows its wear whether sealed or not (sealed just wears slower) — comma after the seal, em-dash on its own.
+  if (it.condWord) { var cw = document.createElement("span"); cw.className = "cond"; cw.textContent = (it.sealed ? ", " : " \\u2014 ") + it.condWord; nm.appendChild(cw); }
   wrap.appendChild(nm);
   var acts = document.createElement("div");
   acts.className = "acts";
@@ -1601,10 +1602,11 @@ function benchItemNode(it, place) {
     // Sealed wealth and raw fungibles both bank in the vault; only unsealed gear
     // needs the seal first (trophies and the like carry no title to seal).
     if (benchAtGate) { if (it.sealed || it.stack) btn("\\u2192 vault", "vault"); else btn("seal", "seal"); }
-    // So are the vice and the hammer: mend the wear, or break gear to scrap.
-    if (benchAtGate && it.slot && !it.sealed) {
+    // So are the vice and the hammer: mend the wear (sealed gear wears now too,
+    // so it can be mended too), or break UNSEALED gear to scrap.
+    if (benchAtGate && it.slot) {
       if (it.cond !== null && it.cond < 100) btn("repair", "repair");
-      armBtn("scrap", "salvage", "scrap");
+      if (!it.sealed) armBtn("scrap", "salvage", "scrap");
     }
   } else {
     btn("\\u2192 pack", "take");

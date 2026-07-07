@@ -10,7 +10,7 @@ import { cap } from "./zone-util";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
-  RUNNERS, BROODERS, SENTINELS, FEARS_FIRE, FIRE_ITEMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
+  RUNNERS, BROODERS, SENTINELS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS,
 } from "./zone-data";
@@ -564,6 +564,33 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         z.refreshRoomCtx(roomId);
       }
     }
+  }
+
+  // The deep coughs one of its own up through the cracks. Called on a slow clock
+  // while the deep door is SEALED (the tick gates it): the world mints the
+  // corpse-key by surfacing a mobile deep-dweller into the shallows, where a
+  // player can kill it and cut its still-cold heart. One at a time — if something's
+  // already up, we wait. If no mobile deep-kin is alive right now, we simply try
+  // again next interval (arrivals keep the deep stocked, so it's never a soft-lock).
+export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
+    const world = z.world!;
+    for (const c of z.creatures.values()) if (c.surfaced) return false; // one horror up at a time
+    const candidates = [...z.creatures.values()].filter((c) => SURFACERS.has(c.templateId));
+    if (candidates.length === 0) return false;
+    const rooms = SURFACE_ROOMS.filter((r) => world.rooms.has(r));
+    if (rooms.length === 0) return false;
+    const c = candidates[randInt(0, candidates.length - 1)];
+    const dest = rooms[randInt(0, rooms.length - 1)];
+    const tmpl = world.mobTemplates.get(c.templateId)!;
+    c.roomId = dest;
+    c.surfaced = true;
+    c.hidden = false;   // it's up in the open, filth-streaked and desperate — no lurking
+    c.target = null;
+    c.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
+    z.roomFeed(dest, `${cap(tmpl.name)} drags itself up out of a black crack in the floor, streaming filth — something that belongs to the deep, thrown up into the light. Cut the heart from it while it's cold.`);
+    z.roomSound(dest, "Something scrabbles up out of the dark {dir}, wet and wrong.");
+    z.refreshRoomCtx(dest);
+    return true;
   }
 
   // The King does not mind that you came — until you make him stand.

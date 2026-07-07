@@ -446,6 +446,13 @@ export async function setItemJournalId(db: D1Database, rowId: string, journalId:
   await db.prepare("UPDATE player_items SET journal_id = ? WHERE id = ?").bind(journalId, rowId).run();
 }
 
+// When a pack row was acquired (epoch SECONDS). Used to tell whether a perishable
+// thing (the corpse-key heart) is still fresh enough to be worth anything.
+export async function itemAcquiredAt(db: D1Database, rowId: string): Promise<number | null> {
+  const row = await db.prepare("SELECT acquired_at FROM player_items WHERE id = ?").bind(rowId).first<{ acquired_at: number }>();
+  return row ? row.acquired_at : null;
+}
+
 export interface JournalRow {
   templateId: string;
   kills: number;

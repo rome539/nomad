@@ -1,6 +1,7 @@
 // Pure, stateless helpers lifted out of the ZoneDO monolith: text shaping, a
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
+import { chance, randInt } from "./rng";
 
 // A crude map lies the SAME way every time you open it (or it reads as noise,
 // not a map). The lie is seeded off the book's row id, so a given scrap is
@@ -50,4 +51,15 @@ export function nameMatches(name: string, arg: string): boolean {
   const words = n.split(/\s+/).filter((w) => w !== "a" && w !== "an" && w !== "the");
   const argWords = arg.split(/\s+/);
   return argWords.every((aw) => words.some((w) => w.startsWith(aw)));
+}
+
+// Gear enters the world already used — a PRISTINE piece is a rare find, not the
+// default. Where it comes from tells you its likely state: gear stripped off the
+// dead (`kept=false`) is battered, fought-in; gear from a sealed coffer or hoard
+// (`kept=true`) was stored and kept, so it comes out better — but still, only
+// rarely, whole. Non-gear (slot "") has no condition and comes back 100.
+export function rollGearCondition(slot: string, kept: boolean): number {
+  if (slot === "") return 100; // food, trophies, keys — condition is meaningless
+  if (chance(kept ? 0.18 : 0.06)) return randInt(90, 100); // the rare near-pristine piece
+  return kept ? randInt(58, 90) : randInt(32, 78);         // most gear is worn; hoarded keeps better
 }

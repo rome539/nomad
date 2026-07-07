@@ -67,6 +67,7 @@ export interface Creature {
   fed?: number; // grave-hyena: corpses eaten; enough and it turns bold
   rouseAt?: number; // dire-hyena guarding a meal: ms it commits to attacking — a wind-up you can flee or hit first
   wakeUntil?: number; // SENTINEL (the deep's hound): asleep until roused; awake (and barring the descent) while now < this
+  surfaced?: boolean; // a deep-dweller the sim coughed up into the shallows; killing it drops the corpse-key (deep-heart)
   nextBirthAt?: number; // brood-rat: ms epoch of its next birth
   stunned?: boolean; // a blunt blow rang it — skips its next action, then clears
   bleedTicks?: number; // ticks of open wound left (armor-ignoring); refreshed by fast hits
@@ -116,5 +117,7 @@ export interface SimState {
   traces: Record<string, Trace[]>;
   rot: RotEntry[];
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once
+  groundCond?: Record<string, number>; // "itemId@roomId" -> condition of gear on the floor, so wear survives drop/pickup
   cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills
+  nextSurfaceAt?: number; // ms epoch the deep next surfaces a dweller (corpse-key minting; only while the deep door is sealed)
 }

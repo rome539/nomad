@@ -20,10 +20,13 @@ export const PLAYER_DMG_MAX = 5;
 export const CRIT_CHANCE = 0.05;
 export const FUMBLE_CHANCE = 0.05;
 // Gear condition (0-100) decays VERY slowly — wear is a background pressure, a
-// battered blade is a veteran's, not a fragile toy. Only PROVISIONAL gear
-// decays; the gate's seal freezes it whole.
+// battered blade is a veteran's, not a fragile toy. The gate's seal SLOWS the
+// wear — it doesn't stop it. Sealed gear is protected, not immortal: it lasts
+// far longer, but it still, eventually, wears through. That slow burn is the
+// economy's real sink — endgame gear leaves play by degrees instead of never.
 export const WEAPON_WEAR = 0.25; // per strike landed (~400 swings to wear out fresh)
 export const ARMOR_WEAR = 0.3;   // per hit turned away (~330 blows)
+export const SEALED_WEAR_MULT = 0.4; // sealed gear takes wear at this rate (~2.5x the life of unsealed)
 // Armor mitigates by PERCENTAGE, not flat subtraction: a hit takes armor/(armor+K)
 // off, so gear always helps but never reaches immunity (flat subtraction let a
 // stacked kit floor every hit to 1). Higher K = armor weaker; lower = stronger.
@@ -35,6 +38,10 @@ export const RUST_PER_TICK = 0.001; // per 2s tick while carried in the damp (~5
 export const WOUNDED_FRACTION = 1 / 3;
 export const WOUNDED_DMG_MULT = 0.75;
 export const WOUNDED_FUMBLE_BONUS = 0.05;
+// Even a shaky near-death fumble mostly just goes wide — the blade only actually
+// flies from your grip a FRACTION of those times. So the "lost my sword" moment
+// is rare (per hurt swing: fumble ~10% × this ≈ 3%), not most low-HP swings.
+export const WOUNDED_DROP_ODDS = 0.3;
 // Auto-eat: when a fight drops you below this and you're carrying provisions,
 // a hand goes to the pack on its own — one reflexive bite so a distracted
 // wanderer doesn't bleed out mid-swing. Fires below the WOUNDED line (it's a
@@ -420,7 +427,27 @@ export const DEEP_ROOMS = new Set([
   "the-descent", "drowned-nave", "black-canal", "the-weir", "pocket-of-air",
   "sunken-gallery", "root-vault", "deep-ossuary", "weeping-cells", "silted-stair",
   "bone-processional", "black-threshold", "sunken-throne", "kings-hoard",
+  // the +18 of migration 036 — the three deeper tiers count as deep too
+  "drowned-barracks", "leech-pools", "tide-vault", "the-cistern",
+  "blackreach", "the-lightless-march", "worm-cloister", "the-undertow", "the-sump",
+  "carrion-gallery", "the-marrow-road", "the-gasping-dark", "sunless-well",
+  "drowned-court", "kings-oratory", "bone-reliquary", "the-death-cell", "the-cold-hearth",
 ]);
+
+// The corpse-key. The black door into the deep opens to a still-cold heart cut
+// from a deep-dweller the sim surfaced — not a key on a shelf. While the door is
+// SEALED, the deep coughs one of its mobile own up into the shallows on a slow
+// clock; kill it (its heart drops, `surfaced`-flagged) and press the heart to the
+// door before it spoils. Fresh heart opens it (and is consumed); a stale one is
+// grey slime. No hoarding (it rots), no soft-lock (the sim keeps surfacing).
+export const DEEP_HEART = "deep-heart";               // the perishable key item
+export const DEEP_DOOR_KEY = "undercroft:down";       // "roomId:dir" of the sealed deep door (the stair out of the undercroft, past the hound)
+export const HEART_FRESH_SEC = 600;                   // a heart opens the door for 10 min after the cut, then it's slime
+export const SURFACE_INTERVAL_MS = 360_000;           // while sealed, the deep surfaces one dweller ~every 6 min
+export const SURFACERS = new Set([                    // the mobile deep-kin that can crawl up (drowned things are water-bound; the hound holds its post)
+  "twice-dead", "thrice-dead", "pale-crawler", "pale-stalker",
+]);
+export const SURFACE_ROOMS = ["well", "oubliette", "catacomb"]; // dark inner holes it climbs out of — never the entry gates
 export const AMBIENCE: Record<"gate" | "deep" | "upper", string[]> = {
   gate: [
     "Cold air wells up out of the dark below, smelling of wet stone.",

@@ -101,6 +101,23 @@ export default {
         return json({ published: true, id: ev.id, pubkey: ev.pubkey, relays: relayList(env) });
       }
 
+      // Keeper-only: wipe the world SIM (mobs, ground, world state) and re-seed
+      // fresh from the spawn tables. Player data in D1 is untouched. Guarded by
+      // ADMIN_TOKEN. Best run when no one's connected. POST /admin/reseed?zone=door
+      if (m === "POST" && pathname === "/admin/reseed") {
+        const token = env.ADMIN_TOKEN?.trim();
+        if (!token || req.headers.get("x-admin-token") !== token) {
+          return json({ error: "unauthorized" }, 401);
+        }
+        const zone = url.searchParams.get("zone") ?? "door";
+        if (!ZONES.has(zone)) return json({ error: "no_such_zone" }, 404);
+        const headers = new Headers();
+        headers.set("x-admin", "reseed");
+        headers.set("x-zone", zone);
+        const stub = env.ZONE.get(env.ZONE.idFromName(zone));
+        return await stub.fetch(new Request(req.url, { method: "POST", headers }));
+      }
+
       // The blinded mint counter (NIP.md): supply is public — serial,
       // time, rarity. Ownership is nobody's business.
       if (m === "GET" && pathname === "/mints") {

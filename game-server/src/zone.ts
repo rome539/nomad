@@ -33,6 +33,7 @@ import {
   setEquipped,
   setItemCondition,
   insertLoot,
+  itemAcquiredAt,
   removeItemRow,
   clearCarriedInventory,
   voidMint,
@@ -48,7 +49,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { hashSeed, mulberry32, cap, dirPhrase, shortName, nameMatches } from "./zone-util";
+import { hashSeed, mulberry32, cap, dirPhrase, shortName, nameMatches, rollGearCondition } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent } from "./signing";
 import { publishEvent, relayList } from "./relay";
@@ -56,8 +57,8 @@ import * as gate from "./gate";
 import * as ai from "./ai";
 import {
   TICK_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
-  WEAPON_WEAR, ARMOR_WEAR, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
-  WOUNDED_FUMBLE_BONUS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX, 
+  WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
+  WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, 
   PARTING_BLOW_CHANCE, STANCE, STAGGER_BONUS, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, 
   CACHE_EMPTY_ODDS, BENCH_CHIP, TRADE_CHIP, FORGE_CHIP, DETAILED_MAP,
@@ -71,7 +72,8 @@ import {
   LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
   SCAVENGERS, AGGRO_SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, CRIT_FLOURISH, CREATURE_HIT, BITERS, 
-  DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS
+  DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
+  DEEP_HEART, DEEP_DOOR_KEY, HEART_FRESH_SEC, SURFACE_INTERVAL_MS
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
@@ -92,7 +94,9 @@ export class ZoneDO implements DurableObject {
   public traces = new Map<string, Trace[]>();
   private rot: RotEntry[] = [];
   private placedSpawns = new Set<string>(); // ground spawns already laid once
+  private groundCond = new Map<string, number>(); // "itemId@roomId" -> condition of gear on the floor, so wear survives a drop/pickup
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
+  private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
   private savedAt = 0;
 
   constructor(
@@ -164,7 +168,9 @@ export class ZoneDO implements DurableObject {
       this.traces = new Map(Object.entries(saved.traces ?? {}));
       this.rot = saved.rot ?? [];
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
+      this.groundCond = new Map(Object.entries(saved.groundCond ?? {}));
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
+      this.nextSurfaceAt = saved.nextSurfaceAt ?? 0;
       this.savedAt = saved.savedAt;
       // Territory backfill: pre-territory saves carry no den. Tie each creature
       // to its bloodline's NEAREST den — which repatriates any deep-dweller
@@ -298,14 +304,48 @@ export class ZoneDO implements DurableObject {
       traces: Object.fromEntries(this.traces),
       rot: this.rot,
       placedSpawns: [...this.placedSpawns],
+      groundCond: Object.fromEntries(this.groundCond),
       cacheSpent: Object.fromEntries(this.cacheSpent),
+      nextSurfaceAt: this.nextSurfaceAt,
     };
     await this.state.storage.put("sim", state);
+  }
+
+  // Blow away the whole world sim and rebuild it from first light. Drops the
+  // saved "sim" blob and every in-memory shard of it, reloads the world book
+  // from D1, and re-seeds creatures/ground fresh off the (migrated) spawn tables.
+  // D1 is untouched — players, packs, lockboxes, vaults, sealed loot all survive.
+  // The deep re-seals (openDoors cleared), so the corpse-key is needed again.
+  private async reseed(zone: string): Promise<number> {
+    await this.state.storage.delete("sim");
+    this.world = null; // force loadWorld + the first-light branch on the re-init below
+    this.creatures.clear();
+    this.ground.clear();
+    this.groundInstances.clear();
+    this.regrow = [];
+    this.arrivals.clear();
+    this.openDoors.clear();
+    this.traces.clear();
+    this.rot = [];
+    this.placedSpawns.clear();
+    this.groundCond.clear();
+    this.cacheSpent.clear();
+    this.nextSurfaceAt = 0;
+    await this.init(zone); // "sim" is gone now → seeds the world fresh at first light
+    return this.creatures.size;
   }
 
   // ---- transport: the direct door ----
 
   async fetch(req: Request): Promise<Response> {
+    // Admin: wipe the world SIM (creatures, ground, arrivals, world state) and
+    // re-seed fresh from the spawn tables. Does NOT touch D1 — every player's
+    // character, inventory, vault and sealed loot survive. Gated by ADMIN_TOKEN
+    // in index.ts. For clearing a piled-up or wedged world without nuking anyone.
+    if (req.headers.get("x-admin") === "reseed") {
+      const n = await this.reseed(req.headers.get("x-zone") ?? "door");
+      return new Response(JSON.stringify({ reseeded: true, creatures: n }), { headers: { "content-type": "application/json" } });
+    }
     if (req.headers.get("Upgrade") !== "websocket") {
       return new Response("expected websocket", { status: 426 });
     }
@@ -658,7 +698,29 @@ export class ZoneDO implements DurableObject {
     }
 
     const doorKey = `${session.roomId}:${dir}`;
-    if (exit.key_item && !this.openDoors.has(doorKey)) {
+    if (exit.key_item === DEEP_HEART && !this.openDoors.has(doorKey)) {
+      // The corpse-key door: it takes a heart, and only a fresh one. No hoarded
+      // key works here — you had to face the deep for this, and be quick with it.
+      const heart = session.items.find((c) => c.itemId === DEEP_HEART);
+      if (!heart) {
+        return this.send(session, `A black iron door bars the way ${dir}, and cold pours up from under it. It has no keyhole. It wants something of the deep pressed to it — and still cold.`, "dmgin");
+      }
+      const at = await itemAcquiredAt(this.env.DB, heart.rowId);
+      const fresh = at !== null && Math.floor(Date.now() / 1000) - at < HEART_FRESH_SEC;
+      // Either way the heart leaves your hands — the door takes the offering, or
+      // the slime is worthless and you're rid of it.
+      session.items.splice(session.items.indexOf(heart), 1);
+      await removeItemRow(this.env.DB, heart.rowId);
+      if (!fresh) {
+        return this.send(session, `You press the heart to the door — but the cold has gone out of it, and it's soft, grey, spoiled. The door does not stir. The slime sloughs from your hand and is gone.`, "dmgin");
+      }
+      // Once opened, open for everyone — until what lives beyond it returns.
+      this.openDoors.add(doorKey);
+      this.send(session, "You press the still-cold heart to the black door. For a moment nothing — then the door *takes* it, drinks the cold clean out of it, and grinds open. It stays open.", "unlock");
+      this.roomFeed(session.roomId, `${session.name} presses something to the black door, and it grinds open.`, session.pubkey);
+      this.roomSound(session.roomId, "Iron grinds against stone, {dir}.");
+      this.creatureNoise(session.roomId);
+    } else if (exit.key_item && exit.key_item !== DEEP_HEART && !this.openDoors.has(doorKey)) {
       if (!session.items.some((c) => c.itemId === exit.key_item)) {
         const key = world.itemTemplates.get(exit.key_item);
         return this.send(
@@ -841,7 +903,15 @@ export class ZoneDO implements DurableObject {
 
     here.splice(here.indexOf(itemId), 1);
     const rowId = uuid();
-    const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition: 100 };
+    // Gear on the floor carries the wear it landed with (a dropped or fumbled
+    // blade doesn't heal by touching the ground). Un-stamped gear is fresh to the
+    // floor — spilled off the dead or seeded here — so it rolls scavenged. Non-gear → 100.
+    const condKey = `${itemId}@${session.roomId}`;
+    const condition = this.groundCond.has(condKey)
+      ? this.groundCond.get(condKey)!
+      : rollGearCondition(tmpl.slot, false);
+    this.groundCond.delete(condKey);
+    const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition };
     session.items.push(carried);
     // A regrowing spawn (the shrine's key, a gate's rock) keeps exactly ONE
     // instance in its room. Only re-seed if this pickup left the room without
@@ -855,7 +925,7 @@ export class ZoneDO implements DurableObject {
         this.regrow.push({ itemId, roomId: session.roomId, at: Date.now() + REGROW_MS });
       }
     }
-    await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null);
+    await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null, condition);
     // Friendly: your FIRST weapon/armor goes on automatically; switching later
     // is a deliberate `equip`. (Never overrides something you've already got on.)
     let readied = "";
@@ -895,6 +965,7 @@ export class ZoneDO implements DurableObject {
       this.dropInstance(session.roomId, itemId, carried.journalId);
     } else {
       this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), itemId]);
+      if (tmpl.slot !== "") this.groundCond.set(`${itemId}@${session.roomId}`, carried.condition); // gear keeps its wear on the floor
       if (tmpl.edible) this.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
     }
     this.send(
@@ -992,6 +1063,7 @@ export class ZoneDO implements DurableObject {
     const shattered = chance(HOLLOW.has(tmpl.id) ? THROW_SHATTER_HOLLOW : THROW_SHATTER);
     if (!shattered) {
       this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
+      if (itmpl.slot !== "") this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // a thrown blade keeps its wear where it lands
       if (itmpl.edible) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
     }
 
@@ -1173,11 +1245,13 @@ export class ZoneDO implements DurableObject {
       const item = world.itemTemplates.get(entry.itemId);
       if (!item) continue;
       // Into the pack if it fits; if you're full, it spills to the floor rather
-      // than vanish — pick it up when you've made room.
-      if (await this.grantItem(session, item.id)) {
+      // than vanish — pick it up when you've made room. Coffer gear is `kept` —
+      // stored and preserved, so it comes out better than corpse-stripped gear.
+      if (await this.grantItem(session, item.id, { kept: true })) {
         this.send(session, `Inside: ${item.name}.${this.itemStat(item)} [${item.rarity}] (unclaimed — the gate can seal it)`);
       } else {
         this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), item.id]);
+        if (item.slot !== "") this.groundCond.set(`${item.id}@${session.roomId}`, rollGearCondition(item.slot, true));
         this.send(session, `Inside: ${item.name}.${this.itemStat(item)} [${item.rarity}] — but your pack is full, so it falls at your feet.`);
       }
     }
@@ -1370,10 +1444,14 @@ export class ZoneDO implements DurableObject {
   // Mint one item into the pack, if there's room. Returns the row, or null when
   // the pack is full (the caller decides: refuse, or spill to the ground). The
   // single doorway for loot onto the body — cap enforcement lives here.
-  public async grantItem(session: Session, itemId: string, opts?: { condition?: number; journalId?: string }): Promise<CarriedItem | null> {
+  public async grantItem(session: Session, itemId: string, opts?: { condition?: number; kept?: boolean; journalId?: string }): Promise<CarriedItem | null> {
     if (!this.packRoom(session, itemId)) return null;
     const rowId = uuid();
-    const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition: opts?.condition ?? 100, journalId: opts?.journalId };
+    // Gear arrives already used — pristine is rare. `kept` gear (a sealed coffer's)
+    // is better preserved than what's stripped off the dead. Non-gear rolls 100.
+    const slot = this.world!.itemTemplates.get(itemId)?.slot ?? "";
+    const condition = opts?.condition ?? rollGearCondition(slot, opts?.kept ?? false);
+    const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, journalId: opts?.journalId };
     session.items.push(carried);
     await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null, carried.condition);
     if (opts?.journalId) await setItemJournalId(this.env.DB, rowId, opts.journalId);
@@ -1385,8 +1463,10 @@ export class ZoneDO implements DurableObject {
     let s = `  ${t ? t.name : c.itemId} [${t?.rarity ?? "?"}]${this.itemStat(t)}`;
     const tags: string[] = [];
     if (c.equipped) tags.push(t?.slot === "weapon" ? "wielded" : "worn");
-    if (c.serial !== null) tags.push(`sealed #${c.serial}`); // frozen whole
-    else if (t && t.slot !== "") tags.push(this.conditionWord(c.condition) || "sound");
+    if (c.serial !== null) tags.push(`sealed #${c.serial}`);
+    // Gear shows its wear whether sealed or not — sealed just wears slower, and
+    // you need to see it to know when to mend it.
+    if (t && t.slot !== "") tags.push(this.conditionWord(c.condition) || "sound");
     if (tags.length) s += ` — ${tags.join(", ")}`;
     return s;
   }
@@ -2033,10 +2113,12 @@ export class ZoneDO implements DurableObject {
         const hurt = session.hp < session.maxHp * WOUNDED_FRACTION;
         if (chance(FUMBLE_CHANCE + (hurt ? WOUNDED_FUMBLE_BONUS : 0))) {
           // The whole arc goes wide either way — but the blade only flies from
-          // your grip when your blood's low and your hands are shaking. Hale,
-          // you just whiff and leave an opening; you never lose your sword at
-          // full strength, only when death is already close.
-          await this.playerFumble(session, hurt ? weapon : null);
+          // your grip when your blood's low, your hands are shaking, AND the luck
+          // runs against you (WOUNDED_DROP_ODDS). Hale you just whiff; hurt you
+          // usually just whiff too, and only rarely actually lose the sword. You
+          // never drop it at full strength, and not on most shaky swings either.
+          const dropsIt = hurt && weapon && chance(WOUNDED_DROP_ODDS);
+          await this.playerFumble(session, dropsIt ? weapon : null);
         } else {
           for (const creature of targets) {
             if (!alive(creature)) continue;
@@ -2465,6 +2547,18 @@ export class ZoneDO implements DurableObject {
     this.applyRegrow(now, false);
     ai.applyArrivals(this, now, false);
     ai.scheduleArrivals(this, now);
+    // While the deep door is SEALED, the deep coughs one of its own up into the
+    // shallows on a slow clock — the world minting the corpse-key. Once someone's
+    // heart opens the door (or the King's death re-seals it), the clock just idles.
+    if (!this.openDoors.has(DEEP_DOOR_KEY)) {
+      if (this.nextSurfaceAt === 0) this.nextSurfaceAt = now + SURFACE_INTERVAL_MS; // start the clock the first sealed tick
+      else if (now >= this.nextSurfaceAt) {
+        ai.surfaceDeepKin(this, now);
+        this.nextSurfaceAt = now + SURFACE_INTERVAL_MS + randInt(0, SURFACE_INTERVAL_MS / 2); // jittered, so it's never on a countable beat
+      }
+    } else {
+      this.nextSurfaceAt = 0; // door's open — reset so a fresh seal starts a fresh clock
+    }
     this.pruneTraces(now);
     this.syncCombatCtx();
 
@@ -2631,6 +2725,7 @@ export class ZoneDO implements DurableObject {
       await removeItemRow(this.env.DB, weapon.carried.rowId);
       if (weapon.carried.serial !== null) await voidMint(this.env.DB, weapon.carried.serial);
       this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), weapon.carried.itemId]);
+      this.groundCond.set(`${weapon.carried.itemId}@${session.roomId}`, weapon.carried.condition); // a dropped blade keeps its wear when you snatch it back
       this.send(session, `Your swing goes wide — ${weapon.tmpl.name} spins from your grip and clatters across the stones!`
         + (weapon.carried.serial !== null ? " The seal cracks where it lands." : ""), "fumble");
       this.roomFeed(session.roomId, `${session.name}'s weapon clatters across the stones!`, session.pubkey);
@@ -2721,6 +2816,15 @@ export class ZoneDO implements DurableObject {
     }
     ai.scheduleArrivals(this, Date.now());
 
+    // A thing the deep surfaced carries a still-cold heart — the corpse-key. Cut
+    // it on the kill, always. It's stamped fresh (acquired_at) and rots in minutes,
+    // so the run to the black door is the game; dawdle and it's grey slime.
+    if (creature.surfaced) {
+      const heart = await this.grantItem(killer, DEEP_HEART);
+      if (heart) this.send(killer, `You cut the still-cold heart from ${tmpl.name}. It steams in the cold air. [the deep door will take it — while it's fresh]`, "gain big");
+      else this.send(killer, `A still-cold heart could be cut from ${tmpl.name} — but your pack is full, and it will not keep on the floor.`);
+    }
+
     // Drops are provisional: the dungeon signs nothing here. The seal waits
     // at the gate — that walk is the game.
     if (tmpl.loot_item && chance(tmpl.loot_chance)) {
@@ -2762,6 +2866,9 @@ export class ZoneDO implements DurableObject {
         const g = this.world!.itemTemplates.get(id);
         floor.push(id);
         if (g) {
+          // Gear off the dead is battered — it fought in this, and lost. Stamp it
+          // scavenged so its wear sticks when the killer stoops for it.
+          if (g.slot !== "") this.groundCond.set(`${id}@${creature.roomId}`, rollGearCondition(g.slot, false));
           this.send(killer, `${cap(g.name)} clatters free of the fallen — it lies here. [${g.rarity}]`);
           this.roomFeed(creature.roomId, `${cap(g.name)} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, killer.pubkey);
         }
@@ -3126,7 +3233,7 @@ export class ZoneDO implements DurableObject {
   // Grind a piece down. Sealed gear is frozen (the seal holds the dungeon off);
   // provisional gear wears, and at 0 it's gone — worn through, mid-life.
   private async wear(session: Session, carried: CarriedItem, tmpl: ItemTemplate, amount: number): Promise<void> {
-    if (carried.serial !== null) return; // sealed: neither use nor damp touches it
+    if (carried.serial !== null) amount *= SEALED_WEAR_MULT; // sealed: protected, not immortal — the mark slows the wear
     carried.condition -= amount;
     if (carried.condition > 0) return;
     const idx = session.items.indexOf(carried);

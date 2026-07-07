@@ -35,8 +35,11 @@ each round in a poisoned state adds a tick; ticks decay when you leave/rest. Hel
 deliberately for a later pass — everything else in Phase 1 shipped without it.
 
 ### Phase 2 — Expand the deep + populate the world *(content/data pass)*
-The content/populate half SHIPPED 2026-07-07 (migrations 034–038). The one
-remaining piece is the scarcity/item-supply system below.
+Content/populate SHIPPED 2026-07-07 (migrations 034–038); scarcity resolved the
+same day via the emergent model (039 + sealed-wear + worn-on-entry); the
+corpse-key (040) retired the tarnished-key. **Phase 2 is DONE** — the only
+carry-over is the deferred **black market** (Icebox), which is population-gated
+anyway. Next arc is Phase 3 (the simulationist direction) whenever rome's ready.
 - ✅ **Deep is a kiddie pool → +18 rooms** (migration 036). A real layered
   descent: Drowned Reach ×4 (loop off the Black Canal), Sunless Deep ×9 (two
   nested loops off the Silted Stair, bottoming at the Sunless Well), King's
@@ -51,31 +54,66 @@ remaining piece is the scarcity/item-supply system below.
   bloodline cousin of the rat (floor 1 + deep) that's [[keep-zone-ts-lean|fire-fearing]]
   (pre-wired, dormant).
 - ✅ **Faster respawns** — `MIGRATION_FACTOR` 20 → 10.
-- **Scarcity via a dungeon-aware item supply** (rome, 2026-07-07) — the primary
-  scarcity mechanism. Model item refills on the mob-migration system: each capped
-  item has a target count in the world; the dungeon refills *toward* the cap only
-  when supply runs short (not on a blind timer), placing restocks at themed homes.
-  Gives the gear economy a **bounded money supply** — a geared player has removed
-  that gear from circulation until it leaves play. Reuses the mob bones
-  (cap + `scheduleArrivals` + a `MIGRATION_FACTOR`-style speed), but counting
-  supply touches D1 (instances live across ground/caches/mob-carried/pack/lockbox/
-  vault). Generalizes the tarnished-key fix ("refill only when none exists").
-  - **Needs sinks or it fills once and freezes** — cap = ceiling, sinks = churn.
-    Drains mostly exist already: death-drops, rust/breakage, rot. Cap sets the
-    ceiling; those set the flow.
-  - **Per-item policy** (like a mob template's behavior): gear = capped & scarce;
-    food/junk = cheap/free regrow; **the rarest things get the tightest cap of
-    all** — barely restocked, if at all.
-  - Drop-table tuning (`gear_drop` / drop chances) is demoted to *one input* — how
-    fast the cap refills — not the whole mechanism.
-  - **Open decisions:** (a) does player-held loot (packs/lockboxes/vaults) count
-    against the cap? *Yes* = hoarders create scarcity for everyone (simulationist,
-    scarce); *No* = simpler but players just drain-and-bank. Leaning yes.
-    (b) which items are capped vs. free-regrow. *Pending rome.*
-- **Tarnished key** regrows every 10 min at the shrine (it's the undercroft door
-  key, kept obtainable so no one's soft-locked) — but it litters copies. Fix:
-  regrow only when none exists in the world. (Check first whether the door
-  *consumes* it.)
+- ✅ **Scarcity — the EMERGENT model** (rome, 2026-07-07; migration 039 +
+  SEALED_WEAR_MULT). We deliberately **dropped the global supply-cap** idea: MUD
+  (persistent, keep-your-stuff) and extraction (impermanent, lose-it-on-death)
+  are fundamentally incompatible on loot — rome's call — and real extraction
+  games (Tarkov, Dark and Darker) don't global-cap anyway; they instance loot
+  and let **death + a market** create scarcity. NOMAD already resolves the tension
+  structurally: **the seal/gate is the membrane** — the dungeon is the extraction
+  layer (death drains it, no cap needed), the vault is the MUD layer (yours, kept).
+  So scarcity is emergent, from three levers:
+  - **Rarer faucets (039):** non-boss uncommon/rare gear drops ×0.6, cache rare
+    ×0.7 / epic ×0.6. Bosses, common starter kit, the reliquary, cigs/maps/
+    trophies all spared. Good gear is now an event, not an inevitability.
+  - **Loot tier follows danger (043):** the two upper `is_safe` hideaway chests
+    (box-bone/box-crack) were rare-gear machines in the safest, bank-adjacent
+    rooms on the FASTEST refill — the inverse of the design. Re-stocked as modest
+    stashes (common/uncommon kit + provisions + slim cig/map). Rare/epic gear now
+    lives ONLY in the deep coffers (box-deep/tide/relic/abyss), behind real danger,
+    far from banking.
+  - **Sealed gear wears SLOWER, not never** (`SEALED_WEAR_MULT = 0.4`): sealing
+    was making gear immortal in combat (the one real leak). Now it lasts ~2.5×
+    but still, eventually, wears through — endgame gear leaves play by degrees.
+    The economy's real sink. Follow-on fixes (2026-07-07): sealed gear can now be
+    **repaired** at the bench (the old code refused it — a trap now that it wears;
+    the seal is title, not condition, so mending keeps the serial), it **shows its
+    wear** in every list (was hidden while it was frozen), and salvage still
+    refuses sealed (the seal protects from destruction, not from mending).
+  - **Gear enters WORN — pristine is a rare find** (rome, 2026-07-07;
+    `rollGearCondition`). Gear no longer arrives at 100%. Off the dead
+    (`kept=false`): avg ~58%, ~6% pristine. From a sealed coffer (`kept=true`):
+    avg ~78%, ~21% pristine. Where you find it tells you its state. Condition is
+    stamped when gear lands on the floor (`groundCond` map) so a dropped/fumbled/
+    thrown blade keeps its wear — no reroll-on-pickup. Makes the world feel old
+    and used, makes a pristine piece a real trophy, and speeds the sink (worn
+    gear breaks sooner).
+  - **Death is the sink** (already built): player-kills drop everything.
+  - **Deferred — the black market / trade layer** (rome: "for another time"). The
+    piece that lets hoarded gear re-enter circulation and floats prices on
+    supply/demand. When it lands it completes the emergent economy. See Icebox.
+- ✅ **The key the world grows — the corpse-key** (rome approved 2026-07-07;
+  migration 040 + code, Direction C). Retires the tarnished-key entirely. The
+  black door into the deep now opens to a **still-cold heart** cut from a
+  deep-dweller the *simulation* surfaced — not a key on a shelf:
+  - **Sim-minted:** while the deep door is SEALED, the tick surfaces one mobile
+    deep-kin (twice-dead/pale-crawler, `SURFACERS`) up into the shallows
+    (`SURFACE_ROOMS`) ~every 6 min (`SURFACE_INTERVAL_MS`, jittered), one at a
+    time. It arrives revealed and desperate (`surfaced` flag). Kill it → its
+    heart drops, always, fresh-stamped.
+  - **Perishable, no schema change:** freshness reads the existing `acquired_at`
+    (epoch secs); the door takes a heart cut within `HEART_FRESH_SEC` (10 min).
+    Stale = grey slime, rejected and sloughed off. Can't hoard, can't litter —
+    the whole old-key problem dissolves with zero cap.
+  - **No soft-lock:** the sim never stops surfacing (arrivals restock the deep),
+    so the door is always *eventually* openable, never on command.
+  - **Verified (local):** no-heart → teaches the want; fresh → door drinks it,
+    opens communally, heart consumed; stale → slime, door stays sealed, slime
+    consumed. Also folded the 036 rooms into `DEEP_ROOMS`.
+  - **Tuning knobs if it needs feel-work:** `SURFACE_INTERVAL_MS`,
+    `HEART_FRESH_SEC`, `SURFACE_ROOMS`, `SURFACERS`. The door's want is currently
+    taught by the locked-door message itself ("something of the deep, still
+    cold") + the heart's item text — no carving/keeper hint yet.
 - **Balance watch — daggers may be too OP** (rome, 2026-07-07). Suspected
   overpowered; revisit weapon tuning. Check dmg range / speed vs. other weapons
   and whether the near-death fumble-only rule or armor curve favors fast light
@@ -92,13 +130,45 @@ remaining piece is the scarcity/item-supply system below.
 - **Encumbrance → combat penalty** + weight-based pack (bones exist: `weight`
   column, `wornWeight()` — today it only affects flee/dodge).
 - **Shallows heat map** — mobs get harder the faster they're farmed, decaying back
-  for fresh players. Gentle (+1–2). Works only *after* curved armor (or bump HP,
-  not damage). rome's idea; good for the shallows, weak for the deep.
+  for fresh players. Gentle (+1–2). Its prerequisite (curved armor) shipped in
+  Phase 0, so it's **unblocked** — bump HP not damage. rome's idea; good for the
+  shallows, weak for the deep.
 
-### Open inputs (from rome)
-- Chapel inhabitant + rough headcounts for the "populate to themes" pass.
-- Which mob-drop items are the "questionable" ones flooding gear.
-- How big is the deep expansion — a few rooms, or a whole sub-zone?
+## Storied gear — items with biographies *(the identity feature, 2026-07-07)*
+
+The answer to "how does MUD + extraction distinguish itself" — not more economy,
+a **meaning layer on top of it**. The economics are done (seal/gate membrane,
+death-drops, wear, worn-on-entry, lean faucets); this is what they're *for*.
+
+**The pitch:** in Tarkov every sword is fungible; in a classic MUD every sword
+is static. In NOMAD an item can have a **history** — because we're standing on
+the exact intersection neither genre can reach:
+- **One persistent shared world** — no resets; what happened, *happened*.
+- **Signed, serialized loot** — the seal was built for anti-forgery, but a
+  serial is a *biography slot*. The dungeon can attest every chapter.
+- **Condition as narrative** (just built) — a blade at 38% isn't damaged
+  goods, it's a veteran.
+- **Death drops everything** — so items *outlive their owners* and change
+  hands over corpses.
+
+**The inversion that makes it sing:** you don't lose your gear when you die —
+**your gear loses you**, and carries you as a scar. "This notched greatsword
+has 214 kills, went to the King twice, and its last three owners died in the
+Sunless Deep — you pried it from the third one's hand." Death stops being only
+an economic sink and becomes how legends circulate. The scarcest resource
+stops being epic-rarity and becomes **story** — the one thing that can't be
+farmed, duped, or inflated, because it's only minted by things actually
+happening in the one shared world.
+
+**Build shape (cheap — the parts exist):** a deeds-ledger keyed by sealed
+serial (small D1 table, not a system). Record: kills (creature/boss/player),
+depths reached, owners, owner deaths while carried. Surface it in `look`/the
+journal ("its account"), and let the 31573/1573 Nostr side carry it for
+bazaar interop later — a storied item's cert should *show* its story.
+**Sequencing:** the substrate (ledger + attestation) can land pre-players so
+day-one history is real; the *payoff* is population-gated — stories need
+people to make and hear them. Ties into [[nomad-loot-economy]] (a storied
+piece is the ultimate barter good) and the Phase 7 legend systems.
 
 ## Phase 7 — Population systems (gated on actual players) — NOT STARTED
 
@@ -153,6 +223,13 @@ until he says go.
   or reproduce) before building either.
 - **Idle kick** (spun off the above) — optionally boot truly-AFK players after N
   minutes of no commands, so a forgotten open tab doesn't hold a live session.
+- **The black market / player trade layer** (rome, 2026-07-07: "for another
+  time") — the final piece of the emergent economy. A place hoarded gear
+  re-enters circulation and prices float on supply/demand, the way Tarkov's
+  flea market does. Completes the scarcity model built in Phase 2 (rarer
+  faucets + sealed-wear are the drains; this is the re-supply/valve). Cigarettes
+  are already the hard currency [[nomad-loot-economy]]. Player-to-player, distinct
+  from the existing keeper/fence NPC trade. Gated on actual players.
 - **Communication layer** — the thing that turns a dungeon into a
   social world. `say`/`tell`/`shout` (shout carries between rooms —
   combat sound already proves the primitive), channels (ooc/gossip),
