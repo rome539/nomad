@@ -368,6 +368,71 @@ export const PAGE = `<!doctype html>
     #trade .bcols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
     #trade .bcol { overflow-y: visible; min-height: 0; }
   }
+  /* The gatehouse forge: same shell as the hatch, single column. Reads your
+     pack and shows what the bench can make — cost in gold when you can afford
+     it, in blood when you can't. */
+  #forge {
+    display: none; position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0, 0, 0, 0.82);
+    align-items: center; justify-content: center; padding: 16px 12px;
+  }
+  #forge.open { display: flex; }
+  #forge .bbox {
+    background: var(--panel); border: 1px solid var(--border2); border-radius: 10px;
+    padding: 14px 14px 0; width: min(560px, 96vw); min-width: 0; max-height: 90vh;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  #forge .bhead { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  #ftitle { color: var(--gold); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; }
+  #fsub { color: var(--dim); font-size: 12px; margin-top: 3px; max-width: 52ch; }
+  #fclose {
+    background: transparent; border: 1px solid var(--border2); border-radius: 5px;
+    color: var(--cream); font: inherit; font-size: 13px; padding: 7px 14px; cursor: pointer;
+    flex: 0 0 auto; white-space: nowrap;
+  }
+  #fclose:hover { color: var(--gold); border-color: var(--gold); }
+  #fnote { flex: 0 0 auto; color: var(--blood); font-size: 12.5px; }
+  #fnote:empty { display: none; }
+  #fhave {
+    flex: 0 0 auto; color: var(--bone); font-size: 12.5px;
+    border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px;
+  }
+  #fhave .scrap { color: var(--gold); }
+  #forge .bcols {
+    flex: 1 1 auto; min-height: 0; padding-bottom: 14px;
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
+  }
+  #forge .bcol {
+    border: 1px solid var(--line); border-radius: 8px; padding: 0 10px 8px;
+    overflow-y: auto; min-width: 0; min-height: 120px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #forge .bcolh {
+    position: sticky; top: 0; background: var(--panel); z-index: 1;
+    color: var(--bone); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    border-bottom: 1px solid var(--line); padding: 10px 0 6px;
+  }
+  #forge .bempty { color: var(--dim); font-size: 12px; font-style: italic; padding: 4px 0; }
+  #forge .bitem { display: flex; flex-direction: column; gap: 5px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  #forge .bitem:last-child { border-bottom: none; }
+  #forge .bitem .nm { color: var(--cream); font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+  #forge .bitem .nm .stat { color: var(--bone); }
+  #forge .bitem .nm .rar { color: var(--dim); }
+  #forge .bitem .cost { font-size: 12px; }
+  #forge .bitem .cost.ok { color: var(--gold); }
+  #forge .bitem .cost.no { color: var(--blood); }
+  #forge .bitem .acts { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  #forge .bitem button {
+    background: transparent; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--bone); font: inherit; font-size: 11.5px; padding: 3px 9px; cursor: pointer;
+  }
+  #forge .bitem button:hover { color: var(--gold); border-color: var(--gold); }
+  #forge .bitem button:disabled { color: var(--dim); border-color: var(--line); cursor: default; }
+  @media (max-width: 680px) {
+    #forge .bbox { max-height: 92vh; }
+    #forge .bcols { overflow-y: auto; }
+    #forge .bcol { overflow-y: visible; min-height: 0; }
+  }
   /* ---- the map & journal modals: knowledge you carry ---- */
   #mapm, #jrnl {
     display: none; position: fixed; inset: 0; z-index: 10000;
@@ -603,6 +668,22 @@ export const PAGE = `<!doctype html>
       <div class="bcols">
         <div class="bcol" id="tstock"></div>
         <div class="bcol" id="tgoods"></div>
+      </div>
+    </div>
+  </div>
+  <div id="forge">
+    <div class="bbox">
+      <div class="bhead">
+        <div>
+          <div id="ftitle">The gatehouse forge</div>
+          <div id="fsub">Scrap iron and the brazier's heat. The bench works what you carry into gear &#8212; raw and unclaimed, yours to seal at the gate.</div>
+        </div>
+        <button id="fclose">bank the brazier</button>
+      </div>
+      <div id="fnote"></div>
+      <div id="fhave"></div>
+      <div class="bcols">
+        <div class="bcol" id="frecipes"></div>
       </div>
     </div>
   </div>
@@ -1132,6 +1213,8 @@ async function connect() {
       if (f.open) renderBench(f); else closeBench();
     } else if (f.t === "trade") {
       if (f.open) renderTrade(f); else closeTrade();
+    } else if (f.t === "forge") {
+      if (f.open) renderForge(f); else closeForge();
     } else if (f.t === "map") {
       renderMap(f);
     } else if (f.t === "journal") {
@@ -1373,11 +1456,15 @@ function logout() {
 var chipsOn = localStorage.getItem("nomad_chips") !== "0"; // default on
 var lastSuggest = [];
 var lastCombat = false;
-// The one chip that isn't a command: the server offers it at a gate, and we
-// open the keeping-bench modal instead of sending it as text. Must match
-// BENCH_CHIP / TRADE_CHIP in zone.ts.
-var BENCH_CHIP = "open the lockbox";
+// The one chip that isn't a command: tapping 'inventory' opens the keeping
+// modal (pack + lockbox, plus the vault & seal at a gate) instead of sending
+// text — typing 'inventory' still prints the plain list. Must match BENCH_CHIP
+// / TRADE_CHIP in zone.ts.
+var BENCH_CHIP = "inventory";
 var TRADE_CHIP = "barter with the keeper";
+// The 'forge' chip opens the forge modal (reads your pack, shows what the bench
+// can make); typing 'forge' still reads the slate. Must match FORGE_CHIP in zone.ts.
+var FORGE_CHIP = "forge";
 // The chip's face is shorter than the command it fires. The two self-evident
 // groups — the compass and the stances — shed their verb: a fixed row of
 // north·south·east·west reads as movement without "go" on each, and a cluster
@@ -1400,6 +1487,8 @@ function chipButton(s) {
       benchSend("open");
     } else if (s === TRADE_CHIP) {
       tradeSend("open");
+    } else if (s === FORGE_CHIP) {
+      forgeSend("open");
     } else if (s.slice(-1) === "\\u2026") {
       cmd.value = s.slice(0, -1).trim() + " ";
       cmd.focus();
@@ -1673,6 +1762,76 @@ function renderTrade(state) {
   fillTradeCol(tstock, "His stock", state.stock || [], "stock");
   renderGoods();
   tradeEl.classList.add("open");
+}
+
+// ---- the gatehouse forge: what the bench can make from what you carry ----
+var forgeEl = document.getElementById("forge");
+var frecipes = document.getElementById("frecipes");
+var fnote = document.getElementById("fnote");
+var fhave = document.getElementById("fhave");
+document.getElementById("fclose").addEventListener("click", function () { forgeSend("close"); });
+
+function forgeSend(action, row) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "forge", action: action, row: row || "" }));
+}
+function closeForge() { forgeEl.classList.remove("open"); }
+
+function forgeItemNode(it) {
+  var wrap = document.createElement("div");
+  wrap.className = "bitem";
+  var nm = document.createElement("div");
+  nm.className = "nm";
+  nm.textContent = it.name;
+  if (it.stat) { var st = document.createElement("span"); st.className = "stat"; st.textContent = " (" + it.stat + ")"; nm.appendChild(st); }
+  var rr = document.createElement("span"); rr.className = "rar"; rr.textContent = " [" + it.rarity + "]"; nm.appendChild(rr);
+  wrap.appendChild(nm);
+  var cost = document.createElement("div");
+  cost.className = "cost " + (it.can ? "ok" : "no");
+  var txt = it.scrap + " scrap iron";
+  if (it.material) txt += " + " + it.material.qty + " " + it.material.name + " (you have " + it.material.have + ")";
+  cost.textContent = txt;
+  wrap.appendChild(cost);
+  var acts = document.createElement("div");
+  acts.className = "acts";
+  var b = document.createElement("button");
+  b.type = "button";
+  b.textContent = "forge";
+  b.disabled = !it.can;
+  b.addEventListener("click", function () { forgeSend("craft", it.id); });
+  acts.appendChild(b);
+  wrap.appendChild(acts);
+  return wrap;
+}
+
+function renderForge(state) {
+  fnote.textContent = state.note || "";
+  fhave.textContent = "";
+  var lbl = document.createElement("span");
+  lbl.textContent = "You have ";
+  fhave.appendChild(lbl);
+  var sc = document.createElement("span");
+  sc.className = "scrap";
+  sc.textContent = state.scrap + " scrap iron";
+  fhave.appendChild(sc);
+  var tail = document.createElement("span");
+  tail.textContent = " across pack and keeping. Salvage gear at the bench to feed the pile.";
+  fhave.appendChild(tail);
+  frecipes.textContent = "";
+  var h = document.createElement("div");
+  h.className = "bcolh";
+  h.textContent = "The bench can make";
+  frecipes.appendChild(h);
+  var recipes = state.recipes || [];
+  if (!recipes.length) {
+    var e = document.createElement("div");
+    e.className = "bempty";
+    e.textContent = "\\u2014 the recipe slate is blank \\u2014";
+    frecipes.appendChild(e);
+  } else {
+    recipes.forEach(function (it) { frecipes.appendChild(forgeItemNode(it)); });
+  }
+  if (state.sfx) sndOne(state.sfx);
+  forgeEl.classList.add("open");
 }
 
 // ---- the map modal: a chart you carry (true, or half a lie) ----

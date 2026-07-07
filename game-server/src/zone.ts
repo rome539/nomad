@@ -30,14 +30,11 @@ import {
   setStance,
   loadInventory,
   loadContainer,
-  setContainer,
   setEquipped,
   setItemCondition,
   insertLoot,
   removeItemRow,
   clearCarriedInventory,
-  mintClaim,
-  setMintEvent,
   voidMint,
   setItemJournalId,
   journalLoad,
@@ -51,549 +48,39 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
+import { hashSeed, mulberry32, cap, dirPhrase, shortName, nameMatches } from "./zone-util";
+import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent } from "./signing";
 import { publishEvent, relayList } from "./relay";
-
-const TICK_MS = 2000;
-// The world ticks every TICK_MS, but blows land on a slower heartbeat so a
-// fight is readable: you get this long between exchanges to read the room and
-// decide — change stance, choke down food, or run — before steel meets steel
-// again. Everything else (regen, movement, atmosphere) stays at the tick.
-const COMBAT_ROUND_MS = 4000;
-// Bare hands. Steel is carried, never granted — a fresh key is a weak key,
-// and that weakness is the sybil resistance (a throwaway identity is a
-// throwaway threat). The best weapon in the pack adds its dmg.
-const PLAYER_DMG_MIN = 2;
-const PLAYER_DMG_MAX = 5;
-// Fat tails, the same for every living thing that swings — the world never
-// moralizes, but every attack is a gamble.
-const CRIT_CHANCE = 0.05;
-const FUMBLE_CHANCE = 0.05;
-// Gear condition (0-100) decays VERY slowly — wear is a background pressure, a
-// battered blade is a veteran's, not a fragile toy. Only PROVISIONAL gear
-// decays; the gate's seal freezes it whole.
-const WEAPON_WEAR = 0.25; // per strike landed (~400 swings to wear out fresh)
-const ARMOR_WEAR = 0.3;   // per hit turned away (~330 blows)
-const RUST_PER_TICK = 0.001; // per 2s tick while carried in the damp (~55h to rust away)
-
-// Wounds are felt, not just counted — on BOTH sides of the blade. Below a
-// third of your blood, your blows soften and your hands shake; same for them.
-const WOUNDED_FRACTION = 1 / 3;
-const WOUNDED_DMG_MULT = 0.75;
-const WOUNDED_FUMBLE_BONUS = 0.05;
-// Auto-eat: when a fight drops you below this and you're carrying provisions,
-// a hand goes to the pack on its own — one reflexive bite so a distracted
-// wanderer doesn't bleed out mid-swing. Fires below the WOUNDED line (it's a
-// last resort, not a feeding trough) and, being a reflex, never staggers you.
-const AUTO_EAT_FRACTION = 0.25;
-// Initiative: the first blow against something that hasn't marked you yet
-// lands heavy. (Getting jumped already costs you — this is the other edge.)
-const AMBUSH_MULT = 1.5;
-// A thrown thing: its own bite plus the arm behind it, and then it's on the
-// floor — theirs to stand on, yours to fetch back.
-const THROW_DMG_MIN = 1; // the arm adds less than a full swing
-const THROW_DMG_MAX = 3;
-const THROW_COOLDOWN_MS = 2000; // one throw per round — no rock machine-guns
-const THROW_SHATTER = 0.15; // a thrown thing may not survive the landing
-const THROW_SHATTER_HOLLOW = 0.4; // stone on bone or old iron, near coin-flip
-// Bone and old iron eat an edge: landed strikes on the HOLLOW grind a weapon
-// eight times faster than flesh does (rome's rule — wear as a counter, not
-// just smaller numbers). ~50 strikes on skeletons wears a fresh blade out.
-const WEAPON_WEAR_HOLLOW = 2.0;
-
-// Mobility: unburdened (worn weight 0, or nothing worn) means foes miss you
-// more, and you slip out of a fight clean. Heavy mail turns blows better but
-// a parting strike may catch you as you flee.
-const DODGE_LIGHT = 0.05; // added to the foe's miss chance when you're quick
-const PARTING_BLOW_CHANCE = 0.4; // heavy armor: odds the fight bills you on the way out
-
-// Fighting stance: trade offense for defense. `atk` scales the damage you deal,
-// `def` scales the damage you take (after armor). Reckless is a glass edge;
-// guarded is a turtle; steady is even. A moment-to-moment choice (`stance`).
-type Stance = "reckless" | "steady" | "guarded";
-const STANCE: Record<Stance, { atk: number; def: number }> = {
-  reckless: { atk: 1.5, def: 1.3 }, // hit half again as hard — and get hit harder
-  steady: { atk: 1.0, def: 1.0 },
-  guarded: { atk: 0.6, def: 0.6 }, // soak far less, but your blows lose their bite
-};
-const STAGGER_BONUS = 2; // an opening costs you
-// Carry space is measured in SLOTS. Fungibles (trophies, food, scrap, keys,
-// cigarettes) stack: a whole pile of rat-tails is one slot. Gear, sealed items,
-// journals, and maps are each their own slot. So the pack limits distinct kit
-// you haul, not how many trophies you hoard.
-const PACK_CAP = 20;
-const LOCKBOX_CAP = 8; // the run closet — small, takes anything, sealed or raw
-const VAULT_CAP = 50; // the bank — deep, generous, sealed wealth only
-// Not every forced box pays out. Now and then the lock gives on nothing —
-// picked clean before you got there, or never worth the key. Uncommon enough
-// that a haul still feels earned, common enough to sting when a key buys air.
-// (The reliquary is spared it — see cmdUnlock: a boss-and-black-key box that
-// duds is cruelty, not mischief.)
-const CACHE_EMPTY_ODDS = 0.15;
-// A sentinel chip: the client intercepts it and opens the bench modal instead
-// of sending it as a command (see renderChips).
-const BENCH_CHIP = "open the lockbox";
-// Same trick for the keeper's hatch: the client opens the trade modal instead
-// of sending it as text. (Typed 'barter'/'buy'/'offer' still work bare.)
-const TRADE_CHIP = "barter with the keeper";
-// The bench's other trades (gate only): the vice breaks gear into scrap iron,
-// scrap mends wear, and the recipe book (forge_recipes) turns scrap back into
-// steel. Yields and mend costs scale with rarity; epics are found, never made.
-const SCRAP_ID = "scrap-iron";
-// Knowledge as loot (see migration 029). Read by id, like the scrap above.
-const DETAILED_MAP = "surveyor-map";
-const CRUDE_MAP = "crude-map";
-const MAP_ITEMS = new Set([DETAILED_MAP, CRUDE_MAP]);
-const JOURNAL_ITEM = "hunters-journal";
-// Fishing: only off the dry shelf of the Pocket of Air, dropping a line into
-// the flood below (where the water — and what swims in it — can't reach you).
-// A cast rarely lands anything; the catch is mostly the blind cave-fish, now
-// and then the rarer, richer pale eel. Patience, not a button to mash.
-const FISHING_ROOMS = new Set(["pocket-of-air"]);
-const FISH_ODDS = 0.18;         // a cast catches SOMETHING less than one time in five
-const PALE_EEL_ODDS = 0.2;      // of those catches, a fifth are the rare eel
-const FISH_COOLDOWN_MS = 6000;  // each cast is a deliberate wait
-// A crude map lies the SAME way every time you open it (or it reads as noise,
-// not a map). The lie is seeded off the book's row id, so a given scrap is
-// consistently wrong — and a second crude map is wrong differently. Deterministic
-// PRNG (mulberry32) + a cheap string hash feed it; never the CSPRNG.
-function hashSeed(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-// How much a crude map lies: how much of the map it omits, and how many of the
-// exits it does show are wrong (dropped or pointing at the wrong room).
-const CRUDE_DROP_ROOM = 0.30;  // ~30% of rooms simply aren't on it
-const CRUDE_BAD_EXIT = 0.15;   // ~15% of shown exits are a lie
-const SALVAGE_YIELD: Record<string, number> = { common: 1, uncommon: 2, rare: 4, epic: 8 };
-const REPAIR_COST: Record<string, number> = { common: 1, uncommon: 1, rare: 2, epic: 3 };
-// The gate keeper deals in kind: barter value ≥ this and his manner changes.
-// What clears the bar is never written down anywhere a player can read.
-const RICH_TENDER = 15;
-// Barter values can be fractional (a rat-tail is worth 0.1), so a counter total
-// is summed in floats — round to a clean tenth so ten tails read as 1, not
-// 0.999…, and the "square" check never sticks a hair short.
-const roundTender = (n: number) => Math.round(n * 10) / 10;
-// Canonical compass order for direction chips, so they never shuffle room to room.
-const DIR_ORDER: Record<string, number> = { north: 0, south: 1, east: 2, west: 3, up: 4, down: 5 };
-const RATE_CAPACITY = 6; // command tokens
-const RATE_REFILL_PER_SEC = 2;
-
-// Body: wounds close only deliberately — resting, or the shelter of a
-// gatehouse (bench or hatch open at a gate: out of the world, mending).
-// Death wakes you whole: the price of dying is everything you carried,
-// not a hobbled morning.
-const REST_REGEN_PER_TICK = 1;
-
-// Simulation clocks.
-const SIM_STEP_MS = 60_000; // catch-up granularity
-const CATCHUP_CAP_MS = 14 * 24 * 3_600_000;
-const CREATURE_HEAL_PER_MIN = 1;
-const HUNGER_PER_MIN = 2; // 0..100
-const HUNGER_MAX = 100;
-const HUNGRY_AT = 50;
-const WANDER_MIN_MS = 45_000;
-const WANDER_MAX_MS = 150_000;
-const FLEE_BELOW = 0.25;
-const FLEE_CHANCE = 0.5; // per tick once below the threshold
-const MIGRATION_FACTOR = 20; // respawn_secs * this = how long an EMPTY/solo zone takes to refill
-// A busy dungeon refills faster: more wanderers, more blood and disturbance,
-// more drawn up from the dark. The effective factor is divided by the number
-// of players in the zone (solo = unchanged), down to a floor so even a crowd
-// keeps some scarcity. Bosses are exempt — the King reforms on its own clock.
-const MIGRATION_MIN_FACTOR = 5;
-const REGROW_MS = 10 * 60_000; // the shrine replaces its gifts
-const GRUDGE_MAX = 5;
-// How long a creature holds a grudge before it forgets — each kind at its own
-// pace. Killing the creature settles it outright (it's gone, and a migrant
-// replacement never knew you); this is the slower mercy of time for one you
-// couldn't put down. The Forgotten King never forgets (is_boss → Infinity).
-const FORGET_MS: Record<string, number> = {
-  rat: 30 * 60_000,            // vermin: a short, scrabbling temper
-  "fleet-rat": 30 * 60_000,    // it's already running; a grudge means little
-  "brood-rat": 24 * 3_600_000, // a mother remembers what came for her nest
-  cutpurse: 20 * 60_000,       // it got what it wanted; no reason to hold a grudge
-  skeleton: 24 * 3_600_000,    // habit and repetition — about a day
-  "grave-hyena": 12 * 3_600_000, // remembers a bad meal half a day
-  "dire-hyena": 24 * 3_600_000,  // the mean one holds it a full day
-  warden: 7 * 24 * 3_600_000,  // a hollow warden holds it a week
-};
-const FORGET_DEFAULT = 24 * 3_600_000;
-const COMBAT_NOISE_EVERY_MS = 8000; // a running fight rings out this often
-const NOISE_HEED_ODDS = 0.7; // a good majority of mobs check out a noise; the rest don't bother
-const DOGPILE_CAP = 3; // most creatures that can land a blow on one player in a tick; the rest press at the edges
-const CROWD_CAP = 5; // a room this full stops drawing more (no wandering in, no answering a fight) — no black holes
-// Worn slots that contribute ARMOR (they all sum). The shield is a worn slot
-// too but pays in BLOCK, not soak; the weapon is worn for WEIGHT only.
-const ARMOR_SLOTS = new Set(["armor", "helm", "feet", "cloak"]);
-const BLEED_TICKS = 3; // how many ticks a fresh cut weeps before it clots
-
-// Traces: the world's memory, decaying at each kind's own pace.
-const TRACE_LIFE_MS: Record<string, number> = {
-  blood: 6 * 3_600_000,
-  remains: 12 * 3_600_000, // bone and broken armor outlast a bloodstain
-  scraps: 6 * 3_600_000,
-  rest: 3 * 3_600_000,
-  passage: 90 * 60_000,
-  // A carving is the most durable trace — you chiseled it — but the stone
-  // still weathers within a day. Nothing a stranger scratches here scars the
-  // world for good; graffiti self-erases, same spine as guest pruning.
-  carve: 24 * 3_600_000,
-};
-const TRACE_CAP = 12; // per room; oldest non-carving forgotten first
-const CARVE_CAP = 5; // wall space is finite
-const CARVE_MAX_LEN = 40;
-const ROT_MS = 12 * 3_600_000; // food on the floor keeps this long
-
-// What a creature on the move sounds like from one room away. Every dweller
-// gets its own voice through the walls — the deep ones especially, so the dark
-// below is never just "something moves."
-const MOVE_SOUNDS: Record<string, string> = {
-  rat: "Claws skitter {dir}.",
-  "fleet-rat": "Tiny claws scrabble away {dir}, fast.",
-  "brood-rat": "Something heavy drags itself {dir}.",
-  skeleton: "Dry bones clatter {dir}.",
-  "bone-knight": "Mail and old bone grind together {dir}, in step.",
-  warden: "Slow, heavy footfalls sound {dir}.",
-  "warden-captain": "A heavy tread rings {dir}, and does not hurry.",
-  cutpurse: "Quick, light footsteps patter {dir}.",
-  cutthroat: "A soft, unhurried step crosses {dir}, and is gone.",
-  "grave-hyena": "Something big pads {dir}, sniffing.",
-  "dire-hyena": "Something heavy pads {dir}, close and unhurried.",
-  "the-drowned": "Water shifts {dir}, thick and slow, around something wading.",
-  "drowned-hulk": "A great mass moves through water {dir}, and the flood slaps the walls.",
-  "pale-crawler": "Something long drags itself over wet stone {dir}.",
-  "pale-stalker": "A wet, boneless sound slides {dir}, and stops.",
-  "twice-dead": "Old bones shift {dir}, unhurried, as if they have all the time there is.",
-  "thrice-dead": "Something dead resettles itself {dir}, patient and wrong.",
-};
-
-// Territory: every creature remembers its den and keeps to the ground around
-// it. Idle wandering never crosses the edge; a creature that finds itself
-// beyond it (fled, or freshly walked in from a dark mouth) spends every idle
-// step walking home. This is what keeps the deep in the deep — and the rats
-// out of rooms three corridors from their nest. Patrollers (PATROLS) are
-// exempt: their route is their territory. The boss goes where it pleases.
-const TERRITORY_RADIUS = 3;
-// The dark mouths: where migrants physically enter the world — a well shaft,
-// a forgotten hole, cracks the dungeon never sealed. A refill surfaces at the
-// mouth nearest its den and walks in; nothing materializes in a watched room.
-// (The sessile — brood-mothers, the drowned — simply are where they live.)
-const MOUTHS = ["well", "oubliette", "kennels", "catacomb", "the-weir", "root-vault"];
-
-// The warden walks its rounds — it always has ("armor... still walking its
-// rounds"). Knocked off the route (fled, investigated), it drifts back. It
-// beats the full INNER RING that circles the hall — never the gates (the
-// threshold rule bars that) and never resting on any one wanderer's path in.
-// Each step is to an adjacent room, so the rounds actually close.
-const PATROLS: Record<string, string[]> = {
-  warden: ["barracks", "cells", "cistern", "ossuary", "catacomb", "kennels", "armory", "gallery"],
-  "warden-captain": ["barracks", "cells", "cistern", "ossuary", "catacomb", "kennels", "armory", "gallery"],
-};
-
-// Creatures with nothing inside. They do not bleed (broken remains, not blood),
-// do not hunger, and no smell of food moves them. The rat is the only thing
-// down here that's honestly alive.
-const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-captain", "forgotten-king", "drowned-god", "marrow-king"]);
-
-// Behavior families — creatures that DO a thing, not just fight:
-// THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
-const THIEVES = new Set(["cutpurse", "cutthroat"]);
-// RUNNERS never stand and fight — they bolt the instant they can, so the only
-// way to kill one is to catch it: hit it as it breaks for the door.
-const RUNNERS = new Set(["fleet-rat"]);
-// BROODERS are nest-bound: they don't wander, don't flee, and while they live
-// they keep birthing scabby rats into their room. Kill the mother or the room
-// stays an infestation. A living source, not a stat block.
-const BROODERS = new Set(["brood-rat"]);
-const BROOD_CAP = 2; // most rats a mother keeps in her nest room
-const BROOD_INTERVAL_MS = 90_000; // ~90s between births
-// LISTENERS are dormant to sight — empty sockets, nothing behind them — but
-// they HEAR. A still, quiet wanderer they walk right past; move (in or out) or
-// make a din and they may lurch awake and swing. (A grudge still wakes them
-// outright; this is only for the ones that don't yet know you.)
-const LISTENERS = new Set(["skeleton", "bone-knight"]);
-const WAKE_ENTER = 0.3;  // sometimes it catches the sound of you coming in
-const WAKE_EXIT = 0.65;  // your move for the door is the loudest thing you do
-const WAKE_NOISE = 0.8;  // a fight in the room is almost unmissable
-const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
-// SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing
-// and — past BOLD — losing their nerve entirely: they stop fleeing and hit harder.
-const SCAVENGERS = new Set(["grave-hyena", "dire-hyena"]);
-// The mean subtype GUARDS its meal: walk into a room where it's on a corpse
-// (or where it's already gorged bold) and it turns on you unprovoked. It also
-// hits harder and holds a grudge longer — a far worse thing to disturb.
-const AGGRO_SCAVENGERS = new Set(["dire-hyena"]);
-const CORPSE_TRACES = new Set(["blood", "remains"]);
-const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
-const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
-const BOLD_DMG_MULT = 1.35; // a gorged scavenger swings harder
-
-// ---- the deep-dwellers (built SOFT; every trick has an answer) ----
-// DROWNERS grapple: a landed blow can SEIZE you — held fast (can't flee) and hit
-// harder — until you wrench free or put the thing down. They never chase or flee;
-// they hold their patch of water. Wade in on your own terms, or not at all.
-const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god"]);
-const SEIZE_ODDS = 0.2;        // soft: a blow only sometimes takes hold
-const SEIZE_BREAK_ODDS = 0.5;  // soft: about half the time you wrench loose each beat
-const SEIZE_DMG_MULT = 1.25;   // it hits a little harder while it has you
-// LURKERS wait UNSEEN — not in the room description at all — until they drop on
-// you. Blind, they wake to noise and to the careless walking in (they ride the
-// same wake odds as LISTENERS, WAKE_ENTER/WAKE_NOISE); stay quiet and still and
-// one may let you pass. Once it strikes it reveals itself, and it's just a fight.
-const LURKERS = new Set(["pale-crawler", "pale-stalker"]);
-// REVENANTS don't stay down: put one to 0 and it RISES ONCE, at part health, and
-// comes again. The second death is the real one. A longer fight, not a lost one.
-const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);
-const REVIVE_FRAC = 0.4;       // soft: it comes back weakened
-// How many times a revenant gets back up before the fall is real. Default 1
-// (twice-dead, marrow-king); the cairn-wight rises twice.
-const RISE_LIMIT: Record<string, number> = { "thrice-dead": 2 };
-// How the hollow come apart when they run. The living just bleed.
-const HURT_STYLE: Record<string, { out: string; in_: string }> = {
-  skeleton: { out: "flees {dir} in a clatter of loose bone.", in_: "bursts in, rattling loose." },
-  "bone-knight": { out: "withdraws {dir} in a grind of mail and bone.", in_: "strides in, mail grinding." },
-  warden: { out: "flees {dir}, armor grinding.", in_: "bursts in, grinding." },
-  "warden-captain": { out: "gives ground {dir}, harness shrieking.", in_: "bears in, harness shrieking." },
-};
-
-// ---- the language of the fight ----
-// Every landed blow used to read the same ("You hit X for N"); a long fight
-// was a wall of identical lines. Now each strike draws a verb from a pool
-// chosen by the weapon in hand — an edge cuts, a bludgeon cracks, a fist
-// clouts — and each creature answers in its own register (teeth, cold hands,
-// dead bone, a thief's knife). The numbers are unchanged; only the telling
-// varies. Verbs are written to sit cleanly before " for N": "You <verb> for N".
-const PLAYER_HIT: Record<"edge" | "blunt" | "spear" | "fist" | "plain", string[]> = {
-  // a cutting weapon (it draws blood — bleed > 0)
-  edge: [
-    "cut into {n}", "slash {n}", "hack at {n}", "lay {n} open", "carve into {n}",
-    "score a line across {n}", "open {n} up", "draw steel across {n}",
-  ],
-  // a crushing weapon (it rings things senseless — stun > 0)
-  blunt: [
-    "crack {n}", "smash into {n}", "batter {n}", "club {n} down", "hammer {n}",
-    "stave {n} in", "drive {n} back with a blow", "catch {n} a heavy blow",
-  ],
-  // a reaching or thrusting weapon (has some other edge — sweep/speed)
-  spear: [
-    "run at {n}", "drive into {n}", "thrust into {n}", "punch through {n}'s guard",
-    "catch {n} on the point", "lunge into {n}",
-  ],
-  // bare hands
-  fist: [
-    "clout {n}", "crack {n} with a fist", "rap {n}", "hammer {n} bare-knuckled",
-    "catch {n} across the jaw", "drive a fist into {n}",
-  ],
-  // a plain weapon with no special property
-  plain: [
-    "strike {n}", "hit {n}", "catch {n}", "land a blow on {n}", "drive into {n}",
-    "beat at {n}", "chop into {n}",
-  ],
-};
-// Kept small and sharp — one of these caps a critical hit, player or creature.
-const CRIT_FLOURISH = [
-  " — a savage blow!", " — and it tells!", " — clean through!", " — a brutal stroke!",
-  " — everything behind it!", " — and something gives!",
-];
-// How each kind of thing lands a blow ON you. Keyed by behaviour family, so a
-// new creature inherits its kin's register the moment it joins a Set.
-const CREATURE_HIT = {
-  teeth: [
-    "sinks its teeth into you", "snaps at you and tears", "bites deep", "savages you",
-    "rakes you with its claws", "worries at you", "sets its jaws in you",
-  ],
-  bone: [
-    "rakes bony fingers across you", "strikes with a rusted edge", "batters you",
-    "catches you with a dead hand", "hacks at you", "swings its old iron into you",
-  ],
-  water: [
-    "crushes down on you", "drags you against the cold stone", "batters you with a swollen limb",
-    "closes its weight on you", "hauls at you", "grinds you under",
-  ],
-  knife: [
-    "opens a thin line across you", "cuts you", "nicks you deep", "slashes at you",
-    "slips its blade past your guard", "scores you",
-  ],
-  plain: [
-    "hits you", "strikes you", "catches you a blow", "lands a blow on you",
-    "gets past your guard", "beats you back",
-  ],
-} as const;
-// Which register a creature swings in. Order matters — first match wins.
-const BITERS = new Set([
-  "rat", "fleet-rat", "brood-rat", "grave-hyena", "dire-hyena", "pale-crawler", "pale-stalker",
-]);
-
-// ---- the dungeon breathing: ambient atmosphere ----
-// A quiet, rate-limited flavour line surfaces to an idle wanderer now and then,
-// drawn from where they stand: the flooded deep sounds nothing like the gates.
-// Add freely — this is meant to grow. Signature rooms override the region pool.
-const DEEP_ROOMS = new Set([
-  "the-descent", "drowned-nave", "black-canal", "the-weir", "pocket-of-air",
-  "sunken-gallery", "root-vault", "deep-ossuary", "weeping-cells", "silted-stair",
-  "bone-processional", "black-threshold", "sunken-throne", "kings-hoard",
-]);
-const AMBIENCE: Record<"gate" | "deep" | "upper", string[]> = {
-  gate: [
-    "Cold air wells up out of the dark below, smelling of wet stone.",
-    "Above, the wind finds a gap in the ruined tower and moans through it.",
-    "Grit trickles down from the broken vault overhead, and stops.",
-    "The keeper shifts behind his hatch, and is still again.",
-  ],
-  upper: [
-    "Dust sifts down out of the dark of the vaulting.",
-    "Far off, water finds stone, drop by patient drop.",
-    "Something small moves in the wall, and thinks better of it.",
-    "The dungeon settles around you with a sound like a held breath let go.",
-    "A draft passes, carrying old smoke and older bone.",
-    "For a moment the dark seems to lean closer. Then it doesn't.",
-    "Somewhere, stone grinds on stone, and the silence closes over it.",
-  ],
-  deep: [
-    "Black water laps at the edge of the dark, unhurried.",
-    "Something turns over in the flood, far off, and goes still.",
-    "A slow drip counts out the silence, somewhere overhead.",
-    "The cold here is a wet hand laid flat against your back.",
-    "Bubbles break the surface where nothing should be breathing.",
-    "The water carries a sound you feel more than hear, and cannot place.",
-  ],
-};
-const ROOM_AMBIENCE: Record<string, string[]> = {
-  smokehouse: ["The old smoke-racks tick overhead, hung with nothing now.", "A ghost of cured smoke still hangs in the cold air."],
-  larder: ["The stores keep their long cold silence around you."],
-  oubliette: ["A breath of colder air rises from the pit, and something in it that is not air."],
-  shrine: ["The altar waits, patient as only dead stone can be."],
-  "pocket-of-air": ["The air here is thin and breathable and does not smell of the water. You breathe while you can."],
-  "sunken-throne": ["The flooded dark hums, low, as if the throne remembers being sat.", "The water around the throne is very, very still."],
-  "kings-hoard": ["Gold gleams once in the dark, and is swallowed again."],
-};
-const AMBIENT_COOLDOWN_MS = 45_000; // at most one breath of atmosphere this often, per wanderer
-const AMBIENT_ODDS = 0.16;          // ~per 2s tick, once off cooldown
-const RECONNECT_GRACE_MS = 5 * 60_000; // a re-weave within this of dropping is a reconnect, not a fresh arrival
-
-interface Session {
-  ws: WebSocket;
-  pubkey: string;
-  name: string;
-  named: boolean; // chose their name (or client adopted their profile name)
-  roomId: string;
-  hp: number;
-  maxHp: number;
-  target: string | null; // creature id — the foe you initiated on
-  stance: Stance; // how you fight: reckless / steady / guarded (persisted to D1)
-  items: CarriedItem[]; // pack cache; D1 is truth. serial != null = gate-sealed
-  staggered: boolean; // fumbled an opening; the next hit that lands costs more
-  resting: boolean;
-  away: boolean; // out of the world, untouchable (bench modal, or the keeper's hatch)
-  trading?: boolean; // which away it is: true = the keeper's hatch (trade modal)
-  ctxCombat: boolean; // the combat state the last chip set was drawn for (see syncCombatCtx)
-  seizedBy?: string; // DROWNER creature id that has hold of you — can't flee till you break free
-  buying?: { itemId: string; cost: number; paid: number; escrow: { row: string; from: string }[] }; // open trade at the keeper's hatch; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square
-  born: number; // created_at, unix seconds — wanderer age on the sheet
-  kills: number; // tallies cached from D1; recordKill/recordDeath keep the truth
-  deaths: number;
-  bossKills: number;
-  pvpKills: number;
-  tokens: number;
-  tokensAt: number; // ms of last refill
-  nextThrowAt: number; // ms — one throw per round; the arm needs its follow-through
-  visited: Set<string>; // rooms seen THIS session — a room you know shows brief, not the full prose again
-  lastAmbientAt: number; // ms of the last atmosphere line (rate-limits the dungeon's breathing)
-  lastFishAt?: number; // ms of the last fishing cast (a short patience between casts)
-}
-
-// A creature is an animal, not a spawner: it has a body, an appetite,
-// A grudge: whose blood it remembers, and when — so time can wear it away.
-interface Grudge {
-  pk: string; // pubkey it holds the grudge against
-  at: number; // ms epoch it was last provoked (renewed each fresh offense)
-}
-
-// and a memory. When it dies it is gone; migration refills the world.
-interface Creature {
-  id: string; // instance id (seed spawn id, or uuid for migrants)
-  templateId: string;
-  roomId: string;
-  hp: number;
-  hunger: number; // 0..100; above HUNGRY_AT it starts hunting for food
-  grudges: Grudge[]; // who hurt it, and when — memory that fades with time
-  nextWanderAt: number; // ms epoch
-  target: string | null; // pubkey it is fighting
-  curious?: string | null; // roomId it heard something from — going to look
-  patrolIdx?: number; // position along a patrol route, if it keeps one
-  phase?: number; // boss rage tier (0/1/2), climbs at hp thresholds
-  stole?: string; // cutpurse: the item id it grabbed and ran with (dropped on death)
-  carries?: string[]; // gear it visibly bears (worn/wielded at spawn, or scavenged) — spills on death
-  fed?: number; // grave-hyena: corpses eaten; enough and it turns bold
-  nextBirthAt?: number; // brood-rat: ms epoch of its next birth
-  stunned?: boolean; // a blunt blow rang it — skips its next action, then clears
-  bleedTicks?: number; // ticks of open wound left (armor-ignoring); refreshed by fast hits
-  bleedDmg?: number; // damage the current wound bleeds each tick
-  hidden?: boolean; // LURKER: unseen in the room until it strikes
-  rises?: number; // REVENANT: times it has already got back up (see RISE_LIMIT)
-  home?: string; // its den: territory anchors here (backfilled for old saves)
-}
-
-interface Regrow {
-  itemId: string;
-  roomId: string;
-  at: number;
-}
-
-// What a room remembers. `label` names the fallen (blood), `words` are a
-// carving's text plus its author.
-interface Trace {
-  kind: "blood" | "remains" | "scraps" | "rest" | "passage" | "carve";
-  at: number;
-  label?: string;
-  words?: string;
-}
-
-interface RotEntry {
-  itemId: string;
-  roomId: string;
-  at: number; // when it goes foul
-}
-
-// A carryable on the floor that can't be reduced to a bare template id — it
-// holds instance state that must survive the drop. Today: journals (journalId).
-interface GroundInstance {
-  itemId: string;
-  journalId: string;
-}
-
-// Everything the world needs to keep existing while nobody watches.
-interface SimState {
-  savedAt: number;
-  creatures: Creature[];
-  ground: Record<string, string[]>;
-  groundInstances?: Record<string, GroundInstance[]>; // instanced items on the floor (journals: they carry their pages)
-  regrow: Regrow[];
-  arrivals: Record<string, number>; // templateId -> ms when a migrant arrives
-  openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
-  traces: Record<string, Trace[]>;
-  rot: RotEntry[];
-  placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once
-  cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills
-}
+import * as gate from "./gate";
+import {
+  TICK_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
+  WEAPON_WEAR, ARMOR_WEAR, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT, 
+  WOUNDED_FUMBLE_BONUS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX, 
+  THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, 
+  PARTING_BLOW_CHANCE, STANCE, STAGGER_BONUS, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, 
+  CACHE_EMPTY_ODDS, BENCH_CHIP, TRADE_CHIP, FORGE_CHIP, DETAILED_MAP,
+  MAP_ITEMS, JOURNAL_ITEM, FISHING_ROOMS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
+  CRUDE_DROP_ROOM, CRUDE_BAD_EXIT, DIR_ORDER,
+  RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, SIM_STEP_MS, CATCHUP_CAP_MS, 
+  CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
+  FLEE_BELOW, FLEE_CHANCE, MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, REGROW_MS, GRUDGE_MAX, 
+  FORGET_MS, FORGET_DEFAULT, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, 
+  ARMOR_SLOTS, BLEED_TICKS, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, CARVE_MAX_LEN, ROT_MS, 
+  MOVE_SOUNDS, TERRITORY_RADIUS, MOUTHS, PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, 
+  BROOD_CAP, BROOD_INTERVAL_MS, LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
+  SCAVENGERS, AGGRO_SCAVENGERS, CORPSE_TRACES, SCAVENGER_HEAL, SCAVENGER_BOLD_AT, 
+  BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, LURKERS, REVENANTS, 
+  REVIVE_FRAC, RISE_LIMIT, HURT_STYLE, PLAYER_HIT, CRIT_FLOURISH, CREATURE_HIT, BITERS, 
+  DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS
+} from "./zone-data";
 
 export class ZoneDO implements DurableObject {
-  private world: World | null = null;
+  public world: World | null = null;
   private sessions = new Map<string, Session>(); // pubkey -> session
   private leftAt = new Map<string, number>(); // pubkey -> ms it last disconnected (a quick return is a reconnect, not an arrival)
-  private creatures = new Map<string, Creature>();
-  private ground = new Map<string, string[]>(); // roomId -> item template ids
+  public creatures = new Map<string, Creature>();
+  public ground = new Map<string, string[]>(); // roomId -> item template ids
   // Items on the floor that carry per-instance state a bare template id can't:
   // a dropped journal keeps the id its pages are keyed to, so whoever picks it
   // up inherits the logs. Everything else stays in the plain `ground` above.
@@ -611,7 +98,7 @@ export class ZoneDO implements DurableObject {
 
   constructor(
     private state: DurableObjectState,
-    private env: Env,
+    public env: Env,
   ) {}
 
   // Four gates ring the Door; you wake at a random one, so no death sends you
@@ -1007,7 +494,8 @@ export class ZoneDO implements DurableObject {
     }
     const isBench = frame?.t === "bench";
     const isTrade = frame?.t === "trade";
-    if (!isBench && !isTrade && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
+    const isForge = frame?.t === "forge";
+    if (!isBench && !isTrade && !isForge && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
 
     // Token bucket per pubkey — castr's daily-cast pattern, compressed.
     const now = Date.now();
@@ -1017,23 +505,57 @@ export class ZoneDO implements DurableObject {
     );
     session.tokensAt = now;
     if (session.tokens < 1) {
-      if (!isBench && !isTrade) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
+      if (!isBench && !isTrade && !isForge) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
       return;
     }
     session.tokens -= 1;
 
     // The gatehouse bench (storage modal) and the keeper's hatch (trade
     // modal): each its own little protocol.
-    if (isBench) return this.handleBench(session, frame);
-    if (isTrade) return this.handleTrade(session, frame);
+    if (isBench) return gate.handleBench(this, session, frame);
+    if (isTrade) return gate.handleTrade(this, session, frame);
+    if (isForge) return gate.handleForge(this, session, frame);
 
-    // Stepped out of the world? The typed world is on hold.
+    // Stepped out of the world with a TYPED barter/forge/inventory: a safe
+    // stance at the counter/brazier/keeping. That stance's own work keeps you
+    // out and untouchable; ANY other act walks you back into the world first,
+    // then runs — so a command-player is never exposed mid-fiddle, and needs no
+    // special "leave" verb ('look' is the natural way back).
+    if (session.away && session.stepText) {
+      const stepCmd = parse(frame.text);
+      if (!stepCmd || "miss" in stepCmd) {
+        return this.send(session, session.trading
+          ? "The keeper waits across the counter. 'buy'/'offer' to deal, or 'look' to step back into the world."
+          : session.forging
+            ? "The brazier's hot. 'forge <thing>' to work one, or 'look' to step back into the world."
+            : "Your kit's laid out. 'stash'/'unstash'/'vault' to sort, or 'look' to step back into the world.");
+      }
+      // Each stance keeps its own work safe; anything else (a 'look', a step, a
+      // swing) walks you back into the world first. 'say' is quiet enough to
+      // stay in any stance; a foreign keeping-command (e.g. 'forge' at the hatch)
+      // cleanly switches stances by leaving this one, then entering that one.
+      const v = stepCmd.verb;
+      const stay = session.trading
+        ? (v === "barter" || v === "buy" || v === "offer" || v === "say")
+        : session.forging
+          ? (v === "forge" || v === "say")
+          : (v === "inventory" || v === "stash" || v === "unstash" || v === "vault" || v === "unvault" || v === "say");
+      if (!stay) await this.leaveStep(session); // anything else rejoins the world first
+      await this.dispatch(session, stepCmd);
+      this.syncCombatCtx();
+      return;
+    }
+
+    // Stepped out via a modal (chip path)? The typed world is on hold — use the
+    // modal, or close it.
     if (session.away) {
       return this.send(session, session.trading
         ? "You're at the keeper's hatch. Close the trade to step back into the world."
-        : this.world!.entryRooms.has(session.roomId)
-          ? "You're sorting your kit at the gatehouse. Close the bench to step back into the world."
-          : "You're crouched over your lockbox. Close it to get your head up and act.");
+        : session.forging
+          ? "You're at the forge. Close it to step back into the world."
+          : this.world!.entryRooms.has(session.roomId)
+            ? "You're sorting your kit at the gatehouse. Close the bench to step back into the world."
+            : "You're crouched over your lockbox. Close it to get your head up and act.");
     }
 
     const text: string = frame.text;
@@ -1082,23 +604,23 @@ export class ZoneDO implements DurableObject {
       case "equip": return this.cmdEquip(session, cmd.arg);
       case "remove": return this.cmdRemove(session, cmd.arg);
       case "unlock": return this.cmdUnlock(session, cmd.arg);
-      case "salvage": return this.cmdSalvage(session, cmd.arg);
-      case "forge": return this.cmdForge(session, cmd.arg);
-      case "repair": return this.cmdRepair(session, cmd.arg);
-      case "barter": return this.cmdBarter(session);
-      case "buy": return this.cmdBuy(session, cmd.arg);
-      case "offer": return this.cmdOffer(session, cmd.arg);
+      case "salvage": return gate.cmdSalvage(this, session, cmd.arg);
+      case "forge": return gate.cmdForge(this, session, cmd.arg);
+      case "repair": return gate.cmdRepair(this, session, cmd.arg);
+      case "barter": return gate.cmdBarter(this, session);
+      case "buy": return gate.cmdBuy(this, session, cmd.arg);
+      case "offer": return gate.cmdOffer(this, session, cmd.arg);
       case "inventory": return this.cmdInventory(session);
       case "who": return this.cmdWho(session);
       case "name": return this.cmdName(session, cmd.arg);
       case "rest": return this.cmdRest(session);
       case "eat": return this.cmdEat(session, cmd.arg);
       case "carve": return this.cmdCarve(session, cmd.arg);
-      case "claim": return this.cmdClaim(session, cmd.arg);
-      case "stash": return this.cmdStore(session, cmd.arg, "lockbox");
-      case "unstash": return this.cmdRetrieve(session, cmd.arg, "lockbox");
-      case "vault": return this.cmdStore(session, cmd.arg, "vault");
-      case "unvault": return this.cmdRetrieve(session, cmd.arg, "vault");
+      case "claim": return gate.cmdClaim(this, session, cmd.arg);
+      case "stash": return gate.cmdStore(this, session, cmd.arg, "lockbox");
+      case "unstash": return gate.cmdRetrieve(this, session, cmd.arg, "lockbox");
+      case "vault": return gate.cmdStore(this, session, cmd.arg, "vault");
+      case "unvault": return gate.cmdRetrieve(this, session, cmd.arg, "vault");
       case "publish": return this.cmdPublish(session, cmd.arg);
       case "map": return this.cmdMap(session, cmd.arg);
       case "study": return this.cmdStudy(session, cmd.arg);
@@ -1304,8 +826,9 @@ export class ZoneDO implements DurableObject {
       `You round on ${tmpl.name} and ready yourself.`,
     ]));
     this.roomFeed(session.roomId, `${session.name} attacks ${tmpl.name}!`, session.pubkey);
-    // A fight is loud: a dormant listener in the room may wake to the din.
-    await this.wakeListeners(session, session.roomId, WAKE_NOISE, "clatters awake at the noise and turns on you!");
+    // A fight is loud, but the blind sentinels sleep through the din now — only
+    // a lurker in the room strikes at the sound (WAKE_NOISE, fromNoise).
+    await this.wakeListeners(session, session.roomId, WAKE_NOISE, "clatters awake at the noise and turns on you!", true);
     await this.ensureAlarm();
   }
 
@@ -1630,12 +1153,12 @@ export class ZoneDO implements DurableObject {
 
   // How many unsealed copies of an item ride in the pack (tender and materials;
   // a sealed copy is title, and the bench and the keeper both leave it alone).
-  private countLoose(session: Session, itemId: string): number {
+  public countLoose(session: Session, itemId: string): number {
     return session.items.filter((c) => c.itemId === itemId && c.serial === null).length;
   }
 
   // Consume n unsealed copies out of the pack (rows deleted for good).
-  private async takeLoose(session: Session, itemId: string, n: number): Promise<void> {
+  public async takeLoose(session: Session, itemId: string, n: number): Promise<void> {
     for (let i = 0; i < n; i++) {
       const idx = session.items.findIndex((c) => c.itemId === itemId && c.serial === null);
       if (idx === -1) return;
@@ -1644,7 +1167,54 @@ export class ZoneDO implements DurableObject {
     }
   }
 
-  private benchGuard(session: Session, work: string): string | null {
+  // The gate's keeping is within reach at the bench: what you carry PLUS what's
+  // in the lockbox and vault. Count unsealed copies across preloaded pools (the
+  // caller loads the containers once and reuses them).
+  public countLooseIn(pools: CarriedItem[][], itemId: string): number {
+    let n = 0;
+    for (const pool of pools) {
+      for (const c of pool) if (c.itemId === itemId && c.serial === null) n++;
+    }
+    return n;
+  }
+
+  // Consume n unsealed copies from the pack first, then the lockbox, then the
+  // vault — the deep keep spent last. Pack rows leave session.items; container
+  // rows are just deleted. (Single-threaded DO: reloading here is consistent.)
+  public async takeLooseAcross(session: Session, itemId: string, n: number): Promise<void> {
+    let left = n;
+    while (left > 0) {
+      const idx = session.items.findIndex((c) => c.itemId === itemId && c.serial === null);
+      if (idx === -1) break;
+      const [row] = session.items.splice(idx, 1);
+      await removeItemRow(this.env.DB, row.rowId);
+      left--;
+    }
+    for (const key of ["lockbox", "vault"] as const) {
+      if (left <= 0) break;
+      const held = await loadContainer(this.env.DB, session.pubkey, key);
+      for (const c of held) {
+        if (left <= 0) break;
+        if (c.itemId === itemId && c.serial === null) {
+          await removeItemRow(this.env.DB, c.rowId);
+          left--;
+        }
+      }
+    }
+  }
+
+  // The three keepings within reach at a gate, loaded once (pack is live in
+  // memory; lockbox and vault come from D1). Shared by forge affordability and
+  // consumption so what the modal shows and what the bench spends never drift.
+  public async gatePools(session: Session): Promise<CarriedItem[][]> {
+    return [
+      session.items,
+      await loadContainer(this.env.DB, session.pubkey, "lockbox"),
+      await loadContainer(this.env.DB, session.pubkey, "vault"),
+    ];
+  }
+
+  public benchGuard(session: Session, work: string): string | null {
     if (!this.world!.entryRooms.has(session.roomId)) {
       return `That's ${work} — the vice and the brazier live at the gates.`;
     }
@@ -1652,373 +1222,57 @@ export class ZoneDO implements DurableObject {
     return null;
   }
 
-  // Break a piece of gear down in the bench vice. Shared by the typed command
-  // and the bench modal; returns the line to show either way.
-  private async salvageCore(session: Session, carried: CarriedItem): Promise<string> {
-    const tmpl = this.world!.itemTemplates.get(carried.itemId)!;
-    if (tmpl.slot === "") return `There's no salvage in ${tmpl.name}.`;
-    if (tmpl.id === "loose-rock") return "It's a rock.";
-    if (carried.serial !== null) return "The gate's seal is on it — the vice won't take gate-marked goods.";
-    if (carried.equipped) {
-      carried.equipped = false;
-      await setEquipped(this.env.DB, carried.rowId, false);
-    }
-    const yieldN = SALVAGE_YIELD[tmpl.rarity] ?? 1;
-    session.items.splice(session.items.indexOf(carried), 1);
-    await removeItemRow(this.env.DB, carried.rowId);
-    for (let i = 0; i < yieldN; i++) {
-      const id = uuid();
-      await insertLoot(this.env.DB, id, session.pubkey, SCRAP_ID, null);
-      session.items.push({ rowId: id, itemId: SCRAP_ID, serial: null, equipped: false, condition: 100 });
-    }
-    return `You crank ${tmpl.name} into the vice and break it down. ${yieldN === 1 ? "A handful" : yieldN + " handfuls"} of scrap iron for the pile.`;
-  }
-
-  private async cmdSalvage(session: Session, arg: string): Promise<void> {
-    const bar = this.benchGuard(session, "bench work");
-    if (bar) return this.send(session, bar);
-    if (!arg) return this.send(session, "Salvage what? The vice takes gear and gives scrap iron.");
-    const carried = this.findCarried(session, arg);
-    if (!carried) return this.send(session, "You carry nothing like that.");
-    const line = await this.salvageCore(session, carried);
-    this.send(session, line);
-    this.roomFeed(session.roomId, `${session.name} works the bench vice, breaking steel.`, session.pubkey);
-    this.sendCtx(session);
-  }
-
-  // Mend a worn piece with scrap iron. Shared with the bench modal.
-  private async repairCore(session: Session, carried: CarriedItem): Promise<string> {
-    const tmpl = this.world!.itemTemplates.get(carried.itemId)!;
-    if (tmpl.slot === "") return `There's nothing to mend in ${tmpl.name}.`;
-    if (carried.serial !== null) return "The seal holds it as it is — frozen, wear and all.";
-    if (carried.condition >= 100) return `${cap(tmpl.name)} is sound already.`;
-    const cost = REPAIR_COST[tmpl.rarity] ?? 1;
-    const have = this.countLoose(session, SCRAP_ID);
-    if (have < cost) return `The mend wants ${cost} scrap iron; you carry ${have}.`;
-    await this.takeLoose(session, SCRAP_ID, cost);
-    carried.condition = 100;
-    await setItemCondition(this.env.DB, carried.rowId, 100);
-    return `You hammer the wear out of ${tmpl.name} and file it true. Sound again.`;
-  }
-
-  private async cmdRepair(session: Session, arg: string): Promise<void> {
-    const bar = this.benchGuard(session, "bench work");
-    if (bar) return this.send(session, bar);
-    if (!arg) return this.send(session, "Repair what?");
-    const carried = this.findCarried(session, arg);
-    if (!carried) return this.send(session, "You carry nothing like that.");
-    this.send(session, await this.repairCore(session, carried));
-    this.sendCtx(session);
-  }
-
-  private async cmdForge(session: Session, arg: string): Promise<void> {
-    const world = this.world!;
-    const bar = this.benchGuard(session, "forge work");
-    if (bar) return this.send(session, bar);
-    if (!world.forgeRecipes.length) return this.send(session, "The brazier is cold and the recipe slate is blank.");
-    if (!arg) {
-      const lines = ["The bench's recipe book, chalked on slate:"];
-      for (const r of [...world.forgeRecipes].sort((a, b) => a.scrap - b.scrap)) {
-        const t = world.itemTemplates.get(r.itemId);
-        if (!t) continue;
-        const mat = r.material ? ` + ${r.materialQty} ${shortName(world.itemTemplates.get(r.material)?.name ?? r.material)}` : "";
-        lines.push(`  ${t.name}${this.itemStat(t)} [${t.rarity}] — ${r.scrap} scrap iron${mat}`);
-      }
-      lines.push(`(You carry ${this.countLoose(session, SCRAP_ID)} scrap iron. 'forge <thing>' to work one. Salvage feeds the pile.)`);
-      return this.send(session, lines.join("\n"));
-    }
-    const recipe = world.forgeRecipes.find((r) => {
-      const t = world.itemTemplates.get(r.itemId);
-      return t ? nameMatches(t.name, arg) : false;
-    });
-    if (!recipe) return this.send(session, "The bench doesn't know how to make that. ('forge' alone reads the slate.)");
-    const t = world.itemTemplates.get(recipe.itemId)!;
-    if (!this.packRoom(session, recipe.itemId)) {
-      return this.send(session, `Your pack is full (${PACK_CAP} slots). Make room before you forge.`);
-    }
-    const haveScrap = this.countLoose(session, SCRAP_ID);
-    if (haveScrap < recipe.scrap) {
-      return this.send(session, `${cap(t.name)} wants ${recipe.scrap} scrap iron; you carry ${haveScrap}.`);
-    }
-    if (recipe.material) {
-      const mt = world.itemTemplates.get(recipe.material);
-      const haveMat = this.countLoose(session, recipe.material);
-      if (haveMat < recipe.materialQty) {
-        return this.send(session, `${cap(t.name)} wants ${recipe.materialQty} of ${mt?.name ?? recipe.material} besides the scrap; you carry ${haveMat}.`);
-      }
-    }
-    await this.takeLoose(session, SCRAP_ID, recipe.scrap);
-    if (recipe.material) await this.takeLoose(session, recipe.material, recipe.materialQty);
-    const id = uuid();
-    await insertLoot(this.env.DB, id, session.pubkey, t.id, null);
-    session.items.push({ rowId: id, itemId: t.id, serial: null, equipped: false, condition: 100 });
-    this.send(session, `Scrap, the brazier's heat, and patience. ${cap(t.name)} comes off the bench, raw but true.${this.itemStat(t)} [${t.rarity}] (unclaimed — the gate can seal it)`, "forge");
-    this.roomFeed(session.roomId, `${session.name} works the bench, hammer ringing off the gatehouse walls.`, session.pubkey);
-    this.sendCtx(session);
-  }
-
-  // ---- the keeper at the gate: stock, trade, and his particular tastes ----
-  // He deals in kind: 'buy' names the want, 'offer' lays goods on the counter
-  // until the trade value is met. No change given, nothing bought outright,
-  // nothing sealed touched. What he privately prizes, he never says.
-
-  private fenceGuard(session: Session): string | null {
-    if (!this.world!.entryRooms.has(session.roomId)) return "The keeper keeps to the gates.";
-    if (this.inCombat(session)) return "The keeper wants no part of your fight. The hatch stays shut.";
-    return null;
-  }
-
-  private cmdBarter(session: Session): void {
-    const world = this.world!;
-    const bar = this.fenceGuard(session);
-    if (bar) return this.send(session, bar);
-    if (!world.fenceStock.length) return this.send(session, "The hatch is shuttered, and stays that way.");
-    const lines = ["The keeper unshutters the hatch and lays out what he'll part with:"];
-    for (const s of [...world.fenceStock].sort((a, b) => a.cost - b.cost)) {
-      const t = world.itemTemplates.get(s.itemId);
-      if (!t) continue;
-      lines.push(`  ${t.name}${this.itemStat(t)} [${t.rarity}] — ${s.cost} in trade`);
-    }
-    lines.push("He deals in kind — bones, teeth, oddments. 'buy <thing>' starts a trade; 'offer <thing>' pays until he's square. He gives no change.");
-    return this.send(session, lines.join("\n"));
-  }
-
-  // Name the want: opens the trade. Shared by the typed command and the modal.
-  private startBuy(session: Session, stock: { itemId: string; cost: number }): string {
-    const t = this.world!.itemTemplates.get(stock.itemId)!;
-    session.buying = { itemId: stock.itemId, cost: stock.cost, paid: 0, escrow: [] };
-    return `The keeper taps the counter: ${t.name} runs ${stock.cost} in trade. Offer what you carry — he'll say when he's square.`;
-  }
-
-  private cmdBuy(session: Session, arg: string): void {
-    const world = this.world!;
-    const bar = this.fenceGuard(session);
-    if (bar) return this.send(session, bar);
-    if (!arg) return this.send(session, "Buy what? 'barter' shows the keeper's stock.");
-    const stock = world.fenceStock.find((s) => {
-      const t = world.itemTemplates.get(s.itemId);
-      return t ? nameMatches(t.name, arg) : false;
-    });
-    if (!stock) return this.send(session, "The keeper shrugs. He doesn't carry that.");
-    this.send(session, this.startBuy(session, stock) + " ('offer nothing' walks away.)");
-    this.sendCtx(session);
-  }
-
-  // Lay one thing on the counter — from the pack, the lockbox, or the vault
-  // (from: '' | 'lockbox' | 'vault'; nothing moves until he's square). All the
-  // keeper's judgement lives here; returns the line to show, however the offer
-  // arrived (typed or modal). He TAKES gate-sealed goods — and cracks the seal
-  // without ceremony when the trade closes (the mint is voided, honestly).
-  private async offerCore(session: Session, carried: CarriedItem, from: string): Promise<string> {
-    const world = this.world!;
-    const trade = session.buying!;
-    const t = world.itemTemplates.get(carried.itemId)!;
-    if ((t.barter ?? 0) <= 0) return `The keeper waves ${t.name} away. No use to him.`;
-    trade.escrow.push({ row: carried.rowId, from });
-    trade.paid = roundTender(trade.paid + t.barter);
-    // His manner is the only appraisal anyone gets.
-    let line: string;
-    if (t.barter >= RICH_TENDER) {
-      line = `The keeper goes very still. Then ${t.name} is gone beneath the counter, and his manner warms considerably.`;
-    } else if (t.barter >= 5) {
-      line = `The keeper's eyebrows climb. He makes ${t.name} disappear.`;
-    } else if (t.barter >= 2) {
-      line = `The keeper weighs ${t.name} in his palm and nods.`;
-    } else {
-      line = `The keeper turns ${t.name} over and grunts.`;
-    }
-    if (trade.paid < trade.cost) return `${line} (${trade.paid} of ${trade.cost}.)`;
-    // Square. Re-tally the counter honestly (something offered may have been
-    // dropped or moved since), then the goods change hands for good.
-    const boxes = new Map<string, CarriedItem[]>([["", session.items]]);
-    for (const key of ["lockbox", "vault"] as const) {
-      if (trade.escrow.some((e) => e.from === key)) {
-        boxes.set(key, await loadContainer(this.env.DB, session.pubkey, key));
-      }
-    }
-    const onCounter: { entry: { row: string; from: string }; item: CarriedItem }[] = [];
-    for (const e of trade.escrow) {
-      const item = (boxes.get(e.from) ?? []).find((c) => c.rowId === e.row);
-      if (item) onCounter.push({ entry: e, item });
-    }
-    trade.escrow = onCounter.map((o) => o.entry);
-    trade.paid = roundTender(onCounter.reduce((sum, o) => sum + (world.itemTemplates.get(o.item.itemId)?.barter ?? 0), 0));
-    if (trade.paid < trade.cost) {
-      return `${line} The keeper re-counts and shakes his head — the counter's short. (${trade.paid} of ${trade.cost}.)`;
-    }
-    let cracked = false;
-    for (const o of onCounter) {
-      if (o.item.serial !== null) {
-        await voidMint(this.env.DB, o.item.serial);
-        cracked = true;
-      }
-      await removeItemRow(this.env.DB, o.item.rowId);
-      if (o.entry.from === "") {
-        const idx = session.items.findIndex((c) => c.rowId === o.item.rowId);
-        if (idx !== -1) session.items.splice(idx, 1);
-      }
-    }
-    const bought = world.itemTemplates.get(trade.itemId)!;
-    // A fresh journal off the keeper's shelf gets a blank book — its own id, so
-    // whatever this wanderer writes in it is theirs to keep, lose, or bleed.
-    const jid = bought.id === JOURNAL_ITEM ? "jrn-" + uuid() : undefined;
-    // The trade's paid: the goods are gone off the counter (slots freed), so
-    // there's almost always room. If the pack is somehow still full, it lands at
-    // your feet at the gate rather than vanishing.
-    const got = await this.grantItem(session, bought.id, { journalId: jid });
-    if (!got) this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), bought.id]);
-    const change = trade.paid > trade.cost ? " He gives no change." : "";
-    const seals = cracked ? " He cracks the gate's seals without ceremony." : "";
-    const where = got ? "across the counter" : "across the counter — your pack is full, so it sits at your feet";
-    session.buying = undefined;
-    this.roomFeed(session.roomId, `${session.name} trades at the keeper's hatch.`, session.pubkey);
-    return `${line}${seals}\nThe keeper slides ${bought.name} ${where}.${change}${this.itemStat(bought)} [${bought.rarity}] (unclaimed — the gate can seal it)`;
-  }
-
-  private async cmdOffer(session: Session, arg: string): Promise<void> {
-    const world = this.world!;
-    const bar = this.fenceGuard(session);
-    if (bar) return this.send(session, bar);
-    const trade = session.buying;
-    if (!trade) {
-      return this.send(session, "You're not mid-trade. The keeper buys nothing outright — 'buy <thing>' first, then offer your goods against it.");
-    }
-    if (arg === "nothing" || arg === "stop" || arg === "cancel" || arg === "no") {
-      session.buying = undefined;
-      this.sendCtx(session);
-      return this.send(session, "You wave the trade off. The keeper sweeps your goods back across the counter without a word.");
-    }
-    if (!arg) return this.send(session, `You've laid ${trade.paid} of ${trade.cost} on the counter so far.`);
-    // First pack match not already on the counter. (Typed offers deal from the
-    // pack; the modal's tabs reach the lockbox and the vault.)
-    let carried: CarriedItem | null = null;
-    let onCounter = false;
-    for (const c of session.items) {
-      const t = world.itemTemplates.get(c.itemId);
-      if (!t || !nameMatches(t.name, arg)) continue;
-      if (trade.escrow.some((e) => e.row === c.rowId)) { onCounter = true; continue; }
-      carried = c;
-      break;
-    }
-    if (!carried) {
-      return this.send(session, onCounter ? "That's already on the counter." : "You carry nothing like that.");
-    }
-    this.send(session, await this.offerCore(session, carried, ""));
-    this.sendCtx(session);
-  }
-
-  // ---- the keeper's hatch as a modal: step out of the world and trade ----
-  // Same shape as the bench: opening it makes you `away` (untouchable, out of
-  // sight), and while it's open the gatehouse quiet closes your wounds too.
-
-  private async handleTrade(session: Session, frame: any): Promise<void> {
-    const world = this.world!;
-    const action = frame?.action;
-    if (action === "open") {
-      if (session.away) return; // one step-out at a time
-      const bar = this.fenceGuard(session);
-      if (bar) return this.send(session, bar);
-      if (!world.fenceStock.length) return this.send(session, "The hatch is shuttered, and stays that way.");
-      session.away = true;
-      session.trading = true;
-      session.resting = false;
-      session.target = null;
+  // Typed barter/forge steps you out of the world just like opening the modal —
+  // untouchable at the counter/brazier — but keeps you in text. Idempotent, so
+  // a run of typed sub-commands (buy, offer, forge) doesn't re-announce it.
+  public enterStep(session: Session, mode: "trading" | "forging" | "sorting"): void {
+    if (session.away) return;
+    const atGate = this.world!.entryRooms.has(session.roomId);
+    session.away = true;
+    session.stepText = true;
+    session.trading = mode === "trading";
+    session.forging = mode === "forging";
+    session.sorting = mode === "sorting";
+    session.resting = false;
+    session.target = null;
+    // At a gate you step clean out of sight; sorting mid-dungeon (lockbox only)
+    // you crouch in the open, still in reach. (trading/forging are gate-only.)
+    if (atGate) {
       for (const c of this.creatures.values()) {
         if (c.target === session.pubkey) c.target = null;
       }
-      this.roomFeed(session.roomId, `${session.name} steps up to the keeper's hatch.`, session.pubkey);
-      this.refreshRoomCtx(session.roomId);
-      return this.sendTrade(session);
     }
-    if (!session.trading) return;
-    if (action === "close") return this.leaveTrade(session);
-    let note: string | undefined;
-    if (action === "buy") {
-      const stock = world.fenceStock.find((s) => s.itemId === frame.row);
-      note = stock ? this.startBuy(session, stock) : undefined;
-    } else if (action === "offer") {
-      if (!session.buying) {
-        note = "Pick your want from the stock first.";
-      } else {
-        // The modal deals from any tab: pack, lockbox, or vault. Prefer an
-        // unsealed copy — no point cracking a seal the trade doesn't need.
-        const src = frame.src === "lockbox" || frame.src === "vault" ? frame.src : "";
-        const pool = src === "" ? session.items : await loadContainer(this.env.DB, session.pubkey, src);
-        const candidates = pool.filter(
-          (c) => c.itemId === frame.row && !session.buying!.escrow.some((e) => e.row === c.rowId),
-        );
-        const carried = candidates.find((c) => c.serial === null) ?? candidates[0];
-        note = carried ? await this.offerCore(session, carried, src) : "You've nothing more like that to offer.";
-      }
-    } else if (action === "cancel") {
-      if (session.buying) {
-        session.buying = undefined;
-        note = "You wave the trade off. The keeper sweeps your goods back across the counter.";
-      }
-    } else return;
-    return this.sendTrade(session, note);
-  }
-
-  private async leaveTrade(session: Session): Promise<void> {
-    session.away = false;
-    session.trading = false;
-    session.buying = undefined; // an unfinished trade sweeps back with you
-    try { session.ws.send(JSON.stringify({ v: 0, t: "trade", open: false })); } catch {}
-    this.roomFeed(session.roomId, `${session.name} steps back from the hatch.`, session.pubkey);
-    this.send(session, this.enterDescribe(session));
-    this.sendCtx(session);
+    const msg = mode === "trading"
+      ? `${session.name} steps up to the keeper's hatch.`
+      : mode === "forging"
+        ? `${session.name} steps to the bench and stirs the brazier to life.`
+        : atGate
+          ? `${session.name} steps into the gatehouse to sort their kit.`
+          : `${session.name} crouches to dig through a lockbox.`;
+    this.roomFeed(session.roomId, msg, session.pubkey);
     this.refreshRoomCtx(session.roomId);
   }
 
-  private async sendTrade(session: Session, note?: string): Promise<void> {
-    const world = this.world!;
-    const stock = [...world.fenceStock]
-      .sort((a, b) => a.cost - b.cost)
-      .map((s) => {
-        const t = world.itemTemplates.get(s.itemId);
-        return t ? {
-          id: s.itemId, name: t.name, rarity: t.rarity, cost: s.cost,
-          stat: this.itemStat(t).replace(/^ \(|\)$/g, ""),
-        } : null;
-      })
-      .filter((s) => s !== null);
-    // Your side of the counter, one tab per keeping: pack, lockbox, vault.
-    // What he'd take, collapsed by kind — never a value shown; his manner
-    // when you offer is the only appraisal. Sealed goods trade too (he
-    // cracks the seal when the deal closes), so the vault's wealth counts.
-    const tally = (pool: CarriedItem[]) => {
-      const goods = new Map<string, { id: string; name: string; rarity: string; n: number }>();
-      for (const c of pool) {
-        if (session.buying?.escrow.some((e) => e.row === c.rowId)) continue;
-        const t = world.itemTemplates.get(c.itemId);
-        if (!t || (t.barter ?? 0) <= 0) continue;
-        const g = goods.get(t.id);
-        if (g) g.n += 1;
-        else goods.set(t.id, { id: t.id, name: t.name, rarity: t.rarity, n: 1 });
-      }
-      return [...goods.values()];
-    };
-    const goods = {
-      pack: tally(session.items),
-      lockbox: tally(await loadContainer(this.env.DB, session.pubkey, "lockbox")),
-      vault: tally(await loadContainer(this.env.DB, session.pubkey, "vault")),
-    };
-    const buying = session.buying;
-    const want = buying ? {
-      name: world.itemTemplates.get(buying.itemId)?.name ?? buying.itemId,
-      cost: buying.cost,
-      paid: buying.paid,
-    } : null;
-    const payload = {
-      v: 0, t: "trade", open: true, note: note ?? "",
-      stock, goods, want,
-    };
-    try { session.ws.send(JSON.stringify(payload)); } catch {}
+  // Step a text-stance player back into the world (any command that isn't part
+  // of the current stance, or a 'look'). Mirrors leaveTrade/leaveForge; the
+  // close frame is a no-op with no modal open. An unfinished trade sweeps back.
+  private async leaveStep(session: Session): Promise<void> {
+    const wasTrading = !!session.trading;
+    const frame = session.trading ? "trade" : session.forging ? "forge" : "bench";
+    session.away = false;
+    session.trading = false;
+    session.forging = false;
+    session.sorting = false;
+    session.stepText = false;
+    session.buying = undefined;
+    try { session.ws.send(JSON.stringify({ v: 0, t: frame, open: false })); } catch {}
+    this.roomFeed(session.roomId, `${session.name} steps back from the ${wasTrading ? "keeper's hatch" : "bench"}.`, session.pubkey);
+    this.refreshRoomCtx(session.roomId);
   }
 
   // Gear stat tag for the inventory line, e.g. " (+4 dmg)", " (+1 dmg, x2 swings)",
   // " (+2 dmg, sweeps 3)", " (2 armor, heavy)".
-  private itemStat(t: ItemTemplate | undefined): string {
+  public itemStat(t: ItemTemplate | undefined): string {
     if (!t) return "";
     const bits: string[] = [];
     if (t.dmg > 0) bits.push(`+${t.dmg} dmg`);
@@ -2034,7 +1288,7 @@ export class ZoneDO implements DurableObject {
 
   // Is this a plain carryable (food, trophy, key) that can safely stack, or gear
   // that must be listed on its own (its wear and slot differ per instance)?
-  private isGear(itemId: string): boolean {
+  public isGear(itemId: string): boolean {
     const t = this.world!.itemTemplates.get(itemId);
     return !!t && t.slot !== "";
   }
@@ -2042,7 +1296,7 @@ export class ZoneDO implements DurableObject {
   // A fungible pack item — trophies, food, scrap, keys, cigarettes. Many share
   // one slot. Gear (has a slot), sealed items (own serial), journals (own pages),
   // and maps (own reading) are each their own slot and never stack.
-  private stackable(itemId: string, serial: number | null, journalId?: string): boolean {
+  public stackable(itemId: string, serial: number | null, journalId?: string): boolean {
     if (serial !== null || journalId) return false;
     if (MAP_ITEMS.has(itemId) || itemId === JOURNAL_ITEM) return false;
     return !this.isGear(itemId);
@@ -2050,7 +1304,7 @@ export class ZoneDO implements DurableObject {
 
   // How many slots a set of carried items fills: each non-stacking item is one,
   // and every distinct stacking KIND is one, however deep the pile.
-  private slotsUsed(items: CarriedItem[]): number {
+  public slotsUsed(items: CarriedItem[]): number {
     const kinds = new Set<string>();
     let loose = 0;
     for (const c of items) {
@@ -2063,19 +1317,19 @@ export class ZoneDO implements DurableObject {
   // Room for one more of itemId in a given store (default the pack)? A stacking
   // kind you already hold always fits — it joins the pile; otherwise you need a
   // free slot under the cap.
-  private hasRoom(items: CarriedItem[], itemId: string, cap: number): boolean {
+  public hasRoom(items: CarriedItem[], itemId: string, cap: number): boolean {
     if (this.stackable(itemId, null) && items.some((c) => c.itemId === itemId && this.stackable(c.itemId, c.serial, c.journalId))) return true;
     return this.slotsUsed(items) < cap;
   }
 
-  private packRoom(session: Session, itemId: string): boolean {
+  public packRoom(session: Session, itemId: string): boolean {
     return this.hasRoom(session.items, itemId, PACK_CAP);
   }
 
   // Mint one item into the pack, if there's room. Returns the row, or null when
   // the pack is full (the caller decides: refuse, or spill to the ground). The
   // single doorway for loot onto the body — cap enforcement lives here.
-  private async grantItem(session: Session, itemId: string, opts?: { condition?: number; journalId?: string }): Promise<CarriedItem | null> {
+  public async grantItem(session: Session, itemId: string, opts?: { condition?: number; journalId?: string }): Promise<CarriedItem | null> {
     if (!this.packRoom(session, itemId)) return null;
     const rowId = uuid();
     const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition: opts?.condition ?? 100, journalId: opts?.journalId };
@@ -2096,14 +1350,14 @@ export class ZoneDO implements DurableObject {
     return s;
   }
 
-  private cmdInventory(session: Session): void {
-    if (session.items.length === 0) return this.send(session, "You carry nothing but your keys.");
+  // One keeping's contents as text, grouped like the modal: fungibles collapse
+  // to a count, gear/equipped/sealed list on their own line.
+  private keepingLines(items: CarriedItem[], header: string): string[] {
     const world = this.world!;
-    const lines = ["You carry:"];
-    // Plain, un-equipped, provisional carryables stack; gear, equipped, and
-    // sealed things are individuals (each wears, or is numbered, on its own).
+    const lines = [header];
+    if (items.length === 0) { lines.push("  — empty —"); return lines; }
     const counts = new Map<string, number>();
-    for (const c of session.items) {
+    for (const c of items) {
       if (this.stackable(c.itemId, c.serial, c.journalId) && !c.equipped) {
         counts.set(c.itemId, (counts.get(c.itemId) ?? 0) + 1);
       }
@@ -2112,12 +1366,37 @@ export class ZoneDO implements DurableObject {
       const t = world.itemTemplates.get(id);
       lines.push(`  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""} [${t?.rarity ?? "?"}]${this.itemStat(t)}`);
     }
-    for (const c of session.items) {
+    for (const c of items) {
       if (this.stackable(c.itemId, c.serial, c.journalId) && !c.equipped) continue; // stacked above
       lines.push(this.itemLine(c));
     }
-    lines.push(`(Pack: ${this.slotsUsed(session.items)}/${PACK_CAP} slots.)`);
-    this.send(session, lines.join("\n"));
+    return lines;
+  }
+
+  // Typed 'inventory'. At a gate it steps you out (like opening the keeping
+  // modal): safe, wounds closing, and all three keepings — pack, lockbox, deep
+  // keep — laid out, with 'stash'/'unstash'/'vault' to move things and 'look'
+  // to step back. In the dungeon it's a light glance (pack + the lockbox that
+  // rides with you), no stepping out. In a fight, your pack only.
+  private async cmdInventory(session: Session): Promise<void> {
+    const world = this.world!;
+    if (this.inCombat(session)) {
+      return this.send(session, this.keepingLines(session.items, `You carry (${this.slotsUsed(session.items)}/${PACK_CAP}):`).join("\n"));
+    }
+    const atGate = world.entryRooms.has(session.roomId);
+    const lockbox = await loadContainer(this.env.DB, session.pubkey, "lockbox");
+    const out: string[] = [];
+    out.push(...this.keepingLines(session.items, `You carry (${this.slotsUsed(session.items)}/${PACK_CAP}):`));
+    out.push(...this.keepingLines(lockbox, `Lockbox (${this.slotsUsed(lockbox)}/${LOCKBOX_CAP}):`));
+    if (atGate) {
+      const vault = await loadContainer(this.env.DB, session.pubkey, "vault");
+      out.push(...this.keepingLines(vault, `The deep keep (${this.slotsUsed(vault)}/${VAULT_CAP}):`));
+      this.enterStep(session, "sorting"); // step out to sort, safe in the gatehouse
+      out.push("('stash'/'unstash'/'vault' to move things; 'look' steps you back into the world.)");
+    } else {
+      out.push("(The deep keep waits at the gates. 'stash'/'unstash' move things to the lockbox that rides with you.)");
+    }
+    this.send(session, out.join("\n"));
   }
 
   private cmdWho(session: Session): void {
@@ -2524,167 +1803,6 @@ export class ZoneDO implements DurableObject {
       : "You open the journal. Its pages are blank — study a thing, and kill a few, and it will fill.");
   }
 
-  // ---- extraction: the gate seals claims; the lockbox and vault keep them ----
-
-  // The moment of relief: what you carried out, the dungeon marks as yours.
-  // Sealed loot survives anything the dungeon does to you. (What another
-  // wanderer does to you is not the dungeon's promise to keep.)
-  private async cmdClaim(session: Session, arg: string): Promise<void> {
-    const world = this.world!;
-    if (!world.entryRooms.has(session.roomId)) {
-      return this.send(session, "The dungeon seals claims only at a gate — where you could still walk away.");
-    }
-    let toSeal: CarriedItem[];
-    if (!arg || arg === "all" || arg === "everything") {
-      // Seal all gear-and-valuables; trophies and the like carry no title.
-      toSeal = session.items.filter((c) => c.serial === null && !this.stackable(c.itemId, c.serial, c.journalId));
-      if (toSeal.length === 0) return this.send(session, "You carry nothing the gate can seal.");
-    } else {
-      const carried = this.findCarried(session, arg);
-      if (!carried) return this.send(session, "You carry nothing like that.");
-      if (carried.serial !== null) {
-        return this.send(session, `The seal is already on it. (mint #${carried.serial})`);
-      }
-      if (this.stackable(carried.itemId, carried.serial, carried.journalId)) {
-        return this.send(session, "Trophies and the like carry no title — the gate's lockbox keeps them, no seal needed.");
-      }
-      toSeal = [carried];
-    }
-
-    const lines: string[] = [];
-    for (const carried of toSeal) {
-      const tmpl = world.itemTemplates.get(carried.itemId)!;
-      const serial = await this.sealOne(session, carried);
-      lines.push(`The gate's cold iron takes the measure of ${tmpl.name} — sealed. (mint #${serial})`);
-    }
-    lines.push("Sealed is TITLE, not armor: carried, it dies with you. Only the gate\u2019s lockbox and vault keep what death cannot.");
-    this.send(session, lines.join("\n"));
-    this.roomFeed(session.roomId, `${session.name} presses a claim at the gate. Iron hums.`, session.pubkey);
-    this.sendCtx(session);
-  }
-
-  // Seal one carried item in place: mint its serial, sign the loot cert if the
-  // game key is configured, and freeze its condition. Shared by `claim` and the
-  // gatehouse bench. Returns the mint serial.
-  private async sealOne(session: Session, carried: CarriedItem): Promise<number> {
-    const world = this.world!;
-    const tmpl = world.itemTemplates.get(carried.itemId)!;
-    const serial = await mintClaim(this.env.DB, carried.rowId, carried.itemId, tmpl.rarity, session.pubkey);
-    carried.serial = serial;
-    // Freeze its condition at the moment of sealing — from here it never wears.
-    if (this.isGear(carried.itemId)) await setItemCondition(this.env.DB, carried.rowId, carried.condition);
-    if (isGameKeyConfigured(this.env)) {
-      const ev = signLootEvent(this.env, {
-        pubkey: session.pubkey,
-        lootId: carried.rowId,
-        itemId: carried.itemId,
-        name: tmpl.name,
-        rarity: tmpl.rarity,
-        zone: world.zone,
-        serial,
-      });
-      await setMintEvent(this.env.DB, serial, ev.id);
-    }
-    return serial;
-  }
-
-  // ---- the gatehouse bench: sort your pack out of the world's reach ----
-  // You step out of sight (untouchable — no one and nothing can reach you),
-  // and your pack, lockbox, and vault lie open together. One modal, all the
-  // keeping, no clicking things one at a time under threat of a knife.
-
-  private async handleBench(session: Session, frame: any): Promise<void> {
-    const world = this.world!;
-    const action = frame?.action;
-    const atGate = world.entryRooms.has(session.roomId);
-    if (action === "open") {
-      if (this.inCombat(session)) {
-        return this.send(session, "Not while something is trying to kill you.");
-      }
-      // The lockbox opens anywhere (you duck aside to sort your run closet); the
-      // vault and the seal are the gate's business, shown only when you're at one.
-      this.enterBench(session);
-      return this.sendBench(session);
-    }
-    if (!session.away) return; // every other action needs the bench already open
-    if (action === "close") return this.leaveBench(session);
-
-    const row = typeof frame.row === "string" ? frame.row : "";
-    const gateOnly = "That's the gatehouse's work — reach a gate for the vault and the seal.";
-    let note: string | undefined;
-    if (action === "stash") note = await this.benchStore(session, row, "lockbox");
-    else if (action === "vault") note = atGate ? await this.benchStore(session, row, "vault") : gateOnly;
-    else if (action === "seal") note = atGate ? await this.benchSeal(session, row) : gateOnly;
-    else if (action === "take") note = await this.benchTake(session, row);
-    else if (action === "equip") note = await this.benchEquip(session, row);
-    else if (action === "remove") note = await this.benchRemove(session, row);
-    else if (action === "burn") note = await this.benchBurn(session, row);
-    else if (action === "salvage") note = atGate ? await this.benchSalvage(session, row) : gateOnly;
-    else if (action === "repair") note = atGate ? await this.benchRepair(session, row) : gateOnly;
-    else return;
-    return this.sendBench(session, note);
-  }
-
-  // Manage what you're wearing/wielding, right from the bench (always safe here,
-  // so none of combat's armor/opening rules apply).
-  private async benchEquip(session: Session, row: string): Promise<string | undefined> {
-    const carried = session.items.find((c) => c.rowId === row);
-    if (!carried) return "You aren't carrying that.";
-    const tmpl = this.world!.itemTemplates.get(carried.itemId)!;
-    if (tmpl.slot === "") return `You can't wear or wield ${tmpl.name}.`;
-    if (carried.equipped) return undefined;
-    const current = this.equippedItem(session, tmpl.slot);
-    if (current) {
-      current.carried.equipped = false;
-      await setEquipped(this.env.DB, current.carried.rowId, false);
-    }
-    carried.equipped = true;
-    await setEquipped(this.env.DB, carried.rowId, true);
-    return undefined;
-  }
-
-  private async benchRemove(session: Session, row: string): Promise<string | undefined> {
-    const carried = session.items.find((c) => c.rowId === row);
-    if (!carried) return "You aren't carrying that.";
-    if (!carried.equipped) return undefined;
-    carried.equipped = false;
-    await setEquipped(this.env.DB, carried.rowId, false);
-    return undefined;
-  }
-
-  // The vice and the hammer, from the modal. Pack items only (the box and the
-  // vault hand things back to the pack first); the cores do the real checks.
-  private async benchSalvage(session: Session, row: string): Promise<string | undefined> {
-    const carried = session.items.find((c) => c.rowId === row);
-    if (!carried) return "You aren't carrying that.";
-    return this.salvageCore(session, carried);
-  }
-
-  private async benchRepair(session: Session, row: string): Promise<string | undefined> {
-    const carried = session.items.find((c) => c.rowId === row);
-    if (!carried) return "You aren't carrying that.";
-    return this.repairCore(session, carried);
-  }
-
-  // Burn an unwanted thing — from pack, lockbox, or vault — gone for good. A
-  // sealed thing's mint is voided as it burns (supply shrinks by one, honestly).
-  private async benchBurn(session: Session, row: string): Promise<string | undefined> {
-    const inPack = session.items.find((c) => c.rowId === row);
-    let carried = inPack;
-    if (!carried) {
-      for (const key of ["lockbox", "vault"] as const) {
-        const held = await loadContainer(this.env.DB, session.pubkey, key);
-        const found = held.find((c) => c.rowId === row);
-        if (found) { carried = found; break; }
-      }
-    }
-    if (!carried) return "There's nothing like that to burn.";
-    const tmpl = this.world!.itemTemplates.get(carried.itemId)!;
-    await removeItemRow(this.env.DB, carried.rowId);
-    if (carried.serial !== null) await voidMint(this.env.DB, carried.serial);
-    if (inPack) session.items.splice(session.items.indexOf(inPack), 1);
-    return `You burn ${tmpl.name}. Nothing of it is left.`;
-  }
 
   // Truly out of the world — untouchable, unseen, beyond reach — only at a gate
   // with a modal open. A wanderer sorting a lockbox mid-dungeon has a modal open
@@ -2704,247 +1822,6 @@ export class ZoneDO implements DurableObject {
     if (n >= DOGPILE_CAP) return false;
     this.blowsThisTick.set(pubkey, n + 1);
     return true;
-  }
-
-  private enterBench(session: Session): void {
-    session.away = true;
-    session.resting = false;
-    session.target = null;
-    if (this.world!.entryRooms.has(session.roomId)) {
-      // At a gate you step clean out of the world: nothing holds you, nothing sees you.
-      for (const c of this.creatures.values()) {
-        if (c.target === session.pubkey) c.target = null;
-      }
-      this.roomFeed(session.roomId, `${session.name} steps into the gatehouse, out of sight.`, session.pubkey);
-    } else {
-      // In the dungeon the lockbox rides with you, but you don't leave with it —
-      // you crouch to sort it in the open, still in the world and in reach.
-      this.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey);
-    }
-    this.refreshRoomCtx(session.roomId);
-  }
-
-  private async leaveBench(session: Session): Promise<void> {
-    session.away = false;
-    try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
-    this.roomFeed(session.roomId, `${session.name} steps back out, kit sorted.`, session.pubkey);
-    await this.provokeGrudges(session, false); // gates hold nothing; no free hit for closing the bench
-    this.send(session, this.enterDescribe(session));
-    this.sendCtx(session);
-    this.refreshRoomCtx(session.roomId);
-  }
-
-  private async benchStore(session: Session, row: string, key: "lockbox" | "vault"): Promise<string | undefined> {
-    const cfg = this.storeCfg(key);
-    // The item may be in the pack, or in the OTHER store (moving straight from
-    // the lockbox into the vault, no round-trip through the pack).
-    let carried = session.items.find((c) => c.rowId === row);
-    let fromContainer: "" | "lockbox" | "vault" = "";
-    if (!carried) {
-      for (const src of ["lockbox", "vault"] as const) {
-        if (src === cfg.container) continue;
-        const held = await loadContainer(this.env.DB, session.pubkey, src);
-        const found = held.find((c) => c.rowId === row);
-        if (found) { carried = found; fromContainer = src; break; }
-      }
-    }
-    if (!carried) return "You aren't carrying that.";
-    // The vault banks sealed wealth — and raw fungibles, which carry no title
-    // to seal in the first place. It's unsealed GEAR the vault turns away.
-    if (cfg.sealedOnly && carried.serial === null && !this.stackable(carried.itemId, carried.serial, carried.journalId)) return cfg.needSeal;
-    const held = await loadContainer(this.env.DB, session.pubkey, cfg.container);
-    if (!this.hasRoom(held, carried.itemId, cfg.cap)) return cfg.full;
-    if (this.isGear(carried.itemId)) await setItemCondition(this.env.DB, carried.rowId, carried.condition);
-    if (fromContainer === "") { // came off the body
-      carried.equipped = false;
-      session.items.splice(session.items.indexOf(carried), 1);
-    }
-    await setContainer(this.env.DB, carried.rowId, cfg.container);
-    return undefined;
-  }
-
-  private async benchTake(session: Session, row: string): Promise<string | undefined> {
-    const atGate = this.world!.entryRooms.has(session.roomId);
-    for (const key of ["lockbox", "vault"] as const) {
-      const held = await loadContainer(this.env.DB, session.pubkey, key);
-      const entry = held.find((c) => c.rowId === row);
-      if (entry) {
-        if (key === "vault" && !atGate) return "The vault's door opens only at a gate.";
-        if (!this.packRoom(session, entry.itemId)) return `Your pack is full (${PACK_CAP} slots).`;
-        await setContainer(this.env.DB, entry.rowId, "");
-        session.items.push(entry);
-        return undefined;
-      }
-    }
-    return "It isn't in the box or the vault.";
-  }
-
-  private async benchSeal(session: Session, row: string): Promise<string | undefined> {
-    // Seal what's on the body, or seal a piece resting in the lockbox in place —
-    // the gate's iron reaches into the box. (Vault gear is already sealed.)
-    let carried = session.items.find((c) => c.rowId === row);
-    if (!carried) {
-      const box = await loadContainer(this.env.DB, session.pubkey, "lockbox");
-      carried = box.find((c) => c.rowId === row);
-    }
-    if (!carried) return "You aren't carrying that.";
-    if (carried.serial !== null) return "The seal is already on it.";
-    if (this.stackable(carried.itemId, carried.serial, carried.journalId)) {
-      return "Trophies and the like carry no title — the gate's lockbox keeps them, no seal needed.";
-    }
-    await this.sealOne(session, carried);
-    return undefined;
-  }
-
-  private async sendBench(session: Session, note?: string): Promise<void> {
-    const world = this.world!;
-    const lockbox = await loadContainer(this.env.DB, session.pubkey, "lockbox");
-    const vault = await loadContainer(this.env.DB, session.pubkey, "vault");
-    const ser = (c: CarriedItem) => {
-      const t = world.itemTemplates.get(c.itemId);
-      const gear = this.isGear(c.itemId);
-      return {
-        row: c.rowId,
-        name: t ? t.name : c.itemId,
-        rarity: t?.rarity ?? "common",
-        slot: t?.slot ?? "",
-        sealed: c.serial !== null,
-        serial: c.serial,
-        stack: this.stackable(c.itemId, c.serial, c.journalId),
-        gear,
-        equipped: !!c.equipped,
-        cond: gear ? c.condition : null,
-        condWord: gear ? (this.conditionWord(c.condition) || "sound") : "",
-        stat: this.itemStat(t).replace(/^ \(|\)$/g, ""),
-      };
-    };
-    // Fungibles collapse to one entry with a count and the full list of rows —
-    // the client shows "×N" and fans a stack action out over every row. The
-    // grouped length IS the slot count (one per stack, one per loose item).
-    const group = (items: CarriedItem[]) => {
-      const out: any[] = [];
-      const at = new Map<string, number>();
-      for (const c of items) {
-        if (this.stackable(c.itemId, c.serial, c.journalId) && at.has(c.itemId)) {
-          const e = out[at.get(c.itemId)!]; e.n++; e.rows.push(c.rowId); continue;
-        }
-        const e = ser(c) as any; e.n = 1; e.rows = [c.rowId];
-        if (this.stackable(c.itemId, c.serial, c.journalId)) at.set(c.itemId, out.length);
-        out.push(e);
-      }
-      return out;
-    };
-    const payload = {
-      v: 0, t: "bench", open: true, note: note ?? "",
-      atGate: world.entryRooms.has(session.roomId), // vault + seal only shown at a gate
-      pack: group(session.items),
-      lockbox: group(lockbox),
-      vault: group(vault),
-      packCap: PACK_CAP, lockboxCap: LOCKBOX_CAP, vaultCap: VAULT_CAP,
-    };
-    try { session.ws.send(JSON.stringify(payload)); } catch {}
-  }
-
-  // Two tiers of keeping, one engine. The lockbox is the run closet (8 slots,
-  // takes anything, sealed or raw); the vault is the bank (50 slots, sealed
-  // gear plus raw fungibles — everything but unsealed gear). Both live at the
-  // gate, both are beyond death's reach.
-  private storeCfg(key: "lockbox" | "vault") {
-    if (key === "vault") {
-      return {
-        container: "vault", cap: VAULT_CAP, sealedOnly: true, kind: "vault",
-        absent: "The vault's riveted door is set deep in the gatehouse. It is not here.",
-        empty: "The vault stands open around nothing.",
-        header: "The vault holds",
-        full: `The vault is full. It holds ${VAULT_CAP} things, and asks no more.`,
-        needSeal: "The vault won't bank raw gear — seal it at the gate first, or drop it in your lockbox.",
-        put: (n: string) => `You lay ${n} in the vault. The iron door swings shut over it.`,
-        feed: "swings the vault door, and seals it again.",
-        takeEmpty: "Draw what out? ('vault' alone shows what it holds.)",
-        holdsNot: "The vault holds nothing like that.",
-        take: (n: string) => `You draw ${n} from the vault. It rides with you now — and so do its risks.`,
-      };
-    }
-    return {
-      container: "lockbox", cap: LOCKBOX_CAP, sealedOnly: false, kind: "lockbox",
-      absent: "Your lockbox is set into the gatehouse wall. It is not here.",
-      empty: "Your lockbox is bolted shut around nothing.",
-      header: "Your lockbox holds",
-      full: `Your lockbox is full. It holds ${LOCKBOX_CAP} things and holds them well. (The vault takes more, if it's sealed.)`,
-      needSeal: "",
-      put: (n: string) => `You drop ${n} in the iron box, and it clicks shut. Whatever happens to you, this is beyond it.`,
-      feed: "opens an iron lockbox, and closes it.",
-      takeEmpty: "Take what out? ('stash' alone shows the box.)",
-      holdsNot: "The box holds nothing like that.",
-      take: (n: string) => `You take ${n} back from the box. It rides with you now — and so do its risks.`,
-    };
-  }
-
-  private async cmdStore(session: Session, arg: string, key: "lockbox" | "vault"): Promise<void> {
-    const world = this.world!;
-    const cfg = this.storeCfg(key);
-    // The lockbox rides with you — reach it anywhere. The vault is the bank, bolted
-    // into the gatehouse; you can only deposit there at a gate.
-    if (key === "vault" && !world.entryRooms.has(session.roomId)) return this.send(session, cfg.absent);
-    const held = await loadContainer(this.env.DB, session.pubkey, cfg.container);
-    if (!arg) {
-      if (held.length === 0) return this.send(session, cfg.empty);
-      // Match the bench modal: fungibles collapse to one line with a count, and
-      // the header counts SLOTS (what the cap is actually measured in), not rows.
-      const lines = [`${cfg.header} (${this.slotsUsed(held)}/${cfg.cap}):`];
-      const counts = new Map<string, number>();
-      for (const c of held) {
-        if (this.stackable(c.itemId, c.serial, c.journalId)) counts.set(c.itemId, (counts.get(c.itemId) ?? 0) + 1);
-      }
-      for (const [id, n] of counts) {
-        const t = world.itemTemplates.get(id);
-        lines.push(`  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""}${this.itemStat(t)}`);
-      }
-      for (const c of held) {
-        if (this.stackable(c.itemId, c.serial, c.journalId)) continue; // stacked above
-        const t = world.itemTemplates.get(c.itemId);
-        const tag = c.serial !== null
-          ? ` — sealed #${c.serial}`
-          : (t && t.slot !== "" ? ` — ${this.conditionWord(c.condition) || "sound"}` : "");
-        lines.push(`  ${t ? t.name : c.itemId}${this.itemStat(t)}${tag}`);
-      }
-      return this.send(session, lines.join("\n"));
-    }
-    const carried = this.findCarried(session, arg);
-    if (!carried) return this.send(session, "You carry nothing like that.");
-    // Sealed wealth or raw fungibles bank in the vault; only unsealed gear is turned away.
-    if (cfg.sealedOnly && carried.serial === null && !this.stackable(carried.itemId, carried.serial, carried.journalId)) return this.send(session, cfg.needSeal);
-    if (!this.hasRoom(held, carried.itemId, cfg.cap)) return this.send(session, cfg.full);
-    const tmpl = world.itemTemplates.get(carried.itemId)!;
-    // Flush its worn condition before it leaves the body, so the box/vault
-    // holds the true value; setContainer clears the equipped flag.
-    if (this.isGear(carried.itemId)) await setItemCondition(this.env.DB, carried.rowId, carried.condition);
-    carried.equipped = false;
-    session.items.splice(session.items.indexOf(carried), 1);
-    await setContainer(this.env.DB, carried.rowId, cfg.container);
-    this.send(session, cfg.put(tmpl.name));
-    this.roomFeed(session.roomId, `${session.name} ${cfg.feed}`, session.pubkey);
-    this.sendCtx(session);
-  }
-
-  private async cmdRetrieve(session: Session, arg: string, key: "lockbox" | "vault"): Promise<void> {
-    const world = this.world!;
-    const cfg = this.storeCfg(key);
-    if (key === "vault" && !world.entryRooms.has(session.roomId)) return this.send(session, cfg.absent);
-    const held = await loadContainer(this.env.DB, session.pubkey, cfg.container);
-    if (held.length === 0) return this.send(session, cfg.empty);
-    if (!arg) return this.send(session, cfg.takeEmpty);
-    const entry = held.find((c) => {
-      const t = world.itemTemplates.get(c.itemId);
-      return t ? nameMatches(t.name, arg) : false;
-    });
-    if (!entry) return this.send(session, cfg.holdsNot);
-    const tmpl = world.itemTemplates.get(entry.itemId)!;
-    if (!this.packRoom(session, entry.itemId)) return this.send(session, `Your pack is full (${PACK_CAP} slots). Make room first.`);
-    await setContainer(this.env.DB, entry.rowId, "");
-    session.items.push(entry);
-    this.send(session, cfg.take(tmpl.name));
-    this.sendCtx(session);
   }
 
   // Nothing is ever published unless the player asks (NIP.md: certificates,
@@ -3049,7 +1926,11 @@ export class ZoneDO implements DurableObject {
         // (more fumbles) and your blows soften.
         const hurt = session.hp < session.maxHp * WOUNDED_FRACTION;
         if (chance(FUMBLE_CHANCE + (hurt ? WOUNDED_FUMBLE_BONUS : 0))) {
-          await this.playerFumble(session, weapon); // the whole arc goes wide
+          // The whole arc goes wide either way — but the blade only flies from
+          // your grip when your blood's low and your hands are shaking. Hale,
+          // you just whiff and leave an opening; you never lose your sword at
+          // full strength, only when death is already close.
+          await this.playerFumble(session, hurt ? weapon : null);
         } else {
           for (const creature of targets) {
             if (!alive(creature)) continue;
@@ -3437,13 +2318,17 @@ export class ZoneDO implements DurableObject {
   // first strike, like being jumped. Grudge-holders are skipped (they wake on
   // their own); a still, silent wanderer rolls nothing and is walked right past.
   // Returns true if one woke (so a caller mid-exit can check for a killing blow).
-  private async wakeListeners(session: Session, roomId: string, odds: number, tell: string): Promise<boolean> {
+  private async wakeListeners(session: Session, roomId: string, odds: number, tell: string, fromNoise = false): Promise<boolean> {
     if (session.away) return false;
     const now = Date.now();
     for (const c of this.creatures.values()) {
       if (c.roomId !== roomId || c.target) continue;
       const lurker = LURKERS.has(c.templateId);
       if (!LISTENERS.has(c.templateId) && !lurker) continue;
+      // The din of a fight no longer rouses the bone-sleepers — they wake to
+      // movement (in or past) and to a grudge, not to noise alone. Blind lurkers
+      // still strike at sound; that's the whole of what they are.
+      if (fromNoise && !lurker) continue;
       if (this.remembers(c, session.pubkey, now)) continue;
       if (!chance(odds)) continue;
       const tmpl = this.world!.mobTemplates.get(c.templateId)!;
@@ -3462,7 +2347,7 @@ export class ZoneDO implements DurableObject {
   // `ambush` = the player just stepped into this room (their choice, their
   // exposure), so a grudge-holder gets the first strike. On a reconnect
   // (blinking back into being) it's false — no free hit for the reconnection.
-  private async provokeGrudges(session: Session, ambush: boolean): Promise<void> {
+  public async provokeGrudges(session: Session, ambush: boolean): Promise<void> {
     if (this.outOfWorld(session)) return; // out of the world at a gate — nothing can mark you
     const now = Date.now();
     let struck = false;
@@ -3593,11 +2478,15 @@ export class ZoneDO implements DurableObject {
         : runner ? `${cap(tmpl.name)} darts ${exit.dir} and is gone.`
         : hurt ? `${cap(tmpl.name)} ${hurt.out.replace("{dir}", exit.dir)}`
         : `${cap(tmpl.name)} flees ${exit.dir}, bleeding.`;
-      this.roomFeed(from, outLine);
+      // Idle wandering stays LOCAL (off the relay) — that was the flood. A
+      // creature FLEEING is a beat in a fight a watcher's following, so that one
+      // still reaches the relay.
+      const toRelay = mode === "flee";
+      this.roomFeed(from, outLine, undefined, toRelay);
       const inLine = mode !== "flee" ? "creeps in."
         : runner ? "skitters in, already looking for the next way out."
         : hurt ? hurt.in_ : "bursts in, bleeding.";
-      this.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`);
+      this.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`, undefined, toRelay);
       this.roomSound(
         creature.roomId,
         mode === "flee"
@@ -4172,7 +3061,6 @@ export class ZoneDO implements DurableObject {
   }
 
   private async onPlayerDeath(victim: Session, tmpl: MobTemplate): Promise<void> {
-    const world = this.world!;
     for (const c of this.creatures.values()) {
       if (c.target === victim.pubkey) c.target = null;
     }
@@ -4239,7 +3127,7 @@ export class ZoneDO implements DurableObject {
     await this.persist();
   }
 
-  private inCombat(session: Session): boolean {
+  public inCombat(session: Session): boolean {
     if (session.target) return true;
     for (const c of this.creatures.values()) {
       if (c.target === session.pubkey) return true;
@@ -4265,7 +3153,7 @@ export class ZoneDO implements DurableObject {
   // brief on every re-entry after — just the name, the ways out, and whatever
   // is actually THERE now. Marks the room known. The whole reason you don't
   // re-read the same paragraph every time you cross a room you've crossed all day.
-  private enterDescribe(session: Session): string {
+  public enterDescribe(session: Session): string {
     const full = !session.visited.has(session.roomId);
     session.visited.add(session.roomId);
     return this.describeRoom(session, full);
@@ -4430,7 +3318,7 @@ export class ZoneDO implements DurableObject {
     return null;
   }
 
-  private findCarried(session: Session, arg: string): CarriedItem | null {
+  public findCarried(session: Session, arg: string): CarriedItem | null {
     for (const c of session.items) {
       const t = this.world!.itemTemplates.get(c.itemId);
       if (t && nameMatches(t.name, arg)) return c;
@@ -4440,7 +3328,7 @@ export class ZoneDO implements DurableObject {
 
   // The sharpest thing in the pack does the biting — no wield verb needed.
   // The item worn/wielded in a given slot, or null. At most one per slot.
-  private equippedItem(session: Session, slot: string): { carried: CarriedItem; tmpl: ItemTemplate } | null {
+  public equippedItem(session: Session, slot: string): { carried: CarriedItem; tmpl: ItemTemplate } | null {
     for (const c of session.items) {
       if (!c.equipped) continue;
       const t = this.world!.itemTemplates.get(c.itemId);
@@ -4495,7 +3383,7 @@ export class ZoneDO implements DurableObject {
   }
 
   // A one-word read on how worn a piece is, for the inventory line.
-  private conditionWord(cond: number): string {
+  public conditionWord(cond: number): string {
     if (cond >= 85) return "";        // pristine — no tag
     if (cond >= 60) return "worn";
     if (cond >= 35) return "battered";
@@ -4529,7 +3417,7 @@ export class ZoneDO implements DurableObject {
   // kill, fumble, death, gain — with "big" for the loud ones) so the client
   // colors combat by MEANING, not by matching prose. This is what lets the
   // dialogue vary freely without the coloring ever falling out of step.
-  private send(session: Session, text: string, cls?: string): void {
+  public send(session: Session, text: string, cls?: string): void {
     try {
       session.ws.send(JSON.stringify(cls ? { v: 0, kind: 24912, text, cls } : { v: 0, kind: 24912, text }));
     } catch {}
@@ -4554,7 +3442,7 @@ export class ZoneDO implements DurableObject {
 
   // UI helper (like status, not protocol): everything you could do right here,
   // as ready-to-send commands. The client renders these as tappable chips.
-  private sendCtx(session: Session): void {
+  public sendCtx(session: Session): void {
     const world = this.world;
     if (!world) return;
     const fighting = this.inCombat(session);
@@ -4648,7 +3536,8 @@ export class ZoneDO implements DurableObject {
       // open still offers the tender chips.
       if (world.entryRooms.has(session.roomId)) {
         if (world.fenceStock.length) suggest.push(TRADE_CHIP);
-        if (session.items.some((c) => c.itemId === SCRAP_ID && c.serial === null)) suggest.push("forge");
+        // The forge chip opens the forge modal (a gate fixture, like the keeper).
+        if (world.forgeRecipes.length) suggest.push(FORGE_CHIP);
         if (session.buying && !session.trading) {
           const offered = new Set<string>();
           for (const c of session.items) {
@@ -4662,14 +3551,15 @@ export class ZoneDO implements DurableObject {
           suggest.push("offer nothing");
         }
       }
-      // The lockbox chip is always up (out of combat): step aside anywhere to
-      // sort your run closet, safe from any knife. The vault + seal only work
-      // at a gate — the modal shows them only there.
-      suggest.push(BENCH_CHIP);
       // Knowledge you carry: open a map or the journal (each pops its modal).
       if (session.items.some((c) => MAP_ITEMS.has(c.itemId))) suggest.push("map");
       if (session.items.some((c) => c.journalId)) suggest.push("journal");
-      if (session.items.length > 0) suggest.push("inventory");
+      // The 'inventory' chip is the one keeping-place: tapping it opens the
+      // pack/lockbox(/vault) modal (the client intercepts BENCH_CHIP), always
+      // up out of combat — step aside anywhere to sort, safe from any knife.
+      // The vault + seal only work at a gate, so the modal shows them only
+      // there. (Typing 'inventory' still prints the plain list — chip ≠ command.)
+      suggest.push(BENCH_CHIP);
       suggest.push("say …", "help");
     }
     // Two rats in a room shouldn't mean two identical chips.
@@ -4680,7 +3570,7 @@ export class ZoneDO implements DurableObject {
   }
 
   // Room contents changed: refresh the chips of everyone standing there.
-  private refreshRoomCtx(roomId: string): void {
+  public refreshRoomCtx(roomId: string): void {
     for (const s of this.sessions.values()) {
       if (s.roomId === roomId) this.sendCtx(s);
     }
@@ -4746,6 +3636,7 @@ export class ZoneDO implements DurableObject {
       const tmpl = world.mobTemplates.get(c.templateId)!;
       if (tmpl.is_boss) continue; // the King waits; the noise comes to him
       if (DROWNERS.has(c.templateId)) continue; // it holds its water; noise doesn't move it
+      if (SCAVENGERS.has(c.templateId)) continue; // hyenas track the scent of the dead, not the din of the living
       // Not every ear pricks up. A good majority come to look; the rest keep
       // to their own business — so a fight draws a crowd, not the whole zone.
       if (!chance(NOISE_HEED_ODDS)) continue;
@@ -4761,13 +3652,18 @@ export class ZoneDO implements DurableObject {
 
   // The spectator feed, kind 24913: to everyone standing in the room, and —
   // when the relay door is open — to anyone anywhere watching t=mudroom-<id>.
-  private roomFeed(roomId: string, text: string, exceptPubkey?: string): void {
+  public roomFeed(roomId: string, text: string, exceptPubkey?: string, toRelay = true): void {
     const frame = JSON.stringify({ v: 0, kind: 24913, room: roomId, text });
     for (const s of this.sessions.values()) {
       if (s.roomId !== roomId || s.pubkey === exceptPubkey) continue;
       try { s.ws.send(frame); } catch {}
     }
-    this.relayFeed("mudroom-" + roomId, text);
+    // Players standing here always see it (a cheap in-memory send). The relay,
+    // though, only carries what a distant watcher would care about — a fight, a
+    // death, an arrival. Idle creature wandering stays LOCAL: it was flooding the
+    // relays two ephemeral events per step (leave + enter) with rats pacing empty
+    // rooms nobody watches. That noise never leaves the box now.
+    if (toRelay) this.relayFeed("mudroom-" + roomId, text);
   }
 
   private roomFeedAll(text: string): void {
@@ -4789,28 +3685,3 @@ export class ZoneDO implements DurableObject {
   }
 }
 
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function dirPhrase(dir: string): string {
-  if (dir === "up") return "from above";
-  if (dir === "down") return "from below";
-  return "to the " + dir;
-}
-
-// "a scabby rat" -> "rat", "the Forgotten King" -> "king": the word a player
-// would naturally type, and one nameMatches() is guaranteed to accept.
-function shortName(name: string): string {
-  const words = name.toLowerCase().split(/\s+/).filter((w) => w !== "a" && w !== "an" && w !== "the");
-  return words[words.length - 1] ?? name.toLowerCase();
-}
-
-// "attack rat" should hit "a scabby rat"; articles don't count.
-function nameMatches(name: string, arg: string): boolean {
-  const n = name.toLowerCase();
-  if (n.includes(arg)) return true;
-  const words = n.split(/\s+/).filter((w) => w !== "a" && w !== "an" && w !== "the");
-  const argWords = arg.split(/\s+/);
-  return argWords.every((aw) => words.some((w) => w.startsWith(aw)));
-}
