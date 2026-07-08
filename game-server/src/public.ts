@@ -30,6 +30,7 @@ export const PAGE = `<!doctype html>
     --blood: #c96f5a;
     --bone: #c9bda3;
     --steel: #a4bec0;
+    --heal: #8faa6b;
     --border: #3a3020;
     --border2: #4a3c22;
     --line: #2c2418;
@@ -474,32 +475,9 @@ export const PAGE = `<!doctype html>
   }
   #mapclose:hover, #jclose:hover { color: var(--gold); border-color: var(--gold); }
   #mapbody, #jbody { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 14px; }
-  /* map: a drawn chart — floors stacked deepest-last, rooms laid on a true grid */
-  #mapbody { overflow-x: auto; }
-  .mfloor { margin-bottom: 18px; }
-  .mfl {
-    color: var(--bone); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-    border-bottom: 1px solid var(--line); padding: 6px 0; margin-bottom: 12px;
-  }
-  .mgrid { position: relative; }
-  .mgrid svg { position: absolute; inset: 0; pointer-events: none; display: block; }
-  .mgrid line { stroke: var(--border2); stroke-width: 1.5; }
-  .mgrid line.far { stroke: var(--blood); stroke-dasharray: 5 4; opacity: 0.55; }
-  .mgrid line.stub { stroke-dasharray: 3 3; opacity: 0.6; }
-  #mapm.crude .mgrid line { stroke-dasharray: 4 3; }
-  .mcell {
-    position: absolute; width: 84px; height: 44px; overflow: hidden;
-    background: #241d13; border: 1px solid var(--border2); border-radius: 5px;
-    padding: 4px 5px 2px;
-  }
-  .mcell .mn { color: var(--bone); font-size: 9px; line-height: 1.2; }
-  .mcell.gate { border-color: var(--steel); }
-  .mcell.gate .mn { color: var(--steel); }
-  .mcell.deep { background: #251519; }
-  .mcell.here { border-color: var(--gold); box-shadow: 0 0 10px rgba(216, 169, 78, 0.35); }
-  .mcell.here .mn { color: var(--gold); font-weight: 700; }
-  .mcell .mglyph { position: absolute; right: 5px; bottom: 2px; font-size: 8px; color: var(--dim); letter-spacing: 2px; }
-  .mcell.here .mglyph { color: var(--gold); }
+  /* map: the drawn poster the Worker serves whole (promo/capture/_map.mjs) */
+  #mapbody { overflow: auto; text-align: center; }
+  .mimg { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: 8px; }
   /* journal: a card per creature */
   #jbody { display: flex; flex-direction: column; gap: 10px; }
   .jent { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
@@ -584,6 +562,21 @@ export const PAGE = `<!doctype html>
     white-space: nowrap;
   }
   #chips button:hover, #chips button:active { color: var(--gold); border-color: var(--gold); }
+  /* chips carry their meaning in colour (soft wash): a faint tint of the
+     category hue under its full-strength outline, with the theme's OWN text
+     colour on top — so it stays legible on any ground: the dark Door, the light
+     Bone, or a worn Nostr theme. Violence red · mending green · gain gold · the
+     guarded stance steel; movement and the quiet verbs stay dim, so the
+     coloured ones read at a glance. */
+  #chips button.c-atk  { background: color-mix(in srgb, var(--blood) 20%, transparent); border-color: var(--blood); color: var(--cream); }
+  #chips button.c-heal { background: color-mix(in srgb, var(--heal) 22%, transparent);  border-color: var(--heal);  color: var(--cream); }
+  #chips button.c-gain { background: color-mix(in srgb, var(--gold) 20%, transparent);  border-color: var(--gold);  color: var(--cream); }
+  #chips button.c-def  { background: color-mix(in srgb, var(--steel) 20%, transparent); border-color: var(--steel); color: var(--cream); }
+  /* hover deepens the wash and keeps the category's own outline (not the gold) */
+  #chips button.c-atk:hover,  #chips button.c-atk:active  { background: color-mix(in srgb, var(--blood) 32%, transparent); border-color: var(--blood); color: var(--cream); }
+  #chips button.c-heal:hover, #chips button.c-heal:active { background: color-mix(in srgb, var(--heal) 34%, transparent);  border-color: var(--heal);  color: var(--cream); }
+  #chips button.c-gain:hover, #chips button.c-gain:active { background: color-mix(in srgb, var(--gold) 32%, transparent);  border-color: var(--gold);  color: var(--cream); }
+  #chips button.c-def:hover,  #chips button.c-def:active  { background: color-mix(in srgb, var(--steel) 32%, transparent); border-color: var(--steel); color: var(--cream); }
   #inputline {
     display: flex;
     gap: 8px;
@@ -1505,9 +1498,20 @@ function chipLabel(s) {
   if (m) return m[1];
   return s;
 }
+// A chip's colour tells you what tapping it DOES: red bites, green mends, gold
+// gains, steel guards. The guarded stance and reckless stance split off from
+// their siblings; everything unlisted (movement, look, map, say…) stays dim.
+function chipKind(s) {
+  if (/^(attack|throw|kill|strike) /.test(s) || s === "stance reckless") return "c-atk";
+  if (/^(eat|bandage) /.test(s) || s === "bandage" || s === "rest") return "c-heal";
+  if (/^(get|unlock|equip|offer) /.test(s) || s === "offer nothing" || s === TRADE_CHIP || s === FORGE_CHIP) return "c-gain";
+  if (s === "stance guarded") return "c-def";
+  return "";
+}
 function chipButton(s) {
   var b = document.createElement("button");
   b.type = "button";
+  b.className = chipKind(s);
   b.textContent = chipLabel(s);
   b.addEventListener("click", function (e) {
     e.stopPropagation();
@@ -1906,226 +1910,14 @@ function renderMap(f) {
   if (detailed && Array.isArray(f.reveal)) {
     for (var i = 0; i < f.reveal.length; i++) knownRooms[f.reveal[i]] = 1;
   }
+  // The chart itself is a drawn poster the Worker serves (promo/capture/_map.mjs
+  // -> mapimg.ts): the surveyor's truth, or the crude copy's lie.
   mapBody.textContent = "";
-
-  // ---- flatten the frame into one room table ----
-  var byId = {}, order = [];
-  var regions = f.regions || [];
-  for (var r = 0; r < regions.length; r++) {
-    var reg = regions[r];
-    var rcls = reg.label === "The Gates" ? "gate" : reg.label === "The Deep" ? "deep" : "upper";
-    var rrooms = reg.rooms || [];
-    for (var j = 0; j < rrooms.length; j++) {
-      rrooms[j].rcls = rcls;
-      byId[rrooms[j].id] = rrooms[j];
-      order.push(rrooms[j].id);
-    }
-  }
-  if (!order.length) return;
-
-  // ---- floors: walk the stairs (down = one deeper), keep the first claim ----
-  var zOf = {};
-  var start = f.here && byId[f.here] ? f.here : order[0];
-  zOf[start] = 0;
-  var queue = [start];
-  while (queue.length) {
-    var qid = queue.shift();
-    var qex = byId[qid].exits || [];
-    for (var k = 0; k < qex.length; k++) {
-      var qe = qex[k];
-      if (!byId[qe.to] || zOf[qe.to] !== undefined) continue;
-      zOf[qe.to] = zOf[qid] + (qe.dir === "down" ? 1 : qe.dir === "up" ? -1 : 0);
-      queue.push(qe.to);
-    }
-  }
-  // Anything the walk never reached (a crude page's omissions cut the thread)
-  // still carries its region — the copyist knows which part of the dungeon a
-  // page came from, just not where it sits. Gates are never adrift.
-  var floors = {};
-  for (var o = 0; o < order.length; o++) {
-    var oid = order[o];
-    var fz = zOf[oid] !== undefined ? String(zOf[oid])
-      : byId[oid].rcls === "gate" ? "gates"
-      : "adrift-" + byId[oid].rcls;
-    (floors[fz] = floors[fz] || []).push(oid);
-  }
-  // The widest floor is the surface; every band is named from it, and the thin
-  // airs above it (the gates, the stair-tops) fold into one band at the top.
-  var surfZ = 0, surfN = -1;
-  var fkeys = Object.keys(floors);
-  for (var s = 0; s < fkeys.length; s++) {
-    if (!isNaN(Number(fkeys[s])) && floors[fkeys[s]].length > surfN) { surfN = floors[fkeys[s]].length; surfZ = Number(fkeys[s]); }
-  }
-  var merged = {}, floorOf = {};
-  for (var s2 = 0; s2 < fkeys.length; s2++) {
-    var mk = !isNaN(Number(fkeys[s2])) && Number(fkeys[s2]) < surfZ ? "gates" : fkeys[s2];
-    var mids = floors[fkeys[s2]];
-    merged[mk] = (merged[mk] || []).concat(mids);
-    for (var s3 = 0; s3 < mids.length; s3++) floorOf[mids[s3]] = mk;
-  }
-  floors = merged;
-  fkeys = Object.keys(floors);
-  var BANDRANK = { gates: -1e9, "adrift-upper": 1e9 - 1, "adrift-deep": 1e9 };
-  fkeys.sort(function (x, y) {
-    var rx = BANDRANK[x] !== undefined ? BANDRANK[x] : Number(x);
-    var ry = BANDRANK[y] !== undefined ? BANDRANK[y] : Number(y);
-    return rx - ry;
-  });
-
-  // ---- within a floor: the compass lays the rooms on a grid ----
-  var DXD = { east: 1, west: -1, north: 0, south: 0 };
-  var DYD = { north: -1, south: 1, east: 0, west: 0 };
-  var WRAP = 7; // columns before a band folds onto a fresh shelf
-  var pos = {};
-  for (var fi = 0; fi < fkeys.length; fi++) {
-    var ids = floors[fkeys[fi]];
-    var inFloor = {}, claimed = {};
-    for (var a = 0; a < ids.length; a++) inFloor[ids[a]] = 1;
-    // gather the connected pieces first, each laid out in its own coordinates
-    var comps = [];
-    for (var a2 = 0; a2 < ids.length; a2++) {
-      if (claimed[ids[a2]]) continue;
-      var tpos = {}, tcells = { "0,0": 1 };
-      tpos[ids[a2]] = [0, 0];
-      claimed[ids[a2]] = 1;
-      var cq = [ids[a2]];
-      while (cq.length) {
-        var cid = cq.shift();
-        var cex = byId[cid].exits || [];
-        for (var k2 = 0; k2 < cex.length; k2++) {
-          var ce = cex[k2];
-          if (DXD[ce.dir] === undefined || !inFloor[ce.to] || claimed[ce.to]) continue;
-          var want = [tpos[cid][0] + DXD[ce.dir], tpos[cid][1] + DYD[ce.dir]];
-          // cell taken (a lying page, or a fold in the stone): nudge to the nearest open one
-          for (var ring = 1; tcells[want[0] + "," + want[1]] && ring < 9; ring++) {
-            var found = null;
-            for (var dy = -ring; dy <= ring && !found; dy++) {
-              for (var dx = -ring; dx <= ring && !found; dx++) {
-                if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
-                if (!tcells[(want[0] + dx) + "," + (want[1] + dy)]) found = [want[0] + dx, want[1] + dy];
-              }
-            }
-            if (found) want = found;
-          }
-          tpos[ce.to] = want;
-          tcells[want[0] + "," + want[1]] = 1;
-          claimed[ce.to] = 1;
-          cq.push(ce.to);
-        }
-      }
-      var mnx = 1e9, mny = 1e9, mxx = -1e9, mxy = -1e9;
-      for (var tid in tpos) {
-        if (tpos[tid][0] < mnx) mnx = tpos[tid][0];
-        if (tpos[tid][1] < mny) mny = tpos[tid][1];
-        if (tpos[tid][0] > mxx) mxx = tpos[tid][0];
-        if (tpos[tid][1] > mxy) mxy = tpos[tid][1];
-      }
-      comps.push({ tpos: tpos, mnx: mnx, mny: mny, w: mxx - mnx + 1, h: mxy - mny + 1 });
-    }
-    // tall pieces first, so the shelves pack tight (fold when a shelf runs wide)
-    comps.sort(function (p, q) { return q.h - p.h || q.w - p.w; });
-    var nextX = 0, shelfY = 0, shelfH = 0;
-    for (var c2 = 0; c2 < comps.length; c2++) {
-      var cp = comps[c2];
-      if (nextX > 0 && nextX + cp.w > WRAP) { nextX = 0; shelfY += shelfH; shelfH = 0; }
-      for (var tid2 in cp.tpos) pos[tid2] = [cp.tpos[tid2][0] - cp.mnx + nextX, cp.tpos[tid2][1] - cp.mny + shelfY];
-      nextX += cp.w + 1;
-      if (cp.h > shelfH) shelfH = cp.h;
-    }
-  }
-
-  // ---- draw: one band per floor, gates at the top, the deep below ----
-  var BW = 84, BH = 44, GX = 26, GY = 24, CW = BW + GX, CH = BH + GY;
-  var NUMS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
-  var SVGNS = "http://www.w3.org/2000/svg";
-  for (var fi2 = 0; fi2 < fkeys.length; fi2++) {
-    var key = fkeys[fi2];
-    var fids = floors[key];
-    var label;
-    if (key === "adrift-upper") label = "the halls \\u2014 pages adrift";
-    else if (key === "adrift-deep") label = "the deep \\u2014 pages adrift";
-    else if (key === "gates") label = "the gates";
-    else {
-      var depth = Number(key) - surfZ;
-      label = depth === 0 ? "the surface" : (NUMS[depth - 1] || String(depth)) + " down";
-    }
-    var cols = 0, rows = 0;
-    for (var b = 0; b < fids.length; b++) {
-      if (pos[fids[b]][0] + 1 > cols) cols = pos[fids[b]][0] + 1;
-      if (pos[fids[b]][1] + 1 > rows) rows = pos[fids[b]][1] + 1;
-    }
-    var w = cols * CW - GX, h2 = rows * CH - GY;
-    var band = document.createElement("div");
-    band.className = "mfloor";
-    var fl = document.createElement("div");
-    fl.className = "mfl";
-    fl.textContent = label;
-    band.appendChild(fl);
-    var grid = document.createElement("div");
-    grid.className = "mgrid";
-    grid.style.width = w + "px";
-    grid.style.height = h2 + "px";
-    // passages first, so the rooms sit on top of them
-    var svg = document.createElementNS(SVGNS, "svg");
-    svg.setAttribute("width", String(w));
-    svg.setAttribute("height", String(h2));
-    var seen = {};
-    for (var b2 = 0; b2 < fids.length; b2++) {
-      var rid = fids[b2];
-      var cx = pos[rid][0] * CW + BW / 2, cy = pos[rid][1] * CH + BH / 2;
-      var rex = byId[rid].exits || [];
-      for (var x2 = 0; x2 < rex.length; x2++) {
-        var re = rex[x2];
-        if (DXD[re.dir] === undefined) continue; // stairs are glyphs, not lines
-        var ln = document.createElementNS(SVGNS, "line");
-        ln.setAttribute("x1", String(cx));
-        ln.setAttribute("y1", String(cy));
-        if (byId[re.to] && floorOf[re.to] === floorOf[rid] && pos[re.to]) {
-          var pk = rid < re.to ? rid + "|" + re.to : re.to + "|" + rid;
-          if (seen[pk]) continue;
-          seen[pk] = 1;
-          ln.setAttribute("x2", String(pos[re.to][0] * CW + BW / 2));
-          ln.setAttribute("y2", String(pos[re.to][1] * CH + BH / 2));
-          var adj = Math.abs(pos[re.to][0] - pos[rid][0]) + Math.abs(pos[re.to][1] - pos[rid][1]) === 1;
-          if (!adj) ln.setAttribute("class", "far"); // a passage the page cannot make honest
-        } else {
-          // it leads off this page: a short stub toward wherever it claims to go
-          ln.setAttribute("x2", String(cx + DXD[re.dir] * (BW / 2 + 16)));
-          ln.setAttribute("y2", String(cy + DYD[re.dir] * (BH / 2 + 16)));
-          ln.setAttribute("class", "stub");
-        }
-        svg.appendChild(ln);
-      }
-    }
-    grid.appendChild(svg);
-    for (var b3 = 0; b3 < fids.length; b3++) {
-      var rm = byId[fids[b3]];
-      var cell = document.createElement("div");
-      cell.className = "mcell " + rm.rcls + (rm.here ? " here" : "");
-      cell.style.left = pos[rm.id][0] * CW + "px";
-      cell.style.top = pos[rm.id][1] * CH + "px";
-      cell.title = rm.name;
-      var nm = document.createElement("div");
-      nm.className = "mn";
-      nm.textContent = rm.name.replace(/^(The|A) /, "");
-      cell.appendChild(nm);
-      var up = false, down = false;
-      var gex = rm.exits || [];
-      for (var x3 = 0; x3 < gex.length; x3++) {
-        if (gex[x3].dir === "up") up = true;
-        if (gex[x3].dir === "down") down = true;
-      }
-      if (up || down) {
-        var gl = document.createElement("div");
-        gl.className = "mglyph";
-        gl.textContent = (up ? "\\u25b2" : "") + (down ? "\\u25bc" : "");
-        cell.appendChild(gl);
-      }
-      grid.appendChild(cell);
-    }
-    band.appendChild(grid);
-    mapBody.appendChild(band);
-  }
+  var img = document.createElement("img");
+  img.className = "mimg";
+  img.alt = detailed ? "The surveyor's map of the Door" : "A crude copy of the map of the Door";
+  img.src = detailed ? "/map-survey.png" : "/map-crude.png";
+  mapBody.appendChild(img);
   closeJournal();
   mapEl.classList.add("open");
   sndOne("unfurl");
@@ -2618,14 +2410,18 @@ chipbtn.addEventListener("click", function () {
 
 // ---- themes: the Door in different lights ----
 // Five local presets, one row in settings; the relays add the rest below.
-var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "blood", "bone", "steel", "border", "border2", "line"];
+var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "blood", "bone", "steel", "heal", "border", "border2", "line"];
 var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
+// 'heal' is the mending-green (eat/bandage/rest chips): a distinct hue that must
+// stay legible on each ground, so — like blood/steel — it's tuned per theme
+// (bright on the dark grounds, dark on the light 'bone', kept off the acid gold
+// on 'moss'). Foreign themes derive it in dittoToVars.
 var THEMES = {
-  door:  { bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
-  bone:  { bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
-  moss:  { bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
-  abyss: { bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", border: "#243049", border2: "#2f4160", line: "#171f33" },
-  ember: { bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", border: "#46291a", border2: "#5c3722", line: "#331e12" },
+  door:  { bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
+  bone:  { bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
+  moss:  { bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
+  abyss: { bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", border: "#243049", border2: "#2f4160", line: "#171f33" },
+  ember: { bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", border: "#46291a", border2: "#5c3722", line: "#331e12" },
 };
 var thbtn = document.getElementById("thbtn");
 var thbrowse = document.getElementById("thbrowse");
@@ -2804,6 +2600,8 @@ function dittoToVars(t) {
     bone: mixHex(text, bg, 0.2),
     // The 'you deal damage' cool tone — nudged to stay legible on any ground.
     steel: ensureContrast("#6f9aa4", bg, 3.0),
+    // The mending-green (eat/bandage/rest) — same nudge, so it reads on any bg.
+    heal: ensureContrast("#7faa63", bg, 3.0),
     border: mixHex(bg, primary, 0.3),
     border2: mixHex(bg, primary, 0.5),
     line: mixHex(bg, primary, 0.18),

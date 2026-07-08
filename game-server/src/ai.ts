@@ -10,7 +10,7 @@ import { cap } from "./zone-util";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
-  RUNNERS, BROODERS, SENTINELS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
+  RUNNERS, BROODERS, SENTINELS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
 } from "./zone-data";
@@ -186,6 +186,14 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     if (!tmpl.is_boss) {
       const inner = exits.filter((e) => !world.entryRooms.has(e.to_room));
       if (inner.length) exits = inner; // never strand a creature with no exits
+    }
+    // A sentinel's post (the hound's undercroft) belongs to it alone — nothing
+    // ordinary wanders across, and not even a boss shares the guarded doorway.
+    // The sentinel never wanders out (it can't target its own room), so this
+    // only ever turns others away. Never strands.
+    if (SENTINEL_ROOMS.size) {
+      const notHeld = exits.filter((e) => !SENTINEL_ROOMS.has(e.to_room));
+      if (notHeld.length) exits = notHeld;
     }
     // Territory: idle wandering keeps to the ground around the den. Beyond the
     // edge (fled, or freshly walked in from a dark mouth), every idle step is

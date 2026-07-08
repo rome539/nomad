@@ -78,7 +78,7 @@ const mobs = [
   { id: "skeleton",       lvl: 2, hp: 20,  min: 2, max: 4,  armor: 0, bleed: 0 },
   { id: "brood-rat",      lvl: 2, hp: 24,  min: 2, max: 4,  armor: 0, bleed: 0 },
   { id: "twice-dead",     lvl: 3, hp: 32,  min: 5, max: 8,  armor: 1, bleed: 0 },
-  { id: "warden",         lvl: 3, hp: 35,  min: 3, max: 6,  armor: 3, bleed: 0 },
+  { id: "warden",         lvl: 3, hp: 35,  min: 3, max: 6,  armor: 2, bleed: 0 },
   { id: "grave-hyena",    lvl: 3, hp: 30,  min: 3, max: 5,  armor: 1, bleed: 2 },
   { id: "pale-crawler",   lvl: 3, hp: 30,  min: 6, max: 10, armor: 0, bleed: 3 },
   { id: "the-drowned",    lvl: 3, hp: 40,  min: 4, max: 7,  armor: 1, bleed: 0 },

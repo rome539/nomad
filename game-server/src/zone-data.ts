@@ -164,7 +164,11 @@ export const MIGRATION_FACTOR = 10; // respawn_secs * this = how long an EMPTY/s
 // of players in the zone (solo = unchanged), down to a floor so even a crowd
 // keeps some scarcity. Bosses are exempt — the King reforms on its own clock.
 export const MIGRATION_MIN_FACTOR = 5;
-export const REGROW_MS = 10 * 60_000; // the shrine replaces its gifts
+// Regrowing ground spawns (rocks, provisions, the rusted pick) come back after
+// a RANDOM delay in this window, not a fixed metronome — so the world doesn't
+// tick out a predictable stream you can stand and farm. 5–25 min, mean ~15.
+export const REGROW_MIN_MS = 5 * 60_000;
+export const REGROW_MAX_MS = 25 * 60_000;
 export const GRUDGE_MAX = 5;
 // How long a creature holds a grudge before it forgets — each kind at its own
 // pace. Killing the creature settles it outright (it's gone, and a migrant
@@ -401,6 +405,7 @@ export const WEAPON_VERBS: Record<string, string[]> = {
   "war-pike": ["run the pike into {n}", "skewer {n} on the war-pike", "drive the pike through {n}"],
   "abyssal-harpoon": ["drive the harpoon into {n}", "run the harpoon through {n}", "skewer {n} on the harpoon"],
   // — punching points (pierce) —
+  "rusted-pick": ["punch the rusty point into {n}", "drive the pick at {n}", "hook the rusted pick into {n}"],
   "horsemans-pick": ["punch the pick into {n}", "drive the pick at {n}", "hook the horseman's pick into {n}"],
   "crow-beak-pick": ["punch the crow-beak into {n}", "drive the beak at {n}", "hook the crow-beak into {n}"],
   "sword-breaker": ["jab the sword-breaker into {n}", "catch {n} on the sword-breaker", "stab at {n}"],
@@ -469,6 +474,11 @@ export const BITERS = new Set([
 // (live tick or offline sim), and noise doesn't lure it off station. The
 // three-headed hound holds the throat of the deep.
 export const SENTINELS = new Set(["three-hound"]);
+// Rooms a sentinel holds ALONE — nothing ordinary crosses the threshold, not
+// even a boss (like a gate, but a guarded doorway). The undercroft is the
+// hound's post: it spawns/migrates there and never wanders out, and nothing
+// else drifts in through the stairs. Add a room here if it gets a lone guardian.
+export const SENTINEL_ROOMS = new Set(["undercroft"]);
 // A roused sentinel stays up this long. Asleep you slip past (and rouse it);
 // awake it bars the way down until it's killed or drops back to sleep. Every
 // fresh disturbance (a passer, a blow) resets the clock, so a busy deep keeps
@@ -496,7 +506,7 @@ export const FIRE_ITEMS = new Set<string>([]);
 // first-strike loses its AMBUSH_MULT against a wielder set to receive.
 export const REACH_ITEMS = new Set(["quarterstaff", "pitted-spear", "war-pike", "abyssal-harpoon", "gaff-hook"]);
 // PIERCE: the pick punches plate — ignores this many points of a mob's armor.
-export const PIERCE = new Map<string, number>([["horsemans-pick", 2], ["crow-beak-pick", 3]]);
+export const PIERCE = new Map<string, number>([["rusted-pick", 2], ["horsemans-pick", 2], ["crow-beak-pick", 3]]);
 // TWO_HANDED: wants both hands; no shield alongside it (enforced at equip).
 export const TWO_HANDED = new Set(["war-pike", "abyssal-harpoon"]);
 // PADDED: a mob's stun rings you half as often. Best piece counts — padding

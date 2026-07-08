@@ -6,6 +6,7 @@ import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
 import { touchIconBytes, ogImageBytes } from "./assets";
+import { surveyMapBytes, crudeMapBytes } from "./mapimg";
 import { signProfileEvent, isGameKeyConfigured } from "./signing";
 import { publishEvent, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
@@ -84,6 +85,18 @@ export default {
       if (m === "GET" && pathname === "/og.jpg") {
         return new Response(ogImageBytes(), {
           headers: { "content-type": "image/jpeg", "cache-control": IMMUTABLE },
+        });
+      }
+      // The two world charts the map modal shows: the surveyor's truth and the
+      // crude copy. Drawn by promo/capture/_map.mjs, embedded in mapimg.ts.
+      if (m === "GET" && pathname === "/map-survey.png") {
+        return new Response(surveyMapBytes(), {
+          headers: { "content-type": "image/png", "cache-control": IMMUTABLE },
+        });
+      }
+      if (m === "GET" && pathname === "/map-crude.png") {
+        return new Response(crudeMapBytes(), {
+          headers: { "content-type": "image/png", "cache-control": IMMUTABLE },
         });
       }
 

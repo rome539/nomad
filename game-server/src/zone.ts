@@ -68,7 +68,7 @@ import {
   CRUDE_DROP_ROOM, CRUDE_BAD_EXIT, DIR_ORDER,
   RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, SIM_STEP_MS, CATCHUP_CAP_MS, 
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
-  FLEE_BELOW, FLEE_CHANCE, REGROW_MS, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, 
+  FLEE_BELOW, FLEE_CHANCE, REGROW_MIN_MS, REGROW_MAX_MS, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, CARVE_MAX_LEN, ROT_MS,
   PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, SENTINELS, HOUND_WAKE_MS,
   LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
@@ -925,7 +925,7 @@ export class ZoneDO implements DurableObject {
       const stillHere = here.includes(itemId);
       const alreadyRegrowing = this.regrow.some((r) => r.itemId === itemId && r.roomId === session.roomId);
       if (!stillHere && !alreadyRegrowing) {
-        this.regrow.push({ itemId, roomId: session.roomId, at: Date.now() + REGROW_MS });
+        this.regrow.push({ itemId, roomId: session.roomId, at: Date.now() + randInt(REGROW_MIN_MS, REGROW_MAX_MS) });
       }
     }
     await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null, condition);
