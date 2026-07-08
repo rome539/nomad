@@ -279,13 +279,21 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   // wanderer writes in it is theirs to keep, lose, or bleed. The counter's
   // slots are free now, so the pack almost always has room; if it's somehow
   // still full, the piece lands at your feet at the gate rather than vanishing.
+  // Paid-for goods come across the counter already bearing the gate's seal
+  // (kept-tier condition, minted on the spot) — you bought it, it's yours, the
+  // world can't peel it off your corpse. Only a pack-full spill lands unsealed.
   const slid: string[] = [];
   for (const w of trade.wants) {
     const bought = world.itemTemplates.get(w.itemId)!;
     const jid = bought.id === JOURNAL_ITEM ? "jrn-" + uuid() : undefined;
-    const got = await z.grantItem(session, bought.id, { journalId: jid });
-    if (!got) z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), bought.id]);
-    slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}]${got ? "" : " (pack full — at your feet)"}`);
+    const got = await z.grantItem(session, bought.id, { kept: true, journalId: jid });
+    if (!got) {
+      z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), bought.id]);
+      slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}] (pack full — at your feet, unsealed)`);
+      continue;
+    }
+    const serial = await sealOne(z, session, got);
+    slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}] (sealed #${serial})`);
   }
   const change = trade.paid > cost ? " He gives no change." : "";
   const seals = cracked ? " He cracks the gate's seals without ceremony." : "";
@@ -294,7 +302,7 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     : `The keeper slides it all across the counter:\n  ${slid.join("\n  ")}`;
   session.buying = undefined;
   z.roomFeed(session.roomId, `${session.name} trades at the keeper's hatch.`, session.pubkey);
-  return `${line}${seals}\n${goods}${change} (unclaimed — the gate can seal what it can)`;
+  return `${line}${seals}\n${goods}${change} The keeper's wares carry the gate's mark already — sealed, and yours.`;
 }
 
 export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promise<void> {

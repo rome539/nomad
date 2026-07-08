@@ -60,7 +60,9 @@ import {
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, 
-  PARTING_BLOW_CHANCE, STANCE, STAGGER_BONUS, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, 
+  PARTING_BLOW_CHANCE, STANCE, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, LOCKBOX_CAP, VAULT_CAP,
+  REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, WARDHIDE_WOUND_ODDS,
+  SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, BENCH_CHIP, TRADE_CHIP, FORGE_CHIP, DETAILED_MAP,
   MAP_ITEMS, JOURNAL_ITEM, FISHING_ROOMS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   CRUDE_DROP_ROOM, CRUDE_BAD_EXIT, DIR_ORDER,
@@ -689,7 +691,7 @@ export class ZoneDO implements DurableObject {
       const grip = this.creatures.get(session.seizedBy);
       if (!grip || grip.roomId !== session.roomId) {
         session.seizedBy = undefined;
-      } else if (chance(SEIZE_BREAK_ODDS)) {
+      } else if (chance(SEIZE_BREAK_ODDS + (this.wearsTrait(session, SLICK) ? SLICK_BREAK_BONUS : 0))) {
         session.seizedBy = undefined;
         this.send(session, "You wrench free of its grip.");
       } else {
@@ -854,7 +856,8 @@ export class ZoneDO implements DurableObject {
       if (session.hp < session.maxHp * WOUNDED_FRACTION) dmg = Math.round(dmg * WOUNDED_DMG_MULT);
       // No crit on top: the surprise IS the crit. (Stacked, a pebble
       // one-shots skeletons; unstacked, an ambush is strong, not a cannon.)
-      dmg = Math.max(1, dmg - tmpl.armor);
+      // A pick's narrow point punches plate: PIERCE ignores that much armor.
+      dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - (weapon ? PIERCE.get(weapon.tmpl.id) ?? 0 : 0)));
       creature.hp -= dmg;
       ai.addGrudge(this, creature, session.pubkey);
       this.roomFeed(session.roomId, `${session.name} falls on ${tmpl.name} without warning!`, session.pubkey);
@@ -927,9 +930,13 @@ export class ZoneDO implements DurableObject {
     }
     await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null, condition);
     // Friendly: your FIRST weapon/armor goes on automatically; switching later
-    // is a deliberate `equip`. (Never overrides something you've already got on.)
+    // is a deliberate `equip`. (Never overrides something you've already got on,
+    // and never auto-crosses the two-handed rule — that pairing is deliberate.)
+    const crossesHands =
+      (tmpl.slot === "weapon" && TWO_HANDED.has(tmpl.id) && this.equippedItem(session, "shield") !== null) ||
+      (tmpl.slot === "shield" && TWO_HANDED.has(this.equippedItem(session, "weapon")?.tmpl.id ?? ""));
     let readied = "";
-    if (tmpl.slot !== "" && !this.equippedItem(session, tmpl.slot)) {
+    if (tmpl.slot !== "" && !this.equippedItem(session, tmpl.slot) && !crossesHands) {
       carried.equipped = true;
       await setEquipped(this.env.DB, rowId, true);
       readied = tmpl.slot === "weapon" ? " You take it in hand." : " You pull it on.";
@@ -1138,9 +1145,9 @@ export class ZoneDO implements DurableObject {
     // Persisted to the player row (keyed by pubkey), so it follows you anywhere.
     await setStance(this.env.DB, session.pubkey, s);
     this.send(session, s === "reckless"
-      ? "You drop your guard and swing to wound — you hit half again as hard, and take it harder in return."
+      ? "You drop your guard and swing to wound — you hit half again as hard, and take it half again as hard. A true gamble."
       : s === "guarded"
-      ? "You close up behind your guard — far less gets through, but your blows lose their bite."
+      ? "You close up behind your guard — far less gets through, claws that would open you are half-turned, and a raised shield catches more. But your blows lose their bite."
       : "You settle into an even, steady footing.");
     // The stance chips show the two you're NOT in — so the row has to redraw the
     // moment you switch, or the one you just tapped stays put and it reads as if
@@ -1165,6 +1172,17 @@ export class ZoneDO implements DurableObject {
     const fighting = this.inCombat(session);
     if (fighting && tmpl.slot !== "weapon") {
       return this.send(session, "You cannot change your gear while something wants your blood.");
+    }
+    // TWO_HANDED steel wants both hands: no shield alongside the pike, no
+    // pike over a shield. Not enforced mid-fight juggling — just refused.
+    if (tmpl.slot === "weapon" && TWO_HANDED.has(tmpl.id) && this.equippedItem(session, "shield")) {
+      return this.send(session, `${cap(tmpl.name)} wants both hands — put up your shield first.`);
+    }
+    if (tmpl.slot === "shield") {
+      const inHand = this.equippedItem(session, "weapon");
+      if (inHand && TWO_HANDED.has(inHand.tmpl.id)) {
+        return this.send(session, `Both your hands are full of ${inHand.tmpl.name}. Lower it first.`);
+      }
     }
     // One item per slot — set down whatever occupies it first.
     const current = this.equippedItem(session, tmpl.slot);
@@ -1395,6 +1413,18 @@ export class ZoneDO implements DurableObject {
     if (t.block > 0) bits.push(`${Math.round(t.block * 100)}% block`);
     if (t.armor > 0) bits.push(`${t.armor} armor, ${t.weight > 0 ? "heavy" : "light"}`);
     else if (t.weight > 0) bits.push("heavy"); // weighted weapon/shield: costs your footwork
+    // Gear traits (045): a one-word tag so the piece teaches its own trick.
+    if (REACH_ITEMS.has(t.id)) bits.push("reach");
+    const pierce = PIERCE.get(t.id);
+    if (pierce) bits.push(`pierces ${pierce}`);
+    if (TWO_HANDED.has(t.id)) bits.push("two-handed");
+    if (PADDED.has(t.id)) bits.push("padded");
+    if (WARDHIDE.has(t.id)) bits.push("wards wounds");
+    if (QUIET_ITEMS.has(t.id)) bits.push("quiet");
+    if (SLICK.has(t.id)) bits.push("slick");
+    if (STRAPPED.has(t.id)) bits.push("strapped-down");
+    const spike = THORNS.get(t.id);
+    if (spike) bits.push(`spiked ${spike}`);
     return bits.length ? ` (${bits.join(", ")})` : "";
   }
 
@@ -1707,6 +1737,18 @@ export class ZoneDO implements DurableObject {
   // clock and takes the worse dmg. Mirrors the mob-side wound, pointed at you.
   private openWound(victim: Session, tmpl: MobTemplate): void {
     if (!(tmpl.bleed > 0)) return; // undefined/NaN (unmigrated column) or 0: no wound — never leak NaN
+    // Guarded is the skill answer to claws: behind your guard, a cut that
+    // would open you only finds flesh half the time (GUARDED_WOUND_ODDS).
+    if (victim.stance === "guarded" && !chance(GUARDED_WOUND_ODDS)) {
+      this.send(victim, `${cap(tmpl.name)} rakes for you, but your guard turns the worst of it — no wound opens.`, "block");
+      return;
+    }
+    // WARDHIDE is the gear answer, and it rolls separately — thick hide under
+    // a guard stacks (0.5 × 0.5): the full turtle bleeds a quarter as often.
+    if (this.wearsTrait(victim, WARDHIDE) && !chance(WARDHIDE_WOUND_ODDS)) {
+      this.send(victim, `${cap(tmpl.name)} drags claws through the thick hide and finds less than it wanted — no wound opens.`, "block");
+      return;
+    }
     const fresh = !victim.bleedTicks;
     victim.bleedTicks = BLEED_TICKS;
     victim.bleedDmg = Math.max(victim.bleedDmg ?? 0, tmpl.bleed);
@@ -1888,6 +1930,7 @@ export class ZoneDO implements DurableObject {
     if (SENTINELS.has(id)) return "A sentinel. It guards one door and never leaves it — deaf to lures, it sleeps until the deep is opened, then wakes and bars the way. Getting past means going through.";
     if (DROWNERS.has(id)) return "A drowned thing. It holds its patch of water and seizes what wades in.";
     if (LURKERS.has(id)) return "It waits unseen and drops on the careless. Noise and movement draw it.";
+    if (CORRODERS.has(id)) return "It does not want your blood. Its touch is rust — every blow blooms green on what you WEAR, and it will patiently eat you out of your kit. Fight it naked or fight it fast.";
     if (REVENANTS.has(id)) return "It does not stay down — put it to nothing and it rises again, weaker, to come once more.";
     if (AGGRO_SCAVENGERS.has(id)) return "A scavenger that guards its kills — walk in on one feeding and it turns on you.";
     if (SCAVENGERS.has(id)) return "A scavenger. It roams the dark eating the dead, and grows bold as it gorges.";
@@ -2125,7 +2168,12 @@ export class ZoneDO implements DurableObject {
             const tmpl = world.mobTemplates.get(creature.templateId)!;
             if (!creature.target) creature.target = session.pubkey;
             ai.addGrudge(this, creature, session.pubkey);
-            let dmg = Math.round((randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) + (weapon ? this.effDmg(weapon) : 0)) * atkMult);
+            // Only the first cut has your shoulder behind it — follow-up swings
+            // from fast steel carry the blade's edge alone (no body roll), so
+            // speed multiplies the blade, never your whole arm. Slow heavy
+            // steel lands fewer, bigger blows; both are real choices.
+            const body = swing === 0 ? randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) : 0;
+            let dmg = Math.round((body + (weapon ? this.effDmg(weapon) : 0)) * atkMult);
             if (hurt) dmg = Math.round(dmg * WOUNDED_DMG_MULT);
             let flourish = ".";
             if (chance(CRIT_CHANCE)) {
@@ -2133,7 +2181,8 @@ export class ZoneDO implements DurableObject {
               flourish = pick(CRIT_FLOURISH);
             }
             // Their hide or plate turns what it can; a blow always bites.
-            dmg = Math.max(1, dmg - tmpl.armor);
+            // A pick's narrow point punches plate (PIERCE ignores that much).
+            dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - (weapon ? PIERCE.get(weapon.tmpl.id) ?? 0 : 0)));
             creature.hp -= dmg;
             if (creature.hp > 0) {
               this.send(session, `${this.playerHit(weapon, tmpl.name)} for ${dmg}${flourish} (${this.condition(creature)})`, flourish === "." ? "dmgout" : "dmgout big");
@@ -2180,7 +2229,9 @@ export class ZoneDO implements DurableObject {
       if (!s.seizedBy) continue;
       const grip = this.creatures.get(s.seizedBy);
       if (!grip || grip.roomId !== s.roomId) { s.seizedBy = undefined; continue; }
-      if (chance(SEIZE_BREAK_ODDS)) { s.seizedBy = undefined; this.send(s, "You tear loose of its grip."); }
+      // SLICK hide slips a grip easier, too (the eel was never held).
+      const breakOdds = SEIZE_BREAK_ODDS + (this.wearsTrait(s, SLICK) ? SLICK_BREAK_BONUS : 0);
+      if (chance(breakOdds)) { s.seizedBy = undefined; this.send(s, "You tear loose of its grip."); }
     }
 
     // Creatures act: flee if badly hurt, otherwise fight back. Only so many can
@@ -2303,16 +2354,29 @@ export class ZoneDO implements DurableObject {
         }
         // A shield can catch the blow whole — and unlike footwork, it holds up
         // even under a full load of plate (block is the heavy build's evasion).
+        // A parrying blade (block on a weapon) counts toward the same catch.
         if (chance(this.equippedBlock(victim))) {
           const shield = this.equippedItem(victim, "shield");
-          const sh = shield?.tmpl.name ?? "your shield";
+          const parry = this.equippedItem(victim, "weapon");
+          const catcher = shield ?? ((parry?.tmpl.block ?? 0) > 0 ? parry : null);
+          const sh = catcher?.tmpl.name ?? "your shield";
           this.send(victim, pick([
             `You catch it on ${sh}.`,
             `You take the blow on ${sh}; it jars up your arm and holds.`,
             `${sh} turns the stroke aside.`,
             `You get ${sh} up in time — the blow rings off it.`,
           ]), "block");
-          if (shield) await this.wear(victim, shield.carried, shield.tmpl, ARMOR_WEAR);
+          if (catcher) await this.wear(victim, catcher.carried, catcher.tmpl, ARMOR_WEAR);
+          // The buckler's spike answers: what it catches, it costs (THORNS).
+          const spike = shield ? THORNS.get(shield.tmpl.id) : undefined;
+          if (spike) {
+            creature.hp -= spike;
+            if (creature.hp <= 0) {
+              await this.onCreatureDeath(victim, creature, tmpl);
+            } else {
+              this.send(victim, `${cap(tmpl.name)} drives itself onto the spike — ${spike} back.`, "dmgout");
+            }
+          }
           this.combatNoise(victim.roomId);
           continue;
         }
@@ -2357,24 +2421,33 @@ export class ZoneDO implements DurableObject {
           this.combatNoise(victim.roomId);
           // A drowned thing that lands a blow can take hold — you're seized,
           // can't flee, and it drags harder until you wrench free or kill it.
-          if (DROWNERS.has(creature.templateId) && !victim.seizedBy && chance(SEIZE_ODDS)) {
+          // SLICK hide (the eel-skin) gives cold arms half as much to hold.
+          const seizeOdds = this.wearsTrait(victim, SLICK) ? SEIZE_ODDS * SLICK_SEIZE_MULT : SEIZE_ODDS;
+          if (DROWNERS.has(creature.templateId) && !victim.seizedBy && chance(seizeOdds)) {
             victim.seizedBy = creature.id;
             this.send(victim, `${cap(tmpl.name)} closes cold arms around you — you're held fast. (break free: keep fighting, or it drags you under)`, "seize");
           }
           // Claws and teeth open a wound the mail can't turn.
           this.openWound(victim, tmpl);
           // A heavy dead blow can ring YOUR skull — you lose your next swing.
-          // One hit, one lost beat; you can't be stun-chained deeper.
-          if (tmpl.stun > 0 && !victim.stunned && chance(tmpl.stun)) {
+          // One hit, one lost beat; you can't be stun-chained deeper. PADDING
+          // (the coif, the riveted lining) takes the ring out of half of them.
+          const stunOdds = this.wearsTrait(victim, PADDED) ? tmpl.stun * PADDED_STUN_MULT : tmpl.stun;
+          if (tmpl.stun > 0 && !victim.stunned && chance(stunOdds)) {
             victim.stunned = true;
             this.send(victim, `${cap(tmpl.name)} lands like a falling stone — your skull rings and the room tilts.`, "stun");
           }
           // Eating a blow thins the mail a hair (provisional gear only).
           if (worn) await this.wear(victim, worn.carried, worn.tmpl, ARMOR_WEAR);
+          // The verdigris-thing's blows eat your KIT, not your blood (soft).
+          if (CORRODERS.has(creature.templateId)) await this.corrodeTouch(victim, tmpl);
           // A cutpurse doesn't fight to win — it fights to grab. One good hit,
           // one unsealed thing off your back (it goes for the richest), and gone.
           // Sealed loot is TITLE the dungeon marked as yours; its fingers slide off.
-          if (THIEVES.has(creature.templateId) && !creature.stole) {
+          // STRAPPED (the baldric) lashes everything down — nothing to lift.
+          if (THIEVES.has(creature.templateId) && !creature.stole && this.wearsTrait(victim, STRAPPED)) {
+            this.send(victim, `${cap(tmpl.name)}'s fingers dance over your pack and find everything lashed down tight. It hisses.`);
+          } else if (THIEVES.has(creature.templateId) && !creature.stole) {
             const loot = victim.items
               .filter((c) => c.serial === null && !c.equipped)
               .sort((a, b) => (RARITY_RANK[world.itemTemplates.get(b.itemId)?.rarity ?? "common"] ?? 0)
@@ -2888,7 +2961,11 @@ export class ZoneDO implements DurableObject {
     const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
     let dmg = randInt(tmpl.dmg_min, tmpl.dmg_max) + (tmpl.is_boss ? (creature.phase ?? 0) * 3 : 0);
     if (ai.scavengerBold(this, creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);
-    dmg = Math.round(dmg * AMBUSH_MULT);
+    // REACH blunts the rush: a haft held at length means the thing arrives on
+    // the point first — the blow still lands, but without the ambush's weight.
+    const weapon = this.equippedItem(victim, "weapon");
+    const atLength = weapon !== null && REACH_ITEMS.has(weapon.tmpl.id);
+    if (!atLength) dmg = Math.round(dmg * AMBUSH_MULT);
     if (cHurt) dmg = Math.max(1, Math.round(dmg * WOUNDED_DMG_MULT));
     const worn = this.equippedItem(victim, "armor");
     dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
@@ -2900,10 +2977,13 @@ export class ZoneDO implements DurableObject {
     }
     this.combatNoise(victim.roomId);
     if (victim.hp > 0) {
-      this.send(victim, `${cap(tmpl.name)} is on you before you're set — a first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`, "dmgin big");
+      this.send(victim, atLength
+        ? `${cap(tmpl.name)} rushes you — but it meets ${weapon!.tmpl.name} held at length, and the worst of the charge dies on the point. A first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`
+        : `${cap(tmpl.name)} is on you before you're set — a first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`, "dmgin big");
       this.sendStatus(victim);
       this.openWound(victim, tmpl); // an ambush by something with claws cuts deep
       if (worn) await this.wear(victim, worn.carried, worn.tmpl, ARMOR_WEAR);
+      if (CORRODERS.has(creature.templateId)) await this.corrodeTouch(victim, tmpl); // rust doesn't wait its turn either
     } else {
       await this.onPlayerDeath(victim, tmpl);
     }
@@ -3214,11 +3294,45 @@ export class ZoneDO implements DurableObject {
     return total;
   }
 
-  // The best shield on your arm gives its block chance (scaled by wear).
+  // The verdigris-thing's touch is rust: a landed blow blooms green on ONE
+  // random worn piece — armor slots and shield, never the weapon in your moving
+  // hand. Soft and steady (CORRODE_WEAR), aimed at your equity, not your blood;
+  // the seal's slower wear applies inside wear(), so sealed kit resists.
+  // Nothing worn = nothing to eat; the naked player shrugs.
+  private async corrodeTouch(victim: Session, tmpl: MobTemplate): Promise<void> {
+    const pieces = [...this.equippedAll(victim)].filter((g) => g.tmpl.slot !== "" && g.tmpl.slot !== "weapon");
+    if (pieces.length === 0) return;
+    const g = pick(pieces);
+    await this.wear(victim, g.carried, g.tmpl, CORRODE_WEAR);
+    // Not every touch gets a line (it'd drown the fight); enough to teach.
+    if (this.equippedItem(victim, g.tmpl.slot) && chance(0.35)) {
+      this.send(victim, `Green bloom spreads where ${tmpl.name} touched — ${g.tmpl.name} pits and flakes.`, "dmgin");
+    }
+  }
+
+  // Does any EQUIPPED piece carry this trait? (Gear traits — reach, padded,
+  // quiet, slick, strapped — are worn, not carried: a spear in the pack blunts
+  // nothing.) Traits are booleans by design; two padded pieces are just padded.
+  private wearsTrait(session: Session, trait: Set<string>): boolean {
+    for (const c of session.items) if (c.equipped && trait.has(c.itemId)) return true;
+    return false;
+  }
+
+  // The shield on your arm gives its block chance (scaled by wear) — and a
+  // parrying blade (a weapon with a block stat: sword-breaker, king's-guard)
+  // adds its own catch on top. The turtle's weapon is part of the wall.
   private equippedBlock(session: Session): number {
+    let block = 0;
     const s = this.equippedItem(session, "shield");
-    if (!s || s.tmpl.block <= 0) return 0;
-    return s.tmpl.block * Math.max(0, s.carried.condition) / 100;
+    if (s && s.tmpl.block > 0) {
+      block += s.tmpl.block * Math.max(0, s.carried.condition) / 100;
+      // Guarded means fighting BEHIND the shield — it catches a shade more.
+      // (Stance only sweetens a shield you actually carry; bare guarded gets nothing.)
+      if (session.stance === "guarded") block += GUARDED_BLOCK_BONUS;
+    }
+    const w = this.equippedItem(session, "weapon");
+    if (w && w.tmpl.block > 0) block += w.tmpl.block * Math.max(0, w.carried.condition) / 100;
+    return block;
   }
 
   // A one-word read on how worn a piece is, for the inventory line.
@@ -3230,8 +3344,9 @@ export class ZoneDO implements DurableObject {
     return "nearly broken";
   }
 
-  // Grind a piece down. Sealed gear is frozen (the seal holds the dungeon off);
-  // provisional gear wears, and at 0 it's gone — worn through, mid-life.
+  // Grind a piece down. Sealed gear wears SLOWER, not never (SEALED_WEAR_MULT —
+  // the mark holds the dungeon off, it doesn't stop time), and it can be mended
+  // at the bench like anything else. At 0 a piece is gone — worn through, mid-life.
   private async wear(session: Session, carried: CarriedItem, tmpl: ItemTemplate, amount: number): Promise<void> {
     if (carried.serial !== null) amount *= SEALED_WEAR_MULT; // sealed: protected, not immortal — the mark slows the wear
     carried.condition -= amount;

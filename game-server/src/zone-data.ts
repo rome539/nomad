@@ -72,10 +72,16 @@ export const PARTING_BLOW_CHANCE = 0.4; // heavy armor: odds the fight bills you
 // `def` scales the damage you take (after armor). Reckless is a glass edge;
 // guarded is a turtle; steady is even. A moment-to-moment choice (`stance`).
 export const STANCE: Record<Stance, { atk: number; def: number }> = {
-  reckless: { atk: 1.5, def: 1.3 }, // hit half again as hard — and get hit harder
+  reckless: { atk: 1.5, def: 1.5 }, // a true gamble: hit half again as hard — and take it half again as hard
   steady: { atk: 1.0, def: 1.0 },
   guarded: { atk: 0.6, def: 0.6 }, // soak far less, but your blows lose their bite
 };
+// Guarded is more than the number — you fight behind your shield. Behind a
+// raised shield it blocks a shade more, and claws that would open a wound
+// (armor-ignoring bleed) only get through half the time. The skill answer to
+// the bleed mobs; wasted on things that don't cut (know your bestiary).
+export const GUARDED_BLOCK_BONUS = 0.10; // added to shield block while guarded
+export const GUARDED_WOUND_ODDS = 0.5;   // odds a fresh wound still opens through your guard
 export const STAGGER_BONUS = 2; // an opening costs you
 // Carry space is measured in SLOTS. Fungibles (trophies, food, scrap, keys,
 // cigarettes) stack: a whole pile of rat-tails is one slot. Gear, sealed items,
@@ -255,7 +261,7 @@ export const PATROLS: Record<string, string[]> = {
 // Creatures with nothing inside. They do not bleed (broken remains, not blood),
 // do not hunger, and no smell of food moves them. The rat is the only thing
 // down here that's honestly alive.
-export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-captain", "forgotten-king", "drowned-god", "marrow-king"]);
+export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-captain", "forgotten-king", "drowned-god", "marrow-king", "marrow-cantor"]);
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
@@ -273,7 +279,7 @@ export const BROOD_INTERVAL_MS = 90_000; // ~90s between births
 // they HEAR. A still, quiet wanderer they walk right past; move (in or out) or
 // make a din and they may lurch awake and swing. (A grudge still wakes them
 // outright; this is only for the ones that don't yet know you.)
-export const LISTENERS = new Set(["skeleton", "bone-knight"]);
+export const LISTENERS = new Set(["skeleton", "bone-knight", "marrow-cantor"]); // the cantor brings ears (and the bone-tax) to the King's Demesne
 export const WAKE_ENTER = 0.3;  // sometimes it catches the sound of you coming in
 export const WAKE_EXIT = 0.65;  // your move for the door is the loudest thing you do
 export const WAKE_NOISE = 0.8;  // a fight in the room is almost unmissable
@@ -419,6 +425,47 @@ export const FEARS_FIRE = new Set(["albino-rat"]);
 // property) when the Light & search phase ships, and FEARS_FIRE comes alive.
 export const FIRE_ITEMS = new Set<string>([]);
 
+// ---- gear traits (the 045 audit expansion): properties, not bigger numbers ----
+// Every trait is a one-line hook into a system the simulation already runs.
+// Stats live in D1 (045); WHAT a piece does lives here, the FEARS_FIRE pattern.
+// REACH: a haft held at length blunts the ambush — a grudge-holder's entry
+// first-strike loses its AMBUSH_MULT against a wielder set to receive.
+export const REACH_ITEMS = new Set(["quarterstaff", "pitted-spear", "war-pike", "abyssal-harpoon", "gaff-hook"]);
+// PIERCE: the pick punches plate — ignores this many points of a mob's armor.
+export const PIERCE = new Map<string, number>([["horsemans-pick", 2], ["crow-beak-pick", 3]]);
+// TWO_HANDED: wants both hands; no shield alongside it (enforced at equip).
+export const TWO_HANDED = new Set(["war-pike", "abyssal-harpoon"]);
+// PADDED: a mob's stun rings you half as often. Best piece counts — padding
+// under padding is just padding (the trait is a boolean, it never stacks).
+export const PADDED = new Set(["quilted-coif", "riveted-cuirass"]);
+export const PADDED_STUN_MULT = 0.5;
+// WARDHIDE: claw-wounds (armor-ignoring bleed) open half as often. Rolls
+// SEPARATELY from guarded stance — hide under a guard stacks to a quarter.
+export const WARDHIDE = new Set(["thick-hide-jack", "sentinels-mantle"]);
+export const WARDHIDE_WOUND_ODDS = 0.5;
+// QUIET: LISTENER wake odds halved while worn (felt says nothing to the bones).
+export const QUIET_ITEMS = new Set(["felt-soled-boots", "grave-shroud", "pale-hide-hood", "shade-wrapped-greaves"]);
+export const QUIET_WAKE_MULT = 0.5;
+// SLICK: a drowned grip takes hold half as often, and breaks easier.
+export const SLICK = new Set(["eel-skin-cloak", "kelp-woven-mail", "abyssal-scale-coat"]);
+export const SLICK_SEIZE_MULT = 0.5;
+export const SLICK_BREAK_BONUS = 0.25; // added to SEIZE_BREAK_ODDS
+// STRAPPED: everything lashed down — the cutpurse's fingers find no purchase.
+export const STRAPPED = new Set(["strapped-baldric"]);
+// THORNS: a blocked blow costs the attacker (the buckler's spike answers).
+export const THORNS = new Map<string, number>([["spiked-buckler", 1], ["crown-guard-pavise", 2]]);
+
+// ---- the verdigris-thing: the extraction monster (047) ----
+// CORRODERS eat your KIT, not your blood: each landed blow blooms green on one
+// random worn piece (armor slots + shield, never the weapon in your moving
+// hand). Soft by design (rome: "make it soft") — a fight is a repair bill, not
+// a wall. Sealed gear resists through the ordinary SEALED_WEAR_MULT, so the
+// gate's mark finally matters mid-fight. The naked player shrugs.
+export const CORRODERS = new Set(["verdigris-thing"]);
+export const CORRODE_WEAR = 1.5; // condition per landed blow (vs ARMOR_WEAR 0.3 baseline; ~12 off one piece across a long fight)
+// (Parry needs no set: it's the block column on a weapon-slot item, read by
+// equippedBlock. Two epic examples: sword-breaker 0.10, king's-guard 0.15.)
+
 // ---- the dungeon breathing: ambient atmosphere ----
 // A quiet, rate-limited flavour line surfaces to an idle wanderer now and then,
 // drawn from where they stand: the flooded deep sounds nothing like the gates.
@@ -432,6 +479,7 @@ export const DEEP_ROOMS = new Set([
   "blackreach", "the-lightless-march", "worm-cloister", "the-undertow", "the-sump",
   "carrion-gallery", "the-marrow-road", "the-gasping-dark", "sunless-well",
   "drowned-court", "kings-oratory", "bone-reliquary", "the-death-cell", "the-cold-hearth",
+  "worm-bore", // the deep's second hideaway (048)
 ]);
 
 // The corpse-key. The black door into the deep opens to a still-cold heart cut

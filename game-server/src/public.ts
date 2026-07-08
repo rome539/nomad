@@ -474,21 +474,32 @@ export const PAGE = `<!doctype html>
   }
   #mapclose:hover, #jclose:hover { color: var(--gold); border-color: var(--gold); }
   #mapbody, #jbody { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 14px; }
-  /* map: regions of room cards */
-  #mapbody { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-  .mregion { border: 1px solid var(--line); border-radius: 8px; padding: 0 10px 10px; min-width: 0; }
-  .mrh {
-    position: sticky; top: 0; background: var(--panel); z-index: 1;
+  /* map: a drawn chart — floors stacked deepest-last, rooms laid on a true grid */
+  #mapbody { overflow-x: auto; }
+  .mfloor { margin-bottom: 18px; }
+  .mfl {
     color: var(--bone); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-    border-bottom: 1px solid var(--line); padding: 10px 0 6px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--line); padding: 6px 0; margin-bottom: 12px;
   }
-  .mroom { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-  .mroom:last-child { border-bottom: none; }
-  .mroom .mrn { color: var(--cream); font-size: 13px; }
-  .mroom.here .mrn { color: var(--gold); font-weight: 700; }
-  .mroom.here .mrn::before { content: "\\25b8 "; color: var(--gold); }
-  .mroom .mrx { color: var(--dim); font-size: 11.5px; margin-top: 2px; }
-  .mroom .mrx .md { color: var(--steel); }
+  .mgrid { position: relative; }
+  .mgrid svg { position: absolute; inset: 0; pointer-events: none; display: block; }
+  .mgrid line { stroke: var(--border2); stroke-width: 1.5; }
+  .mgrid line.far { stroke: var(--blood); stroke-dasharray: 5 4; opacity: 0.55; }
+  .mgrid line.stub { stroke-dasharray: 3 3; opacity: 0.6; }
+  #mapm.crude .mgrid line { stroke-dasharray: 4 3; }
+  .mcell {
+    position: absolute; width: 84px; height: 44px; overflow: hidden;
+    background: #241d13; border: 1px solid var(--border2); border-radius: 5px;
+    padding: 4px 5px 2px;
+  }
+  .mcell .mn { color: var(--bone); font-size: 9px; line-height: 1.2; }
+  .mcell.gate { border-color: var(--steel); }
+  .mcell.gate .mn { color: var(--steel); }
+  .mcell.deep { background: #251519; }
+  .mcell.here { border-color: var(--gold); box-shadow: 0 0 10px rgba(216, 169, 78, 0.35); }
+  .mcell.here .mn { color: var(--gold); font-weight: 700; }
+  .mcell .mglyph { position: absolute; right: 5px; bottom: 2px; font-size: 8px; color: var(--dim); letter-spacing: 2px; }
+  .mcell.here .mglyph { color: var(--gold); }
   /* journal: a card per creature */
   #jbody { display: flex; flex-direction: column; gap: 10px; }
   .jent { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
@@ -504,7 +515,6 @@ export const PAGE = `<!doctype html>
   .jempty { color: var(--dim); font-size: 13px; font-style: italic; padding: 8px 2px; }
   @media (max-width: 680px) {
     #mapm .lbox, #jrnl .lbox { max-height: 92vh; }
-    #mapbody { grid-template-columns: minmax(0, 1fr); }
   }
   #idpanel input {
     flex: 1;
@@ -1897,41 +1907,224 @@ function renderMap(f) {
     for (var i = 0; i < f.reveal.length; i++) knownRooms[f.reveal[i]] = 1;
   }
   mapBody.textContent = "";
+
+  // ---- flatten the frame into one room table ----
+  var byId = {}, order = [];
   var regions = f.regions || [];
   for (var r = 0; r < regions.length; r++) {
     var reg = regions[r];
-    var box = document.createElement("div");
-    box.className = "mregion";
-    var h = document.createElement("div");
-    h.className = "mrh";
-    h.textContent = reg.label;
-    box.appendChild(h);
-    var rooms = reg.rooms || [];
-    for (var j = 0; j < rooms.length; j++) {
-      var room = rooms[j];
-      var rw = document.createElement("div");
-      rw.className = "mroom" + (room.here ? " here" : "");
-      var nm = document.createElement("div");
-      nm.className = "mrn";
-      nm.textContent = room.name;
-      rw.appendChild(nm);
-      var exits = room.exits || [];
-      if (exits.length) {
-        var xr = document.createElement("div");
-        xr.className = "mrx";
-        for (var k = 0; k < exits.length; k++) {
-          if (k) xr.appendChild(document.createTextNode("  \\u00b7  "));
-          var d = document.createElement("span");
-          d.className = "md";
-          d.textContent = exits[k].dir;
-          xr.appendChild(d);
-          xr.appendChild(document.createTextNode(" \\u2192 " + exits[k].toName));
-        }
-        rw.appendChild(xr);
-      }
-      box.appendChild(rw);
+    var rcls = reg.label === "The Gates" ? "gate" : reg.label === "The Deep" ? "deep" : "upper";
+    var rrooms = reg.rooms || [];
+    for (var j = 0; j < rrooms.length; j++) {
+      rrooms[j].rcls = rcls;
+      byId[rrooms[j].id] = rrooms[j];
+      order.push(rrooms[j].id);
     }
-    mapBody.appendChild(box);
+  }
+  if (!order.length) return;
+
+  // ---- floors: walk the stairs (down = one deeper), keep the first claim ----
+  var zOf = {};
+  var start = f.here && byId[f.here] ? f.here : order[0];
+  zOf[start] = 0;
+  var queue = [start];
+  while (queue.length) {
+    var qid = queue.shift();
+    var qex = byId[qid].exits || [];
+    for (var k = 0; k < qex.length; k++) {
+      var qe = qex[k];
+      if (!byId[qe.to] || zOf[qe.to] !== undefined) continue;
+      zOf[qe.to] = zOf[qid] + (qe.dir === "down" ? 1 : qe.dir === "up" ? -1 : 0);
+      queue.push(qe.to);
+    }
+  }
+  // Anything the walk never reached (a crude page's omissions cut the thread)
+  // still carries its region — the copyist knows which part of the dungeon a
+  // page came from, just not where it sits. Gates are never adrift.
+  var floors = {};
+  for (var o = 0; o < order.length; o++) {
+    var oid = order[o];
+    var fz = zOf[oid] !== undefined ? String(zOf[oid])
+      : byId[oid].rcls === "gate" ? "gates"
+      : "adrift-" + byId[oid].rcls;
+    (floors[fz] = floors[fz] || []).push(oid);
+  }
+  // The widest floor is the surface; every band is named from it, and the thin
+  // airs above it (the gates, the stair-tops) fold into one band at the top.
+  var surfZ = 0, surfN = -1;
+  var fkeys = Object.keys(floors);
+  for (var s = 0; s < fkeys.length; s++) {
+    if (!isNaN(Number(fkeys[s])) && floors[fkeys[s]].length > surfN) { surfN = floors[fkeys[s]].length; surfZ = Number(fkeys[s]); }
+  }
+  var merged = {}, floorOf = {};
+  for (var s2 = 0; s2 < fkeys.length; s2++) {
+    var mk = !isNaN(Number(fkeys[s2])) && Number(fkeys[s2]) < surfZ ? "gates" : fkeys[s2];
+    var mids = floors[fkeys[s2]];
+    merged[mk] = (merged[mk] || []).concat(mids);
+    for (var s3 = 0; s3 < mids.length; s3++) floorOf[mids[s3]] = mk;
+  }
+  floors = merged;
+  fkeys = Object.keys(floors);
+  var BANDRANK = { gates: -1e9, "adrift-upper": 1e9 - 1, "adrift-deep": 1e9 };
+  fkeys.sort(function (x, y) {
+    var rx = BANDRANK[x] !== undefined ? BANDRANK[x] : Number(x);
+    var ry = BANDRANK[y] !== undefined ? BANDRANK[y] : Number(y);
+    return rx - ry;
+  });
+
+  // ---- within a floor: the compass lays the rooms on a grid ----
+  var DXD = { east: 1, west: -1, north: 0, south: 0 };
+  var DYD = { north: -1, south: 1, east: 0, west: 0 };
+  var WRAP = 7; // columns before a band folds onto a fresh shelf
+  var pos = {};
+  for (var fi = 0; fi < fkeys.length; fi++) {
+    var ids = floors[fkeys[fi]];
+    var inFloor = {}, claimed = {};
+    for (var a = 0; a < ids.length; a++) inFloor[ids[a]] = 1;
+    // gather the connected pieces first, each laid out in its own coordinates
+    var comps = [];
+    for (var a2 = 0; a2 < ids.length; a2++) {
+      if (claimed[ids[a2]]) continue;
+      var tpos = {}, tcells = { "0,0": 1 };
+      tpos[ids[a2]] = [0, 0];
+      claimed[ids[a2]] = 1;
+      var cq = [ids[a2]];
+      while (cq.length) {
+        var cid = cq.shift();
+        var cex = byId[cid].exits || [];
+        for (var k2 = 0; k2 < cex.length; k2++) {
+          var ce = cex[k2];
+          if (DXD[ce.dir] === undefined || !inFloor[ce.to] || claimed[ce.to]) continue;
+          var want = [tpos[cid][0] + DXD[ce.dir], tpos[cid][1] + DYD[ce.dir]];
+          // cell taken (a lying page, or a fold in the stone): nudge to the nearest open one
+          for (var ring = 1; tcells[want[0] + "," + want[1]] && ring < 9; ring++) {
+            var found = null;
+            for (var dy = -ring; dy <= ring && !found; dy++) {
+              for (var dx = -ring; dx <= ring && !found; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+                if (!tcells[(want[0] + dx) + "," + (want[1] + dy)]) found = [want[0] + dx, want[1] + dy];
+              }
+            }
+            if (found) want = found;
+          }
+          tpos[ce.to] = want;
+          tcells[want[0] + "," + want[1]] = 1;
+          claimed[ce.to] = 1;
+          cq.push(ce.to);
+        }
+      }
+      var mnx = 1e9, mny = 1e9, mxx = -1e9, mxy = -1e9;
+      for (var tid in tpos) {
+        if (tpos[tid][0] < mnx) mnx = tpos[tid][0];
+        if (tpos[tid][1] < mny) mny = tpos[tid][1];
+        if (tpos[tid][0] > mxx) mxx = tpos[tid][0];
+        if (tpos[tid][1] > mxy) mxy = tpos[tid][1];
+      }
+      comps.push({ tpos: tpos, mnx: mnx, mny: mny, w: mxx - mnx + 1, h: mxy - mny + 1 });
+    }
+    // tall pieces first, so the shelves pack tight (fold when a shelf runs wide)
+    comps.sort(function (p, q) { return q.h - p.h || q.w - p.w; });
+    var nextX = 0, shelfY = 0, shelfH = 0;
+    for (var c2 = 0; c2 < comps.length; c2++) {
+      var cp = comps[c2];
+      if (nextX > 0 && nextX + cp.w > WRAP) { nextX = 0; shelfY += shelfH; shelfH = 0; }
+      for (var tid2 in cp.tpos) pos[tid2] = [cp.tpos[tid2][0] - cp.mnx + nextX, cp.tpos[tid2][1] - cp.mny + shelfY];
+      nextX += cp.w + 1;
+      if (cp.h > shelfH) shelfH = cp.h;
+    }
+  }
+
+  // ---- draw: one band per floor, gates at the top, the deep below ----
+  var BW = 84, BH = 44, GX = 26, GY = 24, CW = BW + GX, CH = BH + GY;
+  var NUMS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+  var SVGNS = "http://www.w3.org/2000/svg";
+  for (var fi2 = 0; fi2 < fkeys.length; fi2++) {
+    var key = fkeys[fi2];
+    var fids = floors[key];
+    var label;
+    if (key === "adrift-upper") label = "the halls \\u2014 pages adrift";
+    else if (key === "adrift-deep") label = "the deep \\u2014 pages adrift";
+    else if (key === "gates") label = "the gates";
+    else {
+      var depth = Number(key) - surfZ;
+      label = depth === 0 ? "the surface" : (NUMS[depth - 1] || String(depth)) + " down";
+    }
+    var cols = 0, rows = 0;
+    for (var b = 0; b < fids.length; b++) {
+      if (pos[fids[b]][0] + 1 > cols) cols = pos[fids[b]][0] + 1;
+      if (pos[fids[b]][1] + 1 > rows) rows = pos[fids[b]][1] + 1;
+    }
+    var w = cols * CW - GX, h2 = rows * CH - GY;
+    var band = document.createElement("div");
+    band.className = "mfloor";
+    var fl = document.createElement("div");
+    fl.className = "mfl";
+    fl.textContent = label;
+    band.appendChild(fl);
+    var grid = document.createElement("div");
+    grid.className = "mgrid";
+    grid.style.width = w + "px";
+    grid.style.height = h2 + "px";
+    // passages first, so the rooms sit on top of them
+    var svg = document.createElementNS(SVGNS, "svg");
+    svg.setAttribute("width", String(w));
+    svg.setAttribute("height", String(h2));
+    var seen = {};
+    for (var b2 = 0; b2 < fids.length; b2++) {
+      var rid = fids[b2];
+      var cx = pos[rid][0] * CW + BW / 2, cy = pos[rid][1] * CH + BH / 2;
+      var rex = byId[rid].exits || [];
+      for (var x2 = 0; x2 < rex.length; x2++) {
+        var re = rex[x2];
+        if (DXD[re.dir] === undefined) continue; // stairs are glyphs, not lines
+        var ln = document.createElementNS(SVGNS, "line");
+        ln.setAttribute("x1", String(cx));
+        ln.setAttribute("y1", String(cy));
+        if (byId[re.to] && floorOf[re.to] === floorOf[rid] && pos[re.to]) {
+          var pk = rid < re.to ? rid + "|" + re.to : re.to + "|" + rid;
+          if (seen[pk]) continue;
+          seen[pk] = 1;
+          ln.setAttribute("x2", String(pos[re.to][0] * CW + BW / 2));
+          ln.setAttribute("y2", String(pos[re.to][1] * CH + BH / 2));
+          var adj = Math.abs(pos[re.to][0] - pos[rid][0]) + Math.abs(pos[re.to][1] - pos[rid][1]) === 1;
+          if (!adj) ln.setAttribute("class", "far"); // a passage the page cannot make honest
+        } else {
+          // it leads off this page: a short stub toward wherever it claims to go
+          ln.setAttribute("x2", String(cx + DXD[re.dir] * (BW / 2 + 16)));
+          ln.setAttribute("y2", String(cy + DYD[re.dir] * (BH / 2 + 16)));
+          ln.setAttribute("class", "stub");
+        }
+        svg.appendChild(ln);
+      }
+    }
+    grid.appendChild(svg);
+    for (var b3 = 0; b3 < fids.length; b3++) {
+      var rm = byId[fids[b3]];
+      var cell = document.createElement("div");
+      cell.className = "mcell " + rm.rcls + (rm.here ? " here" : "");
+      cell.style.left = pos[rm.id][0] * CW + "px";
+      cell.style.top = pos[rm.id][1] * CH + "px";
+      cell.title = rm.name;
+      var nm = document.createElement("div");
+      nm.className = "mn";
+      nm.textContent = rm.name.replace(/^(The|A) /, "");
+      cell.appendChild(nm);
+      var up = false, down = false;
+      var gex = rm.exits || [];
+      for (var x3 = 0; x3 < gex.length; x3++) {
+        if (gex[x3].dir === "up") up = true;
+        if (gex[x3].dir === "down") down = true;
+      }
+      if (up || down) {
+        var gl = document.createElement("div");
+        gl.className = "mglyph";
+        gl.textContent = (up ? "\\u25b2" : "") + (down ? "\\u25bc" : "");
+        cell.appendChild(gl);
+      }
+      grid.appendChild(cell);
+    }
+    band.appendChild(grid);
+    mapBody.appendChild(band);
   }
   closeJournal();
   mapEl.classList.add("open");

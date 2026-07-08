@@ -12,7 +12,7 @@ import {
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
   RUNNERS, BROODERS, SENTINELS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE,
-  MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS,
+  MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -98,6 +98,9 @@ export function addGrudge(z: ZoneDO, creature: Creature, pubkey: string): void {
   // Returns true if one woke (so a caller mid-exit can check for a killing blow).
 export async function wakeListeners(z: ZoneDO, session: Session, roomId: string, odds: number, tell: string, fromNoise = false): Promise<boolean> {
     if (session.away) return false;
+    // QUIET gear (felt soles, the grave-shroud) halves what the bones hear —
+    // your footfall, your slip past, your reach for the door. Worn, not carried.
+    if (session.items.some((c) => c.equipped && QUIET_ITEMS.has(c.itemId))) odds *= QUIET_WAKE_MULT;
     const now = Date.now();
     for (const c of z.creatures.values()) {
       if (c.roomId !== roomId || c.target) continue;

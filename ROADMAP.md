@@ -123,10 +123,179 @@ anyway. Next arc is Phase 3 (the simulationist direction) whenever rome's ready.
     `HEART_FRESH_SEC`, `SURFACE_ROOMS`, `SURFACERS`. The door's want is currently
     taught by the locked-door message itself ("something of the deep, still
     cold") + the heart's item text — no carving/keeper hint yet.
-- **Balance watch — daggers may be too OP** (rome, 2026-07-07). Suspected
-  overpowered; revisit weapon tuning. Check dmg range / speed vs. other weapons
-  and whether the near-death fumble-only rule or armor curve favors fast light
-  weapons too much. Observation only — not yet confirmed with numbers.
+### Combat audit — full-ladder balance pass *(2026-07-08, confirmed with math)*
+
+Expected-value audit of every weapon/armor/mob against the code's exact formulas
+(steady stance, fresh gear; dogpile/ambush/boss-phases modeled separately).
+**The shape is right:** naked player loses to a pale-crawler 1v1, uncommon kit
+unlocks the upper floor, rare kit makes the deep tense-but-survivable, kings
+beat rare-kit players 1v1 (group/epic content). The dogpile cap is the tension
+floor — 3 crawlers ≈ 11 dmg/round into a FULL EPIC kit, 60hp in ~6 rounds, so
+crowds stay lethal at every gear tier. Bleed is ~73% of a crawler's output vs
+epic armor: the Phase-0 armor-ceiling lever is working as designed. Findings,
+ranked. **Fixes 1–6 BUILT 2026-07-08** (first-swing rule, reckless 1.5/1.5,
+guarded identity = GUARDED_WOUND_ODDS half-turns fresh wounds + GUARDED_BLOCK_BONUS
+behind a shield, wear() comment, migration 044 weight on chitin/coral-crown);
+post-fix ladder verified via the audit model: shiv 12.0→8.5, fleshing-knife
+15→11.5, widow-maker 24.4→17.5, and heavy steel now wins vs armored mobs.
+Awaiting ship. Original findings:
+
+1. **Speed weapons structurally OP — CONFIRMED** (rome's 07-07 dagger instinct
+   was right). Root cause: every extra swing re-rolls the FULL 2–5 body roll, so
+   `speed` multiplies (base + weapon dmg), not the blade. Dmg/round vs a0:
+   widow-maker (epic ×3) **24.4** vs headsman-sword (epic ×1) **9.5** — 2.6× at
+   equal rarity; bone-shiv (UNCOMMON ×2) **12.0** beats every single-swing
+   weapon in the game incl. both epics; fleshing-knife (rare ×2) **15.0**.
+   Every slow weapon is a trap. **Fix (one rule, fits the fiction):** only the
+   first swing carries the 2–5 body roll; follow-up swings deal weapon dmg only
+   — *"only the first cut has your shoulder behind it."* Lands: shiv 12.0→7.9
+   (between falchion 6.5 / graveblade 7.5 — right for uncommon), fleshing-knife
+   15→11.2 (top rare, taxed by 2× wear), widow-maker 24.4→17.6 (still the DPS
+   epic, no longer double). Stun/reach weapons become real choices.
+2. **The fence sells the exploit for 8 tender:** bone-shiv at the keeper's
+   hatch = second-best weapon in the game, minute one. Self-heals once fix #1
+   lands (becomes the best-VALUE buy, which is fine); until then it hands every
+   fresh player the degenerate build.
+3. **Epic armor has no cost:** chitin-harness(4)/coral-crown(3)/warden-
+   sabatons(2)/hyena-mantle(2) are ALL weight-0 → 11 armor (52% mitigation) AND
+   quick-feet dodge AND clean flight. The heavy/light tradeoff only exists
+   mid-tier, exactly where players pass through fastest. Real fix = the Phase-3
+   encumbrance lever; cheap interim = a weight point on chitin/coral-crown so
+   "light epic" is a choice (deadplate-heavy vs chitin-light should differ
+   somewhere — condition fragility?).
+4. **Reckless stance is efficiency-dominant:** ×1.5 out / ×1.3 in — the trade
+   favors you, and with incoming capped by the dogpile, racing is nearly always
+   correct. Guarded (×0.6/×0.6, symmetric) mostly makes fights 67% longer.
+   Make reckless a true gamble (def 1.3→1.5) or give guarded a hook (raises
+   block, or halves bleed re-open odds — "you fight behind your shield").
+5. **Upper-floor tension collapses at uncommon kit — WATCH, don't fix:**
+   falchion + 7a + buckler goes "easy" vs every non-variant upper mob (die-in
+   19–54 rounds vs kill-in 2–10). Solo tension up top = crowds, noise-waking
+   listeners, grudge first-strikes only. Probably fine (the upper floor IS the
+   farm); if extraction starts feeling free, the lever is density/aggro, not
+   stats.
+6. **Housekeeping:** `wear()` comment still says "Sealed gear is frozen" —
+   stale since `SEALED_WEAR_MULT`. Also worth knowing: HOLLOW mobs grind
+   weapons 8×/strike, which taxes fast blades hardest — a hidden equalizer,
+   but the deep is mostly flesh so it doesn't rescue #1.
+
+   The audit model is `game-server/scripts/balance-audit.mjs` (expected-value
+   tables: dmg/round per weapon vs armor, rounds-to-kill both directions per
+   gear tier, 1v1 margins). Stats are hardcoded from the current tables — re-run
+   it after any tuning pass, update its numbers if migrations move stats.
+
+### The audit expansion — 16 pieces of gear with PROPERTIES *(built 2026-07-08, awaiting ship)*
+
+Designed against the fresh model so each lands in tier on the first shot —
+migration 045 + trait sets in zone-data.ts (the FEARS_FIRE pattern, no schema
+change) + one-line hooks. NO raw-damage creep: every piece buys a situation.
+- **Weapons (8):** quarterstaff c / pitted-spear u / war-pike r / abyssal-harpoon e
+  (REACH — a set haft strips the ambush's AMBUSH_MULT); horsemans-pick u /
+  crow-beak-pick r (PIERCE 2/3 — ignores mob armor; taxed by HOLLOW wear);
+  sword-breaker r / kings-guard-blade e (PARRY — block column on a weapon, sums
+  with shield). War-pike + harpoon are the first TWO-HANDED weapons (no shield,
+  enforced at equip + auto-equip).
+- **Armor (8):** quilted-coif c + riveted-cuirass r (PADDED — mob stuns halved,
+  best piece counts); thick-hide-jack u (WARDHIDE — claw-wounds open half as
+  often, stacks with guarded to a quarter); felt-soled-boots u + grave-shroud e
+  (QUIET — LISTENER wake odds halved); strapped-baldric u (STRAPPED — cutpurse
+  can't snatch); spiked-buckler u (THORNS — blocked blow costs attacker 1);
+  eel-skin-cloak r (SLICK — seize takes hold half as often, breaks easier).
+- **Placement follows danger (043):** commons/uncommons at the fence (3–9),
+  rares in box-deep/relic, the drowned tier guards its own counters (eel-skin +
+  harpoon in box-tide), kings-guard + grave-shroud in box-abyss.
+- **The three archetypes complete:** ghost (felt boots, shroud, spear), turtle
+  (cuirass, sword-breaker, buckler, guarded), cracker (picks, plate, reckless).
+- Post-045 ladder verified in the model: pick flat-5.5 through a2, crow-beak
+  flat-6.5 through a3 (best rare into the hound), pike/harpoon = greatsword/
+  headsman + reach − shield arm, widow-maker still the ceiling at 17.5.
+
+**The exclusives pass (046 "the deep provides", built 2026-07-08, awaiting
+ship):** the corpse-gear table was mostly fence-duplicates and the three-headed
+hound dropped NOTHING (sneak was strictly correct, killing it charity). Ten new
+dungeon-only pieces — the fence dresses you, the deep defines you:
+- **Off creatures** (gear_item, pried loose on death): sentinel's-mantle r
+  (a2 wardhide, hound 0.45) + hound-fang trophy (barter 8, 0.9 — the hound
+  finally pays), pale-hide-hood u (a1 quiet, albino 0.6), crawlers-hooks r
+  (2 dmg ×2 bleed 3 = 10.5 dpr, under fleshing-knife, stalker 0.2), gaff-hook u
+  (reach + bleed 1, the-drowned 0.12), knights-kite-shield r (.30 block w1,
+  bone-knight 0.1); warden-captain now WIELDS the flanged-mace (0.10 — coffer
+  epic made huntable, faucet stays a trickle).
+- **Coffers only:** kelp-woven-mail r (a2 w0 slick, box-tide),
+  shade-wrapped-greaves r (a1 quiet, box-deep), crown-guard-pavise e (.40 block
+  thorns 2, reliquary/abyss — vs gravestone: trade 5% catch for teeth),
+  abyssal-scale-coat e (a3 w0 slick, box-abyss — the GHOST's epic body;
+  chitin/deadplate stay the tanks).
+- **Drop-rate principle (rome):** the spawn is already the gate — the drop
+  shouldn't double-gate. Trophies near-certain, signature hide ~half,
+  epics-off-elites ~a tenth; spawn rarity does the rest. Two rulings
+  (2026-07-08): the door-signet stays 1-in-5 off the King — the one legendary
+  is DELIBERATE myth, allowed to double-gate; and the hyena-mantle came OFF the
+  fence entirely + onto the dire-hyena at 0.3 (its own pelt — an infinite
+  counter faucet closed, a 1-in-10 bloodline hunt opened; bottom line per rome:
+  loot should feel scarce).
+- All traits reuse 045 hooks (sets grew by an id or two); no strictly-better
+  pieces (each checked against slot neighbors in the model); swaps not churn
+  (stalker/drowned/knight traded fence-duplicate drops for exclusives; the
+  crawler keeps the fleshing-knife, the hulk keeps the iron-bound shield).
+
+**The deep gets two new species (047 "verdigris_and_marrow", built 2026-07-08,
+awaiting ship):** the audit found the deep dense enough (29/32 rooms) but
+NARROW — four base species, and 045/046 sold counters to every threat it has.
+Two additions, each hunting a build the deep couldn't touch:
+- **The verdigris-thing** (CORRODERS, wet Drowned-Reach rooms ×4): its landed
+  blows bloom green on ONE random worn piece — CORRODE_WEAR 1.5/blow, SOFT by
+  rome's call (a fight is a repair bill, not a wall; ~5–8 condition per
+  encounter). Weapon in hand never touched; sealed kit resists via
+  SEALED_WEAR_MULT (the seal finally matters mid-fight); the naked player
+  shrugs. The extraction monster: it attacks equity.
+- **The marrow-cantor** (LISTENERS + HOLLOW, King's Demesne bone rooms ×4):
+  the bottom tier finally has EARS (quiet gear earns its keep where loot is
+  best) and the 8× bone-tax (fast blades finally pay at the floor of the
+  world). Warden-tier stats (38hp, 4-7, a2).
+- **Tuning ride-along:** twice-dead stun 0.25→0.12 (rome: "that seems like a
+  lot" — it stunned at a rare warden-maul's rate on a 9-spawn common).
+- **NOTE FOR SHIP:** a warm world never re-reads mob_spawns — run
+  POST /admin/reseed after deploying 047 or the new species never appear.
+- **ICEBOX — the undertow-grasper** (anti-turtle, NOT built): a drowner cousin
+  whose grab comes AROUND the shield (seize that block doesn't stop — arms,
+  not blows). The pavise-turtle currently counters everything; this would be
+  its counter. Deepest water only, if the turtle proves too safe in play.
+
+### The map is a MAP now *(built 2026-07-08, awaiting ship — client-only)*
+The map modal drew a list ("dir → destination" rows). Now it draws floor
+plans. Zero server changes — the frame already carried rooms+exits+dirs; the
+client auto-lays it out (renderMap in public.ts):
+- **Stairs assign floors** (down = one deeper, BFS from where you stand,
+  keep-first on the world's few bent stairs); **the compass lays each floor on
+  a grid** (the world graph turned out grid-perfect: the surface is one clean
+  5×8 plan with the Vaulted Hall dead center, zero collisions).
+- Bands top-to-bottom: **the gates** (all above-surface air folds into one
+  band) → **the surface** → **one down … eight down**. Rooms are boxes (gold
+  = you, steel = gates, blood-dark = deep), passages are lines, ▲▼ = stairs.
+  Wide bands shelf-wrap at 7 columns.
+- **A crude map lies visibly now**: omitted rooms cut the walk, and whatever
+  the walk can't reach lands in region-labeled bands — "the halls — pages
+  adrift" / "the deep — pages adrift" (the copyist knows which part of the
+  dungeon a page came from, just not where it sits; gates are never adrift).
+  Lying exits draw as dashed blood-lines to the wrong box or stubs poking off
+  the page — one copy even draws a deep room confidently into the halls. The
+  surveyor's map draws true and still lights rooms known on the HUD. Shelf
+  packing places tall pieces first (tight bands, no dead rows).
+- Verified: tsc clean, served-script PARSE_OK, DOM-shim run against the real
+  world graph (true from hall, true from throne, crude) — no cell overlaps.
+
+### 048 — a second hideaway for the deep *(built 2026-07-08, awaiting ship)*
+rome, reading the world chart: the deep had ONE hideaway (Pocket of Air, up in
+the Drowned Reach) — everything below it was a no-breath run. Added **A
+Worm-Bore** off the Worm Cloister, mid-Sunless-Deep: deep enough to matter,
+still shy of the King's Demesne so the bottom keeps its dread. Same law as the
+other three (is_safe, engine bars every creature, single squeeze back out —
+and the cloister's pale-crawlers make the doorstep itself a gamble). Added to
+DEEP_ROOMS (zone-data.ts) + the chart's mirror set. No reseed needed —
+rooms/exits are static world data, re-read on deploy. Also: the desktop world
+chart regenerates via `promo/capture/_map.mjs` (self-contained: reads local
+D1, screenshots via headless Chrome; footer auto-counts migrations).
 
 ### Phase 3 — The simulationist direction *(bigger, later)*
 - **Lethality / hit-location** (rome's "damage dire as real life — a hit to the
