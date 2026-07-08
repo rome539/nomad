@@ -423,6 +423,13 @@ export const BLEED_TELL = [
   "the wound weeps and won't close", "the cut runs deep and stays open",
   "it opens, and keeps bleeding", "blood follows the blade back out", "the gash won't clot",
 ];
+// A cutting edge on a HOLLOW thing finds nothing to open — no blood, no bleed
+// (they leave a remains-trace, not a wound). Fires only sometimes, so the
+// player learns the lesson without a line every swing: bring blunt to the bone.
+export const BONE_DRY_TELL = [
+  "no blood in it to spill", "the edge finds nothing to open",
+  "dry bone drinks the cut and gives nothing", "there's nothing in it left to bleed",
+];
 // Kept small and sharp — one of these caps a critical hit, player or creature.
 export const CRIT_FLOURISH = [
   " — a savage blow!", " — and it tells!", " — clean through!", " — a brutal stroke!",

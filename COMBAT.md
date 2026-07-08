@@ -120,7 +120,9 @@ deep makes a full-epic player sweat.
   ticks, **ignoring all armor**; fresh hits refresh it. On the tick a bleed
   would run out, `BLEED_KILL_ODDS` = 0.5 decides whether the last of it takes
   the victim or clots. Cuts both ways: your bleed-weapons work on mobs, their
-  bleed works on you. **WARDHIDE** armor half-turns fresh wounds on you.
+  bleed works on you. **WARDHIDE** armor half-turns fresh wounds on you. The
+  **HOLLOW are immune** — dry bone and old iron have no blood to spill, so a
+  bleeder is the wrong tool in the bone rooms (and it wears fast there besides).
 - **Stun** — a blunt blow (a weapon's `stun`, or a heavy mob's) rings the
   target senseless: **they lose their next swing**. One hit, one lost beat —
   no stun-chaining a thing already reeling, and the boss never reels. **PADDED**

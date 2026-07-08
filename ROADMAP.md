@@ -314,6 +314,14 @@ D1, screenshots via headless Chrome; footer auto-counts migrations).
   seal-agnostically (rescues already-sealed scraps; same latent bug fixed in the
   forge counters); typed `vault <item>` now pulls from the lockbox too (parity
   with the modal shortcut).
+- **Follow-on fixes (next ship):** the HOLLOW no longer bleed — the bleed DoT
+  was applying to bloodless things (skeletons/wardens/kings/cantor/drowned-god)
+  against the design; now immune, with an occasional dry-tell ("no blood in it
+  to spill") so bleeders read as the wrong tool in the bone rooms. And barter
+  gear stopped rolling the dungeon's worn condition: it's new stock now
+  (`rollShopCondition` — ~79% pristine, ~21% "worn", never battered). OPEN: the
+  revenants (twice-dead/thrice-dead) aren't in HOLLOW, so they still bleed —
+  left bleedable pending rome's call.
 - **Lethality / hit-location** (rome's "damage dire as real life — a hit to the
   throat"): earned finishers on an opening (staggered/seized/bleeding) + armor as
   *coverage* of body zones + telegraphed. Never random (that's a slot machine that

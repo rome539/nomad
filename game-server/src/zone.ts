@@ -73,7 +73,7 @@ import {
   PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, SENTINELS, HOUND_WAKE_MS,
   LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
   SCAVENGERS, AGGRO_SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
-  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, BLEED_TELL, CRIT_FLOURISH, CREATURE_HIT, BITERS,
+  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, BITERS,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
   DEEP_HEART, DEEP_DOOR_KEY, HEART_FRESH_SEC, SURFACE_INTERVAL_MS
 } from "./zone-data";
@@ -2198,11 +2198,16 @@ export class ZoneDO implements DurableObject {
             if (creature.hp > 0) {
               // The telling reports what fired THIS beat: a crit shout trumps,
               // else the point through the plate, else a fresh wound that won't
-              // clot. (A landed stun keeps its own line below, for the thud.)
-              const freshBleed = !!(weapon && weapon.tmpl.bleed > 0 && !creature.bleedTicks);
+              // clot — or, on a bloodless HOLLOW thing, the edge finding nothing
+              // to open (sometimes, so it teaches without nagging). A landed stun
+              // keeps its own line below, for the thud.
+              const hollow = HOLLOW.has(tmpl.id);
+              const freshBleed = !!(weapon && weapon.tmpl.bleed > 0 && !hollow && !creature.bleedTicks);
+              const bleedDry = !!(weapon && weapon.tmpl.bleed > 0 && hollow);
               const tail = flourish !== "." ? flourish
                 : pierced ? ` — ${pick(PIERCE_TELL)}.`
                 : freshBleed ? ` — ${pick(BLEED_TELL)}.`
+                : bleedDry && chance(0.3) ? ` — ${pick(BONE_DRY_TELL)}.`
                 : ".";
               this.send(session, `${this.playerHit(weapon, tmpl.name)} for ${dmg}${tail} (${this.condition(creature)})`, flourish === "." ? "dmgout" : "dmgout big");
               // A blunt blow can ring it senseless — it loses its next swing.
@@ -2213,8 +2218,9 @@ export class ZoneDO implements DurableObject {
                 this.send(session, `${cap(tmpl.name)} reels, stunned.`, "stun");
               }
               // A fast, cutting edge opens a wound that keeps weeping — damage
-              // over time that no armor turns. Fresh hits keep it open.
-              if (weapon && weapon.tmpl.bleed > 0) {
+              // over time that no armor turns. Fresh hits keep it open. But the
+              // HOLLOW don't bleed (dry bone, old iron): the DoT finds no blood.
+              if (weapon && weapon.tmpl.bleed > 0 && !hollow) {
                 creature.bleedTicks = BLEED_TICKS;
                 creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, weapon.tmpl.bleed);
               }

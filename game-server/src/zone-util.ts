@@ -63,3 +63,11 @@ export function rollGearCondition(slot: string, kept: boolean): number {
   if (chance(kept ? 0.18 : 0.06)) return randInt(90, 100); // the rare near-pristine piece
   return kept ? randInt(58, 90) : randInt(32, 78);         // most gear is worn; hoarded keeps better
 }
+
+// The keeper sells NEW stock, not scavenged loot: mostly pristine, and at worst
+// lightly shelf-worn — never battered. A floor (70) the dungeon's own gear never
+// promises, because you PAID for this. Non-gear (slot "") comes back 100.
+export function rollShopCondition(slot: string): number {
+  if (slot === "") return 100;
+  return chance(0.65) ? 100 : randInt(70, 95); // most perfect; the rest "worn" at worst
+}

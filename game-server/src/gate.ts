@@ -10,7 +10,7 @@ import { provokeGrudges } from "./ai";
 import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid } from "./rng";
-import { cap, shortName, nameMatches, roundTender } from "./zone-util";
+import { cap, shortName, nameMatches, roundTender, rollShopCondition } from "./zone-util";
 import { SCRAP_ID, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST } from "./zone-data";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -279,14 +279,16 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   // wanderer writes in it is theirs to keep, lose, or bleed. The counter's
   // slots are free now, so the pack almost always has room; if it's somehow
   // still full, the piece lands at your feet at the gate rather than vanishing.
-  // Paid-for goods come across the counter already bearing the gate's seal
-  // (kept-tier condition, minted on the spot) — you bought it, it's yours, the
-  // world can't peel it off your corpse. Only a pack-full spill lands unsealed.
+  // Paid-for goods come across the counter as NEW stock (rollShopCondition:
+  // mostly pristine, at worst lightly worn, never battered — not the dungeon's
+  // scavenged roll) and already bearing the gate's seal, minted on the spot —
+  // you bought it, it's yours, the world can't peel it off your corpse. Only a
+  // pack-full spill lands unsealed.
   const slid: string[] = [];
   for (const w of trade.wants) {
     const bought = world.itemTemplates.get(w.itemId)!;
     const jid = bought.id === JOURNAL_ITEM ? "jrn-" + uuid() : undefined;
-    const got = await z.grantItem(session, bought.id, { kept: true, journalId: jid });
+    const got = await z.grantItem(session, bought.id, { condition: rollShopCondition(bought.slot), journalId: jid });
     if (!got) {
       z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), bought.id]);
       slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}] (pack full — at your feet, unsealed)`);
