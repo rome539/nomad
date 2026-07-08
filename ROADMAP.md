@@ -6,12 +6,15 @@ create stories, not scripted content. The interface is friendly; the world is
 not. Population-dependent systems (PvP, economy, factions) come last — they
 emerge from players, and you can't scaffold players.*
 
-## Combat & The Deep — active (2026-07-07)
+## Combat & The Deep — Phases 0–2 SHIPPED (2026-07-07); Phase 3 is the next arc
 
 **Through-line:** difficulty and reward climb *together* with depth. The deep
 is where death and the good loot both live. **Gear must never equal safety.**
 Origin: an all-night run wiped the whole map (incl. the deep) with no trouble
-once geared — the power curve has no counter-pressure.
+once geared — the power curve had no counter-pressure. Phases 0–2 (the ceiling
+patch, deep teeth, the +18-room populated deep, emergent scarcity, the
+corpse-key) are all live and validated under real play. Phase 3 below is the
+remaining, bigger simulationist arc, for when rome's ready.
 
 ### Phase 0 — The ceiling patch *(cheap, structural)* — ✅ DONE
 - ✅ **Curved / % armor mitigation** (`ARMOR_K=10`: `dmg × K/(armor+K)`), replacing
@@ -49,9 +52,10 @@ anyway. Next arc is Phase 3 (the simulationist direction) whenever rome's ready.
   (bone) — density-graded, worsening toward the bottom; rare bloodline cousins
   spike the threat deeper. Three coffers reward the descent (box-tide/relic/abyss),
   the Sunless Well's abyssal coffer the best non-boss prize. Some rooms left empty
-  for dread. Plus the **three-headed hound** (035), a SENTINEL holding the descent
-  (sleeps/wakes/bars the way), and the **albino rat** (038) — a very rare, strong
-  bloodline cousin of the rat (floor 1 + deep) that's [[keep-zone-ts-lean|fire-fearing]]
+  for dread. Plus the **three-headed hound** (035), a SENTINEL holding the deep's
+  threshold from the Undercroft throne (sleeps/wakes/bars the way — see the
+  corpse-key gateway below), and the **albino rat** (038) — a very rare, strong
+  bloodline cousin of the rat (floor 1 + deep) that's fire-fearing
   (pre-wired, dormant).
 - ✅ **Faster respawns** — `MIGRATION_FACTOR` 20 → 10.
 - ✅ **Scarcity — the EMERGENT model** (rome, 2026-07-07; migration 039 +
@@ -107,9 +111,14 @@ anyway. Next arc is Phase 3 (the simulationist direction) whenever rome's ready.
     the whole old-key problem dissolves with zero cap.
   - **No soft-lock:** the sim never stops surfacing (arrivals restock the deep),
     so the door is always *eventually* openable, never on command.
-  - **Verified (local):** no-heart → teaches the want; fresh → door drinks it,
-    opens communally, heart consumed; stale → slime, door stays sealed, slime
-    consumed. Also folded the 036 rooms into `DEEP_ROOMS`.
+  - **SHIPPED** (6880ed3, 2026-07-07). Door mechanics verified live: no-heart
+    teaches the want; a fresh heart opens communally + is consumed; a stale one
+    is slime, door stays sealed. Folded the 036 rooms into `DEEP_ROOMS`. The
+    gateway is consolidated in **The Undercroft** (042): hall→undercroft is free,
+    the hound holds the stone throne, and undercroft→descent is the heart-locked
+    stair — drop through the hatch, slip past the sleeping hound once (it wakes;
+    everyone after fights it), heart to descend. The one piece not yet confirmed
+    under live play is the surfacing itself (the sim minting hearts).
   - **Tuning knobs if it needs feel-work:** `SURFACE_INTERVAL_MS`,
     `HEART_FRESH_SEC`, `SURFACE_ROOMS`, `SURFACERS`. The door's want is currently
     taught by the locked-door message itself ("something of the deep, still
@@ -167,7 +176,7 @@ journal ("its account"), and let the 31573/1573 Nostr side carry it for
 bazaar interop later — a storied item's cert should *show* its story.
 **Sequencing:** the substrate (ledger + attestation) can land pre-players so
 day-one history is real; the *payoff* is population-gated — stories need
-people to make and hear them. Ties into [[nomad-loot-economy]] (a storied
+people to make and hear them. Ties into the loot economy (a storied
 piece is the ultimate barter good) and the Phase 7 legend systems.
 
 ## Phase 7 — Population systems (gated on actual players) — NOT STARTED
@@ -227,8 +236,8 @@ until he says go.
   time") — the final piece of the emergent economy. A place hoarded gear
   re-enters circulation and prices float on supply/demand, the way Tarkov's
   flea market does. Completes the scarcity model built in Phase 2 (rarer
-  faucets + sealed-wear are the drains; this is the re-supply/valve). Cigarettes
-  are already the hard currency [[nomad-loot-economy]]. Player-to-player, distinct
+  faucets + sealed-wear are the drains; this is the re-supply/valve). The world
+  already has a hard currency for prices to settle in. Player-to-player, distinct
   from the existing keeper/fence NPC trade. Gated on actual players.
 - **Communication layer** — the thing that turns a dungeon into a
   social world. `say`/`tell`/`shout` (shout carries between rooms —
@@ -276,8 +285,8 @@ so these rank above the MUD-flavor three when we build:
   long starts giving themselves away with sound (shifting, breathing,
   gear creak), so gate-campers can't lurk silently forever. Rides on the
   existing sound-carries primitive — stillness leaks, movement doesn't.
-- **Anonymize the relay feed (anti-stream-snipe) — DONE 2026-07-07, in the
-  working tree.** The public `24913` feed named players and their live room —
+- **Anonymize the relay feed (anti-stream-snipe) — SHIPPED 2026-07-07.** The
+  public `24913` feed named players and their live room —
   a real-time tracker letting a sniper subscribe to `mudroom-*` and follow one
   wanderer room to room (the world snitching, which the design forbids). Fixed:
   a centralized `anonForRelay(text)` scrub in `relayFeed` replaces every
