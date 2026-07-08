@@ -292,6 +292,13 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
       slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}] (pack full — at your feet, unsealed)`);
       continue;
     }
+    // Gear comes sealed (you bought it, the world can't peel it off your corpse)
+    // — but a fungible carries no title to seal (scrap iron, trophies, cigs). A
+    // sealed scrap can't be spent at the forge or the vice, so leave it loose.
+    if (z.stackable(got.itemId, got.serial, got.journalId)) {
+      slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}]`);
+      continue;
+    }
     const serial = await sealOne(z, session, got);
     slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}] (sealed #${serial})`);
   }
@@ -527,9 +534,11 @@ export async function repairCore(z: ZoneDO, session: Session, carried: CarriedIt
   // title, not condition: hammering the wear out doesn't touch the serial.
   if (carried.condition >= 100) return `${cap(tmpl.name)} is sound already.`;
   const cost = REPAIR_COST[tmpl.rarity] ?? 1;
-  const have = z.countLoose(session, SCRAP_ID);
-  if (have < cost) return `The mend wants ${cost} scrap iron; you carry ${have}.`;
-  await z.takeLoose(session, SCRAP_ID, cost);
+  // The vice reaches the pack AND the gate's keeping (lockbox + vault), same as
+  // the forge — and scrap counts whether or not a stray seal is on it.
+  const have = z.countLooseIn(await z.gatePools(session), SCRAP_ID);
+  if (have < cost) return `The mend wants ${cost} scrap iron; you have ${have} between pack and keeping.`;
+  await z.takeLooseAcross(session, SCRAP_ID, cost);
   carried.condition = 100;
   await setItemCondition(z.env.DB, carried.rowId, 100);
   return `You hammer the wear out of ${tmpl.name} and file it true. Sound again.`;
@@ -917,7 +926,19 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
       }
       return z.send(session, lines.join("\n"));
     }
-    const carried = z.findCarried(session, arg);
+    // Bank/stash from the pack — or, for the vault, name a sealed thing resting
+    // in the lockbox and send it straight in, no round-trip through the pack
+    // (parity with the bench modal's lockbox → vault shortcut; gate-gated above).
+    let carried = z.findCarried(session, arg);
+    let fromContainer = false;
+    if (!carried && key === "vault") {
+      const box = await loadContainer(z.env.DB, session.pubkey, "lockbox");
+      const found = box.find((c) => {
+        const t = world.itemTemplates.get(c.itemId);
+        return t ? nameMatches(t.name, arg) : false;
+      });
+      if (found) { carried = found; fromContainer = true; }
+    }
     if (!carried) return z.send(session, "You carry nothing like that.");
     // Sealed wealth or raw fungibles bank in the vault; only unsealed gear is turned away.
     if (cfg.sealedOnly && carried.serial === null && !z.stackable(carried.itemId, carried.serial, carried.journalId)) return z.send(session, cfg.needSeal);
@@ -926,8 +947,10 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
     // Flush its worn condition before it leaves the body, so the box/vault
     // holds the true value; setContainer clears the equipped flag.
     if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
-    carried.equipped = false;
-    session.items.splice(session.items.indexOf(carried), 1);
+    if (!fromContainer) { // came off the body/pack; a lockbox row just changes containers
+      carried.equipped = false;
+      session.items.splice(session.items.indexOf(carried), 1);
+    }
     await setContainer(z.env.DB, carried.rowId, cfg.container);
     z.send(session, cfg.put(tmpl.name));
     z.roomFeed(session.roomId, `${session.name} ${cfg.feed}`, session.pubkey);

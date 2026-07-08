@@ -223,7 +223,7 @@ sealed gear at all; fixed). Wear shows in the item's tags.
 | wear source | rate | lifetime from fresh |
 |---|---|---|
 | weapon, per landed strike | 0.25 (`WEAPON_WEAR`) | ~400 swings |
-| weapon, per strike on a HOLLOW target | 2.0 (`WEAPON_WEAR_HOLLOW`) | ~50 swings — bone and old iron eat an edge (8× the tax) |
+| weapon, per strike on a HOLLOW target | 0.6 (`WEAPON_WEAR_HOLLOW`) | ~165 swings — bone and old iron eat an edge (~2.4× the tax) |
 | armor, per blow eaten | 0.3 (`ARMOR_WEAR`) | ~330 blows |
 | armor, per blow from a CORRODER | 1.5 (`CORRODE_WEAR`) | ~one worn piece over a long fight — its touch is rust, not blood |
 | rust, per 2 s tick carried | 0.001 (`RUST_PER_TICK`) | ~55 h of active carry |

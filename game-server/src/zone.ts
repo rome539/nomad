@@ -73,7 +73,7 @@ import {
   PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, SENTINELS, HOUND_WAKE_MS,
   LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
   SCAVENGERS, AGGRO_SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
-  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, CRIT_FLOURISH, CREATURE_HIT, BITERS, 
+  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, BLEED_TELL, CRIT_FLOURISH, CREATURE_HIT, BITERS,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
   DEEP_HEART, DEEP_DOOR_KEY, HEART_FRESH_SEC, SURFACE_INTERVAL_MS
 } from "./zone-data";
@@ -1300,22 +1300,30 @@ export class ZoneDO implements DurableObject {
   // in the lockbox and vault. Count unsealed copies across preloaded pools (the
   // caller loads the containers once and reuses them).
   public countLooseIn(pools: CarriedItem[][], itemId: string): number {
+    // A fungible material (scrap iron, a trophy) carries no title — count every
+    // copy, seal or not. A stray seal on a fungible (an old barter bug) must not
+    // hide it from the forge or the vice. Non-fungibles still count unsealed.
+    const fungible = this.stackable(itemId, null);
     let n = 0;
     for (const pool of pools) {
-      for (const c of pool) if (c.itemId === itemId && c.serial === null) n++;
+      for (const c of pool) if (c.itemId === itemId && (fungible || c.serial === null)) n++;
     }
     return n;
   }
 
-  // Consume n unsealed copies from the pack first, then the lockbox, then the
-  // vault — the deep keep spent last. Pack rows leave session.items; container
-  // rows are just deleted. (Single-threaded DO: reloading here is consistent.)
+  // Consume n copies from the pack first, then the lockbox, then the vault — the
+  // deep keep spent last. Fungibles spend seal-agnostically (a sealed one's mint
+  // is voided as it's used up, keeping supply honest). Pack rows leave
+  // session.items; container rows are deleted. (Single-threaded DO: consistent.)
   public async takeLooseAcross(session: Session, itemId: string, n: number): Promise<void> {
+    const fungible = this.stackable(itemId, null);
+    const match = (c: CarriedItem) => c.itemId === itemId && (fungible || c.serial === null);
     let left = n;
     while (left > 0) {
-      const idx = session.items.findIndex((c) => c.itemId === itemId && c.serial === null);
+      const idx = session.items.findIndex(match);
       if (idx === -1) break;
       const [row] = session.items.splice(idx, 1);
+      if (row.serial !== null) await voidMint(this.env.DB, row.serial);
       await removeItemRow(this.env.DB, row.rowId);
       left--;
     }
@@ -1324,7 +1332,8 @@ export class ZoneDO implements DurableObject {
       const held = await loadContainer(this.env.DB, session.pubkey, key);
       for (const c of held) {
         if (left <= 0) break;
-        if (c.itemId === itemId && c.serial === null) {
+        if (match(c)) {
+          if (c.serial !== null) await voidMint(this.env.DB, c.serial);
           await removeItemRow(this.env.DB, c.rowId);
           left--;
         }
@@ -2182,10 +2191,20 @@ export class ZoneDO implements DurableObject {
             }
             // Their hide or plate turns what it can; a blow always bites.
             // A pick's narrow point punches plate (PIERCE ignores that much).
-            dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - (weapon ? PIERCE.get(weapon.tmpl.id) ?? 0 : 0)));
+            const pierceVal = weapon ? PIERCE.get(weapon.tmpl.id) ?? 0 : 0;
+            const pierced = pierceVal > 0 && tmpl.armor > 0; // the point actually beat armor
+            dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - pierceVal));
             creature.hp -= dmg;
             if (creature.hp > 0) {
-              this.send(session, `${this.playerHit(weapon, tmpl.name)} for ${dmg}${flourish} (${this.condition(creature)})`, flourish === "." ? "dmgout" : "dmgout big");
+              // The telling reports what fired THIS beat: a crit shout trumps,
+              // else the point through the plate, else a fresh wound that won't
+              // clot. (A landed stun keeps its own line below, for the thud.)
+              const freshBleed = !!(weapon && weapon.tmpl.bleed > 0 && !creature.bleedTicks);
+              const tail = flourish !== "." ? flourish
+                : pierced ? ` — ${pick(PIERCE_TELL)}.`
+                : freshBleed ? ` — ${pick(BLEED_TELL)}.`
+                : ".";
+              this.send(session, `${this.playerHit(weapon, tmpl.name)} for ${dmg}${tail} (${this.condition(creature)})`, flourish === "." ? "dmgout" : "dmgout big");
               // A blunt blow can ring it senseless — it loses its next swing.
               // The boss never reels, and a thing already reeling can't be
               // stun-chained deeper (one hit, one lost beat).
@@ -3169,13 +3188,17 @@ export class ZoneDO implements DurableObject {
   // maul cracks, a spear drives, a bare fist clouts, a plain blade just hits.
   private playerHit(weapon: { tmpl: ItemTemplate } | null | undefined, name: string): string {
     const t = weapon?.tmpl;
-    const family: keyof typeof PLAYER_HIT = !t
-      ? "fist"
-      : t.bleed > 0 ? "edge"
-      : t.stun > 0 ? "blunt"
-      : t.sweep > 1 || t.speed > 1 ? "spear"
-      : "plain";
-    return "You " + pick(PLAYER_HIT[family]).replace(/\{n\}/g, name);
+    // The weapon's own voice first (by id); fall back to the family register
+    // (edge/blunt/spear/fist/plain) for anything without a bespoke pool.
+    const pool = t && WEAPON_VERBS[t.id]
+      ? WEAPON_VERBS[t.id]
+      : PLAYER_HIT[!t
+        ? "fist"
+        : t.bleed > 0 ? "edge"
+        : t.stun > 0 ? "blunt"
+        : t.sweep > 1 || t.speed > 1 ? "spear"
+        : "plain"];
+    return "You " + pick(pool).replace(/\{n\}/g, name);
   }
 
   // "A scabby rat sinks its teeth into you" — the register follows the kind of

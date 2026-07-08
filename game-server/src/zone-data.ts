@@ -57,10 +57,12 @@ export const THROW_DMG_MAX = 3;
 export const THROW_COOLDOWN_MS = 2000; // one throw per round — no rock machine-guns
 export const THROW_SHATTER = 0.15; // a thrown thing may not survive the landing
 export const THROW_SHATTER_HOLLOW = 0.4; // stone on bone or old iron, near coin-flip
-// Bone and old iron eat an edge: landed strikes on the HOLLOW grind a weapon
-// eight times faster than flesh does (rome's rule — wear as a counter, not
-// just smaller numbers). ~50 strikes on skeletons wears a fresh blade out.
-export const WEAPON_WEAR_HOLLOW = 2.0;
+// Bone and old iron eat an edge faster than flesh: landed strikes on the HOLLOW
+// grind a weapon ~2.4× the normal rate (rome's rule — wear as a counter, not
+// just smaller numbers). ~165 strikes on skeletons wears a fresh blade out —
+// a real bone-tax at the loot floor, not a weapon-shredder (was 8× / ~50, too
+// fast: a single deep dive through the Demesne could ruin a blade).
+export const WEAPON_WEAR_HOLLOW = 0.6;
 
 // Mobility: unburdened (worn weight 0, or nothing worn) means foes miss you
 // more, and you slip out of a fight clean. Heavy mail turns blows better but
@@ -366,6 +368,61 @@ export const PLAYER_HIT: Record<"edge" | "blunt" | "spear" | "fist" | "plain", s
     "beat at {n}", "chop into {n}",
   ],
 };
+// Phase 3 — the sim speaks. Each weapon swings in its OWN voice (by item id),
+// layered over the family pools above (fallback for anything unlisted). The
+// verb sits before " for N": "You <verb> for N". {n} is the target. Naming the
+// weapon in the verb is the point — a war-pike skewers, a crow-beak punches a
+// hole, a shiv slips in — so every blade reads as itself, not "a weapon".
+export const WEAPON_VERBS: Record<string, string[]> = {
+  // — light & bone —
+  "sharpened-rib": ["jab the rib into {n}", "work the splinter into {n}", "stick {n} with the sharpened rib"],
+  "bone-shiv": ["slip the shiv into {n}", "stick {n} with the shiv", "open {n} up with the shiv"],
+  "throwing-shard": ["slash {n} with the shard", "draw the shard across {n}", "nick {n} with the shard"],
+  // — plain steel —
+  "rusted-sword": ["hack at {n}", "cut into {n}", "chop the old sword into {n}"],
+  "chipped-falchion": ["slash the falchion across {n}", "hack at {n}", "chop into {n}"],
+  "graveblade": ["hew into {n} with the graveblade", "bring the graveblade down on {n}", "cleave into {n}"],
+  "notched-greatsword": ["hew into {n} with the greatsword", "bring the greatsword down on {n}", "cleave {n} near in two"],
+  "kings-guard-blade": ["drive the guard-blade through {n}", "hew into {n}", "cut {n} down with the king's blade"],
+  "headsman-sword": ["bring the headsman's sword down on {n}", "hew into {n}", "cleave into {n}"],
+  // — cutting edges (bleed) —
+  "fleshing-knife": ["draw the fleshing-knife across {n}", "flay at {n}", "open {n} with the knife"],
+  "crawlers-hooks": ["rake the hooks across {n}", "tear at {n} with the hooks", "hook into {n} and pull"],
+  "gaff-hook": ["sink the gaff into {n}", "hook the gaff into {n}", "drag the gaff across {n}"],
+  "widow-maker": ["draw the widow-maker across {n}", "slip the widow-maker into {n}", "flick the widow-maker over {n}"],
+  // — cleaving & sweeping —
+  "rust-eaten-cleaver": ["cleave into {n}", "hack the cleaver through {n}", "swing the cleaver across {n}"],
+  "rusty-billhook": ["hook the billhook into {n}", "drag the billhook across {n}", "catch {n} with the hook"],
+  "headtaker-axe": ["hew into {n} with the axe", "chop the headtaker into {n}", "cleave at {n}"],
+  "reaver-glaive": ["sweep the glaive through {n}", "carve the glaive across {n}", "cut {n} down with the glaive"],
+  // — reach & thrust —
+  "quarterstaff": ["crack the staff across {n}", "jab the staff into {n}", "rap {n} with the quarterstaff"],
+  "pitted-spear": ["drive the spear into {n}", "run the spear at {n}", "catch {n} on the spear-point"],
+  "war-pike": ["run the pike into {n}", "skewer {n} on the war-pike", "drive the pike through {n}"],
+  "abyssal-harpoon": ["drive the harpoon into {n}", "run the harpoon through {n}", "skewer {n} on the harpoon"],
+  // — punching points (pierce) —
+  "horsemans-pick": ["punch the pick into {n}", "drive the pick at {n}", "hook the horseman's pick into {n}"],
+  "crow-beak-pick": ["punch the crow-beak into {n}", "drive the beak at {n}", "hook the crow-beak into {n}"],
+  "sword-breaker": ["jab the sword-breaker into {n}", "catch {n} on the sword-breaker", "stab at {n}"],
+  // — crushing (stun) —
+  "loose-rock": ["crack the rock into {n}", "smash the stone against {n}", "cave at {n} with the rock"],
+  "splintered-cudgel": ["club {n} with the cudgel", "batter {n}", "crack {n} across the skull"],
+  "studded-maul": ["hammer {n} with the studded maul", "batter {n} down", "crack the maul into {n}"],
+  "warden-maul": ["bring the warden-maul down on {n}", "hammer {n}", "crush {n} under the maul"],
+  "flanged-mace": ["crush {n} with the flanged mace", "bring the mace down on {n}", "stave {n} in"],
+  "marrow-scepter": ["crack the scepter across {n}", "hammer {n} with the scepter", "shatter the scepter into {n}"],
+};
+// The trait-tell: a short clause the swing appends when a MECHANIC actually
+// fires this beat, so the prose reads out the system — a point through plate, a
+// wound that won't clot. (Stun keeps its own line for the thud; crit trumps all.)
+export const PIERCE_TELL = [
+  "the point finds the gap in its plate", "the narrow point punches through",
+  "it slips past the armor", "plate can't turn a point like that", "the point bites past the guard",
+];
+export const BLEED_TELL = [
+  "the wound weeps and won't close", "the cut runs deep and stays open",
+  "it opens, and keeps bleeding", "blood follows the blade back out", "the gash won't clot",
+];
 // Kept small and sharp — one of these caps a critical hit, player or creature.
 export const CRIT_FLOURISH = [
   " — a savage blow!", " — and it tells!", " — clean through!", " — a brutal stroke!",

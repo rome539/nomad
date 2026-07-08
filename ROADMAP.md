@@ -298,6 +298,22 @@ chart regenerates via `promo/capture/_map.mjs` (self-contained: reads local
 D1, screenshots via headless Chrome; footer auto-counts migrations).
 
 ### Phase 3 — The simulationist direction *(bigger, later)*
+- **Weapon-aware combat dialog** — ✅ SHIPPED 2026-07-08 (Phase 3 opener; "the
+  sim speaks"). Each of the 30 weapons swings in its own voice (`WEAPON_VERBS`
+  by item id in zone-data.ts, family register as fallback), and the swing
+  appends a trait-tell when a mechanic actually fires this beat — PIERCE_TELL
+  when the point beats armor, BLEED_TELL when an edge opens a fresh wound (crit
+  still trumps; a landed stun keeps its own "reels" line for the thud). Player
+  swing only for now; creature-side already event-narrates (seize/drown/stun),
+  and the player ambush line is a cheap follow-up if wanted.
+- **Combat/economy fixes rolled in same ship:** hollow weapon-wear 2.0→0.6
+  (8×→~2.4×; ~50→~165 swings — was shredding blades in one deep dive);
+  barter no longer seals fungibles (scrap/trophies/cigs carry no title — a
+  sealed scrap couldn't be spent at forge/vice); `repairCore` now reaches the
+  lockbox+vault (was pack-only — broke typed AND modal repair) and counts scrap
+  seal-agnostically (rescues already-sealed scraps; same latent bug fixed in the
+  forge counters); typed `vault <item>` now pulls from the lockbox too (parity
+  with the modal shortcut).
 - **Lethality / hit-location** (rome's "damage dire as real life — a hit to the
   throat"): earned finishers on an opening (staggered/seized/bleeding) + armor as
   *coverage* of body zones + telegraphed. Never random (that's a slot machine that
