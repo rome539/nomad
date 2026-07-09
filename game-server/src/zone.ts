@@ -61,12 +61,12 @@ import {
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, 
   PARTING_BLOW_CHANCE, STANCE, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, LOCKBOX_CAP, VAULT_CAP,
-  REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, WARDHIDE_WOUND_ODDS,
+  REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, BENCH_CHIP, TRADE_CHIP, FORGE_CHIP, DETAILED_MAP,
   MAP_ITEMS, JOURNAL_ITEM, FISHING_ROOMS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   CRUDE_DROP_ROOM, CRUDE_BAD_EXIT, DIR_ORDER,
-  RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, SIM_STEP_MS, CATCHUP_CAP_MS, 
+  RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, REGROW_MIN_MS, REGROW_MAX_MS, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, CARVE_MAX_LEN, ROT_MS,
@@ -100,6 +100,7 @@ export class ZoneDO implements DurableObject {
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
   private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
   private savedAt = 0;
+  private lastFlushAt = 0; // last time live sessions' hp/room were flushed to D1 (restart-durability)
 
   constructor(
     private state: DurableObjectState,
@@ -1746,6 +1747,12 @@ export class ZoneDO implements DurableObject {
   // clock and takes the worse dmg. Mirrors the mob-side wound, pointed at you.
   private openWound(victim: Session, tmpl: MobTemplate): void {
     if (!(tmpl.bleed > 0)) return; // undefined/NaN (unmigrated column) or 0: no wound — never leak NaN
+    // Bleed is a per-hit CHANCE, not a certainty (BLEED_ODDS, tiered by threat):
+    // roll it first, and on a miss it's just an ordinary bite — no message, since
+    // most hits don't open a wound. A bleeder with no entry falls back to every
+    // hit, so a future one is never silently declawed.
+    const bleedOdds = BLEED_ODDS.get(tmpl.id);
+    if (bleedOdds !== undefined && !chance(bleedOdds)) return;
     // Guarded is the skill answer to claws: behind your guard, a cut that
     // would open you only finds flesh half the time (GUARDED_WOUND_ODDS).
     if (victim.stance === "guarded" && !chance(GUARDED_WOUND_ODDS)) {
@@ -2618,6 +2625,8 @@ export class ZoneDO implements DurableObject {
         session.hp = Math.min(session.maxHp, session.hp + REST_REGEN_PER_TICK);
         this.sendStatus(session);
         if (session.hp >= session.maxHp) {
+          // Fully healed: save it now so a restart can't revert a finished rest.
+          await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
           if (session.resting) {
             session.resting = false;
             this.send(session, session.away ? "Your wounds have closed — you are whole." : "You feel whole again, and rise.");
@@ -2625,6 +2634,18 @@ export class ZoneDO implements DurableObject {
             this.send(session, "In the gatehouse quiet, your wounds close. You are whole.");
           }
         }
+      }
+    }
+
+    // Flush every live session's mutable state (hp, room) to D1 on a slow clock,
+    // so a DO restart — a deploy or a Cloudflare eviction — is a reconnect blip,
+    // not a revert. Combat/move/eat already write through; this catches the
+    // in-memory-only heals (chiefly rest) that would otherwise vanish on the
+    // next cold start and snap a rested player back to stale HP.
+    if (now - this.lastFlushAt >= FLUSH_INTERVAL_MS) {
+      this.lastFlushAt = now;
+      for (const s of this.sessions.values()) {
+        await savePlayer(this.env.DB, s.pubkey, s.roomId, s.hp);
       }
     }
 

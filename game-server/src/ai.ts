@@ -384,9 +384,13 @@ export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): bool
     return true;
   }
 
-  // A brood-mother births a scabby rat into her room on a slow clock, up to a
-  // cap — a living spawn source. She only breeds while unbothered (no target),
-  // so engaging her IS the way to stem the tide; leave her and the room fills.
+  // A brood-mother births a scabby rat on a slow clock, up to a cap on her
+  // LIVING BROOD — a living spawn source. She only breeds while unbothered (no
+  // target), so engaging her IS the way to stem the tide; leave her and the
+  // nest grows. The cap counts her whole brood by nest (pups are stamped
+  // home = her room), NOT just who's standing in the room — otherwise pups
+  // wandering out (they're not nest-bound; only the mother is) frees the counter
+  // and she breeds without limit, quietly infesting her whole territory.
 export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
     if (!mother.nextBirthAt) { mother.nextBirthAt = now + BROOD_INTERVAL_MS; return; }
     if (now < mother.nextBirthAt) return;
@@ -395,7 +399,7 @@ export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
     if (!ratTmpl) return;
     let count = 0;
     for (const c of z.creatures.values()) {
-      if (c.roomId === mother.roomId && c.templateId === "rat") count++;
+      if (c.templateId === "rat" && c.home === mother.roomId) count++;
     }
     if (count >= BROOD_CAP) return;
     const pupId = uuid();

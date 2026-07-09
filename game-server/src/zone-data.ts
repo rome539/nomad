@@ -5,6 +5,11 @@ import type { Stance } from "./zone-types";
 
 
 export const TICK_MS = 2000;
+// How often the tick flushes every live session's mutable state (hp, room) to
+// D1, so a DO restart (a deploy, or a Cloudflare eviction) is a reconnect blip,
+// not a revert. In-memory-only heals — chiefly rest — would otherwise vanish on
+// the next cold start and snap a rested player back to stale HP.
+export const FLUSH_INTERVAL_MS = 10_000;
 // The world ticks every TICK_MS, but blows land on a slower heartbeat so a
 // fight is readable: you get this long between exchanges to read the room and
 // decide — change stance, choke down food, or run — before steel meets steel
@@ -54,7 +59,7 @@ export const AMBUSH_MULT = 1.5;
 // floor — theirs to stand on, yours to fetch back.
 export const THROW_DMG_MIN = 1; // the arm adds less than a full swing
 export const THROW_DMG_MAX = 3;
-export const THROW_COOLDOWN_MS = 2000; // one throw per round — no rock machine-guns
+export const THROW_COOLDOWN_MS = 4000; // one throw per combat round (== COMBAT_ROUND_MS) — no rock machine-guns; was 2000, which let two throws land per round
 export const THROW_SHATTER = 0.15; // a thrown thing may not survive the landing
 export const THROW_SHATTER_HOLLOW = 0.4; // stone on bone or old iron, near coin-flip
 // Bone and old iron eat an edge faster than flesh: landed strikes on the HOLLOW
@@ -279,7 +284,7 @@ export const RUNNERS = new Set(["fleet-rat"]);
 // they keep birthing scabby rats into their room. Kill the mother or the room
 // stays an infestation. A living source, not a stat block.
 export const BROODERS = new Set(["brood-rat"]);
-export const BROOD_CAP = 2; // most rats a mother keeps in her nest room
+export const BROOD_CAP = 6; // most LIVING pups a mother sustains at once (total, by nest — counts dispersed pups too, so it can't runaway-infest); she breeds a replacement whenever one dies or is culled
 export const BROOD_INTERVAL_MS = 90_000; // ~90s between births
 // LISTENERS are dormant to sight — empty sockets, nothing behind them — but
 // they HEAR. A still, quiet wanderer they walk right past; move (in or out) or
@@ -517,6 +522,22 @@ export const PADDED_STUN_MULT = 0.5;
 // SEPARATELY from guarded stance — hide under a guard stacks to a quarter.
 export const WARDHIDE = new Set(["thick-hide-jack", "sentinels-mantle"]);
 export const WARDHIDE_WOUND_ODDS = 0.5;
+// Per-hit chance a bleeder actually opens a wound — bleed is no longer guaranteed
+// on every landed hit (that stacked far too hard, a pack of hyenas kept you
+// permanently weeping). Tiered by threat: a scabby rat's filthy teeth rarely bite
+// deep; the deep's pale kin and the hound's jaws often do. Rolled BEFORE the
+// guarded/wardhide defenses, so those still cut it further. A bleeder with no
+// entry here falls back to every-hit (openWound), so a future one is never
+// silently declawed — but every current bleeder is listed.
+export const BLEED_ODDS = new Map<string, number>([
+  ["rat", 0.20],          // scabby rat — filthy teeth, a wound now and then
+  ["grave-hyena", 0.30],
+  ["dire-hyena", 0.35],
+  ["albino-rat", 0.30],
+  ["pale-stalker", 0.40],
+  ["pale-crawler", 0.45], // the deep's worst biters
+  ["three-hound", 0.50],  // the sentinel's jaws — feared, but not a certainty
+]);
 // QUIET: LISTENER wake odds halved while worn (felt says nothing to the bones).
 export const QUIET_ITEMS = new Set(["felt-soled-boots", "grave-shroud", "pale-hide-hood", "shade-wrapped-greaves"]);
 export const QUIET_WAKE_MULT = 0.5;

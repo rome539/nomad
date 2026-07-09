@@ -138,7 +138,7 @@ guarded identity = GUARDED_WOUND_ODDS half-turns fresh wounds + GUARDED_BLOCK_BO
 behind a shield, wear() comment, migration 044 weight on chitin/coral-crown);
 post-fix ladder verified via the audit model: shiv 12.0→8.5, fleshing-knife
 15→11.5, widow-maker 24.4→17.5, and heavy steel now wins vs armored mobs.
-Awaiting ship. Original findings:
+**SHIPPED 2026-07-08 (7dbf1e7).** Original findings:
 
 1. **Speed weapons structurally OP — CONFIRMED** (rome's 07-07 dagger instinct
    was right). Root cause: every extra swing re-rolls the FULL 2–5 body roll, so
@@ -184,7 +184,7 @@ Awaiting ship. Original findings:
    gear tier, 1v1 margins). Stats are hardcoded from the current tables — re-run
    it after any tuning pass, update its numbers if migrations move stats.
 
-### The audit expansion — 16 pieces of gear with PROPERTIES *(built 2026-07-08, awaiting ship)*
+### The audit expansion — 16 pieces of gear with PROPERTIES *(SHIPPED 2026-07-08, 7dbf1e7)*
 
 Designed against the fresh model so each lands in tier on the first shot —
 migration 045 + trait sets in zone-data.ts (the FEARS_FIRE pattern, no schema
@@ -210,8 +210,8 @@ change) + one-line hooks. NO raw-damage creep: every piece buys a situation.
   flat-6.5 through a3 (best rare into the hound), pike/harpoon = greatsword/
   headsman + reach − shield arm, widow-maker still the ceiling at 17.5.
 
-**The exclusives pass (046 "the deep provides", built 2026-07-08, awaiting
-ship):** the corpse-gear table was mostly fence-duplicates and the three-headed
+**The exclusives pass (046 "the deep provides", SHIPPED 2026-07-08, 7dbf1e7):**
+the corpse-gear table was mostly fence-duplicates and the three-headed
 hound dropped NOTHING (sneak was strictly correct, killing it charity). Ten new
 dungeon-only pieces — the fence dresses you, the deep defines you:
 - **Off creatures** (gear_item, pried loose on death): sentinel's-mantle r
@@ -239,8 +239,8 @@ dungeon-only pieces — the fence dresses you, the deep defines you:
   (stalker/drowned/knight traded fence-duplicate drops for exclusives; the
   crawler keeps the fleshing-knife, the hulk keeps the iron-bound shield).
 
-**The deep gets two new species (047 "verdigris_and_marrow", built 2026-07-08,
-awaiting ship):** the audit found the deep dense enough (29/32 rooms) but
+**The deep gets two new species (047 "verdigris_and_marrow", SHIPPED 2026-07-08,
+7dbf1e7):** the audit found the deep dense enough (29/32 rooms) but
 NARROW — four base species, and 045/046 sold counters to every threat it has.
 Two additions, each hunting a build the deep couldn't touch:
 - **The verdigris-thing** (CORRODERS, wet Drowned-Reach rooms ×4): its landed
@@ -255,37 +255,30 @@ Two additions, each hunting a build the deep couldn't touch:
   world). Warden-tier stats (38hp, 4-7, a2).
 - **Tuning ride-along:** twice-dead stun 0.25→0.12 (rome: "that seems like a
   lot" — it stunned at a rare warden-maul's rate on a 9-spawn common).
-- **NOTE FOR SHIP:** a warm world never re-reads mob_spawns — run
-  POST /admin/reseed after deploying 047 or the new species never appear.
+- **Reseed done on ship** (a warm world never re-reads mob_spawns, so 047's
+  species needed POST /admin/reseed after deploy — run at ship time).
 - **ICEBOX — the undertow-grasper** (anti-turtle, NOT built): a drowner cousin
   whose grab comes AROUND the shield (seize that block doesn't stop — arms,
   not blows). The pavise-turtle currently counters everything; this would be
   its counter. Deepest water only, if the turtle proves too safe in play.
 
-### The map is a MAP now *(built 2026-07-08, awaiting ship — client-only)*
-The map modal drew a list ("dir → destination" rows). Now it draws floor
-plans. Zero server changes — the frame already carried rooms+exits+dirs; the
-client auto-lays it out (renderMap in public.ts):
-- **Stairs assign floors** (down = one deeper, BFS from where you stand,
-  keep-first on the world's few bent stairs); **the compass lays each floor on
-  a grid** (the world graph turned out grid-perfect: the surface is one clean
-  5×8 plan with the Vaulted Hall dead center, zero collisions).
-- Bands top-to-bottom: **the gates** (all above-surface air folds into one
-  band) → **the surface** → **one down … eight down**. Rooms are boxes (gold
-  = you, steel = gates, blood-dark = deep), passages are lines, ▲▼ = stairs.
-  Wide bands shelf-wrap at 7 columns.
-- **A crude map lies visibly now**: omitted rooms cut the walk, and whatever
-  the walk can't reach lands in region-labeled bands — "the halls — pages
-  adrift" / "the deep — pages adrift" (the copyist knows which part of the
-  dungeon a page came from, just not where it sits; gates are never adrift).
-  Lying exits draw as dashed blood-lines to the wrong box or stubs poking off
-  the page — one copy even draws a deep room confidently into the halls. The
-  surveyor's map draws true and still lights rooms known on the HUD. Shelf
-  packing places tall pieces first (tight bands, no dead rows).
-- Verified: tsc clean, served-script PARSE_OK, DOM-shim run against the real
-  world graph (true from hall, true from throne, crude) — no cell overlaps.
+### The map is the drawn poster now *(SHIPPED — floor plans 7dbf1e7, then PNG posters 4154837)*
+Two steps, the second superseding the first:
+- **7dbf1e7** replaced the old list ("dir → destination" rows) with live
+  client-drawn floor plans (a `renderMap` that BFS-assigned floors and laid each
+  on a compass grid).
+- **4154837** superseded that: the modal now shows the **drawn PNG poster** the
+  promo pipeline already produces — the surveyor's truth and the crude copy —
+  served by the worker at `/map-survey.png` & `/map-crude.png` from
+  `src/mapimg.ts` (base64; **one string literal per blob** — `+`-concat hangs
+  tsc). The in-game chart is now literally the poster on the wall. The old
+  client-side floor-plan layout code was removed.
+- **Regen:** `promo/capture/_map.mjs` draws the charts from the exit graph to
+  `~/Desktop` (`--crude [copy#]` for a lying copy), then
+  `scripts/embed-maps.mjs` base64s them into `mapimg.ts`. Rerun both after any
+  migration that moves rooms/exits.
 
-### 048 — a second hideaway for the deep *(built 2026-07-08, awaiting ship)*
+### 048 — a second hideaway for the deep *(SHIPPED 2026-07-08, 7dbf1e7)*
 rome, reading the world chart: the deep had ONE hideaway (Pocket of Air, up in
 the Drowned Reach) — everything below it was a no-breath run. Added **A
 Worm-Bore** off the Worm Cloister, mid-Sunless-Deep: deep enough to matter,
@@ -314,14 +307,14 @@ D1, screenshots via headless Chrome; footer auto-counts migrations).
   seal-agnostically (rescues already-sealed scraps; same latent bug fixed in the
   forge counters); typed `vault <item>` now pulls from the lockbox too (parity
   with the modal shortcut).
-- **Follow-on fixes (next ship):** the HOLLOW no longer bleed — the bleed DoT
-  was applying to bloodless things (skeletons/wardens/kings/cantor/drowned-god)
-  against the design; now immune, with an occasional dry-tell ("no blood in it
-  to spill") so bleeders read as the wrong tool in the bone rooms. And barter
-  gear stopped rolling the dungeon's worn condition: it's new stock now
-  (`rollShopCondition` — ~79% pristine, ~21% "worn", never battered). OPEN: the
-  revenants (twice-dead/thrice-dead) aren't in HOLLOW, so they still bleed —
-  left bleedable pending rome's call.
+- **Follow-on fixes (SHIPPED 2026-07-08, c4fc8e8):** the HOLLOW no longer bleed
+  — the bleed DoT was applying to bloodless things (skeletons/wardens/kings/
+  cantor/drowned-god) against the design; now immune, with an occasional dry-tell
+  ("no blood in it to spill") so bleeders read as the wrong tool in the bone
+  rooms. And barter gear stopped rolling the dungeon's worn condition: it's new
+  stock now (`rollShopCondition` — ~79% pristine, ~21% "worn", never battered).
+  OPEN: the revenants (twice-dead/thrice-dead) aren't in HOLLOW, so they still
+  bleed — left bleedable pending rome's call.
 - **Lethality / hit-location** (rome's "damage dire as real life — a hit to the
   throat"): earned finishers on an opening (staggered/seized/bleeding) + armor as
   *coverage* of body zones + telegraphed. Never random (that's a slot machine that
@@ -432,6 +425,16 @@ until he says go.
   faucets + sealed-wear are the drains; this is the re-supply/valve). The world
   already has a hard currency for prices to settle in. Player-to-player, distinct
   from the existing keeper/fence NPC trade. Gated on actual players.
+- **WATCH — the rusted pick is a scrap-iron faucet** (rome, 2026-07-08). The
+  free renewable pick (051, regrows in the Stripped Armory) can be farmed for
+  scrap iron — stand near the armory, take the pick, break it down, repeat. Not
+  a problem *now* (scrap isn't scarce enough for the trickle to matter, and the
+  5–25 min regrow throttles the rate), but if the scrap economy ever tightens
+  (a leaner repair/forge cost, or salvage yield goes up) this becomes an
+  unbounded supply. It's the inherent cost of it being renewable. Levers when it
+  bites: make the pick non-salvageable (yield 0 scrap), or a token 1, slow its
+  regrow, or pull the ground-spawn and sell it cheap at the fence instead. Same
+  caution applies to any future renewable gear on the floor.
 - **Communication layer** — the thing that turns a dungeon into a
   social world. `say`/`tell`/`shout` (shout carries between rooms —
   combat sound already proves the primitive), channels (ooc/gossip),
