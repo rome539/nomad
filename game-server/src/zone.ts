@@ -23,6 +23,7 @@ import type { Env } from "./env";
 import {
   loadWorld,
   getOrCreatePlayer,
+  type PlayerRow,
   recordKill,
   recordDeath,
   renamePlayer,
@@ -356,60 +357,38 @@ export class ZoneDO implements DurableObject {
     if (!pubkey) return new Response("unauthorized", { status: 401 });
     const zone = req.headers.get("x-zone") ?? "door";
 
-    const world = await this.init(zone);
-    // The first observer in a while collapses the elapsed time.
-    if (this.sessions.size === 0) this.catchUp();
+    await this.init(zone);
+    // The first observer in a while collapses the elapsed time. "Observed" now
+    // means a live socket, hibernated or not (getWebSockets) — while any socket
+    // is parked the alarm keeps ticking the world, so it was never truly dark.
+    if (this.state.getWebSockets().length === 0) this.catchUp();
 
     const { row, created } = await getOrCreatePlayer(this.env.DB, pubkey, this.randomGate());
     const items = await loadInventory(this.env.DB, pubkey);
 
-    // One body per soul: a second connection displaces the first.
-    const old = this.sessions.get(pubkey);
-    if (old) {
-      this.send(old, "Your spirit is called elsewhere. (connected from another client)");
-      try { old.ws.close(1000, "reconnected"); } catch {}
-      this.sessions.delete(pubkey);
+    // One body per soul: a second connection displaces the first. With
+    // hibernation the old socket may be parked (in getWebSockets), not only in
+    // this.sessions — close any socket already bearing this key.
+    for (const other of this.state.getWebSockets()) {
+      if (this.wsPubkey(other) !== pubkey) continue;
+      const prev = this.sessions.get(pubkey);
+      if (prev) this.send(prev, "Your spirit is called elsewhere. (connected from another client)");
+      try { other.close(1000, "reconnected"); } catch {}
     }
+    this.sessions.delete(pubkey);
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
-    server.accept();
+    // Hibernatable accept: the socket survives DO eviction and deploys. The
+    // pubkey rides on the socket itself (serializeAttachment), so a woken DO can
+    // rebuild the session from the parked socket alone.
+    this.state.acceptWebSocket(server);
+    server.serializeAttachment({ pubkey });
+    // Answer pings without waking the DO — keeps parked sockets warm for cheap.
+    this.state.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
 
-    const roomId = world.rooms.has(row.room_id) ? row.room_id : this.randomGate();
-    const session: Session = {
-      ws: server,
-      pubkey,
-      name: row.name,
-      named: row.named === 1,
-      roomId,
-      hp: Math.max(1, row.hp),
-      maxHp: row.max_hp,
-      target: null,
-      stance: (["reckless", "steady", "guarded"].includes(row.stance) ? row.stance : "steady") as Stance,
-      items,
-      staggered: false,
-      resting: false,
-      away: false,
-      ctxCombat: false,
-      born: row.created_at,
-      kills: row.kills ?? 0,
-      deaths: row.deaths ?? 0,
-      bossKills: row.boss_kills ?? 0,
-      pvpKills: row.pvp_kills ?? 0,
-      tokens: RATE_CAPACITY,
-      tokensAt: Date.now(),
-      nextThrowAt: 0,
-      visited: new Set<string>(),
-      lastAmbientAt: Date.now(),
-    };
+    const session = this.buildSession(server, row, items);
     this.sessions.set(pubkey, session);
-
-    server.addEventListener("message", (ev) => {
-      this.onMessage(session, typeof ev.data === "string" ? ev.data : "").catch(() => {});
-    });
-    const bye = () => { this.onLeave(session).catch(() => {}); };
-    server.addEventListener("close", bye);
-    server.addEventListener("error", bye);
 
     // A dropped connection that comes back within the grace window is a
     // re-weave, not an arrival: no fanfare, no re-reading the intro, and the
@@ -473,6 +452,105 @@ export class ZoneDO implements DurableObject {
       }
     }
     await this.persist();
+  }
+
+  // ---- hibernation: sockets that outlive the DO ----
+  // The DO can be evicted (a deploy, or Cloudflare reclaiming memory) while its
+  // WebSockets stay parked. On wake, this.sessions is empty but the sockets live
+  // on, each carrying its owner's pubkey — so a session is rebuilt from durable
+  // state (D1 + the sim), and a player never sees a disconnect.
+
+  // Build a Session from a player row, their D1 inventory, and a live socket.
+  // Shared by a fresh connect and a post-wake rehydrate: everything here is
+  // either loaded from D1 or a safe transient default. A wake resets combat /
+  // rest / modal state, but NEVER hp, room, gear, stance, or tallies.
+  private buildSession(ws: WebSocket, row: PlayerRow, items: CarriedItem[]): Session {
+    const world = this.world!;
+    const roomId = world.rooms.has(row.room_id) ? row.room_id : this.randomGate();
+    return {
+      ws,
+      pubkey: row.pubkey,
+      name: row.name,
+      named: row.named === 1,
+      roomId,
+      hp: Math.max(1, row.hp),
+      maxHp: row.max_hp,
+      target: null,
+      stance: (["reckless", "steady", "guarded"].includes(row.stance) ? row.stance : "steady") as Stance,
+      items,
+      staggered: false,
+      resting: false,
+      away: false,
+      ctxCombat: false,
+      born: row.created_at,
+      kills: row.kills ?? 0,
+      deaths: row.deaths ?? 0,
+      bossKills: row.boss_kills ?? 0,
+      pvpKills: row.pvp_kills ?? 0,
+      tokens: RATE_CAPACITY,
+      tokensAt: Date.now(),
+      nextThrowAt: 0,
+      visited: new Set<string>(),
+      lastAmbientAt: Date.now(),
+    };
+  }
+
+  // The owner's key, stashed on the socket at accept-time.
+  private wsPubkey(ws: WebSocket): string | null {
+    try {
+      const a = ws.deserializeAttachment() as { pubkey?: string } | null;
+      return a && typeof a.pubkey === "string" ? a.pubkey : null;
+    } catch { return null; }
+  }
+
+  // Rebuild any session missing from memory for a still-connected socket. A
+  // no-op while the DO is warm (sessions already present); does its D1 reads
+  // only once per socket per cold wake.
+  private async hydrateSessions(): Promise<void> {
+    const sockets = this.state.getWebSockets();
+    if (sockets.length === 0) return;
+    for (const ws of sockets) {
+      const pubkey = this.wsPubkey(ws);
+      if (!pubkey || this.sessions.has(pubkey)) continue;
+      if (!this.world) await this.init("door");
+      const { row } = await getOrCreatePlayer(this.env.DB, pubkey, this.randomGate());
+      const items = await loadInventory(this.env.DB, pubkey);
+      this.sessions.set(pubkey, this.buildSession(ws, row, items));
+    }
+  }
+
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    try {
+      await this.hydrateSessions();
+      const pubkey = this.wsPubkey(ws);
+      if (!pubkey) return;
+      const session = this.sessions.get(pubkey);
+      if (!session) return;
+      session.ws = ws; // a woken socket is a fresh object — keep the session on it
+      await this.onMessage(session, typeof message === "string" ? message : "");
+    } catch {}
+  }
+
+  async webSocketClose(ws: WebSocket): Promise<void> {
+    const pubkey = this.wsPubkey(ws);
+    if (pubkey) {
+      const session = this.sessions.get(pubkey);
+      if (session && session.ws === ws) {
+        await this.onLeave(session).catch(() => {});
+      } else {
+        // Parked socket closed before it was ever rehydrated: its state was
+        // already flushed durably, so just note the departure for reconnect grace.
+        this.leftAt.set(pubkey, Date.now());
+      }
+    }
+    try { ws.close(); } catch {}
+  }
+
+  async webSocketError(ws: WebSocket): Promise<void> {
+    const pubkey = this.wsPubkey(ws);
+    if (!pubkey) return;
+    const session = this.sessions.get(pubkey);
+    if (session && session.ws === ws) await this.onLeave(session).catch(() => {});
   }
 
   // ---- messages in ----
@@ -2121,6 +2199,10 @@ export class ZoneDO implements DurableObject {
   async alarm(): Promise<void> {
     // A cold start with a pending alarm rebuilds the world first.
     if (!this.world) await this.init("door");
+    // The alarm can wake a hibernated DO whose sessions are gone but whose
+    // sockets live on — rebuild them so the tick sees the connected players
+    // (and doesn't mistake a full world for an empty one).
+    await this.hydrateSessions();
     const world = this.world!;
     const now = Date.now();
 
@@ -3118,9 +3200,10 @@ export class ZoneDO implements DurableObject {
   }
 
   private async ensureAlarm(): Promise<void> {
-    // The tick runs only while someone is here to see it; an empty world
-    // is fast-forwarded by catchUp() when the next player arrives.
-    if (this.sessions.size === 0) return;
+    // The tick runs while any socket is connected — hibernated or not; a parked
+    // socket is still a player in the world. A truly empty world (no sockets) is
+    // fast-forwarded by catchUp() when the next player arrives.
+    if (this.state.getWebSockets().length === 0) return;
     const current = await this.state.storage.getAlarm();
     // An overdue alarm is a dead alarm (dev reloads leave them wedged) —
     // setAlarm overwrites, so reschedule rather than trust it.

@@ -1196,6 +1196,9 @@ function maybeAdoptProfileName(f) {
 
 var ws = null;
 var retryMs = 1000;
+var hbTimer = null; // keepalive: a bare "ping" every 25s the server auto-answers
+                    // "pong" without waking the Durable Object — stops NAT/proxy
+                    // idle-timeouts from reaping a quiet socket.
 
 async function connect() {
   profileTried = false;
@@ -1213,7 +1216,11 @@ async function connect() {
   var proto = location.protocol === "https:" ? "wss://" : "ws://";
   ws = new WebSocket(proto + location.host + "/ws?token=" + encodeURIComponent(token));
 
-  ws.onopen = function () { retryMs = 1000; };
+  ws.onopen = function () {
+    retryMs = 1000;
+    clearInterval(hbTimer);
+    hbTimer = setInterval(function () { if (ws && ws.readyState === 1) ws.send("ping"); }, 25000);
+  };
   ws.onmessage = function (m) {
     var f; try { f = JSON.parse(m.data); } catch (e) { return; }
     if (f.kind === 24912) print(f.text, f.cls);
@@ -1242,7 +1249,7 @@ async function connect() {
       renderJournal(f);
     }
   };
-  ws.onclose = function () { closeBench(); closeTrade(); closeMap(); closeJournal(); print("— the connection frays; reweaving —", "sys"); scheduleRetry(); };
+  ws.onclose = function () { clearInterval(hbTimer); closeBench(); closeTrade(); closeMap(); closeJournal(); print("— the connection frays; reweaving —", "sys"); scheduleRetry(); };
 }
 
 function scheduleRetry() {
