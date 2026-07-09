@@ -306,6 +306,19 @@ export const AGGRO_SCAVENGERS = new Set(["dire-hyena"]);
 // and takes a beat to commit. That wind-up is your window to back out or hit first.
 export const DIRE_ROUSE_MS = 5000;
 export const CORPSE_TRACES = new Set(["blood", "remains"]);
+// The food web: who hunts (or drives off) whom. A predator sharing a room with
+// prey it outranks may turn on it — when it's hungry, or when there's a kill or
+// bait to fight over. Every predator genuinely outstats its prey (hp + dmg);
+// the HOLLOW don't eat and aren't here. Same pure-data shape as BLEED_ODDS/PIERCE.
+// Effect: predators thin the herds the brood-mothers swell, and a player can
+// throw bait to start a scrap and slip past. Read/applied in ai.ts (predation).
+export const PREYS_ON = new Map<string, Set<string>>([
+  ["three-hound", new Set(["rat", "fleet-rat", "grave-hyena", "dire-hyena"])], // apex at the threshold — bullies all comers
+  ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena"])],                // the mean cousin drives off the plain one
+  ["grave-hyena", new Set(["rat", "fleet-rat"])],                              // hyenas eat rats
+  ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
+]);
+export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
 export const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
 export const BOLD_DMG_MULT = 1.35; // a gorged scavenger swings harder
@@ -377,6 +390,34 @@ export const PLAYER_HIT: Record<"edge" | "blunt" | "spear" | "fist" | "plain", s
     "beat at {n}", "chop into {n}",
   ],
 };
+// The vitals-lottery killing blow, PLAYER side — the weapon type finds the vital
+// area it's made for: a point through the throat, an edge across it, blunt into
+// the skull, a thrust to the heart. Completes "You ___". Picked by
+// playerVitalsVerb (pierce checked before the stat registers).
+export const PLAYER_VITALS: Record<"pierce" | "edge" | "blunt" | "spear" | "fist" | "plain", string[]> = {
+  pierce: [
+    "drive the point through {n}'s throat", "punch the point clean through {n}'s skull",
+    "run the point up under {n}'s jaw", "find the gap in {n} and drive through",
+  ],
+  edge: [
+    "open {n}'s throat", "draw your edge across {n}'s throat",
+    "lay {n}'s throat open", "cut deep into the side of {n}'s neck",
+  ],
+  blunt: [
+    "stave in {n}'s skull", "crush {n}'s skull with the blow",
+    "bring it down square on {n}'s head", "shatter the side of {n}'s head",
+  ],
+  spear: [
+    "run {n} through the heart", "drive the point into {n}'s heart",
+    "punch through {n}'s ribs into the heart",
+  ],
+  fist: [
+    "snap {n}'s neck", "drive a fist into {n}'s throat", "crack {n}'s windpipe",
+  ],
+  plain: [
+    "find the killing place on {n}", "strike {n} true and deep", "land the one blow that ends {n}",
+  ],
+};
 // Phase 3 — the sim speaks. Each weapon swings in its OWN voice (by item id),
 // layered over the family pools above (fallback for anything unlisted). The
 // verb sits before " for N": "You <verb> for N". {n} is the target. Naming the
@@ -429,6 +470,14 @@ export const PIERCE_TELL = [
   "the point finds the gap in its plate", "the narrow point punches through",
   "it slips past the armor", "plate can't turn a point like that", "the point bites past the guard",
 ];
+// A blunt weapon defeats armor differently than a point: it doesn't slip the
+// plate, it caves it. Shown when a crushing blow beats armor (parallel to
+// PIERCE_TELL); its own voice so a mace never "punches through a gap".
+export const BLUNT_TELL = [
+  "the blow caves the plate", "steel buckles under the weight of it",
+  "armor is no help against a blow like that", "it drives the plate into the flesh beneath",
+  "the sheer weight of it goes straight through the guard",
+];
 export const BLEED_TELL = [
   "the wound weeps and won't close", "the cut runs deep and stays open",
   "it opens, and keeps bleeding", "blood follows the blade back out", "the gash won't clot",
@@ -467,6 +516,32 @@ export const CREATURE_HIT = {
   plain: [
     "hits you", "strikes you", "catches you a blow", "lands a blow on you",
     "gets past your guard", "beats you back",
+  ],
+} as const;
+// The vitals-lottery killing blow, in the same register as CREATURE_HIT (teeth /
+// bone / water / knife / plain) so the death reads like the thing that dealt it —
+// a hound's jaws find the throat, a hollow's iron finds the heart. Picked by
+// creatureVitals(); phrases complete "{The mob} ___".
+export const CREATURE_VITALS = {
+  teeth: [
+    "closes its jaws on your throat", "tears your throat out", "finds the great vein of your neck",
+    "sets its teeth in your throat and does not let go",
+  ],
+  bone: [
+    "drives rusted iron up under your ribs", "punches a dead blade through your heart",
+    "finds the gap in you with cold edge", "buries its old iron in your chest",
+  ],
+  water: [
+    "crushes the last breath from you at once", "closes its cold weight over your throat",
+    "grinds something vital out of you", "folds you under and does not let up",
+  ],
+  knife: [
+    "slips its blade between your ribs, into the heart", "opens your throat with one clean draw",
+    "finds the killing line and takes it", "slides steel past your guard, deep",
+  ],
+  plain: [
+    "lands a blow that finds something vital", "catches you where it kills",
+    "strikes true, and deep", "finds the one place that ends it",
   ],
 } as const;
 // Which register a creature swings in. Order matters — first match wins.
@@ -512,6 +587,10 @@ export const FIRE_ITEMS = new Set<string>([]);
 export const REACH_ITEMS = new Set(["quarterstaff", "pitted-spear", "war-pike", "abyssal-harpoon", "gaff-hook"]);
 // PIERCE: the pick punches plate — ignores this many points of a mob's armor.
 export const PIERCE = new Map<string, number>([["rusted-pick", 2], ["horsemans-pick", 2], ["crow-beak-pick", 3]]);
+// A blunt weapon (stun > 0) ignores this much armor — crushing weight caves plate
+// the way a point slips it. Flat, categorical (every blunt weapon), unlike the
+// per-weapon PIERCE map. The mace was history's answer to armor; so it is here.
+export const BLUNT_ARMOR_IGNORE = 2;
 // TWO_HANDED: wants both hands; no shield alongside it (enforced at equip).
 export const TWO_HANDED = new Set(["war-pike", "abyssal-harpoon"]);
 // PADDED: a mob's stun rings you half as often. Best piece counts — padding
@@ -538,6 +617,46 @@ export const BLEED_ODDS = new Map<string, number>([
   ["pale-crawler", 0.45], // the deep's worst biters
   ["three-hound", 0.50],  // the sentinel's jaws — feared, but not a certainty
 ]);
+// HOBBLE: leg-goers can hamstring you on a hit — a per-hit chance, tiered by
+// threat (only things that go low: hyenas at the legs, the hound, the deep's
+// crawlers/stalkers). A hobbled player can still flee, but only after limping
+// clear (HOBBLE_FLEE_MS); cured by rest. Sibling of BLEED_ODDS, applied in
+// maybeHobble. One affliction instance, not a framework (see ROADMAP).
+export const HOBBLE_ODDS = new Map<string, number>([
+  ["grave-hyena", 0.05],
+  ["pale-stalker", 0.06],
+  ["dire-hyena", 0.08],
+  ["pale-crawler", 0.08],
+  ["three-hound", 0.10], // the sentinel drags you down by the leg
+]);
+export const HOBBLE_FLEE_MS = 4000; // ~1 combat round of limping before you break away
+// The VITALS LOTTERY — the Tarkov headshot (ROADMAP: lethality keystone). A rare,
+// random killing hit that ignores hp AND gear; armor over the vitals only buys the
+// per-hit odds DOWN toward the base rate, never to zero. Designed from cumulative
+// per-run odds (a per-hit % is meaningless alone — 2-5%/hit ≈ 99% death per run):
+// 1/3000 armored -> ~1/1500 naked ≈ 6%/12% of runs at ~200 hits. Threat-gated so
+// trash NEVER rolls it — only the deep's real threats + the hound + bosses, which
+// protects the first run (a rat can't lottery your kit away). PvP half waits on
+// PvP existing (none built yet); VITALS_PVP is ready for that day. Rolled in
+// vitalsLottery (zone.ts). Deliberately random — overrides the old "never random"
+// line; the randomness IS the equalizer (see ROADMAP lethality entry).
+export const VITALS_PVE = 1 / 3000;   // per-hit base (armored floor); naked = 2x via armor scaling
+export const VITALS_PVP = 0.005;      // ready for when PvP exists (0.5% armored -> 1% naked)
+export const VITALS_ARMOR_FULL = 11;  // total armor that counts as 'fully covered' (a max kit)
+export const VITALS_THREATS = new Set<string>([
+  "three-hound", "pale-stalker", "pale-crawler", "the-drowned", "drowned-hulk",
+  "marrow-cantor", "warden-captain", "forgotten-king", "marrow-king", "drowned-god",
+]);
+// The PLAYER side of the vitals lottery. Bosses are the designed wall — never.
+// Every other mob can fall to a lucky killing blow (its own armor buys the odds
+// down, VITALS_PVE base). The three-hound is the exception between: it only falls
+// this way to a PIERCING weapon — you drive the point through its throat — and
+// even then rarely (VITALS_HOUND). Rewards bringing the right tool to the sentinel.
+export const PIERCING_WEAPONS = new Set([
+  "rusted-pick", "horsemans-pick", "crow-beak-pick", // picks: PIERCE-mapped points
+  "pitted-spear", "war-pike", "abyssal-harpoon",     // the point-spears that thrust through
+]);
+export const VITALS_HOUND = 1 / 5000; // the sentinel's tiny pierce-only vitals chance
 // QUIET: LISTENER wake odds halved while worn (felt says nothing to the bones).
 export const QUIET_ITEMS = new Set(["felt-soled-boots", "grave-shroud", "pale-hide-hood", "shade-wrapped-greaves"]);
 export const QUIET_WAKE_MULT = 0.5;

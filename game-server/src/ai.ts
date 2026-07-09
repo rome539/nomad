@@ -9,6 +9,7 @@ import { randInt, chance, uuid } from "./rng";
 import { cap } from "./zone-util";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT,
+  PREYS_ON, PREDATION_ODDS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
   RUNNERS, BROODERS, SENTINELS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE,
@@ -349,6 +350,69 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       z.roomSound(creature.roomId, "Wet tearing sounds drift {dir}.");
       z.refreshRoomCtx(creature.roomId);
     }
+  }
+
+  // The food web: a predator sharing a room with prey it outranks may turn on it
+  // — when it's hungry, or when there's a kill/bait to fight over. Emergent
+  // culling (predators thin the herds the brood-mothers swell) and real tactics
+  // (throw offal to start a scrap and slip past). Stays LOCAL, off the relay,
+  // like idle wandering — it's world-life, not a fight a watcher is following.
+  // Only idle creatures reach this (the tick guards on !target); a struck predator
+  // (stunned/bleeding) has other problems. Returns true if it struck, so the tick
+  // skips this creature's wander.
+export async function predation(z: ZoneDO, creature: Creature, now: number): Promise<boolean> {
+    const prey = PREYS_ON.get(creature.templateId);
+    if (!prey || creature.stunned || creature.bleedTicks) return false;
+    const world = z.world!;
+    const hungry = creature.hunger >= HUNGRY_AT;
+    const traces = z.traces.get(creature.roomId);
+    const corpseHere = !!traces && traces.some((tr) => CORPSE_TRACES.has(tr.kind));
+    const floor = z.ground.get(creature.roomId);
+    const baitHere = !!floor && floor.some((id) => world.itemTemplates.get(id)?.lure);
+    if (!hungry && !corpseHere && !baitHere) return false;
+    if (!chance(PREDATION_ODDS)) return false;
+    // A target in the room; prefer one not already busy with a player (the easy meal).
+    let victim: Creature | null = null;
+    for (const c of z.creatures.values()) {
+      if (c.id === creature.id || c.roomId !== creature.roomId || !prey.has(c.templateId)) continue;
+      victim = c;
+      if (!c.target) break;
+    }
+    if (!victim) return false;
+    const tmpl = world.mobTemplates.get(creature.templateId)!;
+    const vt = world.mobTemplates.get(victim.templateId)!;
+    victim.hp -= randInt(tmpl.dmg_min, tmpl.dmg_max);
+    if (victim.hp <= 0) {
+      preyFalls(z, victim, vt);
+      creature.hunger = 0;
+      creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
+      if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} runs down ${vt.name} and tears into it.`);
+      z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.");
+      z.refreshRoomCtx(creature.roomId);
+    } else {
+      // It lived — it bolts. A scrap, not a slaughter.
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} lunges at ${vt.name}, which breaks and runs.`);
+      await creatureMoves(z, victim, now, "flee", false);
+    }
+    return true;
+  }
+
+  // A creature killed by another creature, not a player: no kill credit, no
+  // corpse-key, no revenant rise — just a body. Its spoils drop where it fell
+  // (emergent loot to recover), a corpse trace feeds the scavengers, and
+  // migration refills it like any other death.
+function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate): void {
+    for (const s of z.sessions.values()) {
+      if (s.target === victim.id) s.target = null;
+      if (s.seizedBy === victim.id) s.seizedBy = undefined;
+    }
+    const spoils = [...(victim.carries ?? [])];
+    if (victim.stole) spoils.push(victim.stole);
+    if (spoils.length) z.ground.set(victim.roomId, [...(z.ground.get(victim.roomId) ?? []), ...spoils]);
+    z.addTrace(victim.roomId, { kind: HOLLOW.has(victim.templateId) ? "remains" : "blood", at: Date.now(), label: vt.name });
+    z.creatures.delete(victim.id);
+    scheduleArrivals(z, Date.now());
   }
 
   // A scavenger that has eaten enough of the dead loses its nerve: it stops

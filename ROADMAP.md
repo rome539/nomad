@@ -262,7 +262,21 @@ Two additions, each hunting a build the deep couldn't touch:
   not blows). The pavise-turtle currently counters everything; this would be
   its counter. Deepest water only, if the turtle proves too safe in play.
 
-### The map is the drawn poster now *(SHIPPED — floor plans 7dbf1e7, then PNG posters 4154837)*
+### The map is a live Achaea-style schematic now *(✅ 2026-07-09 — superseded the posters)*
+> **Third step (2026-07-09):** rome researched Achaea and the PNG poster was the
+> wrong call — a static poster can't show WHERE YOU ARE and makes every crude copy
+> an identical lie (wasting the per-book deterministic-lie the server already
+> computes). The modal now **draws the room graph live** on a canvas: rooms as
+> region-tinted tiles auto-laid on a grid by walking the exit directions (the
+> server already sends the graph + `here` + per-book crude lies), your room
+> **glows**, exits are lines, up/down dashed, drag-to-pan + zoom. Crude maps render
+> their own individual wrong graph; connected-component packing keeps a shattered
+> crude map from collapsing into one row; labels clip to their tile (strip "The ").
+> The **`/map-survey.png` + `/map-crude.png` routes, `src/mapimg.ts`, and
+> `scripts/embed-maps.mjs` were all PRUNED** (dead once the client draws its own).
+> The promo poster pipeline (`promo/capture/_map.mjs`) survives as promo art only.
+> The old steps, kept for the record:
+
 Two steps, the second superseding the first:
 - **7dbf1e7** replaced the old list ("dir → destination" rows) with live
   client-drawn floor plans (a `renderMap` that BFS-assigned floors and laid each
@@ -315,10 +329,37 @@ D1, screenshots via headless Chrome; footer auto-counts migrations).
   stock now (`rollShopCondition` — ~79% pristine, ~21% "worn", never battered).
   OPEN: the revenants (twice-dead/thrice-dead) aren't in HOLLOW, so they still
   bleed — left bleedable pending rome's call.
-- **Lethality / hit-location** (rome's "damage dire as real life — a hit to the
-  throat"): earned finishers on an opening (staggered/seized/bleeding) + armor as
-  *coverage* of body zones + telegraphed. Never random (that's a slot machine that
-  hurts fresh players worst). Could eventually *replace* the flat armor number.
+- **The vitals lottery — the Tarkov headshot** *(✅ PvE SHIPPED 2026-07-09; rome
+  specced the numbers; this DELIBERATELY overrides the old "never random" line
+  below)*. **What shipped:** both PvE directions (a threat can headshot you;
+  YOU can land a lucky killing blow on a mob), weapon-aware text on both sides
+  (creatureVitals teeth/bone/water/knife; playerVitalsVerb pierce→throat/skull,
+  edge→throat, blunt→skull, thrust→heart). **Gates:** bosses excluded (the wall);
+  the three-hound only falls to a PIERCING weapon (VITALS_HOUND 1/5000); the
+  hollow only to a BLUNT weapon (no throat — shatter the skull). **PvP half still
+  waits on PvP existing** (VITALS_PVP 0.5→1% ready; one call to wire). A
+  hit to the vitals can end anyone — mob→player AND player→player — regardless of
+  gear. It IS a lottery (genuinely random), which the old note banned; rome
+  reversed that on purpose because the randomness is the whole point of the
+  headshot: it's the equalizer that lets a naked player kill a geared one (the
+  fresh-vs-geared answer for PvP). Kept fair by three guards, all pure Tarkov:
+  - **Armor covers vitals** — a helm/vitals piece buys the odds down (or covers
+    the zone). Still random, but gear-meaningful and *fair*: you chose not to
+    protect your head. This is the Tarkov helmet.
+  - **Threat-gated in PvE** — trash (rats) NEVER roll it; only real threats
+    (pale-stalker, the hound, deep dwellers, bosses) can. Protects the first run.
+  - **Symmetric in PvP** — always on, both ways.
+  - **The numbers** (designed from cumulative per-run/per-duel odds, not the
+    meaningless per-hit figure — 2–5%/hit = ~99% death per run, a sentence not a
+    lottery): **PvE 1/3000 armored → ~1/1500 naked** (≈6% of runs armored, ≈12%
+    naked, at ~200 hits/run). **PvP 0.5% armored → 1% naked** (≈1 in 20 duels
+    armored, ≈1 in 10 naked, at ~10 hits/duel). Two separate dials because a duel
+    is ~10 hits and a run is ~200 — one per-hit number can't serve both.
+  - Distinct from the leg-wound affliction, though both are body-zone. Could
+    eventually *replace* the flat armor number with zonal coverage.
+  - OLD DESIGN (rome overrode this 2026-07-09, kept for the record): "earned
+    finishers on an opening + telegraphed, NEVER random — a slot machine that
+    hurts fresh players worst."
 - **The Hunter / Nemesis** — targeted pressure: the world sends a named predator
   after the too-successful player, who has to get out ahead of it. Reuses
   grudges + `curious` tracking. (rome: "i love this.")
@@ -328,6 +369,119 @@ D1, screenshots via headless Chrome; footer auto-counts migrations).
   for fresh players. Gentle (+1–2). Its prerequisite (curved armor) shipped in
   Phase 0, so it's **unblocked** — bump HP not damage. rome's idea; good for the
   shallows, weak for the deep.
+
+### The living-world & combat-depth layer *(rome approved, 2026-07-09; drawn from the reference list below)*
+
+Lessons from Achaea, Rain World, and Caves of Qud — deliberately at a **smaller
+scale than the source systems**. Each has a big Phase-3 form and a minimal first
+slice that reuses machinery we already ship. rome: build the slices; the
+frameworks stay on paper. **These four are one design island** — a wounded mob
+*looks* wounded, a hungry mob *eyes* its rival, and your own wounds *show*
+(Qud's "legible deep sim" applied to systems we mostly already have).
+
+> **✅ SHIPPED 2026-07-09** — four of the five island slices landed in one batch:
+> **food web**, **glanceable status**, **leg-wound/hobble** (flee-timer), and the
+> **vitals lottery** keystone (PvE both directions, weapon-aware). Plus two combat
+> tunes rome asked for alongside: **blunt weapons now ignore 2 armor** (a mace
+> caves plate, `BLUNT_ARMOR_IGNORE`, with its own BLUNT_TELL) and the **hollow can
+> only be vitals-killed by blunt** (no throat to open — shatter the skull). Only
+> **herbs** remains of the island. Details in each bullet below.
+
+- **Mob food web — creatures prey on each other** *(APPROVED, 2026-07-09; from
+  Rain World — the best-fit idea on the list, and it's small)*. The world's danger
+  should come from *ecology*, not spawn tables: a dire-hyena drives a grave-hyena
+  off its kill, hyenas eat rats, the hound bullies whatever's near its throne,
+  albino-rat is apex vermin. Build: a **dominance/predation table** (code-side, same
+  shape as `BLEED_ODDS`/`PIERCE`) + **one hook in the AI tick** — when two creatures
+  share a room a dominant/predator may turn on the weaker, **especially over food**
+  present (a corpse, or the `offal` lure). Lives entirely in `ai.ts` per
+  [[keep-zone-ts-lean]]; reuses combat + scavenger + lure. **Why it's safe to build
+  first:** touches ZERO player-combat balance, *thins herds on its own* (a partial
+  fix for the recurring brood/overpopulation fights), and hands players real tactics
+  (throw offal to start a fight and slip past; lure a predator onto your pursuer).
+
+- **Herbs / reagents — a foraging survival layer** *(APPROVED — start with the slice)*.
+  - *Full (later):* room-specific plants, some deep-only, plus a **dry/prepare**
+    state machine so raw ≠ ready. The prepare step is a new verb + item-state —
+    the expensive part; defer it.
+  - *Slice first:* add 2–3 more region-placed edibles with distinct effects, 1–2
+    **deep-only**. Pure DATA on the edible-prop system already live (well-water /
+    cave-lichen, migration 052) — near-free, no new system. The "economy" emerges
+    from *placement*; gives the deep a non-gear reason to be entered. Scarcity-safe
+    (renewable but gated by *where*). See [[nomad-loot-economy]].
+- **Glanceable status + rewarding `look` — the Qud UX layer** *(APPROVED, 2026-07-09;
+  the PREREQUISITE for afflictions, do it first)*. Two concrete things:
+  - *Status you can read at a glance:* afflictions/effects shown as compact
+    persistent HUD tags (`you ▸ hp 42/60  ⚑ leg: hobbled  ⚑ bleeding`), not prose
+    buried in the scroll. Reuses the color-coded chip/HUD system — half-built already.
+    **An affliction you can't read at a glance is just an invisible debuff; this is
+    what makes one worth having.**
+  - *`look`/`examine` that leaks real information:* layered description that does
+    flavor + mechanics at once — a mob's limp reads as its wound, a hungry mob
+    "keeps glancing at the smaller hyena across the room" (telegraphs the food web).
+    Hooks into the journal/bestiary (study deepens what `look` tells you).
+- **Afflictions & cures — tactical status-trading** *(APPROVED — one instance, not a
+  framework; GATED on two things)*.
+  - **Sequencing (rome's call, 2026-07-09):** don't stack a tactical layer on an
+    unmeasured base. Gated on (1) the glanceable-status UX above, and (2) a fresh
+    **balance re-check** — re-run `scripts/balance-audit.mjs` (stale since the combat
+    audit) so we decide on real DPR/TTK numbers, not a hunch. Build food-web first.
+  - *Full (later):* a general affliction system — stacking statuses, cure-routing,
+    mobs applying them. This is the framework; hold it.
+  - *Slice first:* bleed **is** already an affliction and bandage **is** its cure —
+    add exactly **one more instance** of that pattern: a **leg wound / hobble**,
+    cured by rest (a splint item later). One status flag + one hook into flee +
+    one cure path. Proves the tactical layer without building a system. Keep the
+    new behaviour out of zone.ts's spine per [[keep-zone-ts-lean]].
+  - **Hobble = a flee TIMER, not a dice-block (rome, 2026-07-09).** A leg wound
+    must NOT randomly stop you from fleeing — that's the rage-inducing slot machine
+    the lethality item bans. Instead: while hobbled, `flee` doesn't fire instantly;
+    the first attempt starts you "limping clear," and you break away only after a
+    set delay (~1 combat round / 4s), exposed the whole time. Deterministic and
+    tactical: you *can* always escape, but a pack on a hobbled leg forces the
+    choice — eat the wind-up, or cure/kill your way clear first. Cure (rest) clears
+    it at once.
+  - *Build order for the island:* **food web ✅ → glanceable status ✅ → balance
+    re-check ✅ → leg-wound affliction ✅ → herbs slice ⬜** (herbs make the cures
+    matter — the only piece left).
+
+## Design lineage — what to steal, what to avoid *(2026-07-09)*
+
+The reference games for NOMAD (rome's homework list + one add), vetted for fit.
+Each: the one thing to **steal**, and the specific **trap** that would hurt NOMAD
+if copied wholesale. The throughline of every trap: **depth belongs in the world,
+clarity in the interface, scope in a small number of deep systems.**
+
+- **Rain World** — *Steal:* creatures with agendas that relate to each other (a
+  food web; you're prey, not protagonist). *Trap:* its deliberate player-hostility
+  and opacity — NOMAD's cruelty is in the world, never the interface. → food-web (approved).
+- **Project Zomboid** — *Steal:* the layered injury model (a wound worsens, needs a
+  specific cure, tells a death-story). *Trap:* the full survival-needs stack
+  (hunger/thirst/mood/temperature) — chore-management, not tension. → afflictions slice.
+- **Kenshi** — *Steal:* the tone — no chosen one, ruin is normal and recoverable, the
+  world won't wait. *Trap:* its aimlessness; a small dungeon needs the extract-pull
+  for a spine.
+- **Dwarf Fortress** — *Steal:* the philosophy — a few deep systems generate stories;
+  "losing is fun." *Trap:* the breadth (biggest scope risk on the list). Litmus: if an
+  idea makes you ADD a system rather than DEEPEN one, it's the trap.
+- **Cataclysm: DDA** — *Steal:* proof deep sim (body-parts, afflictions, item
+  interaction) reads clearly in text. *Trap:* crafting-tree / item-count sprawl — the
+  enemy of scarcity. Depth per item, never item count.
+- **Dark and Darker** — *Steal:* "push deeper vs. leave" as a live decision every few
+  rooms; dread in tight corridors at near-zero content cost. *Trap:* classes +
+  matchmade rounds — NOMAD is persistent and identity-based, not session-classes.
+- **Escape from Tarkov** — *Steal:* extract psychology + secure-container/flea membrane
+  + tiered hard currency (already core). *Trap:* the spreadsheet barrier, and **wipes**
+  — the Nostr identity is permanent by design; a wipe would betray it.
+- **Achaea** — *Steal:* herb/affliction/balance texture + the live mapper (shipped) +
+  MUD-native command feel. *Trap:* the veteran-wall — keep afflictions readable and
+  forgiving-to-learn, or you rebuild the newbie-hostility you design against.
+- **Caves of Qud** (the add) — *Steal:* best-in-class text UX — legible deep sim,
+  rewarding `look`/`examine`, glanceable status. *Trap:* its lore/character-build depth
+  (mutations, skill trees, attributes) — NOMAD's identity is gear + world, not builds.
+- **The gap:** none of these teaches NOMAD's real differentiator — extraction *as a
+  social protocol layer* over Nostr (portable identity, custodial keys). No homework
+  exists for that; it's the part being invented.
 
 ## Storied gear — items with biographies *(the identity feature, 2026-07-07)*
 
@@ -404,18 +558,33 @@ Do NOT build these before there are people; they emerge from density:
 Directions rome likes and wants held for later. Design only; no code
 until he says go.
 
-- **Connection stability — UNCONFIRMED.** rome *may* be seeing intermittent
-  connect/disconnect in prod; not yet confirmed it's real. Audit (2026-07-07):
-  the DO holds players on **in-memory** WebSockets (not the Hibernation API) and
-  there's **no heartbeat** anywhere. Likely everyday trigger if real = idle-timeout
-  reaping (NAT/proxy/mobile kill a silent socket after ~60–120s; ambient lines are
-  too sparse to keep it warm). Two fixes: (1) **quick** — a ~25s client heartbeat
-  (`{t:"ping"}`, server ignores) to keep the socket warm; ~15 lines, near-zero risk,
-  naturally player-gated (client-driven, and the tick already halts at 0 sessions).
-  (2) **proper** — migrate to the **Hibernation API** + `setWebSocketAutoResponse`
-  so sockets survive DO eviction/deploys; bigger (must rebuild in-memory session
-  state on wake). **First step: confirm it's actually happening** (server/DO logs,
-  or reproduce) before building either.
+- **Connection stability — ✅ SHIPPED 2026-07-09 (`dae29c2`).** Both fixes
+  landed together: the 25s client heartbeat (answered by
+  `setWebSocketAutoResponse` without waking the DO) *and* the full Hibernation
+  API migration (sockets survive deploys/evictions; sessions rebuild from
+  D1 + the sim on wake). Remaining: a throwaway-key prod validation pass —
+  connect, deploy while connected, confirm no disconnect.
+- **Guest-key wrapping at rest** *(from the nsec audit, 2026-07-09 — decided
+  AGAINST for now, reasoning recorded)*. The guest nsec lives as plaintext hex
+  in `localStorage.nomad_sk` (and `nomad_sk_prev`). Considered wrapping it with
+  a non-extractable AES-GCM CryptoKey in IndexedDB so a localStorage-only read
+  yields ciphertext. Passed because the gain is thin: XSS defeats it (can run
+  code in-origin), extensions defeat it, and disk-level malware defeats it (the
+  wrapping key sits in the same browser profile). The real walls are the
+  textContent-only render path (no injection surface) and the graduation paths
+  for high-stakes identities (extension / signer app / Google custody — the
+  key never touches the page on the first two). Revisit only if the client
+  ever renders rich/user-URL content, which is also the security-kit trigger.
+  Bare-nsec-paste fix + history masking SHIPPED separately (see sendCmd).
+- **Balance / equilibrium — the action-cost clock** *(from the Achaea pass,
+  2026-07-09 — rome iceboxed this one; keep 1+2, hold 3)*. Achaea's texture comes
+  from every action costing a recovery window you can't act through. Reassessed as
+  the **biggest and riskiest** of the three Achaea ideas — it rewrites the combat
+  cadence everything is tuned to, and it fights [[keep-zone-ts-lean]]. The primitive
+  already exists (`nextThrowAt` is a per-action cooldown; stagger is a forced skip),
+  so if it ever happens it should be **1–2 opportunistic special cases** (a heavy /
+  reckless swing costs you the *next* beat) expressed with those tools — **never** a
+  global balance bar retrofit onto the 4s round. Hold the general system.
 - **Idle kick** (spun off the above) — optionally boot truly-AFK players after N
   minutes of no commands, so a forgotten open tab doesn't hold a live session.
 - **The black market / player trade layer** (rome, 2026-07-07: "for another
@@ -492,6 +661,15 @@ so these rank above the MUD-flavor three when we build:
 
 ## Seasoning (slot anywhere, low cost)
 
+- **Retune mob memory — how long a grudge lasts (ALL mobs)** *(rome, 2026-07-09
+  — icebox, decide the numbers later)*. The lever is `FORGET_MS` (per-mob) +
+  `FORGET_DEFAULT` in `zone-data.ts`, read by `forgetMs()`/`remembers()` in
+  `ai.ts`; killing the creature settles it, `is_boss` → never forgets. Current
+  scale feels off to rome: default **24h**, warden **7 days**, brood/skeleton/
+  dire-hyena **24h**, grave-hyena **12h**, rat/fleet-rat **30min**, cutpurse
+  **20min**. He wants these changed across the board — open question is
+  shorter (less punishing across sessions) vs a re-shaped curve. Pure data/
+  constants edit, no migration; ship whenever the numbers are settled.
 - Day/night: nocturnal creatures, darker descriptions after dusk.
 - Torch burnout when light matters (needs the `light` property).
 - More rooms/creatures for the Door — but content sprawl stays the

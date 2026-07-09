@@ -63,6 +63,8 @@ import {
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, 
   PARTING_BLOW_CHANCE, STANCE, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, LOCKBOX_CAP, VAULT_CAP,
   REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
+  HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
+  PIERCING_WEAPONS, VITALS_HOUND, PLAYER_VITALS,
   SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, BENCH_CHIP, TRADE_CHIP, FORGE_CHIP, DETAILED_MAP,
   MAP_ITEMS, JOURNAL_ITEM, FISHING_ROOMS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
@@ -74,7 +76,8 @@ import {
   PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, SENTINELS, HOUND_WAKE_MS,
   LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
   SCAVENGERS, AGGRO_SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
-  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, BITERS,
+  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, BLUNT_TELL, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
+  BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
   DEEP_HEART, DEEP_DOOR_KEY, HEART_FRESH_SEC, SURFACE_INTERVAL_MS
 } from "./zone-data";
@@ -778,6 +781,25 @@ export class ZoneDO implements DurableObject {
       }
     }
 
+    // A wounded leg doesn't stop you fleeing — it makes you limp clear first. In
+    // a fight, the first attempt starts you dragging toward the exit; you break
+    // away only once HOBBLE_FLEE_MS has passed, exposed the whole time. Out of
+    // combat you just walk (a limp, not a scramble). Deterministic, never a
+    // dice-block. limpingSince gone stale (a prior fight) resets to a fresh drag.
+    if (session.hobbled && this.inCombat(session)) {
+      const now = Date.now();
+      if (!session.limpingSince || now - session.limpingSince > HOBBLE_FLEE_MS * 2) {
+        session.limpingSince = now;
+        this.sendStatus(session);
+        return this.send(session, "Your wounded leg won't answer — you start dragging yourself toward the way out. It takes a moment. (keep at it to break away)", "dmgin");
+      }
+      if (now - session.limpingSince < HOBBLE_FLEE_MS) {
+        return this.send(session, `You're still hauling your bad leg toward the way ${dir} — not clear yet.`, "dmgin");
+      }
+      session.limpingSince = undefined; // enough — you wrench free and go (hobble stays till you rest)
+      this.send(session, "You drag your wounded leg into motion and break away.");
+    }
+
     const doorKey = `${session.roomId}:${dir}`;
     if (exit.key_item === DEEP_HEART && !this.openDoors.has(doorKey)) {
       // The corpse-key door: it takes a heart, and only a fresh one. No hoarded
@@ -935,8 +957,8 @@ export class ZoneDO implements DurableObject {
       if (session.hp < session.maxHp * WOUNDED_FRACTION) dmg = Math.round(dmg * WOUNDED_DMG_MULT);
       // No crit on top: the surprise IS the crit. (Stacked, a pebble
       // one-shots skeletons; unstacked, an ambush is strong, not a cannon.)
-      // A pick's narrow point punches plate: PIERCE ignores that much armor.
-      dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - (weapon ? PIERCE.get(weapon.tmpl.id) ?? 0 : 0)));
+      // A point slips plate, a blunt weapon caves it: both ignore that much armor.
+      dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - this.armorIgnore(weapon)));
       creature.hp -= dmg;
       ai.addGrudge(this, creature, session.pubkey);
       this.roomFeed(session.roomId, `${session.name} falls on ${tmpl.name} without warning!`, session.pubkey);
@@ -1849,6 +1871,30 @@ export class ZoneDO implements DurableObject {
     if (fresh) this.send(victim, `${cap(tmpl.name)} tears you open — the wound won't stop on its own. (bind it, or bleed)`, "dmgin");
   }
 
+  // Leg-goers can hamstring you on a hit: a per-hit chance (HOBBLE_ODDS, tiered
+  // by threat) that leaves you limping — you can still flee, but only after
+  // dragging clear (see cmdGo), and rest mends it. One affliction instance,
+  // sibling of openWound; the HUD's "hobbled" tag reads it. No-op once hobbled.
+  private maybeHobble(victim: Session, tmpl: MobTemplate): void {
+    if (victim.hobbled) return;
+    const odds = HOBBLE_ODDS.get(tmpl.id);
+    if (odds === undefined || !chance(odds)) return;
+    victim.hobbled = true;
+    victim.limpingSince = undefined; // a fresh wound — the drag-clear clock starts on your next flee
+    this.send(victim, `${cap(tmpl.name)} rakes your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
+  }
+
+  // The vitals lottery — the Tarkov headshot. A rare, RANDOM killing hit that
+  // ignores hp and gear: on any landed hit it may find the throat/heart. Armor
+  // over the vitals only buys the odds DOWN toward `base` (never to zero) — naked
+  // doubles it, VITALS_ARMOR_FULL armor reaches the floor. Deliberately random:
+  // the randomness is the equalizer that lets a fresh player kill a geared one.
+  // Shared by PvE (VITALS_PVE) and, when PvP is built, PvP (VITALS_PVP).
+  private vitalsLottery(armor: number, base: number): boolean {
+    const mult = 2 - Math.min(1, Math.max(0, armor) / VITALS_ARMOR_FULL); // 2× naked → 1× fully covered
+    return chance(base * mult);
+  }
+
   // The dressings a player carries, weakest first — the order both a manual
   // `bandage` and the auto-bind reflex draw from. Sealed loot is never spent.
   private carriedBandages(session: Session): CarriedItem[] {
@@ -1977,10 +2023,10 @@ export class ZoneDO implements DurableObject {
         shown.add(id);
       }
     }
-    const regions: Record<string, { label: string; rooms: any[] }> = {
-      gate: { label: "The Gates", rooms: [] },
-      upper: { label: "The Halls", rooms: [] },
-      deep: { label: "The Deep", rooms: [] },
+    const regions: Record<string, { key: string; label: string; rooms: any[] }> = {
+      gate: { key: "gate", label: "The Gates", rooms: [] },
+      upper: { key: "upper", label: "The Halls", rooms: [] },
+      deep: { key: "deep", label: "The Deep", rooms: [] },
     };
     for (const id of shown) {
       const room = world.rooms.get(id)!;
@@ -2278,12 +2324,32 @@ export class ZoneDO implements DurableObject {
               dmg *= 2;
               flourish = pick(CRIT_FLOURISH);
             }
-            // Their hide or plate turns what it can; a blow always bites.
-            // A pick's narrow point punches plate (PIERCE ignores that much).
+            // Their hide or plate turns what it can; a blow always bites. A pick's
+            // point slips plate, a blunt weapon caves it — both ignore that armor,
+            // each with its own tell (pierce takes precedence if a weapon had both).
             const pierceVal = weapon ? PIERCE.get(weapon.tmpl.id) ?? 0 : 0;
-            const pierced = pierceVal > 0 && tmpl.armor > 0; // the point actually beat armor
-            dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - pierceVal));
+            const bluntVal = weapon && weapon.tmpl.stun > 0 ? BLUNT_ARMOR_IGNORE : 0;
+            const pierced = pierceVal > 0 && tmpl.armor > 0; // the point beat armor
+            const crushed = bluntVal > 0 && pierceVal === 0 && tmpl.armor > 0; // the weight beat armor
+            dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - Math.max(pierceVal, bluntVal)));
             creature.hp -= dmg;
+            // The vitals lottery, PLAYER side — a lucky killing blow on a landed
+            // hit. Bosses are the designed wall (never). The three-hound falls this
+            // way ONLY to a piercing weapon, and rarely (VITALS_HOUND). Everything
+            // else: the base rate, the mob's own armor buying it down. Drops to 0 so
+            // the kill runs the normal death path, with a weapon-aware killing line.
+            let pvitals = false;
+            if (creature.hp > 0 && !tmpl.is_boss) {
+              pvitals = creature.templateId === "three-hound"
+                // the sentinel only falls to a point driven through the throat
+                ? PIERCING_WEAPONS.has(weapon?.tmpl.id ?? "") && chance(VITALS_HOUND)
+                : HOLLOW.has(creature.templateId)
+                // no throat to open, no heart to pierce — only a blunt blow that
+                // shatters the skull ends a hollow thing outright
+                ? (weapon?.tmpl.stun ?? 0) > 0 && this.vitalsLottery(tmpl.armor, VITALS_PVE)
+                : this.vitalsLottery(tmpl.armor, VITALS_PVE);
+              if (pvitals) creature.hp = 0;
+            }
             if (creature.hp > 0) {
               // The telling reports what fired THIS beat: a crit shout trumps,
               // else the point through the plate, else a fresh wound that won't
@@ -2295,6 +2361,7 @@ export class ZoneDO implements DurableObject {
               const bleedDry = !!(weapon && weapon.tmpl.bleed > 0 && hollow);
               const tail = flourish !== "." ? flourish
                 : pierced ? ` — ${pick(PIERCE_TELL)}.`
+                : crushed ? ` — ${pick(BLUNT_TELL)}.`
                 : freshBleed ? ` — ${pick(BLEED_TELL)}.`
                 : bleedDry && chance(0.3) ? ` — ${pick(BONE_DRY_TELL)}.`
                 : ".";
@@ -2316,7 +2383,8 @@ export class ZoneDO implements DurableObject {
               this.combatNoise(session.roomId);
               if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
             } else {
-              await this.onCreatureDeath(session, creature, tmpl);
+              await this.onCreatureDeath(session, creature, tmpl,
+                pvitals ? `${this.playerVitalsVerb(weapon, tmpl.name)} — a killing blow.` : undefined);
             }
             // Every landed strike grinds the blade (a sweep grinds it per
             // foe) — and bone or old iron grinds it far faster than flesh.
@@ -2515,6 +2583,16 @@ export class ZoneDO implements DurableObject {
         dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
         dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
         victim.hp -= dmg;
+        // The vitals lottery — the Tarkov headshot. A real threat (not shallow
+        // trash) may find the gap on any landed hit: instant, ignoring what hp
+        // you had left; armor over the vitals only bought the odds down. Drops to
+        // 0 so the killing blow runs through the same death path below.
+        let vitals = false;
+        if (victim.hp > 0 && VITALS_THREATS.has(creature.templateId)
+            && this.vitalsLottery(this.equippedArmor(victim), VITALS_PVE)) {
+          victim.hp = 0;
+          vitals = true;
+        }
         // While a drowned thing has you under, it can drag you deeper — a lungful
         // of black water no armor turns, a share of your very life, and it can be
         // the end of you. The only answer is to break the grip. (Folds into the
@@ -2543,6 +2621,8 @@ export class ZoneDO implements DurableObject {
           }
           // Claws and teeth open a wound the mail can't turn.
           this.openWound(victim, tmpl);
+          // The leg-goers go low — a hit can hamstring you.
+          this.maybeHobble(victim, tmpl);
           // A heavy dead blow can ring YOUR skull — you lose your next swing.
           // One hit, one lost beat; you can't be stun-chained deeper. PADDING
           // (the coif, the riveted lining) takes the ring out of half of them.
@@ -2579,6 +2659,10 @@ export class ZoneDO implements DurableObject {
             }
           }
         } else {
+          if (vitals) {
+            this.send(victim, `${cap(tmpl.name)} ${this.creatureVitals(tmpl.id)} — and the world goes white. (a killing blow)`, "dmgin big");
+            this.roomFeed(victim.roomId, `${cap(tmpl.name)} drops ${victim.name} with one terrible strike.`, victim.pubkey);
+          }
           await this.onPlayerDeath(victim, tmpl);
         }
       }
@@ -2672,11 +2756,14 @@ export class ZoneDO implements DurableObject {
         // A brood-mother swells the nest while she's left alone.
         if (BROODERS.has(creature.templateId)) ai.broodBirths(this, creature, now);
         if (creature.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, creature, false);
-        if (RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)) {
+        // The food web: a predator turns on weaker prey sharing its room. If it
+        // strikes, that's its action this tick — it doesn't also wander.
+        const hunted = await ai.predation(this, creature, now);
+        if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)) {
           // Never settles while there's someone to run from — it keeps moving,
           // room to room, and you only land a blow the tick you have it cornered.
           await ai.creatureMoves(this, creature, now, "wander", false);
-        } else if (creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId)) {
+        } else if (!hunted && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId)) {
           await ai.creatureMoves(this, creature, now, "wander", false);
         }
       }
@@ -2703,6 +2790,14 @@ export class ZoneDO implements DurableObject {
       // in the dungeon, where you're crouched in the open and can be hit (just
       // like reading a map or journal). Only a gate truly takes you out of the
       // world, and there the gatehouse mends you whether you meant to rest or not.
+      // Off your feet and safe, the leg gets bound and braced — the hobble mends
+      // (independent of hp, so a full-health limp still clears).
+      if ((session.resting || sheltered) && !this.inCombat(session) && session.hobbled) {
+        session.hobbled = false;
+        session.limpingSince = undefined;
+        this.send(session, "Off your feet at last, you bind and brace the wounded leg. It will carry you again.");
+        this.sendStatus(session);
+      }
       if ((session.resting || sheltered) && !this.inCombat(session) && session.hp < session.maxHp) {
         session.hp = Math.min(session.maxHp, session.hp + REST_REGEN_PER_TICK);
         this.sendStatus(session);
@@ -2944,7 +3039,7 @@ export class ZoneDO implements DurableObject {
     }
   }
 
-  private async onCreatureDeath(killer: Session, creature: Creature, tmpl: MobTemplate): Promise<void> {
+  private async onCreatureDeath(killer: Session, creature: Creature, tmpl: MobTemplate, killLine?: string): Promise<void> {
     // A revenant doesn't die the first time: it rises weakened and comes again,
     // up to its limit (most rise once; the cairn-wight twice). Only the final
     // fall is real — so bail out of death entirely while it still has a rise.
@@ -2994,7 +3089,7 @@ export class ZoneDO implements DurableObject {
               `You put ${tmpl.name} down for good.`,
               `${cap(tmpl.name)} falls, and the fight goes out of it.`,
               `You finish ${tmpl.name}.`]);
-    this.send(killer, killVerb, "kill big");
+    this.send(killer, killLine ?? killVerb, "kill big");
     this.roomFeed(creature.roomId, `${killer.name} kills ${tmpl.name}.`, killer.pubkey);
     this.roomSound(creature.roomId, "Something falls {dir}, and is still.");
     this.creatureNoise(creature.roomId);
@@ -3110,6 +3205,7 @@ export class ZoneDO implements DurableObject {
         : `${cap(tmpl.name)} is on you before you're set — a first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`, "dmgin big");
       this.sendStatus(victim);
       this.openWound(victim, tmpl); // an ambush by something with claws cuts deep
+      this.maybeHobble(victim, tmpl); // and it can take the leg out from under you
       if (worn) await this.wear(victim, worn.carried, worn.tmpl, ARMOR_WEAR);
       if (CORRODERS.has(creature.templateId)) await this.corrodeTouch(victim, tmpl); // rust doesn't wait its turn either
     } else {
@@ -3126,6 +3222,7 @@ export class ZoneDO implements DurableObject {
     victim.resting = false;
     victim.staggered = false;
     victim.stunned = false;
+    victim.hobbled = false; victim.limpingSince = undefined; // a new body walks whole
     victim.bleedTicks = 0; victim.bleedDmg = 0; // the gate returns you whole — no wound rides back
     victim.buying = undefined; // death ends any open trade; the counter clears
     victim.deaths += 1;
@@ -3323,6 +3420,43 @@ export class ZoneDO implements DurableObject {
     return pick(pool);
   }
 
+  // The vitals-lottery killing blow, in the same register as creatureHit — so the
+  // headshot reads like the thing that landed it (jaws to the throat, iron to the
+  // heart), not one generic line.
+  private creatureVitals(templateId: string): string {
+    const pool = DROWNERS.has(templateId) ? CREATURE_VITALS.water
+      : THIEVES.has(templateId) ? CREATURE_VITALS.knife
+      : BITERS.has(templateId) ? CREATURE_VITALS.teeth
+      : HOLLOW.has(templateId) ? CREATURE_VITALS.bone
+      : CREATURE_VITALS.plain;
+    return pick(pool);
+  }
+
+  // The vitals-lottery killing blow, PLAYER side — the weapon type finds the vital
+  // it's made for (pierce → the throat/skull driven through, edge → the throat
+  // opened, blunt → the skull, thrust → the heart). Pierce is checked before the
+  // stat registers so a pick reads as a point, not a "plain" blow.
+  // How much armor a weapon's blow ignores: a pick's narrow point (PIERCE, per
+  // weapon) or a blunt weapon's crushing weight (BLUNT_ARMOR_IGNORE, any stun>0),
+  // whichever is greater. The single source for both damage paths.
+  private armorIgnore(weapon: { tmpl: ItemTemplate } | null | undefined): number {
+    if (!weapon) return 0;
+    const pierce = PIERCE.get(weapon.tmpl.id) ?? 0;
+    const blunt = weapon.tmpl.stun > 0 ? BLUNT_ARMOR_IGNORE : 0;
+    return Math.max(pierce, blunt);
+  }
+
+  private playerVitalsVerb(weapon: { tmpl: ItemTemplate } | null | undefined, name: string): string {
+    const t = weapon?.tmpl;
+    const reg = !t ? "fist"
+      : PIERCING_WEAPONS.has(t.id) ? "pierce"
+      : t.bleed > 0 ? "edge"
+      : t.stun > 0 ? "blunt"
+      : t.sweep > 1 || t.speed > 1 ? "spear"
+      : "plain";
+    return "You " + pick(PLAYER_VITALS[reg]).replace(/\{n\}/g, name);
+  }
+
   // Carried loot lives ON the holder. An elite spawns bearing its gear (or not)
   // by a roll — so the prize is visible before the fight, and killing an armed
   // one always spills it. Fodder and pups bear nothing.
@@ -3512,6 +3646,14 @@ export class ZoneDO implements DurableObject {
 
   private sendStatus(session: Session): void {
     const room = this.world?.rooms.get(session.roomId);
+    // Active effects, most urgent first — the HUD shows these as glanceable tags
+    // so a wound is never an invisible debuff (the affliction layer reads here).
+    const fx: string[] = [];
+    if (session.seizedBy) fx.push("seized");
+    if (session.stunned) fx.push("stunned");
+    if (session.hobbled) fx.push("hobbled");
+    if (session.bleedTicks && session.bleedTicks > 0) fx.push("bleeding");
+    if (session.resting) fx.push("resting");
     try {
       session.ws.send(
         JSON.stringify({
@@ -3522,6 +3664,7 @@ export class ZoneDO implements DurableObject {
           hp: session.hp,
           max_hp: session.maxHp,
           room: room?.name ?? session.roomId,
+          fx,
         }),
       );
     } catch {}
