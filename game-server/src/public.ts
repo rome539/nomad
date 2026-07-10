@@ -1621,6 +1621,11 @@ function chipLabel(s) {
   if (m) return m[1];
   m = /^stance (reckless|steady|guarded)$/.exec(s);
   if (m) return m[1];
+  // Where the colour already speaks the verb, the label sheds it: a red chip
+  // bites (attack), a gold one gains (get). The button still sends the full
+  // command, and the echo in the log is where the vocabulary rubs off.
+  m = /^(attack|get) (.+)$/.exec(s);
+  if (m) return m[2];
   return s;
 }
 // A chip's colour tells you what tapping it DOES: red bites, green mends, gold
@@ -1659,6 +1664,14 @@ function chipButton(s) {
 // sends them n·s·e·w·u·d), so directions never scramble room to room — only
 // the ones that actually exist are shown, nothing dead. Everything else keeps
 // its order behind them.
+// A crowded room folds its tail: past CHIP_FOLD chips, the rest hide behind a
+// dim "+N more". The server orders by relevance (foes first, housekeeping
+// last), so what folds is never a fight. Expansion sticks while the chip set
+// is unchanged (combat ticks re-send the same list) and collapses when it
+// actually changes.
+var CHIP_FOLD = 12;
+var chipsExpanded = false;
+var lastSuggestKey = "";
 function renderChips(suggest, combat) {
   lastSuggest = suggest;
   lastCombat = !!combat;
@@ -1666,12 +1679,31 @@ function renderChips(suggest, combat) {
   if (!chipsOn) return; // the quiet terminal: no training wheels
   // In combat the chips are fight-only; even the standing 'keys' chip stands down.
   var all = suggest.concat(combat ? [] : ["keys"]);
+  var key = all.join("|");
+  if (key !== lastSuggestKey) { lastSuggestKey = key; chipsExpanded = false; }
   var dirs = [];
   var rest = [];
   all.forEach(function (s) {
     (/^go (north|south|east|west|up|down)$/.test(s) ? dirs : rest).push(s);
   });
-  dirs.concat(rest).forEach(function (s) { chipsEl.appendChild(chipButton(s)); });
+  var ordered = dirs.concat(rest);
+  var folded = 0;
+  if (!chipsExpanded && ordered.length > CHIP_FOLD + 1) {
+    folded = ordered.length - CHIP_FOLD;
+    ordered = ordered.slice(0, CHIP_FOLD);
+  }
+  ordered.forEach(function (s) { chipsEl.appendChild(chipButton(s)); });
+  if (folded > 0) {
+    var more = document.createElement("button");
+    more.type = "button";
+    more.textContent = "+" + folded + " more";
+    more.addEventListener("click", function (e) {
+      e.stopPropagation();
+      chipsExpanded = true;
+      renderChips(lastSuggest, lastCombat);
+    });
+    chipsEl.appendChild(more);
+  }
 }
 
 // ---- the gatehouse bench: sort your pack, out of the world's reach ----
@@ -2108,6 +2140,9 @@ function closeMap() { mapEl.classList.remove("open"); }
 var MAP_CELL = 108;             // px between cell centers at scale 1 (room to breathe)
 var mapGraph = null;
 var mapCam = { cx: 0, cy: 0, scale: 1 };
+// The chart keeps its place: reopening shows where you last left it, not your
+// room. First unrolling centers on you; the crosshair button recenters anytime.
+var mapCamKept = false;
 var mapCv = null, mapCtx = null, mapWrap = null, mapDpr = 1, mapWired = false;
 
 function mapCssVar(name) {
@@ -2145,6 +2180,17 @@ function mapRoundRect(ctx, x, y, w, h, r) {
 // Walk the exit graph onto an integer grid, anchored at the room you're in so
 // the map opens centered on you. Cells that collide (the graph has cycles) get
 // nudged to the nearest free cell and their link is drawn bent.
+// The world stacks like a cutaway: sky-road, then the surface (grounds, gates
+// and halls share one compass-connected plane), the warrens gnawed beneath,
+// the deep at the bottom. Each stratum lays out on its own; no exit line ever
+// crosses between strata — the tiles' \\u25b2\\u25bc badges carry the vertical ways.
+var MAP_BAND_OF = { sky: 0, out: 1, gate: 1, upper: 1, warrens: 2, deep: 3 };
+var MAP_BANDS = [
+  { band: 0, label: "THE OVERWORKS" },
+  { band: 1, label: "THE SURFACE" },
+  { band: 2, label: "THE WARRENS" },
+  { band: 3, label: "THE DEEP" },
+];
 function buildMapGraph(f) {
   var nodes = {}, order = [];
   var regions = f.regions || [];
@@ -2153,7 +2199,8 @@ function buildMapGraph(f) {
     for (var i = 0; i < rooms.length; i++) {
       var rm = rooms[i];
       if (nodes[rm.id]) continue;
-      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, exits: rm.exits || [], here: !!rm.here };
+      var band = MAP_BAND_OF[key] !== undefined ? MAP_BAND_OF[key] : 1;
+      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here };
       order.push(rm.id);
     }
   }
@@ -2168,6 +2215,9 @@ function buildMapGraph(f) {
     var aex = nodes[order[ai2]].exits;
     for (var ae = 0; ae < aex.length; ae++) {
       var at2 = aex[ae]; if (!DELTA[at2.dir] || !nodes[at2.to]) continue;
+      // Strata never merge: a cross-band exit is not a layout constraint, so
+      // every connected piece stays pure to its own stratum.
+      if (nodes[at2.to].band !== nodes[order[ai2]].band) continue;
       adj[order[ai2]].push(at2.to); adj[at2.to].push(order[ai2]);
     }
   }
@@ -2214,29 +2264,41 @@ function buildMapGraph(f) {
     for (var pid in lp) { var p = lp[pid]; if (p.x < mnx) mnx = p.x; if (p.y < mny) mny = p.y; if (p.x > mxx) mxx = p.x; if (p.y > mxy) mxy = p.y; }
     return { lp: lp, mnx: mnx, mny: mny, w: mxx - mnx, h: mxy - mny };
   }
-  // The piece holding your room lays out first (anchored at 0,0 so the map opens
-  // on you); the rest pack into rows beneath it.
-  var placed = {};
-  var hereComp = (f.here !== undefined && compOf[f.here] !== undefined) ? compOf[f.here] : (comps.length ? 0 : -1);
-  var ord = [];
-  for (var c2 = 0; c2 < comps.length; c2++) ord.push(c2);
-  ord.sort(function (a, b) { if (a === hereComp) return -1; if (b === hereComp) return 1; return comps[b].length - comps[a].length; });
-  var startX = 0, startY = 0, cursorX = 0, cursorY = 0, rowH = 0, targetW = 8;
-  for (var oi = 0; oi < ord.length; oi++) {
-    var piece = comps[ord[oi]];
-    var lo = layoutComp(piece, ord[oi] === hereComp ? f.here : piece[0]);
-    var offx, offy;
-    if (oi === 0) {
-      offx = 0; offy = 0;                       // main piece keeps its coords (your room at 0,0)
-      startX = lo.mnx; startY = lo.mny + lo.h + 3;
-      targetW = Math.max(lo.w + 1, 8);
-      cursorX = startX; cursorY = startY; rowH = 0;
-    } else {
-      if (cursorX > startX && (cursorX - startX) + (lo.w + 1) > targetW) { cursorX = startX; cursorY += rowH + 2; rowH = 0; }
-      offx = cursorX - lo.mnx; offy = cursorY - lo.mny;
+  // Strata stack top to bottom in true vertical order; within each, the pieces
+  // (one whole piece on a true map; a crude copy's shattered fragments) pack
+  // into rows, then the whole stratum centers on the shared axis — a cutaway,
+  // not a staircase. The camera opens on your room, wherever it landed.
+  var placed = {}, labels = [];
+  var bandY = 0;
+  for (var bi = 0; bi < MAP_BANDS.length; bi++) {
+    var bcomps = [];
+    for (var c2 = 0; c2 < comps.length; c2++) {
+      if (nodes[comps[c2][0]].band === MAP_BANDS[bi].band) bcomps.push(comps[c2]);
+    }
+    if (!bcomps.length) continue;
+    bcomps.sort(function (a, b) { return b.length - a.length; });
+    var bandIds = [];
+    var cursorX = 0, cursorY = bandY, rowH = 0, targetW = 12;
+    for (var oi = 0; oi < bcomps.length; oi++) {
+      var lo = layoutComp(bcomps[oi], bcomps[oi][0]);
+      if (cursorX > 0 && cursorX + (lo.w + 1) > targetW) { cursorX = 0; cursorY += rowH + 2; rowH = 0; }
+      var offx = cursorX - lo.mnx, offy = cursorY - lo.mny;
+      for (var pid2 in lo.lp) {
+        placed[pid2] = { x: lo.lp[pid2].x + offx, y: lo.lp[pid2].y + offy, displaced: lo.lp[pid2].displaced };
+        bandIds.push(pid2);
+      }
       cursorX += (lo.w + 1) + 2; if (lo.h > rowH) rowH = lo.h;
     }
-    for (var pid2 in lo.lp) placed[pid2] = { x: lo.lp[pid2].x + offx, y: lo.lp[pid2].y + offy, displaced: lo.lp[pid2].displaced };
+    // center this stratum on x = 0
+    var bx0 = 1e9, bx1 = -1e9, by1 = -1e9;
+    for (var bb = 0; bb < bandIds.length; bb++) {
+      var bp = placed[bandIds[bb]];
+      if (bp.x < bx0) bx0 = bp.x; if (bp.x > bx1) bx1 = bp.x; if (bp.y > by1) by1 = bp.y;
+    }
+    var shiftX = -Math.round((bx0 + bx1) / 2);
+    for (var bs = 0; bs < bandIds.length; bs++) placed[bandIds[bs]].x += shiftX;
+    labels.push({ x: bx0 + shiftX - 0.35, y: bandY - 1.05, text: MAP_BANDS[bi].label });
+    bandY = by1 + 3.4; // the gap between strata: room for the label beneath
   }
   var anchor = (f.here && placed[f.here]) ? f.here : (order.length ? order[0] : null);
   var edges = [], stubs = [], seen = {};
@@ -2250,14 +2312,19 @@ function buildMapGraph(f) {
       if (tp) {
         var ek = fid < ex.to ? fid + "|" + ex.to : ex.to + "|" + fid;
         if (seen[ek]) continue; seen[ek] = 1;
+        // A way between strata draws as a faint gold thread across the gap —
+        // the strata never lay out through each other, so these read clean.
+        var cross = nodes[ex.to] && nodes[ex.to].band !== nodes[fid].band;
         var bent = fp.displaced || tp.displaced || Math.abs(fp.x - tp.x) > 1 || Math.abs(fp.y - tp.y) > 1;
-        edges.push({ x1: fp.x, y1: fp.y, x2: tp.x, y2: tp.y, vertical: vertical, bent: bent && !vertical });
-      } else {
+        edges.push({ x1: fp.x, y1: fp.y, x2: tp.x, y2: tp.y, vertical: vertical, cross: !!cross, bent: bent && !vertical && !cross });
+      } else if (!vertical) {
+        // A compass way to a room this copy forgot; vertical stubs stay silent
+        // (the badge already marks them).
         stubs.push({ x: fp.x, y: fp.y, dx: d2[0], dy: d2[1] });
       }
     }
   }
-  return { nodes: nodes, order: order, placed: placed, edges: edges, stubs: stubs, here: anchor };
+  return { nodes: nodes, order: order, placed: placed, edges: edges, stubs: stubs, labels: labels, here: anchor };
 }
 
 function mapResize() {
@@ -2279,9 +2346,9 @@ function drawMap() {
   ctx.lineWidth = Math.max(1, 1.4 * s);
   for (var i = 0; i < g.edges.length; i++) {
     var ed = g.edges[i];
-    ctx.strokeStyle = ed.vertical ? gold : dim;
-    ctx.setLineDash(ed.vertical ? [2 * s, 4 * s] : (ed.bent ? [4 * s, 4 * s] : []));
-    ctx.globalAlpha = ed.vertical ? 0.85 : 1;
+    ctx.strokeStyle = ed.vertical || ed.cross ? gold : dim;
+    ctx.setLineDash(ed.vertical || ed.cross ? [2 * s, 4 * s] : (ed.bent ? [4 * s, 4 * s] : []));
+    ctx.globalAlpha = ed.cross ? 0.4 : ed.vertical ? 0.85 : 1;
     ctx.beginPath(); ctx.moveTo(sx(ed.x1), sy(ed.y1)); ctx.lineTo(sx(ed.x2), sy(ed.y2)); ctx.stroke();
   }
   ctx.setLineDash([]); ctx.globalAlpha = 1;
@@ -2292,6 +2359,16 @@ function drawMap() {
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + su.dx * MAP_CELL * s * 0.5, y0 + su.dy * MAP_CELL * s * 0.5); ctx.stroke();
   }
   ctx.setLineDash([]); ctx.globalAlpha = 1;
+  // stratum names, set faint above each layer of the cutaway
+  if (g.labels) {
+    ctx.fillStyle = dim; ctx.globalAlpha = 0.65;
+    ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    for (var lb = 0; lb < g.labels.length; lb++) {
+      ctx.fillText(g.labels[lb].text.split("").join("\\u2009"), sx(g.labels[lb].x), sy(g.labels[lb].y));
+    }
+    ctx.globalAlpha = 1;
+  }
   // rooms — wide, low label-plates so a name has somewhere to sit
   var tw = MAP_CELL * s * 0.80, th = MAP_CELL * s * 0.33;
   for (var o = 0; o < g.order.length; o++) {
@@ -2363,8 +2440,11 @@ function renderMap(f) {
   }
   wireMap();
   mapGraph = buildMapGraph(f);
-  mapCam.scale = 1;
-  mapCenterHere();
+  if (!mapCamKept) {
+    mapCam.scale = 1;
+    mapCenterHere();
+    mapCamKept = true;
+  }
   closeJournal();
   mapEl.classList.add("open");
   // The canvas has no size until the modal is laid out — size and draw next frame.

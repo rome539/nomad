@@ -6,8 +6,8 @@
 //   node _map.mjs --crude [copy#] (one lying copy      -> nomad-map-crude.png)
 // The crude mode runs the game's own lie-machine (CRUDE_DROP_ROOM 0.30 /
 // CRUDE_BAD_EXIT 0.15, mulberry32-seeded per copy) so every copy number is a
-// different, consistent liar. Self-contained like _assets.mjs: puppeteer-core
-// + system Chrome.
+// different, consistent liar. Renders via system Chrome's headless CLI
+// (puppeteer-core hung against current Chrome; the CLI does not).
 import fs from "fs";
 import os from "os";
 import { execSync } from "child_process";
@@ -60,8 +60,8 @@ if (CRUDE) {
 // panel A = the surface world (incl. gates + cellars); panel B = undercroft + the deep
 const inB = (id) => DEEP.has(id) || id === "undercroft";
 const panels = [
-  { title: "THE SURFACE — THE RING",
-    sub: CRUDE ? "what the copyist remembered of the halls — some of it is right" : "the four gates, the hall and its wings, and the cellars beneath them",
+  { title: "THE SURFACE — GROUNDS, RING & OVERWORKS",
+    sub: CRUDE ? "what the copyist remembered of the halls — some of it is right" : "the open grounds, the gates and halls, the warrens gnawed beneath, and the sky-road above",
     start: "hall", has: (id) => !inB(id) },
   { title: "THE DEEP — THE LONG DESCENT",
     sub: CRUDE ? "what the copyist remembered of the deep — trust it at your peril" : "past the Undercroft’s sealed door: the Drowned Reach, the Sunless Deep, and the King at the bottom",
@@ -206,18 +206,14 @@ ${panelHTML(panels[1])}
 <div class="f2">${CRUDE
   ? `crude copy №${copyNo} · copied from half a memory · the missing rooms are still down there`
   : `drawn from the exit graph, migrations 001 → ${lastMig} — the chart is the code · geography only (unpopulated)`}</div></div>
-</div><script>window.__done=true;</script></body></html>`;
+</div><script>const p=document.getElementById("poster");document.title=p.offsetWidth+"x"+p.offsetHeight;</script></body></html>`;
 const htmlPath = join(os.tmpdir(), "nomad-chart.html");
 fs.writeFileSync(htmlPath, html);
-const { createRequire } = await import("module");
-const require = createRequire(join(DIR, "package.json"));
-const puppeteer = require("puppeteer-core");
-const browser = await puppeteer.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", args: ["--no-sandbox"] });
-const page = await browser.newPage();
-await page.setViewport({ width: 1900, height: 2600, deviceScaleFactor: 2 });
-await page.goto("file://" + htmlPath);
-await page.waitForFunction("window.__done === true", { timeout: 10000 });
+const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const FLAGS = "--headless=new --disable-gpu --no-first-run --hide-scrollbars";
+const dom = execSync(`"${CHROME}" ${FLAGS} --dump-dom "file://${htmlPath}" 2>/dev/null`).toString();
+const m = dom.match(/<title>(\d+)x(\d+)<\/title>/);
+if (!m) { console.error("measure pass failed — no <title>WxH</title> in dumped DOM"); process.exit(1); }
 const out = join(os.homedir(), "Desktop", CRUDE ? "nomad-map-crude.png" : "nomad-map.png");
-await (await page.$("#poster")).screenshot({ path: out });
-await browser.close();
+execSync(`"${CHROME}" ${FLAGS} --force-device-scale-factor=2 --window-size=${m[1]},${m[2]} --screenshot="${out}" "file://${htmlPath}" 2>/dev/null`);
 console.log("chart written:", out);

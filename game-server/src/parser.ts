@@ -244,6 +244,8 @@ export const HELP_TEXT = [
   "  go <direction>    or just: n s e w u d",
   "  say <words>       (') — speak to the room",
   "  attack <mob>      (k, kill) — engage; combat resolves in rounds. Move to flee.",
+  "                    Two of a kind? 'attack second hyena' or 'look hyena 2'",
+  "                    picks by the order the room lists them.",
   "                    You focus one foe, turning to the next the moment it falls —",
   "                    but everything on you hits back. Fast steel swings twice;",
   "                    sweeping steel drags through a crowd; light armor dodges",

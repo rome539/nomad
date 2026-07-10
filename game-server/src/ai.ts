@@ -5,24 +5,40 @@
 import type { ZoneDO } from "./zone";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
-import { randInt, chance, uuid } from "./rng";
+import { randInt, chance, uuid, pick } from "./rng";
 import { cap } from "./zone-util";
 import {
-  FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT,
+  FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP,
   PREYS_ON, PREDATION_ODDS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
   RUNNERS, BROODERS, SENTINELS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
-  MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE,
+  MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
   DEEP_ROOMS, SURFACED_STALE_MS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
   // cousin. Shared by first-light seeding and migration refills.
-export function rollBloodline(z: ZoneDO, tmpl: MobTemplate): MobTemplate {
+export function rollBloodline(z: ZoneDO, tmpl: MobTemplate, room?: string): MobTemplate {
     const world = z.world!;
     for (const v of world.mobVariants) {
       if (v.baseId !== tmpl.id || !chance(v.chance)) continue;
+      // A nester is immortal and sessile, so every extra mother is forever.
+      // Her law (rome, 2026-07-10): mothers may spread across the dungeon, but
+      // only into a den of her line, and never two to a room — a promotion
+      // needs a known destination that's a vacant nest.
+      if (BROODERS.has(v.variantId)) {
+        if (!room) continue;
+        const denRooms = new Set(
+          world.mobSpawns.filter((s) => s.template_id === tmpl.id || s.template_id === v.variantId).map((s) => s.room_id),
+        );
+        if (!denRooms.has(room)) continue;
+        let occupied = false;
+        for (const c of z.creatures.values()) {
+          if (c.templateId === v.variantId && c.roomId === room) { occupied = true; break; }
+        }
+        if (occupied) continue;
+      }
       const vt = world.mobTemplates.get(v.variantId);
       if (vt) return vt;
     }
@@ -47,13 +63,30 @@ export function reconcilePopulation(z: ZoneDO, world: World): number {
     }
     const byLine = new Map<string, Creature[]>();
     for (const c of z.creatures.values()) {
-      const line = z.variantBase.get(c.templateId) ?? c.templateId;
+      // Same own-row rule as scheduleArrivals: a variant with its own dens is
+      // its own line here, so a warren that piled up seeded mothers sheds them
+      // on the next load instead of hiding them inside the rat count.
+      const line = caps.has(c.templateId) ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
       const list = byLine.get(line) ?? [];
       list.push(c);
       byLine.set(line, list);
     }
     let culled = 0;
     for (const [line, list] of byLine) {
+      // Mothers keep their own law (rome, 2026-07-10): one to a room, dens of
+      // her line only. Anything stacked or off-den sheds; the spread ones stay.
+      if (BROODERS.has(line)) {
+        const base = z.variantBase.get(line) ?? line;
+        const denRooms = new Set(
+          world.mobSpawns.filter((s) => s.template_id === line || s.template_id === base).map((s) => s.room_id),
+        );
+        const seated = new Set<string>();
+        for (const c of list) {
+          if (!denRooms.has(c.roomId) || seated.has(c.roomId)) { z.creatures.delete(c.id); culled++; }
+          else seated.add(c.roomId);
+        }
+        continue;
+      }
       const cap = caps.get(line) ?? 0;
       if (list.length <= cap) continue;
       const homes = dens.get(line) ?? [];
@@ -305,6 +338,8 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     }
 
     const from = creature.roomId;
+    // What beat it colors how it runs — read before the flee clears the target.
+    const fledFrom = mode === "flee" ? creature.target : null;
     creature.roomId = exit.to_room;
     creature.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
     // Beyond its territory a creature travels with purpose — the walk in from
@@ -323,11 +358,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // isn't wounded at all: it just darts, whole and gone.
       const hurt = HURT_STYLE[tmpl.id];
       const runner = RUNNERS.has(tmpl.id);
+      const fleeFam = FLEE_TELL[fledFrom ? z.fleeStyleOf(fledFrom) : "plain"] ?? FLEE_TELL.plain;
       const outLine = mode !== "flee"
         ? `${cap(tmpl.name)} ${tmpl.is_boss ? "moves" : "slips away"} ${exit.dir}.`
         : runner ? `${cap(tmpl.name)} darts ${exit.dir} and is gone.`
         : hurt ? `${cap(tmpl.name)} ${hurt.out.replace("{dir}", exit.dir)}`
-        : `${cap(tmpl.name)} flees ${exit.dir}, bleeding.`;
+        : `${cap(tmpl.name)} ${pick(fleeFam.out).replace("{dir}", exit.dir)}`;
       // Idle wandering stays LOCAL (off the relay) — that was the flood. A
       // creature FLEEING is a beat in a fight a watcher's following, so that one
       // still reaches the relay.
@@ -335,7 +371,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       z.roomFeed(from, outLine, undefined, toRelay);
       const inLine = mode !== "flee" ? "creeps in."
         : runner ? "skitters in, already looking for the next way out."
-        : hurt ? hurt.in_ : "bursts in, bleeding.";
+        : hurt ? hurt.in_ : pick(fleeFam.in_);
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`, undefined, toRelay);
       z.roomSound(
         creature.roomId,
@@ -572,6 +608,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
   // game, so your own fresh kill is safe while you're standing over it.
 export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     if (!SCAVENGERS.has(creature.templateId)) return;
+    if ((creature.carries?.length ?? 0) >= SCAVENGER_CARRY_CAP) return;
     if (playerPresent(z, creature.roomId)) return;
     const floor = z.ground.get(creature.roomId);
     if (!floor?.length) return;
@@ -603,7 +640,11 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
     // around every promotion and swell past its caps).
     const alive = new Map<string, number>();
     for (const c of z.creatures.values()) {
-      const line = z.variantBase.get(c.templateId) ?? c.templateId;
+      // A variant with its own den rows (the seeded brood-mother, the grounds'
+      // fleet-rats) counts against ITS cap; only rolled promotions fold into
+      // the base line. Folding everything made the designed mother invisible
+      // to her own cap — the warren minted mothers forever.
+      const line = caps.has(c.templateId) ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
       alive.set(line, (alive.get(line) ?? 0) + 1);
     }
     for (const [templateId, cap_] of caps) {
@@ -626,29 +667,30 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
       z.arrivals.delete(templateId);
       const baseTmpl = world.mobTemplates.get(templateId);
       if (!baseTmpl) continue;
-      // Rare blood: what refills the ground is usually the ordinary version,
-      // once in a while the mean cousin. (Spawn rows belong to the base.)
-      const tmpl = rollBloodline(z, baseTmpl);
       // Migrants respect the threshold too: nothing ordinary arrives AT a
       // gate (same rule as wandering), or a rat could materialize on top
       // of a respawn. Boss homes are wherever they are.
       let homes = world.mobSpawns.filter((s) => s.template_id === templateId).map((s) => s.room_id);
-      if (!tmpl.is_boss) {
+      if (!baseTmpl.is_boss) {
         const inner = homes.filter((r) => !world.entryRooms.has(r));
         if (inner.length) homes = inner;
       }
       // One mother to a room: a nest with two fountains is a meat grinder. Steer
-      // a respawning brood-mother to a home that hasn't already got one (fall
+      // a respawning designed mother to a nest that hasn't already got one (fall
       // back to her homes if every nest is taken).
-      if (BROODERS.has(tmpl.id)) {
+      if (BROODERS.has(baseTmpl.id)) {
         const taken = new Set<string>();
         for (const c of z.creatures.values()) {
-          if (c.templateId === tmpl.id) taken.add(c.roomId);
+          if (c.templateId === baseTmpl.id) taken.add(c.roomId);
         }
         const open = homes.filter((r) => !taken.has(r));
         if (open.length) homes = open;
       }
       const home = homes[randInt(0, Math.max(0, homes.length - 1))] ?? world.entryRoom;
+      // Rare blood, rolled with the den known: what refills the ground is
+      // usually the ordinary version, once in a while the mean cousin — and a
+      // brood promotion only lands on a vacant nest of her line.
+      const tmpl = rollBloodline(z, baseTmpl, home);
       // Migration is a walk, not a materialization: a walker surfaces at the
       // dark mouth nearest its den and makes its way in (territory homing does
       // the walking). The sessile — mothers, the drowned — and the boss simply

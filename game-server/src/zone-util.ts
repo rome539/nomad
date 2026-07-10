@@ -44,6 +44,27 @@ export function shortName(name: string): string {
   return words[words.length - 1] ?? name.toLowerCase();
 }
 
+// "second hyena", "2 hyena", "2.hyena", "hyena 2" — which of several same-named
+// things you mean, counted in the order the room lists them. Plain "hyena" is
+// the first.
+const ORDINAL_WORDS = ["first", "second", "third", "fourth", "fifth", "sixth"];
+export function parseOrdinal(arg: string): { nth: number; rest: string } {
+  let m = arg.match(/^(\d+)(?:st|nd|rd|th)?[. ]\s*(.+)$/);
+  if (m) return { nth: parseInt(m[1], 10), rest: m[2] };
+  const words = arg.split(/\s+/);
+  const wi = ORDINAL_WORDS.indexOf(words[0]);
+  if (wi >= 0 && words.length > 1) return { nth: wi + 1, rest: words.slice(1).join(" ") };
+  m = arg.match(/^(.+?)\s+(\d+)$/);
+  if (m) return { nth: parseInt(m[2], 10), rest: m[1] };
+  return { nth: 1, rest: arg };
+}
+
+// A chip addresses a specific thing, so it carries the whole name — the
+// variant IS the warning ("attack albino rat", never just "attack rat").
+export function chipName(name: string): string {
+  return name.replace(/^(a|an|the)\s+/i, "").toLowerCase();
+}
+
 // "attack rat" should hit "a scabby rat"; articles don't count.
 export function nameMatches(name: string, arg: string): boolean {
   const n = name.toLowerCase();

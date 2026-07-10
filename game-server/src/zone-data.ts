@@ -161,8 +161,8 @@ export const HUNGER_MAX = 100;
 export const HUNGRY_AT = 50;
 export const WANDER_MIN_MS = 45_000;
 export const WANDER_MAX_MS = 150_000;
-export const FLEE_BELOW = 0.25;
-export const FLEE_CHANCE = 0.5; // per tick once below the threshold
+export const FLEE_BELOW = 0.18; // flesh runs only when nearly done (was 0.25 — everything bolted early)
+export const FLEE_CHANCE = 0.2; // per round once below the threshold (was 0.5)
 export const MIGRATION_FACTOR = 10; // respawn_secs * this = how long an EMPTY/solo zone takes to refill (was 20; halved so leaner rooms don't feel dead)
 // A busy dungeon refills faster: more wanderers, more blood and disturbance,
 // more drawn up from the dark. The effective factor is divided by the number
@@ -262,7 +262,13 @@ export const TERRITORY_RADIUS = 3;
 // a forgotten hole, cracks the dungeon never sealed. A refill surfaces at the
 // mouth nearest its den and walks in; nothing materializes in a watched room.
 // (The sessile — brood-mothers, the drowned — simply are where they live.)
-export const MOUTHS = ["well", "oubliette", "kennels", "catacomb", "the-weir", "root-vault"];
+export const MOUTHS = [
+  "well", "oubliette", "kennels", "catacomb", "the-weir", "root-vault",
+  // The outside keeps its own dark edges: the grounds' beasts come in from
+  // the fen and the briars, the shallow warrens breathe through the sewer-slip
+  // — not out of the crypt. Kills the migrant parade through the keep's ring.
+  "the-black-fen", "the-briar-field", "the-sewer-slip",
+];
 
 // The warden walks its rounds — it always has ("armor... still walking its
 // rounds"). Knocked off the route (fled, investigated), it drifts back. It
@@ -326,6 +332,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
 export const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
+export const SCAVENGER_CARRY_CAP = 3; // jaws only hold so much — gear it can drag off before it stops scooping
 export const BOLD_DMG_MULT = 1.35; // a gorged scavenger swings harder
 
 // ---- the deep-dwellers (built SOFT; every trick has an answer) ----
@@ -471,17 +478,24 @@ export const WEAPON_VERBS: Record<string, string[]> = {
 // The trait-tell: a short clause the swing appends when a MECHANIC actually
 // fires this beat, so the prose reads out the system — a point through plate, a
 // wound that won't clot. (Stun keeps its own line for the thud; crit trumps all.)
+// Plate language belongs ONLY to the hollow — they're the ones in old steel.
+// A living thing's armor is hide and muscle, so every tell splits by target:
+// no rock ever "caves the plate" of a hyena (rome's audit, 2026-07-10).
 export const PIERCE_TELL = [
   "the point finds the gap in its plate", "the narrow point punches through",
   "it slips past the armor", "plate can't turn a point like that", "the point bites past the guard",
 ];
-// A blunt weapon defeats armor differently than a point: it doesn't slip the
-// plate, it caves it. Shown when a crushing blow beats armor (parallel to
-// PIERCE_TELL); its own voice so a mace never "punches through a gap".
+export const PIERCE_TELL_FLESH = [
+  "the point slips between the ribs", "it sinks deep where the hide runs thin",
+  "no hide turns a point like that", "the point finds the soft beneath the shoulder",
+  "it goes in far too easily",
+];
+// A blunt weapon against a living thing: weight against meat and bone.
+// (Its bone cousin below keeps the dry voice for the hollow.)
 export const BLUNT_TELL = [
-  "the blow caves the plate", "steel buckles under the weight of it",
-  "armor is no help against a blow like that", "it drives the plate into the flesh beneath",
-  "the sheer weight of it goes straight through the guard",
+  "something cracks deep under the weight of it", "ribs flex and give beneath the blow",
+  "tough hide is no answer to a blow like that", "it lands with a wet, heavy crunch",
+  "the whole flank shudders under it",
 ];
 // The same crushing blow against the HOLLOW: there's no flesh under that plate,
 // only old bone — the crush speaks bone, never meat (rome's audit, 2026-07-10).
@@ -490,6 +504,48 @@ export const BLUNT_TELL_BONE = [
   "something snaps dry under the weight of it", "the frame beneath the armor gives with a crunch",
   "steel buckles, and the bone under it goes with it",
 ];
+// How a beaten thing runs tells you what beat it: an edge leaves a trail, a
+// weight leaves a broken gait, a point leaves it stuck and leaking. Per-mob
+// HURT_STYLE (the drowned's wet exits) outranks these; the fleet-rat's
+// whole-bodied dart outranks everything. {dir} is the way out.
+export const FLEE_TELL: Record<string, { out: string[]; in_: string[] }> = {
+  edge: {
+    out: [
+      "flees {dir}, trailing blood.",
+      "breaks and runs {dir}, a red line following it across the stone.",
+      "staggers away {dir}, dripping where the edge opened it.",
+      "bolts {dir}, slick and shining with its own blood.",
+    ],
+    in_: ["bursts in, bleeding.", "staggers in, leaving red on the stones."],
+  },
+  blunt: {
+    out: [
+      "drags itself {dir}, something broken inside.",
+      "lurches away {dir}, moving all wrong where the weight landed.",
+      "staggers {dir}, wheezing through what the blow caved in.",
+      "hauls itself {dir}, one side hanging useless.",
+    ],
+    in_: ["lurches in, broken-gaited.", "staggers in, holding itself wrong."],
+  },
+  pierce: {
+    out: [
+      "flees {dir}, hunched around the hole in it.",
+      "staggers away {dir}, leaking from somewhere deep.",
+      "bolts {dir}, the wound in it whistling wet.",
+      "scrambles {dir}, stuck deep and leaving a thin dark trail.",
+    ],
+    in_: ["staggers in, hunched around a deep wound.", "scrambles in, leaking."],
+  },
+  plain: {
+    out: [
+      "breaks and flees {dir}, beaten.",
+      "scrambles away {dir}, wanting no more of it.",
+      "turns and runs {dir}, beaten bloody.",
+      "flees {dir}, ragged and done.",
+    ],
+    in_: ["scrambles in, beaten and wild-eyed.", "staggers in, running from something."],
+  },
+};
 export const BLEED_TELL = [
   "the wound weeps and won't close", "the cut runs deep and stays open",
   "it opens, and keeps bleeding", "blood follows the blade back out", "the gash won't clot",
@@ -634,11 +690,18 @@ export const BLUNT_ARMOR_IGNORE = 2;
 export const TWO_HANDED = new Set(["war-pike", "abyssal-harpoon"]);
 // PADDED: a mob's stun rings you half as often. Best piece counts — padding
 // under padding is just padding (the trait is a boolean, it never stacks).
-export const PADDED = new Set(["quilted-coif", "riveted-cuirass"]);
+// Wards stun: padding halves stun odds. The padded-jerkin finally earns its
+// name, and the deadplate's grave-quiet mass shrugs the ringing off (its
+// answer to the lighter chitin — every epic body is a different bet).
+export const PADDED = new Set(["quilted-coif", "riveted-cuirass", "padded-jerkin", "deadplate-harness"]);
 export const PADDED_STUN_MULT = 0.5;
-// WARDHIDE: claw-wounds (armor-ignoring bleed) open half as often. Rolls
-// SEPARATELY from guarded stance — hide under a guard stacks to a quarter.
+// The wound wards, split by what the fiction can honestly promise:
+// WARDHIDE (thick hide) pads the whole body — bleeds AND leg-rakes turned.
+// MAILWARD (riveted rings) turns edges only — a cut skates, but a hyena can
+// still yank the leg out from under the mail. Both roll SEPARATELY from
+// guarded stance, so hide under a guard stacks to a quarter.
 export const WARDHIDE = new Set(["thick-hide-jack", "sentinels-mantle"]);
+export const MAILWARD = new Set(["mail-hauberk"]);
 export const WARDHIDE_WOUND_ODDS = 0.5;
 // Per-hit chance a bleeder actually opens a wound — bleed is no longer guaranteed
 // on every landed hit (that stacked far too hard, a pack of hyenas kept you

@@ -50,7 +50,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { hashSeed, mulberry32, cap, dirPhrase, shortName, nameMatches, rollGearCondition } from "./zone-util";
+import { hashSeed, mulberry32, cap, dirPhrase, shortName, chipName, nameMatches, parseOrdinal, rollGearCondition } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent } from "./signing";
 import { publishEvent, relayList } from "./relay";
@@ -62,7 +62,7 @@ import {
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, 
   PARTING_BLOW_CHANCE, STANCE, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, LOCKBOX_CAP, VAULT_CAP,
-  REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
+  REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
   PIERCING_WEAPONS, VITALS_HOUND, PLAYER_VITALS,
   SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
@@ -76,7 +76,7 @@ import {
   PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, SENTINELS, HOUND_WAKE_MS,
   LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
   SCAVENGERS, AGGRO_SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
-  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
+  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
   DEEP_HEART, DEEP_DOOR_KEY, HEART_FRESH_SEC, SURFACE_INTERVAL_MS,
@@ -230,7 +230,7 @@ export class ZoneDO implements DurableObject {
         if (!base) continue;
         // Even at first light, rare blood: a den is usually the ordinary
         // version, once in a while the mean cousin.
-        const tmpl = ai.rollBloodline(this, base);
+        const tmpl = ai.rollBloodline(this, base, spawn.room_id);
         this.creatures.set(spawn.id, {
           id: spawn.id,
           templateId: tmpl.id,
@@ -768,7 +768,9 @@ export class ZoneDO implements DurableObject {
       // The examine reads its live state in a full sentence (the room glance gets
       // the same tell as a terser clause) — a wound, a hunt, a hungry eye on a rival.
       const tell = ai.creatureTell(this, creature, session.pubkey);
-      return this.send(session, `${tmpl.description} (${this.condition(creature)})${tell ? ` It is ${tell}.` : ""}`);
+      // The burdened one is identifiable on a close look: what it took, it shows.
+      const bears = this.bearsClause(creature);
+      return this.send(session, `${tmpl.description} (${this.condition(creature)})${tell ? ` It is ${tell}.` : ""}${bears ? ` It is ${bears.slice(2)}.` : ""}`);
     }
     const groundItem = this.findItemIn(this.ground.get(session.roomId) ?? [], arg);
     if (groundItem) return this.send(session, world.itemTemplates.get(groundItem)!.description);
@@ -1480,7 +1482,7 @@ export class ZoneDO implements DurableObject {
       // than vanish — pick it up when you've made room. Coffer gear is `kept` —
       // stored and preserved, so it comes out better than corpse-stripped gear.
       if (await this.grantItem(session, item.id, { kept: true })) {
-        this.send(session, `Inside: ${item.name}.${this.itemStat(item)} [${item.rarity}] (unclaimed — the gate can seal it)`);
+        this.send(session, `Inside: ${item.name}.${this.itemStat(item)} [${item.rarity}] ${this.lootSuffix(item)}`);
       } else {
         this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), item.id]);
         if (item.slot !== "") this.groundCond.set(`${item.id}@${session.roomId}`, rollGearCondition(item.slot, true));
@@ -1641,8 +1643,9 @@ export class ZoneDO implements DurableObject {
     const pierce = PIERCE.get(t.id);
     if (pierce) bits.push(`pierces ${pierce}`);
     if (TWO_HANDED.has(t.id)) bits.push("two-handed");
-    if (PADDED.has(t.id)) bits.push("padded");
+    if (PADDED.has(t.id)) bits.push("wards stun");
     if (WARDHIDE.has(t.id)) bits.push("wards wounds");
+    if (MAILWARD.has(t.id)) bits.push("wards bleeds");
     if (QUIET_ITEMS.has(t.id)) bits.push("quiet");
     if (SLICK.has(t.id)) bits.push("slick");
     if (STRAPPED.has(t.id)) bits.push("strapped-down");
@@ -1661,6 +1664,13 @@ export class ZoneDO implements DurableObject {
   // A fungible pack item — trophies, food, scrap, keys, cigarettes. Many share
   // one slot. Gear (has a slot), sealed items (own serial), journals (own pages),
   // and maps (own reading) are each their own slot and never stack.
+  // The pickup tag must not promise what the gate refuses (cmdClaim turns
+  // trophies away — no title on fungibles), so a stackable's tag talks trade.
+  private lootSuffix(item: ItemTemplate): string {
+    if (!this.stackable(item.id, null)) return "(unclaimed — the gate can seal it)";
+    return item.edible ? "(unclaimed — good, fresh food)" : "(no title to seal — the keeper trades in these, or the lockbox keeps them)";
+  }
+
   public stackable(itemId: string, serial: number | null, journalId?: string): boolean {
     if (serial !== null || journalId) return false;
     if (MAP_ITEMS.has(itemId) || itemId === JOURNAL_ITEM) return false;
@@ -1972,10 +1982,15 @@ export class ZoneDO implements DurableObject {
       this.send(victim, `${cap(tmpl.name)} rakes for you, but your guard turns the worst of it — no wound opens.`, "block");
       return;
     }
-    // WARDHIDE is the gear answer, and it rolls separately — thick hide under
-    // a guard stacks (0.5 × 0.5): the full turtle bleeds a quarter as often.
+    // The wound wards are the gear answer, and they roll separately — hide (or
+    // mail) under a guard stacks (0.5 × 0.5): the full turtle bleeds a quarter
+    // as often. Mail turns edges too: that's what the rings are FOR.
     if (this.wearsTrait(victim, WARDHIDE) && !chance(WARDHIDE_WOUND_ODDS)) {
       this.send(victim, `${cap(tmpl.name)} drags claws through the thick hide and finds less than it wanted — no wound opens.`, "block");
+      return;
+    }
+    if (this.wearsTrait(victim, MAILWARD) && !chance(WARDHIDE_WOUND_ODDS)) {
+      this.send(victim, `${cap(tmpl.name)} rakes across the rings and the edge skates — no wound opens.`, "block");
       return;
     }
     const fresh = !victim.bleedTicks;
@@ -1992,6 +2007,13 @@ export class ZoneDO implements DurableObject {
     if (victim.hobbled) return;
     const odds = HOBBLE_ODDS.get(tmpl.id);
     if (odds === undefined || !chance(odds)) return;
+    // The ward covers the whole wound family (rome, 2026-07-10): hide thick
+    // enough to turn a bleed turns the leg-rake too. Its own roll, same odds
+    // as the bleed ward, so the two afflictions read as one defense.
+    if (this.wearsTrait(victim, WARDHIDE) && !chance(WARDHIDE_WOUND_ODDS)) {
+      this.send(victim, `${cap(tmpl.name)} rakes for your leg — the thick hide takes it, and your stride holds.`, "block");
+      return;
+    }
     victim.hobbled = true;
     victim.limpingSince = undefined; // a fresh wound — the drag-clear clock starts on your next flee
     this.send(victim, `${cap(tmpl.name)} rakes your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
@@ -2480,7 +2502,7 @@ export class ZoneDO implements DurableObject {
               const freshBleed = !!(weapon && weapon.tmpl.bleed > 0 && !hollow && !creature.bleedTicks);
               const bleedDry = !!(weapon && weapon.tmpl.bleed > 0 && hollow);
               const tail = flourish !== "." ? flourish
-                : pierced ? ` — ${pick(PIERCE_TELL)}.`
+                : pierced ? ` — ${pick(HOLLOW.has(tmpl.id) ? PIERCE_TELL : PIERCE_TELL_FLESH)}.`
                 : crushed ? ` — ${pick(HOLLOW.has(tmpl.id) ? BLUNT_TELL_BONE : BLUNT_TELL)}.`
                 : freshBleed ? ` — ${pick(BLEED_TELL)}.`
                 : bleedDry && chance(0.3) ? ` — ${pick(BONE_DRY_TELL)}.`
@@ -2624,9 +2646,10 @@ export class ZoneDO implements DurableObject {
         // A fire-fearing thing (the albino rat, for now) breaks and runs from a
         // flame-bearer whatever its health — see ai.dreadsFire. Dormant until
         // torches exist (carriesFire is false today).
+        // Empty bone knows no fear: the hollow fight until they come apart.
         const wantsFlee = ai.dreadsFire(this, creature, victim)
           || RUNNERS.has(tmpl.id)
-          || (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
+          || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
         if (wantsFlee && !tmpl.is_boss && !ai.scavengerBold(this, creature)) {
           await ai.creatureMoves(this, creature, now, "flee", false);
           continue;
@@ -3267,7 +3290,7 @@ export class ZoneDO implements DurableObject {
       const item = this.world!.itemTemplates.get(tmpl.loot_item);
       if (item) {
         if (await this.grantItem(killer, item.id)) {
-          this.send(killer, `${cap(item.name)} falls into your hands. [${item.rarity}] (unclaimed — the gate can seal it)`);
+          this.send(killer, `${cap(item.name)} falls into your hands. [${item.rarity}] ${this.lootSuffix(item)}`);
         } else {
           this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), item.id]);
           this.send(killer, `${cap(item.name)} falls from ${tmpl.name} — your pack is full, so it lies here. [${item.rarity}]`);
@@ -3364,6 +3387,7 @@ export class ZoneDO implements DurableObject {
     victim.stunned = false;
     victim.hobbled = false; victim.limpingSince = undefined; // a new body walks whole
     victim.bleedTicks = 0; victim.bleedDmg = 0; // the gate returns you whole — no wound rides back
+    victim.litUntil = undefined; victim.torchWarned = undefined; // the torch went down with the body; the gate gives back breath, not fire
     victim.buying = undefined; // death ends any open trade; the counter clears
     victim.deaths += 1;
     await recordDeath(this.env.DB, victim.pubkey);
@@ -3685,17 +3709,23 @@ export class ZoneDO implements DurableObject {
     for (const id of creature.carries) {
       const t = this.world!.itemTemplates.get(id);
       if (!t) continue;
-      const verb = t.slot === "weapon" ? "wielding" : t.slot === "" ? "dragging" : "clad in";
+      // A beast drags everything in its jaws; only something with hands wields or wears.
+      const verb = SCAVENGERS.has(creature.templateId) ? "dragging"
+        : t.slot === "weapon" ? "wielding" : t.slot === "" ? "dragging" : "clad in";
       clauses.push(`${verb} ${t.name}`);
     }
     return clauses.length ? `, ${clauses.join(" and ")}` : "";
   }
 
   private findCreatureIn(roomId: string, arg: string): Creature | null {
+    // "attack second hyena" / "look hyena 2": duplicates count in the same
+    // order the room glance lists them, so what you read is what you address.
+    const { nth, rest } = parseOrdinal(arg);
+    let seen = 0;
     for (const creature of this.creatures.values()) {
       if (creature.roomId !== roomId) continue;
       const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
-      if (nameMatches(tmpl.name, arg)) return creature;
+      if (nameMatches(tmpl.name, rest) && ++seen === nth) return creature;
     }
     return null;
   }
@@ -3813,8 +3843,9 @@ export class ZoneDO implements DurableObject {
       : "plain steel";
     const armor = this.equippedArmor(session);
     const traits: string[] = [];
-    if (this.wearsTrait(session, PADDED)) traits.push("padded (stun softened)");
-    if (this.wearsTrait(session, WARDHIDE)) traits.push("wardhide (wounds turned)");
+    if (this.wearsTrait(session, PADDED)) traits.push("wards stun (odds halved)");
+    if (this.wearsTrait(session, WARDHIDE)) traits.push("wards wounds (bleeds and leg-rakes turned)");
+    if (this.wearsTrait(session, MAILWARD)) traits.push("wards bleeds (edges skate off the rings)");
     if (this.wearsTrait(session, QUIET_ITEMS)) traits.push("quiet (soft-footed)");
     if (this.wearsTrait(session, SLICK)) traits.push("slick (hard to seize)");
     if (this.wearsTrait(session, STRAPPED)) traits.push("strapped (theft-proof)");
@@ -3845,6 +3876,15 @@ export class ZoneDO implements DurableObject {
       // The braggart's ledger rides the doll too — the figure knows its history.
       tally: { kills: session.kills, deaths: session.deaths, boss: session.bossKills, pvp: session.pvpKills, born: session.born },
     };
+  }
+
+  // The wound a fleeing thing runs with remembers the weapon that beat it
+  // (ai's FLEE_TELL): the sheet's six styles collapsed to four flee voices.
+  public fleeStyleOf(pubkey: string): string {
+    const foe = [...this.sessions.values()].find((s) => s.pubkey === pubkey && !this.outOfWorld(s));
+    const t = foe ? this.equippedItem(foe, "weapon")?.tmpl : null;
+    if (!t) return "plain";
+    return PIERCING_WEAPONS.has(t.id) ? "pierce" : t.stun > 0 ? "blunt" : "edge";
   }
 
   // The shield on your arm gives its block chance (scaled by wear) — and a
@@ -3948,13 +3988,20 @@ export class ZoneDO implements DurableObject {
     // A lurker lying in wait is unseen — no chip gives it away, same as the room
     // description holds its tongue.
     let creatureHere = false;
+    // Duplicates get numbered ("attack rat 2") with the SAME matcher and order
+    // findCreatureIn uses, so the chip and the blade always agree — an albino
+    // rat counts as a "rat" too, and the plain-rat chips number around it.
+    const chipNamesSeen: string[] = [];
     for (const creature of this.creatures.values()) {
       if (creature.roomId !== session.roomId) continue;
       // Torchlight reveals a waiting lurker — so it also gets its attack chip.
       if (LURKERS.has(creature.templateId) && creature.hidden && !creature.target && !this.carriesLight(session)) continue;
       creatureHere = true;
       const tmpl = world.mobTemplates.get(creature.templateId)!;
-      suggest.push(`attack ${shortName(tmpl.name)}`);
+      const label = chipName(tmpl.name);
+      chipNamesSeen.push(tmpl.name);
+      const n = chipNamesSeen.filter((nm) => nameMatches(nm, label)).length;
+      suggest.push(`attack ${label}${n > 1 ? ` ${n}` : ""}`);
     }
     // A throwable in hand and something to throw it at: offer the opener.
     if (creatureHere) {
@@ -3964,7 +4011,7 @@ export class ZoneDO implements DurableObject {
       const firstMob = [...this.creatures.values()].find((c) => c.roomId === session.roomId);
       if (throwable && firstMob) {
         const mobT = world.mobTemplates.get(firstMob.templateId)!;
-        suggest.push(`throw ${shortName(world.itemTemplates.get(throwable.itemId)!.name)} at ${shortName(mobT.name)}`);
+        suggest.push(`throw ${shortName(world.itemTemplates.get(throwable.itemId)!.name)} at ${chipName(mobT.name)}`);
       }
     }
     // With a fight in the room (or already in one), offer the other stances.
@@ -3995,7 +4042,7 @@ export class ZoneDO implements DurableObject {
       const firstMob = [...this.creatures.values()].find(
         (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target),
       );
-      if (firstMob) suggest.push(`study ${shortName(world.mobTemplates.get(firstMob.templateId)!.name)}`);
+      if (firstMob) suggest.push(`study ${chipName(world.mobTemplates.get(firstMob.templateId)!.name)}`);
     }
     const edible = session.items.find((c) => world.itemTemplates.get(c.itemId)?.edible);
     if (edible) suggest.push(`eat ${shortName(world.itemTemplates.get(edible.itemId)!.name)}`);
