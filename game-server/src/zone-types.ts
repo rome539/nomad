@@ -72,6 +72,7 @@ export interface Creature {
   rouseAt?: number; // dire-hyena guarding a meal: ms it commits to attacking — a wind-up you can flee or hit first
   wakeUntil?: number; // SENTINEL (the deep's hound): asleep until roused; awake (and barring the descent) while now < this
   surfaced?: boolean; // a deep-dweller the sim coughed up into the shallows; killing it drops the corpse-key (deep-heart)
+  surfacedAt?: number; // ms epoch it surfaced; unkilled past SURFACED_STALE_MS it slinks back down (frees the next surfacing)
   nextBirthAt?: number; // brood-rat: ms epoch of its next birth
   stunned?: boolean; // a blunt blow rang it — skips its next action, then clears
   bleedTicks?: number; // ticks of open wound left (armor-ignoring); refreshed by fast hits

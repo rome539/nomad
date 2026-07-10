@@ -852,6 +852,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
     };
     const payload = {
       v: 0, t: "bench", open: true, note: note ?? "",
+      sheet: z.sheetFor(session), // the paperdoll: gear worn + the combat math it adds up to
       atGate: world.entryRooms.has(session.roomId), // vault + seal only shown at a gate
       pack: group(session.items),
       lockbox: group(lockbox),

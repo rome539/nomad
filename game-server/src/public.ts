@@ -255,6 +255,24 @@ export const PAGE = `<!doctype html>
   #bclose:hover { color: var(--gold); border-color: var(--gold); }
   #bnote { flex: 0 0 auto; color: var(--blood); font-size: 12.5px; }
   #bnote:empty { display: none; }
+  /* The paperdoll: your figure, what it wears, and the math it adds up to. */
+  #bdoll {
+    flex: 0 0 auto; display: none; gap: 16px; align-items: flex-start; flex-wrap: wrap;
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 2px;
+  }
+  #bdoll.on { display: flex; }
+  #dleft { flex: 0 0 auto; display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+  #bdoll svg { flex: 0 0 auto; width: 44px; height: 96px; fill: var(--cream); opacity: 0.2; }
+  #dslots { flex: 0 1 auto; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  #bdoll .dslot { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+  #bdoll .dslot .lb { color: var(--dim); display: inline-block; min-width: 9ch; padding-right: 6px; }
+  #bdoll .dslot .it { color: var(--cream); }
+  #bdoll .dslot .it.none { color: var(--dim); font-style: italic; }
+  #bdoll .dslot .cd { color: var(--dim); }
+  #dstats { flex: 1 1 220px; display: flex; flex-direction: column; gap: 5px; min-width: 200px; }
+  #bdoll .dline { font-size: 12px; line-height: 1.45; }
+  #bdoll .dline .lb { color: var(--gold); letter-spacing: 0.07em; text-transform: uppercase; font-size: 10px; display: block; }
+  #bdoll .dline .vl { color: var(--bone); }
   /* The columns fill the rest and each scroll internally (desktop). */
   #bench .bcols {
     flex: 1 1 auto; min-height: 0; padding-bottom: 14px;
@@ -297,6 +315,10 @@ export const PAGE = `<!doctype html>
     #bench .bbox { max-height: 92vh; }
     #bench .bcols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
     #bench .bcol { overflow-y: visible; min-height: 0; }
+    /* The paperdoll stacks on a phone: figure+slots one row, the math below. */
+    #bdoll { gap: 8px; padding: 8px 10px; }
+    #dstats { flex: 1 1 100%; min-width: 0; }
+    #bdoll .dline { overflow-wrap: anywhere; }
   }
   /* The keeper's hatch: the trade modal. Same shell as the bench — you step
      out of the world to deal — with his stock and your goods side by side. */
@@ -684,6 +706,16 @@ export const PAGE = `<!doctype html>
         <button id="bclose">step back out</button>
       </div>
       <div id="bnote"></div>
+      <div id="bdoll">
+        <div id="dleft">
+          <svg id="dfig" viewBox="0 0 60 130" aria-hidden="true">
+            <circle cx="30" cy="14" r="9"></circle>
+            <path d="M30 25 C 20 27 16 34 15 44 L 12 74 L 18 74 L 21 50 L 21 78 L 16 122 L 25 122 L 30 88 L 35 122 L 44 122 L 39 78 L 39 50 L 42 74 L 48 74 L 45 44 C 44 34 40 27 30 25 Z"></path>
+          </svg>
+          <div id="dslots"></div>
+        </div>
+        <div id="dstats"></div>
+      </div>
       <div class="bcols">
         <div class="bcol" id="bpack"></div>
         <div class="bcol" id="block"></div>
@@ -1281,6 +1313,7 @@ async function connect() {
       hpEl.textContent = f.hp + "/" + f.max_hp + " hp \\u00b7 " + f.name;
       hpEl.className = f.hp <= f.max_hp / 3 ? "hp-low" : "";
       renderFx(f.fx);
+      dollPulse(f.hp, f.max_hp);
       lastName = f.name;
       lastNamed = !!f.named;
       maybeAdoptProfileName(f);
@@ -1748,6 +1781,81 @@ function fillBenchCol(el, title, items, cap, place) {
   items.forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
 }
 
+// ---- the paperdoll: gear on the figure, and the combat math it adds up to ----
+var bdoll = document.getElementById("bdoll");
+var dslots = document.getElementById("dslots");
+var dstats = document.getElementById("dstats");
+var DOLL_SLOTS = { weapon: "hand", shield: "off-hand", helm: "head", armor: "body", cloak: "back", feet: "feet" };
+var dollSheet = null; // last sheet, so live status frames can re-dress the hp line
+var dollHpVal = null; // the stance/hp value span, patched in place on every status
+
+// The crouched-over-your-lockbox inventory keeps you IN the world — bleed ticks
+// and blows land while the modal is open. Every status frame re-paints the
+// doll's hp line so the figure never lies about your blood.
+function dollPulse(hp, maxHp) {
+  if (!dollSheet || !dollHpVal || !benchEl.classList.contains("open")) return;
+  dollSheet.hp = hp; dollSheet.maxHp = maxHp;
+  dollHpVal.textContent = dollStanceText();
+}
+
+function dollStanceText() {
+  return dollSheet.stance + " \\u00b7 " + dollSheet.hp + "/" + dollSheet.maxHp + " hp"
+    + (dollSheet.lit ? " \\u00b7 a torch burns in your grip" : "");
+}
+
+function dollLine(label, value) {
+  var d = document.createElement("div");
+  d.className = "dline";
+  var l = document.createElement("span"); l.className = "lb"; l.textContent = label; d.appendChild(l);
+  var v = document.createElement("span"); v.className = "vl"; v.textContent = value; d.appendChild(v);
+  return d;
+}
+
+function renderDoll(sheet) {
+  if (!sheet) { bdoll.classList.remove("on"); return; }
+  dslots.textContent = ""; dstats.textContent = "";
+  (sheet.slots || []).forEach(function (s) {
+    var d = document.createElement("div"); d.className = "dslot";
+    var l = document.createElement("span"); l.className = "lb"; l.textContent = DOLL_SLOTS[s.slot] || s.slot; d.appendChild(l);
+    var v = document.createElement("span"); v.className = "it" + (s.name ? "" : " none");
+    v.textContent = s.name ? s.name : "\\u2014";
+    d.appendChild(v);
+    if (s.name && s.cond && s.cond !== "sound") {
+      var c = document.createElement("span"); c.className = "cd"; c.textContent = " (" + s.cond + ")"; d.appendChild(c);
+    }
+    dslots.appendChild(d);
+  });
+  var a = sheet.atk || {};
+  var f = sheet.def || {};
+  var atk = a.name + " \\u2014 " + a.style + " \\u00b7 " + a.dmg + " dmg";
+  if (a.swings > 1) atk += " \\u00d7" + a.swings + " swings";
+  if (a.sweep > 1) atk += " \\u00b7 sweeps " + a.sweep;
+  if (a.bleed > 0) atk += " \\u00b7 opens bleeds";
+  if (a.stun > 0) atk += " \\u00b7 can stun";
+  if (a.ignore > 0) atk += " \\u00b7 ignores " + a.ignore + " armor";
+  if (a.twoHanded) atk += " \\u00b7 both hands";
+  dstats.appendChild(dollLine("attack", atk));
+  var def = "armor " + f.armor + " \\u2014 turns " + f.mitigate + "% of a blow";
+  if (f.block > 0) def += " \\u00b7 blocks " + f.block + "%";
+  if (f.weight > 0) def += " \\u00b7 weight " + f.weight + " (drags at flight)";
+  dstats.appendChild(dollLine("defence", def));
+  dollSheet = sheet;
+  var stanceLine = dollLine("stance", dollStanceText());
+  dollHpVal = stanceLine.querySelector(".vl");
+  dstats.appendChild(stanceLine);
+  if (sheet.traits && sheet.traits.length) dstats.appendChild(dollLine("traits", sheet.traits.join(" \\u00b7 ")));
+  if (sheet.tally) {
+    var t = sheet.tally;
+    var days = Math.max(0, Math.floor((Date.now() / 1000 - t.born) / 86400));
+    var rec = t.kills + (t.kills === 1 ? " kill" : " kills") + " \\u00b7 " + t.deaths + (t.deaths === 1 ? " death" : " deaths");
+    if (t.boss > 0) rec += " \\u00b7 " + t.boss + (t.boss === 1 ? " king" : " kings");
+    if (t.pvp > 0) rec += " \\u00b7 " + t.pvp + (t.pvp === 1 ? " wanderer" : " wanderers");
+    rec += " \\u00b7 " + (days === 0 ? "born today" : days + (days === 1 ? " day" : " days") + " old");
+    dstats.appendChild(dollLine("record", rec));
+  }
+  bdoll.classList.add("on");
+}
+
 function renderBench(state) {
   benchAtGate = !!state.atGate;
   // At a gate you truly step out of the world; in the dungeon you only crouch to
@@ -1758,6 +1866,7 @@ function renderBench(state) {
     : "You crouch to dig through your kit \\u2014 but you're still in the dungeon, in the open and in reach. Keep your eyes up.";
   bnote.textContent = state.note || (benchAtGate ? "" : "Away from a gate \\u2014 lockbox only. The vault and the seal wait at the gates.");
   benchEl.classList.toggle("nogate", !benchAtGate);
+  renderDoll(state.sheet);
   fillBenchCol(bpack, "Your pack", state.pack || [], state.packCap || 0, "pack");
   fillBenchCol(block, "Lockbox", state.lockbox || [], state.lockboxCap, "lockbox");
   if (benchAtGate) {
@@ -2008,6 +2117,9 @@ function mapCssVar(name) {
 function mapRegionColor(region) {
   if (region === "gate") return mapCssVar("--steel");
   if (region === "deep") return mapCssVar("--blood");
+  if (region === "out") return mapCssVar("--heal");   // the open ground: green and alive
+  if (region === "sky") return mapCssVar("--cream");  // the overworks: pale, up in the wind
+  if (region === "warrens") return mapCssVar("--dim"); // the warrens: packed earth
   return mapCssVar("--gold"); // the halls / default
 }
 // Fit a room name inside its tile: drop the leading "The " every room shares,

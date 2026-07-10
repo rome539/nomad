@@ -76,11 +76,11 @@ import {
   PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, SENTINELS, HOUND_WAKE_MS,
   LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
   SCAVENGERS, AGGRO_SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
-  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, BLUNT_TELL, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
+  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
   DEEP_HEART, DEEP_DOOR_KEY, HEART_FRESH_SEC, SURFACE_INTERVAL_MS,
-  DARK_ROOMS, TORCH_ITEM, TORCH_BURN_MS
+  DARK_ROOMS, TORCH_ITEM, TORCH_BURN_MS, GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
@@ -708,6 +708,7 @@ export class ZoneDO implements DurableObject {
       case "eat": return this.cmdEat(session, cmd.arg);
       case "bandage": return this.cmdBandage(session, cmd.arg);
       case "light": return this.cmdLight(session);
+      case "sheet": return this.cmdSheet(session);
       case "carve": return this.cmdCarve(session, cmd.arg);
       case "claim": return gate.cmdClaim(this, session, cmd.arg);
       case "stash": return gate.cmdStore(this, session, cmd.arg, "lockbox");
@@ -782,6 +783,24 @@ export class ZoneDO implements DurableObject {
     const other = this.findPlayerIn(session.roomId, arg);
     if (other) return this.send(session, `${other.name}, a fellow wanderer. Keys in pocket, nowhere to be.`);
     this.send(session, "You see nothing like that here.");
+  }
+
+  // The braggart's ledger, read at home: the same tallies the 31573 sheet
+  // publishes (kills/deaths/kings/wanderers, and your age under this name),
+  // shown in-game instead of only to the relays. The world still doesn't
+  // snitch — this is YOUR ledger, in your own hand.
+  private cmdSheet(session: Session): void {
+    const days = Math.max(0, Math.floor((Date.now() / 1000 - session.born) / 86_400));
+    const age = days === 0 ? "born this very day" : days === 1 ? "one day under this name" : `${days} days under this name`;
+    const lines = [
+      `The dungeon keeps your ledger, ${session.name} — ${age}.`,
+      `  Kills: ${session.kills}${session.kills === 0 ? " — the dark is still ahead of you" : ""}`,
+      `  Kings and horrors put down: ${session.bossKills}`,
+      `  Wanderers' blood on your hands: ${session.pvpKills}`,
+      `  Deaths: ${session.deaths}${session.deaths === 0 ? " — so far" : ""}`,
+      `('publish sheet' speaks this ledger to the relays; until then it is yours alone.)`,
+    ];
+    this.send(session, lines.join("\n"));
   }
 
   // Examine yourself: your afflictions in prose (the fx pills' longer form),
@@ -2119,9 +2138,16 @@ export class ZoneDO implements DurableObject {
     }
     const regions: Record<string, { key: string; label: string; rooms: any[] }> = {
       gate: { key: "gate", label: "The Gates", rooms: [] },
+      out: { key: "out", label: "The Open Ground", rooms: [] },
+      sky: { key: "sky", label: "The Overworks", rooms: [] },
       upper: { key: "upper", label: "The Halls", rooms: [] },
+      warrens: { key: "warrens", label: "The Warrens", rooms: [] },
       deep: { key: "deep", label: "The Deep", rooms: [] },
     };
+    // Display grouping only — the sim's regionOf (chest tiers etc.) still reads
+    // these blocks as "upper". The map just names where you're standing honestly.
+    const mapRegionOf = (id: string): string =>
+      GROUNDS_ROOMS.has(id) ? "out" : OVERWORKS_ROOMS.has(id) ? "sky" : WARRENS_ROOMS.has(id) ? "warrens" : this.regionOf(id);
     for (const id of shown) {
       const room = world.rooms.get(id)!;
       const realExits = world.exits.get(id) ?? [];
@@ -2140,7 +2166,7 @@ export class ZoneDO implements DurableObject {
         }
         exits.push({ dir: e.dir, to: e.to_room, toName: world.rooms.get(e.to_room)?.name ?? e.to_room });
       }
-      regions[this.regionOf(id)].rooms.push({ id, name: room.name, exits, here: id === session.roomId });
+      regions[mapRegionOf(id)].rooms.push({ id, name: room.name, exits, here: id === session.roomId });
     }
     try {
       session.ws.send(JSON.stringify({
@@ -2455,7 +2481,7 @@ export class ZoneDO implements DurableObject {
               const bleedDry = !!(weapon && weapon.tmpl.bleed > 0 && hollow);
               const tail = flourish !== "." ? flourish
                 : pierced ? ` — ${pick(PIERCE_TELL)}.`
-                : crushed ? ` — ${pick(BLUNT_TELL)}.`
+                : crushed ? ` — ${pick(HOLLOW.has(tmpl.id) ? BLUNT_TELL_BONE : BLUNT_TELL)}.`
                 : freshBleed ? ` — ${pick(BLEED_TELL)}.`
                 : bleedDry && chance(0.3) ? ` — ${pick(BONE_DRY_TELL)}.`
                 : ".";
@@ -3515,6 +3541,14 @@ export class ZoneDO implements DurableObject {
   private condition(creature: Creature): string {
     const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
     const f = creature.hp / tmpl.max_hp;
+    // Bone doesn't scratch or bleed toward death — it chips, cracks, and comes
+    // apart. The HOLLOW read their damage in their own material.
+    if (HOLLOW.has(tmpl.id)) {
+      if (f >= 1) return "whole";
+      if (f > 0.66) return "chipped";
+      if (f > 0.33) return "cracked";
+      return "coming apart";
+    }
     if (f >= 1) return "unhurt";
     if (f > 0.66) return "scratched";
     if (f > 0.33) return "wounded";
@@ -3753,6 +3787,64 @@ export class ZoneDO implements DurableObject {
   private wearsTrait(session: Session, trait: Set<string>): boolean {
     for (const c of session.items) if (c.equipped && trait.has(c.itemId)) return true;
     return false;
+  }
+
+  // The wanderer, taken in at a glance: everything the combat math derives from
+  // what you wear and hold, served as one structure for the bench modal's
+  // paperdoll (rome's Achaea-style visualizer). Numbers here mirror the real
+  // formulas — mitigation is the curved ARMOR_K share, block includes parry and
+  // the guarded-behind-a-shield bonus, damage reads through condition.
+  public sheetFor(session: Session): object {
+    const slots = ["weapon", "shield", "helm", "armor", "cloak", "feet"].map((slot) => {
+      const g = this.equippedItem(session, slot);
+      return {
+        slot,
+        name: g?.tmpl.name ?? null,
+        cond: g ? (this.conditionWord(g.carried.condition) || "sound") : "",
+      };
+    });
+    const weapon = this.equippedItem(session, "weapon");
+    const t = weapon?.tmpl;
+    const style = !t ? "bare hands"
+      : PIERCING_WEAPONS.has(t.id) ? "piercing"
+      : t.bleed > 0 ? "edged"
+      : t.stun > 0 ? "blunt"
+      : t.sweep > 1 || t.speed > 1 ? "polearm"
+      : "plain steel";
+    const armor = this.equippedArmor(session);
+    const traits: string[] = [];
+    if (this.wearsTrait(session, PADDED)) traits.push("padded (stun softened)");
+    if (this.wearsTrait(session, WARDHIDE)) traits.push("wardhide (wounds turned)");
+    if (this.wearsTrait(session, QUIET_ITEMS)) traits.push("quiet (soft-footed)");
+    if (this.wearsTrait(session, SLICK)) traits.push("slick (hard to seize)");
+    if (this.wearsTrait(session, STRAPPED)) traits.push("strapped (theft-proof)");
+    if (session.items.some((c) => c.equipped && THORNS.has(c.itemId))) traits.push("thorns (blocks bite back)");
+    if (t && REACH_ITEMS.has(t.id)) traits.push("reach (blunts the rush)");
+    return {
+      hp: session.hp, maxHp: session.maxHp, stance: session.stance,
+      slots,
+      atk: {
+        name: t?.name ?? "your bare hands",
+        style,
+        dmg: t ? this.effStat(t.dmg, weapon!.carried.condition) : 1,
+        swings: Math.max(1, t?.speed ?? 1),
+        sweep: Math.max(1, t?.sweep ?? 1),
+        bleed: t?.bleed ?? 0,
+        stun: t?.stun ?? 0,
+        ignore: this.armorIgnore(weapon),
+        twoHanded: !!t && TWO_HANDED.has(t.id),
+      },
+      def: {
+        armor,
+        mitigate: Math.round((100 * armor) / (armor + ARMOR_K)),
+        block: Math.round(100 * this.equippedBlock(session)),
+        weight: this.wornWeight(session),
+      },
+      traits,
+      lit: this.carriesLight(session),
+      // The braggart's ledger rides the doll too — the figure knows its history.
+      tally: { kills: session.kills, deaths: session.deaths, boss: session.bossKills, pvp: session.pvpKills, born: session.born },
+    };
   }
 
   // The shield on your arm gives its block chance (scaled by wear) — and a

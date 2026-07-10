@@ -483,6 +483,13 @@ export const BLUNT_TELL = [
   "armor is no help against a blow like that", "it drives the plate into the flesh beneath",
   "the sheer weight of it goes straight through the guard",
 ];
+// The same crushing blow against the HOLLOW: there's no flesh under that plate,
+// only old bone — the crush speaks bone, never meat (rome's audit, 2026-07-10).
+export const BLUNT_TELL_BONE = [
+  "the blow caves the plate", "old bone cracks beneath the steel",
+  "something snaps dry under the weight of it", "the frame beneath the armor gives with a crunch",
+  "steel buckles, and the bone under it goes with it",
+];
 export const BLEED_TELL = [
   "the wound weeps and won't close", "the cut runs deep and stays open",
   "it opens, and keeps bleeding", "blood follows the blade back out", "the gash won't clot",
@@ -589,6 +596,24 @@ export const FIRE_ITEMS = new Set<string>([]);
 // map it. A torch reveals it. (057; search/flood/map-blackout are follow-ons.)
 export const DARK_ROOMS = new Set([
   "blackreach", "the-lightless-march", "the-gasping-dark", "black-threshold", "black-canal",
+  "the-crawl-of-teeth", "the-earth-throat", // the warrens' lightless squeezes (058)
+]);
+// The 058 blocks, named for the MAP's display regions only — game logic (chest
+// tiers, ambience fallback) still reads them as "upper" via regionOf. The map
+// tells you where you ARE; the sim doesn't care what the copyist labels it.
+export const GROUNDS_ROOMS = new Set([
+  "the-causeway", "the-old-road", "the-burned-village", "the-gatefall", "the-dry-moat",
+  "the-wall-breach", "the-thorn-court", "the-mass-grave", "the-briar-field",
+  "the-hanging-hill", "the-black-fen", "the-drowned-orchard", "the-sally-ditch",
+]);
+export const OVERWORKS_ROOMS = new Set([
+  "the-wall-walk", "the-watch-turret", "the-bell-cote", "the-broken-battlement",
+  "the-leaning-spire", "the-rotted-scaffold", "the-weepers-crown",
+]);
+export const WARRENS_ROOMS = new Set([
+  "the-root-gnawed-run", "the-rat-warren", "the-crawl-of-teeth", "the-gnaw-hollow",
+  "a-dry-burrow", "the-dripping-gallery", "the-bone-midden", "the-hyena-den",
+  "the-undermine", "the-earth-throat", "the-sewer-slip", "the-buried-chapel",
 ]);
 export const TORCH_ITEM = "torch";
 export const TORCH_BURN_MS = 10 * 60_000; // a lit torch throws light this long, then gutters out (the run's clock)
@@ -720,6 +745,7 @@ export const DEEP_HEART = "deep-heart";               // the perishable key item
 export const DEEP_DOOR_KEY = "undercroft:down";       // "roomId:dir" of the sealed deep door (the stair out of the undercroft, past the hound)
 export const HEART_FRESH_SEC = 600;                   // a heart opens the door for 10 min after the cut, then it's slime
 export const SURFACE_INTERVAL_MS = 360_000;           // while sealed, the deep surfaces one dweller ~every 6 min
+export const SURFACED_STALE_MS = 15 * 60_000;         // a surfaced dweller nobody kills slinks back down after this, freeing the next
 export const SURFACERS = new Set([                    // the mobile deep-kin that can crawl up (drowned things are water-bound; the hound holds its post)
   "twice-dead", "thrice-dead", "pale-crawler", "pale-stalker",
 ]);
@@ -750,6 +776,29 @@ export const AMBIENCE: Record<"gate" | "deep" | "upper", string[]> = {
   ],
 };
 export const ROOM_AMBIENCE: Record<string, string[]> = {
+  // ---- the grounds: the first OUTDOOR rooms — wind and sky, not drips (058) ----
+  "the-causeway": ["The wind comes down the old road with nothing left to slow it.", "Somewhere high on the walls, loose stone ticks in the wind."],
+  "the-old-road": ["The thorn wall creaks against itself, keeping whatever is west of it.", "For a moment the wind carries a smell that is not the fortress. Then it is gone."],
+  "the-burned-village": ["A charred beam settles with a soft crunch of old ash.", "The wind worries at a hanging shutter until it bangs, once."],
+  "the-gatefall": ["Scree shifts somewhere in the rubble, and small feet with it.", "A stone lets go of the wall above and clatters down the fall."],
+  "the-dry-moat": ["The dead grass on the lip hisses. From down here, the sky is a road you can't take.", "Something crosses the ditch behind you, quick, bank to bank."],
+  "the-wall-breach": ["Grit sifts down through the broken wall, keeping its own slow count.", "The wind moans through the breach like the wall remembering the day it opened."],
+  "the-thorn-court": ["The briar shifts where nothing is moving it.", "Above the arch, the carved face goes on weeping its dry tears."],
+  "the-mass-grave": ["The soft ground gives a long, settling sigh.", "Flies rise off the pit in a body, then settle again."],
+  "the-briar-field": ["The thorn hisses field-wide, one long breath.", "Off through the briar, something keeps pace and then stops when you stop."],
+  "the-hanging-hill": ["The gibbet chain creaks its one slow note.", "From up here you can see weather coming a long way before it means anything."],
+  "the-black-fen": ["The water between the tussocks shivers, ring after ring, from no wind at all.", "Marsh gas breaks the surface with a smell like the fortress exhaling."],
+  "the-drowned-orchard": ["Dead branches knock together overhead like knuckles.", "The fox-scrape at the old tree's roots breathes its cold underground breath."],
+  "the-sally-ditch": ["Water moves along the ditch, slow as a patrol.", "The wall above leans its old cold shadow over the ditch."],
+  // ---- the warrens: the earth is alive around you (058) ----
+  "the-rat-warren": ["The runs around you rustle — the warren going about its business.", "Somewhere too near, small teeth work at something with patience."],
+  "the-hyena-den": ["The den's smell thickens, as if the pack is nearer than it was.", "A bone shifts in the meal-heap. Nothing else moves."],
+  "the-undermine": ["A pit-prop groans, takes the weight again, and holds. This time.", "Earth trickles from the propped ceiling in a thin, unhurried stream."],
+  "the-buried-chapel": ["The dark above the pews holds its stone silence like a held breath.", "Soil sifts quietly onto the altar, the earth still swallowing, still patient."],
+  // ---- the overworks: wind country (058) ----
+  "the-wall-walk": ["The wind changes its mind again, shoving at you from the other side.", "Far below, the grounds spread grey and moving in the wind."],
+  "the-rotted-scaffold": ["A board somewhere behind you finishes a creak it started when you crossed it.", "The scaffold sways a slow inch and settles, deciding to hold."],
+  "the-weepers-crown": ["Wind pours over the arch's crown, carrying the smell of thorn and rain.", "Below, the briar paths thread the court like veins."],
   smokehouse: ["The old smoke-racks tick overhead, hung with nothing now.", "A ghost of cured smoke still hangs in the cold air."],
   larder: ["The stores keep their long cold silence around you."],
   oubliette: ["A breath of colder air rises from the pit, and something in it that is not air."],

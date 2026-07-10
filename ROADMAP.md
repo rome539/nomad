@@ -453,8 +453,21 @@ frameworks stay on paper. **These four are one design island** — a wounded mob
     choice — eat the wind-up, or cure/kill your way clear first. Cure (rest) clears
     it at once.
   - *Build order for the island:* **food web ✅ → glanceable status ✅ → balance
-    re-check ✅ → leg-wound affliction ✅ → herbs slice ⬜** (herbs make the cures
-    matter — the only piece left).
+    re-check ✅ → leg-wound affliction ✅ → herbs slice ✅** — the island is CLOSED
+    (herbs SHIPPED 2026-07-10, `4dde5ab`, migration 056: bloodwort surface styptic,
+    cave-nettle deep forage, grave-moss the deep's dual mercy). Same ship: the
+    legible-`look` layer (creatureTell + `look self`), the grudge retune (minutes-
+    to-hours, rome's curve), roaming chests, and the fire & light opener (torch +
+    `light`, five pitch-dark rooms, torch-vs-shield hand, torchlight reveals
+    lurkers, fire-fear live — migration 057). Fire follow-ons still open: `search`
+    hidden exits, the tidal flood hazard, map-blackout of dark rooms.
+  - **NEXT ARC — the world grows to ~100 rooms (rome, 2026-07-10; paper map first).**
+    68 today. Three blocks, each serving a system, not sprawl: the **Overworks**
+    (~10 rooms, UP — rooftops/wall-walks; prey escape routes, fleet-rat & cutpurse
+    country), the **Warrens** (~12 — den-country between surface and deep where the
+    broods/packs actually live; more dark rooms; dead-ends only, NO hound bypass),
+    the **Tideways** (~10, deep — geometry for the tidal flood hazard). Shape gets
+    rome's veto on paper before any prose; then migration 058 + reseed.
 
 ## Design lineage — what to steal, what to avoid *(2026-07-09)*
 

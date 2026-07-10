@@ -14,6 +14,7 @@ import {
   RUNNERS, BROODERS, SENTINELS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
+  DEEP_ROOMS, SURFACED_STALE_MS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -100,6 +101,9 @@ export function addGrudge(z: ZoneDO, creature: Creature, pubkey: string): void {
   // pubkey, so "fixed on you" only fires for the one being hunted.
 export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): string {
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    // The key-bearer reads first: a deep-thing in the shallows is an OPPORTUNITY,
+    // not an unfair spawn — its heart opens the descent while it's fresh.
+    if (creature.surfaced) return "still streaked with the deep's black water — its cold heart is a key, while it beats";
     if (creature.stunned) return "reeling and dazed";
     if (creature.bleedTicks && creature.bleedTicks > 0) return "bleeding freely, dark spatter on the stone";
     if (creature.rouseAt && Date.now() < creature.rouseAt) return "winding up to spring, hackles high";
@@ -648,12 +652,18 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
       // Migration is a walk, not a materialization: a walker surfaces at the
       // dark mouth nearest its den and makes its way in (territory homing does
       // the walking). The sessile — mothers, the drowned — and the boss simply
-      // are where they live.
+      // are where they live. A DEEP den only ever refills through a DEEP mouth:
+      // roomDist ignores the sealed descent, so a surface mouth could read
+      // "nearest" to a deep home — and the migrant would strand above the
+      // locked door forever, milling around the hall wing (rome's wight flood,
+      // 2026-07-10). The deep is below the mouths; its things crawl up from
+      // further down, never in through the front door.
       let roomId = home;
       if (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id)) {
+        const deepHome = DEEP_ROOMS.has(home);
         let bestD = Number.POSITIVE_INFINITY;
         for (const m of MOUTHS) {
-          if (!world.rooms.has(m)) continue;
+          if (!world.rooms.has(m) || DEEP_ROOMS.has(m) !== deepHome) continue;
           const d = z.roomDist(m, home);
           if (d < bestD) { bestD = d; roomId = m; }
         }
@@ -697,8 +707,23 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
   // again next interval (arrivals keep the deep stocked, so it's never a soft-lock).
 export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
     const world = z.world!;
-    for (const c of z.creatures.values()) if (c.surfaced) return false; // one horror up at a time
-    const candidates = [...z.creatures.values()].filter((c) => SURFACERS.has(c.templateId));
+    // One horror up at a time — but an unkilled one can't hold the door forever.
+    // It can't walk home (the descent is sealed against it too), so a surfaced
+    // dweller nobody harvests slinks back down the way it came after a while,
+    // heart and all, freeing the next surfacing. No more soft-locked key, no
+    // more deep-kin squatting the shallows.
+    for (const c of z.creatures.values()) {
+      if (!c.surfaced) continue;
+      if (now - (c.surfacedAt ?? now) < SURFACED_STALE_MS) return false;
+      const t = world.mobTemplates.get(c.templateId)!;
+      z.roomFeed(c.roomId, `${cap(t.name)} finds its crack in the floor and drags itself back down into the dark, taking its cold heart with it.`);
+      c.roomId = c.home && world.rooms.has(c.home) ? c.home : c.roomId;
+      c.surfaced = false;
+      c.surfacedAt = undefined;
+      c.target = null;
+      return false; // the deep takes a beat before it coughs up the next
+    }
+    const candidates = [...z.creatures.values()].filter((c) => SURFACERS.has(c.templateId) && !c.surfaced);
     if (candidates.length === 0) return false;
     const rooms = SURFACE_ROOMS.filter((r) => world.rooms.has(r));
     if (rooms.length === 0) return false;
@@ -707,6 +732,7 @@ export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
     const tmpl = world.mobTemplates.get(c.templateId)!;
     c.roomId = dest;
     c.surfaced = true;
+    c.surfacedAt = now;
     c.hidden = false;   // it's up in the open, filth-streaked and desperate — no lurking
     c.target = null;
     c.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);

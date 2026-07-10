@@ -34,6 +34,7 @@ export type Verb =
   | "vault"
   | "unvault"
   | "publish"
+  | "sheet"
   | "map"
   | "study"
   | "journal"
@@ -98,6 +99,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   vault: "vault", bank: "vault", deposit: "vault",
   unvault: "unvault", withdraw: "unvault", retrieve: "unvault",
   publish: "publish", proclaim: "publish", announce: "publish",
+  sheet: "sheet", score: "sheet", stats: "sheet", record: "sheet", tally: "sheet",
   map: "map", chart: "map", atlas: "map",
   study: "study", observe: "study", watch: "study", note: "study",
   journal: "journal", bestiary: "journal", logbook: "journal", ledger: "journal",
@@ -283,6 +285,8 @@ export const HELP_TEXT = [
   "  unstash <item>    take something back out of the lockbox",
   "  vault <item>      at any gate — the vault (40 slots) banks SEALED wealth.",
   "                    'vault' alone looks inside; 'unvault' draws it back out.",
+  "  sheet             (score, stats) — your ledger: kills, deaths, kings,",
+  "                    wanderers, and your age under this name.",
   "  publish sheet|<item>  (proclaim) — the dungeon speaks your claim to the relays.",
   "                    Nothing is ever published unless you ask.",
   "  map               (chart) — open a map you carry. A surveyor's map is true;",
