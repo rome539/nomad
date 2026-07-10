@@ -2506,7 +2506,7 @@ export class ZoneDO implements DurableObject {
         // torches exist (carriesFire is false today).
         const wantsFlee = ai.dreadsFire(this, creature, victim)
           || RUNNERS.has(tmpl.id)
-          || (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
+          || (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
         if (wantsFlee && !tmpl.is_boss && !ai.scavengerBold(this, creature)) {
           await ai.creatureMoves(this, creature, now, "flee", false);
           continue;
@@ -3180,7 +3180,7 @@ export class ZoneDO implements DurableObject {
   // AMBUSH_MULT, before the round begins, before you can set your feet. No miss,
   // no crit; the surprise IS the punch. Armor and stance still turn what they
   // can, and a wounded attacker still hits softer.
-  public async creatureFirstStrike(creature: Creature, tmpl: MobTemplate, victim: Session): Promise<void> {
+  public async creatureFirstStrike(creature: Creature, tmpl: MobTemplate, victim: Session, quiet = false): Promise<void> {
     const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
     let dmg = randInt(tmpl.dmg_min, tmpl.dmg_max) + (tmpl.is_boss ? (creature.phase ?? 0) * 3 : 0);
     if (ai.scavengerBold(this, creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);
@@ -3198,7 +3198,7 @@ export class ZoneDO implements DurableObject {
       victim.resting = false;
       this.send(victim, "You are torn from your rest.");
     }
-    this.combatNoise(victim.roomId);
+    if (!quiet) this.combatNoise(victim.roomId); // a listener's reflex smack makes no din that draws the room
     if (victim.hp > 0) {
       this.send(victim, atLength
         ? `${cap(tmpl.name)} rushes you — but it meets ${weapon!.tmpl.name} held at length, and the worst of the charge dies on the point. A first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`

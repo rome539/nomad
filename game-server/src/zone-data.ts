@@ -609,13 +609,13 @@ export const WARDHIDE_WOUND_ODDS = 0.5;
 // entry here falls back to every-hit (openWound), so a future one is never
 // silently declawed — but every current bleeder is listed.
 export const BLEED_ODDS = new Map<string, number>([
-  ["rat", 0.20],          // scabby rat — filthy teeth, a wound now and then
-  ["grave-hyena", 0.30],
-  ["dire-hyena", 0.35],
-  ["albino-rat", 0.30],
-  ["pale-stalker", 0.40],
-  ["pale-crawler", 0.45], // the deep's worst biters
-  ["three-hound", 0.50],  // the sentinel's jaws — feared, but not a certainty
+  ["rat", 0.10],           // scabby rat — filthy teeth, a wound now and then
+  ["grave-hyena", 0.15],
+  ["dire-hyena", 0.175],
+  ["albino-rat", 0.15],
+  ["pale-stalker", 0.20],
+  ["pale-crawler", 0.225], // the deep's worst biters
+  ["three-hound", 0.25],   // the sentinel's jaws — feared, but not a certainty
 ]);
 // HOBBLE: leg-goers can hamstring you on a hit — a per-hit chance, tiered by
 // threat (only things that go low: hyenas at the legs, the hound, the deep's

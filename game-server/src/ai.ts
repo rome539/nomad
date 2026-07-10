@@ -114,12 +114,19 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       if (remembers(z, c, session.pubkey, now)) continue;
       if (!chance(odds)) continue;
       const tmpl = z.world!.mobTemplates.get(c.templateId)!;
-      c.target = session.pubkey;
       c.hidden = false; // a lurker that strikes is unseen no longer
-      if (!session.target) session.target = c.id;
       z.send(session, lurker ? `${cap(tmpl.name)} drops out of the dark and is on you!` : `${cap(tmpl.name)} ${tell}`);
       z.roomFeed(roomId, `${cap(tmpl.name)} ${lurker ? "uncoils from the dark" : "lurches awake"}.`, session.pubkey);
-      await z.creatureFirstStrike(c, tmpl, session);
+      // A LURKER commits to the kill — it locks on and the fight is joined. A
+      // blind LISTENER (a skeleton) only lashes out at the sound and then settles
+      // back into its stillness: one annoying blow, no rounds, and no din to draw
+      // the room. Swing back and YOU start the fight — that noise is what wakes
+      // the others. So the listener's reflex strikes quiet and takes no target.
+      if (lurker) {
+        c.target = session.pubkey;
+        if (!session.target) session.target = c.id;
+      }
+      await z.creatureFirstStrike(c, tmpl, session, !lurker);
       return true;
     }
     return false;

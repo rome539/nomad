@@ -409,6 +409,17 @@ frameworks stay on paper. **These four are one design island** — a wounded mob
     cave-lichen, migration 052) — near-free, no new system. The "economy" emerges
     from *placement*; gives the deep a non-gear reason to be entered. Scarcity-safe
     (renewable but gated by *where*). See [[nomad-loot-economy]].
+- **Roaming chests — pull loot out of the safe rooms** *(rome, 2026-07-10)*. Today
+  the 7 caches are nailed to fixed rooms, and two (box-bone, box-crack) sit in the
+  safe hideaways — zero-risk loot by the bank, which undercuts extraction. Fix:
+  keep the same *number* of chests (scarcity math unchanged), but each refill cycle
+  a chest **relocates to a random eligible room** instead of a fixed one — finding
+  one becomes exploration + luck. **Pull the two safe-room chests out**; their
+  supply folds into the roaming pool so all chest loot carries risk. Eligibility is
+  danger-tiered (a chest stays in its tier — deep boxes roam deep rooms, not up to
+  the gate). Reuses the `caches` + `cacheSpent` refill machinery; the roam is just
+  a room re-pick on refill. Pairs with the herbs slice (the world seeds things
+  where you have to go find them).
 - **Glanceable status + rewarding `look` — the Qud UX layer** *(APPROVED, 2026-07-09;
   the PREREQUISITE for afflictions, do it first)*. Two concrete things:
   - *Status you can read at a glance:* afflictions/effects shown as compact
