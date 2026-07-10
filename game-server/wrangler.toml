@@ -3,6 +3,14 @@ main = "src/index.ts"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Retain console logs in Cloudflare (queryable in the dashboard for ~3 days), so
+# a RARE server-side throw is captured whenever it fires — no live `wrangler tail`
+# needed. Added to catch the silent command soft-lock (onMessage throws that used
+# to vanish into a bare `catch {}`); head_sampling_rate 1 = keep every event.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 # The front door: nomadmud.com (workers.dev stays open as a side door).
 routes = [
   { pattern = "nomadmud.com", custom_domain = true },

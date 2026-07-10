@@ -523,15 +523,28 @@ export class ZoneDO implements DurableObject {
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    let session: Session | undefined;
     try {
       await this.hydrateSessions();
       const pubkey = this.wsPubkey(ws);
       if (!pubkey) return;
-      const session = this.sessions.get(pubkey);
+      session = this.sessions.get(pubkey);
       if (!session) return;
       session.ws = ws; // a woken socket is a fresh object — keep the session on it
       await this.onMessage(session, typeof message === "string" ? message : "");
-    } catch {}
+    } catch (e) {
+      // A thrown command used to vanish here (a bare `catch {}`) — leaving the
+      // player able to see the world's ambient lines but unable to ACT, a silent
+      // soft-lock with nothing recorded. Now: log the pubkey + the exact input +
+      // the stack (visible in `wrangler tail`) so the next occurrence names its
+      // own cause, and tell the player it stumbled so they know to retry rather
+      // than stare. One bad command no longer eats the whole session.
+      const raw = typeof message === "string" ? message.slice(0, 300) : "";
+      console.error("onMessage threw", this.wsPubkey(ws), raw, (e as Error)?.stack ?? String(e));
+      if (session) {
+        try { this.send(session, "The dungeon stumbles — that didn't take. Try again, or type 'look'."); } catch {}
+      }
+    }
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
