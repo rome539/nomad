@@ -28,6 +28,8 @@ export interface Session {
   stepText?: boolean; // stepped out via a TYPED barter/forge/inventory (text, no modal)
   ctxCombat: boolean; // the combat state the last chip set was drawn for (see syncCombatCtx)
   seizedBy?: string; // DROWNER creature id that has hold of you — can't flee till you break free
+  litUntil?: number; // ms epoch a kindled torch burns until; while now < this you carry light (sees dark rooms, wakes fire-fear). Reset on wake — a rekindle is cheap.
+  torchWarned?: boolean; // fired the one-time "burning low" warning for the current torch
   hobbled?: boolean; // a leg wound: you can still flee, but only after limping clear (a set delay), cured by rest
   limpingSince?: number; // ms epoch you started dragging your bad leg toward the exit; flee lands once HOBBLE_FLEE_MS passes
   buying?: { wants: { itemId: string; cost: number }[]; paid: number; escrow: { row: string; from: string }[] }; // open cart at the keeper's hatch: wants = every thing named (duplicates allowed), paid against their summed cost; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square, then it all changes hands at once
@@ -121,5 +123,6 @@ export interface SimState {
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once
   groundCond?: Record<string, number>; // "itemId@roomId" -> condition of gear on the floor, so wear survives drop/pickup
   cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills
+  cacheRoom?: Record<string, string>; // cacheId -> its CURRENT room (roaming chests relocate on refill; unset = place on first access)
   nextSurfaceAt?: number; // ms epoch the deep next surfaces a dweller (corpse-key minting; only while the deep door is sealed)
 }

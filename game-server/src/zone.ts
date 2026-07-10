@@ -79,7 +79,8 @@ import {
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, BLUNT_TELL, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
-  DEEP_HEART, DEEP_DOOR_KEY, HEART_FRESH_SEC, SURFACE_INTERVAL_MS
+  DEEP_HEART, DEEP_DOOR_KEY, HEART_FRESH_SEC, SURFACE_INTERVAL_MS,
+  DARK_ROOMS, TORCH_ITEM, TORCH_BURN_MS
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
@@ -102,6 +103,7 @@ export class ZoneDO implements DurableObject {
   private placedSpawns = new Set<string>(); // ground spawns already laid once
   private groundCond = new Map<string, number>(); // "itemId@roomId" -> condition of gear on the floor, so wear survives a drop/pickup
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
+  private cacheRoom = new Map<string, string>(); // cacheId -> its CURRENT room; roaming chests relocate on refill
   private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
   private savedAt = 0;
   private lastFlushAt = 0; // last time live sessions' hp/room were flushed to D1 (restart-durability)
@@ -177,6 +179,7 @@ export class ZoneDO implements DurableObject {
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
       this.groundCond = new Map(Object.entries(saved.groundCond ?? {}));
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
+      this.cacheRoom = new Map(Object.entries(saved.cacheRoom ?? {}));
       this.nextSurfaceAt = saved.nextSurfaceAt ?? 0;
       this.savedAt = saved.savedAt;
       // Territory backfill: pre-territory saves carry no den. Tie each creature
@@ -313,6 +316,7 @@ export class ZoneDO implements DurableObject {
       placedSpawns: [...this.placedSpawns],
       groundCond: Object.fromEntries(this.groundCond),
       cacheSpent: Object.fromEntries(this.cacheSpent),
+      cacheRoom: Object.fromEntries(this.cacheRoom),
       nextSurfaceAt: this.nextSurfaceAt,
     };
     await this.state.storage.put("sim", state);
@@ -337,6 +341,7 @@ export class ZoneDO implements DurableObject {
     this.placedSpawns.clear();
     this.groundCond.clear();
     this.cacheSpent.clear();
+    this.cacheRoom.clear();
     this.nextSurfaceAt = 0;
     await this.init(zone); // "sim" is gone now → seeds the world fresh at first light
     return this.creatures.size;
@@ -702,6 +707,7 @@ export class ZoneDO implements DurableObject {
       case "rest": return this.cmdRest(session);
       case "eat": return this.cmdEat(session, cmd.arg);
       case "bandage": return this.cmdBandage(session, cmd.arg);
+      case "light": return this.cmdLight(session);
       case "carve": return this.cmdCarve(session, cmd.arg);
       case "claim": return gate.cmdClaim(this, session, cmd.arg);
       case "stash": return gate.cmdStore(this, session, cmd.arg, "lockbox");
@@ -753,11 +759,15 @@ export class ZoneDO implements DurableObject {
     if (!arg) { session.visited.add(session.roomId); return this.send(session, this.describeRoom(session, true)); }
     const world = this.world!;
 
+    if (arg === "self" || arg === "me" || arg === "myself") return this.send(session, this.selfExamine(session));
+
     const creature = this.findCreatureIn(session.roomId, arg);
     if (creature) {
       const tmpl = world.mobTemplates.get(creature.templateId)!;
-      const hungry = creature.hunger >= HUNGRY_AT && !HOLLOW.has(tmpl.id) ? " It looks hungry." : "";
-      return this.send(session, `${tmpl.description} (${this.condition(creature)})${hungry}`);
+      // The examine reads its live state in a full sentence (the room glance gets
+      // the same tell as a terser clause) — a wound, a hunt, a hungry eye on a rival.
+      const tell = ai.creatureTell(this, creature, session.pubkey);
+      return this.send(session, `${tmpl.description} (${this.condition(creature)})${tell ? ` It is ${tell}.` : ""}`);
     }
     const groundItem = this.findItemIn(this.ground.get(session.roomId) ?? [], arg);
     if (groundItem) return this.send(session, world.itemTemplates.get(groundItem)!.description);
@@ -772,6 +782,67 @@ export class ZoneDO implements DurableObject {
     const other = this.findPlayerIn(session.roomId, arg);
     if (other) return this.send(session, `${other.name}, a fellow wanderer. Keys in pocket, nowhere to be.`);
     this.send(session, "You see nothing like that here.");
+  }
+
+  // Examine yourself: your afflictions in prose (the fx pills' longer form),
+  // plus a quick read of how hurt you are and what's in your hands — the
+  // legible-sim mirror turned on the player.
+  private selfExamine(session: Session): string {
+    const f = session.hp / session.maxHp;
+    const state = f >= 1 ? "whole and unhurt" : f > 0.66 ? "bruised but sound" : f > 0.33 ? "badly hurt" : "at the very edge of it";
+    const parts: string[] = [`You take stock of yourself: ${state}. [${session.hp}/${session.maxHp} hp]`];
+    if (session.bleedTicks && session.bleedTicks > 0) parts.push("Blood runs from a gash that hasn't clotted.");
+    if (session.hobbled) parts.push("One leg is a bad wound — you'd limp if you had to run.");
+    if (session.stunned) parts.push("Your head still rings; the next moment won't quite be yours.");
+    if (session.seizedBy) parts.push("Something has hold of you and won't let go.");
+    if (session.resting) parts.push("You're at rest, catching your breath.");
+    const weapon = this.equippedItem(session, "weapon");
+    const armor = this.equippedItem(session, "armor");
+    parts.push(weapon ? `You hold ${weapon.tmpl.name}.` : "Your hands are empty.");
+    if (armor) parts.push(`You wear ${armor.tmpl.name}.`);
+    return parts.join(" ");
+  }
+
+  // A lit torch throws light until it gutters (litUntil). Read everywhere the
+  // dark matters: seeing a lightless room, and waking the fire-fear (ai.carriesFire
+  // reads the same litUntil, so the two never disagree).
+  private carriesLight(session: Session): boolean {
+    return !!session.litUntil && Date.now() < session.litUntil;
+  }
+
+  // Kindle a torch: it burns for TORCH_BURN_MS, then gutters out. The torch is
+  // spent into the flame at once (removed now), so burnout is just the clock
+  // running down. One at a time — a fresh light won't waste another. An open
+  // flame also wakes the fire-fear the world shipped dormant (carriesFire).
+  private async cmdLight(session: Session): Promise<void> {
+    if (this.carriesLight(session)) {
+      return this.send(session, "Your torch already burns. Best not waste another until it's spent.");
+    }
+    const torch = session.items.find((c) => c.itemId === TORCH_ITEM);
+    if (!torch) return this.send(session, "You have no torch to light.");
+    // A torch burns in the off hand — the shield hand. Both hands on a two-handed
+    // weapon leave nowhere to hold it; a shield gets set aside for the flame. The
+    // choice the dark forces: light, or guard — not both.
+    const weapon = this.equippedItem(session, "weapon");
+    if (weapon && TWO_HANDED.has(weapon.tmpl.id)) {
+      return this.send(session, `Both your hands are full of ${weapon.tmpl.name} — no free hand for a torch. Lower it first.`);
+    }
+    const shield = this.equippedItem(session, "shield");
+    if (shield && this.inCombat(session)) {
+      return this.send(session, "You can't fumble your shield down and a torch up while something wants your blood.");
+    }
+    if (shield) {
+      shield.carried.equipped = false;
+      await setEquipped(this.env.DB, shield.carried.rowId, false);
+    }
+    session.items.splice(session.items.indexOf(torch), 1);
+    await removeItemRow(this.env.DB, torch.rowId); // spent into the burning
+    session.litUntil = Date.now() + TORCH_BURN_MS;
+    session.torchWarned = false;
+    this.send(session, `You touch a spark to the pitch and the torch catches${shield ? `, ${shield.tmpl.name} set aside to hold it` : ""} — a low, guttering light pushes the dark back.`, "gain");
+    this.roomFeed(session.roomId, `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey);
+    this.sendStatus(session);
+    this.send(session, this.describeRoom(session, false)); // the dark may resolve, or the fire may scatter something
   }
 
   private async cmdGo(session: Session, dir: string): Promise<void> {
@@ -1298,6 +1369,15 @@ export class ZoneDO implements DurableObject {
         return this.send(session, `Both your hands are full of ${inHand.tmpl.name}. Lower it first.`);
       }
     }
+    // A shield or a two-handed weapon wants the hand your torch is in — taking it
+    // up snuffs the flame. Light or guard, not both (the reverse of cmdLight).
+    if (this.carriesLight(session) && (tmpl.slot === "shield" || (tmpl.slot === "weapon" && TWO_HANDED.has(tmpl.id)))) {
+      session.litUntil = undefined;
+      session.torchWarned = false;
+      this.send(session, DARK_ROOMS.has(session.roomId) && !this.outOfWorld(session)
+        ? "The torch gutters out — no hand left to hold it, and the dark closes in."
+        : "The torch gutters out — no hand left to hold it.");
+    }
     // One item per slot — set down whatever occupies it first.
     const current = this.equippedItem(session, tmpl.slot);
     if (current) {
@@ -1337,7 +1417,7 @@ export class ZoneDO implements DurableObject {
   // never wasted — a spent lock always gives up at least one thing.
   private async cmdUnlock(session: Session, arg: string): Promise<void> {
     const world = this.world!;
-    const here = world.caches.filter((c) => c.roomId === session.roomId);
+    const here = world.caches.filter((c) => this.cacheRoomId(c) === session.roomId);
     if (!here.length) return this.send(session, "There's nothing here to unlock.");
     const cache = (arg ? here.find((c) => nameMatches(c.name, arg)) : null) ?? here[0];
     const keyT = world.itemTemplates.get(cache.keyItem);
@@ -1350,6 +1430,7 @@ export class ZoneDO implements DurableObject {
     session.items.splice(session.items.indexOf(key), 1);
     await removeItemRow(this.env.DB, key.rowId);
     this.cacheSpent.set(cache.id, Date.now() + cache.refillSecs * 1000);
+    this.placeCache(cache); // looted: it will refill somewhere new in its tier (hidden here until then)
     this.send(session, `You work ${keyT?.name ?? "the key"} into the lock. It gives with a groan, and ${cache.name} swings open.`, "unlock");
     this.roomFeed(session.roomId, `${session.name} forces ${cache.name} open.`, session.pubkey);
     // Now and then the box is a lie: forced open on nothing. The key's already
@@ -2735,6 +2816,26 @@ export class ZoneDO implements DurableObject {
       await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
     }
 
+    // Torches burn down. A warning when the flame runs low, then it gutters out —
+    // and if you're standing in a lightless room, the dark closes over you again.
+    for (const session of this.sessions.values()) {
+      if (!session.litUntil) continue;
+      const left = session.litUntil - now;
+      if (left <= 0) {
+        session.litUntil = undefined;
+        session.torchWarned = false;
+        const inDark = DARK_ROOMS.has(session.roomId) && !this.outOfWorld(session);
+        this.send(session, inDark
+          ? "Your torch gutters, flares, and dies — and the dark closes over you completely."
+          : "Your torch gutters, flares, and dies. The last of it falls as ash.", "dmgin");
+        this.sendStatus(session);
+        if (inDark) this.send(session, this.describeRoom(session, false));
+      } else if (left <= 90_000 && !session.torchWarned) {
+        session.torchWarned = true;
+        this.send(session, "Your torch burns low, the flame guttering — not long now.", "dmgin");
+      }
+    }
+
     // Bodies and appetites, at tick resolution.
     const tickMins = TICK_MS / 60_000;
     for (const creature of this.creatures.values()) {
@@ -3339,6 +3440,11 @@ export class ZoneDO implements DurableObject {
   private describeRoom(session: Session, full = true): string {
     const world = this.world!;
     const room = world.rooms.get(session.roomId)!;
+    // The lightless deep: without a flame you see nothing here — not the room,
+    // not its exits, not what shares it with you. A torch resolves it all.
+    if (DARK_ROOMS.has(room.id) && !this.carriesLight(session)) {
+      return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";
+    }
     const lines = full ? [room.name, room.description] : [room.name];
 
     const exits = world.exits.get(room.id) ?? [];
@@ -3362,16 +3468,27 @@ export class ZoneDO implements DurableObject {
       if (t) lines.push(`${cap(t.name)} lies here, its pages open to the dark.`);
     }
     for (const cache of world.caches) {
-      if (cache.roomId !== room.id) continue;
-      lines.push(this.cacheLocked(cache)
+      if (this.cacheRoomId(cache) !== room.id) continue;
+      const locked = this.cacheLocked(cache);
+      // A roaming chest, once looted, is hidden until it refills elsewhere — no
+      // empty husk left behind to teleport. A fixed chest still shows its husk.
+      if (!locked && this.cacheRoams(cache)) continue;
+      lines.push(locked
         ? `${cap(cache.name)} sits here, locked.`
         : `${cap(cache.name)} sits here, sprung and empty.`);
     }
     for (const creature of this.creatures.values()) {
       if (creature.roomId !== room.id) continue;
-      // A lurker lying in wait is unseen — it isn't in the room until it strikes.
-      if (LURKERS.has(creature.templateId) && creature.hidden && !creature.target) continue;
       const t = world.mobTemplates.get(creature.templateId)!;
+      // A lurker lying in wait is unseen — it isn't in the room at all, until it
+      // strikes. UNLESS you carry a flame: torchlight finds it pressed into its
+      // crevice before it can spring, and the ambush is spoiled (wakeListeners).
+      const hiddenLurker = LURKERS.has(creature.templateId) && creature.hidden && !creature.target;
+      if (hiddenLurker && !this.carriesLight(session)) continue;
+      if (hiddenLurker) {
+        lines.push(`${cap(t.name)} is here, caught in your torchlight before it could spring — pressed into a crevice, watching.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
+        continue;
+      }
       // A sentinel reads by its state: asleep and steppable, or awake and barring the stair.
       if (SENTINELS.has(creature.templateId)) {
         lines.push(this.sentinelAwake(creature)
@@ -3379,7 +3496,8 @@ export class ZoneDO implements DurableObject {
           : `${cap(t.name)} sprawls across the stair, all three heads asleep. For now.`);
         continue;
       }
-      lines.push(`${cap(t.name)} is here${this.bearsClause(creature)}.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
+      const tell = ai.creatureTell(this, creature, session.pubkey);
+      lines.push(`${cap(t.name)} is here${this.bearsClause(creature)}${tell ? `, ${tell}` : ""}.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
     }
     for (const s of this.sessions.values()) {
       if (s.pubkey !== session.pubkey && s.roomId === room.id && !this.outOfWorld(s)) {
@@ -3483,6 +3601,45 @@ export class ZoneDO implements DurableObject {
   // empty until its refill clock runs out.
   private cacheLocked(cache: Cache): boolean {
     return Date.now() >= (this.cacheSpent.get(cache.id) ?? 0);
+  }
+
+  // Roaming chests (rome, 2026-07-10): a chest is no longer nailed to one room.
+  // Its config room in the `caches` table now only fixes its TIER (gate/upper/
+  // deep via regionOf); on each refill it relocates to a random room of that
+  // tier — never a safe hideaway or a gate, so all chest loot carries risk (this
+  // is what pulled box-bone/box-crack out of the safe rooms). The King's Hoard is
+  // the one exception: the boss's treasure stays put. Finding a chest becomes
+  // exploration + luck; the supply (chest COUNT) is unchanged, so scarcity holds.
+  private cacheRoams(cache: Cache): boolean {
+    return cache.keyItem !== "reliquary-key"; // the King's Hoard is fixed
+  }
+
+  // Rooms a chest may roam to: its own tier, minus every gate and hideaway.
+  private cacheEligibleRooms(cache: Cache): string[] {
+    const world = this.world!;
+    const tier = this.regionOf(cache.roomId);
+    const out: string[] = [];
+    for (const r of world.rooms.values()) {
+      if (world.safeRooms.has(r.id) || world.entryRooms.has(r.id)) continue;
+      if (this.regionOf(r.id) === tier) out.push(r.id);
+    }
+    return out;
+  }
+
+  // Drop the chest into a fresh eligible room (or hold at its config room if a
+  // fixed chest, or if — impossibly — its tier has no risky rooms).
+  private placeCache(cache: Cache): void {
+    if (!this.cacheRoams(cache)) { this.cacheRoom.set(cache.id, cache.roomId); return; }
+    const pool = this.cacheEligibleRooms(cache);
+    this.cacheRoom.set(cache.id, pool.length ? pool[randInt(0, pool.length - 1)] : cache.roomId);
+  }
+
+  // Where the chest is right now — placed on first ask (so a warm world scatters
+  // its chests the moment this ships, no reseed).
+  private cacheRoomId(cache: Cache): string {
+    let room = this.cacheRoom.get(cache.id);
+    if (!room) { this.placeCache(cache); room = this.cacheRoom.get(cache.id)!; }
+    return room;
   }
 
 
@@ -3701,7 +3858,8 @@ export class ZoneDO implements DurableObject {
     let creatureHere = false;
     for (const creature of this.creatures.values()) {
       if (creature.roomId !== session.roomId) continue;
-      if (LURKERS.has(creature.templateId) && creature.hidden && !creature.target) continue;
+      // Torchlight reveals a waiting lurker — so it also gets its attack chip.
+      if (LURKERS.has(creature.templateId) && creature.hidden && !creature.target && !this.carriesLight(session)) continue;
       creatureHere = true;
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       suggest.push(`attack ${shortName(tmpl.name)}`);
@@ -3761,7 +3919,7 @@ export class ZoneDO implements DurableObject {
     // A locked cache here that you hold the key to: one chip opens it.
     if (!fighting) {
       for (const cache of world.caches) {
-        if (cache.roomId !== session.roomId || !this.cacheLocked(cache)) continue;
+        if (this.cacheRoomId(cache) !== session.roomId || !this.cacheLocked(cache)) continue;
         if (session.items.some((c) => c.itemId === cache.keyItem)) suggest.push(`unlock ${shortName(cache.name)}`);
       }
     }

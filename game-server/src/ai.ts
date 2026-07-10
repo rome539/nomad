@@ -92,6 +92,41 @@ export function addGrudge(z: ZoneDO, creature: Creature, pubkey: string): void {
     if (creature.grudges.length > GRUDGE_MAX) creature.grudges.shift();
   }
 
+  // The legible deep sim (Qud's lesson): a creature's live state reads in the
+  // prose, so a wound, a hunt, or a hungry eye on a rival is visible in the
+  // room — not a hidden number you only learn from a combat line. Returns the
+  // single most-telling clause (phrased to read after "is" OR after a comma),
+  // or "" when there's nothing worth saying. `viewer` is the looking player's
+  // pubkey, so "fixed on you" only fires for the one being hunted.
+export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): string {
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    if (creature.stunned) return "reeling and dazed";
+    if (creature.bleedTicks && creature.bleedTicks > 0) return "bleeding freely, dark spatter on the stone";
+    if (creature.rouseAt && Date.now() < creature.rouseAt) return "winding up to spring, hackles high";
+    if (creature.target === viewer) return "fixed on you";
+    if (creature.target) {
+      const mark = [...z.sessions.values()].find((s) => s.pubkey === creature.target && !z.outOfWorld(s));
+      return mark ? `fixed on ${mark.name}` : "on the hunt";
+    }
+    // The food web made visible: a hungry predator eyes a weaker thing sharing
+    // its room — the tell that lets a player USE predation (bait a scrap, slip past).
+    if (creature.hunger >= HUNGRY_AT && !HOLLOW.has(tmpl.id)) {
+      const preySet = PREYS_ON.get(creature.templateId);
+      if (preySet) {
+        const prey = [...z.creatures.values()].find(
+          (c) => c.id !== creature.id && c.roomId === creature.roomId && preySet.has(c.templateId),
+        );
+        if (prey) {
+          const pt = z.world!.mobTemplates.get(prey.templateId)!;
+          return `eyeing the ${pt.name.replace(/^(a|an|the) /i, "")} across the room`;
+        }
+      }
+      return "restless with hunger";
+    }
+    if (scavengerBold(z, creature)) return "bold and unafraid, fat on the dead";
+    return "";
+  }
+
   // Sound wakes the blind sentinels. A dormant listener (a skeleton) in the
   // room may catch your movement or your noise and lurch into a swing — one
   // first strike, like being jumped. Grudge-holders are skipped (they wake on
@@ -107,6 +142,9 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       if (c.roomId !== roomId || c.target) continue;
       const lurker = LURKERS.has(c.templateId);
       if (!LISTENERS.has(c.templateId) && !lurker) continue;
+      // A torch spoils the ambush: a lurker caught in your light can't drop from
+      // the dark (it shows in the room instead, revealed — see describeRoom).
+      if (lurker && carriesFire(session)) continue;
       // The din of a fight no longer rouses the bone-sleepers — they wake to
       // movement (in or past) and to a grudge, not to noise alone. Blind lurkers
       // still strike at sound; that's the whole of what they are.
@@ -434,12 +472,11 @@ export function playerPresent(z: ZoneDO, roomId: string): boolean {
   }
 
   // Does this wanderer bear an open flame in hand? The single wire-up point for
-  // FEARS_FIRE. Pre-written for the Light & search phase: no lit-fire item exists
-  // yet, so FIRE_ITEMS is empty and this is always false — the moment a torch or
-  // burning-brand lands, add its id to FIRE_ITEMS (zone-data) and every
-  // fire-fearing creature starts bolting from anyone carrying it. Held or worn
-  // both count; a flame is a flame whether it's in your fist or hung at your hip.
+  // FEARS_FIRE, now LIVE (057): a lit torch is fire while it burns (litUntil), so
+  // a fire-fearing creature bolts from anyone carrying one. FIRE_ITEMS is the
+  // separate hook for a hypothetical ever-burning brand — held-in-inventory fire.
 export function carriesFire(session: Session): boolean {
+    if (session.litUntil && Date.now() < session.litUntil) return true;
     return session.items.some((c) => FIRE_ITEMS.has(c.itemId));
   }
 

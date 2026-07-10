@@ -179,17 +179,22 @@ export const GRUDGE_MAX = 5;
 // pace. Killing the creature settles it outright (it's gone, and a migrant
 // replacement never knew you); this is the slower mercy of time for one you
 // couldn't put down. The Forgotten King never forgets (is_boss → Infinity).
+// A grudge should live inside ONE run — "this fight isn't over, it'll come for
+// you" — not across real-life sessions (rome, 2026-07-10: the old scale ran
+// hours-to-days, so a mob you FLED was still hunting you at next login). Killing
+// the thing settles it instantly; this only governs the ones you ran from. So
+// the curve is minutes-to-a-few-hours now. Bosses still never forget (is_boss).
 export const FORGET_MS: Record<string, number> = {
   rat: 30 * 60_000,            // vermin: a short, scrabbling temper
   "fleet-rat": 30 * 60_000,    // it's already running; a grudge means little
-  "brood-rat": 24 * 3_600_000, // a mother remembers what came for her nest
   cutpurse: 20 * 60_000,       // it got what it wanted; no reason to hold a grudge
-  skeleton: 24 * 3_600_000,    // habit and repetition — about a day
-  "grave-hyena": 12 * 3_600_000, // remembers a bad meal half a day
-  "dire-hyena": 24 * 3_600_000,  // the mean one holds it a full day
-  warden: 7 * 24 * 3_600_000,  // a hollow warden holds it a week
+  "grave-hyena": 2 * 3_600_000, // remembers a bad meal a couple hours
+  skeleton: 2 * 3_600_000,      // habit and repetition, but it fades
+  "dire-hyena": 3 * 3_600_000,  // the mean one holds it longer
+  "brood-rat": 3 * 3_600_000,   // a mother remembers what came for her nest
+  warden: 4 * 3_600_000,        // a hollow warden holds it the longest of the un-bossed
 };
-export const FORGET_DEFAULT = 24 * 3_600_000;
+export const FORGET_DEFAULT = 2 * 3_600_000; // deep dwellers & pale kin: a couple hours
 export const COMBAT_NOISE_EVERY_MS = 8000; // a running fight rings out this often
 export const NOISE_HEED_ODDS = 0.7; // a good majority of mobs check out a noise; the rest don't bother
 export const DOGPILE_CAP = 3; // most creatures that can land a blow on one player in a tick; the rest press at the edges
@@ -574,10 +579,19 @@ export const HOUND_WAKE_MS = 900_000; // 15 minutes
 // rat is the first of the timid: strong enough to maul you in the dark, but it
 // remembers being a rat the instant it sees flame.
 export const FEARS_FIRE = new Set(["albino-rat"]);
-// Items that count as an open flame in hand. EMPTY until torches exist — add the
-// lit-torch / burning-brand id here (or switch carriesFire to a `light` item
-// property) when the Light & search phase ships, and FEARS_FIRE comes alive.
+// Items that count as an open flame in hand ON THEIR OWN (always burning). Still
+// empty — the torch isn't here: a torch is fire only while LIT, which is session
+// state (litUntil), so carriesFire() reads that too. This set stays for a future
+// ever-burning brand. FEARS_FIRE now wakes off a lit torch. (Light phase, 057.)
 export const FIRE_ITEMS = new Set<string>([]);
+// The lightless deep: rooms named for their dark, and now they mean it. Enter one
+// without a lit light source and you see NOTHING — no room, no exits, no way to
+// map it. A torch reveals it. (057; search/flood/map-blackout are follow-ons.)
+export const DARK_ROOMS = new Set([
+  "blackreach", "the-lightless-march", "the-gasping-dark", "black-threshold", "black-canal",
+]);
+export const TORCH_ITEM = "torch";
+export const TORCH_BURN_MS = 10 * 60_000; // a lit torch throws light this long, then gutters out (the run's clock)
 
 // ---- gear traits (the 045 audit expansion): properties, not bigger numbers ----
 // Every trait is a one-line hook into a system the simulation already runs.

@@ -26,6 +26,7 @@ export type Verb =
   | "rest"
   | "eat"
   | "bandage"
+  | "light"
   | "carve"
   | "claim"
   | "stash"
@@ -89,6 +90,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   rest: "rest", sleep: "rest", sit: "rest", camp: "rest",
   eat: "eat", consume: "eat", chew: "eat", devour: "eat",
   bandage: "bandage", bind: "bandage", dress: "bandage", bandages: "bandage",
+  light: "light", kindle: "light", ignite: "light", torch: "light",
   carve: "carve", scratch: "carve", etch: "carve", inscribe: "carve", write: "carve",
   claim: "claim", seal: "claim", extract: "claim", sign: "claim",
   stash: "stash", store: "stash", box: "stash", stow: "stash",
@@ -271,6 +273,9 @@ export const HELP_TEXT = [
   "                    flood below. The catch is rare, but a fish is good food.",
   "  rest              sit and let wounds close. Any effort ends it.",
   "  eat <food>        wounds also close from the inside",
+  "  light             (kindle) — set a carried torch burning. It shows the",
+  "                    lightless deep and burns a while before it gutters out;",
+  "                    an open flame sends some things fleeing.",
   "  carve <words>     scratch up to 40 characters into the stone; it weathers within a day",
   "  claim [item]      at any gate — the dungeon seals your claim on what you carry",
   "  stash <item>      at any gate — the lockbox (8 slots) holds ANYTHING you",
