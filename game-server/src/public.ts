@@ -292,18 +292,19 @@ export const PAGE = `<!doctype html>
   }
   #bench .bcolh .cnt { color: var(--dim); letter-spacing: 0; }
   #bench .bempty { color: var(--dim); font-size: 12px; font-style: italic; padding: 4px 0; }
-  #bench .bitem { display: flex; flex-direction: column; gap: 5px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  #bench .bitem { display: flex; flex-direction: column; gap: 4px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
   #bench .bitem:last-child { border-bottom: none; }
   #bench .bitem .nm { color: var(--cream); font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
   #bench .bitem .nm .seal { color: var(--gold); }
   #bench .bitem .nm .mult { color: var(--gold); font-weight: 700; }
-  #bench .bitem .nm .cond { color: var(--dim); }
+  #bench .bitem .nm .cond { color: var(--dim); font-style: italic; }
   #bench .bitem .nm .stat { color: var(--bone); }
-  #bench .bitem .nm .worn { color: var(--gold); }
-  #bench .bitem .acts { display: flex; flex-wrap: wrap; gap: 5px; }
+  #bench .bitem .nm .tag { font-size: 11.5px; }
+  #bench .bitem .nm .worn { color: var(--heal); }
+  #bench .bitem .acts { display: flex; flex-wrap: wrap; gap: 4px; }
   #bench .bitem button {
     background: transparent; border: 1px solid var(--border); border-radius: 4px;
-    color: var(--bone); font: inherit; font-size: 11.5px; padding: 3px 9px; cursor: pointer;
+    color: var(--bone); font: inherit; font-size: 11px; padding: 2px 8px; cursor: pointer;
   }
   #bench .bitem button:hover { color: var(--gold); border-color: var(--gold); }
   /* burn is the only far-right, destructive action; scrap sits inline like the rest. */
@@ -404,6 +405,33 @@ export const PAGE = `<!doctype html>
   }
   #trade .bitem button:hover { color: var(--gold); border-color: var(--gold); }
   #trade .bitem button:disabled { color: var(--dim); border-color: var(--line); cursor: default; }
+  /* Shelf sections + one-line rows: name, stat tags in the chip colours (red
+     bites, steel guards, gold gains, dim weighs), price right, buy inline. */
+  #trade .tsech, #bench .tsech {
+    color: var(--dim); font-size: 10px; letter-spacing: 0.2em;
+    margin: 12px 0 2px; padding-bottom: 3px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  #trade .tsech:first-of-type { margin-top: 6px; }
+  #trade .trow {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px;
+    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  #trade .trow:last-child { border-bottom: none; }
+  #trade .trow .nm { color: var(--cream); font-size: 13px; flex: 1 1 auto; min-width: 11ch; overflow-wrap: anywhere; }
+  #trade .trow .tags { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 11px; justify-content: flex-end; }
+  /* Full-strength theme colours (no cream-mixing — that washed out on light
+     themes) with a touch of weight so the tags read on any ground. */
+  #trade .st-atk,  #bench .st-atk  { color: var(--blood); font-weight: 600; }
+  #trade .st-def,  #bench .st-def  { color: var(--steel); font-weight: 600; }
+  #trade .st-gain, #bench .st-gain { color: var(--gold);  font-weight: 600; }
+  #trade .st-dim,  #bench .st-dim  { color: var(--dim); }
+  #trade .trow .tcost { color: var(--gold); font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+  #trade .trow button {
+    background: transparent; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--bone); font: inherit; font-size: 11.5px; padding: 3px 9px; cursor: pointer;
+  }
+  #trade .trow button:hover { color: var(--gold); border-color: var(--gold); }
+  #trade .trow button:disabled { color: var(--dim); border-color: var(--line); cursor: default; }
   @media (max-width: 680px) {
     #trade .bbox { max-height: 92vh; }
     #trade .bcols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
@@ -415,6 +443,7 @@ export const PAGE = `<!doctype html>
     #twant > button { padding: 8px 12px; font-size: 13px; }
     #trade .ttabs button { padding: 8px 14px; font-size: 13px; }
     #trade .bitem button { padding: 8px 14px; font-size: 13px; }
+    #trade .trow button { padding: 8px 14px; font-size: 13px; }
   }
   /* The gatehouse forge: same shell as the hatch, single column. Reads your
      pack and shows what the bench can make — cost in gold when you can afford
@@ -1727,8 +1756,18 @@ function benchItemNode(it, place) {
   nm.className = "nm";
   nm.textContent = it.name;
   if (it.n > 1) { var mu = document.createElement("span"); mu.className = "mult"; mu.textContent = " \\u00d7" + it.n; nm.appendChild(mu); }
-  if (it.stat) { var st = document.createElement("span"); st.className = "stat"; st.textContent = " (" + it.stat + ")"; nm.appendChild(st); }
-  if (it.equipped) { var eq = document.createElement("span"); eq.className = "worn"; eq.textContent = " \\u2014 " + (it.slot === "weapon" ? "wielded" : "worn"); nm.appendChild(eq); }
+  // Stats wear the chip colours, same language as the keeper's shelves.
+  if (it.stat) {
+    it.stat.split(", ").forEach(function (tok, i) {
+      var s = document.createElement("span");
+      s.className = "tag " + statTokenClass(tok);
+      s.textContent = (i ? " \\u00b7 " : "  ") + tok;
+      nm.appendChild(s);
+    });
+  }
+  // "in hand" / "on you", never "worn" — that word belongs to condition, and
+  // "a leather cap — worn — worn" was telling the player nothing twice.
+  if (it.equipped) { var eq = document.createElement("span"); eq.className = "worn"; eq.textContent = " \\u2014 " + (it.slot === "weapon" || it.slot === "shield" ? "in hand" : "on you"); nm.appendChild(eq); }
   if (it.sealed) { var sp = document.createElement("span"); sp.className = "seal"; sp.textContent = " \\u2014 sealed #" + it.serial; nm.appendChild(sp); }
   // Gear shows its wear whether sealed or not (sealed just wears slower) — comma after the seal, em-dash on its own.
   if (it.condWord) { var cw = document.createElement("span"); cw.className = "cond"; cw.textContent = (it.sealed ? ", " : " \\u2014 ") + it.condWord; nm.appendChild(cw); }
@@ -1810,6 +1849,21 @@ function fillBenchCol(el, title, items, cap, place) {
     var e = document.createElement("div"); e.className = "bempty"; e.textContent = "\\u2014 empty \\u2014";
     el.appendChild(e); return;
   }
+  // The pack splits what rides your body from what rides your back, so five
+  // pieces of equipped kit stop burying the loose loot between them.
+  if (place === "pack") {
+    var onYou = items.filter(function (it) { return it.equipped; });
+    var packed = items.filter(function (it) { return !it.equipped; });
+    if (onYou.length && packed.length) {
+      var h1 = document.createElement("div"); h1.className = "tsech"; h1.textContent = "ON YOU";
+      el.appendChild(h1);
+      onYou.forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
+      var h2 = document.createElement("div"); h2.className = "tsech"; h2.textContent = "IN THE PACK";
+      el.appendChild(h2);
+      packed.forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
+      return;
+    }
+  }
   items.forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
 }
 
@@ -1875,16 +1929,8 @@ function renderDoll(sheet) {
   var stanceLine = dollLine("stance", dollStanceText());
   dollHpVal = stanceLine.querySelector(".vl");
   dstats.appendChild(stanceLine);
-  if (sheet.traits && sheet.traits.length) dstats.appendChild(dollLine("traits", sheet.traits.join(" \\u00b7 ")));
-  if (sheet.tally) {
-    var t = sheet.tally;
-    var days = Math.max(0, Math.floor((Date.now() / 1000 - t.born) / 86400));
-    var rec = t.kills + (t.kills === 1 ? " kill" : " kills") + " \\u00b7 " + t.deaths + (t.deaths === 1 ? " death" : " deaths");
-    if (t.boss > 0) rec += " \\u00b7 " + t.boss + (t.boss === 1 ? " king" : " kings");
-    if (t.pvp > 0) rec += " \\u00b7 " + t.pvp + (t.pvp === 1 ? " wanderer" : " wanderers");
-    rec += " \\u00b7 " + (days === 0 ? "born today" : days + (days === 1 ? " day" : " days") + " old");
-    dstats.appendChild(dollLine("record", rec));
-  }
+  // No RECORD on the doll (rome, 2026-07-10) — the figure is about the kit you
+  // stand in, not your history. The tallies live in the typed 'sheet' command.
   bdoll.classList.add("on");
 }
 
@@ -1927,17 +1973,38 @@ function tradeSend(action, row, src) {
 }
 function closeTrade() { tradeEl.classList.remove("open"); tradeState = null; }
 
+// A stat token wears the chip colours: red bites, steel guards, gold gains,
+// dim weighs. The shop teaches kit-building the same way the chips taught verbs.
+function statTokenClass(tok) {
+  if (/dmg|bleed|stun|swing|sweep|pierce/.test(tok)) return "st-atk";
+  if (/armor|block/.test(tok)) return "st-def";
+  if (/wards|quiet|slick|strapped|spiked|reach/.test(tok)) return "st-gain";
+  return "st-dim"; // heavy, light, two-handed
+}
 function tradeItemNode(it, place) {
   var wrap = document.createElement("div");
-  wrap.className = "bitem";
-  var nm = document.createElement("div");
+  wrap.className = "trow";
+  var nm = document.createElement("span");
   nm.className = "nm";
   nm.textContent = it.name + (it.n > 1 ? " (x" + it.n + ")" : "");
-  if (it.stat) { var st = document.createElement("span"); st.className = "stat"; st.textContent = " (" + it.stat + ")"; nm.appendChild(st); }
-  if (place === "stock") { var co = document.createElement("span"); co.className = "cost"; co.textContent = " \\u2014 " + it.cost + " in trade"; nm.appendChild(co); }
   wrap.appendChild(nm);
-  var acts = document.createElement("div");
-  acts.className = "acts";
+  if (it.stat) {
+    var tags = document.createElement("span");
+    tags.className = "tags";
+    it.stat.split(", ").forEach(function (tok) {
+      var s = document.createElement("span");
+      s.className = statTokenClass(tok);
+      s.textContent = tok;
+      tags.appendChild(s);
+    });
+    wrap.appendChild(tags);
+  }
+  if (place === "stock") {
+    var co = document.createElement("span");
+    co.className = "tcost";
+    co.textContent = String(it.cost);
+    wrap.appendChild(co);
+  }
   var b = document.createElement("button");
   b.type = "button";
   if (place === "stock") {
@@ -1950,11 +2017,14 @@ function tradeItemNode(it, place) {
     var src = tradeTab === "pack" ? "" : tradeTab;
     b.addEventListener("click", function () { tradeSend("offer", it.id, src); });
   }
-  acts.appendChild(b);
-  wrap.appendChild(acts);
+  wrap.appendChild(b);
   return wrap;
 }
 
+// His shelves read as a shop, not a ledger: steel, kit, physic, sundries —
+// cheapest first within each. Older servers send no kind; everything falls
+// to one unlabelled shelf and the modal still works.
+var TRADE_SHELVES = [["steel", "STEEL"], ["kit", "KIT"], ["physic", "PHYSIC"], ["sundries", "KEYS & PAPERS"]];
 function fillTradeCol(el, title, items, place) {
   el.textContent = "";
   var h = document.createElement("div");
@@ -1966,6 +2036,18 @@ function fillTradeCol(el, title, items, place) {
     e.className = "bempty";
     e.textContent = place === "goods" ? "\\u2014 nothing he'd take \\u2014" : "\\u2014 bare shelves \\u2014";
     el.appendChild(e);
+    return;
+  }
+  if (place === "stock" && items.some(function (it) { return it.kind; })) {
+    TRADE_SHELVES.forEach(function (shelf) {
+      var group = items.filter(function (it) { return (it.kind || "sundries") === shelf[0]; });
+      if (!group.length) return;
+      var sh = document.createElement("div");
+      sh.className = "tsech";
+      sh.textContent = shelf[1];
+      el.appendChild(sh);
+      group.forEach(function (it) { el.appendChild(tradeItemNode(it, place)); });
+    });
     return;
   }
   items.forEach(function (it) { el.appendChild(tradeItemNode(it, place)); });
@@ -2040,7 +2122,8 @@ function renderTrade(state) {
     });
     var prog = document.createElement("span");
     prog.className = "wprog";
-    prog.textContent = tradeWant.paid + " of " + tradeWant.cost + " paid";
+    var short = tradeWant.cost - tradeWant.paid;
+    prog.textContent = tradeWant.cost + " in trade \\u00b7 paid " + tradeWant.paid + (short > 0 ? " \\u00b7 " + short + " short" : "");
     twant.appendChild(prog);
     var cancel = document.createElement("button");
     cancel.type = "button";

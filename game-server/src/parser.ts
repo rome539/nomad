@@ -91,7 +91,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   rest: "rest", sleep: "rest", sit: "rest", camp: "rest",
   eat: "eat", consume: "eat", chew: "eat", devour: "eat",
   bandage: "bandage", bind: "bandage", dress: "bandage", bandages: "bandage",
-  light: "light", kindle: "light", ignite: "light", torch: "light",
+  light: "light", kindle: "light", ignite: "light", torch: "light", lantern: "light",
   carve: "carve", scratch: "carve", etch: "carve", inscribe: "carve", write: "carve",
   claim: "claim", seal: "claim", extract: "claim", sign: "claim",
   stash: "stash", store: "stash", box: "stash", stow: "stash",
@@ -186,6 +186,9 @@ export function parse(input: string): ParseResult | null {
   }
 
   const verb = VERB_ALIASES[head];
+  // The bare noun carries its own intent: "lantern" alone means light THE
+  // LANTERN. ("torch" predates it and stays the bare-light default.)
+  if (verb === "light" && head === "lantern" && !rest) rest = "lantern";
   if (!verb) {
     const near = nearestVerb(head);
     if (near) {
@@ -279,7 +282,9 @@ export const HELP_TEXT = [
   "  eat <food>        wounds also close from the inside",
   "  light             (kindle) — set a carried torch burning. It shows the",
   "                    lightless deep and burns a while before it gutters out;",
-  "                    an open flame sends some things fleeing.",
+  "                    an open flame sends some things fleeing. 'light lantern'",
+  "                    burns a hooded lantern instead: three times the burn,",
+  "                    kept in the pack — but a tame flame frightens nothing.",
   "  carve <words>     scratch up to 40 characters into the stone; it weathers within a day",
   "  claim [item]      at any gate — the dungeon seals your claim on what you carry",
   "  stash <item>      at any gate — the lockbox (8 slots) holds ANYTHING you",
@@ -308,6 +313,7 @@ export const HELP_TEXT = [
   "new finds its way in. What you drop stays where you dropped it.",
   "What you carry is provisional until a gate seals it: unsealed loot",
   "scatters where you die; what the dungeon sealed, the dungeon returns.",
-  "Four gates ring the Door — one a sewer you climb up into. You drop in,",
-  "extract, and bank at any of them; death wakes you at a random one.",
+  "Four gates: three on the walls, and the waystation out on the old road.",
+  "You drop in, extract, and bank at any of them; death wakes you at a",
+  "random one. The sewer is a thief's door — a way in, never an out.",
 ].join("\n");

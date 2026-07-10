@@ -28,8 +28,10 @@ export interface Session {
   stepText?: boolean; // stepped out via a TYPED barter/forge/inventory (text, no modal)
   ctxCombat: boolean; // the combat state the last chip set was drawn for (see syncCombatCtx)
   seizedBy?: string; // DROWNER creature id that has hold of you — can't flee till you break free
-  litUntil?: number; // ms epoch a kindled torch burns until; while now < this you carry light (sees dark rooms, wakes fire-fear). Reset on wake — a rekindle is cheap.
-  torchWarned?: boolean; // fired the one-time "burning low" warning for the current torch
+  litUntil?: number; // ms epoch a kindled light burns until; while now < this you carry light (sees dark rooms; a torch also wakes fire-fear). Reset on wake — a rekindle is cheap.
+  litSource?: "torch" | "lantern"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack)
+  torchWarned?: boolean; // fired the one-time "burning low" warning for the current light
+  linkdeadUntil?: number; // ms epoch a mid-fight disconnect holds the body in the world until; unset = normally connected (or normally gone)
   hobbled?: boolean; // a leg wound: you can still flee, but only after limping clear (a set delay), cured by rest
   limpingSince?: number; // ms epoch you started dragging your bad leg toward the exit; flee lands once HOBBLE_FLEE_MS passes
   buying?: { wants: { itemId: string; cost: number }[]; paid: number; escrow: { row: string; from: string }[] }; // open cart at the keeper's hatch: wants = every thing named (duplicates allowed), paid against their summed cost; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square, then it all changes hands at once

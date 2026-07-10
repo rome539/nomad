@@ -367,7 +367,10 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // Idle wandering stays LOCAL (off the relay) — that was the flood. A
       // creature FLEEING is a beat in a fight a watcher's following, so that one
       // still reaches the relay.
-      const toRelay = mode === "flee";
+      // Only a flee FROM A PLAYER is a beat a relay-watcher could be following;
+      // a rat breaking from a hyena is the ecosystem's business (rome's trim,
+      // 2026-07-10 — creature-only churn stays off the wire, like idle wander).
+      const toRelay = mode === "flee" && !!fledFrom;
       z.roomFeed(from, outLine, undefined, toRelay);
       const inLine = mode !== "flee" ? "creeps in."
         : runner ? "skitters in, already looking for the next way out."
@@ -431,7 +434,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
     z.addTrace(creature.roomId, { kind: "scraps", at });
     if (!silent) {
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} tears into ${item.name}.`);
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} tears into ${item.name}.`, undefined, false);
       z.roomSound(creature.roomId, "Wet tearing sounds drift {dir}.");
       z.refreshRoomCtx(creature.roomId);
     }
@@ -472,12 +475,12 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       creature.hunger = 0;
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} runs down ${vt.name} and tears into it.`);
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} runs down ${vt.name} and tears into it.`, undefined, false);
       z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.");
       z.refreshRoomCtx(creature.roomId);
     } else {
       // It lived — it bolts. A scrap, not a slaughter.
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} lunges at ${vt.name}, which breaks and runs.`);
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} lunges at ${vt.name}, which breaks and runs.`, undefined, false);
       await creatureMoves(z, victim, now, "flee", false);
     }
     return true;
@@ -513,10 +516,12 @@ export function playerPresent(z: ZoneDO, roomId: string): boolean {
 
   // Does this wanderer bear an open flame in hand? The single wire-up point for
   // FEARS_FIRE, now LIVE (057): a lit torch is fire while it burns (litUntil), so
-  // a fire-fearing creature bolts from anyone carrying one. FIRE_ITEMS is the
-  // separate hook for a hypothetical ever-burning brand — held-in-inventory fire.
+  // a fire-fearing creature bolts from anyone carrying one. A hooded LANTERN is
+  // light but not fire — the shutter and the horn pane tame it (065), so the
+  // fear sleeps through it: that's the torch's edge over the longer burn.
+  // FIRE_ITEMS is the separate hook for a hypothetical ever-burning brand.
 export function carriesFire(session: Session): boolean {
-    if (session.litUntil && Date.now() < session.litUntil) return true;
+    if (session.litUntil && Date.now() < session.litUntil && session.litSource !== "lantern") return true;
     return session.items.some((c) => FIRE_ITEMS.has(c.itemId));
   }
 
@@ -563,7 +568,7 @@ export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
       home: mother.roomId, // born to the nest; its ground is its mother's
     });
     const mtmpl = z.world!.mobTemplates.get(mother.templateId)!;
-    z.roomFeed(mother.roomId, `${cap(mtmpl.name)} shudders, and a fresh pup squirms free.`);
+    z.roomFeed(mother.roomId, `${cap(mtmpl.name)} shudders, and a fresh pup squirms free.`, undefined, false);
     z.roomSound(mother.roomId, "A wet, squealing sound {dir}.");
     z.refreshRoomCtx(mother.roomId);
   }
@@ -593,10 +598,10 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     const before = creature.fed ?? 0;
     creature.fed = before + 1;
     if (!silent) {
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} tears into the dead, feeding.`);
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} tears into the dead, feeding.`, undefined, false);
       z.roomSound(creature.roomId, "Wet, cracking sounds drift {dir}.");
       if (before < SCAVENGER_BOLD_AT && creature.fed >= SCAVENGER_BOLD_AT) {
-        z.roomFeed(creature.roomId, `${cap(tmpl.name)} lifts its head, gorged and unafraid.`);
+        z.roomFeed(creature.roomId, `${cap(tmpl.name)} lifts its head, gorged and unafraid.`, undefined, false);
       }
       z.refreshRoomCtx(creature.roomId);
     }
@@ -623,7 +628,7 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     (creature.carries ??= []).push(id);
     const g = z.world!.itemTemplates.get(id);
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
-    if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} snatches up ${g.name} and drags it off into the dark.`);
+    if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} snatches up ${g.name} and drags it off into the dark.`, undefined, false);
     z.refreshRoomCtx(creature.roomId);
   }
 
@@ -734,7 +739,7 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         }
         if (!silent) z.roomFeedAll("Deep below, iron grinds shut. Something remembers its shape.");
       } else if (!silent) {
-        z.roomFeed(roomId, `${cap(tmpl.name)} creeps out of the dark.`);
+        z.roomFeed(roomId, `${cap(tmpl.name)} creeps out of the dark.`, undefined, false);
         z.roomSound(roomId, "Something stirs {dir}.");
         z.refreshRoomCtx(roomId);
       }
@@ -758,7 +763,7 @@ export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
       if (!c.surfaced) continue;
       if (now - (c.surfacedAt ?? now) < SURFACED_STALE_MS) return false;
       const t = world.mobTemplates.get(c.templateId)!;
-      z.roomFeed(c.roomId, `${cap(t.name)} finds its crack in the floor and drags itself back down into the dark, taking its cold heart with it.`);
+      z.roomFeed(c.roomId, `${cap(t.name)} finds its crack in the floor and drags itself back down into the dark, taking its cold heart with it.`, undefined, false);
       c.roomId = c.home && world.rooms.has(c.home) ? c.home : c.roomId;
       c.surfaced = false;
       c.surfacedAt = undefined;

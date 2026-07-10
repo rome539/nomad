@@ -673,6 +673,15 @@ export const WARRENS_ROOMS = new Set([
 ]);
 export const TORCH_ITEM = "torch";
 export const TORCH_BURN_MS = 10 * 60_000; // a lit torch throws light this long, then gutters out (the run's clock)
+// The hooded lantern (065): the explorer's light. It burns three times a torch
+// and isn't spent on lighting — but a shutter and a horn pane make it a TAME
+// flame: it never wakes the fire-fear (ai.carriesFire skips it). Torch = short,
+// aggressive, a weapon against the timid; lantern = long, patient, and the
+// dark's things don't flinch. Each lighting costs LANTERN_WEAR condition, so a
+// fresh lantern holds five burns; the last burn spends the lantern itself.
+export const LANTERN_ITEM = "hooded-lantern";
+export const LANTERN_BURN_MS = 30 * 60_000;
+export const LANTERN_WEAR = 20;
 
 // ---- gear traits (the 045 audit expansion): properties, not bigger numbers ----
 // Every trait is a one-line hook into a system the simulation already runs.
@@ -770,6 +779,18 @@ export const SLICK_BREAK_BONUS = 0.25; // added to SEIZE_BREAK_ODDS
 export const STRAPPED = new Set(["strapped-baldric"]);
 // THORNS: a blocked blow costs the attacker (the buckler's spike answers).
 export const THORNS = new Map<string, number>([["spiked-buckler", 1], ["crown-guard-pavise", 2]]);
+// MANCATCHER (065): the barbed snare-pole fills the shield hand with DENIAL, not
+// defense — a creature your catcher is on cannot flee (the 18%-hp bolt, the
+// runner's dash, even fire-panic: the collar holds them all). Zero block: you
+// traded your guard for the guarantee. PvP RULE, stamped now for later: against
+// PLAYERS the barbs must HOBBLE (HOBBLE_FLEE_MS limp), never hard-hold — flee is
+// the victim's only out in a full-loot game, and a hard hold is a griefing tool.
+export const MANCATCHER = new Set(["man-catcher"]);
+// PARRY_RIPOSTE (065): an off-hand blade that answers what it turns — a caught
+// blow opens a bleed on the attacker (value = bleedDmg, BLEED_TICKS as usual).
+// THORNS's cousin on the other axis: burst vs armor-ignoring drip. HOLLOW
+// attackers don't bleed, same as everywhere.
+export const PARRY_RIPOSTE = new Map<string, number>([["parrying-dagger", 2]]);
 
 // ---- the verdigris-thing: the extraction monster (047) ----
 // CORRODERS eat your KIT, not your blood: each landed blow blooms green on one
@@ -873,4 +894,9 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
 export const AMBIENT_COOLDOWN_MS = 45_000; // at most one breath of atmosphere this often, per wanderer
 export const AMBIENT_ODDS = 0.16;          // ~per 2s tick, once off cooldown
 export const RECONNECT_GRACE_MS = 5 * 60_000; // a re-weave within this of dropping is a reconnect, not a fresh arrival
+// The world stays real when your eyes close: a disconnect during a LIVE fight
+// (you hold a target, or something holds you) leaves the body standing this
+// long — auto-fighting, killable. Pulling the plug is never an escape; with
+// nothing hunting you, the fade is instant and free, same as ever.
+export const LINKDEAD_MS = 45_000;
 

@@ -71,7 +71,7 @@ import {
   CRUDE_DROP_ROOM, CRUDE_BAD_EXIT, DIR_ORDER,
   RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
-  FLEE_BELOW, FLEE_CHANCE, REGROW_MIN_MS, REGROW_MAX_MS, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP,
+  FLEE_BELOW, FLEE_CHANCE, REGROW_MIN_MS, REGROW_MAX_MS, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, CARVE_MAX_LEN, ROT_MS,
   PATROLS, HOLLOW, THIEVES, RUNNERS, BROODERS, SENTINELS, HOUND_WAKE_MS,
   LISTENERS, WAKE_ENTER, WAKE_EXIT, WAKE_NOISE, RARITY_RANK, 
@@ -80,7 +80,8 @@ import {
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
   DEEP_HEART, DEEP_DOOR_KEY, HEART_FRESH_SEC, SURFACE_INTERVAL_MS,
-  DARK_ROOMS, TORCH_ITEM, TORCH_BURN_MS, GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS
+  DARK_ROOMS, TORCH_ITEM, TORCH_BURN_MS, GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS,
+  LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR, MANCATCHER, PARRY_RIPOSTE
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
@@ -377,10 +378,16 @@ export class ZoneDO implements DurableObject {
     // One body per soul: a second connection displaces the first. With
     // hibernation the old socket may be parked (in getWebSockets), not only in
     // this.sessions — close any socket already bearing this key.
+    // A linkdead body still standing in a fight: the return steps back INTO it
+    // — its chewed-down hp, its room, its foes — not into the stale D1 copy.
+    const linkdead = (() => {
+      const p = this.sessions.get(pubkey);
+      return p && p.linkdeadUntil ? p : null;
+    })();
     for (const other of this.state.getWebSockets()) {
       if (this.wsPubkey(other) !== pubkey) continue;
       const prev = this.sessions.get(pubkey);
-      if (prev) this.send(prev, "Your spirit is called elsewhere. (connected from another client)");
+      if (prev && !prev.linkdeadUntil) this.send(prev, "Your spirit is called elsewhere. (connected from another client)");
       try { other.close(1000, "reconnected"); } catch {}
     }
     this.sessions.delete(pubkey);
@@ -396,6 +403,24 @@ export class ZoneDO implements DurableObject {
     this.state.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
 
     const session = this.buildSession(server, row, items);
+    // Step back into the still-standing body: everything the fight did to it
+    // while the eyes were empty carries over. buildSession's D1 read would
+    // otherwise revert hp/wounds to the last flush — a free heal for loggers.
+    if (linkdead) {
+      session.hp = linkdead.hp;
+      session.roomId = linkdead.roomId;
+      session.target = linkdead.target;
+      session.stance = linkdead.stance;
+      session.bleedTicks = linkdead.bleedTicks;
+      session.bleedDmg = linkdead.bleedDmg;
+      session.stunned = linkdead.stunned;
+      session.hobbled = linkdead.hobbled;
+      session.limpingSince = linkdead.limpingSince;
+      session.litUntil = linkdead.litUntil;
+      session.litSource = linkdead.litSource;
+      session.torchWarned = linkdead.torchWarned;
+      session.linkdeadUntil = undefined;
+    }
     this.sessions.set(pubkey, session);
 
     // A dropped connection that comes back within the grace window is a
@@ -445,6 +470,21 @@ export class ZoneDO implements DurableObject {
 
   private async onLeave(session: Session): Promise<void> {
     if (this.sessions.get(session.pubkey) !== session) return; // displaced, already handled
+    // The world stays real when your eyes close (rome, 2026-07-10): a LIVE
+    // fight holds the body here for LINKDEAD_MS — standing, auto-fighting,
+    // killable — so pulling the plug is never an escape. With nothing hunting
+    // you, the fade below is instant and free, same as ever. The tick lets the
+    // body go when the fight ends or the window closes.
+    const fightLive = !!session.target
+      || [...this.creatures.values()].some((c) => c.target === session.pubkey);
+    if (fightLive && !session.linkdeadUntil) {
+      session.linkdeadUntil = Date.now() + LINKDEAD_MS;
+      this.leftAt.set(session.pubkey, Date.now()); // a return inside the window re-weaves
+      this.roomFeed(session.roomId, `${session.name} goes slack — eyes empty, body still standing.`, session.pubkey);
+      await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp); // durability snapshot; the flush keeps chasing
+      return;
+    }
+    session.linkdeadUntil = undefined;
     this.sessions.delete(session.pubkey);
     this.leftAt.set(session.pubkey, Date.now()); // so a quick return reads as a reconnect
     for (const c of this.creatures.values()) {
@@ -707,7 +747,7 @@ export class ZoneDO implements DurableObject {
       case "rest": return this.cmdRest(session);
       case "eat": return this.cmdEat(session, cmd.arg);
       case "bandage": return this.cmdBandage(session, cmd.arg);
-      case "light": return this.cmdLight(session);
+      case "light": return this.cmdLight(session, cmd.arg);
       case "sheet": return this.cmdSheet(session);
       case "carve": return this.cmdCarve(session, cmd.arg);
       case "claim": return gate.cmdClaim(this, session, cmd.arg);
@@ -831,37 +871,63 @@ export class ZoneDO implements DurableObject {
     return !!session.litUntil && Date.now() < session.litUntil;
   }
 
-  // Kindle a torch: it burns for TORCH_BURN_MS, then gutters out. The torch is
-  // spent into the flame at once (removed now), so burnout is just the clock
-  // running down. One at a time — a fresh light won't waste another. An open
-  // flame also wakes the fire-fear the world shipped dormant (carriesFire).
-  private async cmdLight(session: Session): Promise<void> {
+  // Kindle a light. A torch is spent into the flame at once (removed now, burns
+  // TORCH_BURN_MS, an OPEN flame — wakes the fire-fear). A hooded lantern stays
+  // in the pack while it burns (LANTERN_BURN_MS, three torches' worth), pays
+  // LANTERN_WEAR condition per lighting (five burns, then done), and its
+  // shuttered flame is TAME — the fire-fear never wakes to it (ai.carriesFire).
+  // No arg lights the torch first, the lantern if you carry no torch; "light
+  // lantern" / "light torch" choose. One at a time either way.
+  private async cmdLight(session: Session, arg = ""): Promise<void> {
     if (this.carriesLight(session)) {
-      return this.send(session, "Your torch already burns. Best not waste another until it's spent.");
+      return this.send(session, session.litSource === "lantern"
+        ? "Your lantern already burns steady. Let it do its work."
+        : "Your torch already burns. Best not waste another until it's spent.");
     }
     const torch = session.items.find((c) => c.itemId === TORCH_ITEM);
-    if (!torch) return this.send(session, "You have no torch to light.");
-    // A torch burns in the off hand — the shield hand. Both hands on a two-handed
+    const lantern = session.items.find((c) => c.itemId === LANTERN_ITEM);
+    const wantLantern = arg.includes("lantern") ? true : arg.includes("torch") ? false : !torch;
+    const light = wantLantern ? lantern : torch;
+    if (!light) {
+      return this.send(session, wantLantern && torch ? "You carry no lantern — though you do have a torch." : "You have nothing to light.");
+    }
+    if (wantLantern && light.condition <= 0) {
+      return this.send(session, "The wick is burnt to nothing and the pane is cracked through — this lantern is done.");
+    }
+    // A light burns in the off hand — the shield hand. Both hands on a two-handed
     // weapon leave nowhere to hold it; a shield gets set aside for the flame. The
     // choice the dark forces: light, or guard — not both.
     const weapon = this.equippedItem(session, "weapon");
     if (weapon && TWO_HANDED.has(weapon.tmpl.id)) {
-      return this.send(session, `Both your hands are full of ${weapon.tmpl.name} — no free hand for a torch. Lower it first.`);
+      return this.send(session, `Both your hands are full of ${weapon.tmpl.name} — no free hand for a light. Lower it first.`);
     }
     const shield = this.equippedItem(session, "shield");
     if (shield && this.inCombat(session)) {
-      return this.send(session, "You can't fumble your shield down and a torch up while something wants your blood.");
+      return this.send(session, "You can't fumble your shield down and a light up while something wants your blood.");
     }
     if (shield) {
       shield.carried.equipped = false;
       await setEquipped(this.env.DB, shield.carried.rowId, false);
     }
-    session.items.splice(session.items.indexOf(torch), 1);
-    await removeItemRow(this.env.DB, torch.rowId); // spent into the burning
-    session.litUntil = Date.now() + TORCH_BURN_MS;
-    session.torchWarned = false;
-    this.send(session, `You touch a spark to the pitch and the torch catches${shield ? `, ${shield.tmpl.name} set aside to hold it` : ""} — a low, guttering light pushes the dark back.`, "gain");
-    this.roomFeed(session.roomId, `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey);
+    if (wantLantern) {
+      // The oil is committed the moment the wick takes — the wear lands now, and
+      // the burnout tick spends the lantern itself when the last of it is gone.
+      light.condition -= LANTERN_WEAR;
+      await setItemCondition(this.env.DB, light.rowId, light.condition);
+      session.litUntil = Date.now() + LANTERN_BURN_MS;
+      session.litSource = "lantern";
+      session.torchWarned = false;
+      this.send(session, `You slide the shutter and touch flame to the wick${shield ? `, ${shield.tmpl.name} set aside to carry it` : ""} — a low, steady light settles around you. Nothing flinches from it.`, "gain");
+      this.roomFeed(session.roomId, `${session.name} raises a hooded lantern; a patient light spreads.`, session.pubkey);
+    } else {
+      session.items.splice(session.items.indexOf(light), 1);
+      await removeItemRow(this.env.DB, light.rowId); // spent into the burning
+      session.litUntil = Date.now() + TORCH_BURN_MS;
+      session.litSource = "torch";
+      session.torchWarned = false;
+      this.send(session, `You touch a spark to the pitch and the torch catches${shield ? `, ${shield.tmpl.name} set aside to hold it` : ""} — a low, guttering light pushes the dark back.`, "gain");
+      this.roomFeed(session.roomId, `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey);
+    }
     this.sendStatus(session);
     this.send(session, this.describeRoom(session, false)); // the dark may resolve, or the fire may scatter something
   }
@@ -1390,14 +1456,19 @@ export class ZoneDO implements DurableObject {
         return this.send(session, `Both your hands are full of ${inHand.tmpl.name}. Lower it first.`);
       }
     }
-    // A shield or a two-handed weapon wants the hand your torch is in — taking it
+    // A shield or a two-handed weapon wants the hand your light is in — taking it
     // up snuffs the flame. Light or guard, not both (the reverse of cmdLight).
+    // A snuffed lantern goes back in the pack unlit; the burn it was on is spent
+    // (the wear landed at lighting — oil doesn't pour back into the wick).
     if (this.carriesLight(session) && (tmpl.slot === "shield" || (tmpl.slot === "weapon" && TWO_HANDED.has(tmpl.id)))) {
+      const wasLantern = session.litSource === "lantern";
       session.litUntil = undefined;
+      session.litSource = undefined;
       session.torchWarned = false;
-      this.send(session, DARK_ROOMS.has(session.roomId) && !this.outOfWorld(session)
-        ? "The torch gutters out — no hand left to hold it, and the dark closes in."
-        : "The torch gutters out — no hand left to hold it.");
+      const dark = DARK_ROOMS.has(session.roomId) && !this.outOfWorld(session) ? ", and the dark closes in" : "";
+      this.send(session, wasLantern
+        ? `You shutter the lantern and sling it — no hand left to carry it${dark}.`
+        : `The torch gutters out — no hand left to hold it${dark}.`);
     }
     // One item per slot — set down whatever occupies it first.
     const current = this.equippedItem(session, tmpl.slot);
@@ -1651,12 +1722,18 @@ export class ZoneDO implements DurableObject {
     if (STRAPPED.has(t.id)) bits.push("strapped-down");
     const spike = THORNS.get(t.id);
     if (spike) bits.push(`spiked ${spike}`);
+    if (PARRY_RIPOSTE.has(t.id)) bits.push("a caught blow answers — bleeds the attacker");
+    if (MANCATCHER.has(t.id)) bits.push("what it holds cannot flee");
+    if (t.id === LANTERN_ITEM) bits.push("long steady light — a tame flame, nothing fears it");
     return bits.length ? ` (${bits.join(", ")})` : "";
   }
 
   // Is this a plain carryable (food, trophy, key) that can safely stack, or gear
   // that must be listed on its own (its wear and slot differ per instance)?
+  // The lantern is slotless (it lights like a torch, it doesn't equip) but it
+  // IS gear: its condition meters the burns left, so each one lists alone.
   public isGear(itemId: string): boolean {
+    if (itemId === LANTERN_ITEM) return true;
     const t = this.world!.itemTemplates.get(itemId);
     return !!t && t.slot !== "";
   }
@@ -2169,7 +2246,10 @@ export class ZoneDO implements DurableObject {
     // Display grouping only — the sim's regionOf (chest tiers etc.) still reads
     // these blocks as "upper". The map just names where you're standing honestly.
     const mapRegionOf = (id: string): string =>
-      GROUNDS_ROOMS.has(id) ? "out" : OVERWORKS_ROOMS.has(id) ? "sky" : WARRENS_ROOMS.has(id) ? "warrens" : this.regionOf(id);
+      // A gate reads as a gate wherever it stands — the waystation sits in the
+      // open ground but its tile is gold, or the map would hide the bank.
+      this.regionOf(id) === "gate" ? "gate"
+        : GROUNDS_ROOMS.has(id) ? "out" : OVERWORKS_ROOMS.has(id) ? "sky" : WARRENS_ROOMS.has(id) ? "warrens" : this.regionOf(id);
     for (const id of shown) {
       const room = world.rooms.get(id)!;
       const realExits = world.exits.get(id) ?? [];
@@ -2416,6 +2496,9 @@ export class ZoneDO implements DurableObject {
       }
       if (foes.length === 0) {
         if (session.target) session.target = null;
+        // The daze wears off outside the fight too — fled or left standing
+        // alone, the flag must not stick to the HUD until a refresh.
+        if (session.stunned) { session.stunned = false; this.sendStatus(session); }
         continue;
       }
       // Rung senseless last beat: your swing is gone. It clears now — one hit,
@@ -2651,8 +2734,22 @@ export class ZoneDO implements DurableObject {
           || RUNNERS.has(tmpl.id)
           || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
         if (wantsFlee && !tmpl.is_boss && !ai.scavengerBold(this, creature)) {
-          await ai.creatureMoves(this, creature, now, "flee", false);
-          continue;
+          // MANCATCHER: the barbed collar in your shield hand holds what tries to
+          // run — the bolt it just rolled becomes a wrench against the pole, and
+          // the fight goes on. (PvP rule when that day comes: against PLAYERS the
+          // barbs hobble — route through hobbled + HOBBLE_FLEE_MS — never a hard
+          // hold. Flee is the victim's only out; see zone-data's MANCATCHER note.)
+          const offhand = this.equippedItem(victim, "shield");
+          if (offhand && MANCATCHER.has(offhand.tmpl.id)) {
+            this.send(victim, pick([
+              `${cap(tmpl.name)} wrenches for the dark — the barbs of ${offhand.tmpl.name} hold it fast.`,
+              `${cap(tmpl.name)} throws itself away from you and comes up short, caught in the collar.`,
+              `${cap(tmpl.name)} strains against the pole, feet scrabbling — it is not going anywhere.`,
+            ]), "block");
+          } else {
+            await ai.creatureMoves(this, creature, now, "flee", false);
+            continue;
+          }
         }
         // The dogpile cap: if this player already has a full press on them this
         // tick, this one can't get a blow in — it snarls at the edge and waits.
@@ -2701,6 +2798,17 @@ export class ZoneDO implements DurableObject {
             } else {
               this.send(victim, `${cap(tmpl.name)} drives itself onto the spike — ${spike} back.`, "dmgout");
             }
+          }
+          // The parrying blade answers down the line of the turn: a caught blow
+          // opens a bleed on the attacker (PARRY_RIPOSTE). Announced only when
+          // the wound is fresh — refreshes are silent, like the weapon bleeds.
+          // Dry bone doesn't bleed: the HOLLOW shrug the riposte off.
+          const rip = shield ? PARRY_RIPOSTE.get(shield.tmpl.id) : undefined;
+          if (rip && !HOLLOW.has(tmpl.id) && creature.hp > 0) {
+            const fresh = !creature.bleedTicks;
+            creature.bleedTicks = BLEED_TICKS;
+            creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, rip);
+            if (fresh) this.send(victim, `You answer over the turned blow — the point nicks deep, and ${tmpl.name} starts to bleed.`, "dmgout");
           }
           this.combatNoise(victim.roomId);
           continue;
@@ -2865,23 +2973,61 @@ export class ZoneDO implements DurableObject {
       await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
     }
 
-    // Torches burn down. A warning when the flame runs low, then it gutters out —
-    // and if you're standing in a lightless room, the dark closes over you again.
+    // A linkdead body lets go when its fight ends or the window closes — only
+    // then does the normal fade run (creature targets cleared, state flushed).
+    for (const session of [...this.sessions.values()]) {
+      if (!session.linkdeadUntil) continue;
+      const fightLive = !!session.target
+        || [...this.creatures.values()].some((c) => c.target === session.pubkey);
+      if (!fightLive || now >= session.linkdeadUntil) {
+        session.linkdeadUntil = undefined;
+        await this.onLeave(session);
+      }
+    }
+
+    // Lights burn down. A warning when the flame runs low, then it dies — and if
+    // you're standing in a lightless room, the dark closes over you again. A
+    // burning lantern must also still be IN THE PACK (dropped, sold, stolen —
+    // the flame doesn't follow you); and a lantern's last burn spends it.
     for (const session of this.sessions.values()) {
       if (!session.litUntil) continue;
+      const lantern = session.litSource === "lantern";
+      const held = lantern ? session.items.find((c) => c.itemId === LANTERN_ITEM) : undefined;
+      if (lantern && !held) {
+        session.litUntil = undefined;
+        session.litSource = undefined;
+        session.torchWarned = false;
+        this.send(session, "The lantern is out of your hands — its light goes with it.", "dmgin");
+        this.sendStatus(session);
+        continue;
+      }
       const left = session.litUntil - now;
       if (left <= 0) {
         session.litUntil = undefined;
+        session.litSource = undefined;
         session.torchWarned = false;
         const inDark = DARK_ROOMS.has(session.roomId) && !this.outOfWorld(session);
-        this.send(session, inDark
-          ? "Your torch gutters, flares, and dies — and the dark closes over you completely."
-          : "Your torch gutters, flares, and dies. The last of it falls as ash.", "dmgin");
+        if (lantern) {
+          this.send(session, inDark
+            ? "The lantern's flame shrinks to a bead and drowns in its own oil — and the dark closes over you completely."
+            : "The lantern's flame shrinks to a bead and drowns. The pane goes dark.", "dmgin");
+          if (held && held.condition <= 0) {
+            session.items.splice(session.items.indexOf(held), 1);
+            await removeItemRow(this.env.DB, held.rowId);
+            this.send(session, "That was the last of it: the wick is ash, and the cracked tin comes apart in your hands.");
+          }
+        } else {
+          this.send(session, inDark
+            ? "Your torch gutters, flares, and dies — and the dark closes over you completely."
+            : "Your torch gutters, flares, and dies. The last of it falls as ash.", "dmgin");
+        }
         this.sendStatus(session);
         if (inDark) this.send(session, this.describeRoom(session, false));
       } else if (left <= 90_000 && !session.torchWarned) {
         session.torchWarned = true;
-        this.send(session, "Your torch burns low, the flame guttering — not long now.", "dmgin");
+        this.send(session, lantern
+          ? "The lantern's light thins — the oil of this burn is nearly spent."
+          : "Your torch burns low, the flame guttering — not long now.", "dmgin");
       }
     }
 
@@ -3134,7 +3280,7 @@ export class ZoneDO implements DurableObject {
         this.addTrace(r.roomId, { kind: "scraps", at: r.at });
         if (!silent) {
           const t = this.world!.itemTemplates.get(r.itemId);
-          this.roomFeed(r.roomId, `${cap(t?.name ?? "something")} has gone foul.`);
+          this.roomFeed(r.roomId, `${cap(t?.name ?? "something")} has gone foul.`, undefined, false); // housekeeping stays off the relay
           this.refreshRoomCtx(r.roomId);
         }
       }
@@ -3159,7 +3305,8 @@ export class ZoneDO implements DurableObject {
           ? "The rubble shifts — a loose rock lies within reach again."
           : edible
             ? `${cap(t?.name ?? "something")} lies here — the stores are not empty yet.`
-            : `${cap(t?.name ?? "something")} lies on the altar, as if it had never left.`);
+            : `${cap(t?.name ?? "something")} lies on the altar, as if it had never left.`,
+          undefined, false); // regrow is housekeeping — off the relay
         this.roomSound(g.roomId, rock ? "Stone grinds on stone {dir}." : edible ? "Something settles {dir}." : "A faint chime sounds {dir}.");
         this.refreshRoomCtx(g.roomId);
       }
@@ -3387,7 +3534,7 @@ export class ZoneDO implements DurableObject {
     victim.stunned = false;
     victim.hobbled = false; victim.limpingSince = undefined; // a new body walks whole
     victim.bleedTicks = 0; victim.bleedDmg = 0; // the gate returns you whole — no wound rides back
-    victim.litUntil = undefined; victim.torchWarned = undefined; // the torch went down with the body; the gate gives back breath, not fire
+    victim.litUntil = undefined; victim.litSource = undefined; victim.torchWarned = undefined; // the light went down with the body; the gate gives back breath, not fire
     victim.buying = undefined; // death ends any open trade; the counter clears
     victim.deaths += 1;
     await recordDeath(this.env.DB, victim.pubkey);
@@ -4054,6 +4201,12 @@ export class ZoneDO implements DurableObject {
       return t.slot !== "" && (t.slot === "weapon" || !fighting);
     });
     if (gearless) suggest.push(`equip ${shortName(world.itemTemplates.get(gearless.itemId)!.name)}`);
+    // Standing blind in the lightless deep with a light in the pack: the chip
+    // that saves you. Both offered if you carry both — they're different tools.
+    if (DARK_ROOMS.has(session.roomId) && !this.carriesLight(session)) {
+      if (session.items.some((c) => c.itemId === TORCH_ITEM)) suggest.push("light torch");
+      if (session.items.some((c) => c.itemId === LANTERN_ITEM && c.condition > 0)) suggest.push("light lantern");
+    }
 
     // A locked cache here that you hold the key to: one chip opens it.
     if (!fighting) {

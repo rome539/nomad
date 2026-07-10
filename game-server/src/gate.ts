@@ -439,12 +439,19 @@ export async function leaveTrade(z: ZoneDO, session: Session): Promise<void> {
 
 export async function sendTrade(z: ZoneDO, session: Session, note?: string): Promise<void> {
   const world = z.world!;
+  // Shelf sections so the stock reads like a shop, not a ledger: steel (it
+  // hurts), kit (you wear it), physic (it mends), sundries (keys and papers).
+  const kindOf = (t: { dmg: number; slot: string; edible: number; heal: number; staunch: number }): string =>
+    t.dmg > 0 ? "steel"
+      : t.slot !== "" ? "kit"
+      : t.edible === 1 || t.heal > 0 || t.staunch > 0 ? "physic"
+      : "sundries";
   const stock = [...world.fenceStock]
     .sort((a, b) => a.cost - b.cost)
     .map((s) => {
       const t = world.itemTemplates.get(s.itemId);
       return t ? {
-        id: s.itemId, name: t.name, rarity: t.rarity, cost: s.cost,
+        id: s.itemId, name: t.name, rarity: t.rarity, cost: s.cost, kind: kindOf(t),
         stat: z.itemStat(t).replace(/^ \(|\)$/g, ""),
       } : null;
     })
