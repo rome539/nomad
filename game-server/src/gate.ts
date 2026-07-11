@@ -11,7 +11,7 @@ import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid } from "./rng";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition } from "./zone-util";
-import { SCRAP_ID, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST } from "./zone-data";
+import { SCRAP_ID, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM } from "./zone-data";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -538,10 +538,17 @@ export async function cmdSalvage(z: ZoneDO, session: Session, arg: string): Prom
 // Mend a worn piece with scrap iron. Shared with the bench modal.
 export async function repairCore(z: ZoneDO, session: Session, carried: CarriedItem): Promise<string> {
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
-  if (tmpl.slot === "") return `There's nothing to mend in ${tmpl.name}.`;
+  // The lantern is the one slotless mend (rome, 2026-07-11): its wear isn't
+  // dents, it's spent oil and burnt wick — the forge refills it. Everything
+  // else slotless has nothing to mend. (A lantern burnt to NOTHING is gone —
+  // the last burn takes it apart; you maintain it, or you lose it.)
+  const lantern = carried.itemId === LANTERN_ITEM;
+  if (tmpl.slot === "" && !lantern) return `There's nothing to mend in ${tmpl.name}.`;
   // Sealed gear wears now (slowly) — so it can be mended now too. The seal is
   // title, not condition: hammering the wear out doesn't touch the serial.
-  if (carried.condition >= 100) return `${cap(tmpl.name)} is sound already.`;
+  if (carried.condition >= 100) return lantern
+    ? "The well is full and the wick is fresh — this lantern wants nothing."
+    : `${cap(tmpl.name)} is sound already.`;
   const cost = REPAIR_COST[tmpl.rarity] ?? 1;
   // The vice reaches the pack AND the gate's keeping (lockbox + vault), same as
   // the forge — and scrap counts whether or not a stray seal is on it.
@@ -550,7 +557,9 @@ export async function repairCore(z: ZoneDO, session: Session, carried: CarriedIt
   await z.takeLooseAcross(session, SCRAP_ID, cost);
   carried.condition = 100;
   await setItemCondition(z.env.DB, carried.rowId, 100);
-  return `You hammer the wear out of ${tmpl.name} and file it true. Sound again.`;
+  return lantern
+    ? "You trim a fresh wick, fill the oil-well, and rub the horn pane clear. Five good burns in it again."
+    : `You hammer the wear out of ${tmpl.name} and file it true. Sound again.`;
 }
 
 export async function cmdRepair(z: ZoneDO, session: Session, arg: string): Promise<void> {

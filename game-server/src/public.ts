@@ -1813,10 +1813,12 @@ function benchItemNode(it, place) {
     // needs the seal first (trophies and the like carry no title to seal).
     if (benchAtGate) { if (it.sealed || it.stack) btn("\\u2192 vault", "vault"); else btn("seal", "seal"); }
     // So are the vice and the hammer: mend the wear (sealed gear wears now too,
-    // so it can be mended too), or break UNSEALED gear to scrap.
-    if (benchAtGate && it.slot) {
+    // so it can be mended too), or break UNSEALED gear to scrap. The repair
+    // gate is 'gear' not 'slot' so the slotless lantern gets its oil refill;
+    // only slotted steel breaks down to scrap.
+    if (benchAtGate && it.gear) {
       if (it.cond !== null && it.cond < 100) btn("repair", "repair");
-      if (!it.sealed) armBtn("scrap", "salvage", "scrap");
+      if (!it.sealed && it.slot) armBtn("scrap", "salvage", "scrap");
     }
   } else {
     btn("\\u2192 pack", "take");

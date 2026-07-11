@@ -283,7 +283,13 @@ export const PATROLS: Record<string, string[]> = {
 // Creatures with nothing inside. They do not bleed (broken remains, not blood),
 // do not hunger, and no smell of food moves them. The rat is the only thing
 // down here that's honestly alive.
-export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-captain", "forgotten-king", "drowned-god", "marrow-king", "marrow-cantor"]);
+export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-captain", "forgotten-king", "drowned-god", "marrow-king", "marrow-cantor",
+  "twice-dead", "thrice-dead"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run
+// GRAVE_FLESH: hollow, but a BODY — dried corpse, not bare bone or old iron
+// (rome, 2026-07-11: "sounds like a zombie"). A wight has a skull to split, a
+// spine to sever, ribs over what used to matter — so the vitals lottery stays
+// open to EVERY weapon on these two, not the bone-set's blunt-only gate.
+export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead"]);
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
