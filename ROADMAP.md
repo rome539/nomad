@@ -62,11 +62,10 @@ factions) come last — they emerge from players, and you can't scaffold players
   population-gated.
 - **Fire & light follow-ons** (the 057 arc's open ends):
   - `search` for hidden exits (dark hides them; light + searching finds them).
-  - **The tidal flood hazard** — needs its geometry first: the **Tideways**
-    (~10 deep rooms, the one block of the world expansion NOT yet built).
-    Paper shape gets rome's veto before prose, then migration + reseed.
+    Slots naturally into the Tideways ship.
   - **Map-blackout of dark rooms** — a room you've only seen dark doesn't
     belong on your HUD map.
+  - The tidal flood graduated into the room-events arc below.
 - **Encumbrance → combat penalty** — bones exist (`weight` column,
   `wornWeight()`); today weight only affects flee/dodge.
 - **Shallows heat map** — mobs harden where they're farmed (+1–2 HP, not
@@ -74,6 +73,112 @@ factions) come last — they emerge from players, and you can't scaffold players
 - **Balance re-check** — `scripts/balance-audit.mjs` is stale (numbers predate
   the wards, 063 prices, and the off-hand trio). Re-run and update its tables
   before any combat tuning; it's also the gate on the afflictions framework.
+
+## Room events — the world's weather *(APPROVED 2026-07-11; the next arc)*
+
+rome's direction: events everywhere, not just a deep flood — "make the world
+feel living" — and **mobs are citizens of the weather, not spectators**. The
+spec, before any code:
+
+**The law (every event, no exceptions):**
+- **Telegraph → active window → aftermath.** Nothing hits a player the world
+  didn't announce. The best telegraph is CREATURE BEHAVIOR, not narration —
+  rats streaming up a stair say "water's coming" better than any prose.
+- **Systemic only:** an active event is a bundle of toggles on rules that
+  already exist (light, noise, wake odds, traces, wander bias, boldness,
+  seize odds). Never a scripted scene, never a new one-off mechanic.
+- **Mobs ride existing verbs:** events move creatures through wander bias,
+  flee, `curious`, boldness, and birth timing — no new AI states.
+- **Events bias each other, never trigger each other** (the bell empties the
+  keep's rats into the warrens → a boil grows *likelier*, not scheduled).
+
+**The clocks (rome's law, 2026-07-11 — the game is a simulation):** two
+tracks. The BELL is *scheduled* — a keep rings its bell at its own hours,
+twice a day (near 01:00/13:00 UTC, ±20min; learnable, plannable-around).
+Everything else is *rolled*: one die every 3–6h picks ONE event from the whole
+weighted pool — 4–6 a day, never a schedule. One thing in the sky at a time;
+an arc not mid-run parks at NEVER and only the roll starts it. A roll slept
+past (the tick needs an audience) happened unobserved.
+
+**Built (all in `events.ts`, unshipped):**
+1. **Rain** *(outdoors; pool weight 3 — the common sky)*. Iron-grey telegraph,
+   torches drown (**the hooded lantern shrugs it off**), sound masks, traces
+   wash, scavengers bold; aftermath mud cuts prints deeper, forage regrows
+   sooner, and the storm refreshes the surface fishing pools.
+2. **The bell** *(keep, SCHEDULED)*. One note, then 90s where the keep hears
+   EVERYTHING and rat-kind bolts for the warrens; a 10-minute unsettled after.
+   Someday a player-rung bell is a decoy/flush lever (hold that).
+3. **The boil** *(warrens, w2)*. A rat tide takes one corridor room by room —
+   a moving hazard that bites what stands in it; the posted hold their posts.
+4. **Corpse-wake** *(warrens, w2)*. "The dead don't stay down tonight." The
+   hollow all stop at once (the telegraph), then fresh death-litter is the
+   beacon: where something fell lately, a barrow-wight pulls itself up through
+   the floor (the beacon-trace consumed; ≤4 rise). Whatever still stands when
+   the window shuts drops where it is. Camp your killing floor and your kills
+   send for company. No fresh dead — the listening simply passes.
+5. **The keeper's want** *(gate, w2)*. Chalk on the hatch: one named
+   gatherable counts DOUBLE in trade for ~50min. The only weather that
+   gives you somewhere to GO — it points every wanderer at the same corner of
+   the map at once.
+6. **The escaped thing** *(roams, w1 — the rarest)*. The Gaunt (068) gets
+   loose: the whole zone hears the cry, then it walks the world for an hour —
+   rooms empty ahead of it (its telegraph), it fixes-then-springs on whoever
+   shares its room (the wind-up is the warning). Always drops its pelt
+   (barter 20). Unkilled, it answers some call and goes back down.
+7. **Marsh lights** *(fen + causeway, w2)*. Pale lights that read exactly like
+   a carried torch, false careful footsteps on the roomSound channel a real
+   neighbor would leak through. Nothing attacks. The event is doubt.
+8. **The crows** *(outdoors, w2)*. Carrion birds take every high perch and cry
+   out whoever crosses the open ground — every player under the sky hears
+   where you moved. Anti-stealth, fully diegetic.
+9. **The exhale** *(deep, w2)*. The deep breathes out: a cold current no open
+   flame survives — carried torches die, none will catch until it settles;
+   the hooded lantern's shuttered bead holds (its second argument). No new
+   teeth: a lightless deep is ambush weather the LURKERS already own.
+10. **The marrow-song** *(deep, w2)*. A bone-voice holds one note and every
+   hollow thing below stands entranced — wake odds ZERO, walk right past the
+   bone-country's garrison. The flesh-things are agitated by it instead, and
+   the bones wake twitchy (×2) when it dies. The loot corridor nobody trusts.
+11. **Fog** *(outdoors, w2)*. The anti-rain: spot odds down BOTH ways — wake
+   odds halved AND every creature reads as "a grey shape in the fog" (tells
+   blanked). Scavengers hunt in it. Unlike rain, the traces STAY. The
+   stalker's weather.
+12. **Cold snap** *(outdoors + deep, w2)*. Glass-clear and bitter: torches
+   burn half as long (lit ones lose half their remainder; the lantern's oil
+   doesn't care), resting heals half as often, and the living den up on warm
+   ground — while the HOLLOW keep walking, the free tell. A quiet,
+   safe-looking window that taxes your supplies.
+13. **The breach — PARKED (rome, 2026-07-11: "doesn't fit")**. Fully built
+   and idle: stone groans 90s, the wall GIVES, an exit exists both ways for
+   10 minutes, rubble + scar after; 8 hand-picked walls in BREACH_PAIRS.
+   Its pool ticket is commented out in events.ts — restoring the event is
+   uncommenting one line. The flagged *wall-breach ↔ muster* pair was never
+   in.
+
+14. **THE TIDE — the crown (BUILT 2026-07-11; rome passed the map: "i like
+   the tide"; migration 069, NEEDS RESEED on ship)**. The Tideways: ten
+   rooms hanging below the water country, two mouths (under the undertow,
+   under the weir — in one way, out the other). SCHEDULED like the bell
+   (tides don't roll dice): roughly four a day, 5–7h apart. Telegraph 3min:
+   the drips drum and everything living CLIMBS (wander bias up — their
+   flight past you is the warning). Rising: one level per minute, cradle
+   first; flooded rooms kill torches (the lantern survives a wade), refuse
+   rest, and scatter what can't swim; the drowners' hour — everything of
+   theirs in the deep ranges wide. A high tide (1 in 4) takes even the
+   breathing-hall — the one air pocket, the camp you trust until you
+   shouldn't. Crest holds ~8min, then the water lets go all at once:
+   half the floor loot of every drowned room washes one level DOWN (why
+   the still-cradle's floor is a midden), and the wing's fishing pools
+   (eel-run, breathing-hall — new FISHING_DEEP waters) forget every angler.
+   The wing is DEEP by every rule: chest tiers roam it, the exhale and the
+   marrow-song reach it, the cold bites it. Not yet built on top: pack
+   weight slowing the wade, exits sealing/float-ups, the undertow-grasper
+   (watch list — its home is ready).
+
+**Variety shelf (cheap follow-ons):** the warden's muster (patrol surge; a
+wall and a window at once), and the stillness (everything everywhere sleeps
+deeper for a few minutes — the marrow-song already plays this card for the
+deep's hollow).
 
 ## Watch list (don't fix until play says so)
 

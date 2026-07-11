@@ -13,11 +13,14 @@ import { cap, nameMatches, rollGearCondition } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
 import * as ai from "./ai";
 import * as light from "./light";
+import * as events from "./events";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK, SLICK_BREAK_BONUS,
-  PARTING_BLOW_CHANCE, FISHING_ROOMS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
-  CARVE_MAX_LEN, TWO_HANDED, RARITY_RANK, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS,
+  PARTING_BLOW_CHANCE, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
+  RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
+  CARVE_MAX_LEN, TWO_HANDED, RARITY_RANK, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
+  DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS,
 } from "./zone-data";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
@@ -48,7 +51,7 @@ export function cmdSquink(z: ZoneDO, session: Session): void {
 
 // ---- verbs ----
 
-export function cmdLook(z: ZoneDO, session: Session, arg: string): void {
+export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise<void> {
   // A deliberate look always gives the full scene — and marks the room known,
   // so from here you get the brief view unless you ask again.
   if (!arg) { session.visited.add(session.roomId); return z.send(session, z.describeRoom(session, true)); }
@@ -87,6 +90,25 @@ export function cmdLook(z: ZoneDO, session: Session, arg: string): void {
   }
   const other = findPlayerIn(z, session.roomId, arg);
   if (other) return z.send(session, `${other.name}, a fellow wanderer. Keys in pocket, nowhere to be.`);
+  // Not in hand, not on the floor — maybe in the lockbox (rome, 2026-07-11:
+  // look reaches into your own keeping too). Not mid-fight: nobody unlatches
+  // a box with something trying to kill them.
+  if (!z.inCombat(session)) {
+    const boxed = await loadContainer(z.env.DB, session.pubkey, "lockbox");
+    const inBox = boxed.find((c) => {
+      const t = world.itemTemplates.get(c.itemId);
+      return !!t && nameMatches(t.name, arg);
+    });
+    if (inBox) {
+      const t = world.itemTemplates.get(inBox.itemId)!;
+      return z.send(
+        session,
+        `You crouch and work the lockbox's latch. ${t.description}${z.itemStat(t)}${wearClause(z, z.isGear(inBox.itemId) ? inBox.condition : undefined)}`
+          + (inBox.serial !== null ? ` The dungeon's seal is on it. (mint #${inBox.serial})` : "")
+          + " Back it goes, and the latch clicks home.",
+      );
+    }
+  }
   z.send(session, "You see nothing like that here.");
 }
 
@@ -197,9 +219,13 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     if (!fresh) {
       return z.send(session, `You press the heart to the door — but the cold has gone out of it, and it's soft, grey, spoiled. The door does not stir. The slime sloughs from your hand and is gone.`, "dmgin");
     }
-    // Once opened, open for everyone — until what lives beyond it returns.
+    // Once opened, open for everyone — but a heart buys a WINDOW, not a
+    // thoroughfare: the iron remembers its shape (the zone tick re-seals it).
+    // Only the way DOWN is barred; the-descent's way up is unkeyed, so the
+    // door shutting never seals anyone below.
     z.openDoors.add(doorKey);
-    z.send(session, "You press the still-cold heart to the black door. For a moment nothing — then the door *takes* it, drinks the cold clean out of it, and grinds open. It stays open.", "unlock");
+    z.doorCloseAt.set(doorKey, Date.now() + DEEP_DOOR_OPEN_MS);
+    z.send(session, "You press the still-cold heart to the black door. For a moment nothing — then the door *takes* it, drinks the cold clean out of it, and grinds open. The iron will remember its shape before long — but it only ever bars the way down.", "unlock");
     z.roomFeed(session.roomId, `${session.name} presses something to the black door, and it grinds open.`, session.pubkey);
     z.roomSound(session.roomId, "Iron grinds against stone, {dir}.");
     z.creatureNoise(session.roomId);
@@ -222,22 +248,42 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // A SENTINEL guards the way deeper. Asleep, you can step over it — and that
   // rouses it (you've opened the deep, and now it's up for whoever comes next).
   // Awake, it bars the descent outright: the only way down is to put it down.
-  // Heading OUT toward the shallows is always free — it guards the descent, not
-  // the exit.
-  if (DEEP_ROOMS.has(exit.to_room)) {
-    const guard = [...z.creatures.values()].find(
-      (c) => c.roomId === session.roomId && SENTINELS.has(c.templateId),
-    );
-    if (guard) {
-      const gt = world.mobTemplates.get(guard.templateId)!;
-      if (z.sentinelAwake(guard)) {
-        return z.send(session, `${cap(gt.name)} is awake and bars the stair, all three heads low and watching. There is no slipping past it now — put it down, or turn back.`, "dmgin");
-      }
-      guard.wakeUntil = Date.now() + HOUND_WAKE_MS; // step over it and it stirs
-      z.send(session, `You pick your way over ${gt.name}, breath held. Behind you, three heads lift as one — the deep is open, and it is awake.`, "seize");
-      z.roomFeed(session.roomId, `${cap(gt.name)} wakes with a low, tripled growl.`, session.pubkey);
-      z.roomSound(session.roomId, "A low growl rolls up from {dir} — something big, and awake.");
+  // And awake, NO crossing of its room is free — see the toll below.
+  const guard = [...z.creatures.values()].find(
+    (c) => c.roomId === session.roomId && SENTINELS.has(c.templateId),
+  );
+  const guardWasAwake = !!guard && z.sentinelAwake(guard); // read BEFORE the tiptoe wakes it — the first slip past stays free
+  if (guard && DEEP_ROOMS.has(exit.to_room)) {
+    const gt = world.mobTemplates.get(guard.templateId)!;
+    const heads = HOUND_HEADS.get(guard.templateId) ?? "all three heads";
+    if (guardWasAwake) {
+      return z.send(session, `${cap(gt.name)} is awake and bars the stair, ${heads} low and watching. There is no slipping past it now — put it down, or turn back.`, "dmgin");
     }
+    guard.wakeUntil = Date.now() + HOUND_WAKE_MS; // step over it and it stirs
+    z.send(session, `You pick your way over ${gt.name}, breath held. Behind you, ${heads} lift as one — the deep is open, and it is awake.`, "seize");
+    z.roomFeed(session.roomId, `${cap(gt.name)} wakes with a low, tripled growl.`, session.pubkey);
+    z.roomSound(session.roomId, "A low growl rolls up from {dir} — something big, and awake.");
+  }
+
+  // The gate toll: an awake sentinel holds the door, and nothing walks its room
+  // without feeling teeth on the way out — whichever way out. One mitigated
+  // bite per crossing (jaws that bleed roll their bleed too). The sleeping
+  // tiptoe above stays the one free pass, and it costs the waking; the generic
+  // parting blow below excludes the sentinel so one crossing never pays the
+  // same jaws twice.
+  if (guard && guardWasAwake) {
+    const gt = world.mobTemplates.get(guard.templateId)!;
+    let bite = randInt(gt.dmg_min, gt.dmg_max);
+    bite = Math.max(1, Math.round(bite * ARMOR_K / (z.equippedArmor(session) + ARMOR_K)));
+    bite = Math.max(1, Math.round(bite * STANCE[session.stance].def));
+    session.hp -= bite;
+    z.send(session, `${cap(gt.name)} holds its post — and one head snaps out as you pass, jaws closing for ${bite}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`, "dmgin");
+    z.roomFeed(session.roomId, `${cap(gt.name)} snaps at ${session.name} as they pass.`, session.pubkey);
+    if (session.hp <= 0) {
+      await z.onPlayerDeath(session, gt);
+      return;
+    }
+    z.openWound(session, gt);
   }
 
   const wasFighting = z.inCombat(session);
@@ -246,7 +292,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // clean. (Armor still soaks it — that's what it's for.)
   if (wasFighting && z.wornWeight(session) > 0 && chance(PARTING_BLOW_CHANCE)) {
     const striker = [...z.creatures.values()].find(
-      (c) => c.roomId === session.roomId && (c.target === session.pubkey || c.id === session.target),
+      (c) => c.roomId === session.roomId && (c.target === session.pubkey || c.id === session.target)
+        && !(guardWasAwake && c.id === guard!.id), // the sentinel already took its toll above
     );
     if (striker) {
       const stmpl = world.mobTemplates.get(striker.templateId)!;
@@ -282,6 +329,14 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // prints — the name line paints gold even the very first time you see it.
   z.sendStatus(session);
   z.send(session, z.enterDescribe(session));
+  // Carrying an open flame out under the downpour: the rain takes it.
+  events.rainSoaksTorch(z, session);
+  // Carrying one down into the deep's exhale: the cold current takes it.
+  events.exhaleSnuffsTorch(z, session);
+  // Wading into the tide with one: the water takes it.
+  events.tideSoaksTorch(z, session);
+  // And while the crows hold the sky, every open-ground move is called out.
+  events.crowsMark(z, session);
   z.refreshRoomCtx(from);
   z.refreshRoomCtx(session.roomId);
   await ai.provokeGrudges(z, session, true); // you walked in — a grudge-holder gets the jump
@@ -332,7 +387,18 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string): Promise<
     const stillHere = here.includes(itemId);
     const alreadyRegrowing = z.regrow.some((r) => r.itemId === itemId && r.roomId === session.roomId);
     if (!stillHere && !alreadyRegrowing) {
-      z.regrow.push({ itemId, roomId: session.roomId, at: Date.now() + randInt(REGROW_MIN_MS, REGROW_MAX_MS) });
+      // Living forage grows back fast; dead stock (cured provisions nobody is
+      // curing) trickles in on the slow clock — except carrion in carrion
+      // country, which the dying keep stocked. (The hammerstone never comes
+      // through here: the world mints it itself — zone tick, random haunt.)
+      const cured = DEAD_STOCK.has(itemId) && !CARRION_ROOMS.has(session.roomId);
+      z.regrow.push({
+        itemId,
+        roomId: session.roomId,
+        at: Date.now() + (cured
+          ? randInt(STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS)
+          : randInt(REGROW_MIN_MS, REGROW_MAX_MS)),
+      });
     }
   }
   await insertLoot(z.env.DB, rowId, session.pubkey, itemId, null, condition);
@@ -379,7 +445,8 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
     z.dropInstance(session.roomId, itemId, carried.journalId);
   } else {
     z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), itemId]);
-    if (tmpl.slot !== "") z.groundCond.set(`${itemId}@${session.roomId}`, carried.condition); // gear keeps its wear on the floor
+    z.stampFresh(session.roomId, itemId);
+    if (z.isGear(itemId)) z.groundCond.set(`${itemId}@${session.roomId}`, carried.condition); // gear (and the stone) keeps its wear on the floor
     if (tmpl.edible) z.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
   }
   z.send(
@@ -599,6 +666,9 @@ export function cmdRest(z: ZoneDO, session: Session): void {
   }
   if (session.hp >= session.maxHp) return z.send(session, "You are unhurt.");
   if (session.resting) return z.send(session, "You are already resting.");
+  if (events.tideFlooded(z, session.roomId)) {
+    return z.send(session, "Rest, here? The water is at your waist and still moving. Climb first.");
+  }
   session.resting = true;
   z.addTrace(session.roomId, { kind: "rest", at: Date.now() });
   z.send(session, pick([
@@ -613,19 +683,64 @@ export function cmdRest(z: ZoneDO, session: Session): void {
 // Fishing: only off the Pocket of Air's dry shelf, a line dropped into the
 // black flood below. Rarely anything takes it — but a fish is good, fresh
 // food, and the eel is a real meal. A short patience between casts.
+// A catch (or a snag) spends from the water's budget; the last one starts the
+// pool's rest clock — it forgets you slowly.
+function spendPool(z: ZoneDO, roomId: string, pool: { left: number; at: number }): void {
+  pool.left -= 1;
+  if (pool.left <= 0) pool.at = Date.now() + FISH_POOL_REST_MS;
+  z.fishStock.set(roomId, pool);
+}
+
+// Drop a line where the water pools. Depth decides the table: surface water
+// (the fen, the orchard) is mostly cave-fish and wakes under RAIN; the deep
+// flood gives up eels and, rarely, the marrow-lamprey. A miss can still snag
+// scrap off the bottom — the flood keeps a little iron for the patient.
 export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   const world = z.world!;
   if (z.inCombat(session)) return z.send(session, "Not with something trying to kill you.");
   if (!FISHING_ROOMS.has(session.roomId)) {
-    return z.send(session, "There's no water here to fish. You'd need to drop a line where the flood pools deep.");
+    return z.send(session, "There's no water here to fish. You'd need to drop a line where the flood pools deep — or where the fen lies still.");
   }
   const now = Date.now();
   if (session.lastFishAt && now - session.lastFishAt < FISH_COOLDOWN_MS) {
     return z.send(session, "You've only just cast. Let the line settle.");
   }
   session.lastFishAt = now;
-  if (!chance(FISH_ODDS)) {
+  // Pools fish out: each water holds a few catches, then goes quiet while it
+  // forgets you. (This is what keeps the fen from being a money pump.)
+  let pool = z.fishStock.get(session.roomId);
+  if (!pool || (pool.left <= 0 && now >= pool.at)) {
+    pool = { left: FISH_POOL_CATCHES, at: 0 };
+    z.fishStock.set(session.roomId, pool);
+  }
+  if (pool.left <= 0) {
     return z.send(session, pick([
+      "Nothing is biting here anymore. The water needs to forget you.",
+      "You've pulled what this water will give for now.",
+    ]));
+  }
+  const surface = FISHING_SURFACE.has(session.roomId);
+  const biting = surface && events.raining(z, session.roomId);
+  if (!chance(Math.min(0.9, FISH_ODDS * (biting ? RAIN_BITE_MULT : 1)))) {
+    // The bottom keeps old iron; sometimes the hook finds that instead.
+    if (chance(JUNK_SNAG_ODDS) && (await z.grantItem(session, "scrap-iron"))) {
+      spendPool(z, session.roomId, pool);
+      z.send(session, pick([
+        "The line snags dead weight — you haul up a fist of scrap iron, dripping.",
+        "Something heavy and lifeless: old iron off the bottom, good for the forge.",
+      ]), "gain");
+      z.sendCtx(session);
+      await z.persist();
+      return;
+    }
+    return z.send(session, pick(biting ? [
+      "The rain pocks the water and something rolls near the line — not this cast.",
+      "A hard tug in the downpour — then gone. They're moving down there.",
+    ] : surface ? [
+      "The fen lies flat under its own scum. Nothing takes the line.",
+      "A ripple crosses the still water, going somewhere else.",
+      "You wait. The fen keeps its own counsel.",
+    ] : [
       "You lower a line into the black water and wait. Nothing takes it.",
       "The water lies flat and still. Whatever's down there isn't hungry.",
       "A tug — then slack. Gone before you could haul it up.",
@@ -633,17 +748,24 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
       "Something brushes the line and thinks better of it.",
     ]));
   }
-  const fishId = chance(PALE_EEL_ODDS) ? "pale-eel" : "cave-fish";
+  // Depth writes the table: the lamprey never rises to surface water.
+  const fishId = surface
+    ? (chance(EEL_SURFACE_ODDS) ? "pale-eel" : "cave-fish")
+    : chance(LAMPREY_ODDS) ? "marrow-lamprey"
+    : chance(PALE_EEL_ODDS) ? "pale-eel" : "cave-fish";
   const fish = world.itemTemplates.get(fishId);
   if (!fish) return z.send(session, "Something takes the line — but it slips free before you can land it.");
   if (!(await z.grantItem(session, fish.id))) {
     return z.send(session, `Something takes the line — but your pack is full, and you have to let ${fish.name} go.`);
   }
-  z.send(session, (fishId === "pale-eel"
+  spendPool(z, session.roomId, pool);
+  z.send(session, (fishId === "marrow-lamprey"
+    ? `The line dives and holds — you fight it up hand over hand: ${fish.name}, coiling like a question.`
+    : fishId === "pale-eel"
     ? `The line goes taut and FIGHTS you — you haul up ${fish.name}, thrashing.`
     : `The line goes taut — you haul up ${fish.name}.`)
     + ` [${fish.rarity}] (unclaimed — good, fresh food)`, "gain");
-  z.roomFeed(session.roomId, `${session.name} lands a catch from the flood.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} lands a catch from the ${surface ? "still water" : "flood"}.`, session.pubkey);
   z.sendCtx(session);
   await z.persist();
 }

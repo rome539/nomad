@@ -8,6 +8,7 @@
 // light, or guard — not both.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
+import * as events from "./events";
 import { setEquipped, setItemCondition, removeItemRow } from "./world";
 import {
   TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR,
@@ -38,6 +39,20 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   if (wantLantern && light.condition <= 0) {
     return z.send(session, "The wick is burnt to nothing and the pane is cracked through — this lantern is done.");
   }
+  // Under open rain a torch won't catch — the storm is the lantern's argument
+  // (its shuttered flame doesn't care; see events.ts).
+  if (!wantLantern && events.raining(z, session.roomId)) {
+    return z.send(session, "The rain would drown a torch before it caught. A hooded lantern wouldn't care.");
+  }
+  // While the deep exhales, the current pulls an open flame apart before it
+  // catches — the exhale is the lantern's other argument.
+  if (!wantLantern && events.exhaling(z, session.roomId)) {
+    return z.send(session, "The air itself pulls the flame apart before it can catch. A hooded lantern wouldn't care.");
+  }
+  // Standing in the tide: the pitch drinks water before it drinks fire.
+  if (!wantLantern && events.tideFlooded(z, session.roomId)) {
+    return z.send(session, "You are standing in the tide. The pitch would drink water before it ever drank fire. A hooded lantern, held high, wouldn't care.");
+  }
   // Both hands on a two-handed weapon leave nowhere to hold a light; a shield
   // gets set aside for the flame.
   const weapon = z.equippedItem(session, "weapon");
@@ -65,10 +80,12 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   } else {
     session.items.splice(session.items.indexOf(light), 1);
     await removeItemRow(z.env.DB, light.rowId); // spent into the burning
-    session.litUntil = Date.now() + TORCH_BURN_MS;
+    // A torch lit in a cold snap fights for its life the whole way down.
+    const coldMult = events.coldTorchMult(z, session.roomId);
+    session.litUntil = Date.now() + Math.floor(TORCH_BURN_MS * coldMult);
     session.litSource = "torch";
     session.torchWarned = false;
-    z.send(session, `You touch a spark to the pitch and the torch catches${shield ? `, ${shield.tmpl.name} set aside to hold it` : ""} — a low, guttering light pushes the dark back.`, "gain");
+    z.send(session, `You touch a spark to the pitch and the torch catches${shield ? `, ${shield.tmpl.name} set aside to hold it` : ""} — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.`, "gain");
     z.roomFeed(session.roomId, `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey);
   }
   z.sendStatus(session);

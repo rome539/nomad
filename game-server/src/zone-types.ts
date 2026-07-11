@@ -82,6 +82,10 @@ export interface Creature {
   hidden?: boolean; // LURKER: unseen in the room until it strikes
   rises?: number; // REVENANT: times it has already got back up (see RISE_LIMIT)
   home?: string; // its den: territory anchors here (backfilled for old saves)
+  risen?: boolean; // corpse-wake: pulled up for the window only — drops where it stands when the window closes
+  eyeing?: string; // scavenger: the floor gear it has declared intent on (the nose-first telegraph)
+  eyeingAt?: number; // ms epoch the snatch lands, if nobody comes back to interrupt
+  cuddling?: string; // rat-kind: pubkey of the resting wanderer it has curled up against (cleared the moment they rise)
 }
 
 export interface Regrow {
@@ -97,6 +101,14 @@ export interface Trace {
   at: number;
   label?: string;
   words?: string;
+}
+
+// A room event mid-arc (events.ts): which phase the sky is in, and when it
+// turns. phase "idle" means the next telegraph fires at `until`.
+export interface EventState {
+  phase: "idle" | "telegraph" | "active" | "aftermath";
+  until: number; // ms epoch this phase ends
+  data?: string; // event-specific payload (the keeper's want: which item he's asking after)
 }
 
 export interface RotEntry {
@@ -121,6 +133,9 @@ export interface SimState {
   regrow: Regrow[];
   arrivals: Record<string, number>; // templateId -> ms when a migrant arrives
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
+  doorCloseAt?: Record<string, number>; // "roomId:dir" -> ms epoch a timed door re-seals (the deep door: a heart buys a window, not a thoroughfare)
+  fenceOut?: Record<string, number>; // itemId -> ms the keeper restocks it (bare shelves — the market has other customers)
+  nextStoneAt?: number; // ms the world next mints a hammerstone into a random haunt (no farmable spot)
   traces: Record<string, Trace[]>;
   rot: RotEntry[];
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once
@@ -128,4 +143,6 @@ export interface SimState {
   cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills
   cacheRoom?: Record<string, string>; // cacheId -> its CURRENT room (roaming chests relocate on refill; unset = place on first access)
   nextSurfaceAt?: number; // ms epoch the deep next surfaces a dweller (corpse-key minting; only while the deep door is sealed)
+  events?: Record<string, EventState>; // room events mid-arc (rain and its kin) — the sky survives hibernation
+  fishStock?: Record<string, { left: number; at: number }>; // per-water catch budget: what's left, and when a fished-out pool forgets (survives deploys — no free refill)
 }

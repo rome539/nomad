@@ -1814,9 +1814,10 @@ function benchItemNode(it, place) {
     if (benchAtGate) { if (it.sealed || it.stack) btn("\\u2192 vault", "vault"); else btn("seal", "seal"); }
     // So are the vice and the hammer: mend the wear (sealed gear wears now too,
     // so it can be mended too), or break UNSEALED gear to scrap. The repair
-    // gate is 'gear' not 'slot' so the slotless lantern gets its oil refill;
-    // only slotted steel breaks down to scrap.
-    if (benchAtGate && it.gear) {
+    // gate is 'fix' not 'slot' so the slotless lantern gets its oil refill
+    // while the hammerstone (wears, but nothing mends stone) never baits a
+    // refusal; only slotted steel breaks down to scrap.
+    if (benchAtGate && it.fix) {
       if (it.cond !== null && it.cond < 100) btn("repair", "repair");
       if (!it.sealed && it.slot) armBtn("scrap", "salvage", "scrap");
     }

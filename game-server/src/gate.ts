@@ -9,9 +9,11 @@ import type { Session } from "./zone-types";
 import { provokeGrudges } from "./ai";
 import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
-import { uuid } from "./rng";
+import { uuid, randInt, chance } from "./rng";
+import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition } from "./zone-util";
-import { SCRAP_ID, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM } from "./zone-data";
+import { SCRAP_ID, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH,
+  FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS } from "./zone-data";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -169,6 +171,32 @@ export function fenceGuard(z: ZoneDO, session: Session): string | null {
   return null;
 }
 
+// A bare shelf is a bare shelf: sold out until the keeper restocks it.
+export function inStock(z: ZoneDO, itemId: string): boolean {
+  return (z.fenceOut.get(itemId) ?? 0) <= Date.now();
+}
+
+// The market breathes (rome, 2026-07-11): shelves restock on their own clock,
+// and every few hours an off-screen customer buys the keeper out of some one
+// thing — the world has other wanderers, even when the wire is quiet.
+let nextChurnAt = 0;
+export function tickFence(z: ZoneDO, now: number): void {
+  for (const [itemId, at] of z.fenceOut) {
+    if (now >= at) z.fenceOut.delete(itemId); // the crate came in; the shelf fills
+  }
+  if (!nextChurnAt) {
+    nextChurnAt = now + randInt(FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS);
+    return;
+  }
+  if (now < nextChurnAt) return;
+  nextChurnAt = now + randInt(FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS);
+  const world = z.world!;
+  const stocked = world.fenceStock.filter((s) => inStock(z, s.itemId));
+  if (stocked.length <= 1) return; // never empty the whole hatch
+  const gone = stocked[randInt(0, stocked.length - 1)];
+  z.fenceOut.set(gone.itemId, now + randInt(FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS));
+}
+
 export function cmdBarter(z: ZoneDO, session: Session): void {
   const world = z.world!;
   const bar = fenceGuard(z, session);
@@ -176,10 +204,15 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
   if (!world.fenceStock.length) return z.send(session, "The hatch is shuttered, and stays that way.");
   z.enterStep(session, "trading"); // safe at the counter until you step away
   const lines = ["The keeper unshutters the hatch and lays out what he'll part with:"];
+  const bare: string[] = [];
   for (const s of [...world.fenceStock].sort((a, b) => a.cost - b.cost)) {
     const t = world.itemTemplates.get(s.itemId);
     if (!t) continue;
+    if (!inStock(z, s.itemId)) { bare.push(t.name); continue; }
     lines.push(`  ${t.name}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade`);
+  }
+  if (bare.length) {
+    lines.push(`Bare shelf-space where ${bare.join(", ")} would sit. "Come back later," he says, to nobody in particular.`);
   }
   lines.push("He deals in kind — bones, teeth, oddments. 'buy <thing>' starts a trade; 'offer <thing>' pays until he's square. He gives no change. ('look' steps you back into the world.)");
   return z.send(session, lines.join("\n"));
@@ -214,6 +247,9 @@ export function cmdBuy(z: ZoneDO, session: Session, arg: string): void {
     return t ? nameMatches(t.name, arg) : false;
   });
   if (!stock) return z.send(session, "The keeper shrugs. He doesn't carry that.");
+  if (!inStock(z, stock.itemId)) {
+    return z.send(session, "The keeper spreads his hands — fresh out. The shelf behind him is bare where it would sit. Come back later.");
+  }
   z.enterStep(session, "trading"); // safe at the counter until you step away
   z.send(session, startBuy(z, session, stock) + " ('offer nothing' walks away.)");
   z.sendCtx(session);
@@ -230,14 +266,20 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   const t = world.itemTemplates.get(carried.itemId)!;
   if ((t.barter ?? 0) <= 0) return `The keeper waves ${t.name} away. No use to him.`;
   trade.escrow.push({ row: carried.rowId, from });
-  trade.paid = roundTender(trade.paid + t.barter);
+  // The chalked want (events): the thing on the hatch counts double while
+  // the chalk lasts — and his manner gives it away before any tally could.
+  const wanted = events.wantMult(z, carried.itemId);
+  const worth = t.barter * wanted;
+  trade.paid = roundTender(trade.paid + worth);
   // His manner is the only appraisal anyone gets.
   let line: string;
-  if (t.barter >= RICH_TENDER) {
+  if (wanted > 1) {
+    line = `The keeper's hand closes over ${t.name} almost before you set it down — the very thing the chalk asks for.`;
+  } else if (worth >= RICH_TENDER) {
     line = `The keeper goes very still. Then ${t.name} is gone beneath the counter, and his manner warms considerably.`;
-  } else if (t.barter >= 5) {
+  } else if (worth >= 5) {
     line = `The keeper's eyebrows climb. He makes ${t.name} disappear.`;
-  } else if (t.barter >= 2) {
+  } else if (worth >= 2) {
     line = `The keeper weighs ${t.name} in his palm and nods.`;
   } else {
     line = `The keeper turns ${t.name} over and grunts.`;
@@ -258,7 +300,8 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     if (item) onCounter.push({ entry: e, item });
   }
   trade.escrow = onCounter.map((o) => o.entry);
-  trade.paid = roundTender(onCounter.reduce((sum, o) => sum + (world.itemTemplates.get(o.item.itemId)?.barter ?? 0), 0));
+  trade.paid = roundTender(onCounter.reduce(
+    (sum, o) => sum + (world.itemTemplates.get(o.item.itemId)?.barter ?? 0) * events.wantMult(z, o.item.itemId), 0));
   if (trade.paid < cost) {
     return `${line} The keeper re-counts and shakes his head — the counter's short. (${trade.paid} of ${cost}.)`;
   }
@@ -285,7 +328,15 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   // you bought it, it's yours, the world can't peel it off your corpse. Only a
   // pack-full spill lands unsealed.
   const slid: string[] = [];
+  const lastOnes: string[] = [];
   for (const w of trade.wants) {
+    // Sometimes yours was the last one on the shelf — the market is finite,
+    // and the next wanderer finds bare wood where this sat.
+    if (inStock(z, w.itemId) && chance(FENCE_LAST_ONE_ODDS)) {
+      z.fenceOut.set(w.itemId, Date.now() + randInt(FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS));
+      const t = world.itemTemplates.get(w.itemId);
+      if (t) lastOnes.push(t.name);
+    }
     const bought = world.itemTemplates.get(w.itemId)!;
     const jid = bought.id === JOURNAL_ITEM ? "jrn-" + uuid() : undefined;
     const got = await z.grantItem(session, bought.id, { condition: rollShopCondition(bought.slot), journalId: jid });
@@ -311,7 +362,10 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     : `The keeper slides it all across the counter:\n  ${slid.join("\n  ")}`;
   session.buying = undefined;
   z.roomFeed(session.roomId, `${session.name} trades at the keeper's hatch.`, session.pubkey);
-  return `${line}${seals}\n${goods}${change} The keeper's wares carry the gate's mark already — sealed, and yours.`;
+  const bare = lastOnes.length
+    ? ` You took the last ${lastOnes.join(" and the last ")} he had; the shelf behind him stands bare.`
+    : "";
+  return `${line}${seals}\n${goods}${change} The keeper's wares carry the gate's mark already — sealed, and yours.${bare}`;
 }
 
 export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -386,6 +440,9 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
   if (action === "close") return leaveTrade(z, session);
   let note: string | undefined;
   if (action === "buy") {
+    if (typeof frame.row === "string" && !inStock(z, frame.row)) {
+      return sendTrade(z, session, "The keeper spreads his hands — fresh out of that. Come back later.");
+    }
     const stock = world.fenceStock.find((s) => s.itemId === frame.row);
     note = stock ? startBuy(z, session, stock) : undefined;
   } else if (action === "offer") {
@@ -447,6 +504,7 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
       : t.edible === 1 || t.heal > 0 || t.staunch > 0 ? "physic"
       : "sundries";
   const stock = [...world.fenceStock]
+    .filter((s) => inStock(z, s.itemId)) // bare shelves don't show a buy button
     .sort((a, b) => a.cost - b.cost)
     .map((s) => {
       const t = world.itemTemplates.get(s.itemId);
@@ -505,8 +563,8 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
 // and the bench modal; returns the line to show either way.
 export async function salvageCore(z: ZoneDO, session: Session, carried: CarriedItem): Promise<string> {
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
+  if (tmpl.id === "loose-rock" || tmpl.id === "hammerstone") return "It's a rock.";
   if (tmpl.slot === "") return `There's no salvage in ${tmpl.name}.`;
-  if (tmpl.id === "loose-rock") return "It's a rock.";
   if (carried.serial !== null) return "The gate's seal is on it — the vice won't take gate-marked goods.";
   if (carried.equipped) {
     carried.equipped = false;
@@ -543,6 +601,9 @@ export async function repairCore(z: ZoneDO, session: Session, carried: CarriedIt
   // else slotless has nothing to mend. (A lantern burnt to NOTHING is gone —
   // the last burn takes it apart; you maintain it, or you lose it.)
   const lantern = carried.itemId === LANTERN_ITEM;
+  // The stone is the anti-lantern: it wears like gear and NOTHING mends it
+  // (rome, 2026-07-11) — every latch it beats open is spent for good.
+  if (THROW_TOUGH.has(carried.itemId)) return "The vice has no answer for stone. What it's spent, it's spent.";
   if (tmpl.slot === "" && !lantern) return `There's nothing to mend in ${tmpl.name}.`;
   // Sealed gear wears now (slowly) — so it can be mended now too. The seal is
   // title, not condition: hammering the wear out doesn't touch the serial.
@@ -844,6 +905,9 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
         serial: c.serial,
         stack: z.stackable(c.itemId, c.serial, c.journalId),
         gear,
+        // What the bench can actually mend: the stone wears like gear but
+        // nothing refills it (rome) — no repair button to bait a refusal.
+        fix: gear && !THROW_TOUGH.has(c.itemId),
         equipped: !!c.equipped,
         cond: gear ? c.condition : null,
         condWord: gear ? (z.conditionWord(c.condition) || "sound") : "",

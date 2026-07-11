@@ -128,10 +128,30 @@ export const JOURNAL_ITEM = "hunters-journal";
 // the flood below (where the water — and what swims in it — can't reach you).
 // A cast rarely lands anything; the catch is mostly the blind cave-fish, now
 // and then the rarer, richer pale eel. Patience, not a button to mash.
-export const FISHING_ROOMS = new Set(["pocket-of-air"]);
+// The waters split by depth (067): SURFACE water is open-sky and easy company
+// (the fen, the drowned orchard) — mostly cave-fish, and the RAIN wakes it
+// (the bite doubles under a downpour; the fen is the storm-angler's spot).
+// DEEP floodwater is where the good eating swims: eel odds up, and rarely the
+// marrow-lamprey, the deep's delicacy. Any water can also snag JUNK off the
+// bottom — the flood keeps a little scrap for the patient.
+export const FISHING_SURFACE = new Set(["the-black-fen", "the-drowned-orchard"]);
+export const FISHING_DEEP = new Set(["pocket-of-air", "the-weir", "black-canal", "leech-pools", "the-sump", "the-cistern",
+  "the-eel-run", "the-breathing-hall"]); // the Tideways' waters (069) — the tide restocks them when it drains
+export const FISHING_ROOMS = new Set([...FISHING_SURFACE, ...FISHING_DEEP]);
 export const FISH_ODDS = 0.18;         // a cast catches SOMETHING less than one time in five
-export const PALE_EEL_ODDS = 0.2;      // of those catches, a fifth are the rare eel
+export const RAIN_BITE_MULT = 2;       // under open rain the surface waters wake
+export const PALE_EEL_ODDS = 0.2;      // of DEEP catches, a fifth are the eel...
+export const LAMPREY_ODDS = 0.08;      // ...and fewer still the lamprey (rolled first)
+export const EEL_SURFACE_ODDS = 0.07;  // surface water almost never gives up an eel
+export const JUNK_SNAG_ODDS = 0.05;    // of MISSES, one in twenty drags up scrap instead (a bonus, never a wage)
 export const FISH_COOLDOWN_MS = 6000;  // each cast is a deliberate wait
+// POOLS FISH OUT (rome-approved, 2026-07-11 — the answer to the fen being a
+// money pump): each water holds a few catches, then goes quiet while it
+// forgets you. A meal on the way through is untouched; camping a pool caps at
+// a handful an hour. A junk snag spends from the same budget. Rain refreshes
+// the SURFACE pools when it opens (the storm-angler's moment stays real).
+export const FISH_POOL_CATCHES = 5;
+export const FISH_POOL_REST_MS = 25 * 60_000;
 // How much a crude map lies: how much of the map it omits, and how many of the
 // exits it does show are wrong (dropped or pointing at the wrong room).
 export const CRUDE_DROP_ROOM = 0.30;  // ~30% of rooms simply aren't on it
@@ -174,6 +194,50 @@ export const MIGRATION_MIN_FACTOR = 5;
 // tick out a predictable stream you can stand and farm. 5–25 min, mean ~15.
 export const REGROW_MIN_MS = 5 * 60_000;
 export const REGROW_MAX_MS = 25 * 60_000;
+// The two kinds of renewable (rome, 2026-07-11 — the larder was a healing
+// pump): living forage (moss, lichen, nettle, caps, water) GROWS, and keeps
+// the fast clock above. DEAD STOCK — cured provisions nobody is curing
+// anymore — trickles back on the slow clock: what you find is what a long
+// age left behind, and a picked-clean shelf stays picked most of a session.
+// Offal is carrion, not provisions: in carrion country (things keep dying
+// there) it keeps the fast clock; on a pantry hook it's dead stock too.
+export const DEAD_STOCK = new Set(["smoked-haunch", "salt-fish", "hardtack", "offal"]);
+// Thrown things that survive any landing: the hammerstone (070) never
+// shatters — you walk over and pick your argument back up. Its spawns come
+// back roughly twice a DAY (rome's tune): rarer than provisions.
+export const THROW_TOUGH = new Set(["hammerstone"]);
+// Where a hammerstone can turn up (rome: no fixed spots — "people just run to
+// the same spots"): the world mints one every STONE_REGROW window into a
+// random one of these — stone country: graves, scree, rubble, mine-throats,
+// and the tide's midden. Capped so an empty week doesn't pile them up.
+export const HAMMERSTONE_HAUNTS = [
+  "the-mass-grave", "the-dry-moat", "the-gatefall", "the-wall-breach",
+  "the-burned-village", "the-undermine", "the-earth-throat", "the-bone-midden",
+  "blackreach", "the-sump", "the-still-cradle",
+];
+export const STONE_GROUND_CAP = 2; // at most this many lying loose in the haunts at once
+// A rock against a latch (rome, 2026-07-11): strongbox latches give to stone,
+// sometimes. The plain rock is spent by the trying, opened or not; the
+// hammerstone survives and near-always wins. Either way the hammering is a
+// dinner bell — every listener in earshot hears iron being beaten. The
+// reliquary is exempt: a king's lock takes a king's key, not geology.
+export const ROCK_SMASH_ODDS = 0.10;
+export const HAMMERSTONE_SMASH_ODDS = 0.80;
+export const STONE_WEAR = 20; // condition per smash attempt: ~5 latches in a stone, then it cracks through — and NO mend refills it (rome: "no repairs for this rock")
+export const STONE_REGROW_MIN_MS = 10 * 3_600_000;
+export const STONE_REGROW_MAX_MS = 14 * 3_600_000;
+// The keeper's shelves are a market, not a vending machine (rome, 2026-07-11):
+// things sell out. Sometimes YOU take the last one; sometimes an off-screen
+// wanderer beat you to it (the churn — the world has other customers). A bare
+// shelf restocks on its own within the window.
+export const FENCE_OUT_MIN_MS = 30 * 60_000;
+export const FENCE_OUT_MAX_MS = 90 * 60_000;
+export const FENCE_LAST_ONE_ODDS = 0.2; // per item bought: that was his last
+export const FENCE_CHURN_MIN_MS = 2 * 3_600_000; // between off-screen customers
+export const FENCE_CHURN_MAX_MS = 4 * 3_600_000;
+export const CARRION_ROOMS = new Set(["the-mass-grave", "the-bone-midden", "carrion-gallery"]);
+export const STOCK_REGROW_MIN_MS = 2 * 3_600_000;
+export const STOCK_REGROW_MAX_MS = 4 * 3_600_000;
 export const GRUDGE_MAX = 5;
 // How long a creature holds a grudge before it forgets — each kind at its own
 // pace. Killing the creature settles it outright (it's gone, and a migrant
@@ -249,6 +313,7 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "pale-stalker": "A wet, boneless sound slides {dir}, and stops.",
   "twice-dead": "Old bones shift {dir}, unhurried, as if they have all the time there is.",
   "thrice-dead": "Something dead resettles itself {dir}, patient and wrong.",
+  "the-gaunt": "Something very tall moves {dir}, breathing in long, starving pulls.",
 };
 
 // Territory: every creature remembers its den and keeps to the ground around
@@ -319,6 +384,20 @@ export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena"]);
 // (or where it's already gorged bold) and it turns on you unprovoked. It also
 // hits harder and holds a grudge longer — a far worse thing to disturb.
 export const AGGRO_SCAVENGERS = new Set(["dire-hyena"]);
+// The scavenger's theft is paced and telegraphed (rome, 2026-07-11: gear was
+// gone within one 2s tick of a room emptying — "before you can even touch
+// it"). Fresh-fallen gear is safe for the grace; then the thief noses at its
+// prize a beat (the snuffling carries through walls — a chaser one room over
+// can run back and interrupt) before the snatch.
+export const SCOOP_GRACE_MS = 90_000;
+export const SCOOP_NOSE_MS = 8_000;
+// The soft beat (rome, 2026-07-11): a rat that walks in on a resting wanderer
+// may decide you are furniture — warm furniture — and curl up against you.
+// Purely the world being alive, with one grace note: in a cold snap a rat
+// pressed against your ribs is REAL warmth (the cold's rest penalty waives).
+// A rat with a grudge never cuddles; it attacks on arrival like always.
+export const CUDDLE_ODDS = 0.04; // per idle 2s tick sharing a room with a rester
+export const CUDDLE_COLD_MULT = 3; // in the cold, everything warm looks like a bed
 // It doesn't spring the instant you're in reach — it lifts its head, hackles up,
 // and takes a beat to commit. That wind-up is your window to back out or hit first.
 export const DIRE_ROUSE_MS = 5000;
@@ -622,12 +701,24 @@ export const CREATURE_VITALS = {
 export const BITERS = new Set([
   "rat", "fleet-rat", "brood-rat", "albino-rat", "grave-hyena", "dire-hyena", "pale-crawler", "pale-stalker",
   "three-hound", // three sets of teeth at the throat of the deep
+  "two-hound",   // two sets, same throat
 ]);
 
 // SENTINELS hold their post. A guardian chained to one room: it never wanders
 // (live tick or offline sim), and noise doesn't lure it off station. The
-// three-headed hound holds the throat of the deep.
-export const SENTINELS = new Set(["three-hound"]);
+// hound bloodline holds the throat of the deep — usually the three-headed
+// keeper, once in a while its two-headed runt cousin (mob_variants).
+// Membership here is load-bearing beyond behavior: a sentinel arrival spawns
+// AT its post instead of walking in from a mouth it could never leave.
+export const SENTINELS = new Set(["three-hound", "two-hound"]);
+
+// The sentinel lines name their heads, and the runt has one fewer to lift.
+// Quantifier phrase, so it drops into prose whole ("all three heads low and
+// watching" / "both heads low and watching").
+export const HOUND_HEADS = new Map<string, string>([
+  ["three-hound", "all three heads"],
+  ["two-hound", "both heads"],
+]);
 // Rooms a sentinel holds ALONE — nothing ordinary crosses the threshold, not
 // even a boss (like a gate, but a guarded doorway). The undercroft is the
 // hound's post: it spawns/migrates there and never wanders out, and nothing
@@ -659,6 +750,7 @@ export const FIRE_ITEMS = new Set<string>([]);
 export const DARK_ROOMS = new Set([
   "blackreach", "the-lightless-march", "the-gasping-dark", "black-threshold", "black-canal",
   "the-crawl-of-teeth", "the-earth-throat", // the warrens' lightless squeezes (058)
+  "the-long-swallow", "the-tide-throat", "the-silt-chapel", "the-still-cradle", // the Tideways' drowned half (069)
 ]);
 // The 058 blocks, named for the MAP's display regions only — game logic (chest
 // tiers, ambience fallback) still reads them as "upper" via regionOf. The map
@@ -677,6 +769,151 @@ export const WARRENS_ROOMS = new Set([
   "a-dry-burrow", "the-dripping-gallery", "the-bone-midden", "the-hyena-den",
   "the-undermine", "the-earth-throat", "the-sewer-slip", "the-buried-chapel",
 ]);
+// The open sky: every room where weather can reach you (the grounds ring +
+// the overworks rooftops). The room-events engine (events.ts) reads this for
+// rain; anything indoor — keep, warrens, deep — is cover.
+export const OUTDOOR_ROOMS = new Set([...GROUNDS_ROOMS, ...OVERWORKS_ROOMS]);
+// THE WORLD'S CLOCKS (the simulation's law, rome 2026-07-11): two tracks.
+// The BELL is scheduled — a keep rings its bell at its own hours, twice a day,
+// and a player can learn them. Everything else is ROLLED: one die, every few
+// hours, picks ONE event from the whole pool — four to six a day, never a
+// schedule, so the world surprises. An arc that isn't mid-run parks at
+// "never"; only the roll (or the bell's hours) starts one.
+export const ROLL_EVERY_MIN_MS = 3 * 3_600_000; // between rolls: 3-6h -> 4-6 events/day
+export const ROLL_EVERY_MAX_MS = 6 * 3_600_000;
+export const ROLL_FIRST_MIN_MS = 20 * 60_000; // a fresh world proves its sky within the hour
+export const ROLL_FIRST_MAX_MS = 60 * 60_000;
+export const ROLL_GRACE_MS = 10 * 60_000; // a roll slept past by more than this happened unobserved
+export const ROLL_MISSED_MIN_MS = 15 * 60_000; // ...and the next one lands mid-cycle, not instantly-on-login
+export const ROLL_MISSED_MAX_MS = 3 * 3_600_000;
+// Rain (the room-events opener, 067): telegraph -> active -> aftermath.
+export const RAIN_TELEGRAPH_MS = 2 * 60_000; // the iron-grey light before the first drops
+export const RAIN_ACTIVE_MIN_MS = 8 * 60_000;
+export const RAIN_ACTIVE_MAX_MS = 12 * 60_000;
+export const RAIN_AFTERMATH_MS = 15 * 60_000; // mud: deep tracks, quick forage
+export const RAIN_NOISE_MASK = 0.5; // odds an outdoor sound simply drowns in the rain
+// The bell (keep, SCHEDULED): one warning note, then the ringing — and while
+// it rings the keep hears EVERYTHING (quiet gear included; a bell outshouts
+// felt soles). It rings near these UTC hours, never to the minute.
+export const BELL_HOURS_UTC = [1, 13];
+export const BELL_JITTER_MS = 20 * 60_000; // the ringer is not a clock
+export const BELL_GRACE_MS = 15 * 60_000;  // an hour slept past rang unobserved
+export const BELL_TELEGRAPH_MS = 30_000; // the single note, hanging
+export const BELL_ACTIVE_MS = 90_000;    // the ringing — ninety bad seconds
+export const BELL_AFTERMATH_MS = 10 * 60_000; // the halls stay unsettled
+export const BELL_AFTERMATH_WAKE_MULT = 1.5;
+// The boil (warrens event): a den overflows and a tide of rats pours down one
+// corridor — a moving hazard you stand aside from. The tide itself is
+// transient (a deploy dissolves it mid-run; the warrens shrug).
+export const BOIL_TELEGRAPH_MS = 60_000; // the squeaking swells
+export const BOIL_STEP_MS = 15_000;      // the tide holds each room this long
+export const BOIL_AFTERMATH_MS = 5 * 60_000;
+export const BOIL_BITE = 1; // hp per tick while you stand in the tide (flee or climb clear)
+// Corpse-wake (warrens): "the dead don't stay down tonight." Fresh death-
+// litter (blood, remains) is the beacon: where something fell lately, the
+// warrens' own buried dead pull themselves up through the floor for the
+// window — then drop where they stand. Camp your killing floor and your kills
+// send for company. No fresh dead, no wake: the listening simply passes.
+export const WAKE_TELEGRAPH_MS = 90_000; // every hollow thing stops at once, listening
+export const WAKE_ACTIVE_MS = 10 * 60_000;
+export const WAKE_AFTERMATH_MS = 5 * 60_000;
+export const WAKE_FRESH_MS = 90 * 60_000; // how recent a death still calls
+export const WAKE_CAP = 4; // at most this many rise per wake
+// The keeper's want (gate): chalked on the hatch, one named good counts
+// double in trade for the window — a pull event, the only weather that
+// gives you somewhere to GO. The table is all honest gatherables: fen fishing,
+// hyena hunting, warrens rats, bone-country trinkets.
+export const WANT_TABLE = ["cave-fish", "pale-eel", "hyena-fang", "rat-sinew", "bone-charm",
+  "fistful-teeth", "verdigris-scale", "hound-fang", "finger-bone", "linen-dressing"];
+export const WANT_MULT = 2;
+export const WANT_TELEGRAPH_MS = 2 * 60_000;
+export const WANT_ACTIVE_MS = 50 * 60_000; // long enough to hunt for
+export const WANT_AFTERMATH_MS = 5 * 60_000;
+// The escaped thing: the Gaunt gets loose from under the keep and walks the
+// world for the window — announced by a cry the whole zone hears, telegraphed
+// room to room by everything else fleeing ahead of it. Kill it for its pelt
+// (the keeper prizes it), or read the emptying rooms and stay out of its way.
+// If nothing puts it down, it answers some call and pours back into the dark.
+export const ESCAPE_TMPL = "the-gaunt";
+export const ESCAPE_TELEGRAPH_MS = 2 * 60_000;
+export const ESCAPE_ACTIVE_MS = 60 * 60_000;
+export const ESCAPE_AFTERMATH_MS = 5 * 60_000;
+export const ESCAPE_STRIDE_MIN_MS = 20_000; // it strides, it doesn't graze
+export const ESCAPE_STRIDE_MAX_MS = 40_000;
+export const ESCAPE_ROUSE_MS = 8_000; // it fixes on you first — get out, or hit first
+// Marsh lights (the wet ground): pale lights out over the water that read
+// exactly like a carried torch, and careful footsteps that read exactly like
+// a player keeping to the water's edge. Nothing attacks. The event is doubt.
+export const LIGHTS_ROOMS = new Set(["the-black-fen", "the-drowned-orchard", "the-causeway"]);
+export const LIGHTS_TELEGRAPH_MS = 60_000;
+export const LIGHTS_ACTIVE_MS = 18 * 60_000;
+export const LIGHTS_AFTERMATH_MS = 2 * 60_000;
+export const LIGHTS_STEP_MIN_MS = 45_000; // cadence of the false footsteps
+export const LIGHTS_STEP_MAX_MS = 90_000;
+// Fog (outdoors): the anti-rain — milky air, spot odds down BOTH ways: the
+// world half-misses you (wake odds cut) and you half-miss it (creature tells
+// unreadable — every shape in the fog keeps its secrets). Scavengers hunt in
+// it. Unlike rain, the traces STAY: the stalker's weather.
+export const FOG_TELEGRAPH_MS = 90_000; // the air goes milky from the fen up
+export const FOG_ACTIVE_MIN_MS = 10 * 60_000;
+export const FOG_ACTIVE_MAX_MS = 15 * 60_000;
+export const FOG_AFTERMATH_MS = 2 * 60_000;
+export const FOG_WAKE_MULT = 0.5; // the fog swallows half of what would spot you
+// Cold snap (outdoors + deep): clear and bitter. Torches burn double-fast
+// (lit ones lose half their remaining flame when it bites; the lantern's oil
+// doesn't care), resting barely holds (half the ticks heal nothing), and the
+// living den up — while the HOLLOW keep walking, because nothing in them
+// feels it. A quiet, safe-looking window that taxes your supplies; the free
+// tell is which silhouettes are still moving.
+export const COLD_TELEGRAPH_MS = 90_000;
+export const COLD_ACTIVE_MIN_MS = 10 * 60_000;
+export const COLD_ACTIVE_MAX_MS = 15 * 60_000;
+export const COLD_AFTERMATH_MS = 3 * 60_000;
+export const COLD_TORCH_MULT = 0.5; // a torch lit (or caught) in the cold burns half as long
+export const COLD_REST_SKIP = 0.5; // odds a resting tick heals nothing in the cold
+// The breach: the map itself is the event. Stone groans in two rooms that
+// share a wall in the fiction (the telegraph), then the wall gives and an
+// exit exists that isn't supposed to — for a window — then the rubble
+// settles. Exits are data; creatures use the hole like anyone. The pair list
+// is HAND-PICKED under the law of pairs (never across the deep-heart lock,
+// never into a vault/hoard, an entry, or a safe hideaway); rome passed all
+// eight 2026-07-11. Directions chosen to collide with no standing exit.
+export const BREACH_PAIRS: { a: string; aDir: string; b: string; bDir: string }[] = [
+  { a: "library", aDir: "east", b: "scriptorium", bDir: "west" },            // the book country joins
+  { a: "forge", aDir: "east", b: "undercroft", bDir: "west" },               // the cellars meet; the descent stays keyed
+  { a: "chapel", aDir: "down", b: "crypt-steps", bDir: "west" },             // the chapel floor gives onto the crypt stair
+  { a: "the-mass-grave", aDir: "south", b: "the-hanging-hill", bDir: "north" }, // the grave ground slumps into a gully
+  { a: "the-dry-moat", aDir: "south", b: "the-mass-grave", bDir: "north" },  // the moat bank collapses into the grave-pits
+  { a: "the-hyena-den", aDir: "west", b: "the-earth-throat", bDir: "east" }, // the den's back wall goes
+  { a: "the-lightless-march", aDir: "down", b: "the-undertow", bDir: "north" }, // the corridor floor drops to the water country
+  { a: "the-cold-hearth", aDir: "south", b: "the-death-cell", bDir: "east" }, // two dead ends behind the throne
+];
+export const BREACH_TELEGRAPH_MS = 90_000; // groaning stone, sifting dust — get clear or get ready
+export const BREACH_ACTIVE_MS = 10 * 60_000; // the passage stands open
+export const BREACH_AFTERMATH_MS = 10 * 60_000; // fresh rubble, a scar in the wall
+// The exhale (deep): the deep breathes out — a cold current no open flame
+// survives. Torches gutter, torches won't catch; the hooded lantern's
+// shuttered flame shrinks to a bead and holds (its second argument, after the
+// storm). No new teeth: a lightless deep is ambush weather the LURKERS
+// already know how to use.
+export const EXHALE_TELEGRAPH_MS = 90_000; // the drips stop; every flame leans
+export const EXHALE_ACTIVE_MS = 9 * 60_000;
+export const EXHALE_AFTERMATH_MS = 5 * 60_000;
+// The marrow-song (deep): a bone-voice hums one held note and every hollow
+// thing below stands entranced — wake odds zero, feet still — the loot
+// corridor nobody trusts. The flesh-things (drowners, crawlers) are agitated
+// by it instead. After, the bones remember themselves, and are twitchy.
+export const SONG_TELEGRAPH_MS = 60_000;
+export const SONG_ACTIVE_MS = 10 * 60_000;
+export const SONG_AFTERMATH_MS = 3 * 60_000;
+export const SONG_AFTER_WAKE_MULT = 2; // the unsettled after, same shape as the bell's
+// The crows (outdoors): carrion birds settle on every high thing and call out
+// whatever crosses the open ground — everyone under the sky hears where you
+// moved. Anti-stealth, fully diegetic: the world tells on you.
+export const CROWS_TELEGRAPH_MS = 60_000;
+export const CROWS_ACTIVE_MS = 25 * 60_000;
+export const CROWS_AFTERMATH_MS = 60_000;
+export const CROWS_THROTTLE_MS = 15_000; // one cry per mover per this window
 export const TORCH_ITEM = "torch";
 export const TORCH_BURN_MS = 10 * 60_000; // a lit torch throws light this long, then gutters out (the run's clock)
 // The hooded lantern (065): the explorer's light. It burns three times a torch
@@ -733,6 +970,7 @@ export const BLEED_ODDS = new Map<string, number>([
   ["pale-stalker", 0.20],
   ["pale-crawler", 0.225], // the deep's worst biters
   ["three-hound", 0.25],   // the sentinel's jaws — feared, but not a certainty
+  ["two-hound", 0.20],     // the runt's jaws — fewer, not gentler
 ]);
 // HOBBLE: leg-goers can hamstring you on a hit — a per-hit chance, tiered by
 // threat (only things that go low: hyenas at the legs, the hound, the deep's
@@ -745,6 +983,7 @@ export const HOBBLE_ODDS = new Map<string, number>([
   ["dire-hyena", 0.08],
   ["pale-crawler", 0.08],
   ["three-hound", 0.10], // the sentinel drags you down by the leg
+  ["two-hound", 0.08],   // the runt goes low too, with less weight behind it
 ]);
 export const HOBBLE_FLEE_MS = 4000; // ~1 combat round of limping before you break away
 // The VITALS LOTTERY — the Tarkov headshot (ROADMAP: lethality keystone). A rare,
@@ -761,7 +1000,7 @@ export const VITALS_PVE = 1 / 3000;   // per-hit base (armored floor); naked = 2
 export const VITALS_PVP = 0.005;      // ready for when PvP exists (0.5% armored -> 1% naked)
 export const VITALS_ARMOR_FULL = 11;  // total armor that counts as 'fully covered' (a max kit)
 export const VITALS_THREATS = new Set<string>([
-  "three-hound", "pale-stalker", "pale-crawler", "the-drowned", "drowned-hulk",
+  "three-hound", "two-hound", "pale-stalker", "pale-crawler", "the-drowned", "drowned-hulk",
   "marrow-cantor", "warden-captain", "forgotten-king", "marrow-king", "drowned-god",
 ]);
 // The PLAYER side of the vitals lottery. Bosses are the designed wall — never.
@@ -823,7 +1062,41 @@ export const DEEP_ROOMS = new Set([
   "carrion-gallery", "the-marrow-road", "the-gasping-dark", "sunless-well",
   "drowned-court", "kings-oratory", "bone-reliquary", "the-death-cell", "the-cold-hearth",
   "worm-bore", // the deep's second hideaway (048)
+  // THE TIDEWAYS (069) — the wing the tide owns, hanging below the water
+  // country. Deep by every rule: chest tiers, the exhale, the marrow-song.
+  "the-tide-gate", "the-under-weir", "the-drowning-stair", "the-eel-run",
+  "the-long-swallow", "the-salt-vault", "the-breathing-hall", "the-tide-throat",
+  "the-silt-chapel", "the-still-cradle",
 ]);
+
+// The Tideways proper (069): the tide's territory, and the flood order. The
+// TIDE_LEVELS ranks run bottom-up — rank 0 drowns first and drains last. A
+// normal tide crests at rank 1; a high tide (TIDE_HIGH_ODDS) takes the
+// breathing-hall too — the camp you learn to trust exactly until you
+// shouldn't. Rooms not ranked never flood: the approach stays a road.
+export const TIDEWAYS_ROOMS = new Set([
+  "the-tide-gate", "the-under-weir", "the-drowning-stair", "the-eel-run",
+  "the-long-swallow", "the-salt-vault", "the-breathing-hall", "the-tide-throat",
+  "the-silt-chapel", "the-still-cradle",
+]);
+export const TIDE_LEVELS: string[][] = [
+  ["the-still-cradle"],
+  ["the-tide-throat", "the-silt-chapel"],
+  ["the-breathing-hall"],
+];
+export const TIDE_HIGH_ODDS = 0.25;
+// The tide keeps its own clock, like the bell — tides do not roll dice.
+// Roughly four a day, jittered enough that you read the drips, not a watch.
+export const TIDE_EVERY_MIN_MS = 5 * 3_600_000;
+export const TIDE_EVERY_MAX_MS = 7 * 3_600_000;
+export const TIDE_FIRST_MIN_MS = 45 * 60_000; // a fresh world's first tide comes sooner
+export const TIDE_FIRST_MAX_MS = 2 * 3_600_000;
+export const TIDE_GRACE_MS = 15 * 60_000; // slept past = it rose and fell unobserved
+export const TIDE_TELEGRAPH_MS = 3 * 60_000; // quickening drips; everything living climbs
+export const TIDE_STEP_MS = 60_000;  // the water takes one level per step
+export const TIDE_CREST_MS = 8 * 60_000; // and holds at the crest
+export const TIDE_AFTERMATH_MS = 5 * 60_000; // silt, and everything dripping
+export const TIDE_SILT_ODDS = 0.5; // per item: washes one level down when the water drains
 
 // The corpse-key. The black door into the deep opens to a still-cold heart cut
 // from a deep-dweller the sim surfaced — not a key on a shelf. While the door is
@@ -833,6 +1106,12 @@ export const DEEP_ROOMS = new Set([
 // grey slime. No hoarding (it rots), no soft-lock (the sim keeps surfacing).
 export const DEEP_HEART = "deep-heart";               // the perishable key item
 export const DEEP_DOOR_KEY = "undercroft:down";       // "roomId:dir" of the sealed deep door (the stair out of the undercroft, past the hound)
+// How long the black door stands open after a heart is pressed to it. It only
+// bars the way DOWN — the-descent's way up is unkeyed, so a shut door never
+// traps anyone below; it just stops the next visitor arriving free. While it
+// stands open the deep mints no new hearts (surfacing pauses), so the window
+// closing is what restarts the corpse-key economy.
+export const DEEP_DOOR_OPEN_MS = 20 * 60_000;
 export const HEART_FRESH_SEC = 600;                   // a heart opens the door for 10 min after the cut, then it's slime
 export const SURFACE_INTERVAL_MS = 360_000;           // while sealed, the deep surfaces one dweller ~every 6 min
 export const SURFACED_STALE_MS = 15 * 60_000;         // a surfaced dweller nobody kills slinks back down after this, freeing the next

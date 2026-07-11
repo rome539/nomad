@@ -7,14 +7,16 @@ import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
 import { randInt, chance, uuid, pick } from "./rng";
 import { cap } from "./zone-util";
+import * as events from "./events";
 import {
-  FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP,
+  FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS,
+  CUDDLE_ODDS, CUDDLE_COLD_MULT,
   PREYS_ON, PREDATION_ODDS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
   RUNNERS, BROODERS, SENTINELS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
-  DEEP_ROOMS, SURFACED_STALE_MS,
+  DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -133,6 +135,16 @@ export function addGrudge(z: ZoneDO, creature: Creature, pubkey: string): void {
   // or "" when there's nothing worth saying. `viewer` is the looking player's
   // pubkey, so "fixed on you" only fires for the one being hunted.
 export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): string {
+    // In fog, every state is the same state: unreadable. The other half of
+    // "spot odds down both ways" — the world half-misses you, and you can't
+    // read the shapes either.
+    const fogged = events.fogTell(z, creature.roomId);
+    if (fogged) return fogged;
+    if (creature.cuddling) {
+      return creature.cuddling === viewer
+        ? "curled against you, fast asleep — a small warm weight"
+        : "curled up against someone, fast asleep";
+    }
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
     // The key-bearer reads first: a deep-thing in the shallows is an OPPORTUNITY,
     // not an unfair spawn — its heart opens the descent while it's fresh.
@@ -174,6 +186,11 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
     // QUIET gear (felt soles, the grave-shroud) halves what the bones hear —
     // your footfall, your slip past, your reach for the door. Worn, not carried.
     if (session.items.some((c) => c.equipped && QUIET_ITEMS.has(c.itemId))) odds *= QUIET_WAKE_MULT;
+    // The bell outshouts felt soles: while it rings the keep hears everything,
+    // and for a while after, the halls stay unsettled (events.bellWakeMult).
+    odds = Math.min(1, odds * events.bellWakeMult(z, roomId));
+    // The fog swallows half of what would spot you (the stalker's weather).
+    odds *= events.fogWakeMult(z, roomId);
     const now = Date.now();
     for (const c of z.creatures.values()) {
       if (c.roomId !== roomId || c.target) continue;
@@ -187,7 +204,10 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       // still strike at sound; that's the whole of what they are.
       if (fromNoise && !lurker) continue;
       if (remembers(z, c, session.pubkey, now)) continue;
-      if (!chance(odds)) continue;
+      // The marrow-song: an entranced bone wakes to NOTHING while it plays,
+      // and to everything for a while after (per-creature — only the deep's
+      // hollow hear it).
+      if (!chance(Math.min(1, odds * events.songWakeMult(z, c)))) continue;
       const tmpl = z.world!.mobTemplates.get(c.templateId)!;
       c.hidden = false; // a lurker that strikes is unseen no longer
       z.send(session, lurker ? `${cap(tmpl.name)} drops out of the dark and is on you!` : `${cap(tmpl.name)} ${tell}`);
@@ -301,6 +321,36 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       const uncrowded = exits.filter((e) => creaturesIn(z, e.to_room) < CROWD_CAP);
       if (uncrowded.length) exits = uncrowded;
     }
+    // Rain sends the open ground's beasts under cover — and their run for the
+    // tree-line IS the storm's telegraph: watch the grounds empty and you know
+    // what's coming before the first drop. (Scavengers stay out in it; the
+    // downpour is their hunting weather — see scavengerBold.)
+    if (mode === "wander" && events.rainDrives(z, creature.roomId) && !SCAVENGERS.has(tmpl.id)) {
+      const covered = exits.filter((e) => !OUTDOOR_ROOMS.has(e.to_room));
+      if (covered.length) exits = covered;
+    }
+    // The bell drives the keep's vermin down into the earth: while it rings,
+    // rat-kind runs for den-country — and their flight IS the alarm spreading.
+    if (mode === "wander" && events.bellDrivesRats(z, creature)) {
+      const downward = exits.filter((e) => WARRENS_ROOMS.has(e.to_room) || MOUTHS.includes(e.to_room));
+      if (downward.length) exits = downward;
+    }
+    // The cold sends the LIVING to warm ground (keep walls, warrens earth) —
+    // and what's still out walking in it was never alive: the free tell.
+    if (mode === "wander" && events.coldDrives(z, creature)) {
+      const warm = exits.filter((e) => !OUTDOOR_ROOMS.has(e.to_room) && !events.deepRoom(z, e.to_room));
+      if (warm.length) exits = warm;
+    }
+    // The tide sends everything living in the Tideways CLIMBING — up toward
+    // ground the water can't reach. Their flight past you is the warning.
+    if (mode === "wander" && events.tideDrives(z, creature)) {
+      const here = events.floodRank(creature.roomId);
+      const drier = exits.filter((e) => {
+        const there = events.floodRank(e.to_room);
+        return there === -1 || (here !== -1 && there > here);
+      });
+      if (drier.length) exits = drier;
+    }
     if (exits.length === 0) return;
 
     let exit = exits[randInt(0, exits.length - 1)];
@@ -385,6 +435,17 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       );
       z.refreshRoomCtx(from);
       z.refreshRoomCtx(creature.roomId);
+      // The loosed Gaunt empties every room it enters: what can run, runs —
+      // and those emptying rooms ARE its telegraph, spreading a step ahead of
+      // it. (The posted and the brood stand; they are nobody's prey.)
+      if (creature.templateId === ESCAPE_TMPL) {
+        for (const c of z.creatures.values()) {
+          if (c.roomId !== creature.roomId || c.id === creature.id) continue;
+          if (BROODERS.has(c.templateId) || SENTINELS.has(c.templateId)) continue;
+          if (world.mobTemplates.get(c.templateId)?.is_boss) continue;
+          c.nextWanderAt = now;
+        }
+      }
       // Walking into a room full of people it hates — it marks the first and
       // (unless it's fleeing) gets the jump on them, same as when you walk in.
       // A dire-hyena dragging its kill in among them does NOT jump: it winds up
@@ -497,16 +558,24 @@ function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate): void {
     }
     const spoils = [...(victim.carries ?? [])];
     if (victim.stole) spoils.push(victim.stole);
-    if (spoils.length) z.ground.set(victim.roomId, [...(z.ground.get(victim.roomId) ?? []), ...spoils]);
+    if (spoils.length) {
+      z.ground.set(victim.roomId, [...(z.ground.get(victim.roomId) ?? []), ...spoils]);
+      for (const id of spoils) z.stampFresh(victim.roomId, id); // a fresh kill site stays hot a while
+    }
     z.addTrace(victim.roomId, { kind: HOLLOW.has(victim.templateId) ? "remains" : "blood", at: Date.now(), label: vt.name });
     z.creatures.delete(victim.id);
     scheduleArrivals(z, Date.now());
   }
 
   // A scavenger that has eaten enough of the dead loses its nerve: it stops
-  // fleeing and swings harder. The dungeon's own corpses arm it.
+  // fleeing and swings harder. The dungeon's own corpses arm it. And rain is
+  // hunting weather: under a downpour every outdoor scavenger turns bold —
+  // the hyenas love the storm (rome's living-world layer, 067).
 export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
-    return SCAVENGERS.has(creature.templateId) && (creature.fed ?? 0) >= SCAVENGER_BOLD_AT;
+    if (!SCAVENGERS.has(creature.templateId)) return false;
+    if ((creature.fed ?? 0) >= SCAVENGER_BOLD_AT) return true;
+    // Hunting weather, both kinds: the rain's noise and the fog's blindness.
+    return events.raining(z, creature.roomId) || events.foggy(z, creature.roomId);
   }
 
 export function playerPresent(z: ZoneDO, roomId: string): boolean {
@@ -607,28 +676,110 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     }
   }
 
+  // The soft beat: a rat that finds you resting may decide you are furniture —
+  // warm furniture — and curl up against you. It stays as long as you stay
+  // down (its wander clock held), and springs off affronted the moment you
+  // rise. A rat with a grudge never cuddles; grudges attack on arrival like
+  // always, and this only reaches idle, targetless rats. In a cold snap the
+  // odds triple — everything warm looks like a bed — and the warm weight
+  // against your ribs waives the cold's rest penalty (zone's heal tick).
+export function ratCuddles(z: ZoneDO, creature: Creature, now: number): void {
+    if (!creature.templateId.includes("rat") || BROODERS.has(creature.templateId)) return;
+    // Already settled: hold on as long as the bed holds still.
+    if (creature.cuddling) {
+      const bed = [...z.sessions.values()].find((s) => s.pubkey === creature.cuddling);
+      if (bed && bed.resting && bed.roomId === creature.roomId && !creature.target) {
+        creature.nextWanderAt = Math.max(creature.nextWanderAt, now + 30_000); // asleep; going nowhere
+        return;
+      }
+      creature.cuddling = undefined;
+      if (bed && bed.roomId === creature.roomId) {
+        const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+        z.send(bed, pick([
+          `${cap(tmpl.name)} startles awake, gives you a look of profound betrayal, and flows off into the dark.`,
+          `${cap(tmpl.name)} springs off you and retreats to a corner, affronted.`,
+          `${cap(tmpl.name)} tumbles from your lap, shakes itself, and pretends this never happened.`,
+        ]));
+        creature.nextWanderAt = now + randInt(4000, 12_000);
+        z.refreshRoomCtx(creature.roomId);
+      }
+      return;
+    }
+    if (creature.target) return;
+    const rester = [...z.sessions.values()].find(
+      (s) => s.roomId === creature.roomId && s.resting && !z.outOfWorld(s) && s.hp > 0,
+    );
+    if (!rester) return;
+    if (remembers(z, creature, rester.pubkey, now)) return; // a grudge is not a bed
+    const odds = CUDDLE_ODDS * (events.coldBites(z, creature.roomId) ? CUDDLE_COLD_MULT : 1);
+    if (!chance(odds)) return;
+    creature.cuddling = rester.pubkey;
+    creature.nextWanderAt = now + 60_000;
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    z.send(rester, pick([
+      `${cap(tmpl.name)} noses at your boot, thinks it over, and curls up against your side — a small, warm weight.`,
+      `${cap(tmpl.name)} circles twice, tucks its tail over its nose, and settles into the crook of your arm as if it has always slept there.`,
+      `Small claws on stone, closer — then ${tmpl.name} presses itself against your ribs and goes still, warm as a coal.`,
+    ]));
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} lies curled against ${rester.name}, fast asleep.`, rester.pubkey, false);
+    z.refreshRoomCtx(creature.roomId);
+  }
+
   // A scavenger alone in a room drags off gear left on the floor (a body's
   // spoils) and carries it — recover it by running the thing down and killing
   // it. It won't snatch loot from a player's feet: only an empty room is fair
   // game, so your own fresh kill is safe while you're standing over it.
+  // And the theft is paced (rome, 2026-07-11): fresh-fallen gear stays safe
+  // for the grace — the kill site is hot, someone's likely coming back — and
+  // even then the thief noses at its prize a beat before the snatch, with the
+  // snuffling leaking through the walls. Step back in and it abandons the try.
 export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     if (!SCAVENGERS.has(creature.templateId)) return;
     if ((creature.carries?.length ?? 0) >= SCAVENGER_CARRY_CAP) return;
-    if (playerPresent(z, creature.roomId)) return;
+    if (playerPresent(z, creature.roomId)) {
+      creature.eyeing = undefined; // caught in the act: it slinks back and waits
+      creature.eyeingAt = undefined;
+      return;
+    }
     const floor = z.ground.get(creature.roomId);
     if (!floor?.length) return;
+    const now = Date.now();
     // Real gear only — it has no use for food (it eats that) or the free rock.
+    // Fresh-fallen pieces don't tempt it yet; the stale ones are fair game.
     const idx = floor.findIndex((id) => {
       const t = z.world!.itemTemplates.get(id);
-      return !!t && t.slot !== "" && t.id !== "loose-rock";
+      if (!t || t.slot === "" || t.id === "loose-rock") return false;
+      const fell = z.groundFreshAt.get(`${id}@${creature.roomId}`);
+      if (fell !== undefined) {
+        if (now - fell < SCOOP_GRACE_MS) return false;
+        z.groundFreshAt.delete(`${id}@${creature.roomId}`); // grace spent; forget the stamp
+      }
+      return true;
     });
-    if (idx === -1) return;
-    const [id] = floor.splice(idx, 1);
+    if (idx === -1) {
+      creature.eyeing = undefined;
+      creature.eyeingAt = undefined;
+      return;
+    }
+    const targetId = floor[idx];
+    // The nose-first beat: it declares intent, and the sound carries — a
+    // chaser one room over has this long to come back and interrupt.
+    if (creature.eyeing !== targetId || creature.eyeingAt === undefined) {
+      creature.eyeing = targetId;
+      creature.eyeingAt = now + SCOOP_NOSE_MS;
+      z.roomSound(creature.roomId, "Something snuffles over dropped metal {dir}, unhurried.");
+      return;
+    }
+    if (now < creature.eyeingAt) return;
+    creature.eyeing = undefined;
+    creature.eyeingAt = undefined;
+    floor.splice(idx, 1);
     z.ground.set(creature.roomId, floor);
-    (creature.carries ??= []).push(id);
-    const g = z.world!.itemTemplates.get(id);
+    (creature.carries ??= []).push(targetId);
+    const g = z.world!.itemTemplates.get(targetId);
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
     if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} snatches up ${g.name} and drags it off into the dark.`, undefined, false);
+    z.roomSound(creature.roomId, "Metal scrapes over stone {dir}, dragged away.");
     z.refreshRoomCtx(creature.roomId);
   }
 
