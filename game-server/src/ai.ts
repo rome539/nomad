@@ -467,7 +467,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // in, but it does NOT throw itself into the fight; it arrives dormant and
       // strikes only if you MOVE while it's there (wakeListeners) or it already
       // holds a grudge (handled just above). Creepier, and truer to what it is.
-      if (investigating && !creature.target && !LISTENERS.has(tmpl.id)) {
+      // The scary rat is exempt too (rome's ruling): it comes to LOOK — a
+      // scavenger's curiosity — but it doesn't throw itself into a brawl
+      // between bigger things. It arrives, watches, and keeps its own counsel.
+      // Every other investigator (fleet-rat included) still pays the price.
+      if (investigating && !creature.target && !LISTENERS.has(tmpl.id)
+          && tmpl.id !== "rat") {
         for (const s of z.sessions.values()) {
           if (s.roomId === creature.roomId && z.inCombat(s)) {
             creature.target = s.pubkey;

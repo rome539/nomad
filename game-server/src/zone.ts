@@ -2247,7 +2247,7 @@ export class ZoneDO implements DurableObject {
       const line = this.ambientLine(session.roomId);
       if (!line) continue;
       session.lastAmbientAt = now;
-      this.send(session, line);
+      this.send(session, line, "amb"); // tagged so the client's tutorial can hush the weather
     }
 
     this.applyRot(now, false);

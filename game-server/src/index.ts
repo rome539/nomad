@@ -5,7 +5,7 @@ import { GOOGLE_CLIENT_ID } from "./google";
 import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
-import { touchIconBytes, ogImageBytes } from "./assets";
+import { touchIconBytes, ogImageBytes, doorSceneBytes } from "./assets";
 import { signProfileEvent, isGameKeyConfigured } from "./signing";
 import { publishEvent, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
@@ -85,6 +85,17 @@ export default {
         return new Response(ogImageBytes(), {
           headers: { "content-type": "image/jpeg", "cache-control": IMMUTABLE },
         });
+      }
+      // The threshold's backdrops: /door-bg.jpg stays the torch; the scene set
+      // lives at /door-bg/<name>.jpg (the client picks one per visit).
+      const mScene = pathname === "/door-bg.jpg" ? ["", "torch"] : pathname.match(/^\/door-bg\/([a-z]+)\.jpg$/);
+      if (m === "GET" && mScene) {
+        const scene = doorSceneBytes(mScene[1]);
+        if (scene) {
+          return new Response(scene, {
+            headers: { "content-type": "image/jpeg", "cache-control": IMMUTABLE },
+          });
+        }
       }
 
       // Keeper-only: sign the dungeon's kind-0 profile with the epoch key and

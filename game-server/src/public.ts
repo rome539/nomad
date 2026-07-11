@@ -13,13 +13,13 @@ export const PAGE = `<!doctype html>
 <meta property="og:title" content="NOMAD — the Door">
 <meta property="og:description" content="A living text dungeon on Nostr. Your key is your character. What you carry is provisional until the gate seals it — and the dead stay dead.">
 <meta property="og:url" content="https://nomadmud.com">
-<meta property="og:image" content="https://nomadmud.com/og.jpg">
+<meta property="og:image" content="https://nomadmud.com/og.jpg?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="NOMAD — the Door">
 <meta name="twitter:description" content="A living text dungeon on Nostr. The dead stay dead.">
-<meta name="twitter:image" content="https://nomadmud.com/og.jpg">
+<meta name="twitter:image" content="https://nomadmud.com/og.jpg?v=2">
 <style>
   :root {
     --bg: #16120c;
@@ -670,6 +670,28 @@ export const PAGE = `<!doctype html>
     #bench .bitem button { font-size: 13px; padding: 7px 12px; }
     #bclose { padding: 9px 14px; }
   }
+  /* THE THRESHOLD: the door screen. One gold button between a stranger and
+     the world; it fades and is removed the moment it's crossed. */
+  #threshold {
+    position: fixed; inset: 0; z-index: 9000;
+    /* starts as plain darkness; the picked scene painting is set by script
+       only after it has decoded, so nothing flashes between backdrops */
+    background-color: #16120c;
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 24px; padding-bottom: 18vh; transition: opacity .9s ease;
+  }
+  #threshold.gone { opacity: 0; pointer-events: none; }
+  #thr-title { color: var(--gold); font-size: clamp(48px, 5.5vw, 68px); letter-spacing: .16em; font-weight: 700; margin-bottom: 8px; }
+  #thr-line { color: var(--dim); font-size: 14px; max-width: 46ch; line-height: 1.5; }
+  #thr-enter {
+    margin-top: 10px; font-family: inherit; font-size: 17px; letter-spacing: .08em;
+    color: var(--bg); background: var(--gold); border: 0; padding: 12px 34px; cursor: pointer;
+  }
+  #thr-enter:hover, #thr-enter:focus-visible { background: var(--cream); outline: none; }
+  #thr-keys { color: var(--dim); font-size: 12.5px; }
+  #thr-keys span { color: var(--bone); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  #thr-keys span:hover { color: var(--cream); }
 </style>
 </head>
 <body>
@@ -677,6 +699,12 @@ export const PAGE = `<!doctype html>
     <span class="brand" id="brand" title="settings">NOMAD</span>
     <span id="room"></span>
     <span id="rightbar"><span id="fx"></span><span id="idbtn"><span id="hp">keys</span> <span class="caret">&#9662;</span></span></span>
+  </div>
+  <div id="threshold">
+    <div id="thr-title">NOMAD</div>
+    <div id="thr-line">a shared dungeon, alive whether or not anyone is watching</div>
+    <button id="thr-enter" type="button">enter</button>
+    <div id="thr-keys">been here before? <span id="thr-keys-link">bring your keys</span></div>
   </div>
   <div id="setpanel">
     <span class="lbl">SETTINGS</span>
@@ -1334,12 +1362,17 @@ async function connect() {
   };
   ws.onmessage = function (m) {
     var f; try { f = JSON.parse(m.data); } catch (e) { return; }
-    if (f.kind === 24912) print(f.text, f.cls);
-    else if (f.kind === 24913) print(f.text, "feed");
+    // During the first walk the world holds its tongue: the feed (others'
+    // deeds, sounds through walls) and the ambient weather stay out of the
+    // lesson text. Your own actions still speak — that's the tutorial.
+    if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls); }
+    else if (f.kind === 24913) { if (guideActive()) return; print(f.text, "feed"); }
     else if (f.t === "status") {
       roomEl.textContent = f.room || "";
       if (f.room) knownRooms[f.room] = 1;
       hpEl.textContent = f.hp + "/" + f.max_hp + " hp \\u00b7 " + f.name;
+      // Remember the name for the threshold's greeting next visit.
+      try { localStorage.setItem("nomad_name", f.name); } catch (e) {}
       hpEl.className = f.hp <= f.max_hp / 3 ? "hp-low" : "";
       renderFx(f.fx);
       dollPulse(f.hp, f.max_hp);
@@ -1382,6 +1415,7 @@ function sendCmd(text) {
   var masked = bareSecret || /^login\\s+(nsec1|bunker:\\/\\/|[0-9a-fA-F]{64})/.test(t);
   history.unshift(masked ? "login \\u2022\\u2022\\u2022\\u2022" : text); histAt = -1;
   print("\\u25b8 " + (masked ? "login \\u2022\\u2022\\u2022\\u2022" : text), "echo");
+  guideNotice(t); // the first walk listens for its steps
   if (bareSecret) { importKey(t); return; } // importKey routes bunker:// too
   if (localCmd(text)) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "cmd", text: text }));
@@ -1398,6 +1432,8 @@ function localCmd(text) {
   if (lower === "login signer" || lower === "login bunker") { connectSignerApp(); return true; }
   if (lower.indexOf("login ") === 0) { importKey(t.slice(6).trim()); return true; }
   if (lower === "logout") { logout(); return true; }
+  if (lower === "tutorial off" || lower === "tutorial stop") { guideOff(); return true; }
+  if (lower === "tutorial") { guideStart(); return true; } // the first walk, on demand — for anyone, any time
   return false;
 }
 
@@ -3435,8 +3471,143 @@ idpaste.addEventListener("keydown", function (e) {
   if (importKey(v)) idpanel.classList.remove("open");
 });
 
-print("— you feel keys in your pocket. tap your name in the corner, or type 'keys' —", "sys");
-connect();
+// THE THRESHOLD: one click between a stranger and the world — never more.
+// Nothing connects until it's crossed, so the wake-up text lands on an
+// attentive reader instead of piling up behind a curtain. The click is also
+// the browser's audio-unlock gesture, so sound can default ON at first
+// crossing (a saved "off" stays off). A known wanderer is greeted by name.
+var threshold = document.getElementById("threshold");
+var thrEnter = document.getElementById("thr-enter");
+var thrKnown = localStorage.getItem("nomad_name");
+// One painting per visit, drawn from the scene set; each knows where its
+// light sits so the crop keeps it in frame. ?scene=<name> forces one.
+var THR_SCENES = { torch: "center 65%", hound: "center 55%", rain: "center 45%", arch: "center 40%", door: "center 50%", tide: "center 55%" };
+var thrPick = new URLSearchParams(location.search).get("scene");
+if (!THR_SCENES[thrPick]) {
+  var thrNames = Object.keys(THR_SCENES);
+  thrPick = thrNames[Math.floor(Math.random() * thrNames.length)];
+}
+var thrImg = new Image();
+thrImg.onload = function () {
+  threshold.style.backgroundImage = "linear-gradient(rgba(22,18,12,.5), rgba(22,18,12,.15) 45%, rgba(22,18,12,.6)), url(" + thrImg.src + ")";
+  threshold.style.backgroundPosition = "center, " + THR_SCENES[thrPick];
+};
+thrImg.src = "/door-bg/" + thrPick + ".jpg";
+if (thrKnown && stored) thrEnter.textContent = "enter as " + thrKnown;
+var crossed = false;
+function crossThreshold() {
+  if (crossed) return;
+  crossed = true;
+  if (localStorage.getItem("nomad_sound") === null) setSound(true);
+  threshold.classList.add("gone");
+  setTimeout(function () { threshold.remove(); }, 1000);
+  print("— you feel keys in your pocket. tap your name in the corner, or type 'keys' —", "sys");
+  connect();
+  cmd.focus();
+  // A brand-new key gets the first walk, once the wake-up text has landed.
+  // (Anyone else can summon it by typing 'tutorial'.)
+  if (guideFresh) setTimeout(guideStart, 3500);
+}
+thrEnter.addEventListener("click", crossThreshold);
+document.getElementById("thr-keys-link").addEventListener("click", function (e) {
+  // The returning-player path: cross as whoever's in the pocket, with the
+  // identity panel already open to restore the keys that matter.
+  e.stopPropagation();
+  crossThreshold();
+  refreshIdPanel();
+  idpanel.classList.add("open");
+});
+
+// THE FIRST WALK: five lessons printed into the log — where this game's
+// teaching belongs — each one explaining a real system, each advancing only
+// when you DO the thing it asked. Auto-runs once for a freshly minted key;
+// 'tutorial' replays it for anyone; 'tutorial off' ends it. The lessons
+// teach the typed language — chips send the same words, so a tap counts,
+// but nothing here depends on chips existing at all.
+var guideFresh = !stored && !localStorage.getItem("nomad_guided");
+var GUIDE_LESSONS = [
+  { re: null, text: [
+    "\\u2500 THE FIRST WALK (1/5) \\u2500 the world \\u2500",
+    "This is one live dungeon, shared by everyone in it. It is not",
+    "paused when you look away: creatures hunt, eat, sleep, and hold",
+    "grudges \\u2014 they remember faces, and yours is a face. The other",
+    "names you meet down here are real people. ('tutorial off' ends this walk)",
+    "\\u2192 type 'look' to read the room you are standing in.",
+  ] },
+  { re: /^look(\\s|$)/, text: [
+    "\\u2500 lesson 2/5 \\u2500 moving \\u2500",
+    "Every room names its exits; walking is 'go down', 'go west'. Two",
+    "things travel with you everywhere: light and noise. The deep is",
+    "truly dark \\u2014 carry a torch and 'light' it, or see nothing while",
+    "everything sees you. And all you do makes sound; sound draws feet.",
+    "\\u2192 type 'go' and any exit the room names.",
+  ] },
+  { re: /^go\\s/, text: [
+    "\\u2500 lesson 3/5 \\u2500 your hands \\u2500",
+    "The floor is real. 'get' takes what lies there, 'drop' leaves it,",
+    "and it stays where it fell \\u2014 unless something hungrier finds it",
+    "first. 'equip' arms you; 'eat' when food is food. Nothing mends",
+    "itself down here: the gate's bench and forge repair what's worn.",
+    "\\u2192 type 'inventory' to see your pack, lockbox, and vault.",
+  ] },
+  { re: /^inventory(\\s|$)/, text: [
+    "\\u2500 lesson 4/5 \\u2500 blood \\u2500",
+    "'attack <name>' starts a fight. Blows land in rounds, seconds",
+    "apart \\u2014 you have time to think, so think. Stances tilt the trade:",
+    "'stance reckless' hits harder and gets you hit; 'stance guarded'",
+    "turns blows but kills slowly. Walking out of the room is how you",
+    "flee. Wounds keep bleeding until you 'bandage'. And health NEVER",
+    "returns on its own \\u2014 'rest' where nothing is watching, or 'eat'.",
+    "\\u2192 type 'stance guarded' (then 'stance steady' to square back up).",
+  ] },
+  { re: /^stance\\s/, text: [
+    "\\u2500 lesson 5/5 \\u2500 the stakes \\u2500",
+    "When you die, everything you carry scatters where you fall, and",
+    "the world keeps it. The answer is a gate: the keeper barters in",
+    "kind, and what you 'claim' there is SEALED to your name \\u2014 signed,",
+    "provable, and safe in the gate's lockbox where death cannot reach.",
+    "Extraction is the whole game: what you haul out and seal is yours.",
+    "What you carry is a bet.",
+    "\\u2192 type 'keys' \\u2014 the last lesson is who you are.",
+  ] },
+  { re: /^keys(\\s|$)/, text: [
+    "\\u2500 THE DOOR IS YOURS \\u2500",
+    "You are a key, not an account. Top right \\u2014 your health and your",
+    "name \\u2014 opens your keys: SAVE THE SECRET somewhere safe. It is the",
+    "only way back to this wanderer from any other browser or device.",
+    "Top left \\u2014 NOMAD \\u2014 is settings: sound, themes, command chips.",
+    "'help' lists every verb; 'tutorial' replays this walk.",
+    "The dungeon takes it from here.",
+  ] },
+];
+var guideAt = -1; // index of the lesson whose action we are waiting on
+function guideActive() { return guideAt >= 1 && guideAt < GUIDE_LESSONS.length; }
+function guidePrint(i) { print(GUIDE_LESSONS[i].text.join("\\n"), "sys"); }
+function guideStart() {
+  guideAt = 1;
+  guidePrint(0);
+}
+function guideOff() {
+  if (guideAt < 0 || guideAt >= GUIDE_LESSONS.length) { print("\\u2014 no walk is running; 'tutorial' starts one \\u2014", "sys"); return; }
+  localStorage.setItem("nomad_guided", "1");
+  guideAt = -1;
+  print("\\u2014 the walk ends here; 'tutorial' brings it back \\u2014", "sys");
+}
+function guideNotice(cmdText) {
+  if (guideAt < 1 || guideAt >= GUIDE_LESSONS.length) return;
+  if (!GUIDE_LESSONS[guideAt].re.test(cmdText.trim().toLowerCase())) return;
+  var landed = guideAt;
+  guideAt++;
+  var last = guideAt >= GUIDE_LESSONS.length;
+  // Let the world answer the command first; the lesson follows it.
+  setTimeout(function () {
+    guidePrint(landed);
+    if (last) {
+      localStorage.setItem("nomad_guided", "1");
+      guideAt = -1;
+    }
+  }, 700);
+}
 </script>
 </body>
 </html>`;
