@@ -9,7 +9,10 @@
 // armor-ignore (stun>0 -> ignores 2, zone.armorIgnore) now modeled; it was not.
 // NOT modeled: stun's lost rounds, THORNS/PARRY_RIPOSTE counters, wards
 // (PADDED/WARDHIDE), wear, REACH's ambush-strip, dogpile — margins here are
-// the clean-room floor, live fights are swingier.
+// the clean-room floor, live fights are swingier. SHIELD_WALL_DRAG (0.85 on
+// swings behind tower/pavise/gravestone) is modeled in the PvP builds via
+// `drag`; tables 1-2 are SHIELDLESS weapon-identity tables — read a wall-
+// bearer's PvE kill times ~15% slower than printed.
 
 const CRIT = 0.05, FUMBLE = 0.05, K = 10;
 const DODGE_LIGHT = 0.05, AMBUSH_MULT = 1.5, VITALS_PVP = 0.005, VITALS_ARMOR_FULL = 11;
@@ -116,15 +119,17 @@ const mobs = [
   { id: "drowned-god",    lvl: 6, hp: 110, min: 6, max: 10, armor: 1, bleed: 0 },
 ];
 
+// Shield blocks rescaled by 074 (rome capped the wall at 30%): iron-bound .15,
+// warden-tower .25, gravestone .30 — guarded turtle peaks .40, not .55.
 const loadouts = [
   { id: "naked",                 armor: 0,  def: 1.0, weight0: true,  block: 0 },
   { id: "common kit (4a, w0)",   armor: 4,  def: 1.0, weight0: true,  block: 0 },
-  { id: "uncommon kit (7a)+shld",armor: 7,  def: 1.0, weight0: false, block: 0.25 },
-  { id: "rare kit (9a)+shld",    armor: 9,  def: 1.0, weight0: false, block: 0.35 },
+  { id: "uncommon kit (7a)+shld",armor: 7,  def: 1.0, weight0: false, block: 0.15 },
+  { id: "rare kit (9a)+shld",    armor: 9,  def: 1.0, weight0: false, block: 0.25 },
   // 044: chitin+coral-crown carry weight now — 11a is the tank build (no dodge).
-  { id: "epic TANK (11a)+shld",  armor: 11, def: 1.0, weight0: false, block: 0.45 },
+  { id: "epic TANK (11a)+shld",  armor: 11, def: 1.0, weight0: false, block: 0.30 },
   // guarded: +0.10 block behind a shield (GUARDED_BLOCK_BONUS) + wounds half-turned
-  { id: "epic GUARDED",          armor: 11, def: 0.6, weight0: false, block: 0.55, woundMult: 0.5 },
+  { id: "epic GUARDED",          armor: 11, def: 0.6, weight0: false, block: 0.40, woundMult: 0.5 },
 ];
 
 // ---- Table 1: player DPR by weapon vs mob armor tiers ----
@@ -194,8 +199,9 @@ function pvpLandedE(w, defArmor, body, atk = 1.0, def = 1.0) {
 function pvpDPR(att, def) {
   const quick = def.weight0 && !def.burdened;
   const land = (1 - FUMBLE) * (1 - (quick ? DODGE_LIGHT : 0)) * (1 - (def.block ?? 0));
-  const first = pvpLandedE(att.w, def.armor, true);
-  const extra = pvpLandedE(att.w, def.armor, false);
+  // wall-class shields drag the bearer's swings (SHIELD_WALL_DRAG, 074-era tax)
+  const first = pvpLandedE(att.w, def.armor, true, att.drag ?? 1);
+  const extra = pvpLandedE(att.w, def.armor, false, att.drag ?? 1);
   const dpr = land * (first + (att.w.speed - 1) * extra) + (att.w.bleed ?? 0) * land;
   const perBlow = VITALS_PVP * (2 - Math.min(1, def.armor / VITALS_ARMOR_FULL));
   const vitalsRound = 1 - Math.pow(1 - perBlow, land * att.w.speed);
@@ -219,10 +225,10 @@ const builds = [
   { id: "naked knife (shiv x2)",        w: wOf("bone-shiv"),          armor: 0,  weight0: true,  block: 0 },
   { id: "murder kit (widow-maker x3)",  w: wOf("widow-maker"),        armor: 0,  weight0: true,  block: 0 },
   { id: "burdened mule (naked, 4+ iron)", w: wOf("bare hands"),       armor: 0,  weight0: true,  block: 0, burdened: true },
-  { id: "duelist (falchion, 7a+shld)",  w: wOf("chipped-falchion"),   armor: 7,  weight0: false, block: 0.25 },
-  { id: "pick-man (h-pick, 7a+shld)",   w: wOf("horsemans-pick"),     armor: 7,  weight0: false, block: 0.25 },
-  { id: "bruiser (greatsword, 9a+shld)",w: wOf("notched-greatsword"), armor: 9,  weight0: false, block: 0.35 },
-  { id: "tank (flanged mace, 11a+shld)",w: wOf("flanged-mace"),       armor: 11, weight0: false, block: 0.45 },
+  { id: "duelist (falchion, 7a+shld)",  w: wOf("chipped-falchion"),   armor: 7,  weight0: false, block: 0.15 },
+  { id: "pick-man (h-pick, 7a+shld)",   w: wOf("horsemans-pick"),     armor: 7,  weight0: false, block: 0.15 },
+  { id: "bruiser (greatsword, 9a+shld)",w: wOf("notched-greatsword"), armor: 9,  weight0: false, block: 0.25, drag: 0.85 }, // warden-tower = wall
+  { id: "tank (flanged mace, 11a+shld)",w: wOf("flanged-mace"),       armor: 11, weight0: false, block: 0.30, drag: 0.85 }, // gravestone = wall
 ];
 
 // ---- Table 5: PvP dmg/round matrix (rounds to kill 60hp) ----

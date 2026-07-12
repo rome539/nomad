@@ -22,7 +22,7 @@ import {
   CARVE_MAX_LEN, TWO_HANDED, RARITY_RANK, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, DARK_ROOMS, SHIELD_WALL,
 } from "./zone-data";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
@@ -80,7 +80,33 @@ function andList(items: string[]): string {
   return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
-export function describePlayer(z: ZoneDO, other: Session): string {
+export function describePlayer(z: ZoneDO, session: Session, other: Session): string {
+  // What the sky and the dark let you SEE of a stranger. The room already tells
+  // you what weather you're standing in (skyClause); this is what that weather
+  // COSTS you. Without it, the sim contradicted itself: the room said "you can
+  // see nothing, not what shares it with you," and a look still read a man's
+  // whole loadout off him in pitch black (rome, 2026-07-12).
+  const roomId = session.roomId;
+
+  // No light in the lightless deep: you get nothing — and cmdLook never even
+  // looks a player up while blind (naming one must not confirm they're there).
+  // This branch is defense-in-depth for any future caller, and it does NOT
+  // echo the name back for the same reason.
+  if (DARK_ROOMS.has(roomId) && !z.carriesLight(session)) {
+    return "You can make out no one in this dark — shapes and breath and nothing you would swear to. (a light would show the room)";
+  }
+  // The fog blanks a man exactly as it blanks a beast (fogTell): you can see
+  // that someone is standing there, and not one thing about them.
+  if (events.foggy(z, roomId)) {
+    return `${other.name} is a grey shape in the fog — near enough to name, too deep in it to read. That they are there is all of it.`;
+  }
+  // Rain: the big silhouette survives a downpour — steel, armor, a stuffed pack,
+  // a burning brand. The FINE read does not. You cannot judge the wear on a
+  // man's kit through hammering rain, and you cannot read the stains on his
+  // hands. Rain is the murderer's weather: it hides his approach, hides his
+  // guilt, and washes it off him besides (see rainThinsBlood).
+  const inRain = events.raining(z, roomId);
+
   const cond = other.hp >= other.maxHp ? "unhurt"
     : other.hp > other.maxHp * 0.66 ? "bruised but standing"
     : other.hp > other.maxHp * 0.33 ? "badly hurt"
@@ -104,9 +130,11 @@ export function describePlayer(z: ZoneDO, other: Session): string {
     : "They wear nothing that would turn a blade.");
 
   // How hard all of it has been used — an impression across the whole kit, so
-  // no single piece hands you its breaking point.
-  const tell = kitTell([...(w ? [w] : []), ...(sh ? [sh] : []), ...wornGear]);
-  if (tell) out.push(tell);
+  // no single piece hands you its breaking point. Washed out by the rain.
+  if (!inRain) {
+    const tell = kitTell([...(w ? [w] : []), ...(sh ? [sh] : []), ...wornGear]);
+    if (tell) out.push(tell);
+  }
 
   // A flame in the hand: they have made their peace with being seen.
   if (z.carriesLight(other)) {
@@ -121,6 +149,13 @@ export function describePlayer(z: ZoneDO, other: Session): string {
     out.push("Their pack rides heavy and stuffed — loose iron they aren't wearing, and it won't ride quiet.");
   }
 
+  // Blood on the hands is a close read, and the downpour takes it — you cannot
+  // read a man's stains through hammering rain (and it's washing them off him
+  // as you look). The one weather that hides a murderer from a witness.
+  if (inRain) {
+    out.push("The rain runs off them in sheets; you could read nothing finer on them than the steel.");
+    return out.join(" ");
+  }
   return out.join(" ") + pvp.bloodClause(z, other.pubkey);
 }
 
@@ -134,9 +169,25 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
 
   if (arg === "self" || arg === "me" || arg === "myself") return z.send(session, selfExamine(z, session));
 
-  const creature = z.findCreatureIn(session.roomId, arg);
+  // The lightless deep takes the WHOLE room from you — the glance already says
+  // "you can see nothing, not what shares it with you." A named look has to obey
+  // the same law, or you could read a beast's wounds and a blade's wear in pitch
+  // black (rome, 2026-07-12). Your OWN pack still answers: you know your kit by
+  // touch, so carried gear and the lockbox stay readable below.
+  const blind = DARK_ROOMS.has(session.roomId) && !z.carriesLight(session);
+
+  const spotted = blind ? null : z.findCreatureIn(session.roomId, arg);
+  // An unseen lurker is not in the room yet — naming it must not find it.
+  const creature = spotted && z.lurkerUnseen(spotted, session) ? null : spotted;
   if (creature) {
     const tmpl = world.mobTemplates.get(creature.templateId)!;
+    // The fog takes the close read the same way it takes it off a wanderer: you
+    // can see WHAT it is, and nothing of how it fares or what it carries. (It
+    // used to print the full description and exact condition, then finish with
+    // "you cannot read it" — the sentence argued with itself.)
+    if (events.foggy(z, session.roomId)) {
+      return z.send(session, `${tmpl.description} It is a grey shape in the fog — you can read nothing off it: not its wounds, not what it carries.`);
+    }
     // The examine reads its live state in a full sentence (the room glance gets
     // the same tell as a terser clause) — a wound, a hunt, a hungry eye on a rival.
     const tell = ai.creatureTell(z, creature, session.pubkey);
@@ -148,8 +199,9 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // piece DOES (the same stat tags the bench shows), then how far gone it is.
   // Gear on the floor reads its stamped wear (groundCond); a trophy or a food
   // has no wear to speak of.
-  // A drowned floor keeps its contents from a dry-eyed look (dive reads it by touch).
-  const groundItem = events.tideFlooded(z, session.roomId)
+  // A drowned floor keeps its contents from a dry-eyed look (dive reads it by
+  // touch) — and so does the dark.
+  const groundItem = blind || events.tideFlooded(z, session.roomId)
     ? null
     : findItemIn(z, z.ground.get(session.roomId) ?? [], arg);
   if (groundItem) {
@@ -166,8 +218,12 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
         + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : ""),
     );
   }
-  const other = findPlayerIn(z, session.roomId, arg);
-  if (other) return z.send(session, describePlayer(z, other), "study");
+  // In the pitch dark you cannot roll-call the room: naming a wanderer must not
+  // confirm they're there (the glance already refuses to list them; listen is
+  // the honest tool for a dark room). So the player lookup is skipped blind,
+  // and a probe falls through to the same neutral "Pitch dark" as everything else.
+  const other = blind ? null : findPlayerIn(z, session.roomId, arg);
+  if (other) return z.send(session, describePlayer(z, session, other), "study");
   // Not in hand, not on the floor — maybe in the lockbox (rome, 2026-07-11:
   // look reaches into your own keeping too). Not mid-fight: nobody unlatches
   // a box with something trying to kill them.
@@ -187,7 +243,11 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
       );
     }
   }
-  z.send(session, "You see nothing like that here.");
+  // In the dark, "nothing like that here" would be a lie dressed as an answer —
+  // you didn't fail to find it, you failed to SEE. Say which.
+  z.send(session, blind
+    ? "Pitch dark. You can make out nothing of it — only what your hands already hold. (a light would show it)"
+    : "You see nothing like that here.");
 }
 
 // How far gone a piece is, spoken as prose (same buckets as the list tags —
@@ -674,9 +734,15 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
   carried.equipped = true;
   await setEquipped(z.env.DB, carried.rowId, true);
   if (fighting) session.staggered = true;
+  // Raising a wall-class shield tells you its price up front: you'll fight
+  // around the thing you carry (SHIELD_WALL_DRAG on every blow you deal).
+  const wallNote = tmpl.slot === "shield" && SHIELD_WALL.has(tmpl.id)
+    ? " It is a wall, and you will fight around it — your blows lose a little of their weight while it's up."
+    : "";
   z.send(session, (tmpl.slot === "weapon"
     ? `You take ${tmpl.name} in hand${current ? `, setting aside ${current.tmpl.name}` : ""}.`
     : `You pull on ${tmpl.name}${current ? `, shrugging off ${current.tmpl.name}` : ""}.`)
+    + wallNote
     + (fighting ? " Your eyes leave the fight for a heartbeat — an opening." : ""));
   z.sendCtx(session); // your loadout changed — refresh the chips (the equip chip was going stale)
 }
@@ -1267,9 +1333,12 @@ export function findItemIn(z: ZoneDO, itemIds: string[], arg: string): string | 
   return null;
 }
 
+// Someone stepped out of the world (the gate's bench, the keeper's hatch) is
+// not in the room to be found: the room glance already omits them and attack
+// already refuses them, so look must not describe them either (rome, 2026-07-12).
 export function findPlayerIn(z: ZoneDO, roomId: string, arg: string): Session | null {
   for (const s of z.sessions.values()) {
-    if (s.roomId === roomId && s.name.toLowerCase().startsWith(arg)) return s;
+    if (s.roomId === roomId && !z.outOfWorld(s) && s.name.toLowerCase().startsWith(arg)) return s;
   }
   return null;
 }

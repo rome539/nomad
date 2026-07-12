@@ -98,6 +98,14 @@ export const STANCE: Record<Stance, { atk: number; def: number }> = {
 // leaves you open. The tax that keeps the 1.5x stance an honest gamble rather
 // than a free upgrade (rome, 2026-07-12). Steady/guarded never whiff for this.
 export const RECKLESS_MISS = 0.10;
+// The wall-class shields: real fortifications, not bucklers. Behind one you
+// fight AROUND the thing you carry — every blow you deal loses a share of its
+// weight (rome, 2026-07-12: the shield was the one defense with no offense
+// tax; guarded pays 0.6x, plain shield-holding paid nothing). Data-simple,
+// told at equip and on the item read; bucklers and the parrying dagger stay
+// free so the light skirmisher remains a real archetype.
+export const SHIELD_WALL = new Set(["warden-tower-shield", "crown-guard-pavise", "gravestone-shield"]);
+export const SHIELD_WALL_DRAG = 0.85; // multiplies your outgoing damage while the wall is up
 // Guarded is more than the number — you fight behind your shield. Behind a
 // raised shield it blocks a shade more, and claws that would open a wound
 // (armor-ignoring bleed) only get through half the time. The skill answer to

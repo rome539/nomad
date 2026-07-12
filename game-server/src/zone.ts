@@ -62,7 +62,7 @@ import {
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, BURDEN_FREE_IRON,
-  STANCE, RECKLESS_MISS, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
+  STANCE, RECKLESS_MISS, SHIELD_WALL, SHIELD_WALL_DRAG, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
   PIERCING_WEAPONS, VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
   SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
@@ -838,7 +838,10 @@ export class ZoneDO implements DurableObject {
 
   private async cmdAttack(session: Session, arg: string): Promise<void> {
     if (!arg) return this.send(session, "Attack what?");
-    const creature = this.findCreatureIn(session.roomId, arg);
+    const found = this.findCreatureIn(session.roomId, arg);
+    // You cannot swing at what hasn't shown itself: an unseen lurker is not a
+    // target, and naming it must not confirm it's there.
+    const creature = found && this.lurkerUnseen(found, session) ? null : found;
     if (!creature) {
       // No beast by that name — but a wanderer's name reaches for steel too.
       const other = verbs.findPlayerIn(this, session.roomId, arg);
@@ -857,7 +860,7 @@ export class ZoneDO implements DurableObject {
       const weapon = this.equippedItem(session, "weapon");
       let dmg = Math.round(
         (randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) + (weapon ? this.effDmg(weapon) : 0)) *
-          STANCE[session.stance].atk * AMBUSH_MULT,
+          STANCE[session.stance].atk * this.wallDrag(session) * AMBUSH_MULT,
       );
       if (session.hp < session.maxHp * WOUNDED_FRACTION) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); this.tellWounded(session); }
       // No crit on top: the surprise IS the crit. (Stacked, a pebble
@@ -921,6 +924,8 @@ export class ZoneDO implements DurableObject {
       : session.target
         ? this.creatures.get(session.target) ?? null
         : null;
+    // Same law as the blade: you can't hurl a stone at a thing you haven't seen.
+    if (creature && this.lurkerUnseen(creature, session)) creature = null;
     if (creature && creature.roomId !== session.roomId) creature = null;
     // Named a foe that isn't here: that's a miss of the tongue, not the arm.
     if (!creature && targetArg) return this.send(session, "Nothing by that name is here.");
@@ -963,7 +968,7 @@ export class ZoneDO implements DurableObject {
       return;
     }
     let dmg = randInt(THROW_DMG_MIN, THROW_DMG_MAX) + this.effStat(itmpl.dmg, carried.condition);
-    dmg = Math.round(dmg * STANCE[session.stance].atk);
+    dmg = Math.round(dmg * STANCE[session.stance].atk * this.wallDrag(session));
     if (session.hp < session.maxHp * WOUNDED_FRACTION) dmg = Math.round(dmg * WOUNDED_DMG_MULT);
     // Surprise IS the crit: an ambush throw never double-dips a crit roll.
     let flourish = unaware ? " — it never saw it coming!" : ".";
@@ -1309,6 +1314,7 @@ export class ZoneDO implements DurableObject {
     const pierce = PIERCE.get(t.id);
     if (pierce) bits.push(`pierces ${pierce}`);
     if (TWO_HANDED.has(t.id)) bits.push("two-handed");
+    if (SHIELD_WALL.has(t.id)) bits.push("a wall — drags your swing"); // the offense tax, on the label
     if (PADDED.has(t.id)) bits.push("wards stun");
     if (WARDHIDE.has(t.id)) bits.push("wards wounds");
     if (MAILWARD.has(t.id)) bits.push("wards bleeds");
@@ -1614,7 +1620,7 @@ export class ZoneDO implements DurableObject {
         this.send(session, "Your head still rings — the moment to swing slips past you.", "stun");
         continue;
       }
-      const atkMult = STANCE[session.stance].atk;
+      const atkMult = STANCE[session.stance].atk * this.wallDrag(session);
       const alive = (c: Creature) => this.creatures.has(c.id);
       let primary = foes.find((c) => c.id === session.target && alive(c)) ?? foes.find(alive);
       const speed = Math.max(1, this.equippedItem(session, "weapon")?.tmpl.speed ?? 1);
@@ -2887,11 +2893,18 @@ export class ZoneDO implements DurableObject {
         continue;
       }
       const tell = ai.creatureTell(this, creature, session.pubkey);
-      lines.push(`${cap(t.name)} is here${this.bearsClause(creature)}${tell ? `, ${tell}` : ""}.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
+      // In fog the tell already says "you cannot read it" — so the glance must
+      // not then hand over its exact wounds and its haul in the same breath.
+      const fogged = events.foggy(this, room.id);
+      lines.push(`${cap(t.name)} is here${fogged ? "" : this.bearsClause(creature)}${tell ? `, ${tell}` : ""}.${!fogged && creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
     }
+    // Blood on a stranger's hands is a CLOSE read: the fog swallows it and the
+    // rain runs it off them. The room glance only carries the mark in weather
+    // that lets you see it — same law as the look (verbs.describePlayer).
+    const canReadStains = !events.foggy(this, room.id) && !events.raining(this, room.id);
     for (const s of this.sessions.values()) {
       if (s.pubkey !== session.pubkey && s.roomId === room.id && !this.outOfWorld(s)) {
-        lines.push(`${s.name} is here${s.resting ? ", resting" : ""}.${pvp.bloodClause(this, s.pubkey)}`);
+        lines.push(`${s.name} is here${s.resting ? ", resting" : ""}.${canReadStains ? pvp.bloodClause(this, s.pubkey) : ""}`);
       }
     }
     return lines.join("\n");
@@ -3083,6 +3096,20 @@ export class ZoneDO implements DurableObject {
     return null;
   }
 
+  // A lurker lying in wait ISN'T THERE until it springs — the room glance says
+  // so, and every lookup that addresses a creature by name has to agree, or the
+  // ambush is a fiction. Naming it (look/attack/throw) used to find it and hand
+  // back its description, so a player who knew the roster could sweep every room
+  // and never be jumped again — the whole archetype, defeated by typing a word
+  // (rome, 2026-07-12). Torchlight is the honest counter: carry a flame and the
+  // room shows it pressed into its crevice, so it becomes addressable.
+  public lurkerUnseen(creature: Creature, session: Session): boolean {
+    return LURKERS.has(creature.templateId)
+      && !!creature.hidden
+      && !creature.target
+      && !this.carriesLight(session);
+  }
+
 
   public findCarried(session: Session, arg: string): CarriedItem | null {
     for (const c of session.items) {
@@ -3139,6 +3166,13 @@ export class ZoneDO implements DurableObject {
     let total = 0;
     for (const g of this.equippedAll(session)) total += g.tmpl.weight;
     return total;
+  }
+
+  // Fighting from behind a wall-class shield: every blow you deal drags
+  // (SHIELD_WALL_DRAG) — you fight around the thing you carry. Bucklers free.
+  public wallDrag(session: Session): number {
+    const sh = this.equippedItem(session, "shield");
+    return sh && SHIELD_WALL.has(sh.tmpl.id) ? SHIELD_WALL_DRAG : 1;
   }
 
   // The pack's iron: loose (unworn) gear pieces past BURDEN_FREE_IRON make you

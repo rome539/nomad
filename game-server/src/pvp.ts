@@ -158,7 +158,7 @@ async function swingAt(
   // fast steel's follow-ups carry the edge alone — the PvE rule, unchanged.
   const weapon = z.equippedItem(attacker, "weapon");
   const body = opts.body ? randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) : 0;
-  let dmg = Math.round((body + (weapon ? z.effDmg(weapon) : 0)) * STANCE[attacker.stance].atk);
+  let dmg = Math.round((body + (weapon ? z.effDmg(weapon) : 0)) * STANCE[attacker.stance].atk * z.wallDrag(attacker));
   if (hurt) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); z.tellWounded(attacker); }
   let flourish = ".";
   if (opts.ambush) {

@@ -46,7 +46,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     const throwable = session.items.find(
       (c) => c.serial === null && (world.itemTemplates.get(c.itemId)?.dmg ?? 0) > 0,
     );
-    const firstMob = [...z.creatures.values()].find((c) => c.roomId === session.roomId);
+    // Same filter as the attack-chip loop above: the throw chip must never
+    // name a lurker still lying in wait (it was the one place that could).
+    const firstMob = [...z.creatures.values()].find((c) => c.roomId === session.roomId
+      && !(LURKERS.has(c.templateId) && c.hidden && !c.target && !z.carriesLight(session)));
     if (throwable && firstMob) {
       const mobT = world.mobTemplates.get(firstMob.templateId)!;
       suggest.push(`throw ${shortName(world.itemTemplates.get(throwable.itemId)!.name)} at ${chipName(mobT.name)}`);
