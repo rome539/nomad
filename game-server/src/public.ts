@@ -1426,12 +1426,18 @@ function sendCmd(text) {
 // seeing a secret key.
 function localCmd(text) {
   var t = text.trim(), lower = t.toLowerCase();
-  if (lower === "keys") { showKeys(false); return true; }
-  if (lower === "keys reveal") { showKeys(true); return true; }
   if (lower === "login extension" || lower === "login ext") { loginExtension(); return true; }
   if (lower === "login signer" || lower === "login bunker") { connectSignerApp(); return true; }
   if (lower.indexOf("login ") === 0) { importKey(t.slice(6).trim()); return true; }
   if (lower === "logout") { logout(); return true; }
+  // Quit: back out through the door to the threshold. A clean reload — keys
+  // stay in the pocket, the world handles the vanishing (linkdead linger).
+  // Bare words only: the server owns "leave <thing>" (it's a drop).
+  if (lower === "quit" || lower === "leave" || lower === "exit") {
+    print("— you step back through the door —", "sys");
+    setTimeout(function () { location.reload(); }, 400);
+    return true;
+  }
   if (lower === "tutorial off" || lower === "tutorial stop") { guideOff(); return true; }
   if (lower === "tutorial") { guideStart(); return true; } // the first walk, on demand — for anyone, any time
   return false;
@@ -1742,8 +1748,9 @@ function renderChips(suggest, combat) {
   lastCombat = !!combat;
   chipsEl.textContent = "";
   if (!chipsOn) return; // the quiet terminal: no training wheels
-  // In combat the chips are fight-only; even the standing 'keys' chip stands down.
-  var all = suggest.concat(combat ? [] : ["keys"]);
+  // The identity lives behind the name button top right — no keys chip, no
+  // nostr words in a stranger's face (rome, 2026-07-11).
+  var all = suggest;
   var key = all.join("|");
   if (key !== lastSuggestKey) { lastSuggestKey = key; chipsExpanded = false; }
   var dirs = [];
@@ -3439,6 +3446,7 @@ cmd.addEventListener("keydown", function (e) {
 });
 
 idbtn.addEventListener("click", function () {
+  guideNotice("keys"); // the walk's last gate: opening your keys IS the lesson
   if (idpanel.classList.contains("open")) { idpanel.classList.remove("open"); return; }
   setpanel.classList.remove("open");
   refreshIdPanel();
@@ -3609,7 +3617,7 @@ function crossThreshold() {
   if (localStorage.getItem("nomad_sound") === null) setSound(true);
   threshold.classList.add("gone");
   setTimeout(function () { threshold.remove(); }, 1000);
-  print("— you feel keys in your pocket. tap your name in the corner, or type 'keys' —", "sys");
+  print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
   connect();
   cmd.focus();
   // A brand-new key gets the first walk, once the wake-up text has landed.
@@ -3676,7 +3684,7 @@ var GUIDE_LESSONS = [
     "provable, and safe in the gate's lockbox where death cannot reach.",
     "Extraction is the whole game: what you haul out and seal is yours.",
     "What you carry is a bet.",
-    "\\u2192 type 'keys' \\u2014 the last lesson is who you are.",
+    "\\u2192 tap your name, top right \\u2014 the last lesson is who you are.",
   ] },
   { re: /^keys(\\s|$)/, text: [
     "\\u2500 THE DOOR IS YOURS \\u2500",

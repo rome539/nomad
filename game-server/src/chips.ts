@@ -154,7 +154,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // The vault + seal only work at a gate, so the modal shows them only
     // there. (Typing 'inventory' still prints the plain list — chip ≠ command.)
     suggest.push(BENCH_CHIP);
-    suggest.push("say …", "help");
+    // No help chip: the tutorial teaches typed 'help', and a chip row that
+    // ends in meta-buttons reads like a toolbar, not a dungeon (rome, 2026-07-11).
+    suggest.push("say …");
   }
   // Two rats in a room shouldn't mean two identical chips.
   const unique = [...new Set(suggest)];

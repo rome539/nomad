@@ -323,6 +323,8 @@ export const HELP_TEXT = [
   "  inventory         (i) — what you carry",
   "  who               everyone awake in the dungeon",
   "  name <newname>    choose what the dungeon calls you",
+  "  quit              (leave, exit) — step back out through the door. Your",
+  "                    wanderer and everything sealed wait for your return.",
   "  help              (?) — this text",
   "",
   "Wounds do not close on their own. The dead stay dead until something",
