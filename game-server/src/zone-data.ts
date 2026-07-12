@@ -74,6 +74,16 @@ export const WEAPON_WEAR_HOLLOW = 0.6;
 // a parting strike may catch you as you flee.
 export const DODGE_LIGHT = 0.05; // added to the foe's miss chance when you're quick
 export const PARTING_BLOW_CHANCE = 0.4; // heavy armor: odds the fight bills you on the way out
+// The pack's iron is the OTHER half of the load law. Worn weight is priced
+// above; loose gear in the pack (weapons, armor, shields — trophies, food and
+// cigs stack silent forever) is priced here: past BURDEN_FREE_IRON unworn
+// pieces you are BURDENED — no quick-dodge even stripped, parting-cut exposed
+// even stripped, and the load is audible (a burdened room-change can ring the
+// same bell a shout rings; a pressed ear next door reads the clatter). `drop`
+// is the valve: shed the iron mid-chase and you're the naked sprinter again.
+// Your life or your haul — nobody gets to be rich, armed, AND silent.
+export const BURDEN_FREE_IRON = 3;  // loose gear pieces the pack carries quiet
+export const CLATTER_ODDS = 0.5;    // odds a burdened room-change leaks sound
 
 // Fighting stance: trade offense for defense. `atk` scales the damage you deal,
 // `def` scales the damage you take (after armor). Reckless is a glass edge;
@@ -83,6 +93,11 @@ export const STANCE: Record<Stance, { atk: number; def: number }> = {
   steady: { atk: 1.0, def: 1.0 },
   guarded: { atk: 0.6, def: 0.6 }, // soak far less, but your blows lose their bite
 };
+// Reckless swings are all shoulder and no aim: a slice of them sail wide, on
+// top of the ordinary fumble — a clean whiff (you keep your grip) that still
+// leaves you open. The tax that keeps the 1.5x stance an honest gamble rather
+// than a free upgrade (rome, 2026-07-12). Steady/guarded never whiff for this.
+export const RECKLESS_MISS = 0.10;
 // Guarded is more than the number — you fight behind your shield. Behind a
 // raised shield it blocks a shade more, and claws that would open a wound
 // (armor-ignoring bleed) only get through half the time. The skill answer to
@@ -501,34 +516,153 @@ export const PLAYER_HIT: Record<"edge" | "blunt" | "spear" | "fist" | "plain", s
     "beat at {n}", "chop into {n}",
   ],
 };
-// The vitals-lottery killing blow, PLAYER side — the weapon type finds the vital
-// area it's made for: a point through the throat, an edge across it, blunt into
-// the skull, a thrust to the heart. Completes "You ___". Picked by
-// playerVitalsVerb (pierce checked before the stat registers).
-export const PLAYER_VITALS: Record<"pierce" | "edge" | "blunt" | "spear" | "fist" | "plain", string[]> = {
+// The vitals-lottery killing blow. A body has more than one place that ends it,
+// and each weapon reaches a different set of them (rome, 2026-07-12: "the game
+// is a simulation"). So each entry is a PAIR — the killer's account and the
+// victim's, of the SAME wound. They're picked together (pickVitals), never
+// independently: the man who opens a throat must not be told he caved a skull.
+// `hit` completes "You ___" ({n} = the target; NEVER a pronoun, since {n} is a
+// beast as often as a wanderer). `taken` is the loser's second person, and
+// closes in the dark. Register by weapon: pierce (picks) > edge (anything that
+// bleeds) > blunt (anything that stuns) > spear (fast/reaching) > plain (steel
+// that just cuts — most swords and axes live here) > fist (bare hands).
+// NOTE the hollow are gated upstream (a skeleton has no liver to find): only a
+// blunt blow ends bare bone, so the soft-tissue kills never fire on them.
+export const VITALS_KILLS: Record<"pierce" | "edge" | "blunt" | "spear" | "fist" | "plain", { hit: string; taken: string }[]> = {
+  // A narrow point: it goes IN — the temple, the eye, under the jaw, the heart.
   pierce: [
-    "drive the point through {n}'s throat", "punch the point clean through {n}'s skull",
-    "run the point up under {n}'s jaw", "find the gap in {n} and drive through",
+    { hit: "punch the point through {n}'s temple",
+      taken: "The point punches through your temple, and everything simply stops." },
+    { hit: "run the point up under {n}'s jaw",
+      taken: "The point drives up under your jaw and keeps going. You never feel it arrive." },
+    { hit: "drive the point through {n}'s eye",
+      taken: "It takes you through the eye, and the dark is instant and total." },
+    { hit: "punch the point through {n}'s breastbone, into the heart",
+      taken: "It punches through your breastbone and into the heart. Two beats, and no third." },
+    { hit: "drive the point in at the base of {n}'s skull",
+      taken: "The point goes in at the base of your skull. Everything below your neck stops answering." },
+    { hit: "find the gap in {n}'s guard and drive through",
+      taken: "It finds the gap you didn't know you'd left, and drives in to the haft." },
   ],
+  // A cutting edge: the throat, between the ribs, under them, the low back, the
+  // great vein of the thigh. The knife-fighter's map.
   edge: [
-    "open {n}'s throat", "draw your edge across {n}'s throat",
-    "lay {n}'s throat open", "cut deep into the side of {n}'s neck",
+    { hit: "open {n}'s throat",
+      taken: "A line of cold opens across your throat, and the warmth leaves faster than your hands can catch it." },
+    { hit: "slip the edge between {n}'s ribs, into the heart",
+      taken: "The edge slides between two ribs and finds your heart. The room folds shut around it." },
+    { hit: "drive it up under {n}'s ribs, into the liver",
+      taken: "It goes in under your ribs and drags. Everything warm in you starts leaving at once." },
+    { hit: "put it in low, into {n}'s kidney",
+      taken: "A cold punch low in your back — and the pain is so total there's no room left for anything else." },
+    { hit: "lay open the great vein in {n}'s thigh",
+      taken: "The edge opens the big vein in your thigh. You go grey in seconds, and the floor comes up to meet you." },
+    { hit: "cut deep into the side of {n}'s neck",
+      taken: "The cut goes deep in the side of your neck, and you hear your own breath whistle out of the wrong place." },
   ],
+  // Weight and crush: bone driven into whatever it was caging. Skull, temple,
+  // the back of the head, the neck, the ribs, the breastbone.
   blunt: [
-    "stave in {n}'s skull", "crush {n}'s skull with the blow",
-    "bring it down square on {n}'s head", "shatter the side of {n}'s head",
+    { hit: "stave in {n}'s skull",
+      taken: "The blow caves your skull — one white crack of light, and then nothing at all." },
+    { hit: "crush {n}'s temple with the fall of it",
+      taken: "It catches you at the temple. The world snaps sideways and goes out like a pinched wick." },
+    { hit: "break {n}'s neck with one falling blow",
+      taken: "Something in your neck gives with a wet crack, and no limb you own answers again." },
+    { hit: "cave {n}'s ribs into what they were caging",
+      taken: "Your ribs stave inward into what they were caging. There is no breath left anywhere to find." },
+    { hit: "bring it down on the back of {n}'s head",
+      taken: "It lands at the base of your skull. The lights go out well before the pain arrives." },
+    { hit: "drive the head of it through {n}'s breastbone",
+      taken: "The weight of it drives your breastbone in, and your heart stops under the ruin of it." },
   ],
+  // Reach and thrust: it goes THROUGH — heart, lung, throat, belly and out.
   spear: [
-    "run {n} through the heart", "drive the point into {n}'s heart",
-    "punch through {n}'s ribs into the heart",
+    { hit: "run {n} through the heart",
+      taken: "The point runs you through the heart, and the room folds shut around it." },
+    { hit: "punch through {n}'s ribs and into the lung",
+      taken: "It punches through your ribs into the lung. You drown standing up, on dry stone." },
+    { hit: "put the point clean through {n}'s throat",
+      taken: "The point goes clean through your throat. You reach for it, and your hands don't answer." },
+    { hit: "run {n} through the belly and out the back",
+      taken: "It runs you through the belly and out the back, and pins something that mattered." },
+    { hit: "drive the point up beneath {n}'s ribs",
+      taken: "The point drives up beneath your ribs and finds the pump. It quits on the spot." },
   ],
+  // Bare hands: the neck, the windpipe, the temple, the throat, and the long grey
+  // patience of a grip that doesn't open.
   fist: [
-    "snap {n}'s neck", "drive a fist into {n}'s throat", "crack {n}'s windpipe",
+    { hit: "snap {n}'s neck",
+      taken: "Hands take your head and turn it too far. A dry crack, and nothing below it works." },
+    { hit: "crush {n}'s windpipe",
+      taken: "A hand crushes your windpipe — you claw for a breath that will not come, and the dark takes it." },
+    { hit: "drive the heel of your hand into {n}'s temple",
+      taken: "The heel of a hand catches your temple, and the lights go out mid-thought." },
+    { hit: "drive a fist into {n}'s throat",
+      taken: "Knuckles drive into your throat, and the air is simply gone." },
+    { hit: "get your hands round {n}'s throat and keep them there",
+      taken: "Hands close on your throat and do not open. The grey comes in from the edges, and then it's all grey." },
   ],
+  // Plain steel that cuts and chops — most swords and axes. It takes heads, it
+  // splits, it runs through.
   plain: [
-    "find the killing place on {n}", "strike {n} true and deep", "land the one blow that ends {n}",
+    { hit: "take {n}'s head off at the neck",
+      taken: "The steel takes your head from your shoulders. A brief, tumbling brightness — and then nothing." },
+    { hit: "split {n} from the collarbone down",
+      taken: "The blade splits you from the collarbone down, and everything inside you comes loose at once." },
+    { hit: "run {n} through the heart",
+      taken: "The steel goes in and finds your heart. The room folds shut around it." },
+    { hit: "lay {n}'s throat open",
+      taken: "The edge lays your neck open; you reach for it, and the reaching is the last thing you do." },
+    { hit: "open {n}'s belly with one long cut",
+      taken: "One long cut opens your belly, and you are holding yourself together with hands that will not grip." },
+    { hit: "split {n}'s skull to the jaw",
+      taken: "The blade splits your skull to the jaw, and the world ends between one breath and none." },
   ],
 };
+// How a STRANGER's kit reads at a glance — an impression, never a grade
+// (rome, 2026-07-12: "the actual quality of the gear is too revealing, make it
+// descriptive"). You can see that a man's gear is hard-used; you cannot see
+// that his mail is three blows from failing — that would hand you his breaking
+// point for free. So no per-piece condition tags on another wanderer: one
+// sentence, drawn from the AVERAGE state of everything they wear and wield.
+// (Your OWN kit still shows its exact wear — you know your own gear.)
+// Bands are floors, richest first; the finder takes the first one it clears.
+export const KIT_TELLS: { at: number; lines: string[] }[] = [
+  { at: 85, lines: [
+    "Their kit is clean and sound — someone has the coin, or the sense, to keep it that way.",
+    "Nothing they carry looks as though it has failed them yet.",
+  ] },
+  { at: 60, lines: [
+    "Their gear shows honest use, and no more than that.",
+    "The kit is worn in rather than worn out.",
+  ] },
+  { at: 35, lines: [
+    "Their kit is scarred and hard-used — this one has been down here a while.",
+    "Everything on them is scratched, dented, and mended at least once.",
+  ] },
+  { at: 15, lines: [
+    "Their gear is going: straps sprung, edges rolled, every piece a little wrong.",
+    "The kit is failing on them, and they must know it.",
+  ] },
+  { at: 0, lines: [
+    "Their kit is all but ruined — it looks ready to come apart at the first hard blow.",
+    "What they carry is held together by habit and luck, and not much of either.",
+  ] },
+];
+// The finality tacked onto a vitals verb (attacker's side), varied so the
+// rarest kill in the game doesn't always end on the same four words. No
+// pronoun — reads the same over a man or a beast.
+export const VITALS_KICKER = [
+  " — a killing blow.", " — struck home, and clean.", " — and that ends it, all at once.",
+  " — no rising from that.", " — and the fight's over between heartbeats.", " — killed clean.",
+];
+// The blackout coda for a creature's vitals kill (the beast's verb comes from
+// CREATURE_VITALS; this is where the lights go out).
+export const VITALS_DARK = [
+  "and the world goes white, then goes out.", "and everything rushes away into the dark.",
+  "and there's a bright, brief pain, then nothing.", "and the black closes over you all at once.",
+];
 // Phase 3 — the sim speaks. Each weapon swings in its OWN voice (by item id),
 // layered over the family pools above (fallback for anything unlisted). The
 // verb sits before " for N": "You <verb> for N". {n} is the target. Naming the
@@ -961,6 +1095,10 @@ export const TWO_HANDED = new Set(["war-pike", "abyssal-harpoon"]);
 // answer to the lighter chitin — every epic body is a different bet).
 export const PADDED = new Set(["quilted-coif", "riveted-cuirass", "padded-jerkin", "deadplate-harness"]);
 export const PADDED_STUN_MULT = 0.5;
+// Stun tuning lives in the DATA, not in code multipliers (rome, 2026-07-12,
+// after the Emberknock stun-chain): migration 073 halved every weapon's stun
+// stat at the source. One number per weapon, no special-case laws. Bosses
+// were never stunnable (is_boss); the padded coif halves what reaches a head.
 // The wound wards, split by what the fiction can honestly promise:
 // WARDHIDE (thick hide) pads the whole body — bleeds AND leg-rakes turned.
 // MAILWARD (riveted rings) turns edges only — a cut skates, but a hyena can
@@ -1011,7 +1149,15 @@ export const HOBBLE_FLEE_MS = 4000; // ~1 combat round of limping before you bre
 // vitalsLottery (zone.ts). Deliberately random — overrides the old "never random"
 // line; the randomness IS the equalizer (see ROADMAP lethality entry).
 export const VITALS_PVE = 1 / 3000;   // per-hit base (armored floor); naked = 2x via armor scaling
-export const VITALS_PVP = 0.005;      // ready for when PvP exists (0.5% armored -> 1% naked)
+export const VITALS_PVP = 0.005;      // the day came (2026-07-11): 0.5% armored -> 1% naked, per landed blow
+// ---- PvP: steel between wanderers ----
+// The anti-grief is systemic or it is nothing: witnesses = the sound system,
+// evidence = blood on the killer (below), weak fresh keys = the sybil wall,
+// and no dice ever punish the aggressor.
+export const MANCATCHER_PVP_HOBBLE = 0.25; // vs players the barbs HOBBLE, never hold — flee stays the victim's out
+export const BLOOD_FRESH_MS = 2 * 3_600_000;  // man-blood, and it looks fresh
+export const BLOOD_DRY_MS = 12 * 3_600_000;   // dried to brown; still not a beast's
+export const BLOOD_FADE_MS = 36 * 3_600_000;  // when the skin finally forgets (the ledger of the hands)
 export const VITALS_ARMOR_FULL = 11;  // total armor that counts as 'fully covered' (a max kit)
 export const VITALS_THREATS = new Set<string>([
   "three-hound", "two-hound", "pale-stalker", "pale-crawler", "the-drowned", "drowned-hulk",

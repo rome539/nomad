@@ -56,14 +56,15 @@ import * as lore from "./lore";
 import * as chips from "./chips";
 import * as events from "./events";
 import * as verbs from "./verbs";
+import * as pvp from "./pvp";
 import {
   TICK_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
-  THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_LIGHT,
-  STANCE, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
+  THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, BURDEN_FREE_IRON,
+  STANCE, RECKLESS_MISS, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
-  PIERCING_WEAPONS, VITALS_HOUND, PLAYER_VITALS,
+  PIERCING_WEAPONS, VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
   SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_REGROW_MIN_MS, STONE_REGROW_MAX_MS, STONE_WEAR,
@@ -106,6 +107,7 @@ export class ZoneDO implements DurableObject {
   // itemId -> ms the keeper restocks it. A bare shelf is a bare shelf for
   // everyone (gate.ts owns the churn); survives hibernation.
   public fenceOut = new Map<string, number>();
+  public bloodOn = new Map<string, number[]>(); // pubkey -> pvp-kill times; the evidence walks around on the murderer (pvp.ts)
   // ms the world next mints a hammerstone into a random haunt (corpse-key
   // pattern — no farmable spot). 0 = schedule on first tick.
   private nextStoneAt = 0;
@@ -189,6 +191,7 @@ export class ZoneDO implements DurableObject {
       this.openDoors = new Set(saved.openDoors);
       this.doorCloseAt = new Map(Object.entries(saved.doorCloseAt ?? {}));
       this.fenceOut = new Map(Object.entries(saved.fenceOut ?? {}));
+      this.bloodOn = new Map(Object.entries(saved.bloodOn ?? {}));
       this.nextStoneAt = saved.nextStoneAt ?? 0;
       this.traces = new Map(Object.entries(saved.traces ?? {}));
       this.rot = saved.rot ?? [];
@@ -331,6 +334,7 @@ export class ZoneDO implements DurableObject {
       openDoors: [...this.openDoors],
       doorCloseAt: Object.fromEntries(this.doorCloseAt),
       fenceOut: Object.fromEntries(this.fenceOut),
+      bloodOn: Object.fromEntries(this.bloodOn),
       nextStoneAt: this.nextStoneAt,
       traces: Object.fromEntries(this.traces),
       rot: this.rot,
@@ -361,6 +365,7 @@ export class ZoneDO implements DurableObject {
     this.openDoors.clear();
     this.doorCloseAt.clear();
     this.fenceOut.clear();
+    this.bloodOn.clear();
     this.nextStoneAt = 0;
     this.traces.clear();
     this.rot = [];
@@ -791,6 +796,7 @@ export class ZoneDO implements DurableObject {
       case "fish": return verbs.cmdFish(this, session);
       case "listen": return verbs.cmdListen(this, session, cmd.arg);
       case "dive": return verbs.cmdDive(this, session, cmd.arg);
+      case "wash": return verbs.cmdWash(this, session);
       case "smoke": return verbs.cmdSmoke(this, session);
       case "squink": return verbs.cmdSquink(this, session);
       case "xyzzy": return verbs.cmdXyzzy(this, session);
@@ -833,7 +839,12 @@ export class ZoneDO implements DurableObject {
   private async cmdAttack(session: Session, arg: string): Promise<void> {
     if (!arg) return this.send(session, "Attack what?");
     const creature = this.findCreatureIn(session.roomId, arg);
-    if (!creature) return this.send(session, "Nothing by that name is here to fight.");
+    if (!creature) {
+      // No beast by that name — but a wanderer's name reaches for steel too.
+      const other = verbs.findPlayerIn(this, session.roomId, arg);
+      if (other) return pvp.attackPlayer(this, session, other);
+      return this.send(session, "Nothing by that name is here to fight.");
+    }
     const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
     // Initiative: strike something that hasn't marked you — no fight on, no
     // grudge held — and the first blow lands heavy, before it can answer.
@@ -848,7 +859,7 @@ export class ZoneDO implements DurableObject {
         (randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) + (weapon ? this.effDmg(weapon) : 0)) *
           STANCE[session.stance].atk * AMBUSH_MULT,
       );
-      if (session.hp < session.maxHp * WOUNDED_FRACTION) dmg = Math.round(dmg * WOUNDED_DMG_MULT);
+      if (session.hp < session.maxHp * WOUNDED_FRACTION) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); this.tellWounded(session); }
       // No crit on top: the surprise IS the crit. (Stacked, a pebble
       // one-shots skeletons; unstacked, an ambush is strong, not a cannon.)
       // A point slips plate, a blunt weapon caves it: both ignore that much armor.
@@ -1455,7 +1466,7 @@ export class ZoneDO implements DurableObject {
   // doubles it, VITALS_ARMOR_FULL armor reaches the floor. Deliberately random:
   // the randomness is the equalizer that lets a fresh player kill a geared one.
   // Shared by PvE (VITALS_PVE) and, when PvP is built, PvP (VITALS_PVP).
-  private vitalsLottery(armor: number, base: number): boolean {
+  public vitalsLottery(armor: number, base: number): boolean {
     const mult = 2 - Math.min(1, Math.max(0, armor) / VITALS_ARMOR_FULL); // 2× naked → 1× fully covered
     return chance(base * mult);
   }
@@ -1593,7 +1604,7 @@ export class ZoneDO implements DurableObject {
         if (session.target) session.target = null;
         // The daze wears off outside the fight too — fled or left standing
         // alone, the flag must not stick to the HUD until a refresh.
-        if (session.stunned) { session.stunned = false; this.sendStatus(session); }
+        if (session.stunned && !session.pvpTarget) { session.stunned = false; this.sendStatus(session); }
         continue;
       }
       // Rung senseless last beat: your swing is gone. It clears now — one hit,
@@ -1626,6 +1637,11 @@ export class ZoneDO implements DurableObject {
           // never drop it at full strength, and not on most shaky swings either.
           const dropsIt = hurt && weapon && chance(WOUNDED_DROP_ODDS);
           await this.playerFumble(session, dropsIt ? weapon : null);
+        } else if (session.stance === "reckless" && chance(RECKLESS_MISS)) {
+          // The reckless tax: a wild swing carries you wide. Keep your grip
+          // (never a drop), but you've left yourself open — playerFumble(null)
+          // whiffs and staggers you.
+          await this.playerFumble(session, null);
         } else {
           for (const creature of targets) {
             if (!alive(creature)) continue;
@@ -1638,7 +1654,7 @@ export class ZoneDO implements DurableObject {
             // steel lands fewer, bigger blows; both are real choices.
             const body = swing === 0 ? randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) : 0;
             let dmg = Math.round((body + (weapon ? this.effDmg(weapon) : 0)) * atkMult);
-            if (hurt) dmg = Math.round(dmg * WOUNDED_DMG_MULT);
+            if (hurt) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); this.tellWounded(session); }
             let flourish = ".";
             if (chance(CRIT_CHANCE)) {
               dmg *= 2;
@@ -1709,7 +1725,7 @@ export class ZoneDO implements DurableObject {
               if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
             } else {
               await this.onCreatureDeath(session, creature, tmpl,
-                pvitals ? `${this.playerVitalsVerb(weapon, tmpl.name)} — a killing blow.` : undefined);
+                pvitals ? `${this.playerVitalsVerb(weapon, tmpl.name)}` : undefined);
             }
             // Every landed strike grinds the blade (a sweep grinds it per
             // foe) — and bone or old iron grinds it far faster than flesh.
@@ -1728,6 +1744,11 @@ export class ZoneDO implements DurableObject {
         session.target = left ? left.id : null;
       }
     }
+
+    // Wanderers with steel out against each other exchange blows on the same
+    // round clock (pvp.ts) — after they've answered the beasts, before the
+    // beasts answer them.
+    if (combatRound) await pvp.tickPvp(this);
 
     // A seized player works free over time (and is freed the moment the thing
     // holding them is gone) — runs before the creatures swing, so the grip is a
@@ -1855,9 +1876,10 @@ export class ZoneDO implements DurableObject {
         // tick, this one can't get a blow in — it snarls at the edge and waits.
         // (It keeps its target, so it steps up the moment a slot opens.)
         if (!this.canLandBlow(victim.pubkey)) { heldBack.add(victim.pubkey); continue; }
-        // Quick feet: carrying no worn weight adds to the foe's miss chance.
+        // Quick feet: carrying no worn weight adds to the foe's miss chance —
+        // unless the pack's loose iron drags at you (the mule dodges nothing).
         // And a wounded creature fights diminished — shakier, softer blows.
-        const quick = this.wornWeight(victim) === 0;
+        const quick = this.wornWeight(victim) === 0 && !this.burdened(victim);
         const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
         if (chance(FUMBLE_CHANCE + (quick ? DODGE_LIGHT : 0) + (cHurt ? WOUNDED_FUMBLE_BONUS : 0))) {
           this.send(victim, quick
@@ -2011,7 +2033,7 @@ export class ZoneDO implements DurableObject {
           }
         } else {
           if (vitals) {
-            this.send(victim, `${cap(tmpl.name)} ${this.creatureVitals(tmpl.id)} — and the world goes white. (a killing blow)`, "dmgin big");
+            this.send(victim, `${cap(tmpl.name)} ${this.creatureVitals(tmpl.id)} — ${pick(VITALS_DARK)}`, "dmgin big");
             this.roomFeed(victim.roomId, `${cap(tmpl.name)} drops ${victim.name} with one terrible strike.`, victim.pubkey);
           }
           await this.onPlayerDeath(victim, tmpl);
@@ -2192,6 +2214,9 @@ export class ZoneDO implements DurableObject {
     // (bench or hatch open AT a gate — out of the world, mending). Ducking
     // aside mid-dungeon with the lockbox is hiding, not healing.
     for (const session of this.sessions.values()) {
+      // Whole enough again: re-arm the wounded-swing tell so a later wounding
+      // warns afresh (however you healed — rest, food, a bandage).
+      if (session.woundedTold && session.hp >= session.maxHp * WOUNDED_FRACTION) session.woundedTold = false;
       const sheltered = session.away && world.entryRooms.has(session.roomId);
       // Rest heals wherever you're still IN REACH — including the inventory modal
       // in the dungeon, where you're crouched in the open and can be hit (just
@@ -2227,6 +2252,15 @@ export class ZoneDO implements DurableObject {
           }
         }
       }
+    }
+
+    // Standing in the open rain runs a killing off your hands, a layer each
+    // tick — slower than a deliberate wash at the water, but it finds you
+    // wherever the sky is open (rome: blood washes in the rain). Runs whether
+    // or not you're fighting; the sky doesn't wait for a lull.
+    for (const session of this.sessions.values()) {
+      if (this.outOfWorld(session)) continue;
+      if (events.raining(this, session.roomId)) pvp.rainThinsBlood(this, session);
     }
 
     // Flush every live session's mutable state (hp, room) to D1 on a slow clock,
@@ -2432,7 +2466,17 @@ export class ZoneDO implements DurableObject {
   // A swing gone wide. A provisional weapon leaves your hand — it is on the
   // stones now, mid-fight, anyone's to take. A sealed weapon is held to your
   // grip by its mark; bare hands just stumble. Fumbling is loud either way.
-  private async playerFumble(
+  // One-time tell the moment your swings go soft — crossing under a third of
+  // your HP drops your damage to WOUNDED_DMG_MULT, and nothing used to say so.
+  // Fires once per wounding; the tick clears the flag when you're whole enough
+  // again, so a later wounding warns you afresh. (rome, 2026-07-12.)
+  public tellWounded(session: Session): void {
+    if (session.woundedTold) return;
+    session.woundedTold = true;
+    this.send(session, "The wound drags at your arms — there's less behind your blows now.", "dmgin");
+  }
+
+  public async playerFumble(
     session: Session,
     weapon: { carried: CarriedItem; tmpl: ItemTemplate } | null,
   ): Promise<void> {
@@ -2640,16 +2684,22 @@ export class ZoneDO implements DurableObject {
     }
   }
 
-  public async onPlayerDeath(victim: Session, tmpl: MobTemplate | null): Promise<void> {
-    const slayer = tmpl ? tmpl.name : "their own wounds"; // tmpl null = bled out, no hand on the blow
+  public async onPlayerDeath(victim: Session, tmpl: MobTemplate | null, slayerName?: string): Promise<void> {
+    const slayer = slayerName ?? (tmpl ? tmpl.name : "their own wounds"); // tmpl null = bled out (or a wanderer's steel), no beast on the blow
     for (const c of this.creatures.values()) {
       if (c.target === victim.pubkey) c.target = null;
     }
     victim.target = null;
+    // Steel goes down with the body — every exchange pointed here ends.
+    victim.pvpTarget = null;
+    for (const s of this.sessions.values()) {
+      if (s.pvpTarget === victim.pubkey) s.pvpTarget = null;
+    }
     victim.resting = false;
     victim.staggered = false;
     victim.stunned = false;
     victim.hobbled = false; victim.limpingSince = undefined; // a new body walks whole
+    victim.woundedTold = false; // a whole body swings full-weight — re-arm the tell
     victim.bleedTicks = 0; victim.bleedDmg = 0; // the gate returns you whole — no wound rides back
     victim.litUntil = undefined; victim.litSource = undefined; victim.torchWarned = undefined; // the light went down with the body; the gate gives back breath, not fire
     victim.buying = undefined; // death ends any open trade; the counter clears
@@ -2678,13 +2728,18 @@ export class ZoneDO implements DurableObject {
       await clearCarriedInventory(this.env.DB, victim.pubkey);
     }
     victim.items = [];
+    // The relay hears that someone died — never who did it. The killer's name
+    // is spoken only into the room itself (witnesses are eyes, not feeds);
+    // everywhere else the evidence is the blood on their hands (pvp.bloodClause).
+    const slainBy = slayerName ? "" : ` by ${slayer}`;
     this.roomFeed(
       fell,
       scattered.length > 0
-        ? `${victim.name} is slain by ${slayer}. Their pack scatters across the stones${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
-        : `${victim.name} is slain by ${slayer}.`,
+        ? `${victim.name} is slain${slainBy}. Their pack scatters across the stones${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
+        : `${victim.name} is slain${slainBy}.`,
       victim.pubkey,
     );
+    if (slayerName) this.roomFeed(fell, `${slayerName} stands over the body.`, victim.pubkey, false);
     this.roomSound(fell, "A scream, cut short, {dir}.");
     this.creatureNoise(fell);
     this.addTrace(fell, { kind: "blood", at: Date.now(), label: victim.name });
@@ -2697,7 +2752,11 @@ export class ZoneDO implements DurableObject {
           ? "Everything you carried lies where you fell — the gate's seals cracked as they left your hands. Only the lockbox and vault keep."
           : "Everything you carried lies where you fell."
         : "You carried nothing worth scattering.";
-    const end = tmpl ? pick([
+    const end = slayerName ? pick([
+      `${slayerName} kills you.\nDarkness. Then the gate, again.`,
+      `${slayerName} puts you down on the stones.\nThe dark takes you — and gives you back at the gate.`,
+      `The last thing you see is ${slayerName}, already stooping for your pack.\nThen cold air, and the gate, and breath again.`,
+    ]) : tmpl ? pick([
       `${cap(tmpl.name)} kills you.\nDarkness. Then the gate, again.`,
       `${cap(tmpl.name)} puts you down.\nThe dark takes you — and gives you back at the gate.`,
       `${cap(tmpl.name)} is the last thing you see.\nThen cold air, and the gate, and breath again.`,
@@ -2719,8 +2778,12 @@ export class ZoneDO implements DurableObject {
 
   public inCombat(session: Session): boolean {
     if (session.target) return true;
+    if (session.pvpTarget) return true;
     for (const c of this.creatures.values()) {
       if (c.target === session.pubkey) return true;
+    }
+    for (const s of this.sessions.values()) {
+      if (s.pvpTarget === session.pubkey && s.roomId === session.roomId) return true;
     }
     return false;
   }
@@ -2828,7 +2891,7 @@ export class ZoneDO implements DurableObject {
     }
     for (const s of this.sessions.values()) {
       if (s.pubkey !== session.pubkey && s.roomId === room.id && !this.outOfWorld(s)) {
-        lines.push(`${s.name} is here${s.resting ? ", resting" : ""}.`);
+        lines.push(`${s.name} is here${s.resting ? ", resting" : ""}.${pvp.bloodClause(this, s.pubkey)}`);
       }
     }
     return lines.join("\n");
@@ -2859,7 +2922,7 @@ export class ZoneDO implements DurableObject {
   // "You hack at a scabby rat" — the verb varies by the weapon in your hand,
   // then the caller tacks on " for N" and the rest. A cutting edge cuts, a
   // maul cracks, a spear drives, a bare fist clouts, a plain blade just hits.
-  private playerHit(weapon: { tmpl: ItemTemplate } | null | undefined, name: string): string {
+  public playerHit(weapon: { tmpl: ItemTemplate } | null | undefined, name: string): string {
     const t = weapon?.tmpl;
     // The weapon's own voice first (by id); fall back to the family register
     // (edge/blunt/spear/fist/plain) for anything without a bespoke pool.
@@ -2905,14 +2968,17 @@ export class ZoneDO implements DurableObject {
   // How much armor a weapon's blow ignores: a pick's narrow point (PIERCE, per
   // weapon) or a blunt weapon's crushing weight (BLUNT_ARMOR_IGNORE, any stun>0),
   // whichever is greater. The single source for both damage paths.
-  private armorIgnore(weapon: { tmpl: ItemTemplate } | null | undefined): number {
+  public armorIgnore(weapon: { tmpl: ItemTemplate } | null | undefined): number {
     if (!weapon) return 0;
     const pierce = PIERCE.get(weapon.tmpl.id) ?? 0;
     const blunt = weapon.tmpl.stun > 0 ? BLUNT_ARMOR_IGNORE : 0;
     return Math.max(pierce, blunt);
   }
 
-  private playerVitalsVerb(weapon: { tmpl: ItemTemplate } | null | undefined, name: string): string {
+  // Pick ONE killing wound for this weapon — the pair (killer's account and the
+  // victim's) travels together, so the two never contradict each other about
+  // where the blow landed. Every caller of a vitals kill picks here, once.
+  public pickVitals(weapon: { tmpl: ItemTemplate } | null | undefined): { hit: string; taken: string } {
     const t = weapon?.tmpl;
     const reg = !t ? "fist"
       : PIERCING_WEAPONS.has(t.id) ? "pierce"
@@ -2920,7 +2986,17 @@ export class ZoneDO implements DurableObject {
       : t.stun > 0 ? "blunt"
       : t.sweep > 1 || t.speed > 1 ? "spear"
       : "plain";
-    return "You " + pick(PLAYER_VITALS[reg]).replace(/\{n\}/g, name);
+    return pick(VITALS_KILLS[reg]);
+  }
+
+  // The killer's line for a picked wound: "You <hit>" + a varied finality.
+  public vitalsHit(kill: { hit: string }, name: string): string {
+    return "You " + kill.hit.replace(/\{n\}/g, name) + pick(VITALS_KICKER);
+  }
+
+  // PvE convenience: the mob has no client, so only the killer's side is read.
+  public playerVitalsVerb(weapon: { tmpl: ItemTemplate } | null | undefined, name: string): string {
+    return this.vitalsHit(this.pickVitals(weapon), name);
   }
 
   // Carried loot lives ON the holder. An elite spawns bearing its gear (or not)
@@ -3033,7 +3109,7 @@ export class ZoneDO implements DurableObject {
     if (base <= 0) return 0;
     return Math.max(0, Math.ceil(base * Math.max(0, condition) / 100));
   }
-  private effDmg(g: { carried: CarriedItem; tmpl: ItemTemplate }): number {
+  public effDmg(g: { carried: CarriedItem; tmpl: ItemTemplate }): number {
     return this.effStat(g.tmpl.dmg, g.carried.condition);
   }
 
@@ -3063,6 +3139,18 @@ export class ZoneDO implements DurableObject {
     let total = 0;
     for (const g of this.equippedAll(session)) total += g.tmpl.weight;
     return total;
+  }
+
+  // The pack's iron: loose (unworn) gear pieces past BURDEN_FREE_IRON make you
+  // burdened — the mule's tax. See zone-data for the law; drop is the valve.
+  public burdened(session: Session): boolean {
+    let iron = 0;
+    for (const c of session.items) {
+      if (c.equipped) continue;
+      const t = this.world!.itemTemplates.get(c.itemId);
+      if (t && t.slot !== "") iron++;
+    }
+    return iron > BURDEN_FREE_IRON;
   }
 
   // The verdigris-thing's touch is rust: a landed blow blooms green on ONE
@@ -3160,7 +3248,7 @@ export class ZoneDO implements DurableObject {
   // The shield on your arm gives its block chance (scaled by wear) — and a
   // parrying blade (a weapon with a block stat: sword-breaker, king's-guard)
   // adds its own catch on top. The turtle's weapon is part of the wall.
-  private equippedBlock(session: Session): number {
+  public equippedBlock(session: Session): number {
     let block = 0;
     const s = this.equippedItem(session, "shield");
     if (s && s.tmpl.block > 0) {
@@ -3186,7 +3274,7 @@ export class ZoneDO implements DurableObject {
   // Grind a piece down. Sealed gear wears SLOWER, not never (SEALED_WEAR_MULT —
   // the mark holds the dungeon off, it doesn't stop time), and it can be mended
   // at the bench like anything else. At 0 a piece is gone — worn through, mid-life.
-  private async wear(session: Session, carried: CarriedItem, tmpl: ItemTemplate, amount: number): Promise<void> {
+  public async wear(session: Session, carried: CarriedItem, tmpl: ItemTemplate, amount: number): Promise<void> {
     if (carried.serial !== null) amount *= SEALED_WEAR_MULT; // sealed: protected, not immortal — the mark slows the wear
     carried.condition -= amount;
     if (carried.condition > 0) return;
@@ -3277,7 +3365,7 @@ export class ZoneDO implements DurableObject {
 
   // A fight is continuous noise; ring out at most once per window per room.
   private combatNoiseAt = new Map<string, number>();
-  private combatNoise(roomId: string): void {
+  public combatNoise(roomId: string): void {
     const now = Date.now();
     if ((this.combatNoiseAt.get(roomId) ?? 0) + COMBAT_NOISE_EVERY_MS > now) return;
     this.combatNoiseAt.set(roomId, now);

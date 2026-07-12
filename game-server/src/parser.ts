@@ -42,6 +42,7 @@ export type Verb =
   | "fish"
   | "listen"
   | "dive"
+  | "wash"
   | "smoke"
   | "squink"
   | "xyzzy"
@@ -110,6 +111,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   fish: "fish", cast: "fish", angle: "fish",
   listen: "listen", hark: "listen", eavesdrop: "listen",
   dive: "dive", swim: "dive", plunge: "dive",
+  wash: "wash", scrub: "wash", rinse: "wash", clean: "wash",
   smoke: "smoke", puff: "smoke", // light one from the tin. undocumented.
   squink: "squink", // means anything. not documented. never will be.
   xyzzy: "xyzzy", plugh: "xyzzy", frotz: "xyzzy", plover: "xyzzy", // the old words.
@@ -257,6 +259,9 @@ export const HELP_TEXT = [
   "                    neighboring room hears the words — and everything",
   "                    with ears comes to see who owns the voice.",
   "  attack <mob>      (k, kill) — engage; combat resolves in rounds. Move to flee.",
+  "                    A wanderer's name works too. Killing one drops EVERYTHING",
+  "                    they carry, seals cracked — and their blood stays on your",
+  "                    hands for anyone standing close enough to read.",
   "                    Two of a kind? 'attack second hyena' or 'look hyena 2'",
   "                    picks by the order the room lists them.",
   "                    You focus one foe, turning to the next the moment it falls —",
@@ -271,8 +276,11 @@ export const HELP_TEXT = [
   "                    their blood) swing softer and fumble more — them too.",
   "  throw <item> at <mob>  its bite plus your arm; then it's on the stones",
   "  stance <how>      reckless | steady | guarded — trade offense for defense",
-  "  get <item>        (take, grab) — pick something up",
-  "  drop <item>       put something down",
+  "  get <item>        (take, grab) — pick something up. Mind the load: past a",
+  "                    few loose pieces of gear the pack rides LOUD — no slipping",
+  "                    blows, no clean break from a fight, and your moving can be",
+  "                    heard. Trophies, food and the like stack silent forever.",
+  "  drop <item>       put something down (mid-chase, this is how you get quiet)",
   "  equip <item>      (wield, wear) — put on a weapon or armor; your first is auto-equipped",
   "  remove <item>     (unequip) — take it off",
   "  unlock <cache>    (open, pry) — spend a found key on a locked strongbox and",
@@ -294,6 +302,10 @@ export const HELP_TEXT = [
   "  dive [item]       (swim) — in a tide-drowned room: go under and feel across",
   "                    the flooded floor; name a thing to bring it up. The splash",
   "                    carries, and everything with ears knows where you are.",
+  "  wash              (scrub, rinse) — at any water, or in the rain: scrub a",
+  "                    killing off your hands. The blood a murder leaves on you",
+  "                    fades on its own; water takes it now. Anyone watching",
+  "                    sees you do it.",
   "  rest              sit and let wounds close. Any effort ends it.",
   "  eat <food>        wounds also close from the inside",
   "  light             (kindle) — set a carried torch burning. It shows the",

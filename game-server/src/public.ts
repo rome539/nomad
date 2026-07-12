@@ -7,7 +7,7 @@ export const PAGE = `<!doctype html>
 <title>NOMAD — the Door</title>
 <meta name="description" content="A living text dungeon on Nostr. Your key is your character. The dead stay dead.">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#16120c">
 <meta property="og:type" content="website">
@@ -668,7 +668,16 @@ export const PAGE = `<!doctype html>
     outline: none;
     color: var(--cream);
     font: inherit;
+    /* type=search is the one classification Safari exempts from contact
+       autofill; these strip WebKit's search dressing so it stays a bare
+       terminal prompt. */
+    -webkit-appearance: none;
+    appearance: none;
   }
+  #cmd::-webkit-search-cancel-button,
+  #cmd::-webkit-search-decoration,
+  #cmd::-webkit-search-results-button,
+  #cmd::-webkit-search-results-decoration { display: none; -webkit-appearance: none; }
   /* Touch devices: inputs at 16px so iOS never auto-zooms on focus, and
      chips grow into honest tap targets. */
   @media (pointer: coarse), (max-width: 768px) {
@@ -692,10 +701,10 @@ export const PAGE = `<!doctype html>
     gap: 14px; text-align: center; padding: 24px; padding-bottom: 18vh; transition: opacity .9s ease;
   }
   #threshold.gone { opacity: 0; pointer-events: none; }
-  #thr-title { color: var(--gold); font-size: clamp(48px, 5.5vw, 68px); letter-spacing: .16em; font-weight: 700; margin-bottom: 8px; }
+  #thr-title { color: var(--gold); font-size: clamp(48px, 5.5vw, 68px); letter-spacing: .16em; font-weight: 700; line-height: 1; margin-bottom: 0; }
   #thr-line { color: var(--dim); font-size: 14px; max-width: 46ch; line-height: 1.5; }
   #thr-enter {
-    margin-top: 10px; font-family: inherit; font-size: 17px; letter-spacing: .08em;
+    margin-top: 56px; font-family: inherit; font-size: 17px; letter-spacing: .08em;
     color: var(--bg); background: var(--gold); border: 0; padding: 12px 34px; cursor: pointer;
   }
   #thr-enter:hover, #thr-enter:focus-visible { background: var(--cream); outline: none; }
@@ -861,7 +870,7 @@ export const PAGE = `<!doctype html>
   <div id="chips"></div>
   <div id="inputline">
     <span class="prompt">&#9656;</span>
-    <input id="cmd" name="game-command" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" autofocus>
+    <input id="cmd" type="search" name="q" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" autofocus>
   </div>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script type="module">

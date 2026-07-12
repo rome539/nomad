@@ -18,6 +18,7 @@ export interface Session {
   items: CarriedItem[]; // pack cache; D1 is truth. serial != null = gate-sealed
   staggered: boolean; // fumbled an opening; the next hit that lands costs more
   stunned?: boolean; // a heavy dead blow rang you; you skip your next swing, then it clears
+  woundedTold?: boolean; // told-once flag: you've been warned your swings went soft (under a third HP); clears when you're whole enough again
   bleedTicks?: number; // open wound: armor-ignoring ticks left before it clots (claws/teeth in the deep)
   bleedDmg?: number; // damage the current wound leaks each combat round
   resting: boolean;
@@ -31,6 +32,7 @@ export interface Session {
   litUntil?: number; // ms epoch a kindled light burns until; while now < this you carry light (sees dark rooms; a torch also wakes fire-fear). Reset on wake — a rekindle is cheap.
   litSource?: "torch" | "lantern"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack)
   torchWarned?: boolean; // fired the one-time "burning low" warning for the current light
+  pvpTarget?: string | null; // pubkey of the wanderer this one has steel out against (transient — a deploy ends the exchange, never the grudge)
   linkdeadUntil?: number; // ms epoch a mid-fight disconnect holds the body in the world until; unset = normally connected (or normally gone)
   hobbled?: boolean; // a leg wound: you can still flee, but only after limping clear (a set delay), cured by rest
   limpingSince?: number; // ms epoch you started dragging your bad leg toward the exit; flee lands once HOBBLE_FLEE_MS passes
@@ -134,7 +136,8 @@ export interface SimState {
   arrivals: Record<string, number>; // templateId -> ms when a migrant arrives
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
   doorCloseAt?: Record<string, number>; // "roomId:dir" -> ms epoch a timed door re-seals (the deep door: a heart buys a window, not a thoroughfare)
-  fenceOut?: Record<string, number>; // itemId -> ms the keeper restocks it (bare shelves — the market has other customers)
+  fenceOut?: Record<string, number>;
+  bloodOn?: Record<string, number[]>; // pubkey -> kill timestamps; the evidence walks around on the murderer // itemId -> ms the keeper restocks it (bare shelves — the market has other customers)
   nextStoneAt?: number; // ms the world next mints a hammerstone into a random haunt (no farmable spot)
   traces: Record<string, Trace[]>;
   rot: RotEntry[];

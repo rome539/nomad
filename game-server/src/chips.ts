@@ -5,6 +5,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import * as events from "./events";
+import * as pvp from "./pvp";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, DARK_ROOMS, TORCH_ITEM, LANTERN_ITEM,
@@ -119,6 +120,11 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (session.hp < session.maxHp && !session.resting && !creatureHere) suggest.push("rest");
     // The one fishing spot: a line off the Pocket of Air's shelf.
     if (FISHING_ROOMS.has(session.roomId)) suggest.push("fish");
+    // Blood on your hands and water to lose it in: the chip to scrub it off.
+    // Only shown when you're actually marked — it's the quiet affordance a
+    // killer looks for, and it never lies to a clean pair of hands.
+    if ((FISHING_ROOMS.has(session.roomId) || drowned || events.raining(z, session.roomId))
+      && pvp.isBloodied(z, session.pubkey)) suggest.push("wash");
     // Standing in the flood: the way down to the drowned floor. cmdDive
     // refuses with a drowner in the water, so the chip holds back too (the
     // drowner is plainly visible — hiding the chip gives nothing away).

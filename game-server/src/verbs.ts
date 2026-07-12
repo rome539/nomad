@@ -14,14 +14,15 @@ import { chance, randInt, uuid, pick } from "./rng";
 import * as ai from "./ai";
 import * as light from "./light";
 import * as events from "./events";
+import * as pvp from "./pvp";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK, SLICK_BREAK_BONUS,
   PARTING_BLOW_CHANCE, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
   CARVE_MAX_LEN, TWO_HANDED, RARITY_RANK, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
-  ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
+  ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS,
 } from "./zone-data";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
@@ -48,6 +49,79 @@ export function cmdSquink(z: ZoneDO, session: Session): void {
   z.roomFeed(session.roomId, `${session.name} squinks. It echoes longer than it should.`, session.pubkey);
   z.roomSound(session.roomId, "Something squinks, {dir}.");
   z.creatureNoise(session.roomId); // squinking is not free
+}
+
+// ---- looking at another wanderer: the sizing-up ----
+// The one read that decides rob / avoid / run, so it shows what a body honestly
+// shows: the steel in their hands, the kit on their back and how hard it's been
+// used, and whether their pack rides heavy (rome, 2026-07-12).
+// Deliberately NOT shown, by standing law: any kill tally (blood on the killer,
+// never names on the wall — bloodClause IS the reputation system), and what's
+// IN the pack. You cannot see inside a man's bag; the burden tell says HEAVY,
+// and robbing him is how you learn the rest.
+// A stranger's gear is NAMED but never GRADED: you can see the mace, not that
+// it's at 41%. The whole kit gets one prose impression instead (kitTell below).
+function gearWord(_z: ZoneDO, g: { carried: CarriedItem; tmpl: ItemTemplate }): string {
+  return g.tmpl.name;
+}
+
+// The impression: the average state of everything they wear and wield, in one
+// descriptive sentence. Never a number, never a per-piece tag.
+function kitTell(pieces: { carried: CarriedItem }[]): string {
+  if (pieces.length === 0) return "";
+  const avg = pieces.reduce((s, p) => s + p.carried.condition, 0) / pieces.length;
+  const band = KIT_TELLS.find((b) => avg >= b.at) ?? KIT_TELLS[KIT_TELLS.length - 1];
+  return pick(band.lines);
+}
+
+function andList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
+export function describePlayer(z: ZoneDO, other: Session): string {
+  const cond = other.hp >= other.maxHp ? "unhurt"
+    : other.hp > other.maxHp * 0.66 ? "bruised but standing"
+    : other.hp > other.maxHp * 0.33 ? "badly hurt"
+    : "at the very edge of it";
+  const out = [`${other.name}, a fellow wanderer (${cond}).`];
+
+  // The hands first: steel is what decides whether this is a threat or a mark.
+  const w = z.equippedItem(other, "weapon");
+  const sh = z.equippedItem(other, "shield");
+  if (w && sh) out.push(`${cap(gearWord(z, w))} hangs in their fist, ${gearWord(z, sh)} strapped to the arm.`);
+  else if (w) out.push(`${cap(gearWord(z, w))} hangs in their fist.`);
+  else if (sh) out.push(`They hold ${gearWord(z, sh)}, and nothing to swing with.`);
+  else out.push("Their hands are empty.");
+
+  // The back: what would turn a blade.
+  const wornGear = ["armor", "helm", "feet", "cloak"]
+    .map((s) => z.equippedItem(other, s))
+    .filter((g): g is { carried: CarriedItem; tmpl: ItemTemplate } => !!g);
+  out.push(wornGear.length
+    ? `They wear ${andList(wornGear.map((g) => gearWord(z, g)))}.`
+    : "They wear nothing that would turn a blade.");
+
+  // How hard all of it has been used — an impression across the whole kit, so
+  // no single piece hands you its breaking point.
+  const tell = kitTell([...(w ? [w] : []), ...(sh ? [sh] : []), ...wornGear]);
+  if (tell) out.push(tell);
+
+  // A flame in the hand: they have made their peace with being seen.
+  if (z.carriesLight(other)) {
+    out.push(other.litSource === "lantern"
+      ? "A hooded lantern swings at their side, its bead of light steady."
+      : "A torch burns in their hand, and their shadow swings on the wall behind them.");
+  }
+
+  // The loot tell — and, in the same breath, the weakness. A man over the
+  // burden line is worth robbing AND cannot slip a blow or break away clean.
+  if (z.burdened(other)) {
+    out.push("Their pack rides heavy and stuffed — loose iron they aren't wearing, and it won't ride quiet.");
+  }
+
+  return out.join(" ") + pvp.bloodClause(z, other.pubkey);
 }
 
 // ---- verbs ----
@@ -93,7 +167,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     );
   }
   const other = findPlayerIn(z, session.roomId, arg);
-  if (other) return z.send(session, `${other.name}, a fellow wanderer. Keys in pocket, nowhere to be.`);
+  if (other) return z.send(session, describePlayer(z, other), "study");
   // Not in hand, not on the floor — maybe in the lockbox (rome, 2026-07-11:
   // look reaches into your own keeping too). Not mid-fight: nobody unlatches
   // a box with something trying to kill them.
@@ -293,8 +367,12 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const wasFighting = z.inCombat(session);
   // Heavy mail turns blows, but it drags at the escape: leaving a fight in
   // weighted armor risks one parting strike on the way out. The quick flee
-  // clean. (Armor still soaks it — that's what it's for.)
-  if (wasFighting && z.wornWeight(session) > 0 && chance(PARTING_BLOW_CHANCE)) {
+  // clean. (Armor still soaks it — that's what it's for.) A pack full of
+  // loose iron drags the same — stripping down buys nothing while you're
+  // still hauling the armory. `drop` it, or pay the toll.
+  const laden = z.wornWeight(session) > 0 || z.burdened(session);
+  const dragLine = z.wornWeight(session) > 0 ? "The mail drags at you" : "The pack's iron drags at you";
+  if (wasFighting && laden && chance(PARTING_BLOW_CHANCE)) {
     const striker = [...z.creatures.values()].find(
       (c) => c.roomId === session.roomId && (c.target === session.pubkey || c.id === session.target)
         && !(guardWasAwake && c.id === guard!.id), // the sentinel already took its toll above
@@ -305,13 +383,41 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
       pdmg = Math.max(1, Math.round(pdmg * ARMOR_K / (z.equippedArmor(session) + ARMOR_K))); // % mitigation, never immunity
       pdmg = Math.max(1, Math.round(pdmg * STANCE[session.stance].def));
       session.hp -= pdmg;
-      z.send(session, `The mail drags at you — ${stmpl.name} lands a parting blow for ${pdmg}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`);
+      z.send(session, `${dragLine} — ${stmpl.name} lands a parting blow for ${pdmg}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`);
       if (session.hp <= 0) {
         await z.onPlayerDeath(session, stmpl);
         return;
       }
     }
   }
+  // A wanderer breaking from another wanderer pays the same mail-tax: if your
+  // load drags, the hunter gets one parting cut (the quick flee clean). Then
+  // the exchange ends both ways — the chase is a walk, and re-engaging in the
+  // next room is a fresh deliberate act, ambush rules and all.
+  const hunter = [...z.sessions.values()].find(
+    (s) => s.pvpTarget === session.pubkey && s.roomId === session.roomId && s.hp > 0,
+  );
+  if (hunter && laden && chance(PARTING_BLOW_CHANCE)) {
+    const hw = z.equippedItem(hunter, "weapon");
+    let pdmg = randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) + (hw ? z.effDmg(hw) : 0);
+    pdmg = Math.max(1, Math.round(pdmg * ARMOR_K / (z.equippedArmor(session) + ARMOR_K)));
+    pdmg = Math.max(1, Math.round(pdmg * STANCE[session.stance].def));
+    session.hp -= pdmg;
+    z.send(session, `${dragLine} — ${hunter.name} lands a parting cut for ${pdmg}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`, "dmgin");
+    z.send(hunter, `You open ${session.name} as they break away — ${pdmg}.`, "dmgout");
+    if (session.hp <= 0) {
+      await pvp.pvpKill(z, hunter, session);
+      return;
+    }
+  }
+  session.pvpTarget = null;
+  for (const s of z.sessions.values()) {
+    if (s.pvpTarget === session.pubkey && s.roomId === session.roomId) {
+      s.pvpTarget = null;
+      z.send(s, `${session.name} breaks away.`);
+    }
+  }
+
   // Before you slip out, a dormant listener may hear you move for the door
   // and swing as you go — you still leave (if you live), but not always clean.
   if (await ai.wakeListeners(z, session, session.roomId, WAKE_EXIT, "hears you move — and swings as you slip past!")) {
@@ -341,6 +447,13 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   events.tideSoaksTorch(z, session);
   // And while the crows hold the sky, every open-ground move is called out.
   events.crowsMark(z, session);
+  // A pack past its quiet load can't move silent: loose iron knocks and
+  // shifts, and sometimes the next rooms hear it — and so does everything
+  // with ears where you land. The fat run is the loud run; the gate is quiet.
+  if (z.burdened(session) && chance(CLATTER_ODDS)) {
+    z.roomSound(session.roomId, "The knock and shift of loose iron, {dir} — someone moving under a heavy load.");
+    z.creatureNoise(session.roomId);
+  }
   z.refreshRoomCtx(from);
   z.refreshRoomCtx(session.roomId);
   await ai.provokeGrudges(z, session, true); // you walked in — a grudge-holder gets the jump
@@ -399,6 +512,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
     : rollGearCondition(tmpl.slot, false);
   z.groundCond.delete(condKey);
   const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition };
+  const wasBurdened = z.burdened(session); // read before the pack takes it — the crossing gets a line
   session.items.push(carried);
   // A regrowing spawn (the shrine's key, a gate's rock) keeps exactly ONE
   // instance in its room. Only re-seed if this pickup left the room without
@@ -443,7 +557,11 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
     session.staggered = true;
     stooped = " You stoop for it under the swing — an opening.";
   }
-  z.send(session, `You take ${tmpl.name}.` + readied + stooped);
+  // The burden line, announced the moment you cross it: the world telegraphs.
+  const nowLoud = !wasBurdened && z.burdened(session)
+    ? " The pack takes it with a clank — too much loose iron now to slip a blow, and it won't ride quiet."
+    : "";
+  z.send(session, `You take ${tmpl.name}.` + readied + stooped + nowLoud);
   z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, (RARITY_RANK[tmpl.rarity] ?? 0) >= 2); // ordinary pickups local; rare+ still relays ("someone grabbed the legendary")
   z.refreshRoomCtx(session.roomId);
   await z.persist();
@@ -457,6 +575,7 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
   const itemId = carried.itemId;
   const tmpl = z.world!.itemTemplates.get(itemId)!;
 
+  const wasBurdened = z.burdened(session); // the shed gets its answer line below
   session.items.splice(session.items.indexOf(carried), 1);
   await removeItemRow(z.env.DB, carried.rowId);
   // Setting a sealed thing down is letting it go: the claim is released.
@@ -471,11 +590,14 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
     if (z.isGear(itemId)) z.groundCond.set(`${itemId}@${session.roomId}`, carried.condition); // gear (and the stone) keeps its wear on the floor
     if (tmpl.edible) z.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
   }
+  // Shedding under the burden line is the valve working: say so, so the
+  // mid-chase drop reads as the escape it is.
+  const quietAgain = wasBurdened && !z.burdened(session) ? " The pack rides light and quiet again." : "";
   z.send(
     session,
-    carried.serial !== null
+    (carried.serial !== null
       ? `You set ${tmpl.name} down. The seal cracks as it leaves your hands — the claim is no longer yours.`
-      : `You drop ${tmpl.name}.`,
+      : `You drop ${tmpl.name}.`) + quietAgain,
   );
   z.roomFeed(session.roomId, `${session.name} drops ${tmpl.name}.`, session.pubkey);
   z.refreshRoomCtx(session.roomId);
@@ -556,6 +678,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
     ? `You take ${tmpl.name} in hand${current ? `, setting aside ${current.tmpl.name}` : ""}.`
     : `You pull on ${tmpl.name}${current ? `, shrugging off ${current.tmpl.name}` : ""}.`)
     + (fighting ? " Your eyes leave the fight for a heartbeat — an opening." : ""));
+  z.sendCtx(session); // your loadout changed — refresh the chips (the equip chip was going stale)
 }
 
 export async function cmdRemove(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -575,6 +698,7 @@ export async function cmdRemove(z: ZoneDO, session: Session, arg: string): Promi
   if (fighting) session.staggered = true;
   z.send(session, (tmpl.slot === "weapon" ? `You lower ${tmpl.name}.` : `You take off ${tmpl.name}.`)
     + (fighting ? " An opening." : ""));
+  z.sendCtx(session); // loadout changed — refresh the chips
 }
 
 export function itemLine(z: ZoneDO, c: CarriedItem): string {
@@ -620,13 +744,18 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string): s
 // rides with you), no stepping out. In a fight, your pack only.
 export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   const world = z.world!;
+  // The standing read on the burden law — the pack tells you when it's loud.
+  const loud = z.burdened(session)
+    ? ["The loose iron rides heavy and loud — you won't slip a blow under this load, and moving carries."]
+    : [];
   if (z.inCombat(session)) {
-    return z.send(session, keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`).join("\n"));
+    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`), ...loud].join("\n"));
   }
   const atGate = world.entryRooms.has(session.roomId);
   const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
   const out: string[] = [];
   out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`));
+  out.push(...loud);
   out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox)}/${LOCKBOX_CAP}):`));
   if (atGate) {
     const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
@@ -833,11 +962,16 @@ function heardIn(z: ZoneDO, roomId: string): string {
   // to find. rome's anti-camping law, made a read.
   const folk = [...z.sessions.values()].filter((s) => s.roomId === roomId && !z.outOfWorld(s));
   if (folk.length > 0) {
+    // A full pack betrays its owner even standing still — loose iron can't
+    // hold its breath. The other half of the burden law: the fat run is loud.
+    const heavy = folk.some((s) => z.burdened(s));
     parts.push(folk.length > 1
-      ? "more than one set of human lungs, all keeping still"
+      ? "more than one set of human lungs, all keeping still" + (heavy ? " — and the soft clink of loose iron among them" : "")
       : folk[0].resting
         ? "slow, even breathing — sleep, or something near it"
-        : "the small sounds of someone keeping still: cloth, a held breath");
+        : heavy
+          ? "metal shifting under cloth — someone keeping still under a heavy load"
+          : "the small sounds of someone keeping still: cloth, a held breath");
   }
   if (parts.length > 0) return parts.join("; and ");
   if (events.tideFlooded(z, roomId)) return "deep water, moving slow and heavy";
@@ -931,6 +1065,29 @@ export async function cmdDive(z: ZoneDO, session: Session, arg: string): Promise
   }
   z.send(session, "You go under after it, hands out in the black.");
   return cmdGet(z, session, arg, true);
+}
+
+// ---- wash: scrub a killing off your hands ----
+// The blood-on-the-killer mark fades on its own, but water hurries it. Any
+// standing water (the fishing waters, a tide-drowned floor) or the open rain
+// will do — a deliberate scrub takes all of it. It is not a private act: a
+// witness sees you kneeling at the water working at your hands, and knows
+// exactly what that means. (rome, 2026-07-12.)
+export function cmdWash(z: ZoneDO, session: Session): void {
+  const inRain = events.raining(z, session.roomId);
+  const atWater = FISHING_ROOMS.has(session.roomId) || events.tideFlooded(z, session.roomId);
+  if (!inRain && !atWater) {
+    return z.send(session, "There's no water here to wash in — no pool, no rain, nothing to run your hands under.");
+  }
+  const where = atWater ? "You kneel at the water" : "You hold your hands up to the rain";
+  if (!pvp.isBloodied(z, session.pubkey)) {
+    return z.send(session, `${where} and rinse your hands. They were already your own — nothing to answer for.`);
+  }
+  pvp.washBlood(z, session.pubkey);
+  z.send(session, `${where} and scrub until the last of the man-blood lifts and clouds away. Your hands are clean, and yours again.`, "study");
+  z.roomFeed(session.roomId, atWater
+    ? `${session.name} kneels at the water, scrubbing hard at their hands.`
+    : `${session.name} stands with their hands up to the rain, scrubbing at them.`, session.pubkey);
 }
 
 export function cmdCarve(z: ZoneDO, session: Session, arg: string): void {

@@ -5,7 +5,7 @@ import { GOOGLE_CLIENT_ID } from "./google";
 import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
-import { touchIconBytes, ogImageBytes, doorSceneBytes, icon512Bytes } from "./assets";
+import { touchIconBytes, ogImageBytes, doorSceneBytes } from "./assets";
 import { signProfileEvent, isGameKeyConfigured } from "./signing";
 import { publishEvent, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
@@ -90,7 +90,8 @@ export default {
       // standalone — deliberately NO service worker, so a refresh is always
       // current (four-ships-a-day survives no cache).
       if (m === "GET" && pathname === "/icon-512.png") {
-        return new Response(icon512Bytes(), {
+        // The seal is painted at 512 natively — same bytes as /icon.png.
+        return new Response(iconBytes(), {
           headers: { "content-type": "image/png", "cache-control": IMMUTABLE },
         });
       }
@@ -104,8 +105,8 @@ export default {
           background_color: "#16120c",
           theme_color: "#16120c",
           icons: [
-            { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-            { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+            { src: "/apple-touch-icon.png?v=2", sizes: "180x180", type: "image/png" },
+            { src: "/icon-512.png?v=2", sizes: "512x512", type: "image/png" },
           ],
         }), {
           headers: { "content-type": "application/manifest+json", "cache-control": "public, max-age=86400" },

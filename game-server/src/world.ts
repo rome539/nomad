@@ -248,6 +248,10 @@ export async function recordKill(db: D1Database, pubkey: string, boss: boolean):
     .run();
 }
 
+export async function recordPvpKill(db: D1Database, pubkey: string): Promise<void> {
+  await db.prepare("UPDATE players SET pvp_kills = pvp_kills + 1 WHERE pubkey = ?").bind(pubkey).run();
+}
+
 export async function recordDeath(db: D1Database, pubkey: string): Promise<void> {
   await db.prepare("UPDATE players SET deaths = deaths + 1 WHERE pubkey = ?").bind(pubkey).run();
 }
