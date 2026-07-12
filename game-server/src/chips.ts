@@ -4,10 +4,11 @@
 // call sites (every command, every tick, gate.ts, ai.ts) stay unchanged.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
+import * as events from "./events";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, DARK_ROOMS, TORCH_ITEM, LANTERN_ITEM,
-  FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, MAP_ITEMS,
+  FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, MAP_ITEMS, DROWNERS,
 } from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
@@ -65,13 +66,18 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   for (const e of exitsHere) suggest.push(`go ${e.dir}`);
   // Combat-legal at the cost of an opening: stoop for a fallen weapon, eat,
   // or swap your steel (armor on/off is refused mid-fight, so no armor chip).
-  for (const itemId of z.ground.get(session.roomId) ?? []) {
-    const t = world.itemTemplates.get(itemId);
-    if (t) suggest.push(`get ${shortName(t.name)}`);
-  }
-  for (const inst of z.groundInstances.get(session.roomId) ?? []) {
-    const t = world.itemTemplates.get(inst.itemId);
-    if (t) suggest.push(`get ${shortName(t.name)}`);
+  // A tide-drowned floor offers no get chips (cmdGet refuses them) — the
+  // dive chip below is the way down to whatever's there.
+  const drowned = events.tideFlooded(z, session.roomId);
+  if (!drowned) {
+    for (const itemId of z.ground.get(session.roomId) ?? []) {
+      const t = world.itemTemplates.get(itemId);
+      if (t) suggest.push(`get ${shortName(t.name)}`);
+    }
+    for (const inst of z.groundInstances.get(session.roomId) ?? []) {
+      const t = world.itemTemplates.get(inst.itemId);
+      if (t) suggest.push(`get ${shortName(t.name)}`);
+    }
   }
   // Journal in hand and a foe to watch: study it (mid-fight it's an opening).
   if (creatureHere && session.items.some((c) => c.journalId)) {
@@ -113,6 +119,12 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (session.hp < session.maxHp && !session.resting && !creatureHere) suggest.push("rest");
     // The one fishing spot: a line off the Pocket of Air's shelf.
     if (FISHING_ROOMS.has(session.roomId)) suggest.push("fish");
+    // Standing in the flood: the way down to the drowned floor. cmdDive
+    // refuses with a drowner in the water, so the chip holds back too (the
+    // drowner is plainly visible — hiding the chip gives nothing away).
+    if (drowned && ![...z.creatures.values()].some(
+      (c) => c.roomId === session.roomId && DROWNERS.has(c.templateId) && !c.hidden,
+    )) suggest.push("dive");
     // The gate's trades: the keeper's hatch (the client opens the trade
     // modal), and the forge if you carry the makings. A typed trade left
     // open still offers the tender chips.

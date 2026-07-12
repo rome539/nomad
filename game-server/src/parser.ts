@@ -6,6 +6,7 @@ export type Verb =
   | "look"
   | "go"
   | "say"
+  | "shout"
   | "attack"
   | "throw"
   | "stance"
@@ -39,6 +40,8 @@ export type Verb =
   | "study"
   | "journal"
   | "fish"
+  | "listen"
+  | "dive"
   | "smoke"
   | "squink"
   | "xyzzy"
@@ -70,7 +73,8 @@ const DIRECTIONS: Record<string, string> = {
 const VERB_ALIASES: Record<string, Verb> = {
   look: "look", l: "look", x: "look", examine: "look", read: "look", inspect: "look",
   go: "go", walk: "go", run: "go", move: "go", head: "go", climb: "go",
-  say: "say", "'": "say", talk: "say", speak: "say", shout: "say", yell: "say",
+  say: "say", "'": "say", talk: "say", speak: "say",
+  shout: "shout", yell: "shout", holler: "shout", bellow: "shout", scream: "shout",
   attack: "attack", kill: "attack", k: "attack", hit: "attack", fight: "attack",
   throw: "throw", hurl: "throw", chuck: "throw", toss: "throw", lob: "throw",
   stance: "stance", style: "stance", footing: "stance",
@@ -104,6 +108,8 @@ const VERB_ALIASES: Record<string, Verb> = {
   study: "study", observe: "study", watch: "study", note: "study",
   journal: "journal", bestiary: "journal", logbook: "journal", ledger: "journal",
   fish: "fish", cast: "fish", angle: "fish",
+  listen: "listen", hark: "listen", eavesdrop: "listen",
+  dive: "dive", swim: "dive", plunge: "dive",
   smoke: "smoke", puff: "smoke", // light one from the tin. undocumented.
   squink: "squink", // means anything. not documented. never will be.
   xyzzy: "xyzzy", plugh: "xyzzy", frotz: "xyzzy", plover: "xyzzy", // the old words.
@@ -203,6 +209,7 @@ export function parse(input: string): ParseResult | null {
   // say keeps the player's original casing and filler words; a name is yours
   // exactly as you capitalize it; the wall gets your words verbatim.
   if (verb === "say") return { verb, arg: rest };
+  if (verb === "shout") return { verb, arg: rest };
   if (verb === "name") return { verb, arg: rest };
   if (verb === "carve") return { verb, arg: rest };
 
@@ -226,8 +233,8 @@ export function parse(input: string): ParseResult | null {
   }
 
   if (restWords.length > 0 && VERB_PARTICLES.has(restWords[0])) {
-    // "go up" / "climb down": the particle IS the direction.
-    if (verb === "go" && DIRECTIONS[restWords[0]] && restWords.length === 1) {
+    // "go up" / "climb down" / "listen up": the particle IS the direction.
+    if ((verb === "go" || verb === "listen") && DIRECTIONS[restWords[0]] && restWords.length === 1) {
       return { verb, arg: DIRECTIONS[restWords[0]] };
     }
     restWords.shift();
@@ -246,6 +253,9 @@ export const HELP_TEXT = [
   "  look [thing]      (l, x) — the room, or a closer look at something in it",
   "  go <direction>    or just: n s e w u d",
   "  say <words>       (') — speak to the room",
+  "  shout <words>     (yell) — throw your voice through the walls: every",
+  "                    neighboring room hears the words — and everything",
+  "                    with ears comes to see who owns the voice.",
   "  attack <mob>      (k, kill) — engage; combat resolves in rounds. Move to flee.",
   "                    Two of a kind? 'attack second hyena' or 'look hyena 2'",
   "                    picks by the order the room lists them.",
@@ -278,6 +288,12 @@ export const HELP_TEXT = [
   "                    change, buys nothing outright, and touches nothing sealed.",
   "  fish              (cast) — only from the Pocket of Air: drop a line into the",
   "                    flood below. The catch is rare, but a fish is good food.",
+  "  listen [dir]      (hark) — press an ear to the dark and take the next rooms",
+  "                    by sound: breathing, bone, water, a fight, someone keeping",
+  "                    still. Quiet — nothing hears you doing it.",
+  "  dive [item]       (swim) — in a tide-drowned room: go under and feel across",
+  "                    the flooded floor; name a thing to bring it up. The splash",
+  "                    carries, and everything with ears knows where you are.",
   "  rest              sit and let wounds close. Any effort ends it.",
   "  eat <food>        wounds also close from the inside",
   "  light             (kindle) — set a carried torch burning. It shows the",

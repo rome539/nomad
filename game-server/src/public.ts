@@ -3494,10 +3494,118 @@ thrImg.onload = function () {
 };
 thrImg.src = "/door-bg/" + thrPick + ".jpg";
 if (thrKnown && stored) thrEnter.textContent = "enter as " + thrKnown;
+
+// THE DOOR'S MUSIC — grim and hollow, played live by oscillators (no file,
+// no loop point). A constant low pedal on A; over it, bare open fifths — no
+// thirds, no hope — walk a Phrygian line: A, B-flat, A, G. The half-step
+// grinding against the pedal is the dread. No melody: only a dead bell,
+// tolling now and then on the root or its fifth. Browsers refuse audio
+// before a gesture, so it starts at the page's first touch; the enter click
+// hands it a long fade through the door. A saved sound-off is silence here.
+var thrCtx = null, thrMaster = null, thrTimers = [];
+var THR_STEPS = [110, 116.54, 110, 98]; // A, B-flat (the rub), A, G — and around again
+function thrMusicStart() {
+  if (thrCtx || crossed) return;
+  if (localStorage.getItem("nomad_sound") === "0") return;
+  try { thrCtx = new AudioContext(); } catch (e) { return; }
+  if (thrCtx.state === "suspended") { try { thrCtx.resume(); } catch (e) {} }
+  var c = thrCtx;
+  var t0 = c.currentTime;
+  thrMaster = c.createGain();
+  thrMaster.gain.setValueAtTime(0.0001, t0);
+  thrMaster.gain.exponentialRampToValueAtTime(0.16, t0 + 4);
+  thrMaster.connect(c.destination);
+  var lp = c.createBiquadFilter();
+  lp.type = "lowpass"; lp.frequency.value = 650; lp.Q.value = 0.5;
+  lp.connect(thrMaster);
+  // The pedal: A, low and constant. Everything else grinds against it.
+  var pedal = [110, 220];
+  for (var i = 0; i < pedal.length; i++) {
+    var po = c.createOscillator();
+    po.type = i ? "triangle" : "sine";
+    po.frequency.value = pedal[i] * (i ? 1.002 : 1);
+    var pg = c.createGain(); pg.gain.value = i ? 0.032 : 0.07;
+    po.connect(pg); pg.connect(lp); po.start();
+  }
+  // A slow tremor under it all — the ground is not quite still.
+  var lfo = c.createOscillator(); lfo.frequency.value = 0.06;
+  var lg = c.createGain(); lg.gain.value = 0.02;
+  lfo.connect(lg); lg.connect(thrMaster.gain); lfo.start();
+  var si = 0;
+  // The fifths: bare and medieval, five slow seconds to bloom, walking the
+  // Phrygian steps. Against the pedal, B-flat is a knife and G is a weight.
+  var playStep = function () {
+    if (!thrCtx) return;
+    var t = c.currentTime;
+    var root = THR_STEPS[si];
+    si = (si + 1) % THR_STEPS.length;
+    var tones = [root, root * 1.5, root * 2, root * 3];
+    var gains = [0.1, 0.075, 0.05, 0.02];
+    for (var k = 0; k < tones.length; k++) {
+      for (var d = 0; d < 2; d++) {
+        var o = c.createOscillator();
+        o.type = "triangle";
+        o.frequency.value = tones[k] * (d ? 1.005 : 0.997);
+        var g = c.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(gains[k], t + 5);
+        g.gain.setValueAtTime(gains[k], t + 8);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 13);
+        o.connect(g); g.connect(lp);
+        o.start(t); o.stop(t + 13.2);
+      }
+    }
+    thrTimers.push(setTimeout(playStep, 12000));
+  };
+  // The toll: a dead bell, inharmonic and long to die — a funeral sound,
+  // never a melody.
+  var playToll = function () {
+    if (!thrCtx) return;
+    if (Math.random() < 0.75) {
+      var t = c.currentTime;
+      var f = Math.random() < 0.6 ? 110 : 164.81;
+      var parts = [1, 2.02, 2.94, 4.4], pgs = [0.11, 0.05, 0.025, 0.01];
+      for (var k = 0; k < parts.length; k++) {
+        var o = c.createOscillator();
+        o.type = "sine";
+        o.frequency.value = f * parts[k];
+        var g = c.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(pgs[k], t + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 8);
+        o.connect(g); g.connect(thrMaster);
+        o.start(t); o.stop(t + 8.2);
+      }
+    }
+    thrTimers.push(setTimeout(playToll, 12000 + Math.random() * 14000));
+  };
+  playStep();
+  thrTimers.push(setTimeout(playToll, 6000));
+}
+function thrMusicStop() {
+  if (!thrCtx) return;
+  for (var i = 0; i < thrTimers.length; i++) clearTimeout(thrTimers[i]);
+  thrTimers = [];
+  var c = thrCtx, m = thrMaster, t = c.currentTime;
+  thrCtx = null; thrMaster = null;
+  try {
+    m.gain.cancelScheduledValues(t);
+    m.gain.setValueAtTime(Math.max(m.gain.value, 0.0001), t);
+    // Caught young (the gesture WAS the enter click): swell briefly first,
+    // so even the instant-clicker hears the door as they pass through it.
+    if (t < 1.5) m.gain.exponentialRampToValueAtTime(0.07, t + 1.2);
+    m.gain.exponentialRampToValueAtTime(0.0001, t + 7);
+  } catch (e) {}
+  setTimeout(function () { try { c.close(); } catch (e) {} }, 7500);
+}
+document.addEventListener("pointerdown", thrMusicStart, true);
+document.addEventListener("keydown", thrMusicStart, true);
+
 var crossed = false;
 function crossThreshold() {
   if (crossed) return;
   crossed = true;
+  thrMusicStop();
   if (localStorage.getItem("nomad_sound") === null) setSound(true);
   threshold.classList.add("gone");
   setTimeout(function () { threshold.remove(); }, 1000);

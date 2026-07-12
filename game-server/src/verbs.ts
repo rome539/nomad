@@ -9,7 +9,7 @@ import {
   setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
   journalLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
 } from "./world";
-import { cap, nameMatches, rollGearCondition } from "./zone-util";
+import { cap, dirPhrase, nameMatches, rollGearCondition } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
 import * as ai from "./ai";
 import * as light from "./light";
@@ -21,6 +21,7 @@ import {
   CARVE_MAX_LEN, TWO_HANDED, RARITY_RANK, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS,
 } from "./zone-data";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
@@ -73,7 +74,10 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // piece DOES (the same stat tags the bench shows), then how far gone it is.
   // Gear on the floor reads its stamped wear (groundCond); a trophy or a food
   // has no wear to speak of.
-  const groundItem = findItemIn(z, z.ground.get(session.roomId) ?? [], arg);
+  // A drowned floor keeps its contents from a dry-eyed look (dive reads it by touch).
+  const groundItem = events.tideFlooded(z, session.roomId)
+    ? null
+    : findItemIn(z, z.ground.get(session.roomId) ?? [], arg);
   if (groundItem) {
     const t = world.itemTemplates.get(groundItem)!;
     const cond = z.isGear(groundItem) ? z.groundCond.get(`${groundItem}@${session.roomId}`) ?? 100 : undefined;
@@ -352,8 +356,26 @@ export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
   z.roomFeed(session.roomId, `${session.name} says, "${msg}"`, session.pubkey);
 }
 
-export async function cmdGet(z: ZoneDO, session: Session, arg: string): Promise<void> {
+// Shout: your words thrown hard enough to cross walls. The trade IS the verb —
+// every neighboring room hears the words (a warning, a bluff, bait), and the
+// dinner bell rings where you stand: everything with ears comes to see who
+// owns the voice. The one long-range signal the world carries, priced in
+// exactly the coin the world prices everything: noise.
+export function cmdShout(z: ZoneDO, session: Session, msg: string): void {
+  if (!msg) return z.send(session, "Shout what?");
+  z.send(session, `You fill your lungs and shout, "${msg}"`);
+  z.roomFeed(session.roomId, `${session.name} shouts, "${msg}"`, session.pubkey);
+  z.roomSound(session.roomId, `A voice, raw and carrying, {dir}: "${msg}"`);
+  z.creatureNoise(session.roomId); // a shout is a dinner bell with a name on it
+}
+
+export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive = false): Promise<void> {
   if (!arg) return z.send(session, "Get what?");
+  // A tide-drowned floor gives nothing to a standing reach — you go under
+  // for it (cmdDive comes through here with the flag) or you wait it out.
+  if (!fromDive && events.tideFlooded(z, session.roomId)) {
+    return z.send(session, "The floor is under black water. Whatever lies there, you'd have to dive for it.");
+  }
   // A journal on the floor is instanced — picking it up carries its pages
   // (and whoever's logs they were). Matched first, ahead of plain loot.
   const inst = takeGroundInstance(z, session.roomId, arg);
@@ -768,6 +790,147 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   z.roomFeed(session.roomId, `${session.name} lands a catch from the ${surface ? "still water" : "flood"}.`, session.pubkey);
   z.sendCtx(session);
   await z.persist();
+}
+
+// ---- listen: an ear pressed to the dark ----
+// roomSound PUSHES what happens next door; listen is the pull — take the
+// neighboring rooms by their standing sounds. One line per open way, loudest
+// thing first: a fight, then whatever stands there (STILL_SOUNDS voice or its
+// family's register), then a person keeping still, then the water itself.
+// Closed iron blocks it, same rule as roomSound. Hidden lurkers make no sound
+// — silence is what an ambush sounds like, and the fen's lights lie through
+// this channel too. Listening is the one scouting act that costs nothing:
+// no noise, no trace, nothing knows you did it.
+const LISTEN_DIRS: Record<string, string> = {
+  n: "north", north: "north", s: "south", south: "south", e: "east", east: "east",
+  w: "west", west: "west", u: "up", up: "up", d: "down", down: "down",
+};
+
+function heardIn(z: ZoneDO, roomId: string): string {
+  const world = z.world!;
+  // A fight drowns everything else in the room.
+  const fighting =
+    [...z.creatures.values()].some((c) => c.roomId === roomId && c.target) ||
+    [...z.sessions.values()].some((s) => s.roomId === roomId && !z.outOfWorld(s) && z.inCombat(s));
+  if (fighting) return "the sounds of a fight — blows landing, and breathing that breaks";
+  // The loudest standing thing: a bespoke voice if it has one, else its
+  // family's register. More than one audible and the ear can tell.
+  const audible = [...z.creatures.values()].filter(
+    (c) => c.roomId === roomId && !(LURKERS.has(c.templateId) && c.hidden),
+  );
+  const parts: string[] = [];
+  if (audible.length > 0) {
+    const c = audible.find((a) => STILL_SOUNDS[a.templateId]) ?? audible[0];
+    const voice = STILL_SOUNDS[c.templateId]
+      ?? (DROWNERS.has(c.templateId) ? "water moving, slow, around something standing in it"
+        : HOLLOW.has(c.templateId) ? "the dry click and resettle of old bone"
+        : THIEVES.has(c.templateId) ? "a boot placed carefully, then stillness"
+        : "slow animal breathing, and claws shifting on stone");
+    parts.push(voice + (audible.length > 1 ? " — and it is not alone" : ""));
+  }
+  // People never hide under the beasts: stillness leaks sound (shifting,
+  // breath, gear creak), so a gate-camper is always there for a pressed ear
+  // to find. rome's anti-camping law, made a read.
+  const folk = [...z.sessions.values()].filter((s) => s.roomId === roomId && !z.outOfWorld(s));
+  if (folk.length > 0) {
+    parts.push(folk.length > 1
+      ? "more than one set of human lungs, all keeping still"
+      : folk[0].resting
+        ? "slow, even breathing — sleep, or something near it"
+        : "the small sounds of someone keeping still: cloth, a held breath");
+  }
+  if (parts.length > 0) return parts.join("; and ");
+  if (events.tideFlooded(z, roomId)) return "deep water, moving slow and heavy";
+  // Marsh-light weather keeps its lie even under a pressed ear.
+  if (LIGHTS_ROOMS.has(roomId) && events.phaseOf(z, "lights") === "active") {
+    return "careful footsteps, keeping to the water's edge";
+  }
+  return "nothing — stone, and a far-off drip";
+}
+
+export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
+  const world = z.world!;
+  // Rain flattens everything. Hunting weather works both ways.
+  if (events.raining(z, session.roomId)) {
+    return z.send(session, "You cup an ear, but the rain hammers everything flat. You'd hear nothing softer than a scream.");
+  }
+  const want = arg ? LISTEN_DIRS[arg] : undefined;
+  if (arg && !want) return z.send(session, "Listen which way? North, south, east, west, up, or down — or just listen.");
+  const exits = [...(world.exits.get(session.roomId) ?? [])].sort(
+    (a, b) => (DIR_ORDER[a.dir] ?? 9) - (DIR_ORDER[b.dir] ?? 9),
+  );
+  const picked = want ? exits.filter((e) => e.dir === want) : exits;
+  if (picked.length === 0) {
+    return z.send(session, want
+      ? "No way opens that way — just your ear against cold stone."
+      : "Stone all around. Nothing comes through.");
+  }
+  const lines = ["You go still and give the dark your ear."];
+  for (const e of picked) {
+    const sealed = e.key_item && !z.openDoors.has(`${session.roomId}:${e.dir}`);
+    lines.push(`${cap(dirPhrase(e.dir))}: ${sealed ? "cold iron, and nothing through it" : heardIn(z, e.to_room)}.`);
+  }
+  z.send(session, lines.join("\n"), "study");
+}
+
+// ---- dive: the tide's other half ----
+// The flood hides the floor (describeRoom holds its tongue, cmdGet refuses);
+// dive is how you get it back. Bare 'dive' gropes the drowned floor and names
+// what the hands find — touch, not sight, so the dark asks for no light.
+// 'dive <thing>' brings one up through the same pack/wear rules as any get.
+// The price is the splash: it rings the same dinner bell as any noise, in
+// the drowners' own hour.
+export async function cmdDive(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const world = z.world!;
+  if (!events.tideFlooded(z, session.roomId)) {
+    return z.send(session, "There's no drowned floor here to go under. The tide decides that.");
+  }
+  // Their element, their hour: going under with a drowned thing standing in
+  // the same water is not a dive, it's a surrender.
+  const drowner = [...z.creatures.values()].find(
+    (c) => c.roomId === session.roomId && DROWNERS.has(c.templateId) && !c.hidden,
+  );
+  if (drowner) {
+    const mt = world.mobTemplates.get(drowner.templateId)!;
+    return z.send(session, `Not with ${mt.name} standing in this water. It is better under there than you will ever be.`);
+  }
+  // 'dive north' and kin: the water is down, not that way.
+  if (arg && LISTEN_DIRS[arg]) arg = "";
+  // The splash carries; everything with ears knows where you went under.
+  z.roomFeed(session.roomId, `${session.name} fills their lungs and goes under the black water.`, session.pubkey);
+  z.roomSound(session.roomId, "A splash {dir}, then the slow churn of something working underwater.");
+  z.creatureNoise(session.roomId);
+  if (!arg) {
+    const found: string[] = [];
+    for (const itemId of z.ground.get(session.roomId) ?? []) {
+      const t = world.itemTemplates.get(itemId);
+      if (t) found.push(t.name);
+    }
+    for (const inst of z.groundInstances.get(session.roomId) ?? []) {
+      const t = world.itemTemplates.get(inst.itemId);
+      if (t) found.push(t.name);
+    }
+    for (const cache of world.caches) {
+      if (z.cacheRoomId(cache) === session.roomId && z.cacheLocked(cache)) {
+        found.push(`the iron corner of ${cache.name}`);
+      }
+    }
+    if (found.length === 0) {
+      return z.send(session, "You go under into cold and black. Your hands sweep the drowned floor: silt, stone, nothing else. You come up gasping.");
+    }
+    return z.send(session, `You go under into cold and black, and your hands read the floor: ${found.join(", ")}. You come up gasping. (dive <thing> to bring one up)`);
+  }
+  // Named a thing: check by touch before committing the story to it.
+  const onFloor = !!findItemIn(z, z.ground.get(session.roomId) ?? [], arg)
+    || (z.groundInstances.get(session.roomId) ?? []).some((i) => {
+      const t = world.itemTemplates.get(i.itemId);
+      return !!t && nameMatches(t.name, arg);
+    });
+  if (!onFloor) {
+    return z.send(session, "You go under and sweep the drowned floor — your hands close on nothing like that. You come up gasping.");
+  }
+  z.send(session, "You go under after it, hands out in the black.");
+  return cmdGet(z, session, arg, true);
 }
 
 export function cmdCarve(z: ZoneDO, session: Session, arg: string): void {

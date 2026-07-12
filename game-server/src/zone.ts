@@ -743,6 +743,7 @@ export class ZoneDO implements DurableObject {
   // you can't insta-seal your pack the moment someone jumps you.)
   private static readonly NEEDS_CALM = new Set<Command["verb"]>([
     "carve", "claim", "stash", "unstash", "vault", "unvault", "publish", "name", "unlock",
+    "listen", "dive", // an ear to the wall or a head under water: not with steel out
   ]);
 
   private async dispatch(session: Session, cmd: Command): Promise<void> {
@@ -754,6 +755,7 @@ export class ZoneDO implements DurableObject {
       case "look": return verbs.cmdLook(this, session, cmd.arg);
       case "go": return verbs.cmdGo(this, session, cmd.arg);
       case "say": return verbs.cmdSay(this, session, cmd.arg);
+      case "shout": return verbs.cmdShout(this, session, cmd.arg);
       case "attack": return this.cmdAttack(session, cmd.arg);
       case "throw": return this.cmdThrow(session, cmd.arg);
       case "stance": return verbs.cmdStance(this, session, cmd.arg);
@@ -787,6 +789,8 @@ export class ZoneDO implements DurableObject {
       case "study": return lore.cmdStudy(this, session, cmd.arg);
       case "journal": return lore.cmdJournal(this, session);
       case "fish": return verbs.cmdFish(this, session);
+      case "listen": return verbs.cmdListen(this, session, cmd.arg);
+      case "dive": return verbs.cmdDive(this, session, cmd.arg);
       case "smoke": return verbs.cmdSmoke(this, session);
       case "squink": return verbs.cmdSquink(this, session);
       case "xyzzy": return verbs.cmdXyzzy(this, session);
@@ -2774,24 +2778,30 @@ export class ZoneDO implements DurableObject {
       lines.push("A keeper waits at a shuttered hatch in the gatehouse wall, dealing in kind.");
     }
 
-    for (const itemId of this.ground.get(room.id) ?? []) {
-      const t = world.itemTemplates.get(itemId);
-      if (t) lines.push(`${cap(t.name)} lies here.`);
-    }
-    // A dropped journal lies here too — someone's abandoned or spilled hunting.
-    for (const inst of this.groundInstances.get(room.id) ?? []) {
-      const t = world.itemTemplates.get(inst.itemId);
-      if (t) lines.push(`${cap(t.name)} lies here, its pages open to the dark.`);
-    }
-    for (const cache of world.caches) {
-      if (this.cacheRoomId(cache) !== room.id) continue;
-      const locked = this.cacheLocked(cache);
-      // A roaming chest, once looted, is hidden until it refills elsewhere — no
-      // empty husk left behind to teleport. A fixed chest still shows its husk.
-      if (!locked && this.cacheRoams(cache)) continue;
-      lines.push(locked
-        ? `${cap(cache.name)} sits here, locked.`
-        : `${cap(cache.name)} sits here, sprung and empty.`);
+    // A tide-drowned room keeps its floor to itself: whatever lies here lies
+    // under black water, unseen until someone goes down after it (cmdDive).
+    if (events.tideFlooded(this, room.id)) {
+      lines.push("The floor is gone under the water; whatever lies here is down there with it.");
+    } else {
+      for (const itemId of this.ground.get(room.id) ?? []) {
+        const t = world.itemTemplates.get(itemId);
+        if (t) lines.push(`${cap(t.name)} lies here.`);
+      }
+      // A dropped journal lies here too — someone's abandoned or spilled hunting.
+      for (const inst of this.groundInstances.get(room.id) ?? []) {
+        const t = world.itemTemplates.get(inst.itemId);
+        if (t) lines.push(`${cap(t.name)} lies here, its pages open to the dark.`);
+      }
+      for (const cache of world.caches) {
+        if (this.cacheRoomId(cache) !== room.id) continue;
+        const locked = this.cacheLocked(cache);
+        // A roaming chest, once looted, is hidden until it refills elsewhere — no
+        // empty husk left behind to teleport. A fixed chest still shows its husk.
+        if (!locked && this.cacheRoams(cache)) continue;
+        lines.push(locked
+          ? `${cap(cache.name)} sits here, locked.`
+          : `${cap(cache.name)} sits here, sprung and empty.`);
+      }
     }
     for (const creature of this.creatures.values()) {
       if (creature.roomId !== room.id) continue;

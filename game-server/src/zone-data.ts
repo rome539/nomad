@@ -316,6 +316,20 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "the-gaunt": "Something very tall moves {dir}, breathing in long, starving pulls.",
 };
 
+// What a creature sounds like STANDING STILL, for an ear pressed to the dark
+// (verbs.cmdListen). MOVE_SOUNDS is a thing passing; this is a thing that's
+// simply there. Bespoke voices here; anything unlisted falls back to its
+// family register in cmdListen (drowned = water, hollow = dry bone, thieves =
+// a careful boot, beasts = breathing). Hidden lurkers make no sound at all —
+// silence is what an ambush sounds like.
+export const STILL_SOUNDS: Record<string, string> = {
+  "three-hound": "slow, enormous breathing — three sets of lungs working as one",
+  "two-hound": "slow, heavy breathing, doubled — big lungs working in step",
+  "brood-rat": "a wet, many-voiced squirming",
+  "the-gaunt": "long, starving breaths, drawn through teeth",
+  "drowned-hulk": "water pressing and settling around something vast",
+};
+
 // Territory: every creature remembers its den and keeps to the ground around
 // it. Idle wandering never crosses the edge; a creature that finds itself
 // beyond it (fled, or freshly walked in from a dark mouth) spends every idle
