@@ -5,7 +5,7 @@ import { GOOGLE_CLIENT_ID } from "./google";
 import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
-import { touchIconBytes, ogImageBytes, doorSceneBytes } from "./assets";
+import { touchIconBytes, ogImageBytes, doorSceneBytes, icon512Bytes } from "./assets";
 import { signProfileEvent, isGameKeyConfigured } from "./signing";
 import { publishEvent, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
@@ -84,6 +84,31 @@ export default {
       if (m === "GET" && pathname === "/og.jpg") {
         return new Response(ogImageBytes(), {
           headers: { "content-type": "image/jpeg", "cache-control": IMMUTABLE },
+        });
+      }
+      // PWA-lite: a manifest so the game installs to a home screen and opens
+      // standalone — deliberately NO service worker, so a refresh is always
+      // current (four-ships-a-day survives no cache).
+      if (m === "GET" && pathname === "/icon-512.png") {
+        return new Response(icon512Bytes(), {
+          headers: { "content-type": "image/png", "cache-control": IMMUTABLE },
+        });
+      }
+      if (m === "GET" && pathname === "/manifest.json") {
+        return new Response(JSON.stringify({
+          name: "NOMAD",
+          short_name: "NOMAD",
+          description: "a shared dungeon, alive whether or not anyone is watching",
+          start_url: "/",
+          display: "standalone",
+          background_color: "#16120c",
+          theme_color: "#16120c",
+          icons: [
+            { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+            { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+          ],
+        }), {
+          headers: { "content-type": "application/manifest+json", "cache-control": "public, max-age=86400" },
         });
       }
       // The threshold's backdrops: /door-bg.jpg stays the torch; the scene set

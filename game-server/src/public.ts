@@ -8,6 +8,8 @@ export const PAGE = `<!doctype html>
 <meta name="description" content="A living text dungeon on Nostr. Your key is your character. The dead stay dead.">
 <link rel="icon" type="image/png" href="/icon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#16120c">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="NOMAD">
 <meta property="og:title" content="NOMAD — the Door">
@@ -144,8 +146,16 @@ export const PAGE = `<!doctype html>
   #thlist .thpager button:disabled { opacity: 0.35; cursor: default; }
   #thlist .thpager span { color: var(--dim); font-size: 11px; }
   #bar .hp-low { color: var(--blood); }
-  #idbtn { cursor: pointer; user-select: none; }
+  /* The bar must never lose its two doors: NOMAD (settings) and the name
+     (keys). The room label is the one that gives — it shrinks and ellipsizes
+     first (the log already says where you are); a marathon name ellipsizes
+     last. Without these, a phone clips one end of the bar or the other. */
+  #room { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+  #idbtn { cursor: pointer; user-select: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #idbtn .caret { color: var(--gold); }
+  /* Kill the 350ms double-tap-zoom dance: combat is tapping the same chip
+     fast, and iOS would zoom the page mid-fight without this. */
+  button, #idbtn, #brand { touch-action: manipulation; }
   /* glanceable status: active effects as compact tags beside the hp button */
   #rightbar { display: flex; align-items: center; gap: 0.55em; min-width: 0; }
   #fx { display: flex; gap: 5px; overflow: hidden; }
@@ -737,7 +747,7 @@ export const PAGE = `<!doctype html>
         <button id="idext">extension</button>
         <button id="idconn">signer app</button>
       </div>
-      <div class="row"><input id="idpaste" placeholder="or paste nsec1&#8230; / bunker:// &#8212; enter" autocomplete="off" spellcheck="false"></div>
+      <div class="row"><input id="idpaste" placeholder="or paste nsec1&#8230; / bunker:// &#8212; enter" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"></div>
     </div>
     <div class="sect" id="sectback">
       <button id="idback">return to previous keys</button>
@@ -851,7 +861,7 @@ export const PAGE = `<!doctype html>
   <div id="chips"></div>
   <div id="inputline">
     <span class="prompt">&#9656;</span>
-    <input id="cmd" autocomplete="off" spellcheck="false" autofocus>
+    <input id="cmd" name="game-command" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" autofocus>
   </div>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script type="module">
