@@ -5,7 +5,7 @@ import { GOOGLE_CLIENT_ID } from "./google";
 import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
-import { touchIconBytes, ogImageBytes, doorSceneBytes } from "./assets";
+import { touchIconBytes, iconN512Bytes, ogImageBytes, doorSceneBytes } from "./assets";
 import { signProfileEvent, isGameKeyConfigured } from "./signing";
 import { publishEvent, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
@@ -90,8 +90,9 @@ export default {
       // standalone — deliberately NO service worker, so a refresh is always
       // current (four-ships-a-day survives no cache).
       if (m === "GET" && pathname === "/icon-512.png") {
-        // The seal is painted at 512 natively — same bytes as /icon.png.
-        return new Response(iconBytes(), {
+        // The home-screen / PWA app icon is the N monogram (rome's call) — the
+        // gate stays the favicon + Nostr avatar (/icon.png), the N is the app.
+        return new Response(iconN512Bytes(), {
           headers: { "content-type": "image/png", "cache-control": IMMUTABLE },
         });
       }
@@ -105,8 +106,8 @@ export default {
           background_color: "#16120c",
           theme_color: "#16120c",
           icons: [
-            { src: "/apple-touch-icon.png?v=2", sizes: "180x180", type: "image/png" },
-            { src: "/icon-512.png?v=2", sizes: "512x512", type: "image/png" },
+            { src: "/apple-touch-icon.png?v=3", sizes: "180x180", type: "image/png" },
+            { src: "/icon-512.png?v=3", sizes: "512x512", type: "image/png" },
           ],
         }), {
           headers: { "content-type": "application/manifest+json", "cache-control": "public, max-age=86400" },
