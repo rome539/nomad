@@ -16,7 +16,7 @@ import {
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, DARK_ROOMS, THIEVES,
   PREYS_ON, PREDATION_ODDS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
-  RUNNERS, BROODERS, SENTINELS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
+  RUNNERS, BROODERS, SENTINELS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL,
@@ -129,6 +129,38 @@ export function addGrudge(z: ZoneDO, creature: Creature, pubkey: string): void {
     if (existing) { existing.at = now; return; } // fresh blood renews the memory
     creature.grudges.push({ pk: pubkey, at: now });
     if (creature.grudges.length > GRUDGE_MAX) creature.grudges.shift();
+  }
+
+// A fight breaking out in a room pulls in the creatures ALREADY standing in it,
+// not just the ones drawn from next door by the noise (rome, 2026-07-13). No
+// "arrives" beat — they were here; they just turn on you. Same exemptions as
+// the noise-draw so behaviour stays one law: the scary rat (fleet-rat) watches
+// and never scrums, the bone-sleepers (LISTENERS) stay dormant till you MOVE,
+// the brood-mother spawns rather than brawls, and the posted / water-holding /
+// carrion kinds keep to their own business. Fired from combatNoise, so it rolls
+// NOISE_HEED_ODDS once per ring — the room piles on in a stagger, not at once.
+export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
+    for (const creature of z.creatures.values()) {
+      if (creature.roomId !== roomId || creature.target || creature.asleep || creature.hidden) continue;
+      const tmpl = z.world!.mobTemplates.get(creature.templateId);
+      if (!tmpl) continue;
+      if (tmpl.is_boss) continue;                                   // the king waits; he doesn't scrum
+      if (DROWNERS.has(tmpl.id) || SENTINELS.has(tmpl.id)) continue; // holds its water / its post
+      if (SCAVENGERS.has(tmpl.id)) continue;                        // tracks the dead, not the din
+      if (BROODERS.has(tmpl.id)) continue;                          // the brood-mother spawns; her young do the fighting
+      if (LISTENERS.has(tmpl.id)) continue;                         // the bone-sleeper stays dormant till you move
+      if (tmpl.id === "fleet-rat") continue;                        // the scary rat watches, never scrums (rome's standing rule)
+      if (!chance(NOISE_HEED_ODDS)) continue;                       // not every one piles on at once
+      for (const s of z.sessions.values()) {
+        if (s.roomId === roomId && z.inCombat(s) && !z.outOfWorld(s)) {
+          creature.target = s.pubkey;
+          addGrudge(z, creature, s.pubkey);
+          z.send(s, `${cap(tmpl.name)} throws itself into the fight!`);
+          z.roomFeed(roomId, `${cap(tmpl.name)} joins the fight!`, s.pubkey);
+          break;
+        }
+      }
+    }
   }
 
   // The legible deep sim (Qud's lesson): a creature's live state reads in the

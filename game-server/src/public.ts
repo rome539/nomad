@@ -1882,14 +1882,14 @@ function benchItemNode(it, place) {
     // Sealed wealth and raw fungibles both bank in the vault; only unsealed gear
     // needs the seal first (trophies and the like carry no title to seal).
     if (benchAtGate) { if (it.sealed || it.stack) btn("\\u2192 vault", "vault"); else btn("seal", "seal"); }
-    // So are the vice and the hammer: mend the wear (sealed gear wears now too,
-    // so it can be mended too), or break UNSEALED gear to scrap. The repair
-    // gate is 'fix' not 'slot' so the slotless lantern gets its oil refill
-    // while the hammerstone (wears, but nothing mends stone) never baits a
-    // refusal; only slotted steel breaks down to scrap.
+    // So are the vice and the hammer: mend the wear, or break gear to scrap —
+    // sealed or not (the vice cracks the seal itself now, so sealed steel has
+    // the same options as bare). The repair gate is 'fix' not 'slot' so the
+    // slotless lantern gets its oil refill while the hammerstone (wears, but
+    // nothing mends stone) never baits a refusal; only slotted steel scraps.
     if (benchAtGate && it.fix) {
       if (it.cond !== null && it.cond < 100) btn("repair", "repair");
-      if (!it.sealed && it.slot) armBtn("scrap", "salvage", "scrap");
+      if (it.slot) armBtn("scrap", "salvage", "scrap");
     }
   } else {
     btn("\\u2192 pack", "take");

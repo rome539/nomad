@@ -3487,6 +3487,10 @@ export class ZoneDO implements DurableObject {
       c.sleepUntil = undefined;
       c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(2000, 8000));
     }
+    // Creatures ALREADY in the room pile onto the fight, same as the ones the
+    // noise draws in from next door (rome, 2026-07-13) — same exemptions, rolled
+    // once per ring so the room joins in a stagger, not all at once.
+    ai.joinSameRoomFight(this, roomId);
     this.creatureNoise(roomId);
   }
 

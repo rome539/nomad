@@ -565,7 +565,14 @@ export async function salvageCore(z: ZoneDO, session: Session, carried: CarriedI
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
   if (tmpl.id === "loose-rock" || tmpl.id === "hammerstone") return "It's a rock.";
   if (tmpl.slot === "") return `There's no salvage in ${tmpl.name}.`;
-  if (carried.serial !== null) return "The gate's seal is on it, and the vice won't touch gate-marked goods. Drop it first to let the claim go — then it's only steel, and the vice will take it.";
+  // The vice cracks the seal itself now (rome: sealed gear gets every option an
+  // unsealed piece has). The mint is voided honestly as the steel goes in — the
+  // same release as a drop or a trade, just on the way to scrap.
+  const wasSealed = carried.serial !== null;
+  if (carried.serial !== null) {
+    await voidMint(z.env.DB, carried.serial);
+    carried.serial = null;
+  }
   if (carried.equipped) {
     carried.equipped = false;
     await setEquipped(z.env.DB, carried.rowId, false);
@@ -578,7 +585,7 @@ export async function salvageCore(z: ZoneDO, session: Session, carried: CarriedI
     await insertLoot(z.env.DB, id, session.pubkey, SCRAP_ID, null);
     session.items.push({ rowId: id, itemId: SCRAP_ID, serial: null, equipped: false, condition: 100 });
   }
-  return `You crank ${tmpl.name} into the vice and break it down. ${yieldN === 1 ? "A handful" : yieldN + " handfuls"} of scrap iron for the pile.`;
+  return `You crank ${tmpl.name} into the vice and break it down.${wasSealed ? " The gate's seal cracks as it goes in." : ""} ${yieldN === 1 ? "A handful" : yieldN + " handfuls"} of scrap iron for the pile.`;
 }
 
 export async function cmdSalvage(z: ZoneDO, session: Session, arg: string): Promise<void> {
