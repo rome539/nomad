@@ -153,6 +153,7 @@ export interface SimState {
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once
   groundCond?: Record<string, number>; // "itemId@roomId" -> condition of gear on the floor, so wear survives drop/pickup
   groundLore?: Record<string, string>; // "itemId@roomId" -> lore_id of engraved gear on the floor, so the mark survives too (077)
+  groundHeart?: Record<string, number>; // "itemId@roomId" -> a dropped heart's acquired_at, so the floor can't wash its rot off
   cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills
   cacheRoom?: Record<string, string>; // cacheId -> its CURRENT room (roaming chests relocate on refill; unset = place on first access)
   nextSurfaceAt?: number; // ms epoch the deep next surfaces a dweller (corpse-key minting; only while the deep door is sealed)

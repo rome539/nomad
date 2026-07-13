@@ -10,7 +10,7 @@ import {
   journalLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
   setItemLoreId, deedsBump,
 } from "./world";
-import { cap, dirPhrase, nameMatches, rollGearCondition } from "./zone-util";
+import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
 import * as ai from "./ai";
 import * as light from "./light";
@@ -244,7 +244,10 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     // this, and what killed them" read (077). The murdered man's sword talks.
     const floorLore = z.groundLore.get(`${groundItem}@${session.roomId}`);
     const floorLedger = floorLore ? await lore.gearLedger(z, floorLore) : "";
-    return z.send(session, t.description + z.itemStat(t) + wearClause(z, cond) + floorLedger);
+    const floorHeart = groundItem === DEEP_HEART
+      ? " " + heartProse(z.groundHeart.get(`${groundItem}@${session.roomId}`))
+      : "";
+    return z.send(session, t.description + z.itemStat(t) + wearClause(z, cond) + floorLedger + floorHeart);
   }
   const carried = z.findCarried(session, arg);
   if (carried) {
@@ -253,7 +256,8 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
       session,
       t.description + z.itemStat(t) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
         + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
-        + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : ""),
+        + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : "")
+        + (carried.itemId === DEEP_HEART ? " " + heartProse(carried.acquiredAt) : ""),
     );
   }
   // In the pitch dark you cannot roll-call the room: naming a wanderer must not
@@ -278,6 +282,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
         `You crouch and work the lockbox's latch. ${t.description}${z.itemStat(t)}${wearClause(z, z.isGear(inBox.itemId) ? inBox.condition : undefined)}`
           + (inBox.serial !== null ? ` The dungeon's seal is on it. (mint #${inBox.serial})` : "")
           + (inBox.loreId ? await lore.gearLedger(z, inBox.loreId) : "")
+          + (inBox.itemId === DEEP_HEART ? " " + heartProse(inBox.acquiredAt) : "")
           + " Back it goes, and the latch clicks home.",
       );
     }
@@ -621,7 +626,12 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // hands with the steel (a NEW owner only enters the chain when they SEAL it).
   const loreId = z.groundLore.get(condKey);
   z.groundLore.delete(condKey);
-  const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, loreId };
+  // A heart off the floor is as old as the cut that made it — the stones give
+  // back exactly what was set down, still rotting. Anything else is born now.
+  const heartAt = itemId === DEEP_HEART ? z.groundHeart.get(condKey) : undefined;
+  z.groundHeart.delete(condKey);
+  const acquiredAt = heartAt ?? Math.floor(Date.now() / 1000);
+  const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, loreId, acquiredAt };
   const wasBurdened = z.burdened(session); // read before the pack takes it — the crossing gets a line
   session.items.push(carried);
   // A regrowing spawn (the shrine's key, a gate's rock) keeps exactly ONE
@@ -653,7 +663,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
       });
     }
   }
-  await insertLoot(z.env.DB, rowId, session.pubkey, itemId, null, condition);
+  await insertLoot(z.env.DB, rowId, session.pubkey, itemId, null, condition, acquiredAt);
   if (loreId) await setItemLoreId(z.env.DB, rowId, loreId);
   // Friendly: your FIRST weapon/armor goes on automatically; switching later
   // is a deliberate `equip`. (Never overrides something you've already got on,
@@ -706,6 +716,11 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
     z.stampFresh(session.roomId, itemId);
     if (z.isGear(itemId)) z.groundCond.set(`${itemId}@${session.roomId}`, carried.condition); // gear (and the stone) keeps its wear on the floor
     if (carried.loreId) z.groundLore.set(`${itemId}@${session.roomId}`, carried.loreId); // the engraving stays in the steel, wherever it lies
+    // A heart keeps its hour on the stones. Setting it down does not make it
+    // fresh again — the rot follows it to the floor and back into any hand.
+    if (itemId === DEEP_HEART && carried.acquiredAt !== undefined) {
+      z.groundHeart.set(`${itemId}@${session.roomId}`, carried.acquiredAt);
+    }
     if (tmpl.edible) z.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
   }
   // Shedding under the burden line is the valve working: say so, so the
@@ -834,6 +849,9 @@ export function itemLine(z: ZoneDO, c: CarriedItem): string {
   // Gear shows its wear whether sealed or not — sealed just wears slower, and
   // you need to see it to know when to mend it.
   if (t && t.slot !== "") tags.push(z.conditionWord(c.condition) || "sound");
+  // The heart is the one carried thing that DIES. It says so on the shelf, so a
+  // spent one never masquerades as a key.
+  if (c.itemId === DEEP_HEART) tags.push(heartWord(c.acquiredAt));
   if (tags.length) s += ` — ${tags.join(", ")}`;
   return s;
 }
@@ -939,18 +957,27 @@ export function cmdRest(z: ZoneDO, session: Session): void {
     const mt = z.world!.mobTemplates.get(menace.templateId)!;
     return z.send(session, `Not with ${mt.name} in the room. You'd never close your eyes.`);
   }
-  if (session.hp >= session.maxHp) return z.send(session, "You are unhurt.");
   if (session.resting) return z.send(session, "You are already resting.");
   if (events.tideFlooded(z, session.roomId)) {
     return z.send(session, "Rest, here? The water is at your waist and still moving. Climb first.");
   }
   session.resting = true;
   z.addTrace(session.roomId, { kind: "rest", at: Date.now() });
-  z.send(session, pick([
+  // Whole men sit down too (rome, 2026-07-13): rest is a posture, not a
+  // medicine. Unhurt it heals nothing, but it still unbinds a limp, still
+  // leaves a camp trace, still makes you warm furniture for a rat — and it
+  // still drops you the instant you move. The chip just stops nagging.
+  const hurt = session.hp < session.maxHp;
+  z.send(session, hurt ? pick([
     "You settle against the cold stone. Wounds close slowly here — any effort ends it.",
     "You lower yourself down and let your breathing slow. The ache eases, little by little — any effort ends it.",
     "You find a wall to put your back to and go still. Blood stops where it was running — any effort ends it.",
     "You sink down where you stand and let the dark hold you a while. The hurt recedes — any effort ends it.",
+  ]) : pick([
+    "You settle against the cold stone with nothing left to mend, and simply sit — any effort ends it.",
+    "You put your back to a wall and go still. Nothing hurts. You listen instead — any effort ends it.",
+    "You sink down where you stand, whole, and let the dark keep you company a while — any effort ends it.",
+    "You lower yourself down and let your breathing slow. There is nothing to close; you rest anyway — any effort ends it.",
   ]));
   z.roomFeed(session.roomId, `${session.name} settles down to rest.`, session.pubkey, false); // resting: local only, nobody spectates a nap
 }

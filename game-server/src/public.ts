@@ -1841,6 +1841,8 @@ function benchItemNode(it, place) {
   if (it.sealed) { var sp = document.createElement("span"); sp.className = "seal"; sp.textContent = " \\u2014 sealed #" + it.serial; nm.appendChild(sp); }
   // Gear shows its wear whether sealed or not (sealed just wears slower) — comma after the seal, em-dash on its own.
   if (it.condWord) { var cw = document.createElement("span"); cw.className = "cond"; cw.textContent = (it.sealed ? ", " : " \\u2014 ") + it.condWord; nm.appendChild(cw); }
+  // The heart rots on the shelf too — a banked one must never read as a key.
+  if (it.heart) { var hw = document.createElement("span"); hw.className = "cond"; hw.textContent = " \\u2014 " + it.heart; nm.appendChild(hw); }
   wrap.appendChild(nm);
   var acts = document.createElement("div");
   acts.className = "acts";

@@ -11,8 +11,8 @@ import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance } from "./rng";
 import * as events from "./events";
-import { cap, shortName, nameMatches, roundTender, rollShopCondition } from "./zone-util";
-import { SCRAP_ID, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH,
+import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord } from "./zone-util";
+import { SCRAP_ID, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS } from "./zone-data";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -931,6 +931,10 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
         equipped: !!c.equipped,
         cond: gear ? c.condition : null,
         condWord: gear ? (z.conditionWord(c.condition) || "sound") : "",
+        // The heart rots on the shelf like it rots in your hand — the vault is
+        // cold storage for steel, not for meat. A banked heart reads as the
+        // slime it is, instead of pretending to still be a key (rome, 2026-07-13).
+        heart: c.itemId === DEEP_HEART ? heartWord(c.acquiredAt) : "",
         stat: z.itemStat(t).replace(/^ \(|\)$/g, ""),
       };
     };

@@ -118,6 +118,7 @@ export class ZoneDO implements DurableObject {
   private placedSpawns = new Set<string>(); // ground spawns already laid once
   public groundCond = new Map<string, number>(); // "itemId@roomId" -> condition of gear on the floor, so wear survives a drop/pickup
   public groundLore = new Map<string, string>(); // "itemId@roomId" -> the engraving on floor gear, so the mark survives the stones (077)
+  public groundHeart = new Map<string, number>(); // "itemId@roomId" -> a dropped heart's cut-time: the stones don't make it fresh again
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
   private cacheRoom = new Map<string, string>(); // cacheId -> its CURRENT room; roaming chests relocate on refill
   private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
@@ -201,6 +202,7 @@ export class ZoneDO implements DurableObject {
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
       this.groundCond = new Map(Object.entries(saved.groundCond ?? {}));
       this.groundLore = new Map(Object.entries(saved.groundLore ?? {}));
+      this.groundHeart = new Map(Object.entries(saved.groundHeart ?? {}));
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
       this.cacheRoom = new Map(Object.entries(saved.cacheRoom ?? {}));
       this.nextSurfaceAt = saved.nextSurfaceAt ?? 0;
@@ -345,6 +347,7 @@ export class ZoneDO implements DurableObject {
       placedSpawns: [...this.placedSpawns],
       groundCond: Object.fromEntries(this.groundCond),
       groundLore: Object.fromEntries(this.groundLore),
+      groundHeart: Object.fromEntries(this.groundHeart),
       cacheSpent: Object.fromEntries(this.cacheSpent),
       cacheRoom: Object.fromEntries(this.cacheRoom),
       nextSurfaceAt: this.nextSurfaceAt,
@@ -377,6 +380,7 @@ export class ZoneDO implements DurableObject {
     this.placedSpawns.clear();
     this.groundCond.clear();
     this.groundLore.clear();
+    this.groundHeart.clear();
     this.cacheSpent.clear();
     this.cacheRoom.clear();
     this.nextSurfaceAt = 0;
@@ -522,13 +526,18 @@ export class ZoneDO implements DurableObject {
       await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp); // durability snapshot; the flush keeps chasing
       return;
     }
+    // Say it BEFORE the session leaves the book. anonForRelay scrubs names by
+    // walking the live sessions — announce a departure after the delete and the
+    // leaver's name is no longer there to find, so it rides out to the public
+    // relay in the clear. (The room still reads the true name locally; only the
+    // relay copy is anonymised. The world doesn't snitch.)
+    this.roomFeed(session.roomId, `${session.name} fades from the world.`, session.pubkey);
     session.linkdeadUntil = undefined;
     this.sessions.delete(session.pubkey);
     this.leftAt.set(session.pubkey, Date.now()); // so a quick return reads as a reconnect
     for (const c of this.creatures.values()) {
       if (c.target === session.pubkey) c.target = null;
     }
-    this.roomFeed(session.roomId, `${session.name} fades from the world.`);
     await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
     // Flush the worn-down condition of any provisional gear (rust ticks live in
     // memory; D1 catches up here). Sealed gear is frozen, no need.
@@ -1424,7 +1433,7 @@ export class ZoneDO implements DurableObject {
     // is better preserved than what's stripped off the dead. Non-gear rolls 100.
     const slot = this.world!.itemTemplates.get(itemId)?.slot ?? "";
     const condition = opts?.condition ?? rollGearCondition(slot, opts?.kept ?? false);
-    const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, journalId: opts?.journalId };
+    const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, journalId: opts?.journalId, acquiredAt: Math.floor(Date.now() / 1000) };
     session.items.push(carried);
     await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null, carried.condition);
     if (opts?.journalId) await setItemJournalId(this.env.DB, rowId, opts.journalId);
@@ -2674,7 +2683,10 @@ export class ZoneDO implements DurableObject {
           this.stampFresh(creature.roomId, item.id);
           this.send(killer, `${cap(item.name)} falls from ${tmpl.name} — your pack is full, so it lies here. [${item.rarity}]`);
         }
-        this.roomFeed(creature.roomId, `${killer.name} claims ${item.name}.`, killer.pubkey);
+        // Same rule as a pickup off the floor: junk stays in the room. Only a
+        // rare+ find is worth the wire — nobody outside needs to hear that
+        // someone pocketed a finger-bone.
+        this.roomFeed(creature.roomId, `${killer.name} claims ${item.name}.`, killer.pubkey, (RARITY_RANK[item.rarity] ?? 0) >= 2);
         this.sendCtx(killer);
       }
     }
@@ -2804,6 +2816,12 @@ export class ZoneDO implements DurableObject {
         if (c.loreId) {
           await deedsBump(this.env.DB, c.loreId, "deaths");
           this.groundLore.set(`${c.itemId}@${fell}`, c.loreId);
+        }
+        // A heart that falls with you keeps the hour it was cut. Whoever pries
+        // it off your body inherits what's LEFT of it, not a fresh one — steal a
+        // heart off a corpse and you're already running out of time.
+        if (c.itemId === DEEP_HEART && c.acquiredAt !== undefined) {
+          this.groundHeart.set(`${c.itemId}@${fell}`, c.acquiredAt);
         }
       }
       await clearCarriedInventory(this.env.DB, victim.pubkey);

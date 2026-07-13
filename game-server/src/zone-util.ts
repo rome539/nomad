@@ -2,6 +2,36 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
+import { HEART_FRESH_SEC } from "./zone-data";
+
+// The deep-heart is the one thing you carry that DIES in your hands. It opens
+// the black door for HEART_FRESH_SEC after the cut, then it's slime — and until
+// now it said nothing about which it was, so a spent heart and a live key looked
+// identical (rome, 2026-07-13: "make it rot"). It speaks its own decay instead:
+// a short word for the pack and the vault shelf, a full line for `look`.
+// `at` is the row's acquired_at (unix seconds); undefined = we can't tell.
+export type HeartState = "cold" | "cooling" | "spoiled";
+export function heartState(at: number | undefined, now = Math.floor(Date.now() / 1000)): HeartState {
+  if (at === undefined) return "cold";
+  const age = now - at;
+  if (age >= HEART_FRESH_SEC) return "spoiled";
+  if (age >= HEART_FRESH_SEC / 2) return "cooling";
+  return "cold";
+}
+// The shelf-word: what it reads as in the pack list and the vault.
+export function heartWord(at: number | undefined, now?: number): string {
+  const s = heartState(at, now);
+  return s === "spoiled" ? "spoiled" : s === "cooling" ? "going warm" : "still cold";
+}
+// The long look: what the thing is actually doing in your hand.
+export function heartProse(at: number | undefined, now?: number): string {
+  const s = heartState(at, now);
+  return s === "spoiled"
+    ? "It has gone to slime — slack and warm and stinking, and it will open nothing now."
+    : s === "cooling"
+      ? "The cold is going out of it. It is softening at the edges; whatever it opens, it will not open for much longer."
+      : "It is still cold, and it shifts when you shift your grip. It is still a key.";
+}
 
 // A crude map lies the SAME way every time you open it (or it reads as noise,
 // not a map). The lie is seeded off the book's row id, so a given scrap is

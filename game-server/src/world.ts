@@ -343,16 +343,17 @@ export interface CarriedItem {
   condition: number; // 0-100; use + rust wear it down (sealed gear is frozen)
   journalId?: string; // only a journal: the stable id its pages are keyed to
   loreId?: string; // engraved gear: the gate's mark — its deeds-ledger key, enduring past every serial (077)
+  acquiredAt?: number; // unix seconds the row was cut/taken — the deep-heart rots against this
 }
 
 // Carried = on the body (container ''). What sits in the lockbox or the vault
 // is loaded separately and never scatters.
 export async function loadInventory(db: D1Database, pubkey: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id, lore_id FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id, lore_id, acquired_at FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
     .bind(pubkey)
-    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string; lore_id: string }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string; lore_id: string; acquired_at: number }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at }));
 }
 
 // Persist a gear instance's worn-down condition (rounded to the D1 integer).
@@ -371,10 +372,10 @@ export async function setEquipped(db: D1Database, rowId: string, equipped: boole
 // anything that happens to the body that owns it. Condition is preserved.
 export async function loadContainer(db: D1Database, pubkey: string, container: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id, acquired_at FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
     .bind(pubkey, container)
-    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string; acquired_at: number }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at }));
 }
 
 // Move a pack instance into a gate container, or back onto the body (''). The
@@ -419,12 +420,16 @@ export async function insertLoot(
   itemId: string,
   eventId: string | null,
   condition = 100, // gear pried off the fallen arrives worn, not fresh
+  // A heart lifted off the floor keeps the hour it was CUT, not the hour it was
+  // found — otherwise dropping a spent heart and picking it up again would wash
+  // it clean, and the ten-minute window would mean nothing.
+  acquiredAt = nowSec(),
 ): Promise<void> {
   await db
     .prepare(
       "INSERT INTO player_items (id, pubkey, item_id, acquired_at, event_id, condition) VALUES (?, ?, ?, ?, ?, ?)",
     )
-    .bind(id, pubkey, itemId, nowSec(), eventId, condition)
+    .bind(id, pubkey, itemId, acquiredAt, eventId, condition)
     .run();
 }
 
