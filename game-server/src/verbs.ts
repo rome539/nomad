@@ -22,7 +22,7 @@ import {
   CARVE_MAX_LEN, TWO_HANDED, RARITY_RANK, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, DARK_ROOMS, SHIELD_WALL,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, DARK_ROOMS, SHIELD_WALL, REFLECTION_LIE_ODDS,
 } from "./zone-data";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
@@ -161,6 +161,28 @@ export function describePlayer(z: ZoneDO, session: Session, other: Session): str
 
 // ---- verbs ----
 
+// The still-water look: your own face, worse for wear — and rarely, a face that
+// doesn't obey. Pure dread, no mechanic, no state. The lie is rare on purpose.
+function reflection(): string {
+  if (!chance(REFLECTION_LIE_ODDS)) {
+    return pick([
+      "You lean over the still water. Your own face swims up out of the dark to meet you — hollow-eyed, worse for the wear, but yours.",
+      "The water holds still enough to throw your face back: gaunt, grimed, a stranger you know. Yours.",
+      "You look down into the water. There you are, dim and wavering — tired, and older than you left.",
+    ]);
+  }
+  // The Narcissus lie: the water shows you a face lovelier than the one you
+  // own, unmarked and unhurried, and it does not want you to leave. In a place
+  // like this, a pool that holds your gaze is the deadliest thing in the room.
+  return pick([
+    "You lean over the still water — and the face that rises is yours, but kinder: unscarred, unhurried, lovely in a way you have never been. You find you have leaned closer. It takes something to straighten up.",
+    "Your reflection swims up out of the dark, and it is beautiful. Too beautiful, too still. For a long moment you forget the black at your back and the ache in your legs, and only the water seems worth looking at.",
+    "The water gives you back a better self — clear-eyed, calm, waiting for you with a patience you don't deserve. Stay, the stillness seems to say, in a voice that is almost your own.",
+    "You look down and cannot easily look away. The face down there is yours and not yours, and it wants you to keep looking. You make yourself step back, and the wanting comes with you a little way.",
+    "For a moment the pool is the whole world, and the lovely tired face in it is the only company worth keeping. You could stay here. The thought rises off the water, not out of you.",
+  ]);
+}
+
 export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise<void> {
   // A deliberate look always gives the full scene — and marks the room known,
   // so from here you get the brief view unless you ask again.
@@ -175,6 +197,15 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // black (rome, 2026-07-12). Your OWN pack still answers: you know your kit by
   // touch, so carried gear and the lockbox stay readable below.
   const blind = DARK_ROOMS.has(session.roomId) && !z.carriesLight(session);
+
+  // Still water throws your face back — and once in a rare while, something that
+  // isn't quite your face. Only where the water actually stands still (a fishing
+  // pool), never the tide's moving flood, and never in the dark that gives you
+  // nothing to look into. (rome's "your reflection lies".)
+  if (!blind && FISHING_ROOMS.has(session.roomId)
+      && /^(the )?(water|pool|reflection|surface)$/i.test(arg.trim())) {
+    return z.send(session, reflection());
+  }
 
   const spotted = blind ? null : z.findCreatureIn(session.roomId, arg);
   // An unseen lurker is not in the room yet — naming it must not find it.

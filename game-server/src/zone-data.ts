@@ -63,11 +63,11 @@ export const THROW_COOLDOWN_MS = 4000; // one throw per combat round (== COMBAT_
 export const THROW_SHATTER = 0.15; // a thrown thing may not survive the landing
 export const THROW_SHATTER_HOLLOW = 0.4; // stone on bone or old iron, near coin-flip
 // Bone and old iron eat an edge faster than flesh: landed strikes on the HOLLOW
-// grind a weapon ~2.4× the normal rate (rome's rule — wear as a counter, not
-// just smaller numbers). ~165 strikes on skeletons wears a fresh blade out —
+// grind a weapon 2× the normal rate (rome's rule — wear as a counter, not
+// just smaller numbers). ~200 strikes on skeletons wears a fresh blade out —
 // a real bone-tax at the loot floor, not a weapon-shredder (was 8× / ~50, too
-// fast: a single deep dive through the Demesne could ruin a blade).
-export const WEAPON_WEAR_HOLLOW = 0.6;
+// fast: a single deep dive through the Demesne could ruin a blade; then 2.4×).
+export const WEAPON_WEAR_HOLLOW = 0.5;
 
 // Mobility: unburdened (worn weight 0, or nothing worn) means foes miss you
 // more, and you slip out of a fight clean. Heavy mail turns blows better but
@@ -438,6 +438,20 @@ export const CUDDLE_COLD_MULT = 3; // in the cold, everything warm looks like a 
 // It doesn't spring the instant you're in reach — it lifts its head, hackles up,
 // and takes a beat to commit. That wind-up is your window to back out or hit first.
 export const DIRE_ROUSE_MS = 5000;
+// The grave-hyena will not eat its own kind. It stands over a dead grave-hyena,
+// throws its head back, and laughs — that keening, no-mirth laugh — and holds
+// over the body a while before it drifts off. The dire-hyena has no such
+// scruple: the mean cousin eats whatever falls, its own dead included.
+export const MOURN_FRESH_MS = 3 * 60_000; // only a fresh body moves it; old litter doesn't
+export const MOURN_VIGIL_MS = 20_000;     // it holds its vigil this long before wandering on
+// Look into still water and your face comes back — and once in a rare while it
+// does something you didn't. Rare on purpose: the dread is in not expecting it.
+export const REFLECTION_LIE_ODDS = 0.08;
+// The dead remember their own. A hollow thing, idle in a room where a wanderer
+// truly fell, works its jaw and breathes the name off the bloodstain — soft, the
+// way you'd call for someone who isn't coming. Rare, and never a chant.
+export const MURMUR_ODDS = 0.03;          // per idle 2s tick with a living ear present
+export const MURMUR_COOLDOWN_MS = 90_000; // one name, then a long quiet
 export const CORPSE_TRACES = new Set(["blood", "remains"]);
 // The food web: who hunts (or drives off) whom. A predator sharing a room with
 // prey it outranks may turn on it — when it's hungry, or when there's a kill or

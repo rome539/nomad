@@ -151,14 +151,18 @@ export const PAGE = `<!doctype html>
      first (the log already says where you are); a marathon name ellipsizes
      last. Without these, a phone clips one end of the bar or the other. */
   #room { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; }
-  #idbtn { cursor: pointer; user-select: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #idbtn { cursor: pointer; user-select: none; min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #idbtn .caret { color: var(--gold); }
   /* Kill the 350ms double-tap-zoom dance: combat is tapping the same chip
      fast, and iOS would zoom the page mid-fight without this. */
   button, #idbtn, #brand { touch-action: manipulation; }
   /* glanceable status: active effects as compact tags beside the hp button */
   #rightbar { display: flex; align-items: center; gap: 0.55em; min-width: 0; }
-  #fx { display: flex; gap: 5px; overflow: hidden; }
+  /* Wound tags never shrink: under a tight bar the name (#idbtn) yields to
+     ellipsis before a pill is clipped — combat state is urgent, identity you
+     already know. Realistic max is 3 pills; a rare 4th runs off the edge
+     rather than crushing the others. */
+  #fx { display: flex; gap: 5px; overflow: hidden; flex-shrink: 0; }
   .fxtag { font-size: 11px; line-height: 1.65; padding: 0 8px; border-radius: 999px; border: 1px solid currentColor; background: color-mix(in srgb, currentColor 14%, transparent); letter-spacing: 0.03em; white-space: nowrap; }
   .fx-blood { color: var(--blood); }
   .fx-warn { color: var(--gold); }

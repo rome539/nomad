@@ -565,7 +565,7 @@ export async function salvageCore(z: ZoneDO, session: Session, carried: CarriedI
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
   if (tmpl.id === "loose-rock" || tmpl.id === "hammerstone") return "It's a rock.";
   if (tmpl.slot === "") return `There's no salvage in ${tmpl.name}.`;
-  if (carried.serial !== null) return "The gate's seal is on it — the vice won't take gate-marked goods.";
+  if (carried.serial !== null) return "The gate's seal is on it, and the vice won't touch gate-marked goods. Drop it first to let the claim go — then it's only steel, and the vice will take it.";
   if (carried.equipped) {
     carried.equipped = false;
     await setEquipped(z.env.DB, carried.rowId, false);

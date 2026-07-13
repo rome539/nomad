@@ -88,6 +88,8 @@ export interface Creature {
   eyeing?: string; // scavenger: the floor gear it has declared intent on (the nose-first telegraph)
   eyeingAt?: number; // ms epoch the snatch lands, if nobody comes back to interrupt
   cuddling?: string; // rat-kind: pubkey of the resting wanderer it has curled up against (cleared the moment they rise)
+  mournedAt?: number; // grave-hyena: the `at` of the kin-corpse it last keened over, so each body is mourned once
+  murmuredAt?: number; // HOLLOW: last time it breathed a name into the dark (the cooldown anchor)
 }
 
 export interface Regrow {

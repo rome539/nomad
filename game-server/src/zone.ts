@@ -2185,11 +2185,14 @@ export class ZoneDO implements DurableObject {
         if (creature.hp >= tmpl.max_hp) creature.phase = 0; // whole again, seated again
         // A scavenger standing on the dead eats first of all — and drags off
         // any gear left lying where a body fell.
-        if (SCAVENGERS.has(creature.templateId)) { ai.scavengerFeeds(this, creature, false); ai.scavengerScoops(this, creature); }
+        if (SCAVENGERS.has(creature.templateId)) { ai.scavengerFeeds(this, creature, false); ai.scavengerScoops(this, creature); ai.mourns(this, creature, now); }
         // A rat that finds you resting may decide you're warm furniture.
         ai.ratCuddles(this, creature, now);
         // A brood-mother swells the nest while she's left alone.
         if (BROODERS.has(creature.templateId)) ai.broodBirths(this, creature, now);
+        // The bone-country remembers its dead: a hollow thing, idle with a living
+        // ear near, breathes a name off the room's bloodstain.
+        if (HOLLOW.has(creature.templateId)) ai.deadRemembers(this, creature, now);
         if (creature.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, creature, false);
         // The food web: a predator turns on weaker prey sharing its room. If it
         // strikes, that's its action this tick — it doesn't also wander.

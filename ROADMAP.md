@@ -1,12 +1,15 @@
 # NOMAD Roadmap
 
 *Forward work only — shipped history lives in git log, COMBAT.md, and past
-deploys (phases 0–2, the combat audit and its gear expansion, the living-world
-island, the world at 100 rooms, fire & light, the waystation gate, the off-hand
-trio — all live). Guiding principle (from the 2026-07-03 simulation pivot):
-build systems that create stories, not scripted content. The interface is
-friendly; the world is not. Population-dependent systems (PvP, economy,
-factions) come last — they emerge from players, and you can't scaffold players.*
+deploys. The major arcs are all live: phases 0–2, the combat audit and its gear
+expansion, the living-world island, the world at 100 rooms, fire & light, the
+waystation gate, the off-hand trio, **the room-events weather arc + THE TIDE**
+(events.ts), **encumbrance as a combat penalty** (burden/clatter + the shield
+wall's swing tax), and **PvP with its full anti-grief stack** (blood-on-killer,
+witnesses, weak fresh keys). Guiding principle (from the 2026-07-03 simulation
+pivot): build systems that create stories, not scripted content. The interface
+is friendly; the world is not. What's left is depth on the systems that exist
+and the population layer that only real players can fill.*
 
 ## Standing design law (rulings that bind future work)
 
@@ -24,161 +27,80 @@ factions) come last — they emerge from players, and you can't scaffold players
   it hobbles, never holds) and the anti-grief stack (no aggressor-punishing
   dice, ever).
 - **Legibility:** the fiction must teach the mechanic — a ward says what it
-  wards, a wight's dry skin says it won't bleed, a chip never baits a refusal.
+  wards, a wight's dry skin says it won't bleed, a chip never baits a refusal,
+  a wall shield drags the swing it protects and *says so*.
+- **Data, not code, tunes:** when a number is too strong, drop it at its source
+  (a stat migration), never invent a code multiplier (the stun lesson, 073;
+  the block cap, 074).
 - **Scope litmus (from the lineage pass):** if an idea makes you ADD a system
   rather than DEEPEN one, it's the trap. Depth per item, never item count.
 - **Keep zone.ts lean:** the spine is tick/combat + transport. Verbs live in
   verbs.ts, chips in chips.ts, light in light.ts, maps/journal in lore.ts,
-  creature behavior in ai.ts, gate trade in gate.ts, constants in zone-data.ts.
+  creature behavior in ai.ts, gate trade in gate.ts, events in events.ts,
+  PvP in pvp.ts, constants in zone-data.ts.
 
 ## Open calls (awaiting rome)
 
 - **Sentinel stun-resistance** — proposed after the flanged-mace playtest
-  (blunt-ignore-2 zeroes the hound's armor and 35% stun chains it): "three
-  heads, one always awake" — the hound can't be stun-locked, or stuns at
-  reduced odds. rome: HOLD (2026-07-11). Not built.
+  (blunt-ignore-2 zeroes the hound's armor and stun chains it): "three heads,
+  one always awake" — the hound can't be stun-locked, or stuns at reduced odds.
+  rome: HOLD (2026-07-11). Migration 073 halved stun globally, which took the
+  urgency off; revisit only if a hound still stun-locks in play.
+- **Stance through death** — stance persists across a death (onPlayerDeath
+  doesn't reset it), which is why a corpse can come back still reckless. Ruling
+  pending: reset to steady on death, or leave it as the player's problem.
+- **Stance in the status bar** — the one combat read still not glanceable.
+  Flagged during the feedback pass; not decided.
 
 ## Next up (unblocked, pre-players)
 
-- **The Hunter / Nemesis** — targeted pressure: the world sends a named
-  predator after the too-successful player, who has to get out ahead of it.
-  Reuses grudges + `curious` tracking. (rome: "i love this.") Also the natural
-  long-term raid clock for the shallow keep.
-- **Storied gear — items with biographies** *(the identity feature)*. The
-  answer to "how does MUD + extraction distinguish itself": not more economy,
-  a **meaning layer on top of it**. In Tarkov every sword is fungible; in a
-  classic MUD every sword is static. NOMAD stands on the intersection neither
-  can reach — one persistent world, signed serialized loot, condition as
-  narrative, death-drops — so an item can have a **history** the dungeon
-  attests. The inversion that makes it sing: you don't lose your gear when you
-  die — **your gear loses you**, and carries you as a scar. "This notched
-  greatsword has 214 kills, went to the King twice, and its last three owners
-  died in the Sunless Deep." Story is the one currency that can't be farmed,
-  duped, or inflated.
+- **The Hunter / Nemesis** *(now the top of the stack)* — targeted pressure:
+  the world sends a named predator after the too-successful player, who has to
+  get out ahead of it. Reuses grudges + `curious` tracking + the blood-on-killer
+  scent primitives that PvP just proved. Also the natural long-term raid clock
+  for the shallow keep. (rome: "i love this.")
+- **Storied gear — items with biographies** *(the identity feature; rome chose
+  look-item first, this is the next reach)*. The answer to "how does MUD +
+  extraction distinguish itself": not more economy, a **meaning layer on top of
+  it**. In Tarkov every sword is fungible; in a classic MUD every sword is
+  static. NOMAD stands on the intersection neither can reach — one persistent
+  world, signed serialized loot, condition as narrative, death-drops — so an
+  item can have a **history** the dungeon attests. The inversion that makes it
+  sing: you don't lose your gear when you die — **your gear loses you**, and
+  carries you as a scar. "This notched greatsword has 214 kills, went to the
+  King twice, and its last three owners died in the Sunless Deep." Story is the
+  one currency that can't be farmed, duped, or inflated.
   *Build shape (cheap):* a deeds-ledger keyed by sealed serial (small D1
   table): kills, depths, owners, owner-deaths while carried. Surface it in
   `look`/the journal; let 31573/1573 carry it for bazaar interop. The substrate
   can land pre-players so day-one history is real; the payoff is
   population-gated.
-- **Fire & light follow-ons** (the 057 arc's open ends):
+- **Fire & light follow-ons** (the 057 arc's remaining open ends):
   - `search` for hidden exits (dark hides them; light + searching finds them).
-    Slots naturally into the Tideways ship.
+    Not built (zone-data.ts still flags it a follow-on).
   - **Map-blackout of dark rooms** — a room you've only seen dark doesn't
-    belong on your HUD map.
-  - The tidal flood graduated into the room-events arc below.
-- **Encumbrance → combat penalty** — bones exist (`weight` column,
-  `wornWeight()`); today weight only affects flee/dodge.
+    belong on your HUD map. Not built.
 - **Shallows heat map** — mobs harden where they're farmed (+1–2 HP, not
   damage), decaying back for fresh players. Unblocked since curved armor.
-- **Balance re-check** — `scripts/balance-audit.mjs` is stale (numbers predate
-  the wards, 063 prices, and the off-hand trio). Re-run and update its tables
-  before any combat tuning; it's also the gate on the afflictions framework.
 
-## Room events — the world's weather *(APPROVED 2026-07-11; the next arc)*
+## Room events — the world's weather *(SHIPPED — events.ts; kept here for the open ends)*
 
-rome's direction: events everywhere, not just a deep flood — "make the world
-feel living" — and **mobs are citizens of the weather, not spectators**. The
-spec, before any code:
+The arc landed whole: twelve events on two clocks (the scheduled bell + one
+weighted roll every 3–6h), each obeying **telegraph → active window →
+aftermath**, systemic-only, with mobs as citizens of the weather. THE TIDE is
+the crown (the Tideways wing floods bottom-up on its own schedule). Full spec
+lives in git and the memory ship log. What's still *not* built on top:
 
-**The law (every event, no exceptions):**
-- **Telegraph → active window → aftermath.** Nothing hits a player the world
-  didn't announce. The best telegraph is CREATURE BEHAVIOR, not narration —
-  rats streaming up a stair say "water's coming" better than any prose.
-- **Systemic only:** an active event is a bundle of toggles on rules that
-  already exist (light, noise, wake odds, traces, wander bias, boldness,
-  seize odds). Never a scripted scene, never a new one-off mechanic.
-- **Mobs ride existing verbs:** events move creatures through wander bias,
-  flee, `curious`, boldness, and birth timing — no new AI states.
-- **Events bias each other, never trigger each other** (the bell empties the
-  keep's rats into the warrens → a boil grows *likelier*, not scheduled).
-
-**The clocks (rome's law, 2026-07-11 — the game is a simulation):** two
-tracks. The BELL is *scheduled* — a keep rings its bell at its own hours,
-twice a day (near 01:00/13:00 UTC, ±20min; learnable, plannable-around).
-Everything else is *rolled*: one die every 3–6h picks ONE event from the whole
-weighted pool — 4–6 a day, never a schedule. One thing in the sky at a time;
-an arc not mid-run parks at NEVER and only the roll starts it. A roll slept
-past (the tick needs an audience) happened unobserved.
-
-**Built (all in `events.ts`, unshipped):**
-1. **Rain** *(outdoors; pool weight 3 — the common sky)*. Iron-grey telegraph,
-   torches drown (**the hooded lantern shrugs it off**), sound masks, traces
-   wash, scavengers bold; aftermath mud cuts prints deeper, forage regrows
-   sooner, and the storm refreshes the surface fishing pools.
-2. **The bell** *(keep, SCHEDULED)*. One note, then 90s where the keep hears
-   EVERYTHING and rat-kind bolts for the warrens; a 10-minute unsettled after.
-   Someday a player-rung bell is a decoy/flush lever (hold that).
-3. **The boil** *(warrens, w2)*. A rat tide takes one corridor room by room —
-   a moving hazard that bites what stands in it; the posted hold their posts.
-4. **Corpse-wake** *(warrens, w2)*. "The dead don't stay down tonight." The
-   hollow all stop at once (the telegraph), then fresh death-litter is the
-   beacon: where something fell lately, a barrow-wight pulls itself up through
-   the floor (the beacon-trace consumed; ≤4 rise). Whatever still stands when
-   the window shuts drops where it is. Camp your killing floor and your kills
-   send for company. No fresh dead — the listening simply passes.
-5. **The keeper's want** *(gate, w2)*. Chalk on the hatch: one named
-   gatherable counts DOUBLE in trade for ~50min. The only weather that
-   gives you somewhere to GO — it points every wanderer at the same corner of
-   the map at once.
-6. **The escaped thing** *(roams, w1 — the rarest)*. The Gaunt (068) gets
-   loose: the whole zone hears the cry, then it walks the world for an hour —
-   rooms empty ahead of it (its telegraph), it fixes-then-springs on whoever
-   shares its room (the wind-up is the warning). Always drops its pelt
-   (barter 20). Unkilled, it answers some call and goes back down.
-7. **Marsh lights** *(fen + causeway, w2)*. Pale lights that read exactly like
-   a carried torch, false careful footsteps on the roomSound channel a real
-   neighbor would leak through. Nothing attacks. The event is doubt.
-8. **The crows** *(outdoors, w2)*. Carrion birds take every high perch and cry
-   out whoever crosses the open ground — every player under the sky hears
-   where you moved. Anti-stealth, fully diegetic.
-9. **The exhale** *(deep, w2)*. The deep breathes out: a cold current no open
-   flame survives — carried torches die, none will catch until it settles;
-   the hooded lantern's shuttered bead holds (its second argument). No new
-   teeth: a lightless deep is ambush weather the LURKERS already own.
-10. **The marrow-song** *(deep, w2)*. A bone-voice holds one note and every
-   hollow thing below stands entranced — wake odds ZERO, walk right past the
-   bone-country's garrison. The flesh-things are agitated by it instead, and
-   the bones wake twitchy (×2) when it dies. The loot corridor nobody trusts.
-11. **Fog** *(outdoors, w2)*. The anti-rain: spot odds down BOTH ways — wake
-   odds halved AND every creature reads as "a grey shape in the fog" (tells
-   blanked). Scavengers hunt in it. Unlike rain, the traces STAY. The
-   stalker's weather.
-12. **Cold snap** *(outdoors + deep, w2)*. Glass-clear and bitter: torches
-   burn half as long (lit ones lose half their remainder; the lantern's oil
-   doesn't care), resting heals half as often, and the living den up on warm
-   ground — while the HOLLOW keep walking, the free tell. A quiet,
-   safe-looking window that taxes your supplies.
-13. **The breach — PARKED (rome, 2026-07-11: "doesn't fit")**. Fully built
-   and idle: stone groans 90s, the wall GIVES, an exit exists both ways for
-   10 minutes, rubble + scar after; 8 hand-picked walls in BREACH_PAIRS.
-   Its pool ticket is commented out in events.ts — restoring the event is
-   uncommenting one line. The flagged *wall-breach ↔ muster* pair was never
-   in.
-
-14. **THE TIDE — the crown (BUILT 2026-07-11; rome passed the map: "i like
-   the tide"; migration 069, NEEDS RESEED on ship)**. The Tideways: ten
-   rooms hanging below the water country, two mouths (under the undertow,
-   under the weir — in one way, out the other). SCHEDULED like the bell
-   (tides don't roll dice): roughly four a day, 5–7h apart. Telegraph 3min:
-   the drips drum and everything living CLIMBS (wander bias up — their
-   flight past you is the warning). Rising: one level per minute, cradle
-   first; flooded rooms kill torches (the lantern survives a wade), refuse
-   rest, and scatter what can't swim; the drowners' hour — everything of
-   theirs in the deep ranges wide. A high tide (1 in 4) takes even the
-   breathing-hall — the one air pocket, the camp you trust until you
-   shouldn't. Crest holds ~8min, then the water lets go all at once:
-   half the floor loot of every drowned room washes one level DOWN (why
-   the still-cradle's floor is a midden), and the wing's fishing pools
-   (eel-run, breathing-hall — new FISHING_DEEP waters) forget every angler.
-   The wing is DEEP by every rule: chest tiers roam it, the exhale and the
-   marrow-song reach it, the cold bites it. Not yet built on top: pack
-   weight slowing the wade, exits sealing/float-ups, the undertow-grasper
-   (watch list — its home is ready).
-
-**Variety shelf (cheap follow-ons):** the warden's muster (patrol surge; a
-wall and a window at once), and the stillness (everything everywhere sleeps
-deeper for a few minutes — the marrow-song already plays this card for the
-deep's hollow).
+- **The undertow-grasper** (anti-turtle, designed not built) — a drowner cousin
+  whose grab comes AROUND the shield; its Tideways home is ready. Build only if
+  the pavise-turtle proves too safe in play (see watch list).
+- **Pack weight slowing the wade / exits sealing on flood / float-ups** — the
+  tide's deferred second layer.
+- **The breach — PARKED** (rome: "doesn't fit"). Fully built and idle; its pool
+  ticket is one commented line in events.ts. Restore = uncomment.
+- **Variety shelf:** the warden's muster (patrol surge; a wall and a window at
+  once), and a general stillness (everything sleeps deeper for a few minutes —
+  the marrow-song already plays this card for the deep's hollow).
 
 ## Watch list (don't fix until play says so)
 
@@ -192,9 +114,11 @@ deep's hollow).
 - **The rusted pick is a scrap faucet** — the renewable pick can be farmed for
   scrap (take, salvage, wait). Harmless at current scrap prices; if the scrap
   economy tightens, levers: salvage yield 0/1, slower regrow, or fence-only.
-- **The undertow-grasper** (anti-turtle, designed not built) — a drowner
-  cousin whose grab comes AROUND the shield. Build only if the pavise-turtle
-  proves too safe in play.
+- **The undertow-grasper** (anti-turtle) — build only if the pavise-turtle
+  proves too safe now that the shield wall costs a swing tax.
+- **Shield-wall drag (0.85) + block cap (30%)** — the fresh tuning. Watch
+  whether the wall-turtle is now a real trade-off or still dominant; the audit
+  says murder-vs-tank became a coin-flip, but play is the judge.
 - **Prices need players** — 063 killed the dominated buys; whether the curve
   is right waits on strangers with tender.
 
@@ -203,10 +127,10 @@ deep's hollow).
 Bleed and hobble are the two proven instances of the pattern (status + tell +
 cure path). The general framework — stacking statuses, cure-routing, mobs
 applying them — stays on paper until (1) the glanceable-status UX carries more
-than two tags comfortably and (2) the balance re-check above lands. When it
-opens, the on-brand growth is **poisons, tinctures, and set traps** (gritty
-survival, never magic) — including the parked deep-poison: a stacking drain
-the longer you linger, ticks decaying when you leave/rest.
+than two tags comfortably and (2) play validates the fresh combat numbers.
+When it opens, the on-brand growth is **poisons, tinctures, and set traps**
+(gritty survival, never magic) — including the parked deep-poison: a stacking
+drain the longer you linger, ticks decaying when you leave/rest.
 
 ## Extraction feel (rome-ranked above the MUD-flavor ideas)
 
@@ -217,38 +141,22 @@ the longer you linger, ticks decaying when you leave/rest.
   every gate. Highest leverage of the set.
 - **Task / bounty runs** — objectives that *force* insertion: retrieve a
   thing, reach a room, hunt a marked wanderer (rides the blood-on-killer
-  primitives).
+  primitives, now live).
 - **The seal as a vulnerable moment** — claiming becomes a channeled hold: a
   few exposed ticks, sound carrying, interruptible. The gate stops being a
-  safe button.
-- **Campers make noise** — stillness leaks sound (shifting, breathing, gear
-  creak) so gate-campers can't lurk silently; movement doesn't. Rides the
-  sound-carries primitive.
+  safe button. *(Not built.)*
+- **Campers make noise** *(reactive half SHIPPED — `listen` surfaces a still
+  camper, and a heavy pack betrays them even standing)*. The open end is the
+  *passive* broadcast: stillness that leaks to a whole room's ambient without
+  anyone pressing an ear.
 
-## Phase 7 — Population systems (gated on actual players) — NOT STARTED
+## Population systems (gated on actual players)
 
-Do NOT build these before there are people; they emerge from density:
+PvP is out of this bucket — it shipped (4196f5f), because the whole point was
+that it emerges the moment two players share a room, and the anti-grief stack
+is sim-native (no audience required to be correct). The rest genuinely need
+density and do NOT get built before there are people:
 
-- **PvP** — cooperate / ignore / rob / kill when paths cross. Needs an economy
-  worth robbing and enough players that murder has witnesses. Under the
-  extraction rule a player-kill drops everything, signed included — murder is
-  the only way to truly lose what's yours.
-  **Anti-grief stack (all sim-native, no aggressor-punishing dice):**
-  1. *Witnesses* — combat sound already carries through walls.
-  2. *Blood on the killer, not names on the wall* — the world doesn't snitch.
-     Death traces stay victim-only; the evidence walks around on the murderer:
-     "He is bloody from a fight — it looks fresh." Man-blood reads different
-     from creature blood, ages through buckets, stacks for repeat killers.
-     Finding out who did it means meeting them and looking close.
-  3. *The bloodstain as scent* — creatures aggro known killers on sight, the
-     warden's patrol becomes a manhunt, the shrine refuses them.
-  4. *Fat-tailed combat* (shipped) — every attack is a gamble; fumble and your
-     blade is on the floor for the taking.
-  5. *Fresh keys are weak* — power comes only from carried gear, never granted
-     to new spawns. Throwaway identity = throwaway threat. This is the sybil
-     resistance; hold it forever.
-  Pre-wired and waiting: VITALS_PVP (0.5% armored → 1% naked, one call to
-  wire) and the man-catcher's hobble-never-hold rule.
 - **Economy** — scarcity already exists; trade verbs when there are traders.
   Zaps enter here (`nostr-lightning/` is on the shelf).
 - **The black market / player trade layer** — hoarded gear re-enters
@@ -258,8 +166,14 @@ Do NOT build these before there are people; they emerge from density:
 - **Factions** — earned names, not menus: bandit is what you did.
 - **Reputation** — grudges prove the primitive; extend to the world (guards,
   towns) when towns exist.
-- **Events** — migrations already are small events; big ones (flood, caravan,
-  eclipse) once there's an audience to surprise.
+
+*PvP's anti-grief stack, now live, for reference when the rest of this bucket
+builds on it: witnesses (combat sound carries), blood on the killer (not names
+on the wall — the world doesn't snitch), the bloodstain as scent (creatures
+aggro known killers), fat-tailed combat (fumble and your blade's on the floor),
+and weak fresh keys (the sybil wall — power is carried, never granted). A
+player-kill drops everything, signed included — murder is the only way to truly
+lose what's yours.*
 
 ## Design lineage — what to steal, what to avoid *(2026-07-09)*
 
@@ -311,10 +225,9 @@ Directions rome likes and wants held. Design only; no code until he says go.
   retrofit onto the 4s round.
 - **Idle kick** — boot truly-AFK players after N minutes so a forgotten tab
   doesn't hold a live session.
-- **Communication layer** — `tell`/`shout` (sound-carries proves the
-  primitive), channels, emotes. Most on-brand: async **notes / dead-drops**
-  (a written scrap left in a room for whoever comes next) and a shout that
-  travels. Low-tech, high-flavor.
+- **Communication layer** — `tell` is the remaining gap (`shout` and
+  sound-carries shipped). Most on-brand: async **notes / dead-drops** (a
+  written scrap left in a room for whoever comes next). Low-tech, high-flavor.
 - **Guest-key wrapping at rest** *(decided AGAINST 2026-07-09, reasoning
   recorded)*: wrapping the localStorage nsec with an IndexedDB CryptoKey buys
   little — XSS, extensions, and disk malware all defeat it. The real walls are

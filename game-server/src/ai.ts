@@ -10,7 +10,7 @@ import { cap } from "./zone-util";
 import * as events from "./events";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS,
-  CUDDLE_ODDS, CUDDLE_COLD_MULT,
+  CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
   PREYS_ON, PREDATION_ODDS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
   RUNNERS, BROODERS, SENTINELS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP,
@@ -467,12 +467,13 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // in, but it does NOT throw itself into the fight; it arrives dormant and
       // strikes only if you MOVE while it's there (wakeListeners) or it already
       // holds a grudge (handled just above). Creepier, and truer to what it is.
-      // The scary rat is exempt too (rome's ruling): it comes to LOOK — a
-      // scavenger's curiosity — but it doesn't throw itself into a brawl
-      // between bigger things. It arrives, watches, and keeps its own counsel.
-      // Every other investigator (fleet-rat included) still pays the price.
+      // The scary rat (fleet-rat, "a scary rat") is exempt too (rome's ruling):
+      // it comes to LOOK — a scavenger's curiosity — but it doesn't throw itself
+      // into a brawl between bigger things. It arrives, watches, and keeps its
+      // own counsel. Every other investigator — the scabby rat ("rat") very
+      // much included — still pays the price and joins in.
       if (investigating && !creature.target && !LISTENERS.has(tmpl.id)
-          && tmpl.id !== "rat") {
+          && tmpl.id !== "fleet-rat") {
         for (const s of z.sessions.values()) {
           if (s.roomId === creature.roomId && z.inCombat(s)) {
             creature.target = s.pubkey;
@@ -662,23 +663,115 @@ export function hyenaGuardsMeal(z: ZoneDO, creature: Creature): boolean {
 export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): void {
     const list = z.traces.get(creature.roomId);
     if (!list) return;
-    const idx = list.findIndex((tr) => CORPSE_TRACES.has(tr.kind));
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    // The grave-hyena will not eat its own kind — it keens over them instead
+    // (see mourns). It will still strip any other corpse to the bone.
+    const spareKin = creature.templateId === "grave-hyena";
+    const idx = list.findIndex((tr) => CORPSE_TRACES.has(tr.kind) && !(spareKin && tr.label === tmpl.name));
     if (idx === -1) return;
+    const eaten = list[idx];
     list.splice(idx, 1);
     if (list.length === 0) z.traces.delete(creature.roomId);
-    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
     creature.hunger = 0;
     creature.hp = Math.min(tmpl.max_hp, creature.hp + SCAVENGER_HEAL);
     const before = creature.fed ?? 0;
     creature.fed = before + 1;
     if (!silent) {
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} tears into the dead, feeding.`, undefined, false);
+      // The dire-hyena feeding on a fallen hyena — its own included — is a colder
+      // thing than gnawing a rat. Name it when it happens.
+      const hyenaKin = new Set([...SCAVENGERS].map((id) => z.world!.mobTemplates.get(id)?.name));
+      const ownDead = creature.templateId === "dire-hyena" && !!eaten.label && hyenaKin.has(eaten.label);
+      z.roomFeed(creature.roomId, ownDead
+        ? pick([
+            `${cap(tmpl.name)} drags the fallen ${eaten.label!.replace(/^(a|an|the)\s+/i, "")} close and feeds. The pack is nothing to it.`,
+            `${cap(tmpl.name)} sets to its own dead without a pause — it does not care what it was.`,
+          ])
+        : `${cap(tmpl.name)} tears into the dead, feeding.`, undefined, false);
       z.roomSound(creature.roomId, "Wet, cracking sounds drift {dir}.");
       if (before < SCAVENGER_BOLD_AT && creature.fed >= SCAVENGER_BOLD_AT) {
         z.roomFeed(creature.roomId, `${cap(tmpl.name)} lifts its head, gorged and unafraid.`, undefined, false);
       }
       z.refreshRoomCtx(creature.roomId);
     }
+  }
+
+  // The grave-hyena's grief: it finds one of its own kind dead, throws its head
+  // back, and LAUGHS — a high, broken keening with no mirth in it — and holds
+  // over the body a while before it drifts off. It never eats its own (that skip
+  // lives in scavengerFeeds); the dire-hyena, which does, gets no such moment.
+  // Pure flavor — no grudge, no mechanic — just the sound of a thing that mourns
+  // like it's mocking. Each body is keened once.
+export function mourns(z: ZoneDO, creature: Creature, now: number): void {
+    if (creature.templateId !== "grave-hyena" || creature.target) return;
+    const list = z.traces.get(creature.roomId);
+    if (!list) return;
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    const kin = list.find(
+      (tr) => CORPSE_TRACES.has(tr.kind) && tr.label === tmpl.name && now - tr.at < MOURN_FRESH_MS,
+    );
+    if (!kin || creature.mournedAt === kin.at) return;
+    creature.mournedAt = kin.at;
+    creature.nextWanderAt = Math.max(creature.nextWanderAt, now + MOURN_VIGIL_MS); // holds its vigil
+    const dead = tmpl.name.replace(/^(a|an|the)\s+/i, "");
+    z.roomFeed(creature.roomId, pick([
+      `${cap(tmpl.name)} noses at the dead ${dead}, throws its head back, and laughs — a high, broken sound with no mirth anywhere in it.`,
+      `${cap(tmpl.name)} circles the fallen ${dead} and keens, that awful laugh climbing and cracking apart.`,
+      `${cap(tmpl.name)} stands over its own dead and laughs, low and wet, like something coming loose.`,
+    ]), undefined, false);
+    z.roomSound(creature.roomId, "A high, broken laughing carries {dir}, and stops all at once.");
+    z.refreshRoomCtx(creature.roomId);
+  }
+
+  // The dead remember their own. A hollow thing, idle in a room where a wanderer
+  // truly fell, works its jaw and breathes the name off the bloodstain. A player
+  // death stamps a blood trace labelled with the fallen's name (zone's death
+  // handler); a creature death labels with its TEMPLATE name — so a blood label
+  // that matches no creature is a person who died here. If nobody has, the dead
+  // reach for a name of their own, too worn to catch. And on the rare, terrible
+  // occasion the name it breathes is the listener's OWN — you died in this room
+  // once — it says it to your face. Pure flavor: no grudge, no mechanic. It only
+  // speaks when something living is there to hear, and only in the quiet (no
+  // target) — a wight mid-lunge does not reminisce. One name, then a long hush.
+export function deadRemembers(z: ZoneDO, creature: Creature, now: number): void {
+    if (!HOLLOW.has(creature.templateId) || creature.target) return;
+    if (creature.murmuredAt && now - creature.murmuredAt < MURMUR_COOLDOWN_MS) return;
+    const ears = [...z.sessions.values()].filter(
+      (s) => s.roomId === creature.roomId && !z.outOfWorld(s) && s.hp > 0,
+    );
+    if (ears.length === 0 || !chance(MURMUR_ODDS)) return;
+    const world = z.world!;
+    const tmpl = world.mobTemplates.get(creature.templateId)!;
+    const beast = tmpl.name.replace(/^(a|an|the)\s+/i, "");
+    // A blood trace whose label names no creature is a fallen wanderer.
+    const creatureNames = new Set([...world.mobTemplates.values()].map((t) => t.name));
+    const fallen = (z.traces.get(creature.roomId) ?? []).filter(
+      (tr) => tr.kind === "blood" && !!tr.label && !creatureNames.has(tr.label),
+    );
+    creature.murmuredAt = now;
+    if (fallen.length > 0) {
+      const name = pick(fallen).label!;
+      const you = ears.find((s) => s.name === name);
+      if (you) {
+        // The gut-punch: it breathes the name of your own last death, to your face.
+        z.send(you, pick([
+          `${cap(tmpl.name)} turns its blind skull toward you, works its jaw, and breathes a name into the dark — YOUR name. Something died in this room once, wearing it.`,
+          `The ${beast} shapes a word, dry and soft, the way the dead name the dead — and the name it says is yours. You died here once.`,
+        ]), "seize");
+        for (const s of ears) if (s !== you) z.send(s, `${cap(tmpl.name)} breathes a name into the dark — ${name} — and ${you.name} goes very still.`);
+      } else {
+        z.roomFeed(creature.roomId, pick([
+          `${cap(tmpl.name)} works its jaw and breathes a name into the dark — ${name} — soft, the way you'd call for someone who isn't coming.`,
+          `The ${beast} shapes a word, dry as old paper: ${name}. Someone fell in this room wearing it.`,
+        ]), undefined, false);
+      }
+    } else {
+      // No one has died here of late — it reaches for a name of its own.
+      z.roomFeed(creature.roomId, pick([
+        `${cap(tmpl.name)} works its jaw around a name too worn to catch — its own, once, perhaps.`,
+        `The ${beast} breathes a name into the dark. No one by it is here to answer, and it does not seem to expect one.`,
+      ]), undefined, false);
+    }
+    z.roomSound(creature.roomId, "A dry voice shapes a word {dir}, and lets it go.");
   }
 
   // The soft beat: a rat that finds you resting may decide you are furniture —
