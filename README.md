@@ -1,29 +1,40 @@
 # NOMAD
 
-**Nostr Open Multi-user Adventure Dungeon** — a living text dungeon where
-Nostr is the wire protocol, not just the login.
+**Nostr Open Multi-user Adventure Dungeon** — a living text dungeon that
+keeps its identity, its loot, and its voice on Nostr. Your key is your
+character. The dungeon signs what you carry out with a key of its own, and
+narrates its dead and its arrivals to the relays as they happen.
 
 **Play now:** https://nomadmud.com — no signup. A key is minted into your
 pocket the moment you arrive; bring your own npub if you have one.
 
 **The dungeon itself is on Nostr:**
 `npub1n7uszpehfs385qfpe636cvmxvwqyh32qprd4uawfr2kunguh926q9ya2fq`
-Every room narrates itself to relays as it happens — subscribe to kind
-`24913` from that key and watch the skeleton pace the armory before you
-ever log in.
+It speaks the beats a distant watcher would care about — a fight, a death,
+an arrival — to the relays as they happen. Subscribe to kind `24913` from
+that key and watch the world move. (It's an *ephemeral* kind: relays don't
+store it and ordinary clients won't render it, so it's a live spectator
+layer you subscribe to, not a timeline you scroll. Idle wandering stays
+home — that was flooding the relays. Names are scrubbed on the way out:
+the world doesn't snitch.)
 
 ## What makes it different
 
 - **Your key is your character.** Anyone with an npub already has a
   wanderer waiting at the gate. No account to make, none to lose.
-- **It's a simulation, not a lobby.** Creatures hunt, remember grudges,
-  migrate, and starve whether anyone is watching or not. Wounds don't
-  close on their own. The dead stay dead until something new finds its
-  way in.
+- **It's a simulation, not a lobby.** Creatures sleep, hunger, migrate,
+  remember grudges, and hunt each other in rooms nobody is standing in.
+  Wounds don't close on their own. Walk away and the world moves on
+  without you — it fast-forwards what it owed you while you were gone.
 - **Loot is a certificate, not a database row.** The dungeon signs what
   you extract (kind `1573`, serial-numbered). Anyone can verify it against
-  the dungeon's key — even if this server vanishes. What you carry is
-  provisional until the gate seals it; what you die holding, scatters.
+  the dungeon's key — even if this server vanishes. But the seal is title,
+  not armour: everything you die holding scatters where you fall, sealed
+  or not. Only what you banked at a gate outlives you.
+- **Other wanderers are the sharpest thing down there.** PvP is live and
+  it isn't gentle: kill someone and you take everything they were
+  carrying. Get killed and you wake at a gate with nothing. The only
+  defence is banking what you can't afford to lose.
 - **Nothing about you is published unless you say so.** `publish sheet`
   and `publish <item>` are the player's act. Supply stays auditable
   through a blinded mint counter (`/mints` — serial, time, rarity, never
