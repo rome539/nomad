@@ -6,8 +6,8 @@ export const PAGE = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>NOMAD — the Door</title>
 <meta name="description" content="A living text dungeon on Nostr. Your key is your character. The dead stay dead.">
-<link rel="icon" type="image/png" href="/icon.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">
+<link rel="icon" type="image/png" href="/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#16120c">
 <meta property="og:type" content="website">
