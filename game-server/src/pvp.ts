@@ -11,7 +11,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { chance, randInt, pick } from "./rng";
-import { recordPvpKill } from "./world";
+import { recordPvpKill, deedsBump } from "./world";
 import {
   STANCE, RECKLESS_MISS, ARMOR_K, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE,
   WOUNDED_FRACTION, WOUNDED_DMG_MULT, WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS,
@@ -209,6 +209,8 @@ async function swingAt(
         ? z.vitalsHit(vkill, defender.name)
         : `${z.playerHit(weapon, defender.name)} for ${dmg} — and ${defender.name} goes down.`);
     if (weapon) await z.wear(attacker, weapon.carried, weapon.tmpl, WEAPON_WEAR);
+    // A man-kill goes into the steel like any other — heavier, if anything.
+    if (weapon?.carried.loreId) await deedsBump(z.env.DB, weapon.carried.loreId, "kills");
     return;
   }
   const big = flourish !== "." || opts.ambush || staggerHit;

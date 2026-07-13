@@ -38,6 +38,15 @@ and the population layer that only real players can fill.*
   verbs.ts, chips in chips.ts, light in light.ts, maps/journal in lore.ts,
   creature behavior in ai.ts, gate trade in gate.ts, events in events.ts,
   PvP in pvp.ts, constants in zone-data.ts.
+- **Floor renewal (agreed 2026-07-12):** **consumables and the starter
+  loose-rock regrow deterministically** — the world stays livable and no fresh
+  key ever spawns weaponless or lightless (torch stays reliable too). **All
+  other renewable floor GEAR appears by RNG-cadence** — a slow tick rolls a low
+  chance to place the piece if it's absent, so "sometimes there" is dice, never
+  a scheduled take-wait-repeat faucet; keep any built-in ceiling (hammerstone's
+  `STONE_GROUND_CAP`). **Mob drops are unchanged** (already per-kill dice). The
+  faucet was the root of un-scarce gear ([[nomad-loot-economy]]); this is the
+  general cure.
 
 ## Open calls (awaiting rome)
 
@@ -59,22 +68,23 @@ and the population layer that only real players can fill.*
   get out ahead of it. Reuses grudges + `curious` tracking + the blood-on-killer
   scent primitives that PvP just proved. Also the natural long-term raid clock
   for the shallow keep. (rome: "i love this.")
-- **Storied gear — items with biographies** *(the identity feature; rome chose
-  look-item first, this is the next reach)*. The answer to "how does MUD +
-  extraction distinguish itself": not more economy, a **meaning layer on top of
-  it**. In Tarkov every sword is fungible; in a classic MUD every sword is
-  static. NOMAD stands on the intersection neither can reach — one persistent
-  world, signed serialized loot, condition as narrative, death-drops — so an
-  item can have a **history** the dungeon attests. The inversion that makes it
-  sing: you don't lose your gear when you die — **your gear loses you**, and
-  carries you as a scar. "This notched greatsword has 214 kills, went to the
-  King twice, and its last three owners died in the Sunless Deep." Story is the
-  one currency that can't be farmed, duped, or inflated.
-  *Build shape (cheap):* a deeds-ledger keyed by sealed serial (small D1
-  table): kills, depths, owners, owner-deaths while carried. Surface it in
-  `look`/the journal; let 31573/1573 carry it for bazaar interop. The substrate
-  can land pre-players so day-one history is real; the payoff is
-  population-gated.
+- **Storied gear — THE ENGRAVING (BUILT 2026-07-13, migration 077, in tree
+  unshipped)**. The identity feature landed. Key architectural finding: the
+  mint SERIAL couldn't carry the biography — title cracks at every transfer
+  (drop/death/trade, the 2026-07-05 law, unchanged) — so the FIRST sealing
+  **engraves** the piece (lore_id, gear only) and the deeds-ledger keys on the
+  mark, which endures through every hand and floor (groundLore, the
+  wear-survives-drop pattern; instanced like wear, not like journals).
+  Ledger: **kills** (equipped weapon, PvE + PvP), **descents** (carried down
+  past the black door), **owners** (a NEW hand sealing a marked piece grows
+  the chain), **deaths** (an owner dying while it's carried — the scar,
+  written at the scatter). Surfaced in `look` (carried, lockbox, and THE
+  FLOOR — the murdered man's sword talks). Fates: a scavenger dragging a
+  marked piece off ends its story (the beast doesn't read); the fence files
+  the mark off (trade/salvage orphan the ledger — laundering, by design).
+  **Not in v1, deliberately:** deeds riding the 31573 loot cert (bazaar
+  interop — add when the bazaar is real), and a journal surface. The payoff
+  stays population-gated; the substrate is live so day-one history is real.
 - **Fire & light follow-ons** (the 057 arc's remaining open ends):
   - `search` for hidden exits (dark hides them; light + searching finds them).
     Not built (zone-data.ts still flags it a follow-on).
@@ -83,13 +93,69 @@ and the population layer that only real players can fill.*
 - **Shallows heat map** — mobs harden where they're farmed (+1–2 HP, not
   damage), decaying back for fresh players. Unblocked since curved armor.
 
+## Armor pass — filling the defensive ladder *(BUILT 2026-07-13 — migration 075 + ward wiring + the RNG floor-renewal engine, in tree unshipped; no reseed needed, live worlds self-lay new ground spawns)*
+
+rome flagged the game is short on ARMOR PIECES (not armor value). The data
+confirms it: weapons have 7–9 options per rarity tier (31 total); every armor
+slot has ~⅓ that depth, and the TOP end collapses — helm/feet/cloak each have a
+single rare and/or epic, so the endgame is BiS-per-slot with no build choice.
+Worse, the anti-stun build tops out at a *common* coif, and the sneak/anti-bleed
+builds have no rare/epic pieces at all. Fix = a content migration bringing each
+thin slot to ~10 (≤8 per tier), each new piece carrying an EXISTING ward so
+every build gets a full ladder. Targets: helm 6→10, feet 6→10, cloak 7→10,
+shield 9→10; body armor already at 12.
+
+**The 14 pieces (12-piece ladder + 2 guardroom finds):**
+
+| slot | rarity | piece | arm | identity (existing ward) | proposed home |
+|---|---|---|---|---|---|
+| helm | unc | a riveted coif | 1 | MAILWARD (bleeds) | bone-knight |
+| helm | rare | a padded greathelm | 2 | PADDED (stun) | warden-captain |
+| helm | rare | a shroud-hood | 1 | QUIET (sneak) | cutpurse / thief-door |
+| helm | epic | a bone-barred visor | 3 | WARDHIDE (wounds) | marrow-king / deep |
+| feet | common | cracked-leather shoes | 1 | raw filler | grounds spawn |
+| feet | unc | hobnailed boots | 1 | raw | warrens |
+| feet | rare | eel-hide treads | 1 | SLICK (anti-seize) | drowned / Tideways |
+| feet | epic | shadow-step boots | 2 | QUIET (sneak) | pale-stalker |
+| cloak | common | a moth-eaten mantle | 1 | raw filler | grounds spawn |
+| cloak | epic | a chain-lined mantle | 2 | MAILWARD (bleeds) | warden-captain |
+| cloak | epic | a drowned-diver's shroud | 1 | QUIET (deep sneak) | deep |
+| shield | common | a lashed-plank shield | ~.08 block | raw filler | fence / grounds |
+| helm | unc | a watchman's kettle-helm | 2 | raw (guard kit) | **guardroom** ground-spawn |
+| cloak | unc | a warden's watch-mantle | 2 | raw (guard kit) | **guardroom** ground-spawn |
+
+Per-slot result: helm 2/3/3/2, feet 2/3/3/2, cloak 2/2/3/3, shield 2/4/2/2 (plus
+the 2 guardroom uncommons nudging helm/cloak to 11). No tier over 8, and the
+anti-stun / sneak / anti-seize / anti-bleed / wards-wounds builds each pick up
+the top-end piece they were missing.
+
+**Renewal — RESOLVED (loot-economy talk 2026-07-12):** the guardroom pieces (and
+any renewable floor gear) use the **RNG-cadence** model from the Floor-renewal
+standing law above — a slow tick rolls a low chance to hang the kit on the pegs
+if it's absent, so it's dice, not a faucet. Same engine change flips **rusted-pick**
+and **hammerstone** off their deterministic timers onto RNG (hammerstone keeps
+its `STONE_GROUND_CAP`); **loose-rock, torch, and all consumables keep
+regrowing**. Acquisition for the ladder pieces: thematic mob drops for the
+warded ones (ward matches the beast), fence/grounds for the raw commons + plank
+shield; the 2 guardroom uncommons are RNG floor spawns in `guardroom`.
+
+**Build cost:** an `applyRegrow` engine change (RNG-cadence for gear) + the
+pick/hammerstone conversions + a CONTENT MIGRATION (14 new item_templates + drop
+wiring) that NEEDS A SEED — write it, verify local, leave the remote seed for
+rome to trigger (never reseed while he plays).
+
 ## Room events — the world's weather *(SHIPPED — events.ts; kept here for the open ends)*
 
 The arc landed whole: twelve events on two clocks (the scheduled bell + one
 weighted roll every 3–6h), each obeying **telegraph → active window →
 aftermath**, systemic-only, with mobs as citizens of the weather. THE TIDE is
-the crown (the Tideways wing floods bottom-up on its own schedule). Full spec
-lives in git and the memory ship log. What's still *not* built on top:
+the crown (the Tideways wing floods bottom-up on its own schedule). **Event 13,
+THE GLOAM, built 2026-07-13 (in tree):** the dark itself walks the keep — one
+interior hall at a time is true dark (rides `z.isDark`, the new choke-point
+over DARK_ROOMS), drifting room to room; a torch holds it off, the living flee
+it, the HOLLOW keep walking inside it. Never outdoors, never a gate room.
+Full spec lives in git and the memory ship log. What's still *not* built on
+top:
 
 - **The undertow-grasper** (anti-turtle, designed not built) — a drowner cousin
   whose grab comes AROUND the shield; its Tideways home is ready. Build only if
@@ -101,6 +167,38 @@ lives in git and the memory ship log. What's still *not* built on top:
 - **Variety shelf:** the warden's muster (patrol surge; a wall and a window at
   once), and a general stillness (everything sleeps deeper for a few minutes —
   the marrow-song already plays this card for the deep's hollow).
+
+## The small lives *(BUILT 2026-07-13, in tree unshipped — code only, no migration)*
+
+Sleep, thirst, calls, and fear — per creature, never blanket; the refusals are
+design (the dead never sleep, never drink, never call). All guards from the
+consequences audit are law in the code:
+
+- **Sleep:** rats doze anywhere quiet, the cutpurse only in his own crack,
+  hyenas drop off on a full belly (the meal-guard's other face). Nothing naps
+  with a stranger present — you only ever *walk in* on a sleeper. Waking is
+  wakeListeners' one law (entry/noise odds, QUIET gear, the bell); a blow
+  wakes instantly and rides the existing unaware/ambush multiplier — one
+  heavy blow, never a coup de grace (the sentinel rouse law). Scatter events
+  (gloam, boil, Gaunt) and teeth all wake. Sleepers read plainly on look and
+  to a pressed ear.
+- **Thirst:** hyenas only — a destination habit (WATER_ROOMS), tether-bound
+  (no territory leak), one drinker at a hole, rain skips it. Learn the rhythm
+  and the waterhole is ambush ground — theirs and yours.
+- **The call-bus:** one primitive, three meanings. Prey calls AWAY (a rat
+  fleeing a player squeals; the warren nearby fear-marks the room and flows
+  off). Predators call TOWARD (a feeding grave-hyena laughs ONE adjacent
+  packmate in; the dire is a loner). Thieves WARN (an escaped cutpurse
+  whistles; the dead tell no one). **The hard law: a call never triggers a
+  call** (calledTo guard) and calls never ride creatureNoise — no cascades.
+- **Place-fear:** avoids-memory per creature, decays, dies with the creature
+  (migrants arrive naive — fear can't be farmed into a safe corridor). Home is
+  exempt; fear never strands. **Lurkers read traffic instead:** every few
+  hours an unseen one shifts its ambush to the born-dark room (tether-bound)
+  with the freshest footprints — vary your route. Never moves under an eye.
+
+Deferred from the same design talk: fleet-rat play (pure flavor), scavenger
+killing-floor rounds (mostly covered by the existing corpse-smell wander).
 
 ## Watch list (don't fix until play says so)
 

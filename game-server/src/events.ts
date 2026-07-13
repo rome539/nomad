@@ -37,6 +37,7 @@ import {
   TIDE_EVERY_MIN_MS, TIDE_EVERY_MAX_MS, TIDE_FIRST_MIN_MS, TIDE_FIRST_MAX_MS, TIDE_GRACE_MS,
   TIDE_TELEGRAPH_MS, TIDE_STEP_MS, TIDE_CREST_MS, TIDE_AFTERMATH_MS, TIDE_SILT_ODDS,
   BROODERS, SENTINELS, DROWNERS, DEEP_ROOMS,
+  GLOAM_TELEGRAPH_MS, GLOAM_STEP_MS, GLOAM_ACTIVE_MS, GLOAM_AFTERMATH_MS,
 } from "./zone-data";
 
 // An idle arc waits here until the roll (or the bell's hours) wakes it.
@@ -46,7 +47,7 @@ const NEVER = 9_000_000_000_000_000;
 // the loosed Gaunt the rarest. The bell is NOT here — it keeps its own hours.
 const POOL: [string, number][] = [
   ["rain", 3], ["boil", 2], ["wake", 2], ["want", 2], ["lights", 2], ["crows", 2],
-  ["exhale", 2], ["song", 2], ["fog", 2], ["cold", 2], ["escape", 1],
+  ["exhale", 2], ["song", 2], ["fog", 2], ["cold", 2], ["gloam", 2], ["escape", 1],
   // ["breach", 1], — PARKED (rome, 2026-07-11: "park the breech"). The whole
   // arc (tickBreach, BREACH_PAIRS, the wall prose) stays built and idle;
   // restoring it is uncommenting this ticket.
@@ -80,6 +81,22 @@ export function muddy(z: ZoneDO, roomId: string): boolean {
 // not den-country — the warrens don't hear it, and the deep never does.
 export function keepRoom(z: ZoneDO, roomId: string): boolean {
   return z.regionOf(roomId) === "upper" && !OUTDOOR_ROOMS.has(roomId) && !WARRENS_ROOMS.has(roomId);
+}
+
+// Is the gloam ON this room right now? The one room it holds is TRUE dark —
+// z.isDark ORs this in with DARK_ROOMS, so every blind rule (look, chips,
+// torch prose, lurker law) applies without knowing the dark can walk.
+// The room rides EventState.data: a deploy mid-drift doesn't blink it out.
+export function gloamed(z: ZoneDO, roomId: string): boolean {
+  const st = z.events.get("gloam");
+  return !!st && st.phase === "active" && st.data === roomId;
+}
+
+// Where the gloam may stand or step: the keep's interior halls, never a gate
+// room (no fresh key wakes blind), never under the sky, never a hideaway —
+// the sanctuary promise ("the dungeon can't reach you") covers the dark too.
+function gloamCan(z: ZoneDO, roomId: string): boolean {
+  return keepRoom(z, roomId) && !z.world!.entryRooms.has(roomId) && !z.world!.safeRooms.has(roomId);
 }
 
 // While the bell rings the keep hears EVERYTHING (a bell outshouts felt
@@ -245,6 +262,11 @@ export function skyClause(z: ZoneDO, roomId: string): string {
     }
   }
   if (keepRoom(z, roomId)) {
+    const gst = z.events.get("gloam");
+    if (gst && gst.data === roomId) {
+      if (gst.phase === "active") return " The dark owns this room — a black no window argues with, and it moves like it means to stay.";
+      if (gst.phase === "telegraph") return " The light here has gone thin and brown, like water with something in it.";
+    }
     switch (phaseOf(z, "bell")) {
       case "telegraph": return " The echo of a bell-note hangs in the halls.";
       case "active": return " The bell is ringing, iron on iron; the keep is awake.";
@@ -431,13 +453,15 @@ function feedOutdoors(z: ZoneDO, line: string): void {
   feedWhere(z, (roomId) => OUTDOOR_ROOMS.has(roomId), line);
 }
 
-// A line to everyone standing in rooms the event can reach.
+// A line to everyone standing in rooms the event can reach. Every line through
+// here is the WORLD speaking — the "evt" tag colors it apart from creatures
+// and scenery (the omen voice, rome 2026-07-13).
 function feedWhere(z: ZoneDO, inRoom: (roomId: string) => boolean, line: string): void {
   const seen = new Set<string>();
   for (const s of z.sessions.values()) {
     if (seen.has(s.roomId) || !inRoom(s.roomId)) continue;
     seen.add(s.roomId);
-    z.roomFeed(s.roomId, line, undefined, false); // events are local news
+    z.roomFeed(s.roomId, line, undefined, false, "evt"); // events are local news
   }
 }
 
@@ -455,6 +479,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickSong(z, now);
   await tickFog(z, now);
   await tickCold(z, now);
+  await tickGloam(z, now);
   await tickBreach(z, now);
   await tickTide(z, now);
 }
@@ -659,14 +684,17 @@ async function tickBoil(z: ZoneDO, now: number): Promise<void> {
     }
     const entering = boilPath[boilIdx];
     boilStepAt = now + BOIL_STEP_MS;
-    z.roomFeed(leaving, "The rat-tide pours on and is gone, the last of them dragging their tails through the filth.", undefined, false);
-    z.roomFeed(entering, "A tide of rats bursts through — a river of teeth and tails, wall to wall.", undefined, false);
+    z.roomFeed(leaving, "The rat-tide pours on and is gone, the last of them dragging their tails through the filth.", undefined, false, "evt");
+    z.roomFeed(entering, "A tide of rats bursts through — a river of teeth and tails, wall to wall.", undefined, false, "evt");
     z.addTrace(entering, { kind: "scraps", at: now }); // a gnawed path
     // Everything standing there scatters ahead of it (the posted stay posted).
+    // The tide of teeth wakes anything dozing in its path.
     for (const c of [...z.creatures.values()]) {
       if (c.roomId !== entering || BROODERS.has(c.templateId) || SENTINELS.has(c.templateId)) continue;
       const tmpl = z.world!.mobTemplates.get(c.templateId)!;
       if (tmpl.is_boss) continue;
+      c.asleep = false;
+      c.sleepUntil = undefined;
       c.nextWanderAt = now; // it moves the moment the tick lets it
     }
   }
@@ -696,16 +724,17 @@ async function tickBoil(z: ZoneDO, now: number): Promise<void> {
     }
     case "telegraph": {
       // Lay the tide's path: from a random den-country room, a walk through
-      // the warrens only (rats don't open doors), as far as it reaches.
+      // the warrens only (rats don't open doors), as far as it reaches. Never
+      // a hideaway — the tide breaks around a sanctuary like everything else.
       const world = z.world!;
-      const starts = [...WARRENS_ROOMS].filter((r) => world.rooms.has(r));
+      const starts = [...WARRENS_ROOMS].filter((r) => world.rooms.has(r) && !world.safeRooms.has(r));
       const start = starts[randInt(0, starts.length - 1)];
       const path = [start];
       const seen = new Set(path);
       let at = start;
       while (path.length < 7) {
         const steps = (world.exits.get(at) ?? []).filter(
-          (e) => !e.key_item && WARRENS_ROOMS.has(e.to_room) && !seen.has(e.to_room),
+          (e) => !e.key_item && WARRENS_ROOMS.has(e.to_room) && !world.safeRooms.has(e.to_room) && !seen.has(e.to_room),
         );
         if (!steps.length) break;
         at = steps[randInt(0, steps.length - 1)].to_room;
@@ -723,7 +752,7 @@ async function tickBoil(z: ZoneDO, now: number): Promise<void> {
       boilStepAt = now + BOIL_STEP_MS;
       st.phase = "active";
       st.until = now + BOIL_STEP_MS * (path.length + 2); // a hard ceiling; the tide usually spends itself first
-      z.roomFeed(start, "The den mouths open at once and the rats POUR OUT — a tide of them, taking the corridor.", undefined, false);
+      z.roomFeed(start, "The den mouths open at once and the rats POUR OUT — a tide of them, taking the corridor.", undefined, false, "evt");
       z.addTrace(start, { kind: "scraps", at: now });
       break;
     }
@@ -778,6 +807,9 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
       if (tmpl) {
         for (const roomId of WARRENS_ROOMS) {
           if (risen >= WAKE_CAP) break;
+          // A death INSIDE a hideaway (a bleed-out behind the latch) never
+          // raises anything there — nothing stands up where nothing can enter.
+          if (z.world!.safeRooms.has(roomId)) continue;
           const held = z.traces.get(roomId);
           if (!held) continue;
           const idx = held.findIndex((t) => (t.kind === "blood" || t.kind === "remains") && now - t.at < WAKE_FRESH_MS);
@@ -799,7 +831,7 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
           });
           z.roomFeed(roomId, beacon.label
             ? `Where ${beacon.label} fell, the floor gives — and something older pulls itself up through it, dry and wrong.`
-            : "The floor gives, and something long-buried pulls itself up through it, dry and wrong.", undefined, false);
+            : "The floor gives, and something long-buried pulls itself up through it, dry and wrong.", undefined, false, "evt");
           z.roomSound(roomId, "Stone shifts {dir}, and something drags itself over it.");
           z.refreshRoomCtx(roomId);
           risen++;
@@ -826,7 +858,7 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
           if (s.target === c.id) s.target = null;
           if (s.seizedBy === c.id) s.seizedBy = undefined;
         }
-        z.roomFeed(c.roomId, "The risen thing stops mid-stride and drops — loose bones again, all at once.", undefined, false);
+        z.roomFeed(c.roomId, "The risen thing stops mid-stride and drops — loose bones again, all at once.", undefined, false, "evt");
         z.addTrace(c.roomId, { kind: "remains", at: now });
         z.refreshRoomCtx(c.roomId);
       }
@@ -915,7 +947,7 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
       // Someone put it down. The world can exhale.
       st.phase = "aftermath";
       st.until = now + ESCAPE_AFTERMATH_MS;
-      z.roomFeedAll("Far off, a long starving cry cuts short — and does not come again.");
+      z.roomFeedAll("Far off, a long starving cry cuts short — and does not come again.", "evt");
     } else {
       if (gaunt.nextWanderAt > now + ESCAPE_STRIDE_MAX_MS) {
         gaunt.nextWanderAt = now + randInt(ESCAPE_STRIDE_MIN_MS, ESCAPE_STRIDE_MAX_MS);
@@ -952,13 +984,14 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
       }
       st.phase = "telegraph";
       st.until = now + ESCAPE_TELEGRAPH_MS;
-      z.roomFeedAll("From somewhere far under the keep, a long, starving cry rolls up through the stone — and then the sound of something giving way.");
+      z.roomFeedAll("From somewhere far under the keep, a long, starving cry rolls up through the stone — and then the sound of something giving way.", "evt");
       break;
     }
     case "telegraph": {
       const tmpl = z.world!.mobTemplates.get(ESCAPE_TMPL)!;
-      const deep = [...z.world!.rooms.keys()].filter((r) => z.regionOf(r) === "deep");
-      const start = deep.length ? deep[randInt(0, deep.length - 1)] : pick([...WARRENS_ROOMS]);
+      // Never born inside a hideaway (the deep holds two; the fallback set one).
+      const deep = [...z.world!.rooms.keys()].filter((r) => z.regionOf(r) === "deep" && !z.world!.safeRooms.has(r));
+      const start = deep.length ? deep[randInt(0, deep.length - 1)] : pick([...WARRENS_ROOMS].filter((r) => !z.world!.safeRooms.has(r)));
       const id = uuid();
       z.creatures.set(id, {
         id,
@@ -970,7 +1003,7 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
         nextWanderAt: now + randInt(ESCAPE_STRIDE_MIN_MS, ESCAPE_STRIDE_MAX_MS),
         target: null,
       });
-      z.roomFeed(start, "Something comes up out of the dark — tall past reason, starved down to cords, moving like it owns every room it enters.", undefined, false);
+      z.roomFeed(start, "Something comes up out of the dark — tall past reason, starved down to cords, moving like it owns every room it enters.", undefined, false, "evt");
       z.refreshRoomCtx(start);
       st.phase = "active";
       st.until = now + ESCAPE_ACTIVE_MS;
@@ -985,7 +1018,7 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
           if (s.target === gaunt.id) s.target = null;
           if (s.seizedBy === gaunt.id) s.seizedBy = undefined;
         }
-        z.roomFeed(gaunt.roomId, "The gaunt thing lifts its head as if called — then turns, and pours itself back down into the dark.", undefined, false);
+        z.roomFeed(gaunt.roomId, "The gaunt thing lifts its head as if called — then turns, and pours itself back down into the dark.", undefined, false, "evt");
         z.refreshRoomCtx(gaunt.roomId);
       }
       st.phase = "aftermath";
@@ -1166,6 +1199,109 @@ function breachExitClose(z: ZoneDO, roomId: string, dir: string, toRoom: string)
   z.world!.exits.set(roomId, exits.filter((e) => !(e.dir === dir && e.to_room === toRoom)));
 }
 
+// ---- the gloam (the keep) ----
+// The dark itself gets up and walks the halls: one interior room at a time is
+// TRUE dark (z.isDark ORs it in with DARK_ROOMS), taken and left on the
+// gloam's own clock. A carried flame still holds it off — this is a moving
+// dark room, not the exhale. The living flee the room it takes; the HOLLOW
+// keep walking inside it, because bones don't need eyes — hearing that
+// measured tread continue in the black IS the event. Its room rides
+// EventState.data, so a deploy mid-drift doesn't blink the dark out; only
+// the step clock is module-local (a lost beat, nothing more).
+let gloamStepAt = 0;
+
+// The dark descends on a room: the lines, the blind warning, and the scatter
+// of everything living that can leave. Shared by the first fall and each step.
+function gloamTakes(z: ZoneDO, room: string, now: number, first: boolean): void {
+  z.roomFeed(room, first
+    ? "The light goes out of the room all at once — not snuffed, TAKEN. The dark that stands in its place is total."
+    : "The light dies. The dark comes down over the room like water closing, and it is total.", undefined, false, "evt");
+  for (const s of z.sessions.values()) {
+    if (s.roomId === room && !z.outOfWorld(s) && !z.carriesLight(s)) {
+      z.send(s, "The dark takes the room with you in it. Your own hands are gone. (a carried flame would hold it off)", "dmgin");
+    }
+  }
+  // The living clear out ahead of it; the hollow do not care. The dark
+  // arriving wakes a sleeper — nothing dozes through the light being taken.
+  for (const c of [...z.creatures.values()]) {
+    if (c.roomId !== room || HOLLOW.has(c.templateId) || BROODERS.has(c.templateId) || SENTINELS.has(c.templateId)) continue;
+    if (z.world!.mobTemplates.get(c.templateId)!.is_boss) continue;
+    c.asleep = false;
+    c.sleepUntil = undefined;
+    c.nextWanderAt = now;
+  }
+  z.refreshRoomCtx(room);
+}
+
+function endGloam(z: ZoneDO, st: EventState, now: number, room: string | null): void {
+  st.phase = "aftermath";
+  st.until = now + GLOAM_AFTERMATH_MS;
+  st.data = undefined;
+  if (room) {
+    z.roomFeed(room, "The dark thins, pales, and is only shadow again. The room does not feel finished with.", undefined, false, "evt");
+    z.refreshRoomCtx(room);
+  }
+}
+
+async function tickGloam(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("gloam");
+  if (!st) {
+    st = { phase: "idle", until: NEVER };
+    z.events.set("gloam", st);
+  }
+  // Mid-phase: the drift. It slides to an adjacent hall on its own clock.
+  if (st.phase === "active" && now >= gloamStepAt) {
+    if (!st.data) { endGloam(z, st, now, null); return; } // healed: active with no room (shouldn't happen — data persists)
+    const leaving = st.data;
+    const steps = (z.world!.exits.get(leaving) ?? []).filter(
+      (e) => !e.key_item && gloamCan(z, e.to_room),
+    );
+    if (!steps.length) {
+      // Cornered in a dead end: it spends itself where it stands.
+      endGloam(z, st, now, leaving);
+      return;
+    }
+    const entering = steps[randInt(0, steps.length - 1)].to_room;
+    st.data = entering;
+    gloamStepAt = now + GLOAM_STEP_MS;
+    z.roomFeed(leaving, "The dark lifts off this room like a held breath let go — the light comes back thin and grey.", undefined, false, "evt");
+    z.refreshRoomCtx(leaving);
+    gloamTakes(z, entering, now, false);
+  }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      // Pick where the light fails first.
+      const starts = [...z.world!.rooms.keys()].filter((r) => gloamCan(z, r));
+      if (!starts.length) { st.until = NEVER; return; }
+      st.data = starts[randInt(0, starts.length - 1)];
+      st.phase = "telegraph";
+      st.until = now + GLOAM_TELEGRAPH_MS;
+      z.roomFeed(st.data, "The light in this room is going wrong — thin and brown, like water with something in it.", undefined, false, "evt");
+      z.roomSound(st.data, "From {dir}, small quick feet — everything little is leaving a room at once.");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + GLOAM_ACTIVE_MS;
+      gloamStepAt = now + GLOAM_STEP_MS;
+      gloamTakes(z, st.data!, now, true);
+      break;
+    }
+    case "active": {
+      // The ceiling: the walk ends wherever it stands.
+      endGloam(z, st, now, st.data ?? null);
+      break;
+    }
+    case "aftermath": {
+      st.phase = "idle";
+      st.until = NEVER;
+      st.data = undefined;
+      break;
+    }
+  }
+}
+
 async function tickBreach(z: ZoneDO, now: number): Promise<void> {
   let st = z.events.get("breach");
   if (!st) {
@@ -1196,7 +1332,7 @@ async function tickBreach(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + BREACH_TELEGRAPH_MS;
       for (const roomId of [p.a, p.b]) {
-        z.roomFeed(roomId, "The wall lets out a long, grinding groan. Dust sifts from the joints in the stone.", undefined, false);
+        z.roomFeed(roomId, "The wall lets out a long, grinding groan. Dust sifts from the joints in the stone.", undefined, false, "evt");
         z.roomSound(roomId, "Stone grinds against stone {dir}, complaining.");
       }
       break;
@@ -1209,7 +1345,7 @@ async function tickBreach(z: ZoneDO, now: number): Promise<void> {
       breachExitOpen(z, p.a, p.aDir, p.b);
       breachExitOpen(z, p.b, p.bDir, p.a);
       for (const [roomId, dir] of [[p.a, p.aDir], [p.b, p.bDir]] as const) {
-        z.roomFeed(roomId, `The wall GIVES — stone comes down in a roar, and when the dust thins a ragged passage stands open ${dir}, where no passage was.`, undefined, false);
+        z.roomFeed(roomId, `The wall GIVES — stone comes down in a roar, and when the dust thins a ragged passage stands open ${dir}, where no passage was.`, undefined, false, "evt");
         z.roomSound(roomId, "Somewhere {dir}, a wall comes down in a long roar of stone.");
         z.refreshRoomCtx(roomId);
       }
@@ -1221,7 +1357,7 @@ async function tickBreach(z: ZoneDO, now: number): Promise<void> {
         breachExitClose(z, p.a, p.aDir, p.b);
         breachExitClose(z, p.b, p.bDir, p.a);
         for (const roomId of [p.a, p.b]) {
-          z.roomFeed(roomId, "With a grinding sigh the rubble shifts, settles, and chokes the gap shut. The wall has decided to be a wall again.", undefined, false);
+          z.roomFeed(roomId, "With a grinding sigh the rubble shifts, settles, and chokes the gap shut. The wall has decided to be a wall again.", undefined, false, "evt");
           z.refreshRoomCtx(roomId);
         }
       }
@@ -1345,7 +1481,7 @@ function tideWingFeed(z: ZoneDO, line: string): void {
 
 async function floodLevel(z: ZoneDO, rank: number, now: number): Promise<void> {
   for (const roomId of TIDE_LEVELS[rank] ?? []) {
-    z.roomFeed(roomId, "The water comes UP — black and fast, over your knees, your waist, and still rising.", undefined, false);
+    z.roomFeed(roomId, "The water comes UP — black and fast, over your knees, your waist, and still rising.", undefined, false, "evt");
     z.roomSound(roomId, "A great rush of water somewhere {dir}.");
     // What can't swim runs ahead of it (the posted and the drowned stay).
     for (const c of [...z.creatures.values()]) {

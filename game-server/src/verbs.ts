@@ -8,6 +8,7 @@ import type { CarriedItem, ItemTemplate } from "./world";
 import {
   setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
   journalLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
+  setItemLoreId, deedsBump,
 } from "./world";
 import { cap, dirPhrase, nameMatches, rollGearCondition } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
@@ -15,14 +16,15 @@ import * as ai from "./ai";
 import * as light from "./light";
 import * as events from "./events";
 import * as pvp from "./pvp";
+import * as lore from "./lore";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK, SLICK_BREAK_BONUS,
   PARTING_BLOW_CHANCE, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
-  CARVE_MAX_LEN, TWO_HANDED, RARITY_RANK, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
+  CARVE_MAX_LEN, TWO_HANDED, RARITY_RANK, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
-  DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, DARK_ROOMS, SHIELD_WALL, REFLECTION_LIE_ODDS,
+  DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS,
 } from "./zone-data";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
@@ -92,7 +94,7 @@ export function describePlayer(z: ZoneDO, session: Session, other: Session): str
   // looks a player up while blind (naming one must not confirm they're there).
   // This branch is defense-in-depth for any future caller, and it does NOT
   // echo the name back for the same reason.
-  if (DARK_ROOMS.has(roomId) && !z.carriesLight(session)) {
+  if (z.isDark(roomId) && !z.carriesLight(session)) {
     return "You can make out no one in this dark — shapes and breath and nothing you would swear to. (a light would show the room)";
   }
   // The fog blanks a man exactly as it blanks a beast (fogTell): you can see
@@ -196,7 +198,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // the same law, or you could read a beast's wounds and a blade's wear in pitch
   // black (rome, 2026-07-12). Your OWN pack still answers: you know your kit by
   // touch, so carried gear and the lockbox stay readable below.
-  const blind = DARK_ROOMS.has(session.roomId) && !z.carriesLight(session);
+  const blind = z.isDark(session.roomId) && !z.carriesLight(session);
 
   // Still water throws your face back — and once in a rare while, something that
   // isn't quite your face. Only where the water actually stands still (a fishing
@@ -238,7 +240,11 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   if (groundItem) {
     const t = world.itemTemplates.get(groundItem)!;
     const cond = z.isGear(groundItem) ? z.groundCond.get(`${groundItem}@${session.roomId}`) ?? 100 : undefined;
-    return z.send(session, t.description + z.itemStat(t) + wearClause(z, cond));
+    // A marked piece on the stones tells you whose it was — the "whose was
+    // this, and what killed them" read (077). The murdered man's sword talks.
+    const floorLore = z.groundLore.get(`${groundItem}@${session.roomId}`);
+    const floorLedger = floorLore ? await lore.gearLedger(z, floorLore) : "";
+    return z.send(session, t.description + z.itemStat(t) + wearClause(z, cond) + floorLedger);
   }
   const carried = z.findCarried(session, arg);
   if (carried) {
@@ -246,7 +252,8 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     return z.send(
       session,
       t.description + z.itemStat(t) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
-        + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : ""),
+        + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
+        + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : ""),
     );
   }
   // In the pitch dark you cannot roll-call the room: naming a wanderer must not
@@ -270,6 +277,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
         session,
         `You crouch and work the lockbox's latch. ${t.description}${z.itemStat(t)}${wearClause(z, z.isGear(inBox.itemId) ? inBox.condition : undefined)}`
           + (inBox.serial !== null ? ` The dungeon's seal is on it. (mint #${inBox.serial})` : "")
+          + (inBox.loreId ? await lore.gearLedger(z, inBox.loreId) : "")
           + " Back it goes, and the latch clicks home.",
       );
     }
@@ -524,6 +532,13 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const from = session.roomId;
   session.roomId = exit.to_room;
   z.addTrace(session.roomId, { kind: "passage", at: Date.now() });
+  // Past the black door, going DOWN: every engraved piece carried writes a
+  // descent into its ledger. The walk into the deep is a deed the steel keeps.
+  if (`${from}:${dir}` === DEEP_DOOR_KEY) {
+    for (const c of session.items) {
+      if (c.loreId) await deedsBump(z.env.DB, c.loreId, "descents");
+    }
+  }
   z.roomFeed(from, `${session.name} ${wasFighting ? "flees" : "leaves"} ${dir}.`);
   z.roomFeed(session.roomId, `${session.name} arrives.`, session.pubkey);
   // Status first, so the client learns the room's name before the room text
@@ -602,7 +617,11 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
     ? z.groundCond.get(condKey)!
     : rollGearCondition(tmpl.slot, false);
   z.groundCond.delete(condKey);
-  const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition };
+  // An engraved piece keeps its mark through the pickup — the ledger changes
+  // hands with the steel (a NEW owner only enters the chain when they SEAL it).
+  const loreId = z.groundLore.get(condKey);
+  z.groundLore.delete(condKey);
+  const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, loreId };
   const wasBurdened = z.burdened(session); // read before the pack takes it — the crossing gets a line
   session.items.push(carried);
   // A regrowing spawn (the shrine's key, a gate's rock) keeps exactly ONE
@@ -616,19 +635,26 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
     if (!stillHere && !alreadyRegrowing) {
       // Living forage grows back fast; dead stock (cured provisions nobody is
       // curing) trickles in on the slow clock — except carrion in carrion
-      // country, which the dying keep stocked. (The hammerstone never comes
-      // through here: the world mints it itself — zone tick, random haunt.)
+      // country, which the dying keep stocked. GEAR is dice (the floor-renewal
+      // law): its entry schedules a CHECK on the slow gear cadence, and
+      // applyRegrow rolls whether the world actually coughs one back — only
+      // the starter rock keeps the reliable clock. (The hammerstone never
+      // comes through here: the world rolls for it itself — zone tick.)
       const cured = DEAD_STOCK.has(itemId) && !CARRION_ROOMS.has(session.roomId);
+      const dice = tmpl.slot !== "" && !RELIABLE_GEAR.has(itemId);
       z.regrow.push({
         itemId,
         roomId: session.roomId,
-        at: Date.now() + (cured
-          ? randInt(STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS)
-          : randInt(REGROW_MIN_MS, REGROW_MAX_MS)),
+        at: Date.now() + (dice
+          ? randInt(GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS)
+          : cured
+            ? randInt(STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS)
+            : randInt(REGROW_MIN_MS, REGROW_MAX_MS)),
       });
     }
   }
   await insertLoot(z.env.DB, rowId, session.pubkey, itemId, null, condition);
+  if (loreId) await setItemLoreId(z.env.DB, rowId, loreId);
   // Friendly: your FIRST weapon/armor goes on automatically; switching later
   // is a deliberate `equip`. (Never overrides something you've already got on,
   // and never auto-crosses the two-handed rule — that pairing is deliberate.)
@@ -679,6 +705,7 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
     z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), itemId]);
     z.stampFresh(session.roomId, itemId);
     if (z.isGear(itemId)) z.groundCond.set(`${itemId}@${session.roomId}`, carried.condition); // gear (and the stone) keeps its wear on the floor
+    if (carried.loreId) z.groundLore.set(`${itemId}@${session.roomId}`, carried.loreId); // the engraving stays in the steel, wherever it lies
     if (tmpl.edible) z.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
   }
   // Shedding under the burden line is the valve working: say so, so the
@@ -1047,7 +1074,9 @@ function heardIn(z: ZoneDO, roomId: string): string {
   const parts: string[] = [];
   if (audible.length > 0) {
     const c = audible.find((a) => STILL_SOUNDS[a.templateId]) ?? audible[0];
-    const voice = STILL_SOUNDS[c.templateId]
+    // A sleeper reads as sleep to a pressed ear — the window is audible too.
+    const voice = c.asleep ? "slow, even animal breathing — something fast asleep"
+      : STILL_SOUNDS[c.templateId]
       ?? (DROWNERS.has(c.templateId) ? "water moving, slow, around something standing in it"
         : HOLLOW.has(c.templateId) ? "the dry click and resettle of old bone"
         : THIEVES.has(c.templateId) ? "a boot placed carefully, then stillness"

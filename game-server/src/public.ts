@@ -33,6 +33,7 @@ export const PAGE = `<!doctype html>
     --bone: #c9bda3;
     --steel: #a4bec0;
     --heal: #8faa6b;
+    --omen: #b195c9;
     --border: #3a3020;
     --border2: #4a3c22;
     --line: #2c2418;
@@ -611,6 +612,9 @@ export const PAGE = `<!doctype html>
   #log .stun   { color: var(--bone); padding-left: 12px; }
   #log .gain   { color: var(--gold); }
   #log .dim    { color: var(--dim); }
+  /* The world's own voice — event beats (the bell, the tide of rats, the dark
+     going wrong). A hue nothing else wears, so an omen never reads as scenery. */
+  #log .evt    { color: var(--omen); font-style: italic; }
   #log .big    { animation: tremor 0.35s linear; }
   @keyframes tremor {
     0%, 100% { transform: translate(0, 0); }
@@ -1389,7 +1393,7 @@ async function connect() {
     // deeds, sounds through walls) and the ambient weather stay out of the
     // lesson text. Your own actions still speak — that's the tutorial.
     if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls); }
-    else if (f.kind === 24913) { if (guideActive()) return; print(f.text, "feed"); }
+    else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed"); }
     else if (f.t === "status") {
       roomEl.textContent = f.room || "";
       if (f.room) knownRooms[f.room] = 1;
@@ -2332,16 +2336,20 @@ function mapRoundRect(ctx, x, y, w, h, r) {
 // Walk the exit graph onto an integer grid, anchored at the room you're in so
 // the map opens centered on you. Cells that collide (the graph has cycles) get
 // nudged to the nearest free cell and their link is drawn bent.
-// The world stacks like a cutaway: sky-road, then the surface (grounds, gates
-// and halls share one compass-connected plane), the warrens gnawed beneath,
+// The world stacks like a cutaway: sky-road, the open surface (grounds and
+// gates), then the HALLS — the buried keep. Every way from the surface into
+// the halls is a stair (all three gates go DOWN; the sewer climbs UP out), so
+// the gold dungeon draws a level beneath the green, as it truly lies (rome
+// caught the flattened version, 2026-07-13). Then the warrens gnawed beneath,
 // the deep at the bottom. Each stratum lays out on its own; no exit line ever
 // crosses between strata — the tiles' \\u25b2\\u25bc badges carry the vertical ways.
-var MAP_BAND_OF = { sky: 0, out: 1, gate: 1, upper: 1, warrens: 2, deep: 3 };
+var MAP_BAND_OF = { sky: 0, out: 1, gate: 1, upper: 2, warrens: 3, deep: 4 };
 var MAP_BANDS = [
   { band: 0, label: "THE OVERWORKS" },
   { band: 1, label: "THE SURFACE" },
-  { band: 2, label: "THE WARRENS" },
-  { band: 3, label: "THE DEEP" },
+  { band: 2, label: "THE HALLS" },
+  { band: 3, label: "THE WARRENS" },
+  { band: 4, label: "THE DEEP" },
 ];
 function buildMapGraph(f) {
   var nodes = {}, order = [];
@@ -3091,18 +3099,20 @@ chipbtn.addEventListener("click", function () {
 
 // ---- themes: the Door in different lights ----
 // Five local presets, one row in settings; the relays add the rest below.
-var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "blood", "bone", "steel", "heal", "border", "border2", "line"];
+var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "blood", "bone", "steel", "heal", "omen", "border", "border2", "line"];
 var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
 // 'heal' is the mending-green (eat/bandage/rest chips): a distinct hue that must
 // stay legible on each ground, so — like blood/steel — it's tuned per theme
 // (bright on the dark grounds, dark on the light 'bone', kept off the acid gold
-// on 'moss'). Foreign themes derive it in dittoToVars.
+// on 'moss'). 'omen' is the world-event violet (#log .evt) under the same law:
+// bright on the dark grounds, a dark plum on 'bone'. Foreign themes derive
+// both in dittoToVars.
 var THEMES = {
-  door:  { bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
-  bone:  { bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
-  moss:  { bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
-  abyss: { bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", border: "#243049", border2: "#2f4160", line: "#171f33" },
-  ember: { bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", border: "#46291a", border2: "#5c3722", line: "#331e12" },
+  door:  { bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
+  bone:  { bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
+  moss:  { bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
+  abyss: { bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", border: "#243049", border2: "#2f4160", line: "#171f33" },
+  ember: { bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", omen: "#c9a2c4", border: "#46291a", border2: "#5c3722", line: "#331e12" },
 };
 var thbtn = document.getElementById("thbtn");
 var thbrowse = document.getElementById("thbrowse");
@@ -3283,6 +3293,8 @@ function dittoToVars(t) {
     steel: ensureContrast("#6f9aa4", bg, 3.0),
     // The mending-green (eat/bandage/rest) — same nudge, so it reads on any bg.
     heal: ensureContrast("#7faa63", bg, 3.0),
+    // The omen-violet (world-event lines) — same nudge; a hue no other var wears.
+    omen: ensureContrast("#a98cc8", bg, 3.0),
     border: mixHex(bg, primary, 0.3),
     border2: mixHex(bg, primary, 0.5),
     line: mixHex(bg, primary, 0.18),

@@ -342,16 +342,17 @@ export interface CarriedItem {
   equipped: boolean; // worn/wielded — at most one per slot
   condition: number; // 0-100; use + rust wear it down (sealed gear is frozen)
   journalId?: string; // only a journal: the stable id its pages are keyed to
+  loreId?: string; // engraved gear: the gate's mark — its deeds-ledger key, enduring past every serial (077)
 }
 
 // Carried = on the body (container ''). What sits in the lockbox or the vault
 // is loaded separately and never scatters.
 export async function loadInventory(db: D1Database, pubkey: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id, lore_id FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
     .bind(pubkey)
-    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string; lore_id: string }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined }));
 }
 
 // Persist a gear instance's worn-down condition (rounded to the D1 integer).
@@ -370,10 +371,10 @@ export async function setEquipped(db: D1Database, rowId: string, equipped: boole
 // anything that happens to the body that owns it. Condition is preserved.
 export async function loadContainer(db: D1Database, pubkey: string, container: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, condition, journal_id FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
     .bind(pubkey, container)
-    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined }));
 }
 
 // Move a pack instance into a gate container, or back onto the body (''). The
@@ -448,6 +449,49 @@ export async function removeItemRow(db: D1Database, rowId: string): Promise<void
 // back up so the pages find their book again).
 export async function setItemJournalId(db: D1Database, rowId: string, journalId: string): Promise<void> {
   await db.prepare("UPDATE player_items SET journal_id = ? WHERE id = ?").bind(journalId, rowId).run();
+}
+
+// ---- the engraving: gear that remembers (077) ----
+// The deeds ledger keys on lore_id — the gate's mark, cut at first sealing,
+// enduring past every cracked serial and every floor it lies on.
+
+export interface GearDeeds {
+  kills: number;
+  descents: number;
+  owners: number;
+  deaths: number;
+}
+
+export async function setItemLoreId(db: D1Database, rowId: string, loreId: string): Promise<void> {
+  await db.prepare("UPDATE player_items SET lore_id = ? WHERE id = ?").bind(loreId, rowId).run();
+}
+
+export async function deedsCreate(db: D1Database, loreId: string, itemId: string, pubkey: string): Promise<void> {
+  await db
+    .prepare("INSERT OR IGNORE INTO gear_deeds (lore_id, item_id, owners, last_owner, engraved_at) VALUES (?, ?, 1, ?, ?)")
+    .bind(loreId, itemId, pubkey, nowSec())
+    .run();
+}
+
+export async function deedsLoad(db: D1Database, loreId: string): Promise<GearDeeds | null> {
+  const row = await db
+    .prepare("SELECT kills, descents, owners, deaths FROM gear_deeds WHERE lore_id = ?")
+    .bind(loreId)
+    .first<GearDeeds>();
+  return row ?? null;
+}
+
+// One deed, one notch. The columns are closed-set so this stays injection-proof.
+export async function deedsBump(db: D1Database, loreId: string, deed: "kills" | "descents" | "deaths"): Promise<void> {
+  await db.prepare(`UPDATE gear_deeds SET ${deed} = ${deed} + 1 WHERE lore_id = ?`).bind(loreId).run();
+}
+
+// A sealing hand: if it isn't the hand the ledger last knew, the chain grows.
+export async function deedsOwner(db: D1Database, loreId: string, pubkey: string): Promise<void> {
+  await db
+    .prepare("UPDATE gear_deeds SET owners = owners + 1, last_owner = ? WHERE lore_id = ? AND last_owner != ?")
+    .bind(pubkey, loreId, pubkey)
+    .run();
 }
 
 // When a pack row was acquired (epoch SECONDS). Used to tell whether a perishable

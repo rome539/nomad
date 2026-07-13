@@ -176,9 +176,15 @@ export const FISH_COOLDOWN_MS = 6000;  // each cast is a deliberate wait
 export const FISH_POOL_CATCHES = 5;
 export const FISH_POOL_REST_MS = 25 * 60_000;
 // How much a crude map lies: how much of the map it omits, and how many of the
-// exits it does show are wrong (dropped or pointing at the wrong room).
-export const CRUDE_DROP_ROOM = 0.30;  // ~30% of rooms simply aren't on it
-export const CRUDE_BAD_EXIT = 0.15;   // ~15% of shown exits are a lie
+// exits it does show are wrong (dropped or pointing at the wrong room). No two
+// copyists worked alike — each copy rolls a hand (rome, 2026-07-13: RNG decides
+// the map's condition) that slides both rates between these rails. A careful
+// hand omits little; a drunk one hands you noise. Averages sit near the old
+// flat 0.30 / 0.15.
+export const CRUDE_DROP_MIN = 0.10;   // best hand: ~10% of rooms missing
+export const CRUDE_DROP_MAX = 0.50;   // worst hand: half the keep isn't on it
+export const CRUDE_BAD_MIN = 0.05;    // best hand: ~5% of shown exits lie
+export const CRUDE_BAD_MAX = 0.25;    // worst hand: a quarter walk you wrong
 export const SALVAGE_YIELD: Record<string, number> = { common: 1, uncommon: 2, rare: 4, epic: 8 };
 export const REPAIR_COST: Record<string, number> = { common: 1, uncommon: 1, rare: 2, epic: 3 };
 // The gate keeper deals in kind: barter value ≥ this and his manner changes.
@@ -217,6 +223,17 @@ export const MIGRATION_MIN_FACTOR = 5;
 // tick out a predictable stream you can stand and farm. 5–25 min, mean ~15.
 export const REGROW_MIN_MS = 5 * 60_000;
 export const REGROW_MAX_MS = 25 * 60_000;
+// THE FLOOR-RENEWAL LAW (rome, 2026-07-12): consumables and the starter
+// loose-rock keep the deterministic clocks — the world stays livable, and a
+// fresh key is never weaponless or lightless. Renewable floor GEAR is DICE:
+// when its check comes up the world ROLLS whether to cough one back, and a
+// miss just leaves the spot bare until the next roll. "Sometimes there" is
+// literally dice — never a take-wait-take faucet you can farm by the clock.
+// (The rusted pick rides this now; the armor pass's guardroom kit will too.)
+export const GEAR_ROLL_MIN_MS = 30 * 60_000; // a bare spot re-checks itself every 30–60 min
+export const GEAR_ROLL_MAX_MS = 60 * 60_000;
+export const GEAR_REGROW_ODDS = 0.2;         // ~1 roll in 5 hangs the piece back up
+export const RELIABLE_GEAR = new Set(["loose-rock"]); // the starter tool: exempt, always comes back
 // The two kinds of renewable (rome, 2026-07-11 — the larder was a healing
 // pump): living forage (moss, lichen, nettle, caps, water) GROWS, and keeps
 // the fast clock above. DEAD STOCK — cured provisions nobody is curing
@@ -230,9 +247,11 @@ export const DEAD_STOCK = new Set(["smoked-haunch", "salt-fish", "hardtack", "of
 // back roughly twice a DAY (rome's tune): rarer than provisions.
 export const THROW_TOUGH = new Set(["hammerstone"]);
 // Where a hammerstone can turn up (rome: no fixed spots — "people just run to
-// the same spots"): the world mints one every STONE_REGROW window into a
-// random one of these — stone country: graves, scree, rubble, mine-throats,
-// and the tide's midden. Capped so an empty week doesn't pile them up.
+// the same spots"): the world ROLLS for one on the STONE_ROLL cadence (the
+// floor-renewal law — dice, not a mint schedule) into a random one of these —
+// stone country: graves, scree, rubble, mine-throats, and the tide's midden.
+// Cadence × odds keeps rome's original tune (~twice a day), but any given
+// roll can hit — there is no clock to farm. Capped so misses don't pile up.
 export const HAMMERSTONE_HAUNTS = [
   "the-mass-grave", "the-dry-moat", "the-gatefall", "the-wall-breach",
   "the-burned-village", "the-undermine", "the-earth-throat", "the-bone-midden",
@@ -247,8 +266,9 @@ export const STONE_GROUND_CAP = 2; // at most this many lying loose in the haunt
 export const ROCK_SMASH_ODDS = 0.10;
 export const HAMMERSTONE_SMASH_ODDS = 0.80;
 export const STONE_WEAR = 20; // condition per smash attempt: ~5 latches in a stone, then it cracks through — and NO mend refills it (rome: "no repairs for this rock")
-export const STONE_REGROW_MIN_MS = 10 * 3_600_000;
-export const STONE_REGROW_MAX_MS = 14 * 3_600_000;
+export const STONE_ROLL_MIN_MS = 2 * 3_600_000; // the world checks every 2–4h...
+export const STONE_ROLL_MAX_MS = 4 * 3_600_000;
+export const STONE_MINT_ODDS = 0.25;             // ...and 1 check in 4 mints — ~twice a day, on dice
 // The keeper's shelves are a market, not a vending machine (rome, 2026-07-11):
 // things sell out. Sometimes YOU take the last one; sometimes an off-screen
 // wanderer beat you to it (the churn — the world has other customers). A bare
@@ -283,7 +303,7 @@ export const FORGET_MS: Record<string, number> = {
 };
 export const FORGET_DEFAULT = 2 * 3_600_000; // deep dwellers & pale kin: a couple hours
 export const COMBAT_NOISE_EVERY_MS = 8000; // a running fight rings out this often
-export const NOISE_HEED_ODDS = 0.7; // a good majority of mobs check out a noise; the rest don't bother
+export const NOISE_HEED_ODDS = 0.4; // per noise ring — a fight re-rings every 8s and re-rolls, so this converges (64% by ring 2, 78% by 3); 0.7 made every fight a certain crowd (rome dialed it down 2026-07-13)
 export const DOGPILE_CAP = 3; // most creatures that can land a blow on one player in a tick; the rest press at the edges
 export const CROWD_CAP = 5; // a room this full stops drawing more (no wandering in, no answering a fight) — no black holes
 // Worn slots that contribute ARMOR (they all sum). The shield is a worn slot
@@ -330,6 +350,7 @@ export const MOVE_SOUNDS: Record<string, string> = {
   cutthroat: "A soft, unhurried step crosses {dir}, and is gone.",
   "grave-hyena": "Something big pads {dir}, sniffing.",
   "dire-hyena": "Something heavy pads {dir}, close and unhurried.",
+  "last-watchman": "A slow, measured tread {dir} — boots keeping time on old stone.",
   "the-drowned": "Water shifts {dir}, thick and slow, around something wading.",
   "drowned-hulk": "A great mass moves through water {dir}, and the flood slaps the walls.",
   "pale-crawler": "Something long drags itself over wet stone {dir}.",
@@ -348,6 +369,7 @@ export const MOVE_SOUNDS: Record<string, string> = {
 export const STILL_SOUNDS: Record<string, string> = {
   "three-hound": "slow, enormous breathing — three sets of lungs working as one",
   "two-hound": "slow, heavy breathing, doubled — big lungs working in step",
+  "last-watchman": "the creak of old leather and iron, holding perfectly still — something standing at attention",
   "brood-rat": "a wet, many-voiced squirming",
   "the-gaunt": "long, starving breaths, drawn through teeth",
   "drowned-hulk": "water pressing and settling around something vast",
@@ -380,18 +402,27 @@ export const MOUTHS = [
 export const PATROLS: Record<string, string[]> = {
   warden: ["barracks", "cells", "cistern", "ossuary", "catacomb", "kennels", "armory", "gallery"],
   "warden-captain": ["barracks", "cells", "cistern", "ossuary", "catacomb", "kennels", "armory", "gallery"],
+  // The last watchman (076) walks the high circuit out-and-back — every leg
+  // adjacent, so his rounds NEVER leave the walls (no off-route drift down a
+  // stair). The bell-cote hangs above the turret, off his route: the one
+  // perch the watch never checks. Wait up there and let him pass beneath.
+  "last-watchman": [
+    "the-watch-turret", "the-wall-walk", "the-broken-battlement", "the-leaning-spire",
+    "the-rotted-scaffold", "the-weepers-crown", "the-rotted-scaffold", "the-leaning-spire",
+    "the-broken-battlement", "the-wall-walk",
+  ],
 };
 
 // Creatures with nothing inside. They do not bleed (broken remains, not blood),
 // do not hunger, and no smell of food moves them. The rat is the only thing
 // down here that's honestly alive.
 export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-captain", "forgotten-king", "drowned-god", "marrow-king", "marrow-cantor",
-  "twice-dead", "thrice-dead"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run
+  "twice-dead", "thrice-dead", "last-watchman"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
 // GRAVE_FLESH: hollow, but a BODY — dried corpse, not bare bone or old iron
 // (rome, 2026-07-11: "sounds like a zombie"). A wight has a skull to split, a
 // spine to sever, ribs over what used to matter — so the vitals lottery stays
 // open to EVERY weapon on these two, not the bone-set's blunt-only gate.
-export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead"]);
+export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman"]); // the watchman is a dried MAN in kit, not bare bone — every weapon finds him
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
@@ -450,9 +481,59 @@ export const REFLECTION_LIE_ODDS = 0.08;
 // The dead remember their own. A hollow thing, idle in a room where a wanderer
 // truly fell, works its jaw and breathes the name off the bloodstain — soft, the
 // way you'd call for someone who isn't coming. Rare, and never a chant.
-export const MURMUR_ODDS = 0.03;          // per idle 2s tick with a living ear present
-export const MURMUR_COOLDOWN_MS = 90_000; // one name, then a long quiet
+export const MURMUR_ODDS = 0.005;          // RARE on purpose — minutes of standing idle with the dead before one ever speaks
+export const MURMUR_COOLDOWN_MS = 300_000; // and then a long quiet (5 min) before that same one speaks again
 export const CORPSE_TRACES = new Set(["blood", "remains"]);
+// THE GLOAM (rome, 2026-07-13): the dark itself gets up and walks the keep.
+// One interior room at a time is TRUE dark — blind without a light. A carried
+// flame still holds it off (this is a moving dark room, not the exhale). It
+// drifts to an adjacent hall every few minutes; the living flee the room it
+// takes, and the HOLLOW keep walking inside it — bones don't need eyes.
+// Never outdoors (the sky kills it), never a gate room (no fresh key wakes
+// blind). Its room rides EventState.data, so a deploy mid-drift doesn't
+// blink the dark out.
+export const GLOAM_TELEGRAPH_MS = 90_000;      // the light goes thin and brown first
+export const GLOAM_STEP_MS = 150_000;          // it takes a new room every 2.5 min
+export const GLOAM_ACTIVE_MS = 45 * 60_000;    // the walk's ceiling
+export const GLOAM_AFTERMATH_MS = 10 * 60_000; // the halls stay wrong a while
+// ---- the small lives (rome, 2026-07-13): sleep, thirst, calls, and fear ----
+// Nothing blanket: each need lands only where it CHARACTERIZES, and the
+// refusals are design too — the dead never sleep, never drink, never call.
+// SLEEP: warm blood dozes. Rats curl up anywhere quiet; the cutpurse catnaps
+// only in his own crack; hyenas drop off on a full belly (scavengerFeeds
+// rolls it — sleep is the other face of the meal-guard). Nothing naps with a
+// stranger standing over it. Waking shares wakeListeners' one law (entry/
+// noise odds, QUIET gear, the bell); a blow wakes instantly and the striker's
+// hit rides the existing unaware/ambush multiplier — one heavy blow, never a
+// coup de grace (the sentinel rouse law, reused).
+export const NAPPERS = new Set(["rat", "fleet-rat", "albino-rat", "cutpurse"]); // hyenas nap via the gorge only
+export const NAP_ODDS = 0.006;        // per idle 2s tick — a doze now and then, not a schedule
+export const NAP_MIN_MS = 3 * 60_000; // a doze, not a hibernation
+export const NAP_MAX_MS = 8 * 60_000;
+export const GORGE_NAP_ODDS = 0.5;    // a hyena that just fed likely lies down on the bones
+// THIRST: only the hyenas drink — a destination habit, never a meter. The run
+// stays INSIDE the territory tether (a den with no water in reach simply
+// doesn't have the habit — the leak law), one drinker at a hole at a time,
+// and rain IS water (the run skips).
+export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-drowned-orchard", "well", "the-dry-moat"]);
+export const THIRST_MIN_MS = 2 * 3_600_000;
+export const THIRST_MAX_MS = 4 * 3_600_000;
+// CALLS: one primitive, three meanings — prey calls AWAY (a fleeing rat's
+// squeal fear-marks its room for the warren nearby), predators call TOWARD
+// (a feeding grave-hyena laughs ONE adjacent packmate in; the dire is a
+// loner and calls no one), thieves WARN (an escaped cutpurse whistles and
+// the others shun the room a while — the dead tell no one). THE HARD LAW:
+// a call never triggers another call (calledTo marks the summoned), and
+// calls ride their own species channel, never creatureNoise — no cascades.
+export const RAT_AVOID_MS = 2 * 3_600_000;    // a squeal-marked (or fled) room is shunned a couple hours
+export const WHISTLE_AVOID_MS = 10 * 60_000;  // a warned thief keeps clear ten minutes
+export const DINNER_LAUGH_ODDS = 0.35;
+// PLACE-FEAR decays and dies with the creature — migration replaces the dead
+// with amnesiacs, so the world never accumulates permanent fright. LURKERS
+// read the traffic instead: every few hours an unseen one shifts its ambush
+// to the born-dark room (tether-bound) with the freshest footprints — vary
+// your route. It never moves under an eye, and torchlight still reveals it.
+export const LURKER_DRIFT_MS = 3 * 3_600_000;
 // The food web: who hunts (or drives off) whom. A predator sharing a room with
 // prey it outranks may turn on it — when it's hungry, or when there's a kill or
 // bait to fight over. Every predator genuinely outstats its prey (hp + dmg);
@@ -502,6 +583,7 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "bone-knight": { out: "withdraws {dir} in a grind of mail and bone.", in_: "strides in, mail grinding." },
   warden: { out: "flees {dir}, armor grinding.", in_: "bursts in, grinding." },
   "warden-captain": { out: "gives ground {dir}, harness shrieking.", in_: "bears in, harness shrieking." },
+  "last-watchman": { out: "withdraws {dir} at a march, unhurried even now.", in_: "marches in, boots keeping time." },
 };
 
 // ---- the language of the fight ----
@@ -938,6 +1020,7 @@ export const WARRENS_ROOMS = new Set([
   "the-root-gnawed-run", "the-rat-warren", "the-crawl-of-teeth", "the-gnaw-hollow",
   "a-dry-burrow", "the-dripping-gallery", "the-bone-midden", "the-hyena-den",
   "the-undermine", "the-earth-throat", "the-sewer-slip", "the-buried-chapel",
+  "bone-nook", // A Gap in the Bones — moved off the midden (079); safe rooms in this set are display/flavor only, every event actor filters safeRooms
 ]);
 // The open sky: every room where weather can reach you (the grounds ring +
 // the overworks rooftops). The room-events engine (events.ts) reads this for
@@ -1115,7 +1198,7 @@ export const TWO_HANDED = new Set(["war-pike", "abyssal-harpoon"]);
 // Wards stun: padding halves stun odds. The padded-jerkin finally earns its
 // name, and the deadplate's grave-quiet mass shrugs the ringing off (its
 // answer to the lighter chitin — every epic body is a different bet).
-export const PADDED = new Set(["quilted-coif", "riveted-cuirass", "padded-jerkin", "deadplate-harness"]);
+export const PADDED = new Set(["quilted-coif", "riveted-cuirass", "padded-jerkin", "deadplate-harness", "padded-greathelm"]);
 export const PADDED_STUN_MULT = 0.5;
 // Stun tuning lives in the DATA, not in code multipliers (rome, 2026-07-12,
 // after the Emberknock stun-chain): migration 073 halved every weapon's stun
@@ -1126,8 +1209,8 @@ export const PADDED_STUN_MULT = 0.5;
 // MAILWARD (riveted rings) turns edges only — a cut skates, but a hyena can
 // still yank the leg out from under the mail. Both roll SEPARATELY from
 // guarded stance, so hide under a guard stacks to a quarter.
-export const WARDHIDE = new Set(["thick-hide-jack", "sentinels-mantle"]);
-export const MAILWARD = new Set(["mail-hauberk"]);
+export const WARDHIDE = new Set(["thick-hide-jack", "sentinels-mantle", "bone-barred-visor"]);
+export const MAILWARD = new Set(["mail-hauberk", "riveted-coif", "chain-lined-mantle"]);
 export const WARDHIDE_WOUND_ODDS = 0.5;
 // Per-hit chance a bleeder actually opens a wound — bleed is no longer guaranteed
 // on every landed hit (that stacked far too hard, a pack of hyenas kept you
@@ -1196,10 +1279,10 @@ export const PIERCING_WEAPONS = new Set([
 ]);
 export const VITALS_HOUND = 1 / 5000; // the sentinel's tiny pierce-only vitals chance
 // QUIET: LISTENER wake odds halved while worn (felt says nothing to the bones).
-export const QUIET_ITEMS = new Set(["felt-soled-boots", "grave-shroud", "pale-hide-hood", "shade-wrapped-greaves"]);
+export const QUIET_ITEMS = new Set(["felt-soled-boots", "grave-shroud", "pale-hide-hood", "shade-wrapped-greaves", "shroud-hood", "shadow-step-boots", "drowned-divers-shroud"]);
 export const QUIET_WAKE_MULT = 0.5;
 // SLICK: a drowned grip takes hold half as often, and breaks easier.
-export const SLICK = new Set(["eel-skin-cloak", "kelp-woven-mail", "abyssal-scale-coat"]);
+export const SLICK = new Set(["eel-skin-cloak", "kelp-woven-mail", "abyssal-scale-coat", "eel-hide-treads"]);
 export const SLICK_SEIZE_MULT = 0.5;
 export const SLICK_BREAK_BONUS = 0.25; // added to SEIZE_BREAK_ODDS
 // STRAPPED: everything lashed down — the cutpurse's fingers find no purchase.
@@ -1329,7 +1412,7 @@ export const AMBIENCE: Record<"gate" | "deep" | "upper", string[]> = {
 export const ROOM_AMBIENCE: Record<string, string[]> = {
   // ---- the grounds: the first OUTDOOR rooms — wind and sky, not drips (058) ----
   "the-causeway": ["The wind comes down the old road with nothing left to slow it.", "Somewhere high on the walls, loose stone ticks in the wind."],
-  "the-old-road": ["The thorn wall creaks against itself, keeping whatever is west of it.", "For a moment the wind carries a smell that is not the fortress. Then it is gone."],
+  "the-old-road": ["The thorn wall creaks against itself, keeping whatever is east of it.", "For a moment the wind carries a smell that is not the fortress. Then it is gone.", "The gibbet chain creaks on the hill behind, slow as breathing."],
   "the-burned-village": ["A charred beam settles with a soft crunch of old ash.", "The wind worries at a hanging shutter until it bangs, once."],
   "the-gatefall": ["Scree shifts somewhere in the rubble, and small feet with it.", "A stone lets go of the wall above and clatters down the fall."],
   "the-dry-moat": ["The dead grass on the lip hisses. From down here, the sky is a road you can't take.", "Something crosses the ditch behind you, quick, bank to bank."],

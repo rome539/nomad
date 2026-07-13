@@ -5,10 +5,10 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import type { CarriedItem } from "./world";
-import { journalLoad, journalStudy, loadContainer } from "./world";
+import { journalLoad, journalStudy, loadContainer, deedsLoad } from "./world";
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import {
-  MAP_ITEMS, DETAILED_MAP, CRUDE_DROP_ROOM, CRUDE_BAD_EXIT,
+  MAP_ITEMS, DETAILED_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
@@ -26,9 +26,25 @@ export function cmdMap(z: ZoneDO, session: Session, arg: string): void {
   if (!carried) carried = maps.find((c) => c.itemId === DETAILED_MAP) ?? maps[0];
   const detailed = carried.itemId === DETAILED_MAP;
   sendMap(z, session, carried, detailed);
-  z.send(session, detailed
-    ? "You unroll the surveyor's map. Every hall is on it, set down true."
-    : "You unfold the crude map. Some of these ways are right. Trust it at your peril.");
+  if (detailed) {
+    return z.send(session, "You unroll the surveyor's map. Every hall is on it, set down true.");
+  }
+  // The unfold reads the hand that drew this copy — the one honest thing a
+  // crude map tells you is how far to trust the rest of it.
+  const hand = crudeHand(carried.rowId);
+  z.send(session, hand >= 0.75
+    ? "You unfold the crude map. The hand that drew it was careful — most of these ways should hold."
+    : hand < 0.3
+      ? "You unfold the crude map. The hand that drew it was drunk, hurried, or lying. Scrawl and guesswork."
+      : "You unfold the crude map. Some of these ways are right. Trust it at your peril.");
+}
+
+// The hand that drew a given copy: rolled once off the copy's row id, so it's
+// RNG at the moment the copy comes into your life and fixed forever after —
+// this scrap was always this good, or this bad. Salted so it never correlates
+// with the lie-pattern stream seeded off the bare row id.
+function crudeHand(rowId: string): number {
+  return mulberry32(hashSeed(rowId + ":hand"))();
 }
 
 // Build and send the map frame. A detailed map is the true graph and lights
@@ -38,12 +54,17 @@ export function cmdMap(z: ZoneDO, session: Session, arg: string): void {
 function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: boolean): void {
   const world = z.world!;
   const rnd = detailed ? null : mulberry32(hashSeed(carried.rowId));
+  // A bad hand slides both lie rates toward their worst rail; a careful one
+  // toward the best. The hand is per-copy and permanent (see crudeHand).
+  const hand = detailed ? 1 : crudeHand(carried.rowId);
+  const dropRoom = CRUDE_DROP_MIN + (1 - hand) * (CRUDE_DROP_MAX - CRUDE_DROP_MIN);
+  const badExit = CRUDE_BAD_MIN + (1 - hand) * (CRUDE_BAD_MAX - CRUDE_BAD_MIN);
   const roomIds = [...world.rooms.keys()];
   // Which rooms make it onto a crude map: the gates and where you stand always
   // do; the rest are a coin-weighted omission.
   const shown = new Set<string>();
   for (const id of roomIds) {
-    if (detailed || z.regionOf(id) === "gate" || id === session.roomId || rnd!() >= CRUDE_DROP_ROOM) {
+    if (detailed || z.regionOf(id) === "gate" || id === session.roomId || rnd!() >= dropRoom) {
       shown.add(id);
     }
   }
@@ -68,7 +89,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     const exits: { dir: string; to: string; toName: string }[] = [];
     for (const e of realExits) {
       if (!detailed) {
-        if (rnd!() < CRUDE_BAD_EXIT) {
+        if (rnd!() < badExit) {
           // A lie: half the time the exit's simply missing, half the time it
           // points at the wrong room (one that's on this map).
           if (rnd!() < 0.5) continue;
@@ -197,4 +218,21 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
   z.send(session, entries.length
     ? "You open the journal."
     : "You open the journal. Its pages are blank — study a thing, and kill a few, and it will fill.");
+}
+
+// ---- the engraving: what the steel remembers (077) ----
+// The ledger line for a marked piece, read off gear_deeds. Counts framed as
+// prose, never a stat block — the dungeon attests it, so it can't be faked,
+// farmed, or inflated. A fresh mark reads short; a storied one reads like a
+// warning. ("This notched greatsword has 214 kills, went past the black door
+// twice, and its last three owners died holding it.")
+export async function gearLedger(z: ZoneDO, loreId: string): Promise<string> {
+  const d = await deedsLoad(z.env.DB, loreId);
+  if (!d) return "";
+  const bits: string[] = [];
+  if (d.kills > 0) bits.push(`${d.kills} kill${d.kills === 1 ? "" : "s"}`);
+  if (d.descents > 0) bits.push(d.descents === 1 ? "one descent past the black door" : `${d.descents} descents past the black door`);
+  bits.push(d.owners === 1 ? "one owner" : `${d.owners} owners`);
+  if (d.deaths > 0) bits.push(d.deaths === 1 ? "one of them died holding it" : `${d.deaths} died holding it`);
+  return ` The gate's mark is cut into it — the ledger reads: ${bits.join("; ")}.`;
 }

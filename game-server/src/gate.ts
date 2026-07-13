@@ -7,7 +7,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { provokeGrudges } from "./ai";
-import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent } from "./world";
+import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance } from "./rng";
 import * as events from "./events";
@@ -680,6 +680,19 @@ export async function sealOne(z: ZoneDO, session: Session, carried: CarriedItem)
     const tmpl = world.itemTemplates.get(carried.itemId)!;
     const serial = await mintClaim(z.env.DB, carried.rowId, carried.itemId, tmpl.rarity, session.pubkey);
     carried.serial = serial;
+    // THE ENGRAVING (077): the first sealing cuts the gate's mark into the
+    // steel, and a deeds-ledger opens against it. Serials are title and crack
+    // at every transfer; the mark endures — so when a MARKED piece is sealed
+    // again by a new hand, the chain of owners grows. Only gear takes a mark.
+    if (z.isGear(carried.itemId)) {
+      if (!carried.loreId) {
+        carried.loreId = uuid();
+        await setItemLoreId(z.env.DB, carried.rowId, carried.loreId);
+        await deedsCreate(z.env.DB, carried.loreId, carried.itemId, session.pubkey);
+      } else {
+        await deedsOwner(z.env.DB, carried.loreId, session.pubkey);
+      }
+    }
     // Snapshot its condition at the moment of sealing. Sealing no longer freezes
     // wear whole — sealed gear still ages, just far slower (SEALED_WEAR_MULT) —
     // and can be mended at the bench like anything else.

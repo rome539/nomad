@@ -90,6 +90,13 @@ export interface Creature {
   cuddling?: string; // rat-kind: pubkey of the resting wanderer it has curled up against (cleared the moment they rise)
   mournedAt?: number; // grave-hyena: the `at` of the kin-corpse it last keened over, so each body is mourned once
   murmuredAt?: number; // HOLLOW: last time it breathed a name into the dark (the cooldown anchor)
+  asleep?: boolean; // warm blood only: dozing — skips its whole act loop; wakes to entry/noise rolls (the wakeListeners law), a blow, or its own clock
+  sleepUntil?: number; // when the doze ends on its own
+  thirstAt?: number; // hyenas: when the next watering run calls
+  wateringTo?: string; // hyenas: the water room it's padding toward (wander steers by roomDist)
+  avoids?: { roomId: string; until: number }[]; // place-fear: rooms this one steers around (a rat's bad memory, a thief's warning)
+  calledTo?: string; // call-bus guard: it was SUMMONED here — it never calls from this room (a call must never trigger a call)
+  repositionAt?: number; // lurkers: next time it re-reads the traffic and shifts its ambush
 }
 
 export interface Regrow {
@@ -145,6 +152,7 @@ export interface SimState {
   rot: RotEntry[];
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once
   groundCond?: Record<string, number>; // "itemId@roomId" -> condition of gear on the floor, so wear survives drop/pickup
+  groundLore?: Record<string, string>; // "itemId@roomId" -> lore_id of engraved gear on the floor, so the mark survives too (077)
   cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills
   cacheRoom?: Record<string, string>; // cacheId -> its CURRENT room (roaming chests relocate on refill; unset = place on first access)
   nextSurfaceAt?: number; // ms epoch the deep next surfaces a dweller (corpse-key minting; only while the deep door is sealed)

@@ -8,7 +8,7 @@ import * as events from "./events";
 import * as pvp from "./pvp";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
-  LURKERS, DIR_ORDER, DARK_ROOMS, TORCH_ITEM, LANTERN_ITEM,
+  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM,
   FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, MAP_ITEMS, DROWNERS,
 } from "./zone-data";
 
@@ -102,7 +102,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   if (gearless) suggest.push(`equip ${shortName(world.itemTemplates.get(gearless.itemId)!.name)}`);
   // Standing blind in the lightless deep with a light in the pack: the chip
   // that saves you. Both offered if you carry both — they're different tools.
-  if (DARK_ROOMS.has(session.roomId) && !z.carriesLight(session)) {
+  if (z.isDark(session.roomId) && !z.carriesLight(session)) {
     if (session.items.some((c) => c.itemId === TORCH_ITEM)) suggest.push("light torch");
     if (session.items.some((c) => c.itemId === LANTERN_ITEM && c.condition > 0)) suggest.push("light lantern");
   }

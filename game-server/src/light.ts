@@ -12,7 +12,7 @@ import * as events from "./events";
 import { setEquipped, setItemCondition, removeItemRow } from "./world";
 import {
   TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR,
-  TWO_HANDED, DARK_ROOMS,
+  TWO_HANDED,
 } from "./zone-data";
 
 // A kindled light throws light until it gutters (litUntil). Read everywhere the
@@ -101,7 +101,7 @@ export function snuffForHand(z: ZoneDO, session: Session): void {
   session.litUntil = undefined;
   session.litSource = undefined;
   session.torchWarned = false;
-  const dark = DARK_ROOMS.has(session.roomId) && !z.outOfWorld(session) ? ", and the dark closes in" : "";
+  const dark = z.isDark(session.roomId) && !z.outOfWorld(session) ? ", and the dark closes in" : "";
   z.send(session, wasLantern
     ? `You shutter the lantern and sling it — no hand left to carry it${dark}.`
     : `The torch gutters out — no hand left to hold it${dark}.`);
@@ -129,7 +129,7 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
       session.litUntil = undefined;
       session.litSource = undefined;
       session.torchWarned = false;
-      const inDark = DARK_ROOMS.has(session.roomId) && !z.outOfWorld(session);
+      const inDark = z.isDark(session.roomId) && !z.outOfWorld(session);
       if (lantern) {
         z.send(session, inDark
           ? "The lantern's flame shrinks to a bead and drowns in its own oil — and the dark closes over you completely."
