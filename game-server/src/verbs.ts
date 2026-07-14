@@ -901,7 +901,7 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox)}/${LOCKBOX_CAP}):`));
   if (atGate) {
     const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
-    out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault)}/${VAULT_CAP}):`));
+    out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, true)}/${VAULT_CAP} sealed):`)); // fungibles ride free in the vault
     z.enterStep(session, "sorting"); // step out to sort, safe in the gatehouse
     out.push("('stash'/'unstash'/'vault' to move things; 'look' steps you back into the world.)");
   } else {

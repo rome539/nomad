@@ -962,6 +962,9 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
       lockbox: group(lockbox),
       vault: group(vault),
       packCap: PACK_CAP, lockboxCap: LOCKBOX_CAP, vaultCap: VAULT_CAP,
+      // The vault's cap counts SEALED GEAR only — fungibles ride free, so the
+      // client can't just count rows the way it does for the pack and the box.
+      vaultUsed: z.slotsUsed(vault, true),
     };
     try { session.ws.send(JSON.stringify(payload)); } catch {}
   }
@@ -973,11 +976,11 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
 export function storeCfg(z: ZoneDO, key: "lockbox" | "vault") {
     if (key === "vault") {
       return {
-        container: "vault", cap: VAULT_CAP, sealedOnly: true, kind: "vault",
+        container: "vault", cap: VAULT_CAP, sealedOnly: true, kind: "vault", freeStacks: true,
         absent: "The vault's riveted door is set deep in the gatehouse. It is not here.",
         empty: "The vault stands open around nothing.",
         header: "The vault holds",
-        full: `The vault is full. It holds ${VAULT_CAP} things, and asks no more.`,
+        full: `The vault is full. It holds ${VAULT_CAP} sealed things, and asks no more. (Trophies and the like cost it nothing.)`,
         needSeal: "The vault won't bank raw gear — seal it at the gate first, or drop it in your lockbox.",
         put: (n: string) => `You lay ${n} in the vault. The iron door swings shut over it.`,
         feed: "swings the vault door, and seals it again.",
@@ -987,7 +990,7 @@ export function storeCfg(z: ZoneDO, key: "lockbox" | "vault") {
       };
     }
     return {
-      container: "lockbox", cap: LOCKBOX_CAP, sealedOnly: false, kind: "lockbox",
+      container: "lockbox", cap: LOCKBOX_CAP, sealedOnly: false, kind: "lockbox", freeStacks: false,
       absent: "Your lockbox is set into the gatehouse wall. It is not here.",
       empty: "Your lockbox is bolted shut around nothing.",
       header: "Your lockbox holds",
@@ -1012,15 +1015,17 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
       if (held.length === 0) return z.send(session, cfg.empty);
       // Match the bench modal: fungibles collapse to one line with a count, and
       // the header counts SLOTS (what the cap is actually measured in), not rows.
-      const lines = [`${cfg.header} (${z.slotsUsed(held)}/${cfg.cap}):`];
+      const lines = [`${cfg.header} (${z.slotsUsed(held, cfg.freeStacks)}/${cfg.cap}):`];
       const counts = new Map<string, number>();
       for (const c of held) {
         if (z.stackable(c.itemId, c.serial, c.journalId)) counts.set(c.itemId, (counts.get(c.itemId) ?? 0) + 1);
       }
+      const stackLines: string[] = [];
       for (const [id, n] of counts) {
         const t = world.itemTemplates.get(id);
-        lines.push(`  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""}${z.itemStat(t)}`);
+        stackLines.push(`  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""}${z.itemStat(t)}`);
       }
+      const gearLines: string[] = [];
       for (const c of held) {
         if (z.stackable(c.itemId, c.serial, c.journalId)) continue; // stacked above
         const t = world.itemTemplates.get(c.itemId);
@@ -1029,7 +1034,17 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
         if (c.serial !== null) bits.push(`sealed #${c.serial}`);
         if (t && t.slot !== "") bits.push(z.conditionWord(c.condition) || "sound");
         const tag = bits.length ? ` — ${bits.join(", ")}` : "";
-        lines.push(`  ${t ? t.name : c.itemId}${z.itemStat(t)}${tag}`);
+        gearLines.push(`  ${t ? t.name : c.itemId}${z.itemStat(t)}${tag}`);
+      }
+      // Where the stacks cost nothing (the vault), the sealed wealth reads FIRST
+      // and the trophies settle to the bottom — same shape as the bench modal, so
+      // a shelf of rat tails never buries what you actually banked.
+      if (cfg.freeStacks) {
+        lines.push(...gearLines);
+        if (gearLines.length && stackLines.length) lines.push("  — trophies & sundries (they cost the vault nothing) —");
+        lines.push(...stackLines);
+      } else {
+        lines.push(...stackLines, ...gearLines);
       }
       return z.send(session, lines.join("\n"));
     }
@@ -1049,7 +1064,7 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
     if (!carried) return z.send(session, "You carry nothing like that.");
     // Sealed wealth or raw fungibles bank in the vault; only unsealed gear is turned away.
     if (cfg.sealedOnly && carried.serial === null && !z.stackable(carried.itemId, carried.serial, carried.journalId)) return z.send(session, cfg.needSeal);
-    if (!z.hasRoom(held, carried.itemId, cfg.cap)) return z.send(session, cfg.full);
+    if (!z.hasRoom(held, carried.itemId, cfg.cap, cfg.freeStacks)) return z.send(session, cfg.full);
     const tmpl = world.itemTemplates.get(carried.itemId)!;
     // Flush its worn condition before it leaves the body, so the box/vault
     // holds the true value; setContainer clears the equipped flag.

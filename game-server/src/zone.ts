@@ -1400,23 +1400,33 @@ export class ZoneDO implements DurableObject {
   // and every distinct stacking KIND is one, however deep the pile. What you
   // WEAR rides on your body, not in the pack — equipped gear costs no slot, so
   // arming up never eats your carrying room (and stripping down never strands you).
-  public slotsUsed(items: CarriedItem[]): number {
+  // freeStacks: the VAULT charges nothing for fungibles (rome, 2026-07-13). A
+  // bank vault is deep — it does not measure its room in rat tails. Its 50
+  // slots are for SEALED GEAR; trophies, food, scrap, keys and cigs ride along
+  // for free, however many kinds. The pack and the lockbox still count them:
+  // what you HAUL is the game.
+  public slotsUsed(items: CarriedItem[], freeStacks = false): number {
     const kinds = new Set<string>();
     let loose = 0;
     for (const c of items) {
       if (c.equipped) continue; // worn/wielded — on the body, not in the pack
-      if (this.stackable(c.itemId, c.serial, c.journalId)) kinds.add(c.itemId);
-      else loose++;
+      if (this.stackable(c.itemId, c.serial, c.journalId)) {
+        if (!freeStacks) kinds.add(c.itemId);
+      } else loose++;
     }
     return loose + kinds.size;
   }
 
   // Room for one more of itemId in a given store (default the pack)? A stacking
   // kind you already hold always fits — it joins the pile; otherwise you need a
-  // free slot under the cap.
-  public hasRoom(items: CarriedItem[], itemId: string, cap: number): boolean {
-    if (this.stackable(itemId, null) && items.some((c) => c.itemId === itemId && this.stackable(c.itemId, c.serial, c.journalId))) return true;
-    return this.slotsUsed(items) < cap;
+  // free slot under the cap. Where stacks are free (the vault), any fungible
+  // always fits.
+  public hasRoom(items: CarriedItem[], itemId: string, cap: number, freeStacks = false): boolean {
+    if (this.stackable(itemId, null)) {
+      if (freeStacks) return true;
+      if (items.some((c) => c.itemId === itemId && this.stackable(c.itemId, c.serial, c.journalId))) return true;
+    }
+    return this.slotsUsed(items, freeStacks) < cap;
   }
 
   public packRoom(session: Session, itemId: string): boolean {

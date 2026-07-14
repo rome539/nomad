@@ -1908,15 +1908,18 @@ function benchItemNode(it, place) {
   return wrap;
 }
 
-function fillBenchCol(el, title, items, cap, place) {
+function fillBenchCol(el, title, items, cap, place, usedOverride) {
   el.textContent = "";
   var h = document.createElement("div");
   h.className = "bcolh";
   var t = document.createElement("span"); t.textContent = title; h.appendChild(t);
   var c = document.createElement("span"); c.className = "cnt";
   // What you wear rides on the body, not in the pack \\u2014 don't count equipped
-  // rows against the cap (matches the server's slot accounting).
-  var used = items.filter(function (it) { return !it.equipped; }).length;
+  // rows against the cap (matches the server's slot accounting). The vault sends
+  // its own number: fungibles cost it nothing, so rows are not slots there.
+  var used = (typeof usedOverride === "number")
+    ? usedOverride
+    : items.filter(function (it) { return !it.equipped; }).length;
   c.textContent = cap ? (used + "/" + cap) : String(used);
   h.appendChild(c);
   el.appendChild(h);
@@ -1924,20 +1927,27 @@ function fillBenchCol(el, title, items, cap, place) {
     var e = document.createElement("div"); e.className = "bempty"; e.textContent = "\\u2014 empty \\u2014";
     el.appendChild(e); return;
   }
-  // The pack splits what rides your body from what rides your back, so five
-  // pieces of equipped kit stop burying the loose loot between them.
+  // Two columns split themselves in two, for the same reason: the thing that
+  // costs you nothing shouldn't bury the thing that does.
+  //   PACK  \\u2014 what rides your body vs what rides your back.
+  //   VAULT \\u2014 the sealed wealth that eats the 50 slots, and below it the
+  //           trophies and sundries that ride free.
+  var split = null;
   if (place === "pack") {
-    var onYou = items.filter(function (it) { return it.equipped; });
-    var packed = items.filter(function (it) { return !it.equipped; });
-    if (onYou.length && packed.length) {
-      var h1 = document.createElement("div"); h1.className = "tsech"; h1.textContent = "ON YOU";
-      el.appendChild(h1);
-      onYou.forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
-      var h2 = document.createElement("div"); h2.className = "tsech"; h2.textContent = "IN THE PACK";
-      el.appendChild(h2);
-      packed.forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
-      return;
-    }
+    split = ["ON YOU", items.filter(function (it) { return it.equipped; }),
+             "IN THE PACK", items.filter(function (it) { return !it.equipped; })];
+  } else if (place === "vault") {
+    split = ["SEALED", items.filter(function (it) { return !it.stack; }),
+             "TROPHIES & SUNDRIES", items.filter(function (it) { return it.stack; })];
+  }
+  if (split && split[1].length && split[3].length) {
+    var h1 = document.createElement("div"); h1.className = "tsech"; h1.textContent = split[0];
+    el.appendChild(h1);
+    split[1].forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
+    var h2 = document.createElement("div"); h2.className = "tsech"; h2.textContent = split[2];
+    el.appendChild(h2);
+    split[3].forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
+    return;
   }
   items.forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
 }
@@ -2024,7 +2034,7 @@ function renderBench(state) {
   fillBenchCol(block, "Lockbox", state.lockbox || [], state.lockboxCap, "lockbox");
   if (benchAtGate) {
     bvault.style.display = "";
-    fillBenchCol(bvault, "Vault \\u00b7 the deep keep", state.vault || [], state.vaultCap, "vault");
+    fillBenchCol(bvault, "Vault \\u00b7 the deep keep", state.vault || [], state.vaultCap, "vault", state.vaultUsed);
   } else {
     bvault.style.display = "none";
     bvault.textContent = "";
