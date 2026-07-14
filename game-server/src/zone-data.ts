@@ -1441,7 +1441,12 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
   "sunken-throne": ["The flooded dark hums, low, as if the throne remembers being sat.", "The water around the throne is very, very still."],
   "kings-hoard": ["Gold gleams once in the dark, and is swallowed again."],
 };
-export const AMBIENT_COOLDOWN_MS = 45_000; // at most one breath of atmosphere this often, per wanderer
+// The dungeon breathes SLOWLY (rome, 2026-07-13). At 45s + 0.16/tick it spoke
+// about once a minute, which against a four-line gate pool meant the whole pool
+// cycled every four minutes and read like a stuck record. 150s puts the mean
+// gap near 2.7 minutes — atmosphere, not chatter. (See lastAmbientLine: the
+// same line never lands twice running.)
+export const AMBIENT_COOLDOWN_MS = 150_000; // at most one breath of atmosphere this often, per wanderer
 export const AMBIENT_ODDS = 0.16;          // ~per 2s tick, once off cooldown
 export const RECONNECT_GRACE_MS = 5 * 60_000; // a re-weave within this of dropping is a reconnect, not a fresh arrival
 // The world stays real when your eyes close: a disconnect during a LIVE fight

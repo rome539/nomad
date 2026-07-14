@@ -2349,9 +2349,10 @@ export class ZoneDO implements DurableObject {
       if (session.away || this.inCombat(session)) continue;
       if (now - session.lastAmbientAt < AMBIENT_COOLDOWN_MS) continue;
       if (!chance(AMBIENT_ODDS)) continue;
-      const line = this.ambientLine(session.roomId);
+      const line = this.ambientLine(session.roomId, session.lastAmbientLine);
       if (!line) continue;
       session.lastAmbientAt = now;
+      session.lastAmbientLine = line;
       this.send(session, line, "amb"); // tagged so the client's tutorial can hush the weather
     }
 
@@ -2381,15 +2382,23 @@ export class ZoneDO implements DurableObject {
   // One atmosphere line for where you stand: a signature room's own pool if it
   // has one, else the region it belongs to (the gates, the flooded deep, or the
   // ring between). Meant to grow — add lines to AMBIENCE / ROOM_AMBIENCE freely.
-  private ambientLine(roomId: string): string | null {
+  private ambientLine(roomId: string, avoid?: string): string | null {
+    // Never the same breath twice running. Every pool holds at least two lines,
+    // so dropping the last one always leaves something to say; the fallback is
+    // there only so a one-line pool could never fall silent forever.
+    const draw = (pool: string[]): string | null => {
+      if (!pool.length) return null;
+      const fresh = pool.filter((l) => l !== avoid);
+      const from = fresh.length ? fresh : pool;
+      return from[randInt(0, from.length - 1)];
+    };
     // A sky doing something outranks the standing pools (rain drums, mud pulls).
     const sky = events.eventAmbient(this, roomId);
-    if (sky) return sky;
+    if (sky) return sky === avoid ? null : sky; // weather repeating itself just holds its tongue a beat
     const own = ROOM_AMBIENCE[roomId];
-    if (own?.length) return own[randInt(0, own.length - 1)];
+    if (own?.length) return draw(own);
     const region = this.world!.entryRooms.has(roomId) ? "gate" : DEEP_ROOMS.has(roomId) ? "deep" : "upper";
-    const pool = AMBIENCE[region];
-    return pool.length ? pool[randInt(0, pool.length - 1)] : null;
+    return draw(AMBIENCE[region]);
   }
 
   // ---- creature behavior (shared by live tick and catch-up) ----
