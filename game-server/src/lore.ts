@@ -47,6 +47,16 @@ function crudeHand(rowId: string): number {
   return mulberry32(hashSeed(rowId + ":hand"))();
 }
 
+// Display grouping only — the sim's regionOf (chest tiers etc.) still reads
+// these blocks as "upper". The map just names where you're standing honestly.
+// (Shared with the gatehouse wall chart, which draws the same frame.)
+export function mapRegionOf(z: ZoneDO, id: string): string {
+  // A gate reads as a gate wherever it stands — the waystation sits in the
+  // open ground but its tile is gold, or the map would hide the bank.
+  return z.regionOf(id) === "gate" ? "gate"
+    : GROUNDS_ROOMS.has(id) ? "out" : OVERWORKS_ROOMS.has(id) ? "sky" : WARRENS_ROOMS.has(id) ? "warrens" : z.regionOf(id);
+}
+
 // Build and send the map frame. A detailed map is the true graph and lights
 // its rooms 'known' on the HUD; a crude map is deterministically lied — some
 // rooms missing, some exits wrong — seeded off the book so it's consistently
@@ -76,13 +86,6 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     warrens: { key: "warrens", label: "The Warrens", rooms: [] },
     deep: { key: "deep", label: "The Deep", rooms: [] },
   };
-  // Display grouping only — the sim's regionOf (chest tiers etc.) still reads
-  // these blocks as "upper". The map just names where you're standing honestly.
-  const mapRegionOf = (id: string): string =>
-    // A gate reads as a gate wherever it stands — the waystation sits in the
-    // open ground but its tile is gold, or the map would hide the bank.
-    z.regionOf(id) === "gate" ? "gate"
-      : GROUNDS_ROOMS.has(id) ? "out" : OVERWORKS_ROOMS.has(id) ? "sky" : WARRENS_ROOMS.has(id) ? "warrens" : z.regionOf(id);
   for (const id of shown) {
     const room = world.rooms.get(id)!;
     const realExits = world.exits.get(id) ?? [];
@@ -101,7 +104,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       }
       exits.push({ dir: e.dir, to: e.to_room, toName: world.rooms.get(e.to_room)?.name ?? e.to_room });
     }
-    regions[mapRegionOf(id)].rooms.push({ id, name: room.name, exits, here: id === session.roomId });
+    regions[mapRegionOf(z, id)].rooms.push({ id, name: room.name, exits, here: id === session.roomId });
   }
   try {
     session.ws.send(JSON.stringify({

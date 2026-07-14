@@ -45,6 +45,9 @@ export type Verb =
   | "wash"
   | "smoke"
   | "squink"
+  | "enter"
+  | "exit"
+  | "tell"
   | "xyzzy"
   | "help";
 
@@ -112,6 +115,12 @@ const VERB_ALIASES: Record<string, Verb> = {
   listen: "listen", hark: "listen", eavesdrop: "listen",
   dive: "dive", swim: "dive", plunge: "dive",
   wash: "wash", scrub: "wash", rinse: "wash", clean: "wash",
+  // The door in the wall. At a gate, 'in' is the gatehouse — the sanctuary, and
+  // the only room in the world where other people can hear you and nothing else can.
+  enter: "enter", in: "enter", inside: "enter", gatehouse: "enter",
+  exit: "exit", out: "exit", outside: "exit", // NOT 'leave' — that's already 'drop'
+  // A quiet word, one to one, in the gatehouse. Nobody else in the room hears it.
+  tell: "tell", whisper: "tell", quietly: "tell",
   smoke: "smoke", puff: "smoke", // light one from the tin. undocumented.
   squink: "squink", // means anything. not documented. never will be.
   xyzzy: "xyzzy", plugh: "xyzzy", frotz: "xyzzy", plover: "xyzzy", // the old words.
@@ -212,6 +221,7 @@ export function parse(input: string): ParseResult | null {
   // exactly as you capitalize it; the wall gets your words verbatim.
   if (verb === "say") return { verb, arg: rest };
   if (verb === "shout") return { verb, arg: rest };
+  if (verb === "tell") return { verb, arg: rest }; // "<name> <words>" — the words are theirs, verbatim
   if (verb === "name") return { verb, arg: rest };
   if (verb === "carve") return { verb, arg: rest };
 
@@ -285,6 +295,17 @@ export const HELP_TEXT = [
   "  remove <item>     (unequip) — take it off",
   "  unlock <cache>    (open, pry) — spend a found key on a locked strongbox and",
   "                    take what's inside. Keys are rare; the deep holds the best.",
+  "  in                (enter) — at any gate: step INSIDE, into the gatehouse.",
+  "                    Every gate opens on the same warm room: the keeper's hatch,",
+  "                    the bench, the brazier, and whoever else came in off the",
+  "                    dark. Nothing in the dungeon can reach you there. In the",
+  "                    gatehouse ANYTHING YOU TYPE IS SPOKEN ALOUD, unless it's a",
+  "                    command — it is the one room where a wanderer can be heard.",
+  "  out               (exit) — back through the door, into the world.",
+  "  tell <name> <...> (whisper) — in the gatehouse: lean in and speak to ONE",
+  "                    person. The room doesn't hear it. It is the only thing you",
+  "                    can say in this world that is truly sealed — it goes out",
+  "                    encrypted to their key alone, and no relay keeps it.",
   "  salvage <gear>    (scrap) — at any gate: break steel down at the bench vice",
   "                    for scrap iron. The rarer the piece, the bigger the pile.",
   "  forge [item]      (craft) — at any gate: work scrap iron (and the odd trophy)",

@@ -34,6 +34,7 @@ export const PAGE = `<!doctype html>
     --steel: #a4bec0;
     --heal: #8faa6b;
     --omen: #b195c9;
+    --voice: #e79ab6;
     --border: #3a3020;
     --border2: #4a3c22;
     --line: #2c2418;
@@ -615,6 +616,13 @@ export const PAGE = `<!doctype html>
   /* The world's own voice — event beats (the bell, the tide of rats, the dark
      going wrong). A hue nothing else wears, so an omen never reads as scenery. */
   #log .evt    { color: var(--omen); font-style: italic; }
+  /* A PERSON SPOKE. The highest-signal line in a shared world, and it was
+     rendering in the same grey as "dry bones clatter from below" — a human read
+     as weather. Speech gets the one hue nothing else in the palette wears, and
+     it gets full weight: in a room full of the dungeon's noise, the living voice
+     is the thing your eye must land on first. Quiet words (tell) lean italic. */
+  #log .say    { color: var(--voice); font-weight: 700; }
+  #log .tell   { color: var(--voice); font-style: italic; opacity: 0.92; }
   #log .big    { animation: tremor 0.35s linear; }
   @keyframes tremor {
     0%, 100% { transform: translate(0, 0); }
@@ -657,6 +665,12 @@ export const PAGE = `<!doctype html>
   #chips button.c-heal { background: color-mix(in srgb, var(--heal) 22%, transparent);  border-color: var(--heal);  color: var(--cream); }
   #chips button.c-gain { background: color-mix(in srgb, var(--gold) 20%, transparent);  border-color: var(--gold);  color: var(--cream); }
   #chips button.c-def  { background: color-mix(in srgb, var(--steel) 20%, transparent); border-color: var(--steel); color: var(--cream); }
+  /* The door: the way into the only warm room in the world, and the way back out
+     of it. It wears the voice-rose, alone among the chips, because that is where
+     the people are — and it carries a little more weight than its neighbours,
+     because at a gate it is the thing you are most likely to want. */
+  #chips button.c-door { background: color-mix(in srgb, var(--voice) 18%, transparent); border-color: var(--voice); color: var(--cream); font-weight: 700; letter-spacing: 0.02em; }
+  #chips button.c-door:hover, #chips button.c-door:active { background: color-mix(in srgb, var(--voice) 32%, transparent); border-color: var(--voice); color: var(--cream); }
   /* hover deepens the wash and keeps the category's own outline (not the gold) */
   #chips button.c-atk:hover,  #chips button.c-atk:active  { background: color-mix(in srgb, var(--blood) 32%, transparent); border-color: var(--blood); color: var(--cream); }
   #chips button.c-heal:hover, #chips button.c-heal:active { background: color-mix(in srgb, var(--heal) 34%, transparent);  border-color: var(--heal);  color: var(--cream); }
@@ -1307,6 +1321,84 @@ async function fetchProfileName(pk) {
     return null;
   }
 }
+// ---- A WANDERER'S VOICE: your words, your key ----
+// The dungeon's key signs what the DUNGEON says \\u2014 drops, deaths, the room feed.
+// It does not speak for you. So every word a player speaks \\u2014 'say' out in the
+// dark, or talk in the gatehouse \\u2014 is handed back here ("gpub"), and YOUR client
+// signs it with YOUR key and puts it on the relays. Kind 24914 is ephemeral: no
+// relay stores a word of it.
+//
+// The content is base64'd. That is OBFUSCATION, NOT A CIPHER \\u2014 it keeps speech
+// from rendering as readable chatter in a relay explorer beside the 24913 feed;
+// it does not stop anyone who decides to decode it.
+//
+// Fire-and-forget. The room already heard you over the socket; if a relay is
+// down, or a signer refuses, the conversation carries on regardless.
+var SPEECH_KIND = 24914;
+var SPEECH_RELAYS = ["wss://relay.damus.io", "wss://relay.primal.net", "wss://nos.lol", "wss://nostr.mom"];
+var gpubPool = null;
+async function publishSpeech(text, tag) {
+  if (!text) return;
+  try {
+    var b64 = btoa(unescape(encodeURIComponent(String(text))));
+    var evt = {
+      kind: SPEECH_KIND,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [["t", tag || "nomad-say"], ["enc", "b64"], ["v", "0"]],
+      content: b64,
+    };
+    var ev;
+    if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
+    else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
+    else ev = finalizeEvent(evt, sk);
+    if (!gpubPool) {
+      var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
+      gpubPool = new poolMod.SimplePool();
+    }
+    gpubPool.publish(SPEECH_RELAYS, ev);
+  } catch (e) {
+    console.warn("[speech] publish failed:", e && e.message ? e.message : e);
+  }
+}
+
+// ---- A QUIET WORD: sealed, not merely hidden ----
+// Public speech is base64'd, which is obfuscation. A tell is different: it has
+// exactly ONE recipient, so it gets a real cipher. NIP-44 to their npub, kind
+// 24915, ephemeral, p-tagged \\u2014 only they hold the other half of the key, and no
+// relay keeps it. This is the one message in NOMAD that nobody else can read.
+var TELL_KIND = 24915;
+var nip44mod = null;
+async function sealTo(pk, text) {
+  if (method === "ext" && window.nostr && window.nostr.nip44) return await window.nostr.nip44.encrypt(pk, text);
+  if (method === "bunker") return await (await ensureBunkerClient()).nip44Encrypt(pk, text);
+  if (!nip44mod) nip44mod = await import("https://esm.sh/nostr-tools@2.23.9/nip44");
+  var key = nip44mod.v2.utils.getConversationKey(sk, pk);
+  return nip44mod.v2.encrypt(text, key);
+}
+async function publishTell(pk, text) {
+  if (!pk || !text) return;
+  try {
+    var sealed = await sealTo(pk, String(text));
+    var evt = {
+      kind: TELL_KIND,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [["p", pk], ["t", "nomad-tell"], ["enc", "nip44"], ["v", "0"]],
+      content: sealed,
+    };
+    var ev;
+    if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
+    else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
+    else ev = finalizeEvent(evt, sk);
+    if (!gpubPool) {
+      var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
+      gpubPool = new poolMod.SimplePool();
+    }
+    gpubPool.publish(SPEECH_RELAYS, ev);
+  } catch (e) {
+    console.warn("[tell] seal failed:", e && e.message ? e.message : e);
+  }
+}
+
 // Claim a restored identity's real (kind-0) name, once, if we're connected and
 // still wearing a throwaway name we didn't choose. Both the pre-fetch (restore)
 // and the status-frame lookup funnel through here, so neither double-claims and
@@ -1409,6 +1501,7 @@ async function connect() {
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
+      inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       renderChips(f.suggest, f.combat);
     } else if (f.t === "bench") {
       if (f.open) renderBench(f); else closeBench();
@@ -1420,6 +1513,10 @@ async function connect() {
       renderMap(f);
     } else if (f.t === "journal") {
       renderJournal(f);
+    } else if (f.t === "gpub") {
+      publishSpeech(f.text, f.tag); // your words, your key, your signature
+    } else if (f.t === "tpub") {
+      publishTell(f.to, f.text);    // a quiet word, sealed to them alone
     }
   };
   ws.onclose = function () { clearInterval(hbTimer); closeBench(); closeTrade(); closeMap(); closeJournal(); print("— the connection frays; reweaving —", "sys"); scheduleRetry(); };
@@ -1433,6 +1530,34 @@ function scheduleRetry() {
 var history = [];
 var histAt = -1;
 
+// Is this line a thing you SAID, rather than a thing you did? Two ways to be:
+// the speech verbs anywhere, and \\u2014 in the gatehouse \\u2014 any line that isn't one of
+// the room's few commands, because in there the input box is a mouth. Getting it
+// wrong costs one duplicated line or one missing echo; nothing breaks.
+var SPEECH_VERBS = { say: 1, talk: 1, speak: 1, shout: 1, yell: 1, holler: 1, bellow: 1, scream: 1, tell: 1, whisper: 1, quietly: 1 };
+var GATEHOUSE_CMDS = {
+  out: 1, exit: 1, outside: 1, in: 1, enter: 1, inside: 1, gatehouse: 1,
+  look: 1, l: 1, who: 1, players: 1, help: 1, "?": 1, commands: 1, h: 1,
+  inventory: 1, inv: 1, i: 1, bag: 1, items: 1, kit: 1,
+  stash: 1, store: 1, box: 1, stow: 1, unstash: 1, unbox: 1,
+  vault: 1, bank: 1, deposit: 1, unvault: 1, withdraw: 1, retrieve: 1,
+  barter: 1, trade: 1, shop: 1, browse: 1, fence: 1, buy: 1, purchase: 1,
+  offer: 1, pay: 1, sell: 1, give: 1, forge: 1, craft: 1, repair: 1, mend: 1,
+  salvage: 1, scrap: 1, claim: 1, seal: 1, keys: 1, sheet: 1, publish: 1,
+  map: 1, study: 1, journal: 1, rest: 1, sleep: 1, sit: 1, camp: 1,
+  eat: 1, bandage: 1, bind: 1, equip: 1, wield: 1, wear: 1, remove: 1,
+  unequip: 1, name: 1, rename: 1, smoke: 1, puff: 1, theme: 1, login: 1,
+};
+var inGatehouseNow = false;
+function isSpeech(t) {
+  if (!t) return false;
+  if (t.charAt(0) === "'") return true; // the old MUD shorthand
+  var w = t.split(/\\s+/)[0].toLowerCase();
+  if (SPEECH_VERBS[w]) return true;
+  if (inGatehouseNow && !GATEHOUSE_CMDS[w]) return true;
+  return false;
+}
+
 function sendCmd(text) {
   // A secret never enters the log, the history, or the wire — whether typed
   // behind 'login' or pasted bare. A bare paste means what it obviously
@@ -1441,7 +1566,11 @@ function sendCmd(text) {
   var bareSecret = /^(nsec1[a-z0-9]{20,}|[0-9a-fA-F]{64}|bunker:\\/\\/\\S+)$/.test(t);
   var masked = bareSecret || /^login\\s+(nsec1|bunker:\\/\\/|[0-9a-fA-F]{64})/.test(t);
   history.unshift(masked ? "login \\u2022\\u2022\\u2022\\u2022" : text); histAt = -1;
-  print("\\u25b8 " + (masked ? "login \\u2022\\u2022\\u2022\\u2022" : text), "echo");
+  // Speech doesn't need an echo. The server answers every spoken line with
+  // 'You say, "..."' \\u2014 so echoing the command first just prints the words twice
+  // and buries the conversation in its own scaffolding. Commands still echo:
+  // there, seeing exactly what you typed is the whole point.
+  if (!isSpeech(t)) print("\\u25b8 " + (masked ? "login \\u2022\\u2022\\u2022\\u2022" : text), "echo");
   guideNotice(t); // the first walk listens for its steps
   if (bareSecret) { importKey(t); return; } // importKey routes bunker:// too
   if (localCmd(text)) return;
@@ -1722,6 +1851,11 @@ function chipLabel(s) {
   // Where the colour already speaks the verb, the label sheds it: a red chip
   // bites (attack), a gold one gains (get). The button still sends the full
   // command, and the echo in the log is where the vocabulary rubs off.
+  // The door. A bare "in" / "out" reads as nothing at all sitting next to "barter
+  // with the keeper" — and it is the most important thing at a gate: the way to
+  // the only warm room in the world, and the way back into the dark.
+  if (s === "in") return "into the gatehouse";
+  if (s === "out") return "out into the dark";
   m = /^(attack|get) (.+)$/.exec(s);
   if (m) return m[2];
   return s;
@@ -1734,6 +1868,10 @@ function chipKind(s) {
   if (/^(eat|bandage) /.test(s) || s === "bandage" || s === "rest") return "c-heal";
   if (/^(get|unlock|equip|offer) /.test(s) || s === "offer nothing" || s === TRADE_CHIP || s === FORGE_CHIP) return "c-gain";
   if (s === "stance guarded") return "c-def";
+  // The door wears the VOICE colour, and it is the only chip that does. That is
+  // the whole visual argument: rose means people. Speech is rose; the door to the
+  // room where the people are is rose. Nothing else in the world is.
+  if (s === "in" || s === "out") return "c-door";
   return "";
 }
 function chipButton(s) {
@@ -2601,14 +2739,19 @@ function wireMap() {
 
 function renderMap(f) {
   var detailed = !!f.detailed;
+  var wall = !!f.wall;
   mapEl.classList.toggle("crude", !detailed);
-  document.getElementById("maptitle").textContent = detailed ? "Surveyor's Map" : "Crude Map";
-  document.getElementById("mapsub").textContent = detailed
-    ? "Every hall of the Door, set down true."
-    : "Copied from half a memory. Some of it is right. Trust it at your peril.";
-  document.getElementById("maphint").textContent = detailed
-    ? "drag to pan \\u00b7 scroll to zoom"
-    : "an unreliable copy \\u00b7 drag to pan";
+  document.getElementById("maptitle").textContent = wall ? "The Wall Chart" : detailed ? "Surveyor's Map" : "Crude Map";
+  document.getElementById("mapsub").textContent = wall
+    ? "The shallow halls, scratched into the plaster by everyone who walked them and made it back."
+    : detailed
+      ? "Every hall of the Door, set down true."
+      : "Copied from half a memory. Some of it is right. Trust it at your peril.";
+  document.getElementById("maphint").textContent = wall
+    ? "true, as far as it goes \\u00b7 the deep is not on it \\u00b7 drag to pan"
+    : detailed
+      ? "drag to pan \\u00b7 scroll to zoom"
+      : "an unreliable copy \\u00b7 drag to pan";
   // A true map is knowledge kept: its rooms light gold on the HUD hereafter.
   if (detailed && Array.isArray(f.reveal)) {
     for (var i = 0; i < f.reveal.length; i++) knownRooms[f.reveal[i]] = 1;
@@ -3114,7 +3257,7 @@ chipbtn.addEventListener("click", function () {
 
 // ---- themes: the Door in different lights ----
 // Five local presets, one row in settings; the relays add the rest below.
-var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "blood", "bone", "steel", "heal", "omen", "border", "border2", "line"];
+var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "blood", "bone", "steel", "heal", "omen", "voice", "border", "border2", "line"];
 var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
 // 'heal' is the mending-green (eat/bandage/rest chips): a distinct hue that must
 // stay legible on each ground, so — like blood/steel — it's tuned per theme
@@ -3122,12 +3265,19 @@ var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
 // on 'moss'). 'omen' is the world-event violet (#log .evt) under the same law:
 // bright on the dark grounds, a dark plum on 'bone'. Foreign themes derive
 // both in dittoToVars.
+// 'voice' is the living-speech hue (#log .say) under the same law as heal/omen:
+// a color nothing else wears, tuned per ground so a person never reads as
+// weather. It is a ROSE — firelit flesh — because in a world of bone, rust and
+// stone the one living thing should read like a face, not like a signal lamp.
+// It is deliberately held ~33° of hue off 'blood' on every theme, and much
+// lighter, so a voice can never be mistaken for a wound. On the light 'bone'
+// ground it inverts to a deep wine-rose.
 var THEMES = {
-  door:  { bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
-  bone:  { bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
-  moss:  { bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
-  abyss: { bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", border: "#243049", border2: "#2f4160", line: "#171f33" },
-  ember: { bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", omen: "#c9a2c4", border: "#46291a", border2: "#5c3722", line: "#331e12" },
+  door:  { bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
+  bone:  { bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", voice: "#a5325f", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
+  moss:  { bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", voice: "#eb9cba", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
+  abyss: { bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", voice: "#e79cbc", border: "#243049", border2: "#2f4160", line: "#171f33" },
+  ember: { bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", omen: "#c9a2c4", voice: "#f2a4c1", border: "#46291a", border2: "#5c3722", line: "#331e12" },
 };
 var thbtn = document.getElementById("thbtn");
 var thbrowse = document.getElementById("thbrowse");
@@ -3310,6 +3460,8 @@ function dittoToVars(t) {
     heal: ensureContrast("#7faa63", bg, 3.0),
     // The omen-violet (world-event lines) — same nudge; a hue no other var wears.
     omen: ensureContrast("#a98cc8", bg, 3.0),
+    // The living voice (another person spoke) — the rose, nudged to read on any ground.
+    voice: ensureContrast("#e08cad", bg, 4.0),
     border: mixHex(bg, primary, 0.3),
     border2: mixHex(bg, primary, 0.5),
     line: mixHex(bg, primary, 0.18),

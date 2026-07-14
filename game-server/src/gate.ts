@@ -13,7 +13,10 @@ import { uuid, randInt, chance } from "./rng";
 import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord } from "./zone-util";
 import { SCRAP_ID, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
-  FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS } from "./zone-data";
+  FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS,
+  GATEHOUSE_BARRED, GATEHOUSE_AMBIENCE, DEEP_ROOMS } from "./zone-data";
+import { parse } from "./parser";
+import { mapRegionOf } from "./lore";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -97,9 +100,14 @@ export async function handleForge(z: ZoneDO, session: Session, frame: any): Prom
   const world = z.world!;
   const action = frame?.action;
   if (action === "open") {
-    if (session.away) return; // one step-out at a time
+    const lateral = z.outOfWorld(session); // the brazier is a fixture of the room you're standing in
+    if (session.away && !lateral) return; // one step-out at a time (mid-dungeon crouch)
     const bar = forgeGuard(z, session);
     if (bar) return z.send(session, bar);
+    if (lateral) {
+      z.enterStep(session, "forging"); // swap stance; the gate outside hears nothing new
+      return sendForge(z, session);
+    }
     session.away = true;
     session.forging = true;
     // Rest survives a trip to the forge — stepping out pauses the healing (the
@@ -123,9 +131,16 @@ export async function handleForge(z: ZoneDO, session: Session, frame: any): Prom
 }
 
 export async function leaveForge(z: ZoneDO, session: Session): Promise<void> {
-  session.away = false;
   session.forging = false;
   try { session.ws.send(JSON.stringify({ v: 0, t: "forge", open: false })); } catch {}
+  // The brazier is in the gatehouse: bank it and you're still by the fire.
+  if (z.world!.entryRooms.has(session.roomId)) {
+    session.stepText = true;
+    z.send(session, describeGatehouse(z, session));
+    z.sendCtx(session);
+    return;
+  }
+  session.away = false;
   z.roomFeed(session.roomId, `${session.name} banks the brazier and steps back.`, session.pubkey);
   z.send(session, z.enterDescribe(session));
   z.sendCtx(session);
@@ -421,10 +436,15 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
   const world = z.world!;
   const action = frame?.action;
   if (action === "open") {
-    if (session.away) return; // one step-out at a time
+    const lateral = z.outOfWorld(session); // the hatch is a fixture of the room you're standing in
+    if (session.away && !lateral) return; // one step-out at a time (mid-dungeon crouch)
     const bar = fenceGuard(z, session);
     if (bar) return z.send(session, bar);
     if (!world.fenceStock.length) return z.send(session, "The hatch is shuttered, and stays that way.");
+    if (lateral) {
+      z.enterStep(session, "trading"); // swap stance; the gate outside hears nothing new
+      return sendTrade(z, session);
+    }
     session.away = true;
     session.trading = true;
     // Rest survives a trip to the hatch — healing pauses while stepped out, resumes on close.
@@ -484,10 +504,17 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
 }
 
 export async function leaveTrade(z: ZoneDO, session: Session): Promise<void> {
-  session.away = false;
   session.trading = false;
   session.buying = undefined; // an unfinished trade sweeps back with you
   try { session.ws.send(JSON.stringify({ v: 0, t: "trade", open: false })); } catch {}
+  // The hatch IS the gatehouse wall — step back from it and you're still inside.
+  if (z.world!.entryRooms.has(session.roomId)) {
+    session.stepText = true;
+    z.send(session, describeGatehouse(z, session));
+    z.sendCtx(session);
+    return;
+  }
+  session.away = false;
   z.roomFeed(session.roomId, `${session.name} steps back from the hatch.`, session.pubkey);
   z.send(session, z.enterDescribe(session));
   z.sendCtx(session);
@@ -729,13 +756,16 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     const action = frame?.action;
     const atGate = world.entryRooms.has(session.roomId);
     if (action === "open") {
-      if (session.away) return; // already stepped out (a modal, or a typed barter/forge)
+      // In the gatehouse the bench is RIGHT THERE — opening it is a lateral move,
+      // never "already stepped out". Only a mid-dungeon crouch blocks a second one.
+      if (session.away && !z.outOfWorld(session)) return;
       if (z.inCombat(session)) {
         return z.send(session, "Not while something is trying to kill you.");
       }
       // The lockbox opens anywhere (you duck aside to sort your run closet); the
       // vault and the seal are the gate's business, shown only when you're at one.
-      enterBench(z, session);
+      if (z.outOfWorld(session)) z.enterStep(session, "sorting"); // lateral: swap stance, announce nothing
+      else enterBench(z, session);
       return sendBench(z, session);
     }
     if (!session.away) return; // every other action needs the bench already open
@@ -838,6 +868,19 @@ export function enterBench(z: ZoneDO, session: Session): void {
   }
 
 export async function leaveBench(z: ZoneDO, session: Session): Promise<void> {
+    // AT A GATE the bench stands INSIDE the gatehouse — so closing it puts your
+    // head up in that room, among whoever else is by the fire. It does not throw
+    // you out the door; only 'out' does that. (Mid-dungeon there is no room to
+    // come up into: closing the lockbox is straightening up in the open, exactly
+    // as before, and the world is right there waiting.)
+    if (z.world!.entryRooms.has(session.roomId)) {
+      session.sorting = false;
+      session.stepText = true; // still inside, still in text — the tavern has you
+      try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
+      z.send(session, describeGatehouse(z, session));
+      z.sendCtx(session);
+      return;
+    }
     session.away = false;
     try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
     z.roomFeed(session.roomId, `${session.name} steps back out, kit sorted.`, session.pubkey);
@@ -1102,3 +1145,248 @@ export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key:
     z.send(session, cfg.take(tmpl.name));
     z.sendCtx(session);
   }
+// ============================================================================
+// THE GATEHOUSE — the sanctuary behind the door
+// ============================================================================
+// Four doors, one fire. Whichever gate you came in by, `in` puts you in the
+// SAME room: the keeper is one man and it is his house. Everyone who steps out
+// of the dungeon lands next to everyone else who did.
+//
+// In here you are out of the world (no creature paths in, no blade reaches you)
+// but you are PRESENT — the room names who's in it, and the input line is a
+// mouth. Known verbs still command; anything else you type is simply spoken.
+//
+// And it never touches the wire: gatehouse talk is broadcast over the live
+// sockets and nowhere else. No D1 row, no Nostr event, no relay. What's said
+// behind the door stays behind the door.
+
+// Everyone standing in the gatehouse, whichever door they used.
+export function gatehouseFolk(z: ZoneDO): Session[] {
+  return [...z.sessions.values()].filter((s) => z.outOfWorld(s));
+}
+
+// The tavern's only channel. In memory, over the sockets, gone when it's said.
+export function gatehouseFeed(z: ZoneDO, text: string, exceptPubkey?: string, cls?: string): void {
+  for (const s of gatehouseFolk(z)) {
+    if (s.pubkey === exceptPubkey) continue;
+    z.send(s, text, cls);
+  }
+}
+
+export function gatehouseSay(z: ZoneDO, session: Session, raw: string): void {
+  const msg = raw.trim().slice(0, 240);
+  if (!msg) return;
+  const line = `${session.name} says, "${msg}"`;
+  z.send(session, `You say, "${msg}"`, "say");
+  gatehouseFeed(z, line, session.pubkey, "say");
+  // The room hears it over the sockets, instantly. Nostr hears it FROM THE
+  // SPEAKER: z.speechOut hands the line back to their own client, which signs
+  // kind 24914 with their own key and publishes it. Same law as `say` out in
+  // the dark — the gate's key never speaks for a wanderer.
+  z.speechOut(session, line, "nomad-gatehouse");
+}
+
+export function describeGatehouse(z: ZoneDO, session: Session): string {
+  const others = gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey);
+  // Titled exactly as the status bar names it, so the client's knownRooms map
+  // recognises it and paints it gold like any other room. It IS a room.
+  const lines = [
+    "The Gatehouse",
+    "A low room behind the gate, warm and close. The keeper's hatch is shut in the far wall; a bench runs under it, and the brazier keeps its coals. The dungeon is on the other side of a very old door, and it stays there.",
+  ];
+  // The wall chart, plastered by the door: the players' own map, in whatever
+  // state they've left it. The line grows with the wall.
+  const marks = [...z.wallMarks].filter((r) => z.world!.rooms.has(r)).length;
+  lines.push(marks === 0
+    ? "By the door, a stretch of wall has been plastered smooth and scratched with an empty frame — a chart waiting for a first hand."
+    : `By the door, a wall chart scratched by many hands maps ${marks} of the shallow halls. ('study' it; 'carve' to add what you've walked)`);
+  if (others.length === 0) {
+    lines.push("You have it to yourself. The fire ticks.");
+  } else {
+    const names = others.map((s) => s.name + (s.resting ? " (dozing)" : ""));
+    lines.push(names.length === 1
+      ? `${names[0]} is here.`
+      : `Here: ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}.`);
+  }
+  lines.push("(Anything you type in here is spoken aloud. 'out' returns you to the world.)");
+  return lines.join("\n");
+}
+
+// In through the door. Idempotent; gate-only.
+export function enterGatehouse(z: ZoneDO, session: Session): void {
+  if (!z.world!.entryRooms.has(session.roomId)) {
+    return z.send(session, "There's no door here. The gatehouse waits at a gate.");
+  }
+  // THE DOOR IS NOT AN ESCAPE HATCH. Every other way out of the world refuses
+  // mid-fight (benchGuard), and this must too. Nothing in the dungeon can reach a
+  // gate room — so the only blade that can be out here is another wanderer's, and
+  // without this a man losing a duel walks through the door and keeps everything
+  // he's carrying. You cannot leave a fight by leaving the world.
+  if (z.inCombat(session)) {
+    return z.send(session, "The door won't take you — not with steel out. Finish it, or run.");
+  }
+  if (z.outOfWorld(session)) return z.send(session, describeGatehouse(z, session));
+  z.enterStep(session, "gatehouse");
+  z.send(session, describeGatehouse(z, session));
+  gatehouseFeed(z, `${session.name} pushes in out of the cold.`, session.pubkey);
+}
+
+// The router: every frame typed by someone standing in the gatehouse. Known
+// verbs command; the dungeon-facing ones are refused (the dungeon is outside);
+// EVERYTHING ELSE IS SPEECH. That last line is the tavern.
+export async function handleGatehouse(z: ZoneDO, session: Session, text: string): Promise<void> {
+  const cmd = parse(text);
+  // Not a verb we know? Then it wasn't meant as one. Say it.
+  if (!cmd || "miss" in cmd) return gatehouseSay(z, session, text);
+  const v = cmd.verb;
+  if (v === "say") return gatehouseSay(z, session, cmd.arg);
+  if (v === "enter") return z.send(session, "You're already inside.");
+  if (v === "look") return z.send(session, describeGatehouse(z, session));
+  if (v === "who") { // who's by the fire, not who's in the dungeon
+    const folk = gatehouseFolk(z);
+    return z.send(session, folk.length === 1
+      ? "You're the only one by the fire."
+      : `By the fire: ${folk.map((s) => s.name).join(", ")}.`);
+  }
+  // The wall chart: in here, carving means the wall, and studying means the wall.
+  // (Out in the dark, carve still scratches a room and study still reads corpses.)
+  if (v === "carve") return wallCarve(z, session);
+  if (v === "study") return wallStudy(z, session);
+  if (GATEHOUSE_BARRED.has(v)) {
+    return z.send(session, "Not from in here — the dungeon is on the other side of that door. ('out' to step back into it.)");
+  }
+  await z.dispatch(session, cmd); // bench, vault, forge, hatch, kit, keys, the lot
+}
+
+// A breath of the room, for people who sit a while. Same cadence rails as the
+// dungeon's weather, and the same no-stutter law (never the same line twice
+// running) — it just never says anything frightening. This is the ONLY thing you
+// hear in here now: the dungeon's noise stops at the door, so the room's own
+// quiet is all the atmosphere there is, and it has to carry the weight.
+export function gatehouseAmbient(avoid?: string): string {
+  const fresh = GATEHOUSE_AMBIENCE.filter((l) => l !== avoid);
+  const pool = fresh.length ? fresh : GATEHOUSE_AMBIENCE;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// A quiet word, one to one — leaning in at the bar. Only they hear it; the room
+// doesn't. Gatehouse only: out in the dark there is nowhere to lean.
+//
+// The wire copy is a REAL encrypted Nostr message. This is the one place the
+// encryption question answers itself: a `tell` has exactly ONE recipient, so
+// there's no shared-room-key problem — the speaker's client NIP-44s it to that
+// npub and publishes an ephemeral kind 24915, p-tagged to them. Nobody else can
+// read it. No relay keeps it. (The dungeon still routes the socket copy, so it
+// sees the words in passing — if that must change, the client can encrypt before
+// it sends and the server can forward a blob it can't read.)
+export function cmdTell(z: ZoneDO, session: Session, arg: string): void {
+  if (!z.outOfWorld(session)) {
+    return z.send(session, "Not out here. A quiet word needs a wall at your back — that's what the gatehouse is for.");
+  }
+  const m = arg.trim().match(/^(\S+)\s+(.+)$/s);
+  if (!m) return z.send(session, "Tell who what? ('tell <name> <words>')");
+  const [, who, raw] = m;
+  const msg = raw.trim().slice(0, 240);
+  if (!msg) return z.send(session, "Tell them what?");
+  const others = gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey);
+  const target = others.find((s) => s.name.toLowerCase() === who.toLowerCase())
+    ?? others.find((s) => s.name.toLowerCase().startsWith(who.toLowerCase()));
+  if (!target) {
+    return z.send(session, others.length
+      ? `Nobody here by that name. By the fire: ${others.map((s) => s.name).join(", ")}.`
+      : "There's nobody here to lean toward.");
+  }
+  z.send(session, `You lean in to ${target.name}: "${msg}"`, "tell");
+  z.send(target, `${session.name} leans in, close, and says quietly: "${msg}"`, "tell");
+  // Their key, their eyes only. The speaker's client seals it and puts it out.
+  z.tellOut(session, target.pubkey, msg);
+}
+
+// ---- THE WALL CHART: the players' own map ----
+// The wall starts as bare plaster. Every wanderer who walks the shallow halls
+// and makes it back can 'carve' what they walked into it, and anyone can
+// 'study' it and take the marks onto their own map. The dungeon gets charted,
+// over weeks, by the people who died learning it — somebody's last run becomes
+// the next arrival's first advantage.
+//
+// Two laws keep it honest and keep it from eating the map trade:
+//   TESTIMONY, NOT INK — you can only set down rooms the server saw you stand
+//   in this walk (session.visited). There is no freehand; the wall cannot lie.
+//   THE SHALLOW RING ONLY — the gates and the halls just behind them. The deep
+//   never goes on the wall, whatever anyone walked. That is the surveyor's
+//   territory, forever; the keeper still eats.
+
+// The gates and everything within two doors of them, minus the deep.
+export function shallowRing(z: ZoneDO): Set<string> {
+  const world = z.world!;
+  const ring = new Set<string>(world.entryRooms);
+  let frontier = [...world.entryRooms];
+  for (let depth = 0; depth < 2; depth++) {
+    const next: string[] = [];
+    for (const r of frontier) {
+      for (const e of world.exits.get(r) ?? []) {
+        if (!ring.has(e.to_room)) { ring.add(e.to_room); next.push(e.to_room); }
+      }
+    }
+    frontier = next;
+  }
+  for (const id of DEEP_ROOMS) ring.delete(id);
+  return ring;
+}
+
+export async function wallCarve(z: ZoneDO, session: Session): Promise<void> {
+  const ring = shallowRing(z);
+  // Only what YOU walked THIS session — the wall takes testimony, not hearsay.
+  // (A returning player re-walks before they can carve: what you set down is
+  // what you remember from this walk, not a rumor of an old one.)
+  const fresh = [...session.visited].filter((r) => ring.has(r) && !z.wallMarks.has(r));
+  if (!fresh.length) {
+    return z.send(session, z.wallMarks.size
+      ? "You read your memory against the wall. Every hall you walked this time is already scratched there."
+      : "Bare plaster, and nothing walked yet worth setting down. Walk the shallow halls, come back, and carve.");
+  }
+  for (const r of fresh) z.wallMarks.add(r);
+  z.send(session, `You take up a nail and set down what you walked — ${fresh.length} hall${fresh.length === 1 ? "" : "s"} the wall didn't have. Whoever comes in from the cold can read them now.`);
+  gatehouseFeed(z, `${session.name} scratches new halls into the wall chart.`, session.pubkey);
+  await z.persist();
+}
+
+export function wallStudy(z: ZoneDO, session: Session): void {
+  const world = z.world!;
+  const ring = shallowRing(z);
+  // Filter against BOTH the ring and the live world: a migration that re-hangs
+  // a corridor may pull an old mark out of the ring, and it just quietly ages
+  // off the chart rather than lying.
+  const marked = [...z.wallMarks].filter((r) => ring.has(r) && world.rooms.has(r));
+  if (!marked.length) {
+    return z.send(session, "The wall chart is bare plaster — a frame scratched around nothing, waiting. Walk the shallow halls and 'carve' what you find.");
+  }
+  // The same frame a real map sends, built the same way — truth, no lies —
+  // but holding only what's been carved. Exits are drawn only between marked
+  // rooms: the wall never names a hall nobody set down.
+  const shown = new Set(marked);
+  const regions: Record<string, { key: string; label: string; rooms: any[] }> = {
+    gate: { key: "gate", label: "The Gates", rooms: [] },
+    out: { key: "out", label: "The Open Ground", rooms: [] },
+    sky: { key: "sky", label: "The Overworks", rooms: [] },
+    upper: { key: "upper", label: "The Halls", rooms: [] },
+    warrens: { key: "warrens", label: "The Warrens", rooms: [] },
+    deep: { key: "deep", label: "The Deep", rooms: [] },
+  };
+  for (const id of shown) {
+    const room = world.rooms.get(id)!;
+    const exits = (world.exits.get(id) ?? [])
+      .filter((e) => shown.has(e.to_room))
+      .map((e) => ({ dir: e.dir, to: e.to_room, toName: world.rooms.get(e.to_room)?.name ?? e.to_room }));
+    regions[mapRegionOf(z, id)].rooms.push({ id, name: room.name, exits, here: id === session.roomId });
+  }
+  try {
+    session.ws.send(JSON.stringify({
+      v: 0, t: "map", detailed: 1, wall: 1, here: session.roomId,
+      // Studied is kept: the marks light gold on your HUD, same law as a true map.
+      reveal: marked.map((id) => world.rooms.get(id)!.name),
+      regions: Object.values(regions).filter((r) => r.rooms.length),
+    }));
+  } catch {}
+  z.send(session, `You study the wall chart — ${marked.length} hall${marked.length === 1 ? "" : "s"}, set down by whoever walked them. What you've read, you keep.`);
+}

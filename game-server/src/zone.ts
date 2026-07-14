@@ -80,6 +80,7 @@ import {
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
+  GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS,
   DARK_ROOMS,
   LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE
@@ -119,6 +120,17 @@ export class ZoneDO implements DurableObject {
   public groundCond = new Map<string, number>(); // "itemId@roomId" -> condition of gear on the floor, so wear survives a drop/pickup
   public groundLore = new Map<string, string>(); // "itemId@roomId" -> the engraving on floor gear, so the mark survives the stones (077)
   public groundHeart = new Map<string, number>(); // "itemId@roomId" -> a dropped heart's cut-time: the stones don't make it fresh again
+  // Who is INSIDE. A session is rebuilt from nothing on every connect, so without
+  // this a dropped socket threw you out the gatehouse door and into the dungeon —
+  // the one place the room is supposed to protect you from. You left the world by
+  // walking through a door; only walking back through it puts you outside again.
+  public inGatehouse = new Set<string>();
+  // The wall chart: the players' own map of the shallow ring, carved one walk at
+  // a time. Server-verified testimony, never freehand — a room goes on the wall
+  // only when someone who actually stood in it sets it down (see gate.wallCarve),
+  // so the wall cannot lie. It also cannot reach the deep: that stays the paid
+  // map's territory, forever (gate.shallowRing).
+  public wallMarks = new Set<string>();
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
   private cacheRoom = new Map<string, string>(); // cacheId -> its CURRENT room; roaming chests relocate on refill
   private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
@@ -203,6 +215,8 @@ export class ZoneDO implements DurableObject {
       this.groundCond = new Map(Object.entries(saved.groundCond ?? {}));
       this.groundLore = new Map(Object.entries(saved.groundLore ?? {}));
       this.groundHeart = new Map(Object.entries(saved.groundHeart ?? {}));
+      this.inGatehouse = new Set(saved.inGatehouse ?? []);
+      this.wallMarks = new Set(saved.wallMarks ?? []);
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
       this.cacheRoom = new Map(Object.entries(saved.cacheRoom ?? {}));
       this.nextSurfaceAt = saved.nextSurfaceAt ?? 0;
@@ -348,6 +362,8 @@ export class ZoneDO implements DurableObject {
       groundCond: Object.fromEntries(this.groundCond),
       groundLore: Object.fromEntries(this.groundLore),
       groundHeart: Object.fromEntries(this.groundHeart),
+      inGatehouse: [...this.inGatehouse],
+      wallMarks: [...this.wallMarks],
       cacheSpent: Object.fromEntries(this.cacheSpent),
       cacheRoom: Object.fromEntries(this.cacheRoom),
       nextSurfaceAt: this.nextSurfaceAt,
@@ -381,6 +397,7 @@ export class ZoneDO implements DurableObject {
     this.groundCond.clear();
     this.groundLore.clear();
     this.groundHeart.clear();
+    this.wallMarks.clear(); // a fresh world has fresh plaster — old room ids mean nothing here
     this.cacheSpent.clear();
     this.cacheRoom.clear();
     this.nextSurfaceAt = 0;
@@ -495,6 +512,21 @@ export class ZoneDO implements DurableObject {
         this.send(session, "Type 'help' if you're lost.");
       }
       this.roomFeed(session.roomId, `${session.name} blinks into being.`, pubkey);
+    }
+    // YOU WERE INSIDE. A fresh Session is built with away = false, so a frayed
+    // socket used to fling you out of the gatehouse and into the dungeon — out of
+    // the one room whose whole job is that nothing can do that to you. The door
+    // holds across a reconnect: only walking out puts you outside.
+    if (this.inGatehouse.has(pubkey) && this.world!.entryRooms.has(session.roomId)) {
+      session.away = true;
+      session.stepText = true;
+      session.visited.add(session.roomId);
+      this.sendStatus(session);
+      this.send(session, gate.describeGatehouse(this, session));
+      this.sendCtx(session);
+      await this.persist();
+      await this.ensureAlarm();
+      return new Response(null, { status: 101, webSocket: client });
     }
     // Either way, mark the wake room known and show it: full on a real arrival,
     // brief on a re-weave (you never left). Status goes first so the client
@@ -694,6 +726,17 @@ export class ZoneDO implements DurableObject {
     if (isTrade) return gate.handleTrade(this, session, frame);
     if (isForge) return gate.handleForge(this, session, frame);
 
+    // IN THE GATEHOUSE (away, at a gate): the sanctuary is a ROOM now, not a
+    // switch. The dungeon can't reach you and you can still be heard — known
+    // verbs command, the dungeon-facing ones are refused, and anything else you
+    // type is spoken to everyone by the fire. Off the wire entirely. Only 'out'
+    // (or closing the modal you're in) puts you back in the world.
+    if (this.outOfWorld(session)) {
+      await gate.handleGatehouse(this, session, frame.text);
+      this.syncCombatCtx();
+      return;
+    }
+
     // Stepped out of the world with a TYPED barter/forge/inventory: a safe
     // stance at the counter/brazier/keeping. That stance's own work keeps you
     // out and untouchable; ANY other act walks you back into the world first,
@@ -766,7 +809,7 @@ export class ZoneDO implements DurableObject {
     "listen", "dive", // an ear to the wall or a head under water: not with steel out
   ]);
 
-  private async dispatch(session: Session, cmd: Command): Promise<void> {
+  public async dispatch(session: Session, cmd: Command): Promise<void> {
     if (ZoneDO.NEEDS_CALM.has(cmd.verb) && this.inCombat(session)) {
       return this.send(session, "Not while something is trying to kill you.");
     }
@@ -812,6 +855,9 @@ export class ZoneDO implements DurableObject {
       case "listen": return verbs.cmdListen(this, session, cmd.arg);
       case "dive": return verbs.cmdDive(this, session, cmd.arg);
       case "wash": return verbs.cmdWash(this, session);
+      case "enter": return gate.enterGatehouse(this, session);
+      case "exit": return this.leaveGatehouse(session);
+      case "tell": return gate.cmdTell(this, session, cmd.arg);
       case "smoke": return verbs.cmdSmoke(this, session);
       case "squink": return verbs.cmdSquink(this, session);
       case "xyzzy": return verbs.cmdXyzzy(this, session);
@@ -1289,9 +1335,23 @@ export class ZoneDO implements DurableObject {
   // Typed barter/forge steps you out of the world just like opening the modal —
   // untouchable at the counter/brazier — but keeps you in text. Idempotent, so
   // a run of typed sub-commands (buy, offer, forge) doesn't re-announce it.
-  public enterStep(session: Session, mode: "trading" | "forging" | "sorting"): void {
-    if (session.away) return;
+  public enterStep(session: Session, mode: "trading" | "forging" | "sorting" | "gatehouse"): void {
     const atGate = this.world!.entryRooms.has(session.roomId);
+    if (session.away) {
+      // Already out of the world. At a gate that means STANDING IN THE GATEHOUSE
+      // — and the hatch, the brazier and the bench are all fixtures of this room,
+      // so stepping to one is a LATERAL move, not a second step-out. Swap the
+      // stance flags, sweep any unfinished trade, announce nothing to the gate
+      // outside (they heard the door shut). Mid-dungeon (crouched over the
+      // lockbox) the old law holds: one stance at a time.
+      if (!atGate) return;
+      session.buying = mode === "trading" ? session.buying : undefined; // an unfinished trade sweeps back unless you stay at the counter
+      session.trading = mode === "trading";
+      session.forging = mode === "forging";
+      session.sorting = mode === "sorting";
+      session.stepText = true;
+      return;
+    }
     session.away = true;
     session.stepText = true;
     session.trading = mode === "trading";
@@ -1303,6 +1363,7 @@ export class ZoneDO implements DurableObject {
     // At a gate you step clean out of sight; sorting mid-dungeon (lockbox only)
     // you crouch in the open, still in reach. (trading/forging are gate-only.)
     if (atGate) {
+      this.inGatehouse.add(session.pubkey); // you are INSIDE now, and a dropped socket won't undo it
       for (const c of this.creatures.values()) {
         if (c.target === session.pubkey) c.target = null;
       }
@@ -1311,11 +1372,23 @@ export class ZoneDO implements DurableObject {
       ? `${session.name} steps up to the keeper's hatch.`
       : mode === "forging"
         ? `${session.name} steps to the bench and stirs the brazier to life.`
-        : atGate
-          ? `${session.name} steps into the gatehouse to sort their kit.`
-          : `${session.name} crouches to dig through a lockbox.`;
+        : mode === "gatehouse"
+          ? `${session.name} pulls the gatehouse door shut behind them.`
+          : atGate
+            ? `${session.name} steps into the gatehouse to sort their kit.`
+            : `${session.name} crouches to dig through a lockbox.`;
     this.roomFeed(session.roomId, msg, session.pubkey);
     this.refreshRoomCtx(session.roomId);
+  }
+
+  // Out through the door: back into the dungeon, where it can all reach you
+  // again. The room by the fire hears you go.
+  public async leaveGatehouse(session: Session): Promise<void> {
+    if (!session.away) return this.send(session, "You're already out in the world.");
+    gate.gatehouseFeed(this, `${session.name} shoulders the door open and goes back out.`, session.pubkey);
+    await this.leaveStep(session);
+    this.send(session, this.describeRoom(session, false));
+    this.sendCtx(session);
   }
 
   // Step a text-stance player back into the world (any command that isn't part
@@ -1323,15 +1396,22 @@ export class ZoneDO implements DurableObject {
   // close frame is a no-op with no modal open. An unfinished trade sweeps back.
   private async leaveStep(session: Session): Promise<void> {
     const wasTrading = !!session.trading;
+    // Not at a counter, not at a brazier, not over a box — then you were simply
+    // INSIDE, and what the gate sees is a door opening.
+    const fromGatehouse = this.outOfWorld(session)
+      && !session.trading && !session.forging && !session.sorting;
     const frame = session.trading ? "trade" : session.forging ? "forge" : "bench";
     session.away = false;
+    this.inGatehouse.delete(session.pubkey); // out through the door — the only way out
     session.trading = false;
     session.forging = false;
     session.sorting = false;
     session.stepText = false;
     session.buying = undefined;
     try { session.ws.send(JSON.stringify({ v: 0, t: frame, open: false })); } catch {}
-    this.roomFeed(session.roomId, `${session.name} steps back from the ${wasTrading ? "keeper's hatch" : "bench"}.`, session.pubkey);
+    this.roomFeed(session.roomId, fromGatehouse
+      ? `${session.name} comes out of the gatehouse, pulling the door to behind them.`
+      : `${session.name} steps back from the ${wasTrading ? "keeper's hatch" : "bench"}.`, session.pubkey);
     this.refreshRoomCtx(session.roomId);
   }
 
@@ -2385,10 +2465,19 @@ export class ZoneDO implements DurableObject {
     // and then, drawn from where they stand. Never in a fight, never at the
     // bench, and never faster than the cooldown — quiet, not chatter.
     for (const session of this.sessions.values()) {
-      if (session.away || this.inCombat(session)) continue;
-      if (now - session.lastAmbientAt < AMBIENT_COOLDOWN_MS) continue;
-      if (!chance(AMBIENT_ODDS)) continue;
-      const line = this.ambientLine(session.roomId, session.lastAmbientLine);
+      // The gatehouse breathes too — its own quiet, warm pool. (Crouched over a
+      // lockbox mid-dungeon you're still outside: the weather finds you there.)
+      const inGatehouse = this.outOfWorld(session);
+      if ((session.away && !inGatehouse) || this.inCombat(session)) continue;
+      // The gatehouse keeps its own, slower clock: it's a room where people sit
+      // and talk, and the walls shouldn't keep interrupting them.
+      const cool = inGatehouse ? GATEHOUSE_AMBIENT_COOLDOWN_MS : AMBIENT_COOLDOWN_MS;
+      const odds = inGatehouse ? GATEHOUSE_AMBIENT_ODDS : AMBIENT_ODDS;
+      if (now - session.lastAmbientAt < cool) continue;
+      if (!chance(odds)) continue;
+      const line = inGatehouse
+        ? gate.gatehouseAmbient(session.lastAmbientLine)
+        : this.ambientLine(session.roomId, session.lastAmbientLine);
       if (!line) continue;
       session.lastAmbientAt = now;
       session.lastAmbientLine = line;
@@ -3490,7 +3579,10 @@ export class ZoneDO implements DurableObject {
           named: session.named ? 1 : 0,
           hp: session.hp,
           max_hp: session.maxHp,
-          room: room?.name ?? session.roomId,
+          // Inside, the HUD must say INSIDE. You are not at the Weeper's Arch —
+          // you are behind its door, and the bar saying otherwise was the visible
+          // face of a deeper lie: the world still had you standing in the gate room.
+          room: this.outOfWorld(session) ? "The Gatehouse" : (room?.name ?? session.roomId),
           fx,
         }),
       );
@@ -3515,7 +3607,7 @@ export class ZoneDO implements DurableObject {
   // A noisy event in one room is heard, degraded and directional, in every
   // room with an open exit toward it. Closed iron blocks sound. "{dir}" in
   // the template becomes "to the east" / "from below" for each listener.
-  public roomSound(sourceRoomId: string, template: string, excludeRoomId?: string): void {
+  public roomSound(sourceRoomId: string, template: string, excludeRoomId?: string, cls?: string): void {
     const world = this.world;
     if (!world) return;
     // A downpour eats sound made under it — half of what happens in the rain
@@ -3529,9 +3621,20 @@ export class ZoneDO implements DurableObject {
       );
       if (!toward) continue;
       const line = template.replace("{dir}", dirPhrase(toward.dir));
-      const frame = JSON.stringify({ v: 0, kind: 24913, room: rid, text: line });
+      // A shout heard through a wall is still a HUMAN — it carries the speech
+      // color next door too, so it never reads as one more thing scraping in
+      // the dark. (Everything else that carries — claws, water, bone — has no
+      // class and stays the world's grey.)
+      const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: rid, text: line, cls } : { v: 0, kind: 24913, room: rid, text: line });
       for (const s of this.sessions.values()) {
         if (s.roomId !== rid || heard.has(s.pubkey)) continue;
+        // Behind the door, you hear the gatehouse and nothing else. I'd left this
+        // carrying, thinking distant claws through the wall were good atmosphere —
+        // they aren't, they're a lie: the room promises "the dungeon is on the
+        // other side of a very old door, and it stays there," and then let the
+        // dungeon keep talking. (Their own room has its own quiet; see
+        // gate.gatehouseAmbient.)
+        if (this.outOfWorld(s)) continue;
         heard.add(s.pubkey);
         try { s.ws.send(frame); } catch {}
       }
@@ -3600,6 +3703,11 @@ export class ZoneDO implements DurableObject {
     const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: roomId, text, cls } : { v: 0, kind: 24913, room: roomId, text });
     for (const s of this.sessions.values()) {
       if (s.roomId !== roomId || s.pubkey === exceptPubkey) continue;
+      // Someone in the GATEHOUSE shares the gate's roomId but is not in the room:
+      // they're behind the door. The gate's noise — a rat skittering below, a
+      // wanderer blinking in, a bench being closed — doesn't carry through it.
+      // (Their own room has its own feed; see gate.gatehouseFeed.)
+      if (this.outOfWorld(s)) continue;
       try { s.ws.send(frame); } catch {}
     }
     // Players standing here always see it (a cheap in-memory send). The relay,
@@ -3625,6 +3733,35 @@ export class ZoneDO implements DurableObject {
     try {
       const ev = signFeedEvent(this.env, roomTag, this.world.zone, this.anonForRelay(text));
       this.state.waitUntil(publishEvent(this.env, ev));
+    } catch {}
+  }
+
+  // THE GATE'S KEY DOES NOT SPEAK FOR PLAYERS (rome, 2026-07-13).
+  //
+  // The dungeon's key signs what the DUNGEON says — drops, deaths, arrivals, the
+  // room feed. It has no business signing a person's words. So no line a wanderer
+  // speaks — in the tavern or in the dark — is published by this server at all.
+  // We hand it back to the speaker's own client (frame "gpub"); THAT signs it with
+  // THAT player's key, obfuscates it, and puts it on the relays itself. Kind 24914,
+  // ephemeral: no relay keeps a word of it.
+  //
+  // The trade is worth naming plainly: the WORDS are now hidden (base64) where
+  // they used to ride out in the clear, but the AUTHOR is now named (their npub
+  // signs it) where the old feed said only "A wanderer". Speech stops being
+  // anonymous and starts being private. That is the swap rome chose.
+  public speechOut(session: Session, line: string, tag: "nomad-say" | "nomad-shout" | "nomad-gatehouse"): void {
+    try {
+      session.ws.send(JSON.stringify({ v: 0, t: "gpub", text: line, tag }));
+    } catch {}
+  }
+
+  // A quiet word gets more than obfuscation: it gets a CIPHER. One recipient
+  // means NIP-44 works cleanly (no room key, no "who was here when"), so the
+  // speaker's client seals it to that npub and publishes an ephemeral kind 24915,
+  // p-tagged. Only they can open it; no relay keeps it.
+  public tellOut(session: Session, toPubkey: string, msg: string): void {
+    try {
+      session.ws.send(JSON.stringify({ v: 0, t: "tpub", to: toPubkey, text: msg }));
     } catch {}
   }
 

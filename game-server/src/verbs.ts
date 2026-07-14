@@ -574,10 +574,18 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   await z.persist();
 }
 
+// A wanderer's own words, in the world. The room hears them over the sockets —
+// but the WIRE copy is no longer the gate's to sign (rome, 2026-07-13). Until
+// now `say` rode the 24913 room feed out to the public relays in plain text,
+// gate-signed: the room a player thinks is private (two of you alone in the
+// dark) was the one that broadcast. Now the dungeon publishes NOTHING of it
+// (toRelay = false), and instead hands the line back to the speaker's own client,
+// which signs it with the speaker's own key and puts it out obfuscated.
 export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
   if (!msg) return z.send(session, "Say what?");
-  z.send(session, `You say, "${msg}"`);
-  z.roomFeed(session.roomId, `${session.name} says, "${msg}"`, session.pubkey);
+  z.send(session, `You say, "${msg}"`, "say");
+  z.roomFeed(session.roomId, `${session.name} says, "${msg}"`, session.pubkey, false, "say");
+  z.speechOut(session, `${session.name} says, "${msg}"`, "nomad-say");
 }
 
 // Shout: your words thrown hard enough to cross walls. The trade IS the verb —
@@ -587,9 +595,14 @@ export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
 // exactly the coin the world prices everything: noise.
 export function cmdShout(z: ZoneDO, session: Session, msg: string): void {
   if (!msg) return z.send(session, "Shout what?");
-  z.send(session, `You fill your lungs and shout, "${msg}"`);
-  z.roomFeed(session.roomId, `${session.name} shouts, "${msg}"`, session.pubkey);
-  z.roomSound(session.roomId, `A voice, raw and carrying, {dir}: "${msg}"`);
+  z.send(session, `You fill your lungs and shout, "${msg}"`, "say");
+  // Loud in the WORLD, silent on the gate's key — same law as `say`. A shout
+  // carries through stone (roomSound, sockets only, never published) and rings
+  // the dinner bell; what it does NOT do is hand the dungeon a plaintext copy of
+  // a person's words to sign and broadcast. The speaker's own key carries it out.
+  z.roomFeed(session.roomId, `${session.name} shouts, "${msg}"`, session.pubkey, false, "say");
+  z.roomSound(session.roomId, `A voice, raw and carrying, {dir}: "${msg}"`, undefined, "say");
+  z.speechOut(session, `${session.name} shouts, "${msg}"`, "nomad-shout");
   z.creatureNoise(session.roomId); // a shout is a dinner bell with a name on it
 }
 

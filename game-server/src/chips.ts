@@ -6,6 +6,7 @@ import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import * as events from "./events";
 import * as pvp from "./pvp";
+import * as gate from "./gate";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM,
@@ -21,6 +22,45 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   const fighting = z.inCombat(session);
   session.ctxCombat = fighting;
   const suggest: string[] = [];
+
+  // IN THE GATEHOUSE the world's chips are all wrong — there is nothing here to
+  // attack, forage, fish or flee. The room offers what the room has: the fixtures
+  // on its walls, and the door back out. Everything else you might want to do in
+  // here you do by talking, and talking needs no chip.
+  if (z.outOfWorld(session)) {
+    // The room's fixtures in the order you'd walk to them — the door, the hatch,
+    // the brazier — and your own kit last, because it's the one thing here that
+    // isn't the room.
+    const inside = ["out"];
+    if (world.fenceStock.length) inside.push(TRADE_CHIP);
+    if (world.forgeRecipes.length) inside.push(FORGE_CHIP);
+    // The wall chart: read it when it has anything on it; offer the nail when
+    // you walked shallow halls it doesn't have yet.
+    if (z.wallMarks.size) inside.push("study");
+    if ([...session.visited].some((r) => !z.wallMarks.has(r) && gate.shallowRing(z).has(r))) inside.push("carve");
+    inside.push(BENCH_CHIP);
+    // A typed trade left open still offers its tender chips — the deal is HERE
+    // now, so the chips that close it have to be here too.
+    if (session.buying && !session.trading) {
+      const offered = new Set<string>();
+      for (const c of session.items) {
+        if (c.serial !== null || session.buying.escrow.some((e) => e.row === c.rowId)) continue;
+        const t = world.itemTemplates.get(c.itemId);
+        if (!t || (t.barter ?? 0) <= 0 || offered.has(t.id)) continue;
+        offered.add(t.id);
+        inside.push(`offer ${shortName(t.name)}`);
+        if (offered.size >= 4) break;
+      }
+      inside.push("offer nothing");
+    }
+    session.ctxCombat = false;
+    try {
+      // gh: the client needs to know it's in the tavern, where a bare line is
+      // speech and not a command — so it can stop echoing what you said.
+      session.ws.send(JSON.stringify({ v: 0, t: "ctx", combat: false, suggest: inside, gh: true }));
+    } catch {}
+    return;
+  }
 
   // The living get initiative: attack chips first, for every foe in the room.
   // A lurker lying in wait is unseen — no chip gives it away, same as the room
@@ -134,26 +174,12 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (drowned && ![...z.creatures.values()].some(
       (c) => c.roomId === session.roomId && DROWNERS.has(c.templateId) && !c.hidden,
     )) suggest.push("dive");
-    // The gate's trades: the keeper's hatch (the client opens the trade
-    // modal), and the forge if you carry the makings. A typed trade left
-    // open still offers the tender chips.
-    if (world.entryRooms.has(session.roomId)) {
-      if (world.fenceStock.length) suggest.push(TRADE_CHIP);
-      // The forge chip opens the forge modal (a gate fixture, like the keeper).
-      if (world.forgeRecipes.length) suggest.push(FORGE_CHIP);
-      if (session.buying && !session.trading) {
-        const offered = new Set<string>();
-        for (const c of session.items) {
-          if (c.serial !== null || session.buying.escrow.some((e) => e.row === c.rowId)) continue;
-          const t = world.itemTemplates.get(c.itemId);
-          if (!t || (t.barter ?? 0) <= 0 || offered.has(t.id)) continue;
-          offered.add(t.id);
-          suggest.push(`offer ${shortName(t.name)}`);
-          if (offered.size >= 4) break;
-        }
-        suggest.push("offer nothing");
-      }
-    }
+    // OUT AT A GATE THERE IS EXACTLY ONE THING TO DO: go in (rome, 2026-07-13).
+    // The hatch and the brazier are fixtures of the GATEHOUSE — they live in its
+    // wall, on the other side of the door — so their chips belong in the room that
+    // holds them, not out in the dark beside a loose rock. The gate offers the
+    // door, and the door offers everything else.
+    if (world.entryRooms.has(session.roomId) && !session.away) suggest.push("in");
     // Knowledge you carry: open a map or the journal (each pops its modal).
     if (session.items.some((c) => MAP_ITEMS.has(c.itemId))) suggest.push("map");
     if (session.items.some((c) => c.journalId)) suggest.push("journal");

@@ -1449,6 +1449,56 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
 export const AMBIENT_COOLDOWN_MS = 150_000; // at most one breath of atmosphere this often, per wanderer
 export const AMBIENT_ODDS = 0.16;          // ~per 2s tick, once off cooldown
 export const RECONNECT_GRACE_MS = 5 * 60_000; // a re-weave within this of dropping is a reconnect, not a fresh arrival
+
+// ---- THE GATEHOUSE (rome, 2026-07-13) ----
+// The gate is the DOOR. The gatehouse is the sanctuary behind it, and until now
+// it wasn't a place at all — it was a modal, a flag that switched you off. You
+// were safe there because nobody could see you, which is a poor kind of safety
+// and no kind of company.
+//
+// Now it is a room. FOUR DOORS, ONE FIRE: whichever gate you came in by, you
+// step into the same gatehouse, because the keeper is one man and it is his
+// house. With the numbers this world has, four lobbies would be four empty
+// rooms; one is a tavern. Everything that steps out of the dungeon lands in it.
+//
+// In there the input line is a MOUTH, not a command line: known verbs still
+// command, and anything else you type is simply said. It is the one room in
+// NOMAD that never touches the wire — no D1 row, no Nostr event, nothing to
+// relay. What's said behind the door stays behind the door.
+//
+// These verbs reach for the dungeon, and the dungeon is not in here.
+// (carve is NOT barred: in the gatehouse it carves the wall chart — see
+// gate.wallCarve — the one wall in the world worth writing on.)
+export const GATEHOUSE_BARRED = new Set([
+  "go", "attack", "throw", "get", "drop", "fish", "dive",
+  "unlock", "listen", "shout", "light", "wash", "squink",
+]);
+// The gatehouse breathes SLOWER than the dungeon (rome, 2026-07-13): a 3-minute
+// floor, and with the roll on top the lines land about every 3-5 minutes. It is a
+// room where people sit and talk — the walls should not keep interrupting them.
+export const GATEHOUSE_AMBIENT_COOLDOWN_MS = 180_000; // never sooner than 3 minutes
+export const GATEHOUSE_AMBIENT_ODDS = 0.03;           // per 2s tick, once off cooldown -> ~4 min mean
+
+// The gatehouse hears NOTHING of the dungeon — roomFeed and roomSound both stop
+// at the door now — so this pool is the room's entire voice, and it carries all
+// of the atmosphere on its own. It is warm, domestic, and slightly sad: the
+// sound of a place that has watched a great many people go out and not come back.
+export const GATEHOUSE_AMBIENCE = [
+  "The keeper turns a page behind his hatch, and says nothing.",
+  "The fire settles. Somebody's kit drips quietly onto the flags.",
+  "The door holds. It has held a long time.",
+  "Wind leans on the shutters, finds no way in, and gives up.",
+  "The kettle ticks as it cools.",
+  "Far off, on the other side of the door, something calls across the dark. In here it is only a sound.",
+  "A coal cracks. The shadows lean, and settle.",
+  "The bench is worn to a shine at one end, where men sit to work up their nerve.",
+  "Someone has scratched a tally into the wall by the door. It stops.",
+  "The hatch rattles once in its frame, as if the keeper thought better of something.",
+  "Warmth gets into your hands, and they remember they were cold.",
+  "The room smells of pitch, wet wool, and old iron.",
+  "Rain finds the roof somewhere and gives it up drop by drop into a bucket already full.",
+  "Out there the dark goes on doing whatever it does. It can wait.",
+];
 // The world stays real when your eyes close: a disconnect during a LIVE fight
 // (you hold a target, or something holds you) leaves the body standing this
 // long — auto-fighting, killable. Pulling the plug is never an escape; with

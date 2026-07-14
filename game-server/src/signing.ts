@@ -9,6 +9,11 @@ import { hexToBytes, nowSec } from "./util";
 const LOOT_KIND = 1573;
 const SHEET_KIND = 31573;
 const FEED_KIND = 24913;
+// The tavern is kind 24914 — EPHEMERAL (20000-29999), so no relay stores a word
+// of it. It is deliberately NOT signed here: the gate's key signs what the
+// DUNGEON says (drops, deaths, the room feed), never what a wanderer says. Each
+// player's client signs their own speech with their own key and puts it on the
+// relays itself. See the "gpub" frame in gate.ts / public.ts.
 
 // True only when a real dungeon key is configured. Until launch the key is
 // deliberately left unset, so loot is recorded but unsigned — plug in

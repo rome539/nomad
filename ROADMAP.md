@@ -323,6 +323,20 @@ Directions rome likes and wants held. Design only; no code until he says go.
   retrofit onto the 4s round.
 - **Idle kick** — boot truly-AFK players after N minutes so a forgotten tab
   doesn't hold a live session.
+- **`say` is public. Nobody knows that.** *(noted 2026-07-13)* The dungeon's
+  `say` rides `roomFeed` out to the **public Nostr relays** as *"A wanderer
+  says, …"* — kind 24913, anyone in the world can read it. The name is
+  anonymised; the words are not. So the room a player thinks is the private one
+  (two of you alone in the dark) is the one that broadcasts, and there is
+  currently no in-game hint of it. Two things to weigh when this comes up:
+  (a) whether `say` should stay on the wire at all, or whether only FIGHTS,
+  DEATHS and ARRIVALS should — speech is the one feed line that carries a
+  human's actual words rather than the world's events; and (b) if it stays,
+  the player should be *told* — a room whose speech is broadcast should say so,
+  the way the gatehouse says the opposite. Do not "fix" this quietly: a public
+  feed of overheard dungeon voices is also one of the most compelling things
+  about watching NOMAD from outside, and that tension is the actual design
+  question.
 - **Communication layer** — `tell` is the remaining gap (`shout` and
   sound-carries shipped). Most on-brand: async **notes / dead-drops** (a
   written scrap left in a room for whoever comes next). Low-tech, high-flavor.
