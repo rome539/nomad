@@ -1932,21 +1932,24 @@ function fillBenchCol(el, title, items, cap, place, usedOverride) {
   //   PACK  \\u2014 what rides your body vs what rides your back.
   //   VAULT \\u2014 the sealed wealth that eats the 50 slots, and below it the
   //           trophies and sundries that ride free.
-  var split = null;
+  var secs = null;
   if (place === "pack") {
-    split = ["ON YOU", items.filter(function (it) { return it.equipped; }),
-             "IN THE PACK", items.filter(function (it) { return !it.equipped; })];
+    secs = [["ON YOU", items.filter(function (it) { return it.equipped; })],
+            ["IN THE PACK", items.filter(function (it) { return !it.equipped; })]];
   } else if (place === "vault") {
-    split = ["SEALED", items.filter(function (it) { return !it.stack; }),
-             "TROPHIES & SUNDRIES", items.filter(function (it) { return it.stack; })];
+    secs = [["BANKED", items.filter(function (it) { return !it.trophy && !it.key; })],
+            ["KEYS", items.filter(function (it) { return it.key; })],
+            ["TROPHIES", items.filter(function (it) { return it.trophy; })]];
   }
-  if (split && split[1].length && split[3].length) {
-    var h1 = document.createElement("div"); h1.className = "tsech"; h1.textContent = split[0];
-    el.appendChild(h1);
-    split[1].forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
-    var h2 = document.createElement("div"); h2.className = "tsech"; h2.textContent = split[2];
-    el.appendChild(h2);
-    split[3].forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
+  // Only bother sectioning when more than one section actually has anything in
+  // it — a vault holding nothing but rat tails wants no headers over it.
+  if (secs && secs.filter(function (s) { return s[1].length; }).length > 1) {
+    secs.forEach(function (s) {
+      if (!s[1].length) return;
+      var hd = document.createElement("div"); hd.className = "tsech"; hd.textContent = s[0];
+      el.appendChild(hd);
+      s[1].forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
+    });
     return;
   }
   items.forEach(function (it) { el.appendChild(benchItemNode(it, place)); });

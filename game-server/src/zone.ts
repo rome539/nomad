@@ -1396,6 +1396,35 @@ export class ZoneDO implements DurableObject {
     return !this.isGear(itemId);
   }
 
+  // A TROPHY is a thing cut off a body: some creature's loot_item, and not food.
+  // Not a key, not a map, not a ration, not scrap, not a tin of cigarettes —
+  // those are tools and tender. The world's own drop table defines the set, so
+  // it stays true as the bestiary changes.
+  private trophyIds: Set<string> | null = null;
+  public isTrophy(itemId: string): boolean {
+    if (!this.trophyIds) {
+      this.trophyIds = new Set<string>();
+      for (const m of this.world!.mobTemplates.values()) {
+        const t = m.loot_item ? this.world!.itemTemplates.get(m.loot_item) : undefined;
+        if (t && !t.edible && !this.isGear(t.id)) this.trophyIds.add(t.id);
+      }
+    }
+    return this.trophyIds.has(itemId) && !this.isKey(itemId);
+  }
+
+  // A KEY opens something: any cache's key_item, plus the still-cold heart (the
+  // deep door's perishable key). The world's own locks define the set.
+  private keyIds: Set<string> | null = null;
+  public isKey(itemId: string): boolean {
+    if (!this.keyIds) {
+      this.keyIds = new Set<string>([DEEP_HEART]);
+      for (const c of this.world!.caches) {
+        if (c.keyItem) this.keyIds.add(c.keyItem);
+      }
+    }
+    return this.keyIds.has(itemId);
+  }
+
   // How many slots a set of carried items fills: each non-stacking item is one,
   // and every distinct stacking KIND is one, however deep the pile. What you
   // WEAR rides on your body, not in the pack — equipped gear costs no slot, so

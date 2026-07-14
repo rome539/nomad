@@ -924,6 +924,8 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
         sealed: c.serial !== null,
         serial: c.serial,
         stack: z.stackable(c.itemId, c.serial, c.journalId),
+        trophy: z.isTrophy(c.itemId), // cut off a body — not food, not a key, not tender
+        key: z.isKey(c.itemId),       // opens something: a cache's key, or the heart
         gear,
         // What the bench can actually mend: the stone wears like gear but
         // nothing refills it (rome) — no repair button to bait a refusal.
@@ -1021,9 +1023,12 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
         if (z.stackable(c.itemId, c.serial, c.journalId)) counts.set(c.itemId, (counts.get(c.itemId) ?? 0) + 1);
       }
       const stackLines: string[] = [];
+      const trophyLines: string[] = [];
+      const keyLines: string[] = [];
       for (const [id, n] of counts) {
         const t = world.itemTemplates.get(id);
-        stackLines.push(`  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""}${z.itemStat(t)}`);
+        const line = `  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""}${z.itemStat(t)}`;
+        (z.isKey(id) ? keyLines : z.isTrophy(id) ? trophyLines : stackLines).push(line);
       }
       const gearLines: string[] = [];
       for (const c of held) {
@@ -1036,15 +1041,14 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
         const tag = bits.length ? ` — ${bits.join(", ")}` : "";
         gearLines.push(`  ${t ? t.name : c.itemId}${z.itemStat(t)}${tag}`);
       }
-      // Where the stacks cost nothing (the vault), the sealed wealth reads FIRST
-      // and the trophies settle to the bottom — same shape as the bench modal, so
-      // a shelf of rat tails never buries what you actually banked.
+      // In the vault the trophies settle to the BOTTOM (they cost it no slot);
+      // everything else — sealed gear, food, keys, tender — reads first.
       if (cfg.freeStacks) {
-        lines.push(...gearLines);
-        if (gearLines.length && stackLines.length) lines.push("  — trophies & sundries (they cost the vault nothing) —");
-        lines.push(...stackLines);
+        lines.push(...gearLines, ...stackLines);
+        if (keyLines.length) lines.push("  — keys —", ...keyLines);
+        if (trophyLines.length) lines.push("  — trophies —", ...trophyLines);
       } else {
-        lines.push(...stackLines, ...gearLines);
+        lines.push(...stackLines, ...keyLines, ...trophyLines, ...gearLines);
       }
       return z.send(session, lines.join("\n"));
     }
