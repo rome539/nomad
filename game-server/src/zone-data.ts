@@ -1392,6 +1392,7 @@ export const DEEP_DOOR_KEY = "undercroft:down";       // "roomId:dir" of the sea
 // closing is what restarts the corpse-key economy.
 export const DEEP_DOOR_OPEN_MS = 20 * 60_000;
 export const HEART_FRESH_SEC = 600;                   // a heart opens the door for 10 min after the cut, then it's slime
+export const HEART_ROT_SEC = HEART_FRESH_SEC + 120;   // ...and 2 min after it spoils the slime seeps away — a spoiled heart doesn't litter the floor (rome, 2026-07-15)
 export const SURFACE_INTERVAL_MS = 360_000;           // while sealed, the deep surfaces one dweller ~every 6 min
 export const SURFACED_STALE_MS = 15 * 60_000;         // a surfaced dweller nobody kills slinks back down after this, freeing the next
 export const SURFACERS = new Set([                    // the mobile deep-kin that can crawl up (drowned things are water-bound; the hound holds its post)

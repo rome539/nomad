@@ -27,6 +27,7 @@ export interface Session {
   forging?: boolean; // which away it is: true = the gatehouse forge (modal or typed)
   sorting?: boolean; // which away it is: true = a typed 'inventory' keeping-sort
   stepText?: boolean; // stepped out via a TYPED barter/forge/inventory (text, no modal)
+  benchInHouse?: boolean; // was the pack opened from INSIDE the gatehouse? (else the world) — decides where closing it returns you
   ctxCombat: boolean; // the combat state the last chip set was drawn for (see syncCombatCtx)
   seizedBy?: string; // DROWNER creature id that has hold of you — can't flee till you break free
   litUntil?: number; // ms epoch a kindled light burns until; while now < this you carry light (sees dark rooms; a torch also wakes fire-fear). Reset on wake — a rekindle is cheap.

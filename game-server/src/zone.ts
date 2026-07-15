@@ -81,7 +81,7 @@ import {
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
-  DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS,
+  DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
   DARK_ROOMS,
   LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE
 } from "./zone-data";
@@ -334,6 +334,7 @@ export class ZoneDO implements DurableObject {
         }
       }
       this.applyRot(t, true);
+      this.sweepSpoiledHearts(t, true);
       this.applyRegrow(t, true);
       ai.applyArrivals(this, t, true);
       ai.scheduleArrivals(this, t);
@@ -2529,6 +2530,7 @@ export class ZoneDO implements DurableObject {
     }
 
     this.applyRot(now, false);
+    this.sweepSpoiledHearts(now, false);
     this.applyRegrow(now, false);
     ai.applyArrivals(this, now, false);
     ai.scheduleArrivals(this, now);
@@ -2705,6 +2707,32 @@ export class ZoneDO implements DurableObject {
     const pending = this.rot.filter((r) => r.kind === "crumble" && r.roomId === roomId).length;
     for (let i = pending; i < rocks; i++) {
       this.rot.push({ itemId: "loose-rock", roomId, at: Date.now() + randInt(ROCK_CRUMBLE_MIN_MS, ROCK_CRUMBLE_MAX_MS), kind: "crumble" });
+    }
+  }
+
+  // A heart left on the stones keeps its cut-hour (groundHeart), so it spoils on
+  // the same clock it would in a hand — and a while past spoiling, the slime
+  // seeps away rather than littering the floor forever (rome, 2026-07-15). Runs
+  // off groundHeart itself, so it also clears any spoiled heart already lying
+  // around when this ships — no drop-hook needed.
+  private sweepSpoiledHearts(now: number, silent: boolean): void {
+    const nowSec = now / 1000;
+    for (const [key, cutAt] of [...this.groundHeart]) {
+      if (nowSec - cutAt < HEART_ROT_SEC) continue;
+      const at = key.indexOf("@");
+      const itemId = key.slice(0, at), roomId = key.slice(at + 1);
+      const floor = this.ground.get(roomId);
+      const idx = floor ? floor.indexOf(itemId) : -1;
+      if (idx !== -1) {
+        floor!.splice(idx, 1);
+        if (!silent) {
+          this.roomFeed(roomId, "The spoiled heart sinks into a smear of slime, and is gone.", undefined, false); // housekeeping — off the relay
+          this.refreshRoomCtx(roomId);
+        }
+      }
+      this.groundHeart.delete(key);
+      this.groundCond.delete(key);
+      this.groundLore.delete(key);
     }
   }
 

@@ -765,6 +765,10 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
       }
       // The lockbox opens anywhere (you duck aside to sort your run closet); the
       // vault and the seal are the gate's business, shown only when you're at one.
+      // Remember WHERE you opened it: already by the fire (in the gatehouse), or
+      // out in the world at a gate. Closing returns you exactly there — the pack
+      // is a modal, not a door. Captured before the step-out flips `away`.
+      session.benchInHouse = z.outOfWorld(session);
       if (z.outOfWorld(session)) z.enterStep(session, "sorting"); // lateral: swap stance, announce nothing
       else enterBench(z, session);
       return sendBench(z, session);
@@ -900,26 +904,27 @@ export function enterBench(z: ZoneDO, session: Session): void {
   }
 
 export async function leaveBench(z: ZoneDO, session: Session): Promise<void> {
-    // AT A GATE the bench stands INSIDE the gatehouse — so closing it puts your
-    // head up in that room, among whoever else is by the fire. It does not throw
-    // you out the door; only 'out' does that. (Mid-dungeon there is no room to
-    // come up into: closing the lockbox is straightening up in the open, exactly
-    // as before, and the world is right there waiting.)
-    if (z.world!.entryRooms.has(session.roomId)) {
-      session.sorting = false;
-      session.stepText = true; // still inside, still in text — the tavern has you
-      try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
-      z.send(session, describeGatehouse(z, session));
+    // Closing the pack NEVER re-narrates the room you're standing in — the same
+    // quiet line whether you're by the fire or out in the world (rome, 2026-07-15).
+    // And it returns you exactly where you opened it: the pack is a modal, not a
+    // door. Only 'in'/'out' moves you between the world and the gatehouse.
+    session.sorting = false;
+    try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
+    if (session.benchInHouse) {
+      // You opened it from INSIDE the gatehouse — you never left the fire. Stay
+      // by it (still in text, the tavern still has you); just straighten up.
+      session.stepText = true;
+      z.send(session, "You straighten up, your kit sorted.");
       z.sendCtx(session);
       return;
     }
+    // You opened it out in the WORLD — at a gate, or crouched in the dungeon.
+    // Straighten up right where you stand and rejoin the world; opening your pack
+    // was never a step into the gatehouse.
     session.away = false;
-    try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
-    z.roomFeed(session.roomId, `${session.name} steps back out, kit sorted.`, session.pubkey);
-    await provokeGrudges(z, session, false); // gates hold nothing; no free hit for closing the bench
-    // You crouched in the open and stood up again — you never LEFT the room, so
-    // don't re-print it (it buries a conversation you were in the middle of).
-    // A quiet line to close the modal's own thread; the room is where it was.
+    session.stepText = false;
+    z.roomFeed(session.roomId, `${session.name} steps back, kit sorted.`, session.pubkey);
+    await provokeGrudges(z, session, false); // the dungeon holds nothing here; no free hit for closing the bench
     z.send(session, "You straighten up, your kit sorted.");
     z.sendCtx(session);
     z.refreshRoomCtx(session.roomId);
