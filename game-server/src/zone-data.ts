@@ -118,6 +118,12 @@ export const STAGGER_BONUS = 2; // an opening costs you
 // journals, and maps are each their own slot. So the pack limits distinct kit
 // you haul, not how many trophies you hoard.
 export const PACK_CAP = 20;
+// Food free-stacks (a whole kind is one slot, however deep), which turned the
+// pack into an unlimited healing pump you could carry into any fight. A hard
+// ceiling on TOTAL rations carried — any mix of kinds — makes healing a supply
+// decision again: you ration, or you run back to bank and restock (rome,
+// 2026-07-14). Not a slot cost (food still rides light); a count, on its own.
+export const PACK_FOOD_CAP = 8;
 export const LOCKBOX_CAP = 8; // the run closet — small, takes anything, sealed or raw
 export const VAULT_CAP = 50; // the bank — deep, generous, sealed wealth only
 // Not every forced box pays out. Now and then the lock gives on nothing —
@@ -234,6 +240,14 @@ export const GEAR_ROLL_MIN_MS = 30 * 60_000; // a bare spot re-checks itself eve
 export const GEAR_ROLL_MAX_MS = 60 * 60_000;
 export const GEAR_REGROW_ODDS = 0.2;         // ~1 roll in 5 hangs the piece back up
 export const RELIABLE_GEAR = new Set(["loose-rock"]); // the starter tool: exempt, always comes back
+// ...but "always comes back" at the GATE has no drain out in the world: a rock
+// carried off and left where you die (or dropped in a room that doesn't grow
+// them) is net-new — the gate refills behind it, and a rock isn't edible, so
+// nothing ever rots it off the floor. The world silted up with free artillery
+// in every room a body fell (rome, 2026-07-14). A stray rock on a NON-gate
+// floor now crumbles back to rubble on this window; the gate supply is untouched.
+export const ROCK_CRUMBLE_MIN_MS = 20 * 60_000; // 20–40 min, dice-jittered so it's no metronome
+export const ROCK_CRUMBLE_MAX_MS = 40 * 60_000;
 // The two kinds of renewable (rome, 2026-07-11 — the larder was a healing
 // pump): living forage (moss, lichen, nettle, caps, water) GROWS, and keeps
 // the fast clock above. DEAD STOCK — cured provisions nobody is curing
@@ -1472,6 +1486,14 @@ export const RECONNECT_GRACE_MS = 5 * 60_000; // a re-weave within this of dropp
 export const GATEHOUSE_BARRED = new Set([
   "go", "attack", "throw", "get", "drop", "fish", "dive",
   "unlock", "listen", "shout", "light", "wash", "squink",
+]);
+// Verbs that take NO argument. In the gatehouse the input line is a mouth, so a
+// no-arg command with words after it was never a command — "i am trying to quit"
+// is speech, not 'inventory' (i); "out of my mind" is speech, not 'exit' (out).
+// Bare, they still fire. This is what stops a sentence's first word hijacking it.
+export const GATEHOUSE_NOARG = new Set([
+  "look", "who", "inventory", "rest", "enter", "exit", "forge", "barter",
+  "map", "study", "carve", "journal", "sheet", "publish", "help", "smoke",
 ]);
 // The gatehouse breathes SLOWER than the dungeon (rome, 2026-07-13): a 3-minute
 // floor, and with the roll on top the lines land about every 3-5 minutes. It is a

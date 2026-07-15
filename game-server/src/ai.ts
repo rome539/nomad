@@ -382,6 +382,25 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         if (within.length) exits = within;
       }
     }
+    // A patroller's route IS its territory. It leaves the circuit sometimes — it
+    // turns to a noise, or chases a wanderer down a stair — and once off-route
+    // the patrol logic below can't find its next post adjacent and falls to
+    // random steps. Nothing reeled it back, so the walls' watchman walked clean
+    // down into the keep (rome, 2026-07-14: the last watchman in the Vaulted
+    // Hall). Off its route, every idle step now closes on the nearest post —
+    // the rounds always find the wall again. Never strands.
+    if (mode === "wander" && PATROLS[tmpl.id]) {
+      const route = PATROLS[tmpl.id];
+      if (!route.includes(creature.roomId)) {
+        let best = Infinity, near = route[0];
+        for (const r of route) {
+          const d = z.roomDist(creature.roomId, r);
+          if (d < best) { best = d; near = r; }
+        }
+        const closer = exits.filter((e) => z.roomDist(e.to_room, near) < best);
+        if (closer.length) exits = closer;
+      }
+    }
     // Idle drift avoids an already-packed room, so wandering doesn't stack the
     // whole zone into one hub. (Answering a noise or fleeing still goes where it
     // must; and we never strand a creature with no other way to turn.)

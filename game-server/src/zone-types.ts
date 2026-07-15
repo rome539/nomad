@@ -127,6 +127,10 @@ export interface RotEntry {
   itemId: string;
   roomId: string;
   at: number; // when it goes foul
+  // "rot" (the default, undefined on legacy saves): food spoils, leaves scraps.
+  // "crumble": a stray loose-rock lost to the rubble — no scraps, no scavenger
+  // lure, just gone. Same timer machinery, different ending.
+  kind?: "rot" | "crumble";
 }
 
 // A carryable on the floor that can't be reduced to a bare template id — it

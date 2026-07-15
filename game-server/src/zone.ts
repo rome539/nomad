@@ -63,13 +63,13 @@ import {
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, BURDEN_FREE_IRON,
-  STANCE, RECKLESS_MISS, SHIELD_WALL, SHIELD_WALL_DRAG, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
+  STANCE, RECKLESS_MISS, SHIELD_WALL, SHIELD_WALL_DRAG, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
   PIERCING_WEAPONS, VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
   SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
-  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR,
+  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, ROCK_CRUMBLE_MIN_MS, ROCK_CRUMBLE_MAX_MS,
   MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, COLD_REST_SKIP, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
@@ -511,7 +511,7 @@ export class ZoneDO implements DurableObject {
       } else {
         this.send(session, "Type 'help' if you're lost.");
       }
-      this.roomFeed(session.roomId, `${session.name} blinks into being.`, pubkey);
+      this.roomFeed(session.roomId, `${session.name} blinks into being.`, pubkey, true, "who");
     }
     // YOU WERE INSIDE. A fresh Session is built with away = false, so a frayed
     // socket used to fling you out of the gatehouse and into the dungeon — out of
@@ -554,7 +554,7 @@ export class ZoneDO implements DurableObject {
     if (fightLive && !session.linkdeadUntil) {
       session.linkdeadUntil = Date.now() + LINKDEAD_MS;
       this.leftAt.set(session.pubkey, Date.now()); // a return inside the window re-weaves
-      this.roomFeed(session.roomId, `${session.name} goes slack — eyes empty, body still standing.`, session.pubkey);
+      this.roomFeed(session.roomId, `${session.name} goes slack — eyes empty, body still standing.`, session.pubkey, true, "who");
       await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp); // durability snapshot; the flush keeps chasing
       return;
     }
@@ -563,7 +563,7 @@ export class ZoneDO implements DurableObject {
     // leaver's name is no longer there to find, so it rides out to the public
     // relay in the clear. (The room still reads the true name locally; only the
     // relay copy is anonymised. The world doesn't snitch.)
-    this.roomFeed(session.roomId, `${session.name} fades from the world.`, session.pubkey);
+    this.roomFeed(session.roomId, `${session.name} fades from the world.`, session.pubkey, true, "who");
     session.linkdeadUntil = undefined;
     this.sessions.delete(session.pubkey);
     this.leftAt.set(session.pubkey, Date.now()); // so a quick return reads as a reconnect
@@ -1385,8 +1385,12 @@ export class ZoneDO implements DurableObject {
   // again. The room by the fire hears you go.
   public async leaveGatehouse(session: Session): Promise<void> {
     if (!session.away) return this.send(session, "You're already out in the world.");
-    gate.gatehouseFeed(this, `${session.name} shoulders the door open and goes back out.`, session.pubkey);
+    gate.gatehouseFeed(this, `${session.name} shoulders the door open and goes back out.`, session.pubkey, "who");
     await this.leaveStep(session);
+    // leaveStep clears `away`, so the HUD title must be re-sent or the top bar
+    // stays reading "The Gatehouse" while the log shows the gate room. Status
+    // FIRST (it carries the room name the client paints gold), then the room.
+    this.sendStatus(session);
     this.send(session, this.describeRoom(session, false));
     this.sendCtx(session);
   }
@@ -1505,23 +1509,34 @@ export class ZoneDO implements DurableObject {
     return this.keyIds.has(itemId);
   }
 
-  // How many slots a set of carried items fills: each non-stacking item is one,
-  // and every distinct stacking KIND is one, however deep the pile. What you
-  // WEAR rides on your body, not in the pack — equipped gear costs no slot, so
-  // arming up never eats your carrying room (and stripping down never strands you).
-  // freeStacks: the VAULT charges nothing for fungibles (rome, 2026-07-13). A
-  // bank vault is deep — it does not measure its room in rat tails. Its 50
-  // slots are for SEALED GEAR; trophies, food, scrap, keys and cigs ride along
-  // for free, however many kinds. The pack and the lockbox still count them:
-  // what you HAUL is the game.
-  public slotsUsed(items: CarriedItem[], freeStacks = false): number {
+  // How many slots a set of carried items fills, by STORE — each store charges
+  // differently and the `store` arg says which. Common to all: what you WEAR
+  // rides on your body, so equipped gear costs no slot (arming up never eats your
+  // carrying room, stripping down never strands you). Then:
+  //   pack   — non-food stacks one slot per KIND; FOOD is free (a count cap of
+  //            its own governs it, PACK_FOOD_CAP); loose gear one each.
+  //   lockbox— non-food stacks one slot per KIND; FOOD is one slot EACH (no
+  //            fungible stacking), so the small box holds at most its cap in
+  //            rations; loose gear one each.
+  //   vault  — the bank is deep: it charges NOTHING for fungibles (trophies,
+  //            food, scrap, keys, cigs, any kind, any depth). Its 50 slots are
+  //            for SEALED GEAR alone (rome, 2026-07-13 / food rule 2026-07-14).
+  public slotsUsed(items: CarriedItem[], store: "pack" | "lockbox" | "vault" = "pack"): number {
     const kinds = new Set<string>();
     let loose = 0;
     for (const c of items) {
       if (c.equipped) continue; // worn/wielded — on the body, not in the pack
+      if (this.world!.itemTemplates.get(c.itemId)?.edible) {
+        // Food's slot cost is the store's business (rome, 2026-07-14): FREE in
+        // the pack (a COUNT cap governs it there instead) and FREE in the vault,
+        // but ONE SLOT EACH in the lockbox — no fungible stacking there, so the
+        // box holds at most its cap in rations, same kind or not.
+        if (store === "lockbox") loose++;
+        continue;
+      }
       if (this.stackable(c.itemId, c.serial, c.journalId)) {
-        if (!freeStacks) kinds.add(c.itemId);
-      } else loose++;
+        if (store !== "vault") kinds.add(c.itemId); // one slot per KIND; free in the deep keep
+      } else loose++; // loose gear, maps, journals — and sealed gear in the vault
     }
     return loose + kinds.size;
   }
@@ -1530,16 +1545,45 @@ export class ZoneDO implements DurableObject {
   // kind you already hold always fits — it joins the pile; otherwise you need a
   // free slot under the cap. Where stacks are free (the vault), any fungible
   // always fits.
-  public hasRoom(items: CarriedItem[], itemId: string, cap: number, freeStacks = false): boolean {
+  public hasRoom(items: CarriedItem[], itemId: string, cap: number, store: "pack" | "lockbox" | "vault" = "pack"): boolean {
+    if (this.world!.itemTemplates.get(itemId)?.edible) {
+      // Food takes no slot in the pack or the vault, so there's always room for
+      // it there (the pack's own COUNT cap is enforced in packRoom). In the
+      // lockbox it needs a free slot like anything loose — it stacks no deeper.
+      if (store === "pack" || store === "vault") return true;
+      return this.slotsUsed(items, store) < cap;
+    }
     if (this.stackable(itemId, null)) {
-      if (freeStacks) return true;
+      if (store === "vault") return true;
       if (items.some((c) => c.itemId === itemId && this.stackable(c.itemId, c.serial, c.journalId))) return true;
     }
-    return this.slotsUsed(items, freeStacks) < cap;
+    return this.slotsUsed(items, store) < cap;
   }
 
   public packRoom(session: Session, itemId: string): boolean {
-    return this.hasRoom(session.items, itemId, PACK_CAP);
+    // Food is capped in the pack by COUNT, on top of the slot cap: it free-stacks
+    // (a kind is one slot however deep), so without this a run could carry endless
+    // rations = bottomless healing. The ceiling makes healing a supply decision.
+    if (this.foodCapped(session, itemId)) return false;
+    return this.hasRoom(session.items, itemId, PACK_CAP, "pack");
+  }
+
+  // How many rations ride in the pack right now (all edibles; food is never worn).
+  public packFood(session: Session): number {
+    let n = 0;
+    for (const c of session.items) if (this.world!.itemTemplates.get(c.itemId)?.edible) n++;
+    return n;
+  }
+
+  // Would taking one more of itemId break the food ceiling? (Only edibles count;
+  // everything else answers false and rides the ordinary slot rules.)
+  public foodCapped(session: Session, itemId: string): boolean {
+    return !!this.world!.itemTemplates.get(itemId)?.edible && this.packFood(session) >= PACK_FOOD_CAP;
+  }
+
+  // The one line every food-entry point speaks when the ceiling stops it.
+  public foodFullNote(): string {
+    return `You're carrying all the food you can (${PACK_FOOD_CAP}). Eat something, or bank the rest at a gate.`;
   }
 
   // Mint one item into the pack, if there's room. Returns the row, or null when
@@ -1889,7 +1933,7 @@ export class ZoneDO implements DurableObject {
               if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
             } else {
               await this.onCreatureDeath(session, creature, tmpl,
-                pvitals ? `${this.playerVitalsVerb(weapon, tmpl.name)}` : undefined);
+                pvitals ? `${this.playerVitalsVerb(weapon, tmpl.name)}` : undefined, pvitals);
             }
             // Every landed strike grinds the blade (a sweep grinds it per
             // foe) — and bone or old iron grinds it far faster than flesh.
@@ -2197,7 +2241,7 @@ export class ZoneDO implements DurableObject {
           }
         } else {
           if (vitals) {
-            this.send(victim, `${cap(tmpl.name)} ${this.creatureVitals(tmpl.id)} — ${pick(VITALS_DARK)}`, "dmgin big");
+            this.send(victim, `${cap(tmpl.name)} ${this.creatureVitals(tmpl.id)} — ${pick(VITALS_DARK)}`, "dmgin big vital");
             this.roomFeed(victim.roomId, `${cap(tmpl.name)} drops ${victim.name} with one terrible strike.`, victim.pubkey);
           }
           await this.onPlayerDeath(victim, tmpl);
@@ -2627,15 +2671,41 @@ export class ZoneDO implements DurableObject {
       const idx = here.indexOf(r.itemId);
       if (idx !== -1) {
         here.splice(idx, 1);
-        this.addTrace(r.roomId, { kind: "scraps", at: r.at });
-        if (!silent) {
-          const t = this.world!.itemTemplates.get(r.itemId);
-          this.roomFeed(r.roomId, `${cap(t?.name ?? "something")} has gone foul.`, undefined, false); // housekeeping stays off the relay
-          this.refreshRoomCtx(r.roomId);
+        // A crumbling rock leaves nothing — no scraps trace (that lures
+        // scavengers), no "gone foul" (it didn't rot, it's just rubble again).
+        if (r.kind === "crumble") {
+          if (!silent) {
+            this.roomFeed(r.roomId, "A loose rock, kicked among the rubble, is lost in it.", undefined, false); // housekeeping — off the relay
+            this.refreshRoomCtx(r.roomId);
+          }
+        } else {
+          this.addTrace(r.roomId, { kind: "scraps", at: r.at });
+          if (!silent) {
+            const t = this.world!.itemTemplates.get(r.itemId);
+            this.roomFeed(r.roomId, `${cap(t?.name ?? "something")} has gone foul.`, undefined, false); // housekeeping stays off the relay
+            this.refreshRoomCtx(r.roomId);
+          }
         }
       }
       return false;
     });
+  }
+
+  // A room-sweep for stray loose-rocks (rome, 2026-07-14). Call it wherever a
+  // rock can pile onto a floor the world didn't grow it on — a body's spill, a
+  // drop. A GATE room is the reliable supply and is left alone; anywhere else,
+  // enough crumble-timers are armed to eventually take EVERY rock lying loose
+  // here back to rubble (never more timers than rocks, so none are wasted).
+  // This is what gives the reliable rock a drain — it can no longer only ever
+  // accumulate. Cheap; a no-op unless a stray rock is actually present.
+  public strayRock(roomId: string): void {
+    if (this.world!.groundSpawns.some((g) => g.item_id === "loose-rock" && g.room_id === roomId && g.regrows)) return;
+    const rocks = (this.ground.get(roomId) ?? []).filter((i) => i === "loose-rock").length;
+    if (!rocks) return;
+    const pending = this.rot.filter((r) => r.kind === "crumble" && r.roomId === roomId).length;
+    for (let i = pending; i < rocks; i++) {
+      this.rot.push({ itemId: "loose-rock", roomId, at: Date.now() + randInt(ROCK_CRUMBLE_MIN_MS, ROCK_CRUMBLE_MAX_MS), kind: "crumble" });
+    }
   }
 
   // The shrine keeps its promises.
@@ -2722,7 +2792,7 @@ export class ZoneDO implements DurableObject {
     }
   }
 
-  private async onCreatureDeath(killer: Session, creature: Creature, tmpl: MobTemplate, killLine?: string): Promise<void> {
+  private async onCreatureDeath(killer: Session, creature: Creature, tmpl: MobTemplate, killLine?: string, vital = false): Promise<void> {
     // A revenant doesn't die the first time: it rises weakened and comes again,
     // up to its limit (most rise once; the cairn-wight twice). Only the final
     // fall is real — so bail out of death entirely while it still has a rise.
@@ -2775,7 +2845,7 @@ export class ZoneDO implements DurableObject {
               `You put ${tmpl.name} down for good.`,
               `${cap(tmpl.name)} falls, and the fight goes out of it.`,
               `You finish ${tmpl.name}.`]);
-    this.send(killer, killLine ?? killVerb, "kill big");
+    this.send(killer, killLine ?? killVerb, vital ? "kill big vital" : "kill big");
     this.roomFeed(creature.roomId, `${killer.name} kills ${tmpl.name}.`, killer.pubkey);
     this.roomSound(creature.roomId, "Something falls {dir}, and is still.");
     this.creatureNoise(creature.roomId);
@@ -2961,6 +3031,7 @@ export class ZoneDO implements DurableObject {
           this.groundHeart.set(`${c.itemId}@${fell}`, c.acquiredAt);
         }
       }
+      this.strayRock(fell); // a rock spilled where you fell will crumble unless this is a gate
       await clearCarriedInventory(this.env.DB, victim.pubkey);
     }
     victim.items = [];

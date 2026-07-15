@@ -12,11 +12,12 @@ import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance } from "./rng";
 import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord } from "./zone-util";
-import { SCRAP_ID, PACK_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
+import { SCRAP_ID, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS,
-  GATEHOUSE_BARRED, GATEHOUSE_AMBIENCE, DEEP_ROOMS } from "./zone-data";
+  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS } from "./zone-data";
 import { parse } from "./parser";
 import { mapRegionOf } from "./lore";
+import { dropCarried } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -771,19 +772,38 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     if (!session.away) return; // every other action needs the bench already open
     if (action === "close") return leaveBench(z, session);
 
-    const row = typeof frame.row === "string" ? frame.row : "";
+    // A stack action arrives as ALL its rows in ONE frame. The client used to
+    // fan a message per row, and those handlers interleaved at the D1 awaits
+    // (loadContainer/setContainer aren't under the DO's storage input gate) — so
+    // a mid-move sendBench could land a stale count on screen: rome's "weird
+    // amount" drawing a stack out of the vault (2026-07-14). Now the whole pile
+    // moves in THIS one handler, and we render ONCE at the end, from settled
+    // state. (Legacy single-row `frame.row` still accepted, for safety.)
+    const rows = Array.isArray(frame.rows)
+      ? frame.rows.filter((r: unknown): r is string => typeof r === "string")
+      : (typeof frame.row === "string" && frame.row ? [frame.row] : []);
+    const KNOWN = new Set(["stash", "vault", "seal", "take", "equip", "remove", "burn", "drop", "salvage", "repair"]);
+    if (!KNOWN.has(action) || !rows.length) return;
     const gateOnly = "That's the gatehouse's work — reach a gate for the vault and the seal.";
+    const one = async (row: string): Promise<string | undefined> => {
+      if (action === "stash") return benchStore(z, session, row, "lockbox");
+      if (action === "vault") return atGate ? benchStore(z, session, row, "vault") : gateOnly;
+      if (action === "seal") return atGate ? benchSeal(z, session, row) : gateOnly;
+      if (action === "take") return benchTake(z, session, row);
+      if (action === "equip") return benchEquip(z, session, row);
+      if (action === "remove") return benchRemove(z, session, row);
+      if (action === "burn") return benchBurn(z, session, row);
+      if (action === "drop") return benchDrop(z, session, row);
+      if (action === "salvage") return atGate ? benchSalvage(z, session, row) : gateOnly;
+      return atGate ? benchRepair(z, session, row) : gateOnly; // "repair"
+    };
+    // The first thing to SAY wins the note (the pack-full stop, most often); the
+    // successful moves are silent — the settled counts are the confirmation.
     let note: string | undefined;
-    if (action === "stash") note = await benchStore(z, session, row, "lockbox");
-    else if (action === "vault") note = atGate ? await benchStore(z, session, row, "vault") : gateOnly;
-    else if (action === "seal") note = atGate ? await benchSeal(z, session, row) : gateOnly;
-    else if (action === "take") note = await benchTake(z, session, row);
-    else if (action === "equip") note = await benchEquip(z, session, row);
-    else if (action === "remove") note = await benchRemove(z, session, row);
-    else if (action === "burn") note = await benchBurn(z, session, row);
-    else if (action === "salvage") note = atGate ? await benchSalvage(z, session, row) : gateOnly;
-    else if (action === "repair") note = atGate ? await benchRepair(z, session, row) : gateOnly;
-    else return;
+    for (const row of rows) {
+      const n = await one(row);
+      if (n !== undefined && note === undefined) note = n;
+    }
     return sendBench(z, session, note);
   }
 
@@ -848,6 +868,18 @@ export async function benchBurn(z: ZoneDO, session: Session, row: string): Promi
     return `You burn ${tmpl.name}. Nothing of it is left.`;
   }
 
+  // Set ONE exact item on the floor from the inventory. Targets the rowId, so it
+  // is never the "dropped both" ambiguity of a name — only a pack item drops
+  // (you'd take a boxed thing out first), and the shared dropCarried does the
+  // rest (seal cracks, wear and lore ride the floor, the room hears it).
+export async function benchDrop(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
+    const carried = session.items.find((c) => c.rowId === row && !c.equipped);
+    if (!carried) return "That isn't loose in your pack to drop.";
+    const msg = await dropCarried(z, session, carried);
+    await z.persist();
+    return msg;
+  }
+
 export function enterBench(z: ZoneDO, session: Session): void {
     session.away = true;
     // Rest survives opening the bench/keeping (inventory) — healing pauses while
@@ -885,7 +917,10 @@ export async function leaveBench(z: ZoneDO, session: Session): Promise<void> {
     try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
     z.roomFeed(session.roomId, `${session.name} steps back out, kit sorted.`, session.pubkey);
     await provokeGrudges(z, session, false); // gates hold nothing; no free hit for closing the bench
-    z.send(session, z.enterDescribe(session));
+    // You crouched in the open and stood up again — you never LEFT the room, so
+    // don't re-print it (it buries a conversation you were in the middle of).
+    // A quiet line to close the modal's own thread; the room is where it was.
+    z.send(session, "You straighten up, your kit sorted.");
     z.sendCtx(session);
     z.refreshRoomCtx(session.roomId);
   }
@@ -909,7 +944,7 @@ export async function benchStore(z: ZoneDO, session: Session, row: string, key: 
     // to seal in the first place. It's unsealed GEAR the vault turns away.
     if (cfg.sealedOnly && carried.serial === null && !z.stackable(carried.itemId, carried.serial, carried.journalId)) return cfg.needSeal;
     const held = await loadContainer(z.env.DB, session.pubkey, cfg.container);
-    if (!z.hasRoom(held, carried.itemId, cfg.cap)) return cfg.full;
+    if (!z.hasRoom(held, carried.itemId, cfg.cap, cfg.container as "lockbox" | "vault")) return cfg.full;
     if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
     if (fromContainer === "") { // came off the body
       carried.equipped = false;
@@ -926,6 +961,7 @@ export async function benchTake(z: ZoneDO, session: Session, row: string): Promi
       const entry = held.find((c) => c.rowId === row);
       if (entry) {
         if (key === "vault" && !atGate) return "The vault's door opens only at a gate.";
+        if (z.foodCapped(session, entry.itemId)) return z.foodFullNote();
         if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${PACK_CAP} slots).`;
         await setContainer(z.env.DB, entry.rowId, "");
         session.items.push(entry);
@@ -1007,9 +1043,14 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
       lockbox: group(lockbox),
       vault: group(vault),
       packCap: PACK_CAP, lockboxCap: LOCKBOX_CAP, vaultCap: VAULT_CAP,
-      // The vault's cap counts SEALED GEAR only — fungibles ride free, so the
-      // client can't just count rows the way it does for the pack and the box.
-      vaultUsed: z.slotsUsed(vault, true),
+      // Slot accounting is the SERVER's now, for every column: food rides free in
+      // the pack, costs a slot each in the lockbox, and rides free in the vault —
+      // none of which the client can get by counting rows. It just shows these.
+      packUsed: z.slotsUsed(session.items, "pack"),
+      lockboxUsed: z.slotsUsed(lockbox, "lockbox"),
+      vaultUsed: z.slotsUsed(vault, "vault"),
+      // The pack's food is a COUNT cap of its own, sitting apart from the slots.
+      packFood: z.packFood(session), packFoodCap: PACK_FOOD_CAP,
     };
     try { session.ws.send(JSON.stringify(payload)); } catch {}
   }
@@ -1060,7 +1101,7 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
       if (held.length === 0) return z.send(session, cfg.empty);
       // Match the bench modal: fungibles collapse to one line with a count, and
       // the header counts SLOTS (what the cap is actually measured in), not rows.
-      const lines = [`${cfg.header} (${z.slotsUsed(held, cfg.freeStacks)}/${cfg.cap}):`];
+      const lines = [`${cfg.header} (${z.slotsUsed(held, cfg.container as "lockbox" | "vault")}/${cfg.cap}):`];
       const counts = new Map<string, number>();
       for (const c of held) {
         if (z.stackable(c.itemId, c.serial, c.journalId)) counts.set(c.itemId, (counts.get(c.itemId) ?? 0) + 1);
@@ -1111,7 +1152,7 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
     if (!carried) return z.send(session, "You carry nothing like that.");
     // Sealed wealth or raw fungibles bank in the vault; only unsealed gear is turned away.
     if (cfg.sealedOnly && carried.serial === null && !z.stackable(carried.itemId, carried.serial, carried.journalId)) return z.send(session, cfg.needSeal);
-    if (!z.hasRoom(held, carried.itemId, cfg.cap, cfg.freeStacks)) return z.send(session, cfg.full);
+    if (!z.hasRoom(held, carried.itemId, cfg.cap, cfg.container as "lockbox" | "vault")) return z.send(session, cfg.full);
     const tmpl = world.itemTemplates.get(carried.itemId)!;
     // Flush its worn condition before it leaves the body, so the box/vault
     // holds the true value; setContainer clears the equipped flag.
@@ -1139,6 +1180,7 @@ export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key:
     });
     if (!entry) return z.send(session, cfg.holdsNot);
     const tmpl = world.itemTemplates.get(entry.itemId)!;
+    if (z.foodCapped(session, entry.itemId)) return z.send(session, z.foodFullNote());
     if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${PACK_CAP} slots). Make room first.`);
     await setContainer(z.env.DB, entry.rowId, "");
     session.items.push(entry);
@@ -1227,8 +1269,9 @@ export function enterGatehouse(z: ZoneDO, session: Session): void {
   }
   if (z.outOfWorld(session)) return z.send(session, describeGatehouse(z, session));
   z.enterStep(session, "gatehouse");
+  z.sendStatus(session); // the HUD title becomes "The Gatehouse" the moment you're inside
   z.send(session, describeGatehouse(z, session));
-  gatehouseFeed(z, `${session.name} pushes in out of the cold.`, session.pubkey);
+  gatehouseFeed(z, `${session.name} pushes in out of the cold.`, session.pubkey, "who");
 }
 
 // The router: every frame typed by someone standing in the gatehouse. Known
@@ -1240,6 +1283,11 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   if (!cmd || "miss" in cmd) return gatehouseSay(z, session, text);
   const v = cmd.verb;
   if (v === "say") return gatehouseSay(z, session, cmd.arg);
+  // A no-argument command carrying trailing words was a SENTENCE, not a command:
+  // "i am trying to quit" is speech, not inventory; "who knows" is speech, not
+  // the roster. Bare, they still command. This is the whole fix for a chat line's
+  // first word (i / in / out / look / who / rest…) hijacking the message.
+  if (GATEHOUSE_NOARG.has(v) && cmd.arg.trim() !== "") return gatehouseSay(z, session, text);
   if (v === "enter") return z.send(session, "You're already inside.");
   if (v === "look") return z.send(session, describeGatehouse(z, session));
   if (v === "who") { // who's by the fire, not who's in the dungeon

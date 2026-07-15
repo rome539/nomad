@@ -544,8 +544,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
       if (c.loreId) await deedsBump(z.env.DB, c.loreId, "descents");
     }
   }
-  z.roomFeed(from, `${session.name} ${wasFighting ? "flees" : "leaves"} ${dir}.`);
-  z.roomFeed(session.roomId, `${session.name} arrives.`, session.pubkey);
+  z.roomFeed(from, `${session.name} ${wasFighting ? "flees" : "leaves"} ${dir}.`, undefined, true, "who");
+  z.roomFeed(session.roomId, `${session.name} arrives.`, session.pubkey, true, "who");
   // Status first, so the client learns the room's name before the room text
   // prints — the name line paints gold even the very first time you see it.
   z.sendStatus(session);
@@ -621,6 +621,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   const itemId = findItemIn(z, here, arg);
   if (!itemId) return z.send(session, "That isn't lying around here.");
   const tmpl = z.world!.itemTemplates.get(itemId)!;
+  if (z.foodCapped(session, itemId)) return z.send(session, z.foodFullNote());
   if (!z.packRoom(session, itemId)) {
     return z.send(session, `Your pack is full (${PACK_CAP} slots). Drop something, or bank it at a gate.`);
   }
@@ -712,6 +713,24 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
   if (!arg) return z.send(session, "Drop what?");
   const carried = z.findCarried(session, arg);
   if (!carried) return z.send(session, "You carry nothing like that.");
+  // ONE at a time. findCarried returns a single row, but say so plainly: with
+  // two of a kind in the pack, 'drop studded maul' sheds ONE and leaves the
+  // other. (The inventory's per-row drop button is the unambiguous way.)
+  const msg = await dropCarried(z, session, carried);
+  const left = session.items.filter((c) => c.itemId === carried.itemId && !c.equipped).length;
+  const tn = z.world!.itemTemplates.get(carried.itemId)!.name;
+  const tail = left > 0 ? ` (You still carry ${left === 1 ? "one more" : left + " more"} ${tn.replace(/^(a|an|the)\s+/i, "")}.)` : "";
+  z.send(session, msg + tail);
+  await z.persist();
+  await z.ensureAlarm();
+}
+
+// Set one carried item on the floor. The shared core behind both 'drop <name>'
+// and the inventory's per-row drop button — the button targets an exact rowId,
+// so it is never ambiguous the way a name can be when you hold two of a kind.
+// Returns the player-facing line; the caller places it (the log, or the modal
+// note), and owns the persist/alarm flush.
+export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedItem): Promise<string> {
   const itemId = carried.itemId;
   const tmpl = z.world!.itemTemplates.get(itemId)!;
 
@@ -735,20 +754,18 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
       z.groundHeart.set(`${itemId}@${session.roomId}`, carried.acquiredAt);
     }
     if (tmpl.edible) z.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
+    if (itemId === "loose-rock") z.strayRock(session.roomId); // a rock set down off its gate crumbles back to rubble
   }
   // Shedding under the burden line is the valve working: say so, so the
   // mid-chase drop reads as the escape it is.
   const quietAgain = wasBurdened && !z.burdened(session) ? " The pack rides light and quiet again." : "";
-  z.send(
-    session,
-    (carried.serial !== null
-      ? `You set ${tmpl.name} down. The seal cracks as it leaves your hands — the claim is no longer yours.`
-      : `You drop ${tmpl.name}.`) + quietAgain,
-  );
   z.roomFeed(session.roomId, `${session.name} drops ${tmpl.name}.`, session.pubkey);
   z.refreshRoomCtx(session.roomId);
-  await z.persist();
-  await z.ensureAlarm();
+  // persist/alarm are the caller's — cmdDrop flushes after its "one more" line,
+  // the bench-drop flushes after re-sending the modal.
+  return (carried.serial !== null
+    ? `You set ${tmpl.name} down. The seal cracks as it leaves your hands — the claim is no longer yours.`
+    : `You drop ${tmpl.name}.`) + quietAgain;
 }
 
 export async function cmdStance(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -911,10 +928,10 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   const out: string[] = [];
   out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`));
   out.push(...loud);
-  out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox)}/${LOCKBOX_CAP}):`));
+  out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox, "lockbox")}/${LOCKBOX_CAP}):`));
   if (atGate) {
     const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
-    out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, true)}/${VAULT_CAP} sealed):`)); // fungibles ride free in the vault
+    out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, "vault")}/${VAULT_CAP} sealed):`)); // fungibles ride free in the vault
     z.enterStep(session, "sorting"); // step out to sort, safe in the gatehouse
     out.push("('stash'/'unstash'/'vault' to move things; 'look' steps you back into the world.)");
   } else {
@@ -1071,7 +1088,9 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   const fish = world.itemTemplates.get(fishId);
   if (!fish) return z.send(session, "Something takes the line — but it slips free before you can land it.");
   if (!(await z.grantItem(session, fish.id))) {
-    return z.send(session, `Something takes the line — but your pack is full, and you have to let ${fish.name} go.`);
+    return z.send(session, z.foodCapped(session, fish.id)
+      ? `Something takes the line — but you're carrying all the food you can, and you let ${fish.name} slip back under.`
+      : `Something takes the line — but your pack is full, and you have to let ${fish.name} go.`);
   }
   spendPool(z, session.roomId, pool);
   z.send(session, (fishId === "marrow-lamprey"

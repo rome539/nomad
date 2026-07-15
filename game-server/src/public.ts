@@ -254,6 +254,29 @@ export const PAGE = `<!doctype html>
     background: rgba(0, 0, 0, 0.82);
     align-items: center; justify-content: center; padding: 16px 12px;
   }
+  /* The conversation follows you into your kit. A modal is a full scrim, so
+     chat arriving while you sort would land invisibly behind it — this strip
+     floats it ABOVE the modal (z 10001), so a talk in progress never drops
+     just because you opened your pack. Only people-lines ride it; the world's
+     noise stays in the log. Empty and hidden until a modal is open and someone
+     speaks. */
+  #mchat {
+    display: none; position: fixed; z-index: 10001; left: 12px; right: 12px; bottom: 12px;
+    flex-direction: column; gap: 3px; pointer-events: none; max-width: 720px;
+    margin: 0 auto; text-align: left;
+  }
+  #mchat.on { display: flex; }
+  #mchat .mline {
+    background: color-mix(in srgb, var(--panel) 92%, black);
+    border: 1px solid var(--border2); border-left: 2px solid var(--voice);
+    border-radius: 6px; padding: 5px 10px; font-size: 13px; line-height: 1.35;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4); animation: mfade 0.2s ease-out;
+    overflow-wrap: anywhere;
+  }
+  #mchat .mline.say  { color: var(--voice); font-weight: 700; }
+  #mchat .mline.tell { color: var(--voice); font-style: italic; }
+  #mchat .mline.who  { color: var(--voice); }
+  @keyframes mfade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   #bench.open { display: flex; }
   #bench .bbox {
     background: var(--panel); border: 1px solid var(--border2); border-radius: 10px;
@@ -306,7 +329,9 @@ export const PAGE = `<!doctype html>
     border-bottom: 1px solid var(--line); padding: 10px 0 6px;
     display: flex; justify-content: space-between; gap: 8px;
   }
+  #bench .bcolh .cnts { display: flex; gap: 8px; align-items: baseline; }
   #bench .bcolh .cnt { color: var(--dim); letter-spacing: 0; }
+  #bench .bcolh .cnt.food { color: var(--voice); opacity: 0.85; text-transform: none; }
   #bench .bempty { color: var(--dim); font-size: 12px; font-style: italic; padding: 4px 0; }
   #bench .bitem { display: flex; flex-direction: column; gap: 4px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
   #bench .bitem:last-child { border-bottom: none; }
@@ -623,7 +648,18 @@ export const PAGE = `<!doctype html>
      is the thing your eye must land on first. Quiet words (tell) lean italic. */
   #log .say    { color: var(--voice); font-weight: 700; }
   #log .tell   { color: var(--voice); font-style: italic; opacity: 0.92; }
+  /* PRESENCE — another person arriving, leaving, blinking in, fading out. Same
+     rose as speech (rose means people), but unbolded: a body moving is quieter
+     than a body speaking, yet it must never sink into the world's grey. In a
+     world where the other names are real people who can rob and kill you,
+     someone stepping into your room is the most actionable line on the screen. */
+  #log .who    { color: var(--voice); }
   #log .big    { animation: tremor 0.35s linear; }
+  /* The vitals kill — the rarest strike, on both sides of it (you land one, or
+     one lands on you). It keeps its side's colour (gold kill / steel out /
+     blood in) and its tremor; this just makes it a touch larger, so the once-
+     in-a-hundred blow never reads at the same size as a 4-damage poke. */
+  #log .vital  { font-size: 1.16em; font-weight: 700; letter-spacing: 0.01em; }
   @keyframes tremor {
     0%, 100% { transform: translate(0, 0); }
     20% { transform: translate(-1.5px, 1px); }
@@ -794,6 +830,7 @@ export const PAGE = `<!doctype html>
       </div>
     </div>
   </div>
+  <div id="mchat"></div>
   <div id="bench">
     <div class="bbox">
       <div class="bhead">
@@ -1042,6 +1079,15 @@ var SND = {
     this.crack(t + 0.02);
     this._tone(t, { f0: 80, f1: 30, dur: 0.5, gain: 0.5 });
   },
+  // The vitals kill — the rarest, most decisive blow in the game. A sharp point
+  // finding the gap, a heavy final drop under it, and a clean ringing signature
+  // (an octave + a fifth) that decays slow: the one strike that announces itself.
+  vital: function (t) {
+    this._burst(t, { type: "bandpass", freq: 2600, q: 8, dur: 0.05, gain: 0.5 });
+    this._tone(t + 0.01, { f0: 96, f1: 30, dur: 0.75, gain: 0.6 });
+    this._tone(t + 0.04, { f0: 880, dur: 1.5, gain: 0.17 });
+    this._tone(t + 0.06, { f0: 1320, dur: 1.15, gain: 0.09 });
+  },
   death: function (t) {
     this._tone(t, { f0: 200, f1: 34, dur: 1.8, gain: 0.45 });
     this._burst(t + 0.1, { freq: 300, sweep: 60, dur: 1.5, gain: 0.25 });
@@ -1175,6 +1221,10 @@ function sndFor(line, c) {
   if (/squink/i.test(line)) return "squink";
   if (line.indexOf("has fallen to") >= 0) return "swell";
   if (line.indexOf("across the counter") >= 0) return "clink";
+  // The vitals kill wins over any other tag it rides with (kill/dmgout/dmgin):
+  // the rarest strike gets the rarest voice, and it must never fall back to a
+  // plain hit.
+  if (c.indexOf("vital") >= 0) return "vital";
   // The wider vocabulary, keyed off the server's semantic tags.
   if (c === "block") return "clang";
   if (c === "dodge") return "whiff";
@@ -1195,7 +1245,7 @@ function sndFor(line, c) {
 // A combat round can print several lines at once; stagger their voices a
 // hair and let at most four speak, biggest first.
 var SND_RANK = {
-  death: 9, swell: 8, boom: 7, grind: 6, forge: 6, grab: 5, crit: 5, hit: 4, crack: 4,
+  vital: 10, death: 9, swell: 8, boom: 7, grind: 6, forge: 6, grab: 5, crit: 5, hit: 4, crack: 4,
   clang: 4, latch: 4, chime: 3, squink: 3, thud: 3, page: 3, unfurl: 3, clink: 3,
   step: 2, whiff: 2, scratch: 2, tick: 1,
 };
@@ -1217,6 +1267,38 @@ function playSounds(names) {
   for (var i = 0; i < n; i++) { try { SND[names[i]](t + i * 0.07); } catch (e) {} }
 }
 
+// ---- the conversation follows you into your kit ----
+// While a full-screen modal is open the log is hidden behind it, so chat would
+// arrive unseen. This strip floats people-lines (say/tell/who) over the modal
+// so a talk in progress survives you opening your pack. Lines age out on their
+// own; the strip vanishes when the modal closes.
+var mchat = document.getElementById("mchat");
+function anyModalOpen() {
+  return (benchEl && benchEl.classList.contains("open"))
+    || (tradeEl && tradeEl.classList.contains("open"))
+    || (forgeEl && forgeEl.classList.contains("open"))
+    || (mapEl && mapEl.classList.contains("open"))
+    || (jrnlEl && jrnlEl.classList.contains("open"));
+}
+function hideModalChat() {
+  if (!mchat) return;
+  mchat.textContent = "";
+  mchat.classList.remove("on");
+}
+function modalChatPush(text, cls) {
+  if (!mchat || !anyModalOpen()) return; // log's visible otherwise — no need
+  var line = document.createElement("div");
+  line.className = "mline " + (cls || "");
+  line.textContent = text;
+  mchat.appendChild(line);
+  mchat.classList.add("on");
+  while (mchat.childNodes.length > 4) mchat.removeChild(mchat.firstChild); // keep the last few
+  setTimeout(function () {
+    if (line.parentNode) line.parentNode.removeChild(line);
+    if (mchat.childNodes.length === 0) mchat.classList.remove("on");
+  }, 14000);
+}
+
 function print(text, cls) {
   // Explicit classes (sys/feed/echo) keep the whole block; everything else is
   // split per line so each event wears its own color.
@@ -1228,6 +1310,8 @@ function print(text, cls) {
     if (c) div.className = c;
     div.textContent = lines[i];
     log.appendChild(div);
+    // A person spoke or moved while you're in a modal: float it over the top.
+    if (c === "say" || c === "tell" || c === "who") modalChatPush(lines[i], c);
     if (soundOn && actx && cls !== "sys" && cls !== "echo") {
       var s = sndFor(lines[i], c || "");
       if (s) sounds.push(s);
@@ -1548,13 +1632,27 @@ var GATEHOUSE_CMDS = {
   eat: 1, bandage: 1, bind: 1, equip: 1, wield: 1, wear: 1, remove: 1,
   unequip: 1, name: 1, rename: 1, smoke: 1, puff: 1, theme: 1, login: 1,
 };
+// No-argument commands (aliases). Mirrors the server's GATEHOUSE_NOARG: bare
+// they command, but with words after them they were a sentence. Kept in sync so
+// the client's echo matches what the server treats as speech.
+var GATEHOUSE_NOARG_CMDS = {
+  out: 1, exit: 1, outside: 1, in: 1, enter: 1, inside: 1, gatehouse: 1,
+  look: 1, l: 1, who: 1, players: 1, help: 1, "?": 1, commands: 1, h: 1,
+  inventory: 1, inv: 1, i: 1, bag: 1, items: 1, kit: 1,
+  barter: 1, trade: 1, shop: 1, browse: 1, fence: 1, forge: 1, craft: 1,
+  map: 1, study: 1, carve: 1, journal: 1, sheet: 1, publish: 1,
+  rest: 1, sleep: 1, sit: 1, camp: 1, smoke: 1, puff: 1,
+};
 var inGatehouseNow = false;
 function isSpeech(t) {
   if (!t) return false;
   if (t.charAt(0) === "'") return true; // the old MUD shorthand
   var w = t.split(/\\s+/)[0].toLowerCase();
   if (SPEECH_VERBS[w]) return true;
-  if (inGatehouseNow && !GATEHOUSE_CMDS[w]) return true;
+  if (inGatehouseNow) {
+    if (!GATEHOUSE_CMDS[w]) return true;                       // unknown word = speech
+    if (GATEHOUSE_NOARG_CMDS[w] && /\\s/.test(t.trim())) return true; // "i am trying" = speech, bare "i" = command
+  }
   return false;
 }
 
@@ -1953,9 +2051,13 @@ var benchAtGate = false; // vault + seal only when the bench is opened at a gate
 document.getElementById("bclose").addEventListener("click", function () { benchSend("close"); });
 
 function benchSend(action, row) {
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "bench", action: action, row: row || "" }));
+  // One frame carries the WHOLE selection: a stack sends all its rows at once, so
+  // the server moves the pile in a single handler and renders one settled count —
+  // no per-row fan racing at the server's DB awaits (the "weird amount" bug).
+  var rows = Array.isArray(row) ? row : (row == null || row === "" ? [] : [row]);
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "bench", action: action, rows: rows }));
 }
-function closeBench() { benchEl.classList.remove("open"); }
+function closeBench() { benchEl.classList.remove("open"); hideModalChat(); }
 
 function benchItemNode(it, place) {
   var wrap = document.createElement("div");
@@ -1987,10 +2089,17 @@ function benchItemNode(it, place) {
   // A stack action hits every row in the pile (box/seal/burn a whole stack of
   // trophies at once); a single item is just a one-element fan.
   var rows = it.rows && it.rows.length ? it.rows : [it.row];
-  function fire(action) { for (var i = 0; i < rows.length; i++) benchSend(action, rows[i]); }
+  function fire(action) { benchSend(action, rows); } // one frame, the whole stack — the server moves it atomically
   function btn(label, action) {
     var b = document.createElement("button"); b.type = "button"; b.textContent = label;
     b.addEventListener("click", function () { fire(action); });
+    acts.appendChild(b);
+  }
+  // A single-row action: hits ONE of a stack, not the whole pile. Drop is the
+  // one thing you never want fanned — 'drop' on two studded mauls sheds one.
+  function btn1(label, action) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = label;
+    b.addEventListener("click", function () { benchSend(action, rows[0]); });
     acts.appendChild(b);
   }
   // Two-tap actions: the first arms it, the second does it. The cls arg sets the
@@ -2018,6 +2127,9 @@ function benchItemNode(it, place) {
       else btn(it.slot === "weapon" ? "wield" : "wear", "equip");
     }
     btn("\\u2192 box", "stash");
+    // Drop THIS one to the floor — a single row, never the "dropped both"
+    // ambiguity of a name. Not offered for what you're wearing (remove first).
+    if (!it.equipped) btn1("drop", "drop");
     // The vault and the seal are the gate's business — only offered at a gate.
     // Sealed wealth and raw fungibles both bank in the vault; only unsealed gear
     // needs the seal first (trophies and the like carry no title to seal).
@@ -2046,20 +2158,30 @@ function benchItemNode(it, place) {
   return wrap;
 }
 
-function fillBenchCol(el, title, items, cap, place, usedOverride) {
+function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, foodCap) {
   el.textContent = "";
   var h = document.createElement("div");
   h.className = "bcolh";
   var t = document.createElement("span"); t.textContent = title; h.appendChild(t);
+  // Counts group on the right so the header stays title | counts, not spread three
+  // ways. Slot counts come from the server for every column now: food costs no
+  // slot in the pack (a count cap governs it) or the vault, but one slot each in
+  // the box — none of which the client can get by counting rows.
+  var right = document.createElement("span"); right.className = "cnts";
   var c = document.createElement("span"); c.className = "cnt";
-  // What you wear rides on the body, not in the pack \\u2014 don't count equipped
-  // rows against the cap (matches the server's slot accounting). The vault sends
-  // its own number: fungibles cost it nothing, so rows are not slots there.
   var used = (typeof usedOverride === "number")
     ? usedOverride
     : items.filter(function (it) { return !it.equipped; }).length;
   c.textContent = cap ? (used + "/" + cap) : String(used);
-  h.appendChild(c);
+  right.appendChild(c);
+  // The pack's food ceiling rides alongside the slot count — food eats no slot,
+  // so its own "N/8" is the only thing that tells you when the next ration bounces.
+  if (typeof foodCap === "number" && foodCap > 0) {
+    var f = document.createElement("span"); f.className = "cnt food";
+    f.textContent = "food " + (foodUsed || 0) + "/" + foodCap;
+    right.appendChild(f);
+  }
+  h.appendChild(right);
   el.appendChild(h);
   if (!items.length) {
     var e = document.createElement("div"); e.className = "bempty"; e.textContent = "\\u2014 empty \\u2014";
@@ -2171,8 +2293,8 @@ function renderBench(state) {
   bnote.textContent = state.note || (benchAtGate ? "" : "Away from a gate \\u2014 lockbox only. The vault and the seal wait at the gates.");
   benchEl.classList.toggle("nogate", !benchAtGate);
   renderDoll(state.sheet);
-  fillBenchCol(bpack, "Your pack", state.pack || [], state.packCap || 0, "pack");
-  fillBenchCol(block, "Lockbox", state.lockbox || [], state.lockboxCap, "lockbox");
+  fillBenchCol(bpack, "Your pack", state.pack || [], state.packCap || 0, "pack", state.packUsed, state.packFood, state.packFoodCap);
+  fillBenchCol(block, "Lockbox", state.lockbox || [], state.lockboxCap, "lockbox", state.lockboxUsed);
   if (benchAtGate) {
     bvault.style.display = "";
     fillBenchCol(bvault, "Vault \\u00b7 the deep keep", state.vault || [], state.vaultCap, "vault", state.vaultUsed);
@@ -2197,7 +2319,7 @@ document.getElementById("tclose").addEventListener("click", function () { tradeS
 function tradeSend(action, row, src) {
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "trade", action: action, row: row || "", src: src || "" }));
 }
-function closeTrade() { tradeEl.classList.remove("open"); tradeState = null; }
+function closeTrade() { tradeEl.classList.remove("open"); tradeState = null; hideModalChat(); }
 
 // A stat token wears the chip colours: red bites, steel guards, gold gains,
 // dim weighs. The shop teaches kit-building the same way the chips taught verbs.
@@ -2376,7 +2498,7 @@ document.getElementById("fclose").addEventListener("click", function () { forgeS
 function forgeSend(action, row) {
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "forge", action: action, row: row || "" }));
 }
-function closeForge() { forgeEl.classList.remove("open"); }
+function closeForge() { forgeEl.classList.remove("open"); hideModalChat(); }
 
 function forgeItemNode(it) {
   var wrap = document.createElement("div");
@@ -2440,7 +2562,7 @@ function renderForge(state) {
 var mapEl = document.getElementById("mapm");
 var mapBody = document.getElementById("mapbody");
 document.getElementById("mapclose").addEventListener("click", closeMap);
-function closeMap() { mapEl.classList.remove("open"); }
+function closeMap() { mapEl.classList.remove("open"); hideModalChat(); }
 // The map is drawn live from the room graph the Worker sends (rooms + exits +
 // which one you stand in) — not a fixed poster. Rooms have no coordinates, only
 // directional exits, so we walk the graph onto a grid (north = up a cell, east =
@@ -2774,7 +2896,7 @@ function renderMap(f) {
 var jrnlEl = document.getElementById("jrnl");
 var jBody = document.getElementById("jbody");
 document.getElementById("jclose").addEventListener("click", closeJournal);
-function closeJournal() { jrnlEl.classList.remove("open"); }
+function closeJournal() { jrnlEl.classList.remove("open"); hideModalChat(); }
 var JTIER = { 1: "sighted", 2: "hunted", 3: "known cold" };
 function renderJournal(f) {
   jBody.textContent = "";

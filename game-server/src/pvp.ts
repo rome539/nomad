@@ -199,7 +199,7 @@ async function swingAt(
     // blow prints like any other hit — just with the floor at the end of it.
     z.send(defender, vkill
       ? `${attacker.name}'s ${weapon ? weapon.tmpl.name.replace(/^(a|an|the)\s+/i, "") : "fist"} finds the mark. ${vkill.taken}`
-      : `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${opts.ambush ? " — you never saw it coming" : ""} — and the stones come up to meet you.`, "dmgin big");
+      : `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${opts.ambush ? " — you never saw it coming" : ""} — and the stones come up to meet you.`, vkill ? "dmgin big vital" : "dmgin big");
     // The killer reads their killing blow too — the SAME hit line as any
     // other swing, with the number, just ending in the body. Without this the
     // fatal swing collapsed to a bare "You put X down" with no damage shown,
@@ -207,7 +207,8 @@ async function swingAt(
     await pvpKill(z, attacker, defender,
       vkill
         ? z.vitalsHit(vkill, defender.name)
-        : `${z.playerHit(weapon, defender.name)} for ${dmg} — and ${defender.name} goes down.`);
+        : `${z.playerHit(weapon, defender.name)} for ${dmg} — and ${defender.name} goes down.`,
+      !!vkill);
     if (weapon) await z.wear(attacker, weapon.carried, weapon.tmpl, WEAPON_WEAR);
     // A man-kill goes into the steel like any other — heavier, if anything.
     if (weapon?.carried.loreId) await deedsBump(z.env.DB, weapon.carried.loreId, "kills");
@@ -261,11 +262,11 @@ async function swingAt(
 // world's narration never names killers to the relays), blood marked on
 // their hands, and the victim through the one death path there has ever
 // been. EVERYTHING drops, seals cracked.
-export async function pvpKill(z: ZoneDO, killer: Session, victim: Session, killLine?: string): Promise<void> {
+export async function pvpKill(z: ZoneDO, killer: Session, victim: Session, killLine?: string, vital = false): Promise<void> {
   killer.pvpKills += 1;
   await recordPvpKill(z.env.DB, killer.pubkey);
   markBlood(z, killer);
-  z.send(killer, killLine ?? `You put ${victim.name} down.`, "dmgout big");
+  z.send(killer, killLine ?? `You put ${victim.name} down.`, vital ? "dmgout big vital" : "dmgout big");
   await z.onPlayerDeath(victim, null, killer.name);
 }
 

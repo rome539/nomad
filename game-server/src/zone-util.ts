@@ -97,10 +97,16 @@ export function chipName(name: string): string {
 
 // "attack rat" should hit "a scabby rat"; articles don't count.
 export function nameMatches(name: string, arg: string): boolean {
-  const n = name.toLowerCase();
-  if (n.includes(arg)) return true;
+  // Hyphens read as spaces on both sides. The room prints "the three-headed
+  // hound", but a player types "three headed hound" — and a compound name must
+  // not hide behind its punctuation: "three-headed" as one glued token could
+  // never prefix-match the word "headed", so the beast had no look (rome,
+  // 2026-07-14).
+  const n = name.toLowerCase().replace(/-/g, " ");
+  const a = arg.replace(/-/g, " ");
+  if (n.includes(a)) return true;
   const words = n.split(/\s+/).filter((w) => w !== "a" && w !== "an" && w !== "the");
-  const argWords = arg.split(/\s+/);
+  const argWords = a.split(/\s+/);
   return argWords.every((aw) => words.some((w) => w.startsWith(aw)));
 }
 
