@@ -76,7 +76,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litSource = "lantern";
     session.torchWarned = false;
     z.send(session, `You slide the shutter and touch flame to the wick${shield ? `, ${shield.tmpl.name} set aside to carry it` : ""} — a low, steady light settles around you. Nothing flinches from it.`, "gain");
-    z.roomFeed(session.roomId, `${session.name} raises a hooded lantern; a patient light spreads.`, session.pubkey);
+    z.roomFeed(session.roomId, `${session.name} raises a hooded lantern; a patient light spreads.`, session.pubkey, false);
   } else {
     session.items.splice(session.items.indexOf(light), 1);
     await removeItemRow(z.env.DB, light.rowId); // spent into the burning
@@ -86,7 +86,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litSource = "torch";
     session.torchWarned = false;
     z.send(session, `You touch a spark to the pitch and the torch catches${shield ? `, ${shield.tmpl.name} set aside to hold it` : ""} — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.`, "gain");
-    z.roomFeed(session.roomId, `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey);
+    z.roomFeed(session.roomId, `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey, false);
   }
   z.sendStatus(session);
   z.send(session, z.describeRoom(session, false)); // the dark may resolve, or the fire may scatter something

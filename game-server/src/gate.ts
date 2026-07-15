@@ -17,7 +17,7 @@ import { SCRAP_ID, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS } from "./zone-data";
 import { parse } from "./parser";
 import { mapRegionOf } from "./lore";
-import { dropCarried } from "./verbs";
+import { dropCarried, describePlayer } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -78,7 +78,7 @@ export async function forgeCore(
   const id = uuid();
   await insertLoot(z.env.DB, id, session.pubkey, t.id, null);
   session.items.push({ rowId: id, itemId: t.id, serial: null, equipped: false, condition: 100 });
-  z.roomFeed(session.roomId, `${session.name} works the bench, hammer ringing off the gatehouse walls.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} works the bench, hammer ringing off the gatehouse walls.`, session.pubkey, false);
   return {
     ok: true,
     note: `Scrap, the brazier's heat, and patience. ${cap(t.name)} comes off the bench, raw but true.${z.itemStat(t)} [${t.rarity}] (unclaimed — the gate can seal it)`,
@@ -117,7 +117,7 @@ export async function handleForge(z: ZoneDO, session: Session, frame: any): Prom
     for (const c of z.creatures.values()) {
       if (c.target === session.pubkey) c.target = null;
     }
-    z.roomFeed(session.roomId, `${session.name} steps to the bench and stirs the brazier to life.`, session.pubkey);
+    z.roomFeed(session.roomId, `${session.name} steps to the bench and stirs the brazier to life.`, session.pubkey, false);
     z.refreshRoomCtx(session.roomId);
     return sendForge(z, session);
   }
@@ -142,7 +142,7 @@ export async function leaveForge(z: ZoneDO, session: Session): Promise<void> {
     return;
   }
   session.away = false;
-  z.roomFeed(session.roomId, `${session.name} banks the brazier and steps back.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} banks the brazier and steps back.`, session.pubkey, false);
   z.send(session, z.enterDescribe(session));
   z.sendCtx(session);
   z.refreshRoomCtx(session.roomId);
@@ -377,7 +377,7 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     ? `The keeper slides ${slid[0]} across the counter.`
     : `The keeper slides it all across the counter:\n  ${slid.join("\n  ")}`;
   session.buying = undefined;
-  z.roomFeed(session.roomId, `${session.name} trades at the keeper's hatch.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} trades at the keeper's hatch.`, session.pubkey, false);
   const bare = lastOnes.length
     ? ` You took the last ${lastOnes.join(" and the last ")} he had; the shelf behind him stands bare.`
     : "";
@@ -453,7 +453,7 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
     for (const c of z.creatures.values()) {
       if (c.target === session.pubkey) c.target = null;
     }
-    z.roomFeed(session.roomId, `${session.name} steps up to the keeper's hatch.`, session.pubkey);
+    z.roomFeed(session.roomId, `${session.name} steps up to the keeper's hatch.`, session.pubkey, false);
     z.refreshRoomCtx(session.roomId);
     return sendTrade(z, session);
   }
@@ -516,7 +516,7 @@ export async function leaveTrade(z: ZoneDO, session: Session): Promise<void> {
     return;
   }
   session.away = false;
-  z.roomFeed(session.roomId, `${session.name} steps back from the hatch.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} steps back from the hatch.`, session.pubkey, false);
   z.send(session, z.enterDescribe(session));
   z.sendCtx(session);
   z.refreshRoomCtx(session.roomId);
@@ -624,7 +624,7 @@ export async function cmdSalvage(z: ZoneDO, session: Session, arg: string): Prom
   if (!carried) return z.send(session, "You carry nothing like that.");
   const line = await salvageCore(z, session, carried);
   z.send(session, line);
-  z.roomFeed(session.roomId, `${session.name} works the bench vice, breaking steel.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} works the bench vice, breaking steel.`, session.pubkey, false);
   z.sendCtx(session);
 }
 
@@ -703,7 +703,7 @@ export async function cmdClaim(z: ZoneDO, session: Session, arg: string): Promis
     }
     lines.push("Sealed is TITLE, not armor: carried, it dies with you. Only the gate\u2019s lockbox and vault keep what death cannot.");
     z.send(session, lines.join("\n"));
-    z.roomFeed(session.roomId, `${session.name} presses a claim at the gate. Iron hums.`, session.pubkey);
+    z.roomFeed(session.roomId, `${session.name} presses a claim at the gate. Iron hums.`, session.pubkey, false);
     z.sendCtx(session);
   }
 
@@ -894,11 +894,11 @@ export function enterBench(z: ZoneDO, session: Session): void {
       for (const c of z.creatures.values()) {
         if (c.target === session.pubkey) c.target = null;
       }
-      z.roomFeed(session.roomId, `${session.name} steps into the gatehouse, out of sight.`, session.pubkey);
+      z.roomFeed(session.roomId, `${session.name} steps into the gatehouse, out of sight.`, session.pubkey, false);
     } else {
       // In the dungeon the lockbox rides with you, but you don't leave with it —
       // you crouch to sort it in the open, still in the world and in reach.
-      z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey);
+      z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
     }
     z.refreshRoomCtx(session.roomId);
   }
@@ -923,7 +923,7 @@ export async function leaveBench(z: ZoneDO, session: Session): Promise<void> {
     // was never a step into the gatehouse.
     session.away = false;
     session.stepText = false;
-    z.roomFeed(session.roomId, `${session.name} steps back, kit sorted.`, session.pubkey);
+    z.roomFeed(session.roomId, `${session.name} steps back, kit sorted.`, session.pubkey, false);
     await provokeGrudges(z, session, false); // the dungeon holds nothing here; no free hit for closing the bench
     z.send(session, "You straighten up, your kit sorted.");
     z.sendCtx(session);
@@ -1168,7 +1168,7 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
     }
     await setContainer(z.env.DB, carried.rowId, cfg.container);
     z.send(session, cfg.put(tmpl.name));
-    z.roomFeed(session.roomId, `${session.name} ${cfg.feed}`, session.pubkey);
+    z.roomFeed(session.roomId, `${session.name} ${cfg.feed}`, session.pubkey, false);
     z.sendCtx(session);
   }
 
@@ -1213,19 +1213,19 @@ export function gatehouseFolk(z: ZoneDO): Session[] {
 }
 
 // The tavern's only channel. In memory, over the sockets, gone when it's said.
-export function gatehouseFeed(z: ZoneDO, text: string, exceptPubkey?: string, cls?: string): void {
+export function gatehouseFeed(z: ZoneDO, text: string, exceptPubkey?: string, cls?: string, speaker?: { name: string; pk: string }): void {
   for (const s of gatehouseFolk(z)) {
     if (s.pubkey === exceptPubkey) continue;
-    z.send(s, text, cls);
+    z.send(s, text, cls, speaker);
   }
 }
 
 export function gatehouseSay(z: ZoneDO, session: Session, raw: string): void {
   const msg = raw.trim().slice(0, 240);
   if (!msg) return;
-  const line = `${session.name} says, "${msg}"`;
-  z.send(session, `You say, "${msg}"`, "say");
-  gatehouseFeed(z, line, session.pubkey, "say");
+  const line = `${session.name} says: ${msg}`;
+  z.send(session, `You say: ${msg}`, "say");
+  gatehouseFeed(z, line, session.pubkey, "say", { name: session.name, pk: session.pubkey });
   // The room hears it over the sockets, instantly. Nostr hears it FROM THE
   // SPEAKER: z.speechOut hands the line back to their own client, which signs
   // kind 24914 with their own key and publishes it. Same law as `say` out in
@@ -1291,10 +1291,26 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // A no-argument command carrying trailing words was a SENTENCE, not a command:
   // "i am trying to quit" is speech, not inventory; "who knows" is speech, not
   // the roster. Bare, they still command. This is the whole fix for a chat line's
-  // first word (i / in / out / look / who / rest…) hijacking the message.
-  if (GATEHOUSE_NOARG.has(v) && cmd.arg.trim() !== "") return gatehouseSay(z, session, text);
+  // first word (i / in / out / who / rest…) hijacking the message.
+  // Judge that on the RAW text, not the parsed arg: the parser strips filler
+  // words ("this", "that", "the"), so "smoke this" would otherwise arrive as a
+  // bare `smoke` and light one when the player plainly meant to SAY "smoke this".
+  // If ANY word follows the verb as typed, it's speech.
+  const rawTail = text.trim().split(/\s+/).slice(1).join(" ");
+  if (GATEHOUSE_NOARG.has(v) && rawTail !== "") return gatehouseSay(z, session, text);
   if (v === "enter") return z.send(session, "You're already inside.");
-  if (v === "look") return z.send(session, describeGatehouse(z, session));
+  if (v === "look") {
+    const target = cmd.arg.trim();
+    // Bare 'look' takes in the room. With a name, look at whoever's by the fire:
+    // the gate roomId is shared, but gatehouse folk are OUT of the world, so the
+    // dungeon's own player-lookup skips them — the fire keeps its own roll-call.
+    if (!target) return z.send(session, describeGatehouse(z, session));
+    const who = gatehouseFolk(z).find((s) => s.pubkey !== session.pubkey && nameMatches(s.name, target));
+    if (who) return z.send(session, describePlayer(z, session, who), "study");
+    // "look at his hair" — extra words that name nothing here weren't a command.
+    // Say them.
+    return gatehouseSay(z, session, text);
+  }
   if (v === "who") { // who's by the fire, not who's in the dungeon
     const folk = gatehouseFolk(z);
     return z.send(session, folk.length === 1
@@ -1349,8 +1365,8 @@ export function cmdTell(z: ZoneDO, session: Session, arg: string): void {
       ? `Nobody here by that name. By the fire: ${others.map((s) => s.name).join(", ")}.`
       : "There's nobody here to lean toward.");
   }
-  z.send(session, `You lean in to ${target.name}: "${msg}"`, "tell");
-  z.send(target, `${session.name} leans in, close, and says quietly: "${msg}"`, "tell");
+  z.send(session, `You lean in to ${target.name}: ${msg}`, "tell");
+  z.send(target, `${session.name} leans in, close, and says quietly: ${msg}`, "tell", { name: session.name, pk: session.pubkey });
   // Their key, their eyes only. The speaker's client seals it and puts it out.
   z.tellOut(session, target.pubkey, msg);
 }

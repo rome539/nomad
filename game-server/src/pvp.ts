@@ -44,9 +44,9 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
   const unaware = other.pvpTarget !== session.pubkey;
   session.pvpTarget = other.pubkey;
   if (!other.pvpTarget) other.pvpTarget = session.pubkey; // steel answers steel
-  z.roomFeed(session.roomId, unaware
+  z.actorFeed(session, session.roomId, unaware
     ? `${session.name} falls on ${other.name} without warning!`
-    : `${session.name} turns on ${other.name}!`, session.pubkey);
+    : `${session.name} turns on ${other.name}!`);
   z.combatNoise(session.roomId);
   await swingAt(z, session, other, { body: true, ambush: unaware });
   z.refreshRoomCtx(session.roomId);

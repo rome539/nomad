@@ -345,6 +345,8 @@ export const HELP_TEXT = [
   "                    wanderers, and your age under this name.",
   "  publish sheet|<item>  (proclaim) — the dungeon speaks your claim to the relays.",
   "                    Nothing is ever published unless you ask.",
+  "  publish kind 1    (brag) — post your wanderer to your OWN feed, in your own",
+  "                    hand — a note your followers will see. Only this touches it.",
   "  map               (chart) — open a map you carry. A surveyor's map is true;",
   "                    a crude one is half a lie and will walk you wrong.",
   "  study <mob>       (observe) — with a journal IN HAND, watch a creature and note",

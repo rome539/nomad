@@ -35,6 +35,8 @@ export const PAGE = `<!doctype html>
     --heal: #8faa6b;
     --omen: #b195c9;
     --voice: #e79ab6;
+    --name-s: 55%; /* key-coloured names: saturation/lightness, reset per theme from its ground (applyThemeColors) */
+    --name-l: 70%;
     --border: #3a3020;
     --border2: #4a3c22;
     --line: #2c2418;
@@ -155,6 +157,7 @@ export const PAGE = `<!doctype html>
   #room { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; }
   #idbtn { cursor: pointer; user-select: none; min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #idbtn .caret { color: var(--gold); }
+  #brand .caret { color: var(--gold); letter-spacing: 0; margin-left: 0.15em; font-size: 0.85em; }
   /* Kill the 350ms double-tap-zoom dance: combat is tapping the same chip
      fast, and iOS would zoom the page mid-fight without this. */
   button, #idbtn, #brand { touch-action: manipulation; }
@@ -773,7 +776,7 @@ export const PAGE = `<!doctype html>
 </head>
 <body>
   <div id="bar">
-    <span class="brand" id="brand" title="settings">NOMAD</span>
+    <span class="brand" id="brand" title="settings">NOMAD<span class="caret">&#9662;</span></span>
     <span id="room"></span>
     <span id="rightbar"><span id="fx"></span><span id="idbtn"><span id="hp">keys</span> <span class="caret">&#9662;</span></span></span>
   </div>
@@ -1285,11 +1288,39 @@ function hideModalChat() {
   mchat.textContent = "";
   mchat.classList.remove("on");
 }
-function modalChatPush(text, cls) {
+// bitchat-style voices: a wanderer's NAME takes a colour so two people talking
+// in a crowded gate read apart at a glance. Name only — the words stay in the
+// voice tone. The colour is HSL: the HUE is hashed from their key (colour ==
+// identity, and it persists), while SATURATION and LIGHTNESS ride --name-s /
+// --name-l, which every theme sets from its OWN background brightness (see
+// applyThemeColors). So the same person keeps their hue on the dark Door, the
+// light Bone, AND any worn Nostr theme (light ones included) — only how bright
+// the name rides flips with the ground, so contrast always holds.
+function nameColor(pk) {
+  var h = 0, s = String(pk || "");
+  for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+  return "hsl(" + (h % 360) + ", var(--name-s, 55%), var(--name-l, 70%))";
+}
+// Paint a speech line into el: if it opens with the speaker's name, that name
+// wears their colour and the rest stays neutral. All textContent — never
+// innerHTML — so a crafted name or message can never inject markup.
+function paintVoice(el, text, cls, who, pk) {
+  if ((cls === "say" || cls === "tell") && who && pk && text.indexOf(who) === 0) {
+    var nm = document.createElement("span");
+    nm.textContent = who;
+    nm.style.color = nameColor(pk);
+    el.appendChild(nm);
+    el.appendChild(document.createTextNode(text.slice(who.length)));
+  } else {
+    el.textContent = text;
+  }
+}
+
+function modalChatPush(text, cls, who, pk) {
   if (!mchat || !anyModalOpen()) return; // log's visible otherwise — no need
   var line = document.createElement("div");
   line.className = "mline " + (cls || "");
-  line.textContent = text;
+  paintVoice(line, text, cls, who, pk);
   mchat.appendChild(line);
   mchat.classList.add("on");
   while (mchat.childNodes.length > 4) mchat.removeChild(mchat.firstChild); // keep the last few
@@ -1299,7 +1330,7 @@ function modalChatPush(text, cls) {
   }, 14000);
 }
 
-function print(text, cls) {
+function print(text, cls, who, pk) {
   // Explicit classes (sys/feed/echo) keep the whole block; everything else is
   // split per line so each event wears its own color.
   var lines = cls ? [text] : String(text).split("\\n");
@@ -1308,10 +1339,10 @@ function print(text, cls) {
     var div = document.createElement("div");
     var c = cls || classify(lines[i]);
     if (c) div.className = c;
-    div.textContent = lines[i];
+    paintVoice(div, lines[i], c, who, pk);
     log.appendChild(div);
     // A person spoke or moved while you're in a modal: float it over the top.
-    if (c === "say" || c === "tell" || c === "who") modalChatPush(lines[i], c);
+    if (c === "say" || c === "tell" || c === "who") modalChatPush(lines[i], c, who, pk);
     if (soundOn && actx && cls !== "sys" && cls !== "echo") {
       var s = sndFor(lines[i], c || "");
       if (s) sounds.push(s);
@@ -1483,6 +1514,78 @@ async function publishTell(pk, text) {
   }
 }
 
+// ---- THE ARENA BROADCAST: your deeds, your key ----
+// The dungeon narrates a room, but it no longer SIGNS what a wanderer does. Your
+// own movements, fights, kills and death (kind 24913) are handed back here
+// ("fpub") and YOUR client signs them under YOUR key and puts them on the relays.
+// The whole gladiator feed authors itself, spread across every player's own
+// connection \\u2014 no single npub firehoses the relays.
+//
+// Two deliberate differences from speech: the content is PLAIN (a spectator
+// client is MEANT to read it \\u2014 this is the show), and every event carries a
+// fixed "nomad-arena" tag so one subscription catches the whole roster, plus a
+// "mudroom-<id>" tag that says where. And it goes out on a 15s HOLD: the room
+// already saw it live over the socket; the public copy trails a quarter-minute,
+// so the feed can't be read as a real-time tracker to intercept anyone.
+var FEED_KIND = 24913;
+var ARENA_TAG = "nomad-arena";
+var FEED_HOLD_MS = 15000;
+async function publishFeed(room, text) {
+  if (!text) return;
+  try {
+    var evt = {
+      kind: FEED_KIND,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [["t", ARENA_TAG], ["t", "mudroom-" + (room || "door")], ["v", "0"]],
+      content: String(text),
+    };
+    var ev;
+    if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
+    else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
+    else ev = finalizeEvent(evt, sk);
+    if (!gpubPool) {
+      var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
+      gpubPool = new poolMod.SimplePool();
+    }
+    setTimeout(function () { try { gpubPool.publish(SPEECH_RELAYS, ev); } catch (e) {} }, FEED_HOLD_MS);
+  } catch (e) {
+    console.warn("[feed] publish failed:", e && e.message ? e.message : e);
+  }
+}
+
+// ---- THE BRAG: your wanderer, your key, in your own feed ----
+// 'publish kind 1' hands back the one thing NOMAD publishes that a normal Nostr
+// timeline actually renders: a plain kind-1 note, signed by YOUR key, posted to
+// YOUR relays, in front of YOUR followers. Permanent (not ephemeral) — a brag is
+// meant to stick. It carries an "a" tag pointing at the dungeon-signed 31573 so
+// anyone can verify the numbers against the dungeon's signature, and a "t":nomad
+// tag so the posts are findable. Deliberate and rare: only 'publish kind 1' does
+// this — publishing your sheet never touches your feed.
+async function publishNote(text, atag) {
+  if (!text) return;
+  try {
+    var tags = [["t", "nomad"]];
+    if (atag) tags.push(["a", atag]);
+    var evt = {
+      kind: 1,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: tags,
+      content: String(text),
+    };
+    var ev;
+    if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
+    else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
+    else ev = finalizeEvent(evt, sk);
+    if (!gpubPool) {
+      var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
+      gpubPool = new poolMod.SimplePool();
+    }
+    gpubPool.publish(SPEECH_RELAYS, ev);
+  } catch (e) {
+    console.warn("[note] publish failed:", e && e.message ? e.message : e);
+  }
+}
+
 // Claim a restored identity's real (kind-0) name, once, if we're connected and
 // still wearing a throwaway name we didn't choose. Both the pre-fetch (restore)
 // and the status-frame lookup funnel through here, so neither double-claims and
@@ -1568,8 +1671,8 @@ async function connect() {
     // During the first walk the world holds its tongue: the feed (others'
     // deeds, sounds through walls) and the ambient weather stay out of the
     // lesson text. Your own actions still speak — that's the tutorial.
-    if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls); }
-    else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed"); }
+    if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls, f.who, f.sp); }
+    else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed", f.who, f.sp); }
     else if (f.t === "status") {
       roomEl.textContent = f.room || "";
       if (f.room) knownRooms[f.room] = 1;
@@ -1601,6 +1704,10 @@ async function connect() {
       publishSpeech(f.text, f.tag); // your words, your key, your signature
     } else if (f.t === "tpub") {
       publishTell(f.to, f.text);    // a quiet word, sealed to them alone
+    } else if (f.t === "fpub") {
+      publishFeed(f.room, f.text);  // your deed, your key — the arena broadcast
+    } else if (f.t === "npost") {
+      publishNote(f.text, f.atag);  // your brag, your key — a kind 1 in your own feed
     }
   };
   ws.onclose = function () { clearInterval(hbTimer); closeBench(); closeTrade(); closeMap(); closeJournal(); print("— the connection frays; reweaving —", "sys"); scheduleRetry(); };
@@ -1635,12 +1742,16 @@ var GATEHOUSE_CMDS = {
 // No-argument commands (aliases). Mirrors the server's GATEHOUSE_NOARG: bare
 // they command, but with words after them they were a sentence. Kept in sync so
 // the client's echo matches what the server treats as speech.
+// Truly no-arg gatehouse verbs: bare = command, with trailing words = speech.
+// look / forge / publish are DELIBERATELY absent — they take arguments, so an
+// explicit 'look <thing>' / 'forge <thing>' / 'publish sheet' must go through as
+// a command, not be eaten as chat (rome, 2026-07-15). They stay in GATEHOUSE_CMDS.
 var GATEHOUSE_NOARG_CMDS = {
   out: 1, exit: 1, outside: 1, in: 1, enter: 1, inside: 1, gatehouse: 1,
-  look: 1, l: 1, who: 1, players: 1, help: 1, "?": 1, commands: 1, h: 1,
+  who: 1, players: 1, help: 1, "?": 1, commands: 1, h: 1,
   inventory: 1, inv: 1, i: 1, bag: 1, items: 1, kit: 1,
-  barter: 1, trade: 1, shop: 1, browse: 1, fence: 1, forge: 1, craft: 1,
-  map: 1, study: 1, carve: 1, journal: 1, sheet: 1, publish: 1,
+  barter: 1, trade: 1, shop: 1, browse: 1, fence: 1,
+  map: 1, study: 1, carve: 1, journal: 1, sheet: 1,
   rest: 1, sleep: 1, sit: 1, camp: 1, smoke: 1, puff: 1,
 };
 var inGatehouseNow = false;
@@ -3408,10 +3519,26 @@ var themeName = localStorage.getItem("nomad_theme") || "door";
 // Anything reaching our CSS vars must be strict hex — presets, or a vetted
 // derivation of a foreign 36767. Never raw relay strings.
 function okColor(v) { return typeof v === "string" && /^#[0-9a-fA-F]{3,8}$/.test(v); }
+// Perceptual brightness of a hex colour, 0 (black) .. 1 (white).
+function hexLum(hex) {
+  var h = String(hex || "").replace("#", "");
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  var r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return 0;
+  return (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+}
 function applyThemeColors(c) {
   for (var i = 0; i < THEME_VARS.length; i++) {
     if (okColor(c[THEME_VARS[i]])) document.documentElement.style.setProperty("--" + THEME_VARS[i], c[THEME_VARS[i]]);
   }
+  // Set how bright a key-coloured name should ride from THIS theme's ground,
+  // whatever theme it is (built-in or a worn Nostr one). On a dark ground names
+  // ride bright; on a light ground they go deep — so a name holds contrast on
+  // any world the wearer has chosen. hsl() re-resolves these live, so names
+  // recolour the instant the theme changes, with no re-render.
+  var lightGround = hexLum(c && c.bg) > 0.5;
+  document.documentElement.style.setProperty("--name-s", lightGround ? "62%" : "55%");
+  document.documentElement.style.setProperty("--name-l", lightGround ? "36%" : "70%");
   applyThemeFont(c && c._font);
 }
 // A worn theme may bring its own face. We honor the family and, if Ditto gave

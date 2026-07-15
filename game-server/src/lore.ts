@@ -182,7 +182,7 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   const tier = journalTier(row?.kills ?? 0, true);
   z.send(session, `You watch ${tmpl.name} a while and set down what you see.` +
     (tier < 3 ? ` (Its full account wants ${3 - (row?.kills ?? 0)} more kill${3 - (row?.kills ?? 0) === 1 ? "" : "s"}.)` : " Its account is complete.") + opening, "study");
-  z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey, false);
 }
 
 export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {

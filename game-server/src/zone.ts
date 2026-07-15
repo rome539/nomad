@@ -48,7 +48,7 @@ import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
 import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
-import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent } from "./signing";
+import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, gamePubkey } from "./signing";
 import { publishEvent, relayList } from "./relay";
 import * as gate from "./gate";
 import * as ai from "./ai";
@@ -512,7 +512,7 @@ export class ZoneDO implements DurableObject {
       } else {
         this.send(session, "Type 'help' if you're lost.");
       }
-      this.roomFeed(session.roomId, `${session.name} blinks into being.`, pubkey, true, "who");
+      this.actorFeed(session, session.roomId, `${session.name} blinks into being.`, "who");
     }
     // YOU WERE INSIDE. A fresh Session is built with away = false, so a frayed
     // socket used to fling you out of the gatehouse and into the dungeon — out of
@@ -555,16 +555,19 @@ export class ZoneDO implements DurableObject {
     if (fightLive && !session.linkdeadUntil) {
       session.linkdeadUntil = Date.now() + LINKDEAD_MS;
       this.leftAt.set(session.pubkey, Date.now()); // a return inside the window re-weaves
-      this.roomFeed(session.roomId, `${session.name} goes slack — eyes empty, body still standing.`, session.pubkey, true, "who");
+      // Their own beat, their own key (actorFeed) — though the client that would
+      // sign it is the one that just frayed, so in practice the relay rarely
+      // hears this. Good: a broadcast "body standing, nobody home" is a loot
+      // beacon. The room's witnesses get their fair shot; the network doesn't.
+      this.actorFeed(session, session.roomId, `${session.name} goes slack — eyes empty, body still standing.`, "who");
       await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp); // durability snapshot; the flush keeps chasing
       return;
     }
-    // Say it BEFORE the session leaves the book. anonForRelay scrubs names by
-    // walking the live sessions — announce a departure after the delete and the
-    // leaver's name is no longer there to find, so it rides out to the public
-    // relay in the clear. (The room still reads the true name locally; only the
-    // relay copy is anonymised. The world doesn't snitch.)
-    this.roomFeed(session.roomId, `${session.name} fades from the world.`, session.pubkey, true, "who");
+    // Their own beat, their own key (actorFeed) — and, as with the linkdead line
+    // above, the signer is the client that's leaving, so the relay usually never
+    // hears it. Deliberate: a named logout broadcast tells the network exactly
+    // when you stopped watching your own body. The room sees it; that's enough.
+    this.actorFeed(session, session.roomId, `${session.name} fades from the world.`, "who");
     session.linkdeadUntil = undefined;
     this.sessions.delete(session.pubkey);
     this.leftAt.set(session.pubkey, Date.now()); // so a quick return reads as a reconnect
@@ -901,7 +904,7 @@ export class ZoneDO implements DurableObject {
     }
     if (roused > 0) {
       this.send(session, "The pack turns on you as one — hackles up, all teeth.", "dmgin");
-      this.roomFeed(session.roomId, `${session.name} has the whole pack now.`, session.pubkey);
+      this.roomFeed(session.roomId, `${session.name} has the whole pack now.`, session.pubkey, false);
     }
   }
 
@@ -944,9 +947,9 @@ export class ZoneDO implements DurableObject {
       dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - this.armorIgnore(weapon)));
       creature.hp -= dmg;
       ai.addGrudge(this, creature, session.pubkey);
-      this.roomFeed(session.roomId, wasAsleep
+      this.actorFeed(session, session.roomId, wasAsleep
         ? `${session.name} falls on ${tmpl.name} in its sleep!`
-        : `${session.name} falls on ${tmpl.name} without warning!`, session.pubkey);
+        : `${session.name} falls on ${tmpl.name} without warning!`);
       this.combatNoise(session.roomId);
       if (weapon) await this.wear(session, weapon.carried, weapon.tmpl, HOLLOW.has(tmpl.id) ? WEAPON_WEAR_HOLLOW : WEAPON_WEAR);
       if (creature.hp <= 0) {
@@ -973,7 +976,7 @@ export class ZoneDO implements DurableObject {
       `You close on ${tmpl.name}, blood up.`,
       `You round on ${tmpl.name} and ready yourself.`,
     ]));
-    this.roomFeed(session.roomId, `${session.name} attacks ${tmpl.name}!`, session.pubkey);
+    this.actorFeed(session, session.roomId, `${session.name} attacks ${tmpl.name}!`);
     // A fight is loud, but the blind sentinels sleep through the din now — only
     // a lurker in the room strikes at the sound (WAKE_NOISE, fromNoise).
     await ai.wakeListeners(this, session, session.roomId, WAKE_NOISE, "clatters awake at the noise and turns on you!", true);
@@ -1044,7 +1047,7 @@ export class ZoneDO implements DurableObject {
       ai.addGrudge(this, creature, session.pubkey);
       session.target = creature.id;
       this.send(session, `Your throw sails wide — ${itmpl.name} cracks against the stone. ${cap(tmpl.name)} turns on you.`);
-      this.roomFeed(session.roomId, `${session.name} hurls ${itmpl.name} — and misses.`, session.pubkey);
+      this.actorFeed(session, session.roomId, `${session.name} hurls ${itmpl.name} — and misses.`);
       this.combatNoise(session.roomId);
       this.refreshRoomCtx(session.roomId);
       await this.persist();
@@ -1082,7 +1085,7 @@ export class ZoneDO implements DurableObject {
     creature.hp -= dmg;
     ai.addGrudge(this, creature, session.pubkey);
     session.target = creature.id;
-    this.roomFeed(session.roomId, `${session.name} hurls ${itmpl.name} at ${tmpl.name}!`, session.pubkey);
+    this.actorFeed(session, session.roomId, `${session.name} hurls ${itmpl.name} at ${tmpl.name}!`);
     this.combatNoise(session.roomId);
     const landing = shattered ? " It shatters on impact." : " It lands on the stones.";
     if (creature.hp > 0) {
@@ -1093,7 +1096,7 @@ export class ZoneDO implements DurableObject {
       if (itmpl.stun > 0 && !tmpl.is_boss && !creature.stunned && chance(itmpl.stun)) {
         creature.stunned = true;
         this.send(session, `${cap(tmpl.name)} reels, stunned.`, "stun");
-        this.roomFeed(session.roomId, `${cap(tmpl.name)} staggers where it stands.`, session.pubkey);
+        this.roomFeed(session.roomId, `${cap(tmpl.name)} staggers where it stands.`, session.pubkey, false); // local: mob reaction
       }
       if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
     } else {
@@ -1126,7 +1129,7 @@ export class ZoneDO implements DurableObject {
     if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // wear rides the landing
     if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // the engraving too
     this.send(session, `You hurl ${itmpl.name} into the dark. It cracks and clatters off the stone — the sound carries.`);
-    this.roomFeed(session.roomId, `${session.name} sends ${itmpl.name} clattering across the room.`, session.pubkey);
+    this.roomFeed(session.roomId, `${session.name} sends ${itmpl.name} clattering across the room.`, session.pubkey, false);
     // The clatter: players next door hear it (WS-only, no relay flood), the idle
     // curious drift in to look, and any lurker here may drop on the noise.
     this.roomSound(session.roomId, "Something clatters {dir}.");
@@ -1198,7 +1201,7 @@ export class ZoneDO implements DurableObject {
         ? `You bring the hammerstone down on the latch, twice, and the second blow tears it off whole. ${cap(cache.name)} swings open.`
         : `You bring the rock down and both give at once — the rock in pieces, the latch in half. ${cap(cache.name)} swings open.`, "unlock");
       if (stoneSpent) this.send(session, "The hammerstone gave its last argument to that latch — it cracks through and falls away in halves.", "dmgin");
-      this.roomFeed(session.roomId, `${session.name} smashes ${cache.name} open.`, session.pubkey);
+      this.roomFeed(session.roomId, `${session.name} smashes ${cache.name} open.`, session.pubkey, false);
       this.cacheSpent.set(cache.id, Date.now() + cache.refillSecs * 1000);
       this.placeCache(cache); // looted: it will refill somewhere new in its tier (hidden here until then)
     } else {
@@ -1208,7 +1211,7 @@ export class ZoneDO implements DurableObject {
       this.cacheSpent.set(cache.id, Date.now() + cache.refillSecs * 1000);
       this.placeCache(cache); // looted: it will refill somewhere new in its tier (hidden here until then)
       this.send(session, `You work ${keyT?.name ?? "the key"} into the lock. It gives with a groan, and ${cache.name} swings open.`, "unlock");
-      this.roomFeed(session.roomId, `${session.name} forces ${cache.name} open.`, session.pubkey);
+      this.roomFeed(session.roomId, `${session.name} forces ${cache.name} open.`, session.pubkey, false);
     }
     // Now and then the box is a lie: forced open on nothing. The key's already
     // spent and the refill clock's already running, so a dud costs you the same
@@ -1378,7 +1381,7 @@ export class ZoneDO implements DurableObject {
           : atGate
             ? `${session.name} steps into the gatehouse to sort their kit.`
             : `${session.name} crouches to dig through a lockbox.`;
-    this.roomFeed(session.roomId, msg, session.pubkey);
+    this.roomFeed(session.roomId, msg, session.pubkey, false);
     this.refreshRoomCtx(session.roomId);
   }
 
@@ -1416,7 +1419,7 @@ export class ZoneDO implements DurableObject {
     try { session.ws.send(JSON.stringify({ v: 0, t: frame, open: false })); } catch {}
     this.roomFeed(session.roomId, fromGatehouse
       ? `${session.name} comes out of the gatehouse, pulling the door to behind them.`
-      : `${session.name} steps back from the ${wasTrading ? "keeper's hatch" : "bench"}.`, session.pubkey);
+      : `${session.name} steps back from the ${wasTrading ? "keeper's hatch" : "bench"}.`, session.pubkey, false);
     this.refreshRoomCtx(session.roomId);
   }
 
@@ -1726,6 +1729,24 @@ export class ZoneDO implements DurableObject {
   // Nothing is ever published unless the player asks (NIP.md: certificates,
   // not broadcasts). The dungeon signs; the wanderer decides who sees.
   private async cmdPublish(session: Session, arg: string): Promise<void> {
+    const a = arg.trim().toLowerCase();
+    // 'publish kind 1' (aka 'note'/'post'): a readable brag under the WANDERER'S
+    // OWN key — kind 1, permanent, the one published thing that lands in a normal
+    // Nostr timeline in front of their followers. Their client signs and posts it
+    // to their OWN relays (like speech), so it needs neither the dungeon's key nor
+    // the dungeon's relays — it runs before both guards. It carries an `a`-tag to
+    // the dungeon-signed 31573 so a reader can verify the numbers against the
+    // dungeon's signature. Deliberately its own act: publishing your sheet does
+    // NOT post to your feed (rome, 2026-07-15) — this, and only this, does.
+    if (a === "kind 1" || a === "kind1" || a === "note" || a === "post") {
+      // The published brag IS the in-game ledger, verbatim (verbs.ledgerLines),
+      // minus the "days under this name" clause — then just #nomad.
+      const text = verbs.ledgerLines(session, false).join("\n") + "\n\n#nomad";
+      const dpk = gamePubkey(this.env);
+      const atag = dpk ? `31573:${dpk}:${session.pubkey}` : "";
+      try { session.ws.send(JSON.stringify({ v: 0, t: "npost", text, atag })); } catch {}
+      return this.send(session, `You speak your own name beyond the walls — ${session.name}, in your own hand, to your own feed. ('publish sheet' backs it with the dungeon's signature.)`);
+    }
     if (!isGameKeyConfigured(this.env)) {
       return this.send(session, "The dungeon has not yet found its voice. (no signing key configured)");
     }
@@ -1733,7 +1754,7 @@ export class ZoneDO implements DurableObject {
       return this.send(session, "The dungeon's voice does not reach beyond these walls yet. (no relays configured)");
     }
     if (!arg) {
-      return this.send(session, "Publish what? 'publish sheet' for who you are, 'publish <sealed item>' for what you own.");
+      return this.send(session, "Publish what? 'publish sheet' speaks who you are, 'publish kind 1' posts your wanderer to your own feed, 'publish <sealed item>' proclaims what you own.");
     }
     const world = this.world!;
     if (arg === "sheet" || arg === "me" || arg === "self") {
@@ -2001,13 +2022,13 @@ export class ZoneDO implements DurableObject {
         } else if (creature.rouseAt === undefined) {
           creature.rouseAt = now + DIRE_ROUSE_MS; // first sight: begin the wind-up, no strike yet
           this.send(prey, `${cap(tmpl.name)} lifts its bloodied muzzle and fixes on you, hackles rising — it hasn't sprung yet. (get out, or hit first)`);
-          this.roomFeed(creature.roomId, `${cap(tmpl.name)} rises from its kill, hackles up.`, prey.pubkey);
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} rises from its kill, hackles up.`, prey.pubkey, false); // local: mob reaction
         } else if (now >= creature.rouseAt) {
           creature.rouseAt = undefined;
           creature.target = prey.pubkey;
           if (!prey.target) prey.target = creature.id;
           this.send(prey, `${cap(tmpl.name)} springs from its kill — it's on you.`);
-          this.roomFeed(creature.roomId, `${cap(tmpl.name)} springs at ${prey.name}.`, prey.pubkey);
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} springs at ${prey.name}.`, prey.pubkey, false);
         }
       }
       // A SENTINEL sleeps at its post until roused (someone slips past, or a blow
@@ -2025,7 +2046,7 @@ export class ZoneDO implements DurableObject {
             creature.target = prey.pubkey;
             if (!prey.target) prey.target = creature.id;
             this.send(prey, `${cap(tmpl.name)} fixes ${HOUND_HEADS.get(creature.templateId) ?? "all three heads"} on you.`, "dmgin");
-            this.roomFeed(creature.roomId, `${cap(tmpl.name)} turns on ${prey.name}.`, prey.pubkey);
+            this.roomFeed(creature.roomId, `${cap(tmpl.name)} turns on ${prey.name}.`, prey.pubkey, false);
           }
         }
       }
@@ -2036,7 +2057,7 @@ export class ZoneDO implements DurableObject {
           creature.target = prey.pubkey;
           if (!prey.target) prey.target = creature.id;
           this.send(prey, `The water heaves — ${tmpl.name} turns toward you.`);
-          this.roomFeed(creature.roomId, `${cap(tmpl.name)} turns toward ${prey.name}.`, prey.pubkey);
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} turns toward ${prey.name}.`, prey.pubkey, false);
         }
       }
       if (creature.target) {
@@ -2234,7 +2255,7 @@ export class ZoneDO implements DurableObject {
               await removeItemRow(this.env.DB, loot.rowId);
               creature.stole = loot.itemId;
               this.send(victim, `${cap(tmpl.name)} snatches ${it.name} and bolts! (kill it to get it back)`);
-              this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears something from ${victim.name} and flees!`, victim.pubkey);
+              this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears something from ${victim.name} and flees!`, victim.pubkey, false);
               this.sendCtx(victim);
               await ai.creatureMoves(this, creature, now, "flee", false);
               continue;
@@ -2243,7 +2264,7 @@ export class ZoneDO implements DurableObject {
         } else {
           if (vitals) {
             this.send(victim, `${cap(tmpl.name)} ${this.creatureVitals(tmpl.id)} — ${pick(VITALS_DARK)}`, "dmgin big vital");
-            this.roomFeed(victim.roomId, `${cap(tmpl.name)} drops ${victim.name} with one terrible strike.`, victim.pubkey);
+            this.roomFeed(victim.roomId, `${cap(tmpl.name)} drops ${victim.name} with one terrible strike.`, victim.pubkey, false);
           }
           await this.onPlayerDeath(victim, tmpl);
         }
@@ -2298,7 +2319,7 @@ export class ZoneDO implements DurableObject {
       this.send(session, session.hp > before
         ? `Your hand goes to the pack on its own — you tear into ${tmpl.name}. [${session.hp}/${session.maxHp} hp]`
         : `Your hand goes to the pack on its own — you tear into ${tmpl.name}.`, "gain");
-      this.roomFeed(session.roomId, `${session.name} snatches a bite mid-fight.`, session.pubkey);
+      this.roomFeed(session.roomId, `${session.name} snatches a bite mid-fight.`, session.pubkey, false);
       this.sendStatus(session);
       this.sendCtx(session);
       await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
@@ -2805,7 +2826,7 @@ export class ZoneDO implements DurableObject {
       if (weapon.carried.loreId) this.groundLore.set(`${weapon.carried.itemId}@${session.roomId}`, weapon.carried.loreId); // and its mark
       this.send(session, `Your swing goes wide — ${weapon.tmpl.name} spins from your grip and clatters across the stones!`
         + (weapon.carried.serial !== null ? " The seal cracks where it lands." : ""), "fumble");
-      this.roomFeed(session.roomId, `${session.name}'s weapon clatters across the stones!`, session.pubkey);
+      this.roomFeed(session.roomId, `${session.name}'s weapon clatters across the stones!`, session.pubkey, false);
       this.roomSound(session.roomId, "Metal clatters on stone, {dir}.");
       this.creatureNoise(session.roomId);
       this.refreshRoomCtx(session.roomId);
@@ -2834,7 +2855,7 @@ export class ZoneDO implements DurableObject {
         `You put ${tmpl.name} down. It does not stay down.`,
         `${cap(tmpl.name)} collapses, shudders, and hauls itself upright once more.`,
       ]));
-      this.roomFeed(creature.roomId, `${cap(tmpl.name)} rises again.`, killer.pubkey);
+      this.actorFeed(killer, creature.roomId, `${cap(tmpl.name)} rises again.`);
       this.combatNoise(creature.roomId);
       return;
     }
@@ -2874,7 +2895,7 @@ export class ZoneDO implements DurableObject {
               `${cap(tmpl.name)} falls, and the fight goes out of it.`,
               `You finish ${tmpl.name}.`]);
     this.send(killer, killLine ?? killVerb, vital ? "kill big vital" : "kill big");
-    this.roomFeed(creature.roomId, `${killer.name} kills ${tmpl.name}.`, killer.pubkey);
+    this.actorFeed(killer, creature.roomId, `${killer.name} kills ${tmpl.name}.`);
     this.roomSound(creature.roomId, "Something falls {dir}, and is still.");
     this.creatureNoise(creature.roomId);
     // A cutpurse that died with your loot spills it here — chase it, catch it,
@@ -2883,7 +2904,7 @@ export class ZoneDO implements DurableObject {
       const stolen = this.world!.itemTemplates.get(creature.stole);
       this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), creature.stole]);
       this.stampFresh(creature.roomId, creature.stole);
-      if (stolen) this.roomFeed(creature.roomId, `${cap(stolen.name)} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`);
+      if (stolen) this.roomFeed(creature.roomId, `${cap(stolen.name)} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, undefined, false); // local: loot on the ground is a shopping-list beacon
       creature.stole = undefined;
     }
     this.addTrace(creature.roomId, {
@@ -2893,7 +2914,10 @@ export class ZoneDO implements DurableObject {
     });
     this.refreshRoomCtx(creature.roomId);
     if (tmpl.is_boss) {
-      this.roomFeedAll(`A cry rolls through the stone: ${tmpl.name} has fallen to ${killer.name}.`);
+      // The world announces the FALL, never the faller-of — the world key does
+      // not speak a wanderer's name. The killer keeps their credit on the arena
+      // feed, under their own key (the actorFeed kill line above).
+      this.roomFeedAll(`A cry rolls through the stone: ${tmpl.name} has fallen.`);
     }
     ai.scheduleArrivals(this, Date.now());
 
@@ -2921,7 +2945,7 @@ export class ZoneDO implements DurableObject {
         // Same rule as a pickup off the floor: junk stays in the room. Only a
         // rare+ find is worth the wire — nobody outside needs to hear that
         // someone pocketed a finger-bone.
-        this.roomFeed(creature.roomId, `${killer.name} claims ${item.name}.`, killer.pubkey, (RARITY_RANK[item.rarity] ?? 0) >= 2);
+        this.roomFeed(creature.roomId, `${killer.name} claims ${item.name}.`, killer.pubkey, false); // loot stays LOCAL: even a legendary claim is nobody's business (see verbs takes)
         this.sendCtx(killer);
       }
     }
@@ -2957,7 +2981,7 @@ export class ZoneDO implements DurableObject {
           // scavenged so its wear sticks when the killer stoops for it.
           if (g.slot !== "") this.groundCond.set(`${id}@${creature.roomId}`, rollGearCondition(g.slot, false));
           this.send(killer, `${cap(g.name)} clatters free of the fallen — it lies here. [${g.rarity}]`);
-          this.roomFeed(creature.roomId, `${cap(g.name)} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, killer.pubkey);
+          this.roomFeed(creature.roomId, `${cap(g.name)} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, killer.pubkey, false); // local: loot on the ground is a shopping-list beacon
         }
       }
       this.ground.set(creature.roomId, floor);
@@ -3067,12 +3091,12 @@ export class ZoneDO implements DurableObject {
     // is spoken only into the room itself (witnesses are eyes, not feeds);
     // everywhere else the evidence is the blood on their hands (pvp.bloodClause).
     const slainBy = slayerName ? "" : ` by ${slayer}`;
-    this.roomFeed(
+    this.actorFeed(
+      victim,
       fell,
       scattered.length > 0
         ? `${victim.name} is slain${slainBy}. Their pack scatters across the stones${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
         : `${victim.name} is slain${slainBy}.`,
-      victim.pubkey,
     );
     if (slayerName) this.roomFeed(fell, `${slayerName} stands over the body.`, victim.pubkey, false);
     this.roomSound(fell, "A scream, cut short, {dir}.");
@@ -3102,7 +3126,7 @@ export class ZoneDO implements DurableObject {
       `The stones go red beneath you, then grey.\nThen cold air, and the gate, and breath again.`,
     ]);
     this.send(victim, `${end} ${fate}`, "death big");
-    this.roomFeed(victim.roomId, `${victim.name} staggers back through the gate, pale.`, victim.pubkey);
+    this.roomFeed(victim.roomId, `${victim.name} staggers back through the gate, pale.`, victim.pubkey, false);
     this.send(victim, this.describeRoom(victim));
     this.sendStatus(victim);
     this.refreshRoomCtx(fell);
@@ -3653,9 +3677,14 @@ export class ZoneDO implements DurableObject {
   // kill, fumble, death, gain — with "big" for the loud ones) so the client
   // colors combat by MEANING, not by matching prose. This is what lets the
   // dialogue vary freely without the coloring ever falling out of step.
-  public send(session: Session, text: string, cls?: string): void {
+  public send(session: Session, text: string, cls?: string, speaker?: { name: string; pk: string }): void {
     try {
-      session.ws.send(JSON.stringify(cls ? { v: 0, kind: 24912, text, cls } : { v: 0, kind: 24912, text }));
+      const frame: Record<string, unknown> = { v: 0, kind: 24912, text };
+      if (cls) frame.cls = cls;
+      // A speech line can name its speaker: the client paints that name in the
+      // speaker's own key-colour (bitchat-style), so voices read apart.
+      if (speaker) { frame.who = speaker.name; frame.sp = speaker.pk; }
+      session.ws.send(JSON.stringify(frame));
     } catch {}
   }
 
@@ -3798,8 +3827,21 @@ export class ZoneDO implements DurableObject {
 
   // The spectator feed, kind 24913: to everyone standing in the room, and —
   // when the relay door is open — to anyone anywhere watching t=mudroom-<id>.
-  public roomFeed(roomId: string, text: string, exceptPubkey?: string, toRelay = true, cls?: string): void {
-    const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: roomId, text, cls } : { v: 0, kind: 24913, room: roomId, text });
+  //
+  // THE ARENA LAW (rome, 2026-07-15): the public feed is moves, fights, kills,
+  // deaths — and those ride out under the ACTOR's own key (actorFeed), 15s
+  // behind. The world key relays only impersonal world lines; it never speaks
+  // a player's name. Any line that names a wanderer and isn't one of those four
+  // beats passes toRelay=false and stays in the room — banking, trading,
+  // claims, loot, respawns, a body gone slack: witnesses see it, the network
+  // doesn't. If you add a line naming a player, route it or ground it.
+  public roomFeed(roomId: string, text: string, exceptPubkey?: string, toRelay = true, cls?: string, speaker?: { name: string; pk: string }): void {
+    const base: Record<string, unknown> = { v: 0, kind: 24913, room: roomId, text };
+    if (cls) base.cls = cls;
+    // Speech carries its speaker so the client can key-colour the name; only the
+    // local socket copy gets it — the relay text (below) never does.
+    if (speaker) { base.who = speaker.name; base.sp = speaker.pk; }
+    const frame = JSON.stringify(base);
     for (const s of this.sessions.values()) {
       if (s.roomId !== roomId || s.pubkey === exceptPubkey) continue;
       // Someone in the GATEHOUSE shares the gate's roomId but is not in the room:
@@ -3825,12 +3867,36 @@ export class ZoneDO implements DurableObject {
     this.relayFeed("mudzone-" + (this.world?.zone ?? "door"), text);
   }
 
+  // A line that is one wanderer's OWN deed — a step taken, a swing thrown, a kill
+  // earned, their own death. The room hears it live over the socket (minus the
+  // actor, who already read their first-person view). But the RELAY copy is not
+  // signed by the dungeon: it is handed back to the actor's own client (frame
+  // "fpub"), which signs kind 24913 under THEIR key, tags it for the arena feed,
+  // and puts it on the relays after a short hold. So the gladiator feed authors
+  // itself, spread across every player's connection — no single npub firehoses
+  // the relays (rome, 2026-07-15). If the actor's client is gone, the beat simply
+  // doesn't reach the relay: the room already heard it, and the books in D1 — not
+  // this feed — are the truth of who did what.
+  public actorFeed(actor: Session, roomId: string, text: string, cls?: string): void {
+    const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: roomId, text, cls } : { v: 0, kind: 24913, room: roomId, text });
+    for (const s of this.sessions.values()) {
+      if (s.roomId !== roomId || s.pubkey === actor.pubkey) continue;
+      if (this.outOfWorld(s)) continue;
+      try { s.ws.send(frame); } catch {}
+    }
+    try { actor.ws.send(JSON.stringify({ v: 0, t: "fpub", room: roomId, text })); } catch {}
+  }
+
   // Outbound relay door: fire-and-forget, only when something happened —
   // an idle dungeon publishes nothing and costs nothing.
+  // The dungeon's own key still signs the WORLD's lines — ambient beats, boss
+  // falls, creature deaths, the linkdead body going slack. These are rare and
+  // impersonal, so one npub carrying them never looks like a firehose. A
+  // wanderer's OWN deeds go out under the wanderer's key instead (actorFeed).
   private relayFeed(roomTag: string, text: string): void {
     if (!this.world || !isGameKeyConfigured(this.env) || relayList(this.env).length === 0) return;
     try {
-      const ev = signFeedEvent(this.env, roomTag, this.world.zone, this.anonForRelay(text));
+      const ev = signFeedEvent(this.env, roomTag, this.world.zone, text);
       this.state.waitUntil(publishEvent(this.env, ev));
     } catch {}
   }
@@ -3864,21 +3930,10 @@ export class ZoneDO implements DurableObject {
     } catch {}
   }
 
-  // The relay is a public feed anyone can subscribe to. A name on it lets a
-  // stream-sniper follow one wanderer room to room — and the world doesn't
-  // snitch. So every connected player's name is scrubbed to "a wanderer"
-  // before it leaves the box. People standing IN the room still read real
-  // names on their local socket; only the outbound relay is anonymized.
-  private anonForRelay(text: string): string {
-    let out = text;
-    for (const s of this.sessions.values()) {
-      if (!s.name) continue;
-      const esc = s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      out = out.replace(new RegExp(`\\b${esc}\\b`, "g"), "a wanderer");
-    }
-    // A name at the head of the line ("Irongate arrives") leaves a lowercase
-    // "a wanderer" at the sentence start — lift the first letter back up.
-    return out.length ? out[0].toUpperCase() + out.slice(1) : out;
-  }
+  // (The relay feed once scrubbed every player name to "a wanderer" to foil a
+  // stream-sniper. That wall came down on 2026-07-15: names now ride out in the
+  // clear so the world can be watched from outside — a wanderer's own deeds under
+  // their own key (actorFeed), the world's lines under the dungeon's. The trade
+  // is deliberate; see the arena-broadcast notes in actorFeed and public.ts.)
 }
 

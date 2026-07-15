@@ -156,7 +156,7 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
           creature.target = s.pubkey;
           addGrudge(z, creature, s.pubkey);
           z.send(s, `${cap(tmpl.name)} throws itself into the fight!`);
-          z.roomFeed(roomId, `${cap(tmpl.name)} joins the fight!`, s.pubkey);
+          z.roomFeed(roomId, `${cap(tmpl.name)} joins the fight!`, s.pubkey, false); // local: mob reaction in a fight the player already broadcasts
           break;
         }
       }
@@ -276,7 +276,7 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       // The ambush announcement is the most dangerous line in any log — it
       // bleeds red (and trembles) instead of reading like scenery.
       z.send(session, lurker ? `${cap(tmpl.name)} drops out of the dark and is on you!` : `${cap(tmpl.name)} ${tell}`, lurker ? "seize big" : undefined);
-      z.roomFeed(roomId, `${cap(tmpl.name)} ${lurker ? "uncoils from the dark" : "lurches awake"}.`, session.pubkey);
+      z.roomFeed(roomId, `${cap(tmpl.name)} ${lurker ? "uncoils from the dark" : "lurches awake"}.`, session.pubkey, false); // local: mob reaction
       // A LURKER commits to the kill — it locks on and the fight is joined. A
       // blind LISTENER (a skeleton) only lashes out at the sound and then settles
       // back into its stillness: one annoying blow, no rounds, and no din to draw
@@ -318,14 +318,14 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
         if (creature.rouseAt === undefined) {
           creature.rouseAt = now + DIRE_ROUSE_MS;
           z.send(session, `${cap(tmpl.name)} rises over its kill, hackles up and fixed on you — it hasn't sprung yet. (get out, or hit first)`);
-          z.roomFeed(session.roomId, `${cap(tmpl.name)} rises from its kill, hackles up.`, session.pubkey);
+          z.roomFeed(session.roomId, `${cap(tmpl.name)} rises from its kill, hackles up.`, session.pubkey, false); // local: mob reaction
         }
         continue;
       }
       creature.target = session.pubkey;
       if (!session.target) session.target = creature.id;
       z.send(session, `${cap(tmpl.name)} remembers you — and comes for you.`);
-      z.roomFeed(session.roomId, `${cap(tmpl.name)} goes for ${session.name}.`, session.pubkey);
+      z.roomFeed(session.roomId, `${cap(tmpl.name)} goes for ${session.name}.`, session.pubkey, false);
       // The first one to reach you gets the jump; the rest merely engage.
       if (ambush && !struck) {
         struck = true;
@@ -550,12 +550,15 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // Only a flee FROM A PLAYER is a beat a relay-watcher could be following;
       // a rat breaking from a hyena is the ecosystem's business (rome's trim,
       // 2026-07-10 — creature-only churn stays off the wire, like idle wander).
-      const toRelay = mode === "flee" && !!fledFrom;
-      z.roomFeed(from, outLine, undefined, toRelay);
+      // Creatures never relay their own movement — idle wander AND a flee from a
+      // player both stay local now. The fight itself is on the player's own key;
+      // the mob's footwork is room-only detail (rome, 2026-07-15).
+      void fledFrom;
+      z.roomFeed(from, outLine, undefined, false);
       const inLine = mode !== "flee" ? "creeps in."
         : runner ? "skitters in, already looking for the next way out."
         : hurt ? hurt.in_ : pick(fleeFam.in_);
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`, undefined, toRelay);
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`, undefined, false);
       z.roomSound(
         creature.roomId,
         mode === "flee"
@@ -611,7 +614,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
             creature.target = s.pubkey;
             addGrudge(z, creature, s.pubkey);
             z.send(s, `${cap(tmpl.name)} joins the fight, drawn by the noise!`);
-            z.roomFeed(creature.roomId, `${cap(tmpl.name)} joins the fight!`, s.pubkey);
+            z.roomFeed(creature.roomId, `${cap(tmpl.name)} joins the fight!`, s.pubkey, false); // local: mob reaction
             break;
           }
         }
@@ -742,7 +745,7 @@ export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): bool
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
     if (!FEARS_FIRE.has(tmpl.id) || !carriesFire(victim)) return false;
     z.send(victim, `${cap(tmpl.name)} shrinks from your flame and breaks away.`);
-    z.roomFeed(creature.roomId, `${cap(tmpl.name)} shrinks from the flame.`, victim.pubkey);
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} shrinks from the flame.`, victim.pubkey, false); // local: mob reaction (fires every torch-near-mob tick)
     return true;
   }
 

@@ -1492,9 +1492,14 @@ export const GATEHOUSE_BARRED = new Set([
 // no-arg command with words after it was never a command — "i am trying to quit"
 // is speech, not 'inventory' (i); "out of my mind" is speech, not 'exit' (out).
 // Bare, they still fire. This is what stops a sentence's first word hijacking it.
+// TRULY no-arg verbs only: bare they command, but with words after they were a
+// sentence ("who knows", "rest assured"). Verbs that legitimately take an
+// argument — look <thing>, forge <thing>, publish <sheet|kind 1|item> — are NOT
+// here: an explicit command must run in the gatehouse, not be eaten as chat
+// (rome, 2026-07-15). Their bare forms still work; only the arg cases were broken.
 export const GATEHOUSE_NOARG = new Set([
-  "look", "who", "inventory", "rest", "enter", "exit", "forge", "barter",
-  "map", "study", "carve", "journal", "sheet", "publish", "help", "smoke",
+  "who", "inventory", "rest", "enter", "exit", "barter",
+  "map", "study", "carve", "journal", "sheet", "help", "smoke",
 ]);
 // The gatehouse breathes SLOWER than the dungeon (rome, 2026-07-13): a 3-minute
 // floor, and with the roll on top the lines land about every 3-5 minutes. It is a

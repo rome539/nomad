@@ -3,20 +3,25 @@
 **Nostr Open Multi-user Adventure Dungeon** — a living text dungeon that
 keeps its identity, its loot, and its voice on Nostr. Your key is your
 character. The dungeon signs what you carry out with a key of its own, and
-narrates its dead and its arrivals to the relays as they happen.
+every fight, death, and arrival goes out to the relays as it happens.
 
 **Play now:** https://nomadmud.com — no signup. A key is minted into your
 pocket the moment you arrive; bring your own npub if you have one.
 
-**The dungeon itself is on Nostr:**
-`npub1n7uszpehfs385qfpe636cvmxvwqyh32qprd4uawfr2kunguh926q9ya2fq`
-It speaks the beats a distant watcher would care about — a fight, a death,
-an arrival — to the relays as they happen. Subscribe to kind `24913` from
-that key and watch the world move. (It's an *ephemeral* kind: relays don't
-store it and ordinary clients won't render it, so it's a live spectator
-layer you subscribe to, not a timeline you scroll. Idle wandering stays
-home — that was flooding the relays. Names are scrubbed on the way out:
-the world doesn't snitch.)
+**The world is watchable from outside.** Every wanderer's deeds — where they
+go, who they fight, what they kill, how they fall — ride out to the relays as
+they happen, each one signed by that wanderer's *own* key and stamped
+`nomad-arena`. Subscribe to that one tag and the whole roster moves in front of
+you: a live gladiator feed you can follow one fighter at a time or all at once.
+It's an *ephemeral* kind (`24913`) — relays don't keep it, ordinary clients
+won't render it — a spectator layer, not a timeline you scroll. The dungeon
+keeps a key of its own for the world's own voice (a boss falling, the dark
+rising): `npub1n7uszpehfs385qfpe636cvmxvwqyh32qprd4uawfr2kunguh926q9ya2fq`.
+
+Names ride out in the clear — you can't watch a fight whose fighters have none.
+But the feed trails 15 seconds behind the living room, so it's a reel, not a
+targeting radar; and a wanderer's words, their banking, and their loot never
+touch it. The show is deeds, not everything.
 
 ## What makes it different
 
@@ -35,13 +40,18 @@ the world doesn't snitch.)
   it isn't gentle: kill someone and you take everything they were
   carrying. Get killed and you wake at a gate with nothing. The only
   defence is banking what you can't afford to lose.
-- **Nothing about you is published unless you say so.** `publish sheet`
-  and `publish <item>` are the player's act. Supply stays auditable
-  through a blinded mint counter (`/mints` — serial, time, rarity, never
-  the owner).
-- **The world doesn't snitch.** Deaths leave nameless traces; killers
-  just look bloody when you meet them. Reputation is evidence, not a
-  scoreboard.
+- **Your deeds are public; your words and your kit are not.** The world is a
+  spectacle now — your movements, fights, kills and death broadcast as they
+  happen (under your own key, 15 seconds behind). But what you *say* stays
+  yours (obfuscated in the open, sealed end-to-end for a private word), and
+  what you carry, bank, and loot never leaves the room. Your portable record
+  is still opt-in (`publish sheet`, `publish <item>`), and supply stays
+  auditable through a blinded mint counter (`/mints` — serial, time, rarity,
+  never the owner).
+- **The world still won't name a killer.** A death goes out to the feed — but
+  never who dealt it. Killers just look bloody when you meet them; the evidence
+  walks around on their hands, not on a relay. Your *count* of kills anyone can
+  verify, dungeon-signed, from `/sheet`; your *victims* nobody can.
 
 ## The protocol
 
@@ -52,9 +62,9 @@ hierarchy so "the dungeon signs forever" never means "one leak ends the
 world" ([game-server/RUNBOOK.md](game-server/RUNBOOK.md) is the fire
 drill).
 
-Anyone can build against the public surface today — leaderboards from
-published sheets, a room-feed "weather channel," mint-supply watchers —
-no API key, no permission. Subscribe and go.
+Anyone can build against the public surface today — a live arena viewer off
+the `nomad-arena` feed, dungeon-signed leaderboards from `/sheet`, mint-supply
+watchers — no API key, no permission. Subscribe and go.
 
 ## Run your own
 

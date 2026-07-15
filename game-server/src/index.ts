@@ -6,7 +6,8 @@ import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
 import { touchIconBytes, iconN512Bytes, ogImageBytes, doorSceneBytes } from "./assets";
-import { signProfileEvent, isGameKeyConfigured } from "./signing";
+import { signProfileEvent, signSheetEvent, isGameKeyConfigured } from "./signing";
+import type { PlayerRow } from "./world";
 import { publishEvent, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
 import VAULT_SRC from "./vault-bundle.js";
@@ -164,6 +165,35 @@ export default {
         ).all();
         const mints = res.results ?? [];
         return json({ count: mints.length, mints });
+      }
+
+      // The books, on demand. The live arena feed (kind 24913) is a SHOW — a
+      // wanderer signs their own deeds, so a boast on it proves nothing. The
+      // TRUTH of a record lives in D1, and here the DUNGEON hands it back
+      // world-signed (kind 31573): ask for any pubkey and get a tally nobody
+      // could forge. A spectator/leaderboard client verifies the feed against
+      // this — talk is talk; the world's signature is the scoreboard.
+      if (m === "GET" && pathname === "/sheet") {
+        const pk = (url.searchParams.get("pk") ?? "").toLowerCase().trim();
+        if (!/^[0-9a-f]{64}$/.test(pk)) return json({ error: "bad_pubkey" }, 400);
+        if (!isGameKeyConfigured(env)) return json({ error: "no_game_key" }, 409);
+        const row = await env.DB.prepare(
+          "SELECT pubkey, name, hp, max_hp, created_at, kills, deaths, boss_kills, pvp_kills FROM players WHERE pubkey = ?",
+        ).bind(pk).first<PlayerRow>();
+        if (!row) return json({ error: "no_such_wanderer" }, 404);
+        const ev = signSheetEvent(env, {
+          pubkey: row.pubkey,
+          name: row.name,
+          hp: row.hp,
+          maxHp: row.max_hp,
+          zone: "door",
+          born: row.created_at,
+          kills: row.kills,
+          deaths: row.deaths,
+          bossKills: row.boss_kills,
+          pvpKills: row.pvp_kills,
+        });
+        return json({ sheet: ev });
       }
 
       // The direct door: same protocol the relay door will speak, minus the relay.

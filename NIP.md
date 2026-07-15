@@ -37,7 +37,7 @@ a signed event, verifiable by anyone, portable to any client.
 |-------|------------|---------------------|--------------------|
 | 24911 | ephemeral  | command             | wanderer → dungeon |
 | 24912 | ephemeral  | personal view       | dungeon → wanderer |
-| 24913 | ephemeral  | room feed           | dungeon → world    |
+| 24913 | ephemeral  | room feed           | wanderer / dungeon → world |
 | 31573 | addressable| character sheet     | dungeon-signed     |
 | 1573  | regular    | loot certificate    | dungeon-signed     |
 | 31574 | addressable| epoch attestation   | root-signed        |
@@ -79,20 +79,49 @@ p-tagged to the recipient.
 
 ### 24913 — room feed
 
-The spectator layer: public events and sounds of one room. Anyone MAY
-subscribe to a room like a hashtag and watch the dungeon live.
+The spectator layer: the public events and sounds of a world, watchable
+live. Every feed line carries a `mudroom-<room id>` tag (where it
+happened); a wanderer's own deeds carry, in addition, a fixed
+`nomad-arena` tag — a single handle for the whole roster. So a watcher
+MAY follow one room, one fighter (by author, or `#p`), or the entire
+world at once.
+
+Signing is split by who acted:
+
+- **A wanderer's own deeds** — moving, fighting, killing, dying — are
+  signed by **that wanderer's key**, not the dungeon's. The dungeon
+  composes the line (it remains authoritative — authorship is not
+  authority) and hands it to the actor's client, which signs and
+  publishes it. The feed thus authors itself across every player's own
+  connection, so no single key firehoses the relays. A wanderer MAY
+  decline to publish; the line is then seen only by those present.
+- **The world's own voice** — a boss falling, ambient dread, a
+  creature's death — is signed by the **dungeon's epoch key**, and names
+  no wanderer.
 
 ```json
 {
   "kind": 24913,
-  "content": "Rome is slain by the Forgotten King. Their pack scatters across the stones.",
-  "tags": [["t", "mudroom-gate"], ["zone", "door"]]
+  "content": "Ashdrifter is slain. Their pack scatters across the stones.",
+  "tags": [["t", "nomad-arena"], ["t", "mudroom-gate"], ["v", "0"]]
 }
 ```
 
-The `t` tag is `mudroom-` + room id. A room feed line is degraded
-information by design — it names what a bystander would see, not the
-full mechanical truth.
+The example above is signed by the slain wanderer's OWN key. (A
+multi-zone dungeon SHOULD add a `["zone", ...]` tag; NOMAD ships one
+zone and omits it.)
+
+Names appear in the clear: a spectacle whose actors are anonymous is not
+one. To keep a public feed from doubling as a real-time tracker for
+intercepting players, a dungeon SHOULD hold each wanderer-deed line on a
+short delay before publishing (NOMAD: 15 seconds) — the feed is a reel,
+not a radar. A dungeon SHOULD keep private-by-nature lines — a
+wanderer's banking, trades, and loot pickups — off the relay entirely,
+carried only to those in the room.
+
+A room feed line is degraded information by design: it names what a
+bystander would see, not the full mechanical truth, and it never names a
+killer (see 31573).
 
 ### 31573 — character sheet
 
@@ -108,14 +137,20 @@ character as a portable, verifiable object.
 }
 ```
 
-Publication is the player's act (see Certificates, not broadcasts).
-The tallies make opt-in leaderboards buildable by anyone: subscribe to
-kind 31573 from the dungeon's key and sort. Every count is
-dungeon-attested — unforgeable by players — and appears only for
-wanderers who chose to proclaim. `pvp_kills` names no victim: the
-world's own narration never identifies killers (deaths leave nameless
-traces; the evidence is the blood on the killer's hands), so a player-
-kill count surfaces only from the killer's own mouth.
+Every count is dungeon-attested — unforgeable by players. A wanderer MAY
+publish their own sheet to relays (see Certificates, not broadcasts),
+which makes portable, opt-in leaderboards buildable by anyone: subscribe
+to kind 31573 from the dungeon's key and sort. A dungeon MAY ALSO serve
+a freshly-signed sheet for any wanderer on request, over the direct door
+(NOMAD: `GET /sheet?pk=<hex>`), so a watcher can check a boast against
+the world's own signature without waiting for the player to proclaim.
+This is a query answered, not a broadcast pushed — see Certificates, not
+broadcasts.
+
+`pvp_kills` is a bare count and names no victim: the world's own
+narration never records who fell to whom (deaths leave nameless traces;
+the evidence is the blood on the killer's hands). The number is
+verifiable; the victims are not, by anyone, ever.
 
 ### 1573 — loot certificate
 
@@ -170,7 +205,13 @@ the three roles missing) are skipped whole.
 
 A dungeon MUST NOT auto-publish sheets or certificates. Minting is a
 private act: the dungeon signs, stores, and hands the event to its
-owner. **Publishing is the player's decision**, later and optional.
+owner. **Publishing to relays is the player's decision**, later and
+optional. A dungeon MAY, however, answer a direct request for a
+wanderer's current sheet (see 31573): serving a signed object to whoever
+asks is a query, not a broadcast, and keeps standings verifiable without
+a player having to proclaim. The line it MUST NOT cross is pushing a
+sheet or certificate to relays unbidden.
+
 For rare items a dungeon SHOULD expose a blinded mint counter (serial +
 timestamp + rarity, no owner) so supply claims are publicly checkable
 while holders stay unknown.
@@ -228,10 +269,12 @@ standing.
   kind-27235 HTTP-auth event — and then exchanges the event shapes
   above as frames. Signatures MAY be omitted inside an authenticated
   direct session.
-- **Relay door, outbound (RECOMMENDED):** the dungeon publishes room
-  feeds, and any player-released sheets and certificates, to its relay
-  set, signed by the epoch key. Publish only when events occur: an
-  idle dungeon is silent and costs nothing.
+- **Relay door, outbound (RECOMMENDED):** the dungeon publishes the
+  world's own feed lines (24913), and any player-released sheets and
+  certificates, to its relay set, signed by the epoch key. A wanderer's
+  OWN deeds it does not sign: it hands each line to the actor's client,
+  which publishes it under the wanderer's key (see 24913). Publish only
+  when events occur: an idle dungeon is silent and costs nothing.
 - **Relay door, inbound (OPTIONAL):** a dungeon MAY subscribe for
   24911 commands p-tagged to its epoch key and answer with 24912 over
   relays. This requires the dungeon to hold standing subscriptions —
@@ -246,6 +289,16 @@ or history; anyone can verify any published artifact against the root
 attestation chain with no access to the dungeon's servers. What the
 dungeon cannot do invisibly is inflate supply — serials make the mint
 countable.
+
+The room feed (24913) is the deliberate exception, and consumers MUST
+treat it as such. A wanderer's own deeds are signed by the wanderer, so
+a player CAN publish a self-signed feed line for a deed that never
+happened. That is acceptable because the feed is a live *show*, not a
+record: a watcher MUST NOT treat a self-signed 24913 line as
+authoritative. The authoritative record is the dungeon-signed sheet
+(31573), certificate (1573), and mint ledger — a leaderboard verifies
+there (e.g. `GET /sheet`), never by tallying the feed. Talk is talk; the
+dungeon's signature is the scoreboard.
 
 ## Rationale
 

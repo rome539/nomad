@@ -21,11 +21,12 @@ import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK, SLICK_BREAK_BONUS,
   PARTING_BLOW_CHANCE, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
-  CARVE_MAX_LEN, TWO_HANDED, RARITY_RANK, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
+  CARVE_MAX_LEN, TWO_HANDED, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
   DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS,
 } from "./zone-data";
+import { gatehouseFeed } from "./gate";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
 export function cmdXyzzy(z: ZoneDO, session: Session): void {
@@ -40,7 +41,16 @@ export function cmdSmoke(z: ZoneDO, session: Session): void {
     return z.send(session, "You pat yourself down for a smoke and come up with nothing but lint.");
   }
   z.send(session, "You knock one loose from the tin and light it. The first drag steadies your hands; for a breath, the dungeon is just a room you happen to be in.", "gain");
-  z.roomFeed(session.roomId, `${session.name} lights a cigarette; the ember flares, then settles to a slow red eye.`, session.pubkey);
+  const line = `${session.name} lights a cigarette; the ember flares, then settles to a slow red eye.`;
+  // Behind the door the ember is just company: the gatehouse hears it, but the
+  // wire and the dark do not — the smell can't drift through the door, and no
+  // creature is coming for you in the sanctuary. Out in the world it's a deed
+  // AND a tell: the room sees it, the arena feed carries it, the dark leans in.
+  if (z.outOfWorld(session)) {
+    gatehouseFeed(z, line, session.pubkey);
+    return;
+  }
+  z.actorFeed(session, session.roomId, line);
   z.roomSound(session.roomId, "A thread of tobacco smoke drifts in {dir}.");
   z.creatureNoise(session.roomId); // a lit ember and a smell — the dark notices
 }
@@ -48,7 +58,7 @@ export function cmdSmoke(z: ZoneDO, session: Session): void {
 // Nobody knows what this does. That includes the dungeon.
 export function cmdSquink(z: ZoneDO, session: Session): void {
   z.send(session, "You squink. Somewhere below, something squinks back.");
-  z.roomFeed(session.roomId, `${session.name} squinks. It echoes longer than it should.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} squinks. It echoes longer than it should.`, session.pubkey, false);
   z.roomSound(session.roomId, "Something squinks, {dir}.");
   z.creatureNoise(session.roomId); // squinking is not free
 }
@@ -312,17 +322,25 @@ function wearClause(z: ZoneDO, cond: number | undefined): string {
 // publishes (kills/deaths/kings/wanderers, and your age under this name),
 // shown in-game instead of only to the relays. The world still doesn't
 // snitch — this is YOUR ledger, in your own hand.
-export function cmdSheet(z: ZoneDO, session: Session): void {
+// The ledger itself, shared by the in-game 'sheet' readout and the published
+// kind-1 brag so the two can never drift in format. `withAge` keeps the "N days
+// under this name" clause: the readout wants it, the note drops it (rome,
+// 2026-07-15 — the published brag is the exact in-game layout minus the age).
+export function ledgerLines(session: Session, withAge: boolean): string[] {
   const days = Math.max(0, Math.floor((Date.now() / 1000 - session.born) / 86_400));
   const age = days === 0 ? "born this very day" : days === 1 ? "one day under this name" : `${days} days under this name`;
-  const lines = [
-    `The dungeon keeps your ledger, ${session.name} — ${age}.`,
+  return [
+    `The dungeon keeps your ledger, ${session.name}${withAge ? ` — ${age}` : ""}.`,
     `  Kills: ${session.kills}${session.kills === 0 ? " — the dark is still ahead of you" : ""}`,
     `  Kings and horrors put down: ${session.bossKills}`,
     `  Wanderers' blood on your hands: ${session.pvpKills}`,
     `  Deaths: ${session.deaths}${session.deaths === 0 ? " — so far" : ""}`,
-    `('publish sheet' speaks this ledger to the relays; until then it is yours alone.)`,
   ];
+}
+
+export function cmdSheet(z: ZoneDO, session: Session): void {
+  const lines = ledgerLines(session, true);
+  lines.push(`('publish sheet' speaks this ledger to the relays under the dungeon's hand; 'publish kind 1' posts it to your OWN feed, in your own name, for your followers to see. Until then it is yours alone.)`);
   z.send(session, lines.join("\n"));
 }
 
@@ -408,7 +426,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     z.openDoors.add(doorKey);
     z.doorCloseAt.set(doorKey, Date.now() + DEEP_DOOR_OPEN_MS);
     z.send(session, "You press the still-cold heart to the black door. For a moment nothing — then the door *takes* it, drinks the cold clean out of it, and grinds open. The iron will remember its shape before long — but it only ever bars the way down.", "unlock");
-    z.roomFeed(session.roomId, `${session.name} presses something to the black door, and it grinds open.`, session.pubkey);
+    z.roomFeed(session.roomId, `${session.name} presses something to the black door, and it grinds open.`, session.pubkey, false);
     z.roomSound(session.roomId, "Iron grinds against stone, {dir}.");
     z.creatureNoise(session.roomId);
   } else if (exit.key_item && exit.key_item !== DEEP_HEART && !z.openDoors.has(doorKey)) {
@@ -443,7 +461,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     }
     guard.wakeUntil = Date.now() + HOUND_WAKE_MS; // step over it and it stirs
     z.send(session, `You pick your way over ${gt.name}, breath held. Behind you, ${heads} lift as one — the deep is open, and it is awake.`, "seize");
-    z.roomFeed(session.roomId, `${cap(gt.name)} wakes with a low, tripled growl.`, session.pubkey);
+    z.roomFeed(session.roomId, `${cap(gt.name)} wakes with a low, tripled growl.`, session.pubkey, false); // local: mob reaction
     z.roomSound(session.roomId, "A low growl rolls up from {dir} — something big, and awake.");
   }
 
@@ -460,7 +478,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     bite = Math.max(1, Math.round(bite * STANCE[session.stance].def));
     session.hp -= bite;
     z.send(session, `${cap(gt.name)} holds its post — and one head snaps out as you pass, jaws closing for ${bite}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`, "dmgin");
-    z.roomFeed(session.roomId, `${cap(gt.name)} snaps at ${session.name} as they pass.`, session.pubkey);
+    z.roomFeed(session.roomId, `${cap(gt.name)} snaps at ${session.name} as they pass.`, session.pubkey, false);
     if (session.hp <= 0) {
       await z.onPlayerDeath(session, gt);
       return;
@@ -544,8 +562,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
       if (c.loreId) await deedsBump(z.env.DB, c.loreId, "descents");
     }
   }
-  z.roomFeed(from, `${session.name} ${wasFighting ? "flees" : "leaves"} ${dir}.`, undefined, true, "who");
-  z.roomFeed(session.roomId, `${session.name} arrives.`, session.pubkey, true, "who");
+  z.actorFeed(session, from, `${session.name} ${wasFighting ? "flees" : "leaves"} ${dir}.`, "who");
+  z.actorFeed(session, session.roomId, `${session.name} arrives.`, "who");
   // Status first, so the client learns the room's name before the room text
   // prints — the name line paints gold even the very first time you see it.
   z.sendStatus(session);
@@ -583,9 +601,9 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
 // which signs it with the speaker's own key and puts it out obfuscated.
 export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
   if (!msg) return z.send(session, "Say what?");
-  z.send(session, `You say, "${msg}"`, "say");
-  z.roomFeed(session.roomId, `${session.name} says, "${msg}"`, session.pubkey, false, "say");
-  z.speechOut(session, `${session.name} says, "${msg}"`, "nomad-say");
+  z.send(session, `You say: ${msg}`, "say");
+  z.roomFeed(session.roomId, `${session.name} says: ${msg}`, session.pubkey, false, "say", { name: session.name, pk: session.pubkey });
+  z.speechOut(session, `${session.name} says: ${msg}`, "nomad-say");
 }
 
 // Shout: your words thrown hard enough to cross walls. The trade IS the verb —
@@ -595,14 +613,14 @@ export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
 // exactly the coin the world prices everything: noise.
 export function cmdShout(z: ZoneDO, session: Session, msg: string): void {
   if (!msg) return z.send(session, "Shout what?");
-  z.send(session, `You fill your lungs and shout, "${msg}"`, "say");
+  z.send(session, `You fill your lungs and shout: ${msg}`, "say");
   // Loud in the WORLD, silent on the gate's key — same law as `say`. A shout
   // carries through stone (roomSound, sockets only, never published) and rings
   // the dinner bell; what it does NOT do is hand the dungeon a plaintext copy of
   // a person's words to sign and broadcast. The speaker's own key carries it out.
-  z.roomFeed(session.roomId, `${session.name} shouts, "${msg}"`, session.pubkey, false, "say");
-  z.roomSound(session.roomId, `A voice, raw and carrying, {dir}: "${msg}"`, undefined, "say");
-  z.speechOut(session, `${session.name} shouts, "${msg}"`, "nomad-shout");
+  z.roomFeed(session.roomId, `${session.name} shouts: ${msg}`, session.pubkey, false, "say", { name: session.name, pk: session.pubkey });
+  z.roomSound(session.roomId, `A voice, raw and carrying, {dir}: ${msg}`, undefined, "say");
+  z.speechOut(session, `${session.name} shouts: ${msg}`, "nomad-shout");
   z.creatureNoise(session.roomId); // a shout is a dinner bell with a name on it
 }
 
@@ -703,7 +721,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
     ? " The pack takes it with a clank — too much loose iron now to slip a blow, and it won't ride quiet."
     : "";
   z.send(session, `You take ${tmpl.name}.` + readied + stooped + nowLoud);
-  z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, (RARITY_RANK[tmpl.rarity] ?? 0) >= 2); // ordinary pickups local; rare+ still relays ("someone grabbed the legendary")
+  z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)
   z.refreshRoomCtx(session.roomId);
   await z.persist();
   await z.ensureAlarm();
@@ -759,7 +777,7 @@ export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedI
   // Shedding under the burden line is the valve working: say so, so the
   // mid-chase drop reads as the escape it is.
   const quietAgain = wasBurdened && !z.burdened(session) ? " The pack rides light and quiet again." : "";
-  z.roomFeed(session.roomId, `${session.name} drops ${tmpl.name}.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} drops ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL (see takes)
   z.refreshRoomCtx(session.roomId);
   // persist/alarm are the caller's — cmdDrop flushes after its "one more" line,
   // the bench-drop flushes after re-sending the modal.
@@ -968,7 +986,7 @@ export async function cmdName(z: ZoneDO, session: Session, arg: string): Promise
   session.name = name;
   session.named = true;
   z.send(session, `The dungeon will remember you as ${name}.`);
-  z.roomFeed(session.roomId, `${old} is now known as ${name}.`, session.pubkey);
+  z.roomFeed(session.roomId, `${old} is now known as ${name}.`, session.pubkey, false);
   z.sendStatus(session);
 }
 
@@ -1099,7 +1117,7 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
     ? `The line goes taut and FIGHTS you — you haul up ${fish.name}, thrashing.`
     : `The line goes taut — you haul up ${fish.name}.`)
     + ` [${fish.rarity}] (unclaimed — good, fresh food)`, "gain");
-  z.roomFeed(session.roomId, `${session.name} lands a catch from the ${surface ? "still water" : "flood"}.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} lands a catch from the ${surface ? "still water" : "flood"}.`, session.pubkey, false);
   z.sendCtx(session);
   await z.persist();
 }
@@ -1216,7 +1234,7 @@ export async function cmdDive(z: ZoneDO, session: Session, arg: string): Promise
   // 'dive north' and kin: the water is down, not that way.
   if (arg && LISTEN_DIRS[arg]) arg = "";
   // The splash carries; everything with ears knows where you went under.
-  z.roomFeed(session.roomId, `${session.name} fills their lungs and goes under the black water.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} fills their lungs and goes under the black water.`, session.pubkey, false);
   z.roomSound(session.roomId, "A splash {dir}, then the slow churn of something working underwater.");
   z.creatureNoise(session.roomId);
   if (!arg) {
@@ -1272,7 +1290,7 @@ export function cmdWash(z: ZoneDO, session: Session): void {
   z.send(session, `${where} and scrub until the last of the man-blood lifts and clouds away. Your hands are clean, and yours again.`, "study");
   z.roomFeed(session.roomId, atWater
     ? `${session.name} kneels at the water, scrubbing hard at their hands.`
-    : `${session.name} stands with their hands up to the rain, scrubbing at them.`, session.pubkey);
+    : `${session.name} stands with their hands up to the rain, scrubbing at them.`, session.pubkey, false); // LOCAL: washing man-blood is a killer covering tracks — never a broadcast tell
 }
 
 export function cmdCarve(z: ZoneDO, session: Session, arg: string): void {
@@ -1283,7 +1301,7 @@ export function cmdCarve(z: ZoneDO, session: Session, arg: string): void {
   }
   z.addTrace(session.roomId, { kind: "carve", at: Date.now(), label: session.name, words });
   z.send(session, `You scratch it into the stone: "${words}"`, "study");
-  z.roomFeed(session.roomId, `${session.name} scratches something into the wall.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} scratches something into the wall.`, session.pubkey, false);
   z.roomSound(session.roomId, "A faint scratching, {dir}.");
   z.creatureNoise(session.roomId);
 }
@@ -1351,7 +1369,7 @@ export async function cmdEat(z: ZoneDO, session: Session, arg: string): Promise<
     + (gulped ? " You bolt it down with one eye on your foe — an opening." : ""),
     "gain",
   );
-  z.roomFeed(session.roomId, `${session.name} eats ${tmpl.name}.`, session.pubkey);
+  z.roomFeed(session.roomId, `${session.name} eats ${tmpl.name}.`, session.pubkey, false);
   z.sendStatus(session);
   z.sendCtx(session);
   await savePlayer(z.env.DB, session.pubkey, session.roomId, session.hp);
@@ -1438,7 +1456,7 @@ export async function getInstanced(z: ZoneDO, session: Session, inst: GroundInst
   if (z.inCombat(session)) { session.staggered = true; stooped = " You stoop for it under the swing — an opening."; }
   const pages = (await journalLoad(z.env.DB, inst.journalId)).length;
   z.send(session, `You take ${tmpl.name}.` + (pages ? ` Its pages are already ${pages > 8 ? "densely" : "half"} filled — someone else's hunting, now yours.` : "") + stooped);
-  z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, (RARITY_RANK[tmpl.rarity] ?? 0) >= 2); // ordinary pickups local; rare+ still relays ("someone grabbed the legendary")
+  z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)
   z.refreshRoomCtx(session.roomId);
   await z.persist();
   await z.ensureAlarm();

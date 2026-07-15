@@ -2,7 +2,7 @@
 // That signature is what makes loot verifiable and un-forgeable — the same
 // authority pattern castr used for catches, generalized. The event shape stays
 // nditem-compatible (kind 1573 family) for District bazaar interop later.
-import { finalizeEvent, type Event } from "nostr-tools";
+import { finalizeEvent, getPublicKey, type Event } from "nostr-tools";
 import type { Env } from "./env";
 import { hexToBytes, nowSec } from "./util";
 
@@ -21,6 +21,14 @@ const FEED_KIND = 24913;
 export function isGameKeyConfigured(env: Env): boolean {
   const k = env.GAME_SK_HEX?.trim();
   return !!k && /^[0-9a-f]{64}$/i.test(k) && !/^0{64}$/.test(k);
+}
+
+// The dungeon's own public key (the epoch npub, in hex). Used to build the
+// addressable coordinate of a wanderer's 31573 sheet so a player's kind-1 brag
+// can carry a verifiable pointer back to it. Empty when no key is configured.
+export function gamePubkey(env: Env): string {
+  if (!isGameKeyConfigured(env)) return "";
+  return getPublicKey(hexToBytes(env.GAME_SK_HEX));
 }
 
 export interface LootSignParams {
