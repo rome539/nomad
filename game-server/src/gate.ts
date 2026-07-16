@@ -78,7 +78,7 @@ export async function forgeCore(
   const id = uuid();
   await insertLoot(z.env.DB, id, session.pubkey, t.id, null);
   session.items.push({ rowId: id, itemId: t.id, serial: null, equipped: false, condition: 100 });
-  z.roomFeed(session.roomId, `${session.name} works the bench, hammer ringing off the gatehouse walls.`, session.pubkey, false);
+  gatehouseFeed(z, `${session.name} works the bench, hammer ringing off the gatehouse walls.`, session.pubkey); // gatehouse work stays in the gatehouse — the world outside the door doesn't hear the hammer
   return {
     ok: true,
     note: `Scrap, the brazier's heat, and patience. ${cap(t.name)} comes off the bench, raw but true.${z.itemStat(t)} [${t.rarity}] (unclaimed — the gate can seal it)`,
@@ -377,7 +377,7 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     ? `The keeper slides ${slid[0]} across the counter.`
     : `The keeper slides it all across the counter:\n  ${slid.join("\n  ")}`;
   session.buying = undefined;
-  z.roomFeed(session.roomId, `${session.name} trades at the keeper's hatch.`, session.pubkey, false);
+  gatehouseFeed(z, `${session.name} trades at the keeper's hatch.`, session.pubkey); // gatehouse-only — an in-world player at the gate doesn't watch the trade
   const bare = lastOnes.length
     ? ` You took the last ${lastOnes.join(" and the last ")} he had; the shelf behind him stands bare.`
     : "";
@@ -624,7 +624,7 @@ export async function cmdSalvage(z: ZoneDO, session: Session, arg: string): Prom
   if (!carried) return z.send(session, "You carry nothing like that.");
   const line = await salvageCore(z, session, carried);
   z.send(session, line);
-  z.roomFeed(session.roomId, `${session.name} works the bench vice, breaking steel.`, session.pubkey, false);
+  gatehouseFeed(z, `${session.name} works the bench vice, breaking steel.`, session.pubkey); // gatehouse work stays in the gatehouse
   z.sendCtx(session);
 }
 
@@ -703,7 +703,9 @@ export async function cmdClaim(z: ZoneDO, session: Session, arg: string): Promis
     }
     lines.push("Sealed is TITLE, not armor: carried, it dies with you. Only the gate\u2019s lockbox and vault keep what death cannot.");
     z.send(session, lines.join("\n"));
-    z.roomFeed(session.roomId, `${session.name} presses a claim at the gate. Iron hums.`, session.pubkey, false);
+    // Sealing behind the door is the gatehouse's business; at the open gate, the room's.
+    if (z.outOfWorld(session)) gatehouseFeed(z, `${session.name} presses a claim at the gate. Iron hums.`, session.pubkey);
+    else z.roomFeed(session.roomId, `${session.name} presses a claim at the gate. Iron hums.`, session.pubkey, false);
     z.sendCtx(session);
   }
 
@@ -1168,7 +1170,10 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
     }
     await setContainer(z.env.DB, carried.rowId, cfg.container);
     z.send(session, cfg.put(tmpl.name));
-    z.roomFeed(session.roomId, `${session.name} ${cfg.feed}`, session.pubkey, false);
+    // Banking at a gate happens behind the door (gatehouse); a mid-dungeon lockbox
+    // crouch happens in the open. The witnesses follow: gatehouse folk, or the room.
+    if (z.outOfWorld(session)) gatehouseFeed(z, `${session.name} ${cfg.feed}`, session.pubkey);
+    else z.roomFeed(session.roomId, `${session.name} ${cfg.feed}`, session.pubkey, false);
     z.sendCtx(session);
   }
 

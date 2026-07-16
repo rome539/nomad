@@ -1610,4 +1610,12 @@ export const FEED_PVP_HIT: string[] = [
   "{a} staves {t} while they're wide open.",
   "{a} lands a hard one on {t}, and {t} gives ground.",
 ];
+// Caught at rest — guard down, wounds half-mended, the worst moment to be found.
+// Damning for the crowd, and for whoever did it. Fed for BOTH a wanderer's ambush
+// and a beast falling on a sleeper. {a} = the one who strikes, {t} = the resting.
+export const FEED_REST_CAUGHT: string[] = [
+  "{a} falls on {t} at rest — no warning, no mercy.",
+  "{a} sets on {t} before they can rise from their rest.",
+  "{a} catches {t} mending, guard down — and strikes.",
+];
 

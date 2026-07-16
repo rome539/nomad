@@ -19,7 +19,7 @@ import {
   PADDED, PADDED_STUN_MULT, ARMOR_WEAR, WEAPON_WEAR, THORNS, PARRY_RIPOSTE,
   MANCATCHER, MANCATCHER_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE, WARDHIDE_WOUND_ODDS,
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
-  FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_HIT,
+  FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_HIT, FEED_REST_CAUGHT,
 } from "./zone-data";
 
 // How hurt the other one looks — the same buckets as selfExamine, because
@@ -45,8 +45,9 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
   const unaware = other.pvpTarget !== session.pubkey;
   session.pvpTarget = other.pubkey;
   if (!other.pvpTarget) other.pvpTarget = session.pubkey; // steel answers steel
-  z.actorFeed(session, session.roomId, unaware
-    ? `${session.name} falls on ${other.name} without warning!`
+  z.actorFeed(session, session.roomId,
+    other.resting ? z.feedProc(FEED_REST_CAUGHT, session.name, other.name)
+    : unaware ? `${session.name} falls on ${other.name} without warning!`
     : `${session.name} turns on ${other.name}!`, "fight");
   z.combatNoise(session.roomId);
   await swingAt(z, session, other, { body: true, ambush: unaware });

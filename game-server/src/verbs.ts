@@ -593,7 +593,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     }
   }
   z.actorFeed(session, from, `${session.name} ${wasFighting ? "flees" : "leaves"} ${dir}.`, "who");
-  z.actorFeed(session, session.roomId, `${session.name} arrives.`, "who");
+  z.actorFeed(session, session.roomId, `${session.name} arrives.`, "who", false); // local only — "leaves <dir>" already carries the move to the feed
   // Status first, so the client learns the room's name before the room text
   // prints — the name line paints gold even the very first time you see it.
   z.sendStatus(session);

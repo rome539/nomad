@@ -84,7 +84,7 @@ import {
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
   DARK_ROOMS,
   LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE,
-  FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL
+  FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
@@ -2215,6 +2215,7 @@ export class ZoneDO implements DurableObject {
         if (victim.resting) {
           victim.resting = false;
           this.send(victim, "You are dragged from your rest.");
+          this.actorFeed(victim, victim.roomId, this.feedProc(FEED_REST_CAUGHT, tmpl.name, victim.name), "fight");
         }
         if (victim.hp > 0) {
           this.send(victim, `${cap(tmpl.name)} ${this.creatureHit(tmpl.id)} for ${dmg}${flourish} [${victim.hp}/${victim.maxHp} hp]`, flourish === "." ? "dmgin" : "dmgin big");
@@ -3890,14 +3891,18 @@ export class ZoneDO implements DurableObject {
   // the relays (rome, 2026-07-15). If the actor's client is gone, the beat simply
   // doesn't reach the relay: the room already heard it, and the books in D1 — not
   // this feed — are the truth of who did what.
-  public actorFeed(actor: Session, roomId: string, text: string, cls?: string): void {
+  // toRelay=false keeps a deed LOCAL — the room still sees it live, but the actor's
+  // client is NOT handed the fpub, so it never rides the wire to the colosseum. Used
+  // for the redundant "arrives" (the "leaves <dir>" line already tells the move, with
+  // a direction) — halves movement traffic without dimming in-room awareness.
+  public actorFeed(actor: Session, roomId: string, text: string, cls?: string, toRelay = true): void {
     const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: roomId, text, cls } : { v: 0, kind: 24913, room: roomId, text });
     for (const s of this.sessions.values()) {
       if (s.roomId !== roomId || s.pubkey === actor.pubkey) continue;
       if (this.outOfWorld(s)) continue;
       try { s.ws.send(frame); } catch {}
     }
-    try { actor.ws.send(JSON.stringify({ v: 0, t: "fpub", room: roomId, text, fx: cls })); } catch {}
+    if (toRelay) try { actor.ws.send(JSON.stringify({ v: 0, t: "fpub", room: roomId, text, fx: cls })); } catch {}
   }
 
   // The arena feed's third-person voice — a kill or a status proc retold for the
