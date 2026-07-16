@@ -1533,3 +1533,53 @@ export const GATEHOUSE_AMBIENCE = [
 // nothing hunting you, the fade is instant and free, same as ever.
 export const LINKDEAD_MS = 45_000;
 
+// ---- THE ARENA FEED: third-person combat flavor (spectator-facing) ----
+// A player's OWN screen reads in the second person ("You open its throat"); the
+// colosseum needs the same blow retold for the crowd, in the third person. These
+// pools feed only the arena stream — short, punchy, a caption not a scene.
+//   {k} = the killer's name    {n} = the thing that died
+//   {a} = the one who did it   {t} = the one it happened to
+// Kill lines split by how a thing goes down (the hollow shatter, the drowned
+// sink, everything else falls), mirroring the second-person killVerb in zone.ts.
+export const FEED_KILL: Record<string, string[]> = {
+  hollow: [
+    "{k} shatters {n} in a clatter of loose bone.",
+    "{k} caves {n} in, and the light goes out of it.",
+    "{k} breaks {n} apart; the pieces go still.",
+  ],
+  drowner: [
+    "{k} finishes {n}; it slides under and is gone.",
+    "{k} puts {n} down, and the black water closes over it.",
+    "{k} drags {n} under its own dead weight.",
+  ],
+  plain: [
+    "{k} cuts {n} down.",
+    "{k} puts {n} down for good.",
+    "{k} drops {n} where it stands.",
+    "{k} finishes {n}, and the fight goes out of it.",
+  ],
+};
+// The vitals kill — a killing blow to the throat, heart, or skull. Marked BIG in
+// the colosseum (the fx tag carries it), so the lines earn the extra weight.
+export const FEED_VITAL: string[] = [
+  "{k} opens {n}'s throat — it drops in a single spray of red.",
+  "{k} drives the point clean through {n}; it folds and does not move.",
+  "{k} finds the gap, and {n} is dead before it lands.",
+  "{k} caves in {n}'s skull with one dead blow.",
+  "{k} runs {n} through the heart — over in a breath.",
+];
+// Status procs, retold for the crowd — pointed either way (a wanderer's edge, or
+// a beast's claws). {a} acts, {t} suffers; the line is capitalized on send.
+export const FEED_STUN: string[] = [
+  "{a} rings {t} senseless — it reels, a beat lost.",
+  "{a} lands like a falling stone; {t} staggers, head ringing.",
+];
+export const FEED_BLEED: string[] = [
+  "{a} opens a wound on {t} that won't clot on its own.",
+  "{a} cuts {t} deep, and the blood starts to run.",
+];
+export const FEED_HOBBLE: string[] = [
+  "{a} rakes {t}'s leg out from under it — no clean run now.",
+  "{a} hamstrings {t}; it drags a bad leg from here.",
+];
+

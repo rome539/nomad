@@ -2,3 +2,7 @@ node_modules/
 dist/
 .DS_Store
 *.log
+
+# The colosseum (arena spectator app) is a separate Cloudflare/nsite deliverable,
+# not part of the game server — its deploy copy lives here for convenience only.
+arena/

@@ -19,6 +19,7 @@ import {
   PADDED, PADDED_STUN_MULT, ARMOR_WEAR, WEAPON_WEAR, THORNS, PARRY_RIPOSTE,
   MANCATCHER, MANCATCHER_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE, WARDHIDE_WOUND_ODDS,
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
+  FEED_STUN, FEED_BLEED, FEED_HOBBLE,
 } from "./zone-data";
 
 // How hurt the other one looks — the same buckets as selfExamine, because
@@ -233,6 +234,7 @@ async function swingAt(
       defender.stunned = true;
       z.send(defender, `${attacker.name} lands like a falling stone — your skull rings and the room tilts.`, "stun");
       z.send(attacker, `${defender.name} reels, stunned.`, "stun");
+      z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_STUN, attacker.name, defender.name), "stun");
     }
   }
   // A cutting edge opens a wound that keeps weeping — unless hide thick
@@ -241,8 +243,10 @@ async function swingAt(
     if (z.wearsTrait(defender, WARDHIDE) && !chance(WARDHIDE_WOUND_ODDS)) {
       z.send(defender, `${attacker.name}'s edge drags across the thick hide — it holds.`, "block");
     } else {
+      const fresh = !defender.bleedTicks;
       defender.bleedTicks = BLEED_TICKS;
       defender.bleedDmg = Math.max(defender.bleedDmg ?? 0, weapon.tmpl.bleed);
+      if (fresh) z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_BLEED, attacker.name, defender.name), "bleed");
     }
   }
   // The man-catcher's PvP rule, exactly as written the day it was forged:
@@ -253,6 +257,7 @@ async function swingAt(
     defender.limpingSince = undefined;
     z.send(defender, `The barbs of ${offhand.tmpl.name} rake your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
     z.send(attacker, `The barbs catch ${defender.name}'s leg — they won't run clean now.`);
+    z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_HOBBLE, attacker.name, defender.name), "hobble");
   }
   if (worn) await z.wear(defender, worn.carried, worn.tmpl, ARMOR_WEAR);
   if (weapon) await z.wear(attacker, weapon.carried, weapon.tmpl, WEAPON_WEAR);

@@ -304,6 +304,36 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     : "You see nothing like that here.");
 }
 
+// Inspect one of your OWN things by name: the pack first, then the lockbox and
+// vault (both within reach at a gate). Returns the full read — prose, what it
+// does, how worn, its seal and its ledger — or null if you hold no such thing.
+// Read-only: nothing is taken out. This is what makes 'look flanged mace' answer
+// in the gatehouse, where every keeping is at your elbow (rome, 2026-07-15).
+export async function lookKeepingItem(z: ZoneDO, session: Session, arg: string): Promise<string | null> {
+  const world = z.world!;
+  const carried = z.findCarried(session, arg);
+  if (carried) {
+    const t = world.itemTemplates.get(carried.itemId)!;
+    return t.description + z.itemStat(t) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
+      + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
+      + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : "")
+      + (carried.itemId === DEEP_HEART ? " " + heartProse(carried.acquiredAt) : "");
+  }
+  for (const key of ["lockbox", "vault"] as const) {
+    const held = await loadContainer(z.env.DB, session.pubkey, key);
+    const it = held.find((c) => { const t = world.itemTemplates.get(c.itemId); return !!t && nameMatches(t.name, arg); });
+    if (!it) continue;
+    const t = world.itemTemplates.get(it.itemId)!;
+    const latch = key === "lockbox" ? "You work the lockbox's latch." : "You swing the vault's door open.";
+    return `${latch} ${t.description}${z.itemStat(t)}${wearClause(z, z.isGear(it.itemId) ? it.condition : undefined)}`
+      + (it.serial !== null ? ` The dungeon's seal is on it. (mint #${it.serial})` : "")
+      + (it.loreId ? await lore.gearLedger(z, it.loreId) : "")
+      + (it.itemId === DEEP_HEART ? " " + heartProse(it.acquiredAt) : "")
+      + " Then back it goes.";
+  }
+  return null;
+}
+
 // How far gone a piece is, spoken as prose (same buckets as the list tags —
 // conditionWord keeps the two from drifting). Pristine says nothing: soundness
 // is the default state of the world, wear is the news.

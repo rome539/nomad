@@ -17,7 +17,7 @@ import { SCRAP_ID, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS } from "./zone-data";
 import { parse } from "./parser";
 import { mapRegionOf } from "./lore";
-import { dropCarried, describePlayer } from "./verbs";
+import { dropCarried, describePlayer, lookKeepingItem } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -1307,8 +1307,12 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     if (!target) return z.send(session, describeGatehouse(z, session));
     const who = gatehouseFolk(z).find((s) => s.pubkey !== session.pubkey && nameMatches(s.name, target));
     if (who) return z.send(session, describePlayer(z, session, who), "study");
-    // "look at his hair" — extra words that name nothing here weren't a command.
-    // Say them.
+    // Then your own things: at a gate the pack, lockbox and vault are all at your
+    // elbow, so 'look flanged mace' reads it wherever you keep it.
+    const item = await lookKeepingItem(z, session, target);
+    if (item) return z.send(session, item, "study");
+    // "look at his hair" — extra words that name nobody and nothing here weren't
+    // a command. Say them.
     return gatehouseSay(z, session, text);
   }
   if (v === "who") { // who's by the fire, not who's in the dungeon

@@ -63,28 +63,62 @@ and the population layer that only real players can fill.*
 
 ## Next up (unblocked, pre-players)
 
+- **TODO — FIRST THING (rome, 2026-07-15): stray-item floor-drain.** Torches and
+  most dropped gear have NO decay — they lie on a floor forever, a permanent
+  free-light/free-loot beacon AND slow inflation of the one `sim` blob (see the
+  scaling-ceiling icebox entry). Generalise the rock's `strayRock(roomId)` into
+  `strayItem(roomId, itemId)`: arm crumble timers for stray items dropped OFF a
+  gate spawn (gate supply untouched, exactly like rocks), with per-item flavour
+  (a torch "gutters out and is lost," not "kicked into the rubble"). Wire it on
+  drop (`verbs.ts` ~805, currently only `loose-rock`) and on death-spill
+  (`zone.ts` ~3086). Reuses the existing `rot`/`crumble` machinery and
+  `ROCK_CRUMBLE_MIN/MAX_MS` (or a per-item window). Cheap, no migration; buys
+  free headroom against the 128 KB ceiling.
+- **Rare torch spawn — mirror the hammerstone** *(design, rome 2026-07-15)*.
+  Same shape as the hammerstone (migration 070): the world MINTS a rare torch
+  variant every N hours into a random haunt — no farmable spot (mirror
+  `nextStoneAt` + the HAMMERSTONE_HAUNTS pool) — and it's simply BETTER at a
+  torch's job. Edge (open Q, RECOMMEND the clean parallel): a much **longer
+  burn** — 2–3× `TORCH_BURN_MS` — "better at its one thing," and it doesn't
+  tread on the lantern's niche. Alternatives if rome wants: a **tame flame**
+  (no fire-fear wake — but that IS the lantern's role) or a **brighter reach**
+  (lights/reveals adjacent rooms). Build = item template + mint timer (copy the
+  hammerstone's) + a burn-length branch by itemId in light.ts. Pairs naturally
+  with the stray-item drain above (both torch work).
+- **Forge & smelt economy — make crafting actually matter** *(design, rome
+  2026-07-15; noted, not building yet)*. Three linked changes:
+  1. **Salvage shouldn't cough a whole iron per piece.** Today `SALVAGE_YIELD`
+     = common 1 / uncommon 2 / rare 4 / epic 8 scrap, and one common salvage
+     hands you a usable unit. rome wants a TWO-TIER material: breaking a piece
+     yields a **scrap (~1/5 of an iron)**, and ~5 scraps **smelt into one full
+     iron**. Iron becomes something you accumulate, not a per-salvage handout —
+     tightens the forge feed the way the floor-renewal law tightened gear.
+  2. **Forge-EXCLUSIVE gear.** Current recipes (sharpened-rib, rusted-sword,
+     splintered-cudgel, rag-vest, padded-jerkin, leather-cap, worn-boots,
+     tattered-cloak, battered-buckler, bone-shiv, chipped-falchion,
+     rust-eaten-cleaver, graveblade, scavenger-coat…) are low junk that ALSO
+     drops in the world, so forging is never the ONLY path to anything and never
+     worth the scrap. Add gear you can get ONLY by forging — a reason to gather
+     iron.
+  3. **Cut some recipes.** Trim the junk end so the slate reads as a real craft
+     menu, not a pile of starter-tier duplicates.
+  Net: iron is scarcer to make, and what you make is worth making. Forge data
+  lives in `forge_recipes` (D1, cached at init) + `SALVAGE_YIELD` (zone-data);
+  the scrap→iron tier is new (item template + smelt recipe/verb) — a migration
+  plus a bit of gate.ts.
 - **The Hunter / Nemesis** *(now the top of the stack)* — targeted pressure:
   the world sends a named predator after the too-successful player, who has to
   get out ahead of it. Reuses grudges + `curious` tracking + the blood-on-killer
   scent primitives that PvP just proved. Also the natural long-term raid clock
   for the shallow keep. (rome: "i love this.")
-- **Storied gear — THE ENGRAVING (BUILT 2026-07-13, migration 077, in tree
-  unshipped)**. The identity feature landed. Key architectural finding: the
-  mint SERIAL couldn't carry the biography — title cracks at every transfer
-  (drop/death/trade, the 2026-07-05 law, unchanged) — so the FIRST sealing
-  **engraves** the piece (lore_id, gear only) and the deeds-ledger keys on the
-  mark, which endures through every hand and floor (groundLore, the
-  wear-survives-drop pattern; instanced like wear, not like journals).
-  Ledger: **kills** (equipped weapon, PvE + PvP), **descents** (carried down
-  past the black door), **owners** (a NEW hand sealing a marked piece grows
-  the chain), **deaths** (an owner dying while it's carried — the scar,
-  written at the scatter). Surfaced in `look` (carried, lockbox, and THE
-  FLOOR — the murdered man's sword talks). Fates: a scavenger dragging a
-  marked piece off ends its story (the beast doesn't read); the fence files
-  the mark off (trade/salvage orphan the ledger — laundering, by design).
-  **Not in v1, deliberately:** deeds riding the 31573 loot cert (bazaar
-  interop — add when the bazaar is real), and a journal surface. The payoff
-  stays population-gated; the substrate is live so day-one history is real.
+- **Storied gear — THE ENGRAVING** *(SHIPPED f60ef32, migration 077)*. Live:
+  the first sealing **engraves** a piece (lore_id, gear only), and a deeds-ledger
+  (**kills / descents / owners / deaths**) rides the mark through every hand and
+  floor (groundLore, instanced like wear), surfaced in `look` (carried, lockbox,
+  the floor — the murdered man's sword talks). The fence files the mark off
+  (laundering, by design). **Forward work (v2, population-gated):** deeds riding
+  the 31573 loot cert (bazaar interop — add when the bazaar is real) + a journal
+  surface.
 - **Fire & light follow-ons** (the 057 arc's remaining open ends):
   - `search` for hidden exits (dark hides them; light + searching finds them).
     Not built (zone-data.ts still flags it a follow-on).
@@ -93,69 +127,7 @@ and the population layer that only real players can fill.*
 - **Shallows heat map** — mobs harden where they're farmed (+1–2 HP, not
   damage), decaying back for fresh players. Unblocked since curved armor.
 
-## Armor pass — filling the defensive ladder *(BUILT 2026-07-13 — migration 075 + ward wiring + the RNG floor-renewal engine, in tree unshipped; no reseed needed, live worlds self-lay new ground spawns)*
-
-rome flagged the game is short on ARMOR PIECES (not armor value). The data
-confirms it: weapons have 7–9 options per rarity tier (31 total); every armor
-slot has ~⅓ that depth, and the TOP end collapses — helm/feet/cloak each have a
-single rare and/or epic, so the endgame is BiS-per-slot with no build choice.
-Worse, the anti-stun build tops out at a *common* coif, and the sneak/anti-bleed
-builds have no rare/epic pieces at all. Fix = a content migration bringing each
-thin slot to ~10 (≤8 per tier), each new piece carrying an EXISTING ward so
-every build gets a full ladder. Targets: helm 6→10, feet 6→10, cloak 7→10,
-shield 9→10; body armor already at 12.
-
-**The 14 pieces (12-piece ladder + 2 guardroom finds):**
-
-| slot | rarity | piece | arm | identity (existing ward) | proposed home |
-|---|---|---|---|---|---|
-| helm | unc | a riveted coif | 1 | MAILWARD (bleeds) | bone-knight |
-| helm | rare | a padded greathelm | 2 | PADDED (stun) | warden-captain |
-| helm | rare | a shroud-hood | 1 | QUIET (sneak) | cutpurse / thief-door |
-| helm | epic | a bone-barred visor | 3 | WARDHIDE (wounds) | marrow-king / deep |
-| feet | common | cracked-leather shoes | 1 | raw filler | grounds spawn |
-| feet | unc | hobnailed boots | 1 | raw | warrens |
-| feet | rare | eel-hide treads | 1 | SLICK (anti-seize) | drowned / Tideways |
-| feet | epic | shadow-step boots | 2 | QUIET (sneak) | pale-stalker |
-| cloak | common | a moth-eaten mantle | 1 | raw filler | grounds spawn |
-| cloak | epic | a chain-lined mantle | 2 | MAILWARD (bleeds) | warden-captain |
-| cloak | epic | a drowned-diver's shroud | 1 | QUIET (deep sneak) | deep |
-| shield | common | a lashed-plank shield | ~.08 block | raw filler | fence / grounds |
-| helm | unc | a watchman's kettle-helm | 2 | raw (guard kit) | **guardroom** ground-spawn |
-| cloak | unc | a warden's watch-mantle | 2 | raw (guard kit) | **guardroom** ground-spawn |
-
-Per-slot result: helm 2/3/3/2, feet 2/3/3/2, cloak 2/2/3/3, shield 2/4/2/2 (plus
-the 2 guardroom uncommons nudging helm/cloak to 11). No tier over 8, and the
-anti-stun / sneak / anti-seize / anti-bleed / wards-wounds builds each pick up
-the top-end piece they were missing.
-
-**Renewal — RESOLVED (loot-economy talk 2026-07-12):** the guardroom pieces (and
-any renewable floor gear) use the **RNG-cadence** model from the Floor-renewal
-standing law above — a slow tick rolls a low chance to hang the kit on the pegs
-if it's absent, so it's dice, not a faucet. Same engine change flips **rusted-pick**
-and **hammerstone** off their deterministic timers onto RNG (hammerstone keeps
-its `STONE_GROUND_CAP`); **loose-rock, torch, and all consumables keep
-regrowing**. Acquisition for the ladder pieces: thematic mob drops for the
-warded ones (ward matches the beast), fence/grounds for the raw commons + plank
-shield; the 2 guardroom uncommons are RNG floor spawns in `guardroom`.
-
-**Build cost:** an `applyRegrow` engine change (RNG-cadence for gear) + the
-pick/hammerstone conversions + a CONTENT MIGRATION (14 new item_templates + drop
-wiring) that NEEDS A SEED — write it, verify local, leave the remote seed for
-rome to trigger (never reseed while he plays).
-
-## Room events — the world's weather *(SHIPPED — events.ts; kept here for the open ends)*
-
-The arc landed whole: twelve events on two clocks (the scheduled bell + one
-weighted roll every 3–6h), each obeying **telegraph → active window →
-aftermath**, systemic-only, with mobs as citizens of the weather. THE TIDE is
-the crown (the Tideways wing floods bottom-up on its own schedule). **Event 13,
-THE GLOAM, built 2026-07-13 (in tree):** the dark itself walks the keep — one
-interior hall at a time is true dark (rides `z.isDark`, the new choke-point
-over DARK_ROOMS), drifting room to room; a torch holds it off, the living flee
-it, the HOLLOW keep walking inside it. Never outdoors, never a gate room.
-Full spec lives in git and the memory ship log. What's still *not* built on
-top:
+## Room events — the world's weather *(SHIPPED — events.ts; open ends only)*
 
 - **The undertow-grasper** (anti-turtle, designed not built) — a drowner cousin
   whose grab comes AROUND the shield; its Tideways home is ready. Build only if
@@ -168,34 +140,7 @@ top:
   once), and a general stillness (everything sleeps deeper for a few minutes —
   the marrow-song already plays this card for the deep's hollow).
 
-## The small lives *(BUILT 2026-07-13, in tree unshipped — code only, no migration)*
-
-Sleep, thirst, calls, and fear — per creature, never blanket; the refusals are
-design (the dead never sleep, never drink, never call). All guards from the
-consequences audit are law in the code:
-
-- **Sleep:** rats doze anywhere quiet, the cutpurse only in his own crack,
-  hyenas drop off on a full belly (the meal-guard's other face). Nothing naps
-  with a stranger present — you only ever *walk in* on a sleeper. Waking is
-  wakeListeners' one law (entry/noise odds, QUIET gear, the bell); a blow
-  wakes instantly and rides the existing unaware/ambush multiplier — one
-  heavy blow, never a coup de grace (the sentinel rouse law). Scatter events
-  (gloam, boil, Gaunt) and teeth all wake. Sleepers read plainly on look and
-  to a pressed ear.
-- **Thirst:** hyenas only — a destination habit (WATER_ROOMS), tether-bound
-  (no territory leak), one drinker at a hole, rain skips it. Learn the rhythm
-  and the waterhole is ambush ground — theirs and yours.
-- **The call-bus:** one primitive, three meanings. Prey calls AWAY (a rat
-  fleeing a player squeals; the warren nearby fear-marks the room and flows
-  off). Predators call TOWARD (a feeding grave-hyena laughs ONE adjacent
-  packmate in; the dire is a loner). Thieves WARN (an escaped cutpurse
-  whistles; the dead tell no one). **The hard law: a call never triggers a
-  call** (calledTo guard) and calls never ride creatureNoise — no cascades.
-- **Place-fear:** avoids-memory per creature, decays, dies with the creature
-  (migrants arrive naive — fear can't be farmed into a safe corridor). Home is
-  exempt; fear never strands. **Lurkers read traffic instead:** every few
-  hours an unseen one shifts its ambush to the born-dark room (tether-bound)
-  with the freshest footprints — vary your route. Never moves under an eye.
+## The small lives *(SHIPPED f60ef32 — code only, no migration; open ends only)*
 
 Deferred from the same design talk: fleet-rat play (pure flavor), scavenger
 killing-floor rounds (mostly covered by the existing corpse-smell wander).
@@ -265,14 +210,6 @@ density and do NOT get built before there are people:
 - **Reputation** — grudges prove the primitive; extend to the world (guards,
   towns) when towns exist.
 
-*PvP's anti-grief stack, now live, for reference when the rest of this bucket
-builds on it: witnesses (combat sound carries), blood on the killer (not names
-on the wall — the world doesn't snitch), the bloodstain as scent (creatures
-aggro known killers), fat-tailed combat (fumble and your blade's on the floor),
-and weak fresh keys (the sybil wall — power is carried, never granted). A
-player-kill drops everything, signed included — murder is the only way to truly
-lose what's yours.*
-
 ## Design lineage — what to steal, what to avoid *(2026-07-09)*
 
 The reference games for NOMAD (rome's homework list + one add), vetted for fit.
@@ -323,20 +260,18 @@ Directions rome likes and wants held. Design only; no code until he says go.
   retrofit onto the 4s round.
 - **Idle kick** — boot truly-AFK players after N minutes so a forgotten tab
   doesn't hold a live session.
-- **`say` is public. Nobody knows that.** *(noted 2026-07-13)* The dungeon's
-  `say` rides `roomFeed` out to the **public Nostr relays** as *"A wanderer
-  says, …"* — kind 24913, anyone in the world can read it. The name is
-  anonymised; the words are not. So the room a player thinks is the private one
-  (two of you alone in the dark) is the one that broadcasts, and there is
-  currently no in-game hint of it. Two things to weigh when this comes up:
-  (a) whether `say` should stay on the wire at all, or whether only FIGHTS,
-  DEATHS and ARRIVALS should — speech is the one feed line that carries a
-  human's actual words rather than the world's events; and (b) if it stays,
-  the player should be *told* — a room whose speech is broadcast should say so,
-  the way the gatehouse says the opposite. Do not "fix" this quietly: a public
-  feed of overheard dungeon voices is also one of the most compelling things
-  about watching NOMAD from outside, and that tension is the actual design
-  question.
+- **`say` is public, and named. Nobody's told.** *(updated 2026-07-15 — the
+  mechanism CHANGED with the arena-feed ship.)* `say`/`shout` now go out under
+  the **player's OWN key** (kind 24914 via `speechOut`), no longer the
+  anonymised world key — the room copy is local (`toRelay=false`), but the wire
+  copy is signed by the speaker, in clear, their real npub. So a player thinks
+  two-of-you-alone-in-the-dark is private, and it's actually broadcast under
+  their name. The architecture question ((a) should speech be on the wire at
+  all) is effectively answered — it IS, and the public feed of overheard voices
+  is one of the most compelling things about watching NOMAD from outside. The
+  LIVE open end is (b): **the player should be told.** A room whose speech
+  broadcasts should say so, the way the gatehouse says the opposite. Don't fix
+  it by muting speech — fix it by disclosing it.
 - **Communication layer** — `tell` is the remaining gap (`shout` and
   sound-carries shipped). Most on-brand: async **notes / dead-drops** (a
   written scrap left in a room for whoever comes next). Low-tech, high-flavor.
@@ -345,9 +280,41 @@ Directions rome likes and wants held. Design only; no code until he says go.
   little — XSS, extensions, and disk malware all defeat it. The real walls are
   the textContent-only render path and the graduation paths. Revisit only if
   the client ever renders rich/user-URL content.
-- **Day/night** — nocturnal creatures, darker descriptions after dusk.
+- **World events — the long weather (days-to-a-week)** *(design, rome
+  2026-07-15; timed for JUST BEFORE the ~1000-room map expansion)*. Distinct
+  from the shipped ROOM events (events.ts — tide/fog/weather, minutes-scale,
+  ONE room): these are **world-scale and persist DAYS to a WEEK** — a condition
+  that colours the WHOLE dungeon for a stretch: a season, a siege, a plague, a
+  drought, a migration, a red moon. Purpose: a living calendar the world runs on
+  its own — a reason for a player to check in ("what's happening this week"),
+  and history the dungeon accumulates. Bigger map needs bigger weather: a
+  1000-room world wants events that SWEEP it, not just per-room drizzle. Likely
+  rides the existing daily cron (`schedule: 17 4 * * *`) to roll a world-event
+  start/stop each day, persisted across the day-boundary + offline-sim so it
+  survives restarts. Build the framework here; individual events are content.
 - More rooms/creatures for the Door — but content sprawl stays the enemy;
   systems first.
+- **SQL-rows for live state — the world-size ceiling fix** *(measured
+  2026-07-15; DO NOT build until approaching the ceiling — rome's call)*.
+  The whole live world (this.creatures + all ground maps) serialises into ONE
+  DO storage key `"sim"` (`persist()`, `storage.put("sim", …)`), and a single
+  DO value is capped at **128 KiB**. Measured live blob = **27.5 KB = 21% full**
+  at 110 rooms / 87 mob-spawns / 68 ground-spawns. Blob scales with LIVE
+  monsters + ground (~180 B/entity), NOT rooms → cap ≈ **~400 monsters + ~325
+  ground → ~500–700 rooms at today's 0.8-mob/room density** (a few thousand if
+  sparse; rooms themselves are free — D1/RAM). **Fix (when needed):** ZoneDO is
+  already `new_sqlite_classes`, so move creatures/ground out of the one blob
+  into DO **SQLite rows** (the 10 GB space), writing only DIRTY rows per persist
+  — *cheaper* than today's whole-blob rewrite, no extra cost on free tier if you
+  don't re-write every row every tick. Real cost = a careful save/load refactor
+  (riskiest code — lose state = lose the world), not money/perf. Beyond one
+  zone → shard into more zone-DOs (code already keys by `zone`). **Trigger:**
+  re-measure the blob (`SELECT length(value) FROM _cf_KV WHERE key='sim'` in the
+  DO's local sqlite; prod differs) and build this at ~**70% / ~90 KB / ~300
+  monsters** — not before. Blob also creeps up from undecayed litter (torches
+  and dropped gear have NO floor-drain — see loot economy); adding stray-item
+  drains buys headroom for free. Target ~1,000–1,500 dense rooms works TODAY
+  with no code change if monster density is kept ~0.3/room.
 
 ## Easter eggs (parked; an egg in a help file stops being an egg)
 

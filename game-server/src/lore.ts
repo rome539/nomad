@@ -186,14 +186,24 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
 }
 
 export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
-  const journal = session.items.find((c) => c.journalId);
-  if (!journal?.journalId) {
+  let journalId = session.items.find((c) => c.journalId)?.journalId ?? null;
+  // At a gate the lockbox and vault are within reach (the gatehouse is where you
+  // sit and READ), so pull the pages straight out of storage if it's not in the
+  // pack. Writing still wants it in hand — see cmdStudy; this is a read only.
+  if (!journalId && z.world!.entryRooms.has(session.roomId)) {
+    for (const key of ["lockbox", "vault"] as const) {
+      const held = await loadContainer(z.env.DB, session.pubkey, key);
+      const stored = held.find((c) => c.itemId === JOURNAL_ITEM && c.journalId);
+      if (stored?.journalId) { journalId = stored.journalId; break; }
+    }
+  }
+  if (!journalId) {
     const where = await whereIsJournal(z, session);
     return z.send(session, where === "stored"
       ? "Your journal's in the lockbox. Fetch it out to read or write in it."
       : "You carry no journal. The keeper sells them, fairly priced.");
   }
-  const rows = await journalLoad(z.env.DB, journal.journalId);
+  const rows = await journalLoad(z.env.DB, journalId);
   const world = z.world!;
   const entries = rows
     .map((r) => {

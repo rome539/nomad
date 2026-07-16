@@ -83,7 +83,8 @@ import {
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
   DARK_ROOMS,
-  LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE
+  LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE,
+  FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
@@ -1649,7 +1650,10 @@ export class ZoneDO implements DurableObject {
     const fresh = !victim.bleedTicks;
     victim.bleedTicks = BLEED_TICKS;
     victim.bleedDmg = Math.max(victim.bleedDmg ?? 0, tmpl.bleed);
-    if (fresh) this.send(victim, `${cap(tmpl.name)} tears you open — the wound won't stop on its own. (bind it, or bleed)`, "dmgin");
+    if (fresh) {
+      this.send(victim, `${cap(tmpl.name)} tears you open — the wound won't stop on its own. (bind it, or bleed)`, "dmgin");
+      this.actorFeed(victim, victim.roomId, this.feedProc(FEED_BLEED, tmpl.name, victim.name), "bleed");
+    }
   }
 
   // Leg-goers can hamstring you on a hit: a per-hit chance (HOBBLE_ODDS, tiered
@@ -1670,6 +1674,7 @@ export class ZoneDO implements DurableObject {
     victim.hobbled = true;
     victim.limpingSince = undefined; // a fresh wound — the drag-clear clock starts on your next flee
     this.send(victim, `${cap(tmpl.name)} rakes your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
+    this.actorFeed(victim, victim.roomId, this.feedProc(FEED_HOBBLE, tmpl.name, victim.name), "hobble");
   }
 
   // The vitals lottery — the Tarkov headshot. A rare, RANDOM killing hit that
@@ -1943,6 +1948,7 @@ export class ZoneDO implements DurableObject {
               if (weapon && weapon.tmpl.stun > 0 && !tmpl.is_boss && !creature.stunned && chance(weapon.tmpl.stun)) {
                 creature.stunned = true;
                 this.send(session, `${cap(tmpl.name)} reels, stunned.`, "stun");
+                this.actorFeed(session, session.roomId, this.feedProc(FEED_STUN, session.name, tmpl.name), "stun");
               }
               // A fast, cutting edge opens a wound that keeps weeping — damage
               // over time that no armor turns. Fresh hits keep it open. But the
@@ -1950,6 +1956,7 @@ export class ZoneDO implements DurableObject {
               if (weapon && weapon.tmpl.bleed > 0 && !hollow) {
                 creature.bleedTicks = BLEED_TICKS;
                 creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, weapon.tmpl.bleed);
+                if (freshBleed) this.actorFeed(session, session.roomId, this.feedProc(FEED_BLEED, session.name, tmpl.name), "bleed");
               }
               this.combatNoise(session.roomId);
               if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
@@ -2233,6 +2240,7 @@ export class ZoneDO implements DurableObject {
           if (tmpl.stun > 0 && !victim.stunned && chance(stunOdds)) {
             victim.stunned = true;
             this.send(victim, `${cap(tmpl.name)} lands like a falling stone — your skull rings and the room tilts.`, "stun");
+            this.actorFeed(victim, victim.roomId, this.feedProc(FEED_STUN, tmpl.name, victim.name), "stun");
           }
           // Eating a blow thins the mail a hair (provisional gear only).
           if (worn) await this.wear(victim, worn.carried, worn.tmpl, ARMOR_WEAR);
@@ -2895,7 +2903,9 @@ export class ZoneDO implements DurableObject {
               `${cap(tmpl.name)} falls, and the fight goes out of it.`,
               `You finish ${tmpl.name}.`]);
     this.send(killer, killLine ?? killVerb, vital ? "kill big vital" : "kill big");
-    this.actorFeed(killer, creature.roomId, `${killer.name} kills ${tmpl.name}.`);
+    // The crowd's copy: the same fall retold in the third person, and marked big
+    // (fx "vital") when a throat/heart/skull ended it — the colosseum sizes it.
+    this.actorFeed(killer, creature.roomId, this.feedKill(killer.name, tmpl, vital), vital ? "vital" : "kill");
     this.roomSound(creature.roomId, "Something falls {dir}, and is still.");
     this.creatureNoise(creature.roomId);
     // A cutpurse that died with your loot spills it here — chase it, catch it,
@@ -3884,7 +3894,20 @@ export class ZoneDO implements DurableObject {
       if (this.outOfWorld(s)) continue;
       try { s.ws.send(frame); } catch {}
     }
-    try { actor.ws.send(JSON.stringify({ v: 0, t: "fpub", room: roomId, text })); } catch {}
+    try { actor.ws.send(JSON.stringify({ v: 0, t: "fpub", room: roomId, text, fx: cls })); } catch {}
+  }
+
+  // The arena feed's third-person voice — a kill or a status proc retold for the
+  // crowd, capitalized to open a line. feedKill picks by HOW the thing goes down
+  // (hollow shatter / drowned sink / plain fall), or a vitals line when it earned
+  // one. feedProc points a status pool either way: {a} does it, {t} takes it.
+  public feedKill(killer: string, tmpl: MobTemplate, vital: boolean): string {
+    if (vital) return cap(pick(FEED_VITAL).replace("{k}", killer).replace("{n}", tmpl.name));
+    const kind = HOLLOW.has(tmpl.id) ? "hollow" : DROWNERS.has(tmpl.id) ? "drowner" : "plain";
+    return cap(pick(FEED_KILL[kind]).replace("{k}", killer).replace("{n}", tmpl.name));
+  }
+  public feedProc(pool: string[], actor: string, target: string): string {
+    return cap(pick(pool).replace("{a}", actor).replace("{t}", target));
   }
 
   // Outbound relay door: fire-and-forget, only when something happened —

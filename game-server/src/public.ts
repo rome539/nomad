@@ -1530,13 +1530,17 @@ async function publishTell(pk, text) {
 var FEED_KIND = 24913;
 var ARENA_TAG = "nomad-arena";
 var FEED_HOLD_MS = 15000;
-async function publishFeed(room, text) {
+async function publishFeed(room, text, fx) {
   if (!text) return;
   try {
+    var tags = [["t", ARENA_TAG], ["t", "mudroom-" + (room || "door")], ["v", "0"]];
+    // A combat deed carries how it landed (vital / bleed / stun / hobble / kill)
+    // so a spectator client can size and colour it without guessing from prose.
+    if (fx && fx !== "who") tags.push(["fx", String(fx)]);
     var evt = {
       kind: FEED_KIND,
       created_at: Math.floor(Date.now() / 1000),
-      tags: [["t", ARENA_TAG], ["t", "mudroom-" + (room || "door")], ["v", "0"]],
+      tags: tags,
       content: String(text),
     };
     var ev;
@@ -1705,7 +1709,7 @@ async function connect() {
     } else if (f.t === "tpub") {
       publishTell(f.to, f.text);    // a quiet word, sealed to them alone
     } else if (f.t === "fpub") {
-      publishFeed(f.room, f.text);  // your deed, your key — the arena broadcast
+      publishFeed(f.room, f.text, f.fx);  // your deed, your key — the arena broadcast
     } else if (f.t === "npost") {
       publishNote(f.text, f.atag);  // your brag, your key — a kind 1 in your own feed
     }
