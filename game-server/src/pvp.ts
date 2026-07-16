@@ -48,7 +48,7 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
   z.actorFeed(session, session.roomId,
     other.resting ? z.feedProc(FEED_REST_CAUGHT, session.name, other.name)
     : unaware ? `${session.name} falls on ${other.name} without warning!`
-    : `${session.name} turns on ${other.name}!`, "fight");
+    : `${session.name} turns on ${other.name}!`, "fight", true, other.pubkey); // the target reads the blow in their own log — don't echo the third-person account back to them
   z.combatNoise(session.roomId);
   await swingAt(z, session, other, { body: true, ambush: unaware });
   z.refreshRoomCtx(session.roomId);
@@ -229,7 +229,7 @@ async function swingAt(
   z.combatNoise(attacker.roomId);
   // A duel is rare and worth watching turn: the crowd sees the heavy blows land
   // (a crit, the ambush, the opening cashed in), not just the opener and the end.
-  if (big) z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_PVP_HIT, attacker.name, defender.name), "fight");
+  if (big) z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_PVP_HIT, attacker.name, defender.name), "fight", true, defender.pubkey);
   // A blunt weapon can ring the skull — one lost beat, never chained; the
   // padded coif takes the ring out of half of them.
   if (weapon && weapon.tmpl.stun > 0 && !defender.stunned) {
@@ -238,7 +238,7 @@ async function swingAt(
       defender.stunned = true;
       z.send(defender, `${attacker.name} lands like a falling stone — your skull rings and the room tilts.`, "stun");
       z.send(attacker, `${defender.name} reels, stunned.`, "stun");
-      z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_STUN, attacker.name, defender.name), "stun");
+      z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_STUN, attacker.name, defender.name), "stun", true, defender.pubkey);
     }
   }
   // A cutting edge opens a wound that keeps weeping — unless hide thick
@@ -250,7 +250,7 @@ async function swingAt(
       const fresh = !defender.bleedTicks;
       defender.bleedTicks = BLEED_TICKS;
       defender.bleedDmg = Math.max(defender.bleedDmg ?? 0, weapon.tmpl.bleed);
-      if (fresh) z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_BLEED, attacker.name, defender.name), "bleed");
+      if (fresh) z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_BLEED, attacker.name, defender.name), "bleed", true, defender.pubkey);
     }
   }
   // The man-catcher's PvP rule, exactly as written the day it was forged:
@@ -261,7 +261,7 @@ async function swingAt(
     defender.limpingSince = undefined;
     z.send(defender, `The barbs of ${offhand.tmpl.name} rake your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
     z.send(attacker, `The barbs catch ${defender.name}'s leg — they won't run clean now.`);
-    z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_HOBBLE, attacker.name, defender.name), "hobble");
+    z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_HOBBLE, attacker.name, defender.name), "hobble", true, defender.pubkey);
   }
   if (worn) await z.wear(defender, worn.carried, worn.tmpl, ARMOR_WEAR);
   if (weapon) await z.wear(attacker, weapon.carried, weapon.tmpl, WEAPON_WEAR);
@@ -279,7 +279,7 @@ export async function pvpKill(z: ZoneDO, killer: Session, victim: Session, killL
   // The crowd's copy — the victor named, under the killer's OWN key (a brag, not
   // the world snitching), sized big on a vitals kill. onPlayerDeath holds its
   // tongue for a PvP death, so this is the one line the feed carries for the fall.
-  z.actorFeed(killer, killer.roomId, z.feedPvpKill(killer.name, victim.name, vital), vital ? "vital" : "kill");
+  z.actorFeed(killer, killer.roomId, z.feedPvpKill(killer.name, victim.name, vital), vital ? "vital" : "kill", true, victim.pubkey);
   await z.onPlayerDeath(victim, null, killer.name);
 }
 

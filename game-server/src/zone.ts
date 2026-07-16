@@ -3895,10 +3895,14 @@ export class ZoneDO implements DurableObject {
   // client is NOT handed the fpub, so it never rides the wire to the colosseum. Used
   // for the redundant "arrives" (the "leaves <dir>" line already tells the move, with
   // a direction) — halves movement traffic without dimming in-room awareness.
-  public actorFeed(actor: Session, roomId: string, text: string, cls?: string, toRelay = true): void {
+  // alsoSkip drops a SECOND person from the in-room echo (never the relay): a PvP
+  // narration line ("X catches Y square") is a spectator's third-person account —
+  // both fighters already read the blow in their own first/second-person combat, so
+  // echoing it back to the DEFENDER just doubles their log. Bystanders still see it.
+  public actorFeed(actor: Session, roomId: string, text: string, cls?: string, toRelay = true, alsoSkip?: string): void {
     const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: roomId, text, cls } : { v: 0, kind: 24913, room: roomId, text });
     for (const s of this.sessions.values()) {
-      if (s.roomId !== roomId || s.pubkey === actor.pubkey) continue;
+      if (s.roomId !== roomId || s.pubkey === actor.pubkey || s.pubkey === alsoSkip) continue;
       if (this.outOfWorld(s)) continue;
       try { s.ws.send(frame); } catch {}
     }
@@ -3910,17 +3914,17 @@ export class ZoneDO implements DurableObject {
   // (hollow shatter / drowned sink / plain fall), or a vitals line when it earned
   // one. feedProc points a status pool either way: {a} does it, {t} takes it.
   public feedKill(killer: string, tmpl: MobTemplate, vital: boolean): string {
-    if (vital) return cap(pick(FEED_VITAL).replace("{k}", killer).replace("{n}", tmpl.name));
+    if (vital) return cap(pick(FEED_VITAL).replaceAll("{k}", killer).replaceAll("{n}", tmpl.name));
     const kind = HOLLOW.has(tmpl.id) ? "hollow" : DROWNERS.has(tmpl.id) ? "drowner" : "plain";
-    return cap(pick(FEED_KILL[kind]).replace("{k}", killer).replace("{n}", tmpl.name));
+    return cap(pick(FEED_KILL[kind]).replaceAll("{k}", killer).replaceAll("{n}", tmpl.name));
   }
   public feedProc(pool: string[], actor: string, target: string): string {
-    return cap(pick(pool).replace("{a}", actor).replace("{t}", target));
+    return cap(pick(pool).replaceAll("{a}", actor).replaceAll("{t}", target)); // replaceAll: a pool line may name {t} twice
   }
   // Wanderer-on-wanderer kill, retold for the crowd (person pronouns). Named:
   // the arena feed credits the victor (rome, 2026-07-16). {k} kills, {v} falls.
   public feedPvpKill(killer: string, victim: string, vital: boolean): string {
-    return cap(pick(vital ? FEED_PVP_VITAL : FEED_PVP_KILL).replace("{k}", killer).replace("{v}", victim));
+    return cap(pick(vital ? FEED_PVP_VITAL : FEED_PVP_KILL).replaceAll("{k}", killer).replaceAll("{v}", victim));
   }
 
   // Outbound relay door: fire-and-forget, only when something happened —
