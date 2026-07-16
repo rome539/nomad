@@ -1570,16 +1570,44 @@ export const FEED_VITAL: string[] = [
 ];
 // Status procs, retold for the crowd — pointed either way (a wanderer's edge, or
 // a beast's claws). {a} acts, {t} suffers; the line is capitalized on send.
+// Pronoun-safe: the trailing clause never says "it"/"they" (the target can be a
+// mob OR a wanderer, and either subject would misread) — it names {t} or drops out.
 export const FEED_STUN: string[] = [
-  "{a} rings {t} senseless — it reels, a beat lost.",
-  "{a} lands like a falling stone; {t} staggers, head ringing.",
+  "{a} rings {t} senseless — a beat lost.",
+  "{a} lands like a falling stone; {t} staggers, ears ringing.",
 ];
 export const FEED_BLEED: string[] = [
   "{a} opens a wound on {t} that won't clot on its own.",
   "{a} cuts {t} deep, and the blood starts to run.",
 ];
 export const FEED_HOBBLE: string[] = [
-  "{a} rakes {t}'s leg out from under it — no clean run now.",
-  "{a} hamstrings {t}; it drags a bad leg from here.",
+  "{a} rakes the leg out from under {t} — no clean run now.",
+  "{a} hamstrings {t} — a dragging leg from here on.",
+];
+// Wanderer-on-wanderer, retold for the crowd. The arena feed NAMES the victor
+// (rome, 2026-07-16) — the opener already outs the aggressor, and a kill under
+// the killer's own key is a self-published brag, not the world snitching. These
+// use person pronouns (they/them), unlike the mob-facing FEED_KILL/FEED_VITAL.
+//   {k} = the killer   {v} = the fallen
+export const FEED_PVP_KILL: string[] = [
+  "{k} cuts {v} down.",
+  "{k} puts {v} down on the stones.",
+  "{k} drops {v} where they stand.",
+  "{k} finishes {v}, and the fight goes out of them.",
+];
+export const FEED_PVP_VITAL: string[] = [
+  "{k} opens {v}'s throat — they drop in a spray of red.",
+  "{k} drives the point clean through {v}; they fold and lie still.",
+  "{k} finds the gap, and {v} is dead before they land.",
+  "{k} caves in {v}'s skull with one dead blow.",
+  "{k} runs {v} through the heart — over in a breath.",
+];
+// A heavy, telling blow mid-duel (a crit, an ambush landed, or one that cashed
+// an opening) — so the crowd watches the fight turn, not just its end. Fed only
+// in PvP (a duel is rare and worth the detail); {a} lands it, {t} takes it.
+export const FEED_PVP_HIT: string[] = [
+  "{a} catches {t} square — a heavy blow lands.",
+  "{a} staves {t} while they're wide open.",
+  "{a} lands a hard one on {t}, and {t} gives ground.",
 ];
 

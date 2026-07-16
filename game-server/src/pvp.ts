@@ -19,7 +19,7 @@ import {
   PADDED, PADDED_STUN_MULT, ARMOR_WEAR, WEAPON_WEAR, THORNS, PARRY_RIPOSTE,
   MANCATCHER, MANCATCHER_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE, WARDHIDE_WOUND_ODDS,
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
-  FEED_STUN, FEED_BLEED, FEED_HOBBLE,
+  FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_HIT,
 } from "./zone-data";
 
 // How hurt the other one looks — the same buckets as selfExamine, because
@@ -47,7 +47,7 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
   if (!other.pvpTarget) other.pvpTarget = session.pubkey; // steel answers steel
   z.actorFeed(session, session.roomId, unaware
     ? `${session.name} falls on ${other.name} without warning!`
-    : `${session.name} turns on ${other.name}!`);
+    : `${session.name} turns on ${other.name}!`, "fight");
   z.combatNoise(session.roomId);
   await swingAt(z, session, other, { body: true, ambush: unaware });
   z.refreshRoomCtx(session.roomId);
@@ -226,6 +226,9 @@ async function swingAt(
   z.send(defender, `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${opts.ambush ? " — you never saw it coming" : critVic}${openVic}. [${defender.hp}/${defender.maxHp} hp]`, big ? "dmgin big" : "dmgin");
   z.sendStatus(defender);
   z.combatNoise(attacker.roomId);
+  // A duel is rare and worth watching turn: the crowd sees the heavy blows land
+  // (a crit, the ambush, the opening cashed in), not just the opener and the end.
+  if (big) z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_PVP_HIT, attacker.name, defender.name), "fight");
   // A blunt weapon can ring the skull — one lost beat, never chained; the
   // padded coif takes the ring out of half of them.
   if (weapon && weapon.tmpl.stun > 0 && !defender.stunned) {
@@ -272,6 +275,10 @@ export async function pvpKill(z: ZoneDO, killer: Session, victim: Session, killL
   await recordPvpKill(z.env.DB, killer.pubkey);
   markBlood(z, killer);
   z.send(killer, killLine ?? `You put ${victim.name} down.`, vital ? "dmgout big vital" : "dmgout big");
+  // The crowd's copy — the victor named, under the killer's OWN key (a brag, not
+  // the world snitching), sized big on a vitals kill. onPlayerDeath holds its
+  // tongue for a PvP death, so this is the one line the feed carries for the fall.
+  z.actorFeed(killer, killer.roomId, z.feedPvpKill(killer.name, victim.name, vital), vital ? "vital" : "kill");
   await z.onPlayerDeath(victim, null, killer.name);
 }
 

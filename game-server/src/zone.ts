@@ -84,7 +84,7 @@ import {
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
   DARK_ROOMS,
   LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE,
-  FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE
+  FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
@@ -3100,13 +3100,16 @@ export class ZoneDO implements DurableObject {
     // The relay hears that someone died — never who did it. The killer's name
     // is spoken only into the room itself (witnesses are eyes, not feeds);
     // everywhere else the evidence is the blood on their hands (pvp.bloodClause).
-    const slainBy = slayerName ? "" : ` by ${slayer}`;
-    this.actorFeed(
+    // For a PvP kill the KILLER publishes the credited line (pvpKill → feedPvpKill),
+    // so the victim's own death line stays off the feed — no bland doubled "is
+    // slain." An environmental/creature death still narrates itself here, naming
+    // the beast that did it (a creature is not a wanderer — no anti-snitch owed).
+    if (!slayerName) this.actorFeed(
       victim,
       fell,
       scattered.length > 0
-        ? `${victim.name} is slain${slainBy}. Their pack scatters across the stones${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
-        : `${victim.name} is slain${slainBy}.`,
+        ? `${victim.name} is slain by ${slayer}. Their pack scatters across the stones${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
+        : `${victim.name} is slain by ${slayer}.`,
     );
     if (slayerName) this.roomFeed(fell, `${slayerName} stands over the body.`, victim.pubkey, false);
     this.roomSound(fell, "A scream, cut short, {dir}.");
@@ -3908,6 +3911,11 @@ export class ZoneDO implements DurableObject {
   }
   public feedProc(pool: string[], actor: string, target: string): string {
     return cap(pick(pool).replace("{a}", actor).replace("{t}", target));
+  }
+  // Wanderer-on-wanderer kill, retold for the crowd (person pronouns). Named:
+  // the arena feed credits the victor (rome, 2026-07-16). {k} kills, {v} falls.
+  public feedPvpKill(killer: string, victim: string, vital: boolean): string {
+    return cap(pick(vital ? FEED_PVP_VITAL : FEED_PVP_KILL).replace("{k}", killer).replace("{v}", victim));
   }
 
   // Outbound relay door: fire-and-forget, only when something happened —
