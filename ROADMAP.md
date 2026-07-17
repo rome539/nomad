@@ -74,8 +74,8 @@ and the population layer that only real players can fill.*
   piles must be reclaimable, scavengers eye it, the engraving rides it. If
   floor-gear litter ever reads as a problem in play, it's a watch-list item,
   not a law.
-- **Rare torch spawn — THE LONGBRAND** *(BUILT 2026-07-17, pending ship —
-  migration 088 local-only)*. The clean parallel won: a much **longer burn**
+- **Rare torch spawn — THE LONGBRAND** *(SHIPPED `e1537f7` 2026-07-17,
+  migration 088 local + remote)*. The clean parallel won: a much **longer burn**
   (`BRAND_BURN_MS` = 25 min, 2.5× a torch), still an OPEN flame (fire-fear
   wakes, weather drowns, cold pinches — litSource stays "torch" so every
   downstream system reads it unchanged). Minted on the hammerstone's dice law
@@ -336,8 +336,8 @@ Directions rome likes and wants held. Design only; no code until he says go.
   survives restarts. Build the framework here; individual events are content.
 - More rooms/creatures for the Door — but content sprawl stays the enemy;
   systems first.
-- **SQL-rows for live state — the world-size ceiling fix** *(BUILT 2026-07-17
-  on rome's call, pending ship — `simstore.ts`)*. The sim now sleeps in the
+- **SQL-rows for live state — the world-size ceiling fix** *(SHIPPED `e1537f7`
+  2026-07-17 — `simstore.ts`; prod migrated itself on first wake, clean tail)*. The sim now sleeps in the
   DO's own SQLite (`sim_kv`): one row per creature, one per room-with-a-floor,
   one per singleton — the 128 KiB one-blob ceiling is gone (10 GB space).
   Saves are dirty-diffed in one transaction (usually cheaper than the old

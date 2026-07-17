@@ -1545,6 +1545,7 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
 export const AMBIENT_COOLDOWN_MS = 150_000; // at most one breath of atmosphere this often, per wanderer
 export const AMBIENT_ODDS = 0.16;          // ~per 2s tick, once off cooldown
 export const RECONNECT_GRACE_MS = 5 * 60_000; // a re-weave within this of dropping is a reconnect, not a fresh arrival
+export const SEAMLESS_RECONNECT_MS = 45_000; // a re-weave THIS fast is invisible: the world resyncs the HUD (status + chips) and says nothing — no greeting, no room reprint, no scroll churn. Matches LINKDEAD_MS: the body literally never left the world. Slower reconnects (up to RECONNECT_GRACE_MS) still get the gentle "take up the thread" welcome + a brief room.
 
 // ---- THE GATEHOUSE (rome, 2026-07-13) ----
 // The gate is the DOOR. The gatehouse is the sanctuary behind it, and until now

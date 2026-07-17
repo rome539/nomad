@@ -1648,8 +1648,18 @@ var retryMs = 1000;
 var hbTimer = null; // keepalive: a bare "ping" every 25s the server auto-answers
                     // "pong" without waking the Durable Object — stops NAT/proxy
                     // idle-timeouts from reaping a quiet socket.
+var sessionToken = null; // the gate token, kept between reweaves. It's good for a
+                         // week, so a dropped wire reconnects on the token we
+                         // already hold: no /auth round-trip, and — the real win —
+                         // no signer popup on every blip (login() signs an event).
+var frayTold = false;    // did we already show the "frays" line for this outage?
+var frayTimer = null;    // holds that line back until an outage actually lasts
+var failedOpens = 0;     // reweaves that never opened; enough of them and the
+                         // cached token is suspect, so we force a fresh login
+var FRAY_QUIET_MS = 3000;// a reweave that recovers faster than this stays unseen
 
 async function connect() {
+  if (ws && ws.readyState === 0) return; // a connect is already in flight
   profileTried = false;
   if (method === "ext" && !window.nostr) {
     print("— your key extension is not answering; entering with the pocket keys —", "sys");
@@ -1658,15 +1668,25 @@ async function connect() {
   if (method === "bunker" && !localStorage.getItem("nomad_bunker_session")) {
     method = "guest";
   }
-  var token;
-  try { token = await login(); }
-  catch (e) { print("— the gate does not answer (" + e.message + "); retrying —", "sys"); return scheduleRetry(); }
+  // Reuse the gate token across reweaves; only a missing/rejected one pays for a
+  // login (and, for extension/bunker keys, a signature prompt).
+  var usedCached = !!sessionToken;
+  var token = sessionToken;
+  if (!token) {
+    try { token = await login(); sessionToken = token; }
+    catch (e) { print("— the gate does not answer (" + e.message + "); retrying —", "sys"); return scheduleRetry(); }
+  }
 
   var proto = location.protocol === "https:" ? "wss://" : "ws://";
+  var opened = false;
   ws = new WebSocket(proto + location.host + "/ws?token=" + encodeURIComponent(token));
 
   ws.onopen = function () {
-    retryMs = 1000;
+    opened = true;
+    failedOpens = 0;
+    retryMs = 300; // the first reweave after a good run retries near-instantly
+    if (frayTimer) { clearTimeout(frayTimer); frayTimer = null; }
+    if (frayTold) { print("— the thread holds; you are back —", "sys"); frayTold = false; }
     clearInterval(hbTimer);
     hbTimer = setInterval(function () { if (ws && ws.readyState === 1) ws.send("ping"); }, 25000);
   };
@@ -1721,8 +1741,30 @@ async function connect() {
   // whole DO aborted); 1001 = the far side went away cleanly.
   ws.onclose = function (e) {
     clearInterval(hbTimer); closeBench(); closeTrade(); closeMap(); closeJournal();
-    var why = e && e.code ? " (" + e.code + (e.reason ? ": " + e.reason : "") + ")" : "";
-    print("— the connection frays" + why + "; reweaving —", "sys");
+    // You opened this wanderer in another tab or on another device: the server
+    // hands the body over and closes THIS socket on purpose (1000 "reconnected").
+    // Don't fight it — reconnecting here would yank the body back and forth.
+    if (e && e.code === 1000 && e.reason === "reconnected") {
+      print("— your spirit is called to another window; this one goes still —", "sys");
+      ws = null;
+      return;
+    }
+    if (!opened) failedOpens++;
+    // The token is good for a week, so a failure to open is almost always a dead
+    // wire, not a bad token — keep the token (and skip the signer prompt) through
+    // any normal outage. Only a LONG run of failures (~9s of retries) suggests a
+    // genuinely stale token; then drop it so the next try logs in clean. A real
+    // outage that trips this just pays one login when the wire finally returns.
+    if (usedCached && failedOpens >= 5) { sessionToken = null; failedOpens = 0; }
+    // Hold the "frays" line back: a reweave that recovers before the timer fires
+    // stays invisible. Only a real, lasting outage announces itself.
+    if (!frayTold && !frayTimer) {
+      frayTimer = setTimeout(function () {
+        frayTimer = null; frayTold = true;
+        var why = e && e.code ? " (" + e.code + (e.reason ? ": " + e.reason : "") + ")" : "";
+        print("— the connection frays" + why + "; reweaving —", "sys");
+      }, FRAY_QUIET_MS);
+    }
     scheduleRetry();
   };
 }
@@ -1825,6 +1867,12 @@ function localCmd(text) {
 function reconnect() {
   // Identity is changing: forget the old session's face immediately so the
   // bar and panel never mix the previous name with the next keys.
+  // Drop the cached gate token too — it's minted for the OLD keys; reusing it
+  // would reconnect as the wanderer we're leaving. Force a fresh login.
+  sessionToken = null;
+  frayTold = false;
+  if (frayTimer) { clearTimeout(frayTimer); frayTimer = null; }
+  failedOpens = 0;
   lastName = "";
   lastNamed = false;
   nameHint = null;

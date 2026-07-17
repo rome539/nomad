@@ -82,7 +82,7 @@ import {
   SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
-  DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS,
+  DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
   DARK_ROOMS,
@@ -523,10 +523,15 @@ export class ZoneDO implements DurableObject {
     // full welcome and the full room.
     const left = this.leftAt.get(pubkey);
     const reconnecting = !created && left !== undefined && Date.now() - left < RECONNECT_GRACE_MS;
+    // A very fast reweave (a wifi hop, a tunnel) is made INVISIBLE: the HUD is
+    // resynced (status + ctx, below) but nothing is written to the scroll — no
+    // greeting, no room reprint. You never notice you dropped. Slower returns
+    // still get the welcome. The client suppresses its own "frays" line to match.
+    const seamless = reconnecting && left !== undefined && Date.now() - left < SEAMLESS_RECONNECT_MS;
     this.leftAt.delete(pubkey);
 
     if (reconnecting) {
-      this.send(session, "— you take up the thread of the Door again —");
+      if (!seamless) this.send(session, "— you take up the thread of the Door again —");
     } else {
       this.send(session, `NOMAD — the Door. You are ${session.name}.`);
       if (created) {
@@ -557,7 +562,7 @@ export class ZoneDO implements DurableObject {
       session.stepText = true;
       session.visited.add(session.roomId);
       this.sendStatus(session);
-      this.send(session, gate.describeGatehouse(this, session));
+      if (!seamless) this.send(session, gate.describeGatehouse(this, session));
       this.sendCtx(session);
       await this.persist();
       await this.ensureAlarm();
@@ -568,7 +573,7 @@ export class ZoneDO implements DurableObject {
     // knows the room's name in time to paint it gold.
     session.visited.add(session.roomId);
     this.sendStatus(session);
-    this.send(session, this.describeRoom(session, !reconnecting));
+    if (!seamless) this.send(session, this.describeRoom(session, !reconnecting));
     this.sendCtx(session);
     await ai.provokeGrudges(this, session, false); // reconnect grace: no free first strike
     await this.persist();
