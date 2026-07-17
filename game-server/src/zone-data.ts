@@ -140,6 +140,11 @@ export const VAULT_CAP = 50; // the bank — deep, generous, sealed wealth only
 // (The reliquary is spared it — see cmdUnlock: a boss-and-black-key box that
 // duds is cruelty, not mischief.)
 export const CACHE_EMPTY_ODDS = 0.15;
+// A WORD OF THE BOXES (086): the keeper's rumor good. Bought like any stock,
+// but delivered as SPEECH — he names the room where a roaming strongbox sits
+// right now, and nothing enters the pack. The roam was the chests' best trick
+// and their most invisible one; the word makes it legible, for a price.
+export const BOX_WORD = "box-word";
 // A sentinel chip: the client intercepts it and opens the keeping modal
 // (pack + lockbox, plus vault & seal at a gate) instead of sending it as a
 // command (see renderChips). It rides on the 'inventory' chip — tapping opens
@@ -357,6 +362,11 @@ export const BANDAGE_FRACTION = 0.5;
 // Traces: the world's memory, decaying at each kind's own pace.
 export const TRACE_LIFE_MS: Record<string, number> = {
   blood: 6 * 3_600_000,
+  // The walking wound's trail: shorter-lived than a death's pool — a trail is
+  // hunt-fresh intelligence, not an archive. (Bleeds clot in a few ticks, so a
+  // trail is a handful of rooms; 45 min keeps it followable, then the stones
+  // forget.)
+  drip: 45 * 60_000,
   remains: 12 * 3_600_000, // bone and broken armor outlast a bloodstain
   scraps: 6 * 3_600_000,
   rest: 3 * 3_600_000,
@@ -484,6 +494,14 @@ export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rar
 // SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing
 // and — past BOLD — losing their nerve entirely: they stop fleeing and hit harder.
 export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena"]);
+// THE NOSE (rome, 2026-07-17): a scavenger with nothing better to do drifts
+// toward fresh blood next door — a drip trail (a wounded thing that walked
+// through) or a kill's pool. Odds-gated so it's a drift, not a magnet; the
+// freshness window keeps them off stale archaeology. Emergence for free:
+// bleeding + traces + the existing `curious` walk = run wounded and the
+// dungeon can follow you home.
+export const SCENT_FRESH_MS = 15 * 60_000; // blood younger than this pulls
+export const SCENT_HEED_ODDS = 0.6; // per wander beat, when fresh blood is adjacent
 // The mean subtype GUARDS its meal: walk into a room where it's on a corpse
 // (or where it's already gorged bold) and it turns on you unprovoked. It also
 // hits harder and holds a grudge longer — a far worse thing to disturb.
@@ -1229,6 +1247,28 @@ export const TORCH_BURN_MS = 10 * 60_000; // a lit torch throws light this long,
 export const LANTERN_ITEM = "hooded-lantern";
 export const LANTERN_BURN_MS = 30 * 60_000;
 export const LANTERN_WEAR = 20;
+// The longbrand (088): the rare torch — the hammerstone's pattern on fire.
+// Garrison-made for the night watch: heartwood dipped and dipped again until
+// the pitch sealed, it burns BRAND_BURN_MS — two and a half torches on one
+// spark — and it is still an OPEN flame (fire-fear wakes, weather drowns it,
+// litSource stays "torch"). Better at a torch's one job; nothing else.
+// No fixed spawns (the hammerstone's law: no spot to farm): the world rolls
+// on its own cadence and sometimes coughs one up into fire-keeping country —
+// hearths, watch posts, the places the garrison kept its light. The seal
+// keeps the damp out too: a strayed brand never sods (strayTorch is
+// TORCH_ITEM-only, on purpose). It doesn't stack against PACK_TORCH_CAP —
+// the cap rations the common stick, and the world only ever holds one brand.
+export const BRAND_ITEM = "longbrand";
+export const BRAND_BURN_MS = 25 * 60_000;
+export const BRAND_HAUNTS = [
+  "the-cold-hearth", "smokehouse", "guardroom", "warden-post",
+  "the-watch-turret", "the-wall-walk", "barracks", "the-buried-chapel",
+  "scriptorium", "the-bell-cote",
+];
+export const BRAND_GROUND_CAP = 1; // at most one lying unfound — rare stays rare
+export const BRAND_ROLL_MIN_MS = 3 * 3_600_000; // the world checks every 3–6h...
+export const BRAND_ROLL_MAX_MS = 6 * 3_600_000;
+export const BRAND_MINT_ODDS = 0.25;            // ...and 1 check in 4 mints — ~1 a day, on dice
 
 // ---- gear traits (the 045 audit expansion): properties, not bigger numbers ----
 // Every trait is a one-line hook into a system the simulation already runs.

@@ -26,7 +26,7 @@ import {
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
   DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS,
 } from "./zone-data";
-import { gatehouseFeed } from "./gate";
+import { gatehouseFeed, throughTheDoor } from "./gate";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
 export function cmdXyzzy(z: ZoneDO, session: Session): void {
@@ -598,6 +598,12 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const from = session.roomId;
   session.roomId = exit.to_room;
   z.addTrace(session.roomId, { kind: "passage", at: Date.now() });
+  // An open wound walks with you: every room you cross while bleeding takes a
+  // drip trail — huntable (a scavenger's nose drifts to it), and readable by
+  // anyone who looks. Run wounded and the dungeon can follow you home.
+  if ((session.bleedTicks ?? 0) > 0) {
+    z.addTrace(session.roomId, { kind: "drip", at: Date.now(), label: session.name });
+  }
   // Past the black door, going DOWN: every engraved piece carried writes a
   // descent into its ledger. The walk into the deep is a deed the steel keeps.
   if (`${from}:${dir}` === DEEP_DOOR_KEY) {
@@ -684,7 +690,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // (cmdDrop's counterpart, or a dead hand's). Taking it up puts what's LEFT of
   // its burn back in your hand and the room goes back to needing it. Matched
   // only when no unlit torch actually lies here (that one is ordinary loot).
-  if (!itemId && z.roomLit(session.roomId) && /\b(torch|light|flame|fire)\b/i.test(arg)) {
+  if (!itemId && z.roomLit(session.roomId) && /\b(torch|brand|light|flame|fire)\b/i.test(arg)) {
     if (z.carriesLight(session)) return z.send(session, "Your hand already holds a light — leave this one burning where it is.");
     const inHand = z.equippedItem(session, "weapon");
     if (inHand && TWO_HANDED.has(inHand.tmpl.id)) {
@@ -799,7 +805,7 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
   // on the stone, where it keeps burning and lights the room for EVERYONE in it
   // until it guts out. (A lantern isn't shared this way; its light just goes out
   // when it leaves your hand — drop the lantern ITEM as normal.)
-  if (light.carriesLight(session) && session.litSource === "torch" && /\b(torch|light|flame|fire)\b/i.test(arg)) {
+  if (light.carriesLight(session) && session.litSource === "torch" && /\b(torch|brand|light|flame|fire)\b/i.test(arg)) {
     z.groundTorch.set(session.roomId, Math.max(z.groundTorch.get(session.roomId) ?? 0, session.litUntil!));
     session.litUntil = undefined; session.litSource = undefined; session.torchWarned = false;
     z.send(session, "You set the burning torch down on the stone; it keeps guttering there, throwing its light across the room.", "gain");
@@ -1046,8 +1052,14 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   if (atGate) {
     const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
     out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, "vault")}/${VAULT_CAP} sealed):`)); // fungibles ride free in the vault
-    z.enterStep(session, "sorting"); // step out to sort, safe in the gatehouse
-    out.push("('stash'/'unstash'/'vault' to move things; 'look' steps you back into the world.)");
+    // The front door rule: the keeping is laid out INSIDE the gatehouse — from
+    // the gate room this walks you through the door first (announced, HUD
+    // flipped), never a private step-out at the arch (rome, 2026-07-17).
+    const walkedIn = !z.outOfWorld(session);
+    throughTheDoor(z, session);
+    z.enterStep(session, "sorting"); // lateral to the bench
+    if (walkedIn) out.unshift("You push in out of the cold and lay your kit out on the bench.");
+    out.push("('stash'/'unstash'/'vault' to move things; 'out' steps you back into the world.)");
   } else {
     out.push("(The deep keep waits at the gates. 'stash'/'unstash' move things to the lockbox that rides with you.)");
   }

@@ -14,7 +14,7 @@ import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord } from "./zone-util";
 import { SCRAP_ID, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS,
-  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS } from "./zone-data";
+  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD } from "./zone-data";
 import { parse } from "./parser";
 import { mapRegionOf } from "./lore";
 import { dropCarried, describePlayer, lookKeepingItem } from "./verbs";
@@ -24,7 +24,10 @@ export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promis
   const bar = z.benchGuard(session, "forge work");
   if (bar) return z.send(session, bar);
   if (!world.forgeRecipes.length) return z.send(session, "The brazier is cold and the recipe slate is blank.");
-  z.enterStep(session, "forging"); // safe at the brazier until you step away
+  const walkedIn = !z.outOfWorld(session);
+  throughTheDoor(z, session); // the brazier is inside — the door comes first
+  z.enterStep(session, "forging"); // then a lateral step to the bench
+  if (walkedIn) z.send(session, "You push in out of the cold and stir the brazier to life.");
   if (!arg) {
     const lines = ["The bench's recipe book, chalked on slate:"];
     for (const r of [...world.forgeRecipes].sort((a, b) => a.scrap - b.scrap)) {
@@ -34,7 +37,7 @@ export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promis
       lines.push(`  ${t.name}${z.itemStat(t)} [${t.rarity}] — ${r.scrap} scrap iron${mat}`);
     }
     const scrap = z.countLooseIn(await z.gatePools(session), SCRAP_ID);
-    lines.push(`(You have ${scrap} scrap iron between pack and keeping. 'forge <thing>' to work one. Salvage feeds the pile. 'look' steps you back into the world.)`);
+    lines.push(`(You have ${scrap} scrap iron between pack and keeping. 'forge <thing>' to work one. Salvage feeds the pile. 'out' steps you back into the world.)`);
     return z.send(session, lines.join("\n"));
   }
   const recipe = world.forgeRecipes.find((r) => {
@@ -101,24 +104,14 @@ export async function handleForge(z: ZoneDO, session: Session, frame: any): Prom
   const world = z.world!;
   const action = frame?.action;
   if (action === "open") {
-    const lateral = z.outOfWorld(session); // the brazier is a fixture of the room you're standing in
+    const lateral = z.outOfWorld(session); // the brazier is a fixture of the gatehouse
     if (session.away && !lateral) return; // one step-out at a time (mid-dungeon crouch)
     const bar = forgeGuard(z, session);
     if (bar) return z.send(session, bar);
-    if (lateral) {
-      z.enterStep(session, "forging"); // swap stance; the gate outside hears nothing new
-      return sendForge(z, session);
-    }
-    session.away = true;
-    session.forging = true;
-    // Rest survives a trip to the forge — stepping out pauses the healing (the
-    // tick gates on !away), and closing the modal resumes it.
-    session.target = null;
-    for (const c of z.creatures.values()) {
-      if (c.target === session.pubkey) c.target = null;
-    }
-    z.roomFeed(session.roomId, `${session.name} steps to the bench and stirs the brazier to life.`, session.pubkey, false);
-    z.refreshRoomCtx(session.roomId);
+    // The front door rule: from the gate room this walks you INSIDE first (a
+    // real, announced entry), then steps to the brazier. From inside, a lateral.
+    throughTheDoor(z, session);
+    z.enterStep(session, "forging");
     return sendForge(z, session);
   }
   if (!session.forging) return;
@@ -213,12 +206,28 @@ export function tickFence(z: ZoneDO, now: number): void {
   z.fenceOut.set(gone.itemId, now + randInt(FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS));
 }
 
+// THE FRONT DOOR RULE (rome, 2026-07-17): the hatch, the brazier and the bench
+// are fixtures INSIDE the gatehouse — typing (or tapping) one from the gate
+// room must not conjure a private step-out at the arch. This walks you through
+// the door first: a real entry — announced on both sides, HUD flipped — and
+// then the counter is a lateral step from the fire. No-op if you're already in.
+// Combat is refused upstream (fence/bench/forge guards + the door's own rule).
+export function throughTheDoor(z: ZoneDO, session: Session): void {
+  if (z.outOfWorld(session)) return;
+  z.enterStep(session, "gatehouse"); // away + inGatehouse; the gate hears the door shut
+  z.sendStatus(session); // the HUD reads "The Gatehouse" the moment you're in
+  gatehouseFeed(z, `${session.name} pushes in out of the cold.`, session.pubkey, "who");
+}
+
 export function cmdBarter(z: ZoneDO, session: Session): void {
   const world = z.world!;
   const bar = fenceGuard(z, session);
   if (bar) return z.send(session, bar);
   if (!world.fenceStock.length) return z.send(session, "The hatch is shuttered, and stays that way.");
-  z.enterStep(session, "trading"); // safe at the counter until you step away
+  const walkedIn = !z.outOfWorld(session);
+  throughTheDoor(z, session); // the hatch is inside — the door comes first
+  z.enterStep(session, "trading"); // then a lateral step up to the counter
+  if (walkedIn) z.send(session, "You push in out of the cold and step up to the keeper's hatch.");
   const lines = ["The keeper unshutters the hatch and lays out what he'll part with:"];
   const bare: string[] = [];
   for (const s of [...world.fenceStock].sort((a, b) => a.cost - b.cost)) {
@@ -230,7 +239,7 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
   if (bare.length) {
     lines.push(`Bare shelf-space where ${bare.join(", ")} would sit. "Come back later," he says, to nobody in particular.`);
   }
-  lines.push("He deals in kind — bones, teeth, oddments. 'buy <thing>' starts a trade; 'offer <thing>' pays until he's square. He gives no change. ('look' steps you back into the world.)");
+  lines.push("He deals in kind — bones, teeth, oddments. 'buy <thing>' starts a trade; 'offer <thing>' pays until he's square. He gives no change. ('out' steps you back into the world.)");
   return z.send(session, lines.join("\n"));
 }
 
@@ -354,6 +363,21 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
       if (t) lastOnes.push(t.name);
     }
     const bought = world.itemTemplates.get(w.itemId)!;
+    // A WORD OF THE BOXES is not goods — the keeper sells what he's heard.
+    // He names the room where a roaming strongbox sits RIGHT NOW (a locked one
+    // when any is; a sprung one is still a mark worth walking toward — iron
+    // rests, and the box refills where it hides). Spoken, not slid: nothing
+    // enters the pack, so a full pack never spills a rumor on the floor.
+    if (bought.id === BOX_WORD) {
+      const roamers = world.caches.filter((c) => z.cacheRoams(c));
+      const lockedOnes = roamers.filter((c) => z.cacheLocked(c));
+      const mark = lockedOnes.length ? pick(lockedOnes) : pick(roamers);
+      const rn = world.rooms.get(z.cacheRoomId(mark))?.name ?? "a room he won't name twice";
+      const set = z.cacheLocked(mark);
+      z.send(session, `The keeper leans to the hatch, voice dropped low: "${cap(mark.name)} sits in ${rn}${set ? ", lock still set" : " — sprung and bare just now, but iron rests, and it fills where it hides"}. You didn't hear it here."`, "study");
+      slid.push("a word of the boxes — spoken, and not sold twice");
+      continue;
+    }
     const jid = bought.id === JOURNAL_ITEM ? "jrn-" + uuid() : undefined;
     const got = await z.grantItem(session, bought.id, { condition: rollShopCondition(bought.slot), journalId: jid });
     if (!got) {
@@ -437,24 +461,16 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
   const world = z.world!;
   const action = frame?.action;
   if (action === "open") {
-    const lateral = z.outOfWorld(session); // the hatch is a fixture of the room you're standing in
+    const lateral = z.outOfWorld(session); // the hatch is a fixture of the gatehouse
     if (session.away && !lateral) return; // one step-out at a time (mid-dungeon crouch)
     const bar = fenceGuard(z, session);
     if (bar) return z.send(session, bar);
     if (!world.fenceStock.length) return z.send(session, "The hatch is shuttered, and stays that way.");
-    if (lateral) {
-      z.enterStep(session, "trading"); // swap stance; the gate outside hears nothing new
-      return sendTrade(z, session);
-    }
-    session.away = true;
-    session.trading = true;
-    // Rest survives a trip to the hatch — healing pauses while stepped out, resumes on close.
-    session.target = null;
-    for (const c of z.creatures.values()) {
-      if (c.target === session.pubkey) c.target = null;
-    }
-    z.roomFeed(session.roomId, `${session.name} steps up to the keeper's hatch.`, session.pubkey, false);
-    z.refreshRoomCtx(session.roomId);
+    // The front door rule: from the gate room this walks you INSIDE first (a
+    // real, announced entry), then steps to the hatch — the modal never again
+    // conjures a private step-out at the arch. From inside it's just a lateral.
+    throughTheDoor(z, session);
+    z.enterStep(session, "trading");
     return sendTrade(z, session);
   }
   if (!session.trading) return;
@@ -765,14 +781,20 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
       if (z.inCombat(session)) {
         return z.send(session, "Not while something is trying to kill you.");
       }
-      // The lockbox opens anywhere (you duck aside to sort your run closet); the
-      // vault and the seal are the gate's business, shown only when you're at one.
-      // Remember WHERE you opened it: already by the fire (in the gatehouse), or
-      // out in the world at a gate. Closing returns you exactly there — the pack
-      // is a modal, not a door. Captured before the step-out flips `away`.
-      session.benchInHouse = z.outOfWorld(session);
-      if (z.outOfWorld(session)) z.enterStep(session, "sorting"); // lateral: swap stance, announce nothing
-      else enterBench(z, session);
+      // The lockbox opens anywhere (you duck aside to sort your run closet) —
+      // but AT A GATE the bench is a fixture of the gatehouse (the front door
+      // rule): opening it from the gate room walks you through the door first,
+      // and closing it leaves you by the fire ('out' is the way back to the
+      // world). Mid-dungeon, the crouch is unchanged: in the open, in reach,
+      // and closing stands you back up right where you knelt.
+      if (z.world!.entryRooms.has(session.roomId)) {
+        throughTheDoor(z, session); // no-op if already inside
+        session.benchInHouse = true; // the bench is the house's — closing keeps you by the fire
+        z.enterStep(session, "sorting"); // lateral to the bench
+      } else {
+        session.benchInHouse = false;
+        enterBench(z, session); // the dungeon crouch
+      }
       return sendBench(z, session);
     }
     if (!session.away) return; // every other action needs the bench already open
@@ -887,21 +909,15 @@ export async function benchDrop(z: ZoneDO, session: Session, row: string): Promi
   }
 
 export function enterBench(z: ZoneDO, session: Session): void {
-    session.away = true;
-    // Rest survives opening the bench/keeping (inventory) — healing pauses while
+    // The DUNGEON crouch only, since the front door rule (2026-07-17): at a
+    // gate the bench is the gatehouse's fixture and handleBench walks you
+    // through the door instead. Out here the lockbox rides with you, but you
+    // don't leave with it — you crouch to sort it in the open, still in the
+    // world and in reach. Rest survives the crouch — healing pauses while
     // stepped out, resumes on close.
+    session.away = true;
     session.target = null;
-    if (z.world!.entryRooms.has(session.roomId)) {
-      // At a gate you step clean out of the world: nothing holds you, nothing sees you.
-      for (const c of z.creatures.values()) {
-        if (c.target === session.pubkey) c.target = null;
-      }
-      z.roomFeed(session.roomId, `${session.name} steps into the gatehouse, out of sight.`, session.pubkey, false);
-    } else {
-      // In the dungeon the lockbox rides with you, but you don't leave with it —
-      // you crouch to sort it in the open, still in the world and in reach.
-      z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
-    }
+    z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
     z.refreshRoomCtx(session.roomId);
   }
 

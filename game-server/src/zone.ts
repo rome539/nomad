@@ -53,6 +53,7 @@ import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, game
 import { publishEvent, relayList } from "./relay";
 import * as gate from "./gate";
 import * as ai from "./ai";
+import * as simstore from "./simstore";
 import * as light from "./light";
 import * as lore from "./lore";
 import * as chips from "./chips";
@@ -70,6 +71,7 @@ import {
   SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
+  BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
   GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, ROCK_CRUMBLE_MIN_MS, ROCK_CRUMBLE_MAX_MS, TORCH_SODDEN_MIN_MS, TORCH_SODDEN_MAX_MS,
   MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
@@ -116,6 +118,7 @@ export class ZoneDO implements DurableObject {
   // ms the world next mints a hammerstone into a random haunt (corpse-key
   // pattern — no farmable spot). 0 = schedule on first tick.
   private nextStoneAt = 0;
+  private nextBrandAt = 0;
   public traces = new Map<string, Trace[]>();
   public rot: RotEntry[] = [];
   private placedSpawns = new Set<string>(); // ground spawns already laid once
@@ -135,6 +138,7 @@ export class ZoneDO implements DurableObject {
   // map's territory, forever (gate.shallowRing).
   public wallMarks = new Set<string>();
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
+  private sim = simstore.newCache(); // what the sim rows last held, so persist() only writes the dirt (simstore.ts)
   private cacheRoom = new Map<string, string>(); // cacheId -> its CURRENT room; roaming chests relocate on refill
   private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
   public events = new Map<string, EventState>(); // room events mid-arc (events.ts owns the arcs; the spine just keeps the clock)
@@ -192,7 +196,17 @@ export class ZoneDO implements DurableObject {
     this.world = world;
     this.buildWorldMaps(world);
 
-    const saved = await this.state.storage.get<SimState>("sim");
+    // The sim sleeps in rows now (simstore.ts — out of the one-blob 128KiB
+    // ceiling). Rows first; a world with none falls back to the legacy blob
+    // once, hydrates from it unchanged, and is written to rows at the end of
+    // init (the blob deleted only after, so a crash between keeps the backup).
+    simstore.ensureTable(this.state.storage);
+    let saved = simstore.loadSim(this.state.storage, this.sim);
+    let legacyBlob = false;
+    if (!saved) {
+      saved = (await this.state.storage.get<SimState>("sim")) ?? null;
+      legacyBlob = !!saved;
+    }
     if (saved) {
       // Coerce grudges from the old string[] shape (pubkey only) to the
       // timestamped form, starting the forget-clock now for any legacy memory.
@@ -212,6 +226,7 @@ export class ZoneDO implements DurableObject {
       this.fenceOut = new Map(Object.entries(saved.fenceOut ?? {}));
       this.bloodOn = new Map(Object.entries(saved.bloodOn ?? {}));
       this.nextStoneAt = saved.nextStoneAt ?? 0;
+      this.nextBrandAt = saved.nextBrandAt ?? 0;
       this.traces = new Map(Object.entries(saved.traces ?? {}));
       this.rot = saved.rot ?? [];
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
@@ -302,6 +317,14 @@ export class ZoneDO implements DurableObject {
       this.savedAt = now;
       await this.persist();
     }
+    // A pre-rows world: it hydrated off the legacy blob above — write the rows
+    // now (the empty cache makes every key dirty, so this is the full world),
+    // THEN drop the blob. A crash between the two leaves both, and the next
+    // wake prefers the rows.
+    if (legacyBlob) {
+      await this.persist();
+      await this.state.storage.delete("sim");
+    }
     return world;
   }
 
@@ -361,6 +384,7 @@ export class ZoneDO implements DurableObject {
       fenceOut: Object.fromEntries(this.fenceOut),
       bloodOn: Object.fromEntries(this.bloodOn),
       nextStoneAt: this.nextStoneAt,
+      nextBrandAt: this.nextBrandAt,
       traces: Object.fromEntries(this.traces),
       rot: this.rot,
       placedSpawns: [...this.placedSpawns],
@@ -376,7 +400,9 @@ export class ZoneDO implements DurableObject {
       events: Object.fromEntries(this.events),
       fishStock: Object.fromEntries(this.fishStock),
     };
-    await this.state.storage.put("sim", state);
+    // Rows, not the blob (simstore.ts): only what changed since the last save
+    // is written, in one transaction. The 128KiB one-value ceiling is gone.
+    simstore.saveSim(this.state.storage, state, this.sim);
   }
 
   // Blow away the whole world sim and rebuild it from first light. Drops the
@@ -385,6 +411,7 @@ export class ZoneDO implements DurableObject {
   // D1 is untouched — players, packs, lockboxes, vaults, sealed loot all survive.
   // The deep re-seals (openDoors cleared), so the corpse-key is needed again.
   private async reseed(zone: string): Promise<number> {
+    simstore.clearSim(this.state.storage, this.sim); // the rows go the way the blob went
     await this.state.storage.delete("sim");
     this.world = null; // force loadWorld + the first-light branch on the re-init below
     this.creatures.clear();
@@ -397,6 +424,7 @@ export class ZoneDO implements DurableObject {
     this.fenceOut.clear();
     this.bloodOn.clear();
     this.nextStoneAt = 0;
+    this.nextBrandAt = 0;
     this.traces.clear();
     this.rot = [];
     this.placedSpawns.clear();
@@ -1185,13 +1213,14 @@ export class ZoneDO implements DurableObject {
     const key = session.items.find((c) => c.itemId === cache.keyItem);
     if (!key) {
       // No key — then the old way: a rock against the latch (rome, 2026-07-11).
-      // Only a strongbox latch gives to stone; the reliquary's iron takes a
-      // king's key, not geology. The plain rock is spent by the trying, opened
-      // or not; the hammerstone survives every landing, latches included.
+      // Any strongbox latch gives to stone — notched-key shallow or warden-key
+      // deep (086 split the keys, not the latches); only the reliquary's iron
+      // takes a king's key, not geology. The plain rock is spent by the trying,
+      // opened or not; the hammerstone survives every landing, latches included.
       const stone = session.items.find((c) => c.itemId === "hammerstone")
         ?? session.items.find((c) => c.itemId === "loose-rock");
-      if (!stone || cache.keyItem !== "strongbox-key") {
-        return this.send(session, `${cap(cache.name)} is locked. You'd need ${keyT?.name ?? "the right key"}${cache.keyItem === "strongbox-key" ? " — or a rock, and no respect for latches" : ""}.`);
+      if (!stone || cache.keyItem === "reliquary-key") {
+        return this.send(session, `${cap(cache.name)} is locked. You'd need ${keyT?.name ?? "the right key"}${cache.keyItem !== "reliquary-key" ? " — or a rock, and no respect for latches" : ""}.`);
       }
       const hammer = stone.itemId === "hammerstone";
       if (!hammer) {
@@ -2454,6 +2483,27 @@ export class ZoneDO implements DurableObject {
       }
     }
 
+    // The longbrand rolls on the same law — the rare torch turning up in
+    // fire-keeping country (hearths, watch posts, the garrison's light-rooms).
+    // Same dice-not-schedule shape as the stone; capped at one unfound.
+    if (now >= this.nextBrandAt) {
+      this.nextBrandAt = now + randInt(BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS);
+      if (chance(BRAND_MINT_ODDS)) {
+        let loose = 0;
+        for (const roomId of BRAND_HAUNTS) {
+          loose += (this.ground.get(roomId) ?? []).filter((id) => id === BRAND_ITEM).length;
+        }
+        if (loose < BRAND_GROUND_CAP) {
+          const haunts = BRAND_HAUNTS.filter((r) => world.rooms.has(r));
+          if (haunts.length) {
+            const roomId = haunts[randInt(0, haunts.length - 1)];
+            this.ground.set(roomId, [...(this.ground.get(roomId) ?? []), BRAND_ITEM]);
+            this.refreshRoomCtx(roomId);
+          }
+        }
+      }
+    }
+
     // The black door remembers its shape: a heart buys a WINDOW, not a
     // thoroughfare. It only ever bars the way down (the-descent's way up is
     // unkeyed — nobody is sealed in); shutting restarts the corpse-key mint.
@@ -2711,6 +2761,12 @@ export class ZoneDO implements DurableObject {
       const i = list.findIndex((t) => t.kind === "passage");
       if (i !== -1) list.splice(i, 1);
     }
+    if (trace.kind === "drip") {
+      // One trail per room, refreshed — a bleeder pacing a room doesn't stack
+      // twelve trails and shove the older story out of the cap.
+      const i = list.findIndex((t) => t.kind === "drip");
+      if (i !== -1) list.splice(i, 1);
+    }
     if (trace.kind === "carve") {
       const carvings = list.filter((t) => t.kind === "carve");
       if (carvings.length >= CARVE_CAP) {
@@ -2751,6 +2807,11 @@ export class ZoneDO implements DurableObject {
         if (age < 10 * 60_000) lines.push("Fresh blood pools on the stones — something died here moments ago.");
         else if (age < 3_600_000) lines.push("Blood on the stones, still wet.");
         else lines.push("A drying bloodstain darkens the floor.");
+      } else if (t.kind === "drip") {
+        // The walking wound: something crossed this room bleeding. The trail
+        // never says WHO — you follow it to find out.
+        if (age < 10 * 60_000) lines.push("A trail of blood drops crosses the floor, bright and fresh — something wounded passed through, and not long ago.");
+        else lines.push("A dotted line of blood, going dark, crosses the stones — something wounded passed this way.");
       } else if (t.kind === "remains") {
         if (age < 10 * 60_000) lines.push("Broken remains litter the stones, still settling.");
         else if (age < 3 * 3_600_000) lines.push("Broken remains lie scattered here.");
@@ -3539,7 +3600,7 @@ export class ZoneDO implements DurableObject {
   // is what pulled box-bone/box-crack out of the safe rooms). The King's Hoard is
   // the one exception: the boss's treasure stays put. Finding a chest becomes
   // exploration + luck; the supply (chest COUNT) is unchanged, so scarcity holds.
-  private cacheRoams(cache: Cache): boolean {
+  public cacheRoams(cache: Cache): boolean {
     return cache.keyItem !== "reliquary-key"; // the King's Hoard is fixed
   }
 

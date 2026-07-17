@@ -12,7 +12,7 @@ import * as events from "./events";
 import { setItemCondition, removeItemRow } from "./world";
 import {
   TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR,
-  TWO_HANDED,
+  BRAND_ITEM, BRAND_BURN_MS, TWO_HANDED,
 } from "./zone-data";
 
 // A kindled light throws light until it gutters (litUntil). Read everywhere the
@@ -30,11 +30,19 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
       : "Your torch already burns. Best not waste another until it's spent.");
   }
   const torch = session.items.find((c) => c.itemId === TORCH_ITEM);
+  const brand = session.items.find((c) => c.itemId === BRAND_ITEM);
   const lantern = session.items.find((c) => c.itemId === LANTERN_ITEM);
-  const wantLantern = arg.includes("lantern") ? true : arg.includes("torch") ? false : !torch;
-  const light = wantLantern ? lantern : torch;
+  const wantLantern = arg.includes("lantern") ? true
+    : (arg.includes("torch") || arg.includes("brand")) ? false
+    : !torch && !brand;
+  // The plain stick burns first unless the brand is asked for by name —
+  // nobody spends the rare flame by accident.
+  const wantBrand = !wantLantern && (arg.includes("brand") || !torch);
+  const light = wantLantern ? lantern : wantBrand ? brand : torch;
   if (!light) {
-    return z.send(session, wantLantern && torch ? "You carry no lantern — though you do have a torch." : "You have nothing to light.");
+    if (wantLantern && (torch || brand)) return z.send(session, "You carry no lantern — though you do have a torch.");
+    if (wantBrand && arg.includes("brand") && torch) return z.send(session, "You carry no longbrand — though a plain torch would answer.");
+    return z.send(session, "You have nothing to light.");
   }
   if (wantLantern && light.condition <= 0) {
     return z.send(session, "The wick is burnt to nothing and the pane is cracked through — this lantern is done.");
@@ -83,12 +91,19 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.items.splice(session.items.indexOf(light), 1);
     await removeItemRow(z.env.DB, light.rowId); // spent into the burning
     // A torch lit in a cold snap fights for its life the whole way down.
+    // The longbrand is the same open flame with more to burn — 2.5 torches
+    // on one spark; everything downstream still reads litSource "torch".
+    const isBrand = light.itemId === BRAND_ITEM;
     const coldMult = events.coldTorchMult(z, session.roomId);
-    session.litUntil = Date.now() + Math.floor(TORCH_BURN_MS * coldMult);
+    session.litUntil = Date.now() + Math.floor((isBrand ? BRAND_BURN_MS : TORCH_BURN_MS) * coldMult);
     session.litSource = "torch";
     session.torchWarned = false;
-    z.send(session, `You ${shield ? `swing ${shield.tmpl.name} onto your back, then ` : ""}touch a spark to the pitch and the torch catches — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.${shield ? " (No guard while the flame burns — 'equip shield' brings it back.)" : ""}`, "gain");
-    z.roomFeed(session.roomId, `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey, false);
+    z.send(session, isBrand
+      ? `You ${shield ? `swing ${shield.tmpl.name} onto your back, then ` : ""}touch a spark to the seal and the longbrand takes it slow — a fat, even flame that means to stay${coldMult < 1 ? ", though the cold pinches even this one" : ""}.${shield ? " (No guard while the flame burns — 'equip shield' brings it back.)" : ""}`
+      : `You ${shield ? `swing ${shield.tmpl.name} onto your back, then ` : ""}touch a spark to the pitch and the torch catches — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.${shield ? " (No guard while the flame burns — 'equip shield' brings it back.)" : ""}`, "gain");
+    z.roomFeed(session.roomId, isBrand
+      ? `${session.name} kindles a longbrand; its light is steadier than any torch has a right to be.`
+      : `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey, false);
   }
   z.sendStatus(session);
   z.send(session, z.describeRoom(session, false)); // the dark may resolve, or the fire may scatter something

@@ -9,7 +9,7 @@ import { randInt, chance, uuid, pick } from "./rng";
 import { cap } from "./zone-util";
 import * as events from "./events";
 import {
-  FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS,
+  FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
   NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
@@ -129,6 +129,44 @@ export function addGrudge(z: ZoneDO, creature: Creature, pubkey: string): void {
     if (existing) { existing.at = now; return; } // fresh blood renews the memory
     creature.grudges.push({ pk: pubkey, at: now });
     if (creature.grudges.length > GRUDGE_MAX) creature.grudges.shift();
+  }
+
+  // THE DEN REMEMBERS (rome, 2026-07-17): a routed survivor carries its grudge
+  // home. When a fleeing creature arrives among its own bloodline, the kin in
+  // that room inherit every grudge it holds — BACKDATED to half their forget
+  // window, so a told fear fades twice as fast as a felt one. No new
+  // bookkeeping: the contagion rides the same {pk, at} decay that already
+  // governs memory, and `remembers()` does the rest (an inheritor greets the
+  // grudge-bearer on sight, exactly as if it had been hit itself). Farm one
+  // den and the third rat already hates you — reputation with a bloodline,
+  // emergent. An empty bolt-hole teaches no one; the fear needs kin to hear it.
+export function shareGrudges(z: ZoneDO, fled: Creature, now: number): void {
+    if (!fled.grudges.length) return;
+    const line = z.variantBase.get(fled.templateId) ?? fled.templateId;
+    let told = false;
+    for (const kin of z.creatures.values()) {
+      if (kin.id === fled.id || kin.roomId !== fled.roomId) continue;
+      if ((z.variantBase.get(kin.templateId) ?? kin.templateId) !== line) continue;
+      const kinTmpl = z.world!.mobTemplates.get(kin.templateId);
+      const window = kinTmpl ? forgetMs(z, kinTmpl) : FORGET_DEFAULT;
+      // (A boss's window is Infinity — it never forgets, so nothing to halve:
+      // an inherited grudge lands full-fresh on it. Fitting for a king.)
+      const inheritedAt = Number.isFinite(window) ? now - Math.floor(window / 2) : now;
+      for (const g of fled.grudges) {
+        const existing = kin.grudges.find((k) => k.pk === g.pk);
+        // A memory it already holds fresher stays its own; a told one never
+        // lands fresher than half-spent (and never fresher than the source).
+        if (existing) { if (existing.at < Math.min(g.at, inheritedAt)) existing.at = Math.min(g.at, inheritedAt); continue; }
+        kin.grudges.push({ pk: g.pk, at: Math.min(g.at, inheritedAt) });
+        if (kin.grudges.length > GRUDGE_MAX) kin.grudges.shift();
+        told = true;
+      }
+    }
+    if (told) {
+      const tmpl = z.world!.mobTemplates.get(fled.templateId)!;
+      // Local color only — the den's whisper is not the relay's business.
+      z.roomFeed(fled.roomId, `${cap(tmpl.name)} arrives at a panic, and the others take it in. Something passes between them.`, undefined, false);
+    }
   }
 
 // A fight breaking out in a room pulls in the creatures ALREADY standing in it,
@@ -412,6 +450,20 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         if (closer.length) exits = closer;
       }
     }
+    // THE NOSE: fresh blood next door pulls an idle scavenger. A drip trail (a
+    // wounded thing that walked through) or a kill's pool, younger than
+    // SCENT_FRESH_MS, and the hyena drifts toward it instead of wandering blind
+    // — odds-gated so it's a drift, not a magnet. Sets `curious`, and the
+    // curious walk below does the moving: one sniff is one look, like a noise.
+    if (mode === "wander" && !creature.curious && !creature.target && SCAVENGERS.has(creature.templateId)) {
+      const bloody = exits.filter((e) => {
+        const list = z.traces.get(e.to_room) ?? [];
+        return list.some((t) => (t.kind === "drip" || t.kind === "blood") && now - t.at < SCENT_FRESH_MS);
+      });
+      if (bloody.length && chance(SCENT_HEED_ODDS)) {
+        creature.curious = bloody[randInt(0, bloody.length - 1)].to_room;
+      }
+    }
     // Idle drift avoids an already-packed room, so wandering doesn't stack the
     // whole zone into one hub. (Answering a noise or fleeing still goes where it
     // must; and we never strand a creature with no other way to turn.)
@@ -509,6 +561,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // What beat it colors how it runs — read before the flee clears the target.
     const fledFrom = mode === "flee" ? creature.target : null;
     creature.roomId = exit.to_room;
+    // A wounded thing on the move drips where it walks — a fled survivor bleeds
+    // a line straight to wherever it holes up, and anyone (or anything) can
+    // read the stones and follow. Same law as the player's trail (verbs.cmdGo).
+    if ((creature.bleedTicks ?? 0) > 0) {
+      z.addTrace(creature.roomId, { kind: "drip", at: now, label: tmpl.name });
+    }
     creature.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
     // Beyond its territory a creature travels with purpose — the walk in from
     // a dark mouth (or back from a rout) is minutes, not an afternoon.
@@ -520,6 +578,8 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       for (const s of z.sessions.values()) {
         if (s.target === creature.id) s.target = null;
       }
+      // The den remembers: a rout that ends among kin spreads the grudge.
+      shareGrudges(z, creature, now);
     }
     // A summoned hyena that walks OFF the dinner floor may laugh again someday;
     // while it stood there, it never re-called (a call must not trigger a call).

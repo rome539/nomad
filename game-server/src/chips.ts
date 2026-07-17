@@ -9,7 +9,7 @@ import * as pvp from "./pvp";
 import * as gate from "./gate";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
-  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM,
+  LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
   FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, MAP_ITEMS, DROWNERS,
 } from "./zone-data";
 
@@ -144,6 +144,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // that saves you. Both offered if you carry both — they're different tools.
   if (z.isDark(session.roomId) && !z.carriesLight(session)) {
     if (session.items.some((c) => c.itemId === TORCH_ITEM)) suggest.push("light torch");
+    // The brand chip only when no plain torch — the chip must never be the
+    // thing that spends the rare flame while common sticks sit in the pack.
+    else if (session.items.some((c) => c.itemId === BRAND_ITEM)) suggest.push("light brand");
     if (session.items.some((c) => c.itemId === LANTERN_ITEM && c.condition > 0)) suggest.push("light lantern");
   }
 

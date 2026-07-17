@@ -111,7 +111,10 @@ export interface Regrow {
 // What a room remembers. `label` names the fallen (blood), `words` are a
 // carving's text plus its author.
 export interface Trace {
-  kind: "blood" | "remains" | "scraps" | "rest" | "passage" | "carve";
+  // "blood" is a death's pooled stain; "drip" is the walking kind — a thing
+  // (player or creature) that crossed this room with an open wound. The drip
+  // is the huntable trail: scavengers drift toward it, and so can you.
+  kind: "blood" | "drip" | "remains" | "scraps" | "rest" | "passage" | "carve";
   at: number;
   label?: string;
   words?: string;
@@ -157,6 +160,7 @@ export interface SimState {
   fenceOut?: Record<string, number>;
   bloodOn?: Record<string, number[]>; // pubkey -> kill timestamps; the evidence walks around on the murderer // itemId -> ms the keeper restocks it (bare shelves — the market has other customers)
   nextStoneAt?: number; // ms the world next mints a hammerstone into a random haunt (no farmable spot)
+  nextBrandAt?: number; // ms the world next rolls a longbrand into fire-keeping country (the rare torch, same law)
   traces: Record<string, Trace[]>;
   rot: RotEntry[];
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once

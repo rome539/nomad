@@ -55,36 +55,38 @@ and the population layer that only real players can fill.*
   one always awake" — the hound can't be stun-locked, or stuns at reduced odds.
   rome: HOLD (2026-07-11). Migration 073 halved stun globally, which took the
   urgency off; revisit only if a hound still stun-locks in play.
-- **Stance through death** — stance persists across a death (onPlayerDeath
-  doesn't reset it), which is why a corpse can come back still reckless. Ruling
-  pending: reset to steady on death, or leave it as the player's problem.
-- **Stance in the status bar** — the one combat read still not glanceable.
-  Flagged during the feedback pass; not decided.
+- **Stance through death** — RULED NO (rome, 2026-07-17): stance stays as it
+  was through death. A corpse that comes back still reckless is the player's
+  own posture, kept — not a bug. Closed; don't re-propose.
+- **Stance in the status bar** — RULED NO (rome, 2026-07-17): the bar stays as
+  it is; stance lives in the doll and the typed reads. Closed; don't re-propose.
 
 ## Next up (unblocked, pre-players)
 
-- **TODO — FIRST THING (rome, 2026-07-15): stray-item floor-drain.** Torches and
-  most dropped gear have NO decay — they lie on a floor forever, a permanent
-  free-light/free-loot beacon AND slow inflation of the one `sim` blob (see the
-  scaling-ceiling icebox entry). Generalise the rock's `strayRock(roomId)` into
-  `strayItem(roomId, itemId)`: arm crumble timers for stray items dropped OFF a
-  gate spawn (gate supply untouched, exactly like rocks), with per-item flavour
-  (a torch "gutters out and is lost," not "kicked into the rubble"). Wire it on
-  drop (`verbs.ts` ~805, currently only `loose-rock`) and on death-spill
-  (`zone.ts` ~3086). Reuses the existing `rot`/`crumble` machinery and
-  `ROCK_CRUMBLE_MIN/MAX_MS` (or a per-item window). Cheap, no migration; buys
-  free headroom against the 128 KB ceiling.
-- **Rare torch spawn — mirror the hammerstone** *(design, rome 2026-07-15)*.
-  Same shape as the hammerstone (migration 070): the world MINTS a rare torch
-  variant every N hours into a random haunt — no farmable spot (mirror
-  `nextStoneAt` + the HAMMERSTONE_HAUNTS pool) — and it's simply BETTER at a
-  torch's job. Edge (open Q, RECOMMEND the clean parallel): a much **longer
-  burn** — 2–3× `TORCH_BURN_MS` — "better at its one thing," and it doesn't
-  tread on the lantern's niche. Alternatives if rome wants: a **tame flame**
-  (no fire-fear wake — but that IS the lantern's role) or a **brighter reach**
-  (lights/reveals adjacent rooms). Build = item template + mint timer (copy the
-  hammerstone's) + a burn-length branch by itemId in light.ts. Pairs naturally
-  with the stray-item drain above (both torch work).
+- **Stray-item floor-drain** *(SHIPPED `4bd9f76` 2026-07-16 — the half that
+  mattered)*. Torches got the sodden law (`strayTorch`, 30–60 min off their
+  threshold spawns, RotEntry kind `"sodden"`), and the audit found thrown rocks
+  never armed crumble at all — both laws now fire at EVERY off-spawn landing:
+  drop, throw-at-creature, noise-throw, death-spill, cutpurse-spill. The
+  free-light beacon is dead. **The general-gear half is deliberately NOT
+  built:** its second motive (sim-blob inflation) died with the SQL-rows fix
+  (see icebox — built), and gear on floors is load-bearing gameplay — death
+  piles must be reclaimable, scavengers eye it, the engraving rides it. If
+  floor-gear litter ever reads as a problem in play, it's a watch-list item,
+  not a law.
+- **Rare torch spawn — THE LONGBRAND** *(BUILT 2026-07-17, pending ship —
+  migration 088 local-only)*. The clean parallel won: a much **longer burn**
+  (`BRAND_BURN_MS` = 25 min, 2.5× a torch), still an OPEN flame (fire-fear
+  wakes, weather drowns, cold pinches — litSource stays "torch" so every
+  downstream system reads it unchanged). Minted on the hammerstone's dice law
+  (`nextBrandAt`, 3–6h roll × 0.25 odds ≈ 1/day, cap ONE unfound) into
+  `BRAND_HAUNTS` — fire-keeping country: the cold hearth, smokehouse,
+  guardroom, warden-post, watch turret, wall-walk, barracks, buried chapel,
+  scriptorium, bell-cote. Plain torches burn FIRST unless the brand is named
+  ('light brand'), the dark-room chip never offers it while common sticks
+  remain, it doesn't count against PACK_TORCH_CAP (the cap rations the common
+  stick), and the seal keeps the damp out — a strayed brand never sods
+  (strayTorch stays TORCH_ITEM-only, on purpose). Barter 4 at the hatch.
 - **Forge & smelt economy — make crafting actually matter** *(design, rome
   2026-07-15; noted, not building yet)*. Three linked changes:
   1. **Salvage shouldn't cough a whole iron per piece.** Today `SALVAGE_YIELD`
@@ -252,6 +254,27 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **Day and night** *(rome likes it, 2026-07-17 — "a bigger feature, more
+  thought needed"; design only)*. Today NOMAD has NO clock: "tonight" is pure
+  flavor in event prose, darkness is spatial (`DARK_ROOMS` are born-dark
+  forever), and the only day-anchored math is the bell's scheduling jitter
+  (events.ts ~602). The sketch so far: the cycle is **surface-only** — the
+  dungeon's eternal dark is its identity and must not gain a sun. At night the
+  surface band (causeway, fen, hanging-hill, old road) joins the dark rooms:
+  torch rules apply above ground, the map blacks out, crossing between gates
+  after dark becomes a real decision; dawn/dusk each get a feed line; night
+  could tilt what surfaces or prowls up top. Mechanically it's mostly one
+  `isNight()` read feeding systems that already exist (dark-gate, torch
+  economy, event weighting). **Open questions that make it "more thought
+  needed":** cycle length (real-world-anchored vs an accelerated world-clock —
+  a ~3h full day so every session sees both faces; lean accelerated, players
+  span timezones); how night interacts with the weather events (does the gloam
+  own the night? does rain at night read differently?); whether mobs keep
+  their own sleep/wake rhythm against it (warm-bloods already doze); and
+  whether the gatehouse fire becomes the night's anchor (rest/safety pull
+  after dark). Not building until the cycle-length call and the
+  night-ecology pass are designed.
+
 - **Per-browser feed key for the arena stream** *(DEFERRED — do in a login/client
   polish pass, before any wider launch)*. Problem: extension (NIP-07) and bunker
   (NIP-46) logins prompt for **every** signature, so a player who hasn't set
@@ -313,27 +336,22 @@ Directions rome likes and wants held. Design only; no code until he says go.
   survives restarts. Build the framework here; individual events are content.
 - More rooms/creatures for the Door — but content sprawl stays the enemy;
   systems first.
-- **SQL-rows for live state — the world-size ceiling fix** *(measured
-  2026-07-15; DO NOT build until approaching the ceiling — rome's call)*.
-  The whole live world (this.creatures + all ground maps) serialises into ONE
-  DO storage key `"sim"` (`persist()`, `storage.put("sim", …)`), and a single
-  DO value is capped at **128 KiB**. Measured live blob = **27.5 KB = 21% full**
-  at 110 rooms / 87 mob-spawns / 68 ground-spawns. Blob scales with LIVE
-  monsters + ground (~180 B/entity), NOT rooms → cap ≈ **~400 monsters + ~325
-  ground → ~500–700 rooms at today's 0.8-mob/room density** (a few thousand if
-  sparse; rooms themselves are free — D1/RAM). **Fix (when needed):** ZoneDO is
-  already `new_sqlite_classes`, so move creatures/ground out of the one blob
-  into DO **SQLite rows** (the 10 GB space), writing only DIRTY rows per persist
-  — *cheaper* than today's whole-blob rewrite, no extra cost on free tier if you
-  don't re-write every row every tick. Real cost = a careful save/load refactor
-  (riskiest code — lose state = lose the world), not money/perf. Beyond one
-  zone → shard into more zone-DOs (code already keys by `zone`). **Trigger:**
-  re-measure the blob (`SELECT length(value) FROM _cf_KV WHERE key='sim'` in the
-  DO's local sqlite; prod differs) and build this at ~**70% / ~90 KB / ~300
-  monsters** — not before. Blob also creeps up from undecayed litter (torches
-  and dropped gear have NO floor-drain — see loot economy); adding stray-item
-  drains buys headroom for free. Target ~1,000–1,500 dense rooms works TODAY
-  with no code change if monster density is kept ~0.3/room.
+- **SQL-rows for live state — the world-size ceiling fix** *(BUILT 2026-07-17
+  on rome's call, pending ship — `simstore.ts`)*. The sim now sleeps in the
+  DO's own SQLite (`sim_kv`): one row per creature, one per room-with-a-floor,
+  one per singleton — the 128 KiB one-blob ceiling is gone (10 GB space).
+  Saves are dirty-diffed in one transaction (usually cheaper than the old
+  whole-blob rewrite); creature beat-churn (hunger/clocks) is excluded from
+  the dirt judgement + a 5-min full flush, so free-tier row-write budgets
+  hold. Migration is automatic on first wake (blob → rows → blob deleted, in
+  that order). Verified: live blob→rows→eviction→rows pass on the local
+  world, byte-exact shard/unshard roundtrip over every field, and a
+  compile-time guard that fails the build if a SimState field isn't
+  persisted. Disclosed trade-offs: savedAt ≤60s stale on hard restart (one
+  catch-up step), creature hunger ≤5 min stale, and a worker ROLLBACK after
+  prod migrates re-seeds the world (players' D1 state safe) — forward-fix
+  policy. **Next ceiling** (far off): tick CPU over thousands of monsters;
+  beyond one zone → shard into more zone-DOs (code already keys by `zone`).
 
 ## Easter eggs (parked; an egg in a help file stops being an egg)
 
