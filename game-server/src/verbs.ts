@@ -80,13 +80,28 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
   if (!arg) {
     const haveRaw = session.items.some((c) => CURE_RECIPES[c.itemId] && c.serial === null);
     const haveTorch = session.items.some((c) => c.itemId === TORCH_ITEM && c.serial === null);
-    return z.send(session, lit
+    // What's already hanging, and how long it has yet — so a hung haunch isn't an
+    // act of faith with no clock (rome, 2026-07-17: "it doesnt let someone know
+    // it will be done in 3 mins"). Reads the live cure-timers off the rot clock.
+    const curing = z.rot.filter((r) => r.kind === "cure" && r.roomId === SMOKEHOUSE_ROOM);
+    let hanging = "";
+    if (curing.length) {
+      const left = Math.min(...curing.map((r) => r.at)) - Date.now();
+      const mins = Math.max(1, Math.ceil(left / 60_000));
+      hanging = ` ${curing.length === 1 ? "A haunch hangs" : curing.length + " joints hang"} in the smoke, curing — ${left <= 20_000 ? "all but done now" : "about " + mins + " minute" + (mins === 1 ? "" : "s") + " yet"}. Leave them hanging; lift one early and it's raw still.`;
+    }
+    return z.send(session, (lit
       ? "The smoke-racks are burning, smoke crawling up the black brick. Hang what raw meat you've got — 'cure haunch' — and load them while the fire holds; each joint keeps on its own once it's cured through."
         + (haveRaw ? "" : " (Though you've nothing raw to hang.)")
       : "The smoke-racks hang cold in the black brick, waiting. Feed them a torch and hang raw meat — 'cure haunch' — and the old grease-fire wakes; once it's lit you can load the racks with all you carry. It cures where it hangs, so mind that something hungry doesn't come for it first."
-        + (haveRaw && haveTorch ? "" : haveRaw ? " (You've meat to hang, but no torch to wake the fire.)" : haveTorch ? " (You've a torch, but nothing raw to cure.)" : ""));
+        + (haveRaw && haveTorch ? "" : haveRaw ? " (You've meat to hang, but no torch to wake the fire.)" : haveTorch ? " (You've a torch, but nothing raw to cure.)" : ""))
+      + hanging);
   }
-  const carried = z.findCarried(session, arg);
+  // Prefer a CURABLE match: "cure haunch" should find the hyena haunch that CAN
+  // smoke, not the rat-meat ALSO named "a haunch of rat meat" that never could
+  // (the same name collision that bit the rock — resolve to what the verb is for).
+  const curable = session.items.find((c) => CURE_RECIPES[c.itemId] && c.serial === null && nameMatches(world.itemTemplates.get(c.itemId)!.name, arg));
+  const carried = curable ?? z.findCarried(session, arg);
   if (!carried) return z.send(session, "You carry nothing like that.");
   const out = CURE_RECIPES[carried.itemId];
   if (!out) return z.send(session, `${cap(world.itemTemplates.get(carried.itemId)!.name)} won't cure. The racks are for raw meat — a haunch, a slab of flesh.`);
@@ -111,9 +126,10 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
   z.stampFresh(SMOKEHOUSE_ROOM, carried.itemId);
   z.rot.push({ itemId: carried.itemId, roomId: SMOKEHOUSE_ROOM, at: Date.now() + CURE_MS, kind: "cure" });
 
-  z.send(session, lit
+  z.send(session, (lit
     ? `You hang ${rawName} among what's already smoking. The racks take it without complaint; the fire has room yet.`
-    : `You feed the racks a torch. Old grease catches with a reek, smoke crawls up the black brick, and the whole room glows with it. You hang ${rawName} in the smoke and leave it to the fire.`, "gain");
+    : `You feed the racks a torch. Old grease catches with a reek, smoke crawls up the black brick, and the whole room glows with it. You hang ${rawName} in the smoke and leave it to the fire.`)
+    + " Give it a few minutes and it comes down black and keeping — leave it hanging, for a haunch lifted early is raw still. ('cure' reads the racks.)", "gain");
   z.roomFeed(SMOKEHOUSE_ROOM, lit
     ? `${session.name} hangs ${rawName} in the burning smoke-racks.`
     : `${session.name} wakes the smoke-racks with a torch and hangs ${rawName} to cure.`, session.pubkey, false);
@@ -935,7 +951,7 @@ export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedI
     if (itemId === DEEP_HEART && carried.acquiredAt !== undefined) {
       z.groundHeart.set(`${itemId}@${session.roomId}`, carried.acquiredAt);
     }
-    if (tmpl.edible) z.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
+    if (tmpl.edible && !FOOD_KEEPS.has(itemId)) z.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS }); // cured/dried/salted food keeps forever — on the floor as in the hand (rome, 2026-07-17)
     z.armStrayDecay(session.roomId); // a growing consumable set down off its spawn floor spoils fast — rock crumbles, torch soddens, physic wilts
   }
   // Shedding under the burden line is the valve working: say so, so the

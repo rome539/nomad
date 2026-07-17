@@ -516,6 +516,14 @@ export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rar
 // SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing
 // and — past BOLD — losing their nerve entirely: they stop fleeing and hit harder.
 export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena"]);
+// VERMIN eat the dead too — but only to SURVIVE, none of the hyena's package.
+// Rats had no food at all (not predators, not scavengers), so they sat pinned at
+// max hunger, forever "restless with hunger" (rome, 2026-07-17: "what are rats
+// eating? i always see them starving"). Now a hungry rat gnaws a corpse in its
+// room to sate and heal a little — but it does NOT haul off loot, mourn its kin,
+// or gorge itself bold into a threat (all of that stays gated on SCAVENGERS).
+// The bone rooms clean their own dead; the rat just doesn't starve in them.
+export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat"]);
 // THE NOSE (rome, 2026-07-17): a scavenger with nothing better to do drifts
 // toward fresh blood next door — a drip trail (a wounded thing that walked
 // through) or a kill's pool. Odds-gated so it's a drift, not a magnet; the

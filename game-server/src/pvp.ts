@@ -239,6 +239,7 @@ async function swingAt(
       z.send(defender, `${attacker.name} lands like a falling stone — your skull rings and the room tilts.`, "stun");
       z.send(attacker, `${defender.name} reels, stunned.`, "stun");
       z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_STUN, attacker.name, defender.name), "stun", true, defender.pubkey);
+      z.sendStatus(defender); // the earlier status push (pre-stun) missed the flag — light the pill now it's set
     }
   }
   // A cutting edge opens a wound that keeps weeping — unless hide thick

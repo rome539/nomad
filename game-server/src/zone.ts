@@ -79,13 +79,13 @@ import {
   ARMOR_SLOTS, BLEED_TICKS, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
-  SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
-  DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM,
+  DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE, TORCH_ITEM, PACK_TORCH_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT
@@ -276,7 +276,7 @@ export class ZoneDO implements DurableObject {
         const floor = this.ground.get(g.room_id) ?? [];
         if (!floor.includes(g.item_id)) {
           this.ground.set(g.room_id, [...floor, g.item_id]);
-          if (world.itemTemplates.get(g.item_id)?.edible) {
+          if (world.itemTemplates.get(g.item_id)?.edible && !FOOD_KEEPS.has(g.item_id)) {
             this.rot.push({ itemId: g.item_id, roomId: g.room_id, at: Date.now() + ROT_MS });
           }
         }
@@ -313,7 +313,7 @@ export class ZoneDO implements DurableObject {
         this.ground.set(g.room_id, [...(this.ground.get(g.room_id) ?? []), g.item_id]);
         this.placedSpawns.add(`${g.item_id}@${g.room_id}`);
         // The larder starts its clock at first light.
-        if (world.itemTemplates.get(g.item_id)?.edible) {
+        if (world.itemTemplates.get(g.item_id)?.edible && !FOOD_KEEPS.has(g.item_id)) {
           this.rot.push({ itemId: g.item_id, roomId: g.room_id, at: now + ROT_MS });
         }
       }
@@ -1099,7 +1099,7 @@ export class ZoneDO implements DurableObject {
       if (carried.serial !== null) await voidMint(this.env.DB, carried.serial);
       this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
       this.stampFresh(session.roomId, carried.itemId);
-      if (itmpl.edible) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
+      if (itmpl.edible && !FOOD_KEEPS.has(carried.itemId)) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
       if (!creature.target) creature.target = session.pubkey;
       ai.addGrudge(this, creature, session.pubkey);
       session.target = creature.id;
@@ -1136,7 +1136,7 @@ export class ZoneDO implements DurableObject {
       this.stampFresh(session.roomId, carried.itemId);
       if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // a thrown blade (or stone) keeps its wear where it lands
       if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // and the engraving rides the landing
-      if (itmpl.edible) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
+      if (itmpl.edible && !FOOD_KEEPS.has(carried.itemId)) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
       // A thrown consumable lies off its spawn floor now — the stray law applies
       // the same as a drop (this landing was the gap that let thrown copies
       // litter forever while dropped ones spoiled).
@@ -1964,6 +1964,7 @@ export class ZoneDO implements DurableObject {
       if (session.stunned) {
         session.stunned = false;
         this.send(session, "Your head still rings — the moment to swing slips past you.", "stun");
+        this.sendStatus(session); // clear the pill as the lost swing is paid, not a beat later
         continue;
       }
       const atkMult = STANCE[session.stance].atk * this.wallDrag(session);
@@ -2361,6 +2362,7 @@ export class ZoneDO implements DurableObject {
             victim.stunned = true;
             this.send(victim, `${cap(tmpl.name)} lands like a falling stone — your skull rings and the room tilts.`, "stun");
             this.actorFeed(victim, victim.roomId, this.feedProc(FEED_STUN, tmpl.name, victim.name), "stun");
+            this.sendStatus(victim); // light the stun pill the instant it lands — the flag was set but never pushed (rome, 2026-07-17)
           }
           // Eating a blow thins the mail a hair (provisional gear only).
           if (worn) await this.wear(victim, worn.carried, worn.tmpl, ARMOR_WEAR);
@@ -2587,6 +2589,9 @@ export class ZoneDO implements DurableObject {
         // A scavenger standing on the dead eats first of all — and drags off
         // any gear left lying where a body fell.
         if (SCAVENGERS.has(creature.templateId)) { ai.scavengerFeeds(this, creature, false); ai.scavengerScoops(this, creature); ai.mourns(this, creature, now); }
+        // Vermin eat the dead only to survive: a hungry rat gnaws a corpse to sate
+        // (no loot-hauling, no mourning, no gorging bold — that's SCAVENGERS only).
+        else if (VERMIN.has(creature.templateId) && creature.hunger >= HUNGRY_AT) ai.scavengerFeeds(this, creature, false);
         // A rat that finds you resting may decide you're warm furniture.
         ai.ratCuddles(this, creature, now);
         // The small lives: warm blood dozes off in the quiet...
@@ -3320,7 +3325,7 @@ export class ZoneDO implements DurableObject {
       for (const c of scattered) if (!c.journalId) this.stampFresh(fell, c.itemId);
       for (const c of scattered) {
         if (c.journalId) { this.dropInstance(fell, c.itemId, c.journalId); continue; }
-        if (this.world!.itemTemplates.get(c.itemId)?.edible) {
+        if (this.world!.itemTemplates.get(c.itemId)?.edible && !FOOD_KEEPS.has(c.itemId)) {
           this.rot.push({ itemId: c.itemId, roomId: fell, at: Date.now() + ROT_MS });
         }
         if (c.serial !== null) await voidMint(this.env.DB, c.serial);
