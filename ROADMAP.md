@@ -252,6 +252,25 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **Per-browser feed key for the arena stream** *(DEFERRED — do in a login/client
+  polish pass, before any wider launch)*. Problem: extension (NIP-07) and bunker
+  (NIP-46) logins prompt for **every** signature, so a player who hasn't set
+  auto-approve publishes NONE of their ephemeral 24913 deeds → invisible in the
+  colosseum (confirmed live 2026-07-16 with a lowercase extension player). Their
+  actual gameplay is unaffected — only the spectator feed. **Fix:** generate a
+  lightweight feed key per browser (localStorage), sign the ephemeral 24913 feed
+  (and maybe 24914 speech — open) with it instead of the identity signer, so no
+  login method ever prompts for the show. Load is unchanged (still one key per
+  browser, NOT one shared firehose key — that anti-pattern stays avoided). The
+  feed was always *"a spoofable show; the true record lives in D1/31573,"* so it
+  never needed identity-grade signing. To keep colosseum colours matching in-game
+  (rome cares), tag each feed event `["p", <identity-pubkey-hex>]` and have the
+  colosseum colour by that tag, not the signing key. ~20 lines: `public.ts`
+  publishFeed path (a ship + served-parse) + colosseum `nameColor` source (redeploy).
+  **Stopgap until then:** tell the affected player to enable auto-approve/"always
+  allow" for kind 24913 in their extension (Alby/nos2x support it; fragile,
+  per-user/per-device). See [[nomad-arena-colosseum]].
+
 - **The action-cost clock** *(Achaea's balance/equilibrium — rome iceboxed)*.
   Reassessed as the biggest and riskiest Achaea idea: it rewrites the combat
   cadence everything is tuned to. The primitive exists (`nextThrowAt`,

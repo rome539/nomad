@@ -252,6 +252,12 @@ export async function recordPvpKill(db: D1Database, pubkey: string): Promise<voi
   await db.prepare("UPDATE players SET pvp_kills = pvp_kills + 1 WHERE pubkey = ?").bind(pubkey).run();
 }
 
+// A boss ASSIST: your blood was in the fight, so the horror goes on your sheet
+// too — but the kill itself stays the killer's (boss_kills only, never kills).
+export async function recordBossAssist(db: D1Database, pubkey: string): Promise<void> {
+  await db.prepare("UPDATE players SET boss_kills = boss_kills + 1 WHERE pubkey = ?").bind(pubkey).run();
+}
+
 export async function recordDeath(db: D1Database, pubkey: string): Promise<void> {
   await db.prepare("UPDATE players SET deaths = deaths + 1 WHERE pubkey = ?").bind(pubkey).run();
 }

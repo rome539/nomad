@@ -9,7 +9,7 @@ import type { Session } from "./zone-types";
 import { provokeGrudges } from "./ai";
 import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
-import { uuid, randInt, chance } from "./rng";
+import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord } from "./zone-util";
 import { SCRAP_ID, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
@@ -969,6 +969,7 @@ export async function benchTake(z: ZoneDO, session: Session, row: string): Promi
       if (entry) {
         if (key === "vault" && !atGate) return "The vault's door opens only at a gate.";
         if (z.foodCapped(session, entry.itemId)) return z.foodFullNote();
+        if (z.torchCapped(session, entry.itemId)) return z.torchFullNote();
         if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${PACK_CAP} slots).`;
         await setContainer(z.env.DB, entry.rowId, "");
         session.items.push(entry);
@@ -1191,6 +1192,7 @@ export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key:
     if (!entry) return z.send(session, cfg.holdsNot);
     const tmpl = world.itemTemplates.get(entry.itemId)!;
     if (z.foodCapped(session, entry.itemId)) return z.send(session, z.foodFullNote());
+    if (z.torchCapped(session, entry.itemId)) return z.send(session, z.torchFullNote());
     if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${PACK_CAP} slots). Make room first.`);
     await setContainer(z.env.DB, entry.rowId, "");
     session.items.push(entry);
@@ -1330,6 +1332,27 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // (Out in the dark, carve still scratches a room and study still reads corpses.)
   if (v === "carve") return wallCarve(z, session);
   if (v === "study") return wallStudy(z, session);
+  // THE FIRE'S REST: 'rest' in here is its own kind — a deliberate doze by the
+  // fire, truly safe, and wounds close at double time (FIRE_REST_REGEN_PER_TICK;
+  // the dungeon's cold-stone rest keeps the slow rate and the open eye). Never
+  // routed to cmdRest: that one reads the gate ROOM for menaces — a rat out by
+  // the arch must not stop a nap that's behind a very old door.
+  if (v === "rest") {
+    if (session.resting) return z.send(session, "You're already settled in by the fire. Let it do its work.");
+    session.resting = true;
+    const hurt = session.hp < session.maxHp;
+    z.send(session, hurt ? pick([
+      "You drag a bench closer to the fire and let the warmth take the weight off. Wounds close quicker here than cold stone ever let them.",
+      "You settle in by the coals, boots stretched to the heat, and let yourself actually sleep. The mending comes easy by a fire.",
+      "You fold your coat for a pillow and doze by the brazier. Warmth does what the dark never would — the hurt unknots fast.",
+    ]) : pick([
+      "Nothing to mend, but the fire doesn't care. You settle in beside it and doze anyway.",
+      "You stretch out by the coals, whole and warm, and let the fire tick you to sleep.",
+      "You put your feet to the brazier and drift. In here, sleep costs nothing.",
+    ]), "gain");
+    gatehouseFeed(z, `${session.name} settles in by the fire to doze.`, session.pubkey);
+    return;
+  }
   if (GATEHOUSE_BARRED.has(v)) {
     return z.send(session, "Not from in here — the dungeon is on the other side of that door. ('out' to step back into it.)");
   }

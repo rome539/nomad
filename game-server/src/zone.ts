@@ -25,6 +25,7 @@ import {
   getOrCreatePlayer,
   type PlayerRow,
   recordKill,
+  recordBossAssist,
   recordDeath,
   savePlayer,
   loadInventory,
@@ -69,12 +70,12 @@ import {
   SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
-  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, ROCK_CRUMBLE_MIN_MS, ROCK_CRUMBLE_MAX_MS,
-  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, COLD_REST_SKIP, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
+  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, ROCK_CRUMBLE_MIN_MS, ROCK_CRUMBLE_MAX_MS, TORCH_SODDEN_MIN_MS, TORCH_SODDEN_MAX_MS,
+  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
-  HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
+  HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
   SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
@@ -83,7 +84,7 @@ import {
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
   DARK_ROOMS,
-  LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE,
+  LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE, TORCH_ITEM, PACK_TORCH_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT
 } from "./zone-data";
 
@@ -119,6 +120,7 @@ export class ZoneDO implements DurableObject {
   public rot: RotEntry[] = [];
   private placedSpawns = new Set<string>(); // ground spawns already laid once
   public groundCond = new Map<string, number>(); // "itemId@roomId" -> condition of gear on the floor, so wear survives a drop/pickup
+  public groundTorch = new Map<string, number>(); // roomId -> ms epoch a torch dropped/fallen onto the floor keeps burning until; while now < it the room is lit for EVERYONE in it, and it's an open flame (fire-fear flees, lurkers can't spring). Burns its remaining life down, then guts out.
   public groundLore = new Map<string, string>(); // "itemId@roomId" -> the engraving on floor gear, so the mark survives the stones (077)
   public groundHeart = new Map<string, number>(); // "itemId@roomId" -> a dropped heart's cut-time: the stones don't make it fresh again
   // Who is INSIDE. A session is rebuilt from nothing on every connect, so without
@@ -214,6 +216,7 @@ export class ZoneDO implements DurableObject {
       this.rot = saved.rot ?? [];
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
       this.groundCond = new Map(Object.entries(saved.groundCond ?? {}));
+      this.groundTorch = new Map(Object.entries(saved.groundTorch ?? {}));
       this.groundLore = new Map(Object.entries(saved.groundLore ?? {}));
       this.groundHeart = new Map(Object.entries(saved.groundHeart ?? {}));
       this.inGatehouse = new Set(saved.inGatehouse ?? []);
@@ -329,7 +332,7 @@ export class ZoneDO implements DurableObject {
         // brooders keep their nest, so the offline sim can't drift them out of
         // their dens and pile three grapplers into one room while no one watches.
         if (c.nextWanderAt <= t && !tmpl.is_boss && c.hp >= tmpl.max_hp * FLEE_BELOW
-            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId)) {
+            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId)) {
           // Silent catch-up runs with no one connected, so no ambush fires here.
           void ai.creatureMoves(this, c, t, "wander", true);
         }
@@ -362,6 +365,7 @@ export class ZoneDO implements DurableObject {
       rot: this.rot,
       placedSpawns: [...this.placedSpawns],
       groundCond: Object.fromEntries(this.groundCond),
+      groundTorch: Object.fromEntries(this.groundTorch),
       groundLore: Object.fromEntries(this.groundLore),
       groundHeart: Object.fromEntries(this.groundHeart),
       inGatehouse: [...this.inGatehouse],
@@ -397,6 +401,7 @@ export class ZoneDO implements DurableObject {
     this.rot = [];
     this.placedSpawns.clear();
     this.groundCond.clear();
+    this.groundTorch.clear();
     this.groundLore.clear();
     this.groundHeart.clear();
     this.wallMarks.clear(); // a fresh world has fresh plaster — old room ids mean nothing here
@@ -888,6 +893,16 @@ export class ZoneDO implements DurableObject {
     return DARK_ROOMS.has(roomId) || events.gloamed(this, roomId);
   }
 
+  // A torch burning on the FLOOR (dropped by a hand, or fallen from a dead one):
+  // while it lasts it lights the room for EVERYONE standing in it — light on the
+  // stone is shared, unlike the torch you carry — and it's an open flame like any
+  // other (fire-fear breaks from it, a lurker can't spring in its glow). It burns
+  // its remaining life down and guts out (tickLights), and the dark returns.
+  public roomLit(roomId: string): boolean {
+    const until = this.groundTorch.get(roomId);
+    return !!until && Date.now() < until;
+  }
+
 
 
   // Pack animals: strike one hyena and the rest of the pack in the room turns on
@@ -947,6 +962,7 @@ export class ZoneDO implements DurableObject {
       // A point slips plate, a blunt weapon caves it: both ignore that much armor.
       dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - this.armorIgnore(weapon)));
       creature.hp -= dmg;
+      this.markHurt(creature, tmpl, session.pubkey);
       ai.addGrudge(this, creature, session.pubkey);
       this.actorFeed(session, session.roomId, wasAsleep
         ? `${session.name} falls on ${tmpl.name} in its sleep!`
@@ -1081,9 +1097,15 @@ export class ZoneDO implements DurableObject {
       if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // a thrown blade (or stone) keeps its wear where it lands
       if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // and the engraving rides the landing
       if (itmpl.edible) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
+      // A thrown rock or torch lies off its spawn floor now — the stray laws
+      // apply the same as a drop (this landing was the gap that let thrown
+      // copies litter forever while dropped ones crumbled/spoiled).
+      if (carried.itemId === "loose-rock") this.strayRock(session.roomId);
+      if (carried.itemId === TORCH_ITEM) this.strayTorch(session.roomId);
     }
 
     creature.hp -= dmg;
+    this.markHurt(creature, tmpl, session.pubkey);
     ai.addGrudge(this, creature, session.pubkey);
     session.target = creature.id;
     this.actorFeed(session, session.roomId, `${session.name} hurls ${itmpl.name} at ${tmpl.name}!`);
@@ -1129,6 +1151,10 @@ export class ZoneDO implements DurableObject {
     this.stampFresh(session.roomId, carried.itemId);
     if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // wear rides the landing
     if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // the engraving too
+    // The noise-throw's landing obeys the stray laws too — a lure you retrieve
+    // in minutes never notices; only the abandoned copy crumbles or spoils.
+    if (carried.itemId === "loose-rock") this.strayRock(session.roomId);
+    if (carried.itemId === TORCH_ITEM) this.strayTorch(session.roomId);
     this.send(session, `You hurl ${itmpl.name} into the dark. It cracks and clatters off the stone — the sound carries.`);
     this.roomFeed(session.roomId, `${session.name} sends ${itmpl.name} clattering across the room.`, session.pubkey, false);
     // The clatter: players next door hear it (WS-only, no relay flood), the idle
@@ -1390,6 +1416,7 @@ export class ZoneDO implements DurableObject {
   // again. The room by the fire hears you go.
   public async leaveGatehouse(session: Session): Promise<void> {
     if (!session.away) return this.send(session, "You're already out in the world.");
+    session.resting = false; // the door wakes you — nobody sleepwalks into the dungeon
     gate.gatehouseFeed(this, `${session.name} shoulders the door open and goes back out.`, session.pubkey, "who");
     await this.leaveStep(session);
     // leaveStep clears `away`, so the HUD title must be re-sent or the top bar
@@ -1570,6 +1597,9 @@ export class ZoneDO implements DurableObject {
     // (a kind is one slot however deep), so without this a run could carry endless
     // rations = bottomless healing. The ceiling makes healing a supply decision.
     if (this.foodCapped(session, itemId)) return false;
+    // Torches share food's problem: one slot however deep, plus a regrowing floor
+    // spawn feeding it. Same cure — a hard count ceiling on spare torches.
+    if (this.torchCapped(session, itemId)) return false;
     return this.hasRoom(session.items, itemId, PACK_CAP, "pack");
   }
 
@@ -1589,6 +1619,25 @@ export class ZoneDO implements DurableObject {
   // The one line every food-entry point speaks when the ceiling stops it.
   public foodFullNote(): string {
     return `You're carrying all the food you can (${PACK_FOOD_CAP}). Eat something, or bank the rest at a gate.`;
+  }
+
+  // How many spare torches ride in the pack right now (a lit torch is spent out
+  // of the pack the moment it catches, so only unlit reserves count).
+  public packTorches(session: Session): number {
+    let n = 0;
+    for (const c of session.items) if (c.itemId === TORCH_ITEM) n++;
+    return n;
+  }
+
+  // Would taking one more torch break the light ceiling? (Only torches count;
+  // everything else answers false and rides the ordinary slot rules.)
+  public torchCapped(session: Session, itemId: string): boolean {
+    return itemId === TORCH_ITEM && this.packTorches(session) >= PACK_TORCH_CAP;
+  }
+
+  // The one line every torch-entry point speaks when the ceiling stops it.
+  public torchFullNote(): string {
+    return `You're carrying all the torches you can (${PACK_TORCH_CAP}). Light one, or bank the rest at a gate.`;
   }
 
   // Mint one item into the pack, if there's room. Returns the row, or null when
@@ -1805,7 +1854,29 @@ export class ZoneDO implements DurableObject {
 
   // ---- the tick (only while someone is watching) ----
 
+  // The alarm is the world's heartbeat — and it was UNARMORED: any throw
+  // anywhere in the tick (a rare world-state bug, or a transient D1/storage
+  // error, which prod throws now and then no matter how correct the code is)
+  // became an uncaught exception, and an uncaught exception ABORTS the DO —
+  // dropping every connected socket at once. That was rome's "the connection
+  // frays at the most random of times": one bad tick taking the whole room's
+  // wire down, self-healing seconds later, nothing visible anywhere. Now the
+  // tick is wrapped: a throw is logged with its stack (wrangler tail / CF
+  // observability will name the next one), the players stay connected, and the
+  // next beat is always scheduled.
   async alarm(): Promise<void> {
+    try {
+      await this.tick();
+    } catch (e) {
+      console.error("tick threw", (e as Error)?.stack ?? String(e));
+    } finally {
+      // The tick's own tail persists + reschedules; this is the backstop for
+      // the tick that never reached its tail. ensureAlarm is idempotent.
+      try { await this.ensureAlarm(); } catch {}
+    }
+  }
+
+  private async tick(): Promise<void> {
     // A cold start with a pending alarm rebuilds the world first.
     if (!this.world) await this.init("door");
     // The alarm can wake a hibernated DO whose sessions are gone but whose
@@ -1904,6 +1975,7 @@ export class ZoneDO implements DurableObject {
             const crushed = bluntVal > 0 && pierceVal === 0 && tmpl.armor > 0; // the weight beat armor
             dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - Math.max(pierceVal, bluntVal)));
             creature.hp -= dmg;
+            this.markHurt(creature, tmpl, session.pubkey);
             // The vitals lottery, PLAYER side — a lucky killing blow on a landed
             // hit. Bosses are the designed wall (never). The three-hound falls this
             // way ONLY to a piercing weapon, and rarely (VITALS_HOUND). Everything
@@ -2152,6 +2224,7 @@ export class ZoneDO implements DurableObject {
           const spike = shield ? THORNS.get(shield.tmpl.id) : undefined;
           if (spike) {
             creature.hp -= spike;
+            this.markHurt(creature, tmpl, victim.pubkey);
             if (creature.hp <= 0) {
               await this.onCreatureDeath(victim, creature, tmpl);
             } else {
@@ -2453,7 +2526,7 @@ export class ZoneDO implements DurableObject {
           // Never settles while there's someone to run from — it keeps moving,
           // room to room, and you only land a blow the tick you have it cornered.
           await ai.creatureMoves(this, creature, now, "wander", false);
-        } else if (!hunted && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId)) {
+        } else if (!hunted && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && !AGGRESSIVE.has(creature.templateId)) {
           await ai.creatureMoves(this, creature, now, "wander", false);
         }
       }
@@ -2499,15 +2572,21 @@ export class ZoneDO implements DurableObject {
         const warmed = [...this.creatures.values()].some(
           (c) => c.cuddling === session.pubkey && c.roomId === session.roomId,
         );
-        if (!warmed && events.coldBites(this, session.roomId) && chance(COLD_REST_SKIP)) continue;
-        session.hp = Math.min(session.maxHp, session.hp + REST_REGEN_PER_TICK);
+        // The fire's rest: dozing INSIDE the gatehouse mends at double time —
+        // warm, safe, deliberate. Standing shelter and the dungeon's cold-stone
+        // rest both keep the slow rate. (And the cold never reaches the fire.)
+        const byFire = session.resting && this.outOfWorld(session);
+        if (!byFire && !warmed && events.coldBites(this, session.roomId) && chance(COLD_REST_SKIP)) continue;
+        session.hp = Math.min(session.maxHp, session.hp + (byFire ? FIRE_REST_REGEN_PER_TICK : REST_REGEN_PER_TICK));
         this.sendStatus(session);
         if (session.hp >= session.maxHp) {
           // Fully healed: save it now so a restart can't revert a finished rest.
           await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
           if (session.resting) {
             session.resting = false;
-            this.send(session, session.away ? "Your wounds have closed — you are whole." : "You feel whole again, and rise.");
+            this.send(session, byFire
+              ? "You come out of the doze slow and easy, the fire low beside you. You are whole."
+              : session.away ? "Your wounds have closed — you are whole." : "You feel whole again, and rise.");
           } else {
             this.send(session, "In the gatehouse quiet, your wounds close. You are whole.");
           }
@@ -2705,9 +2784,12 @@ export class ZoneDO implements DurableObject {
         here.splice(idx, 1);
         // A crumbling rock leaves nothing — no scraps trace (that lures
         // scavengers), no "gone foul" (it didn't rot, it's just rubble again).
-        if (r.kind === "crumble") {
+        // A sodden torch goes the same quiet way: the damp took the pitch.
+        if (r.kind === "crumble" || r.kind === "sodden") {
           if (!silent) {
-            this.roomFeed(r.roomId, "A loose rock, kicked among the rubble, is lost in it.", undefined, false); // housekeeping — off the relay
+            this.roomFeed(r.roomId, r.kind === "sodden"
+              ? "A torch left on the wet stone has drunk the damp — rag and black sludge now, no light left in it."
+              : "A loose rock, kicked among the rubble, is lost in it.", undefined, false); // housekeeping — off the relay
             this.refreshRoomCtx(r.roomId);
           }
         } else {
@@ -2737,6 +2819,19 @@ export class ZoneDO implements DurableObject {
     const pending = this.rot.filter((r) => r.kind === "crumble" && r.roomId === roomId).length;
     for (let i = pending; i < rocks; i++) {
       this.rot.push({ itemId: "loose-rock", roomId, at: Date.now() + randInt(ROCK_CRUMBLE_MIN_MS, ROCK_CRUMBLE_MAX_MS), kind: "crumble" });
+    }
+  }
+
+  // The rock law, for torches: pitch left on wet stone drinks the damp and
+  // spoils. Same sweep shape — skip the floors where a torch is the world's own
+  // regrowing spawn (the thresholds), count strays, arm what isn't armed.
+  public strayTorch(roomId: string): void {
+    if (this.world!.groundSpawns.some((g) => g.item_id === TORCH_ITEM && g.room_id === roomId && g.regrows)) return;
+    const torches = (this.ground.get(roomId) ?? []).filter((i) => i === TORCH_ITEM).length;
+    if (!torches) return;
+    const pending = this.rot.filter((r) => r.kind === "sodden" && r.roomId === roomId).length;
+    for (let i = pending; i < torches; i++) {
+      this.rot.push({ itemId: TORCH_ITEM, roomId, at: Date.now() + randInt(TORCH_SODDEN_MIN_MS, TORCH_SODDEN_MAX_MS), kind: "sodden" });
     }
   }
 
@@ -2850,6 +2945,15 @@ export class ZoneDO implements DurableObject {
     }
   }
 
+  // BOSS BLOOD: note every hand that wounds a king (bosses only, so the sim
+  // blob never fattens on rat brawls). When it falls, everyone on the list
+  // shares the horror on their sheet — see the assist pass in onCreatureDeath.
+  public markHurt(creature: Creature, tmpl: MobTemplate, pubkey: string): void {
+    if (!tmpl.is_boss) return;
+    if (!creature.hurtBy) creature.hurtBy = [];
+    if (!creature.hurtBy.includes(pubkey)) creature.hurtBy.push(pubkey);
+  }
+
   private async onCreatureDeath(killer: Session, creature: Creature, tmpl: MobTemplate, killLine?: string, vital = false): Promise<void> {
     // A revenant doesn't die the first time: it rises weakened and comes again,
     // up to its limit (most rise once; the cairn-wight twice). Only the final
@@ -2876,6 +2980,21 @@ export class ZoneDO implements DurableObject {
     killer.kills += 1;
     if (tmpl.is_boss) killer.bossKills += 1;
     await recordKill(this.env.DB, killer.pubkey, !!tmpl.is_boss);
+    // BOSS ASSISTS: a king goes down under many hands — everyone whose blow drew
+    // its blood (markHurt) shares the horror on their sheet, not just the one who
+    // landed the last cut. The KILL stays the killer's (kills +1 above is theirs
+    // alone); the assist writes boss_kills only. Credited to live sessions — if
+    // you fought and fell, your respawned self still collects.
+    if (tmpl.is_boss) {
+      for (const pk of creature.hurtBy ?? []) {
+        if (pk === killer.pubkey) continue;
+        const ally = [...this.sessions.values()].find((s) => s.pubkey === pk);
+        if (!ally) continue;
+        ally.bossKills += 1;
+        await recordBossAssist(this.env.DB, pk);
+        this.send(ally, `${cap(tmpl.name)} is down — and your blood helped buy it. Another king put down, written to your name.`, "kill big");
+      }
+    }
     // If you're carrying a journal when it falls, the book keeps count — one
     // more of this kind, written to whichever journal is in your pack.
     const jrn = killer.items.find((c) => c.journalId);
@@ -2916,6 +3035,9 @@ export class ZoneDO implements DurableObject {
       this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), creature.stole]);
       this.stampFresh(creature.roomId, creature.stole);
       if (stolen) this.roomFeed(creature.roomId, `${cap(stolen.name)} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, undefined, false); // local: loot on the ground is a shopping-list beacon
+      // The thief's spill obeys the stray laws like any other landing.
+      if (creature.stole === "loose-rock") this.strayRock(creature.roomId);
+      if (creature.stole === TORCH_ITEM) this.strayTorch(creature.roomId);
       creature.stole = undefined;
     }
     this.addTrace(creature.roomId, {
@@ -3056,7 +3178,12 @@ export class ZoneDO implements DurableObject {
     victim.hobbled = false; victim.limpingSince = undefined; // a new body walks whole
     victim.woundedTold = false; // a whole body swings full-weight — re-arm the tell
     victim.bleedTicks = 0; victim.bleedDmg = 0; // the gate returns you whole — no wound rides back
-    victim.litUntil = undefined; victim.litSource = undefined; victim.torchWarned = undefined; // the light went down with the body; the gate gives back breath, not fire
+    // A TORCH burning in a dead hand falls to the stone and keeps burning where
+    // the body dropped (grounded below, once `fell` is known) — the gate gives
+    // back breath, not fire, so the flame stays behind with everything else you
+    // were carrying. A lantern's light just goes out (it isn't shared this way).
+    const fallenFlame = (victim.litSource === "torch" && victim.litUntil && Date.now() < victim.litUntil) ? victim.litUntil : 0;
+    victim.litUntil = undefined; victim.litSource = undefined; victim.torchWarned = undefined;
     victim.buying = undefined; // death ends any open trade; the counter clears
     victim.deaths += 1;
     await recordDeath(this.env.DB, victim.pubkey);
@@ -3066,6 +3193,13 @@ export class ZoneDO implements DurableObject {
     // and the thing lies on the stones for anyone, or anything, to find.
     // Only the lockbox protects (rome's rule, 2026-07-05).
     const fell = victim.roomId;
+    // The torch that was in your hand lands on the stone and burns on, lighting
+    // the room over your body until it guts out (keep the longest flame if one's
+    // already there).
+    if (fallenFlame) {
+      this.groundTorch.set(fell, Math.max(this.groundTorch.get(fell) ?? 0, fallenFlame));
+      this.roomFeed(fell, "A torch falls from a dead hand and burns on where it lands, throwing long shadows.", victim.pubkey, false);
+    }
     const scattered = victim.items;
     const hadSealed = scattered.some((c) => c.serial !== null);
     if (scattered.length > 0) {
@@ -3095,6 +3229,7 @@ export class ZoneDO implements DurableObject {
         }
       }
       this.strayRock(fell); // a rock spilled where you fell will crumble unless this is a gate
+      this.strayTorch(fell); // and a spilled spare torch drinks the damp off its thresholds
       await clearCarriedInventory(this.env.DB, victim.pubkey);
     }
     victim.items = [];
@@ -3193,7 +3328,7 @@ export class ZoneDO implements DurableObject {
     const room = world.rooms.get(session.roomId)!;
     // The lightless deep: without a flame you see nothing here — not the room,
     // not its exits, not what shares it with you. A torch resolves it all.
-    if (this.isDark(room.id) && !this.carriesLight(session)) {
+    if (this.isDark(room.id) && !this.carriesLight(session) && !this.roomLit(room.id)) {
       return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";
     }
     const lines = full ? [room.name, room.description] : [room.name];
@@ -3219,6 +3354,9 @@ export class ZoneDO implements DurableObject {
     if (events.tideFlooded(this, room.id)) {
       lines.push("The floor is gone under the water; whatever lies here is down there with it.");
     } else {
+      // A torch someone set (or dropped) on the stone, still burning — the room's
+      // own light while it lasts.
+      if (this.roomLit(room.id)) lines.push("A torch burns on the floor here, throwing the dark back off the walls.");
       for (const itemId of this.ground.get(room.id) ?? []) {
         const t = world.itemTemplates.get(itemId);
         if (t) lines.push(`${cap(t.name)} lies here.`);
@@ -3246,9 +3384,9 @@ export class ZoneDO implements DurableObject {
       // strikes. UNLESS you carry a flame: torchlight finds it pressed into its
       // crevice before it can spring, and the ambush is spoiled (wakeListeners).
       const hiddenLurker = LURKERS.has(creature.templateId) && creature.hidden && !creature.target;
-      if (hiddenLurker && !this.carriesLight(session)) continue;
+      if (hiddenLurker && !this.carriesLight(session) && !this.roomLit(room.id)) continue;
       if (hiddenLurker) {
-        lines.push(`${cap(t.name)} is here, caught in your torchlight before it could spring — pressed into a crevice, watching.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
+        lines.push(`${cap(t.name)} is here, caught in ${this.carriesLight(session) ? "your torchlight" : "the torchlight"} before it could spring — pressed into a crevice, watching.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
         continue;
       }
       // A sentinel reads by its state: asleep and steppable, or awake and barring the stair.
@@ -3474,7 +3612,8 @@ export class ZoneDO implements DurableObject {
     return LURKERS.has(creature.templateId)
       && !!creature.hidden
       && !creature.target
-      && !this.carriesLight(session);
+      && !this.carriesLight(session)
+      && !this.roomLit(creature.roomId);
   }
 
 
@@ -3652,7 +3791,11 @@ export class ZoneDO implements DurableObject {
   public equippedBlock(session: Session): number {
     let block = 0;
     const s = this.equippedItem(session, "shield");
-    if (s && s.tmpl.block > 0) {
+    // A hand full of fire holds no shield up: a burning torch or lantern takes
+    // the shield hand, so the shield gives no block while a light burns (it
+    // STAYS on your arm the whole time — never unequipped, never a loose thing
+    // to drop; 'equip shield' lowers the flame and brings the guard back).
+    if (s && s.tmpl.block > 0 && !this.carriesLight(session)) {
       block += s.tmpl.block * Math.max(0, s.carried.condition) / 100;
       // Guarded means fighting BEHIND the shield — it catches a shade more.
       // (Stance only sweetens a shield you actually carry; bare guarded gets nothing.)
@@ -3824,7 +3967,7 @@ export class ZoneDO implements DurableObject {
       const tmpl = world.mobTemplates.get(c.templateId)!;
       if (tmpl.is_boss) continue; // the King waits; the noise comes to him
       if (DROWNERS.has(c.templateId)) continue; // it holds its water; noise doesn't move it
-      if (SENTINELS.has(c.templateId)) continue; // a guardian holds its post; noise doesn't draw it off the door
+      if (SENTINELS.has(c.templateId) || AGGRESSIVE.has(c.templateId)) continue; // a guardian holds its post; noise doesn't draw it off the door
       if (SCAVENGERS.has(c.templateId)) continue; // hyenas track the scent of the dead, not the din of the living
       // Not every ear pricks up. A good majority come to look; the rest keep
       // to their own business — so a fight draws a crowd, not the whole zone.

@@ -1714,7 +1714,17 @@ async function connect() {
       publishNote(f.text, f.atag);  // your brag, your key — a kind 1 in your own feed
     }
   };
-  ws.onclose = function () { clearInterval(hbTimer); closeBench(); closeTrade(); closeMap(); closeJournal(); print("— the connection frays; reweaving —", "sys"); scheduleRetry(); };
+  // The fray line names its cause: the close code (and reason, when the server
+  // gave one) rides the message, so "it reweaves at random" reports carry data.
+  // 1000 "reconnected" = you opened another tab/device (the server said so);
+  // 1006 = the wire dropped without a goodbye (network blip, or the server's
+  // whole DO aborted); 1001 = the far side went away cleanly.
+  ws.onclose = function (e) {
+    clearInterval(hbTimer); closeBench(); closeTrade(); closeMap(); closeJournal();
+    var why = e && e.code ? " (" + e.code + (e.reason ? ": " + e.reason : "") + ")" : "";
+    print("— the connection frays" + why + "; reweaving —", "sys");
+    scheduleRetry();
+  };
 }
 
 function scheduleRetry() {
@@ -2259,7 +2269,10 @@ function benchItemNode(it, place) {
       if (it.slot) armBtn("scrap", "salvage", "scrap");
     }
   } else {
-    btn("\\u2192 pack", "take");
+    // Take ONE of a stack back to the pack, not the pile — banking in bulk is
+    // fine (the vault is bottomless for fungibles), but withdrawing fans out a
+    // whole stack into pack slots you didn't mean to spend (rome, 2026-07-16).
+    btn1("\\u2192 pack", "take");
     // From the lockbox at a gate you can also seal a piece in place or send it
     // straight to the vault, no round-trip through the pack. (Same rule as the
     // pack: sealed wealth and raw fungibles vault; unsealed gear needs a seal.)

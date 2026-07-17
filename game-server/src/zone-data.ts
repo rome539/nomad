@@ -124,6 +124,14 @@ export const PACK_CAP = 20;
 // decision again: you ration, or you run back to bank and restock (rome,
 // 2026-07-14). Not a slot cost (food still rides light); a count, on its own.
 export const PACK_FOOD_CAP = 8;
+// Torches free-stack the same way (a whole pile is one slot), and they're a
+// REGROWING floor forage at every gate threshold — so you could stand at the
+// arch and pick up torch after torch as they respawn, hoarding bottomless light
+// in one slot. That guts the torch's whole point: it's the run's clock (mig
+// 057, ~10 min a burn, "long enough if you do not linger"). A hard ceiling on
+// spare torches carried makes the dark a supply decision again — you stock a
+// reserve, you don't erase the night (rome, 2026-07-16). Count, not a slot.
+export const PACK_TORCH_CAP = 5;
 export const LOCKBOX_CAP = 8; // the run closet — small, takes anything, sealed or raw
 export const VAULT_CAP = 50; // the bank — deep, generous, sealed wealth only
 // Not every forced box pays out. Now and then the lock gives on nothing —
@@ -206,6 +214,13 @@ export const RATE_REFILL_PER_SEC = 2;
 // Death wakes you whole: the price of dying is everything you carried,
 // not a hobbled morning.
 export const REST_REGEN_PER_TICK = 1;
+// Two kinds of rest (rome, 2026-07-16). The DUNGEON rest is the one above:
+// cold stone, one eye open, REST_REGEN_PER_TICK — and anything ends it. The
+// FIRE rest is a deliberate doze INSIDE the gatehouse (typed 'rest' by the
+// fire): warm, truly safe, and wounds close at double time. Standing shelter
+// (bench/hatch open at a gate, not dozing) stays the slow rate — the fire
+// rewards actually settling in, not just being indoors.
+export const FIRE_REST_REGEN_PER_TICK = 2;
 
 // Simulation clocks.
 export const SIM_STEP_MS = 60_000; // catch-up granularity
@@ -248,6 +263,13 @@ export const RELIABLE_GEAR = new Set(["loose-rock"]); // the starter tool: exemp
 // floor now crumbles back to rubble on this window; the gate supply is untouched.
 export const ROCK_CRUMBLE_MIN_MS = 20 * 60_000; // 20–40 min, dice-jittered so it's no metronome
 export const ROCK_CRUMBLE_MAX_MS = 40 * 60_000;
+// A torch left lying OFF its spawn floors goes the same way (rome, 2026-07-16):
+// the dungeon is wet stone, and pitch left in the damp drinks it — rag and
+// sludge inside the hour. Same law as the rock (dropped/thrown/spilled copies
+// only; the regrowing threshold torches are the world's own and never spoil),
+// so torch litter can't carpet the halls into a free light network.
+export const TORCH_SODDEN_MIN_MS = 30 * 60_000; // 30–60 min, jittered
+export const TORCH_SODDEN_MAX_MS = 60 * 60_000;
 // The two kinds of renewable (rome, 2026-07-11 — the larder was a healing
 // pump): living forage (moss, lichen, nettle, caps, water) GROWS, and keeps
 // the fast clock above. DEAD STOCK — cured provisions nobody is curing
@@ -978,6 +1000,21 @@ export const BITERS = new Set([
 // AT its post instead of walking in from a mouth it could never leave.
 export const SENTINELS = new Set(["three-hound", "two-hound"]);
 
+// AGGRESSIVE creatures set on ANY wanderer who crosses into their room — no
+// grudge, no meal, no wake needed — and hold their post to do it (they don't
+// wander off, and noise won't lure them away). A living hazard chained to a
+// place: the last watchman, who bars his turret to everyone who is not him.
+export const AGGRESSIVE = new Set(["last-watchman"]);
+
+// TREASURY DOORS: a room that is some boss's hoard, keyed by the keeper who
+// bars it. The way IN stays shut while that keeper lives in the room before it
+// — you don't slip past a king into his grave-wealth, you put him down and walk
+// in over the body (the exit itself carries no key; the KEEPER is the lock).
+// The way OUT is never barred — nobody gets sealed in with the gold.
+export const TREASURY_DOORS = new Map<string, string>([
+  ["kings-hoard", "forgotten-king"],
+]);
+
 // The sentinel lines name their heads, and the runt has one fewer to lift.
 // Quantifier phrase, so it drops into prose whole ("all three heads low and
 // watching" / "both heads low and watching").
@@ -1204,7 +1241,10 @@ export const PIERCE = new Map<string, number>([["rusted-pick", 2], ["horsemans-p
 // A blunt weapon (stun > 0) ignores this much armor — crushing weight caves plate
 // the way a point slips it. Flat, categorical (every blunt weapon), unlike the
 // per-weapon PIERCE map. The mace was history's answer to armor; so it is here.
-export const BLUNT_ARMOR_IGNORE = 2;
+// Nerfed 2 -> 1 (rome, 2026-07-16): at 2 every mace matched the picks, and the
+// pick family had no reason to exist. Blunts still beat blades on plate (1 > 0);
+// the PICKS (2-3) are now the dedicated can-openers.
+export const BLUNT_ARMOR_IGNORE = 1;
 // TWO_HANDED: wants both hands; no shield alongside it (enforced at equip).
 export const TWO_HANDED = new Set(["war-pike", "abyssal-harpoon"]);
 // PADDED: a mob's stun rings you half as often. Best piece counts — padding
@@ -1240,8 +1280,9 @@ export const BLEED_ODDS = new Map<string, number>([
   ["albino-rat", 0.15],
   ["pale-stalker", 0.20],
   ["pale-crawler", 0.225], // the deep's worst biters
-  ["three-hound", 0.25],   // the sentinel's jaws — feared, but not a certainty
+  ["three-hound", 0.30],   // the sentinel's jaws — the wound that ignores armor opens more often now (085)
   ["two-hound", 0.20],     // the runt's jaws — fewer, not gentler
+  ["cutthroat", 0.30],     // the thin knife — "does not mind cutting you open on the way"
 ]);
 // HOBBLE: leg-goers can hamstring you on a hit — a per-hit chance, tiered by
 // threat (only things that go low: hyenas at the legs, the hound, the deep's

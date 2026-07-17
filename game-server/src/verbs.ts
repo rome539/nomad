@@ -21,7 +21,7 @@ import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK, SLICK_BREAK_BONUS,
   PARTING_BLOW_CHANCE, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
-  CARVE_MAX_LEN, TWO_HANDED, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS,
+  CARVE_MAX_LEN, TWO_HANDED, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
   DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS,
@@ -495,6 +495,19 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     z.roomSound(session.roomId, "A low growl rolls up from {dir} — something big, and awake.");
   }
 
+  // A TREASURY DOOR: the room beyond is some boss's hoard, and the way in stays
+  // shut while its keeper lives in THIS room — the exit carries no key because
+  // the keeper IS the lock. No sleeping tiptoe here (a king on his throne is not
+  // a hound on a stair): the way down opens over his body, or not at all.
+  const keeperId = TREASURY_DOORS.get(exit.to_room);
+  if (keeperId) {
+    const keeper = [...z.creatures.values()].find((c) => c.roomId === session.roomId && c.templateId === keeperId);
+    if (keeper) {
+      const kt = world.mobTemplates.get(keeper.templateId)!;
+      return z.send(session, `${cap(kt.name)} stirs on the throne, and the dark between you and the way ${dir} is suddenly full of him. What he took to the grave, he keeps. The way opens over his body, or not at all.`, "dmgin");
+    }
+  }
+
   // The gate toll: an awake sentinel holds the door, and nothing walks its room
   // without feeling teeth on the way out — whichever way out. One mitigated
   // bite per crossing (jaws that bleed roll their bleed too). The sleeping
@@ -667,9 +680,31 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   if (inst) return getInstanced(z, session, inst);
   const here = z.ground.get(session.roomId) ?? [];
   const itemId = findItemIn(z, here, arg);
+  // The torch burning on the FLOOR isn't a pack item — it's a set-down flame
+  // (cmdDrop's counterpart, or a dead hand's). Taking it up puts what's LEFT of
+  // its burn back in your hand and the room goes back to needing it. Matched
+  // only when no unlit torch actually lies here (that one is ordinary loot).
+  if (!itemId && z.roomLit(session.roomId) && /\b(torch|light|flame|fire)\b/i.test(arg)) {
+    if (z.carriesLight(session)) return z.send(session, "Your hand already holds a light — leave this one burning where it is.");
+    const inHand = z.equippedItem(session, "weapon");
+    if (inHand && TWO_HANDED.has(inHand.tmpl.id)) {
+      return z.send(session, `Both your hands are full of ${inHand.tmpl.name} — no free hand for the flame. Lower it first.`);
+    }
+    session.litUntil = z.groundTorch.get(session.roomId)!;
+    session.litSource = "torch";
+    session.torchWarned = false;
+    z.groundTorch.delete(session.roomId);
+    z.send(session, "You take the burning torch up off the stone — its light is yours again.", "gain");
+    z.roomFeed(session.roomId, `${session.name} takes up the burning torch.`, session.pubkey, false);
+    z.sendStatus(session);
+    z.refreshRoomCtx(session.roomId);
+    await z.persist();
+    return;
+  }
   if (!itemId) return z.send(session, "That isn't lying around here.");
   const tmpl = z.world!.itemTemplates.get(itemId)!;
   if (z.foodCapped(session, itemId)) return z.send(session, z.foodFullNote());
+  if (z.torchCapped(session, itemId)) return z.send(session, z.torchFullNote());
   if (!z.packRoom(session, itemId)) {
     return z.send(session, `Your pack is full (${PACK_CAP} slots). Drop something, or bank it at a gate.`);
   }
@@ -759,6 +794,21 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
 
 export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise<void> {
   if (!arg) return z.send(session, "Drop what?");
+  // A LIT torch is no longer a pack item — it was spent into the flame when you
+  // kindled it, and now it's the light you carry. "drop torch" sets that flame
+  // on the stone, where it keeps burning and lights the room for EVERYONE in it
+  // until it guts out. (A lantern isn't shared this way; its light just goes out
+  // when it leaves your hand — drop the lantern ITEM as normal.)
+  if (light.carriesLight(session) && session.litSource === "torch" && /\b(torch|light|flame|fire)\b/i.test(arg)) {
+    z.groundTorch.set(session.roomId, Math.max(z.groundTorch.get(session.roomId) ?? 0, session.litUntil!));
+    session.litUntil = undefined; session.litSource = undefined; session.torchWarned = false;
+    z.send(session, "You set the burning torch down on the stone; it keeps guttering there, throwing its light across the room.", "gain");
+    z.roomFeed(session.roomId, `${session.name} sets a burning torch down on the floor.`, session.pubkey, false);
+    z.sendStatus(session);
+    z.send(session, z.describeRoom(session, false));
+    await z.persist();
+    return;
+  }
   const carried = z.findCarried(session, arg);
   if (!carried) return z.send(session, "You carry nothing like that.");
   // ONE at a time. findCarried returns a single row, but say so plainly: with
@@ -803,6 +853,7 @@ export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedI
     }
     if (tmpl.edible) z.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
     if (itemId === "loose-rock") z.strayRock(session.roomId); // a rock set down off its gate crumbles back to rubble
+    if (itemId === TORCH_ITEM) z.strayTorch(session.roomId); // a torch set down off its thresholds drinks the damp and spoils
   }
   // Shedding under the burden line is the valve working: say so, so the
   // mid-chase drop reads as the escape it is.
@@ -852,6 +903,21 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
     return z.send(session, `You can't wear or wield ${tmpl.name}.`);
   }
   if (carried.equipped) {
+    // The shield's already on your arm, but a burning light keeps your guard
+    // DOWN (equippedBlock zeroes the block while carriesLight). So 'equip shield'
+    // with a torch lit isn't a no-op — it's the way BACK: lower the flame and
+    // raise the shield, trading the light for the guard.
+    if (tmpl.slot === "shield" && z.carriesLight(session)) {
+      const wasLantern = session.litSource === "lantern";
+      session.litUntil = undefined;
+      session.litSource = undefined;
+      session.torchWarned = false;
+      z.sendStatus(session);
+      const dark = z.isDark(session.roomId) && !z.outOfWorld(session) ? ", and the dark closes back in" : "";
+      z.send(session, `You ${wasLantern ? "shutter the lantern" : "lower the torch"} and swing ${tmpl.name} off your back — your guard returns${dark}.`);
+      z.send(session, z.describeRoom(session, false)); // the dark may close over the room again
+      return;
+    }
     return z.send(session, `You already have ${tmpl.name} ${tmpl.slot === "weapon" ? "in hand" : "on"}.`);
   }
   // Combat narrows this: worn gear cannot be wrestled on or off mid-fight at
@@ -1051,11 +1117,16 @@ export function cmdRest(z: ZoneDO, session: Session): void {
     "You lower yourself down and let your breathing slow. The ache eases, little by little — any effort ends it.",
     "You find a wall to put your back to and go still. Blood stops where it was running — any effort ends it.",
     "You sink down where you stand and let the dark hold you a while. The hurt recedes — any effort ends it.",
+    "You crouch in the lee of a fallen block, knees to your chest, and let the shaking pass. It mends, barely — any effort ends it.",
+    "You sit with your weapon across your knees and your eyes half-open. The body patches what it can — any effort ends it.",
+    "You press your back into a corner where nothing can come at it, and breathe until the edges dull — any effort ends it.",
   ]) : pick([
     "You settle against the cold stone with nothing left to mend, and simply sit — any effort ends it.",
     "You put your back to a wall and go still. Nothing hurts. You listen instead — any effort ends it.",
     "You sink down where you stand, whole, and let the dark keep you company a while — any effort ends it.",
     "You lower yourself down and let your breathing slow. There is nothing to close; you rest anyway — any effort ends it.",
+    "You sit on a fallen block and count the drips somewhere off in the dark. Whole, and in no hurry — any effort ends it.",
+    "You hunker down, unhurt, and give your legs the rest your nerves won't take — any effort ends it.",
   ]));
   z.roomFeed(session.roomId, `${session.name} settles down to rest.`, session.pubkey, false); // resting: local only, nobody spectates a nap
 }

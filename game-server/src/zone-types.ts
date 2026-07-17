@@ -99,6 +99,7 @@ export interface Creature {
   avoids?: { roomId: string; until: number }[]; // place-fear: rooms this one steers around (a rat's bad memory, a thief's warning)
   calledTo?: string; // call-bus guard: it was SUMMONED here — it never calls from this room (a call must never trigger a call)
   repositionAt?: number; // lurkers: next time it re-reads the traffic and shifts its ambush
+  hurtBy?: string[]; // BOSSES only: every pubkey whose blow drew blood — when the boss falls, all of them share the horror on their sheet (assist credit; the kill itself stays the killer's)
 }
 
 export interface Regrow {
@@ -131,7 +132,9 @@ export interface RotEntry {
   // "rot" (the default, undefined on legacy saves): food spoils, leaves scraps.
   // "crumble": a stray loose-rock lost to the rubble — no scraps, no scavenger
   // lure, just gone. Same timer machinery, different ending.
-  kind?: "rot" | "crumble";
+  // "sodden": a torch left on wet stone off its spawn floors — the damp takes
+  // the pitch and it's rag and sludge. No scraps, no lure, gone like the rock.
+  kind?: "rot" | "crumble" | "sodden";
 }
 
 // A carryable on the floor that can't be reduced to a bare template id — it
@@ -158,6 +161,7 @@ export interface SimState {
   rot: RotEntry[];
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once
   groundCond?: Record<string, number>; // "itemId@roomId" -> condition of gear on the floor, so wear survives drop/pickup
+  groundTorch?: Record<string, number>; // roomId -> ms epoch a torch burning on the floor lasts until (a dropped/fallen flame lighting the room for all in it)
   groundLore?: Record<string, string>; // "itemId@roomId" -> lore_id of engraved gear on the floor, so the mark survives too (077)
   groundHeart?: Record<string, number>; // "itemId@roomId" -> a dropped heart's acquired_at, so the floor can't wash its rot off
   inGatehouse?: string[]; // pubkeys standing INSIDE — a dropped socket must not throw you out the door

@@ -9,7 +9,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import * as events from "./events";
-import { setEquipped, setItemCondition, removeItemRow } from "./world";
+import { setItemCondition, removeItemRow } from "./world";
 import {
   TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR,
   TWO_HANDED,
@@ -59,13 +59,15 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   if (weapon && TWO_HANDED.has(weapon.tmpl.id)) {
     return z.send(session, `Both your hands are full of ${weapon.tmpl.name} — no free hand for a light. Lower it first.`);
   }
+  // A lit light fills the shield hand: your shield STAYS on your arm (it is
+  // never unequipped, so it can never become a loose pack item to lose), but it
+  // gives no guard while the flame burns — equippedBlock reads carriesLight and
+  // zeroes the block. Raise the shield again ('equip shield') to lower the flame
+  // and trade the light back for the guard. (Old behaviour set equipped=false
+  // and dropped the shield into the pack; that loose shield was getting lost.)
   const shield = z.equippedItem(session, "shield");
   if (shield && z.inCombat(session)) {
-    return z.send(session, "You can't fumble your shield down and a light up while something wants your blood.");
-  }
-  if (shield) {
-    shield.carried.equipped = false;
-    await setEquipped(z.env.DB, shield.carried.rowId, false);
+    return z.send(session, "You can't drop your guard for a light while something wants your blood.");
   }
   if (wantLantern) {
     // The oil is committed the moment the wick takes — the wear lands now, and
@@ -75,7 +77,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litUntil = Date.now() + LANTERN_BURN_MS;
     session.litSource = "lantern";
     session.torchWarned = false;
-    z.send(session, `You slide the shutter and touch flame to the wick${shield ? `, ${shield.tmpl.name} set aside to carry it` : ""} — a low, steady light settles around you. Nothing flinches from it.`, "gain");
+    z.send(session, `You ${shield ? `swing ${shield.tmpl.name} onto your back, then ` : ""}slide the shutter and touch flame to the wick — a low, steady light settles around you. Nothing flinches from it.${shield ? " (No guard while the light burns — 'equip shield' brings it back.)" : ""}`, "gain");
     z.roomFeed(session.roomId, `${session.name} raises a hooded lantern; a patient light spreads.`, session.pubkey, false);
   } else {
     session.items.splice(session.items.indexOf(light), 1);
@@ -85,7 +87,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litUntil = Date.now() + Math.floor(TORCH_BURN_MS * coldMult);
     session.litSource = "torch";
     session.torchWarned = false;
-    z.send(session, `You touch a spark to the pitch and the torch catches${shield ? `, ${shield.tmpl.name} set aside to hold it` : ""} — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.`, "gain");
+    z.send(session, `You ${shield ? `swing ${shield.tmpl.name} onto your back, then ` : ""}touch a spark to the pitch and the torch catches — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.${shield ? " (No guard while the flame burns — 'equip shield' brings it back.)" : ""}`, "gain");
     z.roomFeed(session.roomId, `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey, false);
   }
   z.sendStatus(session);
@@ -152,5 +154,26 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
         ? "The lantern's light thins — the oil of this burn is nearly spent."
         : "Your torch burns low, the flame guttering — not long now.", "dmgin");
     }
+  }
+  // Torches burning on the FLOOR (dropped, or fallen from a dead hand) gutter out
+  // too. When one dies the room loses its shared light — tell anyone standing
+  // there, and if the room is born-dark, the dark closes back over them. The
+  // weathers that drown a carried flame drown a grounded one the same: the tide
+  // takes it, the rain takes it, the exhale pulls it apart.
+  for (const [roomId, until] of z.groundTorch) {
+    const drowned = events.tideFlooded(z, roomId) || events.raining(z, roomId) || events.exhaling(z, roomId);
+    if (now < until && !drowned) continue;
+    z.groundTorch.delete(roomId);
+    const dark = z.isDark(roomId);
+    for (const s of z.sessions.values()) {
+      if (s.roomId !== roomId || z.outOfWorld(s)) continue;
+      const blind = dark && !z.carriesLight(s);
+      z.send(s, (drowned
+        ? "The torch burning on the floor dies with a hiss — the wet takes it."
+        : "The torch on the floor gutters out and dies.")
+        + (blind ? " The dark closes back over the room." : ""), "dmgin");
+      if (blind) z.send(s, z.describeRoom(s, false));
+    }
+    z.refreshRoomCtx(roomId);
   }
 }

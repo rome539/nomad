@@ -16,7 +16,7 @@ import {
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, DARK_ROOMS, THIEVES,
   PREYS_ON, PREDATION_ODDS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
-  RUNNERS, BROODERS, SENTINELS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL,
@@ -261,7 +261,9 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       if (!LISTENERS.has(c.templateId) && !lurker) continue;
       // A torch spoils the ambush: a lurker caught in your light can't drop from
       // the dark (it shows in the room instead, revealed — see describeRoom).
-      if (lurker && carriesFire(session)) continue;
+      // A torch burning on the FLOOR spoils it the same way — the glow is the
+      // glow, whoever's hand it left.
+      if (lurker && (carriesFire(session) || z.roomLit(roomId))) continue;
       // The din of a fight no longer rouses the bone-sleepers — they wake to
       // movement (in or past) and to a grudge, not to noise alone. Blind lurkers
       // still strike at sound; that's the whole of what they are.
@@ -307,7 +309,11 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       if (creature.asleep) continue;
       const holdsGrudge = remembers(z, creature, session.pubkey, now);
       const guards = hyenaGuardsMeal(z, creature);
-      if (!holdsGrudge && !guards) continue;
+      // A hostile guardian (AGGRESSIVE) needs no grudge — it bars its post to
+      // everyone. It's never a hyena-meal-guard, so it falls straight through to
+      // the target-and-strike below with a guardian's line, not a hyena wind-up.
+      const hostile = AGGRESSIVE.has(creature.templateId);
+      if (!holdsGrudge && !guards && !hostile) continue;
       const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
       // A dire-hyena guarding its kill no longer jumps you the instant you walk
       // in — it winds up (DIRE_ROUSE_MS; the act loop commits it), and the tell
@@ -324,8 +330,13 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       }
       creature.target = session.pubkey;
       if (!session.target) session.target = creature.id;
-      z.send(session, `${cap(tmpl.name)} remembers you — and comes for you.`);
-      z.roomFeed(session.roomId, `${cap(tmpl.name)} goes for ${session.name}.`, session.pubkey, false);
+      const onSight = hostile && !holdsGrudge; // a guardian barring the door, not an old score settled
+      z.send(session, onSight
+        ? `${cap(tmpl.name)} fixes on you the moment you cross into its post — and moves to bar the way.`
+        : `${cap(tmpl.name)} remembers you — and comes for you.`);
+      z.roomFeed(session.roomId, onSight
+        ? `${cap(tmpl.name)} moves to bar ${session.name}'s way.`
+        : `${cap(tmpl.name)} goes for ${session.name}.`, session.pubkey, false);
       // The first one to reach you gets the jump; the rest merely engage.
       if (ambush && !struck) {
         struck = true;
@@ -743,8 +754,12 @@ export function carriesFire(session: Session): boolean {
   // is false today). Returns true when it's recoiling, having said so.
 export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): boolean {
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
-    if (!FEARS_FIRE.has(tmpl.id) || !carriesFire(victim)) return false;
-    z.send(victim, `${cap(tmpl.name)} shrinks from your flame and breaks away.`);
+    if (!FEARS_FIRE.has(tmpl.id)) return false;
+    // The fear answers the FLAME, not the hand: a torch burning on the floor
+    // holds the room the same as one held up.
+    const inHand = carriesFire(victim);
+    if (!inHand && !z.roomLit(creature.roomId)) return false;
+    z.send(victim, `${cap(tmpl.name)} shrinks from ${inHand ? "your flame" : "the burning torch"} and breaks away.`);
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} shrinks from the flame.`, victim.pubkey, false); // local: mob reaction (fires every torch-near-mob tick)
     return true;
   }
