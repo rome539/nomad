@@ -775,25 +775,28 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     const action = frame?.action;
     const atGate = world.entryRooms.has(session.roomId);
     if (action === "open") {
-      // In the gatehouse the bench is RIGHT THERE — opening it is a lateral move,
-      // never "already stepped out". Only a mid-dungeon crouch blocks a second one.
-      if (session.away && !z.outOfWorld(session)) return;
+      // Block a second step-out only when you're crouched OUTSIDE the gatehouse
+      // (a dungeon or a gate crouch). Standing inside the gatehouse the bench is
+      // a fixture in reach, so opening it there is a lateral, always allowed.
+      if (session.away && !z.inGatehouse.has(session.pubkey)) return;
       if (z.inCombat(session)) {
         return z.send(session, "Not while something is trying to kill you.");
       }
-      // The lockbox opens anywhere (you duck aside to sort your run closet) —
-      // but AT A GATE the bench is a fixture of the gatehouse (the front door
-      // rule): opening it from the gate room walks you through the door first,
-      // and closing it leaves you by the fire ('out' is the way back to the
-      // world). Mid-dungeon, the crouch is unchanged: in the open, in reach,
-      // and closing stands you back up right where you knelt.
-      if (z.world!.entryRooms.has(session.roomId)) {
-        throughTheDoor(z, session); // no-op if already inside
-        session.benchInHouse = true; // the bench is the house's — closing keeps you by the fire
-        z.enterStep(session, "sorting"); // lateral to the bench
+      // Opening your pack is a CROUCH, not a door: you sort in place and stand
+      // back up right where you were — at a gate OR in the dungeon. It is NOT a
+      // step into the gatehouse (rome, 2026-07-17: the inventory chip was walking
+      // you in). Your pack is your own kit, not the keeper's counter — barter and
+      // the forge still take you through the door, but the bench doesn't. The
+      // vault and seal still show and work at a gate: the modal reads that off
+      // your room, not off your being inside. The one exception: if you're
+      // ALREADY in the gatehouse (walked in, or stepped over from the hatch), the
+      // bench is a lateral there and closing keeps you by the fire.
+      if (z.inGatehouse.has(session.pubkey)) {
+        session.benchInHouse = true;
+        z.enterStep(session, "sorting"); // lateral to the fixture, still by the fire
       } else {
         session.benchInHouse = false;
-        enterBench(z, session); // the dungeon crouch
+        enterBench(z, session); // a crouch in place — gate or dungeon, never the door
       }
       return sendBench(z, session);
     }
@@ -909,12 +912,12 @@ export async function benchDrop(z: ZoneDO, session: Session, row: string): Promi
   }
 
 export function enterBench(z: ZoneDO, session: Session): void {
-    // The DUNGEON crouch only, since the front door rule (2026-07-17): at a
-    // gate the bench is the gatehouse's fixture and handleBench walks you
-    // through the door instead. Out here the lockbox rides with you, but you
-    // don't leave with it — you crouch to sort it in the open, still in the
-    // world and in reach. Rest survives the crouch — healing pauses while
-    // stepped out, resumes on close.
+    // A crouch in place — at a gate OR in the dungeon (rome, 2026-07-17: opening
+    // your pack is NOT a step into the gatehouse; only barter/forge take the
+    // door). You duck aside to sort what you carry, still in the world and in
+    // reach, and stand back up right where you were. The lockbox rides with you;
+    // the vault/seal still work at a gate off your room. Rest survives the crouch
+    // — healing pauses while stepped out, resumes on close.
     session.away = true;
     session.target = null;
     z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
@@ -1029,6 +1032,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
         stack: z.stackable(c.itemId, c.serial, c.journalId),
         trophy: z.isTrophy(c.itemId), // cut off a body — not food, not a key, not tender
         key: z.isKey(c.itemId),       // opens something: a cache's key, or the heart
+        food: !!t?.edible,            // something you can eat — its own vault shelf, apart from the banked wealth
         gear,
         // What the bench can actually mend: the stone wears like gear but
         // nothing refills it (rome) — no repair button to bait a refusal.

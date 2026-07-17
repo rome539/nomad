@@ -838,6 +838,7 @@ export class ZoneDO implements DurableObject {
     if (session.resting && (cmd.verb === "go" || cmd.verb === "attack" || cmd.verb === "throw" || cmd.verb === "get" || cmd.verb === "drop")) {
       session.resting = false;
       this.send(session, "You rise.");
+      this.sendStatus(session); // the 'resting' pill must clear the instant you rise, not linger until the first combat round pushes the next status
     }
     await this.dispatch(session, cmd);
     this.syncCombatCtx();

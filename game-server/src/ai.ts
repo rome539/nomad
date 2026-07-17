@@ -239,6 +239,23 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
       const mark = [...z.sessions.values()].find((s) => s.pubkey === creature.target && !z.outOfWorld(s));
       return mark ? `fixed on ${mark.name}` : "on the hunt";
     }
+    // Nothing has it fixed on a fight — so read what it's actually DOING. The
+    // legibility law covers peace too: a scavenger tearing a body, a hyena
+    // making for water, a nose down after a scent it caught all read in the look
+    // instead of the beast standing there like it's waiting for you.
+    if (SCAVENGERS.has(creature.templateId)) {
+      const list = z.traces.get(creature.roomId) ?? [];
+      const spareKin = creature.templateId === "grave-hyena"; // won't eat its own dead — it keens
+      const edible = list.filter((tr) => CORPSE_TRACES.has(tr.kind) && !(spareKin && tr.label === tmpl.name));
+      if (edible.some((tr) => tr.kind === "remains")) return "hunched low over a corpse, tearing into it";
+      if (edible.length) return "lapping the bloodied stone clean";
+    }
+    if (creature.wateringTo) return "padding toward water, tongue lolling";
+    if (creature.curious && creature.curious !== creature.roomId) {
+      return SCAVENGERS.has(creature.templateId)
+        ? "casting after a scent, nose to the ground"
+        : "moving toward something only it has heard";
+    }
     // The food web made visible: a hungry predator eyes a weaker thing sharing
     // its room — the tell that lets a player USE predation (bait a scrap, slip past).
     if (creature.hunger >= HUNGRY_AT && !HOLLOW.has(tmpl.id)) {

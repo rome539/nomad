@@ -2300,9 +2300,6 @@ function benchItemNode(it, place) {
       else btn(it.slot === "weapon" ? "wield" : "wear", "equip");
     }
     btn("\\u2192 box", "stash");
-    // Drop THIS one to the floor — a single row, never the "dropped both"
-    // ambiguity of a name. Not offered for what you're wearing (remove first).
-    if (!it.equipped) btn1("drop", "drop");
     // The vault and the seal are the gate's business — only offered at a gate.
     // Sealed wealth and raw fungibles both bank in the vault; only unsealed gear
     // needs the seal first (trophies and the like carry no title to seal).
@@ -2330,6 +2327,11 @@ function benchItemNode(it, place) {
     }
   }
   armBtn("burn", "burn");
+  // Drop THIS one to the floor — a single row, never the "dropped both" ambiguity
+  // of a name. Placed LAST, off on its own past burn, so a stray click among the
+  // box/vault banking buttons can't shed gear by mistake (rome, 2026-07-17). Not
+  // offered for what you're wearing (remove it first).
+  if (place === "pack" && !it.equipped) btn1("drop", "drop");
   wrap.appendChild(acts);
   return wrap;
 }
@@ -2373,8 +2375,9 @@ function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, food
     secs = [["ON YOU", items.filter(function (it) { return it.equipped; })],
             ["IN THE PACK", items.filter(function (it) { return !it.equipped; })]];
   } else if (place === "vault") {
-    secs = [["BANKED", items.filter(function (it) { return !it.trophy && !it.key; })],
+    secs = [["BANKED", items.filter(function (it) { return !it.trophy && !it.key && !it.food; })],
             ["KEYS", items.filter(function (it) { return it.key; })],
+            ["FOOD", items.filter(function (it) { return it.food && !it.key; })],
             ["TROPHIES", items.filter(function (it) { return it.trophy; })]];
   }
   // Only bother sectioning when more than one section actually has anything in
