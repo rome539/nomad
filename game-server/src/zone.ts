@@ -1227,7 +1227,14 @@ export class ZoneDO implements DurableObject {
       // deep (086 split the keys, not the latches); only the reliquary's iron
       // takes a king's key, not geology. The plain rock is spent by the trying,
       // opened or not; the hammerstone survives every landing, latches included.
-      const stone = session.items.find((c) => c.itemId === "hammerstone")
+      // The rock you SWING is the rock in your hand: prefer the equipped stone
+      // within each tier, so the one that shatters is the one you were wielding —
+      // not some spare deeper in the pack while your weapon sails through untouched
+      // (rome, 2026-07-17: "it said it crumbled but I still have it in my hand").
+      // Hammerstone still beats a loose rock (the better tool answers first).
+      const stone = session.items.find((c) => c.itemId === "hammerstone" && c.equipped)
+        ?? session.items.find((c) => c.itemId === "hammerstone")
+        ?? session.items.find((c) => c.itemId === "loose-rock" && c.equipped)
         ?? session.items.find((c) => c.itemId === "loose-rock");
       if (!stone || cache.keyItem === "reliquary-key") {
         return this.send(session, `${cap(cache.name)} is locked. You'd need ${keyT?.name ?? "the right key"}${cache.keyItem !== "reliquary-key" ? " — or a rock, and no respect for latches" : ""}.`);
