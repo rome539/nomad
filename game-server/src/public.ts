@@ -1657,6 +1657,7 @@ var frayTimer = null;    // holds that line back until an outage actually lasts
 var failedOpens = 0;     // reweaves that never opened; enough of them and the
                          // cached token is suspect, so we force a fresh login
 var FRAY_QUIET_MS = 3000;// a reweave that recovers faster than this stays unseen
+var freshLoad = true;    // this page just loaded with an EMPTY scroll — the first connect must ask the server to repaint the room (fresh=1), or a fast refresh lands on a blank pane. A websocket reweave keeps its scroll and never sets this.
 
 async function connect() {
   if (ws && ws.readyState === 0) return; // a connect is already in flight
@@ -1679,10 +1680,11 @@ async function connect() {
 
   var proto = location.protocol === "https:" ? "wss://" : "ws://";
   var opened = false;
-  ws = new WebSocket(proto + location.host + "/ws?token=" + encodeURIComponent(token));
+  ws = new WebSocket(proto + location.host + "/ws?token=" + encodeURIComponent(token) + (freshLoad ? "&fresh=1" : ""));
 
   ws.onopen = function () {
     opened = true;
+    freshLoad = false; // the scroll is (being) painted now — any later reweave is a true seamless one
     failedOpens = 0;
     retryMs = 300; // the first reweave after a good run retries near-instantly
     if (frayTimer) { clearTimeout(frayTimer); frayTimer = null; }

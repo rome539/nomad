@@ -115,9 +115,14 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // dive chip below is the way down to whatever's there.
   const drowned = events.tideFlooded(z, session.roomId);
   if (!drowned) {
+    const curing = z.curingCount(session.roomId);
+    const shownCure: Record<string, number> = {};
     for (const itemId of z.ground.get(session.roomId) ?? []) {
       const t = world.itemTemplates.get(itemId);
-      if (t) suggest.push(`get ${shortName(t.name)}`);
+      if (!t) continue;
+      shownCure[itemId] = (shownCure[itemId] ?? 0) + 1;
+      if (shownCure[itemId] <= (curing[itemId] ?? 0)) continue; // hanging on the racks, curing — not loose loot, no 'get' chip (and no tempting you to cancel your own cure)
+      suggest.push(`get ${shortName(t.name)}`);
     }
     for (const inst of z.groundInstances.get(session.roomId) ?? []) {
       const t = world.itemTemplates.get(inst.itemId);

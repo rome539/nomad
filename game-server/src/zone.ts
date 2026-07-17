@@ -464,6 +464,13 @@ export class ZoneDO implements DurableObject {
     const pubkey = req.headers.get("x-pubkey");
     if (!pubkey) return new Response("unauthorized", { status: 401 });
     const zone = req.headers.get("x-zone") ?? "door";
+    // A FULL PAGE RELOAD wiped the client's scroll — so it needs the room text
+    // resent even when this looks (to us) like a fast reweave. A websocket reweave
+    // keeps its scroll and passes no flag; a fresh page passes fresh=1. Without
+    // this, a refresh inside the 45s seamless window lands you on a blank pane —
+    // the HUD says where you are, but nothing paints it (rome, 2026-07-17: the
+    // gatehouse came back empty on refresh).
+    const fresh = new URL(req.url).searchParams.get("fresh") === "1";
 
     await this.init(zone);
     // The first observer in a while collapses the elapsed time. "Observed" now
@@ -532,7 +539,7 @@ export class ZoneDO implements DurableObject {
     // resynced (status + ctx, below) but nothing is written to the scroll — no
     // greeting, no room reprint. You never notice you dropped. Slower returns
     // still get the welcome. The client suppresses its own "frays" line to match.
-    const seamless = reconnecting && left !== undefined && Date.now() - left < SEAMLESS_RECONNECT_MS;
+    const seamless = !fresh && reconnecting && left !== undefined && Date.now() - left < SEAMLESS_RECONNECT_MS;
     this.leftAt.delete(pubkey);
 
     if (reconnecting) {
@@ -3436,6 +3443,17 @@ export class ZoneDO implements DurableObject {
     return this.describeRoom(session, full);
   }
 
+  // How many floor copies of each itemId in a room are CURING (hanging in the
+  // smokehouse racks), not loose loot. Cure entries only ever exist in the
+  // smokehouse, so this is empty everywhere else. Used to render a curing haunch
+  // as "hangs in the racks" and to withhold its 'get' chip — a hung haunch read
+  // as a dropped one and tempted you into cancelling your own cure (rome, 2026-07-17).
+  public curingCount(roomId: string): Record<string, number> {
+    const m: Record<string, number> = {};
+    for (const r of this.rot) if (r.kind === "cure" && r.roomId === roomId) m[r.itemId] = (m[r.itemId] ?? 0) + 1;
+    return m;
+  }
+
   // full=false is the brief view: the static scene-setting (the prose, the
   // keeper who is always there) is dropped, leaving only what's live.
   public describeRoom(session: Session, full = true): string {
@@ -3472,9 +3490,16 @@ export class ZoneDO implements DurableObject {
       // A torch someone set (or dropped) on the stone, still burning — the room's
       // own light while it lasts.
       if (this.roomLit(room.id)) lines.push("A torch burns on the floor here, throwing the dark back off the walls.");
+      const curing = this.curingCount(room.id);
+      const shownCure: Record<string, number> = {};
       for (const itemId of this.ground.get(room.id) ?? []) {
         const t = world.itemTemplates.get(itemId);
-        if (t) lines.push(`${cap(t.name)} lies here.`);
+        if (!t) continue;
+        shownCure[itemId] = (shownCure[itemId] ?? 0) + 1;
+        // The first N copies (N = curing timers) hang in the racks; the rest are loose.
+        lines.push(shownCure[itemId] <= (curing[itemId] ?? 0)
+          ? `${cap(t.name)} hangs in the smoke-racks, curing.`
+          : `${cap(t.name)} lies here.`);
       }
       // A dropped journal lies here too — someone's abandoned or spilled hunting.
       for (const inst of this.groundInstances.get(room.id) ?? []) {
