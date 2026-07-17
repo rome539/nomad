@@ -72,7 +72,7 @@ import {
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
-  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, ROCK_CRUMBLE_MIN_MS, ROCK_CRUMBLE_MAX_MS, TORCH_SODDEN_MIN_MS, TORCH_SODDEN_MAX_MS,
+  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, STRAY_DECAY,
   MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
@@ -82,10 +82,11 @@ import {
   SCAVENGERS, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
-  DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
+  DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
-  DARK_ROOMS,
+  DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM,
+  SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE, TORCH_ITEM, PACK_TORCH_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT
 } from "./zone-data";
@@ -119,6 +120,7 @@ export class ZoneDO implements DurableObject {
   // pattern — no farmable spot). 0 = schedule on first tick.
   private nextStoneAt = 0;
   private nextBrandAt = 0;
+  private nextSmokeTorchAt = 0; // the world next rolls a plain torch into the smokehouse (dice, capped — a find, not a refill)
   public traces = new Map<string, Trace[]>();
   public rot: RotEntry[] = [];
   private placedSpawns = new Set<string>(); // ground spawns already laid once
@@ -227,6 +229,7 @@ export class ZoneDO implements DurableObject {
       this.bloodOn = new Map(Object.entries(saved.bloodOn ?? {}));
       this.nextStoneAt = saved.nextStoneAt ?? 0;
       this.nextBrandAt = saved.nextBrandAt ?? 0;
+      this.nextSmokeTorchAt = saved.nextSmokeTorchAt ?? 0;
       this.traces = new Map(Object.entries(saved.traces ?? {}));
       this.rot = saved.rot ?? [];
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
@@ -385,6 +388,7 @@ export class ZoneDO implements DurableObject {
       bloodOn: Object.fromEntries(this.bloodOn),
       nextStoneAt: this.nextStoneAt,
       nextBrandAt: this.nextBrandAt,
+      nextSmokeTorchAt: this.nextSmokeTorchAt,
       traces: Object.fromEntries(this.traces),
       rot: this.rot,
       placedSpawns: [...this.placedSpawns],
@@ -425,6 +429,7 @@ export class ZoneDO implements DurableObject {
     this.bloodOn.clear();
     this.nextStoneAt = 0;
     this.nextBrandAt = 0;
+    this.nextSmokeTorchAt = 0;
     this.traces.clear();
     this.rot = [];
     this.placedSpawns.clear();
@@ -902,7 +907,8 @@ export class ZoneDO implements DurableObject {
       case "enter": return gate.enterGatehouse(this, session);
       case "exit": return this.leaveGatehouse(session);
       case "tell": return gate.cmdTell(this, session, cmd.arg);
-      case "smoke": return verbs.cmdSmoke(this, session);
+      case "smoke": return verbs.cmdSmoke(this, session, cmd.arg);
+      case "cure": return verbs.cmdCure(this, session, cmd.arg);
       case "squink": return verbs.cmdSquink(this, session);
       case "xyzzy": return verbs.cmdXyzzy(this, session);
     }
@@ -1131,11 +1137,10 @@ export class ZoneDO implements DurableObject {
       if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // a thrown blade (or stone) keeps its wear where it lands
       if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // and the engraving rides the landing
       if (itmpl.edible) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
-      // A thrown rock or torch lies off its spawn floor now — the stray laws
-      // apply the same as a drop (this landing was the gap that let thrown
-      // copies litter forever while dropped ones crumbled/spoiled).
-      if (carried.itemId === "loose-rock") this.strayRock(session.roomId);
-      if (carried.itemId === TORCH_ITEM) this.strayTorch(session.roomId);
+      // A thrown consumable lies off its spawn floor now — the stray law applies
+      // the same as a drop (this landing was the gap that let thrown copies
+      // litter forever while dropped ones spoiled).
+      this.armStrayDecay(session.roomId);
     }
 
     creature.hp -= dmg;
@@ -1185,10 +1190,9 @@ export class ZoneDO implements DurableObject {
     this.stampFresh(session.roomId, carried.itemId);
     if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // wear rides the landing
     if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // the engraving too
-    // The noise-throw's landing obeys the stray laws too — a lure you retrieve
-    // in minutes never notices; only the abandoned copy crumbles or spoils.
-    if (carried.itemId === "loose-rock") this.strayRock(session.roomId);
-    if (carried.itemId === TORCH_ITEM) this.strayTorch(session.roomId);
+    // The noise-throw's landing obeys the stray law too — a lure you retrieve
+    // in minutes never notices; only the abandoned copy spoils.
+    this.armStrayDecay(session.roomId);
     this.send(session, `You hurl ${itmpl.name} into the dark. It cracks and clatters off the stone — the sound carries.`);
     this.roomFeed(session.roomId, `${session.name} sends ${itmpl.name} clattering across the room.`, session.pubkey, false);
     // The clatter: players next door hear it (WS-only, no relay flood), the idle
@@ -2510,6 +2514,21 @@ export class ZoneDO implements DurableObject {
       }
     }
 
+    // A plain torch rolls into the smokehouse on the same dice-not-schedule law —
+    // kindling left by the old fire, for whoever comes to cure. Capped at one
+    // lying unfound: a lucky find that saves you a torch, never a refill you can
+    // lean on or farm (rome, 2026-07-17).
+    if (now >= this.nextSmokeTorchAt) {
+      this.nextSmokeTorchAt = now + randInt(SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS);
+      if (chance(SMOKE_TORCH_MINT_ODDS) && world.rooms.has(SMOKEHOUSE_ROOM)) {
+        const loose = (this.ground.get(SMOKEHOUSE_ROOM) ?? []).filter((id) => id === TORCH_ITEM).length;
+        if (loose < SMOKE_TORCH_GROUND_CAP) {
+          this.ground.set(SMOKEHOUSE_ROOM, [...(this.ground.get(SMOKEHOUSE_ROOM) ?? []), TORCH_ITEM]);
+          this.refreshRoomCtx(SMOKEHOUSE_ROOM);
+        }
+      }
+    }
+
     // The black door remembers its shape: a heart buys a WINDOW, not a
     // thoroughfare. It only ever bars the way down (the-descent's way up is
     // unkeyed — nobody is sealed in); shutting restarts the corpse-key mint.
@@ -2687,7 +2706,7 @@ export class ZoneDO implements DurableObject {
       if (!chance(odds)) continue;
       const line = inGatehouse
         ? gate.gatehouseAmbient(session.lastAmbientLine)
-        : this.ambientLine(session.roomId, session.lastAmbientLine);
+        : this.ambientLine(session.roomId, session.lastAmbientLine, this.carriesLight(session));
       if (!line) continue;
       session.lastAmbientAt = now;
       session.lastAmbientLine = line;
@@ -2721,7 +2740,7 @@ export class ZoneDO implements DurableObject {
   // One atmosphere line for where you stand: a signature room's own pool if it
   // has one, else the region it belongs to (the gates, the flooded deep, or the
   // ring between). Meant to grow — add lines to AMBIENCE / ROOM_AMBIENCE freely.
-  private ambientLine(roomId: string, avoid?: string): string | null {
+  private ambientLine(roomId: string, avoid?: string, lit?: boolean): string | null {
     // Never the same breath twice running. Every pool holds at least two lines,
     // so dropping the last one always leaves something to say; the fallback is
     // there only so a one-line pool could never fall silent forever.
@@ -2736,6 +2755,13 @@ export class ZoneDO implements DurableObject {
     if (sky) return sky === avoid ? null : sky; // weather repeating itself just holds its tongue a beat
     const own = ROOM_AMBIENCE[roomId];
     if (own?.length) return draw(own);
+    // No voice of its own — the band speaks. But if YOU carried light into a
+    // room the dark has kept, sometimes it's the dust your flame just woke,
+    // instead (never in a room that already has its own atmosphere to lose).
+    if (lit && this.isDark(roomId) && chance(MOTES_ODDS)) {
+      const m = draw(MOTES);
+      if (m && m !== avoid) return m;
+    }
     const region = this.world!.entryRooms.has(roomId) ? "gate" : DEEP_ROOMS.has(roomId) ? "deep" : "upper";
     return draw(AMBIENCE[region]);
   }
@@ -2849,13 +2875,30 @@ export class ZoneDO implements DurableObject {
       const idx = here.indexOf(r.itemId);
       if (idx !== -1) {
         here.splice(idx, 1);
+        // The rot clock run backward: raw meat hung in the smokehouse racks has
+        // cured through. The raw is gone from the floor; its keeping form takes
+        // its place, hanging there for whoever's hand comes for it (yours, if you
+        // beat the scavengers and the other delvers back to it).
+        if (r.kind === "cure") {
+          const out = CURE_RECIPES[r.itemId] ?? "smoked-haunch";
+          here.push(out);
+          this.stampFresh(r.roomId, out);
+          if (!silent) {
+            this.roomFeed(r.roomId, "On the smoke-racks, a haunch has cured through — gone black and hard, and keeping now.", undefined, false); // housekeeping — off the relay
+            this.refreshRoomCtx(r.roomId);
+          }
+          return false;
+        }
         // A crumbling rock leaves nothing — no scraps trace (that lures
         // scavengers), no "gone foul" (it didn't rot, it's just rubble again).
         // A sodden torch goes the same quiet way: the damp took the pitch.
-        if (r.kind === "crumble" || r.kind === "sodden") {
+        if (r.kind === "crumble" || r.kind === "sodden" || r.kind === "wilt") {
           if (!silent) {
-            this.roomFeed(r.roomId, r.kind === "sodden"
-              ? "A torch left on the wet stone has drunk the damp — rag and black sludge now, no light left in it."
+            this.roomFeed(r.roomId,
+              r.kind === "sodden" ? "A torch left on the wet stone has drunk the damp — rag and black sludge now, no light left in it."
+              : r.kind === "wilt" ? (r.itemId === "linen-strips"
+                  ? "Linen strips left on the floor have gone grey and sour with mildew — no use to anyone now."
+                  : "Cut bloodwort, left where it fell, has wilted to brown slime.")
               : "A loose rock, kicked among the rubble, is lost in it.", undefined, false); // housekeeping — off the relay
             this.refreshRoomCtx(r.roomId);
           }
@@ -2872,33 +2915,28 @@ export class ZoneDO implements DurableObject {
     });
   }
 
-  // A room-sweep for stray loose-rocks (rome, 2026-07-14). Call it wherever a
-  // rock can pile onto a floor the world didn't grow it on — a body's spill, a
-  // drop. A GATE room is the reliable supply and is left alone; anywhere else,
-  // enough crumble-timers are armed to eventually take EVERY rock lying loose
-  // here back to rubble (never more timers than rocks, so none are wasted).
-  // This is what gives the reliable rock a drain — it can no longer only ever
-  // accumulate. Cheap; a no-op unless a stray rock is actually present.
-  public strayRock(roomId: string): void {
-    if (this.world!.groundSpawns.some((g) => g.item_id === "loose-rock" && g.room_id === roomId && g.regrows)) return;
-    const rocks = (this.ground.get(roomId) ?? []).filter((i) => i === "loose-rock").length;
-    if (!rocks) return;
-    const pending = this.rot.filter((r) => r.kind === "crumble" && r.roomId === roomId).length;
-    for (let i = pending; i < rocks; i++) {
-      this.rot.push({ itemId: "loose-rock", roomId, at: Date.now() + randInt(ROCK_CRUMBLE_MIN_MS, ROCK_CRUMBLE_MAX_MS), kind: "crumble" });
-    }
-  }
-
-  // The rock law, for torches: pitch left on wet stone drinks the damp and
-  // spoils. Same sweep shape — skip the floors where a torch is the world's own
-  // regrowing spawn (the thresholds), count strays, arm what isn't armed.
-  public strayTorch(roomId: string): void {
-    if (this.world!.groundSpawns.some((g) => g.item_id === TORCH_ITEM && g.room_id === roomId && g.regrows)) return;
-    const torches = (this.ground.get(roomId) ?? []).filter((i) => i === TORCH_ITEM).length;
-    if (!torches) return;
-    const pending = this.rot.filter((r) => r.kind === "sodden" && r.roomId === roomId).length;
-    for (let i = pending; i < torches; i++) {
-      this.rot.push({ itemId: TORCH_ITEM, roomId, at: Date.now() + randInt(TORCH_SODDEN_MIN_MS, TORCH_SODDEN_MAX_MS), kind: "sodden" });
+  // The one stray-decay sweep for EVERY growing consumable (rome, 2026-07-17,
+  // generalizing the rock/torch laws): call it wherever a renewable thing can
+  // pile onto a floor the world didn't grow it on — a drop, a throw, a body's
+  // spill, a thief's spill. For each consumable in STRAY_DECAY it skips the
+  // floors where that thing is the world's OWN regrowing spawn (the reliable
+  // supply is left alone) and, anywhere else, arms enough spoil-timers to
+  // eventually take EVERY stray copy lying here off the floor (never more timers
+  // than copies, so none are wasted). This is the drain that stops the reliable
+  // rock/torch/physic from only ever accumulating. Cheap; a no-op unless a stray
+  // is actually present. Add a growing consumable to STRAY_DECAY and it's covered.
+  public armStrayDecay(roomId: string): void {
+    const floor = this.ground.get(roomId);
+    if (!floor || !floor.length) return;
+    for (const itemId of Object.keys(STRAY_DECAY)) {
+      const d = STRAY_DECAY[itemId];
+      if (this.world!.groundSpawns.some((g) => g.item_id === itemId && g.room_id === roomId && g.regrows)) continue;
+      const n = floor.filter((i) => i === itemId).length;
+      if (!n) continue;
+      const pending = this.rot.filter((r) => r.kind === d.kind && r.roomId === roomId && r.itemId === itemId).length;
+      for (let i = pending; i < n; i++) {
+        this.rot.push({ itemId, roomId, at: Date.now() + randInt(d.min, d.max), kind: d.kind });
+      }
     }
   }
 
@@ -3102,9 +3140,8 @@ export class ZoneDO implements DurableObject {
       this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), creature.stole]);
       this.stampFresh(creature.roomId, creature.stole);
       if (stolen) this.roomFeed(creature.roomId, `${cap(stolen.name)} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, undefined, false); // local: loot on the ground is a shopping-list beacon
-      // The thief's spill obeys the stray laws like any other landing.
-      if (creature.stole === "loose-rock") this.strayRock(creature.roomId);
-      if (creature.stole === TORCH_ITEM) this.strayTorch(creature.roomId);
+      // The thief's spill obeys the stray law like any other landing.
+      this.armStrayDecay(creature.roomId);
       creature.stole = undefined;
     }
     this.addTrace(creature.roomId, {
@@ -3295,8 +3332,7 @@ export class ZoneDO implements DurableObject {
           this.groundHeart.set(`${c.itemId}@${fell}`, c.acquiredAt);
         }
       }
-      this.strayRock(fell); // a rock spilled where you fell will crumble unless this is a gate
-      this.strayTorch(fell); // and a spilled spare torch drinks the damp off its thresholds
+      this.armStrayDecay(fell); // rock, torch, physic — anything renewable spilled where you fell spoils, unless this is its spawn floor
       await clearCarriedInventory(this.env.DB, victim.pubkey);
     }
     victim.items = [];

@@ -11,6 +11,7 @@ import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
   FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, MAP_ITEMS, DROWNERS,
+  SMOKEHOUSE_ROOM, CURE_RECIPES,
 } from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
@@ -132,6 +133,15 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   }
   const edible = session.items.find((c) => world.itemTemplates.get(c.itemId)?.edible);
   if (edible) suggest.push(`eat ${shortName(world.itemTemplates.get(edible.itemId)!.name)}`);
+  // Standing in the smokehouse with raw meat and a torch to light the racks: the
+  // chip that teaches the one station most players would never think to try.
+  if (session.roomId === SMOKEHOUSE_ROOM) {
+    const raw = session.items.find((c) => CURE_RECIPES[c.itemId] && c.serial === null);
+    const fireLit = Date.now() < (z.groundTorch.get(SMOKEHOUSE_ROOM) ?? 0);
+    if (raw && (fireLit || session.items.some((c) => c.itemId === TORCH_ITEM && c.serial === null))) {
+      suggest.push(`cure ${shortName(world.itemTemplates.get(raw.itemId)!.name)}`);
+    }
+  }
   const gearless = session.items.find((c) => {
     if (c.equipped) return false;
     const t = world.itemTemplates.get(c.itemId);

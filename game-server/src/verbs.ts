@@ -10,7 +10,7 @@ import {
   journalLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
   setItemLoreId, deedsBump,
 } from "./world";
-import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse } from "./zone-util";
+import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
 import * as ai from "./ai";
 import * as light from "./light";
@@ -24,7 +24,8 @@ import {
   CARVE_MAX_LEN, TWO_HANDED, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS,
+  SMOKEHOUSE_ROOM, CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor } from "./gate";
 
@@ -36,11 +37,17 @@ export function cmdXyzzy(z: ZoneDO, session: Session): void {
 // Light one from the tin. No stat, no cure — a moment's calm that costs you:
 // the smell rides the draft into the next room, and the dark leans in to look.
 // (What the tin is really worth is never said here. That's for the finding.)
-export function cmdSmoke(z: ZoneDO, session: Session): void {
-  if (!session.items.some((c) => c.itemId === "dry-cigarettes")) {
+export function cmdSmoke(z: ZoneDO, session: Session, arg = ""): void {
+  // "smoke <meat>" is the natural way to reach for the racks — in the smokehouse,
+  // smoking a raw haunch means CURING it, not lighting a cigarette. Delegate.
+  if (arg && session.roomId === SMOKEHOUSE_ROOM) {
+    const c = z.findCarried(session, arg);
+    if (c && CURE_RECIPES[c.itemId]) { void cmdCure(z, session, arg); return; }
+  }
+  if (!session.items.some((c) => CIGARETTES.has(c.itemId))) {
     return z.send(session, "You pat yourself down for a smoke and come up with nothing but lint.");
   }
-  z.send(session, "You knock one loose from the tin and light it. The first drag steadies your hands; for a breath, the dungeon is just a room you happen to be in.", "gain");
+  z.send(session, "You work one loose and light it. The first drag steadies your hands; for a breath, the dungeon is just a room you happen to be in.", "gain");
   const line = `${session.name} lights a cigarette; the ember flares, then settles to a slow red eye.`;
   // Behind the door the ember is just company: the gatehouse hears it, but the
   // wire and the dark do not — the smell can't drift through the door, and no
@@ -53,6 +60,67 @@ export function cmdSmoke(z: ZoneDO, session: Session): void {
   z.actorFeed(session, session.roomId, line);
   z.roomSound(session.roomId, "A thread of tobacco smoke drifts in {dir}.");
   z.creatureNoise(session.roomId); // a lit ember and a smell — the dark notices
+}
+
+// The smokehouse racks. Feed the cold fire a torch and hang raw meat: it cures
+// on the rot clock run backward (CURE_MS) into its keeping form — heals more,
+// never spoils. It hangs on a SHARED floor while it works, raw and reeking, so
+// the wager is real: come back before a scavenger or another delver lifts it.
+// rome (2026-07-17): "a path to making preserved food." This is the path.
+export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const world = z.world!;
+  if (session.roomId !== SMOKEHOUSE_ROOM) {
+    return z.send(session, "There are no smoke-racks here. The old smokehouse lies deep, below the larder — that's where raw meat becomes something that keeps.");
+  }
+  // The racks share ONE fire (groundTorch — the same lit-floor flame that lights
+  // the whole room). A torch lights it, and while it burns you can load the racks
+  // with as many joints as you like, no fresh torch each time. It only guts out
+  // after TORCH_BURN_MS.
+  const lit = Date.now() < (z.groundTorch.get(SMOKEHOUSE_ROOM) ?? 0);
+  if (!arg) {
+    const haveRaw = session.items.some((c) => CURE_RECIPES[c.itemId] && c.serial === null);
+    const haveTorch = session.items.some((c) => c.itemId === TORCH_ITEM && c.serial === null);
+    return z.send(session, lit
+      ? "The smoke-racks are burning, smoke crawling up the black brick. Hang what raw meat you've got — 'cure haunch' — and load them while the fire holds; each joint keeps on its own once it's cured through."
+        + (haveRaw ? "" : " (Though you've nothing raw to hang.)")
+      : "The smoke-racks hang cold in the black brick, waiting. Feed them a torch and hang raw meat — 'cure haunch' — and the old grease-fire wakes; once it's lit you can load the racks with all you carry. It cures where it hangs, so mind that something hungry doesn't come for it first."
+        + (haveRaw && haveTorch ? "" : haveRaw ? " (You've meat to hang, but no torch to wake the fire.)" : haveTorch ? " (You've a torch, but nothing raw to cure.)" : ""));
+  }
+  const carried = z.findCarried(session, arg);
+  if (!carried) return z.send(session, "You carry nothing like that.");
+  const out = CURE_RECIPES[carried.itemId];
+  if (!out) return z.send(session, `${cap(world.itemTemplates.get(carried.itemId)!.name)} won't cure. The racks are for raw meat — a haunch, a slab of flesh.`);
+  if (carried.serial !== null) return z.send(session, "That one's sealed for extraction. Break the seal before you'd hang it in the smoke.");
+
+  // No live fire? Spend one torch to wake the racks — that lights the room too, and
+  // buys the whole TORCH_BURN_MS window to hang the rest of your kills for free.
+  if (!lit) {
+    const torch = session.items.find((c) => c.itemId === TORCH_ITEM && c.serial === null);
+    if (!torch) return z.send(session, "The racks are dead cold, and cold racks cure nothing. You'd need a torch to wake the old grease-fire.");
+    session.items.splice(session.items.indexOf(torch), 1);
+    await removeItemRow(z.env.DB, torch.rowId);
+    z.groundTorch.set(SMOKEHOUSE_ROOM, Date.now() + TORCH_BURN_MS);
+  }
+
+  // The raw meat leaves the pack onto the floor with its own cure-timer (rot kind
+  // "cure"); the rot sweep swaps each for its keeping form as it comes through.
+  const rawName = world.itemTemplates.get(carried.itemId)!.name;
+  session.items.splice(session.items.indexOf(carried), 1);
+  await removeItemRow(z.env.DB, carried.rowId);
+  z.ground.set(SMOKEHOUSE_ROOM, [...(z.ground.get(SMOKEHOUSE_ROOM) ?? []), carried.itemId]);
+  z.stampFresh(SMOKEHOUSE_ROOM, carried.itemId);
+  z.rot.push({ itemId: carried.itemId, roomId: SMOKEHOUSE_ROOM, at: Date.now() + CURE_MS, kind: "cure" });
+
+  z.send(session, lit
+    ? `You hang ${rawName} among what's already smoking. The racks take it without complaint; the fire has room yet.`
+    : `You feed the racks a torch. Old grease catches with a reek, smoke crawls up the black brick, and the whole room glows with it. You hang ${rawName} in the smoke and leave it to the fire.`, "gain");
+  z.roomFeed(SMOKEHOUSE_ROOM, lit
+    ? `${session.name} hangs ${rawName} in the burning smoke-racks.`
+    : `${session.name} wakes the smoke-racks with a torch and hangs ${rawName} to cure.`, session.pubkey, false);
+  z.sendStatus(session);
+  z.sendCtx(session);
+  await z.persist();
+  await z.ensureAlarm();
 }
 
 // Nobody knows what this does. That includes the dungeon.
@@ -195,6 +263,16 @@ function reflection(): string {
   ]);
 }
 
+// The one thing a close look adds about a PERISHABLE: how far gone it is. The
+// heart truly dies (heartProse); food only reads spoiled (foodProse, flavor —
+// it still fills you). Cured/dried/salted food (FOOD_KEEPS) says nothing. Leads
+// with a space so it appends cleanly, "" when there's nothing to add.
+function agedProse(itemId: string, edible: boolean, at: number | undefined): string {
+  if (itemId === DEEP_HEART) return " " + heartProse(at);
+  if (edible && !FOOD_KEEPS.has(itemId)) return " " + foodProse(at);
+  return "";
+}
+
 export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise<void> {
   // A deliberate look always gives the full scene — and marks the room known,
   // so from here you get the brief view unless you ask again.
@@ -267,7 +345,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
       t.description + z.itemStat(t) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
         + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
         + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : "")
-        + (carried.itemId === DEEP_HEART ? " " + heartProse(carried.acquiredAt) : ""),
+        + agedProse(carried.itemId, !!t.edible, carried.acquiredAt),
     );
   }
   // In the pitch dark you cannot roll-call the room: naming a wanderer must not
@@ -292,7 +370,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
         `You crouch and work the lockbox's latch. ${t.description}${z.itemStat(t)}${wearClause(z, z.isGear(inBox.itemId) ? inBox.condition : undefined)}`
           + (inBox.serial !== null ? ` The dungeon's seal is on it. (mint #${inBox.serial})` : "")
           + (inBox.loreId ? await lore.gearLedger(z, inBox.loreId) : "")
-          + (inBox.itemId === DEEP_HEART ? " " + heartProse(inBox.acquiredAt) : "")
+          + agedProse(inBox.itemId, !!t.edible, inBox.acquiredAt)
           + " Back it goes, and the latch clicks home.",
       );
     }
@@ -317,7 +395,7 @@ export async function lookKeepingItem(z: ZoneDO, session: Session, arg: string):
     return t.description + z.itemStat(t) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
       + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
       + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : "")
-      + (carried.itemId === DEEP_HEART ? " " + heartProse(carried.acquiredAt) : "");
+      + agedProse(carried.itemId, !!t.edible, carried.acquiredAt);
   }
   for (const key of ["lockbox", "vault"] as const) {
     const held = await loadContainer(z.env.DB, session.pubkey, key);
@@ -328,7 +406,7 @@ export async function lookKeepingItem(z: ZoneDO, session: Session, arg: string):
     return `${latch} ${t.description}${z.itemStat(t)}${wearClause(z, z.isGear(it.itemId) ? it.condition : undefined)}`
       + (it.serial !== null ? ` The dungeon's seal is on it. (mint #${it.serial})` : "")
       + (it.loreId ? await lore.gearLedger(z, it.loreId) : "")
-      + (it.itemId === DEEP_HEART ? " " + heartProse(it.acquiredAt) : "")
+      + agedProse(it.itemId, !!t.edible, it.acquiredAt)
       + " Then back it goes.";
   }
   return null;
@@ -858,8 +936,7 @@ export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedI
       z.groundHeart.set(`${itemId}@${session.roomId}`, carried.acquiredAt);
     }
     if (tmpl.edible) z.rot.push({ itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
-    if (itemId === "loose-rock") z.strayRock(session.roomId); // a rock set down off its gate crumbles back to rubble
-    if (itemId === TORCH_ITEM) z.strayTorch(session.roomId); // a torch set down off its thresholds drinks the damp and spoils
+    z.armStrayDecay(session.roomId); // a growing consumable set down off its spawn floor spoils fast — rock crumbles, torch soddens, physic wilts
   }
   // Shedding under the burden line is the valve working: say so, so the
   // mid-chase drop reads as the escape it is.
@@ -1000,8 +1077,11 @@ export function itemLine(z: ZoneDO, c: CarriedItem): string {
   // you need to see it to know when to mend it.
   if (t && t.slot !== "") tags.push(z.conditionWord(c.condition) || "sound");
   // The heart is the one carried thing that DIES. It says so on the shelf, so a
-  // spent one never masquerades as a key.
+  // spent one never masquerades as a key. Perishable food ages too — but only
+  // flags itself once it's past fresh (foodWord returns "" while fresh), so the
+  // list isn't cluttered with "— fresh" on every ration.
   if (c.itemId === DEEP_HEART) tags.push(heartWord(c.acquiredAt));
+  else if (t?.edible && !FOOD_KEEPS.has(c.itemId)) { const w = foodWord(c.acquiredAt); if (w) tags.push(w); }
   if (tags.length) s += ` — ${tags.join(", ")}`;
   return s;
 }

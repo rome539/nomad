@@ -2256,6 +2256,8 @@ function benchItemNode(it, place) {
   if (it.condWord) { var cw = document.createElement("span"); cw.className = "cond"; cw.textContent = (it.sealed ? ", " : " \\u2014 ") + it.condWord; nm.appendChild(cw); }
   // The heart rots on the shelf too — a banked one must never read as a key.
   if (it.heart) { var hw = document.createElement("span"); hw.className = "cond"; hw.textContent = " \\u2014 " + it.heart; nm.appendChild(hw); }
+  // Perishable food shows its age once it's past fresh (flavor — it still feeds you).
+  if (it.fresh) { var fw = document.createElement("span"); fw.className = "cond"; fw.textContent = " \\u2014 " + it.fresh; nm.appendChild(fw); }
   wrap.appendChild(nm);
   var acts = document.createElement("div");
   acts.className = "acts";

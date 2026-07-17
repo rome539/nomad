@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { HEART_FRESH_SEC } from "./zone-data";
+import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC } from "./zone-data";
 
 // The deep-heart is the one thing you carry that DIES in your hands. It opens
 // the black door for HEART_FRESH_SEC after the cut, then it's slime — and until
@@ -31,6 +31,34 @@ export function heartProse(at: number | undefined, now?: number): string {
     : s === "cooling"
       ? "The cold is going out of it. It is softening at the edges; whatever it opens, it will not open for much longer."
       : "It is still cold, and it shifts when you shift your grip. It is still a key.";
+}
+
+// Perishable food ages the same way — FLAVOR only. Unlike the heart it never
+// stops working: a spoiled-looking ration still fills you. The caller decides
+// WHICH food ages (edible and not in FOOD_KEEPS); these just turn an age into
+// words. `at` is acquired_at (unix seconds).
+export type FoodState = "fresh" | "turning" | "spoiled";
+export function foodState(at: number | undefined, now = Math.floor(Date.now() / 1000)): FoodState {
+  if (at === undefined) return "fresh";
+  const age = now - at;
+  if (age >= FOOD_SPOIL_SEC) return "spoiled";
+  if (age >= FOOD_FRESH_SEC) return "turning";
+  return "fresh";
+}
+// The shelf-word: fresh food shows NOTHING (no "— fresh" noise on every ration);
+// only aging food flags itself, so the tag reads as a warning, not decoration.
+export function foodWord(at: number | undefined, now?: number): string {
+  const s = foodState(at, now);
+  return s === "spoiled" ? "spoiled" : s === "turning" ? "on the turn" : "";
+}
+// The long look: what the ration is like now.
+export function foodProse(at: number | undefined, now?: number): string {
+  const s = foodState(at, now);
+  return s === "spoiled"
+    ? "It has gone off — slick and grey, a sour reek to it. It will still fill you, if your stomach will have it."
+    : s === "turning"
+      ? "It is past its best: soft now, an edge of rot creeping into the smell. Eat it soon."
+      : "It is fresh, near enough.";
 }
 
 // A crude map lies the SAME way every time you open it (or it reads as noise,

@@ -44,6 +44,7 @@ export type Verb =
   | "dive"
   | "wash"
   | "smoke"
+  | "cure"
   | "squink"
   | "enter"
   | "exit"
@@ -122,6 +123,8 @@ const VERB_ALIASES: Record<string, Verb> = {
   // A quiet word, one to one, in the gatehouse. Nobody else in the room hears it.
   tell: "tell", whisper: "tell", quietly: "tell",
   smoke: "smoke", puff: "smoke", // light one from the tin. undocumented.
+  cure: "cure", preserve: "cure", // hang raw meat in the smokehouse racks to keep it
+
   squink: "squink", // means anything. not documented. never will be.
   xyzzy: "xyzzy", plugh: "xyzzy", frotz: "xyzzy", plover: "xyzzy", // the old words.
   help: "help", "?": "help", commands: "help", h: "help",

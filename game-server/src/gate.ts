@@ -11,10 +11,10 @@ import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
-import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord } from "./zone-util";
+import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
 import { SCRAP_ID, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS,
-  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD } from "./zone-data";
+  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS } from "./zone-data";
 import { parse } from "./parser";
 import { mapRegionOf } from "./lore";
 import { dropCarried, describePlayer, lookKeepingItem } from "./verbs";
@@ -1044,6 +1044,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
         // cold storage for steel, not for meat. A banked heart reads as the
         // slime it is, instead of pretending to still be a key (rome, 2026-07-13).
         heart: c.itemId === DEEP_HEART ? heartWord(c.acquiredAt) : "",
+        fresh: (t?.edible && !FOOD_KEEPS.has(c.itemId)) ? foodWord(c.acquiredAt) : "", // perishable food's age, "" while fresh (flavor)
         stat: z.itemStat(t).replace(/^ \(|\)$/g, ""),
       };
     };

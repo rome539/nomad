@@ -137,7 +137,12 @@ export interface RotEntry {
   // lure, just gone. Same timer machinery, different ending.
   // "sodden": a torch left on wet stone off its spawn floors — the damp takes
   // the pitch and it's rag and sludge. No scraps, no lure, gone like the rock.
-  kind?: "rot" | "crumble" | "sodden";
+  // "wilt": a growing PHYSIC (cut bloodwort, linen strips) hauled off its damp
+  // spawn floor — it dries out / molders fast. No scraps, no lure, just spent.
+  // "cure": the rot clock run BACKWARD — raw meat hung in the smokehouse racks,
+  // which on this timer doesn't spoil but PRESERVES: the floor item is swapped
+  // for its keeping form (CURE_RECIPES). The one timer that ends in something better.
+  kind?: "rot" | "crumble" | "sodden" | "wilt" | "cure";
 }
 
 // A carryable on the floor that can't be reduced to a bare template id — it
@@ -161,6 +166,7 @@ export interface SimState {
   bloodOn?: Record<string, number[]>; // pubkey -> kill timestamps; the evidence walks around on the murderer // itemId -> ms the keeper restocks it (bare shelves — the market has other customers)
   nextStoneAt?: number; // ms the world next mints a hammerstone into a random haunt (no farmable spot)
   nextBrandAt?: number; // ms the world next rolls a longbrand into fire-keeping country (the rare torch, same law)
+  nextSmokeTorchAt?: number; // ms the world next rolls a plain torch into the smokehouse (dice, capped at one — a find, not a refill)
   traces: Record<string, Trace[]>;
   rot: RotEntry[];
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once

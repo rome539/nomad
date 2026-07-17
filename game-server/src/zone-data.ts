@@ -209,6 +209,12 @@ export const REPAIR_COST: Record<string, number> = { common: 1, uncommon: 1, rar
 // The gate keeper deals in kind: barter value ≥ this and his manner changes.
 // What clears the bar is never written down anywhere a player can read.
 export const RICH_TENDER = 15;
+// The hard currency wears many faces (mig 089): a kept tin, a crushed pack off a
+// dead soldier, a twist of hand-rolled leaf from the deep. All worth the same
+// (barter 20 — rich tender), all smokeable, and NONE of it ever named as money
+// in-world. Pure flavor: what you loot tells you who you took it from. Value and
+// the tender bar are barter-driven, so this set only gates the 'smoke' deed.
+export const CIGARETTES = new Set(["dry-cigarettes", "crushed-pack", "hand-rolled-smokes"]);
 // Canonical compass order for direction chips, so they never shuffle room to room.
 export const DIR_ORDER: Record<string, number> = { north: 0, south: 1, east: 2, west: 3, up: 4, down: 5 };
 export const RATE_CAPACITY = 6; // command tokens
@@ -275,6 +281,22 @@ export const ROCK_CRUMBLE_MAX_MS = 40 * 60_000;
 // so torch litter can't carpet the halls into a free light network.
 export const TORCH_SODDEN_MIN_MS = 30 * 60_000; // 30–60 min, jittered
 export const TORCH_SODDEN_MAX_MS = 60 * 60_000;
+// The growing physics — cut bloodwort, torn linen — dry out and molder just as
+// fast off their damp spawn floors (rome, 2026-07-17: "every consumable that
+// grows should decay like the rock and torch"). Same law, same reason: the
+// renewable supply can't be hauled off and stockpiled into a free apothecary.
+export const WILT_MIN_MS = 20 * 60_000; // 20–40 min, jittered
+export const WILT_MAX_MS = 40 * 60_000;
+// The one table for it all: every GROWING consumable, mapped to how it spoils
+// once it's off its own regrow floor. Add a growing consumable here and the
+// stray law covers it automatically — no new hand-wiring. Food is deliberately
+// NOT here: it has its own slower rot+scraps clock (ROT_MS) that lures scavengers.
+export const STRAY_DECAY: Record<string, { kind: "crumble" | "sodden" | "wilt"; min: number; max: number }> = {
+  "torch":        { kind: "sodden",  min: TORCH_SODDEN_MIN_MS,  max: TORCH_SODDEN_MAX_MS }, // = TORCH_ITEM (declared later in this file)
+  "loose-rock":   { kind: "crumble", min: ROCK_CRUMBLE_MIN_MS,  max: ROCK_CRUMBLE_MAX_MS },
+  "bloodwort":    { kind: "wilt",    min: WILT_MIN_MS,          max: WILT_MAX_MS },
+  "linen-strips": { kind: "wilt",    min: WILT_MIN_MS,          max: WILT_MAX_MS },
+};
 // The two kinds of renewable (rome, 2026-07-11 — the larder was a healing
 // pump): living forage (moss, lichen, nettle, caps, water) GROWS, and keeps
 // the fast clock above. DEAD STOCK — cured provisions nobody is curing
@@ -379,7 +401,7 @@ export const TRACE_LIFE_MS: Record<string, number> = {
 export const TRACE_CAP = 12; // per room; oldest non-carving forgotten first
 export const CARVE_CAP = 5; // wall space is finite
 export const CARVE_MAX_LEN = 40;
-export const ROT_MS = 12 * 3_600_000; // food on the floor keeps this long
+export const ROT_MS = 4 * 3_600_000; // food on the floor keeps this long, then rots to scraps (was 12h — rome 2026-07-17: too long; 4h still outlasts any delve, and the scraps feed the scavengers sooner)
 
 // What a creature on the move sounds like from one room away. Every dweller
 // gets its own voice through the walls — the deep ones especially, so the dark
@@ -1255,8 +1277,8 @@ export const LANTERN_WEAR = 20;
 // No fixed spawns (the hammerstone's law: no spot to farm): the world rolls
 // on its own cadence and sometimes coughs one up into fire-keeping country —
 // hearths, watch posts, the places the garrison kept its light. The seal
-// keeps the damp out too: a strayed brand never sods (strayTorch is
-// TORCH_ITEM-only, on purpose). It doesn't stack against PACK_TORCH_CAP —
+// keeps the damp out too: a strayed brand never sods (it's deliberately absent
+// from STRAY_DECAY, so the stray law skips it). It doesn't stack against PACK_TORCH_CAP —
 // the cap rations the common stick, and the world only ever holds one brand.
 export const BRAND_ITEM = "longbrand";
 export const BRAND_BURN_MS = 25 * 60_000;
@@ -1472,6 +1494,44 @@ export const DEEP_DOOR_KEY = "undercroft:down";       // "roomId:dir" of the sea
 // stands open the deep mints no new hearts (surfacing pauses), so the window
 // closing is what restarts the corpse-key economy.
 export const DEEP_DOOR_OPEN_MS = 20 * 60_000;
+// Food reads its age like the heart does — FLAVOR only (rome, 2026-07-17): a
+// perishable ration goes fresh -> on the turn -> spoiled as it sits, but a
+// spoiled-LOOKING one still fills you (the heart is the one thing that truly
+// dies). Timed so it reads spoiled around the time floor-food would rot to
+// scraps (ROT_MS, 4h).
+export const FOOD_FRESH_SEC = 60 * 60;                // fresh for the first hour
+export const FOOD_SPOIL_SEC = 150 * 60;               // reads spoiled after ~2.5h; the hour between is "on the turn"
+// Cured, dried, salted — or just water: these keep, and never read as spoiling.
+// Preservation is the whole point of the smoker, the salt barrel, the hardtack
+// tin. Everything else edible ages. Exclusion set, so a new fresh food spoils by default.
+export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "well-water"]);
+// ---- the smokehouse: raw meat hung in the racks, cured to keeping ----
+// The smoked-haunch's OWN description already claims these racks ("a haunch cured
+// black and hard in the smokehouse racks"); nothing ever lit them. Now a delver
+// can. In the smokehouse room, feed the cold racks a torch and hang raw meat:
+// over CURE_MS it becomes its preserved form — a FOOD_KEEPS food that heals more
+// and never spoils. It hangs on the floor of a SHARED room while it cures, raw
+// and reeking (raw meat carries a lure), so a scavenger or another delver could
+// lift it before you're back — the preservation is a wager, not a vending
+// machine. Reuses the rot clock (a timed floor-item transform) running toward
+// BETTER instead of foul: kind "cure" in the rot sweep looks the output up here.
+// rome (2026-07-17): "should we have a path to making preserved food?" — this is it.
+export const SMOKEHOUSE_ROOM = "smokehouse";
+export const CURE_MS = 3 * 60_000; // 3 min — long enough to be a wait you leave and risk, short enough you circle back mid-delve
+export const CURE_RECIPES: Record<string, string> = {
+  "hyena-haunch": "smoked-haunch", // a raw haunch → the very haunch its lore says these racks make (heal 9 → 12, keeping)
+  "pale-flesh":   "smoked-haunch", // the deep's drowned meat, smoked to keeping (heal 8 → 12, keeping)
+};
+// A plain torch turns up in the smokehouse now and then — the garrison kept
+// their kindling by the fire. It rides the floor-renewal law (DICE, not a
+// schedule; capped at one lying unfound), so it is NOT a refill spot: a delver
+// come to cure MIGHT find fuel already waiting, might not, and can never farm
+// it. Same shape as the hammerstone/longbrand mints. rome (2026-07-17): "a torch
+// spawn in the smokehouse, but rng, not a refill spot."
+export const SMOKE_TORCH_ROLL_MIN_MS = 2 * 3_600_000; // the world checks every 2–4h...
+export const SMOKE_TORCH_ROLL_MAX_MS = 4 * 3_600_000;
+export const SMOKE_TORCH_MINT_ODDS = 0.3;             // ...and only sometimes lays one — a find, not a supply
+export const SMOKE_TORCH_GROUND_CAP = 1;              // never more than one lying unfound — nothing to stockpile
 export const HEART_FRESH_SEC = 600;                   // a heart opens the door for 10 min after the cut, then it's slime
 export const HEART_ROT_SEC = HEART_FRESH_SEC + 120;   // ...and 2 min after it spoils the slime seeps away — a spoiled heart doesn't litter the floor (rome, 2026-07-15)
 export const SURFACE_INTERVAL_MS = 360_000;           // while sealed, the deep surfaces one dweller ~every 6 min
@@ -1486,6 +1546,8 @@ export const AMBIENCE: Record<"gate" | "deep" | "upper", string[]> = {
     "Above, the wind finds a gap in the ruined tower and moans through it.",
     "Grit trickles down from the broken vault overhead, and stops.",
     "The keeper shifts behind his hatch, and is still again.",
+    "Dust hangs in what little daylight reaches down through the breach, and will not settle.",
+    "Old ash lifts off the cold hearth, turns once in the draft, and lies back down.",
   ],
   upper: [
     "Dust sifts down out of the dark of the vaulting.",
@@ -1495,6 +1557,11 @@ export const AMBIENCE: Record<"gate" | "deep" | "upper", string[]> = {
     "A draft passes, carrying old smoke and older bone.",
     "For a moment the dark seems to lean closer. Then it doesn't.",
     "Somewhere, stone grinds on stone, and the silence closes over it.",
+    "Dust lies thick on every ledge, undisturbed but where your own hands have been.",
+    "A skin of grey dust slides off a sill and falls without a sound.",
+    "The air tastes of dry rot and cold iron, and sits heavy in the chest.",
+    "Grit shifts underfoot — old mortar, bone-meal, the powder of things that had shape once.",
+    "A cobweb greyed to felt with dust stirs once, in a draft you can't feel.",
   ],
   deep: [
     "Black water laps at the edge of the dark, unhurried.",
@@ -1503,8 +1570,22 @@ export const AMBIENCE: Record<"gate" | "deep" | "upper", string[]> = {
     "The cold here is a wet hand laid flat against your back.",
     "Bubbles break the surface where nothing should be breathing.",
     "The water carries a sound you feel more than hear, and cannot place.",
+    "A film of silt lifts off the bottom, hangs a while, and greys back down over everything.",
+    "Scum rides the black water — dust that fell here before the flood, going nowhere.",
   ],
 };
+// The dust your OWN light wakes: carried into a naturally-dark room the dark has
+// held a long time, a flame catches what the dark hid — motes turning in the
+// beam. Only when YOU are the light (carriesLight + a born-dark room), and only
+// sometimes, so it stays a small marvel and never wallpaper. rome, 2026-07-17.
+export const MOTES: string[] = [
+  "Your light wakes a slow drift of dust, turning in the beam where nothing has stirred it in a long time.",
+  "Dust hangs motionless in your torchlight, mote on mote, as if the air here forgot how to move.",
+  "The flame catches a haze rising off your own footfalls — the first to trouble this dust in years.",
+  "Motes climb up through your light and out the top of it, back into a dark that closes without a seam.",
+  "In the reach of your flame the air is thick with slow dust; past it, the dark keeps its counsel.",
+];
+export const MOTES_ODDS = 0.4; // when lit in a dark, voiceless room, this share of atmosphere beats are the dust in your light
 export const ROOM_AMBIENCE: Record<string, string[]> = {
   // ---- the grounds: the first OUTDOOR rooms — wind and sky, not drips (058) ----
   "the-causeway": ["The wind comes down the old road with nothing left to slow it.", "Somewhere high on the walls, loose stone ticks in the wind."],
