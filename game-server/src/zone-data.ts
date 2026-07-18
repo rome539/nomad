@@ -5,6 +5,17 @@ import type { Stance } from "./zone-types";
 
 
 export const TICK_MS = 2000;
+// The world SIM (creatures, ground, meta) persists to DO-SQLite rows. Doing it
+// every 2s tick writes a handful of changed rows each beat — 43,200 saves/day
+// — which is what blew the free plan's rows_written cap (and burns the paid
+// plan's allowance too). The sim still TICKS every 2s (creatures act on the
+// beat); only the disk flush batches to this interval, so a mob that shifts
+// three times in 6s writes once, not three times. Command-driven saves
+// (kills, banking, loot) still persist IMMEDIATELY via z.persist(), so nothing
+// a player does waits on this — only ambient creature churn does. Crash cost:
+// up to this much AMBIENT world state (player inventory/vault live in D1, safe;
+// volatile creature fields re-sim from savedAt on restart). (2026-07-18)
+export const TICK_SIM_FLUSH_MS = 6000;
 // How often the tick flushes every live session's mutable state (hp, room) to
 // D1, so a DO restart (a deploy, or a Cloudflare eviction) is a reconnect blip,
 // not a revert. In-memory-only heals — chiefly rest — would otherwise vanish on

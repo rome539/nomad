@@ -61,7 +61,7 @@ import * as events from "./events";
 import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import {
-  TICK_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
+  TICK_MS, TICK_SIM_FLUSH_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, BURDEN_FREE_IRON,
@@ -143,6 +143,7 @@ export class ZoneDO implements DurableObject {
   public wallMarks = new Set<string>();
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
   private sim = simstore.newCache(); // what the sim rows last held, so persist() only writes the dirt (simstore.ts)
+  private lastTickFlushAt = 0; // ms of the last TICK-driven sim flush; the tick batches its writes to TICK_SIM_FLUSH_MS (command saves stay immediate)
   private cacheRoom = new Map<string, string>(); // cacheId -> its CURRENT room; roaming chests relocate on refill
   private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
   public events = new Map<string, EventState>(); // room events mid-arc (events.ts owns the arcs; the spine just keeps the clock)
@@ -2888,7 +2889,16 @@ export class ZoneDO implements DurableObject {
     this.pruneTraces(now);
     this.syncCombatCtx();
 
-    await this.persist();
+    // Batch the tick's disk flush: the sim ticked (creatures acted this beat),
+    // but writing the delta every 2s is what runs up rows_written. Flush the
+    // ambient churn at most every TICK_SIM_FLUSH_MS; whatever changed since the
+    // last flush lands in one write (the delta captures it all). Player-driven
+    // saves already persisted immediately from their own handlers, so this only
+    // delays ambient world state — bounded by the interval, re-simmable on crash.
+    if (now - this.lastTickFlushAt >= TICK_SIM_FLUSH_MS) {
+      this.lastTickFlushAt = now;
+      await this.persist();
+    }
     await this.ensureAlarm();
   }
 

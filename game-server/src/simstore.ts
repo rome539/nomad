@@ -31,7 +31,7 @@
 import type { SimState, Creature, Trace, GroundInstance } from "./zone-types";
 
 const THROTTLE_MS = 60_000; // m:savedAt / m:arrivals at most once a minute
-const FULL_FLUSH_MS = 5 * 60_000; // everything lands at least this often
+const FULL_FLUSH_MS = 20 * 60_000; // everything lands at least this often — the size-driven write floor (288 flushes/day at 5min rewrote every row; 20min quarters that). Low risk: the delta writer keeps disk current between flushes, and restart re-sims the volatile fields from savedAt (2026-07-18)
 
 // The churn fields: real state, but drifting every beat — excluded from the
 // dirt judgement, carried along in every actual write, and never stale past
