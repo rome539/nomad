@@ -138,6 +138,14 @@ export const PACK_FOOD_CAP = 8;
 // spare torches carried makes the dark a supply decision again — you stock a
 // reserve, you don't erase the night (rome, 2026-07-16). Count, not a slot.
 export const PACK_TORCH_CAP = 5;
+// Dressings free-stack the same way — a whole kind of bandages is one slot,
+// however deep — so a run could carry a bottomless supply of bleed-clots and
+// hp-staunch and never fear a wound. Same cure as food and torches: a hard
+// ceiling on TOTAL dressings carried (any mix — linen-dressing, linen-strips,
+// bloodwort), so surviving the deep's bleeds is a supply decision, not a given
+// (rome, 2026-07-18). Count, not a slot. grave-moss doubles as food, so it
+// rides the FOOD cap instead — no double jeopardy (dressingCapped skips edibles).
+export const PACK_DRESSING_CAP = 6;
 export const LOCKBOX_CAP = 8; // the run closet — small, takes anything, sealed or raw
 export const VAULT_CAP = 50; // the bank — deep, generous, sealed wealth only
 // Not every forced box pays out. Now and then the lock gives on nothing —

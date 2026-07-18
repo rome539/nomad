@@ -1034,6 +1034,7 @@ export async function benchTake(z: ZoneDO, session: Session, row: string): Promi
         if (key === "vault" && !atGate) return "The vault's door opens only at a gate.";
         if (z.foodCapped(session, entry.itemId)) return z.foodFullNote();
         if (z.torchCapped(session, entry.itemId)) return z.torchFullNote();
+        if (z.dressingCapped(session, entry.itemId)) return z.dressingFullNote();
         if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${PACK_CAP} slots).`;
         await setContainer(z.env.DB, entry.rowId, "");
         session.items.push(entry);
@@ -1060,6 +1061,26 @@ export async function benchSeal(z: ZoneDO, session: Session, row: string): Promi
     return undefined;
   }
 
+// Body-slot reading order — a worn set reads head-to-foot, and stowed gear of
+// the same slot clusters instead of scattering.
+const SLOT_RANK: Record<string, number> = { weapon: 0, shield: 1, helm: 2, armor: 3, cloak: 4, feet: 5 };
+
+// One deterministic order for every bench column, so a stack always lands in the
+// same place and the eye can find it (rome, 2026-07-18: "items are just out of
+// order ... easy to lose track"). Kind first — worn gear, stowed gear,
+// dressings, food, keys, tender, trophies — then gear by body-slot, then name,
+// then seal serial so identical sealed pieces stay stable. The client's own
+// section filters (ON YOU / IN THE PACK, BANKED / KEYS / FOOD / TROPHIES) ride
+// on top of this and preserve it, so each section comes out sorted.
+const kitRank = (e: any): number =>
+  e.gear ? (e.equipped ? 0 : 1)
+  : e.dressing ? 2 : e.food ? 3 : e.key ? 4 : e.trophy ? 6 : 5;
+const sortKit = (arr: any[]): any[] => arr.sort((a, b) =>
+  kitRank(a) - kitRank(b)
+  || (a.slotRank ?? 9) - (b.slotRank ?? 9)
+  || String(a.name).localeCompare(String(b.name))
+  || (a.serial ?? 0) - (b.serial ?? 0));
+
 export async function sendBench(z: ZoneDO, session: Session, note?: string): Promise<void> {
     const world = z.world!;
     const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
@@ -1078,6 +1099,8 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
         trophy: z.isTrophy(c.itemId), // cut off a body — not food, not a key, not tender
         key: z.isKey(c.itemId),       // opens something: a cache's key, or the heart
         food: !!t?.edible,            // something you can eat — its own vault shelf, apart from the banked wealth
+        dressing: (t?.staunch ?? 0) > 0 && !t?.edible, // binds a wound — sorts with the healing kit
+        slotRank: SLOT_RANK[t?.slot ?? ""] ?? 9,       // body-slot order for gear, so worn kit reads head-to-foot
         gear,
         // What the bench can actually mend: the stone wears like gear but
         // nothing refills it (rome) — no repair button to bait a refusal.
@@ -1113,9 +1136,9 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
       v: 0, t: "bench", open: true, note: note ?? "",
       sheet: z.sheetFor(session), // the paperdoll: gear worn + the combat math it adds up to
       atGate: world.entryRooms.has(session.roomId), // vault + seal only shown at a gate
-      pack: group(session.items),
-      lockbox: group(lockbox),
-      vault: group(vault),
+      pack: sortKit(group(session.items)),
+      lockbox: sortKit(group(lockbox)),
+      vault: sortKit(group(vault)),
       packCap: PACK_CAP, lockboxCap: LOCKBOX_CAP, vaultCap: VAULT_CAP,
       // Slot accounting is the SERVER's now, for every column: food rides free in
       // the pack, costs a slot each in the lockbox, and rides free in the vault —
@@ -1259,6 +1282,7 @@ export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key:
     const tmpl = world.itemTemplates.get(entry.itemId)!;
     if (z.foodCapped(session, entry.itemId)) return z.send(session, z.foodFullNote());
     if (z.torchCapped(session, entry.itemId)) return z.send(session, z.torchFullNote());
+    if (z.dressingCapped(session, entry.itemId)) return z.send(session, z.dressingFullNote());
     if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${PACK_CAP} slots). Make room first.`);
     await setContainer(z.env.DB, entry.rowId, "");
     session.items.push(entry);

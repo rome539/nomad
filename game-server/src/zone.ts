@@ -88,7 +88,7 @@ import {
   DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
-  LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE, TORCH_ITEM, PACK_TORCH_CAP,
+  LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT
 } from "./zone-data";
 
@@ -1663,6 +1663,9 @@ export class ZoneDO implements DurableObject {
     // Torches share food's problem: one slot however deep, plus a regrowing floor
     // spawn feeding it. Same cure — a hard count ceiling on spare torches.
     if (this.torchCapped(session, itemId)) return false;
+    // Dressings share food's problem: one slot however deep. Same count ceiling,
+    // so a stack of bandages can't make bleeds a non-issue.
+    if (this.dressingCapped(session, itemId)) return false;
     return this.hasRoom(session.items, itemId, PACK_CAP, "pack");
   }
 
@@ -1701,6 +1704,31 @@ export class ZoneDO implements DurableObject {
   // The one line every torch-entry point speaks when the ceiling stops it.
   public torchFullNote(): string {
     return `You're carrying all the torches you can (${PACK_TORCH_CAP}). Light one, or bank the rest at a gate.`;
+  }
+
+  // How many dressings ride in the pack right now — anything that binds a wound
+  // (staunch > 0) that ISN'T also food. A dressing that doubles as a ration
+  // (grave-moss) rides the FOOD cap instead, so it's excluded here — one thing,
+  // one ceiling.
+  public packDressings(session: Session): number {
+    let n = 0;
+    for (const c of session.items) {
+      const t = this.world!.itemTemplates.get(c.itemId);
+      if (t && (t.staunch ?? 0) > 0 && !t.edible) n++;
+    }
+    return n;
+  }
+
+  // Would taking one more of itemId break the dressing ceiling? (Only non-food
+  // dressings count; everything else answers false and rides the ordinary rules.)
+  public dressingCapped(session: Session, itemId: string): boolean {
+    const t = this.world!.itemTemplates.get(itemId);
+    return !!t && (t.staunch ?? 0) > 0 && !t.edible && this.packDressings(session) >= PACK_DRESSING_CAP;
+  }
+
+  // The one line every dressing-entry point speaks when the ceiling stops it.
+  public dressingFullNote(): string {
+    return `You're carrying all the dressings you can (${PACK_DRESSING_CAP}). Bind a wound, or bank the rest at a gate.`;
   }
 
   // Mint one item into the pack, if there's room. Returns the row, or null when

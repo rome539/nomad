@@ -870,6 +870,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   const tmpl = z.world!.itemTemplates.get(itemId)!;
   if (z.foodCapped(session, itemId)) return z.send(session, z.foodFullNote());
   if (z.torchCapped(session, itemId)) return z.send(session, z.torchFullNote());
+  if (z.dressingCapped(session, itemId)) return z.send(session, z.dressingFullNote());
   if (!z.packRoom(session, itemId)) {
     return z.send(session, `Your pack is full (${PACK_CAP} slots). Drop something, or bank it at a gate.`);
   }
