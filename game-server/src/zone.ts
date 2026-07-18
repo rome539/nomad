@@ -2501,6 +2501,9 @@ export class ZoneDO implements DurableObject {
               victim.items.splice(victim.items.indexOf(loot), 1);
               await removeItemRow(this.env.DB, loot.rowId);
               creature.stole = loot.itemId;
+              // A stolen journal keeps its pages: the row dies here, so its
+              // instance identity must ride the thief or the book comes back blank.
+              creature.stoleJournal = loot.journalId;
               this.send(victim, `${cap(tmpl.name)} snatches ${it.name} and bolts! (kill it to get it back)`);
               this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears something from ${victim.name} and flees!`, victim.pubkey, false);
               this.sendCtx(victim);
@@ -3306,12 +3309,19 @@ export class ZoneDO implements DurableObject {
     // and it's on the floor where it fell. (Ground items land fresh, no seal.)
     if (creature.stole) {
       const stolen = this.world!.itemTemplates.get(creature.stole);
-      this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), creature.stole]);
-      this.stampFresh(creature.roomId, creature.stole);
+      if (creature.stoleJournal) {
+        // A stolen journal lands INSTANCED — its pages ride the book to whoever
+        // loots it (same door a death-drop uses; a plain spill was a blank book).
+        this.dropInstance(creature.roomId, creature.stole, creature.stoleJournal);
+      } else {
+        this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), creature.stole]);
+        this.stampFresh(creature.roomId, creature.stole);
+      }
       if (stolen) this.roomFeed(creature.roomId, `${cap(stolen.name)} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, undefined, false); // local: loot on the ground is a shopping-list beacon
       // The thief's spill obeys the stray law like any other landing.
       this.armStrayDecay(creature.roomId);
       creature.stole = undefined;
+      creature.stoleJournal = undefined;
     }
     this.addTrace(creature.roomId, {
       kind: HOLLOW.has(tmpl.id) ? "remains" : "blood",

@@ -820,7 +820,11 @@ function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate): void {
       if (s.seizedBy === victim.id) s.seizedBy = undefined;
     }
     const spoils = [...(victim.carries ?? [])];
-    if (victim.stole) spoils.push(victim.stole);
+    // A stolen journal spills INSTANCED so its pages survive this hand-off too
+    // — a hyena that kills the cutpurse must not eat the book's identity.
+    if (victim.stole && victim.stoleJournal) {
+      z.dropInstance(victim.roomId, victim.stole, victim.stoleJournal);
+    } else if (victim.stole) spoils.push(victim.stole);
     if (spoils.length) {
       z.ground.set(victim.roomId, [...(z.ground.get(victim.roomId) ?? []), ...spoils]);
       for (const id of spoils) z.stampFresh(victim.roomId, id); // a fresh kill site stays hot a while

@@ -77,6 +77,7 @@ export interface Creature {
   phase?: number; // boss rage tier (0/1/2), climbs at hp thresholds
   stole?: string; // cutpurse: the item id it grabbed and ran with (dropped on death)
   carries?: string[]; // gear it visibly bears (worn/wielded at spawn, or scavenged) — spills on death
+  stoleJournal?: string; // the snatched thing's instance identity: when `stole` is a journal, its journalId rides here so the pages survive the theft (spills instanced; bare `stole` was eating books — rome, 2026-07-18)
   fed?: number; // grave-hyena: corpses eaten; enough and it turns bold
   rouseAt?: number; // dire-hyena guarding a meal: ms it commits to attacking — a wind-up you can flee or hit first
   wakeUntil?: number; // SENTINEL (the deep's hound): asleep until roused; awake (and barring the descent) while now < this
