@@ -1780,6 +1780,7 @@ export class ZoneDO implements DurableObject {
     victim.hobbled = true;
     victim.limpingSince = undefined; // a fresh wound — the drag-clear clock starts on your next flee
     this.send(victim, `${cap(tmpl.name)} rakes your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
+    this.sendStatus(victim); // light the 'hobbled' HUD pill the instant the leg goes — same fix as stun/rest
     this.actorFeed(victim, victim.roomId, this.feedProc(FEED_HOBBLE, tmpl.name, victim.name), "hobble");
   }
 

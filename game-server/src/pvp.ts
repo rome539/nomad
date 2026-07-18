@@ -262,6 +262,7 @@ async function swingAt(
     defender.limpingSince = undefined;
     z.send(defender, `The barbs of ${offhand.tmpl.name} rake your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
     z.send(attacker, `The barbs catch ${defender.name}'s leg — they won't run clean now.`);
+    z.sendStatus(defender); // light the defender's 'hobbled' pill on the set, not just on clear
     z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_HOBBLE, attacker.name, defender.name), "hobble", true, defender.pubkey);
   }
   if (worn) await z.wear(defender, worn.carried, worn.tmpl, ARMOR_WEAR);
