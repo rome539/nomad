@@ -2970,6 +2970,10 @@ export class ZoneDO implements DurableObject {
   // Food left on the floor goes foul on its own clock.
   private applyRot(now: number, silent: boolean): void {
     this.rot = this.rot.filter((r) => {
+      // Gate-smokehouse cures live in `rot` for the free persistence but never
+      // touch a floor — they're collected lazily at the gate (cureAtGate). Keep
+      // them regardless of maturity; the owner's visit is what resolves them.
+      if (r.kind === "gatecure") return true;
       if (r.at > now) return true;
       const here = this.ground.get(r.roomId) ?? [];
       const idx = here.indexOf(r.itemId);

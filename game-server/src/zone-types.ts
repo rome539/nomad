@@ -143,7 +143,11 @@ export interface RotEntry {
   // "cure": the rot clock run BACKWARD — raw meat hung in the smokehouse racks,
   // which on this timer doesn't spoil but PRESERVES: the floor item is swapped
   // for its keeping form (CURE_RECIPES). The one timer that ends in something better.
-  kind?: "rot" | "crumble" | "sodden" | "wilt" | "cure";
+  // "gatecure": the SAFE gate-smokehouse cure — same preserve timer, but `roomId`
+  // holds the PUBKEY (not a room), it never resolves onto a floor (the sweep skips
+  // it), and it's collected lazily when the owner is next at the gate. Slower than
+  // the deep racks (GATE_CURE_MS), the price of it being unlift-able.
+  kind?: "rot" | "crumble" | "sodden" | "wilt" | "cure" | "gatecure";
 }
 
 // A carryable on the floor that can't be reduced to a bare template id — it

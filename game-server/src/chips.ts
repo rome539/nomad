@@ -35,6 +35,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     const inside = ["out"];
     if (world.fenceStock.length) inside.push(TRADE_CHIP);
     if (world.forgeRecipes.length) { inside.push(FORGE_CHIP); inside.push("smelt"); }
+    // The gate's own smoke-racks: offer 'cure' when you've raw meat to hang or
+    // joints already curing on the racks to check/collect.
+    if (session.items.some((c) => CURE_RECIPES[c.itemId] && c.serial === null)
+      || z.rot.some((r) => r.kind === "gatecure" && r.roomId === session.pubkey)) inside.push("cure");
     // The wall chart: read it when it has anything on it; offer the nail when
     // you walked shallow halls it doesn't have yet.
     if (z.wallMarks.size) inside.push("study");

@@ -10,7 +10,7 @@ import {
   journalLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
   setItemLoreId, deedsBump,
 } from "./world";
-import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse } from "./zone-util";
+import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
 import * as ai from "./ai";
 import * as light from "./light";
@@ -24,8 +24,8 @@ import {
   CARVE_MAX_LEN, TWO_HANDED, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS,
-  SMOKEHOUSE_ROOM, CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT,
+  SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor } from "./gate";
 
@@ -67,10 +67,72 @@ export function cmdSmoke(z: ZoneDO, session: Session, arg = ""): void {
 // never spoils. It hangs on a SHARED floor while it works, raw and reeking, so
 // the wager is real: come back before a scavenger or another delver lifts it.
 // rome (2026-07-17): "a path to making preserved food." This is the path.
+// The SAFE gate smokehouse: hang raw meat on your OWN racks (instanced behind the
+// door — nothing can lift it), no torch (the gate keeps its hearth), and it cures
+// over GATE_CURE_MS even while you're away. Slower than the deep racks — their only
+// edge is speed. Collected LAZILY: any joint whose timer has run drops into your
+// pack the moment you read the racks back at the gate. Gate-cures ride in z.rot
+// (kind "gatecure", roomId = your pubkey) for free persistence; the floor sweep
+// skips them, so they wait for your hand however long you're gone.
+async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const world = z.world!;
+  const now = Date.now();
+  // First, take down anything that cured through while you were away (as pack allows).
+  let collected = 0;
+  for (const r of z.rot.filter((r) => r.kind === "gatecure" && r.roomId === session.pubkey && r.at <= now)) {
+    const out = CURE_RECIPES[r.itemId] ?? "smoked-haunch";
+    if (!z.packRoom(session, out)) continue; // no room — leave it hanging, safe, for when you make space
+    const id = uuid();
+    await insertLoot(z.env.DB, id, session.pubkey, out, null);
+    session.items.push({ rowId: id, itemId: out, serial: null, equipped: false, condition: 100 });
+    z.rot.splice(z.rot.indexOf(r), 1);
+    collected++;
+  }
+  const got = collected ? `You take ${collected === 1 ? "a cured haunch" : collected + " cured joints"} down off the gate-racks — gone black and hard, and keeping now. ` : "";
+
+  if (arg) {
+    const curable = session.items.find((c) => CURE_RECIPES[c.itemId] && c.serial === null && nameMatches(world.itemTemplates.get(c.itemId)!.name, arg));
+    const carried = curable ?? z.findCarried(session, arg);
+    if (!carried) return z.send(session, got + "You carry nothing like that.", got ? "gain" : undefined);
+    const outId = CURE_RECIPES[carried.itemId];
+    if (!outId) return z.send(session, got + `${cap(world.itemTemplates.get(carried.itemId)!.name)} won't cure. The racks are for raw meat — a haunch, a slab of flesh.`, got ? "gain" : undefined);
+    if (carried.serial !== null) return z.send(session, got + "That one's sealed for extraction. Break the seal before you'd hang it in the smoke.", got ? "gain" : undefined);
+    const rawName = world.itemTemplates.get(carried.itemId)!.name;
+    session.items.splice(session.items.indexOf(carried), 1);
+    await removeItemRow(z.env.DB, carried.rowId);
+    z.rot.push({ itemId: carried.itemId, roomId: session.pubkey, at: now + GATE_CURE_MS, kind: "gatecure" });
+    const mins = Math.round(GATE_CURE_MS / 60_000);
+    z.send(session, got + `You hang ${rawName} on the gate's own smoke-racks, safe behind the door. Give it about ${mins} minutes — it cures while you're gone, and nothing in here or out there can lift it. Come back and take it down keeping. ('cure' reads the racks.)`, "gain");
+    gatehouseFeed(z, `${session.name} hangs meat on the gate smoke-racks.`, session.pubkey);
+    z.sendCtx(session);
+    await z.persist();
+    return;
+  }
+
+  // No-arg: read the racks.
+  const still = z.rot.filter((r) => r.kind === "gatecure" && r.roomId === session.pubkey && r.at > now);
+  // Cured-through but not taken down — the only reason after the collect loop is a
+  // full pack. Name it so a ready haunch never silently vanishes from the readout.
+  const readyStuck = z.rot.filter((r) => r.kind === "gatecure" && r.roomId === session.pubkey && r.at <= now);
+  const haveRaw = session.items.some((c) => CURE_RECIPES[c.itemId] && c.serial === null);
+  let hanging = "";
+  if (still.length) {
+    const left = Math.min(...still.map((r) => r.at)) - now;
+    const mins = Math.max(1, Math.ceil(left / 60_000));
+    hanging = ` ${still.length === 1 ? "A haunch hangs" : still.length + " joints hang"} on the racks, curing — ${left <= 20_000 ? "all but done" : "about " + mins + " minute" + (mins === 1 ? "" : "s") + " yet"}.`;
+  }
+  if (readyStuck.length) hanging += ` ${readyStuck.length === 1 ? "A cured haunch waits" : readyStuck.length + " cured joints wait"} on the racks, but your pack is full — make room and 'cure' takes them down.`;
+  const base = "The gate keeps its own smoke-racks in the warm behind the door. Feed them raw meat — 'cure haunch' — and it cures safe while you're away, slower than the deep racks but nothing can ever lift it."
+    + (haveRaw ? "" : " (You've nothing raw to hang.)");
+  z.send(session, (got + base + hanging).trim(), collected ? "gain" : undefined);
+  if (collected) { z.sendCtx(session); await z.persist(); }
+}
+
 export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
+  if (z.outOfWorld(session)) return cureAtGate(z, session, arg); // behind the gate door: the SAFE racks
   if (session.roomId !== SMOKEHOUSE_ROOM) {
-    return z.send(session, "There are no smoke-racks here. The old smokehouse lies deep, below the larder — that's where raw meat becomes something that keeps.");
+    return z.send(session, "There are no smoke-racks here. The old smokehouse lies deep, below the larder — or cure it safe at any gate ('cure' behind the door).");
   }
   // The racks share ONE fire (groundTorch — the same lit-floor flame that lights
   // the whole room). A torch lights it, and while it burns you can load the racks
@@ -1521,17 +1583,22 @@ export function cmdCarve(z: ZoneDO, session: Session, arg: string): void {
 // Take one thing out of the pack and eat it: off the inventory, out of the
 // DB, its seal (if any) voided, and the heal applied. Shared by the `eat`
 // command and the auto-eat reflex, so both do it exactly the same way.
-export async function consumeFood(z: ZoneDO, 
+export async function consumeFood(z: ZoneDO,
   session: Session,
   carried: CarriedItem,
-): Promise<{ before: number; tmpl: ItemTemplate }> {
+): Promise<{ before: number; tmpl: ItemTemplate; spoiled: boolean }> {
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
   session.items.splice(session.items.indexOf(carried), 1);
   await removeItemRow(z.env.DB, carried.rowId);
   if (carried.serial !== null) await voidMint(z.env.DB, carried.serial);
   const before = session.hp;
-  session.hp = Math.min(session.maxHp, session.hp + tmpl.heal);
-  return { before, tmpl };
+  // Spoiled food is HONEST now: a turned ration gives back less (never nothing —
+  // min 1, so it's still desperation food). Cured/keeping food never spoils, so
+  // it's exempt (same FOOD_KEEPS gate as the freshness prose).
+  const spoiled = !FOOD_KEEPS.has(carried.itemId) && foodState(carried.acquiredAt) === "spoiled";
+  const heal = spoiled ? Math.max(1, Math.round(tmpl.heal * FOOD_SPOIL_HEAL_MULT)) : tmpl.heal;
+  session.hp = Math.min(session.maxHp, session.hp + heal);
+  return { before, tmpl, spoiled };
 }
 
 // The provisional food a player is carrying, weakest heal first — the order
@@ -1562,7 +1629,7 @@ export async function cmdEat(z: ZoneDO, session: Session, arg: string): Promise<
       return z.send(session, `You gnaw at ${world.itemTemplates.get(carried.itemId)!.name}. It is not food.`);
     }
   }
-  const { before, tmpl } = await consumeFood(z, session, carried);
+  const { before, tmpl, spoiled } = await consumeFood(z, session, carried);
   // Bolting food mid-fight is allowed — desperation is — but you drop your
   // guard to do it, and the next hit that lands makes you pay for the bite.
   const gulped = z.inCombat(session);
@@ -1570,13 +1637,20 @@ export async function cmdEat(z: ZoneDO, session: Session, arg: string): Promise<
   z.send(
     session,
     (session.hp > before
-      ? `You eat ${tmpl.name}. ${pick([
-          "Warmth comes back to you.",
-          "It sits like a coal in your belly, and some of the grey lifts.",
-          "It is barely food, but your hands steady.",
-          "Strength trickles back into your limbs.",
-          "The gnawing eases, and you feel a little less like dying.",
-        ])} [${session.hp}/${session.maxHp} hp]`
+      ? (spoiled
+          // The label is honest now: spoiled food heals HALF, and the prose says so.
+          ? `You force down ${tmpl.name}, turned and rank. ${pick([
+              "It barely helps — half of it is rot.",
+              "Your stomach turns, but a little strength comes back.",
+              "Foul going down, and it gives back little for it.",
+            ])} [${session.hp}/${session.maxHp} hp]`
+          : `You eat ${tmpl.name}. ${pick([
+              "Warmth comes back to you.",
+              "It sits like a coal in your belly, and some of the grey lifts.",
+              "It is barely food, but your hands steady.",
+              "Strength trickles back into your limbs.",
+              "The gnawing eases, and you feel a little less like dying.",
+            ])} [${session.hp}/${session.maxHp} hp]`)
       : `You eat ${tmpl.name}.`)
     + (gulped ? " You bolt it down with one eye on your foe — an opening." : ""),
     "gain",

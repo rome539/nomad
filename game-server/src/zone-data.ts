@@ -1567,6 +1567,7 @@ export const DEEP_DOOR_OPEN_MS = 20 * 60_000;
 // scraps (ROT_MS, 4h).
 export const FOOD_FRESH_SEC = 60 * 60;                // fresh for the first hour
 export const FOOD_SPOIL_SEC = 150 * 60;               // reads spoiled after ~2.5h; the hour between is "on the turn"
+export const FOOD_SPOIL_HEAL_MULT = 0.5;              // spoiled food is HONEST: it heals this fraction (never nothing — min 1; still edible in a pinch). "turning" is unpenalized — the warning tier. FOOD_KEEPS never spoils.
 // Cured, dried, salted — or just water: these keep, and never read as spoiling.
 // Preservation is the whole point of the smoker, the salt barrel, the hardtack
 // tin. Everything else edible ages. Exclusion set, so a new fresh food spoils by default.
@@ -1584,6 +1585,7 @@ export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "we
 // rome (2026-07-17): "should we have a path to making preserved food?" — this is it.
 export const SMOKEHOUSE_ROOM = "smokehouse";
 export const CURE_MS = 3 * 60_000; // 3 min — long enough to be a wait you leave and risk, short enough you circle back mid-delve
+export const GATE_CURE_MS = 10 * 60_000; // the SAFE gate smokehouse: slower than the deep racks (their only edge is speed), but it can't be lifted and cures while you're away — you collect it black and keeping next time you're at the gate
 export const CURE_RECIPES: Record<string, string> = {
   "hyena-haunch": "smoked-haunch", // a raw haunch → the very haunch its lore says these racks make (heal 9 → 12, keeping)
   "pale-flesh":   "smoked-haunch", // the deep's drowned meat, smoked to keeping (heal 8 → 12, keeping)
