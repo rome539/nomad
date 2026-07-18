@@ -90,15 +90,24 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
   }
   const got = collected ? `You take ${collected === 1 ? "a cured haunch" : collected + " cured joints"} down off the gate-racks — gone black and hard, and keeping now. ` : "";
 
+  // Everything at a gate is at your elbow — pack, lockbox, and vault alike — so
+  // hang raw meat from any of them (parity with smelt, which spends scrap across
+  // all three). Prefer a CURABLE match over a same-named raw that never could.
+  const pools = await z.gatePools(session);
+  const flat = pools.flat();
+  const named = (c: CarriedItem) => nameMatches(world.itemTemplates.get(c.itemId)!.name, arg);
   if (arg) {
-    const curable = session.items.find((c) => CURE_RECIPES[c.itemId] && c.serial === null && nameMatches(world.itemTemplates.get(c.itemId)!.name, arg));
-    const carried = curable ?? z.findCarried(session, arg);
+    const curable = flat.find((c) => CURE_RECIPES[c.itemId] && c.serial === null && named(c));
+    const carried = curable ?? flat.find(named);
     if (!carried) return z.send(session, got + "You carry nothing like that.", got ? "gain" : undefined);
     const outId = CURE_RECIPES[carried.itemId];
     if (!outId) return z.send(session, got + `${cap(world.itemTemplates.get(carried.itemId)!.name)} won't cure. The racks are for raw meat — a haunch, a slab of flesh.`, got ? "gain" : undefined);
     if (carried.serial !== null) return z.send(session, got + "That one's sealed for extraction. Break the seal before you'd hang it in the smoke.", got ? "gain" : undefined);
     const rawName = world.itemTemplates.get(carried.itemId)!.name;
-    session.items.splice(session.items.indexOf(carried), 1);
+    // Remove the row wherever it lived — a pack row leaves session.items too; a
+    // lockbox/vault row is only in D1, so removeItemRow alone clears it.
+    const packIdx = session.items.indexOf(carried);
+    if (packIdx !== -1) session.items.splice(packIdx, 1);
     await removeItemRow(z.env.DB, carried.rowId);
     z.rot.push({ itemId: carried.itemId, roomId: session.pubkey, at: now + GATE_CURE_MS, kind: "gatecure" });
     const mins = Math.round(GATE_CURE_MS / 60_000);
@@ -114,7 +123,7 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
   // Cured-through but not taken down — the only reason after the collect loop is a
   // full pack. Name it so a ready haunch never silently vanishes from the readout.
   const readyStuck = z.rot.filter((r) => r.kind === "gatecure" && r.roomId === session.pubkey && r.at <= now);
-  const haveRaw = session.items.some((c) => CURE_RECIPES[c.itemId] && c.serial === null);
+  const haveRaw = flat.some((c) => CURE_RECIPES[c.itemId] && c.serial === null);
   let hanging = "";
   if (still.length) {
     const left = Math.min(...still.map((r) => r.at)) - now;

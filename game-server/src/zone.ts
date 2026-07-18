@@ -47,7 +47,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition } from "./zone-util";
+import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, gamePubkey } from "./signing";
 import { publishEvent, relayList } from "./relay";
@@ -85,7 +85,7 @@ import {
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
-  DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS,
+  DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -1416,6 +1416,33 @@ export class ZoneDO implements DurableObject {
       await loadContainer(this.env.DB, session.pubkey, "lockbox"),
       await loadContainer(this.env.DB, session.pubkey, "vault"),
     ];
+  }
+
+  // Snapshot whether the smelt/cure chips have anything to act on, counted the
+  // way the verbs actually spend — ACROSS pack + lockbox + vault (smelt melts
+  // scrap from any of them; cure hangs raw meat from any of them). The chip
+  // builder (sendCtx) is sync and runs hot, so it can't load the containers
+  // itself; this async refresh writes two booleans it reads. Called at every
+  // gate seam that can change the stock (entry + after each gatehouse command),
+  // and since nothing but the player's own hand touches their keeping, the cache
+  // stays true between those seams.
+  public async refreshGateStock(session: Session): Promise<void> {
+    if (!this.outOfWorld(session)) { session.gateSmeltable = false; session.gateCureName = undefined; return; }
+    const pools = await this.gatePools(session);
+    session.gateSmeltable = this.countLooseIn(pools, SCRAP_ID) >= SMELT_SCRAP_PER_IRON;
+    // Name a curable raw (from ANY pool — the cure verb hangs it from pack,
+    // lockbox or vault alike) so the chip can be 'cure <meat>' and actually hang
+    // it on click, not bare 'cure' that only reads the racks. Undefined = nothing
+    // to hang.
+    const raw = pools.flat().find((c) => CURE_RECIPES[c.itemId] && c.serial === null);
+    session.gateCureName = raw ? shortName(this.world!.itemTemplates.get(raw.itemId)!.name) : undefined;
+  }
+
+  // Refresh the gate-stock cache, then push chips — the one call a gate flow makes
+  // when it wants the smelt/cure chips to reflect what the player now holds.
+  public async sendGateCtx(session: Session): Promise<void> {
+    await this.refreshGateStock(session);
+    this.sendCtx(session);
   }
 
   public benchGuard(session: Session, work: string): string | null {

@@ -30,6 +30,8 @@ export interface Session {
   stepText?: boolean; // stepped out via a TYPED barter/forge/inventory (text, no modal)
   benchInHouse?: boolean; // was the pack opened from INSIDE the gatehouse? (else the world) — decides where closing it returns you
   ctxCombat: boolean; // the combat state the last chip set was drawn for (see syncCombatCtx)
+  gateSmeltable?: boolean; // cached: enough scrap across pack+lockbox+vault to smelt a bar — gates the 'smelt' chip (refreshGateStock; sync chip builder can't load containers itself)
+  gateCureName?: string;   // cached: chip-name of a curable raw meat somewhere across pack+lockbox+vault, so the 'cure' chip can be 'cure <meat>' (hangs on click); undefined = nothing raw to hang
   seizedBy?: string; // DROWNER creature id that has hold of you — can't flee till you break free
   litUntil?: number; // ms epoch a kindled light burns until; while now < this you carry light (sees dark rooms; a torch also wakes fire-fear). Reset on wake — a rekindle is cheap.
   litSource?: "torch" | "lantern"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack)

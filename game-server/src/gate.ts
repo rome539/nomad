@@ -131,11 +131,13 @@ export async function handleForge(z: ZoneDO, session: Session, frame: any): Prom
 export async function leaveForge(z: ZoneDO, session: Session): Promise<void> {
   session.forging = false;
   try { session.ws.send(JSON.stringify({ v: 0, t: "forge", open: false })); } catch {}
-  // The brazier is in the gatehouse: bank it and you're still by the fire.
+  // The brazier is a fixture of the gatehouse: bank it and you're still by the
+  // fire. NEVER re-narrate the room you never left — a quiet line, same as closing
+  // the bench (rome, 2026-07-15; the pack/hatch/brazier are modals, not doors).
   if (z.world!.entryRooms.has(session.roomId)) {
     session.stepText = true;
-    z.send(session, describeGatehouse(z, session));
-    z.sendCtx(session);
+    z.send(session, "You bank the brazier and turn from the bench.");
+    await z.sendGateCtx(session); // forging changed your iron/scrap — refresh the smelt chip
     return;
   }
   session.away = false;
@@ -409,7 +411,10 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     ? `The keeper slides ${slid[0]} across the counter.`
     : `The keeper slides it all across the counter:\n  ${slid.join("\n  ")}`;
   session.buying = undefined;
-  gatehouseFeed(z, `${session.name} trades at the keeper's hatch.`, session.pubkey); // gatehouse-only — an in-world player at the gate doesn't watch the trade
+  // No per-purchase broadcast: an active shopper was flooding the whole gatehouse
+  // with "X trades at the keeper's hatch." on every settle (rome, 2026-07-18).
+  // Trading is a quiet act now, like sorting the bench — presence is the room's
+  // own "X is here," and the one-time step-up line when they first walk in.
   const bare = lastOnes.length
     ? ` You took the last ${lastOnes.join(" and the last ")} he had; the shelf behind him stands bare.`
     : "";
@@ -533,10 +538,11 @@ export async function leaveTrade(z: ZoneDO, session: Session): Promise<void> {
   session.buying = undefined; // an unfinished trade sweeps back with you
   try { session.ws.send(JSON.stringify({ v: 0, t: "trade", open: false })); } catch {}
   // The hatch IS the gatehouse wall — step back from it and you're still inside.
+  // Don't re-narrate the room you never left; a quiet line, same as the bench.
   if (z.world!.entryRooms.has(session.roomId)) {
     session.stepText = true;
-    z.send(session, describeGatehouse(z, session));
-    z.sendCtx(session);
+    z.send(session, "You step back from the keeper's hatch.");
+    await z.sendGateCtx(session); // a trade may have spent tender — refresh the chips
     return;
   }
   session.away = false;
@@ -981,7 +987,7 @@ export async function leaveBench(z: ZoneDO, session: Session): Promise<void> {
       // by it (still in text, the tavern still has you); just straighten up.
       session.stepText = true;
       z.send(session, "You straighten up, your kit sorted.");
-      z.sendCtx(session);
+      await z.sendGateCtx(session); // scrapping/burning at the bench may have moved your stock — refresh the chips
       return;
     }
     // You opened it out in the WORLD — at a gate, or crouched in the dungeon.
@@ -1357,7 +1363,7 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
 }
 
 // In through the door. Idempotent; gate-only.
-export function enterGatehouse(z: ZoneDO, session: Session): void {
+export async function enterGatehouse(z: ZoneDO, session: Session): Promise<void> {
   if (!z.world!.entryRooms.has(session.roomId)) {
     return z.send(session, "There's no door here. The gatehouse waits at a gate.");
   }
@@ -1369,11 +1375,12 @@ export function enterGatehouse(z: ZoneDO, session: Session): void {
   if (z.inCombat(session)) {
     return z.send(session, "The door won't take you — not with steel out. Finish it, or run.");
   }
-  if (z.outOfWorld(session)) return z.send(session, describeGatehouse(z, session));
+  if (z.outOfWorld(session)) { z.send(session, describeGatehouse(z, session)); return z.sendGateCtx(session); }
   z.enterStep(session, "gatehouse");
   z.sendStatus(session); // the HUD title becomes "The Gatehouse" the moment you're inside
   z.send(session, describeGatehouse(z, session));
   gatehouseFeed(z, `${session.name} pushes in out of the cold.`, session.pubkey, "who");
+  await z.sendGateCtx(session); // seed the smelt/cure chip availability on entry
 }
 
 // The router: every frame typed by someone standing in the gatehouse. Known
@@ -1447,6 +1454,10 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     return z.send(session, "Not from in here — the dungeon is on the other side of that door. ('out' to step back into it.)");
   }
   await z.dispatch(session, cmd); // bench, vault, forge, hatch, kit, keys, the lot
+  // Any of those may have changed the scrap/meat you hold (smelt, cure, salvage,
+  // bank) — refresh the smelt/cure chip availability and re-push chips so they
+  // never linger offering a deed you can no longer do.
+  if (z.outOfWorld(session)) await z.sendGateCtx(session);
 }
 
 // A breath of the room, for people who sit a while. Same cadence rails as the

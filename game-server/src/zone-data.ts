@@ -1579,7 +1579,11 @@ export const FOOD_SPOIL_HEAL_MULT = 0.5;              // spoiled food is HONEST:
 // Cured, dried, salted — or just water: these keep, and never read as spoiling.
 // Preservation is the whole point of the smoker, the salt barrel, the hardtack
 // tin. Everything else edible ages. Exclusion set, so a new fresh food spoils by default.
-export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "well-water"]);
+// dried-meat keeps too — it's DRIED, and it's now the smokehouse's answer for
+// rat meat (see CURE_RECIPES): the humble keeping ration below the smoked-haunch.
+// Makes garrison-foraged dried-meat non-spoiling as well — a minor buff, and a
+// fix (dried meat had no business rotting).
+export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "well-water", "dried-meat"]);
 // ---- the smokehouse: raw meat hung in the racks, cured to keeping ----
 // The smoked-haunch's OWN description already claims these racks ("a haunch cured
 // black and hard in the smokehouse racks"); nothing ever lit them. Now a delver
@@ -1597,6 +1601,7 @@ export const GATE_CURE_MS = 10 * 60_000; // the SAFE gate smokehouse: slower tha
 export const CURE_RECIPES: Record<string, string> = {
   "hyena-haunch": "smoked-haunch", // a raw haunch → the very haunch its lore says these racks make (heal 9 → 12, keeping)
   "pale-flesh":   "smoked-haunch", // the deep's drowned meat, smoked to keeping (heal 8 → 12, keeping)
+  "rat-meat":     "dried-meat",    // the humble loop: rats are everywhere, so their cure is the modest keeping ration, not the premium haunch (heal 5 → 8, keeping)
 };
 // A plain torch turns up in the smokehouse now and then — the garrison kept
 // their kindling by the fire. It rides the floor-renewal law (DICE, not a
