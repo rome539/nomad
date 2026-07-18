@@ -4,9 +4,10 @@
 // file owns what the knowledge SAYS and how it reaches the client.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
-import type { CarriedItem } from "./world";
-import { journalLoad, journalStudy, loadContainer, deedsLoad } from "./world";
+import type { CarriedItem, JournalRow } from "./world";
+import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId } from "./world";
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
+import { uuid } from "./rng";
 import {
   MAP_ITEMS, DETAILED_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
@@ -157,8 +158,22 @@ async function whereIsJournal(z: ZoneDO, session: Session): Promise<"hand" | "st
   return "none";
 }
 
+// Every journal IN HAND, ids guaranteed: a book that lost its name somewhere
+// (a hyena's haul, an old full-pack spill at the counter) gets a fresh one on
+// first open — without it the row is invisible to both read and write.
+async function carriedJournals(z: ZoneDO, session: Session): Promise<CarriedItem[]> {
+  const books = session.items.filter((c) => c.journalId || c.itemId === JOURNAL_ITEM);
+  for (const b of books) {
+    if (!b.journalId) {
+      b.journalId = "jrn-" + uuid();
+      await setItemJournalId(z.env.DB, b.rowId, b.journalId);
+    }
+  }
+  return books;
+}
+
 export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promise<void> {
-  const journal = session.items.find((c) => c.journalId);
+  const journal = (await carriedJournals(z, session))[0];
   if (!journal?.journalId) {
     const where = await whereIsJournal(z, session);
     return z.send(session, where === "stored"
@@ -186,24 +201,37 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
 }
 
 export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
-  let journalId = session.items.find((c) => c.journalId)?.journalId ?? null;
+  const ids = (await carriedJournals(z, session)).map((b) => b.journalId!);
   // At a gate the lockbox and vault are within reach (the gatehouse is where you
   // sit and READ), so pull the pages straight out of storage if it's not in the
   // pack. Writing still wants it in hand — see cmdStudy; this is a read only.
-  if (!journalId && z.world!.entryRooms.has(session.roomId)) {
+  if (!ids.length && z.world!.entryRooms.has(session.roomId)) {
     for (const key of ["lockbox", "vault"] as const) {
       const held = await loadContainer(z.env.DB, session.pubkey, key);
       const stored = held.find((c) => c.itemId === JOURNAL_ITEM && c.journalId);
-      if (stored?.journalId) { journalId = stored.journalId; break; }
+      if (stored?.journalId) { ids.push(stored.journalId); break; }
     }
   }
-  if (!journalId) {
+  if (!ids.length) {
     const where = await whereIsJournal(z, session);
     return z.send(session, where === "stored"
       ? "Your journal's in the lockbox. Fetch it out to read or write in it."
       : "You carry no journal. The keeper sells them, fairly priced.");
   }
-  const rows = await journalLoad(z.env.DB, journalId);
+  // Every book you hold opens at once — the best account of a creature wins,
+  // whichever cover it's written in (someone else's hunting, now yours).
+  const byMob = new Map<string, JournalRow>();
+  for (const id of ids) {
+    for (const r of await journalLoad(z.env.DB, id)) {
+      const cur = byMob.get(r.templateId);
+      const tier = journalTier(r.kills, r.studied);
+      if (!cur || tier > journalTier(cur.kills, cur.studied)
+        || (tier === journalTier(cur.kills, cur.studied) && r.kills > cur.kills)) {
+        byMob.set(r.templateId, r);
+      }
+    }
+  }
+  const rows = [...byMob.values()];
   const world = z.world!;
   const entries = rows
     .map((r) => {
@@ -228,9 +256,10 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
   try {
     session.ws.send(JSON.stringify({ v: 0, t: "journal", entries }));
   } catch {}
+  const many = ids.length > 1;
   z.send(session, entries.length
-    ? "You open the journal."
-    : "You open the journal. Its pages are blank — study a thing, and kill a few, and it will fill.");
+    ? `You open the journal${many ? "s" : ""}.`
+    : `You open the journal${many ? "s" : ""}. ${many ? "Their" : "Its"} pages are blank — study a thing, and kill a few, and ${many ? "they" : "it"} will fill.`);
 }
 
 // ---- the engraving: what the steel remembers (077) ----

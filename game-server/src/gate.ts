@@ -391,7 +391,10 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     const jid = bought.id === JOURNAL_ITEM ? "jrn-" + uuid() : undefined;
     const got = await z.grantItem(session, bought.id, { condition: rollShopCondition(bought.slot), journalId: jid });
     if (!got) {
-      z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), bought.id]);
+      // A journal spills INSTANCED even at the counter — the id minted above
+      // rides the book to the floor, or it comes back up a blank no hand can open.
+      if (jid) z.dropInstance(session.roomId, bought.id, jid);
+      else z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), bought.id]);
       slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}] (pack full — at your feet, unsealed)`);
       continue;
     }

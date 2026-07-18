@@ -25,6 +25,7 @@ import {
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
   DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT,
+  JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor } from "./gate";
@@ -937,6 +938,13 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   }
   await insertLoot(z.env.DB, rowId, session.pubkey, itemId, null, condition, acquiredAt);
   if (loreId) await setItemLoreId(z.env.DB, rowId, loreId);
+  // A plain journal off the stones is a book that lost its name (a hyena's
+  // haul, an old full-pack spill at the counter): give it a fresh one on the
+  // way in, or no hand will ever open it.
+  if (itemId === JOURNAL_ITEM) {
+    carried.journalId = "jrn-" + uuid();
+    await setItemJournalId(z.env.DB, rowId, carried.journalId);
+  }
   // Friendly: your FIRST weapon/armor goes on automatically; switching later
   // is a deliberate `equip`. (Never overrides something you've already got on,
   // and never auto-crosses the two-handed rule — that pairing is deliberate.)

@@ -16,6 +16,23 @@ export const TICK_MS = 2000;
 // up to this much AMBIENT world state (player inventory/vault live in D1, safe;
 // volatile creature fields re-sim from savedAt on restart). (2026-07-18)
 export const TICK_SIM_FLUSH_MS = 6000;
+// The tick's two speeds (2026-07-18). Every setAlarm is itself a billed row
+// written, so the alarm chain — not the sim — is the write floor: a 2s beat
+// costs ~43,200 rows/day for as long as ANY socket stays connected. But the
+// alarm only drives AMBIENT sim (wander, rot, regrow); player commands arrive
+// over the socket and never wait for it. So a LIVE world beats at TICK_MS and
+// a quiet one stretches to IDLE_TICK_MS (~2,880 rows/day) — "live" decided by
+// worldIsHot: a fight, someone resting, an event arc, or any command inside
+// HOT_WINDOW_MS. Big steps are safe: catchUp already fast-forwards a world
+// that slept. A hot world waiting on a quiet-length alarm re-arms early, so
+// the first swing of a fresh fight never waits on the slow beat.
+export const IDLE_TICK_MS = 15_000;
+export const HOT_WINDOW_MS = 60_000;
+// A socket silent this long isn't a player, it's a meter running — its mere
+// connection keeps the alarm chain billing. The tick puts it to sleep via the
+// normal leave path (a live fight still holds the body linkdead — sleep is
+// never an escape hatch), and the last socket out stops the world entirely.
+export const IDLE_TIMEOUT_MS = 30 * 60_000;
 // How often the tick flushes every live session's mutable state (hp, room) to
 // D1, so a DO restart (a deploy, or a Cloudflare eviction) is a reconnect blip,
 // not a revert. In-memory-only heals — chiefly rest — would otherwise vanish on

@@ -61,7 +61,7 @@ import * as events from "./events";
 import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import {
-  TICK_MS, TICK_SIM_FLUSH_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
+  TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, BURDEN_FREE_IRON,
@@ -144,6 +144,8 @@ export class ZoneDO implements DurableObject {
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
   private sim = simstore.newCache(); // what the sim rows last held, so persist() only writes the dirt (simstore.ts)
   private lastTickFlushAt = 0; // ms of the last TICK-driven sim flush; the tick batches its writes to TICK_SIM_FLUSH_MS (command saves stay immediate)
+  private lastTickAt = 0; // ms of the previous tick — per-tick appetite/heal increments scale by the REAL gap (the beat runs slow when idle), not the nominal TICK_MS
+  private lastCommandAt = 0; // ms of the last player frame or connect — the world beats at TICK_MS while it's fresh (HOT_WINDOW_MS), stretches to IDLE_TICK_MS when quiet (see worldIsHot)
   private cacheRoom = new Map<string, string>(); // cacheId -> its CURRENT room; roaming chests relocate on refill
   private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
   public events = new Map<string, EventState>(); // room events mid-arc (events.ts owns the arcs; the spine just keeps the clock)
@@ -510,7 +512,9 @@ export class ZoneDO implements DurableObject {
     // pubkey rides on the socket itself (serializeAttachment), so a woken DO can
     // rebuild the session from the parked socket alone.
     this.state.acceptWebSocket(server);
-    server.serializeAttachment({ pubkey });
+    // la = lastActiveAt, the idle-sweep stamp: it rides the attachment so a
+    // hibernation rebuild (hydrateSessions) doesn't read a parked socket as fresh.
+    server.serializeAttachment({ pubkey, la: Date.now() });
     // Answer pings without waking the DO — keeps parked sockets warm for cheap.
     this.state.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
 
@@ -534,6 +538,7 @@ export class ZoneDO implements DurableObject {
       session.linkdeadUntil = undefined;
     }
     this.sessions.set(pubkey, session);
+    this.lastCommandAt = Date.now(); // an arrival is activity — the world beats fast for fresh footsteps
 
     // A dropped connection that comes back within the grace window is a
     // re-weave, not an arrival: no fanfare, no re-reading the intro, and the
@@ -680,15 +685,21 @@ export class ZoneDO implements DurableObject {
       nextThrowAt: 0,
       visited: new Set<string>(),
       lastAmbientAt: Date.now(),
+      lastActiveAt: Date.now(), // a fresh body is present; hydrateSessions overwrites this from the socket's `la` for a rebuilt one
     };
   }
 
-  // The owner's key, stashed on the socket at accept-time.
-  private wsPubkey(ws: WebSocket): string | null {
+  // The socket's attachment: the owner's key, stashed at accept-time, plus
+  // `la` — the idle stamp (see Session.lastActiveAt).
+  private wsAttachment(ws: WebSocket): { pubkey?: string; la?: number } | null {
     try {
-      const a = ws.deserializeAttachment() as { pubkey?: string } | null;
-      return a && typeof a.pubkey === "string" ? a.pubkey : null;
+      return ws.deserializeAttachment() as { pubkey?: string; la?: number } | null;
     } catch { return null; }
+  }
+
+  private wsPubkey(ws: WebSocket): string | null {
+    const a = this.wsAttachment(ws);
+    return a && typeof a.pubkey === "string" ? a.pubkey : null;
   }
 
   // Rebuild any session missing from memory for a still-connected socket. A
@@ -703,7 +714,13 @@ export class ZoneDO implements DurableObject {
       if (!this.world) await this.init("door");
       const { row } = await getOrCreatePlayer(this.env.DB, pubkey, this.randomGate());
       const items = await loadInventory(this.env.DB, pubkey);
-      this.sessions.set(pubkey, this.buildSession(ws, row, items));
+      const rebuilt = this.buildSession(ws, row, items);
+      // buildSession stamps lastActiveAt = now, which would read a long-parked
+      // socket as JUST arrived and dodge the idle sweep across every eviction —
+      // the true stamp rides the socket.
+      const la = this.wsAttachment(ws)?.la;
+      rebuilt.lastActiveAt = typeof la === "number" ? la : Date.now();
+      this.sessions.set(pubkey, rebuilt);
     }
   }
 
@@ -717,6 +734,9 @@ export class ZoneDO implements DurableObject {
       if (!session) return;
       session.ws = ws; // a woken socket is a fresh object — keep the session on it
       await this.onMessage(session, typeof message === "string" ? message : "");
+      // A command can open a fight while a quiet-length alarm is still
+      // pending — pull the beat in (ensureAlarm re-arms early when hot).
+      await this.ensureAlarm();
     } catch (e) {
       // A thrown command used to vanish here (a bare `catch {}`) — leaving the
       // player able to see the world's ambient lines but unable to ACT, a silent
@@ -770,6 +790,11 @@ export class ZoneDO implements DurableObject {
 
     // Token bucket per pubkey — castr's daily-cast pattern, compressed.
     const now = Date.now();
+    // Presence: any real frame re-stamps the player and heats the world. The
+    // stamp rides the socket too, so a hibernation rebuild keeps it.
+    session.lastActiveAt = now;
+    this.lastCommandAt = now;
+    try { session.ws.serializeAttachment({ pubkey: session.pubkey, la: now }); } catch {}
     session.tokens = Math.min(
       RATE_CAPACITY,
       session.tokens + ((now - session.tokensAt) / 1000) * RATE_REFILL_PER_SEC,
@@ -2689,8 +2714,19 @@ export class ZoneDO implements DurableObject {
       this.roomFeedAll("Deep below, iron grinds slowly shut. The dark has taken back its door.");
     }
 
-    // Bodies and appetites, at tick resolution.
-    const tickMins = TICK_MS / 60_000;
+    // Bodies and appetites advance by WALL-CLOCK elapsed, not the nominal
+    // TICK_MS — because the beat now stretches to IDLE_TICK_MS when the world
+    // is quiet, and a fixed 2s-per-tick increment would starve and heal the
+    // world ~7.5x too slow on the slow beat (the hunger ecology mutes itself the
+    // moment nobody's fighting). Real elapsed keeps the rates true at any beat
+    // speed. First tick of a fresh DO (lastTickAt 0) uses the nominal step, and
+    // an abnormal gap (a cold wake with parked sockets, before catchUp's own
+    // fast-forward) is capped so it can't dump one giant appetite jump.
+    const sinceTick = this.lastTickAt ? now - this.lastTickAt : TICK_MS;
+    this.lastTickAt = now;
+    const stepMs = Math.min(sinceTick, IDLE_TICK_MS * 2); // capped real elapsed — see note above
+    const tickMins = stepMs / 60_000;
+    const beatMul = stepMs / TICK_MS; // 1 at the fast beat, ~7.5 at the idle beat: scales the other fixed per-2s-tick rates (rust) to wall-clock
     for (const creature of this.creatures.values()) {
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       // A fresh wound weeps: armor-ignoring damage each tick until it clots. It
@@ -2774,7 +2810,7 @@ export class ZoneDO implements DurableObject {
         if (c.serial !== null) continue; // sealed: frozen whole
         const t = world.itemTemplates.get(c.itemId);
         if (!t || (t.slot !== "weapon" && t.slot !== "armor")) continue;
-        await this.wear(session, c, t, RUST_PER_TICK);
+        await this.wear(session, c, t, RUST_PER_TICK * beatMul); // wall-clock rust, not per-beat — a slow idle beat mustn't spare steel
       }
     }
 
@@ -2901,6 +2937,17 @@ export class ZoneDO implements DurableObject {
     if (now - this.lastTickFlushAt >= TICK_SIM_FLUSH_MS) {
       this.lastTickFlushAt = now;
       await this.persist();
+    }
+    // Put parked souls to sleep: a socket silent past IDLE_TIMEOUT_MS isn't a
+    // player, it's a meter running — its connection alone keeps the alarm
+    // chain billing rows. The close runs the normal leave path (webSocketClose
+    // -> onLeave), so a body mid-fight still stands linkdead: sleep is never
+    // an escape hatch. Bodies already linkdead are the tick's own affair.
+    for (const session of [...this.sessions.values()]) {
+      if (session.linkdeadUntil) continue;
+      if (now - session.lastActiveAt < IDLE_TIMEOUT_MS) continue;
+      this.send(session, "You drift where you stand, and the Door sets you gently down. (idle — reconnect anytime)");
+      try { session.ws.close(1000, "idle"); } catch {}
     }
     await this.ensureAlarm();
   }
@@ -3578,16 +3625,48 @@ export class ZoneDO implements DurableObject {
     return false;
   }
 
+  // Live, or holding its breath? The tick's speed rides on this (ensureAlarm).
+  // Live means: a fight anywhere — either direction, steel drawn on another
+  // wanderer, or a drowner's grip; someone RESTING (heals land per beat — a
+  // slow beat makes rest crawl); an event arc mid-motion; or any frame inside
+  // HOT_WINDOW_MS, because fresh footsteps deserve a quick world. Creature
+  // clocks are timestamps and the sim fast-forwards, so a quiet world loses
+  // nothing by beating slow.
+  private worldIsHot(now: number): boolean {
+    if (now - this.lastCommandAt < HOT_WINDOW_MS) return true;
+    // An event mid-ARC keeps the beat quick (its per-tick effects want 2s
+    // resolution while a player might be standing in the weather). But most of
+    // the ~16 tracked events sit PARKED in `idle` (until = NEVER) — the roll
+    // runs one arc at a time, every few hours — and idle events must NOT hold
+    // the world hot, or the beat never slows and the whole saving is lost.
+    for (const ev of this.events.values()) {
+      if (ev.phase !== "idle") return true;
+    }
+    for (const s of this.sessions.values()) {
+      if (s.target || s.pvpTarget || s.seizedBy || s.resting) return true;
+    }
+    for (const c of this.creatures.values()) {
+      if (c.target) return true;
+    }
+    return false;
+  }
+
   public async ensureAlarm(): Promise<void> {
     // The tick runs while any socket is connected — hibernated or not; a parked
     // socket is still a player in the world. A truly empty world (no sockets) is
     // fast-forwarded by catchUp() when the next player arrives.
     if (this.state.getWebSockets().length === 0) return;
+    // Two speeds (see IDLE_TICK_MS): every setAlarm is a billed row written,
+    // so the 2s beat is for fights and fresh footsteps, not for a dungeon
+    // holding its breath.
+    const now = Date.now();
+    const hot = this.worldIsHot(now);
     const current = await this.state.storage.getAlarm();
     // An overdue alarm is a dead alarm (dev reloads leave them wedged) —
-    // setAlarm overwrites, so reschedule rather than trust it.
-    if (current === null || current < Date.now()) {
-      await this.state.storage.setAlarm(Date.now() + TICK_MS);
+    // setAlarm overwrites, so reschedule rather than trust it. A HOT world
+    // waiting on a quiet-length alarm re-arms early: the fight can't wait.
+    if (current === null || current < now || (hot && current > now + TICK_MS)) {
+      await this.state.storage.setAlarm(now + (hot ? TICK_MS : IDLE_TICK_MS));
     }
   }
 
