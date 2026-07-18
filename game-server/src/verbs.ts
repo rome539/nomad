@@ -696,6 +696,9 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // drip trail — huntable (a scavenger's nose drifts to it), and readable by
   // anyone who looks. Run wounded and the dungeon can follow you home.
   if ((session.bleedTicks ?? 0) > 0) {
+    // Both stones bleed: the room you crossed leaving AND the one you enter, so
+    // a pursuer standing where you were wounded reads the trail and follows.
+    z.addTrace(from, { kind: "drip", at: Date.now(), label: session.name });
     z.addTrace(session.roomId, { kind: "drip", at: Date.now(), label: session.name });
   }
   // Past the black door, going DOWN: every engraved piece carried writes a

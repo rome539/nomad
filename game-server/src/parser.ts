@@ -17,6 +17,7 @@ export type Verb =
   | "unlock"
   | "salvage"
   | "forge"
+  | "smelt"
   | "repair"
   | "barter"
   | "buy"
@@ -90,6 +91,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   unlock: "unlock", open: "unlock", pry: "unlock", force: "unlock",
   salvage: "salvage", scrap: "salvage", dismantle: "salvage", break: "salvage",
   forge: "forge", craft: "forge", make: "forge", smith: "forge",
+  smelt: "smelt", melt: "smelt",
   repair: "repair", mend: "repair", fix: "repair",
   barter: "barter", trade: "barter", shop: "barter", browse: "barter", fence: "barter",
   buy: "buy", purchase: "buy",

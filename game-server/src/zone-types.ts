@@ -168,6 +168,7 @@ export interface SimState {
   nextStoneAt?: number; // ms the world next mints a hammerstone into a random haunt (no farmable spot)
   nextBrandAt?: number; // ms the world next rolls a longbrand into fire-keeping country (the rare torch, same law)
   nextSmokeTorchAt?: number; // ms the world next rolls a plain torch into the smokehouse (dice, capped at one — a find, not a refill)
+  nextCarrionAt?: number; // ms the world next rolls a carcass into a random deep room (dice — feeds the pale hunters, one body at a time)
   traces: Record<string, Trace[]>;
   rot: RotEntry[];
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once

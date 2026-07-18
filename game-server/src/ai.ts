@@ -13,10 +13,10 @@ import {
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
   NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
-  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, DARK_ROOMS, THIEVES,
-  PREYS_ON, PREDATION_ODDS,
+  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, DARK_ROOMS, THIEVES,
+  PREYS_ON, PREDATION_ODDS, STARVE_HUNTERS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
-  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL,
@@ -269,6 +269,10 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
           return `eyeing the ${pt.name.replace(/^(a|an|the) /i, "")} across the room`;
         }
       }
+      // Nothing weaker in the room. Past STARVING_AT that hunger has nowhere to
+      // go but you — the louder tell, the warning before it might spring (see
+      // starvingHunts + the wind-up in the tick loop).
+      if (creature.hunger >= STARVING_AT && starvingHunts(z, creature)) return "gaunt and ravenous, its eyes fixed on you";
       return "restless with hunger";
     }
     if (scavengerBold(z, creature)) return "bold and unafraid, fat on the dead";
@@ -582,6 +586,10 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // a line straight to wherever it holes up, and anyone (or anything) can
     // read the stones and follow. Same law as the player's trail (verbs.cmdGo).
     if ((creature.bleedTicks ?? 0) > 0) {
+      // It bleeds across BOTH stones: the room it just crossed on the way out
+      // (the red line the flee line describes — where the hunter is standing)
+      // AND the room it holes up in. The per-room drip cap dedupes a pacer.
+      z.addTrace(from, { kind: "drip", at: now, label: tmpl.name });
       z.addTrace(creature.roomId, { kind: "drip", at: now, label: tmpl.name });
     }
     creature.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
@@ -728,6 +736,30 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       z.roomSound(creature.roomId, "Wet tearing sounds drift {dir}.");
       z.refreshRoomCtx(creature.roomId);
     }
+  }
+
+  // The food web reaching UP to the player: a predator starved past mere hunger,
+  // with no easier prey in the room, treats the lone delver sharing it as meat.
+  // The guardrails that make an unprovoked strike FAIR live here — a predator
+  // (PREYS_ON), not a bloodless hollow, genuinely STARVING (not merely peckish),
+  // and only when there's nothing weaker to run down first (predation eats that).
+  // Already-hostile kinds (sentinels bar their post, drowners take the water,
+  // the watchman its door) keep their own aggro and are excluded. The tick loop
+  // rolls the odds and runs the telegraphed wind-up; this is just the predicate.
+export function starvingHunts(z: ZoneDO, creature: Creature): boolean {
+    if (!STARVE_HUNTERS.has(creature.templateId) || HOLLOW.has(creature.templateId)) return false;
+    if (SENTINELS.has(creature.templateId) || DROWNERS.has(creature.templateId) || AGGRESSIVE.has(creature.templateId)) return false;
+    if ((creature.hunger ?? 0) < STARVING_AT) return false;
+    // A hunter that DOES keep a prey map (the surface pack) runs down the easier
+    // animal first — it only comes for you when there's nothing weaker in the room.
+    // The deep's pale hunters have no prey map, so this never spares you: you're it.
+    const prey = PREYS_ON.get(creature.templateId);
+    if (prey) {
+      for (const c of z.creatures.values()) {
+        if (c.id !== creature.id && c.roomId === creature.roomId && prey.has(c.templateId)) return false;
+      }
+    }
+    return true;
   }
 
   // The food web: a predator sharing a room with prey it outranks may turn on it
@@ -1137,20 +1169,44 @@ export function thiefWhistle(z: ZoneDO, roomId: string, now: number, runner: Cre
   // hidden, and torchlight still reveals it the same as ever.
 export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
     if (!LURKERS.has(creature.templateId) || creature.target || !creature.hidden) return;
+    // A rat-hunter (a lurker that keeps a prey map) that's HUNGRY leaves its lurk
+    // and ranges toward the rat-runs — wider, and far more often than the idle
+    // 3h drift. Fed, it falls back to the slow territorial drift below.
+    const prey = PREYS_ON.get(creature.templateId);
+    const hunting = !!prey && (creature.hunger ?? 0) >= HUNGRY_AT;
+    const interval = hunting ? LURKER_HUNT_DRIFT_MS : LURKER_DRIFT_MS;
     if (creature.repositionAt === undefined) {
-      creature.repositionAt = now + randInt(Math.round(LURKER_DRIFT_MS / 2), LURKER_DRIFT_MS);
+      creature.repositionAt = now + randInt(Math.round(interval / 2), interval);
       return;
     }
     if (creature.repositionAt > now) return;
-    creature.repositionAt = now + randInt(LURKER_DRIFT_MS, LURKER_DRIFT_MS * 2);
+    creature.repositionAt = now + randInt(interval, interval * 2);
     const home = creature.home ?? creature.roomId;
     let best: string | null = null;
-    let bestAt = 0;
-    for (const [roomId, list] of z.traces) {
-      if (roomId === creature.roomId || !DARK_ROOMS.has(roomId)) continue;
-      if (z.roomDist(home, roomId) > TERRITORY_RADIUS) continue;
-      for (const tr of list) {
-        if (tr.kind === "passage" && tr.at > bestAt) { bestAt = tr.at; best = roomId; }
+    if (hunting) {
+      // Toward the nearest food in reach: a live rat it preys on, or a carcass to
+      // scavenge. Failing either, hang toward the rat-runs and wait for one. Ranges
+      // out to LURKER_HUNT_RADIUS from home; steps toward the closest such room.
+      let bestDist = Infinity;
+      const consider = (roomId: string) => {
+        if (roomId === creature.roomId || !DARK_ROOMS.has(roomId)) return;
+        if (z.roomDist(home, roomId) > LURKER_HUNT_RADIUS) return;
+        const d = z.roomDist(creature.roomId, roomId);
+        if (d < bestDist) { bestDist = d; best = roomId; }
+      };
+      for (const c of z.creatures.values()) if (prey!.has(c.templateId)) consider(c.roomId); // meat on the hoof
+      for (const [roomId, list] of z.traces) if (list.some((t) => CORPSE_TRACES.has(t.kind))) consider(roomId); // carrion
+      if (!best) for (const roomId of WARRENS_ROOMS) consider(roomId); // nothing yet — drift toward where rats run
+    } else {
+      // FULL: the old aimless drift — shift the ambush to the freshest-trafficked
+      // born-dark room in its own territory (your habitual corridor stops being safe).
+      let bestAt = 0;
+      for (const [roomId, list] of z.traces) {
+        if (roomId === creature.roomId || !DARK_ROOMS.has(roomId)) continue;
+        if (z.roomDist(home, roomId) > TERRITORY_RADIUS) continue;
+        for (const tr of list) {
+          if (tr.kind === "passage" && tr.at > bestAt) { bestAt = tr.at; best = roomId; }
+        }
       }
     }
     if (!best) return;

@@ -641,6 +641,9 @@ export const PAGE = `<!doctype html>
   #log .stun   { color: var(--bone); padding-left: 12px; }
   #log .gain   { color: var(--gold); }
   #log .dim    { color: var(--dim); }
+  /* Gear wearing down — an amber caution so a fraying blade or thinning plate is
+     a warning you SEE coming, never a silent break. Italic: an aside, not combat. */
+  #log .wear   { color: var(--gold); font-style: italic; }
   /* A locked chest in the room is loot-in-waiting — it must not read as white
      scenery you walk past. Gold and bold so it catches the eye on the way in. */
   #log .loot   { color: var(--gold); font-weight: 700; }
@@ -2700,7 +2703,7 @@ function forgeItemNode(it) {
   wrap.appendChild(nm);
   var cost = document.createElement("div");
   cost.className = "cost " + (it.can ? "ok" : "no");
-  var txt = it.scrap + " scrap iron";
+  var txt = it.scrap + " iron";
   if (it.material) txt += " + " + it.material.qty + " " + it.material.name + " (you have " + it.material.have + ")";
   cost.textContent = txt;
   wrap.appendChild(cost);
@@ -2724,10 +2727,11 @@ function renderForge(state) {
   fhave.appendChild(lbl);
   var sc = document.createElement("span");
   sc.className = "scrap";
-  sc.textContent = state.scrap + " scrap iron";
+  sc.textContent = state.scrap + " iron";
   fhave.appendChild(sc);
   var tail = document.createElement("span");
-  tail.textContent = " across pack and keeping. Salvage gear at the bench to feed the pile.";
+  var raw = (state.scrapRaw || 0);
+  tail.textContent = " across pack and keeping (and " + raw + " scrap). Salvage gear to make scrap; 'smelt' casts 5 scrap into 1 iron.";
   fhave.appendChild(tail);
   frecipes.textContent = "";
   var h = document.createElement("div");

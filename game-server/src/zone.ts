@@ -62,7 +62,7 @@ import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import {
   TICK_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
-  WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
+  WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, BURDEN_FREE_IRON,
   STANCE, RECKLESS_MISS, SHIELD_WALL, SHIELD_WALL_DRAG, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
@@ -76,10 +76,10 @@ import {
   MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
-  ARMOR_SLOTS, BLEED_TICKS, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
+  ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
@@ -87,6 +87,7 @@ import {
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
   DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
+  CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE, TORCH_ITEM, PACK_TORCH_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT
 } from "./zone-data";
@@ -121,6 +122,7 @@ export class ZoneDO implements DurableObject {
   private nextStoneAt = 0;
   private nextBrandAt = 0;
   private nextSmokeTorchAt = 0; // the world next rolls a plain torch into the smokehouse (dice, capped — a find, not a refill)
+  private nextCarrionAt = 0; // the world next rolls a carcass into a random deep room (dice — feeds the pale hunters, one body at a time)
   public traces = new Map<string, Trace[]>();
   public rot: RotEntry[] = [];
   private placedSpawns = new Set<string>(); // ground spawns already laid once
@@ -230,6 +232,7 @@ export class ZoneDO implements DurableObject {
       this.nextStoneAt = saved.nextStoneAt ?? 0;
       this.nextBrandAt = saved.nextBrandAt ?? 0;
       this.nextSmokeTorchAt = saved.nextSmokeTorchAt ?? 0;
+      this.nextCarrionAt = saved.nextCarrionAt ?? 0;
       this.traces = new Map(Object.entries(saved.traces ?? {}));
       this.rot = saved.rot ?? [];
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
@@ -389,6 +392,7 @@ export class ZoneDO implements DurableObject {
       nextStoneAt: this.nextStoneAt,
       nextBrandAt: this.nextBrandAt,
       nextSmokeTorchAt: this.nextSmokeTorchAt,
+      nextCarrionAt: this.nextCarrionAt,
       traces: Object.fromEntries(this.traces),
       rot: this.rot,
       placedSpawns: [...this.placedSpawns],
@@ -430,6 +434,7 @@ export class ZoneDO implements DurableObject {
     this.nextStoneAt = 0;
     this.nextBrandAt = 0;
     this.nextSmokeTorchAt = 0;
+    this.nextCarrionAt = 0;
     this.traces.clear();
     this.rot = [];
     this.placedSpawns.clear();
@@ -885,6 +890,7 @@ export class ZoneDO implements DurableObject {
       case "unlock": return this.cmdUnlock(session, cmd.arg);
       case "salvage": return gate.cmdSalvage(this, session, cmd.arg);
       case "forge": return gate.cmdForge(this, session, cmd.arg);
+      case "smelt": return gate.cmdSmelt(this, session, cmd.arg);
       case "repair": return gate.cmdRepair(this, session, cmd.arg);
       case "barter": return gate.cmdBarter(this, session);
       case "buy": return gate.cmdBuy(this, session, cmd.arg);
@@ -2177,6 +2183,39 @@ export class ZoneDO implements DurableObject {
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} springs at ${prey.name}.`, prey.pubkey, false);
         }
       }
+      // The food web reaches UP: a predator starved past mere hunger, with no
+      // easier prey in the room, turns on the lone delver sharing it — you're the
+      // nearest meat. Like the meal-guard it WINDS UP (DIRE_ROUSE_MS) rather than
+      // springing blind — the 'gaunt and ravenous, eyes fixed on you' tell was
+      // the warning, this is the coil, and you can still back out a door or strike
+      // first. A low per-tick roll BEGINS it (the threshold + no-prey gate already
+      // make it rare); once wound up it commits. Not for meal-guarders — those own
+      // the block above. See ai.starvingHunts for the guardrails.
+      if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && ai.starvingHunts(this, creature)) {
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
+        if (!prey) {
+          creature.rouseAt = undefined; // no one to hunt — the hunger settles back
+        } else if (creature.rouseAt === undefined) {
+          if (chance(STARVE_HUNTS_ODDS)) {
+            creature.rouseAt = now + DIRE_ROUSE_MS;
+            // A LURKER should have been foiled by your light — a lit room or a
+            // torch in hand spoils its ambush (ai.wakeListeners). Naming that the
+            // hunger OVERRIDES the light is the whole point of the deep's danger.
+            const lurker = LURKERS.has(creature.templateId);
+            if (lurker) creature.hidden = false; // it uncoils to wind up — unseen no longer
+            this.send(prey, lurker
+              ? `${cap(tmpl.name)} uncoils from the dark despite your light — starved past caring, it fixes on you. It hasn't sprung yet. (get out, or hit first)`
+              : `${cap(tmpl.name)}, gaunt and starving, fixes on you — not a guard's warning but a predator's hunger. It hasn't sprung yet. (get out, or hit first)`);
+            this.roomFeed(creature.roomId, `${cap(tmpl.name)}, starving, sizes up ${prey.name}.`, prey.pubkey, false);
+          }
+        } else if (now >= creature.rouseAt) {
+          creature.rouseAt = undefined;
+          creature.target = prey.pubkey;
+          if (!prey.target) prey.target = creature.id;
+          this.send(prey, `${cap(tmpl.name)} lunges — hunger drives it straight onto you.`, "dmgin");
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} runs at ${prey.name}, starving.`, prey.pubkey, false);
+        }
+      }
       // A SENTINEL sleeps at its post until roused (someone slips past, or a blow
       // lands). Asleep it does nothing — you can tiptoe by. Awake it takes anyone
       // in the room, like a drowned thing, and holds the door until it's put down
@@ -2306,7 +2345,9 @@ export class ZoneDO implements DurableObject {
           if (rip && !HOLLOW.has(tmpl.id) && creature.hp > 0) {
             const fresh = !creature.bleedTicks;
             creature.bleedTicks = BLEED_TICKS;
-            creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, rip);
+            // The riposte is its OWN wound — it STACKS on top of the weapon's
+            // bleed (capped), rather than the weaker one being lost to a max().
+            creature.bleedDmg = Math.min(BLEED_STACK_CAP, (creature.bleedDmg ?? 0) + rip);
             if (fresh) this.send(victim, `You answer over the turned blow — the point nicks deep, and ${tmpl.name} starts to bleed.`, "dmgout");
           }
           this.combatNoise(victim.roomId);
@@ -2558,6 +2599,27 @@ export class ZoneDO implements DurableObject {
       }
     }
 
+    // The deep eats its own: a strayed rat dies in the dark and rots where it
+    // fell, and the pale hunters scavenge it (their feed cycle). Same dice-not-
+    // schedule law — one carcass every several hours, into a deep room that
+    // doesn't already hold a body, so it never piles up into a larder. A carcass
+    // is a corpse trace (what scavengerFeeds eats); it reads in the room and ages
+    // out like any death. This is what keeps a crawler's hunger a GRADIENT rather
+    // than a permanent starve — a quiet enough stretch still finds nothing.
+    if (now >= this.nextCarrionAt) {
+      this.nextCarrionAt = now + randInt(CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS);
+      if (chance(CARRION_MINT_ODDS)) {
+        const rooms = [...DEEP_ROOMS].filter((r) =>
+          world.rooms.has(r) && !(this.traces.get(r) ?? []).some((t) => CORPSE_TRACES.has(t.kind)),
+        );
+        if (rooms.length) {
+          const room = rooms[randInt(0, rooms.length - 1)];
+          this.addTrace(room, { kind: "blood", at: now, label: "a strayed rat" });
+          this.refreshRoomCtx(room);
+        }
+      }
+    }
+
     // The black door remembers its shape: a heart buys a WINDOW, not a
     // thoroughfare. It only ever bars the way down (the-descent's way up is
     // unkeyed — nobody is sealed in); shutting restarts the corpse-key mint.
@@ -2612,6 +2674,12 @@ export class ZoneDO implements DurableObject {
         // Vermin eat the dead only to survive: a hungry rat gnaws a corpse to sate
         // (no loot-hauling, no mourning, no gorging bold — that's SCAVENGERS only).
         else if (VERMIN.has(creature.templateId) && creature.hunger >= HUNGRY_AT) ai.scavengerFeeds(this, creature, false);
+        // The pale hunters feed the same way to survive — a fresh kill in their
+        // stretch of dark resets the hunger that would otherwise drive them off
+        // their ambush and onto your torchlight. A LONG-quiet corridor (no death
+        // near) is what starves one desperate enough to come anyway. (Feed only:
+        // no gear-scooping, no going bold — they're hunters, not looters.)
+        else if (LURKERS.has(creature.templateId) && creature.hunger >= HUNGRY_AT) ai.scavengerFeeds(this, creature, false);
         // A rat that finds you resting may decide you're warm furniture.
         ai.ratCuddles(this, creature, now);
         // The small lives: warm blood dozes off in the quiet...
@@ -3973,12 +4041,24 @@ export class ZoneDO implements DurableObject {
   // at the bench like anything else. At 0 a piece is gone — worn through, mid-life.
   public async wear(session: Session, carried: CarriedItem, tmpl: ItemTemplate, amount: number): Promise<void> {
     if (carried.serial !== null) amount *= SEALED_WEAR_MULT; // sealed: protected, not immortal — the mark slows the wear
+    const before = carried.condition;
     carried.condition -= amount;
-    if (carried.condition > 0) return;
+    if (carried.condition > 0) {
+      // The heads-up, so wear is never a silent surprise-break. One-shot crossings
+      // (the decrement passes each mark once); urgent checked first so a single big
+      // bite — a corrode, a stone-smash — that leaps both marks speaks the louder line.
+      const weap = tmpl.slot === "weapon";
+      if (before > GEAR_FAILING_AT && carried.condition <= GEAR_FAILING_AT) {
+        this.send(session, `${cap(tmpl.name)} is about to fail — ${weap ? "one more hard blow could finish it" : "it's barely holding together"}. (repair at a gate, or find another)`, "wear");
+      } else if (before > GEAR_WORN_AT && carried.condition <= GEAR_WORN_AT) {
+        this.send(session, `${cap(tmpl.name)} is ${weap ? "notched and loose in your grip" : "battered and thinning"} — it's taken hard wear. (repair at a gate to hammer it out)`, "wear");
+      }
+      return;
+    }
     const idx = session.items.indexOf(carried);
     if (idx >= 0) session.items.splice(idx, 1);
     await removeItemRow(this.env.DB, carried.rowId);
-    this.send(session, `${cap(tmpl.name)} is worn through — it comes apart in your ${tmpl.slot === "weapon" ? "grip" : "hands"} and is gone.`);
+    this.send(session, `${cap(tmpl.name)} is worn through — it comes apart in your ${tmpl.slot === "weapon" ? "grip" : "hands"} and is gone.`, "wear");
     this.refreshRoomCtx(session.roomId);
   }
 

@@ -12,7 +12,7 @@ import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
-import { SCRAP_ID, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
+import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS } from "./zone-data";
 import { parse } from "./parser";
@@ -34,10 +34,12 @@ export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promis
       const t = world.itemTemplates.get(r.itemId);
       if (!t) continue;
       const mat = r.material ? ` + ${r.materialQty} ${shortName(world.itemTemplates.get(r.material)?.name ?? r.material)}` : "";
-      lines.push(`  ${t.name}${z.itemStat(t)} [${t.rarity}] — ${r.scrap} scrap iron${mat}`);
+      lines.push(`  ${t.name}${z.itemStat(t)} [${t.rarity}] — ${r.scrap} iron${mat}`);
     }
-    const scrap = z.countLooseIn(await z.gatePools(session), SCRAP_ID);
-    lines.push(`(You have ${scrap} scrap iron between pack and keeping. 'forge <thing>' to work one. Salvage feeds the pile. 'out' steps you back into the world.)`);
+    const pools = await z.gatePools(session);
+    const iron = z.countLooseIn(pools, IRON_ID);
+    const scrap = z.countLooseIn(pools, SCRAP_ID);
+    lines.push(`(You have ${iron} iron and ${scrap} scrap between pack and keeping. 'forge <thing>' works one; 'smelt' casts ${SMELT_SCRAP_PER_IRON} scrap into 1 iron. Salvage feeds the scrap pile. 'out' steps you back into the world.)`);
     return z.send(session, lines.join("\n"));
   }
   const recipe = world.forgeRecipes.find((r) => {
@@ -63,20 +65,22 @@ export async function forgeCore(
   if (!z.packRoom(session, recipe.itemId)) {
     return { ok: false, note: `Your pack is full (${PACK_CAP} slots). Make room before you forge.` };
   }
-  // The bench reaches the pack AND the gate's keeping (lockbox + vault).
+  // The bench reaches the pack AND the gate's keeping (lockbox + vault). Recipes
+  // are cut in IRON now (recipe.scrap holds the iron cost — the column kept its
+  // old name); scrap is for the smelter and the mending vice.
   const pools = await z.gatePools(session);
-  const haveScrap = z.countLooseIn(pools, SCRAP_ID);
-  if (haveScrap < recipe.scrap) {
-    return { ok: false, note: `${cap(t.name)} wants ${recipe.scrap} scrap iron; you have ${haveScrap} between pack and keeping.` };
+  const haveIron = z.countLooseIn(pools, IRON_ID);
+  if (haveIron < recipe.scrap) {
+    return { ok: false, note: `${cap(t.name)} wants ${recipe.scrap} iron; you have ${haveIron} between pack and keeping. (Smelt scrap into iron: '${SMELT_SCRAP_PER_IRON} scrap = 1 iron'.)` };
   }
   if (recipe.material) {
     const mt = world.itemTemplates.get(recipe.material);
     const haveMat = z.countLooseIn(pools, recipe.material);
     if (haveMat < recipe.materialQty) {
-      return { ok: false, note: `${cap(t.name)} wants ${recipe.materialQty} of ${mt?.name ?? recipe.material} besides the scrap; you have ${haveMat}.` };
+      return { ok: false, note: `${cap(t.name)} wants ${recipe.materialQty} of ${mt?.name ?? recipe.material} besides the iron; you have ${haveMat}.` };
     }
   }
-  await z.takeLooseAcross(session, SCRAP_ID, recipe.scrap);
+  await z.takeLooseAcross(session, IRON_ID, recipe.scrap);
   if (recipe.material) await z.takeLooseAcross(session, recipe.material, recipe.materialQty);
   const id = uuid();
   await insertLoot(z.env.DB, id, session.pubkey, t.id, null);
@@ -84,7 +88,7 @@ export async function forgeCore(
   gatehouseFeed(z, `${session.name} works the bench, hammer ringing off the gatehouse walls.`, session.pubkey); // gatehouse work stays in the gatehouse — the world outside the door doesn't hear the hammer
   return {
     ok: true,
-    note: `Scrap, the brazier's heat, and patience. ${cap(t.name)} comes off the bench, raw but true.${z.itemStat(t)} [${t.rarity}] (unclaimed — the gate can seal it)`,
+    note: `Iron, the brazier's heat, and patience. ${cap(t.name)} comes off the bench, raw but true.${z.itemStat(t)} [${t.rarity}] (unclaimed — the gate can seal it)`,
   };
 }
 
@@ -146,7 +150,11 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
   // Affordability counts the pack AND the gate's keeping, so what the modal
   // shows matches what the bench will actually spend.
   const pools = await z.gatePools(session);
-  const scrap = z.countLooseIn(pools, SCRAP_ID);
+  // Recipes are priced in IRON now; the modal's affordability currency is iron.
+  // (Payload key stays `scrap` — the client reads it — but it carries the iron
+  // count; the client labels it "iron".) The raw scrap count rides alongside.
+  const scrap = z.countLooseIn(pools, IRON_ID);
+  const scrapRaw = z.countLooseIn(pools, SCRAP_ID);
   const recipes = [...world.forgeRecipes]
     .sort((a, b) => a.scrap - b.scrap)
     .map((r) => {
@@ -165,7 +173,7 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
       };
     })
     .filter((r) => r !== null);
-  const payload = { v: 0, t: "forge", open: true, note: note ?? "", sfx: sfx ?? "", scrap, recipes };
+  const payload = { v: 0, t: "forge", open: true, note: note ?? "", sfx: sfx ?? "", scrap, scrapRaw, recipes };
   try { session.ws.send(JSON.stringify(payload)); } catch {}
 }
 
@@ -608,6 +616,9 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
 export async function salvageCore(z: ZoneDO, session: Session, carried: CarriedItem): Promise<string> {
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
   if (tmpl.id === "loose-rock" || tmpl.id === "hammerstone") return "It's a rock.";
+  // The renewable rusted pick gives no scrap — the vice would be a bottomless
+  // iron faucet otherwise (take → salvage → wait → repeat). More rust than metal.
+  if (NO_SALVAGE.has(tmpl.id)) return `The vice can make nothing of ${tmpl.name} — it's more rust than metal, not worth the pulling.`;
   if (tmpl.slot === "") return `There's no salvage in ${tmpl.name}.`;
   // The vice cracks the seal itself now (rome: sealed gear gets every option an
   // unsealed piece has). The mint is voided honestly as the steel goes in — the
@@ -641,6 +652,40 @@ export async function cmdSalvage(z: ZoneDO, session: Session, arg: string): Prom
   const line = await salvageCore(z, session, carried);
   z.send(session, line);
   gatehouseFeed(z, `${session.name} works the bench vice, breaking steel.`, session.pubkey); // gatehouse work stays in the gatehouse
+  z.sendCtx(session);
+}
+
+// Smelt scrap into iron: SMELT_SCRAP_PER_IRON scrap -> 1 iron bar. 'smelt' casts
+// one; 'smelt N' casts N; 'smelt all' casts as many as the scrap allows. The
+// brazier reaches the pack AND the gate's keeping, same as forge/salvage.
+export async function cmdSmelt(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const bar = z.benchGuard(session, "smelting");
+  if (bar) return z.send(session, bar);
+  const walkedIn = !z.outOfWorld(session);
+  throughTheDoor(z, session); // the brazier is inside — the door comes first
+  z.enterStep(session, "forging");
+  if (walkedIn) z.send(session, "You push in out of the cold and stir the brazier to life.");
+  if (!z.packRoom(session, IRON_ID)) {
+    return z.send(session, `Your pack is full (${PACK_CAP} slots). Make room before you smelt.`);
+  }
+  const scrap = z.countLooseIn(await z.gatePools(session), SCRAP_ID);
+  const maxBars = Math.floor(scrap / SMELT_SCRAP_PER_IRON);
+  if (maxBars < 1) {
+    return z.send(session, `Smelting a bar of iron takes ${SMELT_SCRAP_PER_IRON} scrap; you have ${scrap} between pack and keeping.`);
+  }
+  let bars = 1;
+  if (arg) {
+    const want = arg.trim().toLowerCase() === "all" ? maxBars : parseInt(arg, 10);
+    if (Number.isFinite(want) && want >= 1) bars = Math.min(want, maxBars);
+  }
+  await z.takeLooseAcross(session, SCRAP_ID, bars * SMELT_SCRAP_PER_IRON);
+  for (let i = 0; i < bars; i++) {
+    const id = uuid();
+    await insertLoot(z.env.DB, id, session.pubkey, IRON_ID, null);
+    session.items.push({ rowId: id, itemId: IRON_ID, serial: null, equipped: false, condition: 100 });
+  }
+  gatehouseFeed(z, `${session.name} works the bellows, smelting scrap down to iron.`, session.pubkey);
+  z.send(session, `You rake the scrap into the brazier and work the bellows white-hot. ${bars === 1 ? "A bar" : bars + " bars"} of iron, cast and cooling — ${bars * SMELT_SCRAP_PER_IRON} scrap spent.`, "forge");
   z.sendCtx(session);
 }
 

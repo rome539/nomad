@@ -50,7 +50,7 @@ type PerRowField = "creatures" | "ground" | "groundInstances" | "groundCond"
 type MetaField = Exclude<keyof SimState, PerRowField>;
 const META_FIELDS = [
   "savedAt", "regrow", "arrivals", "openDoors", "doorCloseAt", "fenceOut",
-  "bloodOn", "nextStoneAt", "nextBrandAt", "nextSmokeTorchAt", "rot", "placedSpawns", "inGatehouse", "wallMarks",
+  "bloodOn", "nextStoneAt", "nextBrandAt", "nextSmokeTorchAt", "nextCarrionAt", "rot", "placedSpawns", "inGatehouse", "wallMarks",
   "cacheSpent", "cacheRoom", "nextSurfaceAt", "events", "fishStock",
 ] as const satisfies readonly MetaField[];
 // Errors when a MetaField is missing from META_FIELDS (the type collapses to

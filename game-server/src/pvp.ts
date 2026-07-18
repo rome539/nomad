@@ -15,7 +15,7 @@ import { recordPvpKill, deedsBump } from "./world";
 import {
   STANCE, RECKLESS_MISS, ARMOR_K, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE,
   WOUNDED_FRACTION, WOUNDED_DMG_MULT, WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS,
-  AMBUSH_MULT, VITALS_PVP, DODGE_LIGHT, STAGGER_BONUS, BLEED_TICKS,
+  AMBUSH_MULT, VITALS_PVP, DODGE_LIGHT, STAGGER_BONUS, BLEED_TICKS, BLEED_STACK_CAP,
   PADDED, PADDED_STUN_MULT, ARMOR_WEAR, WEAPON_WEAR, THORNS, PARRY_RIPOSTE,
   MANCATCHER, MANCATCHER_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE, WARDHIDE_WOUND_ODDS,
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
@@ -150,7 +150,8 @@ async function swingAt(
     if (rip && attacker.hp > 0) {
       const fresh = !attacker.bleedTicks;
       attacker.bleedTicks = BLEED_TICKS;
-      attacker.bleedDmg = Math.max(attacker.bleedDmg ?? 0, rip);
+      // The riposte STACKS on top of any weapon bleed (capped) — a separate wound.
+      attacker.bleedDmg = Math.min(BLEED_STACK_CAP, (attacker.bleedDmg ?? 0) + rip);
       if (fresh) z.send(defender, `You answer over the turned blow — the point nicks deep, and ${attacker.name} starts to bleed.`, "dmgout");
     }
     z.combatNoise(attacker.roomId);

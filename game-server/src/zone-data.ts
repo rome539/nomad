@@ -32,6 +32,12 @@ export const FUMBLE_CHANCE = 0.05;
 export const WEAPON_WEAR = 0.25; // per strike landed (~400 swings to wear out fresh)
 export const ARMOR_WEAR = 0.3;   // per hit turned away (~330 blows)
 export const SEALED_WEAR_MULT = 0.4; // sealed gear takes wear at this rate (~2.5x the life of unsealed)
+// Wear was SILENT until the thing broke in your hand. Two heads-up marks give a
+// player the warning: a first "showing hard wear" as condition falls past WORN,
+// then an urgent "about to fail" past FAILING — each a ONE-SHOT crossing (the
+// continuous decrement passes each mark exactly once), so it warns without nagging.
+export const GEAR_WORN_AT = 35;    // condition (0-100) falling past this = the first notched/battered tell
+export const GEAR_FAILING_AT = 12; // falling past this = the urgent last-chance tell (repair, or it's about to go)
 // Armor mitigates by PERCENTAGE, not flat subtraction: a hit takes armor/(armor+K)
 // off, so gear always helps but never reaches immunity (flat subtraction let a
 // stacked kit floor every hit to 1). Higher K = armor weaker; lower = stronger.
@@ -104,7 +110,7 @@ export const RECKLESS_MISS = 0.10;
 // tax; guarded pays 0.6x, plain shield-holding paid nothing). Data-simple,
 // told at equip and on the item read; bucklers and the parrying dagger stay
 // free so the light skirmisher remains a real archetype.
-export const SHIELD_WALL = new Set(["warden-tower-shield", "crown-guard-pavise", "gravestone-shield"]);
+export const SHIELD_WALL = new Set(["warden-tower-shield", "crown-guard-pavise", "gravestone-shield", "smiths-aegis"]); // smiths-aegis (093): the forge's masterwork wall
 export const SHIELD_WALL_DRAG = 0.85; // multiplies your outgoing damage while the wall is up
 // Guarded is more than the number — you fight behind your shield. Behind a
 // raised shield it blocks a shade more, and claws that would open a wound
@@ -161,6 +167,15 @@ export const FORGE_CHIP = "forge";
 // scrap mends wear, and the recipe book (forge_recipes) turns scrap back into
 // steel. Yields and mend costs scale with rarity; epics are found, never made.
 export const SCRAP_ID = "scrap-iron";
+// The two-tier forge stock (roadmap "Forge & smelt economy"): salvage gives the
+// small unit (scrap); 'smelt' casts SMELT_SCRAP_PER_IRON scrap into one IRON bar;
+// the forge cuts its recipes in iron (repair still spends scrap — small mends).
+export const IRON_ID = "iron";
+export const SMELT_SCRAP_PER_IRON = 5;
+// The renewable rusted pick would be an iron FAUCET once iron is scarce (take →
+// salvage → wait → repeat), so the vice makes nothing of it — the iron in it is
+// more rust than metal (roadmap: the scrap-faucet lever).
+export const NO_SALVAGE = new Set(["rusted-pick"]);
 // Knowledge as loot (see migration 029). Read by id, like the scrap above.
 export const DETAILED_MAP = "surveyor-map";
 export const CRUDE_MAP = "crude-map";
@@ -240,6 +255,7 @@ export const CREATURE_HEAL_PER_MIN = 1;
 export const HUNGER_PER_MIN = 2; // 0..100
 export const HUNGER_MAX = 100;
 export const HUNGRY_AT = 50;
+export const STARVING_AT = 85; // past mere hunger: the end of the rope, where a predator with no easier meal eyes a lone delver as meat
 export const WANDER_MIN_MS = 45_000;
 export const WANDER_MAX_MS = 150_000;
 export const FLEE_BELOW = 0.18; // flesh runs only when nearly done (was 0.25 — everything bolted early)
@@ -373,6 +389,11 @@ export const CROWD_CAP = 5; // a room this full stops drawing more (no wandering
 // too but pays in BLOCK, not soak; the weapon is worn for WEIGHT only.
 export const ARMOR_SLOTS = new Set(["armor", "helm", "feet", "cloak"]);
 export const BLEED_TICKS = 3; // how many ticks a fresh cut weeps before it clots
+// Bleed DAMAGE per tick takes the MAX across weapon hits (a fast blade re-opening
+// one wound doesn't stack into a runaway DoT). But a PARRY RIPOSTE is a SEPARATE
+// wound from a separate blade, so it STACKS on top of the weapon bleed — capped
+// here so sustained parrying can't climb forever (rome, edges-all-bleed era).
+export const BLEED_STACK_CAP = 6;
 // A wound that would drop you to 0 SOMETIMES kills outright; otherwise you cling
 // on at 1 hp, one more beat to bind it or run. Bleeding out is a coin-flip, not
 // a sentence — but with no dressing left, the flips keep coming.
@@ -629,8 +650,37 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena"])],                // the mean cousin drives off the plain one
   ["grave-hyena", new Set(["rat", "fleet-rat"])],                              // hyenas eat rats
   ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
+  // The pale hunters are the DEEP's rat-catchers: hungry, they leave their lurk
+  // and range toward the rat-runs (lurkerDrifts), run one down (predation), and
+  // go quiet again. A stretch of dark with no rats left is what starves one onto
+  // your torchlight (starvingHunts).
+  ["pale-crawler", new Set(["rat", "fleet-rat", "brood-rat"])],
+  ["pale-stalker", new Set(["rat", "fleet-rat", "brood-rat"])],
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
+// Who turns on a PLAYER when starved past all patience (STARVING_AT). Kept apart
+// from PREYS_ON on purpose: hunting a lone delver for meat isn't the same list as
+// "eats which weaker mob." The surface hunters carry a prey map too, so they run
+// down an easier animal first (starvingHunts defers to it); the deep's pale
+// hunters have NO prey down there — near-equals, everything else bloodless — so
+// for them starvation has nowhere to go but your torchlight. (three-hound is a
+// SENTINEL and takes the room on its own terms — it stays out.)
+export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker"]);
+// The deep eats its own: strayed rats (and worse) die in the dark and rot where
+// they fall, and the pale hunters scavenge the carrion. A dice mint (same law as
+// the stone/torch — cadence × odds, no clock to farm) drops one fresh carcass into
+// a random deep room every several hours, so a crawler's hunger has SOMETHING to
+// find — but only one body at a time, so a quiet-enough stretch still starves a
+// hunter onto your light. Never stacks a second body on a room that still has one.
+export const CARRION_ROLL_MIN_MS = 2 * 3_600_000; // the world checks every 2–4h...
+export const CARRION_ROLL_MAX_MS = 4 * 3_600_000;
+export const CARRION_MINT_ODDS = 0.3;             // ...and ~1 in 3 checks drops a carcass — a body every several hours, on dice
+// A HUNGRY pale hunter ranges wider and repositions far more often than the idle
+// 3h lurk-drift — it's hunting, not lying in wait. Fed, it falls back to the slow
+// territorial drift (LURKER_DRIFT_MS / TERRITORY_RADIUS).
+export const LURKER_HUNT_RADIUS = 6;               // twice its normal territory, to reach the rat-runs
+export const LURKER_HUNT_DRIFT_MS = 40 * 60_000;   // ~40 min between hunting moves (vs the 3h idle drift)
+export const STARVE_HUNTS_ODDS = 0.2; // chance/tick a STARVING predator with no easier prey begins its wind-up on a player sharing the room (low: the threshold + no-prey gate already make it rare)
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
 export const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
 export const SCAVENGER_CARRY_CAP = 3; // jaws only hold so much — gear it can drag off before it stops scooping
@@ -1313,6 +1363,7 @@ export const REACH_ITEMS = new Set(["quarterstaff", "pitted-spear", "war-pike", 
 export const PIERCE = new Map<string, number>([
   ["rusted-pick", 2], ["horsemans-pick", 2], ["crow-beak-pick", 3],
   ["pitted-spear", 1], ["war-pike", 2], ["abyssal-harpoon", 2],
+  ["forged-warspike", 2], // the forge's pierce answer (092) — punches plate like the war-pike
 ]);
 // A blunt weapon (stun > 0) ignores this much armor — crushing weight caves plate
 // the way a point slips it. Flat, categorical (every blunt weapon), unlike the
@@ -1419,7 +1470,8 @@ export const SLICK_BREAK_BONUS = 0.25; // added to SEIZE_BREAK_ODDS
 // STRAPPED: everything lashed down — the cutpurse's fingers find no purchase.
 export const STRAPPED = new Set(["strapped-baldric"]);
 // THORNS: a blocked blow costs the attacker (the buckler's spike answers).
-export const THORNS = new Map<string, number>([["spiked-buckler", 1], ["crown-guard-pavise", 2]]);
+export const THORNS = new Map<string, number>([["spiked-buckler", 1], ["crown-guard-pavise", 2],
+  ["bristling-targe", 2], ["smiths-aegis", 2]]); // forge off-hands (093): the targe and the wall-class aegis bite back
 // MANCATCHER (065): the barbed snare-pole fills the shield hand with DENIAL, not
 // defense — a creature your catcher is on cannot flee (the 18%-hp bolt, the
 // runner's dash, even fire-panic: the collar holds them all). Zero block: you
@@ -1431,7 +1483,7 @@ export const MANCATCHER = new Set(["man-catcher"]);
 // blow opens a bleed on the attacker (value = bleedDmg, BLEED_TICKS as usual).
 // THORNS's cousin on the other axis: burst vs armor-ignoring drip. HOLLOW
 // attackers don't bleed, same as everywhere.
-export const PARRY_RIPOSTE = new Map<string, number>([["parrying-dagger", 2]]);
+export const PARRY_RIPOSTE = new Map<string, number>([["parrying-dagger", 2], ["forged-main-gauche", 3]]); // the forge's counter off-hand (093)
 
 // ---- the verdigris-thing: the extraction monster (047) ----
 // CORRODERS eat your KIT, not your blood: each landed blow blooms green on one
