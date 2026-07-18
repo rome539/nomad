@@ -1306,8 +1306,14 @@ export const BRAND_MINT_ODDS = 0.25;            // ...and 1 check in 4 mints —
 // REACH: a haft held at length blunts the ambush — a grudge-holder's entry
 // first-strike loses its AMBUSH_MULT against a wielder set to receive.
 export const REACH_ITEMS = new Set(["quarterstaff", "pitted-spear", "war-pike", "abyssal-harpoon", "gaff-hook"]);
-// PIERCE: the pick punches plate — ignores this many points of a mob's armor.
-export const PIERCE = new Map<string, number>([["rusted-pick", 2], ["horsemans-pick", 2], ["crow-beak-pick", 3]]);
+// PIERCE: the point punches plate — ignores this many points of a mob's armor.
+// The picks, and now the thrusting shafts (spear/pike/harpoon) — piercing is a
+// real class, the anti-armor answer, distinct from the edge that opens flesh and
+// the weight that caves bone (rome, 2026-07-17).
+export const PIERCE = new Map<string, number>([
+  ["rusted-pick", 2], ["horsemans-pick", 2], ["crow-beak-pick", 3],
+  ["pitted-spear", 1], ["war-pike", 2], ["abyssal-harpoon", 2],
+]);
 // A blunt weapon (stun > 0) ignores this much armor — crushing weight caves plate
 // the way a point slips it. Flat, categorical (every blunt weapon), unlike the
 // per-weapon PIERCE map. The mace was history's answer to armor; so it is here.

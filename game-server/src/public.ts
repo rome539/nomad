@@ -641,6 +641,9 @@ export const PAGE = `<!doctype html>
   #log .stun   { color: var(--bone); padding-left: 12px; }
   #log .gain   { color: var(--gold); }
   #log .dim    { color: var(--dim); }
+  /* A locked chest in the room is loot-in-waiting — it must not read as white
+     scenery you walk past. Gold and bold so it catches the eye on the way in. */
+  #log .loot   { color: var(--gold); font-weight: 700; }
   /* The world's own voice — event beats (the bell, the tide of rats, the dark
      going wrong). A hue nothing else wears, so an omen never reads as scenery. */
   #log .evt    { color: var(--omen); font-style: italic; }
@@ -988,6 +991,9 @@ function classify(s) {
   if (knownRooms[s]) return "head";
   if (/falls into your hands|falls from the dead|clatters free of the fallen|sealed\\. \\(mint #|^What is sealed is yours|locked in your box|back from the box|slides .* across the counter/.test(s)) return "gain";
   if (/^Exits: /.test(s)) return "dim";
+  // A locked chest pops gold (loot waiting); a sprung, empty one recedes (spent husk).
+  if (/ sits here, locked\./.test(s)) return "loot";
+  if (/ sits here, sprung and empty\./.test(s)) return "dim";
   if (/bloodstain darkens|dust is freshly disturbed|swept clear, sat in|Fresh blood pools|Gnawed scraps|scratched into the stone/.test(s)) return "dim";
   return "";
 }

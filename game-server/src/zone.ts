@@ -1028,6 +1028,10 @@ export class ZoneDO implements DurableObject {
       this.send(session, wasAsleep
         ? `You fall on ${tmpl.name} in its sleep — the blow lands heavy for ${dmg}, and it comes awake SWINGING. (${this.condition(creature)})`
         : `You fall on ${tmpl.name} before it marks you — the first blow lands heavy for ${dmg}. (${this.condition(creature)})`, "dmgout big");
+      // A BLUNT opener spends your whole beat: the heavy head takes its time coming
+      // back up, so the foe answers before you swing again. A finesse weapon (edged
+      // or piercing) recovers quick and keeps its opener-plus-swing (rome, 2026-07-17).
+      if ((weapon?.tmpl.stun ?? 0) > 0) session.openedHeavy = true;
       if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
       await this.ensureAlarm();
       return;
@@ -1964,6 +1968,7 @@ export class ZoneDO implements DurableObject {
         // The daze wears off outside the fight too — fled or left standing
         // alone, the flag must not stick to the HUD until a refresh.
         if (session.stunned && !session.pvpTarget) { session.stunned = false; this.sendStatus(session); }
+        session.openedHeavy = false; // a heavy-opener that never resolved (fled, or the foe fell to something else) must not eat a swing in the next fight
         continue;
       }
       // Rung senseless last beat: your swing is gone. It clears now — one hit,
@@ -1972,6 +1977,13 @@ export class ZoneDO implements DurableObject {
         session.stunned = false;
         this.send(session, "Your head still rings — the moment to swing slips past you.", "stun");
         this.sendStatus(session); // clear the pill as the lost swing is paid, not a beat later
+        continue;
+      }
+      // A heavy blunt opener was your whole beat: the head is slow to rise, so the
+      // foe answers before you come round again (edged/pierce never set this).
+      if (session.openedHeavy) {
+        session.openedHeavy = false;
+        this.send(session, "You put it all into that opening blow; the heavy head is slow to rise again.", "dmgout");
         continue;
       }
       const atkMult = STANCE[session.stance].atk * this.wallDrag(session);
