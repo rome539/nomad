@@ -19,7 +19,7 @@ import * as pvp from "./pvp";
 import * as lore from "./lore";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK, SLICK_BREAK_BONUS,
-  PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
+  PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
   CARVE_MAX_LEN, TWO_HANDED, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
@@ -805,6 +805,19 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
       ? "The clank and grind of armor plate, {dir} — someone moving heavy and unhurried."
       : "The knock and shift of loose iron, {dir} — someone moving under a load.");
     z.creatureNoise(session.roomId);
+    // You hear your OWN racket too — the noise the load law makes was invisible to
+    // the person making it, so a heavy delver watched things wander in for no
+    // stated reason (rome, 2026-07-19). Throttled, and flavoured by what's loud:
+    // worn plate, the loose pack-iron, or — naked — a stone turned underfoot.
+    const now = Date.now();
+    if (now - (session.loudSelfAt ?? 0) >= LOUD_SELF_COOLDOWN_MS) {
+      session.loudSelfAt = now;
+      z.send(session, z.wornWeight(session) > 0
+        ? "Your armor rings on the stone as you go — that carried far."
+        : z.loadOf(session) > 0
+          ? "The iron in your pack knocks and shifts — that carried far."
+          : "A loose stone turns under your foot — small, but the dark is quiet.", "amb");
+    }
   }
   z.refreshRoomCtx(from);
   z.refreshRoomCtx(session.roomId);
@@ -1628,14 +1641,29 @@ export async function consumeFood(z: ZoneDO,
 }
 
 // The provisional food a player is carrying, weakest heal first — the order
-// both manual `eat` (unhurt-safe default) and auto-eat draw from. Sealed
-// rations are never touched by accident.
+// manual `eat` (unhurt-safe default) draws from. Sealed rations are never
+// touched by accident.
 export function carriedFood(z: ZoneDO, session: Session): CarriedItem[] {
   const world = z.world!;
   return session.items
     .filter((c) => world.itemTemplates.get(c.itemId)?.edible)
     .sort((a, b) =>
       Number(a.serial !== null) - Number(b.serial !== null) ||
+      (world.itemTemplates.get(a.itemId)!.heal - world.itemTemplates.get(b.itemId)!.heal));
+}
+
+// The order the mid-fight AUTO-EAT reflex draws from: KEPT provisions first
+// (FOOD_KEEPS — the cured, non-spoiling food), then raw forage as a fallback.
+// A reflex bite should be dependable, not a mouthful of turned offal that heals
+// 1 (rome, 2026-07-19). Same sealed-last rule; within each tier still weakest-
+// heal first, so it spends cheap hardtack before the prized smoked-haunch.
+export function carriedFoodAuto(z: ZoneDO, session: Session): CarriedItem[] {
+  const world = z.world!;
+  return session.items
+    .filter((c) => world.itemTemplates.get(c.itemId)?.edible)
+    .sort((a, b) =>
+      Number(a.serial !== null) - Number(b.serial !== null) ||
+      Number(!FOOD_KEEPS.has(a.itemId)) - Number(!FOOD_KEEPS.has(b.itemId)) ||
       (world.itemTemplates.get(a.itemId)!.heal - world.itemTemplates.get(b.itemId)!.heal));
 }
 

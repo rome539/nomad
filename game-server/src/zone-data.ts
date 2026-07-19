@@ -120,6 +120,13 @@ export const DODGE_ZERO_AT = 13;      // ...falling linearly to nothing at the m
 export const NOISE_FLOOR = 0.06;      // even bare feet knock a stone loose now and then — naked is rare-but-not-silent, not dead quiet
 export const NOISE_PER_WEIGHT = 0.06; // ...plus this per point of load: a room-change leaks sound to the neighbors AND rouses the room (0.06 + 13×0.06 ≈ cap)
 export const NOISE_CAP = 0.85;
+// At or above this load your kit is the thing making the racket — the mover hears
+// their own noise ("your armor rings on the stone") and a woken sleeper blames
+// the armor, not just "the sound of you" (rome, 2026-07-19: the noise the load
+// law makes should be legible from the INSIDE, not only to the neighbors).
+// ~6 is medium-and-up (light ≈3 stays quiet-flavored); the noise ROLL is separate.
+export const NOISY_LOAD = 6;
+export const LOUD_SELF_COOLDOWN_MS = 15_000; // ...but tell the noisemaker at most this often, so continuous marching isn't a line every step
 export const PARTING_PER_WEIGHT = 0.06; // odds/point-of-load the fight bills you one blow as you flee it (13×0.06 ≈ cap)
 export const PARTING_CAP = 0.80;
 export const ENTRY_STEALTH_MIN = 0.25;  // the lightest tread still wakes a sleeper this fraction of the full WAKE_ENTER roll

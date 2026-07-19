@@ -18,7 +18,7 @@ import {
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
-  MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
+  MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL,
 } from "./zone-data";
 
@@ -310,7 +310,12 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
         if (!session.target) session.target = c.id;
         z.send(session, `${cap(ct.name)} starts awake — and it remembers you.`, "dmgin");
       } else {
-        z.send(session, `${cap(ct.name)} stirs at the sound of you and comes awake.`);
+        // A loud kit names itself as the culprit — the load law's noise, made
+        // legible where it bites (rome, 2026-07-19). A light tread keeps the old
+        // impersonal line; only NOISY_LOAD and up blames the armor.
+        z.send(session, z.loadOf(session) >= NOISY_LOAD
+          ? `Your armor gives you away — ${ct.name} stirs and comes awake.`
+          : `${cap(ct.name)} stirs at the sound of you and comes awake.`);
       }
       z.refreshRoomCtx(roomId);
     }

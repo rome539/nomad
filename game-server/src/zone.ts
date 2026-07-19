@@ -2650,7 +2650,7 @@ export class ZoneDO implements DurableObject {
     for (const session of this.sessions.values()) {
       if (session.hp <= 0 || session.hp >= session.maxHp * AUTO_EAT_FRACTION) continue;
       if (!this.inCombat(session)) continue;
-      const food = verbs.carriedFood(this, session)[0];
+      const food = verbs.carriedFoodAuto(this, session)[0];
       if (!food) continue;
       const { before, tmpl } = await verbs.consumeFood(this, session, food);
       this.send(session, session.hp > before
