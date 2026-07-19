@@ -28,7 +28,6 @@ export interface Session {
   forging?: boolean; // which away it is: true = the gatehouse forge (modal or typed)
   sorting?: boolean; // which away it is: true = a typed 'inventory' keeping-sort
   stepText?: boolean; // stepped out via a TYPED barter/forge/inventory (text, no modal)
-  benchInHouse?: boolean; // was the pack opened from INSIDE the gatehouse? (else the world) — decides where closing it returns you
   ctxCombat: boolean; // the combat state the last chip set was drawn for (see syncCombatCtx)
   gateSmeltable?: boolean; // cached: enough scrap across pack+lockbox+vault to smelt a bar — gates the 'smelt' chip (refreshGateStock; sync chip builder can't load containers itself)
   gateCureName?: string;   // cached: chip-name of a curable raw meat somewhere across pack+lockbox+vault, so the 'cure' chip can be 'cure <meat>' (hangs on click); undefined = nothing raw to hang

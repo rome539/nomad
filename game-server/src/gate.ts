@@ -846,10 +846,8 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
       // ALREADY in the gatehouse (walked in, or stepped over from the hatch), the
       // bench is a lateral there and closing keeps you by the fire.
       if (z.inGatehouse.has(session.pubkey)) {
-        session.benchInHouse = true;
         z.enterStep(session, "sorting"); // lateral to the fixture, still by the fire
       } else {
-        session.benchInHouse = false;
         enterBench(z, session); // a crouch in place — gate or dungeon, never the door
       }
       return sendBench(z, session);
@@ -985,7 +983,14 @@ export async function leaveBench(z: ZoneDO, session: Session): Promise<void> {
     // door. Only 'in'/'out' moves you between the world and the gatehouse.
     session.sorting = false;
     try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
-    if (session.benchInHouse) {
+    // "Am I behind the door?" is the DURABLE inGatehouse set, not a per-session
+    // flag. A fray while the bench is open inside the gatehouse rebuilds the
+    // session (benchInHouse lost), the reconnect restores `away` off inGatehouse,
+    // and then closing the stale bench used to fall to the world branch below —
+    // dropping `away` while inGatehouse stayed true: you'd hear the dungeon and
+    // 'out' would swear you were already out (rome, 2026-07-19). inGatehouse
+    // survives the fray (persisted, and the reconnect trusts it), so read that.
+    if (z.inGatehouse.has(session.pubkey)) {
       // You opened it from INSIDE the gatehouse — you never left the fire. Stay
       // by it (still in text, the tavern still has you); just straighten up.
       session.stepText = true;

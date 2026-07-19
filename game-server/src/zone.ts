@@ -584,6 +584,11 @@ export class ZoneDO implements DurableObject {
       session.away = true;
       session.stepText = true;
       session.visited.add(session.roomId);
+      // The rebuilt session has no open stance (sorting/trading/forging default
+      // false), but the client may still be showing a modal it had open when the
+      // socket dropped. Dismiss it so the view matches the restored state — else
+      // a stale bench frame lingers over the gatehouse until the next click.
+      try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
       this.sendStatus(session);
       if (!seamless) this.send(session, gate.describeGatehouse(this, session));
       this.sendCtx(session);
