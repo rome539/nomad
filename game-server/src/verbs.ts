@@ -24,7 +24,7 @@ import {
   CARVE_MAX_LEN, TWO_HANDED, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_WALL, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
 } from "./zone-data";
@@ -1154,11 +1154,14 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
   carried.equipped = true;
   await setEquipped(z.env.DB, carried.rowId, true);
   if (fighting) session.staggered = true;
-  // Raising a wall-class shield tells you its price up front: you'll fight
-  // around the thing you carry (SHIELD_WALL_DRAG on every blow you deal).
-  const wallNote = tmpl.slot === "shield" && SHIELD_WALL.has(tmpl.id)
-    ? " It is a wall, and you will fight around it — your blows lose a little of their weight while it's up."
-    : "";
+  // Raising a shield tells you its price up front: you fight around it, and the
+  // bigger the guard the more it drags your blows (wallDrag). A buckler is free.
+  const drag = tmpl.slot === "shield" ? Math.round((tmpl.block - SHIELD_DRAG_FREE) * SHIELD_DRAG_PER_BLOCK * 100) : 0;
+  const wallNote = drag <= 0
+    ? ""
+    : SHIELD_WALL.has(tmpl.id)
+      ? ` It is a wall, and you will fight around it — your blows lose ${drag}% of their weight while it's up.`
+      : ` You'll fight a little around it — your blows lose ${drag}% of their weight while it's up.`;
   z.send(session, (tmpl.slot === "weapon"
     ? `You take ${tmpl.name} in hand${current ? `, setting aside ${current.tmpl.name}` : ""}.`
     : `You pull on ${tmpl.name}${current ? `, shrugging off ${current.tmpl.name}` : ""}.`)

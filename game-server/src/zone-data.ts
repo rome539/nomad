@@ -163,7 +163,17 @@ export const RECKLESS_MISS = 0.10;
 // told at equip and on the item read; bucklers and the parrying dagger stay
 // free so the light skirmisher remains a real archetype.
 export const SHIELD_WALL = new Set(["warden-tower-shield", "crown-guard-pavise", "gravestone-shield", "smiths-aegis"]); // smiths-aegis (093): the forge's masterwork wall
-export const SHIELD_WALL_DRAG = 0.85; // multiplies your outgoing damage while the wall is up
+// Block and offense are one dial: a shield costs your swing in proportion to how
+// much it guards, so a bigger guard is always "how much offense will I trade?"
+// rather than a free upgrade (rome, 2026-07-19). A buckler's-worth of block is
+// FREE (SHIELD_DRAG_FREE) — a light guard doesn't slow your arm; every point of
+// block ABOVE that drags SHIELD_DRAG_PER_BLOCK of your damage. Tuned so the walls
+// land at ~0.85 (30% block -> (0.30-0.10)*0.75 = 0.15 drag), exactly where the
+// old flat SHIELD_WALL_DRAG cliff sat — but now smooth from the buckler up.
+// Off the shield's OWN block (not stance/condition): the guarded stance already
+// pays offense through STANCE.atk, so it adds block without a second tax.
+export const SHIELD_DRAG_FREE = 0.10;      // block up to a buckler's guard costs no offense
+export const SHIELD_DRAG_PER_BLOCK = 0.75; // damage lost per point of block above the free floor
 // Guarded is more than the number — you fight behind your shield. Behind a
 // raised shield it blocks a shade more, and claws that would open a wound
 // (armor-ignoring bleed) only get through half the time. The skill answer to

@@ -65,7 +65,7 @@ import {
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON,
-  STANCE, RECKLESS_MISS, SHIELD_WALL, SHIELD_WALL_DRAG, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
+  STANCE, RECKLESS_MISS, SHIELD_WALL, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
   PIERCING_WEAPONS, VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
   SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
@@ -1592,7 +1592,13 @@ export class ZoneDO implements DurableObject {
     const pierce = PIERCE.get(t.id);
     if (pierce) bits.push(`pierces ${pierce}`);
     if (TWO_HANDED.has(t.id)) bits.push("two-handed");
-    if (SHIELD_WALL.has(t.id)) bits.push("a wall — drags your swing"); // the offense tax, on the label
+    // A shield drags your swing in proportion to its guard (wallDrag): show the
+    // real cost on anything past the free buckler floor, and keep "a wall" for the
+    // biggest ones' identity.
+    if (t.slot === "shield" && t.block > SHIELD_DRAG_FREE) {
+      const drag = Math.round((t.block - SHIELD_DRAG_FREE) * SHIELD_DRAG_PER_BLOCK * 100);
+      bits.push(`${SHIELD_WALL.has(t.id) ? "a wall — " : ""}−${drag}% to your swing`);
+    }
     if (PADDED.has(t.id)) bits.push("wards stun");
     if (WARDHIDE.has(t.id)) bits.push("wards wounds");
     if (MAILWARD.has(t.id)) bits.push("wards bleeds");
@@ -4134,11 +4140,13 @@ export class ZoneDO implements DurableObject {
     return total;
   }
 
-  // Fighting from behind a wall-class shield: every blow you deal drags
-  // (SHIELD_WALL_DRAG) — you fight around the thing you carry. Bucklers free.
+  // Fighting from behind a shield drags every blow you deal, in PROPORTION to how
+  // much it guards: a buckler's-worth of block is free, everything above it costs
+  // offense on a smooth slope (SHIELD_DRAG_FREE / SHIELD_DRAG_PER_BLOCK). Off the
+  // shield's own block — the guarded stance pays its own offense through STANCE.
   public wallDrag(session: Session): number {
-    const sh = this.equippedItem(session, "shield");
-    return sh && SHIELD_WALL.has(sh.tmpl.id) ? SHIELD_WALL_DRAG : 1;
+    const block = this.equippedItem(session, "shield")?.tmpl.block ?? 0;
+    return 1 - Math.max(0, block - SHIELD_DRAG_FREE) * SHIELD_DRAG_PER_BLOCK;
   }
 
   // The pack's iron: loose (unworn) gear pieces the pack hauls. Trophies, food
