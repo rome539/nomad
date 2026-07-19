@@ -85,6 +85,7 @@ import {
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
+  SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
@@ -193,6 +194,26 @@ export class ZoneDO implements DurableObject {
 
   public roomDist(a: string, b: string): number {
     return this.roomDists.get(a)?.get(b) ?? Number.POSITIVE_INFINITY;
+  }
+
+  // THE BUBBLE: the set of rooms within SIM_RADIUS of anyone's boots — the only
+  // rooms where the full per-beat simulation runs. Every session projects one
+  // (gatehouse-sitters keep the gate's surroundings warm for the moment they
+  // step out; a linkdead body is still a body, and what's chewing it must keep
+  // chewing). Rebuilt each tick from the precomputed all-pairs distances, so
+  // it's a handful of map reads. Returns null when SIM_RADIUS is Infinity —
+  // the old whole-world tick, and the rollback switch.
+  // ms of the last slow-world advance (not persisted: a restart skips one slow beat, harmless)
+  private lastEcologyAt = 0;
+  private liveRooms(): Set<string> | null {
+    if (!Number.isFinite(SIM_RADIUS)) return null;
+    const live = new Set<string>();
+    for (const s of this.sessions.values()) {
+      const dists = this.roomDists.get(s.roomId);
+      if (!dists) { live.add(s.roomId); continue; }
+      for (const [rid, d] of dists) if (d <= SIM_RADIUS) live.add(rid);
+    }
+    return live;
   }
 
 
@@ -377,6 +398,52 @@ export class ZoneDO implements DurableObject {
     }
     this.pruneTraces(now);
     this.savedAt = now;
+    // The catch-up just advanced EVERYONE to now — the slow clock restarts from
+    // here, or it would replay the same gap onto the frozen world.
+    this.lastEcologyAt = now;
+  }
+
+  // THE SLOW CLOCK: everything outside the bubbles, advanced by real elapsed
+  // time on a coarse beat. Same quiet-life arithmetic as catchUp — heal, hunger,
+  // grudges fading, eating, a due wander step — plus the population beats the
+  // live loop runs (brood births, predation, survival feeding), so the far
+  // world genuinely breeds, culls and starves while nobody watches; only the
+  // choreography coarsens, never the outcomes. Every send here is silent or
+  // lands in rooms that by definition hold no one: frozen rooms sit beyond
+  // SIM_RADIUS, and sound carries one room — the ring in between is empty.
+  private async slowEcology(now: number, elapsedMs: number, liveRooms: Set<string>): Promise<void> {
+    const world = this.world!;
+    const mins = elapsedMs / 60_000;
+    for (const c of this.creatures.values()) {
+      if (liveRooms.has(c.roomId)) continue;
+      const tmpl = world.mobTemplates.get(c.templateId)!;
+      if (tmpl.is_boss || c.templateId === ESCAPE_TMPL) continue; // always-live: the fast beat owns them
+      c.target = null; // nobody out here to fight — mirror of catchUp's rule
+      if (c.asleep) {
+        if (now < (c.sleepUntil ?? 0)) continue; // dead to the world, out here too
+        c.asleep = false;
+        c.sleepUntil = undefined;
+      }
+      if (!c.bleedTicks) c.hp = Math.min(tmpl.max_hp, c.hp + CREATURE_HEAL_PER_MIN * mins);
+      if (c.hp >= tmpl.max_hp) c.phase = 0;
+      if (!HOLLOW.has(c.templateId)) c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * mins);
+      if (c.grudges.length) {
+        const ms = ai.forgetMs(this, tmpl);
+        c.grudges = c.grudges.filter((g) => now - g.at < ms);
+      }
+      if (c.hunger >= HUNGRY_AT) {
+        if (SCAVENGERS.has(c.templateId) || VERMIN.has(c.templateId) || LURKERS.has(c.templateId)) {
+          ai.scavengerFeeds(this, c, true);
+        }
+        ai.creatureEatsHere(this, c, true, now);
+      }
+      if (BROODERS.has(c.templateId)) ai.broodBirths(this, c, now);
+      const hunted = await ai.predation(this, c, now);
+      if (!hunted && c.nextWanderAt <= now && !tmpl.is_boss && c.hp >= tmpl.max_hp * FLEE_BELOW
+          && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId)) {
+        await ai.creatureMoves(this, c, now, "wander", true);
+      }
+    }
   }
 
   public async persist(): Promise<void> {
@@ -2256,8 +2323,24 @@ export class ZoneDO implements DurableObject {
     // wait their turn, so a crowd is deadly but never an instant, unwinnable
     // grind. The blow budget is `canLandBlow` (shared with entry strikes this
     // tick); `heldBack` remembers whose victims felt the crush, for a line after.
+    // THE BUBBLE: one live-set per tick. A creature outside it (and outside the
+    // always-live few) skips the whole beat — no behavior, no writes — and lives
+    // on the slow clock instead. The boss and the loosed Gaunt never freeze:
+    // their dramas are map-scale, and they must keep unfolding unwatched.
+    const liveRooms = this.liveRooms();
+    const live = (c: Creature) =>
+      !liveRooms || liveRooms.has(c.roomId)
+      || c.templateId === ESCAPE_TMPL
+      || world.mobTemplates.get(c.templateId)!.is_boss;
     const heldBack = new Set<string>();
     if (combatRound) for (const creature of this.creatures.values()) {
+      if (!live(creature)) {
+        // A wind-up that lost its prey to a death-warp (the one way a player
+        // leaves a room without crossing the ring) must not hang loaded — the
+        // spring resets when the room goes cold, same as when the room empties.
+        if (creature.rouseAt !== undefined) creature.rouseAt = undefined;
+        continue;
+      }
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       // Rung senseless by a blunt blow: it loses this whole action, then clears.
       if (creature.stunned) {
@@ -2805,6 +2888,13 @@ export class ZoneDO implements DurableObject {
     const tickMins = stepMs / 60_000;
     const beatMul = stepMs / TICK_MS; // 1 at the fast beat, ~7.5 at the idle beat: scales the other fixed per-2s-tick rates (rust) to wall-clock
     for (const creature of this.creatures.values()) {
+      // Outside the bubble the beat doesn't reach: appetite, healing, feeding
+      // and wandering all advance on the slow clock (slowEcology) instead, by
+      // real elapsed time — so freezing here never starves or fattens anything,
+      // it only coarsens WHEN the same arithmetic runs. (A bleed pauses frozen —
+      // combat's own refugee, it resumes with the room. Rare, and kinder than
+      // letting an unwatched wound tick a creature down to a corpse nobody cut.)
+      if (!live(creature)) continue;
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       // A fresh wound weeps: armor-ignoring damage each tick until it clots. It
       // wears a thing down but never lands the kill — your own strike does that.
@@ -2880,6 +2970,15 @@ export class ZoneDO implements DurableObject {
           await ai.creatureMoves(this, creature, now, "wander", false);
         }
       }
+    }
+
+    // The far world's heartbeat: past the bubbles, time advances in slow whole
+    // strides instead of beats. (First beat after a restart just stamps the
+    // clock — the gap before it isn't this world's to replay.)
+    if (liveRooms && now - this.lastEcologyAt >= SLOW_ECOLOGY_MS) {
+      const elapsed = this.lastEcologyAt ? Math.min(now - this.lastEcologyAt, CATCHUP_CAP_MS) : 0;
+      this.lastEcologyAt = now;
+      if (elapsed > 0) await this.slowEcology(now, elapsed, liveRooms);
     }
 
     // The damp works on carried steel: provisional weapons and armor rust a

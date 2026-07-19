@@ -321,6 +321,22 @@ export const FIRE_REST_REGEN_PER_TICK = 2;
 // Simulation clocks.
 export const SIM_STEP_MS = 60_000; // catch-up granularity
 export const CATCHUP_CAP_MS = 14 * 24 * 3_600_000;
+// THE BUBBLE (rome, 2026-07-19): the full per-beat simulation runs only within
+// this many rooms of someone's boots. Noise carries 1 room and nothing moves
+// more than 1 room per beat, so radius 2 is the interaction range plus one beat
+// of lookahead — measured on the real graph it keeps ~7% of the world hot per
+// player instead of all of it, and (because persist writes only the dirt) the
+// frozen rest costs no rows either. Everything outside the bubbles lives on the
+// slow clock below. Set to Infinity to restore the old whole-world tick — that
+// is the rollback switch, no code change needed.
+export const SIM_RADIUS = 2;
+// The far world's own heartbeat: every this-often, everything OUTSIDE the
+// bubbles advances by the real elapsed time — hunger, healing, eating, brood
+// births, predation, a wander step. Same quiet-life model as the offline
+// catch-up, so "unobserved" behaves identically whether the whole world is
+// empty or just that corner of it. Creatures entering a bubble are therefore
+// at most this stale — imperceptible, and no per-creature bookkeeping needed.
+export const SLOW_ECOLOGY_MS = 30_000;
 export const CREATURE_HEAL_PER_MIN = 1;
 export const HUNGER_PER_MIN = 2; // 0..100
 export const HUNGER_MAX = 100;
