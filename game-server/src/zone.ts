@@ -84,7 +84,7 @@ import {
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
-  DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC,
+  DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
@@ -3272,15 +3272,22 @@ export class ZoneDO implements DurableObject {
       if (!silent) {
         const rock = g.itemId === "loose-rock";
         const edible = !!t?.edible;
+        // The altar line (and its chime) is for the few rooms that actually HAVE
+        // an altar — a bloodwort sprig back on the chapel's stone reads as a
+        // returned offering. Everywhere else this same "else" branch just means a
+        // torch/bandage/bone turned up on the floor again, so say exactly that.
+        const onAltar = !rock && !gear && !edible && ALTAR_ROOMS.has(g.roomId);
         this.roomFeed(g.roomId, rock
           ? "The rubble shifts — a loose rock lies within reach again."
           : gear
             ? `${cap(t?.name ?? "something")} turns up among the litter, where there was nothing before.`
             : edible
               ? `${cap(t?.name ?? "something")} lies here — the stores are not empty yet.`
-              : `${cap(t?.name ?? "something")} lies on the altar, as if it had never left.`,
+              : onAltar
+                ? `${cap(t?.name ?? "something")} lies on the altar, as if it had never left.`
+                : `${cap(t?.name ?? "something")} lies here again, where there was nothing before.`,
           undefined, false); // regrow is housekeeping — off the relay
-        this.roomSound(g.roomId, rock ? "Stone grinds on stone {dir}." : gear ? "Metal scrapes softly on stone {dir}." : edible ? "Something settles {dir}." : "A faint chime sounds {dir}.");
+        this.roomSound(g.roomId, rock ? "Stone grinds on stone {dir}." : gear ? "Metal scrapes softly on stone {dir}." : onAltar ? "A faint chime sounds {dir}." : "Something settles {dir}.");
         this.refreshRoomCtx(g.roomId);
       }
       return false;

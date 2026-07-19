@@ -1179,6 +1179,12 @@ export const HOUND_HEADS = new Map<string, string>([
 // hound's post: it spawns/migrates there and never wanders out, and nothing
 // else drifts in through the stairs. Add a room here if it gets a lone guardian.
 export const SENTINEL_ROOMS = new Set(["undercroft"]);
+// Rooms with a real altar — the only places a regrown offering reads as "on the
+// altar." Everywhere else, a renewing torch/bandage/herb/bone just turns up on
+// the floor again (rome, 2026-07-19: the altar line was the regrow catch-all and
+// leaked to ~20 altarless rooms — a torch "on the altar" at the gate). Add a
+// room here only if it genuinely has an altar a gift could lie on.
+export const ALTAR_ROOMS = new Set(["shrine", "chapel", "the-buried-chapel", "the-silt-chapel"]);
 // A roused sentinel stays up this long. Asleep you slip past (and rouse it);
 // awake it bars the way down until it's killed or drops back to sleep. Every
 // fresh disturbance (a passer, a blow) resets the clock, so a busy deep keeps
@@ -1433,10 +1439,12 @@ export const PIERCE = new Map<string, number>([
 // A blunt weapon (stun > 0) ignores this much armor — crushing weight caves plate
 // the way a point slips it. Flat, categorical (every blunt weapon), unlike the
 // per-weapon PIERCE map. The mace was history's answer to armor; so it is here.
-// Nerfed 2 -> 1 (rome, 2026-07-16): at 2 every mace matched the picks, and the
-// pick family had no reason to exist. Blunts still beat blades on plate (1 > 0);
-// the PICKS (2-3) are now the dedicated can-openers.
-export const BLUNT_ARMOR_IGNORE = 1;
+// Restored 1 -> 2 (rome, 2026-07-19): the load law made blunts the HEAVIEST
+// weapons (stun adds a point of weight), so 2 is earned now, not free — and it
+// lets blunt be the anti-heavy RPS counter it's meant to be, which at 1 it
+// couldn't (couldn't actually cave plate). The PICKS stay distinct: lighter, and
+// their 2-3 pierce still tops out above a mace's flat 2.
+export const BLUNT_ARMOR_IGNORE = 2;
 // TWO_HANDED: wants both hands; no shield alongside it (enforced at equip).
 export const TWO_HANDED = new Set(["war-pike", "abyssal-harpoon"]);
 // PADDED: a mob's stun rings you half as often. Best piece counts — padding
