@@ -1383,7 +1383,10 @@ export async function enterGatehouse(z: ZoneDO, session: Session): Promise<void>
   if (z.inCombat(session)) {
     return z.send(session, "The door won't take you — not with steel out. Finish it, or run.");
   }
-  if (z.outOfWorld(session)) { z.send(session, describeGatehouse(z, session)); return z.sendGateCtx(session); }
+  // Already behind the door — 'in' is idempotent, just re-show it. Re-assert
+  // `away` here too, so if the flag had drifted false under inGatehouse this
+  // heals it (outOfWorld already trusts inGatehouse; this re-syncs the rest).
+  if (z.outOfWorld(session)) { session.away = true; z.send(session, describeGatehouse(z, session)); return z.sendGateCtx(session); }
   z.enterStep(session, "gatehouse");
   z.sendStatus(session); // the HUD title becomes "The Gatehouse" the moment you're inside
   z.send(session, describeGatehouse(z, session));

@@ -1536,7 +1536,9 @@ export class ZoneDO implements DurableObject {
   // Out through the door: back into the dungeon, where it can all reach you
   // again. The room by the fire hears you go.
   public async leaveGatehouse(session: Session): Promise<void> {
-    if (!session.away) return this.send(session, "You're already out in the world.");
+    // outOfWorld, not bare `away`: if the flags drifted (inGatehouse=true /
+    // away=false) you must still be able to walk out — leaveStep clears BOTH.
+    if (!this.outOfWorld(session)) return this.send(session, "You're already out in the world.");
     session.resting = false; // the door wakes you — nobody sleepwalks into the dungeon
     gate.gatehouseFeed(this, `${session.name} shoulders the door open and goes back out.`, session.pubkey, "who");
     await this.leaveStep(session);
@@ -1922,7 +1924,14 @@ export class ZoneDO implements DurableObject {
   // reach of everything standing there. `away` means "a modal is up"; THIS means
   // "safe." Keep the two apart. (Same gate condition as `sheltered` healing.)
   public outOfWorld(s: Session): boolean {
-    return s.away && this.world!.entryRooms.has(s.roomId);
+    // inGatehouse is the DURABLE "behind the door" truth — persisted, and the one
+    // the reconnect trusts. `away` can drift FALSE under it: a seamless reweave
+    // rebuilds the session away=false, and if the restore misses you end up
+    // inGatehouse=true / away=false — which leaked the whole dungeon's roomSound
+    // into the gatehouse and made 'in'/'out' lose track of you (rome, 2026-07-19,
+    // twice). Trust inGatehouse FIRST so that drift can never un-insulate you;
+    // `away && at-a-gate` still covers the pack-crouch at a gate (never inGatehouse).
+    return this.inGatehouse.has(s.pubkey) || (s.away && this.world!.entryRooms.has(s.roomId));
   }
 
   // The dogpile cap, shared across every blow-landing path in a tick: swings in
@@ -2886,7 +2895,7 @@ export class ZoneDO implements DurableObject {
       // Whole enough again: re-arm the wounded-swing tell so a later wounding
       // warns afresh (however you healed — rest, food, a bandage).
       if (session.woundedTold && session.hp >= session.maxHp * WOUNDED_FRACTION) session.woundedTold = false;
-      const sheltered = session.away && world.entryRooms.has(session.roomId);
+      const sheltered = this.outOfWorld(session); // gatehouse/gate-crouch mends; trusts inGatehouse so a flag-drift still heals
       // Rest heals wherever you're still IN REACH — including the inventory modal
       // in the dungeon, where you're crouched in the open and can be hit (just
       // like reading a map or journal). Only a gate truly takes you out of the
