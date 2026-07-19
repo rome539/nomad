@@ -28,7 +28,7 @@ import {
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
 } from "./zone-data";
-import { gatehouseFeed, throughTheDoor } from "./gate";
+import { gatehouseFeed, throughTheDoor, enterBench, sendBench } from "./gate";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
 export function cmdXyzzy(z: ZoneDO, session: Session): void {
@@ -1244,25 +1244,32 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`), ...loud].join("\n"));
   }
   const atGate = world.entryRooms.has(session.roomId);
+  // Out in the world, 'inv' CROUCHES you over the pack — the same modal the
+  // pack-button opens (enterBench, a crouch in place) — so you sort and BURN from
+  // the list anywhere, not only at a gate (rome, 2026-07-19: "that's where you
+  // burn items"). It is NOT sanctuary: you crouch in the open, still in reach —
+  // outOfWorld stays false away from an entry room, so creatures keep their
+  // target and their swings and your wounds keep bleeding. Only the gate's door
+  // (below) is safe. (Combat above already refused — you can't sort mid-fight.)
+  if (!atGate) {
+    enterBench(z, session);
+    return sendBench(z, session);
+  }
   const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
   const out: string[] = [];
   out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`));
   out.push(...loud);
   out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox, "lockbox")}/${LOCKBOX_CAP}):`));
-  if (atGate) {
-    const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
-    out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, "vault")}/${VAULT_CAP} sealed):`)); // fungibles ride free in the vault
-    // The front door rule: the keeping is laid out INSIDE the gatehouse — from
-    // the gate room this walks you through the door first (announced, HUD
-    // flipped), never a private step-out at the arch (rome, 2026-07-17).
-    const walkedIn = !z.outOfWorld(session);
-    throughTheDoor(z, session);
-    z.enterStep(session, "sorting"); // lateral to the bench
-    if (walkedIn) out.unshift("You push in out of the cold and lay your kit out on the bench.");
-    out.push("('stash'/'unstash'/'vault' to move things; 'out' steps you back into the world.)");
-  } else {
-    out.push("(The deep keep waits at the gates. 'stash'/'unstash' move things to the lockbox that rides with you.)");
-  }
+  const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
+  out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, "vault")}/${VAULT_CAP} sealed):`)); // fungibles ride free in the vault
+  // The front door rule: the keeping is laid out INSIDE the gatehouse — from
+  // the gate room this walks you through the door first (announced, HUD
+  // flipped), never a private step-out at the arch (rome, 2026-07-17).
+  const walkedIn = !z.outOfWorld(session);
+  throughTheDoor(z, session);
+  z.enterStep(session, "sorting"); // lateral to the bench
+  if (walkedIn) out.unshift("You push in out of the cold and lay your kit out on the bench.");
+  out.push("('stash'/'unstash'/'vault' to move things; 'out' steps you back into the world.)");
   z.send(session, out.join("\n"));
 }
 
