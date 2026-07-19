@@ -64,7 +64,7 @@ import {
   TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
-  THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_LIGHT, BURDEN_FREE_IRON,
+  THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON,
   STANCE, RECKLESS_MISS, SHIELD_WALL, SHIELD_WALL_DRAG, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
   PIERCING_WEAPONS, VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
@@ -1864,6 +1864,12 @@ export class ZoneDO implements DurableObject {
       this.send(victim, `${cap(tmpl.name)} rakes for your leg — the thick hide takes it, and your stride holds.`, "block");
       return;
     }
+    // Worn MASS plants you: a leg-rake can't sweep out from under a load. Poise
+    // as its own save (light builds lean on WARDHIDE above instead).
+    if (chance(this.poiseOf(victim))) {
+      this.send(victim, `${cap(tmpl.name)} rakes for your leg — but you're too planted under the weight to be swept, and your stride holds.`, "block");
+      return;
+    }
     victim.hobbled = true;
     victim.limpingSince = undefined; // a fresh wound — the drag-clear clock starts on your next flee
     this.send(victim, `${cap(tmpl.name)} rakes your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
@@ -2398,12 +2404,13 @@ export class ZoneDO implements DurableObject {
         // tick, this one can't get a blow in — it snarls at the edge and waits.
         // (It keeps its target, so it steps up the moment a slot opens.)
         if (!this.canLandBlow(victim.pubkey)) { heldBack.add(victim.pubkey); continue; }
-        // Quick feet: carrying no worn weight adds to the foe's miss chance —
-        // unless the pack's loose iron drags at you (the mule dodges nothing).
-        // And a wounded creature fights diminished — shakier, softer blows.
-        const quick = this.wornWeight(victim) === 0 && !this.burdened(victim);
+        // Quick feet: a light load adds to the foe's miss chance, scaling down
+        // as the kit gets heavier (dodgeBonus) — real evasion in cloth, nothing
+        // in plate. And a wounded creature fights diminished — softer blows.
+        const dodge = this.dodgeBonus(victim);
+        const quick = this.loadOf(victim) < 2; // light enough to read as nimble
         const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
-        if (chance(FUMBLE_CHANCE + (quick ? DODGE_LIGHT : 0) + (cHurt ? WOUNDED_FUMBLE_BONUS : 0))) {
+        if (chance(FUMBLE_CHANCE + dodge + (cHurt ? WOUNDED_FUMBLE_BONUS : 0))) {
           this.send(victim, quick
             ? pick([
                 `${cap(tmpl.name)} lunges — you slip aside, nothing weighing you down.`,
@@ -2512,8 +2519,10 @@ export class ZoneDO implements DurableObject {
           this.combatNoise(victim.roomId);
           // A drowned thing that lands a blow can take hold — you're seized,
           // can't flee, and it drags harder until you wrench free or kill it.
-          // SLICK hide (the eel-skin) gives cold arms half as much to hold.
-          const seizeOdds = this.wearsTrait(victim, SLICK) ? SEIZE_ODDS * SLICK_SEIZE_MULT : SEIZE_ODDS;
+          // SLICK hide (eel-skin) gives cold arms half as much to hold; worn MASS
+          // (poise) plants you so it can't drag — strongest-wins, never stacked.
+          const seizeMult = Math.min(this.wearsTrait(victim, SLICK) ? SLICK_SEIZE_MULT : 1, 1 - this.poiseOf(victim));
+          const seizeOdds = SEIZE_ODDS * seizeMult;
           if (DROWNERS.has(creature.templateId) && !victim.seizedBy && chance(seizeOdds)) {
             victim.seizedBy = creature.id;
             this.send(victim, `${cap(tmpl.name)} closes cold arms around you — you're held fast. (break free: keep fighting, or it drags you under)`, "seize");
@@ -2524,8 +2533,11 @@ export class ZoneDO implements DurableObject {
           this.maybeHobble(victim, tmpl);
           // A heavy dead blow can ring YOUR skull — you lose your next swing.
           // One hit, one lost beat; you can't be stun-chained deeper. PADDING
-          // (the coif, the riveted lining) takes the ring out of half of them.
-          const stunOdds = this.wearsTrait(victim, PADDED) ? tmpl.stun * PADDED_STUN_MULT : tmpl.stun;
+          // (cushion) takes the ring out of a share; worn MASS (poise) shrugs the
+          // stagger — strongest-wins, so heavy resists by mass and a LIGHT build
+          // buys the same by slotting a padded piece (no double-dip).
+          const stunMult = Math.min(this.wearsTrait(victim, PADDED) ? PADDED_STUN_MULT : 1, 1 - this.poiseOf(victim));
+          const stunOdds = tmpl.stun * stunMult;
           if (tmpl.stun > 0 && !victim.stunned && chance(stunOdds)) {
             victim.stunned = true;
             this.send(victim, `${cap(tmpl.name)} lands like a falling stone — your skull rings and the room tilts.`, "stun");
@@ -4108,16 +4120,37 @@ export class ZoneDO implements DurableObject {
     return sh && SHIELD_WALL.has(sh.tmpl.id) ? SHIELD_WALL_DRAG : 1;
   }
 
-  // The pack's iron: loose (unworn) gear pieces past BURDEN_FREE_IRON make you
-  // burdened — the mule's tax. See zone-data for the law; drop is the valve.
-  public burdened(session: Session): boolean {
+  // The pack's iron: loose (unworn) gear pieces the pack hauls. Trophies, food
+  // and cigs stack silent forever; weapons/armor/shields are the iron.
+  private looseIron(session: Session): number {
     let iron = 0;
     for (const c of session.items) {
       if (c.equipped) continue;
       const t = this.world!.itemTemplates.get(c.itemId);
       if (t && t.slot !== "") iron++;
     }
-    return iron > BURDEN_FREE_IRON;
+    return iron;
+  }
+  // Past BURDEN_FREE_IRON loose pieces you're burdened — the mule's tax.
+  public burdened(session: Session): boolean {
+    return this.looseIron(session) > BURDEN_FREE_IRON;
+  }
+  // THE LOAD LAW, one number (rome, 2026-07-19): worn armor/weapon/shield weight
+  // + loose pack-iron past its free allowance. Dodge, noise, and the parting-cut
+  // all read this — light is quick/quiet/free-to-leave, heavy is none of those.
+  public loadOf(session: Session): number {
+    return this.wornWeight(session) + Math.max(0, this.looseIron(session) - BURDEN_FREE_IRON);
+  }
+  // Poise rides WORN mass alone (a loaded pack doesn't help you keep your feet):
+  // the fraction (0..POISE_CAP) a control effect is reduced by. Combined with the
+  // resist traits STRONGEST-WINS (see the CC sites), never stacked.
+  public poiseOf(session: Session): number {
+    return Math.min(POISE_CAP, this.wornWeight(session) * POISE_PER_WEIGHT);
+  }
+  // The quick-foot dodge added to a foe's miss chance: real evasion when light,
+  // scaling to nothing as the load climbs to DODGE_ZERO_AT.
+  public dodgeBonus(session: Session): number {
+    return Math.max(0, DODGE_MAX * (1 - this.loadOf(session) / DODGE_ZERO_AT));
   }
 
   // The verdigris-thing's touch is rust: a landed blow blooms green on ONE

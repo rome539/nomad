@@ -19,12 +19,12 @@ import * as pvp from "./pvp";
 import * as lore from "./lore";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK, SLICK_BREAK_BONUS,
-  PARTING_BLOW_CHANCE, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
+  PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
   CARVE_MAX_LEN, TWO_HANDED, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, CLATTER_ODDS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_WALL, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
 } from "./zone-data";
@@ -701,9 +701,9 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // clean. (Armor still soaks it — that's what it's for.) A pack full of
   // loose iron drags the same — stripping down buys nothing while you're
   // still hauling the armory. `drop` it, or pay the toll.
-  const laden = z.wornWeight(session) > 0 || z.burdened(session);
+  const partingOdds = Math.min(PARTING_CAP, z.loadOf(session) * PARTING_PER_WEIGHT);
   const dragLine = z.wornWeight(session) > 0 ? "The mail drags at you" : "The pack's iron drags at you";
-  if (wasFighting && laden && chance(PARTING_BLOW_CHANCE)) {
+  if (wasFighting && partingOdds > 0 && chance(partingOdds)) {
     const striker = [...z.creatures.values()].find(
       (c) => c.roomId === session.roomId && (c.target === session.pubkey || c.id === session.target)
         && !(guardWasAwake && c.id === guard!.id), // the sentinel already took its toll above
@@ -728,7 +728,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const hunter = [...z.sessions.values()].find(
     (s) => s.pvpTarget === session.pubkey && s.roomId === session.roomId && s.hp > 0,
   );
-  if (hunter && laden && chance(PARTING_BLOW_CHANCE)) {
+  if (hunter && partingOdds > 0 && chance(partingOdds)) {
     const hw = z.equippedItem(hunter, "weapon");
     let pdmg = randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) + (hw ? z.effDmg(hw) : 0);
     pdmg = Math.max(1, Math.round(pdmg * ARMOR_K / (z.equippedArmor(session) + ARMOR_K)));
@@ -794,18 +794,26 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   events.tideSoaksTorch(z, session);
   // And while the crows hold the sky, every open-ground move is called out.
   events.crowsMark(z, session);
-  // A pack past its quiet load can't move silent: loose iron knocks and
-  // shifts, and sometimes the next rooms hear it — and so does everything
-  // with ears where you land. The fat run is the loud run; the gate is quiet.
-  if (z.burdened(session) && chance(CLATTER_ODDS)) {
-    z.roomSound(session.roomId, "The knock and shift of loose iron, {dir} — someone moving under a heavy load.");
+  // The load can't move silent: worn plate clanks, loose pack-iron knocks, and
+  // the odds it carries to the next rooms — and rouses everything with ears where
+  // you land — SCALE with the load (rome, 2026-07-19). Cloth is dead quiet and
+  // sneaks; full plate broadcasts every step. Worn mass reads as armor, the pack
+  // as loose iron.
+  const noiseOdds = Math.min(NOISE_CAP, NOISE_FLOOR + z.loadOf(session) * NOISE_PER_WEIGHT);
+  if (chance(noiseOdds)) {
+    z.roomSound(session.roomId, z.wornWeight(session) > 0
+      ? "The clank and grind of armor plate, {dir} — someone moving heavy and unhurried."
+      : "The knock and shift of loose iron, {dir} — someone moving under a load.");
     z.creatureNoise(session.roomId);
   }
   z.refreshRoomCtx(from);
   z.refreshRoomCtx(session.roomId);
   await ai.provokeGrudges(z, session, true); // you walked in — a grudge-holder gets the jump
-  // …and a dormant listener might just catch the sound of your arrival.
-  await ai.wakeListeners(z, session, session.roomId, WAKE_ENTER, "twists toward the sound of you and lunges!");
+  // …and a dormant listener might just catch the sound of your arrival — but a
+  // light tread scales that roll DOWN (rome, 2026-07-19: the plate ninja is
+  // dead). Cloth tiptoes past the sleeper; plate wakes the thing in the room.
+  const stealthMult = Math.max(ENTRY_STEALTH_MIN, Math.min(1, z.loadOf(session) / DODGE_ZERO_AT));
+  await ai.wakeListeners(z, session, session.roomId, WAKE_ENTER * stealthMult, "twists toward the sound of you and lunges!");
   await savePlayer(z.env.DB, session.pubkey, session.roomId, session.hp);
   await z.persist();
 }

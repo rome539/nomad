@@ -15,7 +15,7 @@ import { recordPvpKill, deedsBump } from "./world";
 import {
   STANCE, RECKLESS_MISS, ARMOR_K, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE,
   WOUNDED_FRACTION, WOUNDED_DMG_MULT, WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS,
-  AMBUSH_MULT, VITALS_PVP, DODGE_LIGHT, STAGGER_BONUS, BLEED_TICKS, BLEED_STACK_CAP,
+  AMBUSH_MULT, VITALS_PVP, STAGGER_BONUS, BLEED_TICKS, BLEED_STACK_CAP,
   PADDED, PADDED_STUN_MULT, ARMOR_WEAR, WEAPON_WEAR, THORNS, PARRY_RIPOSTE,
   MANCATCHER, MANCATCHER_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE, WARDHIDE_WOUND_ODDS,
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
@@ -115,9 +115,9 @@ async function swingAt(
     z.combatNoise(attacker.roomId);
     return;
   }
-  // Quick feet: carrying no worn weight slips a blow entirely — unless the
-  // pack's loose iron drags at you. Too much to slip anything.
-  if (z.wornWeight(defender) === 0 && !z.burdened(defender) && chance(DODGE_LIGHT)) {
+  // Quick feet: a light load slips a blow entirely, scaling down as the kit
+  // gets heavier (dodgeBonus) — plate slips nothing.
+  if (chance(z.dodgeBonus(defender))) {
     z.send(attacker, `${defender.name} sways clear of your swing, light on their feet.`);
     z.send(defender, `${attacker.name} swings — you slip aside, nothing weighing you down.`, "dodge");
     z.combatNoise(attacker.roomId);

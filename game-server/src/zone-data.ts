@@ -103,21 +103,38 @@ export const THROW_SHATTER_HOLLOW = 0.4; // stone on bone or old iron, near coin
 // fast: a single deep dive through the Demesne could ruin a blade; then 2.4×).
 export const WEAPON_WEAR_HOLLOW = 0.5;
 
-// Mobility: unburdened (worn weight 0, or nothing worn) means foes miss you
-// more, and you slip out of a fight clean. Heavy mail turns blows better but
-// a parting strike may catch you as you flee.
-export const DODGE_LIGHT = 0.05; // added to the foe's miss chance when you're quick
-export const PARTING_BLOW_CHANCE = 0.4; // heavy armor: odds the fight bills you on the way out
-// The pack's iron is the OTHER half of the load law. Worn weight is priced
-// above; loose gear in the pack (weapons, armor, shields — trophies, food and
-// cigs stack silent forever) is priced here: past BURDEN_FREE_IRON unworn
-// pieces you are BURDENED — no quick-dodge even stripped, parting-cut exposed
-// even stripped, and the load is audible (a burdened room-change can ring the
-// same bell a shout rings; a pressed ear next door reads the clatter). `drop`
-// is the valve: shed the iron mid-chase and you're the naked sprinter again.
-// Your life or your haul — nobody gets to be rich, armed, AND silent.
-export const BURDEN_FREE_IRON = 3;  // loose gear pieces the pack carries quiet
-export const CLATTER_ODDS = 0.5;    // odds a burdened room-change leaks sound
+// THE LOAD LAW (rome, 2026-07-19 — the graduated rebuild): the heavy/light axis
+// rides ONE number, loadOf = worn armor weight + loose pack-iron past
+// BURDEN_FREE_IRON. Light is quick, quiet, and free to leave; heavy is none of
+// those — on a SLOPE, not a cliff, so every point of load costs you. Worn MASS
+// also grants poise (below). Total worn kit runs ~0 (naked) to ~7 (full plate +
+// maul + wall shield), so the curves are calibrated to that range.
+// Calibrated to the REAL worn range under the WEIGHT LAW (mig 096; the armor
+// tiers stay INTACT — light is a low-ARMOR choice, not a cut). A minimal LIGHT
+// build ≈ armor 5 / weight 2 (fragile, slippery), a MEDIUM build ≈ armor 8 /
+// weight ~6, a full HEAVY build ≈ armor 12 / weight 11-13 (tanky, loud, trapped),
+// naked 0. So the curves span load 0..13. Armor costs weight — you armor up by
+// paying mobility, and a genuinely light kit stays squishy (rome, 2026-07-19).
+export const DODGE_MAX = 0.15;        // quick-foot bonus to a foe's miss at zero load (naked ≈ this + FUMBLE_CHANCE 5% ≈ 20%; a light build ~2 ≈ 17%)...
+export const DODGE_ZERO_AT = 13;      // ...falling linearly to nothing at the maximal heavy load (base 5% only in full plate)
+export const NOISE_FLOOR = 0.06;      // even bare feet knock a stone loose now and then — naked is rare-but-not-silent, not dead quiet
+export const NOISE_PER_WEIGHT = 0.06; // ...plus this per point of load: a room-change leaks sound to the neighbors AND rouses the room (0.06 + 13×0.06 ≈ cap)
+export const NOISE_CAP = 0.85;
+export const PARTING_PER_WEIGHT = 0.06; // odds/point-of-load the fight bills you one blow as you flee it (13×0.06 ≈ cap)
+export const PARTING_CAP = 0.80;
+export const ENTRY_STEALTH_MIN = 0.25;  // the lightest tread still wakes a sleeper this fraction of the full WAKE_ENTER roll
+// POISE: worn MASS keeps your feet — it reduces the odds a control effect (stun
+// / hobble / seize) lands, scaling with WORN weight ONLY (a heavy pack doesn't
+// plant you). Combined with the resist traits (PADDED stun / WARDHIDE hobble /
+// SLICK seize) STRONGEST-WINS, never stacked — so heavy gets broad poise from
+// mass, while a LIGHT build buys back a specific resist by slotting its trait.
+export const POISE_PER_WEIGHT = 0.12; // CC-resist fraction per point of worn weight...
+export const POISE_CAP = 0.75;        // ...capped here — never full immunity
+// The pack's iron is the OTHER half of the load. Loose gear past BURDEN_FREE_IRON
+// counts into loadOf (dodge/noise/parting all feel it); `drop` is the valve —
+// shed the iron mid-chase and you're the naked sprinter again. Your life or your
+// haul: nobody gets to be rich, armed, AND silent.
+export const BURDEN_FREE_IRON = 3;  // loose gear pieces the pack carries quiet before it counts as load
 
 // Fighting stance: trade offense for defense. `atk` scales the damage you deal,
 // `def` scales the damage you take (after armor). Reckless is a glass edge;
