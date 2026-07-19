@@ -717,6 +717,7 @@ export const CARRION_MINT_ODDS = 0.3;             // ...and ~1 in 3 checks drops
 export const LURKER_HUNT_RADIUS = 6;               // twice its normal territory, to reach the rat-runs
 export const LURKER_HUNT_DRIFT_MS = 40 * 60_000;   // ~40 min between hunting moves (vs the 3h idle drift)
 export const STARVE_HUNTS_ODDS = 0.2; // chance/tick a STARVING predator with no easier prey begins its wind-up on a player sharing the room (low: the threshold + no-prey gate already make it rare)
+export const THIEF_ROB_ODDS = 0.35; // chance/combat-round a HUNGRY thief sharing a player's room begins its wind-up to rob them (higher than the starving-hunt: it's a non-lethal grab-and-bolt, and the whole point of a hungry thief)
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
 export const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
 export const SCAVENGER_CARRY_CAP = 3; // jaws only hold so much — gear it can drag off before it stops scooping
@@ -1207,6 +1208,17 @@ export const WARRENS_ROOMS = new Set([
   "the-undermine", "the-earth-throat", "the-sewer-slip", "the-buried-chapel",
   "bone-nook", // A Gap in the Bones — moved off the midden (079); safe rooms in this set are display/flavor only, every event actor filters safeRooms
 ]);
+// THE FOOD WEB'S FLOOR (rome, 2026-07-18): the dungeon feeds its own. A hungry
+// rat or thief standing in this muck-country — the warrens' fungus, carrion's
+// scraps, the gate thresholds' regrowing forage — gnaws the ROOM itself to
+// survive (no item consumed, a nibble's worth of heal). This is the primary
+// producer that runs with NO players around and through offline catch-up, so
+// the whole web (rats → hyenas, pale hunters, thieves) doesn't starve to the
+// bone between visits. Gate thresholds (world.entryRooms) are folded in by code
+// — they're a runtime set, not known here. Grazers only: carnivores keep to
+// corpses and prey (a hyena doesn't chew fungus).
+export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS]);
+export const FORAGE_HEAL = 3; // a scavenged nibble — less than a corpse (SCAVENGER_HEAL 6) or a dropped meal
 // The open sky: every room where weather can reach you (the grounds ring +
 // the overworks rooftops). The room-events engine (events.ts) reads this for
 // rain; anything indoor — keep, warrens, deep — is cover.

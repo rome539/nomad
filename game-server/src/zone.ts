@@ -79,7 +79,7 @@ import {
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
@@ -2297,6 +2297,32 @@ export class ZoneDO implements DurableObject {
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} runs at ${prey.name}, starving.`, prey.pubkey, false);
         }
       }
+      // A hungry thief doesn't wait to be wronged: restless with an empty belly,
+      // it sidles up to anyone sharing its room and goes for the pack (rome,
+      // 2026-07-18: "more aggressive while hungry"). Hands already full (mid-steal)
+      // or asleep, it doesn't. Like the other unprovoked strikes it WINDS UP — a
+      // beat to back out a door or hit first — and it's a ROB, not a kill: it
+      // grabs a meal (steal-food-first in the combat block) and bolts. Its own
+      // whistle-fear (avoids) keeps it from working the same mark over and over.
+      if (!creature.target && !creature.stole && !creature.asleep
+          && THIEVES.has(creature.templateId) && creature.hunger >= HUNGRY_AT) {
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
+        if (!prey) {
+          creature.rouseAt = undefined; // no mark — the itch settles
+        } else if (creature.rouseAt === undefined) {
+          if (chance(THIEF_ROB_ODDS)) {
+            creature.rouseAt = now + DIRE_ROUSE_MS;
+            this.send(prey, `${cap(tmpl.name)} eyes your pack, hungry, and edges closer — it hasn't sprung yet. (get out, or hit first)`);
+            this.roomFeed(creature.roomId, `${cap(tmpl.name)} sidles toward ${prey.name}, eyeing the pack.`, prey.pubkey, false);
+          }
+        } else if (now >= creature.rouseAt) {
+          creature.rouseAt = undefined;
+          creature.target = prey.pubkey;
+          if (!prey.target) prey.target = creature.id;
+          this.send(prey, `${cap(tmpl.name)} darts in — going for your pack.`, "dmgin");
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} darts at ${prey.name}.`, prey.pubkey, false);
+        }
+      }
       // A SENTINEL sleeps at its post until roused (someone slips past, or a blow
       // lands). Asleep it does nothing — you can tiptoe by. Awake it takes anyone
       // in the room, like a drowned thing, and holds the door until it's put down
@@ -2517,20 +2543,39 @@ export class ZoneDO implements DurableObject {
           if (THIEVES.has(creature.templateId) && !creature.stole && this.wearsTrait(victim, STRAPPED)) {
             this.send(victim, `${cap(tmpl.name)}'s fingers dance over your pack and find everything lashed down tight. It hisses.`);
           } else if (THIEVES.has(creature.templateId) && !creature.stole) {
-            const loot = victim.items
-              .filter((c) => c.serial === null && !c.equipped)
-              .sort((a, b) => (RARITY_RANK[world.itemTemplates.get(b.itemId)?.rarity ?? "common"] ?? 0)
-                - (RARITY_RANK[world.itemTemplates.get(a.itemId)?.rarity ?? "common"] ?? 0))[0];
+            const takeable = victim.items.filter((c) => c.serial === null && !c.equipped);
+            const byRarity = (a: typeof takeable[number], b: typeof takeable[number]) =>
+              (RARITY_RANK[world.itemTemplates.get(b.itemId)?.rarity ?? "common"] ?? 0)
+              - (RARITY_RANK[world.itemTemplates.get(a.itemId)?.rarity ?? "common"] ?? 0);
+            // A hungry thief grabs a MEAL before the shiny thing — food off your
+            // pack first when its belly's talking (rome, 2026-07-18). Well-fed,
+            // it goes for the richest as ever. (Richest food if you carry several.)
+            const foodFirst = creature.hunger >= HUNGRY_AT
+              ? takeable.filter((c) => world.itemTemplates.get(c.itemId)?.edible).sort(byRarity)[0]
+              : undefined;
+            const loot = foodFirst ?? [...takeable].sort(byRarity)[0];
             if (loot) {
               const it = world.itemTemplates.get(loot.itemId)!;
               victim.items.splice(victim.items.indexOf(loot), 1);
               await removeItemRow(this.env.DB, loot.rowId);
-              creature.stole = loot.itemId;
-              // A stolen journal keeps its pages: the row dies here, so its
-              // instance identity must ride the thief or the book comes back blank.
-              creature.stoleJournal = loot.journalId;
-              this.send(victim, `${cap(tmpl.name)} snatches ${it.name} and bolts! (kill it to get it back)`);
-              this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears something from ${victim.name} and flees!`, victim.pubkey, false);
+              if (it.edible && creature.hunger >= HUNGRY_AT) {
+                // A hungry thief that grabs FOOD doesn't fence it — it crams it
+                // down on the run. THAT is how a cutpurse feeds (rome, 2026-07-18:
+                // "we have to feed them"): the meal sates it (hunger clears, a
+                // little heal) and is GONE — no "kill it to get it back". Gear it
+                // still pockets to drop on death; only food it eats.
+                creature.hunger = 0;
+                creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(it.heal, 3));
+                this.send(victim, `${cap(tmpl.name)} snatches ${it.name} and crams it down as it bolts — gone.`);
+                this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears a meal from ${victim.name} and flees, gulping it down.`, victim.pubkey, false);
+              } else {
+                creature.stole = loot.itemId;
+                // A stolen journal keeps its pages: the row dies here, so its
+                // instance identity must ride the thief or the book comes back blank.
+                creature.stoleJournal = loot.journalId;
+                this.send(victim, `${cap(tmpl.name)} snatches ${it.name} and bolts! (kill it to get it back)`);
+                this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears something from ${victim.name} and flees!`, victim.pubkey, false);
+              }
               this.sendCtx(victim);
               await ai.creatureMoves(this, creature, now, "flee", false);
               continue;
@@ -2796,7 +2841,10 @@ export class ZoneDO implements DurableObject {
           // Never settles while there's someone to run from — it keeps moving,
           // room to room, and you only land a blow the tick you have it cornered.
           await ai.creatureMoves(this, creature, now, "wander", false);
-        } else if (!hunted && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && !AGGRESSIVE.has(creature.templateId)) {
+        } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && !AGGRESSIVE.has(creature.templateId)) {
+          // Mid-wind-up (rouseAt) it holds its ground — a thing that's telegraphed
+          // a lunge doesn't stroll off before it commits (keeps the thief's rob,
+          // the meal-guard's spring, and the starve-lunge from fizzling out).
           await ai.creatureMoves(this, creature, now, "wander", false);
         }
       }

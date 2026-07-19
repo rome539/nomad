@@ -15,7 +15,7 @@ import {
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, DARK_ROOMS, THIEVES,
   PREYS_ON, PREDATION_ODDS, STARVE_HUNTERS,
-  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS,
+  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT,
@@ -560,7 +560,21 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       if (scent) exit = scent;
       creature.curious = null;
     } else if (creature.hunger >= HUNGRY_AT && !HOLLOW.has(tmpl.id)) {
-      const smells = exits.find((e) =>
+      const grazer = VERMIN.has(tmpl.id) || THIEVES.has(tmpl.id);
+      // A hungry thief hunts a MARK first — empty-handed and restless, it edges
+      // toward a room where someone's standing, a pocket to pick (rome,
+      // 2026-07-18). Hands full (mid-steal), it just flees as ever.
+      const mark = THIEVES.has(tmpl.id) && !creature.stole
+        ? exits.find((e) => playerPresent(z, e.to_room))
+        : undefined;
+      // A grazer with no mark walks toward the LARDER — the muck-country the
+      // dungeon regrows (warrens/carrion/gate) — so hunger leads it to food
+      // instead of drifting blind and starving. Its place-fear (avoids) already
+      // steered the exits, so it won't loop back into a room it just fled.
+      const larder = !mark && grazer
+        ? exits.find((e) => FORAGE_ROOMS.has(e.to_room) || world.entryRooms.has(e.to_room))
+        : undefined;
+      const smells = mark ?? larder ?? exits.find((e) =>
         (z.ground.get(e.to_room) ?? []).some((id) => world.itemTemplates.get(id)?.lure),
       );
       if (smells) exit = smells;
@@ -724,17 +738,38 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     const world = z.world!;
     const here = z.ground.get(creature.roomId) ?? [];
     const idx = here.findIndex((id) => world.itemTemplates.get(id)?.lure);
-    if (idx === -1) return;
-    const item = world.itemTemplates.get(here[idx])!;
-    here.splice(idx, 1);
-    const tmpl = world.mobTemplates.get(creature.templateId)!;
-    creature.hunger = 0;
-    creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
-    z.addTrace(creature.roomId, { kind: "scraps", at });
-    if (!silent) {
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} tears into ${item.name}.`, undefined, false);
-      z.roomSound(creature.roomId, "Wet tearing sounds drift {dir}.");
-      z.refreshRoomCtx(creature.roomId);
+    if (idx !== -1) {
+      const item = world.itemTemplates.get(here[idx])!;
+      here.splice(idx, 1);
+      const tmpl = world.mobTemplates.get(creature.templateId)!;
+      creature.hunger = 0;
+      creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
+      z.addTrace(creature.roomId, { kind: "scraps", at });
+      if (!silent) {
+        z.roomFeed(creature.roomId, `${cap(tmpl.name)} tears into ${item.name}.`, undefined, false);
+        z.roomSound(creature.roomId, "Wet tearing sounds drift {dir}.");
+        z.refreshRoomCtx(creature.roomId);
+      }
+      return;
+    }
+    // Nothing lying to eat — but the dungeon feeds its own. A hungry rat or thief
+    // in muck-country (warrens/carrion/gate thresholds) gnaws the ROOM itself:
+    // no item, a nibble's heal. THIS is the food web's floor that keeps it alive
+    // with no players around, and it rides catch-up (rome, 2026-07-18). Grazers
+    // only — a carnivore keeps to corpses and prey. The HUNGRY_AT gate at the
+    // call site is the rate limit: it grazes the beat it crosses hungry, resets,
+    // and won't be back for it until the appetite returns.
+    const grazer = VERMIN.has(creature.templateId) || THIEVES.has(creature.templateId);
+    if (grazer && (FORAGE_ROOMS.has(creature.roomId) || world.entryRooms.has(creature.roomId))) {
+      const tmpl = world.mobTemplates.get(creature.templateId)!;
+      creature.hunger = 0;
+      creature.hp = Math.min(tmpl.max_hp, creature.hp + FORAGE_HEAL);
+      if (!silent) {
+        z.roomFeed(creature.roomId, THIEVES.has(creature.templateId)
+          ? `${cap(tmpl.name)} crouches in a corner, gnawing at something it has scavenged.`
+          : `${cap(tmpl.name)} noses through the muck, gnawing at fungus and scraps.`, undefined, false);
+        z.refreshRoomCtx(creature.roomId);
+      }
     }
   }
 
