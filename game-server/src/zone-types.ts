@@ -50,6 +50,7 @@ export interface Session {
   tokensAt: number; // ms of last refill
   nextThrowAt: number; // ms — one throw per round; the arm needs its follow-through
   visited: Set<string>; // rooms seen THIS session — a room you know shows brief, not the full prose again
+  mapInk?: Map<string, Set<string>>; // per carried surveyor's copy (its journalId): rooms inked onto it — cache over map_ink, loaded on first touch
   lastAmbientAt: number; // ms of the last atmosphere line (rate-limits the dungeon's breathing)
   lastAmbientLine?: string; // the last one said — never said twice running, however small the pool
   lastFishAt?: number; // ms of the last fishing cast (a short patience between casts)

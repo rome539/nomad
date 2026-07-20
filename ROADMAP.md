@@ -254,6 +254,52 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **System-hook gear — seven approved pieces** *(rome, 2026-07-19: "these all
+  sound good, note them down")*. The anti-reskin law behind them: **every new
+  piece hooks a SYSTEM the sim already runs, never just a stat** — if the pitch
+  is "like X but +1," it's a reskin; if it changes how a live system reads you,
+  it's an item. Grid method: slots × systems (noise/load, light, traces, scent,
+  weather, sleep, theft, rot, CC…), fill EMPTY cells. The seven:
+  - **Feet × traces** — boots that leave no footprints (the tracker economy has
+    no counter today).
+  - **Cloak × scent** — a tanner's cloak that masks your blood-drip from the
+    scavengers' nose (SCENT_FRESH/drip trails are live; nothing beats them).
+  - **Cloak × weather** — oilcloth that keeps a torch lit in the rain
+    (rainSoaksTorch kills them today).
+  - **Helm × sleep** — a helm that muffles the bell for its wearer
+    (bellWakeMult exists; no counter).
+  - **Body × hunger** — a pack-liner that slows carried-food rot (the rot
+    clock exists; FOOD_KEEPS is the only escape).
+  - **Weapon × theft** — a strapped blade the cutpurse can't snatch (STRAPPED
+    exists for exactly one item, the baldric).
+  - **Shield × light** — a mirrored boss that spooks fire-fearing mobs
+    (dreadsFire exists, dormant-ish).
+  Guardrails when building: stat ladders stay ≤3 tiers/slot/weight-class;
+  every new power pays a legible cost (weight is the currency — the blunt
+  weight-point and proportional shield drag are the precedent).
+
+- **The trait lottery — per-instance rolled traits** *(rome, 2026-07-19:
+  "roll the traits"; designed, not built; the trait ledger (098) is its
+  shipped foundation)*. THIS copy of a scavenger's coat rolled `quiet` when it
+  entered the world; the next one didn't — small catalog, real variety, every
+  drop worth inspecting. The shape: (1) roll at MINT (loot drops/cache spills;
+  keeper stock stays plain) from a slot-appropriate, fiction-plausible pool
+  (felt lining on cloth/leather never plate; eel-grease on cloaks/treads),
+  most pieces roll NOTHING, cap one rolled trait — no god-rolls; (2) store on
+  the player_items row (per-instance, like condition/journal_id), carried
+  through drop/death/theft like condition already is; (3) read path =
+  template tags ∪ instance tags (the ledger's trait()/hasTrait() single
+  read-point makes this one layer, but it re-touches ~50 sites' data source —
+  half a day careful, not an evening); (4) NAMES come from display-time
+  rendering ("a scavenger's coat — felt-lined"), never from new template
+  rows. Cost: D1 only, a few writes at mint — the DO never sees it.
+  **BOTH LAYERS RULE (rome asked; answered 2026-07-19): rolls for breadth,
+  templates for legends.** Authored variant templates stay FEW and iconic
+  (hand-named, hunt-able, maybe trait-pairs the lottery never rolls) — the
+  reskin-hurt is real only as (a) adjective-spam across bases, (b) value
+  compression if authored variants undercut the lottery's scarcity, (c)
+  balance surface sprawl. Every row must earn its name.
+
 - **Day and night** *(rome likes it, 2026-07-17 — "a bigger feature, more
   thought needed"; design only)*. Today NOMAD has NO clock: "tonight" is pure
   flavor in event prose, darkness is spatial (`DARK_ROOMS` are born-dark

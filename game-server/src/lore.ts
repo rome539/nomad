@@ -5,7 +5,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import type { CarriedItem, JournalRow } from "./world";
-import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId } from "./world";
+import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd } from "./world";
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import { uuid } from "./rng";
 import {
@@ -17,7 +17,36 @@ import {
 
 // ---- maps: open a chart you carry (the modal draws it) ----
 
-export function cmdMap(z: ZoneDO, session: Session, arg: string): void {
+// THE SURVEYOR'S BLANK (rome, 2026-07-19): a surveyor's map charts what its
+// CARRIER walks — the ink lives with the COPY, riding the same instanced
+// identity as the hunter's journal (journalId), so drop/steal/death carry the
+// charted work with the paper. A dead surveyor's filled map is loot; a fresh
+// copy is blank but the gates; and a grown world stays dark until walked.
+// Called from every room-change (and on unroll): mint the copy's identity if
+// it never got one, warm the ink cache, and set down the room underfoot.
+export async function inkRooms(z: ZoneDO, session: Session): Promise<void> {
+  for (const carried of session.items) {
+    if (carried.itemId !== DETAILED_MAP) continue;
+    if (!carried.journalId) {
+      // A copy that never got a name (bought, found, or owned from before the
+      // blank) starts its ink here.
+      carried.journalId = "map-" + uuid();
+      await setItemJournalId(z.env.DB, carried.rowId, carried.journalId);
+    }
+    session.mapInk ??= new Map();
+    let ink = session.mapInk.get(carried.journalId);
+    if (!ink) {
+      ink = new Set(await mapInkLoad(z.env.DB, carried.journalId));
+      session.mapInk.set(carried.journalId, ink);
+    }
+    if (!ink.has(session.roomId)) {
+      ink.add(session.roomId);
+      await mapInkAdd(z.env.DB, carried.journalId, session.roomId);
+    }
+  }
+}
+
+export async function cmdMap(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const maps = session.items.filter((c) => MAP_ITEMS.has(c.itemId));
   if (!maps.length) {
     return z.send(session, "You carry no map. The keeper sells them — a true one dear, a crude one cheap.");
@@ -26,9 +55,13 @@ export function cmdMap(z: ZoneDO, session: Session, arg: string): void {
   let carried = arg ? maps.find((c) => nameMatches(z.world!.itemTemplates.get(c.itemId)!.name, arg)) : null;
   if (!carried) carried = maps.find((c) => c.itemId === DETAILED_MAP) ?? maps[0];
   const detailed = carried.itemId === DETAILED_MAP;
+  if (detailed) await inkRooms(z, session); // unrolling it sets down where you stand
   sendMap(z, session, carried, detailed);
   if (detailed) {
-    return z.send(session, "You unroll the surveyor's map. Every hall is on it, set down true.");
+    const inked = session.mapInk?.get(carried.journalId!)?.size ?? 1;
+    return z.send(session, inked <= 1
+      ? "You unroll the surveyor's blank — empty but for the gates and the ground underfoot. It charts what its carrier walks, set down true."
+      : `You unroll the surveyor's map. ${inked} halls are set down true, walked in by the hands that carried it.`);
   }
   // The unfold reads the hand that drew this copy — the one honest thing a
   // crude map tells you is how far to trust the rest of it.
@@ -71,11 +104,17 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
   const dropRoom = CRUDE_DROP_MIN + (1 - hand) * (CRUDE_DROP_MAX - CRUDE_DROP_MIN);
   const badExit = CRUDE_BAD_MIN + (1 - hand) * (CRUDE_BAD_MAX - CRUDE_BAD_MIN);
   const roomIds = [...world.rooms.keys()];
-  // Which rooms make it onto a crude map: the gates and where you stand always
-  // do; the rest are a coin-weighted omission.
+  // Which rooms make it onto the paper. A SURVEYOR'S copy holds exactly its own
+  // ink — the halls its carriers walked while holding it — plus the gates
+  // (communal signposts; the map must never hide the bank) and the ground
+  // underfoot. A CRUDE map shows the gates, where you stand, and a coin-weighted
+  // scatter of everything else, right or not.
+  const ink = detailed ? (session.mapInk?.get(carried.journalId ?? "") ?? new Set<string>()) : null;
   const shown = new Set<string>();
   for (const id of roomIds) {
-    if (detailed || z.regionOf(id) === "gate" || id === session.roomId || rnd!() >= dropRoom) {
+    if (detailed) {
+      if (ink!.has(id) || z.regionOf(id) === "gate" || id === session.roomId) shown.add(id);
+    } else if (z.regionOf(id) === "gate" || id === session.roomId || rnd!() >= dropRoom) {
       shown.add(id);
     }
   }
@@ -103,6 +142,11 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
           continue;
         }
       }
+      // A surveyor's copy draws only passages between halls it holds — a door
+      // into somewhere unwalked isn't on the paper yet, and mustn't leak the
+      // far room's name. (The room's own prose still names its exits; the map
+      // records where you've BEEN.)
+      if (detailed && !shown.has(e.to_room)) continue;
       exits.push({ dir: e.dir, to: e.to_room, toName: world.rooms.get(e.to_room)?.name ?? e.to_room });
     }
     regions[mapRegionOf(z, id)].rooms.push({ id, name: room.name, exits, here: id === session.roomId });
