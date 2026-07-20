@@ -210,6 +210,7 @@ export const PACK_TORCH_CAP = 5;
 // rides the FOOD cap instead — no double jeopardy (dressingCapped skips edibles).
 export const PACK_DRESSING_CAP = 6;
 export const LOCKBOX_CAP = 8; // the run closet — small, takes anything, sealed or raw
+export const FOOD_LOCKBOX_STACK = 8; // rations stack in the run closet: a kind rides ONE slot this deep, then spills to a second (rome, 2026-07-20)
 export const VAULT_CAP = 50; // the bank — deep, generous, sealed wealth only
 // Not every forced box pays out. Now and then the lock gives on nothing —
 // picked clean before you got there, or never worth the key. Uncommon enough

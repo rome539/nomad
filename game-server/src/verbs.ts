@@ -806,22 +806,30 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // as loose iron.
   const noiseOdds = Math.min(NOISE_CAP, NOISE_FLOOR + z.loadOf(session) * NOISE_PER_WEIGHT);
   if (chance(noiseOdds)) {
-    z.roomSound(session.roomId, z.wornWeight(session) > 0
+    // The flavor has to name what's actually heavy on you, or a rock-and-shield
+    // delver with no armor gets told his "armor rings" (Lunapilot, 2026-07-20).
+    // Worn plate is one sound; the weapon and shield in your hands are another;
+    // a loaded pack is another; a naked delver is a turned stone.
+    const armorWt = z.wornArmorWeight(session);          // helm/body/cloak/feet
+    const heldWt = z.wornWeight(session) - armorWt;      // the weapon + shield in hand
+    z.roomSound(session.roomId, armorWt > 0
       ? "The clank and grind of armor plate, {dir} — someone moving heavy and unhurried."
       : "The knock and shift of loose iron, {dir} — someone moving under a load.");
     z.creatureNoise(session.roomId);
     // You hear your OWN racket too — the noise the load law makes was invisible to
     // the person making it, so a heavy delver watched things wander in for no
     // stated reason (rome, 2026-07-19). Throttled, and flavoured by what's loud:
-    // worn plate, the loose pack-iron, or — naked — a stone turned underfoot.
+    // worn plate, the gear in your hands, the loose pack-iron, or — bare — a stone.
     const now = Date.now();
     if (now - (session.loudSelfAt ?? 0) >= LOUD_SELF_COOLDOWN_MS) {
       session.loudSelfAt = now;
-      z.send(session, z.wornWeight(session) > 0
+      z.send(session, armorWt > 0
         ? "Your armor rings on the stone as you go — that carried far."
-        : z.loadOf(session) > 0
-          ? "The iron in your pack knocks and shifts — that carried far."
-          : "A loose stone turns under your foot — small, but the dark is quiet.", "amb");
+        : heldWt > 0
+          ? "The gear in your hands knocks and shifts as you go — that carried far."
+          : z.burdened(session)
+            ? "The iron in your pack knocks and shifts — that carried far."
+            : "A loose stone turns under your foot — small, but the dark is quiet.", "amb");
     }
   }
   z.refreshRoomCtx(from);

@@ -77,6 +77,7 @@ import {
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
   GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, STRAY_DECAY,
   MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
+  FOOD_LOCKBOX_STACK,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
@@ -1763,22 +1764,26 @@ export class ZoneDO implements DurableObject {
   //            for SEALED GEAR alone (rome, 2026-07-13 / food rule 2026-07-14).
   public slotsUsed(items: CarriedItem[], store: "pack" | "lockbox" | "vault" = "pack"): number {
     const kinds = new Set<string>();
+    const foodByKind = new Map<string, number>(); // lockbox rations: counted per kind to stack 8-deep
     let loose = 0;
     for (const c of items) {
       if (c.equipped) continue; // worn/wielded — on the body, not in the pack
       if (this.world!.itemTemplates.get(c.itemId)?.edible) {
-        // Food's slot cost is the store's business (rome, 2026-07-14): FREE in
-        // the pack (a COUNT cap governs it there instead) and FREE in the vault,
-        // but ONE SLOT EACH in the lockbox — no fungible stacking there, so the
-        // box holds at most its cap in rations, same kind or not.
-        if (store === "lockbox") loose++;
+        // Food's slot cost is the store's business: FREE in the pack (a COUNT cap
+        // governs it there) and FREE in the vault. In the lockbox rations now
+        // STACK by kind (rome, 2026-07-20): a kind rides one slot up to
+        // FOOD_LOCKBOX_STACK deep, then spills to a second slot — so several
+        // stacks of food can share the box, not one slot per ration.
+        if (store === "lockbox") foodByKind.set(c.itemId, (foodByKind.get(c.itemId) ?? 0) + 1);
         continue;
       }
       if (this.stackable(c.itemId, c.serial, c.journalId)) {
         if (store !== "vault") kinds.add(c.itemId); // one slot per KIND; free in the deep keep
       } else loose++; // loose gear, maps, journals — and sealed gear in the vault
     }
-    return loose + kinds.size;
+    let foodSlots = 0;
+    for (const n of foodByKind.values()) foodSlots += Math.ceil(n / FOOD_LOCKBOX_STACK); // 8 to a stack, then a new slot
+    return loose + kinds.size + foodSlots;
   }
 
   // Room for one more of itemId in a given store (default the pack)? A stacking
@@ -1789,8 +1794,11 @@ export class ZoneDO implements DurableObject {
     if (this.world!.itemTemplates.get(itemId)?.edible) {
       // Food takes no slot in the pack or the vault, so there's always room for
       // it there (the pack's own COUNT cap is enforced in packRoom). In the
-      // lockbox it needs a free slot like anything loose — it stacks no deeper.
+      // lockbox a ration joins its kind's open stack if that stack isn't full
+      // (FOOD_LOCKBOX_STACK deep); only a fresh stack needs a free slot.
       if (store === "pack" || store === "vault") return true;
+      const have = items.filter((c) => !c.equipped && c.itemId === itemId).length;
+      if (have % FOOD_LOCKBOX_STACK !== 0) return true; // room in the current stack
       return this.slotsUsed(items, store) < cap;
     }
     if (this.stackable(itemId, null)) {
@@ -3524,8 +3532,10 @@ export class ZoneDO implements DurableObject {
       }
     }
     // If you're carrying a journal when it falls, the book keeps count — one
-    // more of this kind, written to whichever journal is in your pack.
-    const jrn = killer.items.find((c) => c.journalId);
+    // more of this kind, written to whichever journal is in your pack. A map
+    // shares the journalId rail (097) but is NOT a book: skip it, or kills would
+    // be misfiled to a map instead of your bestiary.
+    const jrn = killer.items.find((c) => c.journalId && !MAP_ITEMS.has(c.itemId));
     if (jrn?.journalId) await journalBumpKill(this.env.DB, jrn.journalId, tmpl.id);
     // An engraved weapon keeps its own count: the kill goes into the steel.
     const kw = this.equippedItem(killer, "weapon");
@@ -4268,6 +4278,16 @@ export class ZoneDO implements DurableObject {
   public wornWeight(session: Session): number {
     let total = 0;
     for (const g of this.equippedAll(session)) total += g.tmpl.weight;
+    return total;
+  }
+
+  // Just the ARMOR the body wears (helm/body/cloak/feet) — NOT the weapon and
+  // shield in your hands. wornWeight lumps all of it for the load math; this
+  // splits out real armor so the noise flavor can tell "plate rings" from "the
+  // rock and shield in your hands knock" — the sound has to match what's heavy.
+  public wornArmorWeight(session: Session): number {
+    let total = 0;
+    for (const g of this.equippedAll(session)) if (ARMOR_SLOTS.has(g.tmpl.slot)) total += g.tmpl.weight;
     return total;
   }
 

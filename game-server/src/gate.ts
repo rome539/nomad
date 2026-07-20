@@ -1155,7 +1155,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
       vault: sortKit(group(vault)),
       packCap: PACK_CAP, lockboxCap: LOCKBOX_CAP, vaultCap: VAULT_CAP,
       // Slot accounting is the SERVER's now, for every column: food rides free in
-      // the pack, costs a slot each in the lockbox, and rides free in the vault —
+      // the pack, stacks 8-to-a-slot in the lockbox, and rides free in the vault —
       // none of which the client can get by counting rows. It just shows these.
       packUsed: z.slotsUsed(session.items, "pack"),
       lockboxUsed: z.slotsUsed(lockbox, "lockbox"),

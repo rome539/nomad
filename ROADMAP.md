@@ -63,6 +63,24 @@ and the population layer that only real players can fill.*
 
 ## Next up (unblocked, pre-players)
 
+- **BUG: surveyor-map shows the `journal` chip — FIXED (pending ship), 2026-07-20.**
+  Fixed at all four `journalId`-as-journal readers with the guard
+  `c.journalId && !MAP_ITEMS.has(c.itemId)`: the `journal` + mid-fight `study`
+  chips (chips.ts 212/144), `whereIsJournal` + `carriedJournals` (lore.ts
+  197/209), and the kill-log hook (zone.ts 3528 — was misfiling kills to a
+  carried map instead of the bestiary). Detail below for the record.
+  *(Lunapilot/rome, 2026-07-20)*. The surveyor's blank (b98921a) rides the JOURNAL's
+  instanced rail — it mints a `journalId` (`map-<uuid>`) on the MAP itself to
+  hold its ink. But the chip logic keys "this is a journal" on ANY `journalId`:
+  [chips.ts:210-212] `session.items.some((c) => c.journalId)` → pushes the
+  `journal` chip for a map, and [chips.ts:142] does the same for the mid-fight
+  `study` chip. A carried surveyor-map should offer ONLY `map`, never `journal`/
+  `study`. Fix: distinguish a real journal from a map-with-ink at both sites —
+  `c.journalId && !MAP_ITEMS.has(c.itemId)` (or `c.itemId === JOURNAL_ITEM`).
+  Root lesson: `journalId` is now OVERLOADED (journal pages OR map ink) — any
+  code reading `c.journalId` as "is a journal" must exclude MAP_ITEMS. Audit the
+  other `c.journalId` readers when fixing (stackable(), whereIsJournal, etc.).
+
 - **Stray-item floor-drain** *(SHIPPED `4bd9f76` 2026-07-16 — the half that
   mattered)*. Torches got the sodden law (`strayTorch`, 30–60 min off their
   threshold spawns, RotEntry kind `"sodden"`), and the audit found thrown rocks
@@ -166,6 +184,28 @@ killing-floor rounds (mostly covered by the existing corpse-smell wander).
   says murder-vs-tank became a coin-flip, but play is the judge.
 - **Prices need players** — 063 killed the dominated buys; whether the curve
   is right waits on strangers with tender.
+- **"No armour still loud"** *(Lunapilot reported, 2026-07-20; diagnosed, NOT a
+  code bug — the load law as written)*. Movement noise is `NOISE_FLOOR(0.06) +
+  loadOf × NOISE_PER_WEIGHT(0.06)` (verbs.ts ~807), and `loadOf` =
+  `wornWeight` (sums EVERY equipped slot incl. the wielded WEAPON + shield, via
+  equippedAll) `+ max(0, looseIron − BURDEN_FREE_IRON=3)` (spare gear in the
+  pack). So an unarmored player is still loud from (a) the weapon in hand — a
+  flanged mace is wt3 → naked-but-swinging = `0.06+3×0.06 = 24%`/move, +shield &
+  a couple spare pieces → ~36-40%, and (b) loot past the 3 free. A truly
+  empty-handed naked delver sits at the 6% floor (quiet). "Some locations" =
+  `RAIN_NOISE_MASK` eats half of outdoor-rain noise, so dry/deep rooms carry the
+  full racket while rainy surface reads silent — same load, location-variable
+  audibility. **RESOLVED as WAI + a flavor fix (rome, 2026-07-20):** the noise
+  AMOUNT is the load law working — a weapon and shield ARE weight, so you make
+  sound; that stays. The actual bug was the FLAVOR lying — the message keyed on
+  `wornWeight > 0` (which lumps weapon+shield in) and told a rock-and-shield,
+  no-armor delver his "armor rings." FIXED: new `wornArmorWeight` (helm/body/
+  cloak/feet only) splits real armor from held gear, and the self + roomSound
+  lines now name the true source ("the gear in your hands knocks", "the iron in
+  your pack", worn "armor rings", or a bare "loose stone"). STILL PARKED (not
+  done, no one's asked): whether a wielded weapon SHOULD feed movement noise per
+  point of weight exactly like plate — lever if ever wanted is to drop/half the
+  weapon slot in the noise calc only.
 
 ## Afflictions & cures — the framework *(gated)*
 
@@ -278,9 +318,15 @@ Directions rome likes and wants held. Design only; no code until he says go.
   every new power pays a legible cost (weight is the currency — the blunt
   weight-point and proportional shield drag are the precedent).
 
-- **The trait lottery — per-instance rolled traits** *(rome, 2026-07-19:
-  "roll the traits"; designed, not built; the trait ledger (098) is its
-  shipped foundation)*. THIS copy of a scavenger's coat rolled `quiet` when it
+- **The trait lottery + the legends — SHIPPED `80aad49`, 2026-07-20 (migs
+  099+100).** Phase 1: fresh world-loot rolls <=1 slot-pool trait per instance
+  (`rolled_traits` on player_items, rides the floor via `groundRolled`,
+  `wearsTrait` folds template ∪ instance). Phase 2: nine legendary wearables,
+  one per boss/elite, each a trait-combo the lottery can't produce. Original
+  design notes kept below for the record; v2 upgrade (instanced rail to kill the
+  same-floor roll-smear) and more legends remain open.
+  *(rome, 2026-07-19: "roll the traits"; the trait ledger (098) was its
+  foundation)*. THIS copy of a scavenger's coat rolled `quiet` when it
   entered the world; the next one didn't — small catalog, real variety, every
   drop worth inspecting. The shape: (1) roll at MINT (loot drops/cache spills;
   keeper stock stays plain) from a slot-appropriate, fiction-plausible pool

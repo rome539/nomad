@@ -139,7 +139,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     }
   }
   // Journal in hand and a foe to watch: study it (mid-fight it's an opening).
-  if (creatureHere && session.items.some((c) => c.journalId)) {
+  // A surveyor-map carries a journalId too (its ink rides the journal rail, 097),
+  // so "a real journal" is journalId AND not a map — else a map offers `study`.
+  if (creatureHere && session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) {
     const firstMob = [...z.creatures.values()].find(
       (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target),
     );
@@ -209,7 +211,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (world.entryRooms.has(session.roomId) && !session.away) suggest.push("in");
     // Knowledge you carry: open a map or the journal (each pops its modal).
     if (session.items.some((c) => MAP_ITEMS.has(c.itemId))) suggest.push("map");
-    if (session.items.some((c) => c.journalId)) suggest.push("journal");
+    // A map's journalId is its ink-rail, not a book — only a true journal (has a
+    // journalId and isn't a map) offers the `journal` chip (097 overload fix).
+    if (session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) suggest.push("journal");
     // The 'inventory' chip is the one keeping-place: tapping it opens the
     // pack/lockbox(/vault) modal (the client intercepts BENCH_CHIP), always
     // up out of combat — step aside anywhere to sort, safe from any knife.

@@ -194,7 +194,9 @@ function journalTier(kills: number, studied: boolean): number {
 // remembering. It's safe to leave it in the lockbox between hunts; you just
 // can't log a thing while it's locked away. Returns where the nearest one is.
 async function whereIsJournal(z: ZoneDO, session: Session): Promise<"hand" | "stored" | "none"> {
-  if (session.items.some((c) => c.journalId || c.itemId === JOURNAL_ITEM)) return "hand";
+  // A surveyor-map carries a journalId (its ink-rail, 097) but is not a book —
+  // a real journal is a journalId that isn't a map, or the base journal item.
+  if (session.items.some((c) => (c.journalId && !MAP_ITEMS.has(c.itemId)) || c.itemId === JOURNAL_ITEM)) return "hand";
   for (const key of ["lockbox", "vault"] as const) {
     const held = await loadContainer(z.env.DB, session.pubkey, key);
     if (held.some((c) => c.itemId === JOURNAL_ITEM)) return "stored";
@@ -206,7 +208,9 @@ async function whereIsJournal(z: ZoneDO, session: Session): Promise<"hand" | "st
 // (a hyena's haul, an old full-pack spill at the counter) gets a fresh one on
 // first open — without it the row is invisible to both read and write.
 async function carriedJournals(z: ZoneDO, session: Session): Promise<CarriedItem[]> {
-  const books = session.items.filter((c) => c.journalId || c.itemId === JOURNAL_ITEM);
+  // Maps share the journalId rail (097) but are not books — exclude them, or
+  // `study`/journal-read would operate on a map.
+  const books = session.items.filter((c) => (c.journalId && !MAP_ITEMS.has(c.itemId)) || c.itemId === JOURNAL_ITEM);
   for (const b of books) {
     if (!b.journalId) {
       b.journalId = "jrn-" + uuid();
