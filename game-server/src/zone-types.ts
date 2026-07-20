@@ -18,6 +18,7 @@ export interface Session {
   items: CarriedItem[]; // pack cache; D1 is truth. serial != null = gate-sealed
   staggered: boolean; // fumbled an opening; the next hit that lands costs more
   stunned?: boolean; // a heavy dead blow rang you; you skip your next swing, then it clears
+  dying?: boolean; // a fall is being processed — re-entrancy guard so two triggers in one beat (a bleed tick + a threshold ambush) can't BOTH scatter the pack and dupe the set
   openedHeavy?: boolean; // you opened a fight with a BLUNT ambush — the heavy blow WAS your beat, so you skip the first round's swing (the foe answers before you swing again). Edged/pierce don't set this; their finesse keeps the opener + swing.
   woundedTold?: boolean; // told-once flag: you've been warned your swings went soft (under a third HP); clears when you're whole enough again
   bleedTicks?: number; // open wound: armor-ignoring ticks left before it clots (claws/teeth in the deep)

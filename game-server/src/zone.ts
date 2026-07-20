@@ -3712,7 +3712,25 @@ export class ZoneDO implements DurableObject {
     }
   }
 
+  // ONE fall per death. Two triggers can co-fire in a single beat — a bleed tick
+  // and a fresh room's ambush as you step across a threshold — and the inner
+  // handler used to run twice: the pack is only emptied AFTER the scatter's D1
+  // awaits (which don't hold the DO's input gate), so the second call still saw a
+  // full pack and scattered the set onto a SECOND floor. Picking both spills up
+  // minted real duplicate rows (rome, 2026-07-20: a sealed set duped, death text
+  // in BOTH rooms). The guard drops any co-fired second call; `finally` clears it
+  // so a death that throws mid-way can't leave you permanently unkillable.
   public async onPlayerDeath(victim: Session, tmpl: MobTemplate | null, slayerName?: string): Promise<void> {
+    if (victim.dying) return;
+    victim.dying = true;
+    try {
+      await this.onPlayerDeathInner(victim, tmpl, slayerName);
+    } finally {
+      victim.dying = false;
+    }
+  }
+
+  private async onPlayerDeathInner(victim: Session, tmpl: MobTemplate | null, slayerName?: string): Promise<void> {
     const slayer = slayerName ?? (tmpl ? tmpl.name : "their own wounds"); // tmpl null = bled out (or a wanderer's steel), no beast on the blow
     for (const c of this.creatures.values()) {
       if (c.target === victim.pubkey) c.target = null;
