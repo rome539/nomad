@@ -209,6 +209,7 @@ export const PACK_TORCH_CAP = 5;
 // (rome, 2026-07-18). Count, not a slot. grave-moss doubles as food, so it
 // rides the FOOD cap instead — no double jeopardy (dressingCapped skips edibles).
 export const PACK_DRESSING_CAP = 6;
+export const FLOOR_ITEMS_BRIEF = 3; // walking in, a floor with more loose loot than this condenses to a count — you 'look' to see it all (rome, 2026-07-20)
 export const LOCKBOX_CAP = 8; // the run closet — small, takes anything, sealed or raw
 export const FOOD_LOCKBOX_STACK = 8; // rations stack in the run closet: a kind rides ONE slot this deep, then spills to a second (rome, 2026-07-20)
 export const VAULT_CAP = 50; // the bank — deep, generous, sealed wealth only
@@ -440,11 +441,16 @@ export const STONE_MINT_ODDS = 0.25;             // ...and 1 check in 4 mints �
 // things sell out. Sometimes YOU take the last one; sometimes an off-screen
 // wanderer beat you to it (the churn — the world has other customers). A bare
 // shelf restocks on its own within the window.
-export const FENCE_OUT_MIN_MS = 30 * 60_000;
-export const FENCE_OUT_MAX_MS = 90 * 60_000;
-export const FENCE_LAST_ONE_ODDS = 0.2; // per item bought: that was his last
-export const FENCE_CHURN_MIN_MS = 2 * 3_600_000; // between off-screen customers
-export const FENCE_CHURN_MAX_MS = 4 * 3_600_000;
+// The keeper's shelf ROTATES (rome, 2026-07-20): at any time about a third of
+// his gear/oddments simply aren't on offer — not "sold out" on a bare shelf,
+// just not carried right now — and they cycle back over an hour or three. The
+// basics (food, water, dressings, torches, scrap) are always kept.
+export const FENCE_ABSENT_FRACTION = 0.33; // share of the ROTATING catalog gone at any time
+export const FENCE_OUT_MIN_MS = 60 * 60_000;  // an absent item stays gone this long...
+export const FENCE_OUT_MAX_MS = 180 * 60_000; // ...to this — "for some time", then it's back
+export const FENCE_LAST_ONE_ODDS = 0.2; // per item bought: that was his last (staples never sell out)
+export const FENCE_CHURN_MIN_MS = 20 * 60_000; // how often the shelf tops itself back up to the rotation target
+export const FENCE_CHURN_MAX_MS = 45 * 60_000;
 export const CARRION_ROOMS = new Set(["the-mass-grave", "the-bone-midden", "carrion-gallery"]);
 export const STOCK_REGROW_MIN_MS = 2 * 3_600_000;
 export const STOCK_REGROW_MAX_MS = 4 * 3_600_000;

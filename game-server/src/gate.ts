@@ -13,7 +13,7 @@ import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
-  FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS,
+  FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS } from "./zone-data";
 import { parse } from "./parser";
 import { mapRegionOf } from "./lore";
@@ -190,18 +190,30 @@ export function fenceGuard(z: ZoneDO, session: Session): string | null {
   return null;
 }
 
-// A bare shelf is a bare shelf: sold out until the keeper restocks it.
+// Whether the keeper is carrying a thing right now. An absent item isn't a
+// "bare shelf" any more (rome, 2026-07-20) — it's simply not on offer until it
+// cycles back.
 export function inStock(z: ZoneDO, itemId: string): boolean {
   return (z.fenceOut.get(itemId) ?? 0) <= Date.now();
 }
 
-// The market breathes (rome, 2026-07-11): shelves restock on their own clock,
-// and every few hours an off-screen customer buys the keeper out of some one
-// thing — the world has other wanderers, even when the wire is quiet.
+// The basics the keeper ALWAYS keeps: food, water, dressings, torches, scrap.
+// Everything else — gear and oddments — rotates in and out.
+export function fenceStaple(z: ZoneDO, itemId: string): boolean {
+  const t = z.world!.itemTemplates.get(itemId);
+  return !!t && (!!t.edible || t.staunch > 0 || itemId === TORCH_ITEM || itemId === SCRAP_ID);
+}
+
+// The shelf ROTATES (rome, 2026-07-20): the keeper doesn't stock his whole
+// catalog at once — about a third of his gear/oddments simply aren't carried
+// right now, and they cycle back over an hour or three. Each churn tops the
+// absent count back up to the target as items return, so the offering keeps
+// changing. Staples never rotate. (Supersedes the old "one customer buys him
+// out every few hours" — that left him carrying nearly everything, always.)
 let nextChurnAt = 0;
 export function tickFence(z: ZoneDO, now: number): void {
   for (const [itemId, at] of z.fenceOut) {
-    if (now >= at) z.fenceOut.delete(itemId); // the crate came in; the shelf fills
+    if (now >= at) z.fenceOut.delete(itemId); // it cycled back in; on offer again
   }
   if (!nextChurnAt) {
     nextChurnAt = now + randInt(FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS);
@@ -209,11 +221,14 @@ export function tickFence(z: ZoneDO, now: number): void {
   }
   if (now < nextChurnAt) return;
   nextChurnAt = now + randInt(FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS);
-  const world = z.world!;
-  const stocked = world.fenceStock.filter((s) => inStock(z, s.itemId));
-  if (stocked.length <= 1) return; // never empty the whole hatch
-  const gone = stocked[randInt(0, stocked.length - 1)];
-  z.fenceOut.set(gone.itemId, now + randInt(FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS));
+  const rotating = z.world!.fenceStock.filter((s) => !fenceStaple(z, s.itemId));
+  const target = Math.round(rotating.length * FENCE_ABSENT_FRACTION);
+  const available = rotating.filter((s) => inStock(z, s.itemId));
+  const need = target - (rotating.length - available.length); // how many more to pull off the shelf
+  for (let i = 0; i < need && available.length; i++) {
+    const [gone] = available.splice(randInt(0, available.length - 1), 1);
+    z.fenceOut.set(gone.itemId, now + randInt(FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS)); // gone "for some time", then back
+  }
 }
 
 // THE FRONT DOOR RULE (rome, 2026-07-17): the hatch, the brazier and the bench
@@ -239,15 +254,10 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
   z.enterStep(session, "trading"); // then a lateral step up to the counter
   if (walkedIn) z.send(session, "You push in out of the cold and step up to the keeper's hatch.");
   const lines = ["The keeper unshutters the hatch and lays out what he'll part with:"];
-  const bare: string[] = [];
   for (const s of [...world.fenceStock].sort((a, b) => a.cost - b.cost)) {
     const t = world.itemTemplates.get(s.itemId);
-    if (!t) continue;
-    if (!inStock(z, s.itemId)) { bare.push(t.name); continue; }
+    if (!t || !inStock(z, s.itemId)) continue; // what he isn't carrying just isn't shown — no bare shelf
     lines.push(`  ${t.name}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade`);
-  }
-  if (bare.length) {
-    lines.push(`Bare shelf-space where ${bare.join(", ")} would sit. "Come back later," he says, to nobody in particular.`);
   }
   lines.push("He deals in kind — bones, teeth, oddments. 'buy <thing>' starts a trade; 'offer <thing>' pays until he's square. He gives no change. ('out' steps you back into the world.)");
   return z.send(session, lines.join("\n"));
@@ -283,7 +293,7 @@ export function cmdBuy(z: ZoneDO, session: Session, arg: string): void {
   });
   if (!stock) return z.send(session, "The keeper shrugs. He doesn't carry that.");
   if (!inStock(z, stock.itemId)) {
-    return z.send(session, "The keeper spreads his hands — fresh out. The shelf behind him is bare where it would sit. Come back later.");
+    return z.send(session, "The keeper shakes his head. \"Not carrying that just now. Check back — it comes and goes.\"");
   }
   z.enterStep(session, "trading"); // safe at the counter until you step away
   z.send(session, startBuy(z, session, stock) + " ('offer nothing' walks away.)");
@@ -367,7 +377,7 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   for (const w of trade.wants) {
     // Sometimes yours was the last one on the shelf — the market is finite,
     // and the next wanderer finds bare wood where this sat.
-    if (inStock(z, w.itemId) && chance(FENCE_LAST_ONE_ODDS)) {
+    if (inStock(z, w.itemId) && !fenceStaple(z, w.itemId) && chance(FENCE_LAST_ONE_ODDS)) {
       z.fenceOut.set(w.itemId, Date.now() + randInt(FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS));
       const t = world.itemTemplates.get(w.itemId);
       if (t) lastOnes.push(t.name);
@@ -494,7 +504,7 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
   let note: string | undefined;
   if (action === "buy") {
     if (typeof frame.row === "string" && !inStock(z, frame.row)) {
-      return sendTrade(z, session, "The keeper spreads his hands — fresh out of that. Come back later.");
+      return sendTrade(z, session, "The keeper shakes his head — he isn't carrying that just now. It comes and goes; check back.");
     }
     const stock = world.fenceStock.find((s) => s.itemId === frame.row);
     note = stock ? startBuy(z, session, stock) : undefined;

@@ -364,7 +364,7 @@ function agedProse(itemId: string, edible: boolean, at: number | undefined): str
 export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise<void> {
   // A deliberate look always gives the full scene — and marks the room known,
   // so from here you get the brief view unless you ask again.
-  if (!arg) { session.visited.add(session.roomId); return z.send(session, z.describeRoom(session, true)); }
+  if (!arg) { session.visited.add(session.roomId); return z.send(session, z.describeRoom(session, true, true)); }
   const world = z.world!;
 
   if (arg === "self" || arg === "me" || arg === "myself") return z.send(session, selfExamine(z, session));
@@ -424,14 +424,21 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
       ? " " + heartProse(z.groundHeart.get(`${groundItem}@${session.roomId}`))
       : "";
     const floorRoll = z.rolledTell(parseTraits(z.groundRolled.get(`${groundItem}@${session.roomId}`)));
-    return z.send(session, t.description + z.itemStat(t) + floorRoll + wearClause(z, cond) + floorLedger + floorHeart);
+    // Say WHERE it is, so a floor piece never reads the same as the twin on your
+    // body — 'look' checks the floor first, so this is the one at your feet.
+    return z.send(session, t.description + z.itemStat(t) + floorRoll + wearClause(z, cond) + " It lies here on the stones." + floorLedger + floorHeart);
   }
   const carried = z.findCarried(session, arg);
   if (carried) {
     const t = world.itemTemplates.get(carried.itemId)!;
+    // WHERE it is on you: in hand, worn, or stowed — so the piece you're using
+    // never reads the same as its twin at your feet or in the pack.
+    const where = carried.equipped
+      ? (t.slot === "weapon" ? " It's in your hand." : " You have it on.")
+      : " It's in your pack.";
     return z.send(
       session,
-      t.description + z.itemStat(t) + z.rolledTell(carried.rolledMap) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
+      t.description + z.itemStat(t) + z.rolledTell(carried.rolledMap) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined) + where
         + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
         + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : "")
         + agedProse(carried.itemId, !!t.edible, carried.acquiredAt),

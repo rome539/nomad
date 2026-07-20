@@ -77,7 +77,7 @@ import {
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
   GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, STRAY_DECAY,
   MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
-  FOOD_LOCKBOX_STACK,
+  FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
@@ -3917,7 +3917,10 @@ export class ZoneDO implements DurableObject {
 
   // full=false is the brief view: the static scene-setting (the prose, the
   // keeper who is always there) is dropped, leaving only what's live.
-  public describeRoom(session: Session, full = true): string {
+  // itemized=true lists every loose item on the floor (a deliberate `look`);
+  // walking in leaves it false, so a littered floor condenses to a count
+  // instead of a wall of "X lies here" lines (rome, 2026-07-20).
+  public describeRoom(session: Session, full = true, itemized = false): string {
     const world = this.world!;
     const room = world.rooms.get(session.roomId)!;
     // The lightless deep: without a flame you see nothing here — not the room,
@@ -3953,6 +3956,10 @@ export class ZoneDO implements DurableObject {
       if (this.roomLit(room.id)) lines.push("A torch burns on the floor here, throwing the dark back off the walls.");
       const curing = this.curingCount(room.id);
       const shownCure: Record<string, number> = {};
+      // Loose loot is COLLECTED, not spilled line-by-line: on entry a big pile
+      // condenses to a count; a deliberate `look` (itemized) lists it in full.
+      // Curing racks show either way — they're your process, not scatter.
+      const loose: string[] = [];
       for (const itemId of this.ground.get(room.id) ?? []) {
         const t = world.itemTemplates.get(itemId);
         if (!t) continue;
@@ -3961,14 +3968,24 @@ export class ZoneDO implements DurableObject {
         // A lottery piece reads its rolled adjective on the stone (099) — the
         // find is visible before you stoop, which is the whole thrill.
         const shown = cap(this.floorName(itemId, room.id));
-        lines.push(shownCure[itemId] <= (curing[itemId] ?? 0)
-          ? `${shown} hangs in the smoke-racks, curing.`
-          : `${shown} lies here.`);
+        if (shownCure[itemId] <= (curing[itemId] ?? 0)) lines.push(`${shown} hangs in the smoke-racks, curing.`);
+        else loose.push(`${shown} lies here.`);
       }
-      // A dropped journal lies here too — someone's abandoned or spilled hunting.
+      // A dropped journal (or an unrolled map) lies here too — someone's spilled
+      // hunting. A map isn't a book: it doesn't read "pages open to the dark".
       for (const inst of this.groundInstances.get(room.id) ?? []) {
         const t = world.itemTemplates.get(inst.itemId);
-        if (t) lines.push(`${cap(t.name)} lies here, its pages open to the dark.`);
+        if (!t) continue;
+        loose.push(MAP_ITEMS.has(inst.itemId)
+          ? `${cap(t.name)} lies here, unrolled and going soft in the damp.`
+          : `${cap(t.name)} lies here, its pages open to the dark.`);
+      }
+      // The wall of loot becomes a glance you can act on: a count and a nudge to
+      // look. Below the threshold it just reads out — a couple of things is no wall.
+      if (itemized || loose.length <= FLOOR_ITEMS_BRIEF) {
+        for (const l of loose) lines.push(l);
+      } else if (loose.length) {
+        lines.push(`Loot lies scattered across the stones — ${loose.length} things in all. ('look' to pick them out.)`);
       }
       for (const cache of world.caches) {
         if (this.cacheRoomId(cache) !== room.id) continue;
