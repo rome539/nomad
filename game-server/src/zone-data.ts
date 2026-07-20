@@ -1579,6 +1579,41 @@ export const SLICK_BREAK_BONUS = 0.25; // added to SEIZE_BREAK_ODDS
 //               thorns's cousin on the other axis: burst vs armor-ignoring
 //               drip. HOLLOW attackers don't bleed, same as everywhere.
 
+// ---- THE TRAIT LOTTERY (099): rolls for breadth, templates for legends ----
+// A fresh piece of world-loot may enter the world carrying ONE rolled trait on
+// top of its template's own — most roll nothing. This turns a small catalog
+// into a whole loot table: one scavenger's coat template shows up plain, or
+// felt-lined (quiet), or boiled (wardhide), each a real mechanical difference,
+// not a reskin. The keeper's stock never rolls (bought gear is dependable), and
+// the roll only ever ADDS a trait a piece could plausibly have — structural
+// traits that DEFINE a piece (wall, reach, two-handed, pierce, mancatcher,
+// riposte, thorns) are never in the pool. Only traits with a live system hook
+// and a slot-honest fiction sit here; a new ability becomes rollable the day it
+// joins its slot's list. Read via rolledMap ∪ the template (wearsTrait, 099).
+export const TRAIT_ROLL_ODDS = 0.18; // odds a fresh gear drop carries a rolled trait at all
+export const TRAIT_POOL: Record<string, string[]> = {
+  feet:  ["quiet", "slick"],            // felt-lined tread, eel-greased sole
+  cloak: ["quiet", "slick", "strapped"],// a muffled / oiled / lashed-down wrap
+  armor: ["padded", "wardhide", "strapped"], // quilted, boiled, buckled tight
+  helm:  ["padded"],                    // an arming cap sewn in
+};
+// The adjective a rolled trait wears in an item's name ("a muffled cloak"). One
+// per tag — the piece advertises WHAT it rolled; the paperdoll spells the effect
+// out once it's worn (wearsTrait feeds the sheet).
+export const TRAIT_ADJ: Record<string, string> = {
+  quiet: "muffled", slick: "oiled", padded: "quilted", wardhide: "boiled", strapped: "buckled",
+};
+// What `look` says about a rolled trait — the reason the piece is worth more than
+// its plain twin, in the game's voice, with the mechanic named in parens to
+// match itemStat's tells. Only the lottery pool needs entries (099).
+export const ROLLED_TELL: Record<string, string> = {
+  quiet: "Worked soft — it makes no sound as you move (quiet).",
+  slick: "Greased slick — a grasping hand slides right off it (slick).",
+  padded: "Quilted through — it soaks up a ringing blow (wards stun).",
+  wardhide: "Boiled hard — it turns a cut that would open you (wards wounds).",
+  strapped: "Lashed down tight — no cutpurse lifts it off you (strapped).",
+};
+
 // ---- the verdigris-thing: the extraction monster (047) ----
 // CORRODERS eat your KIT, not your blood: each landed blow blooms green on one
 // random worn piece (armor slots + shield, never the weapon in your moving

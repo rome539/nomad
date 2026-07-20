@@ -70,7 +70,7 @@ const B_META = "b:meta";
 // field and the store silently forgets it on restart" is a tsc error, not a
 // haunting.
 type PerBlobField = "creatures" | "ground" | "groundInstances" | "groundCond"
-  | "groundLore" | "groundHeart" | "groundTorch" | "traces";
+  | "groundLore" | "groundRolled" | "groundHeart" | "groundTorch" | "traces";
 type MetaField = Exclude<keyof SimState, PerBlobField>;
 const META_FIELDS = [
   "savedAt", "regrow", "arrivals", "openDoors", "doorCloseAt", "fenceOut",
@@ -137,6 +137,7 @@ interface RoomBundle {
   i?: GroundInstance[]; // instanced (journals)
   c?: Record<string, number>; // itemId -> condition
   l?: Record<string, string>; // itemId -> loreId
+  r?: Record<string, string>; // itemId -> rolled_traits (099)
   h?: Record<string, number>; // itemId -> heart cut-time
   t?: number; // a torch burning on the floor, until (ms)
   tr?: Trace[]; // traces
@@ -160,13 +161,14 @@ function byRoom<T>(rec: Record<string, T> | undefined): Map<string, [string, T][
 function groundBlob(state: SimState): string {
   const conds = byRoom(state.groundCond);
   const lores = byRoom(state.groundLore);
+  const rolls = byRoom(state.groundRolled);
   const hearts = byRoom(state.groundHeart);
   const rooms = [...new Set<string>([
     ...Object.keys(state.ground),
     ...Object.keys(state.groundInstances ?? {}),
     ...Object.keys(state.groundTorch ?? {}),
     ...Object.keys(state.traces ?? {}),
-    ...conds.keys(), ...lores.keys(), ...hearts.keys(),
+    ...conds.keys(), ...lores.keys(), ...rolls.keys(), ...hearts.keys(),
   ])].sort();
   const out: Record<string, RoomBundle> = {};
   for (const roomId of rooms) {
@@ -179,6 +181,8 @@ function groundBlob(state: SimState): string {
     if (c && c.length) b.c = sortedRecord(c);
     const l = lores.get(roomId);
     if (l && l.length) b.l = sortedRecord(l);
+    const r = rolls.get(roomId);
+    if (r && r.length) b.r = sortedRecord(r);
     const h = hearts.get(roomId);
     if (h && h.length) b.h = sortedRecord(h);
     const t = (state.groundTorch ?? {})[roomId];
@@ -215,6 +219,7 @@ function emptyState(): Record<string, unknown> {
     groundInstances: {} as Record<string, GroundInstance[]>,
     groundCond: {} as Record<string, number>,
     groundLore: {} as Record<string, string>,
+    groundRolled: {} as Record<string, string>,
     groundHeart: {} as Record<string, number>,
     groundTorch: {} as Record<string, number>,
     traces: {} as Record<string, Trace[]>,
@@ -231,6 +236,7 @@ function expandBundle(state: Record<string, unknown>, roomId: string, b: RoomBun
   if (b.i) (state.groundInstances as Record<string, GroundInstance[]>)[roomId] = b.i;
   for (const [itemId, cond] of Object.entries(b.c ?? {})) (state.groundCond as Record<string, number>)[`${itemId}@${roomId}`] = cond;
   for (const [itemId, lore] of Object.entries(b.l ?? {})) (state.groundLore as Record<string, string>)[`${itemId}@${roomId}`] = lore;
+  for (const [itemId, roll] of Object.entries(b.r ?? {})) (state.groundRolled as Record<string, string>)[`${itemId}@${roomId}`] = roll;
   for (const [itemId, at] of Object.entries(b.h ?? {})) (state.groundHeart as Record<string, number>)[`${itemId}@${roomId}`] = at;
   if (b.t) (state.groundTorch as Record<string, number>)[roomId] = b.t;
   if (b.tr) (state.traces as Record<string, Trace[]>)[roomId] = b.tr;

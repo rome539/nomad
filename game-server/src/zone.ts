@@ -46,6 +46,7 @@ import {
   type Cache,
   trait,
   hasTrait,
+  parseTraits,
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
@@ -88,6 +89,7 @@ import {
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
+  TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL,
   DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
@@ -132,6 +134,7 @@ export class ZoneDO implements DurableObject {
   public groundCond = new Map<string, number>(); // "itemId@roomId" -> condition of gear on the floor, so wear survives a drop/pickup
   public groundTorch = new Map<string, number>(); // roomId -> ms epoch a torch dropped/fallen onto the floor keeps burning until; while now < it the room is lit for EVERYONE in it, and it's an open flame (fire-fear flees, lurkers can't spring). Burns its remaining life down, then guts out.
   public groundLore = new Map<string, string>(); // "itemId@roomId" -> the engraving on floor gear, so the mark survives the stones (077)
+  public groundRolled = new Map<string, string>(); // "itemId@roomId" -> what this copy rolled (099), so a lottery trait survives a drop/pickup like the engraving does
   public groundHeart = new Map<string, number>(); // "itemId@roomId" -> a dropped heart's cut-time: the stones don't make it fresh again
   // Who is INSIDE. A session is rebuilt from nothing on every connect, so without
   // this a dropped socket threw you out the gatehouse door and into the dungeon —
@@ -265,6 +268,7 @@ export class ZoneDO implements DurableObject {
       this.groundCond = new Map(Object.entries(saved.groundCond ?? {}));
       this.groundTorch = new Map(Object.entries(saved.groundTorch ?? {}));
       this.groundLore = new Map(Object.entries(saved.groundLore ?? {}));
+      this.groundRolled = new Map(Object.entries(saved.groundRolled ?? {}));
       this.groundHeart = new Map(Object.entries(saved.groundHeart ?? {}));
       this.inGatehouse = new Set(saved.inGatehouse ?? []);
       this.wallMarks = new Set(saved.wallMarks ?? []);
@@ -471,6 +475,7 @@ export class ZoneDO implements DurableObject {
       groundCond: Object.fromEntries(this.groundCond),
       groundTorch: Object.fromEntries(this.groundTorch),
       groundLore: Object.fromEntries(this.groundLore),
+      groundRolled: Object.fromEntries(this.groundRolled),
       groundHeart: Object.fromEntries(this.groundHeart),
       inGatehouse: [...this.inGatehouse],
       wallMarks: [...this.wallMarks],
@@ -513,6 +518,7 @@ export class ZoneDO implements DurableObject {
     this.groundCond.clear();
     this.groundTorch.clear();
     this.groundLore.clear();
+    this.groundRolled.clear();
     this.groundHeart.clear();
     this.wallMarks.clear(); // a fresh world has fresh plaster — old room ids mean nothing here
     this.cacheSpent.clear();
@@ -1253,6 +1259,7 @@ export class ZoneDO implements DurableObject {
       this.stampFresh(session.roomId, carried.itemId);
       if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // a thrown blade (or stone) keeps its wear where it lands
       if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // and the engraving rides the landing
+      if (carried.rolledTraits) this.groundRolled.set(`${carried.itemId}@${session.roomId}`, carried.rolledTraits); // and whatever it rolled (099)
       if (itmpl.edible && !FOOD_KEEPS.has(carried.itemId)) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
       // A thrown consumable lies off its spawn floor now — the stray law applies
       // the same as a drop (this landing was the gap that let thrown copies
@@ -1307,6 +1314,7 @@ export class ZoneDO implements DurableObject {
     this.stampFresh(session.roomId, carried.itemId);
     if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // wear rides the landing
     if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // the engraving too
+    if (carried.rolledTraits) this.groundRolled.set(`${carried.itemId}@${session.roomId}`, carried.rolledTraits); // its roll too (099)
     // The noise-throw's landing obeys the stray law too — a lure you retrieve
     // in minutes never notices; only the abandoned copy spoils.
     this.armStrayDecay(session.roomId);
@@ -1430,12 +1438,14 @@ export class ZoneDO implements DurableObject {
       // Into the pack if it fits; if you're full, it spills to the floor rather
       // than vanish — pick it up when you've made room. Coffer gear is `kept` —
       // stored and preserved, so it comes out better than corpse-stripped gear.
-      if (await this.grantItem(session, item.id, { kept: true })) {
+      const rolled = this.rollTraits(item); // one roll, used whichever way it lands (099)
+      if (await this.grantItem(session, item.id, { kept: true, rolledTraits: rolled })) {
         this.send(session, `Inside: ${item.name}.${this.itemStat(item)} [${item.rarity}] ${this.lootSuffix(item)}`);
       } else {
         this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), item.id]);
         this.stampFresh(session.roomId, item.id);
         if (item.slot !== "") this.groundCond.set(`${item.id}@${session.roomId}`, rollGearCondition(item.slot, true));
+        if (rolled) this.groundRolled.set(`${item.id}@${session.roomId}`, rolled);
         this.send(session, `Inside: ${item.name}.${this.itemStat(item)} [${item.rarity}] — but your pack is full, so it falls at your feet.`);
       }
     }
@@ -1869,16 +1879,20 @@ export class ZoneDO implements DurableObject {
   // Mint one item into the pack, if there's room. Returns the row, or null when
   // the pack is full (the caller decides: refuse, or spill to the ground). The
   // single doorway for loot onto the body — cap enforcement lives here.
-  public async grantItem(session: Session, itemId: string, opts?: { condition?: number; kept?: boolean; journalId?: string }): Promise<CarriedItem | null> {
+  public async grantItem(session: Session, itemId: string, opts?: { condition?: number; kept?: boolean; journalId?: string; rolledTraits?: string }): Promise<CarriedItem | null> {
     if (!this.packRoom(session, itemId)) return null;
     const rowId = uuid();
     // Gear arrives already used — pristine is rare. `kept` gear (a sealed coffer's)
     // is better preserved than what's stripped off the dead. Non-gear rolls 100.
     const slot = this.world!.itemTemplates.get(itemId)?.slot ?? "";
     const condition = opts?.condition ?? rollGearCondition(slot, opts?.kept ?? false);
-    const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, journalId: opts?.journalId, acquiredAt: Math.floor(Date.now() / 1000) };
+    // The lottery trait comes from the caller (a fresh mint rolls; a pickup off
+    // the floor hands its stored roll back). grantItem never rolls on its own —
+    // that keeps quest/gift grants and keeper stock plain unless told otherwise.
+    const rolledTraits = opts?.rolledTraits ?? "";
+    const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, journalId: opts?.journalId, acquiredAt: Math.floor(Date.now() / 1000), rolledTraits: rolledTraits || undefined, rolledMap: parseTraits(rolledTraits) };
     session.items.push(carried);
-    await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null, carried.condition);
+    await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null, carried.condition, carried.acquiredAt, rolledTraits);
     if (opts?.journalId) await setItemJournalId(this.env.DB, rowId, opts.journalId);
     return carried;
   }
@@ -3363,6 +3377,7 @@ export class ZoneDO implements DurableObject {
       this.groundHeart.delete(key);
       this.groundCond.delete(key);
       this.groundLore.delete(key);
+      this.groundRolled.delete(key);
     }
   }
 
@@ -3440,6 +3455,7 @@ export class ZoneDO implements DurableObject {
       this.stampFresh(session.roomId, weapon.carried.itemId);
       this.groundCond.set(`${weapon.carried.itemId}@${session.roomId}`, weapon.carried.condition); // a dropped blade keeps its wear when you snatch it back
       if (weapon.carried.loreId) this.groundLore.set(`${weapon.carried.itemId}@${session.roomId}`, weapon.carried.loreId); // and its mark
+      if (weapon.carried.rolledTraits) this.groundRolled.set(`${weapon.carried.itemId}@${session.roomId}`, weapon.carried.rolledTraits); // and its roll (099)
       this.send(session, `Your swing goes wide — ${weapon.tmpl.name} spins from your grip and clatters across the stones!`
         + (weapon.carried.serial !== null ? " The seal cracks where it lands." : ""), "fumble");
       this.roomFeed(session.roomId, `${session.name}'s weapon clatters across the stones!`, session.pubkey, false);
@@ -3586,12 +3602,14 @@ export class ZoneDO implements DurableObject {
     if (tmpl.loot_item && chance(tmpl.loot_chance)) {
       const item = this.world!.itemTemplates.get(tmpl.loot_item);
       if (item) {
-        if (await this.grantItem(killer, item.id)) {
+        const rolled = this.rollTraits(item); // one roll, whichever way it lands (099)
+        if (await this.grantItem(killer, item.id, { rolledTraits: rolled })) {
           this.send(killer, `${cap(item.name)} falls into your hands. [${item.rarity}] ${this.lootSuffix(item)}`);
         } else {
           this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), item.id]);
           this.stampFresh(creature.roomId, item.id);
-          this.send(killer, `${cap(item.name)} falls from ${tmpl.name} — your pack is full, so it lies here. [${item.rarity}]`);
+          if (rolled) this.groundRolled.set(`${item.id}@${creature.roomId}`, rolled);
+          this.send(killer, `${cap(this.floorName(item.id, creature.roomId))} falls from ${tmpl.name} — your pack is full, so it lies here. [${item.rarity}]`);
         }
         // Same rule as a pickup off the floor: junk stays in the room. Only a
         // rare+ find is worth the wire — nobody outside needs to hear that
@@ -3631,8 +3649,13 @@ export class ZoneDO implements DurableObject {
           // Gear off the dead is battered — it fought in this, and lost. Stamp it
           // scavenged so its wear sticks when the killer stoops for it.
           if (g.slot !== "") this.groundCond.set(`${id}@${creature.roomId}`, rollGearCondition(g.slot, false));
-          this.send(killer, `${cap(g.name)} clatters free of the fallen — it lies here. [${g.rarity}]`);
-          this.roomFeed(creature.roomId, `${cap(g.name)} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, killer.pubkey, false); // local: loot on the ground is a shopping-list beacon
+          // A fresh piece off the dead is world-loot: it may have rolled a trait
+          // (099). Set it before the message so the name reads what it rolled.
+          const rolled = this.rollTraits(g);
+          if (rolled) this.groundRolled.set(`${id}@${creature.roomId}`, rolled);
+          const shown = cap(this.floorName(id, creature.roomId));
+          this.send(killer, `${shown} clatters free of the fallen — it lies here. [${g.rarity}]`);
+          this.roomFeed(creature.roomId, `${shown} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, killer.pubkey, false); // local: loot on the ground is a shopping-list beacon
         }
       }
       this.ground.set(creature.roomId, floor);
@@ -3732,6 +3755,7 @@ export class ZoneDO implements DurableObject {
         }
         if (c.serial !== null) await voidMint(this.env.DB, c.serial);
         if (this.isGear(c.itemId)) this.groundCond.set(`${c.itemId}@${fell}`, c.condition); // the spill keeps its wear
+        if (c.rolledTraits) this.groundRolled.set(`${c.itemId}@${fell}`, c.rolledTraits); // and whatever it rolled — the looter inherits the roll (099)
         // The scar: an engraved piece writes its owner's death into the ledger,
         // and the mark rides the stones for whoever takes it up next. Your gear
         // loses you — and carries you.
@@ -3924,9 +3948,12 @@ export class ZoneDO implements DurableObject {
         if (!t) continue;
         shownCure[itemId] = (shownCure[itemId] ?? 0) + 1;
         // The first N copies (N = curing timers) hang in the racks; the rest are loose.
+        // A lottery piece reads its rolled adjective on the stone (099) — the
+        // find is visible before you stoop, which is the whole thrill.
+        const shown = cap(this.floorName(itemId, room.id));
         lines.push(shownCure[itemId] <= (curing[itemId] ?? 0)
-          ? `${cap(t.name)} hangs in the smoke-racks, curing.`
-          : `${cap(t.name)} lies here.`);
+          ? `${shown} hangs in the smoke-racks, curing.`
+          : `${shown} lies here.`);
       }
       // A dropped journal lies here too — someone's abandoned or spilled hunting.
       for (const inst of this.groundInstances.get(room.id) ?? []) {
@@ -4186,8 +4213,11 @@ export class ZoneDO implements DurableObject {
 
   public findCarried(session: Session, arg: string): CarriedItem | null {
     for (const c of session.items) {
-      const t = this.world!.itemTemplates.get(c.itemId);
-      if (t && nameMatches(t.name, arg)) return c;
+      // Match the name as SHOWN — a rolled piece reads "a muffled coat", so
+      // "muffled" must target it, and a rolled copy must be distinguishable from
+      // a plain one by its adjective (099). displayName == template name when
+      // nothing rolled, so this is identical for all existing gear.
+      if (this.world!.itemTemplates.get(c.itemId) && nameMatches(this.displayName(c), arg)) return c;
     }
     return null;
   }
@@ -4306,9 +4336,69 @@ export class ZoneDO implements DurableObject {
   // live on the item row — "padded", "quiet", "slick" — not in code sets.)
   public wearsTrait(session: Session, tag: string): boolean {
     for (const c of session.items) {
-      if (c.equipped && hasTrait(this.world!.itemTemplates.get(c.itemId), tag)) return true;
+      if (!c.equipped) continue;
+      // A worn piece carries the tag if its TEMPLATE has it (098) OR THIS copy
+      // rolled it (099) — the two layers read as one, so a felt-lined boot is as
+      // quiet as one the smith made quiet. This is the single fold-in point:
+      // every mechanical trait consumed off worn gear routes through here.
+      if (hasTrait(this.world!.itemTemplates.get(c.itemId), tag)) return true;
+      if ((c.rolledMap?.get(tag) ?? 0) > 0) return true;
     }
     return false;
+  }
+
+  // THE TRAIT LOTTERY (099). A fresh piece of world-loot may enter carrying one
+  // rolled trait from its slot's pool — most roll nothing, and the roll never
+  // duplicates what the template already grants (no double-quiet, no god-roll).
+  // Returns a comma list (one tag, or ""). Keeper stock and already-owned gear
+  // never call this — only fresh mints do.
+  public rollTraits(tmpl: ItemTemplate | undefined): string {
+    if (!tmpl || tmpl.slot === "") return "";
+    const pool = TRAIT_POOL[tmpl.slot];
+    if (!pool || !chance(TRAIT_ROLL_ODDS)) return "";
+    const options = pool.filter((t) => !hasTrait(tmpl, t));
+    return options.length ? pick(options) : "";
+  }
+
+  // An item's name as it reads on the shelf and the floor, with its rolled trait
+  // worn as an adjective ("a muffled cloak"). The paperdoll spells out what the
+  // trait DOES once the piece is worn; the name just advertises that it's there.
+  public displayName(c: CarriedItem): string {
+    const base = this.world!.itemTemplates.get(c.itemId)?.name ?? c.itemId;
+    return this.rolledName(base, c.rolledMap);
+  }
+
+  // What `look` appends for a rolled piece — the flavor + mechanic of whatever it
+  // rolled (099). itemStat reads the TEMPLATE, so it never sees an instance roll;
+  // this fills that in. Empty for plain gear. Leading space, sentence per trait.
+  public rolledTell(rolled?: Map<string, number>): string {
+    if (!rolled?.size) return "";
+    const tells: string[] = [];
+    for (const tag of rolled.keys()) { const s = ROLLED_TELL[tag]; if (s) tells.push(s); }
+    return tells.length ? " " + tells.join(" ") : "";
+  }
+
+  // The same, for a template id + a rolled string sitting on the floor (glance).
+  public floorName(itemId: string, roomId: string): string {
+    const base = this.world!.itemTemplates.get(itemId)?.name ?? itemId;
+    const rolled = this.groundRolled.get(`${itemId}@${roomId}`);
+    return rolled ? this.rolledName(base, parseTraits(rolled)) : base;
+  }
+
+  // Fold the first rolled tag's adjective into a name, after the article:
+  // "a scavenger's coat" + quiet -> "a muffled scavenger's coat". The a/an
+  // article re-agrees with the adjective now leading ("an oiled wrap", "a
+  // quilted cap"); "the" and article-less names ("boots") are left alone.
+  private rolledName(base: string, rolled?: Map<string, number>): string {
+    if (!rolled?.size) return base;
+    let adj = "";
+    for (const tag of rolled.keys()) { adj = TRAIT_ADJ[tag] ?? ""; if (adj) break; }
+    if (!adj) return base;
+    const m = base.match(/^(an? |the )/i);
+    if (!m) return `${adj} ${base}`;
+    const rest = base.slice(m[0].length);
+    const article = /^the /i.test(m[0]) ? m[0] : (/^[aeiou]/i.test(adj) ? "an " : "a ");
+    return `${article}${adj} ${rest}`;
   }
 
   // The wanderer, taken in at a glance: everything the combat math derives from

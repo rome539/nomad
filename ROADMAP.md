@@ -299,6 +299,25 @@ Directions rome likes and wants held. Design only; no code until he says go.
   reskin-hurt is real only as (a) adjective-spam across bases, (b) value
   compression if authored variants undercut the lottery's scarcity, (c)
   balance surface sprawl. Every row must earn its name.
+  **SCOPE ACCEPTED (rome, 2026-07-20 — "this sounds good", designed not built).**
+  Growth math: ~40 droppable templates × (1 base + ~3 slot-pool rolls) ≈ ~160
+  felt finds from the rows we already have; the catalog barely grows (the point).
+  FORWARD-COMPAT is the real test and it holds: a new trait = one line added to
+  its slot's pool (instantly roll-able on every item in that slot, the moment its
+  one-line hook exists); new gear = a DB row (ledger already), inherits its slot's
+  pool automatically — both growth paths stay one-liners, the lottery is the
+  amplifier UNDER whatever we add next. Build shape (one focused ~1-day pass, like
+  the ledger): (1a) mig adds `rolled_traits` to player_items + `rolledTraits` on
+  CarriedItem + `effTrait/effHasTrait` folding instance ∪ template — the read-path
+  swap at combat sites is the only real risk, do it COMPILER-GUIDED (tsc
+  enumerates the sites the way it did for the ledger); (1b) roll-at-mint + slot
+  pool (code map, tunable, no reship) + display-name suffix + floor survival.
+  DECIDED defaults: survival rides the condition rail (`groundRolled` map mirrors
+  `groundCond`, scalar-simple, accepts the same rare same-floor collision
+  condition already does — upgrade to the instanced journal rail ONLY if it
+  bites); roll is VISIBLE on the floor (the adjective shows in the room glance —
+  the extraction thrill). Legends = a later, separate content pass (a few
+  hand-authored variant rows + a rare drop-weight, ~zero engine code).
 
 - **Day and night** *(rome likes it, 2026-07-17 — "a bigger feature, more
   thought needed"; design only)*. Today NOMAD has NO clock: "tonight" is pure

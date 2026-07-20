@@ -8,7 +8,7 @@ import type { CarriedItem, ItemTemplate } from "./world";
 import {
   setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
   journalLoad, mapInkLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
-  setItemLoreId, deedsBump, trait, hasTrait,
+  setItemLoreId, deedsBump, trait, hasTrait, parseTraits,
 } from "./world";
 import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
@@ -412,7 +412,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // touch) — and so does the dark.
   const groundItem = blind || events.tideFlooded(z, session.roomId)
     ? null
-    : findItemIn(z, z.ground.get(session.roomId) ?? [], arg);
+    : findItemIn(z, z.ground.get(session.roomId) ?? [], arg, session.roomId);
   if (groundItem) {
     const t = world.itemTemplates.get(groundItem)!;
     const cond = z.isGear(groundItem) ? z.groundCond.get(`${groundItem}@${session.roomId}`) ?? 100 : undefined;
@@ -423,14 +423,15 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     const floorHeart = groundItem === DEEP_HEART
       ? " " + heartProse(z.groundHeart.get(`${groundItem}@${session.roomId}`))
       : "";
-    return z.send(session, t.description + z.itemStat(t) + wearClause(z, cond) + floorLedger + floorHeart);
+    const floorRoll = z.rolledTell(parseTraits(z.groundRolled.get(`${groundItem}@${session.roomId}`)));
+    return z.send(session, t.description + z.itemStat(t) + floorRoll + wearClause(z, cond) + floorLedger + floorHeart);
   }
   const carried = z.findCarried(session, arg);
   if (carried) {
     const t = world.itemTemplates.get(carried.itemId)!;
     return z.send(
       session,
-      t.description + z.itemStat(t) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
+      t.description + z.itemStat(t) + z.rolledTell(carried.rolledMap) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
         + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
         + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : "")
         + agedProse(carried.itemId, !!t.edible, carried.acquiredAt),
@@ -879,7 +880,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   const inst = takeGroundInstance(z, session.roomId, arg);
   if (inst) return getInstanced(z, session, inst);
   const here = z.ground.get(session.roomId) ?? [];
-  const itemId = findItemIn(z, here, arg);
+  const itemId = findItemIn(z, here, arg, session.roomId);
   // The torch burning on the FLOOR isn't a pack item — it's a set-down flame
   // (cmdDrop's counterpart, or a dead hand's). Taking it up puts what's LEFT of
   // its burn back in your hand and the room goes back to needing it. Matched
@@ -924,12 +925,16 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // hands with the steel (a NEW owner only enters the chain when they SEAL it).
   const loreId = z.groundLore.get(condKey);
   z.groundLore.delete(condKey);
+  // Whatever this copy rolled when it entered the world rides the stones the
+  // same way (099) — a floor piece with no entry is simply plain, never re-rolled.
+  const rolled = z.groundRolled.get(condKey) ?? "";
+  z.groundRolled.delete(condKey);
   // A heart off the floor is as old as the cut that made it — the stones give
   // back exactly what was set down, still rotting. Anything else is born now.
   const heartAt = itemId === DEEP_HEART ? z.groundHeart.get(condKey) : undefined;
   z.groundHeart.delete(condKey);
   const acquiredAt = heartAt ?? Math.floor(Date.now() / 1000);
-  const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, loreId, acquiredAt };
+  const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, loreId, acquiredAt, rolledTraits: rolled || undefined, rolledMap: parseTraits(rolled) };
   const wasBurdened = z.burdened(session); // read before the pack takes it — the crossing gets a line
   session.items.push(carried);
   // A regrowing spawn (the shrine's key, a gate's rock) keeps exactly ONE
@@ -961,7 +966,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
       });
     }
   }
-  await insertLoot(z.env.DB, rowId, session.pubkey, itemId, null, condition, acquiredAt);
+  await insertLoot(z.env.DB, rowId, session.pubkey, itemId, null, condition, acquiredAt, rolled);
   if (loreId) await setItemLoreId(z.env.DB, rowId, loreId);
   // A plain journal off the stones is a book that lost its name (a hyena's
   // haul, an old full-pack spill at the counter): give it a fresh one on the
@@ -1196,7 +1201,7 @@ export async function cmdRemove(z: ZoneDO, session: Session, arg: string): Promi
 
 export function itemLine(z: ZoneDO, c: CarriedItem): string {
   const t = z.world!.itemTemplates.get(c.itemId);
-  let s = `  ${t ? t.name : c.itemId} [${t?.rarity ?? "?"}]${z.itemStat(t)}`;
+  let s = `  ${z.displayName(c)} [${t?.rarity ?? "?"}]${z.itemStat(t)}`;
   const tags: string[] = [];
   if (c.equipped) tags.push(t?.slot === "weapon" ? "wielded" : "worn");
   if (c.serial !== null) tags.push(`sealed #${c.serial}`);
@@ -1585,7 +1590,7 @@ export async function cmdDive(z: ZoneDO, session: Session, arg: string): Promise
     return z.send(session, `You go under into cold and black, and your hands read the floor: ${found.join(", ")}. You come up gasping. (dive <thing> to bring one up)`);
   }
   // Named a thing: check by touch before committing the story to it.
-  const onFloor = !!findItemIn(z, z.ground.get(session.roomId) ?? [], arg)
+  const onFloor = !!findItemIn(z, z.ground.get(session.roomId) ?? [], arg, session.roomId)
     || (z.groundInstances.get(session.roomId) ?? []).some((i) => {
       const t = world.itemTemplates.get(i.itemId);
       return !!t && nameMatches(t.name, arg);
@@ -1823,10 +1828,15 @@ export async function getInstanced(z: ZoneDO, session: Session, inst: GroundInst
   await z.ensureAlarm();
 }
 
-export function findItemIn(z: ZoneDO, itemIds: string[], arg: string): string | null {
+export function findItemIn(z: ZoneDO, itemIds: string[], arg: string, roomId?: string): string | null {
   for (const id of itemIds) {
     const t = z.world!.itemTemplates.get(id);
-    if (t && nameMatches(t.name, arg)) return id;
+    if (!t) continue;
+    if (nameMatches(t.name, arg)) return id;
+    // On the stones, a rolled piece reads with its adjective ("a muffled coat"),
+    // so let "muffled" reach for it too (099). floorName == template name when
+    // nothing rolled here, so this changes nothing for ordinary loot.
+    if (roomId && nameMatches(z.floorName(id, roomId), arg)) return id;
   }
   return null;
 }

@@ -383,16 +383,21 @@ export interface CarriedItem {
   journalId?: string; // only a journal: the stable id its pages are keyed to
   loreId?: string; // engraved gear: the gate's mark — its deeds-ledger key, enduring past every serial (077)
   acquiredAt?: number; // unix seconds the row was cut/taken — the deep-heart rots against this
+  // THE TRAIT LOTTERY (099): what THIS copy rolled when it entered the world —
+  // a comma list like the template's, on top of the template's own tags. Blank
+  // for most gear. Parsed once into rolledMap; combat reads both (wearsTrait).
+  rolledTraits?: string;
+  rolledMap?: Map<string, number>;
 }
 
 // Carried = on the body (container ''). What sits in the lockbox or the vault
 // is loaded separately and never scatters.
 export async function loadInventory(db: D1Database, pubkey: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id, lore_id, acquired_at FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id, lore_id, acquired_at, rolled_traits FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
     .bind(pubkey)
-    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string; lore_id: string; acquired_at: number }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits) }));
 }
 
 // Persist a gear instance's worn-down condition (rounded to the D1 integer).
@@ -411,10 +416,10 @@ export async function setEquipped(db: D1Database, rowId: string, equipped: boole
 // anything that happens to the body that owns it. Condition is preserved.
 export async function loadContainer(db: D1Database, pubkey: string, container: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id, acquired_at FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id, acquired_at, rolled_traits FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
     .bind(pubkey, container)
-    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string; acquired_at: number }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits) }));
 }
 
 // Move a pack instance into a gate container, or back onto the body (''). The
@@ -463,12 +468,16 @@ export async function insertLoot(
   // found — otherwise dropping a spent heart and picking it up again would wash
   // it clean, and the ten-minute window would mean nothing.
   acquiredAt = nowSec(),
+  // What this copy rolled at mint (099). Blank for keeper stock and anything
+  // already-owned; a fresh loot drop fills it. Set at insert so the row is
+  // whole in one write, like condition.
+  rolledTraits = "",
 ): Promise<void> {
   await db
     .prepare(
-      "INSERT INTO player_items (id, pubkey, item_id, acquired_at, event_id, condition) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO player_items (id, pubkey, item_id, acquired_at, event_id, condition, rolled_traits) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
-    .bind(id, pubkey, itemId, acquiredAt, eventId, condition)
+    .bind(id, pubkey, itemId, acquiredAt, eventId, condition, rolledTraits)
     .run();
 }
 

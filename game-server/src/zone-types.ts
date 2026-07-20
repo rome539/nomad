@@ -184,6 +184,7 @@ export interface SimState {
   groundCond?: Record<string, number>; // "itemId@roomId" -> condition of gear on the floor, so wear survives drop/pickup
   groundTorch?: Record<string, number>; // roomId -> ms epoch a torch burning on the floor lasts until (a dropped/fallen flame lighting the room for all in it)
   groundLore?: Record<string, string>; // "itemId@roomId" -> lore_id of engraved gear on the floor, so the mark survives too (077)
+  groundRolled?: Record<string, string>; // "itemId@roomId" -> rolled_traits of lottery gear on the floor, so the roll survives a drop/pickup (099)
   groundHeart?: Record<string, number>; // "itemId@roomId" -> a dropped heart's acquired_at, so the floor can't wash its rot off
   inGatehouse?: string[]; // pubkeys standing INSIDE — a dropped socket must not throw you out the door
   wallMarks?: string[]; // roomIds carved onto the gatehouse wall chart — the players' own map of the shallow ring

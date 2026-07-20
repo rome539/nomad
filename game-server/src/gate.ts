@@ -1104,7 +1104,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
       const gear = z.isGear(c.itemId);
       return {
         row: c.rowId,
-        name: t ? t.name : c.itemId,
+        name: z.displayName(c), // carries its rolled adjective, if any (099)
         rarity: t?.rarity ?? "common",
         slot: t?.slot ?? "",
         sealed: c.serial !== null,
