@@ -452,6 +452,48 @@ export async function setMintEvent(db: D1Database, serial: number, eventId: stri
   await db.prepare("UPDATE mints SET event_id = ? WHERE serial = ?").bind(eventId, serial).run();
 }
 
+// THE RECKONING (mig 101): a wanderer's opt-in leaderboard snapshot, written to
+// their own row when they run `publish score`. Read by both the in-game board
+// and the Gamestr broadcast — same opted-in numbers, one source of truth.
+export async function recordLeaderboard(db: D1Database, pubkey: string, legend: number, trophies: number): Promise<void> {
+  await db
+    .prepare("UPDATE players SET lb_legend = ?, lb_trophies = ?, lb_published_at = ? WHERE pubkey = ?")
+    .bind(Math.max(0, Math.round(legend)), Math.max(0, Math.round(trophies)), nowSec(), pubkey)
+    .run();
+}
+
+export interface LbEntry {
+  pubkey: string;
+  name: string;
+  score: number;
+}
+
+// The top N on a board — opted-in wanderers only, best first. `board` is a fixed
+// whitelist (never user input), so the column name is safe to interpolate.
+export async function loadLeaderboard(db: D1Database, board: "legend" | "trophies", limit: number): Promise<LbEntry[]> {
+  const col = board === "trophies" ? "lb_trophies" : "lb_legend";
+  const res = await db
+    .prepare(`SELECT pubkey, name, ${col} AS score FROM players WHERE lb_published_at IS NOT NULL AND ${col} > 0 ORDER BY ${col} DESC, lb_published_at ASC LIMIT ?`)
+    .bind(limit)
+    .all<LbEntry>();
+  return res.results ?? [];
+}
+
+// A wanderer's own rank on a board (1-based), or null if they've not entered it.
+export async function leaderboardRank(db: D1Database, pubkey: string, board: "legend" | "trophies"): Promise<{ rank: number; score: number } | null> {
+  const col = board === "trophies" ? "lb_trophies" : "lb_legend";
+  const me = await db
+    .prepare(`SELECT ${col} AS score, lb_published_at AS pub FROM players WHERE pubkey = ?`)
+    .bind(pubkey)
+    .first<{ score: number; pub: number | null }>();
+  if (!me || me.pub === null || me.score <= 0) return null;
+  const ahead = await db
+    .prepare(`SELECT COUNT(*) AS n FROM players WHERE lb_published_at IS NOT NULL AND ${col} > ?`)
+    .bind(me.score)
+    .first<{ n: number }>();
+  return { rank: (ahead?.n ?? 0) + 1, score: me.score };
+}
+
 // A claim released on purpose (dropped, eaten): the seal cracks, the ledger notes it.
 export async function voidMint(db: D1Database, serial: number): Promise<void> {
   await db.prepare("UPDATE mints SET voided_at = ? WHERE serial = ?").bind(nowSec(), serial).run();

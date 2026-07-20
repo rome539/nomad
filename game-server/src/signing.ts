@@ -9,6 +9,10 @@ import { hexToBytes, nowSec } from "./util";
 const LOOT_KIND = 1573;
 const SHEET_KIND = 31573;
 const FEED_KIND = 24913;
+const SCORE_KIND = 30762; // Gamestr leaderboard score (addressable/replaceable)
+// The Gamestr game identifier — the `game` tag and the prefix of every score's
+// addressable `d`. Lowercase-hyphenated, as their directory expects.
+export const GAME_ID = "nomad";
 // The tavern is kind 24914 — EPHEMERAL (20000-29999), so no relay stores a word
 // of it. It is deliberately NOT signed here: the gate's key signs what the
 // DUNGEON says (drops, deaths, the room feed), never what a wanderer says. Each
@@ -65,6 +69,41 @@ export function signLootEvent(env: Env, p: LootSignParams): Event {
         zone: p.zone,
       }),
     },
+    sk,
+  );
+}
+
+export interface ScoreSignParams {
+  player: string; // the wanderer's own pubkey (hex) — the SUBJECT of the score
+  board: string; // which leaderboard: "carrying" | "legend"
+  score: number;
+  content: string;
+  genres?: string[]; // Gamestr genre `t` tags
+}
+
+// A Gamestr score (kind 30762), signed by the DUNGEON's own key so it shows as
+// VERIFIED — the wanderer is named in the `p` tag but never signs their own
+// number (the world attests it; a self-signed brag would inflate). Addressable:
+// one current score per (player, board), replaced in place as it changes.
+export function signScoreEvent(env: Env, p: ScoreSignParams): Event {
+  const sk = hexToBytes(env.GAME_SK_HEX);
+  const tags: string[][] = [
+    ["d", `${GAME_ID}:${p.player}:${p.board}`],
+    ["game", GAME_ID],
+    ["score", String(Math.max(0, Math.round(p.score)))],
+    ["p", p.player],
+    ["state", "active"],
+    ["mode", "multiplayer"],
+    // `level` mirrors the board segment of `d` — Gamestr's addressable key is
+    // game-id:player:level, so the board name rides the level slot and the two
+    // boards (trophies / legend) stay distinct per wanderer.
+    ["level", p.board],
+    ["board", p.board],
+    ["v", "0"],
+  ];
+  for (const g of p.genres ?? []) tags.push(["t", g]);
+  return finalizeEvent(
+    { kind: SCORE_KIND, created_at: nowSec(), tags, content: p.content },
     sk,
   );
 }

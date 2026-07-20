@@ -8,6 +8,7 @@ import type { CarriedItem, ItemTemplate } from "./world";
 import {
   setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
   journalLoad, mapInkLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
+  loadLeaderboard, leaderboardRank,
   setItemLoreId, deedsBump, trait, hasTrait, parseTraits,
 } from "./world";
 import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState } from "./zone-util";
@@ -1307,6 +1308,42 @@ export function cmdWho(z: ZoneDO, session: Session): void {
   for (const s of awake) {
     lines.push(`  ${s.name} — ${world.rooms.get(s.roomId)?.name ?? s.roomId}`);
   }
+  z.send(session, lines.join("\n"));
+}
+
+// THE RECKONING (mig 101): the dungeon's own boards, shown to any who ask. Only
+// wanderers who chose to enter ('publish score') appear — the same opt-in law as
+// the sheet. Two boards: legend (kings, blood, and slain) and trophies (hoards).
+// Your own rank is called out even when you're nowhere near the top.
+export async function cmdLeaderboard(z: ZoneDO, session: Session): Promise<void> {
+  const TOP = 10;
+  const boards: Array<{ key: "legend" | "trophies"; head: string }> = [
+    { key: "legend", head: "— legend: kings felled, blood spilled, all slain —" },
+    { key: "trophies", head: "— trophies: the deepest hoards —" },
+  ];
+  const lines: string[] = ["THE DUNGEON'S RECKONING — the mighty, as they last spoke their names to it."];
+  for (const b of boards) {
+    const top = await loadLeaderboard(z.env.DB, b.key, TOP);
+    lines.push("", b.head);
+    if (top.length === 0) {
+      lines.push("  (no names yet — be the first: 'publish score')");
+      continue;
+    }
+    let shownSelf = false;
+    top.forEach((e, i) => {
+      const you = e.pubkey === session.pubkey;
+      if (you) shownSelf = true;
+      lines.push(`  ${String(i + 1).padStart(2)}. ${e.name.padEnd(16)} ${String(e.score).padStart(6)}${you ? "  <- you" : ""}`);
+    });
+    if (!shownSelf) {
+      const mine = await leaderboardRank(z.env.DB, session.pubkey, b.key);
+      if (mine) {
+        lines.push("   …");
+        lines.push(`  ${String(mine.rank).padStart(2)}. ${session.name.padEnd(16)} ${String(mine.score).padStart(6)}  <- you`);
+      }
+    }
+  }
+  lines.push("", "('publish score' enters you on the boards — in here, and beyond the walls.)");
   z.send(session, lines.join("\n"));
 }
 

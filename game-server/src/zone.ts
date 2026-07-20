@@ -26,6 +26,7 @@ import {
   type PlayerRow,
   recordKill,
   recordBossAssist,
+  recordLeaderboard,
   recordDeath,
   savePlayer,
   loadInventory,
@@ -52,8 +53,8 @@ import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
 import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
-import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, gamePubkey } from "./signing";
-import { publishEvent, relayList } from "./relay";
+import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
+import { publishEvent, publishScore, relayList } from "./relay";
 import * as gate from "./gate";
 import * as ai from "./ai";
 import * as simstore from "./simstore";
@@ -90,6 +91,7 @@ import {
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
+  LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL,
   DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
@@ -1010,6 +1012,7 @@ export class ZoneDO implements DurableObject {
       case "bandage": return verbs.cmdBandage(this, session, cmd.arg);
       case "light": return light.cmdLight(this, session, cmd.arg);
       case "sheet": return verbs.cmdSheet(this, session);
+      case "leaderboard": return verbs.cmdLeaderboard(this, session);
       case "carve": return verbs.cmdCarve(this, session, cmd.arg);
       case "claim": return gate.cmdClaim(this, session, cmd.arg);
       case "stash": return gate.cmdStore(this, session, cmd.arg, "lockbox");
@@ -2007,6 +2010,36 @@ export class ZoneDO implements DurableObject {
     this.groundFreshAt.set(`${itemId}@${roomId}`, Date.now());
   }
 
+  // Speak this wanderer's standing to the Gamestr leaderboards (kind 30762, signed
+  // by the DUNGEON's key so it shows as VERIFIED). ONLY on the player's say-so —
+  // `publish score`, the same opt-in law as the sheet ("the world doesn't snitch";
+  // nothing about a wanderer reaches a public directory unless they ask). Two
+  // boards: `trophies` = the barter value of every trophy they hold (pack + the
+  // gate's lockbox + vault), `legend` = lifetime combat prestige. Addressable —
+  // one current score per (player, board) — so a re-publish just overwrites.
+  public async publishScores(session: Session): Promise<void> {
+    if (!isGameKeyConfigured(this.env) || !this.world) return;
+    const trophyValue = (items: CarriedItem[]): number =>
+      items.reduce((sum, c) => sum + (this.isTrophy(c.itemId) ? (this.world!.itemTemplates.get(c.itemId)?.barter ?? 0) : 0), 0);
+    const lockbox = await loadContainer(this.env.DB, session.pubkey, "lockbox");
+    const vault = await loadContainer(this.env.DB, session.pubkey, "vault");
+    const trophies = Math.round(trophyValue(session.items) + trophyValue(lockbox) + trophyValue(vault));
+    const legend = session.bossKills * LB_BOSS_PTS + session.pvpKills * LB_PVP_PTS + session.kills;
+    if (trophies <= 0 && legend <= 0) {
+      return this.send(session, "You've nothing to put on the boards yet — no trophies, no kills to your name. Go earn a place.");
+    }
+    // Snapshot to D1 first — this is the opt-in the in-game `leaderboard` reads;
+    // the Gamestr broadcast below is the same numbers, sent beyond the walls.
+    await recordLeaderboard(this.env.DB, session.pubkey, legend, trophies);
+    const emit = (board: string, score: number, content: string): void => {
+      const ev = signScoreEvent(this.env, { player: session.pubkey, board, score, content, genres: LB_GENRES });
+      this.state.waitUntil(publishScore(this.env, ev));
+    };
+    emit("trophies", trophies, `${session.name} — ${trophies} in trophies, all told.`);
+    emit("legend", legend, `${session.name}: ${session.bossKills} bosses down, ${session.pvpKills} felled in blood, ${session.kills} slain in all.`);
+    this.send(session, `The dungeon speaks your standing to the boards: ${trophies} in trophies, a legend of ${legend}. (the leaderboard hears you)`);
+  }
+
 
 
   // Maps + the journal live in lore.ts; the region read stays here (chest
@@ -2070,9 +2103,12 @@ export class ZoneDO implements DurableObject {
       return this.send(session, "The dungeon's voice does not reach beyond these walls yet. (no relays configured)");
     }
     if (!arg) {
-      return this.send(session, "Publish what? 'publish sheet' speaks who you are, 'publish kind 1' posts your wanderer to your own feed, 'publish <sealed item>' proclaims what you own.");
+      return this.send(session, "Publish what? 'publish sheet' speaks who you are, 'publish score' posts your standing to the leaderboards, 'publish kind 1' posts your wanderer to your own feed, 'publish <sealed item>' proclaims what you own.");
     }
     const world = this.world!;
+    if (a === "score" || a === "scores" || a === "leaderboard" || a === "rank") {
+      return this.publishScores(session);
+    }
     if (arg === "sheet" || arg === "me" || arg === "self") {
       const ev = signSheetEvent(this.env, {
         pubkey: session.pubkey,

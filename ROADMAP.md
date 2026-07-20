@@ -294,6 +294,27 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **Far-world write cost — mostly already solved; small residual lever** *(rome,
+  2026-07-20 — investigated the "lots more mobs" scaling question, found the win
+  is already banked)*. The write axis (rows_written → $), not CPU, is what meters
+  mob scale. **The "stop rewriting rooms for hunger they can recompute" idea is
+  ALREADY SHIPPED:** `simstore.ts` `VOLATILE` set (`hunger, nextWanderAt,
+  thirstAt, sleepUntil, repositionAt, murmuredAt`) is stripped before the dirty
+  comparison (`stableCreatureCopy`), so smooth drift generates ZERO writes; a 60s
+  throttle + 5-min full flush persist churn with bounded staleness. Combined with
+  the bubble freezing far creatures outright, **idle far regions already cost
+  ~nothing on writes** — the headroom is already there (no build needed for the
+  planned ~400 rooms / ~800 mobs). The ONLY residual lever, and it's small: the
+  30s ecology sweep still produces genuine STRUCTURAL far events (a mob changes
+  rooms — `WANDER_MIN/MAX_MS` 45–150s — a birth, a death) that dirty legitimately.
+  To cut those you'd freeze/slow far-world WANDER (unobserved mobs have no reason
+  to pace; hold position, redistribute lazily on bubble-entry) so the far world
+  only writes on rare tens-of-minutes events. Modest gain, only worth it at
+  thousands-of-rooms scale. Cheapest knob of all if writes ever bite: bump
+  `SLOW_ECOLOGY_MS` 30s→60s (halves structural-sweep + throttle writes; cost =
+  coarser far dynamics, NOT visible staleness — entry catch-up is capped by
+  `CATCHUP_CAP_MS`). See [[nomad-scaling-ceiling]].
+
 - **System-hook gear — seven approved pieces** *(rome, 2026-07-19: "these all
   sound good, note them down")*. The anti-reskin law behind them: **every new
   piece hooks a SYSTEM the sim already runs, never just a stat** — if the pitch

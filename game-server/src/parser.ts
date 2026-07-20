@@ -37,6 +37,7 @@ export type Verb =
   | "unvault"
   | "publish"
   | "sheet"
+  | "leaderboard"
   | "map"
   | "study"
   | "journal"
@@ -111,6 +112,9 @@ const VERB_ALIASES: Record<string, Verb> = {
   unvault: "unvault", withdraw: "unvault", retrieve: "unvault",
   publish: "publish", proclaim: "publish", announce: "publish",
   sheet: "sheet", score: "sheet", stats: "sheet", record: "sheet", tally: "sheet",
+  leaderboard: "leaderboard", leaderboards: "leaderboard", boards: "leaderboard",
+  ranks: "leaderboard", ranking: "leaderboard", rankings: "leaderboard",
+  top: "leaderboard", standings: "leaderboard", reckoning: "leaderboard",
   map: "map", chart: "map", atlas: "map",
   study: "study", observe: "study", watch: "study", note: "study",
   journal: "journal", bestiary: "journal", logbook: "journal", ledger: "journal",
@@ -348,8 +352,12 @@ export const HELP_TEXT = [
   "                    'vault' alone looks inside; 'unvault' draws it back out.",
   "  sheet             (score, stats) — your ledger: kills, deaths, kings,",
   "                    wanderers, and your age under this name.",
+  "  leaderboard       (boards, top) — the dungeon's reckoning: the mighty who",
+  "                    entered the boards. 'publish score' enters you.",
   "  publish sheet|<item>  (proclaim) — the dungeon speaks your claim to the relays.",
   "                    Nothing is ever published unless you ask.",
+  "  publish score     (rank) — post your standing to the leaderboards: your",
+  "                    trophies, and your legend of kills.",
   "  publish kind 1    (brag) — post your wanderer to your OWN feed, in your own",
   "                    hand — a note your followers will see. Only this touches it.",
   "  map               (chart) — open a map you carry. A surveyor's map charts the",

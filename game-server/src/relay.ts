@@ -12,6 +12,15 @@ export async function publishEvent(env: Env, ev: Event): Promise<void> {
   await Promise.allSettled(relayList(env).map((r) => sendOne(r, ev)));
 }
 
+// Gamestr's indexing relay — leaderboard score events (kind 30762) go here so
+// the directory picks them up, ALONGSIDE the dungeon's own relays.
+export const GAMESTR_RELAY = "wss://main.relay.gamestr.io";
+
+export async function publishScore(env: Env, ev: Event): Promise<void> {
+  const relays = [...new Set([...relayList(env), GAMESTR_RELAY])];
+  await Promise.allSettled(relays.map((r) => sendOne(r, ev)));
+}
+
 // Workers outbound WebSocket: fetch with an Upgrade header; wss:// -> https://.
 async function sendOne(relay: string, ev: Event): Promise<void> {
   const resp = await fetch(relay.replace(/^ws/, "http"), {

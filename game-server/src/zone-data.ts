@@ -344,6 +344,15 @@ export const CREATURE_HEAL_PER_MIN = 1;
 export const HUNGER_PER_MIN = 2; // 0..100
 export const HUNGER_MAX = 100;
 export const HUNGRY_AT = 50;
+
+// THE GAMESTR LEADERBOARDS (kind 30762, dungeon-signed = "verified"). Published
+// ONLY on the player's say-so (`publish score`) — the same opt-in law as the
+// sheet. Two boards: `trophies` = the barter value of every trophy held (pack +
+// lockbox + vault), `legend` = lifetime combat prestige (boss/pvp kills + kills).
+// Weights and genres are data; tune freely.
+export const LB_GENRES = ["mud", "extraction", "roguelike", "pvp", "dungeon-crawler"];
+export const LB_BOSS_PTS = 100;
+export const LB_PVP_PTS = 25;
 export const STARVING_AT = 85; // past mere hunger: the end of the rope, where a predator with no easier meal eyes a lone delver as meat
 export const WANDER_MIN_MS = 45_000;
 export const WANDER_MAX_MS = 150_000;
