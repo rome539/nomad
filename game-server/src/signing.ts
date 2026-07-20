@@ -87,16 +87,20 @@ export interface ScoreSignParams {
 // one current score per (player, board), replaced in place as it changes.
 export function signScoreEvent(env: Env, p: ScoreSignParams): Event {
   const sk = hexToBytes(env.GAME_SK_HEX);
+  // ONE Gamestr game per board (`nomad-legend`, `nomad-trophies`). Gamestr groups
+  // leaderboards by the `game` tag and does NOT surface the level/board on a card,
+  // so a single `game` with two boards renders as two indistinguishable entries.
+  // A distinct game-id per board is the only lever that keeps them apart (each
+  // must be registered on Gamestr for its display name to show; until then both
+  // read "Unknown Game"). The in-game `leaderboard` is the controlled surface.
+  const game = `${GAME_ID}-${p.board}`;
   const tags: string[][] = [
-    ["d", `${GAME_ID}:${p.player}:${p.board}`],
-    ["game", GAME_ID],
+    ["d", `${game}:${p.player}:${p.board}`],
+    ["game", game],
     ["score", String(Math.max(0, Math.round(p.score)))],
     ["p", p.player],
     ["state", "active"],
     ["mode", "multiplayer"],
-    // `level` mirrors the board segment of `d` — Gamestr's addressable key is
-    // game-id:player:level, so the board name rides the level slot and the two
-    // boards (trophies / legend) stay distinct per wanderer.
     ["level", p.board],
     ["board", p.board],
     ["v", "0"],
