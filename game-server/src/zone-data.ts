@@ -162,7 +162,8 @@ export const RECKLESS_MISS = 0.10;
 // tax; guarded pays 0.6x, plain shield-holding paid nothing). Data-simple,
 // told at equip and on the item read; bucklers and the parrying dagger stay
 // free so the light skirmisher remains a real archetype.
-export const SHIELD_WALL = new Set(["warden-tower-shield", "crown-guard-pavise", "gravestone-shield", "smiths-aegis"]); // smiths-aegis (093): the forge's masterwork wall
+// `wall` (trait tag, 098): the wall-class shield identity — the label and the
+// equip note; the offense tax itself is proportional to block (wallDrag).
 // Block and offense are one dial: a shield costs your swing in proportion to how
 // much it guards, so a bigger guard is always "how much offense will I trade?"
 // rather than a free upgrade (rome, 2026-07-19). A buckler's-worth of block is
@@ -1459,16 +1460,16 @@ export const BRAND_MINT_ODDS = 0.25;            // ...and 1 check in 4 mints —
 // Stats live in D1 (045); WHAT a piece does lives here, the FEARS_FIRE pattern.
 // REACH: a haft held at length blunts the ambush — a grudge-holder's entry
 // first-strike loses its AMBUSH_MULT against a wielder set to receive.
-export const REACH_ITEMS = new Set(["quarterstaff", "pitted-spear", "war-pike", "abyssal-harpoon", "gaff-hook"]);
-// PIERCE: the point punches plate — ignores this many points of a mob's armor.
-// The picks, and now the thrusting shafts (spear/pike/harpoon) — piercing is a
-// real class, the anti-armor answer, distinct from the edge that opens flesh and
-// the weight that caves bone (rome, 2026-07-17).
-export const PIERCE = new Map<string, number>([
-  ["rusted-pick", 2], ["horsemans-pick", 2], ["crow-beak-pick", 3],
-  ["pitted-spear", 1], ["war-pike", 2], ["abyssal-harpoon", 2],
-  ["forged-warspike", 2], // the forge's pierce answer (092) — punches plate like the war-pike
-]);
+// THE TRAIT LEDGER (098): gear abilities live in the DATA now — a `traits`
+// column on item_templates ("wall,thorns:2"), parsed at world-load, read via
+// world.trait()/hasTrait(). The old code Sets are gone; migration 098 carried
+// their membership verbatim onto the rows. New gear = new rows, no code.
+// The tags and their laws (tuning constants stay HERE, one per law):
+//   reach     — strikes past the front line ('attack ... from behind')
+//   pierce:N  — the point punches plate: ignores N of a mob's armor. Distinct
+//               from the edge that opens flesh and the weight that caves bone
+//               (rome, 2026-07-17); forged-warspike (092) pierces WITHOUT the
+//               piercing class tag below — old, deliberate asymmetry.
 // A blunt weapon (stun > 0) ignores this much armor — crushing weight caves plate
 // the way a point slips it. Flat, categorical (every blunt weapon), unlike the
 // per-weapon PIERCE map. The mace was history's answer to armor; so it is here.
@@ -1478,26 +1479,20 @@ export const PIERCE = new Map<string, number>([
 // couldn't (couldn't actually cave plate). The PICKS stay distinct: lighter, and
 // their 2-3 pierce still tops out above a mace's flat 2.
 export const BLUNT_ARMOR_IGNORE = 2;
-// TWO_HANDED: wants both hands; no shield alongside it (enforced at equip).
-export const TWO_HANDED = new Set(["war-pike", "abyssal-harpoon"]);
-// PADDED: a mob's stun rings you half as often. Best piece counts — padding
-// under padding is just padding (the trait is a boolean, it never stacks).
-// Wards stun: padding halves stun odds. The padded-jerkin finally earns its
-// name, and the deadplate's grave-quiet mass shrugs the ringing off (its
-// answer to the lighter chitin — every epic body is a different bet).
-export const PADDED = new Set(["quilted-coif", "riveted-cuirass", "padded-jerkin", "deadplate-harness", "padded-greathelm"]);
+//   two-handed — wants both hands; no shield alongside it (enforced at equip)
+//   padded    — a mob's stun rings you half as often (PADDED_STUN_MULT). Best
+//               piece counts; the trait is a boolean, it never stacks.
 export const PADDED_STUN_MULT = 0.5;
 // Stun tuning lives in the DATA, not in code multipliers (rome, 2026-07-12,
 // after the Emberknock stun-chain): migration 073 halved every weapon's stun
 // stat at the source. One number per weapon, no special-case laws. Bosses
 // were never stunnable (is_boss); the padded coif halves what reaches a head.
 // The wound wards, split by what the fiction can honestly promise:
-// WARDHIDE (thick hide) pads the whole body — bleeds AND leg-rakes turned.
-// MAILWARD (riveted rings) turns edges only — a cut skates, but a hyena can
-// still yank the leg out from under the mail. Both roll SEPARATELY from
-// guarded stance, so hide under a guard stacks to a quarter.
-export const WARDHIDE = new Set(["thick-hide-jack", "sentinels-mantle", "bone-barred-visor"]);
-export const MAILWARD = new Set(["mail-hauberk", "riveted-coif", "chain-lined-mantle"]);
+//   wardhide — thick hide pads the whole body: bleeds AND leg-rakes turned
+//   mailward — riveted rings turn edges only: a cut skates, but a hyena can
+//              still yank the leg out from under the mail.
+// Both roll SEPARATELY from guarded stance, so hide under a guard stacks to a
+// quarter (WARDHIDE_WOUND_ODDS is the shared roll).
 export const WARDHIDE_WOUND_ODDS = 0.5;
 // Per-hit chance a bleeder actually opens a wound — bleed is no longer guaranteed
 // on every landed hit (that stacked far too hard, a pack of hyenas kept you
@@ -1561,35 +1556,28 @@ export const VITALS_THREATS = new Set<string>([
 // down, VITALS_PVE base). The three-hound is the exception between: it only falls
 // this way to a PIERCING weapon — you drive the point through its throat — and
 // even then rarely (VITALS_HOUND). Rewards bringing the right tool to the sentinel.
-export const PIERCING_WEAPONS = new Set([
-  "rusted-pick", "horsemans-pick", "crow-beak-pick", // picks: PIERCE-mapped points
-  "pitted-spear", "war-pike", "abyssal-harpoon",     // the point-spears that thrust through
-]);
+//   piercing  — the vitals CLASS (not the armor value): the three-hound falls
+//               only to these (VITALS_HOUND), and the flee-voice reads it.
 export const VITALS_HOUND = 1 / 5000; // the sentinel's tiny pierce-only vitals chance
-// QUIET: LISTENER wake odds halved while worn (felt says nothing to the bones).
-export const QUIET_ITEMS = new Set(["felt-soled-boots", "grave-shroud", "pale-hide-hood", "shade-wrapped-greaves", "shroud-hood", "shadow-step-boots", "drowned-divers-shroud"]);
+//   quiet     — LISTENER wake odds halved while worn (felt says nothing to the bones)
 export const QUIET_WAKE_MULT = 0.5;
-// SLICK: a drowned grip takes hold half as often, and breaks easier.
-export const SLICK = new Set(["eel-skin-cloak", "kelp-woven-mail", "abyssal-scale-coat", "eel-hide-treads"]);
+//   slick     — a drowned grip takes hold half as often, and breaks easier
 export const SLICK_SEIZE_MULT = 0.5;
 export const SLICK_BREAK_BONUS = 0.25; // added to SEIZE_BREAK_ODDS
-// STRAPPED: everything lashed down — the cutpurse's fingers find no purchase.
-export const STRAPPED = new Set(["strapped-baldric"]);
-// THORNS: a blocked blow costs the attacker (the buckler's spike answers).
-export const THORNS = new Map<string, number>([["spiked-buckler", 1], ["crown-guard-pavise", 2],
-  ["bristling-targe", 2], ["smiths-aegis", 2]]); // forge off-hands (093): the targe and the wall-class aegis bite back
-// MANCATCHER (065): the barbed snare-pole fills the shield hand with DENIAL, not
-// defense — a creature your catcher is on cannot flee (the 18%-hp bolt, the
-// runner's dash, even fire-panic: the collar holds them all). Zero block: you
-// traded your guard for the guarantee. PvP RULE, stamped now for later: against
-// PLAYERS the barbs must HOBBLE (HOBBLE_FLEE_MS limp), never hard-hold — flee is
-// the victim's only out in a full-loot game, and a hard hold is a griefing tool.
-export const MANCATCHER = new Set(["man-catcher"]);
-// PARRY_RIPOSTE (065): an off-hand blade that answers what it turns — a caught
-// blow opens a bleed on the attacker (value = bleedDmg, BLEED_TICKS as usual).
-// THORNS's cousin on the other axis: burst vs armor-ignoring drip. HOLLOW
-// attackers don't bleed, same as everywhere.
-export const PARRY_RIPOSTE = new Map<string, number>([["parrying-dagger", 2], ["forged-main-gauche", 3]]); // the forge's counter off-hand (093)
+//   strapped  — everything lashed down: the cutpurse's fingers find no purchase
+//   thorns:N  — a blocked blow costs the attacker N (the buckler's spike answers)
+//   mancatcher — (065) the barbed snare-pole fills the shield hand with DENIAL,
+//               not defense: a creature your catcher is on cannot flee (the
+//               18%-hp bolt, the runner's dash, even fire-panic — the collar
+//               holds them all). Zero block: you traded your guard for the
+//               guarantee. PvP RULE, stamped now for later: against PLAYERS the
+//               barbs must HOBBLE (HOBBLE_FLEE_MS limp), never hard-hold — flee
+//               is the victim's only out in a full-loot game, and a hard hold
+//               is a griefing tool.
+//   riposte:N — (065) an off-hand blade that answers what it turns: a caught
+//               blow opens a bleed of N on the attacker (BLEED_TICKS as usual).
+//               thorns's cousin on the other axis: burst vs armor-ignoring
+//               drip. HOLLOW attackers don't bleed, same as everywhere.
 
 // ---- the verdigris-thing: the extraction monster (047) ----
 // CORRODERS eat your KIT, not your blood: each landed blow blooms green on one

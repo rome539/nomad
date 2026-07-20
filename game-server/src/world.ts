@@ -63,6 +63,35 @@ export interface ItemTemplate {
   bleed: number; // fast weapons: armor-ignoring damage per tick while the wound is fresh
   barter: number; // what the gate keeper credits it at in trade; 0 = he waves it away
   staunch: number; // a dressing: HP it binds back when applied (and it clots the wound); 0 = not a dressing
+  // THE TRAIT LEDGER (098): abilities live on the row, like armor and weight —
+  // a comma list of tags, valued tags as name:value ("wall,thorns:2"). Parsed
+  // once at world-load into traitMap; the code reads tags via trait()/hasTrait()
+  // and never keys abilities to item ids again. Blank for most gear.
+  traits: string;
+  traitMap?: Map<string, number>;
+}
+
+// Parse "wall,thorns:2" → Map { wall→1, thorns→2 }. Unvalued tags read as 1.
+export function parseTraits(raw: string | null | undefined): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const part of (raw ?? "").split(",")) {
+    const tag = part.trim();
+    if (!tag) continue;
+    const at = tag.indexOf(":");
+    if (at === -1) m.set(tag, 1);
+    else m.set(tag.slice(0, at), Number(tag.slice(at + 1)) || 1);
+  }
+  return m;
+}
+
+// The one read every trait check goes through: 0 when absent (or no template),
+// the tag's value when present (plain tags are 1).
+export function trait(t: ItemTemplate | null | undefined, name: string): number {
+  return t?.traitMap?.get(name) ?? 0;
+}
+
+export function hasTrait(t: ItemTemplate | null | undefined, name: string): boolean {
+  return trait(t, name) > 0;
 }
 
 export interface GroundSpawn {
@@ -142,6 +171,10 @@ export async function loadWorld(db: D1Database, zone: string): Promise<World> {
   const allGround = (await db.prepare("SELECT * FROM ground_spawns").all<GroundSpawn>()).results ?? [];
   const templates = (await db.prepare("SELECT * FROM mob_templates").all<MobTemplate>()).results ?? [];
   const items = (await db.prepare("SELECT * FROM item_templates").all<ItemTemplate>()).results ?? [];
+  // The trait ledger, parsed once: tags become a Map the combat math reads via
+  // trait()/hasTrait(). (A DB from before 098 has no column — parse of
+  // undefined yields the empty map, and every item is plain until the mig runs.)
+  for (const it of items) it.traitMap = parseTraits(it.traits);
 
   // Locked caches, their loot pools, and mob key-drops. Guarded: a DB that
   // hasn't run the Phase-C migration yet just has no caches (world still loads).
@@ -460,6 +493,25 @@ export async function removeItemRow(db: D1Database, rowId: string): Promise<void
 // back up so the pages find their book again).
 export async function setItemJournalId(db: D1Database, rowId: string, journalId: string): Promise<void> {
   await db.prepare("UPDATE player_items SET journal_id = ? WHERE id = ?").bind(journalId, rowId).run();
+}
+
+// ---- the surveyor's ink: rooms charted onto one particular copy (097) ----
+// Keyed by the same instanced identity a journal rides (journal_id on the pack
+// row), so the drop/steal/death plumbing carries the ink with the paper.
+
+export async function mapInkLoad(db: D1Database, mapId: string): Promise<string[]> {
+  const res = await db
+    .prepare("SELECT room_id FROM map_ink WHERE map_id = ?")
+    .bind(mapId)
+    .all<{ room_id: string }>();
+  return (res.results ?? []).map((r) => r.room_id);
+}
+
+export async function mapInkAdd(db: D1Database, mapId: string, roomId: string): Promise<void> {
+  await db
+    .prepare("INSERT OR IGNORE INTO map_ink (map_id, room_id) VALUES (?, ?)")
+    .bind(mapId, roomId)
+    .run();
 }
 
 // ---- the engraving: gear that remembers (077) ----

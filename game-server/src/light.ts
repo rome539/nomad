@@ -9,10 +9,10 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import * as events from "./events";
-import { setItemCondition, removeItemRow } from "./world";
+import { setItemCondition, removeItemRow, hasTrait } from "./world";
 import {
   TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR,
-  BRAND_ITEM, BRAND_BURN_MS, TWO_HANDED,
+  BRAND_ITEM, BRAND_BURN_MS,
 } from "./zone-data";
 
 // A kindled light throws light until it gutters (litUntil). Read everywhere the
@@ -64,7 +64,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   // Both hands on a two-handed weapon leave nowhere to hold a light; a shield
   // gets set aside for the flame.
   const weapon = z.equippedItem(session, "weapon");
-  if (weapon && TWO_HANDED.has(weapon.tmpl.id)) {
+  if (weapon && hasTrait(weapon.tmpl, "two-handed")) {
     return z.send(session, `Both your hands are full of ${weapon.tmpl.name} — no free hand for a light. Lower it first.`);
   }
   // A lit light fills the shield hand: your shield STAYS on your arm (it is

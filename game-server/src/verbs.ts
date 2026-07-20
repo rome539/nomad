@@ -7,8 +7,8 @@ import type { Session, Stance, GroundInstance } from "./zone-types";
 import type { CarriedItem, ItemTemplate } from "./world";
 import {
   setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
-  journalLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
-  setItemLoreId, deedsBump,
+  journalLoad, mapInkLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
+  setItemLoreId, deedsBump, trait, hasTrait,
 } from "./world";
 import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
@@ -18,13 +18,13 @@ import * as events from "./events";
 import * as pvp from "./pvp";
 import * as lore from "./lore";
 import {
-  PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK, SLICK_BREAK_BONUS,
+  PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
-  CARVE_MAX_LEN, TWO_HANDED, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
+  CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_WALL, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, DETAILED_MAP,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
 } from "./zone-data";
@@ -571,7 +571,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     const grip = z.creatures.get(session.seizedBy);
     if (!grip || grip.roomId !== session.roomId) {
       session.seizedBy = undefined;
-    } else if (chance(SEIZE_BREAK_ODDS + (z.wearsTrait(session, SLICK) ? SLICK_BREAK_BONUS : 0))) {
+    } else if (chance(SEIZE_BREAK_ODDS + (z.wearsTrait(session, "slick") ? SLICK_BREAK_BONUS : 0))) {
       session.seizedBy = undefined;
       z.send(session, "You wrench free of its grip.");
     } else {
@@ -764,6 +764,10 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const from = session.roomId;
   session.roomId = exit.to_room;
   z.addTrace(session.roomId, { kind: "passage", at: Date.now() });
+  // A carried surveyor's map sets down every hall its carrier walks (the ink
+  // lives with the copy — lore.inkRooms). One cheap INSERT the first time a
+  // copy meets a room; pure cache after.
+  await lore.inkRooms(z, session);
   // An open wound walks with you: every room you cross while bleeding takes a
   // drip trail — huntable (a scavenger's nose drifts to it), and readable by
   // anyone who looks. Run wounded and the dungeon can follow you home.
@@ -883,7 +887,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   if (!itemId && z.roomLit(session.roomId) && /\b(torch|brand|light|flame|fire)\b/i.test(arg)) {
     if (z.carriesLight(session)) return z.send(session, "Your hand already holds a light — leave this one burning where it is.");
     const inHand = z.equippedItem(session, "weapon");
-    if (inHand && TWO_HANDED.has(inHand.tmpl.id)) {
+    if (inHand && hasTrait(inHand.tmpl, "two-handed")) {
       return z.send(session, `Both your hands are full of ${inHand.tmpl.name} — no free hand for the flame. Lower it first.`);
     }
     session.litUntil = z.groundTorch.get(session.roomId)!;
@@ -970,8 +974,8 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // is a deliberate `equip`. (Never overrides something you've already got on,
   // and never auto-crosses the two-handed rule — that pairing is deliberate.)
   const crossesHands =
-    (tmpl.slot === "weapon" && TWO_HANDED.has(tmpl.id) && z.equippedItem(session, "shield") !== null) ||
-    (tmpl.slot === "shield" && TWO_HANDED.has(z.equippedItem(session, "weapon")?.tmpl.id ?? ""));
+    (tmpl.slot === "weapon" && hasTrait(tmpl, "two-handed") && z.equippedItem(session, "shield") !== null) ||
+    (tmpl.slot === "shield" && hasTrait(z.equippedItem(session, "weapon")?.tmpl, "two-handed"));
   let readied = "";
   if (tmpl.slot !== "" && !z.equippedItem(session, tmpl.slot) && !crossesHands) {
     carried.equipped = true;
@@ -1131,18 +1135,18 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
   }
   // TWO_HANDED steel wants both hands: no shield alongside the pike, no
   // pike over a shield. Not enforced mid-fight juggling — just refused.
-  if (tmpl.slot === "weapon" && TWO_HANDED.has(tmpl.id) && z.equippedItem(session, "shield")) {
+  if (tmpl.slot === "weapon" && hasTrait(tmpl, "two-handed") && z.equippedItem(session, "shield")) {
     return z.send(session, `${cap(tmpl.name)} wants both hands — put up your shield first.`);
   }
   if (tmpl.slot === "shield") {
     const inHand = z.equippedItem(session, "weapon");
-    if (inHand && TWO_HANDED.has(inHand.tmpl.id)) {
+    if (inHand && hasTrait(inHand.tmpl, "two-handed")) {
       return z.send(session, `Both your hands are full of ${inHand.tmpl.name}. Lower it first.`);
     }
   }
   // A shield or a two-handed weapon wants the hand your light is in — taking
   // it up snuffs the flame (light.ts). Light or guard, not both.
-  if (z.carriesLight(session) && (tmpl.slot === "shield" || (tmpl.slot === "weapon" && TWO_HANDED.has(tmpl.id)))) {
+  if (z.carriesLight(session) && (tmpl.slot === "shield" || (tmpl.slot === "weapon" && hasTrait(tmpl, "two-handed")))) {
     light.snuffForHand(z, session);
   }
   // One item per slot — set down whatever occupies it first.
@@ -1159,7 +1163,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
   const drag = tmpl.slot === "shield" ? Math.round((tmpl.block - SHIELD_DRAG_FREE) * SHIELD_DRAG_PER_BLOCK * 100) : 0;
   const wallNote = drag <= 0
     ? ""
-    : SHIELD_WALL.has(tmpl.id)
+    : hasTrait(tmpl, "wall")
       ? ` It is a wall, and you will fight around it — your blows lose ${drag}% of their weight while it's up.`
       : ` You'll fight a little around it — your blows lose ${drag}% of their weight while it's up.`;
   z.send(session, (tmpl.slot === "weapon"
@@ -1804,8 +1808,15 @@ export async function getInstanced(z: ZoneDO, session: Session, inst: GroundInst
   await setItemJournalId(z.env.DB, rowId, inst.journalId);
   let stooped = "";
   if (z.inCombat(session)) { session.staggered = true; stooped = " You stoop for it under the swing — an opening."; }
-  const pages = (await journalLoad(z.env.DB, inst.journalId)).length;
-  z.send(session, `You take ${tmpl.name}.` + (pages ? ` Its pages are already ${pages > 8 ? "densely" : "half"} filled — someone else's hunting, now yours.` : "") + stooped);
+  if (inst.itemId === DETAILED_MAP) {
+    // A surveyor's copy off the stones: the take-line reads the INK, not the
+    // hunt — a well-walked chart is the whole reason to stoop for it.
+    const inked = (await mapInkLoad(z.env.DB, inst.journalId)).length;
+    z.send(session, `You take ${tmpl.name}.` + (inked > 1 ? ` ${inked} halls are already set down in another hand — someone else's walking, now yours.` : "") + stooped);
+  } else {
+    const pages = (await journalLoad(z.env.DB, inst.journalId)).length;
+    z.send(session, `You take ${tmpl.name}.` + (pages ? ` Its pages are already ${pages > 8 ? "densely" : "half"} filled — someone else's hunting, now yours.` : "") + stooped);
+  }
   z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)
   z.refreshRoomCtx(session.roomId);
   await z.persist();

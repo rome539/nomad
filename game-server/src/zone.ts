@@ -44,6 +44,8 @@ import {
   type ItemTemplate,
   type CarriedItem,
   type Cache,
+  trait,
+  hasTrait,
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
@@ -65,10 +67,10 @@ import {
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON,
-  STANCE, RECKLESS_MISS, SHIELD_WALL, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, REACH_ITEMS, PIERCE, TWO_HANDED, PADDED, PADDED_STUN_MULT, WARDHIDE, MAILWARD, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
+  STANCE, RECKLESS_MISS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, PADDED_STUN_MULT, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
-  PIERCING_WEAPONS, VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
-  SLICK, SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, STRAPPED, THORNS, QUIET_ITEMS, CORRODERS, CORRODE_WEAR,
+  VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
+  SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
@@ -89,7 +91,7 @@ import {
   DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
-  LANTERN_ITEM, MANCATCHER, PARRY_RIPOSTE, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
+  LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT
 } from "./zone-data";
 
@@ -1655,27 +1657,27 @@ export class ZoneDO implements DurableObject {
     if (t.armor > 0) bits.push(`${t.armor} armor, ${t.weight > 0 ? "heavy" : "light"}`);
     else if (t.weight > 0) bits.push("heavy"); // weighted weapon/shield: costs your footwork
     // Gear traits (045): a one-word tag so the piece teaches its own trick.
-    if (REACH_ITEMS.has(t.id)) bits.push("reach");
-    const pierce = PIERCE.get(t.id);
+    if (hasTrait(t, "reach")) bits.push("reach");
+    const pierce = trait(t, "pierce");
     if (pierce) bits.push(`pierces ${pierce}`);
-    if (TWO_HANDED.has(t.id)) bits.push("two-handed");
+    if (hasTrait(t, "two-handed")) bits.push("two-handed");
     // A shield drags your swing in proportion to its guard (wallDrag): show the
     // real cost on anything past the free buckler floor, and keep "a wall" for the
     // biggest ones' identity.
     if (t.slot === "shield" && t.block > SHIELD_DRAG_FREE) {
       const drag = Math.round((t.block - SHIELD_DRAG_FREE) * SHIELD_DRAG_PER_BLOCK * 100);
-      bits.push(`${SHIELD_WALL.has(t.id) ? "a wall — " : ""}−${drag}% to your swing`);
+      bits.push(`${hasTrait(t, "wall") ? "a wall — " : ""}−${drag}% to your swing`);
     }
-    if (PADDED.has(t.id)) bits.push("wards stun");
-    if (WARDHIDE.has(t.id)) bits.push("wards wounds");
-    if (MAILWARD.has(t.id)) bits.push("wards bleeds");
-    if (QUIET_ITEMS.has(t.id)) bits.push("quiet");
-    if (SLICK.has(t.id)) bits.push("slick");
-    if (STRAPPED.has(t.id)) bits.push("strapped-down");
-    const spike = THORNS.get(t.id);
+    if (hasTrait(t, "padded")) bits.push("wards stun");
+    if (hasTrait(t, "wardhide")) bits.push("wards wounds");
+    if (hasTrait(t, "mailward")) bits.push("wards bleeds");
+    if (hasTrait(t, "quiet")) bits.push("quiet");
+    if (hasTrait(t, "slick")) bits.push("slick");
+    if (hasTrait(t, "strapped")) bits.push("strapped-down");
+    const spike = trait(t, "thorns");
     if (spike) bits.push(`spiked ${spike}`);
-    if (PARRY_RIPOSTE.has(t.id)) bits.push("a caught blow answers — bleeds the attacker");
-    if (MANCATCHER.has(t.id)) bits.push("what it holds cannot flee");
+    if (hasTrait(t, "riposte")) bits.push("a caught blow answers — bleeds the attacker");
+    if (hasTrait(t, "mancatcher")) bits.push("what it holds cannot flee");
     if (t.id === LANTERN_ITEM) bits.push("long steady light — a tame flame, nothing fears it");
     return bits.length ? ` (${bits.join(", ")})` : "";
   }
@@ -1912,11 +1914,11 @@ export class ZoneDO implements DurableObject {
     // The wound wards are the gear answer, and they roll separately — hide (or
     // mail) under a guard stacks (0.5 × 0.5): the full turtle bleeds a quarter
     // as often. Mail turns edges too: that's what the rings are FOR.
-    if (this.wearsTrait(victim, WARDHIDE) && !chance(WARDHIDE_WOUND_ODDS)) {
+    if (this.wearsTrait(victim, "wardhide") && !chance(WARDHIDE_WOUND_ODDS)) {
       this.send(victim, `${cap(tmpl.name)} drags claws through the thick hide and finds less than it wanted — no wound opens.`, "block");
       return;
     }
-    if (this.wearsTrait(victim, MAILWARD) && !chance(WARDHIDE_WOUND_ODDS)) {
+    if (this.wearsTrait(victim, "mailward") && !chance(WARDHIDE_WOUND_ODDS)) {
       this.send(victim, `${cap(tmpl.name)} rakes across the rings and the edge skates — no wound opens.`, "block");
       return;
     }
@@ -1940,7 +1942,7 @@ export class ZoneDO implements DurableObject {
     // The ward covers the whole wound family (rome, 2026-07-10): hide thick
     // enough to turn a bleed turns the leg-rake too. Its own roll, same odds
     // as the bleed ward, so the two afflictions read as one defense.
-    if (this.wearsTrait(victim, WARDHIDE) && !chance(WARDHIDE_WOUND_ODDS)) {
+    if (this.wearsTrait(victim, "wardhide") && !chance(WARDHIDE_WOUND_ODDS)) {
       this.send(victim, `${cap(tmpl.name)} rakes for your leg — the thick hide takes it, and your stride holds.`, "block");
       return;
     }
@@ -2216,7 +2218,7 @@ export class ZoneDO implements DurableObject {
             // Their hide or plate turns what it can; a blow always bites. A pick's
             // point slips plate, a blunt weapon caves it — both ignore that armor,
             // each with its own tell (pierce takes precedence if a weapon had both).
-            const pierceVal = weapon ? PIERCE.get(weapon.tmpl.id) ?? 0 : 0;
+            const pierceVal = weapon ? trait(weapon.tmpl, "pierce") ?? 0 : 0;
             const bluntVal = weapon && weapon.tmpl.stun > 0 ? BLUNT_ARMOR_IGNORE : 0;
             const pierced = pierceVal > 0 && tmpl.armor > 0; // the point beat armor
             const crushed = bluntVal > 0 && pierceVal === 0 && tmpl.armor > 0; // the weight beat armor
@@ -2232,7 +2234,7 @@ export class ZoneDO implements DurableObject {
             if (creature.hp > 0 && !tmpl.is_boss) {
               pvitals = creature.templateId === "three-hound"
                 // the sentinel only falls to a point driven through the throat
-                ? PIERCING_WEAPONS.has(weapon?.tmpl.id ?? "") && chance(VITALS_HOUND)
+                ? hasTrait(weapon?.tmpl, "piercing") && chance(VITALS_HOUND)
                 : HOLLOW.has(creature.templateId) && !GRAVE_FLESH.has(creature.templateId)
                 // no throat to open, no heart to pierce — only a blunt blow that
                 // shatters the skull ends a hollow thing outright. The wights are
@@ -2314,7 +2316,7 @@ export class ZoneDO implements DurableObject {
       const grip = this.creatures.get(s.seizedBy);
       if (!grip || grip.roomId !== s.roomId) { s.seizedBy = undefined; continue; }
       // SLICK hide slips a grip easier, too (the eel was never held).
-      const breakOdds = SEIZE_BREAK_ODDS + (this.wearsTrait(s, SLICK) ? SLICK_BREAK_BONUS : 0);
+      const breakOdds = SEIZE_BREAK_ODDS + (this.wearsTrait(s, "slick") ? SLICK_BREAK_BONUS : 0);
       if (chance(breakOdds)) { s.seizedBy = undefined; this.send(s, "You tear loose of its grip."); }
     }
 
@@ -2492,7 +2494,7 @@ export class ZoneDO implements DurableObject {
           // barbs hobble — route through hobbled + HOBBLE_FLEE_MS — never a hard
           // hold. Flee is the victim's only out; see zone-data's MANCATCHER note.)
           const offhand = this.equippedItem(victim, "shield");
-          if (offhand && MANCATCHER.has(offhand.tmpl.id)) {
+          if (offhand && hasTrait(offhand.tmpl, "mancatcher")) {
             this.send(victim, pick([
               `${cap(tmpl.name)} wrenches for the dark — the barbs of ${offhand.tmpl.name} hold it fast.`,
               `${cap(tmpl.name)} throws itself away from you and comes up short, caught in the collar.`,
@@ -2544,7 +2546,7 @@ export class ZoneDO implements DurableObject {
           ]), "block");
           if (catcher) await this.wear(victim, catcher.carried, catcher.tmpl, ARMOR_WEAR);
           // The buckler's spike answers: what it catches, it costs (THORNS).
-          const spike = shield ? THORNS.get(shield.tmpl.id) : undefined;
+          const spike = shield ? trait(shield.tmpl, "thorns") : undefined;
           if (spike) {
             creature.hp -= spike;
             this.markHurt(creature, tmpl, victim.pubkey);
@@ -2558,7 +2560,7 @@ export class ZoneDO implements DurableObject {
           // opens a bleed on the attacker (PARRY_RIPOSTE). Announced only when
           // the wound is fresh — refreshes are silent, like the weapon bleeds.
           // Dry bone doesn't bleed: the HOLLOW shrug the riposte off.
-          const rip = shield ? PARRY_RIPOSTE.get(shield.tmpl.id) : undefined;
+          const rip = shield ? trait(shield.tmpl, "riposte") : undefined;
           if (rip && !HOLLOW.has(tmpl.id) && creature.hp > 0) {
             const fresh = !creature.bleedTicks;
             creature.bleedTicks = BLEED_TICKS;
@@ -2624,7 +2626,7 @@ export class ZoneDO implements DurableObject {
           // can't flee, and it drags harder until you wrench free or kill it.
           // SLICK hide (eel-skin) gives cold arms half as much to hold; worn MASS
           // (poise) plants you so it can't drag — strongest-wins, never stacked.
-          const seizeMult = Math.min(this.wearsTrait(victim, SLICK) ? SLICK_SEIZE_MULT : 1, 1 - this.poiseOf(victim));
+          const seizeMult = Math.min(this.wearsTrait(victim, "slick") ? SLICK_SEIZE_MULT : 1, 1 - this.poiseOf(victim));
           const seizeOdds = SEIZE_ODDS * seizeMult;
           if (DROWNERS.has(creature.templateId) && !victim.seizedBy && chance(seizeOdds)) {
             victim.seizedBy = creature.id;
@@ -2639,7 +2641,7 @@ export class ZoneDO implements DurableObject {
           // (cushion) takes the ring out of a share; worn MASS (poise) shrugs the
           // stagger — strongest-wins, so heavy resists by mass and a LIGHT build
           // buys the same by slotting a padded piece (no double-dip).
-          const stunMult = Math.min(this.wearsTrait(victim, PADDED) ? PADDED_STUN_MULT : 1, 1 - this.poiseOf(victim));
+          const stunMult = Math.min(this.wearsTrait(victim, "padded") ? PADDED_STUN_MULT : 1, 1 - this.poiseOf(victim));
           const stunOdds = tmpl.stun * stunMult;
           if (tmpl.stun > 0 && !victim.stunned && chance(stunOdds)) {
             victim.stunned = true;
@@ -2655,7 +2657,7 @@ export class ZoneDO implements DurableObject {
           // one unsealed thing off your back (it goes for the richest), and gone.
           // Sealed loot is TITLE the dungeon marked as yours; its fingers slide off.
           // STRAPPED (the baldric) lashes everything down — nothing to lift.
-          if (THIEVES.has(creature.templateId) && !creature.stole && this.wearsTrait(victim, STRAPPED)) {
+          if (THIEVES.has(creature.templateId) && !creature.stole && this.wearsTrait(victim, "strapped")) {
             this.send(victim, `${cap(tmpl.name)}'s fingers dance over your pack and find everything lashed down tight. It hisses.`);
           } else if (THIEVES.has(creature.templateId) && !creature.stole) {
             const takeable = victim.items.filter((c) => c.serial === null && !c.equipped);
@@ -3651,7 +3653,7 @@ export class ZoneDO implements DurableObject {
     // REACH blunts the rush: a haft held at length means the thing arrives on
     // the point first — the blow still lands, but without the ambush's weight.
     const weapon = this.equippedItem(victim, "weapon");
-    const atLength = weapon !== null && REACH_ITEMS.has(weapon.tmpl.id);
+    const atLength = weapon !== null && hasTrait(weapon.tmpl, "reach");
     if (!atLength) dmg = Math.round(dmg * AMBUSH_MULT);
     if (cHurt) dmg = Math.max(1, Math.round(dmg * WOUNDED_DMG_MULT));
     const worn = this.equippedItem(victim, "armor");
@@ -4048,12 +4050,12 @@ export class ZoneDO implements DurableObject {
   // it's made for (pierce → the throat/skull driven through, edge → the throat
   // opened, blunt → the skull, thrust → the heart). Pierce is checked before the
   // stat registers so a pick reads as a point, not a "plain" blow.
-  // How much armor a weapon's blow ignores: a pick's narrow point (PIERCE, per
+  // How much armor a weapon's blow ignores: a pick's narrow point (per
   // weapon) or a blunt weapon's crushing weight (BLUNT_ARMOR_IGNORE, any stun>0),
   // whichever is greater. The single source for both damage paths.
   public armorIgnore(weapon: { tmpl: ItemTemplate } | null | undefined): number {
     if (!weapon) return 0;
-    const pierce = PIERCE.get(weapon.tmpl.id) ?? 0;
+    const pierce = trait(weapon.tmpl, "pierce") ?? 0;
     const blunt = weapon.tmpl.stun > 0 ? BLUNT_ARMOR_IGNORE : 0;
     return Math.max(pierce, blunt);
   }
@@ -4064,7 +4066,7 @@ export class ZoneDO implements DurableObject {
   public pickVitals(weapon: { tmpl: ItemTemplate } | null | undefined): { hit: string; taken: string } {
     const t = weapon?.tmpl;
     const reg = !t ? "fist"
-      : PIERCING_WEAPONS.has(t.id) ? "pierce"
+      : hasTrait(t, "piercing") ? "pierce"
       : t.bleed > 0 ? "edge"
       : t.stun > 0 ? "blunt"
       : t.sweep > 1 || t.speed > 1 ? "spear"
@@ -4300,8 +4302,12 @@ export class ZoneDO implements DurableObject {
   // Does any EQUIPPED piece carry this trait? (Gear traits — reach, padded,
   // quiet, slick, strapped — are worn, not carried: a spear in the pack blunts
   // nothing.) Traits are booleans by design; two padded pieces are just padded.
-  public wearsTrait(session: Session, trait: Set<string>): boolean {
-    for (const c of session.items) if (c.equipped && trait.has(c.itemId)) return true;
+  // Does anything equipped carry this trait tag? (The trait ledger, 098: tags
+  // live on the item row — "padded", "quiet", "slick" — not in code sets.)
+  public wearsTrait(session: Session, tag: string): boolean {
+    for (const c of session.items) {
+      if (c.equipped && hasTrait(this.world!.itemTemplates.get(c.itemId), tag)) return true;
+    }
     return false;
   }
 
@@ -4322,21 +4328,21 @@ export class ZoneDO implements DurableObject {
     const weapon = this.equippedItem(session, "weapon");
     const t = weapon?.tmpl;
     const style = !t ? "bare hands"
-      : PIERCING_WEAPONS.has(t.id) ? "piercing"
+      : hasTrait(t, "piercing") ? "piercing"
       : t.bleed > 0 ? "edged"
       : t.stun > 0 ? "blunt"
       : t.sweep > 1 || t.speed > 1 ? "polearm"
       : "plain steel";
     const armor = this.equippedArmor(session);
     const traits: string[] = [];
-    if (this.wearsTrait(session, PADDED)) traits.push("wards stun (odds halved)");
-    if (this.wearsTrait(session, WARDHIDE)) traits.push("wards wounds (bleeds and leg-rakes turned)");
-    if (this.wearsTrait(session, MAILWARD)) traits.push("wards bleeds (edges skate off the rings)");
-    if (this.wearsTrait(session, QUIET_ITEMS)) traits.push("quiet (soft-footed)");
-    if (this.wearsTrait(session, SLICK)) traits.push("slick (hard to seize)");
-    if (this.wearsTrait(session, STRAPPED)) traits.push("strapped (theft-proof)");
-    if (session.items.some((c) => c.equipped && THORNS.has(c.itemId))) traits.push("thorns (blocks bite back)");
-    if (t && REACH_ITEMS.has(t.id)) traits.push("reach (blunts the rush)");
+    if (this.wearsTrait(session, "padded")) traits.push("wards stun (odds halved)");
+    if (this.wearsTrait(session, "wardhide")) traits.push("wards wounds (bleeds and leg-rakes turned)");
+    if (this.wearsTrait(session, "mailward")) traits.push("wards bleeds (edges skate off the rings)");
+    if (this.wearsTrait(session, "quiet")) traits.push("quiet (soft-footed)");
+    if (this.wearsTrait(session, "slick")) traits.push("slick (hard to seize)");
+    if (this.wearsTrait(session, "strapped")) traits.push("strapped (theft-proof)");
+    if (this.wearsTrait(session, "thorns")) traits.push("thorns (blocks bite back)");
+    if (t && hasTrait(t, "reach")) traits.push("reach (blunts the rush)");
     return {
       hp: session.hp, maxHp: session.maxHp, stance: session.stance,
       slots,
@@ -4349,7 +4355,7 @@ export class ZoneDO implements DurableObject {
         bleed: t?.bleed ?? 0,
         stun: t?.stun ?? 0,
         ignore: this.armorIgnore(weapon),
-        twoHanded: !!t && TWO_HANDED.has(t.id),
+        twoHanded: !!t && hasTrait(t, "two-handed"),
       },
       def: {
         armor,
@@ -4370,7 +4376,7 @@ export class ZoneDO implements DurableObject {
     const foe = [...this.sessions.values()].find((s) => s.pubkey === pubkey && !this.outOfWorld(s));
     const t = foe ? this.equippedItem(foe, "weapon")?.tmpl : null;
     if (!t) return "plain";
-    return PIERCING_WEAPONS.has(t.id) ? "pierce" : t.stun > 0 ? "blunt" : "edge";
+    return hasTrait(t, "piercing") ? "pierce" : t.stun > 0 ? "blunt" : "edge";
   }
 
   // The shield on your arm gives its block chance (scaled by wear) — and a

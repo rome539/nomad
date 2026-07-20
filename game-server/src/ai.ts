@@ -5,6 +5,7 @@
 import type { ZoneDO } from "./zone";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
+import { hasTrait } from "./world";
 import { randInt, chance, uuid, pick } from "./rng";
 import { cap } from "./zone-util";
 import * as events from "./events";
@@ -18,7 +19,7 @@ import {
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
-  MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_ITEMS, QUIET_WAKE_MULT, NOISY_LOAD,
+  MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL,
 } from "./zone-data";
 
@@ -288,7 +289,7 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
     if (session.away) return false;
     // QUIET gear (felt soles, the grave-shroud) halves what the bones hear —
     // your footfall, your slip past, your reach for the door. Worn, not carried.
-    if (session.items.some((c) => c.equipped && QUIET_ITEMS.has(c.itemId))) odds *= QUIET_WAKE_MULT;
+    if (z.wearsTrait(session, "quiet")) odds *= QUIET_WAKE_MULT;
     // The bell outshouts felt soles: while it rings the keep hears everything,
     // and for a while after, the halls stay unsettled (events.bellWakeMult).
     odds = Math.min(1, odds * events.bellWakeMult(z, roomId));

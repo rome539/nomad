@@ -11,13 +11,13 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { chance, randInt, pick } from "./rng";
-import { recordPvpKill, deedsBump } from "./world";
+import { recordPvpKill, deedsBump, trait, hasTrait } from "./world";
 import {
   STANCE, RECKLESS_MISS, ARMOR_K, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE,
   WOUNDED_FRACTION, WOUNDED_DMG_MULT, WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS,
   AMBUSH_MULT, VITALS_PVP, STAGGER_BONUS, BLEED_TICKS, BLEED_STACK_CAP,
-  PADDED, PADDED_STUN_MULT, ARMOR_WEAR, WEAPON_WEAR, THORNS, PARRY_RIPOSTE,
-  MANCATCHER, MANCATCHER_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE, WARDHIDE_WOUND_ODDS,
+  PADDED_STUN_MULT, ARMOR_WEAR, WEAPON_WEAR,
+  MANCATCHER_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE_WOUND_ODDS,
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
   FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_HIT, FEED_REST_CAUGHT,
 } from "./zone-data";
@@ -132,7 +132,7 @@ async function swingAt(
     z.send(attacker, `${defender.name} catches your blow on ${sh}.`, "block");
     z.send(defender, `You take ${attacker.name}'s blow on ${sh}; it jars up your arm and holds.`, "block");
     if (catcher) await z.wear(defender, catcher.carried, catcher.tmpl, ARMOR_WEAR);
-    const spike = shield ? THORNS.get(shield.tmpl.id) : undefined;
+    const spike = shield ? trait(shield.tmpl, "thorns") : undefined;
     if (spike) {
       attacker.hp -= spike;
       if (attacker.hp <= 0) {
@@ -146,7 +146,7 @@ async function swingAt(
     }
     // The parrying blade answers down the line of the turn — and unlike the
     // hollow, a wanderer has blood to lose.
-    const rip = shield ? PARRY_RIPOSTE.get(shield.tmpl.id) : undefined;
+    const rip = shield ? trait(shield.tmpl, "riposte") : undefined;
     if (rip && attacker.hp > 0) {
       const fresh = !attacker.bleedTicks;
       attacker.bleedTicks = BLEED_TICKS;
@@ -234,7 +234,7 @@ async function swingAt(
   // A blunt weapon can ring the skull — one lost beat, never chained; the
   // padded coif takes the ring out of half of them.
   if (weapon && weapon.tmpl.stun > 0 && !defender.stunned) {
-    const odds = z.wearsTrait(defender, PADDED) ? weapon.tmpl.stun * PADDED_STUN_MULT : weapon.tmpl.stun;
+    const odds = z.wearsTrait(defender, "padded") ? weapon.tmpl.stun * PADDED_STUN_MULT : weapon.tmpl.stun;
     if (chance(odds)) {
       defender.stunned = true;
       z.send(defender, `${attacker.name} lands like a falling stone — your skull rings and the room tilts.`, "stun");
@@ -246,7 +246,7 @@ async function swingAt(
   // A cutting edge opens a wound that keeps weeping — unless hide thick
   // enough to turn it takes the cut (the ward covers the whole wound family).
   if (weapon && weapon.tmpl.bleed > 0) {
-    if (z.wearsTrait(defender, WARDHIDE) && !chance(WARDHIDE_WOUND_ODDS)) {
+    if (z.wearsTrait(defender, "wardhide") && !chance(WARDHIDE_WOUND_ODDS)) {
       z.send(defender, `${attacker.name}'s edge drags across the thick hide — it holds.`, "block");
     } else {
       const fresh = !defender.bleedTicks;
@@ -258,7 +258,7 @@ async function swingAt(
   // The man-catcher's PvP rule, exactly as written the day it was forged:
   // against players the barbs HOBBLE — never hold. Flee stays the out.
   const offhand = z.equippedItem(attacker, "shield");
-  if (offhand && MANCATCHER.has(offhand.tmpl.id) && !defender.hobbled && chance(MANCATCHER_PVP_HOBBLE)) {
+  if (offhand && hasTrait(offhand.tmpl, "mancatcher") && !defender.hobbled && chance(MANCATCHER_PVP_HOBBLE)) {
     defender.hobbled = true;
     defender.limpingSince = undefined;
     z.send(defender, `The barbs of ${offhand.tmpl.name} rake your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
