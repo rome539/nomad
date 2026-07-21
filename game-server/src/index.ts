@@ -6,9 +6,9 @@ import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
 import { touchIconBytes, iconN512Bytes, ogImageBytes, doorSceneBytes } from "./assets";
-import { signProfileEvent, signSheetEvent, isGameKeyConfigured } from "./signing";
+import { signProfileEvent, signSheetEvent, signDeleteEvent, isGameKeyConfigured } from "./signing";
 import type { PlayerRow } from "./world";
-import { publishEvent, relayList } from "./relay";
+import { publishEvent, publishScore, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
 import VAULT_SRC from "./vault-bundle.js";
 
@@ -138,6 +138,25 @@ export default {
         const ev = signProfileEvent(env, PROFILE);
         await publishEvent(env, ev);
         return json({ published: true, id: ev.id, pubkey: ev.pubkey, relays: relayList(env) });
+      }
+
+      // Keeper-only: retract events the epoch key itself signed (NIP-09, kind
+      // 5) — e.g. stale/malformed leaderboard scores from a since-fixed bug.
+      // Body: { ids: string[], kinds: number[], reason?: string }. Reaches the
+      // Gamestr relay too, since 30762 scores are published there.
+      if (m === "POST" && pathname === "/admin/publish-deletion") {
+        const token = env.ADMIN_TOKEN?.trim();
+        if (!token || req.headers.get("x-admin-token") !== token) {
+          return json({ error: "unauthorized" }, 401);
+        }
+        if (!isGameKeyConfigured(env)) return json({ error: "no_game_key" }, 409);
+        const body = await req.json<{ ids?: string[]; kinds?: number[]; reason?: string }>().catch(() => null);
+        const ids = (body?.ids ?? []).filter((id) => /^[0-9a-f]{64}$/i.test(id));
+        const kinds = (body?.kinds ?? []).filter((k) => Number.isInteger(k));
+        if (ids.length === 0 || kinds.length === 0) return json({ error: "bad_body" }, 400);
+        const ev = signDeleteEvent(env, { ids, kinds, reason: body?.reason });
+        await publishScore(env, ev);
+        return json({ published: true, id: ev.id, pubkey: ev.pubkey, relays: [...relayList(env)] });
       }
 
       // Keeper-only: wipe the world SIM (mobs, ground, world state) and re-seed

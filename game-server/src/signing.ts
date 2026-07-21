@@ -161,6 +161,22 @@ export function signSheetEvent(
   );
 }
 
+// NIP-09 deletion request (kind 5), signed by the epoch key so it can retract
+// only what the epoch key itself signed — a stale/malformed 30762 score, say.
+// One `k` tag per deleted kind, one `e` tag per event id.
+export function signDeleteEvent(
+  env: Env,
+  p: { ids: string[]; kinds: number[]; reason?: string },
+): Event {
+  const sk = hexToBytes(env.GAME_SK_HEX);
+  const tags: string[][] = [...new Set(p.kinds)].map((k) => ["k", String(k)]);
+  for (const id of p.ids) tags.push(["e", id]);
+  return finalizeEvent(
+    { kind: 5, created_at: nowSec(), tags, content: p.reason ?? "" },
+    sk,
+  );
+}
+
 // The dungeon's own face: kind-0 profile metadata, signed by the epoch key.
 // This is the npub that authors everything the dungeon says — loot, feeds,
 // sheets — so its profile lives under the same key. The root key stays a cold
