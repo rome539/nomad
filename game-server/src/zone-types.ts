@@ -42,6 +42,7 @@ export interface Session {
   hobbled?: boolean; // a leg wound: you can still flee, but only after limping clear (a set delay), cured by rest
   limpingSince?: number; // ms epoch you started dragging your bad leg toward the exit; flee lands once HOBBLE_FLEE_MS passes
   buying?: { wants: { itemId: string; cost: number }[]; paid: number; escrow: { row: string; from: string }[] }; // open cart at the keeper's hatch: wants = every thing named (duplicates allowed), paid against their summed cost; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square, then it all changes hands at once
+  dealId?: string; // pending player-to-player trade (trade.ts) — points into ZoneDO's `deals` map. Ephemeral: a DO wake never restores it (same as `buying`), and either side leaving, dying, or drawing steel cancels it for both
   born: number; // created_at, unix seconds — wanderer age on the sheet
   kills: number; // tallies cached from D1; recordKill/recordDeath keep the truth
   deaths: number;

@@ -525,7 +525,21 @@ export async function insertLoot(
 
 // Death scatters EVERYTHING carried — sealed included; the seal is title, not
 // armor (rome's rule, 2026-07-05). Only the gate containers never stir.
-export async function clearCarriedInventory(db: D1Database, pubkey: string): Promise<void> {
+// `exclude`: rows a concurrent settlement (trade.ts) has mid-flight to a new
+// owner — this blanket delete runs off the CURRENT pubkey column, not the
+// victim's in-memory `items` (already spliced clean of anything settling), so
+// without this a row awaiting its `UPDATE pubkey` would still get swept here
+// first and the reassignment would land on nothing. Named rows only; empty is
+// the overwhelmingly common case and stays a plain unconditional delete.
+export async function clearCarriedInventory(db: D1Database, pubkey: string, exclude?: string[]): Promise<void> {
+  if (exclude && exclude.length) {
+    const placeholders = exclude.map(() => "?").join(",");
+    await db
+      .prepare(`DELETE FROM player_items WHERE pubkey = ? AND container = '' AND id NOT IN (${placeholders})`)
+      .bind(pubkey, ...exclude)
+      .run();
+    return;
+  }
   await db
     .prepare("DELETE FROM player_items WHERE pubkey = ? AND container = ''")
     .bind(pubkey)
@@ -535,6 +549,18 @@ export async function clearCarriedInventory(db: D1Database, pubkey: string): Pro
 // Removes one specific pack row (drop, eat, a fumbled weapon).
 export async function removeItemRow(db: D1Database, rowId: string): Promise<void> {
   await db.prepare("DELETE FROM player_items WHERE id = ?").bind(rowId).run();
+}
+
+// A struck deal, settled: every row that changed hands reassigned in ONE
+// atomic write (trade.ts) — nothing can land half-sent (one side's rows
+// moved, the other's not) even if the worker dies mid-call. Container resets
+// to '' regardless of where it came from — you don't inherit someone else's
+// lockbox or vault, it lands in your PACK, same as any other acquisition.
+// Equipped clears too — worn gear comes off the body it leaves (same rule
+// setContainer already applies whenever a piece leaves a body for a box).
+export async function transferItems(db: D1Database, moves: { rowId: string; toPubkey: string }[]): Promise<void> {
+  if (!moves.length) return;
+  await db.batch(moves.map((m) => db.prepare("UPDATE player_items SET pubkey = ?, container = '', equipped = 0 WHERE id = ?").bind(m.toPubkey, m.rowId)));
 }
 
 // ---- journals: a bestiary keyed to the book, so it travels when the book does ----

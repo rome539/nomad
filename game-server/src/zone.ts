@@ -64,6 +64,7 @@ import * as chips from "./chips";
 import * as events from "./events";
 import * as verbs from "./verbs";
 import * as pvp from "./pvp";
+import * as trade from "./trade";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
@@ -103,6 +104,15 @@ import {
 export class ZoneDO implements DurableObject {
   public world: World | null = null;
   public sessions = new Map<string, Session>(); // pubkey -> session
+  // Open player-to-player trades (trade.ts) — dealId -> Deal. In-memory only,
+  // same as `buying`: a DO wake never restores one, and it needs no D1 row of
+  // its own (settlement is the only part that touches D1, and it's atomic).
+  public deals = new Map<string, trade.Deal>();
+  // player_items rowIds a settlement (trade.ts) currently has mid-flight to a
+  // new owner — the DEATH cleanup below (clearCarriedInventory) must not
+  // sweep these out from under the pending UPDATE. Set right before that
+  // await, cleared right after, always in trade.ts's settleDeal.
+  public tradeLocked = new Set<string>();
   private leftAt = new Map<string, number>(); // pubkey -> ms it last disconnected (a quick return is a reconnect, not an arrival)
   public creatures = new Map<string, Creature>();
   public ground = new Map<string, string[]>(); // roomId -> item template ids
@@ -617,6 +627,12 @@ export class ZoneDO implements DurableObject {
     }
     this.sessions.set(pubkey, session);
     this.lastCommandAt = Date.now(); // an arrival is activity — the world beats fast for fresh footsteps
+    // buildSession never carries a dealId across — any deal this player was
+    // in is already cancelled server-side (onLeave's cancelDealForSession ran
+    // when the old socket dropped, though that closeFrame died with it,
+    // unsent). The client doesn't know that: force its swap UI shut so a
+    // reweave never leaves "wave it off" stuck talking to nothing.
+    trade.forceCloseSwapUI(session);
 
     // A dropped connection that comes back within the grace window is a
     // re-weave, not an arrival: no fanfare, no re-reading the intro, and the
@@ -690,6 +706,10 @@ export class ZoneDO implements DurableObject {
 
   private async onLeave(session: Session): Promise<void> {
     if (this.sessions.get(session.pubkey) !== session) return; // displaced, already handled
+    // Whichever branch below runs, this player isn't reading the wire anymore
+    // — a deal they had open can't wait for them (the counterparty needs to
+    // know now, not whenever they might reconnect).
+    trade.cancelDealForSession(this, session);
     // The world stays real when your eyes close (rome, 2026-07-10): a LIVE
     // fight holds the body here for LINKDEAD_MS — standing, auto-fighting,
     // killable — so pulling the plug is never an escape. With nothing hunting
@@ -804,6 +824,12 @@ export class ZoneDO implements DurableObject {
       const la = this.wsAttachment(ws)?.la;
       rebuilt.lastActiveAt = typeof la === "number" ? la : Date.now();
       this.sessions.set(pubkey, rebuilt);
+      // A cold wake means the WHOLE DO reset — z.deals is gone, and this
+      // fresh session carries no dealId — but the client's browser doesn't
+      // know that and may still be showing a swap modal/popup with dead
+      // buttons. Force it closed so a reweave never strands someone unable
+      // to wave off a trade that no longer exists server-side.
+      trade.forceCloseSwapUI(rebuilt);
     }
   }
 
@@ -869,7 +895,8 @@ export class ZoneDO implements DurableObject {
     const isBench = frame?.t === "bench";
     const isTrade = frame?.t === "trade";
     const isForge = frame?.t === "forge";
-    if (!isBench && !isTrade && !isForge && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
+    const isSwap = frame?.t === "swap";
+    if (!isBench && !isTrade && !isForge && !isSwap && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
 
     // Token bucket per pubkey — castr's daily-cast pattern, compressed.
     const now = Date.now();
@@ -884,7 +911,7 @@ export class ZoneDO implements DurableObject {
     );
     session.tokensAt = now;
     if (session.tokens < 1) {
-      if (!isBench && !isTrade && !isForge) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
+      if (!isBench && !isTrade && !isForge && !isSwap) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
       return;
     }
     session.tokens -= 1;
@@ -894,6 +921,11 @@ export class ZoneDO implements DurableObject {
     if (isBench) return gate.handleBench(this, session, frame);
     if (isTrade) return gate.handleTrade(this, session, frame);
     if (isForge) return gate.handleForge(this, session, frame);
+    // The wanderer-to-wanderer deal (trade.ts): unlike the three above, this
+    // one never sets `away` — it works whether you're in the gatehouse or
+    // standing in the dark, so it's routed here rather than behind the
+    // outOfWorld() gate below.
+    if (isSwap) return trade.handleSwap(this, session, frame);
 
     // IN THE GATEHOUSE (away, at a gate): the sanctuary is a ROOM now, not a
     // switch. The dungeon can't reach you and you can still be heard — known
@@ -1030,6 +1062,7 @@ export class ZoneDO implements DurableObject {
       case "enter": return gate.enterGatehouse(this, session);
       case "exit": return this.leaveGatehouse(session);
       case "tell": return gate.cmdTell(this, session, cmd.arg);
+      case "deal": return trade.cmdDeal(this, session, cmd.arg);
       case "smoke": return verbs.cmdSmoke(this, session, cmd.arg);
       case "cure": return verbs.cmdCure(this, session, cmd.arg);
       case "squink": return verbs.cmdSquink(this, session);
@@ -3790,6 +3823,7 @@ export class ZoneDO implements DurableObject {
     const fallenFlame = (victim.litSource === "torch" && victim.litUntil && Date.now() < victim.litUntil) ? victim.litUntil : 0;
     victim.litUntil = undefined; victim.litSource = undefined; victim.torchWarned = undefined;
     victim.buying = undefined; // death ends any open trade; the counter clears
+    trade.cancelDealForSession(this, victim); // and any open deal with another wanderer
     victim.deaths += 1;
     await recordDeath(this.env.DB, victim.pubkey);
 
@@ -3835,7 +3869,7 @@ export class ZoneDO implements DurableObject {
         }
       }
       this.armStrayDecay(fell); // rock, torch, physic — anything renewable spilled where you fell spoils, unless this is its spawn floor
-      await clearCarriedInventory(this.env.DB, victim.pubkey);
+      await clearCarriedInventory(this.env.DB, victim.pubkey, this.tradeLocked.size ? [...this.tradeLocked] : undefined);
     }
     victim.items = [];
     // The relay hears that someone died — never who did it. The killer's name
@@ -4673,6 +4707,7 @@ export class ZoneDO implements DurableObject {
 
   private syncCombatCtx(): void {
     chips.syncCombatCtx(this);
+    trade.sweepCombatDeals(this); // a deal is not a shield — steel out ends it
   }
 
   // ---- sound: text renders it better than graphics render anything ----

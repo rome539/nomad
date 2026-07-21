@@ -52,6 +52,7 @@ export type Verb =
   | "exit"
   | "tell"
   | "xyzzy"
+  | "deal"
   | "help";
 
 export interface Command {
@@ -128,6 +129,9 @@ const VERB_ALIASES: Record<string, Verb> = {
   exit: "exit", out: "exit", outside: "exit", // NOT 'leave' — that's already 'drop'
   // A quiet word, one to one, in the gatehouse. Nobody else in the room hears it.
   tell: "tell", whisper: "tell", quietly: "tell",
+  // A wanderer-to-wanderer trade, not the keeper's hatch ("trade"/"barter" stay
+  // his alone). Named to match the chip it grows ("deal with X").
+  deal: "deal", swap: "deal",
   smoke: "smoke", puff: "smoke", // light one from the tin. undocumented.
   cure: "cure", preserve: "cure", // hang raw meat in the smokehouse racks to keep it
 
@@ -311,6 +315,12 @@ export const HELP_TEXT = [
   "                    gatehouse ANYTHING YOU TYPE IS SPOKEN ALOUD, unless it's a",
   "                    command — it is the one room where a wanderer can be heard.",
   "  out               (exit) — back through the door, into the world.",
+  "  deal <name>      strike an item-for-item trade with another wanderer —",
+  "                    anywhere, in the world or the gatehouse. Both sides lay",
+  "                    goods down; either side changing the table un-shakes both",
+  "                    hands. No coin changes it — only what you both agree to",
+  "                    carry. Sealed, worn, and journal pages never cross a deal.",
+  "                    Steel drawn on either end calls the whole thing off.",
   "  tell <name> <...> (whisper) — in the gatehouse: lean in and speak to ONE",
   "                    person. The room doesn't hear it. It is the only thing you",
   "                    can say in this world that is truly sealed — it goes out",

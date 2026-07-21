@@ -280,6 +280,24 @@ export const PAGE = `<!doctype html>
   #mchat .mline.tell { color: var(--voice); font-style: italic; }
   #mchat .mline.who  { color: var(--voice); }
   @keyframes mfade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  /* The deal ASK: a small top-right card, never the trading floor itself —
+     the other side has to answer before either of you sees that. Sits above
+     everything (z 10002) since it can land while a modal's already open. */
+  #dealreq {
+    display: none; position: fixed; z-index: 10002; top: 12px; right: 12px;
+    max-width: 280px; background: var(--panel); border: 1px solid var(--gold);
+    border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+    animation: mfade 0.2s ease-out;
+  }
+  #dealreq.open { display: block; }
+  #drtext { color: var(--cream); font-size: 13px; line-height: 1.4; margin-bottom: 8px; }
+  #dracts { display: flex; gap: 6px; }
+  #dracts button {
+    background: transparent; border: 1px solid var(--border2); border-radius: 4px;
+    color: var(--cream); font: inherit; font-size: 12px; padding: 5px 12px; cursor: pointer;
+  }
+  #dracts button:first-child:hover { color: var(--heal); border-color: var(--heal); }
+  #dracts button:last-child:hover { color: var(--blood); border-color: var(--blood); }
   #bench.open { display: flex; }
   #bench .bbox {
     background: var(--panel); border: 1px solid var(--border2); border-radius: 10px;
@@ -488,6 +506,82 @@ export const PAGE = `<!doctype html>
     #trade .ttabs button { padding: 8px 14px; font-size: 13px; }
     #trade .bitem button { padding: 8px 14px; font-size: 13px; }
     #trade .trow button { padding: 8px 14px; font-size: 13px; }
+  }
+  /* The wanderer-to-wanderer deal: same shell and item-row look as the hatch,
+     but three columns (your pack to draw from, what's on your side, what's on
+     theirs) since there's no keeper here — just the two of you. Works
+     anywhere, not only at a gate, so it never claims the gatehouse's shell
+     styling (no bdoll, no away framing). */
+  #swap {
+    display: none; position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0, 0, 0, 0.82);
+    align-items: center; justify-content: center; padding: 16px 12px;
+  }
+  #swap.open { display: flex; }
+  #swap .bbox {
+    background: var(--panel); border: 1px solid var(--border2); border-radius: 10px;
+    padding: 14px 14px 0; width: min(920px, 96vw); min-width: 0; max-height: 90vh;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  #swap .bhead { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  #swtitle { color: var(--gold); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; }
+  #swsub { color: var(--dim); font-size: 12px; margin-top: 3px; max-width: 52ch; }
+  #swclose {
+    background: transparent; border: 1px solid var(--border2); border-radius: 5px;
+    color: var(--cream); font: inherit; font-size: 13px; padding: 7px 14px; cursor: pointer;
+    flex: 0 0 auto; white-space: nowrap;
+  }
+  #swclose:hover { color: var(--blood); border-color: var(--blood); }
+  #swnote { flex: 0 0 auto; color: var(--blood); font-size: 12.5px; }
+  #swnote:empty { display: none; }
+  #swconfirm {
+    flex: 0 0 auto; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+    color: var(--bone); font-size: 12.5px;
+    border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px;
+  }
+  #swconfirm .swside { display: inline-flex; align-items: center; gap: 6px; }
+  #swconfirm .swok { color: var(--heal); font-weight: 700; }
+  #swconfirm .swpending { color: var(--dim); font-style: italic; }
+  #swconfirm button {
+    background: transparent; border: 1px solid var(--border2); border-radius: 4px;
+    color: var(--cream); font: inherit; font-size: 12px; padding: 5px 14px; cursor: pointer;
+    margin-left: auto;
+  }
+  #swconfirm button:hover { color: var(--gold); border-color: var(--gold); }
+  #swconfirm button.on { color: var(--heal); border-color: var(--heal); }
+  #swap .bcols {
+    flex: 1 1 auto; min-height: 0; padding-bottom: 14px;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+  }
+  #swap .bcol {
+    border: 1px solid var(--line); border-radius: 8px; padding: 0 10px 8px;
+    overflow-y: auto; min-width: 0; min-height: 120px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #swap .bcolh {
+    position: sticky; top: 0; background: var(--panel); z-index: 1;
+    color: var(--bone); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    border-bottom: 1px solid var(--line); padding: 10px 0 6px;
+  }
+  #swap .bempty { color: var(--dim); font-size: 12px; font-style: italic; padding: 4px 0; }
+  #swap .trow {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px;
+    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  #swap .trow:last-child { border-bottom: none; }
+  #swap .trow .nm { color: var(--cream); font-size: 13px; flex: 1 1 auto; min-width: 11ch; overflow-wrap: anywhere; }
+  #swap .trow button {
+    background: transparent; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--bone); font: inherit; font-size: 11.5px; padding: 3px 9px; cursor: pointer;
+  }
+  #swap .trow button:hover { color: var(--gold); border-color: var(--gold); }
+  #swap .trow button:disabled { color: var(--dim); border-color: var(--line); cursor: default; }
+  @media (max-width: 680px) {
+    #swap .bbox { max-height: 92vh; }
+    #swap .bcols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+    #swap .bcol { overflow-y: visible; min-height: 0; }
+    #swconfirm button { padding: 8px 14px; font-size: 13px; }
+    #swap .trow button { padding: 8px 14px; font-size: 13px; }
   }
   /* The gatehouse forge: same shell as the hatch, single column. Reads your
      pack and shows what the bench can make — cost in gold when you can afford
@@ -840,6 +934,10 @@ export const PAGE = `<!doctype html>
     </div>
   </div>
   <div id="mchat"></div>
+  <div id="dealreq">
+    <div id="drtext"></div>
+    <div id="dracts"></div>
+  </div>
   <div id="bench">
     <div class="bbox">
       <div class="bhead">
@@ -881,6 +979,24 @@ export const PAGE = `<!doctype html>
       <div class="bcols">
         <div class="bcol" id="tstock"></div>
         <div class="bcol" id="tgoods"></div>
+      </div>
+    </div>
+  </div>
+  <div id="swap">
+    <div class="bbox">
+      <div class="bhead">
+        <div>
+          <div id="swtitle">Striking a deal</div>
+          <div id="swsub">Item for item &#8212; there's no coin here. Either side changing the table un-shakes both hands.</div>
+        </div>
+        <button id="swclose">wave it off</button>
+      </div>
+      <div id="swnote"></div>
+      <div id="swconfirm"></div>
+      <div class="bcols">
+        <div class="bcol" id="swpack"></div>
+        <div class="bcol" id="swmine"></div>
+        <div class="bcol" id="swtheirs"></div>
       </div>
     </div>
   </div>
@@ -1731,6 +1847,10 @@ async function connect() {
       if (f.open) renderTrade(f); else closeTrade();
     } else if (f.t === "forge") {
       if (f.open) renderForge(f); else closeForge();
+    } else if (f.t === "swap") {
+      if (!f.open) closeSwap();
+      else if (f.pending) renderDealReq(f);
+      else renderSwap(f);
     } else if (f.t === "map") {
       renderMap(f);
     } else if (f.t === "journal") {
@@ -2678,6 +2798,123 @@ function renderTrade(state) {
   fillTradeCol(tstock, "His stock", state.stock || [], "stock");
   renderGoods();
   tradeEl.classList.add("open");
+}
+
+// ---- a deal with another wanderer: item for item, no keeper, no coin ----
+// Same shell and row look as the hatch, but three columns (your pack to draw
+// from, your offer, theirs) since it's two people, not a shop. Works
+// anywhere a deal was struck, not only at a gate.
+var swapEl = document.getElementById("swap");
+var swpack = document.getElementById("swpack");
+var swmine = document.getElementById("swmine");
+var swtheirs = document.getElementById("swtheirs");
+var swnote = document.getElementById("swnote");
+var swconfirm = document.getElementById("swconfirm");
+document.getElementById("swclose").addEventListener("click", function () { swapSend("cancel"); });
+
+function swapSend(action, row) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "swap", action: action, row: row || "" }));
+}
+function closeSwap() { swapEl.classList.remove("open"); dealreqEl.classList.remove("open"); hideModalChat(); }
+
+// The ask itself, before either side sees the modal: a small top-right card,
+// not a full screen. Incoming gets accept/decline; outgoing gets a cancel
+// while it waits. Deliberately separate from renderSwap's DOM — nobody sees
+// the trading floor until the ask is answered.
+var dealreqEl = document.getElementById("dealreq");
+var drtext = document.getElementById("drtext");
+var dracts = document.getElementById("dracts");
+function renderDealReq(f) {
+  swapEl.classList.remove("open");
+  drtext.textContent = f.role === "incoming"
+    ? f.partner + " wants to strike a deal."
+    : "Waiting on " + f.partner + " to answer\\u2026";
+  dracts.textContent = "";
+  function actButton(label, action) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.addEventListener("click", function () { swapSend(action); });
+    dracts.appendChild(b);
+  }
+  if (f.role === "incoming") {
+    actButton("accept", "accept");
+    actButton("decline", "decline");
+  } else {
+    actButton("cancel", "cancel");
+  }
+  dealreqEl.classList.add("open");
+}
+
+function swapRow(name, itemId, action) {
+  var wrap = document.createElement("div");
+  wrap.className = "trow";
+  var nm = document.createElement("span");
+  nm.className = "nm";
+  nm.textContent = name;
+  wrap.appendChild(nm);
+  if (action) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = action === "offer" ? "offer" : "take back";
+    b.addEventListener("click", function () { swapSend(action, itemId); });
+    wrap.appendChild(b);
+  }
+  return wrap;
+}
+
+function fillSwapCol(el, title, rows) {
+  el.textContent = "";
+  var h = document.createElement("div");
+  h.className = "bcolh";
+  h.textContent = title;
+  el.appendChild(h);
+  if (!rows.length) {
+    var e = document.createElement("div");
+    e.className = "bempty";
+    e.textContent = "\\u2014 nothing here \\u2014";
+    el.appendChild(e);
+    return;
+  }
+  rows.forEach(function (r) { el.appendChild(r); });
+}
+
+function swapSideNode(label, confirmed) {
+  var side = document.createElement("span");
+  side.className = "swside";
+  var lbl = document.createElement("span");
+  lbl.textContent = label + ": ";
+  side.appendChild(lbl);
+  var st = document.createElement("span");
+  st.className = confirmed ? "swok" : "swpending";
+  st.textContent = confirmed ? "shaken on it" : "still deciding";
+  side.appendChild(st);
+  return side;
+}
+
+function renderSwap(state) {
+  dealreqEl.classList.remove("open");
+  swnote.textContent = state.note || "";
+  var partner = state.partner || "your partner";
+  fillSwapCol(swpack, "Your goods", (state.pack || []).map(function (it) {
+    return swapRow(it.name + (it.n > 1 ? " (x" + it.n + ")" : ""), it.itemId, "offer");
+  }));
+  fillSwapCol(swmine, "Your offer", (state.yourOffer || []).map(function (it) {
+    return swapRow(it.name, it.itemId, "unoffer");
+  }));
+  fillSwapCol(swtheirs, partner + "'s offer", (state.theirOffer || []).map(function (it) {
+    return swapRow(it.name, it.itemId, null);
+  }));
+  swconfirm.textContent = "";
+  swconfirm.appendChild(swapSideNode("You", state.yourConfirm));
+  swconfirm.appendChild(swapSideNode(partner, state.theirConfirm));
+  var shake = document.createElement("button");
+  shake.type = "button";
+  shake.textContent = state.yourConfirm ? "hold on" : "shake on it";
+  if (state.yourConfirm) shake.classList.add("on");
+  shake.addEventListener("click", function () { swapSend(state.yourConfirm ? "unconfirm" : "confirm"); });
+  swconfirm.appendChild(shake);
+  swapEl.classList.add("open");
 }
 
 // ---- the gatehouse forge: what the bench can make from what you carry ----
