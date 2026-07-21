@@ -564,6 +564,11 @@ export const PAGE = `<!doctype html>
     border-bottom: 1px solid var(--line); padding: 10px 0 6px;
   }
   #swap .bempty { color: var(--dim); font-size: 12px; font-style: italic; padding: 4px 0; }
+  #swap .bsubh {
+    color: var(--dim); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 6px 0 2px;
+  }
+  #swap .bsubh:first-of-type { padding-top: 2px; }
   #swap .trow {
     display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px;
     padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
@@ -2812,8 +2817,8 @@ var swnote = document.getElementById("swnote");
 var swconfirm = document.getElementById("swconfirm");
 document.getElementById("swclose").addEventListener("click", function () { swapSend("cancel"); });
 
-function swapSend(action, row) {
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "swap", action: action, row: row || "" }));
+function swapSend(action, row, pool) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "swap", action: action, row: row || "", pool: pool || "" }));
 }
 function closeSwap() { swapEl.classList.remove("open"); dealreqEl.classList.remove("open"); hideModalChat(); }
 
@@ -2846,7 +2851,7 @@ function renderDealReq(f) {
   dealreqEl.classList.add("open");
 }
 
-function swapRow(name, itemId, action) {
+function swapRow(name, itemId, action, pool) {
   var wrap = document.createElement("div");
   wrap.className = "trow";
   var nm = document.createElement("span");
@@ -2857,7 +2862,7 @@ function swapRow(name, itemId, action) {
     var b = document.createElement("button");
     b.type = "button";
     b.textContent = action === "offer" ? "offer" : "take back";
-    b.addEventListener("click", function () { swapSend(action, itemId); });
+    b.addEventListener("click", function () { swapSend(action, itemId, pool); });
     wrap.appendChild(b);
   }
   return wrap;
@@ -2879,6 +2884,39 @@ function fillSwapCol(el, title, rows) {
   rows.forEach(function (r) { el.appendChild(r); });
 }
 
+var SWAP_POOL_LABEL = { "": "Pack", lockbox: "Lockbox", vault: "Vault" };
+
+// "Your goods" is grouped into sub-headed clusters by where the item actually
+// lives (pack/lockbox/vault) — same itemId can sit in more than one pool at
+// once, and the offer action needs to know which one it's pulling from.
+function fillSwapGoods(el, title, items) {
+  el.textContent = "";
+  var h = document.createElement("div");
+  h.className = "bcolh";
+  h.textContent = title;
+  el.appendChild(h);
+  if (!items.length) {
+    var e = document.createElement("div");
+    e.className = "bempty";
+    e.textContent = "\\u2014 nothing here \\u2014";
+    el.appendChild(e);
+    return;
+  }
+  var groups = { "": [], lockbox: [], vault: [] };
+  items.forEach(function (it) { (groups[it.pool] || groups[""]).push(it); });
+  ["", "lockbox", "vault"].forEach(function (pool) {
+    var list = groups[pool];
+    if (!list.length) return;
+    var sh = document.createElement("div");
+    sh.className = "bsubh";
+    sh.textContent = SWAP_POOL_LABEL[pool];
+    el.appendChild(sh);
+    list.forEach(function (it) {
+      el.appendChild(swapRow(it.name + (it.n > 1 ? " (x" + it.n + ")" : ""), it.itemId, "offer", pool));
+    });
+  });
+}
+
 function swapSideNode(label, confirmed) {
   var side = document.createElement("span");
   side.className = "swside";
@@ -2896,9 +2934,7 @@ function renderSwap(state) {
   dealreqEl.classList.remove("open");
   swnote.textContent = state.note || "";
   var partner = state.partner || "your partner";
-  fillSwapCol(swpack, "Your goods", (state.pack || []).map(function (it) {
-    return swapRow(it.name + (it.n > 1 ? " (x" + it.n + ")" : ""), it.itemId, "offer");
-  }));
+  fillSwapGoods(swpack, "Your goods", state.pack || []);
   fillSwapCol(swmine, "Your offer", (state.yourOffer || []).map(function (it) {
     return swapRow(it.name, it.itemId, "unoffer");
   }));

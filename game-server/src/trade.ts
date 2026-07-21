@@ -152,9 +152,10 @@ export async function handleSwap(z: ZoneDO, session: Session, frame: any): Promi
   const other = z.sessions.get(otherOf(deal, session.pubkey));
   if (action === "offer") {
     const row = typeof frame.row === "string" ? frame.row : "";
+    const pool = frame.pool === "lockbox" || frame.pool === "vault" ? frame.pool : "";
     const already = mine ? deal.offerA : deal.offerB;
     const pools = await tradePools(z, session, deal.gatehouse);
-    const hit = pools.find((p) => p.item.itemId === row && !already.some((o) => o.rowId === p.item.rowId));
+    const hit = pools.find((p) => p.item.itemId === row && p.pool === pool && !already.some((o) => o.rowId === p.item.rowId));
     if (!hit) { await sendDeal(z, session, deal, "You've nothing more like that to lay down."); return; }
     already.push({ rowId: hit.item.rowId, itemId: hit.item.itemId });
     deal.confirmA = false; deal.confirmB = false; // any change un-shakes both hands
@@ -194,14 +195,15 @@ export async function sendDeal(z: ZoneDO, session: Session, deal: Deal, note?: s
   const theirOffer = mine ? deal.offerB : deal.offerA;
   const other = z.sessions.get(otherOf(deal, session.pubkey));
   const nameOf = (o: DealItem) => world.itemTemplates.get(o.itemId)?.name ?? o.itemId;
-  const goods = new Map<string, { itemId: string; name: string; rarity: string; n: number }>();
-  for (const { item: c } of await tradePools(z, session, deal.gatehouse)) {
+  const goods = new Map<string, { itemId: string; name: string; rarity: string; pool: "" | "lockbox" | "vault"; n: number }>();
+  for (const { item: c, pool } of await tradePools(z, session, deal.gatehouse)) {
     if (yourOffer.some((o) => o.rowId === c.rowId)) continue;
     const t = world.itemTemplates.get(c.itemId);
     if (!t) continue;
-    const g = goods.get(t.id) ?? { itemId: t.id, name: t.name, rarity: t.rarity, n: 0 };
+    const key = pool + ":" + t.id;
+    const g = goods.get(key) ?? { itemId: t.id, name: t.name, rarity: t.rarity, pool, n: 0 };
     g.n += 1;
-    goods.set(t.id, g);
+    goods.set(key, g);
   }
   try {
     session.ws.send(JSON.stringify({
