@@ -161,6 +161,33 @@ export function signSheetEvent(
   );
 }
 
+// Overwrites a specific addressable score coordinate in place (same kind+
+// pubkey+d as some prior event) with a neutral, zeroed-out entry. For relays
+// that reject NIP-09 kind-5 deletions (Gamestr does) but still honor
+// addressable-replaceable semantics — the same mechanism a normal score
+// re-publish relies on — this is the only way to retire a stale entry there.
+export function signRetireScoreEvent(
+  env: Env,
+  p: { d: string; game: string; player: string; board: string; content: string },
+): Event {
+  const sk = hexToBytes(env.GAME_SK_HEX);
+  const tags: string[][] = [
+    ["d", p.d],
+    ["game", p.game],
+    ["score", "0"],
+    ["p", p.player],
+    ["state", "retired"],
+    ["mode", "multiplayer"],
+    ["level", p.board],
+    ["board", p.board],
+    ["v", "0"],
+  ];
+  return finalizeEvent(
+    { kind: SCORE_KIND, created_at: nowSec(), tags, content: p.content },
+    sk,
+  );
+}
+
 // NIP-09 deletion request (kind 5), signed by the epoch key so it can retract
 // only what the epoch key itself signed — a stale/malformed 30762 score, say.
 // One `k` tag per deleted kind, one `e` tag per event id.

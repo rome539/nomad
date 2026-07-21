@@ -6,7 +6,7 @@ import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
 import { touchIconBytes, iconN512Bytes, ogImageBytes, doorSceneBytes } from "./assets";
-import { signProfileEvent, signSheetEvent, signDeleteEvent, isGameKeyConfigured } from "./signing";
+import { signProfileEvent, signSheetEvent, signDeleteEvent, signRetireScoreEvent, isGameKeyConfigured } from "./signing";
 import type { PlayerRow } from "./world";
 import { publishEvent, publishScore, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
@@ -157,6 +157,34 @@ export default {
         const ev = signDeleteEvent(env, { ids, kinds, reason: body?.reason });
         await publishScore(env, ev);
         return json({ published: true, id: ev.id, pubkey: ev.pubkey, relays: [...relayList(env)] });
+      }
+
+      // Keeper-only: for relays that ignore NIP-09 deletions (Gamestr blocks
+      // kind 5 outright) but still honor addressable-replaceable semantics,
+      // overwrite a stale score coordinate in place with a zeroed, retired
+      // entry. Body: one of { entries: [{d, game, player, board, content}] }.
+      if (m === "POST" && pathname === "/admin/retire-score") {
+        const token = env.ADMIN_TOKEN?.trim();
+        if (!token || req.headers.get("x-admin-token") !== token) {
+          return json({ error: "unauthorized" }, 401);
+        }
+        if (!isGameKeyConfigured(env)) return json({ error: "no_game_key" }, 409);
+        const body = await req.json<{ entries?: Array<{ d?: string; game?: string; player?: string; board?: string; content?: string }> }>().catch(() => null);
+        const entries = body?.entries ?? [];
+        const results = [];
+        for (const e of entries) {
+          if (!e.d || !e.game || !e.player || !e.board) {
+            results.push({ error: "bad_entry", entry: e });
+            continue;
+          }
+          const ev = signRetireScoreEvent(env, {
+            d: e.d, game: e.game, player: e.player, board: e.board,
+            content: e.content ?? "(retired — malformed pre-launch entry, superseded)",
+          });
+          await publishScore(env, ev);
+          results.push({ published: true, id: ev.id, d: e.d });
+        }
+        return json({ results });
       }
 
       // Keeper-only: wipe the world SIM (mobs, ground, world state) and re-seed
