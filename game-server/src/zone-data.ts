@@ -2,6 +2,7 @@
 // for the dungeon — lifted out of the ZoneDO monolith. Pure data; no state, no
 // logic. Values and names are unchanged from when they lived in zone.ts.
 import type { Stance } from "./zone-types";
+import { type ItemTemplate, trait } from "./world";
 
 
 export const TICK_MS = 2000;
@@ -1612,12 +1613,42 @@ export const TRAIT_POOL: Record<string, string[]> = {
   cloak: ["quiet", "slick", "strapped"],// a muffled / oiled / lashed-down wrap
   armor: ["padded", "wardhide", "strapped"], // quilted, boiled, buckled tight
   helm:  ["padded"],                    // an arming cap sewn in
+  // Weapons (2026-07-21): six item-instance properties, none of them the
+  // structural traits (reach/pierce/two-handed/mancatcher/riposte) that DEFINE
+  // what a weapon is — those stay hand-authored, never in the pool. Four
+  // classes, symmetric: one class-EXCLUSIVE trait apiece (sharpens whatever
+  // that weapon already is) plus two that are class-OPEN (any weapon at all)
+  // — 3 possible rolls per weapon, no matter which class it's cut from.
+  // Checked in WEAPON_CLASS_TRAIT (below), enforced in zone.ts's rollTraits.
+  //   keen     — EXCLUSIVE, edged (bleed > 0): +1 effective bleed.
+  //   weighted — EXCLUSIVE, blunt (stun > 0): +1 on top of BLUNT_ARMOR_IGNORE.
+  //   needling — EXCLUSIVE, pierce (pierce > 0): +1 pierce.
+  //   cleaving — EXCLUSIVE, cleave (sweep > 1): one more foe per landed swing.
+  //   balanced — OPEN, any weapon: a point lighter in the hand (load law
+  //              only, dmg untouched).
+  //   honed    — OPEN, any weapon: a flat +1 to the blow that lands.
+  weapon: ["keen", "balanced", "honed", "weighted", "needling", "cleaving"],
 };
+// Which class a class-locked weapon trait may land on — absence here means
+// "any weapon" (keen/balanced/honed). Checked in rollTraits so the roll never
+// wastes itself on a weapon it can't do anything for.
+export const WEAPON_CLASS_TRAIT: Record<string, (t: ItemTemplate) => boolean> = {
+  keen: (t) => t.bleed > 0,
+  weighted: (t) => t.stun > 0,
+  needling: (t) => trait(t, "pierce") > 0,
+  cleaving: (t) => t.sweep > 1,
+};
+// keen on a weapon with no bleed stat at all (blunt/pierce) doesn't guarantee a
+// wound every swing — it's a bare chance, rolled once per landed hit, same
+// shape as BLEED_ODDS above.
+export const KEEN_BARE_BLEED_ODDS = 0.15;
 // The adjective a rolled trait wears in an item's name ("a muffled cloak"). One
 // per tag — the piece advertises WHAT it rolled; the paperdoll spells the effect
 // out once it's worn (wearsTrait feeds the sheet).
 export const TRAIT_ADJ: Record<string, string> = {
   quiet: "muffled", slick: "oiled", padded: "quilted", wardhide: "boiled", strapped: "buckled",
+  keen: "keen", balanced: "balanced", honed: "honed",
+  weighted: "weighted", needling: "needling", cleaving: "wide-arced",
 };
 // What `look` says about a rolled trait — the reason the piece is worth more than
 // its plain twin, in the game's voice, with the mechanic named in parens to
@@ -1628,6 +1659,12 @@ export const ROLLED_TELL: Record<string, string> = {
   padded: "Quilted through — it soaks up a ringing blow (wards stun).",
   wardhide: "Boiled hard — it turns a cut that would open you (wards wounds).",
   strapped: "Lashed down tight — no cutpurse lifts it off you (strapped).",
+  keen: "Ground to a wicked edge — it bites deeper than its plain twin (extra bleed).",
+  balanced: "Balanced true — it hangs lighter in the hand than its weight suggests (less load).",
+  honed: "Honed hard, honed true — every blow lands a shade harder (+1 dmg).",
+  weighted: "Head-heavy, deliberately so — it caves plate a shade deeper (extra armor-ignore).",
+  needling: "Ground down to a needle's point — it finds the seam plate can't close (extra armor-ignore).",
+  cleaving: "Wide in the arc — it catches one more than its plain twin (extra sweep).",
 };
 
 // ---- the verdigris-thing: the extraction monster (047) ----

@@ -93,7 +93,7 @@ import {
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
-  TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL,
+  TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT,
   DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
@@ -2269,7 +2269,9 @@ export class ZoneDO implements DurableObject {
         // Re-fetch each swing: a fumble can fling the blade mid-round, and a
         // blade can wear through mid-arc. The rest of the round is bare-handed.
         const weapon = this.equippedItem(session, "weapon");
-        const sweepN = Math.max(1, weapon?.tmpl.sweep ?? 1);
+        // cleaving (099-weapon): one more foe caught per landed swing, on top
+        // of the template's own sweep.
+        const sweepN = Math.max(1, (weapon?.tmpl.sweep ?? 1) + (weapon && this.itemRolled(weapon, "cleaving") ? 1 : 0));
         const targets = [primary, ...foes.filter((c) => c !== primary && alive(c)).slice(0, sweepN - 1)];
 
         // Wounds are felt: below a third of your blood, your hands shake
@@ -2299,7 +2301,8 @@ export class ZoneDO implements DurableObject {
             // speed multiplies the blade, never your whole arm. Slow heavy
             // steel lands fewer, bigger blows; both are real choices.
             const body = swing === 0 ? randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) : 0;
-            let dmg = Math.round((body + (weapon ? this.effDmg(weapon) : 0)) * atkMult);
+            const honed = weapon && this.itemRolled(weapon, "honed") ? 1 : 0;
+            let dmg = Math.round((body + (weapon ? this.effDmg(weapon) + honed : 0)) * atkMult);
             if (hurt) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); this.tellWounded(session); }
             let flourish = ".";
             if (chance(CRIT_CHANCE)) {
@@ -2309,8 +2312,10 @@ export class ZoneDO implements DurableObject {
             // Their hide or plate turns what it can; a blow always bites. A pick's
             // point slips plate, a blunt weapon caves it — both ignore that armor,
             // each with its own tell (pierce takes precedence if a weapon had both).
-            const pierceVal = weapon ? trait(weapon.tmpl, "pierce") ?? 0 : 0;
-            const bluntVal = weapon && weapon.tmpl.stun > 0 ? BLUNT_ARMOR_IGNORE : 0;
+            // needling/weighted (099-weapon): +1 armor-ignore each, on top of
+            // the template's own pierce value / the flat blunt constant.
+            const pierceVal = weapon ? (trait(weapon.tmpl, "pierce") ?? 0) + (this.itemRolled(weapon, "needling") ? 1 : 0) : 0;
+            const bluntVal = weapon && weapon.tmpl.stun > 0 ? BLUNT_ARMOR_IGNORE + (this.itemRolled(weapon, "weighted") ? 1 : 0) : 0;
             const pierced = pierceVal > 0 && tmpl.armor > 0; // the point beat armor
             const crushed = bluntVal > 0 && pierceVal === 0 && tmpl.armor > 0; // the weight beat armor
             dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - Math.max(pierceVal, bluntVal)));
@@ -2342,8 +2347,16 @@ export class ZoneDO implements DurableObject {
               // to open (sometimes, so it teaches without nagging). A landed stun
               // keeps its own line below, for the thud.
               const hollow = HOLLOW.has(tmpl.id);
-              const freshBleed = !!(weapon && weapon.tmpl.bleed > 0 && !hollow && !creature.bleedTicks);
-              const bleedDry = !!(weapon && weapon.tmpl.bleed > 0 && hollow);
+              // keen (099-weapon): +1 effective bleed on an already-edged blade —
+              // the lottery only ever rolls it there (WEAPON_CLASS_TRAIT), but the
+              // bare-chance branch below stays live for a hand-authored exception.
+              const keen = weapon ? this.itemRolled(weapon, "keen") : false;
+              const effBleed = weapon
+                ? weapon.tmpl.bleed > 0 ? weapon.tmpl.bleed + (keen ? 1 : 0)
+                : keen && chance(KEEN_BARE_BLEED_ODDS) ? 1 : 0
+                : 0;
+              const freshBleed = !!(weapon && effBleed > 0 && !hollow && !creature.bleedTicks);
+              const bleedDry = !!(weapon && effBleed > 0 && hollow);
               // The wights (GRAVE_FLESH) split the voices: a point still slips
               // between ribs (a corpse has them), but a blunt blow cracks dry —
               // and their bleed immunity speaks through BONE_DRY_TELL like bone.
@@ -2365,9 +2378,9 @@ export class ZoneDO implements DurableObject {
               // A fast, cutting edge opens a wound that keeps weeping — damage
               // over time that no armor turns. Fresh hits keep it open. But the
               // HOLLOW don't bleed (dry bone, old iron): the DoT finds no blood.
-              if (weapon && weapon.tmpl.bleed > 0 && !hollow) {
+              if (weapon && effBleed > 0 && !hollow) {
                 creature.bleedTicks = BLEED_TICKS;
-                creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, weapon.tmpl.bleed);
+                creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, effBleed);
                 if (freshBleed) this.actorFeed(session, session.roomId, this.feedProc(FEED_BLEED, session.name, tmpl.name), "bleed");
               }
               this.combatNoise(session.roomId);
@@ -4382,7 +4395,11 @@ export class ZoneDO implements DurableObject {
   // clean flight); a heavy blade costs you your footwork same as heavy plate.
   public wornWeight(session: Session): number {
     let total = 0;
-    for (const g of this.equippedAll(session)) total += g.tmpl.weight;
+    // A balanced weapon shaves a point off its own weight — the load law only,
+    // damage untouched (099-weapon).
+    for (const g of this.equippedAll(session)) {
+      total += Math.max(0, g.tmpl.weight - (this.itemRolled(g, "balanced") ? 1 : 0));
+    }
     return total;
   }
 
@@ -4454,6 +4471,15 @@ export class ZoneDO implements DurableObject {
     }
   }
 
+  // Does THIS carried instance carry the tag — its template's OR its own roll
+  // (099)? Unlike wearsTrait (whole-kit, boolean-only fold), keen/balanced/honed
+  // are properties of the specific weapon in hand, not the whole body, so they
+  // read off one item, not every equipped slot.
+  public itemRolled(g: { carried: CarriedItem; tmpl: ItemTemplate } | null, tag: string): boolean {
+    if (!g) return false;
+    return hasTrait(g.tmpl, tag) || (g.carried.rolledMap?.get(tag) ?? 0) > 0;
+  }
+
   // Does any EQUIPPED piece carry this trait? (Gear traits — reach, padded,
   // quiet, slick, strapped — are worn, not carried: a spear in the pack blunts
   // nothing.) Traits are booleans by design; two padded pieces are just padded.
@@ -4481,7 +4507,10 @@ export class ZoneDO implements DurableObject {
     if (!tmpl || tmpl.slot === "") return "";
     const pool = TRAIT_POOL[tmpl.slot];
     if (!pool || !chance(TRAIT_ROLL_ODDS)) return "";
-    const options = pool.filter((t) => !hasTrait(tmpl, t));
+    // Class-locked weapon traits (weighted/needling/cleaving) only enter the
+    // draw for a weapon of their own class — no wasted rolls on a mace that
+    // can never use needling.
+    const options = pool.filter((t) => !hasTrait(tmpl, t) && (WEAPON_CLASS_TRAIT[t]?.(tmpl) ?? true));
     return options.length ? pick(options) : "";
   }
 
