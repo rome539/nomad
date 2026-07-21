@@ -93,7 +93,7 @@ import {
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
-  TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT,
+  TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, playerBleedOdds,
   DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
@@ -2351,8 +2351,11 @@ export class ZoneDO implements DurableObject {
               // the lottery only ever rolls it there (WEAPON_CLASS_TRAIT), but the
               // bare-chance branch below stays live for a hand-authored exception.
               const keen = weapon ? this.itemRolled(weapon, "keen") : false;
+              // Bleed is a per-hit CHANCE now (playerBleedOdds), derived from the
+              // weapon's own dmg/bleed ratio — was unconditional before this tune.
               const effBleed = weapon
-                ? weapon.tmpl.bleed > 0 ? weapon.tmpl.bleed + (keen ? 1 : 0)
+                ? weapon.tmpl.bleed > 0
+                  ? chance(playerBleedOdds(weapon.tmpl.dmg, weapon.tmpl.bleed)) ? weapon.tmpl.bleed + (keen ? 1 : 0) : 0
                 : keen && chance(KEEN_BARE_BLEED_ODDS) ? 1 : 0
                 : 0;
               const freshBleed = !!(weapon && effBleed > 0 && !hollow && !creature.bleedTicks);

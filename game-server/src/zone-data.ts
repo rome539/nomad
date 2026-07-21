@@ -1642,6 +1642,27 @@ export const WEAPON_CLASS_TRAIT: Record<string, (t: ItemTemplate) => boolean> = 
 // wound every swing — it's a bare chance, rolled once per landed hit, same
 // shape as BLEED_ODDS above.
 export const KEEN_BARE_BLEED_ODDS = 0.15;
+
+// Player-inflicted bleed used to fire on 100% of landed hits, every edged
+// weapon, no roll — the mirror-image mob-side (BLEED_ODDS) has always been a
+// per-hit CHANCE, tiered by threat. That asymmetry let a weapon's bleed climb
+// as a share of total damage the more armor ate its direct hit (bleed ignores
+// armor entirely), and let one outlier (crawlers-hooks: dmg2/bleed3) bleed for
+// MORE than its own swing on every single hit.
+// Fix: derive the odds from the weapon's OWN numbers instead of one flat
+// guess. Target — bleed should average out to roughly TARGET_BLEED_SHARE of
+// what the weapon's direct hit does. Odds = share * dmg / bleed, capped at 1.
+// A small bleed relative to the weapon's own dmg procs often (a dull common
+// blade was never doing much else); a big bleed relative to dmg procs rarely
+// (when it lands, it already hit hard on its own). No weapon can be both
+// "always" and "hits harder than its own swing" — self-corrects per weapon,
+// no per-item special-casing. keen's own +1 stacks on the RESULT (how deep
+// the wound goes when it opens), never on the odds (how often it opens).
+export const PLAYER_BLEED_TARGET_SHARE = 0.3;
+export function playerBleedOdds(dmg: number, bleed: number): number {
+  if (bleed <= 0) return 0;
+  return Math.min(1, (PLAYER_BLEED_TARGET_SHARE * dmg) / bleed);
+}
 // The adjective a rolled trait wears in an item's name ("a muffled cloak"). One
 // per tag — the piece advertises WHAT it rolled; the paperdoll spells the effect
 // out once it's worn (wearsTrait feeds the sheet).
