@@ -16,6 +16,7 @@ export type Verb =
   | "remove"
   | "unlock"
   | "salvage"
+  | "burn"
   | "forge"
   | "smelt"
   | "repair"
@@ -92,6 +93,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   remove: "remove", unequip: "remove", unwield: "remove", doff: "remove", sheathe: "remove", sheath: "remove",
   unlock: "unlock", open: "unlock", pry: "unlock", force: "unlock",
   salvage: "salvage", scrap: "salvage", dismantle: "salvage", break: "salvage",
+  burn: "burn", destroy: "burn",
   forge: "forge", craft: "forge", make: "forge", smith: "forge",
   smelt: "smelt", melt: "smelt",
   repair: "repair", mend: "repair", fix: "repair",
@@ -327,6 +329,7 @@ export const HELP_TEXT = [
   "                    encrypted to their key alone, and no relay keeps it.",
   "  salvage <gear>    (scrap) — at any gate: break steel down at the bench vice",
   "                    for scrap iron. The rarer the piece, the bigger the pile.",
+  "  burn <item>       (destroy) — gone for good, no scrap, no trace. Anywhere.",
   "  forge [item]      (craft) — at any gate: work scrap iron (and the odd trophy)",
   "                    into gear. 'forge' alone reads the bench's recipe book.",
   "  repair <gear>     (mend) — at any gate: spend scrap iron to hammer out the wear",

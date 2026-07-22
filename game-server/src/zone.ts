@@ -994,7 +994,7 @@ export class ZoneDO implements DurableObject {
       return;
     }
     // Effort ends rest; watching and talking do not.
-    if (session.resting && (cmd.verb === "go" || cmd.verb === "attack" || cmd.verb === "throw" || cmd.verb === "get" || cmd.verb === "drop")) {
+    if (session.resting && (cmd.verb === "go" || cmd.verb === "attack" || cmd.verb === "throw" || cmd.verb === "get" || cmd.verb === "drop" || cmd.verb === "burn")) {
       session.resting = false;
       this.send(session, "You rise.");
       this.sendStatus(session); // the 'resting' pill must clear the instant you rise, not linger until the first combat round pushes the next status
@@ -1027,6 +1027,7 @@ export class ZoneDO implements DurableObject {
       case "stance": return verbs.cmdStance(this, session, cmd.arg);
       case "get": return verbs.cmdGet(this, session, cmd.arg);
       case "drop": return verbs.cmdDrop(this, session, cmd.arg);
+      case "burn": return verbs.cmdBurn(this, session, cmd.arg);
       case "equip": return verbs.cmdEquip(this, session, cmd.arg);
       case "remove": return verbs.cmdRemove(this, session, cmd.arg);
       case "unlock": return this.cmdUnlock(session, cmd.arg);

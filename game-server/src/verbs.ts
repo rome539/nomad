@@ -29,7 +29,7 @@ import {
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
 } from "./zone-data";
-import { gatehouseFeed, throughTheDoor, enterBench, sendBench } from "./gate";
+import { gatehouseFeed, throughTheDoor } from "./gate";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
 export function cmdXyzzy(z: ZoneDO, session: Session): void {
@@ -1093,6 +1093,24 @@ export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedI
     : `You drop ${tmpl.name}.`) + quietAgain;
 }
 
+// Typed 'burn <item>' — the same destructive act as the bench's burn button
+// (gate.ts benchBurn), but by name instead of a modal row, so it works
+// anywhere the pack does: gate or dungeon, sanctuary or not (rome, 2026-07-22:
+// "burn will be in text"). Pack only — the lockbox/vault stay a bench-modal
+// act, since you can't name-target a box you aren't looking into.
+export async function cmdBurn(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  if (!arg) return z.send(session, "Burn what?");
+  const carried = z.findCarried(session, arg);
+  if (!carried) return z.send(session, "You carry nothing like that.");
+  const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
+  session.items.splice(session.items.indexOf(carried), 1);
+  await removeItemRow(z.env.DB, carried.rowId);
+  if (carried.serial !== null) await voidMint(z.env.DB, carried.serial);
+  z.roomFeed(session.roomId, `${session.name} burns ${tmpl.name} down to nothing.`, session.pubkey, false);
+  z.send(session, `You burn ${tmpl.name}. Nothing of it is left.`, "gain");
+  await z.persist();
+}
+
 export async function cmdStance(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const alias: Record<string, Stance> = {
     reckless: "reckless", aggressive: "reckless", aggro: "reckless", offensive: "reckless", berserk: "reckless", wild: "reckless",
@@ -1258,8 +1276,11 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string): s
 // Typed 'inventory'. At a gate it steps you out (like opening the keeping
 // modal): safe, wounds closing, and all three keepings — pack, lockbox, deep
 // keep — laid out, with 'stash'/'unstash'/'vault' to move things and 'look'
-// to step back. In the dungeon it's a light glance (pack + the lockbox that
-// rides with you), no stepping out. In a fight, your pack only.
+// to step back. In the dungeon it's a light glance at the pack, in TEXT, same
+// shape as the gate but without the walk through the door (rome, 2026-07-22:
+// the modal read as inconsistent with the gate's plain listing — 'burn' now
+// works by name anywhere via cmdBurn, so the modal was the only reason left
+// to crouch into it). In a fight, your pack only, no flavor line.
 export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   const world = z.world!;
   // The standing read on the burden law — the pack tells you when it's loud.
@@ -1270,16 +1291,17 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`), ...loud].join("\n"));
   }
   const atGate = world.entryRooms.has(session.roomId);
-  // Out in the world, 'inv' CROUCHES you over the pack — the same modal the
-  // pack-button opens (enterBench, a crouch in place) — so you sort and BURN from
-  // the list anywhere, not only at a gate (rome, 2026-07-19: "that's where you
-  // burn items"). It is NOT sanctuary: you crouch in the open, still in reach —
-  // outOfWorld stays false away from an entry room, so creatures keep their
-  // target and their swings and your wounds keep bleeding. Only the gate's door
-  // (below) is safe. (Combat above already refused — you can't sort mid-fight.)
+  // Out in the world, 'inv' crouches you over the pack a moment — the same
+  // NOT-sanctuary beat the old modal had (still in reach, creatures keep
+  // their target, wounds keep bleeding) — but resolves straight to text
+  // instead of opening a modal. Only the gate's door (below) is safe.
   if (!atGate) {
-    enterBench(z, session);
-    return sendBench(z, session);
+    z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
+    return z.send(session, [
+      ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`),
+      ...loud,
+      "('burn <item>' to destroy it, 'drop <item>' to shed it, 'equip'/'remove' to swap gear.)",
+    ].join("\n"));
   }
   const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
   const out: string[] = [];
