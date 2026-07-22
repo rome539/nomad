@@ -1134,6 +1134,15 @@ export const BONE_DRY_TELL = [
   "no blood in it to spill", "the edge finds nothing to open",
   "dry bone drinks the cut and gives nothing", "there's nothing in it left to bleed",
 ];
+// The stagger-punish flavor, edge's version: pierce/blunt already read this
+// moment through PIERCE_TELL/BLUNT_TELL (their armor-ignore was already
+// live, just bigger this swing); edge needed its own line, since this is the
+// only time an edge weapon's direct hit ever bypasses armor at all.
+export const STAGGER_EDGE_TELL = [
+  "it's still off-balance — the cut goes in clean, armor or not",
+  "still reeling from its own overreach, it never turns the blade",
+  "caught flat-footed, the edge finds nothing in its way",
+];
 // Kept small and sharp — one of these caps a critical hit, player or creature.
 export const CRIT_FLOURISH = [
   " — a savage blow!", " — and it tells!", " — clean through!", " — a brutal stroke!",
@@ -1521,6 +1530,25 @@ export const BRAND_MINT_ODDS = 0.25;            // ...and 1 check in 4 mints —
 // couldn't (couldn't actually cave plate). The PICKS stay distinct: lighter, and
 // their 2-3 pierce still tops out above a mace's flat 2.
 export const BLUNT_ARMOR_IGNORE = 2;
+// Punishing an overreach (rome, 2026-07-22): when a creature's OWN swing goes
+// wide (the FUMBLE_CHANCE/dodge branch, "swings wide"/"overreaches"), it's
+// briefly off-balance (Creature.staggerUntil) — the player's very next
+// landed hit gets a bonus, keyed to the weapon's own damage-shape so every
+// class has a real answer, not just blunt. One hit only, whichever weapon
+// lands it — consumed the instant it's used. The window just needs to
+// comfortably reach the player's NEXT swing (players go first each round —
+// a miss this round is caught on the next one, never the same beat).
+export const STAGGER_WINDOW_MS = 6000; // ~1.5 rounds at COMBAT_ROUND_MS
+export const STAGGER_STUN_BONUS = 0.25; // blunt: straight add to the stun roll
+// pierce/edge: extra armor-ignore for that one hit — same size as blunt's OWN
+// permanent BLUNT_ARMOR_IGNORE. For edge this is new capability, not a bump:
+// an edge weapon's direct hit otherwise NEVER ignores armor at all (bleed is
+// its usual answer to armor, never the swing itself).
+export const STAGGER_ARMOR_BONUS = 2;
+// cleave: no armor-ignore analog fits — sweep's whole identity is "more
+// targets," and one foe's own opening doesn't create more of them. A flat
+// damage bump instead, same slot as honed's +1 but bigger since it's earned.
+export const STAGGER_CLEAVE_DMG_BONUS = 2;
 //   two-handed — wants both hands; no shield alongside it (enforced at equip)
 //   padded    — a mob's stun rings you half as often (PADDED_STUN_MULT). Best
 //               piece counts; the trait is a boolean, it never stacks.

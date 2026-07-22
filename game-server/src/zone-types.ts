@@ -89,6 +89,7 @@ export interface Creature {
   surfacedAt?: number; // ms epoch it surfaced; unkilled past SURFACED_STALE_MS it slinks back down (frees the next surfacing)
   nextBirthAt?: number; // brood-rat: ms epoch of its next birth
   stunned?: boolean; // a blunt blow rang it — skips its next action, then clears
+  staggerUntil?: number; // ms epoch: its OWN swing went wide and left it off-balance — the player's next landed hit before this expires gets a class-keyed bonus (STAGGER_* consts), then this clears — one hit only
   bleedTicks?: number; // ticks of open wound left (armor-ignoring); refreshed by fast hits
   bleedDmg?: number; // damage the current wound bleeds each tick
   hidden?: boolean; // LURKER: unseen in the room until it strikes

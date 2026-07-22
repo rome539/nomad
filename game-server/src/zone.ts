@@ -87,7 +87,7 @@ import {
   WAKE_NOISE, RARITY_RANK,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
-  BLUNT_ARMOR_IGNORE,
+  BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
@@ -2304,7 +2304,18 @@ export class ZoneDO implements DurableObject {
             // steel lands fewer, bigger blows; both are real choices.
             const body = swing === 0 ? randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) : 0;
             const honed = weapon && this.itemRolled(weapon, "honed") ? 1 : 0;
-            let dmg = Math.round((body + (weapon ? this.effDmg(weapon) + honed : 0)) * atkMult);
+            // The stagger-punish window (STAGGER_WINDOW_MS, set above on the
+            // creature's own overreach): one landed hit only, consumed the
+            // instant it's read here, whichever bonus below fits this
+            // weapon's class. isEdge/isPierce/isCleave read the WEAPON'S
+            // base class, same tests WEAPON_CLASS_TRAIT uses for the roll.
+            const staggered = creature.staggerUntil !== undefined && now < creature.staggerUntil;
+            if (staggered) creature.staggerUntil = undefined;
+            const isEdge = !!weapon && weapon.tmpl.bleed > 0;
+            const isPierce = !!weapon && (trait(weapon.tmpl, "pierce") ?? 0) > 0;
+            const isCleave = !!weapon && weapon.tmpl.sweep > 1;
+            const staggerDmg = staggered && isCleave ? STAGGER_CLEAVE_DMG_BONUS : 0;
+            let dmg = Math.round((body + (weapon ? this.effDmg(weapon) + honed + staggerDmg : 0)) * atkMult);
             if (hurt) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); this.tellWounded(session); }
             let flourish = ".";
             if (chance(CRIT_CHANCE)) {
@@ -2316,11 +2327,16 @@ export class ZoneDO implements DurableObject {
             // each with its own tell (pierce takes precedence if a weapon had both).
             // needling/weighted (099-weapon): +1 armor-ignore each, on top of
             // the template's own pierce value / the flat blunt constant.
-            const pierceVal = weapon ? (trait(weapon.tmpl, "pierce") ?? 0) + (this.itemRolled(weapon, "needling") ? 1 : 0) : 0;
+            const pierceVal = weapon ? (trait(weapon.tmpl, "pierce") ?? 0) + (this.itemRolled(weapon, "needling") ? 1 : 0) + (staggered && isPierce ? STAGGER_ARMOR_BONUS : 0) : 0;
             const bluntVal = weapon && weapon.tmpl.stun > 0 ? BLUNT_ARMOR_IGNORE + (this.itemRolled(weapon, "weighted") ? 1 : 0) : 0;
+            // edge has no PERMANENT armor-ignore at all (bleed is its usual
+            // answer to armor, never the direct hit) — this is the one
+            // moment it gets one, same size as blunt's own baseline.
+            const edgeVal = staggered && isEdge ? STAGGER_ARMOR_BONUS : 0;
             const pierced = pierceVal > 0 && tmpl.armor > 0; // the point beat armor
             const crushed = bluntVal > 0 && pierceVal === 0 && tmpl.armor > 0; // the weight beat armor
-            dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - Math.max(pierceVal, bluntVal)));
+            const opened = edgeVal > 0 && pierceVal === 0 && bluntVal === 0 && tmpl.armor > 0; // the stagger bonus, edge's one-off
+            dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - Math.max(pierceVal, bluntVal, edgeVal)));
             creature.hp -= dmg;
             this.markHurt(creature, tmpl, session.pubkey);
             // The vitals lottery, PLAYER side — a lucky killing blow on a landed
@@ -2368,14 +2384,16 @@ export class ZoneDO implements DurableObject {
               const tail = flourish !== "." ? flourish
                 : pierced ? ` — ${pick(hollow && !GRAVE_FLESH.has(tmpl.id) ? PIERCE_TELL : PIERCE_TELL_FLESH)}.`
                 : crushed ? ` — ${pick(hollow ? BLUNT_TELL_BONE : BLUNT_TELL)}.`
+                : opened ? ` — ${pick(STAGGER_EDGE_TELL)}.`
                 : freshBleed ? ` — ${pick(BLEED_TELL)}.`
                 : bleedDry && chance(0.3) ? ` — ${pick(BONE_DRY_TELL)}.`
                 : ".";
               this.send(session, `${this.playerHit(weapon, tmpl.name)} for ${dmg}${tail} (${this.condition(creature)})`, flourish === "." ? "dmgout" : "dmgout big");
               // A blunt blow can ring it senseless — it loses its next swing.
               // The boss never reels, and a thing already reeling can't be
-              // stun-chained deeper (one hit, one lost beat).
-              if (weapon && weapon.tmpl.stun > 0 && !tmpl.is_boss && !creature.stunned && chance(weapon.tmpl.stun)) {
+              // stun-chained deeper (one hit, one lost beat). Still off-balance
+              // from its own overreach (staggered) makes that harder to shake.
+              if (weapon && weapon.tmpl.stun > 0 && !tmpl.is_boss && !creature.stunned && chance(weapon.tmpl.stun + (staggered ? STAGGER_STUN_BONUS : 0))) {
                 creature.stunned = true;
                 this.send(session, `${cap(tmpl.name)} reels, stunned.`, "stun");
                 this.actorFeed(session, session.roomId, this.feedProc(FEED_STUN, session.name, tmpl.name), "stun");
@@ -2654,6 +2672,12 @@ export class ZoneDO implements DurableObject {
         const quick = this.loadOf(victim) < 2; // light enough to read as nimble
         const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
         if (chance(FUMBLE_CHANCE + dodge + (cHurt ? WOUNDED_FUMBLE_BONUS : 0))) {
+          if (!quick) {
+            // It overreached, not just missed — genuinely off-balance, not
+            // just beaten by your footwork (the `quick` branch is YOU being
+            // nimble, not IT erring). Your very next landed hit punishes it.
+            creature.staggerUntil = now + STAGGER_WINDOW_MS;
+          }
           this.send(victim, quick
             ? pick([
                 `${cap(tmpl.name)} lunges — you slip aside, nothing weighing you down.`,
