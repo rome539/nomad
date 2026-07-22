@@ -1347,11 +1347,9 @@ export function gatehouseSay(z: ZoneDO, session: Session, raw: string): void {
   const line = `${session.name} says: ${msg}`;
   z.send(session, `You say: ${msg}`, "say");
   gatehouseFeed(z, line, session.pubkey, "say", { name: session.name, pk: session.pubkey });
-  // The room hears it over the sockets, instantly. Nostr hears it FROM THE
-  // SPEAKER: z.speechOut hands the line back to their own client, which signs
-  // kind 24914 with their own key and publishes it. Same law as `say` out in
-  // the dark — the gate's key never speaks for a wanderer.
-  z.speechOut(session, line, "nomad-gatehouse");
+  // The room hears it over the sockets, instantly — and that's the whole of
+  // it now (rome, 2026-07-21), same drop as `say` out in the dark: no "gpub"
+  // frame back to the speaker's client, nothing reaches a relay in any form.
 }
 
 export function describeGatehouse(z: ZoneDO, session: Session): string {

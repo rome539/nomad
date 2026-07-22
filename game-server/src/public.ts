@@ -1600,7 +1600,14 @@ async function publishSpeech(text, tag) {
       var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
       gpubPool = new poolMod.SimplePool();
     }
-    gpubPool.publish(SPEECH_RELAYS, ev);
+    // A shout carries across rooms and rings the dinner bell (creatureNoise) \\u2014
+    // it's already the loud, findable half of speech, so it rides the SAME
+    // 15s hold as the arena feed (FEED_HOLD_MS below): published late enough
+    // that it can't be read as a real-time tracker of where you are right now.
+    // 'say' publishes nothing at all (dropped 2026-07-21); gatehouse talk stays
+    // immediate \\u2014 sanctuary, no noise/tracking concern to hedge against.
+    if (tag === "nomad-shout") setTimeout(function () { try { gpubPool.publish(SPEECH_RELAYS, ev); } catch (e) {} }, FEED_HOLD_MS);
+    else gpubPool.publish(SPEECH_RELAYS, ev);
   } catch (e) {
     console.warn("[speech] publish failed:", e && e.message ? e.message : e);
   }

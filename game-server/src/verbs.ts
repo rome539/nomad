@@ -853,17 +853,15 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
 }
 
 // A wanderer's own words, in the world. The room hears them over the sockets —
-// but the WIRE copy is no longer the gate's to sign (rome, 2026-07-13). Until
-// now `say` rode the 24913 room feed out to the public relays in plain text,
-// gate-signed: the room a player thinks is private (two of you alone in the
-// dark) was the one that broadcast. Now the dungeon publishes NOTHING of it
-// (toRelay = false), and instead hands the line back to the speaker's own client,
-// which signs it with the speaker's own key and puts it out obfuscated.
+// and that's now the whole of it (rome, 2026-07-21): `say` no longer hands a
+// "gpub" frame back to the speaker's client at all, so nothing said in a room
+// reaches a relay in any form, obfuscated or not. Two of you alone in the dark
+// stays exactly that; shout/gatehouse speech still ride the relay-publish path
+// (speechOut) unchanged — this is `say` alone, not a blanket speech policy.
 export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
   if (!msg) return z.send(session, "Say what?");
   z.send(session, `You say: ${msg}`, "say");
   z.roomFeed(session.roomId, `${session.name} says: ${msg}`, session.pubkey, false, "say", { name: session.name, pk: session.pubkey });
-  z.speechOut(session, `${session.name} says: ${msg}`, "nomad-say");
 }
 
 // Shout: your words thrown hard enough to cross walls. The trade IS the verb —
