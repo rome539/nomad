@@ -7,7 +7,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { provokeGrudges } from "./ai";
-import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner } from "./world";
+import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner, hasTrait } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
@@ -908,6 +908,19 @@ export async function benchEquip(z: ZoneDO, session: Session, row: string): Prom
     const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
     if (tmpl.slot === "") return `You can't wear or wield ${tmpl.name}.`;
     if (carried.equipped) return undefined;
+    // TWO_HANDED steel wants both hands — the same refusal cmdEquip gives,
+    // missing here until now (rome, 2026-07-22: the modal let a two-handed
+    // weapon and a shield both read "equipped" at once — real inconsistent
+    // state, not just a display bug, since block/load-law would both fire).
+    if (tmpl.slot === "weapon" && hasTrait(tmpl, "two-handed") && z.equippedItem(session, "shield")) {
+      return `${tmpl.name[0].toUpperCase()}${tmpl.name.slice(1)} wants both hands — put up your shield first.`;
+    }
+    if (tmpl.slot === "shield") {
+      const inHand = z.equippedItem(session, "weapon");
+      if (inHand && hasTrait(inHand.tmpl, "two-handed")) {
+        return `Both your hands are full of ${inHand.tmpl.name}. Lower it first.`;
+      }
+    }
     const current = z.equippedItem(session, tmpl.slot);
     if (current) {
       current.carried.equipped = false;
