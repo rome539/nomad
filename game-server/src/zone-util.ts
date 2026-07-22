@@ -2,7 +2,25 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC } from "./zone-data";
+import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS } from "./zone-data";
+
+// The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
+// cycle is day, second half is night. Pure modulo — no persisted state.
+export function isNight(now = Date.now()): boolean {
+  return (now % DAY_CYCLE_MS) >= DAY_CYCLE_MS / 2;
+}
+// The moon rides a slower modulo on top: which day/night cycle we're in,
+// mod MOON_FULL_EVERY. Only meaningful during a night (isDark() is the only
+// caller, and it's already gated on isNight() there) — a "full moon" at noon
+// is not a thing this asks about.
+export function isFullMoon(now = Date.now()): boolean {
+  return Math.floor(now / DAY_CYCLE_MS) % MOON_FULL_EVERY === 0;
+}
+// Predators hunt harder after dark, outdoors only — day/night has no opinion
+// on indoor rooms, so neither does this. 1 = no change, the common case.
+export function nightHuntMult(roomId: string, now = Date.now()): number {
+  return OUTDOOR_ROOMS.has(roomId) && isNight(now) ? NIGHT_HUNT_MULT : 1;
+}
 
 // The deep-heart is the one thing you carry that DIES in your hands. It opens
 // the black door for HEART_FRESH_SEC after the cut, then it's slime — and until

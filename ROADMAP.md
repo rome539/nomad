@@ -294,6 +294,124 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **Dens → towns — a personal stake in the world** *(rome, 2026-07-22, several
+  days out — design only)*. The gap identified: NOMAD already simulates on a
+  real clock (creature hunger/decay, food/heart spoilage) whether you're
+  logged in or not, but nothing the PLAYER owns is on that clock — extraction
+  currently ends at the shared, neutral gatehouse, nothing personal to lose or
+  tend. **The gatehouse/den split: the gatehouse is a small vault — a moving
+  inn, safe because it's shared and neutral and nobody's. The den is the
+  opposite: safe only because it's YOURS and only as far as you've made it
+  so** — which resolves the "den might undercut extraction tension" worry
+  below: the gatehouse already covers neutral-safe, so a den can open
+  genuinely exposed and earn its security entirely through upgrades, never by
+  default. A den fills that: a claimed private space (room or pocket off one)
+  with real-clock decay on what's stored there and mechanical upgrades earned
+  by doing things in the world (not a grind currency/XP bar — stays
+  simulation-native, same category as gear condition, not a bolted-on
+  progression system). Once enough dens cluster in one area (proposed
+  threshold: 3+), a shared town layer unlocks — one front gate, communal
+  stuff no single den justifies alone (a fire that stays lit, a shared cache,
+  maybe a trader who only shows where people live). Raids on the town should
+  be MONSTER-driven (plugs into the existing aggression/hunger machinery —
+  starving predators, the bell, thieves), not player-vs-player — property
+  raiding by other players is a much heavier anti-grief problem than the
+  existing PvP-kill stack was built to solve and wasn't part of this
+  conversation's design. Central risk to hold the line on when building: a
+  den that's too safe/rewarding undercuts the extraction loop's whole tension
+  (the deep is where the loot AND the death are) — the design bar is "does
+  having a den make leaving it feel MORE dangerous," not just "is this cool."
+  **Bundled as one expansion arc, not four separate ones** (rome, same day):
+  dens/town belong at the SAFE edge of a genuinely new zone, not carved out of
+  the existing stable ~110-room world — new rooms need new mobs to justify
+  existing (empty territory is filler), new mobs need a capping boss to give
+  the zone an edge (same role the King/other bosses play elsewhere), and the
+  den/town is the reason players return to *this* new zone specifically
+  instead of just passing through toward its loot. One arc: new zone + its
+  mob population + a capping boss + dens/town at its safe end.
+  **Cooking, tied to the den's hearth** (same conversation): the smoke-racks
+  (`cmdSmoke`/curing) are already the right shape for this — real-clock,
+  single-ingredient, tended-or-lost — just not a recipe system yet. Room to
+  grow: multi-ingredient recipes (raw meat + a foraged herb → something
+  better than either alone), effects beyond a flat heal (staunches bleed,
+  wards cold, briefly buffs the next fight), and the den's own hearth as
+  where REAL cooking happens vs. the gatehouse racks staying the safe/basic
+  option. Gives the den something to DO, not just something to guard.
+  **Genre check (rome, same day): is this what simulation games aim for, is
+  this Achaea?** Yes to both, on purpose, with a guardrail. Dwarf
+  Fortress/RimWorld/Zomboid all use a persistent, personally-owned place as
+  the surface where background systems (weather, hunger, decay, raids)
+  actually become legible to the player — NOMAD has the background systems
+  (hunger, decay, weather, aggression) already but nothing of the player's
+  for them to press on; a den is that surface. Achaea's the same instinct at
+  MUD scale (crafting/cooking/city economy giving players a reason to depend
+  on each other beyond combat) — the shape is right to chase, but NOT
+  Achaea's skill-tree/XP-grind mechanism. Every new system here (den
+  upgrades, cooking) must stay simulation-native — real state that changed
+  because something real happened, never a meter that fills from repetition.
+
+- **New mob mechanics — genuinely unbuilt categories** *(rome, 2026-07-22,
+  same conversation as dens — design only, several are candidates for the
+  new zone's population)*. `MobTemplate` only has `bleed`/`stun` (mirrors
+  weapons' edge/blunt); it has no `pierce`, no `sweep`/cleave equivalent, and
+  no trait ledger the way gear does — mob abilities are hardcoded Sets
+  (`LURKERS`, `THIEVES`, `SENTINELS`, etc.), so a new mob mechanic is always a
+  real code build, never a data-only migration the way a new weapon is.
+  Ranged/thrown was considered and DROPPED — the room-based combat model has
+  no notion of acting on a player from outside their own room, and that's too
+  much new plumbing for uncertain payoff (rome, 2026-07-22: "that will be
+  hard to get right"). What's left, roughly ordered by how much they reuse
+  existing plumbing vs. need new:
+  - **Armor-piercing bite** — mirrors weapon `pierce`; cheapest gap to close.
+  - **Sweep attack** — hits everyone in the room on its swing, not just its
+    target (mirrors weapon `sweep`); nothing currently lets a mob hit more
+    than one player at once.
+  - **Regenerates unless it's bleeding** — heals back damage each tick unless
+    an open wound (bleed/pierce landed) shuts that off; forces a weapon-class
+    choice instead of just being a bigger HP bar.
+  - **Corrosive/degrading hit** — eats condition off worn gear
+    (`rollGearCondition`'s existing 0–100 number) instead of, or alongside,
+    HP damage. Real stakes without touching combat math.
+  - **Alarm call** — being hit (not just aggroed) alerts same-species
+    creatures elsewhere in the zone, pulling their wander toward its room; a
+    pack that actually musters instead of every mob living in isolation.
+  - **Splits on death** — dies into 2 weaker copies instead of dropping loot
+    outright (a slime/swarm type); new spawn-on-death path, doesn't exist now.
+  - **Debuff on a landed heavy hit, never a disable** — a visible, temporary
+    softening of your next swing (damage or accuracy), reworked from a
+    fear/rout idea specifically to respect the standing law that no
+    affliction may deny escape as a dice-roll — always visible, always
+    timed, same shape as hobble.
+  - **Snuffs your light** — sets `session.litUntil = undefined` (the exact
+    field `light.ts` already reads) instead of dealing damage. Cheap — reuses
+    real shipped state — and plunges you straight into `isDark()`
+    consequences mid-fight, doubly relevant now that day/night is landing.
+  - **Eats an item, not you** — destroys something specific out of your pack
+    (a ration, a dressing, your only light) rather than stealing-and-dropping
+    like the existing thief. Makes it a threat to plan around, not tank.
+  - **Marks you** — leaves a scent that makes every other creature in the
+    zone more likely to notice you for a while, separate from the wound-scent
+    mechanic just shipped (this one fires without you being hurt at all).
+  - **Silences you** — mutes shout/talk for a duration; attacks your social
+    tools (calling for help, coordinating) rather than your body.
+  - **Swaps places with you** — a blink/displace trading your position with
+    the creature's mid-fight; disorienting, not damaging — you may end up cut
+    off from your own exit.
+  - **Drags you off** *(distinct from the drowner's seize-in-place — nothing
+    currently moves a player's `roomId` against their will except spawn/death
+    respawn)*: wins a grapple and relocates you to a different room instead
+    of holding you still — a den, a pit, deeper in — displacement as the
+    stake instead of damage. Telegraphed the same as seize (a visible
+    grab-window to break out of before the drag completes).
+  - **Closes some of a room's exits while it's alive** *(distinct from a
+    sentinel, which is one hardcoded creature barring one hardcoded exit in
+    one hardcoded room — `SENTINEL_ROOMS`)*: a general mechanic where any
+    room with multiple exits has SOME (not all) blocked for as long as this
+    creature occupies it — kill it or drive it off and the room reopens to
+    its full exit list. A room-shaping threat that acts on the map itself,
+    not on HP/gear/position — a genuinely different category from every
+    other mechanic on this list.
+
 - **Far-world write cost — mostly already solved; small residual lever** *(rome,
   2026-07-20 — investigated the "lots more mobs" scaling question, found the win
   is already banked)*. The write axis (rows_written → $), not CPU, is what meters

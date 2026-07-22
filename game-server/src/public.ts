@@ -1322,13 +1322,13 @@ function startAmb() {
   src.buffer = SND._noise(); src.loop = true;
   var f = actx.createBiquadFilter();
   f.type = "lowpass"; f.frequency.value = 140;
-  var g = actx.createGain(); g.gain.value = 0.045;
+  var g = actx.createGain(); g.gain.value = 0.028;
   src.connect(f); f.connect(g); g.connect(aout());
   src.start();
   var o = actx.createOscillator(); o.frequency.value = 39;
-  var og = actx.createGain(); og.gain.value = 0.028;
+  var og = actx.createGain(); og.gain.value = 0.017;
   var lfo = actx.createOscillator(); lfo.frequency.value = 0.11;
-  var lg = actx.createGain(); lg.gain.value = 0.013;
+  var lg = actx.createGain(); lg.gain.value = 0.008;
   lfo.connect(lg); lg.connect(og.gain);
   o.connect(og); og.connect(aout());
   o.start(); lfo.start();

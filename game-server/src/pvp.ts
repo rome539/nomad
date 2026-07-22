@@ -164,7 +164,13 @@ async function swingAt(
   let dmg = Math.round((body + (weapon ? z.effDmg(weapon) : 0)) * STANCE[attacker.stance].atk * z.wallDrag(attacker));
   if (hurt) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); z.tellWounded(attacker); }
   let flourish = ".";
-  if (opts.ambush) {
+  // REACH blunts a PvP ambush the same way it blunts a monster's (zone.ts's
+  // creatureFirstStrike): a haft held at length means the attacker arrives on
+  // the point first, whoever they are — the fiction doesn't carve out an
+  // exception for people. Reads the DEFENDER's own weapon, not the attacker's.
+  const defWeapon = z.equippedItem(defender, "weapon");
+  const atLength = opts.ambush && defWeapon !== null && hasTrait(defWeapon.tmpl, "reach");
+  if (opts.ambush && !atLength) {
     dmg = Math.round(dmg * AMBUSH_MULT); // the surprise IS the crit — never both
   } else if (chance(CRIT_CHANCE)) {
     dmg *= 2;
@@ -202,7 +208,7 @@ async function swingAt(
     // blow prints like any other hit — just with the floor at the end of it.
     z.send(defender, vkill
       ? `${attacker.name}'s ${weapon ? weapon.tmpl.name.replace(/^(a|an|the)\s+/i, "") : "fist"} finds the mark. ${vkill.taken}`
-      : `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${opts.ambush ? " — you never saw it coming" : ""} — and the stones come up to meet you.`, vkill ? "dmgin big vital" : "dmgin big");
+      : `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${opts.ambush && !atLength ? " — you never saw it coming" : ""} — and the stones come up to meet you.`, vkill ? "dmgin big vital" : "dmgin big");
     // The killer reads their killing blow too — the SAME hit line as any
     // other swing, with the number, just ending in the body. Without this the
     // fatal swing collapsed to a bare "You put X down" with no damage shown,
@@ -217,7 +223,8 @@ async function swingAt(
     if (weapon?.carried.loreId) await deedsBump(z.env.DB, weapon.carried.loreId, "kills");
     return;
   }
-  const big = flourish !== "." || opts.ambush || staggerHit;
+  const realAmbush = opts.ambush && !atLength;
+  const big = flourish !== "." || realAmbush || staggerHit;
   // Say WHY a number is big: the crit flourish the attacker already gets, plus
   // the opening this blow cashed in (staggerHit) — and the victim, who used to
   // see only a bare number, now reads the crit AND the opening too.
@@ -225,7 +232,7 @@ async function swingAt(
   const critVic = flourish !== "." ? " — it catches you square" : "";
   const openVic = staggerHit ? " — you were caught open" : "";
   z.send(attacker, `${z.playerHit(weapon, defender.name)} for ${dmg}${flourish === "." ? "" : flourish}${openAtk}. (${conditionOf(defender)})`, big ? "dmgout big" : "dmgout");
-  z.send(defender, `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${opts.ambush ? " — you never saw it coming" : critVic}${openVic}. [${defender.hp}/${defender.maxHp} hp]`, big ? "dmgin big" : "dmgin");
+  z.send(defender, `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${realAmbush ? " — you never saw it coming" : critVic}${openVic}. [${defender.hp}/${defender.maxHp} hp]`, big ? "dmgin big" : "dmgin");
   z.sendStatus(defender);
   z.combatNoise(attacker.roomId);
   // A duel is rare and worth watching turn: the crowd sees the heavy blows land

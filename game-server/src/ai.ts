@@ -7,7 +7,7 @@ import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
 import { hasTrait } from "./world";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap } from "./zone-util";
+import { cap, isNight } from "./zone-util";
 import * as events from "./events";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
@@ -809,6 +809,28 @@ export function starvingHunts(z: ZoneDO, creature: Creature): boolean {
     return true;
   }
 
+  // The food web reads WOUNDS too, not just its own belly: the same eligible
+  // predators, independent of their own hunger — a fed hyena still knows a
+  // stumbling, bleeding thing when it smells one. Every other guardrail is
+  // identical to starvingHunts (same set, same hollow/sentinel/drowner/
+  // aggressive exclusions, same "an easier animal in the room spares you"
+  // rule) — this predicate only swaps the trigger from the CREATURE's hunger
+  // to the VICTIM's own wounds (checked by the caller against WOUNDED_FRACTION,
+  // the same "hurt" threshold that already softens a wounded player's own
+  // blows and worsens their fumbles — one meaningful number, one more reason
+  // to fear it).
+export function woundedPreyHunts(z: ZoneDO, creature: Creature): boolean {
+    if (!STARVE_HUNTERS.has(creature.templateId) || HOLLOW.has(creature.templateId)) return false;
+    if (SENTINELS.has(creature.templateId) || DROWNERS.has(creature.templateId) || AGGRESSIVE.has(creature.templateId)) return false;
+    const prey = PREYS_ON.get(creature.templateId);
+    if (prey) {
+      for (const c of z.creatures.values()) {
+        if (c.id !== creature.id && c.roomId === creature.roomId && prey.has(c.templateId)) return false;
+      }
+    }
+    return true;
+  }
+
   // The food web: a predator sharing a room with prey it outranks may turn on it
   // — when it's hungry, or when there's a kill/bait to fight over. Emergent
   // culling (predators thin the herds the brood-mothers swell) and real tactics
@@ -888,8 +910,12 @@ function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate): void {
 export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
     if (!SCAVENGERS.has(creature.templateId)) return false;
     if ((creature.fed ?? 0) >= SCAVENGER_BOLD_AT) return true;
-    // Hunting weather, both kinds: the rain's noise and the fog's blindness.
-    return events.raining(z, creature.roomId) || events.foggy(z, creature.roomId);
+    // Hunting weather, all three kinds: the rain's noise, the fog's blindness,
+    // and the dark itself — an outdoor scavenger is bolder at night same as
+    // under a storm (the world-clock, isNight; deep/warrens are already dark
+    // regardless of the hour, so this only ever adds anything outdoors).
+    return events.raining(z, creature.roomId) || events.foggy(z, creature.roomId)
+      || (OUTDOOR_ROOMS.has(creature.roomId) && isNight());
   }
 
 export function playerPresent(z: ZoneDO, roomId: string): boolean {

@@ -51,7 +51,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName } from "./zone-util";
+import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, nightHuntMult } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -85,7 +85,7 @@ import {
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
@@ -94,7 +94,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, playerBleedOdds,
-  DARK_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  DARK_ROOMS, OUTDOOR_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -164,6 +164,7 @@ export class ZoneDO implements DurableObject {
   private sim = simstore.newCache(); // what the sim rows last held, so persist() only writes the dirt (simstore.ts)
   private lastTickFlushAt = 0; // ms of the last TICK-driven sim flush; the tick batches its writes to TICK_SIM_FLUSH_MS (command saves stay immediate)
   private lastTickAt = 0; // ms of the previous tick — per-tick appetite/heal increments scale by the REAL gap (the beat runs slow when idle), not the nominal TICK_MS
+  private lastNightPhase: boolean | undefined; // the day/night world-clock's phase as of the last tick — undefined until first observed, so a cold wake never fires a false transition line
   private lastCommandAt = 0; // ms of the last player frame or connect — the world beats at TICK_MS while it's fresh (HOT_WINDOW_MS), stretches to IDLE_TICK_MS when quiet (see worldIsHot)
   private cacheRoom = new Map<string, string>(); // cacheId -> its CURRENT room; roaming chests relocate on refill
   private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
@@ -1086,7 +1087,7 @@ export class ZoneDO implements DurableObject {
   // the born-dark rooms (DARK_ROOMS) plus wherever the gloam is standing —
   // so the dark that walks obeys every law the dark that stays already has.
   public isDark(roomId: string): boolean {
-    return DARK_ROOMS.has(roomId) || events.gloamed(this, roomId);
+    return DARK_ROOMS.has(roomId) || events.gloamed(this, roomId) || (OUTDOOR_ROOMS.has(roomId) && isNight() && !isFullMoon());
   }
 
   // A torch burning on the FLOOR (dropped by a hand, or fallen from a dead one):
@@ -2495,7 +2496,7 @@ export class ZoneDO implements DurableObject {
         if (!prey) {
           creature.rouseAt = undefined; // no one to hunt — the hunger settles back
         } else if (creature.rouseAt === undefined) {
-          if (chance(STARVE_HUNTS_ODDS)) {
+          if (chance(STARVE_HUNTS_ODDS * nightHuntMult(creature.roomId, now))) {
             creature.rouseAt = now + DIRE_ROUSE_MS;
             // A LURKER should have been foiled by your light — a lit room or a
             // torch in hand spoils its ambush (ai.wakeListeners). Naming that the
@@ -2513,6 +2514,35 @@ export class ZoneDO implements DurableObject {
           if (!prey.target) prey.target = creature.id;
           this.send(prey, `${cap(tmpl.name)} lunges — hunger drives it straight onto you.`, "dmgin");
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} runs at ${prey.name}, starving.`, prey.pubkey, false);
+        }
+      }
+      // The food web reads WOUNDS too, independent of the predator's OWN
+      // hunger: a badly hurt wanderer (< WOUNDED_FRACTION hp — the same "hurt"
+      // threshold that already softens their own blows) reads as easier meat
+      // than whatever else is around, even to a predator that isn't starving.
+      // Excludes anything the block above already claimed (a genuinely
+      // starving predator's own hunger is reason enough — this is the
+      // separate case of a fed one smelling blood on someone stumbling).
+      if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && !ai.starvingHunts(this, creature) && ai.woundedPreyHunts(this, creature)) {
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s) && s.hp < s.maxHp * WOUNDED_FRACTION);
+        if (!prey) {
+          creature.rouseAt = undefined; // healed up, left, or died — the interest settles
+        } else if (creature.rouseAt === undefined) {
+          if (chance(WOUNDED_PREY_ODDS * nightHuntMult(creature.roomId, now))) {
+            creature.rouseAt = now + DIRE_ROUSE_MS;
+            const lurker = LURKERS.has(creature.templateId);
+            if (lurker) creature.hidden = false;
+            this.send(prey, lurker
+              ? `${cap(tmpl.name)} uncoils from the dark, drawn by the blood on you — it hasn't sprung yet. (get out, or hit first)`
+              : `${cap(tmpl.name)} goes still, then fixes on you — it's caught the blood on you, and you're the easier meal here. It hasn't sprung yet. (get out, or hit first)`);
+            this.roomFeed(creature.roomId, `${cap(tmpl.name)} goes still, sizing up ${prey.name}'s wounds.`, prey.pubkey, false);
+          }
+        } else if (now >= creature.rouseAt) {
+          creature.rouseAt = undefined;
+          creature.target = prey.pubkey;
+          if (!prey.target) prey.target = creature.id;
+          this.send(prey, `${cap(tmpl.name)} lunges for the wound already open in you.`, "dmgin");
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} runs at ${prey.name}, straight for the hurt.`, prey.pubkey, false);
         }
       }
       // A hungry thief doesn't wait to be wronged: restless with an empty belly,
@@ -2888,6 +2918,28 @@ export class ZoneDO implements DurableObject {
     // The sky turns (events.ts): rain telegraphs, falls, and leaves mud —
     // and its kin to come. The spine just winds the clock.
     await events.tickEvents(this, now);
+
+    // The day/night world-clock flips: tell whoever's standing outside to
+    // see it (same courtesy the weather events already extend on their own
+    // onset/lift). Silent for anyone indoors — the deep/warrens/keep don't
+    // care what hour it is, and isDark()/scavengerBold() already read the
+    // clock directly without needing this announcement at all.
+    const nightNow = isNight(now);
+    if (this.lastNightPhase !== undefined && this.lastNightPhase !== nightNow) {
+      // A full-moon nightfall gets its own line — isDark() already skips the
+      // outdoor-night check on these nights, so the grounds genuinely stay
+      // lit; the announcement has to say so, not just that dark "settles".
+      const fullMoon = nightNow && isFullMoon(now);
+      for (const s of this.sessions.values()) {
+        if (this.outOfWorld(s) || !OUTDOOR_ROOMS.has(s.roomId)) continue;
+        this.send(s, fullMoon
+          ? "A full moon rises over the grounds, huge and white — plain as day out here tonight."
+          : nightNow
+          ? "The light fails outside — full dark settles over the grounds."
+          : "Dawn breaks over the grounds — the dark thins and lifts.", "evt");
+      }
+    }
+    this.lastNightPhase = nightNow;
 
     // The keeper's shelves breathe: restocks come in, and every few hours an
     // off-screen customer buys him out of some one thing.

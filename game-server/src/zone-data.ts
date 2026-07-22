@@ -785,6 +785,7 @@ export const CARRION_MINT_ODDS = 0.3;             // ...and ~1 in 3 checks drops
 export const LURKER_HUNT_RADIUS = 6;               // twice its normal territory, to reach the rat-runs
 export const LURKER_HUNT_DRIFT_MS = 40 * 60_000;   // ~40 min between hunting moves (vs the 3h idle drift)
 export const STARVE_HUNTS_ODDS = 0.2; // chance/tick a STARVING predator with no easier prey begins its wind-up on a player sharing the room (low: the threshold + no-prey gate already make it rare)
+export const WOUNDED_PREY_ODDS = 0.15; // chance/tick an eligible predator begins its wind-up on a BADLY HURT player (< WOUNDED_FRACTION hp), independent of the predator's own hunger — slightly rarer than the starving-hunt since it can fire on ANY eligible predator, not just a genuinely starved one
 export const THIEF_ROB_ODDS = 0.35; // chance/combat-round a HUNGRY thief sharing a player's room begins its wind-up to rob them (higher than the starving-hunt: it's a non-lethal grab-and-bolt, and the whole point of a hungry thief)
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
 export const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
@@ -1297,6 +1298,30 @@ export const FORAGE_HEAL = 3; // a scavenged nibble — less than a corpse (SCAV
 // the overworks rooftops). The room-events engine (events.ts) reads this for
 // rain; anything indoor — keep, warrens, deep — is cover.
 export const OUTDOOR_ROOMS = new Set([...GROUNDS_ROOMS, ...OVERWORKS_ROOMS]);
+// A day/night world-clock (rome, 2026-07-22): every OUTDOOR room only, deep/
+// warrens/keep are always their own dark regardless. Deliberately faster than
+// a real day — a full cycle every DAY_CYCLE_MS — so a single play session
+// actually sees both halves instead of always catching the same one. Derived
+// from Date.now() modulo: zero persisted state, perfectly synced across every
+// player, survives a deploy or a hibernation gap with no drift to correct.
+// Read via isNight() (zone-util.ts) at exactly two dials: isDark() (night
+// outdoors reads dark same as any other dark room — torches, lurkers, every
+// existing blind rule inherits it for free) and scavengerBold() (night is
+// hunting weather for outdoor scavengers, same slot as rain/fog).
+export const DAY_CYCLE_MS = 4 * 3_600_000; // 2h day, 2h night
+// The moon is a SLOWER clock riding on top of the day/night one, same
+// "scheduled, not rolled" law as the bell and the tide — no dice, just a
+// bigger modulo. Every MOON_FULL_EVERY-th night is full: `isDark()` (zone.ts)
+// skips its outdoor-night check on those nights specifically, so a full moon
+// genuinely lights the grounds instead of just being a flavor label. One full
+// moon roughly once a day (6 * DAY_CYCLE_MS's 4h night-halves).
+export const MOON_FULL_EVERY = 6;
+// Predators hunt harder after dark: a straight multiplier on the two
+// wind-up odds (STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS), same shape as the
+// bell's bellWakeMult — never a new mechanic, just the existing roll made
+// more likely. OUTDOOR rooms + night only (nightHuntMult, zone-util.ts);
+// day/night has no opinion indoors at all, so this doesn't either.
+export const NIGHT_HUNT_MULT = 1.6;
 // THE WORLD'S CLOCKS (the simulation's law, rome 2026-07-11): two tracks.
 // The BELL is scheduled — a keep rings its bell at its own hours, twice a day,
 // and a player can learn them. Everything else is ROLLED: one die, every few
