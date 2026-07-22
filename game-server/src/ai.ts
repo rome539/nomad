@@ -371,7 +371,13 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       if (creature.roomId !== session.roomId || creature.target) continue;
       // A sleeping grudge-holder sleeps through your entry — unless the
       // entry-noise roll (wakeListeners) wakes it, and THEN it remembers you.
-      if (creature.asleep) continue;
+      // SENTINELS (the deep's hound) don't use the generic asleep flag at all —
+      // their sleep is a separate wake-clock (wakeUntil/sentinelAwake), and the
+      // room's own "sprawls across the stair, asleep" line reads THAT. Without
+      // this check a grudge-holding hound could ambush you the same beat the
+      // room told you it was asleep — the flag this loop actually checked never
+      // applied to it, so a standing grudge went straight through.
+      if (SENTINELS.has(creature.templateId) ? !z.sentinelAwake(creature) : creature.asleep) continue;
       const holdsGrudge = remembers(z, creature, session.pubkey, now);
       const guards = hyenaGuardsMeal(z, creature);
       // A hostile guardian (AGGRESSIVE) needs no grudge — it bars its post to
