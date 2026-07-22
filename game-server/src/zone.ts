@@ -4083,6 +4083,15 @@ export class ZoneDO implements DurableObject {
     // The lightless deep: without a flame you see nothing here — not the room,
     // not its exits, not what shares it with you. A torch resolves it all.
     if (this.isDark(room.id) && !this.carriesLight(session) && !this.roomLit(room.id)) {
+      // The one generic line read identically whether you were in the deep's
+      // permanent dark or an outdoor courtyard the night-clock just shrouded —
+      // no telling the two apart (rome, 2026-07-22: "not really much telling
+      // me it's night time"). Outdoor + night, with no OTHER reason it'd be
+      // dark (a gloamed sky, or a room that's dark regardless of hour), gets
+      // its own line — no cave, no water-drip, open sky instead.
+      if (OUTDOOR_ROOMS.has(room.id) && isNight() && !DARK_ROOMS.has(room.id) && !events.gloamed(this, room.id)) {
+        return "Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind. A light would show it. (light a torch, or feel your way back the way you came)";
+      }
       return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";
     }
     const lines = full ? [room.name, room.description] : [room.name];
@@ -4091,6 +4100,15 @@ export class ZoneDO implements DurableObject {
     // you're standing in.
     const sky = events.skyClause(this, room.id);
     if (sky) lines.push(sky.trim());
+    // The night-clock itself gets a line too, same legibility rule as
+    // weather — this only runs past the pitch-dark return above, so it's
+    // either a torch holding the dark at bay or a full moon lighting the
+    // grounds outright; either way, say which (rome, 2026-07-22).
+    if (OUTDOOR_ROOMS.has(room.id) && isNight()) {
+      lines.push(isFullMoon()
+        ? "A full moon rides high and white — the grounds lie almost as bright as day."
+        : "Night's fully down out here — past your light, it's black.");
+    }
 
     const exits = world.exits.get(room.id) ?? [];
     lines.push(exits.length ? `Exits: ${exits.map((e) => e.dir).join(", ")}.` : "There is no way out.");
