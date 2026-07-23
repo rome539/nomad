@@ -705,6 +705,25 @@ export class ZoneDO implements DurableObject {
     return new Response(null, { status: 101, webSocket: client });
   }
 
+  // A wrapped savePlayer: D1 briefly overloads under real concurrent load
+  // ("D1_ERROR: D1 DB is overloaded. Requests queued for too long.") — a real
+  // Cloudflare-side thing, not something code alone prevents. The danger was
+  // never the failed write itself (this row gets saved again on the next
+  // flush/event); it was that tick() is one long sequential function, and an
+  // uncaught throw ANYWHERE in it aborts everything still queued after it —
+  // one player's save hiccup was silently killing that whole tick's work for
+  // every OTHER connected player and creature too (rome, 2026-07-22/23,
+  // traced live via Workers Logs: "tick threw Error: D1_ERROR..." at
+  // savePlayer). Swallow and log; the state is provisional in memory either
+  // way and the next successful save catches it up.
+  private async trySavePlayer(pubkey: string, roomId: string, hp: number): Promise<void> {
+    try {
+      await savePlayer(this.env.DB, pubkey, roomId, hp);
+    } catch (e) {
+      console.error(`savePlayer failed for ${pubkey}, will retry next flush:`, e);
+    }
+  }
+
   private async onLeave(session: Session): Promise<void> {
     if (this.sessions.get(session.pubkey) !== session) return; // displaced, already handled
     // Whichever branch below runs, this player isn't reading the wire anymore
@@ -726,7 +745,7 @@ export class ZoneDO implements DurableObject {
       // hears this. Good: a broadcast "body standing, nobody home" is a loot
       // beacon. The room's witnesses get their fair shot; the network doesn't.
       this.actorFeed(session, session.roomId, `${session.name} goes slack — eyes empty, body still standing.`, "who");
-      await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
+      await this.trySavePlayer(session.pubkey, session.roomId, session.hp);
       // Gear condition too — a fray mid-fight is exactly when armor is taking
       // wear, and this branch used to leave it unflushed ("the flush keeps
       // chasing"). If the DO ever cold-wakes before a later flush caught up,
@@ -752,7 +771,7 @@ export class ZoneDO implements DurableObject {
     for (const c of this.creatures.values()) {
       if (c.target === session.pubkey) c.target = null;
     }
-    await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
+    await this.trySavePlayer(session.pubkey, session.roomId, session.hp);
     // Flush the worn-down condition of any provisional gear (rust ticks live in
     // memory; D1 catches up here). Sealed gear is frozen, no need.
     for (const c of session.items) {
@@ -2933,7 +2952,7 @@ export class ZoneDO implements DurableObject {
       this.roomFeed(session.roomId, `${session.name} snatches a bite mid-fight.`, session.pubkey, false);
       this.sendStatus(session);
       this.sendCtx(session);
-      await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
+      await this.trySavePlayer(session.pubkey, session.roomId, session.hp);
     }
 
     // A linkdead body lets go when its fight ends or the window closes — only
@@ -3228,7 +3247,7 @@ export class ZoneDO implements DurableObject {
         this.sendStatus(session);
         if (session.hp >= session.maxHp) {
           // Fully healed: save it now so a restart can't revert a finished rest.
-          await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
+          await this.trySavePlayer(session.pubkey, session.roomId, session.hp);
           if (session.resting) {
             session.resting = false;
             this.send(session, byFire
@@ -3258,7 +3277,7 @@ export class ZoneDO implements DurableObject {
     if (now - this.lastFlushAt >= FLUSH_INTERVAL_MS) {
       this.lastFlushAt = now;
       for (const s of this.sessions.values()) {
-        await savePlayer(this.env.DB, s.pubkey, s.roomId, s.hp);
+        await this.trySavePlayer(s.pubkey, s.roomId, s.hp);
       }
     }
 
@@ -4024,7 +4043,7 @@ export class ZoneDO implements DurableObject {
     this.sendStatus(victim);
     this.refreshRoomCtx(fell);
     this.refreshRoomCtx(victim.roomId);
-    await savePlayer(this.env.DB, victim.pubkey, victim.roomId, victim.hp);
+    await this.trySavePlayer(victim.pubkey, victim.roomId, victim.hp);
     await this.persist();
   }
 
