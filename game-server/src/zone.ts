@@ -4726,18 +4726,25 @@ export class ZoneDO implements DurableObject {
   // adds its own catch on top. The turtle's weapon is part of the wall.
   public equippedBlock(session: Session): number {
     let block = 0;
+    const w = this.equippedItem(session, "weapon");
     const s = this.equippedItem(session, "shield");
+    // Both hands are full of a two-handed weapon — there's no arm free for a
+    // shield, whatever the row says. Belt-and-suspenders: equip already
+    // refuses this combination going forward, but combat itself should never
+    // trust `equipped=1` alone for something the fiction can't support (rome,
+    // 2026-07-22 — a leftover from before the equip guard existed still had
+    // one live and was genuinely blocking, not just showing wrong).
+    const twoHanded = !!w && hasTrait(w.tmpl, "two-handed");
     // A hand full of fire holds no shield up: a burning torch or lantern takes
     // the shield hand, so the shield gives no block while a light burns (it
     // STAYS on your arm the whole time — never unequipped, never a loose thing
     // to drop; 'equip shield' lowers the flame and brings the guard back).
-    if (s && s.tmpl.block > 0 && !this.carriesLight(session)) {
+    if (s && s.tmpl.block > 0 && !twoHanded && !this.carriesLight(session)) {
       block += s.tmpl.block * Math.max(0, s.carried.condition) / 100;
       // Guarded means fighting BEHIND the shield — it catches a shade more.
       // (Stance only sweetens a shield you actually carry; bare guarded gets nothing.)
       if (session.stance === "guarded") block += GUARDED_BLOCK_BONUS;
     }
-    const w = this.equippedItem(session, "weapon");
     if (w && w.tmpl.block > 0) block += w.tmpl.block * Math.max(0, w.carried.condition) / 100;
     return block;
   }
