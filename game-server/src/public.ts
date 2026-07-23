@@ -2693,16 +2693,13 @@ function tradeItemNode(it, place) {
   return wrap;
 }
 
-// His shelves read as a shop, not a ledger: steel, kit, physic, sundries —
-// cheapest first within each. Older servers send no kind; everything falls
-// to one unlabelled shelf and the modal still works.
-var TRADE_SHELVES = [["steel", "STEEL"], ["kit", "KIT"], ["physic", "PHYSIC"], ["sundries", "KEYS & PAPERS"]];
-function fillTradeCol(el, title, items, place) {
-  el.textContent = "";
-  var h = document.createElement("div");
-  h.className = "bcolh";
-  h.textContent = title;
-  el.appendChild(h);
+// Both sides of the counter read as shelves, not a ledger: steel, kit,
+// physic, sundries — cheapest first within each on his side; on yours, gear
+// stays apart from trophies/oddments instead of interleaved by pack order.
+// Older servers send no kind; everything falls to one unlabelled shelf and
+// the modal still works.
+var TRADE_SHELVES = [["steel", "STEEL"], ["kit", "KIT"], ["physic", "PHYSIC"], ["sundries", "SUNDRIES"]];
+function renderItemList(el, items, place) {
   if (!items.length) {
     var e = document.createElement("div");
     e.className = "bempty";
@@ -2710,7 +2707,7 @@ function fillTradeCol(el, title, items, place) {
     el.appendChild(e);
     return;
   }
-  if (place === "stock" && items.some(function (it) { return it.kind; })) {
+  if (items.some(function (it) { return it.kind; })) {
     TRADE_SHELVES.forEach(function (shelf) {
       var group = items.filter(function (it) { return (it.kind || "sundries") === shelf[0]; });
       if (!group.length) return;
@@ -2723,6 +2720,14 @@ function fillTradeCol(el, title, items, place) {
     return;
   }
   items.forEach(function (it) { el.appendChild(tradeItemNode(it, place)); });
+}
+function fillTradeCol(el, title, items, place) {
+  el.textContent = "";
+  var h = document.createElement("div");
+  h.className = "bcolh";
+  h.textContent = title;
+  el.appendChild(h);
+  renderItemList(el, items, place);
 }
 
 // The goods column: tabs across your three keepings, so the lockbox and the
@@ -2747,14 +2752,7 @@ function renderGoods() {
   });
   tgoods.appendChild(tabs);
   var items = (tradeState && tradeState.goods && tradeState.goods[tradeTab]) || [];
-  if (!items.length) {
-    var e = document.createElement("div");
-    e.className = "bempty";
-    e.textContent = "\\u2014 nothing he'd take \\u2014";
-    tgoods.appendChild(e);
-    return;
-  }
-  items.forEach(function (it) { tgoods.appendChild(tradeItemNode(it, "goods")); });
+  renderItemList(tgoods, items, "goods");
 }
 
 function renderTrade(state) {

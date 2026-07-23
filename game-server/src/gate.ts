@@ -594,12 +594,12 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
     // then count only the copies not yet on the counter. Escrowed copies still
     // register the kind's position, so laying one on the counter never reshuffles
     // the list — the row just decrements, and vanishes when its last copy is offered.
-    const goods = new Map<string, { id: string; name: string; rarity: string; n: number }>();
+    const goods = new Map<string, { id: string; name: string; rarity: string; kind: string; n: number }>();
     for (const c of pool) {
       const t = world.itemTemplates.get(c.itemId);
       if (!t || (t.barter ?? 0) <= 0) continue;
       let g = goods.get(t.id);
-      if (!g) { g = { id: t.id, name: t.name, rarity: t.rarity, n: 0 }; goods.set(t.id, g); }
+      if (!g) { g = { id: t.id, name: t.name, rarity: t.rarity, kind: kindOf(t), n: 0 }; goods.set(t.id, g); }
       if (!session.buying?.escrow.some((e) => e.row === c.rowId)) g.n += 1;
     }
     return [...goods.values()].filter((g) => g.n > 0);
