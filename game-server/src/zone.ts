@@ -726,7 +726,19 @@ export class ZoneDO implements DurableObject {
       // hears this. Good: a broadcast "body standing, nobody home" is a loot
       // beacon. The room's witnesses get their fair shot; the network doesn't.
       this.actorFeed(session, session.roomId, `${session.name} goes slack — eyes empty, body still standing.`, "who");
-      await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp); // durability snapshot; the flush keeps chasing
+      await savePlayer(this.env.DB, session.pubkey, session.roomId, session.hp);
+      // Gear condition too — a fray mid-fight is exactly when armor is taking
+      // wear, and this branch used to leave it unflushed ("the flush keeps
+      // chasing"). If the DO ever cold-wakes before a later flush caught up,
+      // that wear was lost outright: condition rewound to its last-saved
+      // value, and the next hit re-crossed the SAME "about to fail" threshold
+      // as if for the first time — the same warning firing over and over
+      // across repeated frays (rome, 2026-07-22, reported live).
+      for (const c of session.items) {
+        if (c.serial === null && this.isGear(c.itemId)) {
+          await setItemCondition(this.env.DB, c.rowId, c.condition);
+        }
+      }
       return;
     }
     // Their own beat, their own key (actorFeed) — and, as with the linkdead line
