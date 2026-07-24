@@ -94,7 +94,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, playerBleedOdds,
-  DARK_ROOMS, OUTDOOR_ROOMS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  DARK_ROOMS, OUTDOOR_ROOMS, DARK_TOUCH, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -4166,12 +4166,10 @@ export class ZoneDO implements DurableObject {
         // that started dry and ended with "the rain slackens, and stops," never
         // once telling him it had started).
         const wet = events.raining(this, room.id) ? " Rain hisses down out of the black, cold on your skin." : "";
-        // The bell-cote earns its own line blind — the bell itself is close
-        // enough to touch in the dark, cracked note and all (rome, 2026-07-24:
-        // a special place deserves more than the same blank field everywhere
-        // else gets).
-        const perch = room.id === "the-bell-cote" ? " The bell hangs unseen at your shoulder — cold under your hand if you reach for it, the wind worrying at the one note it isn't ringing." : "";
-        return `Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind.${wet}${perch} A light would show it. (light a torch, or feel your way back the way you came)`;
+        // Blind isn't blank: a distinctive room still has touch, sound, smell
+        // to give even with nothing to see (DARK_TOUCH, zone-data.ts).
+        const touch = DARK_TOUCH[room.id] ? ` ${DARK_TOUCH[room.id]}` : "";
+        return `Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind.${wet}${touch} A light would show it. (light a torch, or feel your way back the way you came)`;
       }
       return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";
     }

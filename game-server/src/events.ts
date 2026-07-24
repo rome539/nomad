@@ -604,11 +604,19 @@ export function mudDeepens(z: ZoneDO, roomId: string, kind: string): number {
 
 // ---- the bell (keep, SCHEDULED) ----
 // Something in the bell-cote rings at the keep's own hours — twice a day,
-// near the same times, never to the minute. Nobody rings it. One warning note
-// hangs; then the ringing — ninety seconds where every listener in the keep
-// hears EVERYTHING and the vermin bolt for the warrens (which makes a boil
-// likelier in the way events are allowed to: bias, never a trigger). Then the
-// worse part: the silence after, with the halls still listening.
+// near the same times, never to the minute. One warning note hangs; then the
+// ringing — ninety seconds where every listener in the keep hears EVERYTHING
+// and the vermin bolt for the warrens (which makes a boil likelier in the way
+// events are allowed to: bias, never a trigger). Then the worse part: the
+// silence after, with the halls still listening.
+// THE WATCHMAN RINGS IT (rome, 2026-07-24): nextBellAt still picks roughly
+// when, but idle no longer fires on the clock alone — it waits for the last
+// watchman's patrol to actually reach the-watch-turret, directly under the
+// cote, before it tolls. He loops back to the turret every lap of his route
+// (a matter of minutes, not hours), so this is a short wait, not a stall —
+// and if he's mid-respawn, it waits for that too. The bell-cote itself STAYS
+// off his patrol (PATROLS["last-watchman"], zone-data.ts) — he rings it from
+// below, the cote stays the one perch the watch never checks.
 function nextBellAt(now: number): number {
   const day = Math.floor(now / 86_400_000) * 86_400_000;
   let best = NEVER;
@@ -636,15 +644,23 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
         st.until = nextBellAt(now);
         break;
       }
+      // Due, but he isn't at his post yet (mid-route, or mid-respawn) — wait
+      // for him. Doesn't burn the grace window; it just checks again next tick.
+      const watchman = [...z.creatures.values()].find((c) => c.templateId === "last-watchman");
+      if (!watchman || watchman.roomId !== "the-watch-turret") return;
       st.phase = "telegraph";
       st.until = now + BELL_TELEGRAPH_MS;
-      feedWhere(z, inKeep, "Somewhere above, a single bell-note rolls through the halls — then silence.");
+      // Standing at the source gets its own line — "somewhere above" is a lie
+      // if you're the one under the bell (rome, 2026-07-24).
+      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote", "Somewhere above, a single bell-note rolls through the halls — then silence.");
+      z.roomFeed("the-bell-cote", "The bell shudders under your hand before it even sounds — one note, so close it isn't sound anymore, just impact.", undefined, false, "evt");
       break;
     }
     case "telegraph": {
       st.phase = "active";
       st.until = now + BELL_ACTIVE_MS;
-      feedWhere(z, inKeep, "The bell begins to RING — over and over, iron on iron, and the keep is waking around you.");
+      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote", "The bell begins to RING — over and over, iron on iron, and the keep is waking around you.");
+      z.roomFeed("the-bell-cote", "The bell is RINGING inches from you — iron on iron, filling your skull, drowning every other sense you have.", undefined, false, "evt");
       // Everything under the keep's roof stirs at once; the rats are already
       // running for the earth (see bellDrivesRats).
       for (const c of z.creatures.values()) {
@@ -657,7 +673,8 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
     case "active": {
       st.phase = "aftermath";
       st.until = now + BELL_AFTERMATH_MS;
-      feedWhere(z, inKeep, "The bell stops. The silence after is worse — the halls are still listening.");
+      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote", "The bell stops. The silence after is worse — the halls are still listening.");
+      z.roomFeed("the-bell-cote", "The bell goes still under your palm — the ringing's out of the air, but not out of your bones yet.", undefined, false, "evt");
       break;
     }
     case "aftermath": {

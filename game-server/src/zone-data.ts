@@ -1958,6 +1958,35 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
   "sunken-throne": ["The flooded dark hums, low, as if the throne remembers being sat.", "The water around the throne is very, very still."],
   "kings-hoard": ["Gold gleams once in the dark, and is swallowed again."],
 };
+// Blind still isn't blank (rome, 2026-07-24, after the bell-cote): 'look' in
+// a pitch-black outdoor room returned the SAME bare line everywhere, no
+// matter how distinctive the place is lit. Unlike ROOM_AMBIENCE (a rare,
+// rate-limited background line), this fires on every dark 'look' at an
+// OUTDOOR room that has an entry — sense-only (touch, sound, smell), never
+// sight, since you genuinely can't see. Rooms with nothing here just get the
+// plain generic line, same as before.
+export const DARK_TOUCH: Record<string, string> = {
+  "the-bell-cote": "The bell hangs unseen at your shoulder — cold under your hand if you reach for it, the wind worrying at the one note it isn't ringing.",
+  "the-black-fen": "Something with too many legs picks its way across the water near your feet — felt more than heard.",
+  "the-briar-field": "Thorn hisses against itself all around you, and the field seems to be moving somewhere just out of sight.",
+  "the-broken-battlement": "Wind pours straight through gaps in the wall beside you — the drop is close, and you can't tell where it starts.",
+  "the-burned-village": "A charred beam shifts and settles somewhere near — the wind still finds this place, even burned down to its sills.",
+  "the-causeway": "Behind you the Door's black bulk blots out even the little the sky gives — the one shape the dark can't take from you.",
+  "the-drowned-orchard": "Cold air breathes up out of the ground near the old tree's roots — the fox-scrape, open, still cold.",
+  "the-dry-moat": "The banks rise close on either side — anything on the lip above could be looking down at you right now, and you'd never know it.",
+  "the-gatefall": "The rubble squeaks and scurries around you, unseen — it never quite stops, day or night.",
+  "the-hanging-hill": "Somewhere above, the gibbet's chain creaks on a wind you can't see move.",
+  "the-leaning-spire": "The floor tilts under you, same as always — everything loose settled against the low wall long before you got here.",
+  "the-mass-grave": "The ground gives soft underfoot, wrong in a way you feel more than see — and something on four legs is moving nearby, drawn by the same smell you are.",
+  "the-old-road": "Somewhere ahead the toll-house keeps its lamp lit — a point of warmth you could feel your way toward.",
+  "the-rotted-scaffold": "The boards under you creak and sigh with every shift of weight — they've held this long; that's all that can be said.",
+  "the-sally-ditch": "Water stands cold around your ankles — whoever cut this ditch meant to move through it unseen, same as you're doing now.",
+  "the-thorn-court": "Low paths thread the briar around you, cut by things that go on four legs — you can feel where the ground's worn smooth.",
+  "the-wall-breach": "Loose stone shifts underfoot — a bad stair, climbing toward the wall above, if you dared it blind.",
+  "the-wall-walk": "The wind up here never stops — it just changes its mind, first off the yard, then off the waste.",
+  "the-watch-turret": "Wind cuts through the arrow-slits around you, thin and precise — whoever stood this post saw everything from here, once.",
+  "the-weepers-crown": "Somewhere above your head the carved face keeps its silent watch — you could trace one stone tear with your fingers, if you reached.",
+};
 // The dungeon breathes SLOWLY (rome, 2026-07-13). At 45s + 0.16/tick it spoke
 // about once a minute, which against a four-line gate pool meant the whole pool
 // cycled every four minutes and read like a stuck record. 150s puts the mean
