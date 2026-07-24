@@ -4136,6 +4136,21 @@ export class ZoneDO implements DurableObject {
   public describeRoom(session: Session, full = true, itemized = false): string {
     const world = this.world!;
     const room = world.rooms.get(session.roomId)!;
+    // Catch-up: the world only announces a phase change ONCE, live, to
+    // whoever's in an outdoor room at that exact tick. Walk in after rain's
+    // already started and you'd never be told at all — the violet line here
+    // plays for you the first time YOUR view of the room crosses into a
+    // phase you haven't been shown yet, dark or lit either way. Never repeats
+    // a phase already announced to this session; resets naturally once the
+    // phase moves past telegraph/active (idle, aftermath).
+    if (OUTDOOR_ROOMS.has(room.id)) {
+      const phase = events.phaseOf(this, "rain");
+      if (phase !== session.rainPhaseSeen) {
+        const line = events.rainAnnounceLine(phase);
+        if (line) this.send(session, line, "evt");
+        session.rainPhaseSeen = phase;
+      }
+    }
     // The lightless deep: without a flame you see nothing here — not the room,
     // not its exits, not what shares it with you. A torch resolves it all.
     if (this.isDark(room.id) && !this.carriesLight(session) && !this.roomLit(room.id)) {
@@ -4146,7 +4161,12 @@ export class ZoneDO implements DurableObject {
       // dark (a gloamed sky, or a room that's dark regardless of hour), gets
       // its own line — no cave, no water-drip, open sky instead.
       if (OUTDOOR_ROOMS.has(room.id) && isNight() && !DARK_ROOMS.has(room.id) && !events.gloamed(this, room.id)) {
-        return "Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind. A light would show it. (light a torch, or feel your way back the way you came)";
+        // Blind, you still hear it: rain doesn't need light to reach you, so the
+        // one weather line the dark can't take away (rome, 2026-07-24 — a fight
+        // that started dry and ended with "the rain slackens, and stops," never
+        // once telling him it had started).
+        const wet = events.raining(this, room.id) ? " Rain hisses down out of the black, cold on your skin." : "";
+        return `Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind.${wet} A light would show it. (light a torch, or feel your way back the way you came)`;
       }
       return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";
     }

@@ -57,6 +57,7 @@ export interface Session {
   lastAmbientLine?: string; // the last one said — never said twice running, however small the pool
   lastFishAt?: number; // ms of the last fishing cast (a short patience between casts)
   lastActiveAt: number; // ms of the last real frame (or connect) — the tick's idle sweep sleeps sockets silent past IDLE_TIMEOUT_MS. Rides the socket attachment as `la` so a hibernation rebuild doesn't read a parked socket as fresh.
+  rainPhaseSeen?: string; // last rain phase this session was shown the violet line for — describeRoom plays catch-up on a phase it hasn't announced to THIS player yet (walked in after it started), never repeats one already shown
 }
 
 // A grudge: whose blood it remembers, and when — so time can wear it away.

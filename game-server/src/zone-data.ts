@@ -604,12 +604,23 @@ export const PATROLS: Record<string, string[]> = {
     "the-rotted-scaffold", "the-weepers-crown", "the-rotted-scaffold", "the-leaning-spire",
     "the-broken-battlement", "the-wall-walk",
   ],
+  // rome, 2026-07-24: one warden pulled off the interior circuit to walk the
+  // open ground instead — the ONE spot in the world with a patroller on it
+  // now. Full loop of GROUNDS_ROOMS, out-and-back on its three dead ends
+  // (mass-grave, old-road, sally-ditch) same as the last-watchman's route;
+  // every leg here is a real adjacent exit.
+  "warden-surface": [
+    "the-causeway", "the-gatefall", "the-dry-moat", "the-wall-breach", "the-thorn-court",
+    "the-mass-grave", "the-thorn-court", "the-briar-field", "the-hanging-hill", "the-old-road",
+    "the-hanging-hill", "the-briar-field", "the-black-fen", "the-drowned-orchard", "the-sally-ditch",
+    "the-drowned-orchard", "the-burned-village",
+  ],
 };
 
 // Creatures with nothing inside. They do not bleed (broken remains, not blood),
 // do not hunger, and no smell of food moves them. The rat is the only thing
 // down here that's honestly alive.
-export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-captain", "forgotten-king", "drowned-god", "marrow-king", "marrow-cantor",
+export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-surface", "warden-captain", "forgotten-king", "drowned-god", "marrow-king", "marrow-cantor",
   "twice-dead", "thrice-dead", "last-watchman"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
 // GRAVE_FLESH: hollow, but a BODY — dried corpse, not bare bone or old iron
 // (rome, 2026-07-11: "sounds like a zombie"). A wight has a skull to split, a

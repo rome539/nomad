@@ -65,6 +65,17 @@ export function raining(z: ZoneDO, roomId: string): boolean {
   return phaseOf(z, "rain") === "active" && OUTDOOR_ROOMS.has(roomId);
 }
 
+// The violet announcement line for a rain phase — same text tickRain
+// broadcasts live, exported so describeRoom can play catch-up for anyone who
+// missed it (rome, 2026-07-24: walked into rain that started before they
+// arrived, never got told). Aftermath excluded on purpose: by the time
+// you're there to see it, announcing "the sky opens" would be a lie.
+export function rainAnnounceLine(phase: EventState["phase"]): string | undefined {
+  if (phase === "telegraph") return "The light goes iron-grey. The air smells of rain coming.";
+  if (phase === "active") return "The sky opens. Rain comes down in earnest, loud on stone and thorn.";
+  return undefined;
+}
+
 // The sky is turning or already open — the window where the open ground's
 // beasts head for cover (telegraph included: they feel it before you do).
 export function rainDrives(z: ZoneDO, roomId: string): boolean {
