@@ -25,6 +25,7 @@ export type Verb =
   | "offer"
   | "inventory"
   | "who"
+  | "census"
   | "name"
   | "rest"
   | "eat"
@@ -102,6 +103,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   offer: "offer", pay: "offer", sell: "offer", give: "offer",
   inventory: "inventory", inv: "inventory", i: "inventory", bag: "inventory", items: "inventory",
   who: "who", players: "who",
+  census: "census",
   name: "name", rename: "name", callme: "name",
   rest: "rest", sleep: "rest", sit: "rest", camp: "rest",
   eat: "eat", consume: "eat", chew: "eat", devour: "eat",

@@ -204,24 +204,6 @@ export default {
         return await stub.fetch(new Request(req.url, { method: "POST", headers }));
       }
 
-      // Keeper-only: the live census — every creature actually alive right
-      // now, by template, straight off the DO's own memory (not mob_spawns,
-      // which is only the target count). GET /admin/census?zone=door
-      if (m === "GET" && pathname === "/admin/census") {
-        const token = env.ADMIN_TOKEN?.trim();
-        if (!token || req.headers.get("x-admin-token") !== token) {
-          return json({ error: "unauthorized" }, 401);
-        }
-        const zone = url.searchParams.get("zone") ?? "door";
-        if (!ZONES.has(zone)) return json({ error: "no_such_zone" }, 404);
-        const headers = new Headers();
-        headers.set("x-admin", "census");
-        headers.set("x-zone", zone);
-        const stub = env.ZONE.get(env.ZONE.idFromName(zone));
-        const res = await stub.fetch(new Request(req.url, { method: "GET", headers }));
-        return new Response(res.body, { status: res.status, headers: { "content-type": "application/json" } });
-      }
-
       // The blinded mint counter (NIP.md): supply is public — serial,
       // time, rarity. Ownership is nobody's business.
       if (m === "GET" && pathname === "/mints") {

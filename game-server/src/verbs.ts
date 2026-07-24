@@ -1331,6 +1331,24 @@ export function cmdWho(z: ZoneDO, session: Session): void {
   z.send(session, lines.join("\n"));
 }
 
+// Keeper-only: what's actually alive right now, straight off the DO's own
+// creature map — not mob_spawns (that's only the target each spawn point
+// respawns toward). Gated to a single pubkey in-game (Irongate) so it's a
+// typed command, not an HTTP endpoint that needs a token nobody wrote down.
+const CENSUS_PUBKEY = "acee4b2c6111c160a8eb3b68da327ea3242b41136cda46d376af762d768db612";
+export function cmdCensus(z: ZoneDO, session: Session): void {
+  if (session.pubkey !== CENSUS_PUBKEY) return z.send(session, "The deep keeps its own count.");
+  const world = z.world!;
+  const counts = new Map<string, number>();
+  for (const c of z.creatures.values()) counts.set(c.templateId, (counts.get(c.templateId) ?? 0) + 1);
+  const byMob = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const lines = [`Alive in the deep (${z.creatures.size}):`];
+  for (const [id, n] of byMob) {
+    lines.push(`  ${world.mobTemplates.get(id)?.name ?? id} — ${n}`);
+  }
+  z.send(session, lines.join("\n"));
+}
+
 // THE RECKONING (mig 101): the dungeon's own boards, shown to any who ask. Only
 // wanderers who chose to enter ('publish score') appear — the same opt-in law as
 // the sheet. Two boards: legend (kings, blood, and slain) and trophies (hoards).

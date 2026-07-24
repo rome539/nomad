@@ -555,17 +555,6 @@ export class ZoneDO implements DurableObject {
       const n = await this.reseed(req.headers.get("x-zone") ?? "door");
       return new Response(JSON.stringify({ reseeded: true, creatures: n }), { headers: { "content-type": "application/json" } });
     }
-    // Admin: the live census — every creature actually alive right now, by
-    // template, straight off this.creatures (the DO's own memory). Distinct
-    // from mob_spawns in D1, which is only the target/design count each
-    // spawn point respawns toward, not what's alive at this instant.
-    if (req.headers.get("x-admin") === "census") {
-      await this.init(req.headers.get("x-zone") ?? "door");
-      const counts = new Map<string, number>();
-      for (const c of this.creatures.values()) counts.set(c.templateId, (counts.get(c.templateId) ?? 0) + 1);
-      const byMob = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id, n]) => ({ id, n }));
-      return new Response(JSON.stringify({ total: this.creatures.size, byMob }), { headers: { "content-type": "application/json" } });
-    }
     if (req.headers.get("Upgrade") !== "websocket") {
       return new Response("expected websocket", { status: 426 });
     }
@@ -1082,6 +1071,7 @@ export class ZoneDO implements DurableObject {
       case "offer": return gate.cmdOffer(this, session, cmd.arg);
       case "inventory": return verbs.cmdInventory(this, session);
       case "who": return verbs.cmdWho(this, session);
+      case "census": return verbs.cmdCensus(this, session);
       case "name": return verbs.cmdName(this, session, cmd.arg);
       case "rest": return verbs.cmdRest(this, session);
       case "eat": return verbs.cmdEat(this, session, cmd.arg);
