@@ -4166,7 +4166,12 @@ export class ZoneDO implements DurableObject {
         // that started dry and ended with "the rain slackens, and stops," never
         // once telling him it had started).
         const wet = events.raining(this, room.id) ? " Rain hisses down out of the black, cold on your skin." : "";
-        return `Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind.${wet} A light would show it. (light a torch, or feel your way back the way you came)`;
+        // The bell-cote earns its own line blind — the bell itself is close
+        // enough to touch in the dark, cracked note and all (rome, 2026-07-24:
+        // a special place deserves more than the same blank field everywhere
+        // else gets).
+        const perch = room.id === "the-bell-cote" ? " The bell hangs unseen at your shoulder — cold under your hand if you reach for it, the wind worrying at the one note it isn't ringing." : "";
+        return `Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind.${wet}${perch} A light would show it. (light a torch, or feel your way back the way you came)`;
       }
       return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";
     }
