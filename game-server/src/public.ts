@@ -1837,6 +1837,11 @@ async function connect() {
     if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls, f.who, f.sp); }
     else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed", f.who, f.sp); }
     else if (f.t === "status") {
+      // A real room change is the only thing that should re-fold the chips
+      // (rome, 2026-07-26): keyed on the suggest LIST before, so a mob simply
+      // walking into your room — adding one chip — changed the key and
+      // collapsed an expanded "+more" right when a fight might be starting.
+      if (f.room && f.room !== roomEl.textContent) chipsExpanded = false;
       roomEl.textContent = f.room || "";
       if (f.room) knownRooms[f.room] = 1;
       hpEl.textContent = f.hp + "/" + f.max_hp + " hp \\u00b7 " + f.name;
@@ -2317,11 +2322,10 @@ function chipButton(s) {
 // A crowded room folds its tail: past CHIP_FOLD chips, the rest hide behind a
 // dim "+N more". The server orders by relevance (foes first, housekeeping
 // last), so what folds is never a fight. Expansion sticks while the chip set
-// is unchanged (combat ticks re-send the same list) and collapses when it
-// actually changes.
+// is unchanged and collapses on a real room change (status frame, above) —
+// a mob merely walking in and adding a chip no longer folds it back up.
 var CHIP_FOLD = 12;
 var chipsExpanded = false;
-var lastSuggestKey = "";
 function renderChips(suggest, combat) {
   lastSuggest = suggest;
   lastCombat = !!combat;
@@ -2330,8 +2334,6 @@ function renderChips(suggest, combat) {
   // The identity lives behind the name button top right — no keys chip, no
   // nostr words in a stranger's face (rome, 2026-07-11).
   var all = suggest;
-  var key = all.join("|");
-  if (key !== lastSuggestKey) { lastSuggestKey = key; chipsExpanded = false; }
   var dirs = [];
   var rest = [];
   all.forEach(function (s) {

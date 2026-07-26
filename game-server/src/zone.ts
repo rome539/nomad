@@ -1688,9 +1688,19 @@ export class ZoneDO implements DurableObject {
   public async leaveGatehouse(session: Session): Promise<void> {
     // outOfWorld, not bare `away`: if the flags drifted (inGatehouse=true /
     // away=false) you must still be able to walk out — leaveStep clears BOTH.
-    if (!this.outOfWorld(session)) return this.send(session, "You're already out in the world.");
+    // But bare `away` alone still counts here too (rome, 2026-07-26): the
+    // inventory CHIP crouches you over your lockbox mid-dungeon (enterBench,
+    // away=true, never inGatehouse, never at a gate) — outOfWorld is false
+    // there by design, so 'out' hit this guard and said "you're already out"
+    // without closing anything. leaveStep already knows how to close whatever
+    // frame is actually open; just let it.
+    const wasOutOfWorld = this.outOfWorld(session);
+    if (!wasOutOfWorld && !session.away) return this.send(session, "You're already out in the world.");
     session.resting = false; // the door wakes you — nobody sleepwalks into the dungeon
-    gate.gatehouseFeed(this, `${session.name} shoulders the door open and goes back out.`, session.pubkey, "who");
+    // The door-shutting line is the GATEHOUSE'S own — a lockbox crouch mid-dungeon
+    // never went through any door, and leaveStep already sends the right local
+    // "steps back from the bench" line for that case.
+    if (wasOutOfWorld) gate.gatehouseFeed(this, `${session.name} shoulders the door open and goes back out.`, session.pubkey, "who");
     await this.leaveStep(session);
     // leaveStep clears `away`, so the HUD title must be re-sent or the top bar
     // stays reading "The Gatehouse" while the log shows the gate room. Status
