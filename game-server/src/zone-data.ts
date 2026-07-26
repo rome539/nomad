@@ -1861,6 +1861,11 @@ export const CURE_RECIPES: Record<string, string> = {
   "hyena-haunch": "smoked-haunch", // a raw haunch → the very haunch its lore says these racks make (heal 9 → 12, keeping)
   "pale-flesh":   "smoked-haunch", // the deep's drowned meat, smoked to keeping (heal 8 → 12, keeping)
   "rat-meat":     "dried-meat",    // the humble loop: rats are everywhere, so their cure is the modest keeping ration, not the premium haunch (heal 5 → 8, keeping)
+  // The angler's loop (119): the common catch salts down to keeping. The pale
+  // eel (16) and the marrow-lamprey (20) are deliberately ABSENT — they heal
+  // more than anything cured and they SPOIL, and that trade is the whole point
+  // of a delicacy. Preserve them and there'd be no reason to eat anything else.
+  "cave-fish":    "salt-fish",     // the humble catch → the strip the keeper sells (heal 11 → 14, keeping)
 };
 // A plain torch turns up in the smokehouse now and then — the garrison kept
 // their kindling by the fire. It rides the floor-renewal law (DICE, not a

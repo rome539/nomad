@@ -446,7 +446,11 @@ export class ZoneDO implements DurableObject {
       }
       if (!c.bleedTicks) c.hp = Math.min(tmpl.max_hp, c.hp + CREATURE_HEAL_PER_MIN * mins);
       if (c.hp >= tmpl.max_hp) c.phase = 0;
-      if (!HOLLOW.has(c.templateId)) c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * mins);
+      // CORRODERS want your gear, not your blood — no food source, ever hungers
+      // for nothing (rome, 2026-07-26: the verdigris-thing had no business
+      // showing "restless with hunger" when it's explicitly not interested in
+      // eating at all). Same shape as HOLLOW's exclusion, different reason.
+      if (!HOLLOW.has(c.templateId) && !CORRODERS.has(c.templateId)) c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * mins);
       if (c.grudges.length) {
         const ms = ai.forgetMs(this, tmpl);
         c.grudges = c.grudges.filter((g) => now - g.at < ms);
@@ -3510,7 +3514,7 @@ export class ZoneDO implements DurableObject {
           here.push(out);
           this.stampFresh(r.roomId, out);
           if (!silent) {
-            this.roomFeed(r.roomId, "On the smoke-racks, a haunch has cured through — gone black and hard, and keeping now.", undefined, false); // housekeeping — off the relay
+            this.roomFeed(r.roomId, `On the smoke-racks, ${this.world!.itemTemplates.get(out)?.name ?? "a haunch"} has cured through — gone black and hard, and keeping now.`, undefined, false); // housekeeping — off the relay; names what actually cured (fish cure here too since 119)
             this.refreshRoomCtx(r.roomId);
           }
           return false;

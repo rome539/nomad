@@ -90,7 +90,7 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
     z.rot.splice(z.rot.indexOf(r), 1);
     collected++;
   }
-  const got = collected ? `You take ${collected === 1 ? "a cured haunch" : collected + " cured joints"} down off the gate-racks — gone black and hard, and keeping now. ` : "";
+  const got = collected ? `You take ${collected === 1 ? "a cured piece" : collected + " cured pieces"} down off the gate-racks — gone black and hard, and keeping now. ` : "";
 
   // Everything at a gate is at your elbow — pack, lockbox, and vault alike — so
   // hang raw meat from any of them (parity with smelt, which spends scrap across
@@ -103,7 +103,7 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
     const carried = curable ?? flat.find(named);
     if (!carried) return z.send(session, got + "You carry nothing like that.", got ? "gain" : undefined);
     const outId = CURE_RECIPES[carried.itemId];
-    if (!outId) return z.send(session, got + `${cap(world.itemTemplates.get(carried.itemId)!.name)} won't cure. The racks are for raw meat — a haunch, a slab of flesh.`, got ? "gain" : undefined);
+    if (!outId) return z.send(session, got + `${cap(world.itemTemplates.get(carried.itemId)!.name)} won't cure. The racks are for raw meat and fresh-caught fish — a haunch, a slab of flesh, a fish off the line.`, got ? "gain" : undefined);
     if (carried.serial !== null) return z.send(session, got + "That one's sealed for extraction. Break the seal before you'd hang it in the smoke.", got ? "gain" : undefined);
     const rawName = world.itemTemplates.get(carried.itemId)!.name;
     // Remove the row wherever it lived — a pack row leaves session.items too; a
@@ -130,10 +130,10 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
   if (still.length) {
     const left = Math.min(...still.map((r) => r.at)) - now;
     const mins = Math.max(1, Math.ceil(left / 60_000));
-    hanging = ` ${still.length === 1 ? "A haunch hangs" : still.length + " joints hang"} on the racks, curing — ${left <= 20_000 ? "all but done" : "about " + mins + " minute" + (mins === 1 ? "" : "s") + " yet"}.`;
+    hanging = ` ${still.length === 1 ? "A piece hangs" : still.length + " pieces hang"} on the racks, curing — ${left <= 20_000 ? "all but done" : "about " + mins + " minute" + (mins === 1 ? "" : "s") + " yet"}.`;
   }
-  if (readyStuck.length) hanging += ` ${readyStuck.length === 1 ? "A cured haunch waits" : readyStuck.length + " cured joints wait"} on the racks, but your pack is full — make room and 'cure' takes them down.`;
-  const base = "The gate keeps its own smoke-racks in the warm behind the door. Feed them raw meat — 'cure haunch' — and it cures safe while you're away, slower than the deep racks but nothing can ever lift it."
+  if (readyStuck.length) hanging += ` ${readyStuck.length === 1 ? "A cured piece waits" : readyStuck.length + " cured pieces wait"} on the racks, but your pack is full — make room and 'cure' takes them down.`;
+  const base = "The gate keeps its own smoke-racks in the warm behind the door. Feed them raw meat or a fresh catch — 'cure haunch', 'cure fish' — and it cures safe while you're away, slower than the deep racks but nothing can ever lift it."
     + (haveRaw ? "" : " (You've nothing raw to hang.)");
   z.send(session, (got + base + hanging).trim(), collected ? "gain" : undefined);
   if (collected) { z.sendCtx(session); await z.persist(); }
@@ -161,13 +161,13 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
     if (curing.length) {
       const left = Math.min(...curing.map((r) => r.at)) - Date.now();
       const mins = Math.max(1, Math.ceil(left / 60_000));
-      hanging = ` ${curing.length === 1 ? "A haunch hangs" : curing.length + " joints hang"} in the smoke, curing — ${left <= 20_000 ? "all but done now" : "about " + mins + " minute" + (mins === 1 ? "" : "s") + " yet"}. Leave them hanging; lift one early and it's raw still.`;
+      hanging = ` ${curing.length === 1 ? "A piece hangs" : curing.length + " pieces hang"} in the smoke, curing — ${left <= 20_000 ? "all but done now" : "about " + mins + " minute" + (mins === 1 ? "" : "s") + " yet"}. Leave them hanging; lift one early and it's raw still.`;
     }
     return z.send(session, (lit
-      ? "The smoke-racks are burning, smoke crawling up the black brick. Hang what raw meat you've got — 'cure haunch' — and load them while the fire holds; each joint keeps on its own once it's cured through."
+      ? "The smoke-racks are burning, smoke crawling up the black brick. Hang what raw meat or fish you've got — 'cure haunch', 'cure fish' — and load them while the fire holds; each piece keeps on its own once it's cured through."
         + (haveRaw ? "" : " (Though you've nothing raw to hang.)")
-      : "The smoke-racks hang cold in the black brick, waiting. Feed them a torch and hang raw meat — 'cure haunch' — and the old grease-fire wakes; once it's lit you can load the racks with all you carry. It cures where it hangs, so mind that something hungry doesn't come for it first."
-        + (haveRaw && haveTorch ? "" : haveRaw ? " (You've meat to hang, but no torch to wake the fire.)" : haveTorch ? " (You've a torch, but nothing raw to cure.)" : ""))
+      : "The smoke-racks hang cold in the black brick, waiting. Feed them a torch and hang raw meat or a fresh catch — 'cure haunch', 'cure fish' — and the old grease-fire wakes; once it's lit you can load the racks with all you carry. It cures where it hangs, so mind that something hungry doesn't come for it first."
+        + (haveRaw && haveTorch ? "" : haveRaw ? " (You've something raw to hang, but no torch to wake the fire.)" : haveTorch ? " (You've a torch, but nothing raw to cure.)" : ""))
       + hanging);
   }
   // Prefer a CURABLE match: "cure haunch" should find the hyena haunch that CAN
@@ -177,7 +177,7 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
   const carried = curable ?? z.findCarried(session, arg);
   if (!carried) return z.send(session, "You carry nothing like that.");
   const out = CURE_RECIPES[carried.itemId];
-  if (!out) return z.send(session, `${cap(world.itemTemplates.get(carried.itemId)!.name)} won't cure. The racks are for raw meat — a haunch, a slab of flesh.`);
+  if (!out) return z.send(session, `${cap(world.itemTemplates.get(carried.itemId)!.name)} won't cure. The racks are for raw meat and fresh-caught fish — a haunch, a slab of flesh, a fish off the line.`);
   if (carried.serial !== null) return z.send(session, "That one's sealed for extraction. Break the seal before you'd hang it in the smoke.");
 
   // No live fire? Spend one torch to wake the racks — that lights the room too, and
