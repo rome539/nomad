@@ -3417,9 +3417,21 @@ function renderJournal(f) {
     } else {
       var lk = document.createElement("div");
       lk.className = "jlocked";
-      lk.textContent = e.tier >= 2
-        ? "Kill and study it more for the hard numbers."
-        : "You've watched it, not fought it. Blood fills the rest.";
+      // Name EXACTLY what's missing (rome, 2026-07-26): the old line read "Kill
+      // and study it more for the hard numbers", which sent a player who'd
+      // already killed 83 of a thing off to kill more \\u2014 when kills past 3 do
+      // nothing and the account was only ever waiting on one 'study'. A full
+      // account is study AND 3 kills; say which half is short.
+      if (e.tier >= 2) {
+        var need = 3 - e.kills;
+        lk.textContent = !e.studied
+          ? (need > 0
+            ? "Study one alive, and " + need + " more kill" + (need === 1 ? "" : "s") + ", for the hard numbers."
+            : "You've bled it enough. Study one alive \\u2014 that's all the account wants now.")
+          : need + " more kill" + (need === 1 ? "" : "s") + " for the hard numbers.";
+      } else {
+        lk.textContent = "You've watched it, not fought it. Blood fills the rest.";
+      }
       card.appendChild(lk);
     }
     jBody.appendChild(card);
