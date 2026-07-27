@@ -456,8 +456,8 @@ export class ZoneDO implements DurableObject {
         c.grudges = c.grudges.filter((g) => now - g.at < ms);
       }
       if (c.hunger >= HUNGRY_AT) {
-        if (SCAVENGERS.has(c.templateId) || VERMIN.has(c.templateId) || LURKERS.has(c.templateId)) {
-          ai.scavengerFeeds(this, c, true);
+        if (SCAVENGERS.has(c.templateId) || VERMIN.has(c.templateId) || LURKERS.has(c.templateId) || DROWNERS.has(c.templateId)) {
+          ai.scavengerFeeds(this, c, true); // drowners included since 2026-07-26 — the offline sim must feed them too, or they'd starve only while nobody watches
         }
         ai.creatureEatsHere(this, c, true, now);
       }
@@ -631,6 +631,7 @@ export class ZoneDO implements DurableObject {
       session.linkdeadUntil = undefined;
     }
     this.sessions.set(pubkey, session);
+    await lore.refreshStudied(this, session); // the sync chip builder can't read D1; prime the studied-cache so no redundant `study` chip shows before the first journal open
     this.lastCommandAt = Date.now(); // an arrival is activity — the world beats fast for fresh footsteps
     // buildSession never carries a dealId across — any deal this player was
     // in is already cancelled server-side (onLeave's cancelDealForSession ran
@@ -860,6 +861,7 @@ export class ZoneDO implements DurableObject {
       const la = this.wsAttachment(ws)?.la;
       rebuilt.lastActiveAt = typeof la === "number" ? la : Date.now();
       this.sessions.set(pubkey, rebuilt);
+      await lore.refreshStudied(this, rebuilt); // same as a fresh connect: a wake rebuild starts with an empty cache
       // A cold wake means the WHOLE DO reset — z.deals is gone, and this
       // fresh session carries no dealId — but the client's browser doesn't
       // know that and may still be showing a swap modal/popup with dead
@@ -3174,6 +3176,15 @@ export class ZoneDO implements DurableObject {
         // near) is what starves one desperate enough to come anyway. (Feed only:
         // no gear-scooping, no going bold — they're hunters, not looters.)
         else if (LURKERS.has(creature.templateId) && creature.hunger >= HUNGRY_AT) ai.scavengerFeeds(this, creature, false);
+        // The drowned eat what the water takes (rome, 2026-07-26). They had NO
+        // food path at all — not scavengers, no prey map, excluded from the
+        // starving-hunt (they keep their own seize-aggro) — so they climbed to
+        // max hunger and sat there reading "restless with hunger" forever, the
+        // same dead end rats were in before VERMIN. They don't hunt for it: they
+        // stand where things sink and feed on what dies in their water. Feed
+        // only — no gear-scooping, no gorging bold (scavengerBold gates on
+        // SCAVENGERS, so the escalation can't leak to them).
+        else if (DROWNERS.has(creature.templateId) && creature.hunger >= HUNGRY_AT) ai.scavengerFeeds(this, creature, false);
         // A rat that finds you resting may decide you're warm furniture.
         ai.ratCuddles(this, creature, now);
         // The small lives: warm blood dozes off in the quiet...

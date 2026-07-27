@@ -1019,13 +1019,21 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
       // thing than gnawing a rat. Name it when it happens.
       const hyenaKin = new Set([...SCAVENGERS].map((id) => z.world!.mobTemplates.get(id)?.name));
       const ownDead = creature.templateId === "dire-hyena" && !!eaten.label && hyenaKin.has(eaten.label);
+      // A drowned thing doesn't tear at a body — it takes it under, and the
+      // water does the rest. Its own line, and its own quieter sound.
+      const drowner = DROWNERS.has(creature.templateId);
       z.roomFeed(creature.roomId, ownDead
         ? pick([
             `${cap(tmpl.name)} drags the fallen ${eaten.label!.replace(/^(a|an|the)\s+/i, "")} close and feeds. The pack is nothing to it.`,
             `${cap(tmpl.name)} sets to its own dead without a pause — it does not care what it was.`,
           ])
+        : drowner
+        ? pick([
+            `${cap(tmpl.name)} gathers the dead in and sinks with it. The water closes over them both.`,
+            `${cap(tmpl.name)} draws the body down under the black water and does not come up for a while.`,
+          ])
         : `${cap(tmpl.name)} tears into the dead, feeding.`, undefined, false);
-      z.roomSound(creature.roomId, "Wet, cracking sounds drift {dir}.");
+      z.roomSound(creature.roomId, drowner ? "Water turns over heavily, {dir}, and settles." : "Wet, cracking sounds drift {dir}.");
       if (before < SCAVENGER_BOLD_AT && creature.fed >= SCAVENGER_BOLD_AT) {
         z.roomFeed(creature.roomId, `${cap(tmpl.name)} lifts its head, gorged and unafraid.`, undefined, false);
       }

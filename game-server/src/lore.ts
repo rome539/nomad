@@ -220,6 +220,30 @@ async function carriedJournals(z: ZoneDO, session: Session): Promise<CarriedItem
   return books;
 }
 
+// Re-read which creatures are already studied across every carried journal into
+// session.studied. The chip builder (chips.ts) is SYNCHRONOUS — sendCtx runs on
+// every combat round — so it cannot ask D1 whether a `study` chip would be
+// redundant; it reads this cache instead. Same shape as session.mapInk: a
+// per-session cache over a journal table. Refreshed on connect/wake, on study,
+// and on a journal read.
+// NEVER throws: it runs on the connect/wake path, and a D1 hiccup (the
+// overload that used to abort whole ticks) must not cost anyone a login over a
+// chip hint. On failure the cache stays unhydrated and the chip just shows.
+export async function refreshStudied(z: ZoneDO, session: Session): Promise<void> {
+  try {
+    const ids = (await carriedJournals(z, session)).map((b) => b.journalId!);
+    const seen = new Set<string>();
+    for (const id of ids) {
+      for (const r of await journalLoad(z.env.DB, id)) {
+        if (r.studied) seen.add(r.templateId);
+      }
+    }
+    session.studied = seen;
+  } catch (e) {
+    console.error("refreshStudied threw", (e as Error)?.stack ?? String(e));
+  }
+}
+
 export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const journal = (await carriedJournals(z, session))[0];
   if (!journal?.journalId) {
@@ -236,6 +260,7 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   }
   const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
   await journalStudy(z.env.DB, journal.journalId, tmpl.id);
+  (session.studied ??= new Set<string>()).add(tmpl.id); // the chip for this one goes quiet from here on
   // Standing still to watch a thing this close is a risk: if it's a fight, your
   // eyes leave it for a beat.
   let opening = "";
@@ -246,6 +271,7 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   z.send(session, `You watch ${tmpl.name} a while and set down what you see.` +
     (tier < 3 ? ` (Its full account wants ${3 - (row?.kills ?? 0)} more kill${3 - (row?.kills ?? 0) === 1 ? "" : "s"}.)` : " Its account is complete.") + opening, "study");
   z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey, false);
+  z.sendCtx(session); // drop the now-redundant `study` chip without waiting for the next refresh
 }
 
 export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
@@ -269,8 +295,10 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
   // Every book you hold opens at once — the best account of a creature wins,
   // whichever cover it's written in (someone else's hunting, now yours).
   const byMob = new Map<string, JournalRow>();
+  const studied = new Set<string>();
   for (const id of ids) {
     for (const r of await journalLoad(z.env.DB, id)) {
+      if (r.studied) studied.add(r.templateId); // free refresh of the chip cache — the rows are already in hand
       const cur = byMob.get(r.templateId);
       const tier = journalTier(r.kills, r.studied);
       if (!cur || tier > journalTier(cur.kills, cur.studied)
@@ -280,6 +308,7 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
     }
   }
   const rows = [...byMob.values()];
+  session.studied = studied;
   const world = z.world!;
   const entries = rows
     .map((r) => {

@@ -142,8 +142,13 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // A surveyor-map carries a journalId too (its ink rides the journal rail, 097),
   // so "a real journal" is journalId AND not a map — else a map offers `study`.
   if (creatureHere && session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) {
+    // Skip anything already written up (rome, 2026-07-26): studying twice adds
+    // NOTHING, and mid-fight the chip actively costs you — cmdStudy staggers you
+    // for the look. session.studied is the cache the sync builder can read;
+    // unhydrated (undefined) falls through and offers it, as it always did.
     const firstMob = [...z.creatures.values()].find(
-      (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target),
+      (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target)
+        && !session.studied?.has(c.templateId),
     );
     if (firstMob) suggest.push(`study ${chipName(world.mobTemplates.get(firstMob.templateId)!.name)}`);
   }

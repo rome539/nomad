@@ -405,6 +405,26 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     const bears = z.bearsClause(creature);
     return z.send(session, `${tmpl.description} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}${bears ? ` It is ${bears.slice(2)}.` : ""}`);
   }
+  // A chest is a FIXTURE of the room, and 'look' could never see one (rome,
+  // 2026-07-26) — every cache carries real description prose in D1 that nothing
+  // ever showed. Resolved room-scoped by name, exactly as 'unlock' does, and
+  // checked BEFORE floor/pack items on purpose: standing at the reliquary,
+  // 'look reliquary' must read the chest, not the reliquary-key in your pocket.
+  // Blind obeys the same law as everything else — the dark takes the room.
+  const cacheHere = blind ? null : world.caches.find(
+    (c) => z.cacheRoomId(c) === session.roomId && nameMatches(c.name, arg)
+      && (z.cacheLocked(c) || !z.cacheRoams(c)), // a looted roaming chest isn't here at all (it hides until it refills elsewhere)
+  );
+  if (cacheHere) {
+    const keyT = world.itemTemplates.get(cacheHere.keyItem);
+    if (!z.cacheLocked(cacheHere)) {
+      return z.send(session, `${cacheHere.description} It hangs sprung and empty. Give it time to be worth forcing again.`);
+    }
+    const hasKey = session.items.some((c) => c.itemId === cacheHere.keyItem);
+    return z.send(session, `${cacheHere.description} It is locked.`
+      + (keyT ? (hasKey ? ` ${cap(keyT.name)} in your pack fits that lock.` : ` The lock wants ${keyT.name}.`) : ""));
+  }
+
   // Items get a real inspection (rome, 2026-07-11): the prose, then what the
   // piece DOES (the same stat tags the bench shows), then how far gone it is.
   // Gear on the floor reads its stamped wear (groundCond); a trophy or a food
