@@ -585,6 +585,20 @@ export const MOUTHS = [
   // the fen and the briars, the shallow warrens breathe through the sewer-slip
   // — not out of the crypt. Kills the migrant parade through the keep's ring.
   "the-black-fen", "the-briar-field", "the-sewer-slip",
+  // TWO MORE DEEP MOUTHS (rome, 2026-07-27: "the mobs in the deep are just all
+  // in the central corridor"). applyArrivals walks a migrant in from the
+  // nearest mouth on ITS side of the descent — and only the-weir and root-vault
+  // were deep, so every deep respawn entered through one of two rooms and
+  // marched to its den, all along the same spine. Measured over the live spawn
+  // table: 31 deep walkers, busiest corridor room carrying 17 of them, average
+  // march 5.1 rooms — so a large share of the deep's population was permanently
+  // in transit on the boss road instead of at home. These two cut that to 11
+  // and 2.4. Both are openings by their own prose (the sump is where everything
+  // the deep loosens gathers; the undertow drags toward the deeper black), the
+  // same law as the weir's gap and the root-split vault. worm-bore is
+  // deliberately NOT one — it's the deep's hideaway, and things crawling out of
+  // it would ruin the one place nothing can follow you.
+  "the-sump", "the-undertow",
 ];
 
 // The warden walks its rounds — it always has ("armor... still walking its
