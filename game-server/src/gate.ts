@@ -310,6 +310,13 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   const trade = session.buying!;
   const t = world.itemTemplates.get(carried.itemId)!;
   if ((t.barter ?? 0) <= 0) return `The keeper waves ${t.name} away. No use to him.`;
+  // You can't sell what you're standing in. Both the modal and the typed offer
+  // land here, so this one guard covers both — and the goods tally hides worn
+  // pieces besides, so the modal never offers the button in the first place.
+  // Same law as benchDrop ("that isn't loose in your pack"): take it off, then
+  // deal. Stash and salvage silently unequip, but those keep the piece or its
+  // metal — this hands it across a counter and it is GONE.
+  if (carried.equipped) return `You'd have to take ${t.name} off first. The keeper deals in goods, not the clothes on your back.`;
   trade.escrow.push({ row: carried.rowId, from });
   // The chalked want (events): the thing on the hatch counts double while
   // the chalk lasts — and his manner gives it away before any tally could.
@@ -467,7 +474,12 @@ export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promis
     if (matches.length) seenNamed = true;
     const free = matches.filter((c) => !trade.escrow.some((e) => e.row === c.rowId));
     if (free.length) {
-      carried = free.find((c) => c.serial === null) ?? free[0];
+      // Prefer a piece you're NOT wearing, then an unsealed one: 'offer maul'
+      // with one on your hip and a spare in the pack sells the spare, rather
+      // than bouncing off the equipped guard in offerCore.
+      const loose = free.filter((c) => !c.equipped);
+      const pick = loose.length ? loose : free;
+      carried = pick.find((c) => c.serial === null) ?? pick[0];
       from = key;
       break;
     }
@@ -519,7 +531,10 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
       const candidates = pool.filter(
         (c) => c.itemId === frame.row && !session.buying!.escrow.some((e) => e.row === c.rowId),
       );
-      const carried = candidates.find((c) => c.serial === null) ?? candidates[0];
+      // Same preference as the typed path: the spare before the worn one.
+      const looseC = candidates.filter((c) => !c.equipped);
+      const pickC = looseC.length ? looseC : candidates;
+      const carried = pickC.find((c) => c.serial === null) ?? pickC[0];
       note = carried ? await offerCore(z, session, carried, src) : "You've nothing more like that to offer.";
     }
   } else if (action === "unbuy") {
@@ -598,6 +613,7 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
     for (const c of pool) {
       const t = world.itemTemplates.get(c.itemId);
       if (!t || (t.barter ?? 0) <= 0) continue;
+      if (c.equipped) continue; // what you're wearing isn't stock (rome, 2026-07-30) — take it off first, same law as 'drop'
       let g = goods.get(t.id);
       if (!g) { g = { id: t.id, name: t.name, rarity: t.rarity, kind: kindOf(t), n: 0 }; goods.set(t.id, g); }
       if (!session.buying?.escrow.some((e) => e.row === c.rowId)) g.n += 1;
