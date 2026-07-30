@@ -808,6 +808,15 @@ export const CARRION_MINT_ODDS = 0.3;             // ...and ~1 in 3 checks drops
 // 3h lurk-drift — it's hunting, not lying in wait. Fed, it falls back to the slow
 // territorial drift (LURKER_DRIFT_MS / TERRITORY_RADIUS).
 export const LURKER_HUNT_RADIUS = 6;               // twice its normal territory, to reach the rat-runs
+// A lurk is a solitary thing (rome, 2026-07-30: "the pale stalkers still all
+// bunch up in the deep"). lurkerDrifts moves on its own path, not through
+// creatureMoves, so it never saw CROWD_CAP — and BOTH its branches pick a
+// single deterministic best room (the nearest prey, or the freshest-trafficked
+// room in territory), so every lurker with an overlapping range computes the
+// SAME answer and piles into it. This is that missing cap, and it counts only
+// other LURKERS: the hunting branch is meant to close on prey, so counting
+// every creature would stop a stalker ever reaching a rat.
+export const LURKER_CROWD = 2;                     // a dark room already holding this many lurkers stops drawing more
 export const LURKER_HUNT_DRIFT_MS = 40 * 60_000;   // ~40 min between hunting moves (vs the 3h idle drift)
 export const STARVE_HUNTS_ODDS = 0.2; // chance/tick a STARVING predator with no easier prey begins its wind-up on a player sharing the room (low: the threshold + no-prey gate already make it rare)
 export const WOUNDED_PREY_ODDS = 0.15; // chance/tick an eligible predator begins its wind-up on a BADLY HURT player (< WOUNDED_FRACTION hp), independent of the predator's own hunger — slightly rarer than the starving-hunt since it can fire on ANY eligible predator, not just a genuinely starved one

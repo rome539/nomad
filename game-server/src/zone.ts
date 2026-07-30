@@ -3332,6 +3332,13 @@ export class ZoneDO implements DurableObject {
 
     this.applyRot(now, false);
     this.sweepSpoiledHearts(now, false);
+    // Every armStrayDecay caller is an EVENT (a drop, a throw, a spill), so a
+    // pile that predates its timers would sit there forever with nothing to
+    // arm it — exactly the undercroft's 11 torches, which accumulated while
+    // spawn floors were wholly exempt. Sweeping the floors the world is
+    // already holding costs a filter over the few rooms that have any items,
+    // and guarantees a historical pile drains without waiting on a passer-by.
+    for (const roomId of this.ground.keys()) this.armStrayDecay(roomId);
     this.applyRegrow(now, false);
     ai.applyArrivals(this, now, false);
     ai.scheduleArrivals(this, now);
@@ -3571,9 +3578,15 @@ export class ZoneDO implements DurableObject {
     if (!floor || !floor.length) return;
     for (const itemId of Object.keys(STRAY_DECAY)) {
       const d = STRAY_DECAY[itemId];
-      if (this.world!.groundSpawns.some((g) => g.item_id === itemId && g.room_id === roomId && g.regrows)) continue;
-      const n = floor.filter((i) => i === itemId).length;
-      if (!n) continue;
+      // The world's OWN copies are exempt — but only that many. This used to
+      // skip the room entirely, which made a spawn floor immortal: the
+      // undercroft grows a torch, so every torch ever dropped there could
+      // never rot, and the pile only grew (rome, 2026-07-30: 11 on one floor).
+      // Protect one copy per regrowing spawn row and let every stray above
+      // that spoil like it would anywhere else.
+      const kept = this.world!.groundSpawns.filter((g) => g.item_id === itemId && g.room_id === roomId && g.regrows).length;
+      const n = floor.filter((i) => i === itemId).length - kept;
+      if (n <= 0) continue;
       const pending = this.rot.filter((r) => r.kind === d.kind && r.roomId === roomId && r.itemId === itemId).length;
       for (let i = pending; i < n; i++) {
         this.rot.push({ itemId, roomId, at: Date.now() + randInt(d.min, d.max), kind: d.kind });

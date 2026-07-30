@@ -14,7 +14,7 @@ import {
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
   NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
-  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, DARK_ROOMS, THIEVES,
+  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PREDATION_ODDS, STARVE_HUNTERS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
@@ -1276,6 +1276,7 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
       const consider = (roomId: string) => {
         if (roomId === creature.roomId || !DARK_ROOMS.has(roomId)) return;
         if (z.roomDist(home, roomId) > LURKER_HUNT_RADIUS) return;
+        if (lurkersIn(z, roomId, creature.id) >= LURKER_CROWD) return; // that stretch of dark is taken
         const d = z.roomDist(creature.roomId, roomId);
         if (d < bestDist) { bestDist = d; best = roomId; }
       };
@@ -1289,6 +1290,7 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
       for (const [roomId, list] of z.traces) {
         if (roomId === creature.roomId || !DARK_ROOMS.has(roomId)) continue;
         if (z.roomDist(home, roomId) > TERRITORY_RADIUS) continue;
+        if (lurkersIn(z, roomId, creature.id) >= LURKER_CROWD) continue; // another one already lies in wait there
         for (const tr of list) {
           if (tr.kind === "passage" && tr.at > bestAt) { bestAt = tr.at; best = roomId; }
         }
@@ -1603,5 +1605,16 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
 export function creaturesIn(z: ZoneDO, roomId: string): number {
     let n = 0;
     for (const c of z.creatures.values()) if (c.roomId === roomId) n++;
+    return n;
+  }
+
+// Lurkers only — the crowd rule for an ambush (see LURKER_CROWD). Counting
+// every creature would read a room full of RATS as crowded, which is the one
+// place a hungry stalker most wants to be.
+export function lurkersIn(z: ZoneDO, roomId: string, exceptId: string): number {
+    let n = 0;
+    for (const c of z.creatures.values()) {
+      if (c.id !== exceptId && c.roomId === roomId && LURKERS.has(c.templateId)) n++;
+    }
     return n;
   }
