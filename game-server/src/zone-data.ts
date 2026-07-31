@@ -660,7 +660,7 @@ export const BROOD_INTERVAL_MS = 90_000; // ~90s between births
 // outright; this is only for the ones that don't yet know you.)
 export const LISTENERS = new Set(["skeleton", "bone-knight", "marrow-cantor"]); // the cantor brings ears (and the bone-tax) to the King's Demesne
 export const WAKE_ENTER = 0.3;  // sometimes it catches the sound of you coming in
-export const WAKE_EXIT = 0.65;  // your move for the door is the loudest thing you do
+export const WAKE_EXIT = 0.45;  // your move for the door is still the loudest thing you do — but it SCALES with your load now (rome, 2026-07-30). At a flat 0.65 leaving a room with a sleeper in it was punished two times in three, with no way to creep out: entry took ENTRY_STEALTH_MIN scaling ("the plate ninja is dead"), the exit took none, so light gear helped you arrive and did nothing for you leaving. Same roll both ways now, and the door stays the louder of the two.
 export const WAKE_NOISE = 0.8;  // a fight in the room is almost unmissable
 export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
 // SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing

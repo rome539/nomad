@@ -778,9 +778,14 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     }
   }
 
+  // What you're wearing decides how quietly you move — one figure for BOTH
+  // ends of the step, so slipping out obeys the same law as slipping in
+  // (rome, 2026-07-30: the exit roll used to ignore load entirely, so light
+  // gear bought you a quiet arrival and nothing at all on the way out).
+  const stealthMult = Math.max(ENTRY_STEALTH_MIN, Math.min(1, z.loadOf(session) / DODGE_ZERO_AT));
   // Before you slip out, a dormant listener may hear you move for the door
   // and swing as you go — you still leave (if you live), but not always clean.
-  if (await ai.wakeListeners(z, session, session.roomId, WAKE_EXIT, "hears you move — and swings as you slip past!")) {
+  if (await ai.wakeListeners(z, session, session.roomId, WAKE_EXIT * stealthMult, "hears you move — and swings as you slip past!")) {
     if (session.hp <= 0) return; // felled on the way out
   }
   session.target = null;
@@ -866,7 +871,6 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // …and a dormant listener might just catch the sound of your arrival — but a
   // light tread scales that roll DOWN (rome, 2026-07-19: the plate ninja is
   // dead). Cloth tiptoes past the sleeper; plate wakes the thing in the room.
-  const stealthMult = Math.max(ENTRY_STEALTH_MIN, Math.min(1, z.loadOf(session) / DODGE_ZERO_AT));
   await ai.wakeListeners(z, session, session.roomId, WAKE_ENTER * stealthMult, "twists toward the sound of you and lunges!");
   await savePlayer(z.env.DB, session.pubkey, session.roomId, session.hp);
   await z.persist();
