@@ -1,0 +1,22 @@
+-- 124 the lighter wight (rome, 2026-07-30: "barrow is hitting too hard").
+-- twice-dead 5-8 -> 4-7. This is the cut rome first called for on the 26th
+-- (then withdrew); he's named it again after it opened on him for 12 and 14.
+--
+-- 5-8 was the hardest-hitting level 3 in the game -- above pale-crawler (4-8),
+-- warden (3-6), the-drowned (3-5 as of 123), and well above its own deeper
+-- cousin the cairn-wight (3-5). On top of that base it stacks:
+--
+--   x1.5  AMBUSH_MULT -- "is on you before you're set", its opener
+--   x1.5  STANCE.reckless.def, if that's how you're standing
+--   armour is the ONLY reducer (ARMOR_K), and a freshly respawned player
+--         has none at all, so nothing is absorbed
+--
+-- so a naked reckless delver could eat 11.25-18 from one opening blow of a
+-- level 3 -- nearly a third of 60 hp before the round even starts. 4-7 brings
+-- that worst case to 9-15.75 and the ambush ceiling from 12 to 10.5.
+--
+-- Still the meanest thing at its level, which suits a REVENANT that gets back
+-- up, doesn't bleed, never flees and carries a 12% stun. The threat was always
+-- meant to be that it keeps coming, not that it one-shots a third of you.
+
+UPDATE mob_templates SET dmg_min = 4, dmg_max = 7 WHERE id = 'twice-dead';

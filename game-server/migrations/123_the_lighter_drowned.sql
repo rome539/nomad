@@ -1,0 +1,21 @@
+-- 123 the lighter drowned (rome, 2026-07-30: "the drowned thing might hit 1-2
+-- points too hard"). the-drowned sat at 4-7, which read fine on paper but
+-- landed harder than its tier for two reasons:
+--
+--   * it matched drowned-hulk (4-7) exactly -- and the hulk is a LEVEL 4
+--     variant with 46 hp to its 40. The rarer, meaner form had more body but
+--     no more bite, so the common one was doing a level-4's damage.
+--   * it is the only one of them carrying SEIZE_DMG_MULT (1.25) -- while it
+--     has hold of you, 4-7 is really 5-8.75. That put its ceiling ABOVE
+--     twice-dead (8), which has the higher base damage and no grapple.
+--
+-- 4-7 -> 3-5. Average 5.5 -> 4.0; seized ceiling 8.75 -> 6.25. The min comes
+-- down 1 and the max 2, so the spike goes rather than the whole threat -- the
+-- grapple, the no-flee hold and the unmitigable drowning roll are what should
+-- frighten you, not a chip hit that reads like a boss's.
+--
+-- drowned-hulk and drowned-god are deliberately untouched: rome named the
+-- drowned thing. The hulk now hits harder than its base form, which is what a
+-- meaner variant should do anyway.
+
+UPDATE mob_templates SET dmg_min = 3, dmg_max = 5 WHERE id = 'the-drowned';

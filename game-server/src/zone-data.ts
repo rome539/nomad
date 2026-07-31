@@ -1080,6 +1080,7 @@ export const WEAPON_VERBS: Record<string, string[]> = {
   "sword-breaker": ["jab the sword-breaker into {n}", "catch {n} on the sword-breaker", "stab at {n}"],
   // — crushing (stun) —
   "loose-rock": ["crack the rock into {n}", "smash the stone against {n}", "cave at {n} with the rock"],
+  "hammerstone": ["bring the hammerstone down on {n}", "club {n} with the stone", "drive the hammerstone into {n}"],
   "splintered-cudgel": ["club {n} with the cudgel", "batter {n}", "crack {n} across the skull"],
   "studded-maul": ["hammer {n} with the studded maul", "batter {n} down", "crack the maul into {n}"],
   "warden-maul": ["bring the warden-maul down on {n}", "hammer {n}", "crush {n} under the maul"],

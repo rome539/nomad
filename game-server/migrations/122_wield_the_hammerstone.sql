@@ -1,0 +1,21 @@
+-- 122 wield the hammerstone (rome, 2026-07-30): the hammerstone had real
+-- weapon stats -- dmg 3, 12% stun, better than a rusted sword -- but slot ''
+-- so nothing could ever equip it. A loose rock (slot 'weapon', dmg 1, 8%
+-- stun) CAN be wielded, so the strictly better stone was the one you couldn't
+-- hold. Given the weapon slot to match.
+--
+-- Its dmg was never dead: cmdThrow reads itmpl.dmg, so 3 already counted on
+-- the throw. This only adds the melee half.
+--
+-- Nothing else keys off the change:
+--   * isGear() already returned true for it via THROW_TOUGH, so condition and
+--     wear were tracked before this -- no new behaviour there.
+--   * playerHit falls back to the BLUNT register on stun > 0, so it reads
+--     right in combat (it also gets its own verb pool this ship).
+--   * salvage already refuses it ("It's a rock."), same as loose-rock, which
+--     is slotted today -- so the bench's scrap button was already in that
+--     state for a stone. No new wart.
+--   * barter is 3, and 111 only touched barter = 0 rows, so the gear-pricing
+--     passes don't retroactively catch it.
+
+UPDATE item_templates SET slot = 'weapon' WHERE id = 'hammerstone';

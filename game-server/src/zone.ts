@@ -721,11 +721,42 @@ export class ZoneDO implements DurableObject {
   // traced live via Workers Logs: "tick threw Error: D1_ERROR..." at
   // savePlayer). Swallow and log; the state is provisional in memory either
   // way and the next successful save catches it up.
+  // Pubkeys whose last save did not land. A lost save used to be invisible and
+  // self-correcting-in-theory ("retry next flush") — but that only holds while
+  // the session lives. Lose the DEATH save and the next rebuild reads a stale
+  // D1 row: the player is standing at a gate in memory while D1 still says the
+  // deep, and hydrateSessions believes D1 (rome, 2026-07-30 — died in the
+  // Drowned Court, respawned at the Sally Port, and was put back in the Cold
+  // Hearth, the dead-end one room from his corpse, at full hp: exactly the
+  // room of his last good flush). The tick drains this, so a failure can never
+  // outlive the beat that caused it.
+  private dirtySaves = new Set<string>();
+
   private async trySavePlayer(pubkey: string, roomId: string, hp: number): Promise<void> {
-    try {
-      await savePlayer(this.env.DB, pubkey, roomId, hp);
-    } catch (e) {
-      console.error(`savePlayer failed for ${pubkey}, will retry next flush:`, e);
+    // D1 overload is transient (it's a queue, not an outage), so a couple of
+    // immediate retries close most of the window on their own.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await savePlayer(this.env.DB, pubkey, roomId, hp);
+        this.dirtySaves.delete(pubkey);
+        return;
+      } catch (e) {
+        if (attempt === 2) {
+          this.dirtySaves.add(pubkey); // the tick keeps trying with LIVE state
+          console.error(`savePlayer failed for ${pubkey} after 3 tries, queued dirty:`, e);
+        }
+      }
+    }
+  }
+
+  // Retry whatever didn't land, from the session's CURRENT state — never a
+  // stale snapshot, so this can only ever move D1 toward the truth.
+  private async drainDirtySaves(): Promise<void> {
+    if (!this.dirtySaves.size) return;
+    for (const pubkey of [...this.dirtySaves]) {
+      const s = this.sessions.get(pubkey);
+      if (!s) { this.dirtySaves.delete(pubkey); continue; } // gone; onLeave's own save is the last word
+      await this.trySavePlayer(pubkey, s.roomId, s.hp);
     }
   }
 
@@ -3306,6 +3337,9 @@ export class ZoneDO implements DurableObject {
         await this.trySavePlayer(s.pubkey, s.roomId, s.hp);
       }
     }
+    // Every beat, not just every flush: a lost save must not survive long
+    // enough for a hibernation wake to rebuild the player from the stale row.
+    await this.drainDirtySaves();
 
     // The dungeon breathes: an idle wanderer catches a line of atmosphere now
     // and then, drawn from where they stand. Never in a fight, never at the
