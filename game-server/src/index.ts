@@ -11,6 +11,7 @@ import type { PlayerRow } from "./world";
 import { publishEvent, publishScore, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
 import VAULT_SRC from "./vault-bundle.js";
+import NOSTR_SRC from "./nostr-bundle.js";
 
 // Public, referrer-restricted browser credential for the Drive file picker
 // (cross-app vault import). Not a secret — pairs with GOOGLE_CLIENT_ID.
@@ -61,6 +62,16 @@ export default {
       }
       if (m === "GET" && pathname === "/vault.js") {
         return new Response(VAULT_SRC, {
+          headers: { "content-type": "application/javascript; charset=utf-8" },
+        });
+      }
+      // nostr-tools, from US rather than a public CDN. This is the code that
+      // mints every player's key, so it must not arrive from a third party we
+      // don't control (see nostr-entry.mjs). The client static-imports this
+      // before it can do anything, so it is on the boot path — but it's our own
+      // worker answering, the same one that just served the page.
+      if (m === "GET" && pathname === "/nostr.js") {
+        return new Response(NOSTR_SRC, {
           headers: { "content-type": "application/javascript; charset=utf-8" },
         });
       }

@@ -1063,7 +1063,10 @@ export const PAGE = `<!doctype html>
   </div>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script type="module">
-import { generateSecretKey, getPublicKey, finalizeEvent, nip19 } from "https://esm.sh/nostr-tools@2.23.9";
+// Our own copy, served by this same worker (/nostr.js) — never a public CDN.
+// generateSecretKey mints the key that IS the player's account; code that does
+// that cannot come from a third party's server. See src/nostr-entry.mjs.
+import { generateSecretKey, getPublicKey, finalizeEvent, nip19 } from "/nostr.js";
 
 // "Continue with Google" — the dungeon keeps your key backed up to your Google
 // account (server-side, sealed). Injected at serve time; public by design.
@@ -1499,7 +1502,7 @@ var BUNKER_RELAYS = ["wss://relay.nsec.app", "wss://relay.primal.net", "wss://no
 var bunkerClient = null;
 async function makeBunkerClient() {
   if (!globalThis.__nip44mod) {
-    globalThis.__nip44mod = await import("https://esm.sh/nostr-tools@2.23.9/nip44");
+    globalThis.__nip44mod = (await import("/nostr.js")).nip44;
   }
   var mod = await import("/nip46-bunker.js");
   return new mod.BunkerClient({
@@ -1548,7 +1551,7 @@ async function currentIdentityPubkey() {
 }
 async function fetchProfileName(pk) {
   try {
-    var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
+    var poolMod = await import("/nostr.js");
     var pool = new poolMod.SimplePool();
     var ev = await pool.get(
       ["wss://purplepag.es", "wss://relay.damus.io", "wss://relay.primal.net", "wss://nos.lol"],
@@ -1597,7 +1600,7 @@ async function publishSpeech(text, tag) {
     else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
     else ev = finalizeEvent(evt, sk);
     if (!gpubPool) {
-      var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
+      var poolMod = await import("/nostr.js");
       gpubPool = new poolMod.SimplePool();
     }
     // A shout carries across rooms and rings the dinner bell (creatureNoise) \\u2014
@@ -1623,7 +1626,7 @@ var nip44mod = null;
 async function sealTo(pk, text) {
   if (method === "ext" && window.nostr && window.nostr.nip44) return await window.nostr.nip44.encrypt(pk, text);
   if (method === "bunker") return await (await ensureBunkerClient()).nip44Encrypt(pk, text);
-  if (!nip44mod) nip44mod = await import("https://esm.sh/nostr-tools@2.23.9/nip44");
+  if (!nip44mod) nip44mod = (await import("/nostr.js")).nip44;
   var key = nip44mod.v2.utils.getConversationKey(sk, pk);
   return nip44mod.v2.encrypt(text, key);
 }
@@ -1642,7 +1645,7 @@ async function publishTell(pk, text) {
     else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
     else ev = finalizeEvent(evt, sk);
     if (!gpubPool) {
-      var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
+      var poolMod = await import("/nostr.js");
       gpubPool = new poolMod.SimplePool();
     }
     gpubPool.publish(SPEECH_RELAYS, ev);
@@ -1685,7 +1688,7 @@ async function publishFeed(room, text, fx) {
     else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
     else ev = finalizeEvent(evt, sk);
     if (!gpubPool) {
-      var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
+      var poolMod = await import("/nostr.js");
       gpubPool = new poolMod.SimplePool();
     }
     setTimeout(function () { try { gpubPool.publish(SPEECH_RELAYS, ev); } catch (e) {} }, FEED_HOLD_MS);
@@ -1718,7 +1721,7 @@ async function publishNote(text, atag) {
     else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
     else ev = finalizeEvent(evt, sk);
     if (!gpubPool) {
-      var poolMod = await import("https://esm.sh/nostr-tools@2.23.9/pool");
+      var poolMod = await import("/nostr.js");
       gpubPool = new poolMod.SimplePool();
     }
     gpubPool.publish(SPEECH_RELAYS, ev);

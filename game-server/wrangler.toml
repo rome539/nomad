@@ -13,7 +13,7 @@ routes = [
 # plus the generated Drive-vault bundle (npm run bundle:vault).
 [[rules]]
 type = "Text"
-globs = ["**/nip46-bunker.js", "**/vault-bundle.js"]
+globs = ["**/nip46-bunker.js", "**/vault-bundle.js", "**/nostr-bundle.js"]
 fallthrough = true
 
 # One Durable Object per zone: authoritative room/mob state, tick via alarms.
