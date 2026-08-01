@@ -11,7 +11,7 @@ import { cap, isNight } from "./zone-util";
 import * as events from "./events";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
-  HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_ODDS, HOARD_TRAIL_ODDS, HOARD_SPOOK_MS,
+  HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_MS, HOARD_TRAIL_MS, HOARD_SPOOK_MS,
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
   NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
@@ -1456,7 +1456,15 @@ export function hoarderSheds(z: ZoneDO, creature: Creature): void {
     if ((creature.carries?.length ?? 0) <= HOARD_KEEP) return;
     if (playerPresent(z, creature.roomId)) return; // it won't unload while watched
     const atDen = !!creature.home && creature.roomId === creature.home;
-    if (!chance(atDen ? HOARD_DEN_ODDS : HOARD_TRAIL_ODDS)) return;
+    const now = Date.now();
+    // A wall-clock gate, NOT a per-beat roll: this function is called from both
+    // the 2s live tick and the 30s slow clock, so odds would run 15x hot for
+    // anyone standing inside the bubble. The threshold is read against wherever
+    // it is right now, so walking home genuinely speeds its unloading and
+    // walking out slows it, without either rate depending on who is watching.
+    if (creature.lastShedAt === undefined) { creature.lastShedAt = now; return; } // fresh: start the clock, don't shed on arrival
+    if (now - creature.lastShedAt < (atDen ? HOARD_DEN_MS : HOARD_TRAIL_MS)) return;
+    creature.lastShedAt = now;
     const shed = creature.carries!.shift()!;
     z.ground.set(creature.roomId, [...(z.ground.get(creature.roomId) ?? []), shed]);
     z.stampFresh(creature.roomId, shed);

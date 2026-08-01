@@ -98,6 +98,7 @@ export interface Creature {
   rises?: number; // REVENANT: times it has already got back up (see RISE_LIMIT)
   home?: string; // its den: territory anchors here (backfilled for old saves)
   risen?: boolean; // corpse-wake: pulled up for the window only — drops where it stands when the window closes
+  lastShedAt?: number; // HOARDER: ms epoch it last let a piece fall. Wall-clock, because the scoop runs on two beats (2s live tick / 30s slow clock) and a per-beat roll would shed 15x faster whenever a player stood within SIM_RADIUS
   eyeing?: string; // scavenger: the floor gear it has declared intent on (the nose-first telegraph)
   eyeingAt?: number; // ms epoch the snatch lands, if nobody comes back to interrupt
   cuddling?: string; // rat-kind: pubkey of the resting wanderer it has curled up against (cleared the moment they rise)

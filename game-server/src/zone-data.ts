@@ -730,7 +730,16 @@ export const HOARD_CARRY_CAP = 8;   // the deep pocket (a hyena's jaws hold 3)
 // silts up into a warning — something big walks here, and it has been busy.
 // It never sheds below HOARD_KEEP, so killing it is always worth the fight.
 export const HOARD_KEEP = 4;
-export const HOARD_DEN_ODDS = 0.2; // per scoop beat, standing in its own den
+// Shed rates are WALL-CLOCK intervals, not per-beat odds, and that distinction
+// is load-bearing (rome caught this 2026-08-01). The scoop runs on two different
+// clocks: the live tick every TICK_MS (2s) for anything inside the SIM_RADIUS
+// bubble, and slowEcology every SLOW_ECOLOGY_MS (30s) for everything outside it.
+// A per-beat chance therefore fires 15x faster whenever a player is within two
+// rooms — so the first version of this made the hoarder vomit its hoard the
+// moment anyone came near, which is precisely backwards. Timestamps can't drift
+// with the beat, and they survive anyone retuning either constant later.
+export const HOARD_DEN_MS = 150_000;   // ~2.5 min between pieces, at its own den
+
 // THE TRAIL (rome, 2026-08-01: "slowly drops an item to spread loot around the
 // deep, and then keeps picking up"). Away from the den, pieces work loose from
 // the lashings and fall where it happens to be standing. That turns the hoarder
@@ -739,7 +748,7 @@ export const HOARD_DEN_ODDS = 0.2; // per scoop beat, standing in its own den
 // of pooling wherever it happened to drop. Slow on purpose — at the 30s far-world
 // beat this is roughly one piece every eight minutes of wandering, so you find a
 // dropped blade in a corridor and wonder what put it there.
-export const HOARD_TRAIL_ODDS = 0.06;
+export const HOARD_TRAIL_MS = 500_000; // ~8 min of wandering between dropped pieces
 // It hears a fight two rooms off and wants no part of it. How long it shuns a
 // room it heard trouble in (its own den is always exempt — see the avoids law).
 export const HOARD_SPOOK_MS = 10 * 60_000;
