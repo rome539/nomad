@@ -267,6 +267,43 @@ export function sweepCombatDeals(z: ZoneDO): void {
   }
 }
 
+// "Still within arm's reach of where this was struck?" — the ONE definition,
+// used by both the stranded sweep and settleDeal. Two copies of this rule could
+// drift into disagreeing, and then a deal could refuse to settle while refusing
+// to die (or the reverse).
+function together(z: ZoneDO, deal: Deal, a: Session, b: Session): boolean {
+  return deal.gatehouse
+    ? (z.outOfWorld(a) && z.outOfWorld(b))
+    : (!z.outOfWorld(a) && !z.outOfWorld(b) && a.roomId === deal.roomId && b.roomId === deal.roomId);
+}
+
+// Hook for the same sweep: a deal is a HANDSHAKE, and it dies the moment either
+// party steps out of arm's reach (rome, 2026-08-01). That covers the unanswered
+// ASK too — a request you walked away from is not a request any more, and the
+// popup shouldn't outlive the room it was made in.
+//
+// Before this, nothing at all watched movement: onLeave, death and drawn steel
+// each cancelled a deal, but simply walking next door left the invite popup (or
+// a fully open swap modal) live and clickable. You could accept a trade from
+// someone no longer standing there, load up both sides, and only discover it at
+// the final handshake, where settleDeal's own reach check refused it — leaving a
+// modal that could never complete and never closed itself.
+//
+// Deliberately a SWEEP rather than a hook in cmdGo: changing rooms is not the
+// only way to break a deal's reach — stepping into or out of the gatehouse never
+// touches roomId at all, and death relocates you too. One sweep on the existing
+// per-command/per-tick pass catches every path, including ones added later,
+// instead of three call sites that must each remember to call it.
+export function sweepStrandedDeals(z: ZoneDO): void {
+  for (const deal of [...z.deals.values()]) { // snapshot: cancelDeal mutates z.deals
+    const a = z.sessions.get(deal.aPk);
+    const b = z.sessions.get(deal.bPk);
+    if (!a || !b) continue; // a vanished session is onLeave/cancelDealForSession's business
+    if (together(z, deal, a, b)) continue;
+    cancelDeal(z, deal, "The deal falls through — you're no longer within arm's reach.");
+  }
+}
+
 // Both hands shook: move everything at once, or not at all.
 async function settleDeal(z: ZoneDO, deal: Deal): Promise<void> {
   if (deal.settling) return;
@@ -278,10 +315,11 @@ async function settleDeal(z: ZoneDO, deal: Deal): Promise<void> {
   // whoever's frame happened to trigger this.
   if (z.inCombat(a) || z.inCombat(b)) return cancelDeal(z, deal, "Steel's out — the deal's off.");
 
-  const together = deal.gatehouse
-    ? (z.outOfWorld(a) && z.outOfWorld(b))
-    : (!z.outOfWorld(a) && !z.outOfWorld(b) && a.roomId === deal.roomId && b.roomId === deal.roomId);
-  if (!together) {
+  // Belt and braces behind sweepStrandedDeals: that sweep normally kills a
+  // strayed deal long before anyone can confirm, but settling is async (it
+  // awaits D1), so someone can still walk off between the confirm and the
+  // write. Same shared predicate, so the two can't disagree.
+  if (!together(z, deal, a, b)) {
     deal.confirmA = false; deal.confirmB = false;
     await sendDeal(z, a, deal, "The deal falls apart — you're no longer within arm's reach.");
     await sendDeal(z, b, deal, "The deal falls apart — you're no longer within arm's reach.");
