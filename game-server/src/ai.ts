@@ -456,12 +456,26 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // (survival first; the next calm step starts the walk back). Patrollers
     // are exempt — their route is their territory. Never strands.
     if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id]) {
-      const d = z.roomDist(creature.roomId, creature.home);
-      if (d > TERRITORY_RADIUS) {
-        const closer = exits.filter((e) => z.roomDist(e.to_room, creature.home!) < d);
+      // ONE capped walk out from the den answers both halves — am I inside my
+      // range, and which of these exits are. This is the hottest distance query
+      // in the game (every wandering creature, every beat); routing it through
+      // full-map distances meant a distance map per den per beat, and with
+      // hundreds of dens no cache can hold them. Radius+1 so the "which exit is
+      // closer" comparison can still see one step past the edge.
+      const near = z.nearby(creature.home, TERRITORY_RADIUS + 1);
+      const d = near.get(creature.roomId);
+      if (d === undefined) {
+        // Genuinely off the map's edge of its range — the long walk in from a
+        // dark mouth, or back from a rout. Rare enough to pay for true
+        // distances, and the only case that actually needs them.
+        const far = z.roomDist(creature.roomId, creature.home);
+        const closer = exits.filter((e) => z.roomDist(e.to_room, creature.home!) < far);
+        if (closer.length) exits = closer;
+      } else if (d > TERRITORY_RADIUS) {
+        const closer = exits.filter((e) => (near.get(e.to_room) ?? Infinity) < d);
         if (closer.length) exits = closer;
       } else {
-        const within = exits.filter((e) => z.roomDist(e.to_room, creature.home!) <= TERRITORY_RADIUS);
+        const within = exits.filter((e) => (near.get(e.to_room) ?? Infinity) <= TERRITORY_RADIUS);
         if (within.length) exits = within;
       }
     }
@@ -622,7 +636,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     creature.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
     // Beyond its territory a creature travels with purpose — the walk in from
     // a dark mouth (or back from a rout) is minutes, not an afternoon.
-    if (creature.home && !tmpl.is_boss && z.roomDist(creature.roomId, creature.home) > TERRITORY_RADIUS) {
+    if (creature.home && !tmpl.is_boss && !z.withinRadius(creature.roomId, creature.home, TERRITORY_RADIUS)) {
       creature.nextWanderAt = now + randInt(8000, 25_000);
     }
     if (mode === "flee") {
@@ -1194,7 +1208,7 @@ export function waters(z: ZoneDO, creature: Creature, now: number): void {
     }
     const home = creature.home ?? creature.roomId;
     const dest = [...WATER_ROOMS].find(
-      (r) => z.world!.rooms.has(r) && z.roomDist(home, r) <= TERRITORY_RADIUS,
+      (r) => z.world!.rooms.has(r) && z.withinRadius(home, r, TERRITORY_RADIUS),
     );
     if (!dest) {
       creature.thirstAt = now + randInt(THIRST_MIN_MS, THIRST_MAX_MS);
@@ -1276,7 +1290,7 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
       let bestDist = Infinity;
       const consider = (roomId: string) => {
         if (roomId === creature.roomId || !DARK_ROOMS.has(roomId)) return;
-        if (z.roomDist(home, roomId) > LURKER_HUNT_RADIUS) return;
+        if (!z.withinRadius(home, roomId, LURKER_HUNT_RADIUS)) return;
         if (lurkersIn(z, roomId, creature.id) >= LURKER_CROWD) return; // that stretch of dark is taken
         const d = z.roomDist(creature.roomId, roomId);
         if (d < bestDist) { bestDist = d; best = roomId; }
@@ -1290,7 +1304,7 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
       let bestAt = 0;
       for (const [roomId, list] of z.traces) {
         if (roomId === creature.roomId || !DARK_ROOMS.has(roomId)) continue;
-        if (z.roomDist(home, roomId) > TERRITORY_RADIUS) continue;
+        if (!z.withinRadius(home, roomId, TERRITORY_RADIUS)) continue;
         if (lurkersIn(z, roomId, creature.id) >= LURKER_CROWD) continue; // another one already lies in wait there
         for (const tr of list) {
           if (tr.kind === "passage" && tr.at > bestAt) { bestAt = tr.at; best = roomId; }

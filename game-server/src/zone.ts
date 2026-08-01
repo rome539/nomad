@@ -194,26 +194,116 @@ export class ZoneDO implements DurableObject {
   private roomDists = new Map<string, Map<string, number>>();
   public variantBase = new Map<string, string>();
 
+  // THE DISTANCE CACHE (2026-08-01). This used to precompute ALL-PAIRS shortest
+  // paths at init — a BFS from every room, every distance kept forever. At 110
+  // rooms that's 12k entries and 0.4 MB, invisible. It is O(N²), and the world
+  // is about to grow: measured on this exact exit density, 1,110 rooms costs
+  // 60.8 MB and a 319 ms cold-start build. A Durable Object gets 128 MB TOTAL,
+  // so nearly half the budget would have gone to a lookup table before a single
+  // creature, session or item existed — and an OOM here kills the whole zone
+  // with everyone in it.
+  //
+  // Now nothing is precomputed. Distance maps are built on demand and kept in
+  // an LRU, because the ROOMS THAT GET ASKED ABOUT are a tiny, repeating set:
+  // dens, watering holes, the dark mouths. A handful of hot anchors serve
+  // essentially every query, and the cost stops scaling with map size.
+  //
+  // Kept deliberately behind the SAME roomDist(a, b) signature: all 16 call
+  // sites are untouched and get identical answers. A capped-radius version was
+  // considered and REJECTED — five of those sites ask short questions ("within
+  // TERRITORY_RADIUS?"), but three need true distance across the whole map: a
+  // migrant walking home from a far mouth, a hyena pathing to water, and the
+  // mouth-choosing itself. Capping those would have quietly broken migration
+  // and watering — invisible in review, obvious after a week of play.
+  private static readonly DIST_CACHE_MAX = 64; // × N entries; 64 × 1,110 ≈ 3.5 MB
+  private exitsSymmetric = true;
+
   private buildWorldMaps(world: World): void {
-    for (const src of world.rooms.keys()) {
-      const dist = new Map<string, number>([[src, 0]]);
-      const queue = [src];
-      while (queue.length) {
-        const at = queue.shift()!;
-        const d = dist.get(at)!;
-        for (const e of world.exits.get(at) ?? []) {
-          if (dist.has(e.to_room)) continue;
-          dist.set(e.to_room, d + 1);
-          queue.push(e.to_room);
-        }
+    this.roomDists.clear();
+    // The reverse-lookup trick below (answering roomDist(a,b) from a cached map
+    // built at b) is only valid while every exit has a matching return exit.
+    // All 258 exits are two-way today, but a one-way drop you can't climb back
+    // up would silently make distances asymmetric and mis-route every creature
+    // that walks home. Detect it once here and fall back to strict forward
+    // lookups instead of quietly returning wrong numbers.
+    this.exitsSymmetric = true;
+    outer: for (const [from, exits] of world.exits) {
+      for (const e of exits) {
+        const back = world.exits.get(e.to_room);
+        if (!back || !back.some((r) => r.to_room === from)) { this.exitsSymmetric = false; break outer; }
       }
-      this.roomDists.set(src, dist);
     }
     for (const v of world.mobVariants) this.variantBase.set(v.variantId, v.baseId);
   }
 
+  // Every room within maxDepth steps, and no further. For the "is this near?"
+  // questions — the sim bubble, crowding — where walking the whole map to throw
+  // away all but a dozen rooms is pure waste.
+  public nearby(src: string, maxDepth: number): Map<string, number> {
+    const world = this.world!;
+    const dist = new Map<string, number>([[src, 0]]);
+    const queue = [src];
+    for (let head = 0; head < queue.length; head++) {
+      const at = queue[head];
+      const d = dist.get(at)!;
+      if (d >= maxDepth) continue; // frontier reached; don't expand past it
+      for (const e of world.exits.get(at) ?? []) {
+        if (dist.has(e.to_room)) continue;
+        dist.set(e.to_room, d + 1);
+        queue.push(e.to_room);
+      }
+    }
+    return dist;
+  }
+
+  // Full distances from one room, built once and kept while it stays hot.
+  private distsFrom(src: string): Map<string, number> {
+    const hit = this.roomDists.get(src);
+    if (hit) { this.roomDists.delete(src); this.roomDists.set(src, hit); return hit; } // touch: Map keeps insertion order, so re-inserting makes this the newest
+    const world = this.world!;
+    const dist = new Map<string, number>([[src, 0]]);
+    const queue = [src];
+    for (let head = 0; head < queue.length; head++) {
+      const at = queue[head];
+      const d = dist.get(at)!;
+      for (const e of world.exits.get(at) ?? []) {
+        if (dist.has(e.to_room)) continue;
+        dist.set(e.to_room, d + 1);
+        queue.push(e.to_room);
+      }
+    }
+    this.roomDists.set(src, dist);
+    if (this.roomDists.size > ZoneDO.DIST_CACHE_MAX) {
+      const coldest = this.roomDists.keys().next().value; // oldest insertion = least recently used
+      if (coldest !== undefined) this.roomDists.delete(coldest);
+    }
+    return dist;
+  }
+
+  // "Is b within max steps of a?" — the shape of most distance questions here,
+  // and the ONLY shape of the hottest one (every wandering creature checking its
+  // territory, every beat). Answering these through full-map distances is what
+  // made the cache thrash: hundreds of dens, each wanting its own map, none of
+  // them reused. A capped walk touches ~30 rooms and needs no cache at all.
+  public withinRadius(a: string, b: string, max: number): boolean {
+    if (a === b) return true;
+    return this.nearby(a, max).has(b);
+  }
+
   public roomDist(a: string, b: string): number {
-    return this.roomDists.get(a)?.get(b) ?? Number.POSITIVE_INFINITY;
+    const from = this.roomDists.get(a);
+    if (from) return from.get(b) ?? Number.POSITIVE_INFINITY;
+    if (this.exitsSymmetric) {
+      const to = this.roomDists.get(b);
+      if (to) return to.get(a) ?? Number.POSITIVE_INFINITY; // dist is symmetric while every exit has a return
+    }
+    // Neither cached. Build from the TARGET when we're allowed to: the call
+    // sites vary the source and hold the target still ("every exit from here —
+    // which gets me closer to the den?"), so caching on b turns a per-exit
+    // rebuild into one build and N hits. Asymmetric worlds must build from a.
+    return this.exitsSymmetric
+      ? (this.distsFrom(b).get(a) ?? Number.POSITIVE_INFINITY)
+      : (this.distsFrom(a).get(b) ?? Number.POSITIVE_INFINITY);
   }
 
   // THE BUBBLE: the set of rooms within SIM_RADIUS of anyone's boots — the only
@@ -229,9 +319,11 @@ export class ZoneDO implements DurableObject {
     if (!Number.isFinite(SIM_RADIUS)) return null;
     const live = new Set<string>();
     for (const s of this.sessions.values()) {
-      const dists = this.roomDists.get(s.roomId);
-      if (!dists) { live.add(s.roomId); continue; }
-      for (const [rid, d] of dists) if (d <= SIM_RADIUS) live.add(rid);
+      if (!this.world?.rooms.has(s.roomId)) { live.add(s.roomId); continue; }
+      // A bounded walk, not a scan of every distance from here: this runs every
+      // tick for every session, and the old form read the whole map (all 1,110
+      // rooms at the target size) just to keep the dozen within SIM_RADIUS.
+      for (const rid of this.nearby(s.roomId, SIM_RADIUS).keys()) live.add(rid);
     }
     return live;
   }
