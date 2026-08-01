@@ -16,7 +16,7 @@ import {
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PREDATION_ODDS, STARVE_HUNTERS,
-  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL,
+  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
@@ -1602,6 +1602,26 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
   }
 
   // How many creatures stand in a room right now (for crowd/convergence caps).
+// Who is on the hunger clock at all — ONE predicate, because the three places
+// that advance hunger (catchUp, slowEcology, the live tick) had already drifted
+// apart: the CORRODERS exemption added 2026-07-26 only ever landed in
+// slowEcology, so a verdigris-thing kept getting hungry on the other two paths.
+//
+//   HOLLOW    — nothing inside to feed.
+//   CORRODERS — want your gear, not your blood; no food source at all.
+//   DROWNERS  — sessile ambushers (they hold their water and never move), with
+//               no prey map. Hunger reaches "restless" in 25 MINUTES, and the
+//               only supplier a corpse system could give them is the carrion
+//               mint: one body per ~10h across 43 deep rooms, so a given
+//               drowned thing would eat about once every 18 days. That gap is
+//               unclosable by tuning, and hunger does nothing for them anyway —
+//               they're already excluded from starvingHunts ("drowners take the
+//               water", they keep their own aggro). It only ever printed a
+//               "restless with hunger" line that was a lie. (rome, 2026-07-31.)
+export function hungers(templateId: string): boolean {
+  return !HOLLOW.has(templateId) && !CORRODERS.has(templateId) && !DROWNERS.has(templateId);
+}
+
 export function creaturesIn(z: ZoneDO, roomId: string): number {
     let n = 0;
     for (const c of z.creatures.values()) if (c.roomId === roomId) n++;

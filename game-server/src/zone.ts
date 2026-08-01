@@ -397,10 +397,10 @@ export class ZoneDO implements DurableObject {
         const tmpl = world.mobTemplates.get(c.templateId)!;
         c.target = null;
         c.hp = Math.min(tmpl.max_hp, c.hp + CREATURE_HEAL_PER_MIN * mins);
-        if (!HOLLOW.has(c.templateId)) {
+        if (ai.hungers(c.templateId)) {
           c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * mins);
           if (c.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, c, true, t);
-        }
+        } else c.hunger = 0; // clears whatever the old rules already banked, so a live drowner isn't stuck "restless" forever
         // Same "stays put" rule as the live tick: the drowned holds its water and
         // brooders keep their nest, so the offline sim can't drift them out of
         // their dens and pile three grapplers into one room while no one watches.
@@ -446,18 +446,18 @@ export class ZoneDO implements DurableObject {
       }
       if (!c.bleedTicks) c.hp = Math.min(tmpl.max_hp, c.hp + CREATURE_HEAL_PER_MIN * mins);
       if (c.hp >= tmpl.max_hp) c.phase = 0;
-      // CORRODERS want your gear, not your blood — no food source, ever hungers
-      // for nothing (rome, 2026-07-26: the verdigris-thing had no business
-      // showing "restless with hunger" when it's explicitly not interested in
-      // eating at all). Same shape as HOLLOW's exclusion, different reason.
-      if (!HOLLOW.has(c.templateId) && !CORRODERS.has(c.templateId)) c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * mins);
+      // Who eats at all lives in ai.hungers now — one predicate for all three
+      // hunger sites, because this exemption used to be written out by hand
+      // here and nowhere else.
+      if (ai.hungers(c.templateId)) c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * mins);
+      else c.hunger = 0;
       if (c.grudges.length) {
         const ms = ai.forgetMs(this, tmpl);
         c.grudges = c.grudges.filter((g) => now - g.at < ms);
       }
       if (c.hunger >= HUNGRY_AT) {
-        if (SCAVENGERS.has(c.templateId) || VERMIN.has(c.templateId) || LURKERS.has(c.templateId) || DROWNERS.has(c.templateId)) {
-          ai.scavengerFeeds(this, c, true); // drowners included since 2026-07-26 — the offline sim must feed them too, or they'd starve only while nobody watches
+        if (SCAVENGERS.has(c.templateId) || VERMIN.has(c.templateId) || LURKERS.has(c.templateId)) {
+          ai.scavengerFeeds(this, c, true);
         }
         ai.creatureEatsHere(this, c, true, now);
       }
@@ -3173,9 +3173,9 @@ export class ZoneDO implements DurableObject {
         );
         if (watcher) this.send(watcher, `${cap(tmpl.name)} bleeds — ${bd}. (${this.condition(creature)})`);
       }
-      if (!HOLLOW.has(creature.templateId)) {
+      if (ai.hungers(creature.templateId)) {
         creature.hunger = Math.min(HUNGER_MAX, creature.hunger + HUNGER_PER_MIN * tickMins);
-      }
+      } else creature.hunger = 0;
       // Time wears grudges away, each kind at its own pace (the boss never lets go).
       if (creature.grudges.length && !tmpl.is_boss) {
         const ms = ai.forgetMs(this, tmpl);
@@ -3207,15 +3207,11 @@ export class ZoneDO implements DurableObject {
         // near) is what starves one desperate enough to come anyway. (Feed only:
         // no gear-scooping, no going bold — they're hunters, not looters.)
         else if (LURKERS.has(creature.templateId) && creature.hunger >= HUNGRY_AT) ai.scavengerFeeds(this, creature, false);
-        // The drowned eat what the water takes (rome, 2026-07-26). They had NO
-        // food path at all — not scavengers, no prey map, excluded from the
-        // starving-hunt (they keep their own seize-aggro) — so they climbed to
-        // max hunger and sat there reading "restless with hunger" forever, the
-        // same dead end rats were in before VERMIN. They don't hunt for it: they
-        // stand where things sink and feed on what dies in their water. Feed
-        // only — no gear-scooping, no gorging bold (scavengerBold gates on
-        // SCAVENGERS, so the escalation can't leak to them).
-        else if (DROWNERS.has(creature.templateId) && creature.hunger >= HUNGRY_AT) ai.scavengerFeeds(this, creature, false);
+        // (The drowned used to feed here too, added 2026-07-26 — removed
+        // 2026-07-31 when they came off the hunger clock entirely: sessile, no
+        // prey map, and a carrion supply ~200x too slow to ever satisfy them.
+        // See ai.hungers. The branch was gated on being hungry, so keeping it
+        // would have been code that could never fire.)
         // A rat that finds you resting may decide you're warm furniture.
         ai.ratCuddles(this, creature, now);
         // The small lives: warm blood dozes off in the quiet...

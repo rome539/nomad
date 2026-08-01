@@ -342,7 +342,19 @@ export const SIM_RADIUS = 2;
 // at most this stale — imperceptible, and no per-creature bookkeeping needed.
 export const SLOW_ECOLOGY_MS = 30_000;
 export const CREATURE_HEAL_PER_MIN = 1;
-export const HUNGER_PER_MIN = 2; // 0..100
+// 0..100, counted in REAL wall-clock minutes (the tick advances it by elapsed,
+// not by beats). Was 2 (rome, 2026-07-31: "restless in 25 mins seems too
+// fast") — at that rate a creature went from fed to PINNED AT MAX in 50
+// minutes, and only vermin (foraging) and scavengers (corpses) have a supply
+// quick enough to keep up. Everything else — crawlers, the pale hunters,
+// anything between meals — simply sat at 100 forever, so "restless with
+// hunger" stopped being a signal and became background noise on half the room.
+// At 0.5 the arc is hours, not minutes: restless ~1h40m, starving ~2h50m,
+// pinned ~3h20m. Hunger is a state a creature passes through again, which is
+// what makes the tell worth reading — and predation, thief-robbing and the
+// starving-hunt go back to being occasional events rather than the default.
+// Spawn hunger is deliberately untouched: some things arriving hungry is good.
+export const HUNGER_PER_MIN = 0.5;
 export const HUNGER_MAX = 100;
 export const HUNGRY_AT = 50;
 
