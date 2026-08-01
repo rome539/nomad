@@ -403,7 +403,12 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     const tell = ai.creatureTell(z, creature, session.pubkey);
     // The burdened one is identifiable on a close look: what it took, it shows.
     const bears = z.bearsClause(creature);
-    return z.send(session, `${tmpl.description} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}${bears ? ` It is ${bears.slice(2)}.` : ""}`);
+    // The close read is where a hoard becomes a decision: the room line only
+    // says it's laden, but standing in front of it you can count the pile and
+    // work out whether that fight is worth what it will cost you.
+    const hoard = z.hoardManifest(creature);
+    return z.send(session, `${tmpl.description} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}`
+      + (hoard || (bears ? ` It is ${bears.slice(2)}.` : "")));
   }
   // A chest is a FIXTURE of the room, and 'look' could never see one (rome,
   // 2026-07-26) — every cache carries real description prose in D1 that nothing

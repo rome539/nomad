@@ -11,6 +11,7 @@ import { cap, isNight } from "./zone-util";
 import * as events from "./events";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
+  HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_ODDS,
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
   NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
@@ -1359,8 +1360,14 @@ export function ratCuddles(z: ZoneDO, creature: Creature, now: number): void {
   // even then the thief noses at its prize a beat before the snatch, with the
   // snuffling leaking through the walls. Step back in and it abandons the try.
 export function scavengerScoops(z: ZoneDO, creature: Creature): void {
-    if (!SCAVENGERS.has(creature.templateId)) return;
-    if ((creature.carries?.length ?? 0) >= SCAVENGER_CARRY_CAP) return;
+    const hoarder = HOARDERS.has(creature.templateId);
+    if (!hoarder && !SCAVENGERS.has(creature.templateId)) return;
+    // Standing in its own den with a full enough pocket, a hoarder sheds one
+    // piece onto the pile before it goes looking for more. This runs BEFORE the
+    // cap check: a hoarder at capacity is exactly the one that should be
+    // unloading, and it's what keeps the lair silting up over days.
+    if (hoarder) hoarderSheds(z, creature);
+    if ((creature.carries?.length ?? 0) >= (hoarder ? HOARD_CARRY_CAP : SCAVENGER_CARRY_CAP)) return;
     if (playerPresent(z, creature.roomId)) {
       creature.eyeing = undefined; // caught in the act: it slinks back and waits
       creature.eyeingAt = undefined;
@@ -1369,11 +1376,23 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     const floor = z.ground.get(creature.roomId);
     if (!floor?.length) return;
     const now = Date.now();
-    // Real gear only — it has no use for food (it eats that) or the free rock.
-    // Fresh-fallen pieces don't tempt it yet; the stale ones are fair game.
+    // A hyena takes real gear only — it has no use for food (it eats that) or
+    // the free rock. A hoarder takes ANYTHING but the rock: it isn't feeding
+    // and it isn't equipping, it's keeping, and a trophy or a tin of scraps is
+    // as good to it as a blade. (The rock stays exempt everywhere — it's the
+    // free weapon the world always leaves lying around, and a thing that
+    // pocketed those would quietly disarm the poorest players.)
+    // Fresh-fallen pieces don't tempt either of them yet; stale ones are fair game.
     const idx = floor.findIndex((id) => {
       const t = z.world!.itemTemplates.get(id);
-      if (!t || t.slot === "" || t.id === "loose-rock") return false;
+      if (!t || t.id === "loose-rock") return false;
+      if (!hoarder && t.slot === "") return false;
+      // A hoarder takes LITTER, not FURNITURE. Because it takes everything, it
+      // would otherwise strip the world's renewable floors — the torch that
+      // belongs in the undercroft, the food that regrows in a larder — and the
+      // floor-renewal law would dutifully put them back for it to take again,
+      // forever. What a room is configured to hold is that room's, not its.
+      if (hoarder && z.world!.groundSpawns.some((g) => g.room_id === creature.roomId && g.item_id === id)) return false;
       const fell = z.groundFreshAt.get(`${id}@${creature.roomId}`);
       if (fell !== undefined) {
         if (now - fell < SCOOP_GRACE_MS) return false;
@@ -1392,7 +1411,9 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     if (creature.eyeing !== targetId || creature.eyeingAt === undefined) {
       creature.eyeing = targetId;
       creature.eyeingAt = now + SCOOP_NOSE_MS;
-      z.roomSound(creature.roomId, "Something snuffles over dropped metal {dir}, unhurried.");
+      z.roomSound(creature.roomId, hoarder
+        ? "Something stops {dir}, and a load of hanging metal stops with it — one beat late."
+        : "Something snuffles over dropped metal {dir}, unhurried.");
       return;
     }
     if (now < creature.eyeingAt) return;
@@ -1407,8 +1428,33 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     (creature.carries ??= []).push(targetId);
     const g = z.world!.itemTemplates.get(targetId);
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
-    if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} snatches up ${g.name} and drags it off into the dark.`, undefined, false);
-    z.roomSound(creature.roomId, "Metal scrapes over stone {dir}, dragged away.");
+    if (g) z.roomFeed(creature.roomId, hoarder
+      ? `${cap(tmpl.name)} stoops, takes up ${g.name}, and hangs it with the rest.`
+      : `${cap(tmpl.name)} snatches up ${g.name} and drags it off into the dark.`, undefined, false);
+    z.roomSound(creature.roomId, hoarder
+      ? "Something is added to a great deal of something else {dir}, and the whole load resettles."
+      : "Metal scrapes over stone {dir}, dragged away.");
+    z.refreshRoomCtx(creature.roomId);
+  }
+
+  // The den beat. Over the keep line, standing where it sleeps, it lets one
+  // piece go — the oldest thing it picked up, so the pile reads as strata and
+  // what it still wears is what it took most recently. The shed piece lands on
+  // the floor like any other drop and obeys the stray law, so an unvisited lair
+  // doesn't grow forever: the deep takes back what nobody comes for.
+export function hoarderSheds(z: ZoneDO, creature: Creature): void {
+    if (!creature.home || creature.roomId !== creature.home) return;
+    if ((creature.carries?.length ?? 0) <= HOARD_KEEP) return;
+    if (playerPresent(z, creature.roomId)) return; // it won't unload while watched
+    if (!chance(HOARD_DEN_ODDS)) return;
+    const shed = creature.carries!.shift()!;
+    z.ground.set(creature.roomId, [...(z.ground.get(creature.roomId) ?? []), shed]);
+    z.stampFresh(creature.roomId, shed);
+    z.armStrayDecay(creature.roomId);
+    const g = z.world!.itemTemplates.get(shed);
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} works ${g.name} loose and lets it fall on the pile.`, undefined, false);
+    z.roomSound(creature.roomId, "Something is set down {dir}, onto a heap of other things.");
     z.refreshRoomCtx(creature.roomId);
   }
 
@@ -1618,8 +1664,13 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
 //               they're already excluded from starvingHunts ("drowners take the
 //               water", they keep their own aggro). It only ever printed a
 //               "restless with hunger" line that was a lie. (rome, 2026-07-31.)
+//   HOARDERS  — it collects; it doesn't eat. Its whole drive is the floor, not
+//               the corpse on it, and it has no feeding path of any kind — the
+//               same trap the drowners were in. Keep it off the clock rather
+//               than give it a mouth with nothing to put in it.
 export function hungers(templateId: string): boolean {
-  return !HOLLOW.has(templateId) && !CORRODERS.has(templateId) && !DROWNERS.has(templateId);
+  return !HOLLOW.has(templateId) && !CORRODERS.has(templateId) && !DROWNERS.has(templateId)
+    && !HOARDERS.has(templateId);
 }
 
 export function creaturesIn(z: ZoneDO, roomId: string): number {

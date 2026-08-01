@@ -563,6 +563,7 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "twice-dead": "Old bones shift {dir}, unhurried, as if they have all the time there is.",
   "thrice-dead": "Something dead resettles itself {dir}, patient and wrong.",
   "the-gaunt": "Something very tall moves {dir}, breathing in long, starving pulls.",
+  "rag-and-bone": "Something moves {dir} in a slow clatter of hanging metal, like a cart of scrap walking.",
 };
 
 // What a creature sounds like STANDING STILL, for an ear pressed to the dark
@@ -578,6 +579,7 @@ export const STILL_SOUNDS: Record<string, string> = {
   "brood-rat": "a wet, many-voiced squirming",
   "the-gaunt": "long, starving breaths, drawn through teeth",
   "drowned-hulk": "water pressing and settling around something vast",
+  "rag-and-bone": "a soft, ceaseless chink of metal on metal — a great many small things hung on one slow-breathing thing",
 };
 
 // Territory: every creature remembers its den and keeps to the ground around
@@ -705,6 +707,30 @@ export const AGGRO_SCAVENGERS = new Set(["dire-hyena"]);
 // can run back and interrupt) before the snatch.
 export const SCOOP_GRACE_MS = 90_000;
 export const SCOOP_NOSE_MS = 8_000;
+// THE HOARDER (rome, 2026-08-01): the deep's mini-boss isn't a bigger set of
+// teeth — it's a thing that has been down here longer than you, picking up
+// everything the dark drops. It builds its OWN loot table out of the deep's
+// litter, so what it's worth is a function of how long it has been left alive.
+// Mechanically it's the hyena's scoop widened: same nose-first telegraph, same
+// grace window, same spill-on-death, just a far deeper pocket and no appetite
+// (it collects; it doesn't eat — see hungers()). It takes anything but the free
+// rock, where a hyena only takes real gear: junk and trophies are treasure to
+// something that keeps rather than uses.
+// PASSIVITY IS PART OF THE DESIGN (rome, 2026-08-01: "not aggressive, only
+// attacks when attacked"). A hoarder is deliberately absent from AGGRESSIVE,
+// STARVE_HUNTERS, THIEVES, SCAVENGERS and PREYS_ON — those five gate every
+// unprovoked-attack path there is, so it only swings at someone who swung
+// first. Adding it to STARVE_HUNTERS would break that SILENTLY: woundedPreyHunts
+// is gated on membership alone and never reads hunger, so the hunger exemption
+// below would not save it. It is a 115 hp wall you choose to fight.
+export const HOARDERS = new Set(["rag-and-bone"]);
+export const HOARD_CARRY_CAP = 8;   // the deep pocket (a hyena's jaws hold 3)
+// The den is a TELL, not the prize (rome: "carries it, den is a bonus"). Above
+// the keep line it sheds the odd piece where it sleeps, so the room slowly
+// silts up into a warning — something big walks here, and it has been busy.
+// It never sheds below HOARD_KEEP, so killing it is always worth the fight.
+export const HOARD_KEEP = 4;
+export const HOARD_DEN_ODDS = 0.2; // per scoop beat, standing in its own den
 // The soft beat (rome, 2026-07-11): a rat that walks in on a resting wanderer
 // may decide you are furniture — warm furniture — and curl up against you.
 // Purely the world being alive, with one grace note: in a cold snap a rat

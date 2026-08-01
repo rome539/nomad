@@ -85,6 +85,7 @@ import {
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
+  HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
@@ -462,6 +463,14 @@ export class ZoneDO implements DurableObject {
         ai.creatureEatsHere(this, c, true, now);
       }
       if (BROODERS.has(c.templateId)) ai.broodBirths(this, c, now);
+      // The hoarder works the FAR world too, and mostly there: the scoop refuses
+      // to run with a player in the room, so a thing that only collected inside
+      // the bubble would never collect at all. This is the beat that actually
+      // fills it — the deep quietly tidying itself into one walking pile while
+      // you're three corridors away. (Not in catchUp: that runs on simulated
+      // time and the scoop's grace/telegraph windows read the real clock, so a
+      // frozen world would yield one pickup for the whole gap either way.)
+      if (HOARDERS.has(c.templateId)) ai.scavengerScoops(this, c);
       const hunted = await ai.predation(this, c, now);
       if (!hunted && c.nextWanderAt <= now && !tmpl.is_boss && c.hp >= tmpl.max_hp * FLEE_BELOW
           && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId)) {
@@ -2719,9 +2728,14 @@ export class ZoneDO implements DurableObject {
         // flame-bearer whatever its health — see ai.dreadsFire. Dormant until
         // torches exist (carriesFire is false today).
         // Empty bone knows no fear: the hollow fight until they come apart.
+        // A HOARDER doesn't run either, and that's a fairness rule as much as a
+        // flavor one: it is a 100 hp grind, and a version of it that broke for
+        // the dark at low health would carry the entire prize out of a fight you
+        // had already spent your weapon's edge on. It is laden and slow. It
+        // stands.
         const wantsFlee = ai.dreadsFire(this, creature, victim)
           || RUNNERS.has(tmpl.id)
-          || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
+          || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !HOARDERS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
         if (wantsFlee && !tmpl.is_boss && !ai.scavengerBold(this, creature)) {
           // MANCATCHER: the barbed collar in your shield hand holds what tries to
           // run — the bolt it just rolled becomes a wrench against the pole, and
@@ -3198,6 +3212,9 @@ export class ZoneDO implements DurableObject {
         // A scavenger standing on the dead eats first of all — and drags off
         // any gear left lying where a body fell.
         if (SCAVENGERS.has(creature.templateId)) { ai.scavengerFeeds(this, creature, false); ai.scavengerScoops(this, creature); ai.mourns(this, creature, now); }
+        // The hoarder does the scoop and nothing else in this block: no feeding
+        // (it has no appetite — see hungers), no mourning. Just the floor.
+        else if (HOARDERS.has(creature.templateId)) ai.scavengerScoops(this, creature);
         // Vermin eat the dead only to survive: a hungry rat gnaws a corpse to sate
         // (no loot-hauling, no mourning, no gorging bold — that's SCAVENGERS only).
         else if (VERMIN.has(creature.templateId) && creature.hunger >= HUNGRY_AT) ai.scavengerFeeds(this, creature, false);
@@ -4517,8 +4534,36 @@ export class ZoneDO implements DurableObject {
 
   // The room-line clause for what a creature visibly bears: "clad in warden's
   // plate", "wielding a graveblade", "dragging a bone shiv". No leading article.
+  // The close read of a hoarder: every piece it has taken, counted, so you can
+  // price the fight before you start it. Empty string for anything that isn't a
+  // hoarder (or a hoarder that hasn't found anything yet), so the caller falls
+  // back to the ordinary bears clause.
+  public hoardManifest(creature: Creature): string {
+    if (!HOARDERS.has(creature.templateId) || !creature.carries?.length) return "";
+    const names = creature.carries
+      .map((id) => this.world!.itemTemplates.get(id)?.name)
+      .filter((n): n is string => !!n);
+    if (!names.length) return "";
+    return ` Hung on it, lashed and knotted and swinging: ${names.join(", ")}.`
+      + ` (${names.length} ${names.length === 1 ? "piece" : "pieces"} — all of it falls where it falls.)`;
+  }
+
   public bearsClause(creature: Creature): string {
     if (!creature.carries?.length) return "";
+    // A hoarder can be wearing eight things, and eight "and"s would bury the
+    // room line. It gets a WEIGHT instead of a manifest — you can see it's laden
+    // and roughly how badly, and the two most recent pieces (the top of the
+    // pile) are the ones that read. `look` at it for the full inventory.
+    if (HOARDERS.has(creature.templateId)) {
+      const n = creature.carries.length;
+      const top = creature.carries.slice(-2).map((id) => this.world!.itemTemplates.get(id)?.name).filter(Boolean);
+      const heft = n >= HOARD_CARRY_CAP ? "hung to the point of staggering with"
+        : n >= HOARD_KEEP ? "hung about with"
+        : "carrying";
+      if (!top.length) return "";
+      const rest = n - top.length;
+      return `, ${heft} ${top.join(" and ")}${rest > 0 ? ` and ${rest} more dead men's things` : ""}`;
+    }
     const clauses: string[] = [];
     for (const id of creature.carries) {
       const t = this.world!.itemTemplates.get(id);
