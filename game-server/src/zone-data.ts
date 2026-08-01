@@ -731,6 +731,18 @@ export const HOARD_CARRY_CAP = 8;   // the deep pocket (a hyena's jaws hold 3)
 // It never sheds below HOARD_KEEP, so killing it is always worth the fight.
 export const HOARD_KEEP = 4;
 export const HOARD_DEN_ODDS = 0.2; // per scoop beat, standing in its own den
+// THE TRAIL (rome, 2026-08-01: "slowly drops an item to spread loot around the
+// deep, and then keeps picking up"). Away from the den, pieces work loose from
+// the lashings and fall where it happens to be standing. That turns the hoarder
+// from a vacuum into a CURRENT: it lifts loot out of the rooms that have it and
+// leaves it in rooms that don't, so the deep's litter keeps circulating instead
+// of pooling wherever it happened to drop. Slow on purpose — at the 30s far-world
+// beat this is roughly one piece every eight minutes of wandering, so you find a
+// dropped blade in a corridor and wonder what put it there.
+export const HOARD_TRAIL_ODDS = 0.06;
+// It hears a fight two rooms off and wants no part of it. How long it shuns a
+// room it heard trouble in (its own den is always exempt — see the avoids law).
+export const HOARD_SPOOK_MS = 10 * 60_000;
 // The soft beat (rome, 2026-07-11): a rat that walks in on a resting wanderer
 // may decide you are furniture — warm furniture — and curl up against you.
 // Purely the world being alive, with one grace note: in a cold snap a rat

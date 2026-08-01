@@ -11,7 +11,7 @@ import { cap, isNight } from "./zone-util";
 import * as events from "./events";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
-  HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_ODDS,
+  HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_ODDS, HOARD_TRAIL_ODDS, HOARD_SPOOK_MS,
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
   NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
@@ -1437,25 +1437,78 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     z.refreshRoomCtx(creature.roomId);
   }
 
-  // The den beat. Over the keep line, standing where it sleeps, it lets one
-  // piece go — the oldest thing it picked up, so the pile reads as strata and
-  // what it still wears is what it took most recently. The shed piece lands on
-  // the floor like any other drop and obeys the stray law, so an unvisited lair
-  // doesn't grow forever: the deep takes back what nobody comes for.
+  // The shed beat, in two flavors. Over the keep line it lets ONE piece go —
+  // always the oldest thing it picked up, so its pile reads as strata and what
+  // it still wears is what it took most recently.
+  //
+  //   AT THE DEN  — deliberate, and frequent enough that the lair silts up into
+  //                 a tell: something big walks here, and it has been busy.
+  //   ON THE ROAD — rare, and not a choice: a lashing gives and the piece falls
+  //                 wherever it happened to be standing. This is what makes the
+  //                 hoarder a CURRENT rather than a drain — it lifts loot out of
+  //                 rooms that have it and leaves it in rooms that don't, so the
+  //                 deep's litter keeps moving instead of pooling where it fell.
+  //
+  // Either way the piece lands like any other drop and obeys the stray law, so
+  // neither the lair nor a corridor grows forever: the deep takes back what
+  // nobody comes for.
 export function hoarderSheds(z: ZoneDO, creature: Creature): void {
-    if (!creature.home || creature.roomId !== creature.home) return;
     if ((creature.carries?.length ?? 0) <= HOARD_KEEP) return;
     if (playerPresent(z, creature.roomId)) return; // it won't unload while watched
-    if (!chance(HOARD_DEN_ODDS)) return;
+    const atDen = !!creature.home && creature.roomId === creature.home;
+    if (!chance(atDen ? HOARD_DEN_ODDS : HOARD_TRAIL_ODDS)) return;
     const shed = creature.carries!.shift()!;
     z.ground.set(creature.roomId, [...(z.ground.get(creature.roomId) ?? []), shed]);
     z.stampFresh(creature.roomId, shed);
     z.armStrayDecay(creature.roomId);
     const g = z.world!.itemTemplates.get(shed);
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
-    if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} works ${g.name} loose and lets it fall on the pile.`, undefined, false);
-    z.roomSound(creature.roomId, "Something is set down {dir}, onto a heap of other things.");
+    if (g) {
+      z.roomFeed(creature.roomId, atDen
+        ? `${cap(tmpl.name)} works ${g.name} loose and lets it fall on the pile.`
+        : `A lashing gives somewhere in the load, and ${g.name} drops from ${tmpl.name} into the dark.`,
+        undefined, false);
+    }
+    z.roomSound(creature.roomId, atDen
+      ? "Something is set down {dir}, onto a heap of other things."
+      : "Something falls and rings on stone {dir}, and whatever dropped it walks on.");
     z.refreshRoomCtx(creature.roomId);
+  }
+
+  // THE HOARDER GOES THE OTHER WAY (rome, 2026-08-01: "when he hears noise he
+  // runs away from it"). Everything else in the deep comes to LOOK at a noise —
+  // creatureNoise makes the idle curious and walks them toward it. This one
+  // wants no part of whatever is making that sound: it marks the room and
+  // shuffles off, and keeps clear of it for HOARD_SPOOK_MS.
+  //
+  // Two useful things fall out of that for free. It never joins a fight it
+  // could not win anyway (2-4 damage), so hunting it stays a decision rather
+  // than an ambush. And because it flees noise, the loot it scatters drifts
+  // AWAY from wherever the fighting is — you find its leavings in the quiet
+  // parts of the deep, which is exactly where nobody was looking.
+  //
+  // Handles both the room it's standing in and the rooms next door: a thing
+  // that fled the racket next door but stood in the racket itself would read as
+  // deaf. Its den stays exempt from the shunning by the ordinary avoids law —
+  // everything may always go home.
+export function hoardersSpook(z: ZoneDO, sourceRoomId: string, now: number): void {
+    const world = z.world;
+    if (!world) return;
+    for (const c of z.creatures.values()) {
+      if (!HOARDERS.has(c.templateId) || c.target) continue;
+      const here = c.roomId === sourceRoomId;
+      const adjacent = !here && (world.exits.get(c.roomId) ?? []).some(
+        (e) => e.to_room === sourceRoomId && (!e.key_item || z.openDoors.has(`${c.roomId}:${e.dir}`)),
+      );
+      if (!here && !adjacent) continue;
+      c.avoids = [
+        ...(c.avoids ?? []).filter((a) => a.until > now && a.roomId !== sourceRoomId),
+        { roomId: sourceRoomId, until: now + HOARD_SPOOK_MS },
+      ];
+      c.eyeing = undefined; // whatever it was nosing at, it isn't finishing that now
+      c.eyeingAt = undefined;
+      c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(2000, 6000));
+    }
   }
 
   // The dead stay dead — but the dungeon refills. When a population is below

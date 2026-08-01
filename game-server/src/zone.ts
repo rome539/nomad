@@ -5010,6 +5010,7 @@ export class ZoneDO implements DurableObject {
   private syncCombatCtx(): void {
     chips.syncCombatCtx(this);
     trade.sweepCombatDeals(this); // a deal is not a shield — steel out ends it
+    trade.sweepStrandedDeals(this); // and a handshake doesn't reach between rooms
   }
 
   // ---- sound: text renders it better than graphics render anything ----
@@ -5078,13 +5079,19 @@ export class ZoneDO implements DurableObject {
   public creatureNoise(sourceRoomId: string): void {
     const world = this.world;
     if (!world) return;
-    // A room already full of the curious doesn't pull in more — that's what
-    // turned the central hub into a black hole that swallowed the whole zone.
-    if (ai.creaturesIn(this, sourceRoomId) >= CROWD_CAP) return;
     // The rain masks creature-ward too: what the downpour swallows, nothing
     // comes to investigate.
     if (events.raining(this, sourceRoomId) && chance(RAIN_NOISE_MASK)) return;
     const now = Date.now();
+    // The hoarder runs FROM noise, so it is handled before the crowd guard
+    // below: that guard exists to stop a busy room pulling in yet more bodies,
+    // and applying it here would have muted the one creature that wants to
+    // leave — deafened by a crowd, in the exact moment a crowd is the thing
+    // worth fleeing.
+    ai.hoardersSpook(this, sourceRoomId, now);
+    // A room already full of the curious doesn't pull in more — that's what
+    // turned the central hub into a black hole that swallowed the whole zone.
+    if (ai.creaturesIn(this, sourceRoomId) >= CROWD_CAP) return;
     for (const c of this.creatures.values()) {
       if (c.target || c.roomId === sourceRoomId) continue;
       if (c.asleep) continue; // a sleeper doesn't hear the next room over (same-room noise has its own wake roll)
@@ -5093,6 +5100,7 @@ export class ZoneDO implements DurableObject {
       if (DROWNERS.has(c.templateId)) continue; // it holds its water; noise doesn't move it
       if (SENTINELS.has(c.templateId) || AGGRESSIVE.has(c.templateId)) continue; // a guardian holds its post; noise doesn't draw it off the door
       if (SCAVENGERS.has(c.templateId)) continue; // hyenas track the scent of the dead, not the din of the living
+      if (HOARDERS.has(c.templateId)) continue; // it already ran the other way (hoardersSpook, above) — never also draw it in
       // Not every ear pricks up. A good majority come to look; the rest keep
       // to their own business — so a fight draws a crowd, not the whole zone.
       if (!chance(NOISE_HEED_ODDS)) continue;
