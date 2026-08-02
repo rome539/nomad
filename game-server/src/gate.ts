@@ -1615,6 +1615,17 @@ export function wallStudy(z: ZoneDO, session: Session): void {
   // but holding only what's been carved. Exits are drawn only between marked
   // rooms: the wall never names a hall nobody set down.
   const shown = new Set(marked);
+  // THE WALL KNOWS THE NEW BANDS TOO (rome, 2026-08-02: "you broke the study
+  // and carve features of the map inside the gatehouse").
+  //
+  // This table was the fortress's six keys and — unlike the surveyor's map,
+  // which has always had a `?? regions.upper` fallback — an unguarded index, so
+  // an unknown band threw and `study` came back "the dungeon stumbles."
+  // shallowRing seeds from world.entryRooms, which is all EIGHT gates now, and
+  // walks two steps out: road and wood rooms have been carveable since the
+  // doors spread, and one of them on the chart was enough to break the whole
+  // wall. Both halves are fixed here — the missing bands, and the guard that
+  // means a band nobody has written yet can never throw again.
   const regions: Record<string, { key: string; label: string; rooms: any[] }> = {
     gate: { key: "gate", label: "The Gates", rooms: [] },
     out: { key: "out", label: "The Open Ground", rooms: [] },
@@ -1622,13 +1633,19 @@ export function wallStudy(z: ZoneDO, session: Session): void {
     upper: { key: "upper", label: "The Halls", rooms: [] },
     warrens: { key: "warrens", label: "The Warrens", rooms: [] },
     deep: { key: "deep", label: "The Deep", rooms: [] },
+    road: { key: "road", label: "The Roads", rooms: [] },
+    wood: { key: "wood", label: "The Wood", rooms: [] },
+    mountain: { key: "mountain", label: "The Mountain", rooms: [] },
   };
   for (const id of shown) {
     const room = world.rooms.get(id)!;
     const exits = (world.exits.get(id) ?? [])
       .filter((e) => shown.has(e.to_room))
       .map((e) => ({ dir: e.dir, to: e.to_room, toName: world.rooms.get(e.to_room)?.name ?? e.to_room }));
-    regions[mapRegionOf(z, id)].rooms.push({ id, name: room.name, exits, here: id === session.roomId });
+    (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({
+      id, name: room.name, exits, here: id === session.roomId,
+      gate: world.entryRooms.has(id) ? 1 : 0, // a door draws as a door on the wall too
+    });
   }
   try {
     session.ws.send(JSON.stringify({
