@@ -3073,9 +3073,20 @@ function mapRegionColor(region, isGate) {
   // read as more dungeon. Bone for the road: pale dust and old paving, the
   // one thing out there that people made. Omen for the wood, because it is
   // the band that lies to you about which way you are facing.
-  if (region === "road") return mapCssVar("--bone");
+  // MEASURED, NOT EYEBALLED. Four of the palette's colours sit on the SAME hue
+  // — cream 42deg, dim 43deg, gold 40deg, bone 41deg — so they differ only in
+  // lightness, and a pale one among them reads as the overworks or the halls.
+  // I picked bone for the road on looks and it was 1deg off both (rome: "the
+  // overworks is bone already"). Only two hue families are actually free:
+  //   voice  338deg  61-66deg clear of every warm colour   -> THE ROAD
+  //   omen   272deg  66deg clear of voice, 90+ of the rest -> THE WOOD
+  // Voice is also the real cartographic convention: roads are drawn red. Its
+  // nearest neighbour is blood at 33deg, and blood is the DEEP — four strata
+  // down, never on screen beside a road.
+  if (region === "road") return mapCssVar("--voice");
   if (region === "wood") return mapCssVar("--omen");
-  if (region === "mountain") return mapCssVar("--cream");
+  // No colour for the mountain until the mountain exists — the cream I first
+  // gave it was the overworks exactly.
   return mapCssVar("--gold"); // the halls / default
 }
 // Fit a room name inside its tile: drop the leading "The " every room shares,
