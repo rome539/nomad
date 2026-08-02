@@ -3067,6 +3067,15 @@ function mapRegionColor(region, isGate) {
   if (region === "out") return mapCssVar("--heal");   // the open ground: green and alive
   if (region === "sky") return mapCssVar("--cream");  // the overworks: pale, up in the wind
   if (region === "warrens") return mapCssVar("--dim"); // the warrens: packed earth
+  // THE SURFACE BANDS NEED THEIR OWN COLOURS (rome, 2026-08-02: "the road is
+  // the same exact colour as the halls"). road/wood/mountain fell through to
+  // the default and drew gold — the buried keep's colour — so the open road
+  // read as more dungeon. Bone for the road: pale dust and old paving, the
+  // one thing out there that people made. Omen for the wood, because it is
+  // the band that lies to you about which way you are facing.
+  if (region === "road") return mapCssVar("--bone");
+  if (region === "wood") return mapCssVar("--omen");
+  if (region === "mountain") return mapCssVar("--cream");
   return mapCssVar("--gold"); // the halls / default
 }
 // Fit a room name inside its tile: drop the leading "The " every room shares,
