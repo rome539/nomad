@@ -3119,23 +3119,9 @@ function mapRoundRect(ctx, x, y, w, h, r) {
 // caught the flattened version, 2026-07-13). Then the warrens gnawed beneath,
 // the deep at the bottom. Each stratum lays out on its own; no exit line ever
 // crosses between strata — the tiles' \\u25b2\\u25bc badges carry the vertical ways.
-// THE STRATA ARE VERTICAL, AND THE ROAD IS NOT (rome, 2026-08-02: "why aren't
-// the roads connected in the map? why does it appear on top and not next to
-// the room that you used").
-//
-// I gave road/wood their own strips, and strata DELIBERATELY never link — the
-// layout drops any cross-band exit as a constraint, because every way from the
-// surface into the halls is a stair and a stair is carried by the tile's up/down
-// badge instead. That is right for depth and wrong for a road: you reach the
-// West Road by walking WEST out of the Drowned Orchard, on the same ground, so
-// severing it from the fortress drew it as an island floating above the world.
-//
-// The road, the wood and the mountain are SURFACE. They lay out from their real
-// east/west exits, which puts the road west of the orchard and the wood west of
-// that — the shape of the actual world. They keep their own colours, so the
-// bands still read apart; they just are not separate strata, because they are
-// not separate levels.
-var MAP_BAND_OF = { sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, upper: 2, warrens: 3, deep: 4 };
+// The strata themselves. WHICH band a room is in is the server's call now and
+// ships on the frame (zone-data.MAP_BAND_OF) — this is only their order and
+// their names, which are a drawing concern.
 var MAP_BANDS = [
   { band: 0, label: "THE OVERWORKS" },
   { band: 1, label: "THE SURFACE" },
@@ -3151,8 +3137,11 @@ function buildMapGraph(f) {
     for (var i = 0; i < rooms.length; i++) {
       var rm = rooms[i];
       if (nodes[rm.id]) continue;
-      var band = MAP_BAND_OF[key] !== undefined ? MAP_BAND_OF[key] : 1;
-      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate };
+      // The band is the SERVER's now (zone-data.MAP_BAND_OF) — it ships on the
+      // frame, so there is one copy of the strata and not two to drift apart.
+      var band = (rm.band !== undefined && rm.band !== null) ? rm.band : 1;
+      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate,
+                       gx: rm.x, gy: rm.y };
       order.push(rm.id);
     }
   }
@@ -3230,6 +3219,28 @@ function buildMapGraph(f) {
     if (!bcomps.length) continue;
     bcomps.sort(function (a, b) { return b.length - a.length; });
     var bandIds = [];
+    // A TRUE map ships every room's canonical position, laid out server-side
+    // from the WHOLE world graph. Use it verbatim: the islands on a half-carved
+    // chart then sit where they really are relative to each other, with honest
+    // gaps where nobody has been. Packing them into rows — right for a crude
+    // map, which is a shattered pack of lies — made the wall chart "clusters in
+    // the centre, not real with how it looks on a map" (rome, 2026-08-02).
+    var canon = true;
+    for (var cq = 0; cq < bcomps.length && canon; cq++)
+      for (var cr = 0; cr < bcomps[cq].length; cr++)
+        if (nodes[bcomps[cq][cr]].gx === undefined || nodes[bcomps[cq][cr]].gx === null) { canon = false; break; }
+    if (canon) {
+      var gminx = 1e9, gminy = 1e9;
+      for (var g1 = 0; g1 < bcomps.length; g1++) for (var g2 = 0; g2 < bcomps[g1].length; g2++) {
+        var gn = nodes[bcomps[g1][g2]];
+        if (gn.gx < gminx) gminx = gn.gx; if (gn.gy < gminy) gminy = gn.gy;
+      }
+      for (var g3 = 0; g3 < bcomps.length; g3++) for (var g4 = 0; g4 < bcomps[g3].length; g4++) {
+        var gid = bcomps[g3][g4], gnn = nodes[gid];
+        placed[gid] = { x: gnn.gx - gminx, y: gnn.gy - gminy + bandY, displaced: false };
+        bandIds.push(gid);
+      }
+    } else {
     var cursorX = 0, cursorY = bandY, rowH = 0, targetW = 12;
     for (var oi = 0; oi < bcomps.length; oi++) {
       var lo = layoutComp(bcomps[oi], bcomps[oi][0]);
@@ -3240,6 +3251,7 @@ function buildMapGraph(f) {
         bandIds.push(pid2);
       }
       cursorX += (lo.w + 1) + 2; if (lo.h > rowH) rowH = lo.h;
+    }
     }
     // center this stratum on x = 0
     var bx0 = 1e9, bx1 = -1e9, by1 = -1e9;

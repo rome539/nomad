@@ -213,6 +213,10 @@ export class ZoneDO implements DurableObject {
   // mouths, and family-cap counting all lean on them.
   private roomDists = new Map<string, Map<string, number>>();
   public variantBase = new Map<string, string>();
+  // The canonical map grid, laid out once from the whole world graph so two
+  // disconnected islands on somebody's chart still sit where they really are
+  // relative to each other (lore.worldGrid). Static world, so never invalidated.
+  public mapGrid: Map<string, { x: number; y: number }> | null = null;
 
   // THE DISTANCE CACHE (2026-08-01). This used to precompute ALL-PAIRS shortest
   // paths at init — a BFS from every room, every distance kept forever. At 110
@@ -5291,12 +5295,12 @@ export class ZoneDO implements DurableObject {
     // comes to investigate.
     if (events.raining(this, sourceRoomId) && chance(RAIN_NOISE_MASK)) return;
     const now = Date.now();
-    // The hoarder runs FROM noise, so it is handled before the crowd guard
-    // below: that guard exists to stop a busy room pulling in yet more bodies,
-    // and applying it here would have muted the one creature that wants to
-    // leave — deafened by a crowd, in the exact moment a crowd is the thing
-    // worth fleeing.
-    ai.hoardersSpook(this, sourceRoomId, now);
+    // What runs FROM noise — the hoarder, and every RUNNER — is handled before
+    // the crowd guard below: that guard exists to stop a busy room pulling in
+    // yet more bodies, and applying it here would mute the very creatures that
+    // want to LEAVE — deafened by a crowd, in the exact moment a crowd is the
+    // thing worth fleeing.
+    ai.spookFromNoise(this, sourceRoomId, now);
     // A room already full of the curious doesn't pull in more — that's what
     // turned the central hub into a black hole that swallowed the whole zone.
     if (ai.creaturesIn(this, sourceRoomId) >= CROWD_CAP) return;
@@ -5308,7 +5312,11 @@ export class ZoneDO implements DurableObject {
       if (DROWNERS.has(c.templateId)) continue; // it holds its water; noise doesn't move it
       if (SENTINELS.has(c.templateId) || AGGRESSIVE.has(c.templateId)) continue; // a guardian holds its post; noise doesn't draw it off the door
       if (SCAVENGERS.has(c.templateId)) continue; // hyenas track the scent of the dead, not the din of the living
-      if (HOARDERS.has(c.templateId)) continue; // it already ran the other way (hoardersSpook, above) — never also draw it in
+      if (HOARDERS.has(c.templateId)) continue; // it already ran the other way (spookFromNoise, above) — never also draw it in
+      // A RUNNER is not one of the "good majority" whose ears prick up. Its whole
+      // nature is bolting, and a deer that walks toward a fight is not a deer
+      // (rome, 2026-08-02). spookFromNoise has already sent it the other way.
+      if (RUNNERS.has(c.templateId)) continue;
       // Not every ear pricks up. A good majority come to look; the rest keep
       // to their own business — so a fight draws a crowd, not the whole zone.
       if (!chance(NOISE_HEED_ODDS)) continue;

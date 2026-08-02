@@ -16,7 +16,7 @@ import {
   NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
-  PREYS_ON, PREDATION_ODDS, STARVE_HUNTERS,
+  PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
@@ -266,7 +266,7 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     // The food web made visible: a hungry predator eyes a weaker thing sharing
     // its room — the tell that lets a player USE predation (bait a scrap, slip past).
     if (creature.hunger >= HUNGRY_AT && !HOLLOW.has(tmpl.id)) {
-      const preySet = PREYS_ON.get(creature.templateId);
+      const preySet = preyHere(z, creature);
       if (preySet) {
         const prey = [...z.creatures.values()].find(
           (c) => c.id !== creature.id && c.roomId === creature.roomId && preySet.has(c.templateId),
@@ -744,13 +744,15 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // in, but it does NOT throw itself into the fight; it arrives dormant and
       // strikes only if you MOVE while it's there (wakeListeners) or it already
       // holds a grudge (handled just above). Creepier, and truer to what it is.
-      // The scary rat (fleet-rat, "a scary rat") is exempt too (rome's ruling):
-      // it comes to LOOK — a scavenger's curiosity — but it doesn't throw itself
-      // into a brawl between bigger things. It arrives, watches, and keeps its
-      // own counsel. Every other investigator — the scabby rat ("rat") very
-      // much included — still pays the price and joins in.
+      // RUNNERS are exempt (rome's fleet-rat ruling, generalised 2026-08-02 when
+      // a roe deer threw itself into a boar fight). A thing whose whole nature
+      // is bolting does not join a brawl between bigger things. This was written
+      // as a hardcoded `tmpl.id !== "fleet-rat"` back when the fleet-rat was the
+      // only runner in the game; the sibling site in joinSameRoomFight was
+      // generalised earlier today and this one was missed. Every other
+      // investigator — the scabby rat very much included — still pays the price.
       if (investigating && !creature.target && !LISTENERS.has(tmpl.id)
-          && tmpl.id !== "fleet-rat") {
+          && !RUNNERS.has(tmpl.id)) {
         for (const s of z.sessions.values()) {
           if (s.roomId === creature.roomId && z.inCombat(s)) {
             creature.target = s.pubkey;
@@ -859,8 +861,27 @@ export function woundedPreyHunts(z: ZoneDO, creature: Creature): boolean {
   // Only idle creatures reach this (the tick guards on !target); a struck predator
   // (stunned/bleeding) has other problems. Returns true if it struck, so the tick
   // skips this creature's wander.
+// What this creature may take IN THIS ROOM: its ordinary prey, plus anything
+// PACK_PREY lets it take once enough of its own line is standing here. The pack
+// is counted by LINE (variantBase), so a dire wolf counts toward the greys —
+// see PACK_PREY for why that is the whole point of it.
+function preyHere(z: ZoneDO, creature: Creature): Set<string> | null {
+  const solo = PREYS_ON.get(creature.templateId);
+  const pack = PACK_PREY.get(creature.templateId);
+  if (!pack) return solo ?? null;
+  const line = z.variantBase.get(creature.templateId) ?? creature.templateId;
+  let strength = 0;
+  for (const c of z.creatures.values()) {
+    if (c.roomId !== creature.roomId) continue;
+    if ((z.variantBase.get(c.templateId) ?? c.templateId) === line) strength++;
+  }
+  const set = new Set(solo ?? []);
+  for (const [prey, need] of pack) if (strength >= need) set.add(prey);
+  return set.size ? set : null;
+}
+
 export async function predation(z: ZoneDO, creature: Creature, now: number): Promise<boolean> {
-    const prey = PREYS_ON.get(creature.templateId);
+    const prey = preyHere(z, creature);
     if (!prey || creature.stunned || creature.bleedTicks) return false;
     const world = z.world!;
     const hungry = creature.hunger >= HUNGRY_AT;
@@ -1518,11 +1539,20 @@ export function hoarderSheds(z: ZoneDO, creature: Creature): void {
   // that fled the racket next door but stood in the racket itself would read as
   // deaf. Its den stays exempt from the shunning by the ordinary avoids law —
   // everything may always go home.
-export function hoardersSpook(z: ZoneDO, sourceRoomId: string, now: number): void {
+// WHAT RUNS FROM A NOISE, RATHER THAN TOWARD IT (was hoardersSpook; widened to
+// the RUNNERS 2026-08-02 — rome: "why is a deer jumping in fights? they should
+// be running away when they hear noise").
+//
+// The hoarder already had this exactly right and it was written for one
+// creature. A deer and a hoarder want the same thing from a din two rooms away:
+// to be somewhere else. So a runner now marks the source as a room to AVOID and
+// moves off soon, instead of being one of the "good majority" whose ears prick
+// up in creatureNoise.
+export function spookFromNoise(z: ZoneDO, sourceRoomId: string, now: number): void {
     const world = z.world;
     if (!world) return;
     for (const c of z.creatures.values()) {
-      if (!HOARDERS.has(c.templateId) || c.target) continue;
+      if (!(HOARDERS.has(c.templateId) || RUNNERS.has(c.templateId)) || c.target) continue;
       const here = c.roomId === sourceRoomId;
       const adjacent = !here && (world.exits.get(c.roomId) ?? []).some(
         (e) => e.to_room === sourceRoomId && (!e.key_item || z.openDoors.has(`${c.roomId}:${e.dir}`)),

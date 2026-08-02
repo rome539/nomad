@@ -14,9 +14,9 @@ import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
-  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS } from "./zone-data";
+  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF } from "./zone-data";
 import { parse } from "./parser";
-import { mapRegionOf } from "./lore";
+import { mapRegionOf, worldGrid } from "./lore";
 import { dropCarried, describePlayer, lookKeepingItem } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -1642,9 +1642,15 @@ export function wallStudy(z: ZoneDO, session: Session): void {
     const exits = (world.exits.get(id) ?? [])
       .filter((e) => shown.has(e.to_room))
       .map((e) => ({ dir: e.dir, to: e.to_room, toName: world.rooms.get(e.to_room)?.name ?? e.to_room }));
+    // The wall chart is the WORST case for island-packing — the shallow ring
+    // around eight gates in three bands is eight neighbourhoods that never
+    // touch — so it wants the canonical grid most of all.
+    const at = worldGrid(z).get(id);
     (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({
       id, name: room.name, exits, here: id === session.roomId,
       gate: world.entryRooms.has(id) ? 1 : 0, // a door draws as a door on the wall too
+      band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
+      x: at?.x, y: at?.y,
     });
   }
   try {

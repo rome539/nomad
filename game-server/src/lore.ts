@@ -14,7 +14,7 @@ import {
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
-  MILESTONES, MILESTONE_CAP, MILESTONE_SHOW,
+  MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF,
   GATE_TELLINGS,
 } from "./zone-data";
 
@@ -134,6 +134,96 @@ function crudeHand(rowId: string): number {
   return mulberry32(hashSeed(rowId + ":hand"))();
 }
 
+// ---- THE CANONICAL WORLD GRID ---------------------------------------------
+//
+// rome, 2026-08-02: "when I map the gatehouses for the different regions it's
+// all just clusters in the center and it's not real with how it looks on a map."
+//
+// He is right, and the clusters are REAL, which is the bug. The wall chart only
+// ever holds what has been carved, and the surveyor's map only what has been
+// walked, so both routinely hold several disconnected islands — the shallow ring
+// around eight gates in three bands is eight separate neighbourhoods that do not
+// touch. The client laid each island out on its own little grid and then PACKED
+// the islands into rows to fill the band. That is correct for a crude map, which
+// is a shattered pack of lies by design. It is wrong for a true one, where the
+// islands are real places with real positions relative to each other.
+//
+// The client cannot fix this: it only ever receives the rooms you know, so it
+// has no idea how far apart two islands are. The SERVER has the whole graph. So
+// the world gets ONE canonical grid, laid out from the true map, and every true
+// frame ships the coordinates of the rooms you are allowed to see. Nothing leaks
+// — an unwalked room sends no name, no exit and no coordinate; there is simply a
+// gap in the paper where you have not been, which is exactly what a real
+// surveyor's sheet looks like.
+//
+// Computed once per world and cached: the map is static, and this is a few
+// hundred cheap steps.
+export function worldGrid(z: ZoneDO): Map<string, { x: number; y: number }> {
+  if (z.mapGrid) return z.mapGrid;
+  const world = z.world!;
+  const grid = new Map<string, { x: number; y: number }>();
+  const DELTA: Record<string, [number, number]> = {
+    north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0], up: [-1, -1], down: [1, 1],
+  };
+  const bandOf = (id: string) => MAP_BAND_OF[mapRegionOf(z, id)] ?? 1;
+  // Every room, grouped by stratum. Strata never share a plane — a stair is
+  // carried by the tile's up/down badge, not by a line — so each lays out alone.
+  const byBand = new Map<number, string[]>();
+  for (const id of world.rooms.keys()) {
+    const b = bandOf(id);
+    const list = byBand.get(b) ?? [];
+    list.push(id);
+    byBand.set(b, list);
+  }
+  for (const [band, rooms] of byBand) {
+    // Deterministic anchor so the grid never shifts between two players or two
+    // sessions: a gate if the band has one, else the first room by id.
+    const sorted = [...rooms].sort();
+    const anchor = sorted.find((r) => world.entryRooms.has(r)) ?? sorted[0];
+    const occupied = new Set<string>();
+    const claim = (id: string, x: number, y: number) => {
+      if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); grid.set(id, { x, y }); return; }
+      // Cycles make a flat grid impossible to satisfy exactly; nudge to the
+      // nearest free cell, same as the client always did locally.
+      for (let ring = 1; ring <= 60; ring++) {
+        for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
+          if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
+          if (!occupied.has(`${x + dx},${y + dy}`)) {
+            occupied.add(`${x + dx},${y + dy}`);
+            grid.set(id, { x: x + dx, y: y + dy });
+            return;
+          }
+        }
+      }
+      grid.set(id, { x, y });
+    };
+    // Breadth-first from the anchor, then from any room the walk never reached
+    // (a band can be genuinely severed — the far side of the wood is only
+    // reachable by climbing out of the sunken wood, which is a cross-band step).
+    const queue: string[] = [];
+    const seed = (id: string, x: number, y: number) => { claim(id, x, y); queue.push(id); };
+    seed(anchor, 0, 0);
+    let stranded = 0;
+    for (const id of sorted) {
+      while (queue.length) {
+        const cur = queue.shift()!;
+        const at = grid.get(cur)!;
+        for (const e of world.exits.get(cur) ?? []) {
+          if (grid.has(e.to_room) || bandOf(e.to_room) !== band) continue;
+          const d = DELTA[e.dir];
+          if (!d) continue;
+          seed(e.to_room, at.x + d[0], at.y + d[1]);
+        }
+      }
+      // Whatever is left starts a fresh island, set well clear of the last one
+      // so two severed halves never overlap into nonsense.
+      if (!grid.has(id)) { stranded++; seed(id, stranded * 40, 0); }
+    }
+  }
+  z.mapGrid = grid;
+  return grid;
+}
+
 // Display grouping only — the sim's regionOf (chest tiers etc.) still reads
 // these blocks as "upper". The map just names where you're standing honestly.
 // (Shared with the gatehouse wall chart, which draws the same frame.)
@@ -227,7 +317,16 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     }
     // A band with no frame of its own falls in with the halls rather than
     // throwing the whole map away over one unlabelled room.
-    (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({ id, name: room.name, exits, here: id === session.roomId, gate: world.entryRooms.has(id) ? 1 : 0 });
+    // A TRUE map carries its canonical position (worldGrid) so islands sit where
+    // they really are; a CRUDE map deliberately does not — it is a shattered
+    // pack of lies and the client's own packing is the right look for it.
+    const at = detailed ? worldGrid(z).get(id) : undefined;
+    (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({
+      id, name: room.name, exits, here: id === session.roomId,
+      gate: world.entryRooms.has(id) ? 1 : 0,
+      band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
+      x: at?.x, y: at?.y,
+    });
   }
   try {
     session.ws.send(JSON.stringify({

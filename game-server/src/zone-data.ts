@@ -569,6 +569,12 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "rag-and-bone": "Something moves {dir} in a slow clatter of hanging metal, like a cart of scrap walking.",
   "road-carrier": "Boots go {dir} at a steady walking pace, neither hurrying nor stopping.",
   "masterless-dog": "Something four-legged trots {dir}, claws ticking on stone.",
+  "lead-dog": "Something four-legged goes {dir} at a walk, in no hurry at all.",
+  "wayman": "A single step {dir}, placed deliberately, by somebody who could have been quieter.",
+  "dire-wolf": "A heavy padding crosses {dir}, and the stride is far too long.",
+  "white-roe": "Something light steps {dir} and does not hurry.",
+  "old-boar": "Something very heavy goes {dir} through the brush and does not go around anything.",
+  "something-ahead": "A step {dir} that matches yours — and it is in front of you.",
   footpad: "A step scuffs the verge {dir}, and takes care to be the last one you hear.",
   "roe-deer": "Something light and quick breaks {dir} through the undergrowth, all at once.",
   "wild-boar": "Something heavy shoulders through the brush {dir}, taking the straight way.",
@@ -598,6 +604,12 @@ export const STILL_SOUNDS: Record<string, string> = {
   "roe-deer": "quick shallow breathing, held — something small deciding whether it has been seen",
   "wild-boar": "a low grunting and the steady work of something rooting, unbothered",
   "grey-wolf": "nothing at all, and then the small sound of a jaw closing",
+  "lead-dog": "slow breathing through a bad nose, and a collar-chain that has not been on anything for a long time",
+  "wayman": "cloth shifting, and a man breathing through his mouth to keep it quiet",
+  "dire-wolf": "breathing far too deep and slow for a wolf, and nothing else at all",
+  "white-roe": "breathing, unhurried and quite steady — something that has not decided to be afraid of you",
+  "old-boar": "a deep, wet snorting, and a tusk knocking on wood, over and over",
+  "something-ahead": "your own breathing, and ahead of it, a fraction EARLY, something doing the same",
   "the-follower": "your own breathing, and under it, a fraction late, something doing the same",
   "charcoal-burner": "wood being laid on wood, one piece at a time, patiently, by somebody who is not hurrying",
   "root-thing": "a slow creak of wet timber taking weight, over and over, going nowhere",
@@ -733,7 +745,7 @@ export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman"
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
-export const THIEVES = new Set(["cutpurse", "cutthroat", "footpad"]);
+export const THIEVES = new Set(["cutpurse", "cutthroat", "footpad", "wayman"]);
 
 // ROAMING DENS (rome, 2026-08-02: "do they have dens? i think we should have it
 // as rng where they spawn on a road").
@@ -818,6 +830,9 @@ export const MILESTONE_CAP = 40;   // names a stone holds; the oldest weather of
 export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest first
 // RUNNERS never stand and fight — they bolt the instant they can, so the only
 // way to kill one is to catch it: hit it as it breaks for the door.
+// The WHITE ROE is deliberately NOT here (mig 141). Everything in the wood that
+// can bolt, bolts — so the rarest thing on the surface is the one that stands in
+// the open and looks back at you. Its whole effect is the omission.
 export const RUNNERS = new Set(["fleet-rat", "roe-deer"]);
 // BROODERS are nest-bound: they don't wander, don't flee, and while they live
 // they keep birthing scabby rats into their room. Kill the mother or the room
@@ -836,7 +851,7 @@ export const WAKE_NOISE = 0.8;  // a fight in the room is almost unmissable
 export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
 // SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing
 // and — past BOLD — losing their nerve entirely: they stop fleeing and hit harder.
-export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf"]);
+export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf"]);
 // VERMIN eat the dead too — but only to SURVIVE, none of the hyena's package.
 // Rats had no food at all (not predators, not scavengers), so they sat pinned at
 // max hunger, forever "restless with hunger" (rome, 2026-07-17: "what are rats
@@ -844,7 +859,7 @@ export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf"]);
 // room to sate and heal a little — but it does NOT haul off loot, mourn its kin,
 // or gorge itself bold into a threat (all of that stays gated on SCAVENGERS).
 // The bone rooms clean their own dead; the rat just doesn't starve in them.
-export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer"]);
+export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe"]);
 // THE NOSE (rome, 2026-07-17): a scavenger with nothing better to do drifts
 // toward fresh blood next door — a drip trail (a wounded thing that walked
 // through) or a kill's pool. Odds-gated so it's a drift, not a magnet; the
@@ -1000,13 +1015,41 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena"])],                // the mean cousin drives off the plain one
   ["grave-hyena", new Set(["rat", "fleet-rat"])],                              // hyenas eat rats
   ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
-  ["grey-wolf", new Set(["roe-deer"])],                                       // the wood's own food web: wolves run deer, and you can walk into the middle of it
+  ["grey-wolf", new Set(["roe-deer", "white-roe"])],                          // the wood's own food web: wolves run deer, and you can walk into the middle of it
+  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar"])],             // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 48hp/4-7
+  ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
+  ["lead-dog", new Set(["masterless-dog"])],                                  // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and the only food web the road has
   // The pale hunters are the DEEP's rat-catchers: hungry, they leave their lurk
   // and range toward the rat-runs (lurkerDrifts), run one down (predation), and
   // go quiet again. A stretch of dark with no rats left is what starves one onto
   // your torchlight (starvingHunts).
   ["pale-crawler", new Set(["rat", "fleet-rat", "brood-rat"])],
   ["pale-stalker", new Set(["rat", "fleet-rat", "brood-rat"])],
+]);
+// THE PACK (rome, 2026-08-02: "multiple grey wolves beats old boar"). PREYS_ON
+// is a stats table — every edge in it holds because the predator genuinely
+// outstats the prey alone. That law is right and it makes wolves wrong: a wolf
+// is not a thing that wins alone, it is a thing that wins in threes, and a wood
+// where one wolf can never touch a boar no matter how many of them are standing
+// in the room is a wood with no pack in it.
+//
+// So: prey a line can only take IN NUMBERS, and how many it takes. Counted by
+// LINE, not by template — variantBase folds the dire wolf in with the greys,
+// which is exactly right, because the dire wolf's whole description is that it
+// runs with the pack and the pack is used to it. Two greys and a dire cousin is
+// a pack of three.
+//
+// The escalation is honest against the statlines:
+//   2 wolves  = 68hp, 6-12   vs the wild boar  48hp, 4-7,  armor 1
+//   3 wolves  = 102hp, 9-18  vs the old boar   70hp, 6-10, armor 2
+// and the dire wolf needs one fewer, because it is worth about two of them.
+//
+// It reads both ways at once, which is the point: alone, a wolf is on the old
+// boar's OWN prey list. Walk in on one wolf and a boar and you know how that
+// ends. Walk in on four wolves and a boar and you do not.
+export const PACK_PREY = new Map<string, Map<string, number>>([
+  ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3]])],
+  ["dire-wolf", new Map([["old-boar", 2]])],
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // Who turns on a PLAYER when starved past all patience (STARVING_AT). Kept apart
@@ -1016,7 +1059,7 @@ export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes 
 // hunters have NO prey down there — near-equals, everything else bloodless — so
 // for them starvation has nowhere to go but your torchlight. (three-hound is a
 // SENTINEL and takes the room on its own terms — it stays out.)
-export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "grey-wolf"]);
+export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf"]);
 // The deep eats its own: strayed rats (and worse) die in the dark and rot where
 // they fall, and the pale hunters scavenge the carrion. A dice mint (same law as
 // the stone/torch — cadence × odds, no clock to farm) drops one fresh carcass into
@@ -1069,7 +1112,7 @@ export const SEIZE_DROWN_FRACTION = 0.15; // unmitigated, as a share of max hp
 // room until it drops on you, which is the only honest way to write a thing
 // you never catch sight of. It lives in the lying cores, so it finds you at
 // exactly the moment you have stopped knowing the way back.
-export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower"]);
+export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", "something-ahead"]);
 // REVENANTS don't stay down: put one to 0 and it RISES ONCE, at part health, and
 // comes again. The second death is the real one. A longer fight, not a lost one.
 export const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);
@@ -1482,7 +1525,7 @@ export const SENTINELS = new Set(["three-hound", "two-hound"]);
 // the one room in the honest band you cannot cross casually. The keeper holds
 // the hall floor of the holding for the same structural reason the watchman
 // holds his turret: it is his.
-export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "the-keeper-of-the-holding"]);
+export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding"]);
 
 // TREASURY DOORS: a room that is some boss's hoard, keyed by the keeper who
 // bars it. The way IN stays shut while that keeper lives in the room before it
@@ -1856,6 +1899,25 @@ export const BLEED_ODDS = new Map<string, number>([
   ["three-hound", 0.30],   // the sentinel's jaws — the wound that ignores armor opens more often now (085)
   ["two-hound", 0.20],     // the runt's jaws — fewer, not gentler
   ["cutthroat", 0.30],     // the thin knife — "does not mind cutting you open on the way"
+  // THE SURFACE, LISTED (2026-08-02). The comment above says every current
+  // bleeder is listed, and it was true until this morning: I shipped twelve
+  // bleeders on the road and in the wood and put NONE of them here, so every one
+  // of them fell through to the every-hit fallback and opened a guaranteed wound
+  // on every landed blow. Mig 140 then raised their damage from a mistaken 0.3
+  // to a real 1-3, which turned a harmless bug into the hardest thing about the
+  // surface. Tiered against the ladder above, not invented.
+  ["masterless-dog", 0.12],      // a dog's teeth: dirty, not deep
+  ["lead-dog", 0.15],            // older, bigger, and it has done this before
+  ["grey-wolf", 0.18],           // wolves work the same wound over
+  ["dire-wolf", 0.22],           // the same jaws, half again the size
+  ["wild-boar", 0.20],           // tusks go in and come up
+  ["old-boar", 0.25],            // tusks grown past any use for rooting
+  ["the-follower", 0.20],        // level with the deep's pale kin, which is what it is
+  ["something-ahead", 0.25],
+  ["the-mire-walker", 0.20],
+  ["wayman", 0.30],              // a knife, held low and easy — the cutthroat's rate, and the same reason
+  ["the-keeper-of-the-holding", 0.25],
+  ["the-woodward", 0.30],        // the hardest thing on the surface, level with the hound's jaws
 ]);
 // HOBBLE: leg-goers can hamstring you on a hit — a per-hit chance, tiered by
 // threat (only things that go low: hyenas at the legs, the hound, the deep's
@@ -2439,6 +2501,19 @@ export const GATEHOUSE_NOARG = new Set([
 // room where people sit and talk — the walls should not keep interrupting them.
 export const GATEHOUSE_AMBIENT_COOLDOWN_MS = 180_000; // never sooner than 3 minutes
 export const GATEHOUSE_AMBIENT_ODDS = 0.03;           // per 2s tick, once off cooldown -> ~4 min mean
+
+// THE MAP'S STRATA, AND WHO OWNS THEM (2026-08-02). This lived only inside the
+// client script, which meant the SERVER could not reason about the map at all —
+// and the server is the only thing that knows the whole world graph. It is here
+// now, sent per-room on the frame, and the client no longer keeps its own copy.
+//
+// The cutaway is vertical. The road, the wood and the mountain are SURFACE:
+// you reach them by walking west on the same ground, not by a stair, so
+// severing them into their own strata drew them as islands floating above the
+// world (rome, 2026-08-02).
+export const MAP_BAND_OF: Record<string, number> = {
+  sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, upper: 2, warrens: 3, deep: 4,
+};
 
 // ---- WHAT THE KEEPER TELLS YOU: each region's story, across the hatch ------
 //
