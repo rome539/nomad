@@ -1,0 +1,42 @@
+-- BLEED IS DAMAGE, NOT ODDS (2026-08-02) — fixing my own error from the world
+-- ship this morning.
+--
+-- mob_templates.bleed is the DAMAGE A WOUND DOES PER TICK. It is consumed
+-- directly: `victim.bleedDmg = Math.max(victim.bleedDmg ?? 0, tmpl.bleed)`, with
+-- no chance gate anywhere near it — the only test is `bleed > 0`, which decides
+-- whether the creature opens a wound at all.
+--
+-- I wrote every road and wood creature as though it were a PROBABILITY, because
+-- the player-side column next to it (playerBleedOdds) genuinely is one. So the
+-- whole new half of the world got 0.25 to 0.4 where every creature written
+-- before it has 1, 2 or 3.
+--
+-- TWO BUGS OUT OF THE ONE MISTAKE:
+--
+--   1. The road and the wood cannot really wound you. "It tears you open, the
+--      wound won't stop" and then it takes a third of a hit point a tick. The
+--      woodward is meant to be the hardest thing on the surface and his bleed
+--      was a tenth of a scabby rat's.
+--
+--   2. Float HP on the screen. 0.3 is not representable in binary, so three
+--      ticks of it read out as 49.400000000000006 (rome, 2026-08-02). Every
+--      bleed in the game before this was an integer, so nothing had ever put a
+--      fraction into a hit point total.
+--
+-- THE VALUES, set against the ladder that already existed rather than invented:
+-- a rat opens 1, the deep's mid-tier (hyenas, crawler, cutthroat, the Gaunt,
+-- two-hound) open 2, the worst of it (pale-stalker, three-hound) opens 3.
+--
+--   masterless-dog             0.3  -> 1   a dog's bite, the road's cheapest wound
+--   wild-boar                  0.25 -> 2   tusks; it commits and it opens you
+--   grey-wolf                  0.35 -> 2   the wood's pack teeth, level with the hyenas
+--   the-follower               0.3  -> 2   the maze's lurker, same tier
+--   the-mire-walker            0.3  -> 2   same
+--   the-woodward               0.35 -> 3   the hardest thing on the surface
+--   the-keeper-of-the-holding  0.4  -> 3   a boss, and he holds his hall floor
+--
+-- Nothing written before today is touched.
+
+UPDATE mob_templates SET bleed = 1 WHERE id = 'masterless-dog';
+UPDATE mob_templates SET bleed = 2 WHERE id IN ('wild-boar', 'grey-wolf', 'the-follower', 'the-mire-walker');
+UPDATE mob_templates SET bleed = 3 WHERE id IN ('the-woodward', 'the-keeper-of-the-holding');

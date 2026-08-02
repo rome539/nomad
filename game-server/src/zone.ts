@@ -3178,7 +3178,12 @@ export class ZoneDO implements DurableObject {
         await this.onPlayerDeath(session, null);
         continue;
       }
-      session.hp = Math.max(1, session.hp - bd);
+      // Rounded, always. Every bleed value in the game is an integer, so this
+      // costs nothing — but a fractional one (mig 140: I wrote seven of them as
+      // odds by mistake) put 49.400000000000006 on a player's screen, because
+      // 0.3 has no exact binary form and three ticks of it drift. A hit point
+      // total is the most-read number in the game and it must never show that.
+      session.hp = Math.max(1, Math.round((session.hp - bd) * 100) / 100);
       if (session.bleedTicks <= 0) { session.bleedTicks = 0; session.bleedDmg = 0; }
       this.send(session, `Your wound bleeds — ${bd}.${session.bleedTicks ? "" : " It clots."} [${session.hp}/${session.maxHp} hp]`, "dmgin");
       this.sendStatus(session);
@@ -3375,7 +3380,8 @@ export class ZoneDO implements DurableObject {
       if (combatRound && creature.bleedTicks && creature.bleedTicks > 0) {
         creature.bleedTicks -= 1;
         const bd = creature.bleedDmg ?? 1;
-        creature.hp = Math.max(1, creature.hp - bd);
+        creature.hp = Math.max(1, Math.round((creature.hp - bd) * 100) / 100); // same rounding law as the player's wound
+
         if (creature.bleedTicks <= 0) { creature.bleedTicks = 0; creature.bleedDmg = 0; }
         const watcher = [...this.sessions.values()].find(
           (s) => s.roomId === creature.roomId && (s.target === creature.id || creature.target === s.pubkey),
