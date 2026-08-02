@@ -113,7 +113,7 @@ export async function cmdMap(z: ZoneDO, session: Session, arg: string): Promise<
   if (detailed) {
     const inked = session.mapInk?.get(carried.journalId!)?.size ?? 1;
     return z.send(session, inked <= 1
-      ? "You unroll the surveyor's blank — empty but for the gates and the ground underfoot. It charts what its carrier walks, set down true."
+      ? "You unroll the surveyor's blank — empty but for the ground underfoot. It charts what its carrier walks, set down true."
       : `You unroll the surveyor's map. ${inked} halls are set down true, walked in by the hands that carried it.`);
   }
   // The unfold reads the hand that drew this copy — the one honest thing a
@@ -178,7 +178,15 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
   const shown = new Set<string>();
   for (const id of roomIds) {
     if (detailed) {
-      if (ink!.has(id) || z.regionOf(id) === "gate" || id === session.roomId) shown.add(id);
+      // A DOOR YOU HAVE NEVER WALKED TO IS NOT ON YOUR PAPER (rome, 2026-08-02).
+      // This used to pre-ink every gate as a communal signpost — "the map must
+      // never hide the bank" — which was harmless while all three doors were in
+      // the fortress you start in. With eight of them spread across three bands
+      // it hands a fresh wanderer the wood's three doors and the road's two
+      // before he has taken a step outside, which is both a lie about what the
+      // copy has charted and the whole of the exploration given away on a blank
+      // sheet. A surveyor's map holds EXACTLY what its carriers walked.
+      if (ink!.has(id) || id === session.roomId) shown.add(id);
     } else if (z.regionOf(id) === "gate" || id === session.roomId || rnd!() >= dropRoom) {
       shown.add(id);
     }

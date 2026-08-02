@@ -3303,9 +3303,16 @@ function drawMap() {
     var id = g.order[o], p = g.placed[id]; if (!p) continue;
     var nd = g.nodes[id], cx = sx(p.x), cy = sy(p.y), col = mapRegionColor(nd.region, nd.gate);
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s);
-    ctx.globalAlpha = nd.here ? 0.30 : 0.15; ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1;
+    // A DOOR LOOKS LIKE A DOOR (rome, 2026-08-02: "you made a gate not blue").
+    // Steel at a 15% wash and a hairline stroke reads as grey — which was fine
+    // when every gate sat in a crowd of fortress rooms to contrast against, and
+    // is not fine now that one can stand alone in an otherwise empty band. A
+    // gate gets a solid steel plate and a heavy stroke: it is the single most
+    // important tile on the paper, because it is the bank and the way out.
+    ctx.globalAlpha = nd.here ? 0.30 : (nd.gate ? 0.42 : 0.15); ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1;
     if (nd.here) { ctx.shadowColor = heal; ctx.shadowBlur = 16 * s; }
-    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : Math.max(1, 1.1 * s);
+    else if (nd.gate) { ctx.shadowColor = col; ctx.shadowBlur = 10 * s; }
+    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : nd.gate ? Math.max(2, 2.0 * s) : Math.max(1, 1.1 * s);
     ctx.strokeStyle = nd.here ? heal : col;
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s); ctx.stroke();
     ctx.shadowBlur = 0;
