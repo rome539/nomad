@@ -138,8 +138,20 @@ function crudeHand(rowId: string): number {
 // these blocks as "upper". The map just names where you're standing honestly.
 // (Shared with the gatehouse wall chart, which draws the same frame.)
 export function mapRegionOf(z: ZoneDO, id: string): string {
-  // A gate reads as a gate wherever it stands — the waystation sits in the
-  // open ground but its tile is gold, or the map would hide the bank.
+  // A GATE IS DRAWN ON THE GROUND IT STANDS ON, and coloured as a gate by the
+  // `gate` flag the frame carries (rome, 2026-08-02: "the gates are broken and
+  // showing up in the middle of the fortress").
+  //
+  // regionOf checks entryRooms FIRST and collapses every gate to "gate", which
+  // was right while all three doors were in the fortress. Since they spread,
+  // it put the wood's Timber Stack and the road's First Milestone in the
+  // FORTRESS's stratum — a wood room drawn among the fortress's own ground,
+  // disconnected from everything, floating. So: a room that carries its own
+  // region is drawn in that region, gate or not.
+  const own = z.world!.rooms.get(id)?.region;
+  if (own) return own; // road / wood / mountain — their gates included
+  // The original 110 carry no region column and keep the derived reading, where
+  // "gate" is still the right stratum: those three doors ARE the fortress.
   return z.regionOf(id) === "gate" ? "gate"
     : GROUNDS_ROOMS.has(id) ? "out" : OVERWORKS_ROOMS.has(id) ? "sky" : WARRENS_ROOMS.has(id) ? "warrens" : z.regionOf(id);
 }
@@ -207,7 +219,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     }
     // A band with no frame of its own falls in with the halls rather than
     // throwing the whole map away over one unlabelled room.
-    (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({ id, name: room.name, exits, here: id === session.roomId });
+    (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({ id, name: room.name, exits, here: id === session.roomId, gate: world.entryRooms.has(id) ? 1 : 0 });
   }
   try {
     session.ws.send(JSON.stringify({

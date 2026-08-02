@@ -3056,7 +3056,12 @@ function mapCssVar(name) {
   var v = getComputedStyle(document.documentElement).getPropertyValue(name);
   return (v && v.trim()) || "#8a8a8a";
 }
-function mapRegionColor(region) {
+function mapRegionColor(region, isGate) {
+  // A GATE IS A GATE WHEREVER IT STANDS. Colour used to ride the region alone,
+  // which was fine while every gate was in the fortress: since the doors spread
+  // onto the road and into the wood their region is road/wood, and they were
+  // drawing as ordinary ground — the map hid five banks (rome, 2026-08-02).
+  if (isGate) return mapCssVar("--steel");
   if (region === "gate") return mapCssVar("--steel");
   if (region === "deep") return mapCssVar("--blood");
   if (region === "out") return mapCssVar("--heal");   // the open ground: green and alive
@@ -3094,13 +3099,25 @@ function mapRoundRect(ctx, x, y, w, h, r) {
 // caught the flattened version, 2026-07-13). Then the warrens gnawed beneath,
 // the deep at the bottom. Each stratum lays out on its own; no exit line ever
 // crosses between strata — the tiles' \\u25b2\\u25bc badges carry the vertical ways.
-var MAP_BAND_OF = { sky: 0, out: 1, gate: 1, upper: 2, warrens: 3, deep: 4 };
+// THE SURFACE BANDS GOT THEIR OWN STRATA (rome, 2026-08-02: "the gates are
+// broken and showing up in the middle of the fortress"). road/wood/mountain
+// were missing from this table, so every room in them fell through to the
+// default — band 1, THE SURFACE — and thirty road rooms and a hundred and
+// seventy wood rooms drew as unlabelled islands packed in among the fortress's
+// own ground. The axis is a journey now, not just a depth: highest and furthest
+// out at the top, deepest at the bottom. Empty strata are skipped entirely
+// (see the bcomps guard below), so a wanderer who has never left the fortress
+// sees exactly the map they saw before.
+var MAP_BAND_OF = { mountain: 0, sky: 1, wood: 2, road: 3, out: 4, gate: 4, upper: 5, warrens: 6, deep: 7 };
 var MAP_BANDS = [
-  { band: 0, label: "THE OVERWORKS" },
-  { band: 1, label: "THE SURFACE" },
-  { band: 2, label: "THE HALLS" },
-  { band: 3, label: "THE WARRENS" },
-  { band: 4, label: "THE DEEP" },
+  { band: 0, label: "THE MOUNTAIN" },
+  { band: 1, label: "THE OVERWORKS" },
+  { band: 2, label: "THE WOOD" },
+  { band: 3, label: "THE WEST ROAD" },
+  { band: 4, label: "THE SURFACE" },
+  { band: 5, label: "THE HALLS" },
+  { band: 6, label: "THE WARRENS" },
+  { band: 7, label: "THE DEEP" },
 ];
 function buildMapGraph(f) {
   var nodes = {}, order = [];
@@ -3111,7 +3128,7 @@ function buildMapGraph(f) {
       var rm = rooms[i];
       if (nodes[rm.id]) continue;
       var band = MAP_BAND_OF[key] !== undefined ? MAP_BAND_OF[key] : 1;
-      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here };
+      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate };
       order.push(rm.id);
     }
   }
@@ -3284,7 +3301,7 @@ function drawMap() {
   var tw = MAP_CELL * s * 0.80, th = MAP_CELL * s * 0.33;
   for (var o = 0; o < g.order.length; o++) {
     var id = g.order[o], p = g.placed[id]; if (!p) continue;
-    var nd = g.nodes[id], cx = sx(p.x), cy = sy(p.y), col = mapRegionColor(nd.region);
+    var nd = g.nodes[id], cx = sx(p.x), cy = sy(p.y), col = mapRegionColor(nd.region, nd.gate);
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s);
     ctx.globalAlpha = nd.here ? 0.30 : 0.15; ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1;
     if (nd.here) { ctx.shadowColor = heal; ctx.shadowBlur = 16 * s; }
