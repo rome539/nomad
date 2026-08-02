@@ -3230,14 +3230,17 @@ function buildMapGraph(f) {
       for (var cr = 0; cr < bcomps[cq].length; cr++)
         if (nodes[bcomps[cq][cr]].gx === undefined || nodes[bcomps[cq][cr]].gx === null) { canon = false; break; }
     if (canon) {
-      var gminx = 1e9, gminy = 1e9;
-      for (var g1 = 0; g1 < bcomps.length; g1++) for (var g2 = 0; g2 < bcomps[g1].length; g2++) {
-        var gn = nodes[bcomps[g1][g2]];
-        if (gn.gx < gminx) gminx = gn.gx; if (gn.gy < gminy) gminy = gn.gy;
-      }
+      // THE SHEET IS ALREADY DRAWN; YOU ARE ONLY UNCOVERING IT (rome, 2026-08-02:
+      // "why does the surface keep shifting right when I expand westward? make
+      // the map already made behind BUT invisible and the rooms just fill in").
+      // Plot the server's ABSOLUTE coordinates verbatim. The first cut of this
+      // normalised to the extent of the rooms YOU know, so every new room found
+      // to the west moved the origin and shoved the whole world right under you.
+      // No normalising here, no per-band stacking here: both are baked into the
+      // grid server-side, measured against the WHOLE world, and neither can move.
       for (var g3 = 0; g3 < bcomps.length; g3++) for (var g4 = 0; g4 < bcomps[g3].length; g4++) {
         var gid = bcomps[g3][g4], gnn = nodes[gid];
-        placed[gid] = { x: gnn.gx - gminx, y: gnn.gy - gminy + bandY, displaced: false };
+        placed[gid] = { x: gnn.gx, y: gnn.gy, displaced: false };
         bandIds.push(gid);
       }
     } else {
@@ -3259,10 +3262,19 @@ function buildMapGraph(f) {
       var bp = placed[bandIds[bb]];
       if (bp.x < bx0) bx0 = bp.x; if (bp.x > bx1) bx1 = bp.x; if (bp.y > by1) by1 = bp.y;
     }
-    var shiftX = -Math.round((bx0 + bx1) / 2);
-    for (var bs = 0; bs < bandIds.length; bs++) placed[bandIds[bs]].x += shiftX;
-    labels.push({ x: bx0 + shiftX - 0.35, y: bandY - 1.05, text: MAP_BANDS[bi].label });
-    bandY = by1 + 3.4; // the gap between strata: room for the label beneath
+    if (canon) {
+      // A fixed sheet gets a fixed label: the server hands back where each
+      // stratum hangs, measured against the whole band. Centring on what YOU
+      // know would slide the label the same way the rooms used to slide.
+      var ba = null;
+      for (var bk = 0; bk < (f.bands || []).length; bk++) if (f.bands[bk].band === MAP_BANDS[bi].band) ba = f.bands[bk];
+      labels.push({ x: (ba ? ba.x : bx0 - 0.35), y: (ba ? ba.y : bandY - 1.05), text: MAP_BANDS[bi].label });
+    } else {
+      var shiftX = -Math.round((bx0 + bx1) / 2);
+      for (var bs = 0; bs < bandIds.length; bs++) placed[bandIds[bs]].x += shiftX;
+      labels.push({ x: bx0 + shiftX - 0.35, y: bandY - 1.05, text: MAP_BANDS[bi].label });
+      bandY = by1 + 3.4; // the gap between strata: room for the label beneath
+    }
   }
   var anchor = (f.here && placed[f.here]) ? f.here : (order.length ? order[0] : null);
   var edges = [], stubs = [], seen = {};

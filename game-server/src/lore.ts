@@ -158,16 +158,20 @@ function crudeHand(rowId: string): number {
 //
 // Computed once per world and cached: the map is static, and this is a few
 // hundred cheap steps.
-export function worldGrid(z: ZoneDO): Map<string, { x: number; y: number }> {
+export interface WorldGrid {
+  at: Map<string, { x: number; y: number }>;      // absolute, band offset already baked in
+  bands: { band: number; x: number; y: number }[]; // where each stratum's label hangs, fixed forever
+}
+
+export function worldGrid(z: ZoneDO): WorldGrid {
   if (z.mapGrid) return z.mapGrid;
   const world = z.world!;
-  const grid = new Map<string, { x: number; y: number }>();
+  const at = new Map<string, { x: number; y: number }>();
+  const bands: { band: number; x: number; y: number }[] = [];
   const DELTA: Record<string, [number, number]> = {
     north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0], up: [-1, -1], down: [1, 1],
   };
   const bandOf = (id: string) => MAP_BAND_OF[mapRegionOf(z, id)] ?? 1;
-  // Every room, grouped by stratum. Strata never share a plane — a stair is
-  // carried by the tile's up/down badge, not by a line — so each lays out alone.
   const byBand = new Map<number, string[]>();
   for (const id of world.rooms.keys()) {
     const b = bandOf(id);
@@ -175,31 +179,28 @@ export function worldGrid(z: ZoneDO): Map<string, { x: number; y: number }> {
     list.push(id);
     byBand.set(b, list);
   }
-  for (const [band, rooms] of byBand) {
-    // Deterministic anchor so the grid never shifts between two players or two
-    // sessions: a gate if the band has one, else the first room by id.
+  // Strata stack in order, each below the last, with a fixed gap for its label.
+  let stackY = 0;
+  for (const band of [...byBand.keys()].sort((a, b) => a - b)) {
+    const rooms = byBand.get(band)!;
+    const local = new Map<string, { x: number; y: number }>();
     const sorted = [...rooms].sort();
     const anchor = sorted.find((r) => world.entryRooms.has(r)) ?? sorted[0];
     const occupied = new Set<string>();
     const claim = (id: string, x: number, y: number) => {
-      if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); grid.set(id, { x, y }); return; }
-      // Cycles make a flat grid impossible to satisfy exactly; nudge to the
-      // nearest free cell, same as the client always did locally.
+      if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); local.set(id, { x, y }); return; }
       for (let ring = 1; ring <= 60; ring++) {
         for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
           if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
           if (!occupied.has(`${x + dx},${y + dy}`)) {
             occupied.add(`${x + dx},${y + dy}`);
-            grid.set(id, { x: x + dx, y: y + dy });
+            local.set(id, { x: x + dx, y: y + dy });
             return;
           }
         }
       }
-      grid.set(id, { x, y });
+      local.set(id, { x, y });
     };
-    // Breadth-first from the anchor, then from any room the walk never reached
-    // (a band can be genuinely severed — the far side of the wood is only
-    // reachable by climbing out of the sunken wood, which is a cross-band step).
     const queue: string[] = [];
     const seed = (id: string, x: number, y: number) => { claim(id, x, y); queue.push(id); };
     seed(anchor, 0, 0);
@@ -207,21 +208,31 @@ export function worldGrid(z: ZoneDO): Map<string, { x: number; y: number }> {
     for (const id of sorted) {
       while (queue.length) {
         const cur = queue.shift()!;
-        const at = grid.get(cur)!;
+        const p = local.get(cur)!;
         for (const e of world.exits.get(cur) ?? []) {
-          if (grid.has(e.to_room) || bandOf(e.to_room) !== band) continue;
+          if (local.has(e.to_room) || bandOf(e.to_room) !== band) continue;
           const d = DELTA[e.dir];
           if (!d) continue;
-          seed(e.to_room, at.x + d[0], at.y + d[1]);
+          seed(e.to_room, p.x + d[0], p.y + d[1]);
         }
       }
-      // Whatever is left starts a fresh island, set well clear of the last one
-      // so two severed halves never overlap into nonsense.
-      if (!grid.has(id)) { stranded++; seed(id, stranded * 40, 0); }
+      if (!local.has(id)) { stranded++; seed(id, stranded * 40, 0); }
     }
+    // Bake the stratum's offset in, measured against THE WHOLE BAND — never
+    // against the rooms one player happens to know. That is the difference
+    // between a fixed sheet and a sheet that slides under you.
+    let minX = Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of local.values()) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    for (const [id, p] of local) at.set(id, { x: p.x - minX, y: p.y - minY + stackY });
+    bands.push({ band, x: -0.35, y: stackY - 1.05 });
+    stackY += (maxY - minY) + 3.4;
   }
-  z.mapGrid = grid;
-  return grid;
+  z.mapGrid = { at, bands };
+  return z.mapGrid;
 }
 
 // Display grouping only — the sim's regionOf (chest tiers etc.) still reads
@@ -320,7 +331,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     // A TRUE map carries its canonical position (worldGrid) so islands sit where
     // they really are; a CRUDE map deliberately does not — it is a shattered
     // pack of lies and the client's own packing is the right look for it.
-    const at = detailed ? worldGrid(z).get(id) : undefined;
+    const at = detailed ? worldGrid(z).at.get(id) : undefined;
     (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({
       id, name: room.name, exits, here: id === session.roomId,
       gate: world.entryRooms.has(id) ? 1 : 0,
@@ -334,6 +345,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       // A true map is knowledge you keep: its rooms light gold on the HUD. A
       // crude one reveals nothing it can be trusted on.
       reveal: detailed ? [...shown].map((id) => world.rooms.get(id)!.name) : [],
+      bands: worldGrid(z).bands,
       regions: Object.values(regions).filter((r) => r.rooms.length),
     }));
   } catch {}

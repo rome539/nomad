@@ -216,7 +216,7 @@ export class ZoneDO implements DurableObject {
   // The canonical map grid, laid out once from the whole world graph so two
   // disconnected islands on somebody's chart still sit where they really are
   // relative to each other (lore.worldGrid). Static world, so never invalidated.
-  public mapGrid: Map<string, { x: number; y: number }> | null = null;
+  public mapGrid: import("./lore").WorldGrid | null = null;
 
   // THE DISTANCE CACHE (2026-08-01). This used to precompute ALL-PAIRS shortest
   // paths at init — a BFS from every room, every distance kept forever. At 110

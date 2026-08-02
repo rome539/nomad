@@ -305,6 +305,42 @@ export function cmdBuy(z: ZoneDO, session: Session, arg: string): void {
 // keeper's judgement lives here; returns the line to show, however the offer
 // arrived (typed or modal). He TAKES gate-sealed goods — and cracks the seal
 // without ceremony when the trade closes (the mint is voided, honestly).
+// HOW MANY GO ACROSS THE COUNTER IN ONE GESTURE (rome, 2026-08-02: "offer rat
+// tails should offer up 10 at a time (to equal 1) if you have at least 10").
+//
+// Anything worth less than a whole unit of tender is handed over in a FISTFUL,
+// not one at a time. A rat tail is 0.1, so ten of them are 1 — and paying for a
+// 6-barter knife a tail at a time is sixty commands, which is not a trade, it is
+// data entry. Derived from the price rather than listed, so the rule holds for
+// whatever cheap thing gets written next; the rat tail is the only sub-unit good
+// in the game today.
+export function bundleSize(t: { barter?: number } | undefined): number {
+  const b = t?.barter ?? 0;
+  if (b <= 0 || b >= 1) return 1;
+  return Math.max(1, Math.round(1 / b));
+}
+
+// Lay a fistful on the counter. Stops early the moment the counter goes square —
+// you never overpay because your hand was full — and reports once, with the
+// running tally from the last one across, rather than ten near-identical lines.
+export async function offerFistful(
+  z: ZoneDO, session: Session, picks: CarriedItem[], from: "" | "lockbox" | "vault",
+): Promise<string> {
+  const world = z.world!;
+  const t = world.itemTemplates.get(picks[0].itemId);
+  const want = Math.min(bundleSize(t), picks.length);
+  let line = "";
+  let laid = 0;
+  for (let i = 0; i < want; i++) {
+    if (i > 0 && !session.buying) break; // the trade closed on the last one
+    line = await offerCore(z, session, picks[i], from);
+    laid++;
+    if (line.startsWith("The keeper waves") || line.startsWith("You'd have to")) break; // refused; don't shovel
+  }
+  if (laid <= 1) return line;
+  return `You count out ${laid} onto the counter, a fistful of ${t?.name ?? "them"}. ${line}`;
+}
+
 export async function offerCore(z: ZoneDO, session: Session, carried: CarriedItem, from: string): Promise<string> {
   const world = z.world!;
   const trade = session.buying!;
@@ -464,6 +500,7 @@ export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promis
     ["vault", await loadContainer(z.env.DB, session.pubkey, "vault")],
   ];
   let carried: CarriedItem | null = null;
+  let batch: CarriedItem[] = [];
   let from: "" | "lockbox" | "vault" = "";
   let seenNamed = false;
   for (const [key, pool] of pools) {
@@ -479,7 +516,9 @@ export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promis
       // than bouncing off the equipped guard in offerCore.
       const loose = free.filter((c) => !c.equipped);
       const pick = loose.length ? loose : free;
-      carried = pick.find((c) => c.serial === null) ?? pick[0];
+      // Unsealed first, then the rest — so a fistful cracks no seal it needn't.
+      batch = [...pick.filter((c) => c.serial === null), ...pick.filter((c) => c.serial !== null)];
+      carried = batch[0];
       from = key;
       break;
     }
@@ -487,7 +526,7 @@ export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promis
   if (!carried) {
     return z.send(session, seenNamed ? "That's already on the counter." : "You carry nothing like that.");
   }
-  z.send(session, await offerCore(z, session, carried, from));
+  z.send(session, await offerFistful(z, session, batch, from));
   z.sendCtx(session);
 }
 
@@ -534,8 +573,10 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
       // Same preference as the typed path: the spare before the worn one.
       const looseC = candidates.filter((c) => !c.equipped);
       const pickC = looseC.length ? looseC : candidates;
-      const carried = pickC.find((c) => c.serial === null) ?? pickC[0];
-      note = carried ? await offerCore(z, session, carried, src) : "You've nothing more like that to offer.";
+      // Same fistful law as the typed path — the button should not need ten
+      // clicks to spend a pocket of rat tails.
+      const ordered = [...pickC.filter((c) => c.serial === null), ...pickC.filter((c) => c.serial !== null)];
+      note = ordered.length ? await offerFistful(z, session, ordered, src) : "You've nothing more like that to offer.";
     }
   } else if (action === "unbuy") {
     // Take one thing back off the cart (by its position). If that empties the
@@ -1645,7 +1686,7 @@ export function wallStudy(z: ZoneDO, session: Session): void {
     // The wall chart is the WORST case for island-packing — the shallow ring
     // around eight gates in three bands is eight neighbourhoods that never
     // touch — so it wants the canonical grid most of all.
-    const at = worldGrid(z).get(id);
+    const at = worldGrid(z).at.get(id);
     (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({
       id, name: room.name, exits, here: id === session.roomId,
       gate: world.entryRooms.has(id) ? 1 : 0, // a door draws as a door on the wall too
@@ -1658,6 +1699,7 @@ export function wallStudy(z: ZoneDO, session: Session): void {
       v: 0, t: "map", detailed: 1, wall: 1, here: session.roomId,
       // Studied is kept: the marks light gold on your HUD, same law as a true map.
       reveal: marked.map((id) => world.rooms.get(id)!.name),
+      bands: worldGrid(z).bands,
       regions: Object.values(regions).filter((r) => r.rooms.length),
     }));
   } catch {}
