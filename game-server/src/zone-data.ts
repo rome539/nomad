@@ -1018,7 +1018,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["grave-hyena", new Set(["rat", "fleet-rat"])],                              // hyenas eat rats
   ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
   ["grey-wolf", new Set(["roe-deer", "white-roe"])],                          // the wood's own food web: wolves run deer, and you can walk into the middle of it
-  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar"])],             // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 48hp/4-7
+  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar"])],             // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148)
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
   ["lead-dog", new Set(["masterless-dog"])],                                  // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and the only food web the road has
   // The pale hunters are the DEEP's rat-catchers: hungry, they leave their lurk
@@ -1041,9 +1041,11 @@ export const PREYS_ON = new Map<string, Set<string>>([
 // runs with the pack and the pack is used to it. Two greys and a dire cousin is
 // a pack of three.
 //
-// The escalation is honest against the statlines:
-//   2 wolves  = 68hp, 6-12   vs the wild boar  48hp, 4-7,  armor 1
-//   3 wolves  = 102hp, 9-18  vs the old boar   70hp, 6-10, armor 2
+// The escalation is honest against the statlines (migs 147-148 retuned both
+// sides; the law holds, and the margins actually got CLEANER — a lone wolf is
+// now well under a boar, so needing the pack is arithmetic, not a ruling):
+//   2 wolves  = 52hp, 4-10   vs the wild boar  34hp, 3-6,  no armor
+//   3 wolves  = 78hp, 6-15   vs the old boar   70hp, 5-8,  armor 2
 // and the dire wolf needs one fewer, because it is worth about two of them.
 //
 // It reads both ways at once, which is the point: alone, a wolf is on the old

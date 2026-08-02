@@ -1,0 +1,54 @@
+-- THE WOOD LETS YOU IN (rome, 2026-08-02: "any new player is going to get
+-- destroyed in the forest", then "of course we can balance the mobs").
+--
+-- He is right and I was wrong to say otherwise. The wood does not need new
+-- creatures in it. It needs its COMMON tier tuned to the player who actually
+-- walks through a wood gate, and the lever I had been ignoring is ARMOUR.
+--
+-- =========================================================================
+-- WHY ARMOUR IS THE WHOLE PROBLEM.
+--
+-- A fresh key is 40 max HP (64 of the players on prod are sitting at 40; only
+-- the grown ones are at 60). Bare-handed damage is PLAYER_DMG_MIN..MAX = 2-5,
+-- average 3.5. Mitigation is FLAT SUBTRACTION with a floor of 1:
+--
+--     dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - armorIgnore(weapon)))
+--
+-- So one point of armour takes ~30% off a fresh player's swing and two points
+-- takes ~55%. Against the root-thing at armour 2, a 2-5 swing lands for 1-3 —
+-- thirty-nine rounds to chew through 58 HP while it needs seven to finish you.
+-- That is not a hard fight, it is arithmetic that says no.
+--
+-- The fortress is enterable because it has a rung where the arithmetic says yes:
+-- a cutpurse is 14 HP, no armour, and hits for 1-2. You kill it in four rounds
+-- and it needs twenty-seven to kill you. Nothing in 170 wood rooms said yes.
+--
+-- =========================================================================
+-- WHAT THIS DOES. Every common wood mob is retuned so a fresh player can WIN the
+-- fight — not walk it. The numbers below are rounds-to-kill at 40 HP, bare
+-- hands, no armour, which is the worst case anyone actually starts in.
+--
+--   grey wolf   34hp 3-6 arm0  ->  26hp 2-5 arm0    you: 8   it: 14
+--   wild boar   42hp 4-7 arm1  ->  34hp 3-6 arm0    you: 10  it: 9
+--   root-thing  58hp 4-7 arm2  ->  44hp 4-6 arm1    you: 18  it: 8
+--   mire-walker 46hp 4-7 arm1  ->  38hp 3-6 arm1    you: 15  it: 11
+--
+-- THE WOLF IS IN THIS FILE, and it was not in 146. rome kept the wolves out of
+-- the thinning and the nerf, and that still holds — the count is untouched, all
+-- sixteen greys, and the dire cousin is not in this file at all. But the plain
+-- grey wolf is the SOFTEST hostile the wood has, so it is the rung, and a rung
+-- you lose to is not a rung. It comes down and the pack does the work instead:
+-- one wolf is now a fight you win at half health, and three is still three.
+--
+-- THE ROOT-THING STAYS THE WALL. Eighteen rounds against its eight is a fight a
+-- fresh player should lose and a geared one should take. It keeps a point of
+-- armour precisely so a weapon still matters against it. What it stops being is
+-- unwinnable-by-arithmetic.
+--
+-- THE CHARCOAL BURNER IS UNTOUCHED (rome's call, twice).
+-- THE DIRE WOLF IS UNTOUCHED. THE BOSSES ARE UNTOUCHED (see mig 147).
+
+UPDATE mob_templates SET max_hp = 26, dmg_min = 2, dmg_max = 5, armor = 0 WHERE id = 'grey-wolf';
+UPDATE mob_templates SET max_hp = 34, dmg_min = 3, dmg_max = 6, armor = 0 WHERE id = 'wild-boar';
+UPDATE mob_templates SET max_hp = 44, dmg_min = 4, dmg_max = 6, armor = 1 WHERE id = 'root-thing';
+UPDATE mob_templates SET max_hp = 38, dmg_min = 3, dmg_max = 6, armor = 1 WHERE id = 'the-mire-walker';
