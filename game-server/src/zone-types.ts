@@ -187,6 +187,7 @@ export interface SimState {
   traces: Record<string, Trace[]>;
   rot: RotEntry[];
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once
+  seededDens?: string[]; // mob_spawn ids already populated once — so a migration's new dens fill on load instead of trickling in on the migration clock
   groundCond?: Record<string, number>; // "itemId@roomId" -> condition of gear on the floor, so wear survives drop/pickup
   groundTorch?: Record<string, number>; // roomId -> ms epoch a torch burning on the floor lasts until (a dropped/fallen flame lighting the room for all in it)
   groundLore?: Record<string, string>; // "itemId@roomId" -> lore_id of engraved gear on the floor, so the mark survives too (077)
@@ -194,6 +195,7 @@ export interface SimState {
   groundHeart?: Record<string, number>; // "itemId@roomId" -> a dropped heart's acquired_at, so the floor can't wash its rot off
   inGatehouse?: string[]; // pubkeys standing INSIDE — a dropped socket must not throw you out the door
   wallMarks?: string[]; // roomIds carved onto the gatehouse wall chart — the players' own map of the shallow ring
+  stoneNames?: Record<string, { name: string; at: number }[]>; // milestone roomId -> the register cut into it, oldest first (the road's record of who walked it)
   cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills
   cacheRoom?: Record<string, string>; // cacheId -> its CURRENT room (roaming chests relocate on refill; unset = place on first access)
   nextSurfaceAt?: number; // ms epoch the deep next surfaces a dweller (corpse-key minting; only while the deep door is sealed)

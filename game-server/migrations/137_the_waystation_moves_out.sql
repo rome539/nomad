@@ -1,0 +1,40 @@
+-- THE WAYSTATION MOVES OUT (rome, 2026-08-02) — a fortress gate steps onto the
+-- road.
+--
+-- rome: "you can just move one of those 4 fortress gates just right outside of
+-- the fortress on the road." He is right and I had missed it because I was
+-- measuring each band against itself. The fortress cannot spread four gates
+-- past minimum-separation 4 — it is only 18 steps across — but that ceiling is
+-- an artefact of treating the fortress as the whole world. It isn't any more.
+-- The road is attached to it. Gates should be spread across the WORLD.
+--
+-- Moving one gate out onto the road lifts the near world's minimum separation
+-- from 4 to 5 and drops the average walk from 5.7 to 5.6, without removing a
+-- gate from anyone.
+--
+-- WHICH ONE: the Waystation. It was always the road-facing gate of the four,
+-- and it is half of the tightest pair (4 steps from the Weeper's Arch). Its
+-- FUNCTION moves; the room stays exactly where it is and keeps hatching
+-- wanderers (is_spawn survives — that is the whole point of the split).
+--
+-- WHERE IT GOES: the First Milestone, four rooms out. Measured against every
+-- other road room that is a built thing (a gate needs a door and a keeper, not
+-- a hedge), it ties for the best separation available and is the closest such
+-- room to the fortress — which is what rome asked for. The far option (the Old
+-- Boundary) scores the same separation and a slightly better average, but it is
+-- half the road away and that is not "just outside".
+--
+--   the-first-milestone   minSep 5  avg 5.6   <- chosen, 4 rooms out
+--   the-old-boundary      minSep 5  avg 5.3      half the road out
+--   the-wayside-shelter   minSep 4  avg 5.7
+--   the-crooked-gibbet    minSep 4  avg 5.6
+--   the-dry-well          minSep 2  avg 5.7
+--
+-- And the fiction was already sitting there: the First Milestone is where the
+-- road's travellers ALREADY stop, and where they cut their names into the lee
+-- of the stone (mig 135's register). Somebody setting up a hatch where people
+-- already halt is exactly what a waystation is. The register and the bank end
+-- up in the same room, which is what that word means.
+
+UPDATE rooms SET is_entry = 0 WHERE id = 'the-old-road';
+UPDATE rooms SET is_entry = 1 WHERE id = 'the-first-milestone';

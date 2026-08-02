@@ -61,6 +61,345 @@ and the population layer that only real players can fill.*
 - **Stance in the status bar** — RULED NO (rome, 2026-07-17): the bar stays as
   it is; stance lives in the doll and the typed reads. Closed; don't re-propose.
 
+## THE WORLD GROWS OUTWARD — the surface expansion *(rome, 2026-08-01; THE ACTIVE ARC)*
+
+The world stops being a fortress and becomes a country. ~966 new rooms hung off
+the existing grounds, taking the world from 110 to **~1,076 rooms and ~702
+mobs** — a tenfold world. Hand-authored, not generated (rome ruled procedural
+out: the rooms read well *because* they're written). Baseline tagged
+`world-v1-110` before the first new room, so "the original world" stays a
+findable point.
+
+**Where it attaches.** The surface was the thinnest part of the world (20 of 110
+rooms; the deep alone is 43) and the part every player meets first. It also had
+open edges everywhere — the Waystation and the Mass-Grave are dead ends, and the
+Black Fen, Drowned Orchard, Sally Ditch and Hanging Hill all have unclaimed
+compass points.
+
+```
+   THE WOOD (maze)          THE FORTRESS         THE ROAD EAST
+   ───────────────          ────────────         ─────────────
+   west/south, off the      the 110 rooms        Waystation ► THE CROSSING
+   orchard + black fen      you already have       ► foothills ► slopes
+        │                                          ► ridge ► THE SUMMIT ◄ dragon
+    ★ THE DENS
+   (clearings at the
+    wood's near edge)
+```
+
+| region | rooms | mobs | density | shape |
+|---|---|---|---|---|
+| West Road | 30 | 7 | 0.16 | paving → ruts → track → a gap in the trees |
+| The Wood | 280 | ~195 | 0.70 | one canopy, few landmarks, genuinely losable |
+| The Dens | 60 | ~3 | 0.05 | clearings and holdings; near-empty by design |
+| East Road | 45 | 10 | 0.16 | rises for a dozen rooms before the climb |
+| The Crossing | 170 | ~100 | 0.59 | the great water; gates the mountain by being a place, not a lock |
+| The Mountain | 380 | ~300 | 0.80 avg | five tiers; density CLIMBS with altitude (0.4 foothills → 1.2 ridge) |
+| The Summit | 1 | dragon | — | |
+| **new** | **966** | **~615** | | |
+| **world** | **1,076** | **~702** | | |
+
+**Rulings from the design pass (2026-08-01):**
+
+- **New REGIONS, not new zone-DOs.** `regionOf` gains values; `ZONES` stays
+  `["door"]`. This is not just less engineering — it's the difference between
+  paying nothing and paying money (see the DO-duration measurement below).
+- **Roads get PATROLLERS, not residents.** That's what makes a road a road: you
+  meet something *going somewhere*, not something that lives there. Pure data —
+  `PATROLS` already does this (`warden-surface` walks the grounds). Roads also
+  make natural `MOUTHS`, so migrants come up the road and you pass them.
+- **The dragon is an ANIMAL, not a wyrm.** NOMAD's register is dead
+  institutions and things that used to be people — a hoard-sitting fantasy
+  dragon would be the first borrowed thing in this world. An enormous old
+  cold-blooded thing that has held the top of a mountain a very long time and
+  needs no reason. Same fight, same fear, different words.
+- **Altitude IS the difficulty curve.** The mountain's mob density rises with
+  height, so the high ridge is worse than the deep, and you can see how far up
+  you are.
+- **A den is a HOLDING WITH BUNKS, not a room with an owner.** One-room-one-nomad
+  caps housing at 60 forever and locks out the 61st permanently. A claim gives
+  you the room; the room has capacity; the holder decides who else gets a key.
+  60 doors × ~6 bunks ≈ **360 nomads housed**, while dens stay scarce as
+  *property* — which is what keeps rome's own guardrail intact ("does having a
+  den make leaving it feel MORE dangerous"). It also makes nomads depend on each
+  other: you're not looking for an empty room, you're looking for someone who'll
+  take you in.
+- **The Crossing gates the mountain.** rome asked whether the climb should be
+  sealed like the deep. A crossing is the better gate — a place, not a lock. It
+  also brings the water machinery (fishing, drowning, the tide, drowners) to the
+  surface, where none of it currently runs.
+- **Build the den GROUND now, the den SYSTEM later.** 60 rooms that are
+  obviously meant for something, with nothing to claim yet, until the space has
+  been walked.
+- **SPLIT "is a gate" FROM "is a spawn"** *(rome, 2026-08-01)*. `is_entry` means
+  both today, which forces two unrelated decisions to share one flag. At scale
+  that breaks: the fortress holds 4 gates in 110 rooms (one per 27) while the new
+  world would hold ~3 in 966 (one per 322), so **57% of all deaths would return
+  you to the fortress** — including dying at the summit — while 90% of the world
+  shared the rest. Add a second column. Gates go where the fiction wants a door;
+  spawn points go where the map needs balance; they are not the same places.
+- **Respawn stays RANDOM across spawn points** (rome ruled, same day — nearest-gate
+  was proposed and rejected). You don't choose where you wash up, and nobody camps
+  one gate. With spawn points spread across the world this makes death genuinely
+  displacing, which is the intent.
+- **NO progression flags on gates.** A "gate you unlock by reaching it" was
+  proposed and killed: it's a checkpoint system, and per standing law every
+  system here must be simulation-native — real state that changed because
+  something real happened, never a meter that fills. A gate is a door that's
+  there. What keeps the far country out of reach early is that you cannot
+  survive the walk, not a flag on your character.
+- **ROAMING DENS on the road** *(rome, 2026-08-02: "do they have dens? i think
+  we should have it as rng where they spawn on a road")*. Every creature in the
+  game has a HOME — the den it was seeded at, the ground it keeps to. Right for
+  a dungeon, wrong for a road: the road's own ruling was PATROLLERS NOT
+  RESIDENTS, and a dog that reliably re-appears at the mustering yard is a
+  resident with extra steps. Three trips taught you the whole roster's
+  addresses. `ROAMING_DENS` (masterless-dog, footpad — NOT the carrier, who
+  patrols) now re-roll their den across every room of their band on each
+  arrival AND at first placement, gates and hideaways excluded. Went from 3
+  fixed rooms per template to any of 28. Territory is unchanged once placed:
+  they keep to the ground around wherever they woke. **You never learn where the
+  footpads are; you learn that the road has footpads.** Candidate to extend to
+  the wood's deer and wolves — not done, rome named the road.
+- **Roads carry POINTS OF INTEREST** *(rome, 2026-08-01)* — roughly one every 8
+  rooms. Each rides a system that already exists, so they're content, not new
+  code: **milestones** you carve your name into (the `wallCarve`/`wallMarks`
+  precedent — the road keeps a record of who went up it and didn't come back),
+  **wayside shelters** (`is_safe` — a long road becomes "push on hurt or hole
+  up"), **wrecked carts** (`ground_spawns` + `caches`, loot with a story
+  attached), **wells and fords** (`WATER_ROOMS`/`FISHING_ROOMS` — puts the food
+  web on the road, since hyenas already path to water), and **gibbets and
+  roadside graves** (ambience + traces, the Hanging Hill's siblings). Model for
+  all of it is the Waystation, which was already a road POI before there were
+  roads.
+  *(Terminology note: "toll-house" is FLAVOUR PROSE in the Waystation's
+  description and nowhere else in the world or the code. The system is the
+  GATEHOUSE — the safe room behind a gate's door. Don't invent a parallel name.)*
+
+**Open calls (need rome before the wood is built):**
+1. ~~**Does the wood lie about direction?**~~ **RULED: THE HYBRID** *(rome,
+   2026-08-01)* — an honest outer band, a lying core. Pure-honest is solvable
+   once and permanently (someone posts a route and the maze is a corridor);
+   pure-lying makes the dens hostile to reach and stepping off the road feel
+   unfair rather than dangerous. Slab 1 built (mig 130): a 5×3 honest lattice
+   west of the Gap in the Trees, a threshold column that is the last honest
+   ground, and a 6-room lying core. **THE CORE'S DESIGN LAW:** every core room
+   carries all four compass exits, and none of them pairs with its opposite. A
+   room merely *missing* an east exit would answer "there is no way east from
+   here", which announces the trick — the lie has to be that east works
+   perfectly and puts you somewhere else. Two rooms spill you back onto the
+   honest band (the Turned Ground east, the Heart of It south) at places you
+   did not go in by: **you always get out; you never get out where you
+   expect.** Verified by script, not by eye — no exit retraces, no core room is
+   a trap, the band is symmetric everywhere outside the threshold.
+   **SLAB 2 (mig 131): 32 more rooms — 59 of ~280.** The honest lattice went
+   from 3 rows to 5 (northern and southern rows, six pockets: a spring head, a
+   hunter's stand, a lime kiln, a deer fence, fox earths, a burnt stand), plus
+   two more thresholds and TWO more lying cores. **The core pattern is now
+   formalised as a RING WITH FIXED OFFSETS** — 8 rooms, `north:+1 east:+3
+   south:+5 west:+7` around the ring — which makes the no-retrace law
+   arithmetic instead of eyeballed (a→a+1 by north, and that room's south goes
+   to a+6, never back). Two exits per core are swapped for spills onto the band
+   far from the threshold you entered by. Future slabs: reuse the ring, write
+   new prose, done.
+   **SLAB 3 (mig 132): 56 more rooms — 115 of ~280.** Two more honest rows (the
+   wood is 7 deep now), eight pockets, two thresholds, three more lying cores —
+   this time rings of TWELVE (`d_n+d_s = 6`, `d_e+d_w = 10`, neither ≡ 0 mod 12,
+   so the law still holds). **NEW STRUCTURE: THE SUNKEN WOOD.** A core that sits
+   BELOW the others, reached only by `down` exits added to four rooms scattered
+   through three older cores — the ground gives way where you did not choose it
+   to — and left by two `up` exits onto honest ground. Being lost now has a
+   second stage: lost, and then lower. 4 ways down, 2 ways back up.
+   **SLAB 4 (mig 133): 55 rooms — THE MAZE IS CLOSED AT 170.** rome cut the
+   target from 280 to 170 (2026-08-02): losability comes from the lying cores,
+   not room count, and the extra 110 would have been more honest band.
+   Final shape: **82 lying rooms, 88 honest.** This slab added **THE FAR SIDE** —
+   31 honest rooms you CANNOT REACH BY WALKING WEST. Its only entrances are
+   five `up` climbs out of the sunken wood and out of Core G below it, so you
+   reach the far side by going UNDER the maze: you get there by being lost, not
+   by deciding to. You can always leave (two rooms lie eastward into cores,
+   cores spill onto the band) but you cannot walk back to it deliberately.
+   Out there: **the holding** — a ruined moated house, nine rooms, the only
+   built thing in the whole wood, and the reason the far side exists. Plus
+   CORE G (a second sunken layer, below the sunken wood, leaving only by
+   climbing onto the far side) and CORE H (dry scrub, hung off the far side's
+   west edge). Verified: every lying room has all four compass points, no
+   accidental lies in the honest half, and from all 170 rooms you can still get
+   out of the wood entirely.
+   **THE WOOD IS PEOPLED (mig 134, 2026-08-02): 115 bodies, 8 templates, 4 new
+   items.** The roster's law is **DEPTH — how lost you are.** The fortress
+   arranges danger by tier, the road by distance, the mountain will by altitude;
+   the wood by how far past knowing-the-way you have gone. Measured against the
+   built world: honest band 0.68 density / avg level 2.0 / avg 28 hp → lying
+   cores 0.72 / 3.9 / 45 → sunken 0.75 / 4.0 / 70 → the holding, one keeper,
+   level 6, 130 hp. 73 of the 170 rooms hold nothing: the wood has to breathe.
+   Placement is a deterministic even spread per band (no RNG — the same world
+   always places them the same way, and a re-run never quietly reshuffles).
+   Roster: roe-deer (RUNNERS+VERMIN, the wood's food), wild-boar (AGGRESSIVE —
+   it holds its rooting ground), grey-wolf (SCAVENGERS+STARVE_HUNTERS, PREYS_ON
+   roe-deer, so the wood has its own food web you can walk into the middle of),
+   **the-follower** (a LURKER — not in the room until it drops on you, which is
+   the only honest way to write a thing you never catch sight of; it lives in
+   the lying cores, so it finds you exactly when you have stopped knowing the
+   way), the charcoal burner, root-things, the mire-walker, and the keeper of
+   the holding.
+   **THE WOODWARD — the maze's boss (mig 135, rome 2026-08-02: "we need a boss,
+   a minotaur or equivalent").** NOT a minotaur: same objection as the dragon —
+   a bull-headed man out of Greek myth would be the first borrowed thing in this
+   world. The woodward was a real office. He kept the wood, walked its bounds,
+   took the tools off anyone cutting without right, and answered to a lord dead
+   for centuries. He is still doing the job. **What makes him the maze's boss is
+   that he WALKS it** — a closed six-room circuit of the centre core (`PATROLS`),
+   the one core you cannot navigate. He walks it correctly, forever. You are lost
+   in his rounds. 145 hp / 7-11 through armor 3 / bleed + stun — the hardest
+   thing on the surface, above the keeper of the holding and below the king. The
+   real danger is WHERE the fight is: you cannot break off in a straight line
+   because there are no straight lines in there. Drops the woodward's axe (9 dmg,
+   sweep 2, 18 barter) and a bounds tally.
+   **ENGINE CHANGE THIS NEEDED: a boss with a route walks it.** Bosses stand
+   where they live (the king in his hoard, the hound on its threshold) because a
+   wandering boss drifts off the thing it guards — every wander caller gated on
+   `!tmpl.is_boss`. Now `(!tmpl.is_boss || PATROLS[tmpl.id])`: a boss's route IS
+   where it lives. No existing boss has a route, so nothing else changes.
+   **TWO BUGS FOUND BY WALKING IT, both fixed:**
+   1. **NO MOUTHS OUTSIDE THE FORTRESS.** A migrant surfaces at the mouth
+      *nearest its den* and walks in — and every mouth was in the old world, so
+      every wolf, boar and root-thing would have been born in the fortress
+      grounds and marched 40–90 rooms to get home. The wood would sit silent for
+      hours while the grounds filled with things that don't live there. Added 13
+      mouths across road, band, cores, sunken layers and far side — each one
+      somewhere a thing could come out of unseen (burrows, brakes, a quarry, an
+      earth-fall), never open ground.
+   2. **`listen` answered "stone, and a far-off drip" in a wood.** The dungeon's
+      silence was answering for the whole world. Now region-aware.
+   *Note for whoever checks this next:* a core ring DOES contain returns via
+   different directions (east then south can loop you back). That is fine and
+   invisible — the invariant that matters is that REVERSING a step never
+   retraces. A checker keyed on "any return at all" reports 17 false positives.
+2. **Six bunks per den** — confirm or change.
+3. **How many spawn points, and where** — once the gate/spawn split exists, this
+   is a placement decision, not a density accident.
+
+**Engineering: DONE.**
+- **The room ceiling is lifted** (`85ee069`). The all-pairs distance table was
+  O(N²) — measured 60.8 MB and a 319 ms cold start at ~1,110 rooms, against a
+  128 MB Durable Object budget. It would have failed *gradually, mid-build*,
+  with nothing in the game looking wrong. Now lazy + LRU, with the hottest query
+  (territory checks) moved to bounded walks: **2.2 MB, 0 ms, and room count no
+  longer costs memory.** Verified against all 12,100 room pairs, zero mismatches.
+
+**Engineering: STILL NEEDED.**
+- **The authoring pipeline** *(next, and it gates everything)*. 966 rooms is
+  ~180,000 characters of prose; nobody hand-writes that many INSERTs without a
+  silent orphan room. Plain text in (`## id | Name`, prose, `> dir target`),
+  validated migration out: every exit resolves, every exit has a return path
+  unless marked one-way, no duplicate ids, no room unreachable from a gate, no
+  missing description.
+- ~~**Region plumbing.**~~ **BUILT 2026-08-01 (mig 126, uncommitted).** A room
+  now carries its own `region` instead of having one derived from a hardcoded
+  id-set: `REGIONS` in `world.ts` is the list (`gate`/`deep`/`upper` plus
+  `road`/`wood`/`mountain`), `regionOf` prefers the room's own and falls back to
+  the old derivation, so all 110 existing rooms are untouched. `AMBIENCE` went
+  `Partial` — a band with no pool yet is SILENT rather than borrowing the
+  dungeon's drips. `is_spawn` split off `is_entry`, backfilled so today's four
+  gates are today's four spawns; `randomGate()` now draws from spawns. The
+  pipeline takes `!region <name>` (file-level) and `!spawn`, refuses a region
+  name the engine doesn't know, and refuses a new room that declares none —
+  silence there would quietly mean "the dungeon's halls". Still needed per
+  region as it lands: an AMBIENCE pool, a map label in `lore.ts`, and its
+  entries in the chest-tier/weather/dark-room tables.
+- **Mob rosters** per region (stat-blocks are data; new *behaviors* are code —
+  abilities are hardcoded Sets).
+- **The dragon's mechanic** — breath, a room-wide sweep, an airborne phase.
+  Real code, not a migration.
+- **Per-region** mouths, water/forage rooms, chest tiers, names.
+
+**Build order:** ~~pipeline~~ → ~~region plumbing~~ → ~~west road~~ → wood → den
+ground → east road + crossing → mountain → dragon → den system.
+
+**THE WEST ROAD IS BUILT** *(2026-08-01, uncommitted: migs 127 + 128, source in
+`game-server/regions/west-road.rooms`)*. 30 rooms hung off the Drowned Orchard's
+west edge, ending at THE GAP IN THE TREES — the stub the wood attaches to (28
+steps from the main gate). Paving → frost-heave → weeds → earth → ruts → green
+tunnel: the surface underfoot tells you how far out you are. 25-room spine plus
+five off-spine pockets. POIs as ruled: two milestones, a wayside shelter
+(`is_safe`), a broken axle, a shallow ford (`WATER_ROOMS`), a gibbet and roadside
+graves. ONE gate — the Roadwarden's Post — deliberately **not** a spawn (open
+call 3 is still rome's).
+- **Roster (mig 128): 7 bodies, 3 templates.** The carrier (a courier still
+  walking a route for an institution that stopped existing — `PATROLS`, the
+  whole spine out and back, 48 legs, the longest route in the game), three
+  masterless dogs, three footpads (`THIEVES`). Difficulty rides DISTANCE the way
+  the mountain's will ride altitude: nothing at all on the paved end, both far
+  spawns past the Old Boundary.
+- **Two engine gaps this exposed and closed.** (1) `OUTDOOR_ROOMS` was a
+  hardcoded id-set of the fortress's 20 grounds — a road that never gets rained
+  on or dark isn't a road. Bands now declare themselves outdoors via
+  `OUTDOOR_REGIONS` and fold in at world load; it stays a Set of ids because one
+  caller iterates it. (2) A gate reads as region `gate` wherever it stands, so
+  the Roadwarden's Post would have drawn the fortress's ambience — *cold air
+  wells up out of the dark below*, at a house with nothing under it. It has its
+  own `ROOM_AMBIENCE` pool now, as do 12 other road rooms, plus 17 `DARK_TOUCH`
+  lines (moonless nights out there are total).
+- **THE MILESTONE REGISTER** *(rome approved 2026-08-01; code + no migration)*.
+  Two stones twelve rooms apart keep a PERMANENT list of names (`stoneNames`,
+  persisted in sim rows; cap 40, oldest weather off). Bare `carve` at a stone
+  cuts your own name — the same shape as bare `carve` inside the gatehouse —
+  and `read stone` lists them, marking anyone who also appears on the OTHER
+  stone. That comparison is the whole feature: the near stone is four rooms
+  out and anyone reaches it, the drowned stone is past the ford where the dogs
+  are, so a name on both is somebody who went on and a name on one is somebody
+  who turned back or didn't turn anything back. **Nothing tracks deaths — the
+  two lists ARE the record.** Distinct from its two neighbours on purpose: the
+  gatehouse wall records HALLS (shared map knowledge), `carve <words>` records
+  anything and weathers off in a day, a milestone records PEOPLE. Reading needs
+  light; carving is loud (`creatureNoise`) and takes a while, on an open road.
+- **THE CART'S LOAD** *(mig 129)*. A locked `caches` row, not `ground_spawns` —
+  a renewing floor pile would walk back the scarcity fix. In fiction the loose
+  cargo went within a week and what's left is the box strapped under the
+  boards, which is *why* the cart is still worth stopping at. Cargo not kit
+  (hardtack, scrap, dressings, iron stock, one pair of dead man's boots): the
+  road's payoff is supplies for going FURTHER; gear comes from the wood and the
+  mountain. One exception, `dry-cigarettes` at 0.06 — a merchant's cart is
+  exactly where they'd be, and it seeds the hard currency outside the deep
+  without a word of explanation. Six-hour refill; a rock opens it, which means
+  ringing iron in the open.
+
+**SCHEDULED: SPLIT `b:creatures` BY ZONE — do it when the mountain starts**
+*(rome, 2026-08-02: "keep this in mind for later")*. Not a bug and not urgent;
+a dated appointment. Measured 2026-08-02 with the road and maze built:
+
+```
+b:creatures   45,519 bytes   ← 211 creatures, 216 bytes each
+b:meta         8,808
+b:ground       2,455
+```
+
+`simstore.ts:389` warns at **64 KB**, which at 216 bytes/creature is **~303
+creatures**. Today: 211. The rest of the plan — dens (~3), east road (~10), the
+Crossing (~100), the mountain (~300) — lands near **625 creatures ≈ 135 KB**,
+well past it. The mountain ALONE roughly doubles the world's creature count,
+which is why the trigger is "when the mountain starts", not "when it's done".
+
+The escape is already designed and named in simstore's own header: one creature
+blob per zone/region instead of one for the world, so only the dirty region
+writes. Writes are already cheap (1–2 rows a flush — the whole point of the blob
+shape); this is about the single blob having stopped being the right shape, not
+about a hard wall. **Rooms are free; monsters are the load.**
+
+**Capacity, measured 2026-08-01 (Workers Paid, $5/mo):** none of this is close
+to a limit. DO memory ~5–15 MB of 128. D1 storage 1.03 MB → ~3 MB of 5 GB. D1
+rows read 0.3% → **1.5%** of the 25 B/month (reads are dominated by DO cold
+starts reloading the world, so they scale with world size — you'd need a world
+70× the target to see a bill). Requests 0.06%, CPU 0.04%. **DO duration is the
+one real ceiling and the calendar caps it:** 400,000 GB-s ÷ 0.125 GB = 889 hours
+of world-awake time, and a month has 720 — so a single zone running 24/7 all
+month lands at ~81% of the included allowance and still costs nothing. TWO
+always-on zone-DOs would be 162% and billable, which is the hard argument for
+regions over sharding. Tightest ratio on the board is the worker script: 1.81 MB
+of 10 MB gzipped. The world only ticks while a socket is connected
+(`ensureAlarm`), which is why an idle NOMAD bills zero.
+
 ## Next up (unblocked, pre-players)
 
 - **BUG: surveyor-map shows the `journal` chip — FIXED (pending ship), 2026-07-20.**

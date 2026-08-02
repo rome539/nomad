@@ -10,7 +10,18 @@ export interface Room {
   description: string;
   is_entry: number;
   is_safe: number; // a hideaway ("a crack in the wall") no creature will enter
+  region: string; // which band it belongs to ('' = derive it the old way, see regionOf)
+  is_spawn: number; // players wake here (a gate is a SERVICE; a spawn is a doorway — mig 126)
 }
+
+// The bands of the world. A room either declares its own (the `region` column,
+// mig 126) or leaves it blank and gets the old derivation — gate/deep/upper.
+// Adding one is this line plus, ideally, a pool in AMBIENCE and a label on the
+// map; a room whose region isn't listed here is treated as blank rather than
+// trusted, so a typo in a .rooms file can't quietly invent a band the rest of
+// the engine has never heard of.
+export type Region = "gate" | "deep" | "upper" | "road" | "wood" | "mountain";
+export const REGIONS = new Set<string>(["gate", "deep", "upper", "road", "wood", "mountain"]);
 
 export interface Exit {
   room_id: string;
@@ -145,7 +156,8 @@ export interface FenceStock {
 export interface World {
   zone: string;
   entryRoom: string; // canonical gate — the default when one must be named
-  entryRooms: Set<string>; // every gate: enter, extract, and bank at any of them
+  entryRooms: Set<string>; // every gate: extract and bank at any of them
+  spawnRooms: Set<string>; // where a fresh wanderer wakes, and where the dead wake again
   safeRooms: Set<string>; // hideaways no creature will follow you into
   rooms: Map<string, Room>;
   exits: Map<string, Exit[]>; // room_id -> exits
@@ -227,10 +239,23 @@ export async function loadWorld(db: D1Database, zone: string): Promise<World> {
   const gates = rooms.filter((r) => r.is_entry === 1);
   const entry = gates[0] ?? rooms[0];
 
+  // A DB from before mig 126 serves neither column. Normalize both so the
+  // engine can trust them: no region is the old derivation, no spawn flag means
+  // the gates spawn (which is what they did before the split existed). An
+  // unrecognized region name is treated as blank — see REGIONS.
+  for (const r of rooms) {
+    r.region = REGIONS.has(r.region) ? r.region : "";
+    r.is_spawn = r.is_spawn ?? 0;
+  }
+  const spawns = rooms.filter((r) => r.is_spawn === 1);
+
   return {
     zone,
     entryRoom: entry.id,
     entryRooms: new Set((gates.length ? gates : [entry]).map((r) => r.id)),
+    // No room claims a spawn (pre-126, or someone cleared every flag): fall
+    // back to the gates. There must ALWAYS be somewhere to wake.
+    spawnRooms: new Set((spawns.length ? spawns : (gates.length ? gates : [entry])).map((r) => r.id)),
     safeRooms: new Set(rooms.filter((r) => r.is_safe === 1).map((r) => r.id)),
     rooms: new Map(rooms.map((r) => [r.id, r])),
     exits,

@@ -28,6 +28,7 @@ import {
   DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, DETAILED_MAP,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
+  MILESTONES,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor } from "./gate";
 
@@ -384,6 +385,15 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   if (!blind && FISHING_ROOMS.has(session.roomId)
       && /^(the )?(water|pool|reflection|surface)$/i.test(arg.trim())) {
     return z.send(session, reflection());
+  }
+
+  // The road's register. Reading is a LOOK (read/x/examine all land here), so
+  // it needs no new verb — but it needs light: the dark-touch line already
+  // tells you your hand finds the scratches, and finding them is not reading
+  // them.
+  if (MILESTONES.has(session.roomId) && /^(the )?(stone|milestone|names|marks|register)$/i.test(arg.trim())) {
+    if (blind) return z.send(session, "Your fingers find the cut names, one crowded over another, and tell you nothing but that they are there. You need a light to read them.");
+    return lore.milestoneRead(z, session);
   }
 
   const spotted = blind ? null : z.findCreatureIn(session.roomId, arg);
@@ -1633,6 +1643,13 @@ function heardIn(z: ZoneDO, roomId: string): string {
   if (LIGHTS_ROOMS.has(roomId) && events.phaseOf(z, "lights") === "active") {
     return "careful footsteps, keeping to the water's edge";
   }
+  // An empty room still has to sound like WHERE IT IS. The drip is the
+  // dungeon's silence and it was answering for the whole world — including 170
+  // rooms of wood, where there is no stone to drip off (2026-08-02).
+  const region = z.regionOf(roomId);
+  if (region === "wood") return "nothing — leaves, and the wood working somewhere further off";
+  if (region === "road") return "nothing — wind, and a long way of open ground";
+  if (region === "mountain") return "nothing — wind off the rock, and the cold under it";
   return "nothing — stone, and a far-off drip";
 }
 
@@ -1746,6 +1763,11 @@ export function cmdWash(z: ZoneDO, session: Session): void {
 
 export function cmdCarve(z: ZoneDO, session: Session, arg: string): void {
   const words = arg.replace(/[\r\n\t]+/g, " ").replace(/"/g, "'").trim();
+  // Bare `carve` at a milestone cuts your NAME into the road's register — the
+  // same shape as bare `carve` inside the gatehouse setting down halls on the
+  // wall chart. `carve <words>` still works here and is still just graffiti
+  // that weathers off in a day; the stone's register is a different thing.
+  if (!words && MILESTONES.has(session.roomId)) { void lore.milestoneCarve(z, session); return; }
   if (!words) return z.send(session, "Carve what? (carve <words>)");
   if (words.length > CARVE_MAX_LEN) {
     return z.send(session, `The stone only takes ${CARVE_MAX_LEN} characters. Chisel it down.`);

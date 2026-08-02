@@ -45,6 +45,7 @@ import {
   type ItemTemplate,
   type CarriedItem,
   type Cache,
+  type Region,
   trait,
   hasTrait,
   parseTraits,
@@ -95,7 +96,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, playerBleedOdds,
-  DARK_ROOMS, OUTDOOR_ROOMS, DARK_TOUCH, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -145,6 +146,7 @@ export class ZoneDO implements DurableObject {
   public traces = new Map<string, Trace[]>();
   public rot: RotEntry[] = [];
   private placedSpawns = new Set<string>(); // ground spawns already laid once
+  private seededDens = new Set<string>(); // mob_spawn ids already populated once — new dens fill on the load that adds them, not on the migration clock
   public groundCond = new Map<string, number>(); // "itemId@roomId" -> condition of gear on the floor, so wear survives a drop/pickup
   public groundTorch = new Map<string, number>(); // roomId -> ms epoch a torch dropped/fallen onto the floor keeps burning until; while now < it the room is lit for EVERYONE in it, and it's an open flame (fire-fear flees, lurkers can't spring). Burns its remaining life down, then guts out.
   public groundLore = new Map<string, string>(); // "itemId@roomId" -> the engraving on floor gear, so the mark survives the stones (077)
@@ -161,6 +163,10 @@ export class ZoneDO implements DurableObject {
   // so the wall cannot lie. It also cannot reach the deep: that stays the paid
   // map's territory, forever (gate.shallowRing).
   public wallMarks = new Set<string>();
+  // The road's own record, and a different thing from the wall: the wall holds
+  // HALLS, this holds PEOPLE. Milestone roomId -> names cut into it, oldest
+  // first (see MILESTONES; lore.milestoneCarve writes it).
+  public stoneNames = new Map<string, { name: string; at: number }[]>();
   private cacheSpent = new Map<string, number>(); // cacheId -> ms it re-locks/refills
   private sim = simstore.newCache(); // what the sim rows last held, so persist() only writes the dirt (simstore.ts)
   private lastTickFlushAt = 0; // ms of the last TICK-driven sim flush; the tick batches its writes to TICK_SIM_FLUSH_MS (command saves stay immediate)
@@ -179,13 +185,27 @@ export class ZoneDO implements DurableObject {
     public env: Env,
   ) {}
 
-  // Four gates ring the Door; you wake at a random one, so no death sends you
-  // back to a route you already know cold. Falls back to the canonical gate.
+  // You wake at a random SPAWN, so no death sends you back to a route you
+  // already know cold. Spawns are not the same thing as gates any more (mig
+  // 126): a gatehouse far out on a road is somewhere to bank, not somewhere the
+  // world hands you a fresh wanderer. Falls back to the canonical gate.
   private randomGate(): string {
     const world = this.world;
     if (!world) return "gate";
-    const gates = Array.from(world.entryRooms);
-    return gates[randInt(0, gates.length - 1)] ?? world.entryRoom;
+    // Two kinds of spawn now. A marked ROOM (the fortress's thresholds) is one
+    // slot. A whole spawn REGION is also one slot, and resolves to a random room
+    // anywhere in it — the road hatches you out on the road, not on its
+    // doorstep (rome, 2026-08-02). Counting a region as ONE slot rather than one
+    // per room is what stops the road's thirty rooms from swamping the four
+    // fortress gates.
+    const slots: string[] = [...world.spawnRooms, ...[...SPAWN_REGIONS].map((r) => `@${r}`)];
+    const pick = slots[randInt(0, slots.length - 1)] ?? world.entryRoom;
+    if (!pick.startsWith("@")) return pick;
+    const band = pick.slice(1);
+    // Never in a hideaway, and never at a gate (regionOf calls a gate "gate", so
+    // gates fall out of the band automatically).
+    const pool = [...world.rooms.keys()].filter((r) => this.regionOf(r) === band && !world.safeRooms.has(r));
+    return pool[randInt(0, pool.length - 1)] ?? world.entryRoom;
   }
 
   // All-pairs room distances (BFS over exits, ~49 rooms — trivial), and the
@@ -335,6 +355,19 @@ export class ZoneDO implements DurableObject {
     const world = await loadWorld(this.env.DB, zone);
     this.world = world;
     this.buildWorldMaps(world);
+    // WHAT COUNTS AS OUTDOORS, assembled rather than hardcoded (2026-08-01).
+    // Rain, fog, cold, crows, the night dark and the night hunt multiplier all
+    // ask OUTDOOR_ROOMS, which was a static set of the fortress's 20 grounds and
+    // overworks ids. A road that never gets rained on and never gets dark isn't
+    // a road. New bands declare themselves outdoors as a REGION (see
+    // OUTDOOR_REGIONS) and their rooms are folded in here, once, at world load.
+    // It stays a Set of ids on purpose — one caller iterates it to walk every
+    // outdoor room, so a predicate wouldn't do. Idempotent: a re-init re-adds
+    // the same ids. A room that is outdoors DESPITE its band (or indoors within
+    // one) is a per-room exception and still belongs in the static sets.
+    for (const room of world.rooms.values()) {
+      if (OUTDOOR_REGIONS.has(room.region)) OUTDOOR_ROOMS.add(room.id);
+    }
 
     // The sim sleeps in rows now (simstore.ts — out of the one-blob 128KiB
     // ceiling). Rows first; a world with none falls back to the legacy blob
@@ -372,6 +405,10 @@ export class ZoneDO implements DurableObject {
       this.traces = new Map(Object.entries(saved.traces ?? {}));
       this.rot = saved.rot ?? [];
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
+      // A world saved before this existed has no list — treat every den it
+      // already knows about as seeded, or the backfill below would re-fill
+      // dens whose creature is legitimately dead and on the respawn clock.
+      this.seededDens = new Set(saved.seededDens ?? (saved.creatures ?? []).map((c: any) => c.id));
       this.groundCond = new Map(Object.entries(saved.groundCond ?? {}));
       this.groundTorch = new Map(Object.entries(saved.groundTorch ?? {}));
       this.groundLore = new Map(Object.entries(saved.groundLore ?? {}));
@@ -379,6 +416,7 @@ export class ZoneDO implements DurableObject {
       this.groundHeart = new Map(Object.entries(saved.groundHeart ?? {}));
       this.inGatehouse = new Set(saved.inGatehouse ?? []);
       this.wallMarks = new Set(saved.wallMarks ?? []);
+      this.stoneNames = new Map(Object.entries(saved.stoneNames ?? {}));
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
       this.cacheRoom = new Map(Object.entries(saved.cacheRoom ?? {}));
       this.nextSurfaceAt = saved.nextSurfaceAt ?? 0;
@@ -423,7 +461,45 @@ export class ZoneDO implements DurableObject {
         this.placedSpawns.add(key);
         addedSpawn = true;
       }
-      if (addedSpawn) await this.persist();
+      // NEW DENS GET FILLED ONCE (2026-08-02). The line above does exactly this
+      // for ground spawns — "content added since this world's first light gets
+      // laid down once" — and nothing did it for MOB dens, so a migration that
+      // adds a region left every den in it empty and waited on the migration
+      // clock to trickle them in. That clock is per-TEMPLATE and holds one
+      // pending arrival at a time (ai.scheduleArrivals), at respawn_secs ×
+      // MIGRATION_FACTOR: the wood's 30 roe-deer dens would have filled at one
+      // deer per ~50 minutes. A region shipped on Tuesday would still be
+      // half-empty on Thursday. Found by walking the wood and finding nothing
+      // in it (rome, 2026-08-02: "okay how do we look?").
+      //
+      // So: any den this world has never seeded gets its creature now, at full
+      // health, at home. Tracked by SPAWN ID, so it happens exactly once per
+      // den for the life of the world — a den whose creature is later killed
+      // goes back to the ordinary migration clock, which is the behaviour we
+      // want everywhere except the moment new content lands.
+      const freshDens = world.mobSpawns.filter((s) => !this.seededDens.has(s.id) && !this.creatures.has(s.id));
+      for (const spawn of freshDens) {
+        const base = world.mobTemplates.get(spawn.template_id);
+        if (!base) continue;
+        // A roaming line takes fresh ground even on its first placement.
+        const den = ai.rollDen(this, spawn.template_id, spawn.room_id);
+        const tmpl = ai.rollBloodline(this, base, den);
+        this.creatures.set(spawn.id, {
+          id: spawn.id,
+          templateId: tmpl.id,
+          roomId: den,
+          hp: tmpl.max_hp,
+          hunger: randInt(0, HUNGRY_AT - 10),
+          grudges: [],
+          nextWanderAt: Date.now() + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
+          target: null,
+          carries: this.rollCarry(tmpl),
+          hidden: LURKERS.has(tmpl.id) || undefined,
+          home: den,
+        });
+      }
+      for (const s of world.mobSpawns) this.seededDens.add(s.id);
+      if (addedSpawn || freshDens.length) await this.persist();
     } else {
       // First light: seed the world from D1 templates.
       const now = Date.now();
@@ -433,11 +509,12 @@ export class ZoneDO implements DurableObject {
         if (!base) continue;
         // Even at first light, rare blood: a den is usually the ordinary
         // version, once in a while the mean cousin.
-        const tmpl = ai.rollBloodline(this, base, spawn.room_id);
+        const den = ai.rollDen(this, spawn.template_id, spawn.room_id);
+        const tmpl = ai.rollBloodline(this, base, den);
         this.creatures.set(spawn.id, {
           id: spawn.id,
           templateId: tmpl.id,
-          roomId: spawn.room_id,
+          roomId: den,
           hp: tmpl.max_hp,
           hunger: randInt(0, HUNGRY_AT - 10),
           grudges: [],
@@ -445,7 +522,7 @@ export class ZoneDO implements DurableObject {
           target: null,
           carries: this.rollCarry(tmpl),
           hidden: LURKERS.has(tmpl.id) || undefined,
-          home: spawn.room_id,
+          home: den,
         });
       }
       this.ground.clear();
@@ -497,7 +574,14 @@ export class ZoneDO implements DurableObject {
         // Same "stays put" rule as the live tick: the drowned holds its water and
         // brooders keep their nest, so the offline sim can't drift them out of
         // their dens and pile three grapplers into one room while no one watches.
-        if (c.nextWanderAt <= t && !tmpl.is_boss && c.hp >= tmpl.max_hp * FLEE_BELOW
+        // A BOSS WITH A ROUTE WALKS IT (2026-08-02). Bosses stand where they
+        // live — the king in his hoard, the hound on its threshold — because a
+        // wandering boss would drift off the thing it guards. But the woodward
+        // guards a MAZE, and a maze's keeper standing still is a room, not a
+        // maze. So: is_boss still means "does not idly wander", and a boss that
+        // has a PATROLS route is exempt, because its route IS where it lives.
+        // No existing boss has a route, so nothing else changes.
+        if (c.nextWanderAt <= t && (!tmpl.is_boss || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
             && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId)) {
           // Silent catch-up runs with no one connected, so no ambush fires here.
           void ai.creatureMoves(this, c, t, "wander", true);
@@ -564,7 +648,7 @@ export class ZoneDO implements DurableObject {
       // frozen world would yield one pickup for the whole gap either way.)
       if (HOARDERS.has(c.templateId)) ai.scavengerScoops(this, c);
       const hunted = await ai.predation(this, c, now);
-      if (!hunted && c.nextWanderAt <= now && !tmpl.is_boss && c.hp >= tmpl.max_hp * FLEE_BELOW
+      if (!hunted && c.nextWanderAt <= now && (!tmpl.is_boss || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
           && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId)) {
         await ai.creatureMoves(this, c, now, "wander", true);
       }
@@ -591,6 +675,7 @@ export class ZoneDO implements DurableObject {
       traces: Object.fromEntries(this.traces),
       rot: this.rot,
       placedSpawns: [...this.placedSpawns],
+      seededDens: [...this.seededDens],
       groundCond: Object.fromEntries(this.groundCond),
       groundTorch: Object.fromEntries(this.groundTorch),
       groundLore: Object.fromEntries(this.groundLore),
@@ -598,6 +683,7 @@ export class ZoneDO implements DurableObject {
       groundHeart: Object.fromEntries(this.groundHeart),
       inGatehouse: [...this.inGatehouse],
       wallMarks: [...this.wallMarks],
+      stoneNames: Object.fromEntries(this.stoneNames),
       cacheSpent: Object.fromEntries(this.cacheSpent),
       cacheRoom: Object.fromEntries(this.cacheRoom),
       nextSurfaceAt: this.nextSurfaceAt,
@@ -634,12 +720,14 @@ export class ZoneDO implements DurableObject {
     this.traces.clear();
     this.rot = [];
     this.placedSpawns.clear();
+    this.seededDens.clear();
     this.groundCond.clear();
     this.groundTorch.clear();
     this.groundLore.clear();
     this.groundRolled.clear();
     this.groundHeart.clear();
     this.wallMarks.clear(); // a fresh world has fresh plaster — old room ids mean nothing here
+    this.stoneNames.clear(); // and fresh stone: the road has nobody's name on it yet
     this.cacheSpent.clear();
     this.cacheRoom.clear();
     this.nextSurfaceAt = 0;
@@ -2259,8 +2347,16 @@ export class ZoneDO implements DurableObject {
 
   // Maps + the journal live in lore.ts; the region read stays here (chest
   // tiers and ambience lean on it too).
-  public regionOf(roomId: string): "gate" | "deep" | "upper" {
-    return this.world!.entryRooms.has(roomId) ? "gate" : DEEP_ROOMS.has(roomId) ? "deep" : "upper";
+  // A gate reads as a gate wherever it stands — the waystation sits out in the
+  // open ground, but you bank there, so its band is "gate" and the map draws it
+  // gold. Under that, a room's OWN declared region wins (mig 126); rooms that
+  // declare nothing — the original 110 — fall back to the derivation this
+  // function was born as.
+  public regionOf(roomId: string): Region {
+    if (this.world!.entryRooms.has(roomId)) return "gate";
+    const own = this.world!.rooms.get(roomId)?.region;
+    if (own) return own as Region;
+    return DEEP_ROOMS.has(roomId) ? "deep" : "upper";
   }
 
   // Truly out of the world — untouchable, unseen, beyond reach — only at a gate
@@ -3545,8 +3641,10 @@ export class ZoneDO implements DurableObject {
       const m = draw(MOTES);
       if (m && m !== avoid) return m;
     }
-    const region = this.world!.entryRooms.has(roomId) ? "gate" : DEEP_ROOMS.has(roomId) ? "deep" : "upper";
-    return draw(AMBIENCE[region]);
+    // A region with no pool of its own simply has nothing to say — better a
+    // quiet band than the dungeon's drips leaking into a wood. Add lines to
+    // AMBIENCE and it starts breathing.
+    return draw(AMBIENCE[this.regionOf(roomId)] ?? []);
   }
 
   // ---- creature behavior (shared by live tick and catch-up) ----

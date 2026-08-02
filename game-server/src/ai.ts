@@ -18,7 +18,7 @@ import {
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PREDATION_ODDS, STARVE_HUNTERS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL,
-  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL,
@@ -189,7 +189,12 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
       if (SCAVENGERS.has(tmpl.id)) continue;                        // tracks the dead, not the din
       if (BROODERS.has(tmpl.id)) continue;                          // the brood-mother spawns; her young do the fighting
       if (LISTENERS.has(tmpl.id)) continue;                         // the bone-sleeper stays dormant till you move
-      if (tmpl.id === "fleet-rat") continue;                        // the scary rat watches, never scrums (rome's standing rule)
+      // Nothing that bolts for a living joins a scrum. This was `tmpl.id ===
+      // "fleet-rat"` (rome's standing rule: the scary rat watches, never
+      // scrums) — RUNNERS is that same rule stated as a family, and it now also
+      // covers the wood's roe deer, which were "throwing themselves into the
+      // fight" and then immediately fleeing it (2026-08-02).
+      if (RUNNERS.has(tmpl.id)) continue;
       if (!chance(NOISE_HEED_ODDS)) continue;                       // not every one piles on at once
       for (const s of z.sessions.values()) {
         if (s.roomId === roomId && z.inCombat(s) && !z.outOfWorld(s)) {
@@ -1535,6 +1540,21 @@ export function hoardersSpook(z: ZoneDO, sourceRoomId: string, now: number): voi
 
   // The dead stay dead — but the dungeon refills. When a population is below
   // its cap, a migrant is already on its way; it arrives here.
+// Where a creature of this line should wake. Normally its den — one of the
+// rooms the spawn table gave it. For a ROAMING_DENS line the den is re-rolled
+// across the whole band instead, so the road never has fixed addresses. Falls
+// back to the given room if the band somehow yields nothing.
+export function rollDen(z: ZoneDO, templateId: string, fallback: string): string {
+  if (!ROAMING_DENS.has(templateId)) return fallback;
+  const world = z.world!;
+  const bands = new Set(
+    world.mobSpawns.filter((s) => s.template_id === templateId).map((s) => z.regionOf(s.room_id)),
+  );
+  const pool = [...world.rooms.keys()].filter((r) =>
+    bands.has(z.regionOf(r)) && !world.entryRooms.has(r) && !world.safeRooms.has(r));
+  return pool.length ? pool[randInt(0, pool.length - 1)] : fallback;
+}
+
 export function scheduleArrivals(z: ZoneDO, now: number): void {
     const world = z.world!;
     const caps = new Map<string, number>();
@@ -1592,7 +1612,9 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         const open = homes.filter((r) => !taken.has(r));
         if (open.length) homes = open;
       }
-      const home = homes[randInt(0, Math.max(0, homes.length - 1))] ?? world.entryRoom;
+      let home = homes[randInt(0, Math.max(0, homes.length - 1))] ?? world.entryRoom;
+      // A roaming line ignores its den rows entirely and takes fresh ground.
+      home = rollDen(z, baseTmpl.id, home);
       // Rare blood, rolled with the den known: what refills the ground is
       // usually the ordinary version, once in a while the mean cousin — and a
       // brood promotion only lands on a vacant nest of her line.

@@ -13,7 +13,58 @@ import {
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
+  MILESTONES, MILESTONE_CAP, MILESTONE_SHOW,
 } from "./zone-data";
+
+// ---- the milestones: the road's register of who walked it ----
+//
+// Distinct from both of its neighbours in the codebase, deliberately. The
+// gatehouse wall (gate.wallCarve) records HALLS — shared map knowledge, and it
+// only takes rooms you personally walked this session. `carve <words>`
+// (verbs.cmdCarve) records ANYTHING, anywhere, and weathers off inside a day.
+// A milestone records PEOPLE, permanently, and only your own name: you cannot
+// write someone else onto the road, and you cannot write yourself onto a stone
+// you are not standing at.
+
+export async function milestoneCarve(z: ZoneDO, session: Session): Promise<void> {
+  const stone = MILESTONES.get(session.roomId);
+  if (!stone) return;
+  const cut = z.stoneNames.get(session.roomId) ?? [];
+  if (cut.some((c) => c.name === session.name)) {
+    return z.send(session, `Your name is already on ${stone.stone}, in your own hand. Once is what it's for.`, "study");
+  }
+  cut.push({ name: session.name, at: Date.now() });
+  // The stone is finite. New names crowd the oldest off the bottom, which is
+  // the only weathering this register has — everything else about it is
+  // permanent, and a name that falls off was cut a very long time ago.
+  const weathered = cut.length > MILESTONE_CAP ? cut.splice(0, cut.length - MILESTONE_CAP) : [];
+  z.stoneNames.set(session.roomId, cut);
+  z.send(session, `You work your name into ${stone.stone} under the others: ${session.name}.` +
+    (weathered.length ? ` The oldest name on it goes under your chisel to make the room — ${weathered[0].name}, whoever that was.` : ""), "study");
+  z.roomFeed(session.roomId, `${session.name} cuts a name into the stone, slowly.`, session.pubkey, false);
+  z.roomSound(session.roomId, "Steel worrying at stone, {dir} — slow, patient, going on a while.");
+  z.creatureNoise(session.roomId); // it takes a long time and it carries: a road is a bad place to make noise
+  await z.persist();
+}
+
+export function milestoneRead(z: ZoneDO, session: Session): void {
+  const stone = MILESTONES.get(session.roomId)!;
+  const cut = z.stoneNames.get(session.roomId) ?? [];
+  if (!cut.length) {
+    return z.send(session, `The old cut has weathered past reading, and below it the stone is bare. Nobody has set their name down here. (carve)`, "study");
+  }
+  // The whole point of there being TWO stones: a name on both is somebody who
+  // went on. Nothing tracks that — the comparison IS the record.
+  const far = new Set((z.stoneNames.get(stone.other) ?? []).map((c) => c.name));
+  const newestFirst = [...cut].reverse();
+  const lines = newestFirst.slice(0, MILESTONE_SHOW)
+    .map((c) => `  ${c.name}${far.has(c.name) ? ` — ${stone.also}` : ""}`);
+  const rest = newestFirst.length - lines.length;
+  const both = newestFirst.filter((c) => far.has(c.name)).length;
+  z.send(session, `Names, crowded into the lee of ${stone.stone}, the newest cut over the oldest:\n${lines.join("\n")}` +
+    (rest > 0 ? `\n  …and ${rest} more, cut deeper and read harder.` : "") +
+    `\n${both} of the ${newestFirst.length} are on both stones.`, "study");
+}
 
 // ---- maps: open a chart you carry (the modal draws it) ----
 
@@ -125,6 +176,9 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     upper: { key: "upper", label: "The Halls", rooms: [] },
     warrens: { key: "warrens", label: "The Warrens", rooms: [] },
     deep: { key: "deep", label: "The Deep", rooms: [] },
+    road: { key: "road", label: "The Roads", rooms: [] },
+    wood: { key: "wood", label: "The Wood", rooms: [] },
+    mountain: { key: "mountain", label: "The Mountain", rooms: [] },
   };
   for (const id of shown) {
     const room = world.rooms.get(id)!;
@@ -149,7 +203,9 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       if (detailed && !shown.has(e.to_room)) continue;
       exits.push({ dir: e.dir, to: e.to_room, toName: world.rooms.get(e.to_room)?.name ?? e.to_room });
     }
-    regions[mapRegionOf(z, id)].rooms.push({ id, name: room.name, exits, here: id === session.roomId });
+    // A band with no frame of its own falls in with the halls rather than
+    // throwing the whole map away over one unlabelled room.
+    (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({ id, name: room.name, exits, here: id === session.roomId });
   }
   try {
     session.ws.send(JSON.stringify({

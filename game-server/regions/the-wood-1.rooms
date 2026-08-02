@@ -1,0 +1,221 @@
+# THE WOOD, SLAB 1 — 27 rooms: the honest band, the threshold, the first core.
+#
+# rome ruled the HYBRID (2026-08-01): an honest outer band, a lying core.
+#
+# THE HONEST BAND is a 5x3 lattice west of the Gap in the Trees. Every exit
+# has its proper return — north in, south back out — so the near edge of the
+# wood is somewhere you can walk into and walk out of, and the dens at the
+# wood's edge stay reachable. It is disorienting only because it is trees.
+#
+# THE THRESHOLD is the lattice's west column (the Turning, the Close Ground,
+# the Swallowing). Nothing marks it. Walk west out of any of the three and the
+# returns stop matching.
+#
+# THE CORE lies. Every exit in it is one-way and no two of them pair up, so
+# turning round never retraces anything. It is NOT a trap: two rooms spill you
+# back onto the honest band (the Turned Ground east, the Heart of It south) at
+# places you did not go in by. You always get out of the wood. You never get out
+# where you expect, and you cannot walk back to where you were.
+#
+# The core rooms are written to be describable but unmemorable on purpose —
+# real detail, nothing you could use to tell one from another afterwards.
+
+!region wood
+
+## the-gap-in-the-trees | attachment: the road ends, the wood begins
+!existing
+> west the-eaves
+
+# ---- the honest band: column 0, the edge -----------------------------------
+
+## the-eaves | The Eaves
+The wood does not start gradually. One step the light is grey and open and the track is under you, the next the trunks have closed over and it has gone green and close and the air is ten degrees colder. Behind you the gap still shows the road. Ahead there is no gap at all.
+> east the-gap-in-the-trees
+> west the-deer-path
+> north the-birch-edge
+> south the-bramble-margin
+
+## the-birch-edge | The Birch Edge
+Birch grows in the poor ground along the wood's margin, thin and white and close-ranked, all of it leaning the same way from a wind that does not reach in this far any more. You can still see daylight through it if you look back east.
+> south the-eaves
+> west the-holly-brake
+
+## the-bramble-margin | The Bramble Margin
+Bramble has taken the whole southern edge, chest-high and grown through itself in loops, and there is one way through it that was not cut by anything with hands. It closes behind you at about knee height.
+> north the-eaves
+> west the-nettle-glade
+
+# ---- column 1 --------------------------------------------------------------
+
+## the-deer-path | The Deer Path
+A narrow line of bare earth winds west between the trunks, packed hard and no wider than a shoulder. Nothing made it on purpose. It goes where the deer needed to go, which is not necessarily anywhere you need to be.
+> east the-eaves
+> west the-first-clearing
+> north the-holly-brake
+> south the-nettle-glade
+
+## the-holly-brake | The Holly Brake
+Holly grows dense enough here to stop the light entirely, dark green and waxed and armed on every leaf. Underneath there is bare ground and a dry rustling carpet of old spines, and nothing else grows in it at all.
+> east the-birch-edge
+> south the-deer-path
+> west the-pollard-row
+
+## the-nettle-glade | The Nettle Glade
+A break in the canopy has let enough light down for nettles, and they have taken every inch of it, waist-high and unbroken. Something has been through recently — there is a green wound of crushed stems, already lifting back upright.
+> east the-bramble-margin
+> north the-deer-path
+> west the-wet-hollow
+
+# ---- column 2 --------------------------------------------------------------
+
+## the-first-clearing | The First Clearing
+Open ground, a good bowshot across, ringed by trees standing shoulder to shoulder as if they had agreed on the edge. Grass, not leaf-mould. Nothing has grown back into it in a long time, and something is keeping it that way.
+> east the-deer-path
+> west the-fallen-giant
+> north the-pollard-row
+> south the-wet-hollow
+
+## the-pollard-row | The Pollard Row
+A line of trees cut off at head height, long ago and repeatedly, so each one has thrown up a fist of thick vertical growth from the same scarred knuckle. They run north to south in a dead straight line. Somebody managed this wood once, on a schedule.
+> east the-holly-brake
+> south the-first-clearing
+> west the-lightning-split
+> north the-stone-pile
+
+## the-stone-pile | The Stone Pile
+A cairn of field stones the height of a man, thick with moss on every face but the south. It is not a grave and not a wall and not a marker for anything you can see. It is where a great many stones were carried, one at a time, by people who wanted them out of somewhere else.
+> south the-pollard-row
+
+## the-wet-hollow | The Wet Hollow
+The ground dishes and holds water here, and alder has come in around a black standing pool no bigger than a room. Everything smells of iron and rot. The leaf-litter under the surface goes down further than you would think.
+> east the-nettle-glade
+> north the-first-clearing
+> west the-badger-ground
+> south the-drinking-pool
+
+## the-drinking-pool | The Drinking Pool
+A wider water in a ring of trodden mud, and the mud is printed all over — deer, and something with pads, and something bigger than both that came down to the water alone. The water itself is clear, and cold, and moving very slightly from somewhere underneath.
+> north the-wet-hollow
+
+# ---- column 3 --------------------------------------------------------------
+
+## the-fallen-giant | The Fallen Giant
+An oak came down here a generation ago and took three others with it, and the whole tangle lies where it fell, going back to earth on its own schedule. The root-plate stands on end, taller than you, with a crater of dark soil where it tore out.
+> east the-first-clearing
+> west the-boundary-oak
+> north the-lightning-split
+> south the-badger-ground
+
+## the-lightning-split | The Lightning Split
+A beech split top to bottom by something that came down out of the sky, its two halves leaning apart and still living, the wound between them gone black and hard. It happened long enough ago that ivy has dressed it.
+> east the-pollard-row
+> south the-fallen-giant
+> west the-ash-stand
+
+## the-badger-ground | The Badger Ground
+The bank here is worked all over with holes and spoil-heaps of pale earth, generations of them, most collapsed and a few very much not. There are paths between them worn to the width of a low, heavy animal.
+> east the-wet-hollow
+> north the-fallen-giant
+> west the-charcoal-flat
+
+# ---- column 4: the last honest ground --------------------------------------
+
+## the-boundary-oak | The Boundary Oak
+An oak far older than anything around it, hollow, and wide enough that four people could stand inside the trunk. Ancient iron is grown deep into the bark on the eastern face — the remains of a plate, or a hinge, or a nail somebody drove for a reason nobody kept.
+> east the-fallen-giant
+> west the-turning
+> north the-ash-stand
+> south the-charcoal-flat
+
+## the-ash-stand | The Ash Stand
+Ash grown up all of a height from a single felling, the whole stand the same age and the same thickness, the trunks running up straight and grey to a canopy that starts well above your head. Between them you can see a long way and none of it is different.
+> east the-lightning-split
+> south the-boundary-oak
+> west the-close-ground
+
+## the-charcoal-flat | The Charcoal Flat
+A level circle of ground where the earth is black to a depth of a foot, and nothing has grown on it since. They stacked and burned wood here for weeks at a time. Around the edge, the ground is heaped where the turf was cut away and never put back.
+> east the-badger-ground
+> north the-boundary-oak
+> west the-swallowing
+> south the-charcoal-hut
+
+## the-charcoal-hut | The Charcoal Hut
+A shelter of poles and turf, half sunk into the ground, built for one man to sleep in with one eye open while his stack burned. The roof holds. Nothing dens here — it smells too strongly of old fire, and everything with a nose knows what that means.
+!safe
+> north the-charcoal-flat
+
+# ---- the threshold: still honest, and the last of it ------------------------
+
+## the-turning | The Turning
+The trees stand closer together west of here, and the ground begins to lift and fold in a way that means nothing in particular. There is no marker, no gate, no change in the light worth reporting. It is simply the last place in this wood where going back the way you came works.
+> east the-boundary-oak
+> north the-close-ground
+> south the-swallowing
+> west the-close-dark  oneway
+
+## the-close-ground | The Close Ground
+The stand crowds in until you are turning your shoulders to get between trunks, and the canopy closes over so completely that the floor is bare, brown, and silent. Sound stops carrying. You can hear your own pulse in your ears, which means there is nothing else to hear.
+> east the-ash-stand
+> south the-turning
+> west the-turned-ground  oneway
+
+## the-swallowing | The Swallowing
+Ivy has come up every trunk and out along every branch until the shapes overhead are not trees any more, only a mass. The light that gets down is green and even and comes from no particular direction, so nothing casts a shadow, so nothing has a side.
+> east the-charcoal-flat
+> north the-turning
+> west the-hollow-beeches  oneway
+
+# ---- the core: every exit one-way, nothing pairs, no way back --------------
+#
+# EVERY core room has all four compass exits, and that is the important part.
+# If a core room simply lacked an east exit, stepping back the way you came
+# would answer "there is no way east from here" — which ANNOUNCES the trick.
+# The lie has to be that east works perfectly and puts you somewhere else.
+#
+# No exit in here pairs with its opposite (verified by script, not by eye), so
+# turning round never retraces. Two rooms spill you back onto the honest band —
+# the Turned Ground east, the Heart of It south — at places you did not come in
+# by. You always get out of the wood. You never get out where you expect.
+
+## the-close-dark | The Close Dark
+Trunks in every direction at about the same spacing, going back into a green-brown dimness that ends wherever your eye gives up. The floor is leaf-mould, deep and soft and unmarked. There is a fallen limb here, half rotted, with a fern growing out of the split.
+> north the-turned-ground  oneway
+> south the-hollow-beeches  oneway
+> east the-listening-stand  oneway
+> west the-same-tree  oneway
+
+## the-turned-ground | The Turned Ground
+The floor has been worked over — turned, rooted through, the leaf-litter thrown up in ridges across a good stretch of ground. It was done thoroughly and it was not done recently. Beyond the worked ground the trees stand as they stand everywhere.
+> north the-heart-of-it  oneway
+> south the-same-tree  oneway
+> east the-ash-stand  oneway
+> west the-listening-stand  oneway
+
+## the-same-tree | The Same Tree
+A beech with a burl on it the size of a head, grey bark, one dead branch out to the left, standing among others. You have not seen this tree before. You are fairly sure you have not seen this tree before.
+> north the-heart-of-it  oneway
+> south the-listening-stand  oneway
+> east the-turned-ground  oneway
+> west the-hollow-beeches  oneway
+
+## the-listening-stand | The Listening Stand
+Somewhere close, a wood-pigeon is working through its two notes over and over, and it does not stop or move when you do. Everything else here has decided to be quiet. The trees are ordinary. The quiet is not, quite.
+> north the-hollow-beeches  oneway
+> south the-heart-of-it  oneway
+> east the-same-tree  oneway
+> west the-turned-ground  oneway
+
+## the-hollow-beeches | The Hollow Beeches
+Old beeches gone hollow standing on their own roots, each one a shell you could step inside if you wanted to be inside something. The ground between them is bare and pale and takes a footprint well. There are footprints. Some of them are the right size.
+> north the-same-tree  oneway
+> south the-close-dark  oneway
+> east the-heart-of-it  oneway
+> west the-listening-stand  oneway
+
+## the-heart-of-it | The Heart of It
+Nothing announces this place. The trees are the same trees, the light is the same green, the floor is the same soft depth of years of leaves — and the wood is very obviously not the same here, in a way you could not put into a sentence if you had to. Southward the ground falls away and lightens, slightly.
+> north the-turned-ground  oneway
+> south the-charcoal-flat  oneway
+> east the-listening-stand  oneway
+> west the-same-tree  oneway

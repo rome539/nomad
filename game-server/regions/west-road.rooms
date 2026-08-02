@@ -1,0 +1,176 @@
+# THE WEST ROAD — 30 rooms, the fortress to the eaves of the wood.
+#
+# Shape (ROADMAP): paving -> ruts -> track -> a gap in the trees. The road
+# starts as something the dead institution built and maintained, and degrades
+# a stage at a time until it is only the memory of a road going into trees.
+#
+# It attaches at the Drowned Orchard's unclaimed west edge and runs west,
+# bending south twice, ending at THE GAP IN THE TREES — the stub the wood
+# will hang off. Five rooms are off-spine pockets (a shelter, graves, a well,
+# a quarry, a hollow) so the road is walked, not just traversed.
+#
+# Points of interest, roughly one per eight rooms, each riding a system that
+# already exists: the milestones (wallCarve), the wayside shelter (is_safe),
+# the broken axle (ground_spawns/caches), the shallow ford (WATER_ROOMS),
+# the gibbet and the graves (ambience and traces).
+#
+# ONE GATE, at the Roadwarden's Post — a place to bank a long walk from the
+# Door. It is deliberately NOT a spawn: open call 3 (how many spawn points and
+# where) is rome's, and a gate is a service, not a doorway.
+
+!region road
+
+## the-drowned-orchard | attachment: the road leaves the grounds
+!existing
+> west the-cart-road
+
+## the-cart-road | The Cart Road
+The orchard's standing water gives out and the ground comes up hard underfoot: dressed stone, laid in a herringbone by people who expected to be paid for it. Two centuries of cartwheels have polished a groove down the middle of it. It runs west, straight, out of the fortress's shadow and into open country.
+> east the-drowned-orchard
+> west the-broken-paving
+
+## the-broken-paving | The Broken Paving
+Frost has been at the roadbed. The stones are still in their courses but each one sits a little proud or a little sunk, so the whole surface reads like water caught mid-chop. Grass has found every seam.
+> east the-cart-road
+> west the-first-milestone
+
+## the-first-milestone | The First Milestone
+A squat pillar of grey stone stands at the verge, waist-high, cut flat on the road-facing side. Whatever distance it once promised has weathered past reading. Below the old cut, the stone is crowded with newer marks — names, mostly, scratched shallow by people who wanted the road to know they had come this far.
+> east the-broken-paving
+> west the-elder-hedge
+
+## the-elder-hedge | The Elder Hedge
+A hedge runs alongside the road here, elder and blackthorn grown up out of what was once a laid boundary and left to do as it liked for a long time. It is taller than a rider now. On the far side of it, the country is a rumour.
+> east the-first-milestone
+> south the-sunken-lane
+
+## the-sunken-lane | The Sunken Lane
+The road drops between banks — not cut, worn, the traffic of generations pressing the way down into the earth a hand's breadth a century. The banks come up to your shoulders and the roots hang out of them. Nothing on the road can see out; nothing off it can see in.
+> north the-elder-hedge
+> south the-drovers-turn
+
+## the-drovers-turn | The Drover's Turn
+The banks fall away and the road swings west at a wide, patient angle, the kind of curve made for beasts that will not be hurried. Churned ground on the inside of the bend has gone to a hard grey mud, printed all over with hooves that are not fresh.
+> north the-sunken-lane
+> west the-crooked-gibbet
+
+## the-crooked-gibbet | The Crooked Gibbet
+A gibbet leans over the verge, its post silvered and split, its iron cage still hanging and still shut. It is empty except for the weather. Whoever the sentence was for, the sentence outlasted the court, and the road has gone on past it for a long time without comment.
+> east the-drovers-turn
+> south the-roadside-graves
+> west the-ash-verge
+
+## the-roadside-graves | The Roadside Graves
+A dozen low mounds lie in the rough grass off the road, unmarked but for a stone laid at the head of each, and laid flat, so nothing shows above the grass but the shape of the ground. Buried outside the wall and off the road: the two things you do with people nobody would claim.
+> north the-crooked-gibbet
+
+## the-ash-verge | The Ash Verge
+Ash trees stand along the north verge at even spacings, planted, all of them dying back from the crown down. Their shadows fall across the road in bars. Somebody counted these out and set them, and that somebody has been gone a long while.
+> east the-crooked-gibbet
+> north the-wayside-shelter
+> west the-long-straight
+
+## the-wayside-shelter | The Wayside Shelter
+Three walls and half a roof of mossed slate, set back from the road for exactly this: somewhere to be when you cannot go on and cannot go back. The bench inside has been worn to a hollow. Nothing has ever denned here — too open, too much used, too near the road.
+!safe
+> south the-ash-verge
+
+## the-long-straight | The Long Straight
+The road runs level and dead straight for as far as this stretch goes, laid out by instrument across flat ground. You can see everything coming. So can everything.
+> east the-ash-verge
+> west the-weed-paving
+
+## the-weed-paving | The Weed Paving
+Here the road is losing. Whole stones are gone, lifted for somebody's wall, and the gaps have filled with dock and nettle and a low creeping weed that has begun to work under the courses on either side.
+> east the-long-straight
+> north the-dry-well
+> west the-roadwarden-post
+
+## the-dry-well | The Dry Well
+A well-head of dressed stone stands in the weeds a little off the road, its cover long gone. The shaft is neat, deep, and dry, and it has been dry so long that a rowan has got a footing eight feet down and grown up toward the light without ever reaching it.
+> south the-weed-paving
+
+## the-roadwarden-post | The Roadwarden's Post
+A squat stone house set hard against the road with a yard behind it and a barred hatch beside the door, built when the road was policed and kept up long after it wasn't. Somebody is still inside. Whatever the post was for originally, what it does now is take your goods off your hands, hold them, and let you sleep behind a shut door.
+!entry
+> east the-weed-paving
+> west the-mustering-yard
+
+## the-mustering-yard | The Mustering Yard
+A wide flat apron of hardstanding beside the road, walled on three sides, big enough to hold a column of men or a season's beasts. It holds neither. The gateposts are still up, and the ruts running into it are still deep enough to turn an ankle.
+> east the-roadwarden-post
+> north the-flooded-quarry
+> west the-shallow-ford
+
+## the-flooded-quarry | The Flooded Quarry
+The pit the road came out of. They cut the stone here and stopped, and the water came up and stayed, and now the working face goes down into a still green depth with the tool-marks on it still crisp under the surface. The spoil heaps have gone to grass.
+> south the-mustering-yard
+
+## the-shallow-ford | The Shallow Ford
+The road walks straight down into a broad slow beck and comes up out of it on the other side, the paving carried right through the water and still sound. It is shin-deep at the middle and floored with clean gravel. There has been a bridge here, once — the stumps of the piers stand a little downstream, doing nothing.
+> east the-mustering-yard
+> west the-drowned-milestone
+
+## the-drowned-milestone | The Drowned Milestone
+A second milestone, the twin of the first, standing in a wet hollow the road has slumped into. The water has taken the bottom third of it and softened the stone to a grey soap. It carries names too, but only above the waterline; below that the stone has given everything back.
+> east the-shallow-ford
+> south the-broken-axle
+
+## the-broken-axle | The Broken Axle
+A cart lies over on its side half off the road, one wheel still on and turning in the wind, the other in pieces some way off. It came down hard. Whatever it was carrying is still under and around it, and whoever was bringing it did not come back for any of it.
+> north the-drowned-milestone
+> south the-cutting
+
+## the-cutting | The Cutting
+The road goes through rising ground instead of over it, and the rock stands up on both sides in raw benched faces still showing where the wedges went. It is colder in here, and quieter, and there is exactly one way through it in each direction.
+> north the-broken-axle
+> west the-beggars-hollow
+> south the-rain-shadow
+
+## the-beggars-hollow | The Beggar's Hollow
+A scoop worn out of the cutting's west face, deep enough for two people to be out of the wind, blackened at the back where fires have been. The ground is trodden to bone-hardness. It has been in use, on and off, longer than the road has been unmaintained.
+> east the-cutting
+
+## the-rain-shadow | The Rain Shadow
+Out of the cutting and onto the dry side of the ridge, where the ground goes thin and pale and the only things that hold are gorse and a wiry grass that cuts. The road is still under you, but only just — sand has come across it in long tongues.
+> north the-cutting
+> west the-old-boundary
+
+## the-old-boundary | The Old Boundary
+A ditch and bank run north to south across the country here, and the road cuts through them at a gap that was once gated: two stone jambs, no gate, the hinge-pins still set in the stone and worn bright. Everything east of this line was administered. Everything west of it was not.
+> east the-rain-shadow
+> west the-tinkers-camp
+
+## the-tinkers-camp | The Tinker's Camp
+A patch of level ground off the verge with the black rings of old fires on it, seven or eight of them, none recent. Scraps of worked metal are trodden into the turf — clippings, a broken awl, the tang of something. People stopped here regularly, for years, and then stopped coming.
+> east the-old-boundary
+> west the-last-paving
+
+## the-last-paving | The Last Paving
+The final stones. They end not at a boundary but in a ragged tongue, the way a thing ends when the money ends: three courses, then two, then a scatter, then earth. Standing on the last of them you can see the road ahead is only a road because people keep walking it.
+> east the-tinkers-camp
+> west the-track
+
+## the-track | The Track
+Earth and stone now, no courses, no camber. It holds its line out of habit and because the ground on either side is worse. Somewhere under all this there is still a roadbed, and it is no longer anybody's business.
+> east the-last-paving
+> west the-rutted-track
+
+## the-rutted-track | The Rutted Track
+Two deep ruts with a spine of grass between them, filled with standing water that never quite goes. Walking the spine is easier than walking the ruts, and everything that comes this way has learned that, so the spine is worn and the ruts are not.
+> east the-track
+> west the-green-lane
+
+## the-green-lane | The Green Lane
+Hedges have closed in from both sides and met overhead, and the track runs through them in a green tunnel that keeps the light out and the damp in. It is a good deal narrower than a cart. Nothing has brought a cart along here in a long time.
+> east the-rutted-track
+> west the-holloway
+
+## the-holloway | The Holloway
+The lane sinks again, deeper than the sunken lane and older, until you are walking in a trench with roots for walls and a ceiling of leaves closing over. The sound of your own feet comes back at you off the banks. There is a smell of leaf-rot ahead that is not the lane's.
+> east the-green-lane
+> west the-gap-in-the-trees
+
+## the-gap-in-the-trees | The Gap in the Trees
+The banks fall away and the track ends — not at a gate or a boundary or anything built, but at a wall of trunks with one dark gap in it where the way goes on. The wood stands there and does not begin gradually. Everything behind you is a road somebody made. Everything past that gap is not.
+> east the-holloway

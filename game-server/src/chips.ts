@@ -11,7 +11,7 @@ import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
   FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, MAP_ITEMS, DROWNERS,
-  SMOKEHOUSE_ROOM, CURE_RECIPES,
+  SMOKEHOUSE_ROOM, CURE_RECIPES, MILESTONES,
 } from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
@@ -214,6 +214,13 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // holds them, not out in the dark beside a loose rock. The gate offers the
     // door, and the door offers everything else.
     if (world.entryRooms.has(session.roomId) && !session.away) suggest.push("in");
+    // A milestone offers exactly the two things a milestone is for. `read stone`
+    // rather than bare `read` — the parser folds read into look, and a bare look
+    // is the room. The carve chip goes quiet once your name is on this one.
+    if (MILESTONES.has(session.roomId)) {
+      suggest.push("read stone");
+      if (!(z.stoneNames.get(session.roomId) ?? []).some((c) => c.name === session.name)) suggest.push("carve");
+    }
     // Knowledge you carry: open a map or the journal (each pops its modal).
     if (session.items.some((c) => MAP_ITEMS.has(c.itemId))) suggest.push("map");
     // A map's journalId is its ink-rail, not a book — only a true journal (has a

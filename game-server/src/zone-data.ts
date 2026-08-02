@@ -2,7 +2,7 @@
 // for the dungeon — lifted out of the ZoneDO monolith. Pure data; no state, no
 // logic. Values and names are unchanged from when they lived in zone.ts.
 import type { Stance } from "./zone-types";
-import { type ItemTemplate, trait } from "./world";
+import { type ItemTemplate, type Region, trait } from "./world";
 
 
 export const TICK_MS = 2000;
@@ -265,7 +265,10 @@ export const JOURNAL_ITEM = "hunters-journal";
 // DEEP floodwater is where the good eating swims: eel odds up, and rarely the
 // marrow-lamprey, the deep's delicacy. Any water can also snag JUNK off the
 // bottom — the flood keeps a little scrap for the patient.
-export const FISHING_SURFACE = new Set(["the-black-fen", "the-drowned-orchard"]);
+// The flooded quarry only — deep still water with a working face going down out
+// of sight. The ford is shin-deep over gravel: you can drink it and wade it, but
+// there is nothing in it to catch.
+export const FISHING_SURFACE = new Set(["the-black-fen", "the-drowned-orchard", "the-flooded-quarry"]);
 export const FISHING_DEEP = new Set(["pocket-of-air", "the-weir", "black-canal", "leech-pools", "the-sump", "the-cistern",
   "the-eel-run", "the-breathing-hall"]); // the Tideways' waters (069) — the tide restocks them when it drains
 export const FISHING_ROOMS = new Set([...FISHING_SURFACE, ...FISHING_DEEP]);
@@ -564,6 +567,17 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "thrice-dead": "Something dead resettles itself {dir}, patient and wrong.",
   "the-gaunt": "Something very tall moves {dir}, breathing in long, starving pulls.",
   "rag-and-bone": "Something moves {dir} in a slow clatter of hanging metal, like a cart of scrap walking.",
+  "road-carrier": "Boots go {dir} at a steady walking pace, neither hurrying nor stopping.",
+  "masterless-dog": "Something four-legged trots {dir}, claws ticking on stone.",
+  footpad: "A step scuffs the verge {dir}, and takes care to be the last one you hear.",
+  "roe-deer": "Something light and quick breaks {dir} through the undergrowth, all at once.",
+  "wild-boar": "Something heavy shoulders through the brush {dir}, taking the straight way.",
+  "grey-wolf": "A long, unhurried padding crosses {dir}, and does not stop to consider you.",
+  "the-follower": "A step {dir} that matches yours, and stops when you stop.",
+  "charcoal-burner": "Boots and a dragging haft go {dir}, at a working pace.",
+  "root-thing": "Earth and root shift {dir}, slowly, like a bank giving way.",
+  "the-mire-walker": "Water drags {dir} around something that will not lift its feet clear.",
+  "the-woodward": "A steady tread goes {dir}, unhurried, and does not cast about for the way.",
 };
 
 // What a creature sounds like STANDING STILL, for an ear pressed to the dark
@@ -580,6 +594,16 @@ export const STILL_SOUNDS: Record<string, string> = {
   "the-gaunt": "long, starving breaths, drawn through teeth",
   "drowned-hulk": "water pressing and settling around something vast",
   "rag-and-bone": "a soft, ceaseless chink of metal on metal — a great many small things hung on one slow-breathing thing",
+  "road-carrier": "the creak of a loaded satchel strap, and breathing measured to a pace — something standing still that would rather be walking",
+  "roe-deer": "quick shallow breathing, held — something small deciding whether it has been seen",
+  "wild-boar": "a low grunting and the steady work of something rooting, unbothered",
+  "grey-wolf": "nothing at all, and then the small sound of a jaw closing",
+  "the-follower": "your own breathing, and under it, a fraction late, something doing the same",
+  "charcoal-burner": "wood being laid on wood, one piece at a time, patiently, by somebody who is not hurrying",
+  "root-thing": "a slow creak of wet timber taking weight, over and over, going nowhere",
+  "the-mire-walker": "water settling around something standing in it, and settling again",
+  "the-woodward": "a slow creak of leather, and breathing — something standing at ease in a place it has never once been lost in",
+  "masterless-dog": "panting, low and open-mouthed, and the small sound of a collar shifting",
 };
 
 // Territory: every creature remembers its den and keeps to the ground around
@@ -599,6 +623,22 @@ export const MOUTHS = [
   // the fen and the briars, the shallow warrens breathe through the sewer-slip
   // — not out of the crypt. Kills the migrant parade through the keep's ring.
   "the-black-fen", "the-briar-field", "the-sewer-slip",
+  // THE SURFACE EXPANSION NEEDS ITS OWN EDGES (2026-08-02). A migrant surfaces
+  // at the mouth NEAREST its den and walks in, and before this the nearest
+  // mouth to anything in the road or the wood was the fen or the briars — so
+  // every wolf, boar and root-thing would have been born in the fortress
+  // grounds and marched forty to ninety rooms across the whole world to get
+  // home. The wood would have stayed empty for hours while the grounds filled
+  // with things that do not live there. Found by walking it: the wood was
+  // silent twenty minutes after the roster shipped.
+  //
+  // Each of these is somewhere a thing could plausibly come out of unseen —
+  // burrows, brakes, a quarry, a hollow, an earth-fall — never open ground.
+  "the-flooded-quarry", "the-beggars-hollow",                    // the road
+  "the-holly-brake", "the-fox-earths", "the-badger-ground", "the-alder-carr", // the wood, honest band
+  "the-hollow-beeches", "the-grey-thicket", "the-rush-bed",      // the lying cores
+  "the-earth-fall", "the-under-roots",                           // the sunken wood, and below it
+  "the-wolf-pits", "the-icehouse",                               // the far side
   // TWO MORE DEEP MOUTHS (rome, 2026-07-27: "the mobs in the deep are just all
   // in the central corridor"). applyArrivals walks a migrant in from the
   // nearest mouth on ITS side of the descent — and only the-weir and root-vault
@@ -643,6 +683,41 @@ export const PATROLS: Record<string, string[]> = {
     "the-hanging-hill", "the-briar-field", "the-black-fen", "the-drowned-orchard", "the-sally-ditch",
     "the-drowned-orchard", "the-burned-village",
   ],
+  // THE CARRIER (2026-08-01): the West Road's whole spine, out and back — the
+  // longest route in the game by a wide margin, and the point of it. A road
+  // patroller you meet every few minutes isn't going anywhere; one who takes a
+  // very long time to come round again is a man with 25 rooms of road to walk.
+  // Every leg is a real adjacent exit (the spine only — he never turns off into
+  // the shelter, the well, the quarry or the hollow, because a courier doesn't).
+  "road-carrier": [
+    "the-cart-road", "the-broken-paving", "the-first-milestone", "the-elder-hedge",
+    "the-sunken-lane", "the-drovers-turn", "the-crooked-gibbet", "the-ash-verge",
+    "the-long-straight", "the-weed-paving", "the-roadwarden-post", "the-mustering-yard",
+    "the-shallow-ford", "the-drowned-milestone", "the-broken-axle", "the-cutting",
+    "the-rain-shadow", "the-old-boundary", "the-tinkers-camp", "the-last-paving",
+    "the-track", "the-rutted-track", "the-green-lane", "the-holloway",
+    "the-gap-in-the-trees",
+    // and back the way he came
+    "the-holloway", "the-green-lane", "the-rutted-track", "the-track",
+    "the-last-paving", "the-tinkers-camp", "the-old-boundary", "the-rain-shadow",
+    "the-cutting", "the-broken-axle", "the-drowned-milestone", "the-shallow-ford",
+    "the-mustering-yard", "the-roadwarden-post", "the-weed-paving", "the-long-straight",
+    "the-ash-verge", "the-crooked-gibbet", "the-drovers-turn", "the-sunken-lane",
+    "the-elder-hedge", "the-first-milestone", "the-broken-paving",
+  ],
+  // THE WOODWARD (rome, 2026-08-02: "we need a boss in the center of the maze").
+  // He walks a closed circuit of the CENTRE CORE — the first lying core, the one
+  // behind the Turning — and that is the entire idea of him. You cannot navigate
+  // that core: turning round never retraces, and you get spat out somewhere you
+  // did not choose. He walks it correctly, forever, because it is his. The maze
+  // is not a place he is kept in. It is a place he keeps.
+  //
+  // Every leg is a real exit in the core's one-way tangle (checked by script),
+  // and the ring closes: the-hollow-beeches south returns to the-close-dark.
+  "the-woodward": [
+    "the-close-dark", "the-turned-ground", "the-heart-of-it",
+    "the-listening-stand", "the-same-tree", "the-hollow-beeches",
+  ],
 };
 
 // Creatures with nothing inside. They do not bleed (broken remains, not blood),
@@ -658,10 +733,74 @@ export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman"
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
-export const THIEVES = new Set(["cutpurse", "cutthroat"]);
+export const THIEVES = new Set(["cutpurse", "cutthroat", "footpad"]);
+
+// ROAMING DENS (rome, 2026-08-02: "do they have dens? i think we should have it
+// as rng where they spawn on a road").
+//
+// Every other creature in the game has a HOME — the den it was seeded at, the
+// ground it keeps to, the room it walks back toward when idle. That is right for
+// a dungeon, where a thing lives somewhere. It is wrong for a road. The road's
+// own ruling was PATROLLERS, NOT RESIDENTS: what makes a road a road is meeting
+// something that was already going somewhere. A dog that reliably re-appears at
+// the mustering yard is a resident with extra steps, and three trips teach you
+// the whole roster's addresses.
+//
+// So these take a NEW den every time they arrive, rolled across every room of
+// the band they belong to (gates and hideaways excluded — nothing dens on a
+// threshold or in a bolthole). Territory still works exactly as before once
+// they are placed: they keep to the ground around wherever they woke. You never
+// learn where the footpads are. You learn that the road has footpads.
+//
+// The carrier is deliberately NOT here — he patrols, so his den only decides
+// where he re-enters the world, and the road is his route either way.
+export const ROAMING_DENS = new Set(["masterless-dog", "footpad"]);
+
+// SPAWN REGIONS (rome, 2026-08-02: "make the road spawn rng anywhere, like
+// mobs"). A band listed here hatches wanderers ANYWHERE in itself rather than at
+// a marked room — the same idea as ROAMING_DENS, applied to people.
+//
+// The road is the right place for it and the fortress is not. A road is where
+// you meet things that were already going somewhere; waking on it at a random
+// milestone reads as having walked there. The fortress's four spawns are
+// thresholds — arches and ports, places you are meant to arrive AT — so they
+// stay marked rooms.
+//
+// Weighting: each spawn ROOM is one slot and each spawn REGION is also one slot,
+// so the road is a fifth of arrivals rather than swamping the four fortress
+// gates with its thirty rooms. Hideaways are excluded (nobody wakes inside a
+// bolthole) and so are gates, since regionOf calls a gate "gate" — you never
+// wake on the Roadwarden's doorstep, you wake somewhere out on the road.
+export const SPAWN_REGIONS = new Set<string>(["road"]);
+
+// THE MILESTONES (2026-08-01). Two stones on the West Road, twelve rooms apart,
+// that keep a PERMANENT register of names — distinct from `carve <words>`, which
+// is a trace and weathers off within a day, and from the gatehouse wall chart,
+// which records HALLS (shared map knowledge) rather than people.
+//
+// The whole mechanic is having two of them. The first stone is four rooms out
+// and anyone can reach it; the drowned stone is past the ford, out where the
+// dogs are. Compare the lists and the road tells you who went on — nobody
+// tracks deaths, nobody writes a "who survived" system, the two registers ARE
+// the record. Names on the near stone only are people who turned back, or who
+// turned nothing back.
+export const MILESTONES = new Map<string, { stone: string; other: string; also: string }>([
+  ["the-first-milestone", {
+    stone: "the milestone",
+    other: "the-drowned-milestone",
+    also: "and again on the drowned stone, twelve rooms on",
+  }],
+  ["the-drowned-milestone", {
+    stone: "the drowned milestone",
+    other: "the-first-milestone",
+    also: "who cut the first stone too",
+  }],
+]);
+export const MILESTONE_CAP = 40;   // names a stone holds; the oldest weather off as new ones are cut
+export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest first
 // RUNNERS never stand and fight — they bolt the instant they can, so the only
 // way to kill one is to catch it: hit it as it breaks for the door.
-export const RUNNERS = new Set(["fleet-rat"]);
+export const RUNNERS = new Set(["fleet-rat", "roe-deer"]);
 // BROODERS are nest-bound: they don't wander, don't flee, and while they live
 // they keep birthing scabby rats into their room. Kill the mother or the room
 // stays an infestation. A living source, not a stat block.
@@ -679,7 +818,7 @@ export const WAKE_NOISE = 0.8;  // a fight in the room is almost unmissable
 export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
 // SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing
 // and — past BOLD — losing their nerve entirely: they stop fleeing and hit harder.
-export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena"]);
+export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf"]);
 // VERMIN eat the dead too — but only to SURVIVE, none of the hyena's package.
 // Rats had no food at all (not predators, not scavengers), so they sat pinned at
 // max hunger, forever "restless with hunger" (rome, 2026-07-17: "what are rats
@@ -687,7 +826,7 @@ export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena"]);
 // room to sate and heal a little — but it does NOT haul off loot, mourn its kin,
 // or gorge itself bold into a threat (all of that stays gated on SCAVENGERS).
 // The bone rooms clean their own dead; the rat just doesn't starve in them.
-export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat"]);
+export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer"]);
 // THE NOSE (rome, 2026-07-17): a scavenger with nothing better to do drifts
 // toward fresh blood next door — a drip trail (a wounded thing that walked
 // through) or a kill's pool. Odds-gated so it's a drift, not a magnet; the
@@ -808,7 +947,12 @@ export const GORGE_NAP_ODDS = 0.5;    // a hyena that just fed likely lies down 
 // stays INSIDE the territory tether (a den with no water in reach simply
 // doesn't have the habit — the leak law), one drinker at a hole at a time,
 // and rain IS water (the run skips).
-export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-drowned-orchard", "well", "the-dry-moat"]);
+// Where a thirsty creature paths to. The road's two waters put the food web out
+// on it — the ford is the only drinkable thing for a dozen rooms in either
+// direction, which makes it the road's natural ambush, and the masterless dogs
+// path to it on their own.
+export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-drowned-orchard", "well", "the-dry-moat",
+  "the-shallow-ford", "the-flooded-quarry"]);
 export const THIRST_MIN_MS = 2 * 3_600_000;
 export const THIRST_MAX_MS = 4 * 3_600_000;
 // CALLS: one primitive, three meanings — prey calls AWAY (a fleeing rat's
@@ -838,6 +982,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena"])],                // the mean cousin drives off the plain one
   ["grave-hyena", new Set(["rat", "fleet-rat"])],                              // hyenas eat rats
   ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
+  ["grey-wolf", new Set(["roe-deer"])],                                       // the wood's own food web: wolves run deer, and you can walk into the middle of it
   // The pale hunters are the DEEP's rat-catchers: hungry, they leave their lurk
   // and range toward the rat-runs (lurkerDrifts), run one down (predation), and
   // go quiet again. A stretch of dark with no rats left is what starves one onto
@@ -853,7 +998,7 @@ export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes 
 // hunters have NO prey down there — near-equals, everything else bloodless — so
 // for them starvation has nowhere to go but your torchlight. (three-hound is a
 // SENTINEL and takes the room on its own terms — it stays out.)
-export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker"]);
+export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "grey-wolf"]);
 // The deep eats its own: strayed rats (and worse) die in the dark and rot where
 // they fall, and the pale hunters scavenge the carrion. A dice mint (same law as
 // the stone/torch — cadence × odds, no clock to farm) drops one fresh carcass into
@@ -902,7 +1047,11 @@ export const SEIZE_DROWN_FRACTION = 0.15; // unmitigated, as a share of max hp
 // you. Blind, they wake to noise and to the careless walking in (they ride the
 // same wake odds as LISTENERS, WAKE_ENTER/WAKE_NOISE); stay quiet and still and
 // one may let you pass. Once it strikes it reveals itself, and it's just a fight.
-export const LURKERS = new Set(["pale-crawler", "pale-stalker"]);
+// The follower is the maze's signature: it is a LURKER, so it is not in the
+// room until it drops on you, which is the only honest way to write a thing
+// you never catch sight of. It lives in the lying cores, so it finds you at
+// exactly the moment you have stopped knowing the way back.
+export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower"]);
 // REVENANTS don't stay down: put one to 0 and it RISES ONCE, at part health, and
 // comes again. The second death is the real one. A longer fight, not a lost one.
 export const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);
@@ -1311,7 +1460,11 @@ export const SENTINELS = new Set(["three-hound", "two-hound"]);
 // grudge, no meal, no wake needed — and hold their post to do it (they don't
 // wander off, and noise won't lure them away). A living hazard chained to a
 // place: the last watchman, who bars his turret to everyone who is not him.
-export const AGGRESSIVE = new Set(["last-watchman"]);
+// The boar holds its rooting ground and commits at whatever walks into it —
+// the one room in the honest band you cannot cross casually. The keeper holds
+// the hall floor of the holding for the same structural reason the watchman
+// holds his turret: it is his.
+export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "the-keeper-of-the-holding"]);
 
 // TREASURY DOORS: a room that is some boss's hoard, keyed by the keeper who
 // bars it. The way IN stays shut while that keeper lives in the room before it
@@ -1367,6 +1520,10 @@ export const DARK_ROOMS = new Set([
   "blackreach", "the-lightless-march", "the-gasping-dark", "black-threshold", "black-canal",
   "the-crawl-of-teeth", "the-earth-throat", // the warrens' lightless squeezes (058)
   "the-long-swallow", "the-tide-throat", "the-silt-chapel", "the-still-cradle", // the Tideways' drowned half (069)
+  // The holloway (2026-08-01): sunk between root walls with the leaf canopy
+  // closed over it. Dark at noon, not just at night — the one room on the road
+  // that needs a torch in daylight, and it is the last room before the wood.
+  "the-holloway",
 ]);
 // The 058 blocks, named for the MAP's display regions only — game logic (chest
 // tiers, ambience fallback) still reads them as "upper" via regionOf. The map
@@ -1401,6 +1558,12 @@ export const FORAGE_HEAL = 3; // a scavenged nibble — less than a corpse (SCAV
 // the overworks rooftops). The room-events engine (events.ts) reads this for
 // rain; anything indoor — keep, warrens, deep — is cover.
 export const OUTDOOR_ROOMS = new Set([...GROUNDS_ROOMS, ...OVERWORKS_ROOMS]);
+// Bands that are outdoors by their nature — every room of them is folded into
+// OUTDOOR_ROOMS at world load (see init()), so weather, fog, cold, crows and
+// the night dark reach them without anyone listing a thousand room ids. The
+// wood counts: a canopy is a roof you still get rained through, and its own
+// dark is a matter for DARK_ROOMS, room by room.
+export const OUTDOOR_REGIONS = new Set<string>(["road", "wood", "mountain"]);
 // A day/night world-clock (rome, 2026-07-22): every OUTDOOR room only, deep/
 // warrens/keep are always their own dark regardless. Deliberately faster than
 // a real day — a full cycle every DAY_CYCLE_MS — so a single play session
@@ -1968,7 +2131,8 @@ export const SURFACERS = new Set([                    // the mobile deep-kin tha
   "twice-dead", "thrice-dead", "pale-crawler", "pale-stalker",
 ]);
 export const SURFACE_ROOMS = ["well", "oubliette", "catacomb"]; // dark inner holes it climbs out of — never the entry gates
-export const AMBIENCE: Record<"gate" | "deep" | "upper", string[]> = {
+// Partial on purpose: a band with no pool yet is silent rather than borrowed.
+export const AMBIENCE: Partial<Record<Region, string[]>> = {
   gate: [
     "Cold air wells up out of the dark below, smelling of wet stone.",
     "Above, the wind finds a gap in the ruined tower and moans through it.",
@@ -2000,6 +2164,57 @@ export const AMBIENCE: Record<"gate" | "deep" | "upper", string[]> = {
     "The water carries a sound you feel more than hear, and cannot place.",
     "A film of silt lifts off the bottom, hangs a while, and greys back down over everything.",
     "Scum rides the black water — dust that fell here before the flood, going nowhere.",
+  ],
+  // ---- THE SURFACE BANDS (2026-08-01) ----
+  // The dungeon's three pools are all enclosure: dust, drip, held breath. These
+  // are the opposite problem — open country, where the threat is distance and
+  // what's in it. Weather outranks all of them (eventAmbient runs first), so
+  // none of these mention rain or sky-state; they'd fight the storm for the
+  // same beat and lose.
+
+  // The road: exposure. Nothing here hides you, and everything on it is going
+  // somewhere — which means everything on it can see you coming, too.
+  road: [
+    "The wind comes straight down the open road with nothing left to slow it.",
+    "Ruts run ahead of you in the mud, filled with water, older than your errand.",
+    "Somewhere off the verge a bird goes up out of the grass, hard and sudden, and is gone.",
+    "The road unrolls to a point ahead and does not hurry to get there.",
+    "Grass has come up through the old paving in the places nobody walks any more.",
+    "A stone in the verge leans where it was set, its cut face worn past reading.",
+    "Something has passed this way not long ago: the mud holds the shape and not the name.",
+    "The wind drops, and for a moment you can hear how far away everything is.",
+    "Crows work something small down the ditch, and pause to watch you by, and go back to it.",
+    "The country opens on both sides of you, and offers nowhere at all to stand out of sight.",
+  ],
+  // The wood: enclosure again, but green and alive — the dungeon's dark keeps
+  // still, and this one doesn't. The recurring note is the sightline: you can
+  // never see far enough, and the wood knows where you are before you do.
+  wood: [
+    "The trees close the sky over you a branch at a time, and the light goes green and thin.",
+    "Something moves off through the undergrowth, unhurried, keeping its distance.",
+    "The birds nearby stop. Further off, they carry on.",
+    "Leaf-mould gives underfoot with a sound like something being let go.",
+    "A branch settles somewhere behind you, at about the height of a shoulder.",
+    "The wood breathes out a smell of wet bark and rot and something sweeter under it.",
+    "Every way you look, the trees stand at the same distance and give you nothing.",
+    "A twig goes, off to your left. Nothing follows it.",
+    "Old growth leans in overhead until the way ahead is a tunnel of leaves.",
+    "Somewhere in the green a wood-pigeon starts up its two notes, and thinks better of the third.",
+  ],
+  // The mountain: scale and cold. Nothing here is interested in you — the
+  // threat is the place itself, and the hint, kept rare and never named, that
+  // something very large has been up here a long time.
+  mountain: [
+    "The air comes thin and cold off the stone and takes the warmth out of your hands.",
+    "Loose scree shifts somewhere above you, runs a little way, and stops.",
+    "The wind hunts along the rock face, finds a gap, and howls through it.",
+    "Below you the country lies out flat and small and none of it is any help.",
+    "Frost has got into the stone and split it, patiently, over a long time.",
+    "Nothing grows at this height but a grey lichen, clinging where it can.",
+    "The cold up here is dry and clean and entirely without mercy.",
+    "A shadow crosses the slope ahead, and there is nothing overhead to have cast it.",
+    "The rock is scored in long parallel grooves, too deep and too even for weather.",
+    "Somewhere far above, stone grinds on stone, and the mountain resettles its weight.",
   ],
 };
 // The dust your OWN light wakes: carried into a naturally-dark room the dark has
@@ -2045,6 +2260,64 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
   "pocket-of-air": ["The air here is thin and breathable and does not smell of the water. You breathe while you can."],
   "sunken-throne": ["The flooded dark hums, low, as if the throne remembers being sat.", "The water around the throne is very, very still."],
   "kings-hoard": ["Gold gleams once in the dark, and is swallowed again."],
+  // ---- the west road: the places on it worth stopping at (2026-08-01) ----
+  // The Roadwarden's Post NEEDS its own pool. It is a gate, and regionOf calls
+  // every gate "gate" wherever it stands, so without this it would draw the
+  // fortress's lines — cold air welling up out of the dark below, at a stone
+  // house in open country with nothing under it.
+  "the-roadwarden-post": [
+    "Behind the hatch, something is set down, and taken up again.",
+    "The yard gate knocks against its post in the wind, not quite latched.",
+    "Smoke leans off the chimney and flattens out along the road.",
+  ],
+  "the-crooked-gibbet": [
+    "The cage turns a few degrees on its chain, and turns back.",
+    "Iron creaks overhead — the one sound this thing has left to make.",
+  ],
+  "the-roadside-graves": [
+    "The grass over the mounds grows greener than the grass around them.",
+    "Something small goes over the flat stones and off into the rough.",
+  ],
+  "the-wayside-shelter": [
+    "Wind passes the open side of the shelter and lets go of you for a moment.",
+    "Water finds a way through the half-roof and ticks onto the flags, unhurried.",
+  ],
+  "the-long-straight": [
+    "The road runs out ahead of you to a point, and nothing is on it.",
+    "A long way off, something crosses the road and is gone before it resolves.",
+  ],
+  "the-dry-well": [
+    "The rowan down the shaft stirs, though nothing up here is moving.",
+    "You could drop a stone in and hear exactly how far it is to the bottom.",
+  ],
+  "the-flooded-quarry": [
+    "The green water takes the light and gives nothing back.",
+    "A slab lets go of the working face, somewhere under the surface, and settles.",
+  ],
+  "the-shallow-ford": [
+    "The beck works over the paving with a sound like a held conversation.",
+    "Something upstream drops into the water, and the ripple reaches you late.",
+  ],
+  "the-broken-axle": [
+    "The good wheel turns a quarter, stops, and turns back.",
+    "The wind gets into the cart's ribs and hums there.",
+  ],
+  "the-cutting": [
+    "Your own footfalls come back off the rock walls a half-beat late.",
+    "Cold air stands in the cutting the way water stands in a ditch.",
+  ],
+  "the-old-boundary": [
+    "Wind runs the length of the old ditch, north to south, going somewhere.",
+    "The hinge-pins in the jambs are worn bright, and nothing has hung on them in living memory.",
+  ],
+  "the-holloway": [
+    "Roots hang out of the banks at head height, and one of them moves as you pass.",
+    "The leaf-rot smell thickens ahead of you, and does not come from behind.",
+  ],
+  "the-gap-in-the-trees": [
+    "The gap gives back nothing at all — not a shape, not a distance.",
+    "Something in the wood shifts its weight, once, and the trees hold still around it.",
+  ],
 };
 // Blind still isn't blank (rome, 2026-07-24, after the bell-cote): 'look' in
 // a pitch-black outdoor room returned the SAME bare line everywhere, no
@@ -2074,6 +2347,28 @@ export const DARK_TOUCH: Record<string, string> = {
   "the-wall-walk": "The wind up here never stops — it just changes its mind, first off the yard, then off the waste.",
   "the-watch-turret": "Wind cuts through the arrow-slits around you, thin and precise — whoever stood this post saw everything from here, once.",
   "the-weepers-crown": "Somewhere above your head the carved face keeps its silent watch — you could trace one stone tear with your fingers, if you reached.",
+  // ---- the west road (2026-08-01) ----
+  // The road is outdoors and moonless nights are total, so an unlit walk out
+  // here is thirty rooms of pitch black — which is exactly when the surface
+  // underfoot has to do the work the prose usually does. Read the road by
+  // touch and you can still tell how far out you are.
+  "the-cart-road": "Dressed stone underfoot, and a worn groove down the middle of it your boot keeps finding — the road is still doing its job, blind or not.",
+  "the-broken-paving": "Every stone sits at its own angle. You go slowly, and your ankles do the seeing.",
+  "the-first-milestone": "Your hand finds the pillar at the verge, and under your fingers the newer scratches — names, crowded over the old cut.",
+  "the-elder-hedge": "Blackthorn rakes your sleeve on the north side. Whatever is beyond it stays beyond it.",
+  "the-sunken-lane": "Banks close in at shoulder height, roots hanging out of them, and the road runs on between with nowhere else to go.",
+  "the-crooked-gibbet": "Above you, iron turns on a chain and stops. It is empty. You cannot check that it is empty.",
+  "the-wayside-shelter": "Three walls and half a roof — you find the bench by shin, and the hollow worn in it by sitting down.",
+  "the-long-straight": "Level, straight, and open on both sides. Nothing to walk into, and nothing to get behind.",
+  "the-shallow-ford": "The road walks you down into cold water, shin-deep over clean gravel, and up out of it on the far side, still paved.",
+  "the-broken-axle": "Your hand finds a spoked wheel, waist-high and slowly turning, and the cart's ribs beyond it.",
+  "the-cutting": "Rock walls on both sides, close enough to touch at once, and your own footfalls coming back a half-beat late.",
+  "the-old-boundary": "Two stone jambs and the cold hinge-pins set in them, worn smooth. The gate they held is long gone.",
+  "the-last-paving": "The stones give out under your boots — courses, then a scatter, then bare earth. Past here the road is only habit.",
+  "the-rutted-track": "Two water-filled ruts with a spine of grass between. Walk the spine; everything else has learned to.",
+  "the-green-lane": "Hedge on both sides, met overhead. You are in a tunnel, and it is not much wider than you are.",
+  "the-holloway": "Roots for walls, leaves for a ceiling, and a smell of leaf-rot ahead of you that is not the lane's.",
+  "the-gap-in-the-trees": "The track stops. Ahead your hands find trunks, and then a gap between them, and the air out of it is colder and older than the road's.",
 };
 // The dungeon breathes SLOWLY (rome, 2026-07-13). At 45s + 0.16/tick it spoke
 // about once a minute, which against a four-line gate pool meant the whole pool

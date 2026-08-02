@@ -1,0 +1,45 @@
+-- THE GATES, SPREAD (rome, 2026-08-02) — three doors in the wood, and the road
+-- stops having a front step.
+--
+-- WHY THREE, AND WHY NOT ONE. I argued the wood down to one gate on a metric
+-- that assumed you can navigate — shortest-path distance — which is exactly the
+-- thing the maze takes away from you. Re-measured as EXPECTED STEPS OUT WHEN YOU
+-- CANNOT PATH THE CORES:
+--
+--   0 wood gates : avg 32.6 steps out, 44.1 from inside a core, worst 56
+--   1 wood gate  : avg 16.0,           27.3,                    worst 39
+--   2 wood gates : avg 13.7,           24.2,                    worst 31
+--   3 wood gates : avg 12.5,           23.1,                    worst 31
+--
+-- Note what that says: past the first gate, the cost barely moves, because the
+-- expense is the random walk inside the lying cores and no door can fix that.
+-- So extra gates are FREE in difficulty terms — the maze still charges ~23 steps
+-- for being lost — and they buy the thing rome was actually asking about:
+-- ONE CAMPER'S COVERAGE. With one wood gate a single ganker covers 100% of
+-- everyone banking in the wood; with three, 33%.
+--
+-- WHERE. Best-spread three among honest-band rooms, excluding the 17 rooms the
+-- cores spill you into (a gate on a spill point is camper bait by construction —
+-- it is the one predictable place a lost player appears). That gives minimum
+-- separation 10 between gates, against the fortress's 4, with worst-case walk 7
+-- and average 4.1.
+--
+-- All three are BUILT things, which a gate has to be — you cannot hang a keeper
+-- and a hatch on a stand of trees:
+--   the Timber Stack  — a crib of squared, seasoned trunks, never collected
+--   the Withy Hut     — a round mud-and-withy hut, one low door, dry inside
+--   the Gate Arch     — the holding's arch, gate-pin sockets still in the jambs
+--
+-- The Gate Arch also puts a bank on the FAR SIDE, which is otherwise the longest
+-- walk home in the game: that quarter is only reachable by climbing up out of
+-- the sunken wood, so before this, everything won out there had to be carried
+-- back through the maze.
+--
+-- THE FORTRESS IS UNCHANGED, and deliberately: rome asked to space its four out,
+-- and they cannot be. Measured every 4-room combination among plausible door
+-- rooms — the best achievable minimum separation is 4, and the current four are
+-- already at 4. The fortress is 110 rooms but only 18 steps across; four doors
+-- cannot get further apart than that. (Three could reach 5. That is the only
+-- lever, and it costs a gate.)
+
+UPDATE rooms SET is_entry = 1 WHERE id IN ('the-timber-stack', 'the-withy-hut', 'the-gate-arch');

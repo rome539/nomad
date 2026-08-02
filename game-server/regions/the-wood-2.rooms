@@ -1,0 +1,277 @@
+# THE WOOD (THE MAZE), SLAB 2 — 32 rooms: the band widens, two more cores.
+#
+# Slab 1 proved the mechanism. This grows it: the honest lattice gains a
+# northern and a southern row (so the wood is 5 rows deep instead of 3), two
+# more thresholds at its far corners, and TWO more lying cores behind them.
+#
+# THE CORE PATTERN, now formalised. Each core is 8 rooms in a ring, and every
+# room's four exits are assigned by fixed offsets around that ring:
+#     north -> +1     east -> +3     south -> +5     west -> +7
+# That guarantees the design law with no eyeballing: a -north-> a+1, and that
+# room's south goes to a+6, never back to a. Same for every other pair. Every
+# room keeps all four compass points, so no direction ever answers "there is no
+# way east from here" and gives the trick away.
+#
+# Two exits per core are replaced with SPILLS back onto the honest band, at
+# rooms nowhere near the threshold you entered by.
+
+!region wood
+
+# ---- attachments: the slab-1 rooms that gain a door --------------------------
+
+## the-birch-edge | attachment
+!existing
+> north the-wind-shorn-edge
+
+## the-holly-brake | attachment
+!existing
+> north the-old-coppice
+
+## the-stone-pile | attachment
+!existing
+> north the-hornbeam-row
+
+## the-lightning-split | attachment
+!existing
+> north the-crow-roost
+
+## the-ash-stand | attachment
+!existing
+> north the-high-holly
+
+## the-bramble-margin | attachment
+!existing
+> south the-sunken-ditch
+
+## the-nettle-glade | attachment
+!existing
+> south the-alder-carr
+
+## the-drinking-pool | attachment
+!existing
+> south the-mire-edge
+
+## the-badger-ground | attachment
+!existing
+> south the-fox-earths
+
+## the-charcoal-hut | attachment
+!existing
+> south the-burnt-stand
+
+# ---- the northern row: still honest -----------------------------------------
+
+## the-wind-shorn-edge | The Wind-Shorn Edge
+The wood's northern lip, where nothing gets to grow tall. Everything here has been pruned by weather into the same crouching shape, leaning inland, and past the last of it the ground opens out grey and empty and offers you no reason to cross it.
+> south the-birch-edge
+> west the-old-coppice
+
+## the-old-coppice | The Old Coppice
+Hazel cut to the stool on a cycle and then abandoned mid-cycle, so every stump has thrown up a dozen poles, all of them the same age and far too thick now for anything they were meant for. Walking through is a business of turning sideways.
+> east the-wind-shorn-edge
+> south the-holly-brake
+> west the-hornbeam-row
+> north the-spring-head
+
+## the-spring-head | The Spring Head
+Water comes up out of the ground here without ceremony, filling a stone-lined basin somebody cut for it a very long time ago, and running away north through the leaf-litter. The stone is cut square and the water is very cold and very clear.
+> south the-old-coppice
+
+## the-hornbeam-row | The Hornbeam Row
+Hornbeam, planted in a line and left, their trunks fluted and grey and hard as iron — this is the wood people came to when they needed something that would not wear out. The line runs east to west and does not deviate for anything.
+> east the-old-coppice
+> south the-stone-pile
+> west the-crow-roost
+
+## the-crow-roost | The Crow Roost
+A stand of tall pines with the ground beneath them white and sour with droppings and nothing growing in it at all. The birds are up there in numbers, and they stop when you arrive, and they start again when they have decided about you.
+> east the-hornbeam-row
+> south the-lightning-split
+> west the-high-holly
+> north the-hunters-stand
+
+## the-hunters-stand | The Hunter's Stand
+A platform of grey boards lashed into the fork of an oak, twelve feet up, with a ladder of nailed battens going to it. From up there you would be able to see over a good stretch of the canopy. The battens do not all look sound.
+> south the-crow-roost
+
+## the-high-holly | The High Holly
+Holly grown to full tree height rather than brake, dark and heavy-crowned, standing far enough apart to walk between and close enough to close the sky. It is a good deal darker here than the hour accounts for.
+> east the-crow-roost
+> south the-ash-stand
+> west the-north-turning
+
+# ---- the southern row: still honest -----------------------------------------
+
+## the-sunken-ditch | The Sunken Ditch
+A ditch runs along the wood's southern edge, silted to half its depth and full of last year's leaves, with the remains of a bank on the far side. It was dug to keep deer in, or out, by somebody who owned enough of the world to care which.
+> north the-bramble-margin
+> west the-alder-carr
+> south the-lime-kiln
+
+## the-lime-kiln | The Lime Kiln
+A brick-lined pit with a stone arch at its foot, built into the bank and burned out long ago. The inside is still white in patches. Somebody fed this thing for weeks at a time and somebody else carried away what it made.
+> north the-sunken-ditch
+
+## the-alder-carr | The Alder Carr
+Alder standing in standing water, their roots up out of it like knuckles, the ground between them not really ground. Every step decides for itself how far down it is going. The air is thick and still and smells of the bottom of things.
+> east the-sunken-ditch
+> north the-nettle-glade
+> west the-mire-edge
+
+## the-mire-edge | The Mire Edge
+The carr gives out into open mire — flat, pale, quaking, with a skin of moss over it that will hold a bird and has no opinion about holding you. Something has been across it recently in a straight line, which is more confidence than you have.
+> east the-alder-carr
+> north the-drinking-pool
+> west the-fox-earths
+
+## the-fox-earths | The Fox Earths
+Dry sandy rise out of the wet, dug through and through, holes at every angle with fans of pale spoil below them. It smells sharply of fox for twenty paces in every direction, and the smell is not old.
+> east the-mire-edge
+> north the-badger-ground
+> west the-burnt-stand
+> south the-deer-fence
+
+## the-deer-fence | The Deer Fence
+A line of split posts marching away east and west, most of them still standing, the wire between them long gone to rust and lying in the leaves in loops. It enclosed something once. It does not enclose anything now.
+> north the-fox-earths
+
+## the-burnt-stand | The Burnt Stand
+Fire came through here a long while back and the trees stand dead in their own char, black and limbless and perfectly upright, with green growing up thick and fast between them. It is the lightest place in the wood and the least alive.
+> east the-fox-earths
+> north the-charcoal-hut
+> west the-south-turning
+
+# ---- two more thresholds: the last honest ground -----------------------------
+
+## the-north-turning | The North Turning
+The high holly thins and the ground tilts, and there is a stretch here where the trees have arranged themselves into something that looks like an avenue for about thirty paces before admitting it isn't. Nothing marks the end of it.
+> east the-high-holly
+> west the-crooked-stand  oneway
+
+## the-south-turning | The South Turning
+West of the burnt ground the green comes back all at once, and closes, and the light goes from that hard white glare to nothing much in the space of a few steps. Your eyes take a while. By the time they have, you are in it.
+> east the-burnt-stand
+> west the-black-alders  oneway
+
+# ---- CORE B (north): ring of 8, offsets n+1 e+3 s+5 w+7 ---------------------
+# ring order: crooked-stand, white-ground, leaning-wood, mast-fall,
+#             grey-thicket, birdless-acre, turning-leaves, far-hollow
+# two exits replaced with spills: mast-fall east -> the-crow-roost,
+#                                 turning-leaves south -> the-first-clearing
+
+## the-crooked-stand | The Crooked Stand
+Every trunk here came up out of the ground at an angle and then thought better of it, so the whole stand is bent the same way at the same height, like a crowd all leaning to hear something. The floor is deep in years of leaves.
+> north the-white-ground  oneway
+> east the-mast-fall  oneway
+> south the-birdless-acre  oneway
+> west the-far-hollow  oneway
+
+## the-white-ground | The White Ground
+The leaf-mould gives way to a floor of pale fungus, spread flat and wide over the ground and up the base of every trunk, so that the whole stretch is the colour of old bone. It gives underfoot without any sound at all.
+> north the-leaning-wood  oneway
+> east the-grey-thicket  oneway
+> south the-turning-leaves  oneway
+> west the-crooked-stand  oneway
+
+## the-leaning-wood | The Leaning Wood
+Trees at every spacing and no spacing, a stretch of wood with no character to it whatever — no clearing, no water, no fall, no ruin. Just wood, going away from you in all directions to about the same distance.
+> north the-mast-fall  oneway
+> east the-birdless-acre  oneway
+> south the-far-hollow  oneway
+> west the-white-ground  oneway
+
+## the-mast-fall | The Mast Fall
+Beech mast lies inches deep over everything, shells and husks and the ones that never opened, a whole autumn's worth dropped at once and gone nowhere since. It rustles at every step, loudly, and keeps rustling a moment after you stop.
+> north the-grey-thicket  oneway
+> east the-crow-roost  oneway
+> south the-crooked-stand  oneway
+> west the-leaning-wood  oneway
+
+## the-grey-thicket | The Grey Thicket
+Scrub grown up under a gap in the canopy and then shaded out again when the gap closed, so it is all dead — a thicket of grey brittle stems standing exactly where they grew, snapping off at the touch and not falling over.
+> north the-birdless-acre  oneway
+> east the-far-hollow  oneway
+> south the-white-ground  oneway
+> west the-mast-fall  oneway
+
+## the-birdless-acre | The Birdless Acre
+An ordinary stretch of good wood — mature trees, decent spacing, light coming down in patches — with nothing in it. No birds, no small movement in the litter, no insects in the light shafts. Everything about it is right except that.
+> north the-turning-leaves  oneway
+> east the-crooked-stand  oneway
+> south the-leaning-wood  oneway
+> west the-grey-thicket  oneway
+
+## the-turning-leaves | The Turning Leaves
+The canopy over this stretch has gone to autumn colour while everything around it has not, and the leaves come down steadily the whole time you are standing in it, one at a time, with no wind to account for any of it.
+> north the-far-hollow  oneway
+> east the-white-ground  oneway
+> south the-first-clearing  oneway
+> west the-birdless-acre  oneway
+
+## the-far-hollow | The Far Hollow
+A shallow bowl in the wood floor, wide and quite regular, with the trees growing right down into it and out the other side. Nothing is in the bottom of it. It is a long way from anywhere and there is no reason for it to be here.
+> north the-crooked-stand  oneway
+> east the-leaning-wood  oneway
+> south the-grey-thicket  oneway
+> west the-turning-leaves  oneway
+
+# ---- CORE C (south): ring of 8, same offsets --------------------------------
+# ring order: black-alders, sodden-ground, reed-break, still-air,
+#             moss-floor, drowned-roots, low-mist, blind-corner
+# spills: reed-break east -> the-alder-carr, drowned-roots north -> the-badger-ground
+
+## the-black-alders | The Black Alders
+Alders standing close in wet black ground, their bark near enough to black itself, and everything below knee height gone the same colour. The water between the roots does not move and does not reflect much of anything.
+> north the-sodden-ground  oneway
+> east the-still-air  oneway
+> south the-drowned-roots  oneway
+> west the-blind-corner  oneway
+
+## the-sodden-ground | The Sodden Ground
+Ground so saturated that your prints fill behind you before you have finished making the next one. There is no standing water and no dry footing either — just a wood growing out of something that has not decided which it is.
+> north the-reed-break  oneway
+> east the-moss-floor  oneway
+> south the-low-mist  oneway
+> west the-black-alders  oneway
+
+## the-reed-break | The Reed Break
+Reeds up over your head in a stand that has no business being inside a wood, dense and dry-rattling, with the trees continuing straight up out of the middle of them. You cannot see your own feet and you cannot see three paces.
+> north the-still-air  oneway
+> east the-alder-carr  oneway
+> south the-blind-corner  oneway
+> west the-sodden-ground  oneway
+
+## the-still-air | The Still Air
+The air here does not move at all. Not a leaf, not a stem, not the surface of the water lying in the hollows — and it is not that there is no wind, because you can hear wind, working the canopy somewhere not far off.
+> north the-moss-floor  oneway
+> east the-low-mist  oneway
+> south the-black-alders  oneway
+> west the-reed-break  oneway
+
+## the-moss-floor | The Moss Floor
+Moss has covered everything — floor, fallen wood, the lower six feet of every trunk — in one continuous green pelt a hand deep, so that the shapes underneath are only suggestions. Your feet make no sound whatsoever.
+> north the-drowned-roots  oneway
+> east the-blind-corner  oneway
+> south the-sodden-ground  oneway
+> west the-still-air  oneway
+
+## the-drowned-roots | The Drowned Roots
+The water is deeper here, shin-high and cold, and the roots come up through it in arches you have to step over or duck under. Underneath the surface the bottom is a mat of roots too, going down further than a wood should need.
+> north the-badger-ground  oneway
+> east the-black-alders  oneway
+> south the-reed-break  oneway
+> west the-moss-floor  oneway
+
+## the-low-mist | The Low Mist
+Mist lies flat across this stretch at about waist height, quite level, with the trunks going up through it and the canopy clear above. From here everything below your ribs is guesswork, including the ground.
+> north the-blind-corner  oneway
+> east the-sodden-ground  oneway
+> south the-still-air  oneway
+> west the-drowned-roots  oneway
+
+## the-blind-corner | The Blind Corner
+The trees close into a wall on three sides — not planted, just grown that way — leaving a pocket of open floor with one obvious way in. Standing in it, you cannot see anything coming until it is already at the gap.
+> north the-black-alders  oneway
+> east the-reed-break  oneway
+> south the-moss-floor  oneway
+> west the-low-mist  oneway

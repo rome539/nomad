@@ -1,0 +1,455 @@
+# THE WOOD (THE MAZE), SLAB 3 — 56 rooms. Takes the maze to 115.
+#
+# Two more honest rows (the wood is 7 rows deep now), eight more pockets, two
+# more thresholds, and THREE more lying cores of twelve.
+#
+# NEW STRUCTURE: THE SUNKEN WOOD. Core F sits BELOW the others. You reach it
+# only by `down` exits added to four rooms scattered through the older cores —
+# the ground gives way where you did not choose it to — and you leave it by two
+# `up` exits that put you back on the honest band. So being lost now has a
+# second stage: lost, and then lower.
+#
+# Ring maths, same as slab 2 but m=12: north +1, east +3, south +5, west +7.
+# d_n+d_s = 6 and d_e+d_w = 10, neither ≡ 0 mod 12, so no exit retraces.
+
+!region wood
+
+# ---- attachments -----------------------------------------------------------
+
+## the-wind-shorn-edge | attachment
+!existing
+> north the-outer-scrub
+
+## the-spring-head | attachment
+!existing
+> north the-bracken-edge
+
+## the-hornbeam-row | attachment
+!existing
+> north the-north-ride
+
+## the-hunters-stand | attachment
+!existing
+> north the-thin-soil
+
+## the-high-holly | attachment
+!existing
+> north the-last-oaks
+
+## the-lime-kiln | attachment
+!existing
+> south the-willow-margin
+
+## the-alder-carr | attachment
+!existing
+> south the-flood-meadow
+
+## the-mire-edge | attachment
+!existing
+> south the-south-ride
+
+## the-deer-fence | attachment
+!existing
+> south the-black-mud
+
+## the-burnt-stand | attachment
+!existing
+> south the-drowned-holly
+
+# The floor gives way in four places, scattered through three different cores.
+# Nothing warns you and nothing marks them.
+
+## the-close-dark | attachment: the ground gives
+!existing
+> down the-sunken-wood  oneway
+
+## the-leaning-wood | attachment: the ground gives
+!existing
+> down the-earth-fall  oneway
+
+## the-still-air | attachment: the ground gives
+!existing
+> down the-slip  oneway
+
+## the-far-hollow | attachment: the ground gives
+!existing
+> down the-old-ditch  oneway
+
+# ---- the far northern row: honest ------------------------------------------
+
+## the-outer-scrub | The Outer Scrub
+Thorn and stunted birch in poor ground, the last of the wood before it gives up entirely, with the open country showing grey through the gaps. Nothing here is taller than you are.
+> south the-wind-shorn-edge
+> west the-bracken-edge
+> north the-fallen-wall
+
+## the-fallen-wall | The Fallen Wall
+A drystone wall running east to west, down to knee height along most of its length and gone altogether in places, with trees now growing on both sides of it and through it. Somebody's boundary, kept up for centuries and then not.
+> south the-outer-scrub
+
+## the-bracken-edge | The Bracken Edge
+Bracken has taken everything that gets light here, shoulder-high and unbroken, so that the trees stand up out of a green sea you have to wade. Underneath it the ground is invisible and uneven.
+> east the-outer-scrub
+> south the-spring-head
+> west the-north-ride
+
+## the-north-ride | The North Ride
+A straight cut through the wood forty feet wide, grassed over now, running away east and west further than you can see. It was made for dragging timber out, or for driving game along, and it has not been used for either in a long time.
+> east the-bracken-edge
+> south the-hornbeam-row
+> west the-thin-soil
+> north the-charcoal-ring
+
+## the-charcoal-ring | The Charcoal Ring
+Another burning-floor, smaller than the one south of here and much older, the black circle almost grown over. Whoever worked this end of the wood worked it the same way, on the same schedule, for generations.
+> south the-north-ride
+
+## the-thin-soil | The Thin Soil
+Rock comes near the surface here and the trees know it — short, thick-trunked, wide-crowned, rooted sideways across the stone instead of down into it. In three places the bare rock is through, grey and scoured.
+> east the-north-ride
+> south the-hunters-stand
+> west the-last-oaks
+> north the-timber-stack
+
+## the-timber-stack | The Timber Stack
+Cut trunks stacked in a crib eight feet high, squared and sound and stripped, seasoned past use and never collected. The bottom course has gone soft into the ground. The top course would still take an axe.
+> south the-thin-soil
+
+## the-last-oaks | The Last Oaks
+Six oaks of enormous age standing well apart in clean ground, each one wide enough to fill a room, and nothing growing under any of them. They were old before the wall fell. They have outlasted every use anybody had for them.
+> east the-thin-soil
+> south the-high-holly
+> west the-far-north-turning
+> north the-poachers-camp
+
+## the-poachers-camp | The Poacher's Camp
+A hollow behind a fallen crown with a fire-scrape in it, a stone to sit on, and a wire snare still set in the run behind, rusted through and holding nothing. Somebody worked this ground carefully and quietly and did not come back for their gear.
+> south the-last-oaks
+
+# ---- the far southern row: honest ------------------------------------------
+
+## the-willow-margin | The Willow Margin
+Willow along the wood's southern water, silvered and thin, leaning out over ground that is more water than ground. Everything here bends and nothing here breaks.
+> north the-lime-kiln
+> west the-flood-meadow
+> south the-old-pond
+
+## the-old-pond | The Old Pond
+A pond somebody dug, square-cornered under the weed, with a stone sill at one end where the overflow ran. It is silting up from the edges in. What is left of the open water is black and perfectly still.
+> north the-willow-margin
+
+## the-flood-meadow | The Flood Meadow
+Open ground inside the wood that the water takes every winter and gives back every spring, so nothing woody has ever got a hold. Coarse grass, flat as a table, and a tidemark of stranded twigs all round the edge at knee height.
+> east the-willow-margin
+> north the-alder-carr
+> west the-south-ride
+> south the-heronry
+
+## the-heronry | The Heronry
+Big untidy nests wedged in the tops of the tallest alders, a dozen of them, and the ground beneath white and stinking and littered with bones the size of your finger. The birds are not in residence. Something has been at the nests.
+> north the-flood-meadow
+
+## the-south-ride | The South Ride
+The southern twin of the north ride, the same forty-foot cut, but this one holds water down its whole length in a shallow green channel. Walking it means walking in it.
+> east the-flood-meadow
+> north the-mire-edge
+> west the-black-mud
+> south the-withy-hut
+
+## the-withy-hut | The Withy Hut
+A low round hut of woven withies plastered with mud, built to cut and soak and bend osiers in, and dry inside to this day. It has one low door and no window, and nothing has denned in it — too tight, too smelling of man, too easy to be cornered in.
+!safe
+> north the-south-ride
+
+## the-black-mud | The Black Mud
+Ground churned to a black grease that takes your boot to the ankle and gives it back reluctantly. Everything that crosses here leaves a record, and the record is crowded, and some of it is fresh.
+> east the-south-ride
+> north the-deer-fence
+> west the-drowned-holly
+> south the-osier-beds
+
+## the-osier-beds | The Osier Beds
+Willow cut to the stool in rows and left, so each stump carries a fistful of straight red rods eight feet long. They were harvested every winter without fail. They have not been cut in years, and the rows are still perfectly straight.
+> north the-black-mud
+
+## the-drowned-holly | The Drowned Holly
+Holly standing in water, which it should not tolerate and evidently does, the lower leaves black and the upper still hard and green. The water is clear and shallow and has no obvious source or outlet.
+> east the-black-mud
+> north the-burnt-stand
+> west the-far-south-turning
+
+# ---- two more thresholds ----------------------------------------------------
+
+## the-far-north-turning | The Far North Turning
+Past the last of the great oaks the ground rises very slightly and the wood changes species without changing character. There is nothing here to notice and nothing here to remember, which is the only warning you get.
+> east the-last-oaks
+> west the-bracken-sea  oneway
+
+## the-far-south-turning | The Far South Turning
+The water underfoot deepens by an inch and the trees stand closer, and the sound of your own wading stops carrying more than a few paces. It is not a boundary. Nothing here is a boundary.
+> east the-drowned-holly
+> west the-willow-break  oneway
+
+# ---- CORE D (far north, dry): ring of 12, n+1 e+3 s+5 w+7 -------------------
+# spills: the-old-burn east -> the-hornbeam-row, the-dry-gully south -> the-north-ride
+
+## the-bracken-sea | The Bracken Sea
+Bracken over your head, in every direction, with the trunks going up through it and no ground visible anywhere. You are walking by feel and pushing with your arms, and the way closes behind you as you go.
+> north the-pine-dark  oneway
+> east the-empty-ride  oneway
+> south the-thin-birches  oneway
+> west the-ant-hills  oneway
+
+## the-pine-dark | The Pine Dark
+Planted pine in dead straight rows, so dense that the lower branches are all dead and the floor is bare orange needle and nothing else. There is no undergrowth, no birdsong, and no light worth the name.
+> north the-windfall  oneway
+> east the-lichen-wood  oneway
+> south the-old-burn  oneway
+> west the-holly-maze  oneway
+
+## the-windfall | The Windfall
+A gale laid a whole stand down in one night and they lie as they fell, crossed over each other at every angle, root-plates up. Getting through is a matter of climbing, and every surface is slick.
+> north the-empty-ride  oneway
+> east the-thin-birches  oneway
+> south the-ant-hills  oneway
+> west the-dry-gully  oneway
+
+## the-empty-ride | The Empty Ride
+A cut ride like the ones at the wood's edge — the same width, the same grass — running east and west, except that it does not come from anywhere and does not go anywhere, and both ends simply stop in standing wood.
+> north the-lichen-wood  oneway
+> east the-old-burn  oneway
+> south the-holly-maze  oneway
+> west the-open-canopy  oneway
+
+## the-lichen-wood | The Lichen Wood
+Every branch is furred with grey-green lichen hanging in beards a foot long, thick enough to blur the shapes of the trees. It only grows where the air has been clean and undisturbed for a very long time.
+> north the-thin-birches  oneway
+> east the-ant-hills  oneway
+> south the-dry-gully  oneway
+> west the-deer-lawn  oneway
+
+## the-thin-birches | The Thin Birches
+Birch grown up too close and starved of light, hundreds of them no thicker than your wrist, all the same height, all dying. Half are dead standing and held up by the others.
+> north the-old-burn  oneway
+> east the-holly-maze  oneway
+> south the-open-canopy  oneway
+> west the-bracken-sea  oneway
+
+## the-old-burn | The Old Burn
+Fire came through a generation ago and the wood has closed over the scar, but the ground still tells: charcoal in the litter, and every mature trunk blackened on one side to the same height.
+> north the-ant-hills  oneway
+> east the-hornbeam-row  oneway
+> south the-deer-lawn  oneway
+> west the-pine-dark  oneway
+
+## the-ant-hills | The Ant Hills
+Wood-ant nests the height of your chest, a dozen of them spread through open pine, each one a heap of needles alive on the surface with a movement you can hear if you stand still. The ground between them is highways.
+> north the-holly-maze  oneway
+> east the-open-canopy  oneway
+> south the-bracken-sea  oneway
+> west the-windfall  oneway
+
+## the-holly-maze | The Holly Maze
+Holly gone rampant, grown into itself into walls and blind passages taller than a man, with bare swept floor between. It is not a maze. It only has the shape of one, and it goes on for some distance.
+> north the-dry-gully  oneway
+> east the-deer-lawn  oneway
+> south the-pine-dark  oneway
+> west the-empty-ride  oneway
+
+## the-dry-gully | The Dry Gully
+A watercourse with no water in it, cut deep into the wood floor, floored with clean rounded stones. Something ran here for a long time and does not any more, and the trees have grown right up to both lips.
+> north the-open-canopy  oneway
+> east the-bracken-sea  oneway
+> south the-north-ride  oneway
+> west the-lichen-wood  oneway
+
+## the-open-canopy | The Open Canopy
+A stretch where the crowns do not meet, and the sky is up there in patches, and the light comes down in hard columns you can walk between. Everything at ground level is a tangle of things racing for it.
+> north the-deer-lawn  oneway
+> east the-pine-dark  oneway
+> south the-empty-ride  oneway
+> west the-thin-birches  oneway
+
+## the-deer-lawn | The Deer Lawn
+Grass, cropped to the length of a carpet over half an acre, ringed by trees browsed to a perfectly level line at the height of a deer's reach. Nothing is standing on it. It has been kept like this by a great many mouths over a great many years.
+> north the-bracken-sea  oneway
+> east the-windfall  oneway
+> south the-lichen-wood  oneway
+> west the-old-burn  oneway
+
+# ---- CORE E (far south, wet): ring of 12 ------------------------------------
+# spills: the-leaning-alders east -> the-mire-edge, the-sunk-fence north -> the-south-ride
+
+## the-willow-break | The Willow Break
+Willow grown into a thicket you cannot see through at any height, standing in water, every stem leaning a different way. Pushing through means both hands, and you cannot hear anything over the noise you are making.
+> north the-flooded-ride  oneway
+> east the-sedge-flat  oneway
+> south the-quaking-ground  oneway
+> west the-silted-pond  oneway
+
+## the-flooded-ride | The Flooded Ride
+Another of the wood's straight cuts, this one under a foot of standing water for its whole visible length, mirror-flat, with the trees on both sides doubled in it. Wading it, you break the only straight line here.
+> north the-black-pool  oneway
+> east the-leaning-alders  oneway
+> south the-eel-ditch  oneway
+> west the-rush-bed  oneway
+
+## the-black-pool | The Black Pool
+Open water in the trees, a good stone's throw across, so dark it gives back the canopy and nothing of its own depth. The edge shelves away immediately. Nothing grows in it and nothing is on it.
+> north the-sedge-flat  oneway
+> east the-quaking-ground  oneway
+> south the-silted-pond  oneway
+> west the-frog-chorus  oneway
+
+## the-sedge-flat | The Sedge Flat
+Sedge in tussocks, each one a firm footing surrounded by water of no known depth, spaced just too far apart to step between comfortably. Going straight across is a series of decisions.
+> north the-leaning-alders  oneway
+> east the-eel-ditch  oneway
+> south the-rush-bed  oneway
+> west the-sunk-fence  oneway
+
+## the-leaning-alders | The Leaning Alders
+Alders that started upright and have been slowly laid over by the ground softening under them, so the whole stand leans thirty degrees the same way, still growing, still in leaf.
+> north the-quaking-ground  oneway
+> east the-mire-edge  oneway
+> south the-frog-chorus  oneway
+> west the-brown-water  oneway
+
+## the-quaking-ground | The Quaking Ground
+A raft of root and moss floating on water, springing underfoot for yards around every step you take, so that the trees themselves move slightly when you walk. It holds. It is not clear how.
+> north the-eel-ditch  oneway
+> east the-rush-bed  oneway
+> south the-sunk-fence  oneway
+> west the-willow-break  oneway
+
+## the-eel-ditch | The Eel Ditch
+A cut ditch, straight, waist-deep, running through the wet wood with brick still showing at the corners of it. The water in it moves, very slowly, and something in it moves faster than the water does.
+> north the-silted-pond  oneway
+> east the-frog-chorus  oneway
+> south the-brown-water  oneway
+> west the-flooded-ride  oneway
+
+## the-silted-pond | The Silted Pond
+A pond three-quarters filled with its own silt, so what is left is a crescent of water round a flat of grey mud that will not hold anything. The mud is printed all over, and the prints go in and do not come out.
+> north the-rush-bed  oneway
+> east the-sunk-fence  oneway
+> south the-willow-break  oneway
+> west the-black-pool  oneway
+
+## the-rush-bed | The Rush Bed
+Soft rush in a stand taller than your head, so dense it takes the light out entirely, growing out of six inches of water. Every step is loud and every direction looks the same from inside it.
+> north the-frog-chorus  oneway
+> east the-brown-water  oneway
+> south the-flooded-ride  oneway
+> west the-sedge-flat  oneway
+
+## the-frog-chorus | The Frog Chorus
+The noise here is enormous and unbroken and comes from everywhere at once, and it stops the moment you arrive, all of it, and starts again behind you before you have gone ten paces.
+> north the-sunk-fence  oneway
+> east the-willow-break  oneway
+> south the-black-pool  oneway
+> west the-quaking-ground  oneway
+
+## the-sunk-fence | The Sunk Fence
+A line of posts running away through the water with their tops a foot proud of it, the wire long gone. It goes straight for as far as you can follow it and disappears under without changing angle.
+> north the-south-ride  oneway
+> east the-flooded-ride  oneway
+> south the-sedge-flat  oneway
+> west the-eel-ditch  oneway
+
+## the-brown-water | The Brown Water
+Water stained the colour of strong tea by whatever it has been sitting in, shin-deep everywhere and the same depth everywhere, with no bank and no channel and no edge to it that you can find.
+> north the-willow-break  oneway
+> east the-black-pool  oneway
+> south the-leaning-alders  oneway
+> west the-old-burn  oneway
+
+# ---- CORE F: THE SUNKEN WOOD, below the others ------------------------------
+# Entered only by the four `down` falls above. Two rooms climb back out (the
+# Fern Pit and the Lost Stand) onto the honest band.
+
+## the-sunken-wood | The Sunken Wood
+The ground here is fifteen feet below the wood you were in, and the trees growing out of it reach their crowns up to the same level as the trees up there, so the canopy is continuous and the floor is not.
+> north the-under-eaves  oneway
+> east the-cold-seep  oneway
+> south the-earth-fall  oneway
+> west the-slip  oneway
+
+## the-under-eaves | The Under-Eaves
+Down here the light arrives already used — filtered through the whole depth of the canopy above and then again through what grows at this level — and everything is the colour of a bruise.
+> north the-fern-pit  oneway
+> east the-buried-wall  oneway
+> south the-white-roots  oneway
+> west the-lost-stand  oneway
+
+## the-fern-pit | The Fern Pit
+Ferns four feet high covering the whole floor of the depression, unbroken, and the air standing damp and green in among them. On the north side the bank is climbable, roots for handholds all the way.
+> north the-cold-seep  oneway
+> east the-earth-fall  oneway
+> south the-slip  oneway
+> west the-green-dark  oneway
+> up the-charcoal-flat  oneway
+
+## the-cold-seep | The Cold Seep
+Water comes out of the bank here in a dozen places at once, not fast, and runs away over a floor of clean grey clay. The cold of it comes up through your boots within a few steps.
+> north the-buried-wall  oneway
+> east the-white-roots  oneway
+> south the-lost-stand  oneway
+> west the-bottom-of-it  oneway
+
+## the-buried-wall | The Buried Wall
+Dressed stone showing through the bank in a course six feet long, cut and squared and laid by somebody, with the wood growing over the top of it and the rest of it going away into the earth in both directions.
+> north the-earth-fall  oneway
+> east the-slip  oneway
+> south the-green-dark  oneway
+> west the-old-ditch  oneway
+
+## the-earth-fall | The Earth Fall
+A section of the upper bank has come away and lies here in a slope of raw earth and toppled trees, still settling, with the roots of things standing up out of it. The hole it left is up there and you cannot reach it.
+> north the-white-roots  oneway
+> east the-lost-stand  oneway
+> south the-bottom-of-it  oneway
+> west the-sunken-wood  oneway
+
+## the-white-roots | The White Roots
+Roots come out of the bank at every height and hang in the air where the earth has washed from under them, pale and blind and thick as your arm, and you go through them the way you would go through a curtain.
+> north the-slip  oneway
+> east the-green-dark  oneway
+> south the-old-ditch  oneway
+> west the-under-eaves  oneway
+
+## the-slip | The Slip
+Wet clay on a slope, scored all over with the marks of things that have come down it and not gone back up. It is perfectly passable downhill and not passable at all in the other direction.
+> north the-lost-stand  oneway
+> east the-bottom-of-it  oneway
+> south the-sunken-wood  oneway
+> west the-fern-pit  oneway
+
+## the-lost-stand | The Lost Stand
+Trees down here that are not the same species as the ones above — older, heavier, a wood that was growing before the ground fell in and has been carrying on ever since without reference to anything. The east bank goes up in steps.
+> north the-bottom-of-it  oneway
+> east the-old-ditch  oneway
+> south the-under-eaves  oneway
+> west the-cold-seep  oneway
+> up the-mire-edge  oneway
+
+## the-green-dark | The Green Dark
+There is enough light to walk by and not enough to read a face, and all of it is green, and it does not change with the hour because it never came directly from the sky in the first place.
+> north the-bottom-of-it  oneway
+> east the-sunken-wood  oneway
+> south the-fern-pit  oneway
+> west the-buried-wall  oneway
+
+## the-bottom-of-it | The Bottom of It
+The lowest ground, where the seeps collect into a floor of black standing water an inch deep over clay, absolutely flat, going away between the trunks in every direction with no rise anywhere in sight.
+> north the-old-ditch  oneway
+> east the-under-eaves  oneway
+> south the-cold-seep  oneway
+> west the-white-roots  oneway
+
+## the-old-ditch | The Old Ditch
+A ditch dug down here when down here was up there — before the ground went — running straight through the sunken wood and cut off at both ends by banks of fallen earth. It still holds its shape exactly.
+> north the-sunken-wood  oneway
+> east the-fern-pit  oneway
+> south the-buried-wall  oneway
+> west the-white-roots  oneway
