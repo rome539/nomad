@@ -91,7 +91,7 @@ import {
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
-  GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS,
+  GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS, KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
@@ -1044,6 +1044,7 @@ export class ZoneDO implements DurableObject {
       tokensAt: Date.now(),
       nextThrowAt: 0,
       visited: new Set<string>(),
+      keeperTold: lore.keeperTold(row.keeper_told),
       lastAmbientAt: Date.now(),
       lastActiveAt: Date.now(), // a fresh body is present; hydrateSessions overwrites this from the socket's `la` for a rebuilt one
     };
@@ -1892,6 +1893,11 @@ export class ZoneDO implements DurableObject {
     // you crouch in the open, still in reach. (trading/forging are gate-only.)
     if (atGate) {
       this.inGatehouse.add(session.pubkey); // you are INSIDE now, and a dropped socket won't undo it
+      // The keeper gets round to one line of the region's story this visit, and
+      // one only — armed here, spent when he uses it (lore.keeperTells). Not at
+      // the instant the door shuts: he finishes what he was doing first, and a
+      // duck-in-and-out gets nothing, which is correct.
+      session.keeperDueAt = Date.now() + randInt(KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS);
       for (const c of this.creatures.values()) {
         if (c.target === session.pubkey) c.target = null;
       }
@@ -1948,6 +1954,7 @@ export class ZoneDO implements DurableObject {
     const frame = session.trading ? "trade" : session.forging ? "forge" : "bench";
     session.away = false;
     this.inGatehouse.delete(session.pubkey); // out through the door — the only way out
+    session.keeperDueAt = 0; // whatever he had left to say keeps until you're back
     session.trading = false;
     session.forging = false;
     session.sorting = false;
@@ -3550,6 +3557,11 @@ export class ZoneDO implements DurableObject {
       // lockbox mid-dungeon you're still outside: the weather finds you there.)
       const inGatehouse = this.outOfWorld(session);
       if ((session.away && !inGatehouse) || this.inCombat(session)) continue;
+      // Behind the door, the keeper talking outranks the room's own quiet: he
+      // is the one thing in here actually saying something, and a line of the
+      // region's story and the fire settling must never land on the same
+      // breath. Which story is which door you came in by (lore.keeperTells).
+      if (inGatehouse && lore.keeperTells(this, session, now)) continue;
       // The gatehouse keeps its own, slower clock: it's a room where people sit
       // and talk, and the walls shouldn't keep interrupting them.
       const cool = inGatehouse ? GATEHOUSE_AMBIENT_COOLDOWN_MS : AMBIENT_COOLDOWN_MS;

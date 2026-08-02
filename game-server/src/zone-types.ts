@@ -56,6 +56,8 @@ export interface Session {
   studied?: Set<string>; // templateIds already studied across every carried journal — cache over journal_logs so the SYNC chip builder can hide a redundant `study` (sendCtx runs every combat round; it can't read D1). undefined = not hydrated yet, and the chip shows, same as before the cache existed
   lastAmbientAt: number; // ms of the last atmosphere line (rate-limits the dungeon's breathing)
   lastAmbientLine?: string; // the last one said — never said twice running, however small the pool
+  keeperTold: Map<string, number>; // template id -> how many lines of that keeper's story you have heard (persisted, players.keeper_told)
+  keeperDueAt?: number; // ms the keeper gets round to saying his one line this visit; 0/unset = already said it, or you aren't behind a door
   lastFishAt?: number; // ms of the last fishing cast (a short patience between casts)
   lastActiveAt: number; // ms of the last real frame (or connect) — the tick's idle sweep sleeps sockets silent past IDLE_TIMEOUT_MS. Rides the socket attachment as `la` so a hibernation rebuild doesn't read a parked socket as fresh.
   rainPhaseSeen?: string; // last rain phase this session was shown the violet line for — describeRoom plays catch-up on a phase it hasn't announced to THIS player yet (walked in after it started), never repeats one already shown

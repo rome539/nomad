@@ -3,9 +3,10 @@
 // plumbing (journals dropping/lifting rides the get/drop/death paths); this
 // file owns what the knowledge SAYS and how it reaches the client.
 import type { ZoneDO } from "./zone";
+import type { Region } from "./world";
 import type { Session } from "./zone-types";
 import type { CarriedItem, JournalRow } from "./world";
-import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd } from "./world";
+import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import { uuid } from "./rng";
 import {
@@ -14,6 +15,7 @@ import {
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
   MILESTONES, MILESTONE_CAP, MILESTONE_SHOW,
+  GATE_TELLINGS,
 } from "./zone-data";
 
 // ---- the milestones: the road's register of who walked it ----
@@ -410,4 +412,64 @@ export async function gearLedger(z: ZoneDO, loreId: string): Promise<string> {
   bits.push(d.owners === 1 ? "one owner" : `${d.owners} owners`);
   if (d.deaths > 0) bits.push(d.deaths === 1 ? "one of them died holding it" : `${d.deaths} died holding it`);
   return ` The gate's mark is cut into it — the ledger reads: ${bits.join("; ")}.`;
+}
+
+// ---- what the keeper tells you: the region's story, across the hatch -------
+//
+// The stories live in zone-data.GATE_TELLINGS, keyed by the REGION OF THE GATE
+// ROOM — so the door you ran for decides what you find out. See that block for
+// why this is the gatehouse's job and not a set of NPCs standing out in the
+// dark, which is where I put it the first time and was wrong.
+
+// Your place in each telling, off the player row: "gate:4,wood:9". Unparseable
+// junk decays to "not started", which is the only safe way to fail: a corrupt
+// cell costs somebody the top of a story, never a 500.
+export function keeperTold(packed: string | null | undefined): Map<string, number> {
+  const told = new Map<string, number>();
+  for (const part of (packed ?? "").split(",")) {
+    const at = part.lastIndexOf(":");
+    if (at <= 0) continue;
+    const band = part.slice(0, at);
+    const n = Number(part.slice(at + 1));
+    if (GATE_TELLINGS[band as Region] && Number.isFinite(n) && n >= 0) told.set(band, Math.floor(n));
+  }
+  return told;
+}
+
+function packKeeperTold(told: Map<string, number>): string {
+  return [...told].map(([band, n]) => `${band}:${n}`).join(",");
+}
+
+// One line of the local story for somebody sitting behind the door. Returns true
+// if the keeper spoke, which the caller uses to hold the gatehouse's own
+// atmosphere back for that beat — a man talking and the fire settling should
+// never arrive on the same breath.
+//
+// Caller guarantees they are in the gatehouse. session.roomId is still the GATE
+// they came in by while they are behind the door (outOfWorld leaves it alone),
+// which is exactly the key we want.
+export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
+  // Exactly one line per stay behind the door: armed when you come in, spent the
+  // moment he uses it. See KEEPER_DELAY_MIN_MS for why this is not a drip.
+  if (!session.keeperDueAt || now < session.keeperDueAt) return false;
+  const band = z.regionOf(session.roomId);
+  const lines = GATE_TELLINGS[band as Region];
+  if (!lines?.length) return false; // a band with no telling written yet keeps its own quiet
+  const heard = session.keeperTold.get(band) ?? 0;
+  // Past the last line he begins again from the top. Not a fallback for running
+  // out of content — it is the truest thing about him. He has told this to every
+  // wanderer who ever sat here and he will tell it to the next one.
+  session.keeperDueAt = 0;
+  session.keeperTold.set(band, heard + 1);
+  // NOT the "amb" class, even though this rides the ambience beat: the client
+  // DROPS every "amb" line while the tutorial guide is up (public.ts), and the
+  // index advances server-side either way — a new player at the bench would lose
+  // the opening of a story and never know. "study" is the knowledge channel (the
+  // milestone register reads on it), is never hushed, and is the honest label.
+  z.send(session, lines[heard % lines.length], "study");
+  // Written as it is heard: one small update per VISIT, which is as cold as a
+  // write gets.
+  void setKeeperTold(z.env.DB, session.pubkey, packKeeperTold(session.keeperTold))
+    .catch(() => { /* a lost place in a story is not worth a thrown tick */ });
+  return true;
 }

@@ -289,6 +289,17 @@ export interface PlayerRow {
   boss_kills: number;
   pvp_kills: number; // self-publishable only; the world's narration never names killers
   stance: string; // "reckless" | "steady" | "guarded" — persisted play-style
+  keeper_told: string; // how far through each keeper's telling you are: "muster-clerk:4,the-roadwarden:9"
+}
+
+// How far you have got through each region keeper's story (zone-data.KEEPERS).
+// It lives on the PLAYER ROW rather than in the zone's own state because it is
+// knowledge, and knowledge in this game follows the key: log in from another
+// browser next month and the clerk carries on from the line you left him at.
+// Written as you hear a line — one small update per ~25s, and only while you
+// are actually standing in front of one, which is rare and cheap.
+export async function setKeeperTold(db: D1Database, pubkey: string, told: string): Promise<void> {
+  await db.prepare("UPDATE players SET keeper_told = ? WHERE pubkey = ?").bind(told, pubkey).run();
 }
 
 // Persist the character's fighting stance. Keyed by pubkey, so it follows the
@@ -360,6 +371,7 @@ export async function getOrCreatePlayer(
     boss_kills: 0,
     pvp_kills: 0,
     stance: "steady",
+    keeper_told: "", // a new wanderer has heard nobody out; every keeper starts at his first line
   };
   await db
     .prepare(

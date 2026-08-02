@@ -754,7 +754,25 @@ export const THIEVES = new Set(["cutpurse", "cutthroat", "footpad"]);
 //
 // The carrier is deliberately NOT here — he patrols, so his den only decides
 // where he re-enters the world, and the road is his route either way.
-export const ROAMING_DENS = new Set(["masterless-dog", "footpad"]);
+//
+// THE WOOD'S GAME JOINED THEM (rome, 2026-08-02: "roaming would suit them").
+// Different argument from the road's, same conclusion. A deer has no address —
+// that is most of what a deer IS — and a wolf follows the deer, so pinning
+// either to a fixed den turns the wood's food chain into a timetable. Worse
+// here than on the road, because the wood is 170 rooms and its whole promise is
+// that you do not know where you are: a player who cannot navigate the cores
+// can still learn "the deer are at the Spring Head", and that is a landmark
+// handed out for free in the one region built to withhold them.
+//
+// The woodward stays out for the carrier's reason (he patrols), and the
+// follower stays out for the opposite one — it is the maze's fixture, one to a
+// core, and a follower that moved house would stop being the thing that is
+// always already there.
+//
+// Note this converts GRADUALLY, not on load: the deer and wolves alive right
+// now keep the homes they woke at, and each re-roll happens when one dies and
+// the next arrives. Animals do not relocate because a constant changed.
+export const ROAMING_DENS = new Set(["masterless-dog", "footpad", "roe-deer", "grey-wolf"]);
 
 // SPAWN REGIONS (rome, 2026-08-02: "make the road spawn rng anywhere, like
 // mobs"). A band listed here hatches wanderers ANYWHERE in itself rather than at
@@ -2421,6 +2439,124 @@ export const GATEHOUSE_NOARG = new Set([
 // room where people sit and talk — the walls should not keep interrupting them.
 export const GATEHOUSE_AMBIENT_COOLDOWN_MS = 180_000; // never sooner than 3 minutes
 export const GATEHOUSE_AMBIENT_ODDS = 0.03;           // per 2s tick, once off cooldown -> ~4 min mean
+
+// ---- WHAT THE KEEPER TELLS YOU: each region's story, across the hatch ------
+//
+// rome, 2026-08-02: "YOU GO TO THE GATE/GATEHOUSE FOR SAFETY (IT'S A TAVERN)
+// AND WHY NOT GET INFORMATION OF THE REGION FROM THERE?"
+//
+// He is right, and my first cut of this was exactly backwards: I stood four
+// storytellers out in the deep, the road and the wood — the three places in the
+// game where standing still for five minutes gets you killed — and then
+// explicitly gave the gatehouse none, on the reasoning that safe lore is cheap
+// lore. That reasoning is wrong twice over. A story nobody can afford to stop
+// and hear is not a story, it is 44 lines of dead content. And a tavern is
+// EXACTLY where you learn about the country outside: that is what the room has
+// always been for, which is why it already has its own warm slow ambience and
+// its own bench and its own man behind a hatch.
+//
+// SO THE TELLER IS THE KEEPER, the one who was already there. No new NPC, no
+// new verb, nothing to type. He talks while he works — at the room, the way a
+// barman does, not to you. The design law from the first cut survives intact
+// and costs nothing here: you are overhearing a man, not opening a dialogue.
+//
+// WHICH STORY YOU GET IS WHICH DOOR YOU CAME IN BY. Keyed on the region of the
+// gate room itself, so:
+//   gate  -> the fortress (its three doors)   the garrison, and then the water
+//   road  -> the west road (its two doors)    what used to pass, and what does
+//   wood  -> the maze (its three doors)       the wood court, and the wood
+// That is the whole reason to have gates spread across bands rather than piled
+// in one: the door you run for decides what you find out. A wanderer who only
+// ever banks at the Weeper's Arch never hears a word about the wood.
+//
+// THE PRICE IS TIME, AND THE GATEHOUSE IS WHERE YOU HAVE IT. A line lands about
+// every 25 seconds you sit behind the door — which is what you are doing anyway
+// while you bank, sort, repair and eat. A full telling is eleven lines, so it
+// costs three or four visits to hear one out. Your place persists per key
+// (players.keeper_told), so it resumes across sessions and devices, and past
+// the last line he starts the story again from the top.
+//
+// The mountain gets its telling when the mountain gets its gate.
+export const GATE_TELLINGS: Partial<Record<Region, string[]>> = {
+  // THE FORTRESS. Two collapses in one telling, because they were one event:
+  // the garrison thinned out, and the water came up, and the second is why the
+  // first stopped mattering. He tells it as a man who has read the papers left
+  // in the rooms below him — which is the honest way for a gate keeper to know
+  // any of it, and quietly explains why the muster roll and the gauge-post turn
+  // up in the deep as things you can carry out and barter.
+  gate: [
+    "The keeper works a rag around the inside of a cup and talks at the room. \"Place was a garrison. Eight hundred men on the roll, and a roll called every morning in the chapter house, out loud, to see who answered.\"",
+    "\"There's a clerk's roll still down there, on two pegs. Names in one hand all the way down, marks against them for a third of it, and then the marks stop and the names carry on.\" He sets the cup down. \"Somebody kept writing them in after he'd given up marking them.\"",
+    "\"They weren't killed. That's the thing everybody gets wrong.\" He starts on another cup. \"They were sent for. Elsewhere. Over about forty years, in ones and twos, and nobody was ever sent back.\"",
+    "\"The last stretch of that roll is one company and it's got a strength of nine. Then it's got a strength of one. There's a name at the bottom in a shakier hand and it's the clerk's own, marked present.\"",
+    "\"Meanwhile there's a warden down at the weir doing the same job with water. Reads the level off a post twice a day, writes it in a book, sends the book up. Two below the sill. One below. Level at the sill.\"",
+    "\"He asks for the lower gates shut. He's told the lower gates are wanted open — there's still trade going through them, see, and trade outranks a man with a stick.\" He shrugs. \"The gates shut themselves in the end.\"",
+    "\"Somewhere in there he runs out of post. Notches climbing all up one face of it. So he turns it over and starts again from the bottom of the other side, higher than the first lot finished.\" A pause. \"That's the whole of it, on one bit of oak.\"",
+    "\"Last readings in that book are taken from under the water he's reading. Level at the gallery floor. Level at the vaulting. No reading — the post is below the reading.\" He puts the cup on the shelf. \"Man never once wrote down that it was over.\"",
+    "\"So there's your fortress. Nobody stormed it. It was emptied out one man at a time from above and filled up one hand's width at a time from below, and the two halves of it never met.\"",
+    "\"What's left is the roll and the post and whatever's walking about between them.\" He looks toward the dark. \"Both of those are worth something over this counter, if you're the sort that goes and gets them.\"",
+    "\"And they're still at it down there. That's the part I'd not think about too hard, in your line of work.\" He picks up a fresh cup and the rag. \"Place was a garrison,\" he says. \"Eight hundred men on the roll.\"",
+  ],
+
+  // THE ROAD. Told as traffic, because the road's whole story is what went
+  // along it. The turn is the night the fortress emptied east — which is the
+  // same collapse the fortress telling gives you from the other end, and a
+  // player who hears both gets the join for free.
+  road: [
+    "The keeper leans on the hatch and looks out at the road. \"There was a warden on this road once. Post's still standing out there with his name on it. Job was counting what went by and taking a half toll at the post and a half at the ford.\"",
+    "\"Fourteen carts on a good day. Wool going down, salt coming up, a drove of something most weeks, and a wedding party now and again, which pays nothing and is a great deal of trouble.\"",
+    "\"He kept it on a stick. Squared hazel, notch a cart. Three faces of it packed solid.\" He taps the counter. \"Fourth face is nearly bare, and the fourth face is the newest.\"",
+    "\"It goes nine. Then six. Then two, and he writes down that the two were the same man twice.\" A short laugh with nothing in it. \"Then none, and there's no notch for none, so he just writes the word.\"",
+    "\"The ford wanted stone. He asked for stone. Verges wanted cutting, he asked for cutters. Nobody came, and the ford took the far milestone, and he couldn't shift it back on his own.\"",
+    "\"Then one night he counts eleven going east. In the dark. No toll asked of any of them.\" He straightens up. \"He put it in the book that that isn't traffic. That's the fortress emptying.\"",
+    "\"After that it's none west and none east for a long stretch, and he keeps opening the book anyway, because that's the job.\"",
+    "\"What's out there now isn't traffic either. Dogs on the long straight that answer to nobody. Men on the weed paving who aren't carrying anything and aren't going anywhere, which on a road means one thing only.\"",
+    "\"There's a cart gone over near the ford with its axle broken, been there longer than I've been here, and whatever was in it is still in it. People have gone out for that. Some came back.\"",
+    "\"And there's the two stones. Names cut in both of them by everyone who ever stopped.\" He looks at you for the first time, or near enough. \"Names on the near stone and not the far one are people who turned back. Or who turned nothing back.\"",
+    "He settles onto his elbows again. \"There was a warden on this road once,\" he says. \"Post's still standing out there with his name on it.\"",
+  ],
+
+  // THE WOOD. The court record, secondhand — which is how a man behind a hatch
+  // would have it. It ends on the woodward, because the practical thing a
+  // wanderer needs to know about that wood is that its enforcement outlived its
+  // court, and the enforcement is still walking.
+  wood: [
+    "The keeper jerks his chin at the trees. \"That wood had a court. Proper one. Sat under a named oak on the bounds twice a year and heard what people had done to it.\"",
+    "\"Green wood taken without right, twopence. Same man twice, fourpence and a warning. Coppice cut in the sixth year that should have stood eight — offender unknown, so nobody paid.\" He shakes his head. \"Small stuff. It's all small stuff at the start.\"",
+    "\"Pale broken on the north bounds in three places, deer gone out. Ordered: make the pale good before the fall.\" A beat. \"Next roll: ordered, make the pale good. Same words. That's when you know.\"",
+    "\"Rides to be cleared and kept eight foot wide. Cleared at midsummer and grown in by the reading.\" He wipes the counter. \"You can't fine a wood for growing.\"",
+    "\"Then they present the holding itself — for letting the moat fill and the hall go to ruin. And the holding doesn't attend, on account of being a ruin.\"",
+    "\"Best one's the perambulation. Walking the bounds, that is. Six men set out at Michaelmas to do it and not one of them finished.\" He holds up two fingers. \"Two came out where they went in. Four came out somewhere else entirely.\"",
+    "\"So the court orders the bounds walked notwithstanding, and orders that any man who can't say where he's standing be brought to the oak and set right.\" He lets that sit. \"There's no note of anybody ever being brought to the oak.\"",
+    "\"Last entry on the last roll presents the wood. For taking the coppice, the rides, the pale, the holding, and the court.\" He almost smiles. \"The wood did not attend. The wood is fined nothing, being a wood.\"",
+    "\"Now. A court like that has an officer. Woodward. Walks the bounds, knows every stand in it, takes the tools off anyone cutting without right.\" He stops wiping. \"Court's four hundred year gone. He isn't.\"",
+    "\"He's still walking it, and he's still taking tools off people, and he does not stop to hear which right you think you've got. Big man, oiled leather, felling axe carried like it weighs nothing.\"",
+    "\"Past the first few stands in there the wood stops telling you the truth about which way you're facing, and that's where he does his rounds.\" He goes back to the counter. \"That wood had a court,\" he says. \"Proper one.\"",
+  ],
+};
+
+// ONE LINE PER VISIT. NOT A DRIP (rome, 2026-08-02: "this seems like spam").
+//
+// My first cut fed a line every 25 seconds you sat behind the door, which is
+// indefensible twice over. It is spam on its face — eleven interruptions while
+// you are trying to sort a lockbox. And it breaks the rule written eight lines
+// above it in this same file: the gatehouse ambience is deliberately the SLOWEST
+// clock in the game because it is a room where people sit and talk and the walls
+// should not keep interrupting them. A man who interrupts you every 25 seconds
+// is not a barman, he is a notification.
+//
+// So he says ONE thing per time you are behind the door, and then he is done
+// with you until you come back. That is how it actually goes in a bar, it can
+// never stack on top of anything you are doing, and it turns the telling into
+// something that unfolds across a WHOLE CAREER rather than one long sit: eleven
+// visits to hear a region out, and you have three regions to hear.
+//
+// The line lands somewhere in the first stretch of the visit rather than the
+// instant the door shuts — he finishes what he was doing first — and a duck-in,
+// bank, duck-out gets nothing at all, which is correct. He is not going to
+// start a story at somebody who is already leaving.
+export const KEEPER_DELAY_MIN_MS = 15_000;
+export const KEEPER_DELAY_MAX_MS = 45_000;
 
 // The gatehouse hears NOTHING of the dungeon — roomFeed and roomSound both stop
 // at the door now — so this pool is the room's entire voice, and it carries all

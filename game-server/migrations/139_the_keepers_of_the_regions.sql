@@ -1,0 +1,24 @@
+-- WHAT THE KEEPER TELLS YOU (rome, 2026-08-02) — the gatehouse hands out the
+-- story of the region its door stands in.
+--
+-- "YOU GO TO THE GATE/GATEHOUSE FOR SAFETY (IT'S A TAVERN) AND WHY NOT GET
+-- INFORMATION OF THE REGION FROM THERE?"
+--
+-- The teller is the keeper who was already behind the hatch, so this migration
+-- adds NO creatures, NO items and NO rooms. The stories themselves are content,
+-- not data (zone-data.GATE_TELLINGS), keyed on the region of the gate room —
+-- gate/road/wood today, mountain when the mountain gets a door. The only thing
+-- that has to be durable is HOW FAR THROUGH EACH ONE YOU ARE.
+--
+-- WHY IT HANGS ON THE PLAYER ROW AND NOT ON THE ZONE. It is knowledge, and
+-- knowledge in this game follows the KEY: sit down at the Weeper's Arch tonight,
+-- come back next month from another browser, and he carries on from the line you
+-- left him at. It also means every wanderer hears every telling from its first
+-- line — nobody ever walks in halfway through somebody else's.
+--
+-- FORMAT: "gate:4,wood:9" — band, colon, lines heard. Empty = has heard nobody
+-- out. Anything unparseable decays to "not started" (lore.keeperTold), which is
+-- the only safe way for this to fail: a corrupt cell costs somebody the top of a
+-- story, never a thrown tick.
+
+ALTER TABLE players ADD COLUMN keeper_told TEXT NOT NULL DEFAULT '';
