@@ -2574,6 +2574,15 @@ export const GATEHOUSE_AMBIENT_ODDS = 0.03;           // per 2s tick, once off c
 // you reach them by walking west on the same ground, not by a stair, so
 // severing them into their own strata drew them as islands floating above the
 // world (rome, 2026-08-02).
+// WHO HEARS THE KEEP. The world-wide announcements all speak fortress — "deep
+// below", "through the stone", "far under the keep" — so they carry to the
+// fortress's own bands and no further. A gate reads as "gate" only for the
+// fortress's three doors; the road's and the wood's report their own band, which
+// is what puts a gatehouse sitter with the ground they came in from.
+export const FORTRESS_BANDS = new Set<string>(["gate", "upper", "deep"]);
+// And the surface's own news, for the things that happen out here.
+export const SURFACE_BANDS = new Set<string>(["gate", "road", "wood", "mountain"]);
+
 export const MAP_BAND_OF: Record<string, number> = {
   sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, upper: 2, warrens: 3, deep: 4,
 };

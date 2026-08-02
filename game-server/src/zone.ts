@@ -96,7 +96,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, playerBleedOdds,
-  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, FORAGE_ROOMS, FORAGE_REGIONS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -3358,7 +3358,7 @@ export class ZoneDO implements DurableObject {
       if (now < at) continue;
       this.doorCloseAt.delete(key);
       if (!this.openDoors.delete(key)) continue;
-      this.roomFeedAll("Deep below, iron grinds slowly shut. The dark has taken back its door.");
+      this.roomFeedBands(FORTRESS_BANDS, "Deep below, iron grinds slowly shut. The dark has taken back its door.");
     }
 
     // Bodies and appetites advance by WALL-CLOCK elapsed, not the nominal
@@ -4089,7 +4089,15 @@ export class ZoneDO implements DurableObject {
       // The world announces the FALL, never the faller-of — the world key does
       // not speak a wanderer's name. The killer keeps their credit on the arena
       // feed, under their own key (the actorFeed kill line above).
-      this.roomFeedAll(`A cry rolls through the stone: ${tmpl.name} has fallen.`);
+      // WHERE IT FELL DECIDES WHO HEARS, AND IN WHAT WORDS. "A cry rolls through
+      // the stone" is a line about a buried keep; the woodward dies under open
+      // sky forty rooms west of any stone at all.
+      const surface = SURFACE_BANDS.has(this.regionOf(creature.roomId));
+      if (surface) {
+        this.roomFeedBands(SURFACE_BANDS, `Somewhere out under the trees, a cry goes up and is not answered: ${tmpl.name} has fallen.`);
+      } else {
+        this.roomFeedBands(FORTRESS_BANDS, `A cry rolls through the stone: ${tmpl.name} has fallen.`);
+      }
     }
     ai.scheduleArrivals(this, Date.now());
 
@@ -5366,6 +5374,29 @@ export class ZoneDO implements DurableObject {
     // relays two ephemeral events per step (leave + enter) with rats pacing empty
     // rooms nobody watches. That noise never leaves the box now.
     if (toRelay) this.relayFeed("mudroom-" + roomId, text);
+  }
+
+  // A WORLD-WIDE LINE THAT IS NOT ACTUALLY WORLD-WIDE (rome, 2026-08-02: "I'm
+  // hearing the deep close but the gatehouse I'm in is from the Timber Stack").
+  //
+  // Every roomFeedAll in the game speaks fortress — "deep below", "through the
+  // stone", "far under the keep" — because the fortress WAS the world when they
+  // were written. They now reach two hundred rooms of open road and wood, and
+  // every gatehouse whichever door it belongs to. A man sitting behind a hut in
+  // the wood should not hear the black door grind shut forty rooms away.
+  //
+  // So a line can name the bands it carries to. A gatehouse sitter keeps their
+  // GATE as roomId while they are behind the door (outOfWorld leaves it alone),
+  // so this puts them with the band they actually came in from, which is the
+  // whole point. The relay copy still goes out whole — the arena watches the
+  // world, not one band of it.
+  public roomFeedBands(bands: Set<string>, text: string, cls?: string): void {
+    const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: "*", text, cls } : { v: 0, kind: 24913, room: "*", text });
+    for (const s of this.sessions.values()) {
+      if (!bands.has(this.regionOf(s.roomId))) continue;
+      try { s.ws.send(frame); } catch {}
+    }
+    this.relayFeed("mudzone-" + (this.world?.zone ?? "door"), text);
   }
 
   public roomFeedAll(text: string, cls?: string): void {

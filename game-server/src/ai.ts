@@ -21,7 +21,7 @@ import {
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
-  DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL,
+  DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -1690,7 +1690,14 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
             if (e.to_room === roomId && e.key_item) z.openDoors.delete(`${rid}:${e.dir}`);
           }
         }
-        if (!silent) z.roomFeedAll("Deep below, iron grinds shut. Something remembers its shape.");
+        // The black door is a fortress thing; the wood's keeper reforming under
+        // the trees is not something the deep announces (see roomFeedBands).
+        if (!silent) {
+          const bands = SURFACE_BANDS.has(z.regionOf(roomId)) ? SURFACE_BANDS : FORTRESS_BANDS;
+          z.roomFeedBands(bands, SURFACE_BANDS.has(z.regionOf(roomId))
+            ? "Out west, something heavy settles back onto ground it has always kept."
+            : "Deep below, iron grinds shut. Something remembers its shape.");
+        }
       } else if (!silent) {
         z.roomFeed(roomId, `${cap(tmpl.name)} creeps out of the dark.`, undefined, false);
         z.roomSound(roomId, "Something stirs {dir}.");
@@ -1754,7 +1761,7 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
       z.roomSound(creature.roomId, "Stone scrapes {dir}; something vast has stood up.");
       z.creatureNoise(creature.roomId);
     } else {
-      z.roomFeedAll(`A voice rolls through the stone: ${cap(tmpl.name)} calls — and the dark answers.`);
+      z.roomFeedBands(FORTRESS_BANDS, `A voice rolls through the stone: ${cap(tmpl.name)} calls — and the dark answers.`);
       const summoned: Creature = {
         id: uuid(),
         templateId: "rat",

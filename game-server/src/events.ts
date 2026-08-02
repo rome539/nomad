@@ -38,6 +38,7 @@ import {
   TIDE_TELEGRAPH_MS, TIDE_STEP_MS, TIDE_CREST_MS, TIDE_AFTERMATH_MS, TIDE_SILT_ODDS,
   BROODERS, SENTINELS, DROWNERS, DEEP_ROOMS,
   GLOAM_TELEGRAPH_MS, GLOAM_STEP_MS, GLOAM_ACTIVE_MS, GLOAM_AFTERMATH_MS,
+  FORTRESS_BANDS,
 } from "./zone-data";
 
 // An idle arc waits here until the roll (or the bell's hours) wakes it.
@@ -975,7 +976,7 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
       // Someone put it down. The world can exhale.
       st.phase = "aftermath";
       st.until = now + ESCAPE_AFTERMATH_MS;
-      z.roomFeedAll("Far off, a long starving cry cuts short — and does not come again.", "evt");
+      z.roomFeedBands(FORTRESS_BANDS, "Far off, a long starving cry cuts short — and does not come again.", "evt");
     } else {
       if (gaunt.nextWanderAt > now + ESCAPE_STRIDE_MAX_MS) {
         gaunt.nextWanderAt = now + randInt(ESCAPE_STRIDE_MIN_MS, ESCAPE_STRIDE_MAX_MS);
@@ -1012,7 +1013,7 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
       }
       st.phase = "telegraph";
       st.until = now + ESCAPE_TELEGRAPH_MS;
-      z.roomFeedAll("From somewhere far under the keep, a long, starving cry rolls up through the stone — and then the sound of something giving way.", "evt");
+      z.roomFeedBands(FORTRESS_BANDS, "From somewhere far under the keep, a long, starving cry rolls up through the stone — and then the sound of something giving way.", "evt");
       break;
     }
     case "telegraph": {
