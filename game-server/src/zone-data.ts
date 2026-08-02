@@ -569,6 +569,8 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "rag-and-bone": "Something moves {dir} in a slow clatter of hanging metal, like a cart of scrap walking.",
   "road-carrier": "Boots go {dir} at a steady walking pace, neither hurrying nor stopping.",
   "masterless-dog": "Something four-legged trots {dir}, claws ticking on stone.",
+  "the-keeper-of-the-holding": "A heavy tread crosses {dir} on boards that have not held anyone in a long time.",
+  "warden-surface": "Armor moves {dir}, grinding, out under the open sky.",
   "lead-dog": "Something four-legged goes {dir} at a walk, in no hurry at all.",
   "wayman": "A single step {dir}, placed deliberately, by somebody who could have been quieter.",
   "dire-wolf": "A heavy padding crosses {dir}, and the stride is far too long.",
@@ -1122,6 +1124,29 @@ export const REVIVE_FRAC = 0.4;       // soft: it comes back weakened
 export const RISE_LIMIT: Record<string, number> = { "thrice-dead": 2 };
 // How the hollow come apart when they run. The living just bleed.
 export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
+  // THE SURFACE MOVES LIKE ITSELF (2026-08-02). Every road and wood creature was
+  // missing from this table, so all eighteen fell through to the generic
+  // damage-class lines and fled and arrived identically — the whole new half of
+  // the world moved like one animal. A thing's retreat should tell you what it
+  // is as loudly as its attack does.
+  "masterless-dog": { out: "bolts {dir}, tail down, keeping low to the ground.", in_: "comes in fast and low, head down." },
+  "lead-dog": { out: "gives ground {dir} still facing you, and only turns at the last.", in_: "walks in and stops, square on, waiting." },
+  footpad: { out: "is over the verge and gone {dir} before you can close.", in_: "steps in off the verge with the blade already out." },
+  wayman: { out: "goes {dir} at a walk, without hurrying, which is somehow worse.", in_: "comes in unhurried, blade held low and easy." },
+  "road-carrier": { out: "walks off {dir} at the pace it always keeps.", in_: "walks in at a steady pace and does not break it." },
+  "roe-deer": { out: "breaks {dir} in one bound and is simply not there.", in_: "comes through in a rush, all legs and panic." },
+  "white-roe": { out: "walks {dir}, unhurried, and does not look back.", in_: "steps in, stands, and looks directly at you." },
+  "grey-wolf": { out: "gives ground {dir}, circling, never turning its back.", in_: "comes in at a trot, low and wide." },
+  "dire-wolf": { out: "falls back {dir} at a walk, untroubled by the idea.", in_: "comes in, and the room is smaller for it." },
+  "wild-boar": { out: "wheels and crashes off {dir} through the brush.", in_: "comes through the brush without slowing." },
+  "old-boar": { out: "backs {dir} a few steps with its tusks up, daring you.", in_: "comes in straight and does not stop." },
+  "the-follower": { out: "goes {dir} — the step you had been hearing, leaving.", in_: "arrives a fraction after the sound of it does." },
+  "something-ahead": { out: "goes {dir}, and is somehow ahead of you again.", in_: "is here before the sound of it is." },
+  "charcoal-burner": { out: "walks {dir}, soot falling off him as he goes.", in_: "comes in with the billhook trailing at his side." },
+  "the-woodward": { out: "withdraws {dir} at a walk, axe at the trail.", in_: "walks in and looks at what you are doing on his ground." },
+  "the-keeper-of-the-holding": { out: "gives back {dir} across his own hall floor.", in_: "comes across the hall floor to meet you." },
+  "the-mire-walker": { out: "wades off {dir}, the water closing behind it.", in_: "comes up out of the wet and in." },
+  "warden-surface": { out: "falls back {dir}, armor grinding.", in_: "bursts in, grinding." },
   skeleton: { out: "flees {dir} in a clatter of loose bone.", in_: "bursts in, rattling loose." },
   "bone-knight": { out: "withdraws {dir} in a grind of mail and bone.", in_: "strides in, mail grinding." },
   warden: { out: "flees {dir}, armor grinding.", in_: "bursts in, grinding." },
@@ -1613,7 +1638,32 @@ export const WARRENS_ROOMS = new Set([
 // bone between visits. Gate thresholds (world.entryRooms) are folded in by code
 // — they're a runtime set, not known here. Grazers only: carnivores keep to
 // corpses and prey (a hyena doesn't chew fungus).
+// WHERE A GRAZING THING CAN EAT THE ROOM ITSELF — the floor of the whole food
+// web, and the thing that keeps it alive with nobody watching.
+//
+// This was the fortress's muck-country only, and the two hundred rooms shipped
+// this morning had NOTHING IN THEM TO EAT (rome, 2026-08-02). Every ground spawn
+// in the game is in the fortress, and forage was warrens + carrion, so a roe
+// deer in a WOOD — surrounded by more browse than exists anywhere else in the
+// world — could never once feed, and neither could a boar. They crossed hungry,
+// stayed hungry, and the wolves ate the only thing that could.
+//
+// So bands declare themselves forage ground the same way they declare
+// themselves outdoors (OUTDOOR_REGIONS), and their rooms fold into this set at
+// world load. The wood is the obvious one; the road's verges are grass and hedge
+// and count too. Kept a Set of ids rather than a predicate because the hunger
+// walk reads it per-exit while choosing where to go.
+export const FORAGE_REGIONS = new Set<string>(["road", "wood"]);
 export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS]);
+// WHO EATS THE GROUND. Was the bare union VERMIN + THIEVES, written inline at
+// two call sites — which quietly left the boar out, and a boar is a rooting
+// animal before it is anything else. Named here so the next grazer is one line
+// and not a hunt through ai.ts.
+export const GRAZERS = new Set<string>([
+  "rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",   // VERMIN
+  "cutpurse", "cutthroat", "footpad", "wayman",               // THIEVES — they scavenge, not graze, but same floor
+  "wild-boar", "old-boar",                                    // rooting, which is what a boar is FOR
+]);
 export const FORAGE_HEAL = 3; // a scavenged nibble — less than a corpse (SCAVENGER_HEAL 6) or a dropped meal
 // The open sky: every room where weather can reach you (the grounds ring +
 // the overworks rooftops). The room-events engine (events.ts) reads this for
@@ -2192,6 +2242,19 @@ export const CURE_RECIPES: Record<string, string> = {
   // more than anything cured and they SPOIL, and that trade is the whole point
   // of a delicacy. Preserve them and there'd be no reason to eat anything else.
   "cave-fish":    "salt-fish",     // the humble catch → the strip the keeper sells (heal 11 → 14, keeping)
+  // THE WOOD'S MEAT (2026-08-02). deer-haunch shipped this morning as the only
+  // raw meat in the game that could not be cured — every other one has hung in
+  // these racks since they were lit. It is a HAUNCH, so it smokes to the very
+  // thing the smoked-haunch's own description claims these racks make.
+  //
+  // Heal 11 → 12 is a small step, and that is the point: what you buy at the
+  // racks is KEEPING, not power. Venison is the surface's best fresh meat and it
+  // rots like everything fresh; smoke it and it travels. It stays under the
+  // delicacy line too (the pale eel at 16 and the marrow-lamprey at 20 are
+  // deliberately absent from this table — they heal more than anything cured
+  // AND they spoil, and that trade is what makes them delicacies), so nothing
+  // about the top of the ladder moves.
+  "deer-haunch":  "smoked-haunch",
 };
 // A plain torch turns up in the smokehouse now and then — the garrison kept
 // their kindling by the fire. It rides the floor-renewal law (DICE, not a

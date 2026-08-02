@@ -179,8 +179,8 @@ export function worldGrid(z: ZoneDO): WorldGrid {
     list.push(id);
     byBand.set(b, list);
   }
-  // Strata stack in order, each below the last, with a fixed gap for its label.
-  let stackY = 0;
+  // Lay each stratum out on its own local grid first; alignment comes after.
+  const localOf = new Map<number, Map<string, { x: number; y: number }>>();
   for (const band of [...byBand.keys()].sort((a, b) => a - b)) {
     const rooms = byBand.get(band)!;
     const local = new Map<string, { x: number; y: number }>();
@@ -218,17 +218,51 @@ export function worldGrid(z: ZoneDO): WorldGrid {
       }
       if (!local.has(id)) { stranded++; seed(id, stranded * 40, 0); }
     }
-    // Bake the stratum's offset in, measured against THE WHOLE BAND — never
-    // against the rooms one player happens to know. That is the difference
-    // between a fixed sheet and a sheet that slides under you.
-    let minX = Infinity, minY = Infinity, maxY = -Infinity;
+    localOf.set(band, local);
+  }
+
+  // ALIGN THE STRATA BY THEIR STAIRS (rome, 2026-08-02: "the overworks and deep
+  // are so far left"). Each band was previously pushed to its own left edge, so
+  // a 7-room overworks and a 216-room surface both started at x=0 and the deep
+  // sat nowhere near the fortress it lies under. A cutaway is only honest if a
+  // stair goes straight down: so a band's horizontal offset is chosen to line
+  // its stair-heads up with the band it descends from. Averaged over every link,
+  // because a band with several stairs cannot satisfy all of them exactly.
+  const order = [...byBand.keys()].sort((a, b) => a - b);
+  const offX = new Map<number, number>();
+  const rootBand = bandOf(world.entryRoom);
+  offX.set(rootBand, 0);
+  for (let pass = 0; pass < order.length; pass++) {
+    for (const band of order) {
+      if (offX.has(band)) continue;
+      const local = localOf.get(band)!;
+      let sum = 0, n = 0;
+      for (const [id, p] of local) {
+        for (const e of world.exits.get(id) ?? []) {
+          const other = bandOf(e.to_room);
+          if (other === band || !offX.has(other)) continue;
+          const op = localOf.get(other)!.get(e.to_room);
+          if (!op) continue;
+          sum += (op.x + offX.get(other)!) - p.x;
+          n++;
+        }
+      }
+      if (n) offX.set(band, Math.round(sum / n));
+    }
+  }
+  // Strata stack in order, each below the last, with a fixed gap for its label.
+  let stackY = 0;
+  for (const band of order) {
+    const local = localOf.get(band)!;
+    let minY = Infinity, maxY = -Infinity, minX = Infinity;
     for (const p of local.values()) {
-      if (p.x < minX) minX = p.x;
       if (p.y < minY) minY = p.y;
       if (p.y > maxY) maxY = p.y;
+      if (p.x < minX) minX = p.x;
     }
-    for (const [id, p] of local) at.set(id, { x: p.x - minX, y: p.y - minY + stackY });
-    bands.push({ band, x: -0.35, y: stackY - 1.05 });
+    const dx = offX.get(band) ?? 0;
+    for (const [id, p] of local) at.set(id, { x: p.x + dx, y: p.y - minY + stackY });
+    bands.push({ band, x: minX + dx - 0.35, y: stackY - 1.05 });
     stackY += (maxY - minY) + 3.4;
   }
   z.mapGrid = { at, bands };

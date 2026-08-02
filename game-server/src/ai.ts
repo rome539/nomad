@@ -17,7 +17,7 @@ import {
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS,
-  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL,
+  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
@@ -592,7 +592,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       if (scent) exit = scent;
       creature.curious = null;
     } else if (creature.hunger >= HUNGRY_AT && !HOLLOW.has(tmpl.id)) {
-      const grazer = VERMIN.has(tmpl.id) || THIEVES.has(tmpl.id);
+      const grazer = GRAZERS.has(tmpl.id);
       // A hungry thief hunts a MARK first — empty-handed and restless, it edges
       // toward a room where someone's standing, a pocket to pick (rome,
       // 2026-07-18). Hands full (mid-steal), it just flees as ever.
@@ -793,7 +793,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     // only — a carnivore keeps to corpses and prey. The HUNGRY_AT gate at the
     // call site is the rate limit: it grazes the beat it crosses hungry, resets,
     // and won't be back for it until the appetite returns.
-    const grazer = VERMIN.has(creature.templateId) || THIEVES.has(creature.templateId);
+    const grazer = GRAZERS.has(creature.templateId);
     if (grazer && (FORAGE_ROOMS.has(creature.roomId) || world.entryRooms.has(creature.roomId))) {
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       creature.hunger = 0;

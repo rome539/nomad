@@ -96,7 +96,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, playerBleedOdds,
-  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, FORAGE_ROOMS, FORAGE_REGIONS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -371,6 +371,10 @@ export class ZoneDO implements DurableObject {
     // one) is a per-room exception and still belongs in the static sets.
     for (const room of world.rooms.values()) {
       if (OUTDOOR_REGIONS.has(room.region)) OUTDOOR_ROOMS.add(room.id);
+      // Same fold for the larder: a band that declares itself forage ground
+      // (FORAGE_REGIONS) feeds the things that graze it. Without this the wood
+      // was two hundred rooms of trees that a deer could starve in.
+      if (FORAGE_REGIONS.has(room.region)) FORAGE_ROOMS.add(room.id);
     }
 
     // The sim sleeps in rows now (simstore.ts — out of the one-blob 128KiB
