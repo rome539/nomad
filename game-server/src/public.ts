@@ -3099,25 +3099,29 @@ function mapRoundRect(ctx, x, y, w, h, r) {
 // caught the flattened version, 2026-07-13). Then the warrens gnawed beneath,
 // the deep at the bottom. Each stratum lays out on its own; no exit line ever
 // crosses between strata — the tiles' \\u25b2\\u25bc badges carry the vertical ways.
-// THE SURFACE BANDS GOT THEIR OWN STRATA (rome, 2026-08-02: "the gates are
-// broken and showing up in the middle of the fortress"). road/wood/mountain
-// were missing from this table, so every room in them fell through to the
-// default — band 1, THE SURFACE — and thirty road rooms and a hundred and
-// seventy wood rooms drew as unlabelled islands packed in among the fortress's
-// own ground. The axis is a journey now, not just a depth: highest and furthest
-// out at the top, deepest at the bottom. Empty strata are skipped entirely
-// (see the bcomps guard below), so a wanderer who has never left the fortress
-// sees exactly the map they saw before.
-var MAP_BAND_OF = { mountain: 0, sky: 1, wood: 2, road: 3, out: 4, gate: 4, upper: 5, warrens: 6, deep: 7 };
+// THE STRATA ARE VERTICAL, AND THE ROAD IS NOT (rome, 2026-08-02: "why aren't
+// the roads connected in the map? why does it appear on top and not next to
+// the room that you used").
+//
+// I gave road/wood their own strips, and strata DELIBERATELY never link — the
+// layout drops any cross-band exit as a constraint, because every way from the
+// surface into the halls is a stair and a stair is carried by the tile's up/down
+// badge instead. That is right for depth and wrong for a road: you reach the
+// West Road by walking WEST out of the Drowned Orchard, on the same ground, so
+// severing it from the fortress drew it as an island floating above the world.
+//
+// The road, the wood and the mountain are SURFACE. They lay out from their real
+// east/west exits, which puts the road west of the orchard and the wood west of
+// that — the shape of the actual world. They keep their own colours, so the
+// bands still read apart; they just are not separate strata, because they are
+// not separate levels.
+var MAP_BAND_OF = { sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, upper: 2, warrens: 3, deep: 4 };
 var MAP_BANDS = [
-  { band: 0, label: "THE MOUNTAIN" },
-  { band: 1, label: "THE OVERWORKS" },
-  { band: 2, label: "THE WOOD" },
-  { band: 3, label: "THE WEST ROAD" },
-  { band: 4, label: "THE SURFACE" },
-  { band: 5, label: "THE HALLS" },
-  { band: 6, label: "THE WARRENS" },
-  { band: 7, label: "THE DEEP" },
+  { band: 0, label: "THE OVERWORKS" },
+  { band: 1, label: "THE SURFACE" },
+  { band: 2, label: "THE HALLS" },
+  { band: 3, label: "THE WARRENS" },
+  { band: 4, label: "THE DEEP" },
 ];
 function buildMapGraph(f) {
   var nodes = {}, order = [];
