@@ -394,6 +394,37 @@ ground → east road + crossing → mountain → dragon → den system.
 `game-server/regions/west-road.rooms`)*. 30 rooms hung off the Drowned Orchard's
 west edge, ending at THE GAP IN THE TREES — the stub the wood attaches to (28
 steps from the main gate). Paving → frost-heave → weeds → earth → ruts → green
+  **THE ROAD GETS LONGER (migs 157-159, same day, after I spent the first ten
+  rooms on the fork instead of on length: "i was fucking saying 10 rooms plus
+  the fucking fork").** Ten more, threaded into the MIDDLE at the seam between
+  the Long Straight and the Weed Paving — not onto either end, since one is the
+  fortress's doorstep and the other the wood's. Eight on the spine (two more
+  numbered milestones, an open heath, a burnt farmstead, a wind row, a culvert,
+  a crooked mile, a hollow elm) and two pockets (a pinfold, a smithy ruin —
+  which is the only place on either road that regrows scrap). A road that grows
+  in the middle has to be cut open first: mig 157 deletes the seam's two exits
+  before 158 writes the stretch, because the room pipeline only ever WRITES
+  exits and an INSERT onto an existing (room_id, dir) is a PK error. **The
+  carrier's round went 49 stops to 64** — his route ran straight through that
+  seam, so without extending it his legs stopped being adjacent there and the
+  patrol would have quietly fallen back to wandering. Verified leg by leg
+  against the live exits. **The road is 50 rooms now**, the world 330.
+  **THE DROVE ROAD (migs 155-156, rome 2026-08-03: "can we make the road 10
+  rooms longer? and also maybe split the path a lil").** Both at once, because a
+  fork is a better ten rooms than an extension: the road ran fortress-to-wood as
+  ONE line with five dead-end pockets, so every wanderer walked the same 25
+  rooms in the same order. Now the FLOODED QUARRY stops being a dead end and
+  becomes the junction — a pocket players already know is the right place to
+  hide a road. The drove leaves west out of the quarry, crosses the beck on a
+  plank bridge upstream, runs the dry ridge, and drops back onto the paving at
+  the Old Boundary. **The trade is real:** the paving is 5 rooms, shorter, holds
+  the cart's strongbox, and crosses water the tide and rain both have opinions
+  about; the drove is 8 rooms plus two pockets (a droving stance, a sheep-fold),
+  longer, drier, no ford, unmaintained since the beasts stopped coming. The
+  Shallow Ford's own prose has been asking for it since it shipped — "there has
+  been a bridge here, once". 3 spawns at the road's own density (0.23/room),
+  placed on what the prose already said. **The carrier stays on the paving** on
+  purpose: the fork is the way around HIM as much as around the ford.
 tunnel: the surface underfoot tells you how far out you are. 25-room spine plus
 five off-spine pockets. POIs as ruled: two milestones, a wayside shelter
 (`is_safe`), a broken axle, a shallow ford (`WATER_ROOMS`), a gibbet and roadside

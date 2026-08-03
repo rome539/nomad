@@ -1,0 +1,83 @@
+# THE WEST ROAD, SLAB 3 — the road gets longer: 10 rooms (rome, 2026-08-03,
+# after I spent the first ten on the fork: "i was fucking saying 10 rooms plus
+# the fucking fork"). The fork (migs 155-156) stays. This is the length.
+#
+# WHERE THE LENGTH GOES. Not on either end — the east end is the fortress's
+# doorstep and the west end is the wood's — but INTO the middle, at the seam
+# between the Long Straight and the Weed Paving. That is the road at its most
+# maintained and its most exposed, and it is where a road is supposed to be
+# boring in the specific way that makes a walk feel long: open country, the
+# milestones counting down, nothing to put your back to.
+#
+# The seam's two exits are cut in mig 157 before this runs, because a road that
+# grows in the middle has to stop going straight through first.
+#
+# Eight rooms on the spine, two pockets off it (a pinfold, a smith's ruin), one
+# more milestone in the series that already runs the road (the First Milestone
+# is at the fortress end, and now they are numbered west as they should have
+# been). The burnt farmstead is the beat in the middle: the one place out here
+# somebody tried to live off the road instead of on it.
+
+!region road
+
+# ---- the seam: the two ends the new stretch is threaded between --------------
+
+## the-long-straight | attachment: the road no longer runs straight through
+!existing
+> west the-second-milestone
+
+## the-weed-paving | attachment: the far end of the new stretch
+!existing
+> east the-third-milestone
+
+# ---- the stretch ------------------------------------------------------------
+
+## the-second-milestone | The Second Milestone
+A milestone of the same pattern as the one back east, cut with the same hand and the same numbers, standing to the same height in grass that nobody cuts. The face has been scratched at by passers-by until the distance it names is a matter of opinion.
+> east the-long-straight
+> west the-open-heath
+
+## the-open-heath | The Open Heath
+The trees give out entirely and the road runs across a flat brown heath, ling and bare sand and standing water in the hollows, with nothing higher than your knee for as far as it goes. You can see a very long way. So can everything else.
+> east the-second-milestone
+> west the-burnt-farmstead
+> north the-pinfold
+
+## the-pinfold | The Pinfold
+A round stone pound with an iron gate hanging off one pin, built to hold strays until somebody paid to have them back. The walls are chest-high and dry-laid and there is nothing in it now but nettles and the smell of very old dung.
+> south the-open-heath
+
+## the-burnt-farmstead | The Burnt Farmstead
+A holding set back from the road behind a wall, burnt down to the gable ends and left. Somebody tried to farm the heath, which was optimistic, and then somebody else made sure they stopped. The hearth is still there, and the doorstep is worn hollow.
+> east the-open-heath
+> west the-wind-row
+
+## the-wind-row | The Wind Row
+A double line of thorns planted along the road's north side to break the weather off it, grown into one continuous bent hedge leaning south. Walking under it, the wind goes over your head and the noise it makes covers everything else.
+> east the-burnt-farmstead
+> west the-culvert
+> north the-smithy-ruin
+
+## the-smithy-ruin | The Smithy Ruin
+A wayside smithy with the roof gone and the walls to head height, the forge itself still standing in the corner as a block of scorched stone. The floor is black with beaten scale and the little cinders of two hundred years of somebody else's work.
+> south the-wind-row
+
+## the-culvert | The Culvert
+The road crosses a drain on a barrel-arch of brick, low and neat, with the water going through it a good drop below. The parapet is gone on the south side. There is a way down the bank if you want to be under the road rather than on it.
+> east the-wind-row
+> west the-crooked-mile
+
+## the-crooked-mile | The Crooked Mile
+A stretch where the paving bends twice for no reason the land gives — around something that was there when it was laid and is not there now. The kink is exact and old and nobody has ever straightened it.
+> east the-culvert
+> west the-hollow-elm
+
+## the-hollow-elm | The Hollow Elm
+An elm dead of its own disease standing alone at the verge, hollow all the way up and open down one side, big enough inside for two people to stand out of the rain and dry enough that people plainly have. There is ash in the bottom of it.
+> east the-crooked-mile
+> west the-third-milestone
+
+## the-third-milestone | The Third Milestone
+The last of the numbered stones, leaning hard downhill and half swallowed by the verge, its face turned away from the road as if it had given up on being read. West of here the paving starts losing its edges.
+> east the-hollow-elm
+> west the-weed-paving

@@ -715,7 +715,13 @@ export const PATROLS: Record<string, string[]> = {
   "road-carrier": [
     "the-cart-road", "the-broken-paving", "the-first-milestone", "the-elder-hedge",
     "the-sunken-lane", "the-drovers-turn", "the-crooked-gibbet", "the-ash-verge",
-    "the-long-straight", "the-weed-paving", "the-roadwarden-post", "the-mustering-yard",
+    "the-long-straight",
+    // the new stretch (migs 157-158) — the road grew ten rooms in the middle and
+    // a courier's route is the road. Without these his legs stopped being
+    // adjacent at the seam and the patrol quietly fell back to wandering.
+    "the-second-milestone", "the-open-heath", "the-burnt-farmstead", "the-wind-row",
+    "the-culvert", "the-crooked-mile", "the-hollow-elm", "the-third-milestone",
+    "the-weed-paving", "the-roadwarden-post", "the-mustering-yard",
     "the-shallow-ford", "the-drowned-milestone", "the-broken-axle", "the-cutting",
     "the-rain-shadow", "the-old-boundary", "the-tinkers-camp", "the-last-paving",
     "the-track", "the-rutted-track", "the-green-lane", "the-holloway",
@@ -724,7 +730,10 @@ export const PATROLS: Record<string, string[]> = {
     "the-holloway", "the-green-lane", "the-rutted-track", "the-track",
     "the-last-paving", "the-tinkers-camp", "the-old-boundary", "the-rain-shadow",
     "the-cutting", "the-broken-axle", "the-drowned-milestone", "the-shallow-ford",
-    "the-mustering-yard", "the-roadwarden-post", "the-weed-paving", "the-long-straight",
+    "the-mustering-yard", "the-roadwarden-post", "the-weed-paving",
+    "the-third-milestone", "the-hollow-elm", "the-crooked-mile", "the-culvert",
+    "the-wind-row", "the-burnt-farmstead", "the-open-heath", "the-second-milestone",
+    "the-long-straight",
     "the-ash-verge", "the-crooked-gibbet", "the-drovers-turn", "the-sunken-lane",
     "the-elder-hedge", "the-first-milestone", "the-broken-paving",
   ],

@@ -1,0 +1,92 @@
+# THE WEST ROAD, SLAB 2 — the drove road: 10 rooms, and the road stops being
+# a single line (rome, 2026-08-03: "can we make the road 10 rooms longer? and
+# also maybe split the path a lil").
+#
+# Both at once, because a fork is a better ten rooms than an extension. The road
+# ran fortress-to-wood as ONE line with five dead-end pockets hung off it: every
+# wanderer who ever walks it walks the same 25 rooms in the same order. Ten more
+# on the end would have been ten more of that. A fork is a decision.
+#
+# WHERE IT LEAVES. The Shallow Ford's own description has been asking for this
+# since it shipped: "There has been a bridge here, once — the stumps of the
+# piers stand a little downstream, doing nothing." When the bridge went, the
+# beasts stopped going that way. The DROVE ROAD is where they went instead: out
+# through the quarry, over a plank bridge upstream, along the dry high ground,
+# and back down onto the paving at the Old Boundary.
+#
+# So the Flooded Quarry stops being a dead end and becomes the junction — a
+# pocket players already know, which is the right place to hide a road.
+#
+# THE TRADE, and it should be a real one:
+#   the paving  — 5 rooms (ford, drowned milestone, broken axle, cutting, rain
+#                 shadow). Shorter. Has the cart's strongbox on it. Crosses the
+#                 water, which the tide and the rain both have opinions about.
+#   the drove   — 8 rooms and two pockets. Longer, drier, no ford, and nobody
+#                 has maintained it since the beasts stopped coming.
+#
+# Two pockets so it is walked, not traversed: a droving stance and a sheep-fold.
+# One point of interest on the same law as the milestones — a wayside cross.
+
+!region road
+
+# ---- the junction: an old pocket grows a way out -----------------------------
+
+## the-flooded-quarry | attachment: the haul road west
+!existing
+> west the-haul-road
+
+## the-old-boundary | attachment: the drove comes back down
+!existing
+> north the-sunken-drove
+
+# ---- the drove road ----------------------------------------------------------
+
+## the-haul-road | The Haul Road
+The track the stone went out on, wide enough for a sledge and graded to keep a loaded one from running away downhill. Nothing has hauled anything along it in a very long time, and the ruts have filled with a fine pale grit that takes a footprint perfectly.
+> east the-flooded-quarry
+> west the-spoil-banks
+
+## the-spoil-banks | The Spoil Banks
+Long heaps of quarry waste to either side, gone over to grass and thorn, so the track runs between two low green walls that were not put there by anyone who thought of them as walls. Rabbits have been at the banks. Something bigger has been at the rabbits.
+> east the-haul-road
+> west the-plank-bridge
+
+## the-plank-bridge | The Plank Bridge
+The beck again, narrower and faster up here, and across it three heavy planks laid on stone footings and pinned. It is not a bridge anyone was proud of. It has outlasted the one that was, downstream, which is the whole reason this road exists.
+> east the-spoil-banks
+> west the-thorn-lane
+> south the-drovers-stance
+
+## the-drovers-stance | The Drover's Stance
+A flat acre of cropped turf inside a wall of piled stone, with a spring-fed trough at one end and the black rings of old fires at the other. Beasts were held here overnight, and men sat up with them. The grass still grows differently where they stood.
+> north the-plank-bridge
+
+## the-thorn-lane | The Thorn Lane
+Blackthorn grown in from both sides until the way through is a green tunnel barely wider than a cow, arched over and dark even at noon. It catches at you the whole length. There is wool on the thorns, grey with age.
+> east the-plank-bridge
+> west the-broken-cross
+
+## the-broken-cross | The Broken Cross
+A wayside cross on a stepped base, snapped off at the shaft, the head lying in the grass where it fell and half sunk into it. People stopped here to be somewhere for a moment. The base is cut all over with the marks they left doing it.
+> east the-thorn-lane
+> west the-high-verge
+
+## the-high-verge | The High Verge
+Open ground along the top of the ridge, the drove running broad and grassy with the whole valley laid out south of it. You can see the paved road down there, a pale line through the trees, and anything that is on it. Anything on it can see you.
+> east the-broken-cross
+> west the-gorse-tunnel
+> north the-sheep-fold
+
+## the-sheep-fold | The Sheep-Fold
+A round fold of drystone, roofless, the wall still shoulder-high all the way round and the doorway a gap you turn sideways through. Out of the wind, out of sight, and out of the weather. Somebody swept it, not so very long ago.
+> south the-high-verge
+
+## the-gorse-tunnel | The Gorse Tunnel
+Gorse taller than a man closed over the drove, so the way is a low green pipe going west, floored in its own dead needles. It is loud to walk through and there is no seeing out of it. It smells, absurdly, of coconut.
+> east the-high-verge
+> south the-sunken-drove
+
+## the-sunken-drove | The Sunken Drove
+The last of the drove drops off the ridge in a channel worn waist-deep by four hundred years of hooves, so narrow at the bottom that you walk it with a hand on each bank. It comes out on the paving at the boundary stone, which is where it always meant to.
+> north the-gorse-tunnel
+> south the-old-boundary
