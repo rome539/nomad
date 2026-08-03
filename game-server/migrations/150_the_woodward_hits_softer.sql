@@ -1,0 +1,34 @@
+-- THE WOODWARD HITS SOFTER (rome, 2026-08-03: "since it has high armor we can
+-- drop the dmg a bit").
+--
+-- He was carrying the top of every column at once: 145 hp (the most in the
+-- game), 3 armour (tied for the most), 6-10 damage (tied with the drowned god
+-- for the hardest hit), bleed 3, stun 0.15, and a 40-minute respawn. Mig 147
+-- ruled that nothing outhits the drowned god — that was a CEILING, not a floor,
+-- and a boss built to be endured does not also need to be the one that hits
+-- hardest. The armour and the hit points are his character. The damage was
+-- just more.
+--
+-- 6-10 -> 5-9. That puts him level with the keeper of the holding, the marrow
+-- king and the forgotten king on damage, and leaves him alone at the top on
+-- everything that makes him a wall: hp, armour, bleed, stun and the wait.
+--
+-- What it actually does, through the mitigation curve (dmg * 10/(armour+10),
+-- floor 1 — it is a share, never immunity):
+--
+--   your armour   before    after     average
+--        0         6-10      5-9      8.0 -> 7.0
+--        3          5-8      4-7      6.2 -> 5.4
+--        5          4-7      3-6      5.4 -> 4.6
+--        9          3-5      3-5      4.2 -> 3.8
+--       12          3-5      2-4      3.8 -> 3.2
+--
+-- Round numbers: he took a bare 40 hp key down in 5 swings and now takes 5.7;
+-- a grown 60 hp one in 7.5 and now 8.6. It is about a 13% cut all the way up
+-- the ladder — a boss you can last one more exchange against, not a boss you
+-- can stand in front of.
+--
+-- Nothing else moves. The keeper is untouched (rome named the woodward), and
+-- so are his drops, his round, and the 40-minute wait for him to come back.
+
+UPDATE mob_templates SET dmg_min = 5, dmg_max = 9 WHERE id = 'the-woodward';

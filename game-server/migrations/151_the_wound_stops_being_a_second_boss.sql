@@ -1,0 +1,64 @@
+-- THE WOUND STOPS BEING A SECOND BOSS (rome, 2026-08-03: "thats still a lot of
+-- fucking damge since it bleeds for fucking 3, also it looks like the keeper is
+-- op too").
+--
+-- He is right, and mig 147 is why. That file ruled that nothing outhits the
+-- drowned god and then only ever read the DAMAGE COLUMN. Bleed is the other
+-- damage column and it is the meaner one, because it is NOT MITIGATED. A hit
+-- goes through the armour curve (dmg * 10/(armour+10)); a bleed is subtracted
+-- from hit points raw, three ticks of it per wound, refreshed every time
+-- another one lands. So a bleed of 3 is a flat +3 per round that no armour a
+-- player will ever own can touch.
+--
+-- What that did to the ladder 147 thought it had fixed — real per-round damage,
+-- hit plus bleed:
+--
+--   armour      drowned god     woodward / keeper (before)
+--      0            8.0                 10.0
+--      5            5.4                  7.6
+--      9            4.2                  6.8
+--     12            3.8                  6.2
+--
+-- The surface pair were not "the hardest things on the surface". They were the
+-- hardest things in the WORLD, by half again at the armour a grown player
+-- actually wears — and they scaled the wrong way, getting relatively stronger
+-- the more armour you bought, because half of what they did ignored it. At
+-- armour 12, 48% of the woodward's damage could not be reduced at all. The deep
+-- is supposed to be the end of the world, not the wood.
+--
+-- BOTH COLUMNS COME DOWN, ON BOTH OF THEM.
+--
+--   bleed 3 -> 2   the band the wolves and boars they live among already use,
+--                  and 3 was the top of the whole game's bleed ladder, shared
+--                  with the pale stalker and the three-hound.
+--   dmg 5-9 -> 4-8 (the woodward was 6-10 this morning, cut to 5-9 in mig 150,
+--                  and rome looked at it and said still.)
+--
+-- Where that lands them:
+--
+--   armour      drowned god     woodward / keeper (after)
+--      0            8.0                  8.0
+--      5            5.4                  6.0
+--      9            4.2                  5.2
+--     12            3.8                  4.8
+--
+-- Level with the deep's hardest boss bare, and above him only against armour —
+-- which is exactly what an unmitigated wound is FOR, and the only shape this can
+-- take while they still bleed you at all. Any bleed above zero beats the curve
+-- at high armour; that is the mechanic, not a bug to tune away.
+--
+-- WHAT THEY KEEP, because it is what they are: the woodward's 145 hp and the
+-- keeper's 130 (still first and second in the game), armour 3 (tied first), the
+-- stun at 0.15 (the game's ceiling), the wound itself, the drops, the round he
+-- walks, and the 40- and 30-minute waits. They are still the two hardest fights
+-- on the surface. They stop being the two hardest fights anywhere.
+--
+-- NOT DONE HERE, worth rome's eye: these two are now identical in every column
+-- but hit points, and a keeper of a ruined house probably should not fight like
+-- a man who walks bounds. Differentiating them is a design job, not a tuning
+-- one. The remaining lever if this is still too much is the STUN — 0.15 costs a
+-- player roughly one swing in seven, which is a damage cut on their side that
+-- does not show up in any of these numbers.
+
+UPDATE mob_templates SET bleed = 2, dmg_min = 4, dmg_max = 8 WHERE id = 'the-woodward';               -- was bleed 3, 5-9 (6-10 before mig 150)
+UPDATE mob_templates SET bleed = 2, dmg_min = 4, dmg_max = 8 WHERE id = 'the-keeper-of-the-holding';  -- was bleed 3, 5-9
