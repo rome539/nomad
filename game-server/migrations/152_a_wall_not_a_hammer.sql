@@ -1,0 +1,39 @@
+-- A WALL, NOT A HAMMER (rome, 2026-08-03: "i think we can still make woodward
+-- and the keeper do 1 less attack").
+--
+-- Third cut today, and the last one the damage column has in it. 6-10 this
+-- morning, 5-9 (mig 150), 4-8 (mig 151), now 3-7 for both.
+--
+-- Where that puts them against the deep's hardest boss, per round, with the
+-- bleed of 2 counted — which is the number that matters, because a bleed is
+-- subtracted raw and no armour touches it:
+--
+--   your armour    drowned god    4-8 (was)    3-7 (now)
+--        0             8.0           8.0          7.0
+--        3             6.2           6.6          5.8
+--        5             5.4           6.0          5.4
+--        9             4.2           5.2          4.8
+--       12             3.8           4.8          4.2
+--
+-- They now come in UNDER the drowned god bare and at armour 3 and 5, and the
+-- gap left at 9 and 12 is the wound doing it — which is what the wound is for
+-- and cannot be tuned away while they still bleed at all.
+--
+-- This makes them the lowest-damage bosses in the game: the forgotten king and
+-- the marrow king both swing 5-9. That is the trade, and it is the right one
+-- for these two. Their threat was never the swing. It is 145 and 130 hit points
+-- behind armour 3 — first and second in the world, and nothing else is close —
+-- a wound that ignores your kit, a stun at the ceiling that takes one swing in
+-- seven off you, and a wait of 40 and 30 minutes if you lose. They are a wall
+-- you have to get through, not a hammer that ends you in five rounds.
+--
+-- Bare-key arithmetic: a fresh 40 hp wanderer lasted 5.0 rounds against them
+-- this morning and lasts 5.7 now; a grown 60 hp one, 7.5 and now 8.6.
+--
+-- Everything else stands: hp, armour, bleed 2, stun 0.15, the drops, the round
+-- the woodward walks, the respawns. If this still grinds, the stun is the next
+-- lever and it is a bigger one than it looks — it is a cut to YOUR damage, and
+-- it appears in none of the numbers above.
+
+UPDATE mob_templates SET dmg_min = 3, dmg_max = 7 WHERE id = 'the-woodward';               -- was 4-8
+UPDATE mob_templates SET dmg_min = 3, dmg_max = 7 WHERE id = 'the-keeper-of-the-holding';  -- was 4-8

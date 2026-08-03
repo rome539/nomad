@@ -374,6 +374,15 @@ export const WANDER_MIN_MS = 45_000;
 export const WANDER_MAX_MS = 150_000;
 export const FLEE_BELOW = 0.18; // flesh runs only when nearly done (was 0.25 — everything bolted early)
 export const FLEE_CHANCE = 0.2; // per round once below the threshold (was 0.5)
+// FEARS_FIRE, but as nerve rather than a wall (rome, 2026-08-03: "the woods
+// mobs are running away too much when a person has fire, it should be a chance
+// they run away during the rounds"). It was absolute: a fire-fearing thing broke
+// on the first round it could see a flame, every time, which made a torch a
+// no-fight button over 63 of the wood's 87 bodies. Now it is a roll each round,
+// the same shape as FLEE_CHANCE — a wolf still means to have you, and the fire
+// is what keeps talking it out of it. 0.35 averages a break around the third
+// round: long enough to be a fight, short enough that the flame is why you won.
+export const FIRE_FLEE_CHANCE = 0.35;
 export const MIGRATION_FACTOR = 10; // respawn_secs * this = how long an EMPTY/solo zone takes to refill (was 20; halved so leaner rooms don't feel dead)
 // A busy dungeon refills faster: more wanderers, more blood and disturbance,
 // more drawn up from the dark. The effective factor is divided by the number
@@ -2093,8 +2102,10 @@ export const SLICK_BREAK_BONUS = 0.25; // added to SEIZE_BREAK_ODDS
 export const TRAIT_ROLL_ODDS = 0.18; // odds a fresh gear drop carries a rolled trait at all
 export const TRAIT_POOL: Record<string, string[]> = {
   feet:  ["quiet", "slick"],            // felt-lined tread, eel-greased sole
-  cloak: ["quiet", "slick", "strapped"],// a muffled / oiled / lashed-down wrap
-  armor: ["padded", "wardhide", "strapped"], // quilted, boiled, buckled tight
+  // staunched and hooded joined the pool the day the wood learned to make them
+  // (2026-08-03) — a moss-packed lining, a hood deep enough to light under.
+  cloak: ["quiet", "slick", "strapped", "staunched", "hooded"],
+  armor: ["padded", "wardhide", "strapped", "staunched"], // quilted, boiled, buckled, packed
   helm:  ["padded"],                    // an arming cap sewn in
   // Weapons (2026-07-21): six item-instance properties, none of them the
   // structural traits (reach/pierce/two-handed/mancatcher/riposte) that DEFINE

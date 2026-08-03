@@ -1368,6 +1368,41 @@ export class ZoneDO implements DurableObject {
     return !!until && Date.now() < until;
   }
 
+  // CAN THIS PERSON SEE, RIGHT HERE, RIGHT NOW (rome, 2026-08-03, standing in
+  // the pitch dark next to another wanderer who had just kindled a torch:
+  // "when another player has a torch, they should be able to light the room for
+  // everyone in it"). He is right, and light in a shared room was only ever
+  // half-wired: your OWN flame counted, and a torch set down on the FLOOR
+  // counted for everyone, but a torch in another wanderer's hand lit nothing
+  // for anybody but them. Two people could stand in the same dark, one of them
+  // holding fire, and the other saw "you can see nothing under open sky".
+  //
+  // Three ways a room is lit for you, and they all end here now: your own hand,
+  // the floor, or somebody else's hand. A lantern counts the same as a torch —
+  // this is about SIGHT. (Fire is a different question with a different answer:
+  // carriesFire/roomLit still decide what a beast will not walk up to, and the
+  // hooded lantern is not fire for that purpose.)
+  //
+  // Someone standing INSIDE a gatehouse is out of the world and lights nothing
+  // out in it, same as they can't be hit from out there.
+  public litFor(session: Session): boolean {
+    if (!this.isDark(session.roomId)) return true;
+    if (this.carriesLight(session)) return true;
+    if (this.roomLit(session.roomId)) return true;
+    return this.roomHasBearer(session.roomId, session);
+  }
+
+  // Is anyone else standing here with a light in hand? Split out because the
+  // room-description path needs to name it ("someone's torch throws your shadow
+  // up the wall") as well as test it.
+  public roomHasBearer(roomId: string, except?: Session): boolean {
+    for (const s of this.sessions.values()) {
+      if (s === except || s.roomId !== roomId || this.outOfWorld(s)) continue;
+      if (this.carriesLight(s)) return true;
+    }
+    return false;
+  }
+
 
 
   // Pack animals: strike one hyena and the rest of the pack in the room turns on
@@ -2028,6 +2063,8 @@ export class ZoneDO implements DurableObject {
     if (hasTrait(t, "padded")) bits.push("wards stun");
     if (hasTrait(t, "wardhide")) bits.push("wards wounds");
     if (hasTrait(t, "mailward")) bits.push("wards bleeds");
+    if (hasTrait(t, "staunched")) bits.push("staunched — wounds clot sooner");
+    if (hasTrait(t, "hooded")) bits.push("hooded — a flame catches in rain");
     if (hasTrait(t, "quiet")) bits.push("quiet");
     if (hasTrait(t, "slick")) bits.push("slick");
     if (hasTrait(t, "strapped")) bits.push("strapped-down");
@@ -2291,7 +2328,7 @@ export class ZoneDO implements DurableObject {
       return;
     }
     const fresh = !victim.bleedTicks;
-    victim.bleedTicks = BLEED_TICKS;
+    victim.bleedTicks = this.bleedTicksFor(victim);
     victim.bleedDmg = Math.max(victim.bleedDmg ?? 0, tmpl.bleed);
     if (fresh) {
       this.send(victim, `${cap(tmpl.name)} tears you open — the wound won't stop on its own. (bind it, or bleed)`, "dmgin");
@@ -2952,12 +2989,15 @@ export class ZoneDO implements DurableObject {
         // health. You already swung this tick (the living go first), so your
         // blow lands as it breaks for the door; then it's gone and you give
         // chase. Brooders are the opposite: they never leave the nest.
-        // A fire-fearing thing breaks and runs from a flame-bearer whatever its
-        // health — see ai.dreadsFire. Since 2026-08-03 that is most of the wood,
-        // so an open flame walks you through it and a lantern doesn't (the
-        // shutter tames the fear). Note what still holds them: the MANCATCHER
-        // below catches a fire-flinch like any other bolt, so a torch and a
-        // barbed collar together mean the wood can't run from you either.
+        // A fire-fearing thing ROLLS to break from a flame-bearer each round it
+        // stands there, at any health (ai.dreadsFire, FIRE_FLEE_CHANCE) — a
+        // chance, not a certainty, since 2026-08-03: it used to bolt on sight,
+        // which made a torch a no-fight button over most of the wood. Now the
+        // fire argues with it round after round and usually wins by the third.
+        // A lantern never triggers it at all (the shutter tames the flame).
+        // Note what still holds them: the MANCATCHER below catches a fire-flinch
+        // like any other bolt, so a torch and a barbed collar together mean the
+        // wood can't run from you either.
         // Empty bone knows no fear: the hollow fight until they come apart.
         // A HOARDER doesn't run either, and that's a fairness rule as much as a
         // flavor one: it is a 100 hp grind, and a version of it that broke for
@@ -4489,8 +4529,9 @@ export class ZoneDO implements DurableObject {
       }
     }
     // The lightless deep: without a flame you see nothing here — not the room,
-    // not its exits, not what shares it with you. A torch resolves it all.
-    if (this.isDark(room.id) && !this.carriesLight(session) && !this.roomLit(room.id)) {
+    // not its exits, not what shares it with you. Any flame resolves it all:
+    // yours, one on the floor, or one in a companion's hand (litFor).
+    if (!this.litFor(session)) {
       // The one generic line read identically whether you were in the deep's
       // permanent dark or an outdoor courtyard the night-clock just shrouded —
       // no telling the two apart (rome, 2026-07-22: "not really much telling
@@ -4523,7 +4564,13 @@ export class ZoneDO implements DurableObject {
     if (OUTDOOR_ROOMS.has(room.id) && isNight()) {
       lines.push(isFullMoon()
         ? "A full moon rides high and white — the grounds lie almost as bright as day."
-        : "Night's fully down out here — past your light, it's black.");
+        // Whose light it is matters here: this line runs for anyone the room is
+        // lit FOR, and telling a man he can see past "your light" when the
+        // flame is in his companion's fist is the same small lie as the rest of
+        // this (rome, 2026-08-03).
+        : this.carriesLight(session) || this.roomLit(room.id)
+          ? "Night's fully down out here — past your light, it's black."
+          : "Night's fully down out here — past the light you're standing in, it's black.");
     }
 
     const exits = world.exits.get(room.id) ?? [];
@@ -4545,6 +4592,12 @@ export class ZoneDO implements DurableObject {
       // A torch someone set (or dropped) on the stone, still burning — the room's
       // own light while it lasts.
       if (this.roomLit(room.id)) lines.push("A torch burns on the floor here, throwing the dark back off the walls.");
+      // Or the light is in somebody's hand. Say whose work you're seeing by —
+      // in the dark it is the difference between the room being lit and you
+      // wondering why you can suddenly see (rome, 2026-08-03).
+      else if (this.isDark(room.id) && !this.carriesLight(session) && this.roomHasBearer(room.id, session)) {
+        lines.push("Somebody else's light holds the dark off this room.");
+      }
       const curing = this.curingCount(room.id);
       const shownCure: Record<string, number> = {};
       // Loose loot is COLLECTED, not spilled line-by-line: on entry a big pile
@@ -4596,7 +4649,7 @@ export class ZoneDO implements DurableObject {
       // strikes. UNLESS you carry a flame: torchlight finds it pressed into its
       // crevice before it can spring, and the ambush is spoiled (wakeListeners).
       const hiddenLurker = LURKERS.has(creature.templateId) && creature.hidden && !creature.target;
-      if (hiddenLurker && !this.carriesLight(session) && !this.roomLit(room.id)) continue;
+      if (hiddenLurker && !this.litFor(session)) continue;
       if (hiddenLurker) {
         lines.push(`${cap(t.name)} is here, caught in ${this.carriesLight(session) ? "your torchlight" : "the torchlight"} before it could spring — pressed into a crevice, watching.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
         continue;
@@ -4852,8 +4905,7 @@ export class ZoneDO implements DurableObject {
     return LURKERS.has(creature.templateId)
       && !!creature.hidden
       && !creature.target
-      && !this.carriesLight(session)
-      && !this.roomLit(creature.roomId);
+      && !this.litFor(session);
   }
 
 
@@ -5003,6 +5055,17 @@ export class ZoneDO implements DurableObject {
   // nothing.) Traits are booleans by design; two padded pieces are just padded.
   // Does anything equipped carry this trait tag? (The trait ledger, 098: tags
   // live on the item row — "padded", "quiet", "slick" — not in code sets.)
+  // STAUNCHED (2026-08-03, the wood's answer to its own worst habit): moss-packed
+  // linings and boiled hide don't stop a wound opening — wardhide and mailward
+  // already do that — they stop it running. One tick less, every wound, from any
+  // source. It is the FIRST thing in the game that touches bleed damage after
+  // the fact: armour cannot, because a bleed is subtracted raw (see mig 151),
+  // which is exactly why the two surface bosses hurt so much more than their
+  // damage column said. A floor of one tick — nothing makes a cut free.
+  public bleedTicksFor(session: Session): number {
+    return Math.max(1, BLEED_TICKS - (this.wearsTrait(session, "staunched") ? 1 : 0));
+  }
+
   public wearsTrait(session: Session, tag: string): boolean {
     for (const c of session.items) {
       if (!c.equipped) continue;
@@ -5099,6 +5162,8 @@ export class ZoneDO implements DurableObject {
     const traits: string[] = [];
     if (this.wearsTrait(session, "padded")) traits.push("wards stun (odds halved)");
     if (this.wearsTrait(session, "wardhide")) traits.push("wards wounds (bleeds and leg-rakes turned)");
+    if (this.wearsTrait(session, "staunched")) traits.push("staunched (a wound clots a tick sooner)");
+    if (this.wearsTrait(session, "hooded")) traits.push("hooded (a flame catches in the rain)");
     if (this.wearsTrait(session, "mailward")) traits.push("wards bleeds (edges skate off the rings)");
     if (this.wearsTrait(session, "quiet")) traits.push("quiet (soft-footed)");
     if (this.wearsTrait(session, "slick")) traits.push("slick (hard to seize)");

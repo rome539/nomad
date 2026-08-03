@@ -96,10 +96,14 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     return z.send(session, "The wick is burnt to nothing and the pane is cracked through — this lantern is done.");
   }
   // Under open rain a torch won't catch — the storm is the lantern's argument
-  // (its shuttered flame doesn't care; see events.ts).
-  if (!wantLantern && events.raining(z, session.roomId)) {
+  // (its shuttered flame doesn't care; see events.ts). UNLESS you are wearing
+  // something you can hunch over it: HOODED gear (2026-08-03) is the wood's
+  // weather answer, and the wood is the one region that is outdoors end to end.
+  // It does not make you dry. It buys you the one lit match.
+  if (!wantLantern && events.raining(z, session.roomId) && !z.wearsTrait(session, "hooded")) {
     return z.send(session, "The rain would drown a torch before it caught. A hooded lantern wouldn't care.");
   }
+  const hoodedFlame = !wantLantern && events.raining(z, session.roomId);
   // While the deep exhales, the current pulls an open flame apart before it
   // catches — the exhale is the lantern's other argument.
   if (!wantLantern && events.exhaling(z, session.roomId)) {
@@ -141,6 +145,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litUntil = Date.now() + Math.floor((isBrand ? BRAND_BURN_MS : TORCH_BURN_MS) * coldMult);
     session.litSource = "torch";
     session.torchWarned = false;
+    if (hoodedFlame) z.send(session, "You turn your back to the rain and hunch the hood over your hands — the wet stays off just long enough.");
     z.send(session, isBrand
       ? `You touch a spark to the seal and the longbrand takes it slow — a fat, even flame that means to stay${coldMult < 1 ? ", though the cold pinches even this one" : ""}.${guardNote(z, session, "the flame")}`
       : `You touch a spark to the pitch and the torch catches — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.${guardNote(z, session, "the flame")}`, "gain");
@@ -161,7 +166,7 @@ export function snuffForHand(z: ZoneDO, session: Session): void {
   session.litUntil = undefined;
   session.litSource = undefined;
   session.torchWarned = false;
-  const dark = z.isDark(session.roomId) && !z.outOfWorld(session) ? ", and the dark closes in" : "";
+  const dark = !z.outOfWorld(session) && !z.litFor(session) ? ", and the dark closes in" : "";
   z.send(session, wasLantern
     ? `You shutter the lantern and sling it — no hand left to carry it${dark}.`
     : `The torch gutters out — no hand left to hold it${dark}.`);
@@ -189,7 +194,7 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
       session.litUntil = undefined;
       session.litSource = undefined;
       session.torchWarned = false;
-      const inDark = z.isDark(session.roomId) && !z.outOfWorld(session);
+      const inDark = !z.outOfWorld(session) && !z.litFor(session); // somebody else's flame still counts
       if (lantern) {
         z.send(session, (inDark
           ? "The lantern's flame shrinks to a bead and drowns in its own oil — and the dark closes over you completely."

@@ -18,7 +18,7 @@ import {
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
-  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
@@ -975,11 +975,19 @@ export function carriesFire(session: Session): boolean {
     return session.items.some((c) => FIRE_ITEMS.has(c.itemId));
   }
 
-  // A fire-fearing thing will not stand against an open flame: cornered by a
-  // fire-bearer it recoils, and the combat tick turns that into a flat flee
-  // whatever its health. Live since torches landed (057), and since 2026-08-03
-  // it is most of the wood — the deer, the wolves, the boars and the root-things
-  // (FEARS_FIRE, zone-data.ts). Returns true when it's recoiling, having said so.
+  // A fire-fearing thing does not want to be near an open flame — but wanting
+  // and doing are different, and this used to skip straight past the difference.
+  // It broke on the FIRST round it could see a flame, every time, which turned a
+  // torch into a no-fight button over most of the wood (rome, 2026-08-03: "the
+  // woods mobs are running away too much... it should be a chance they run away
+  // during the rounds"). Now the fear is rolled every round it stands there —
+  // FIRE_FLEE_CHANCE, the same shape as the wounded-flee roll — so a wolf comes
+  // in at you and the fire is the thing arguing with it, round after round,
+  // until it wins. It usually wins. Not immediately.
+  //
+  // Live since torches landed (057); most of the wood since 2026-08-03 (the
+  // deer, the wolves, the boars and the root-things — FEARS_FIRE, zone-data.ts).
+  // Returns true only on the round it actually breaks, and says so then.
 export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): boolean {
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
     if (!FEARS_FIRE.has(tmpl.id)) return false;
@@ -987,8 +995,12 @@ export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): bool
     // holds the room the same as one held up.
     const inHand = carriesFire(victim);
     if (!inHand && !z.roomLit(creature.roomId)) return false;
+    // Nerve fails on a roll, not on sight. The rounds it holds are silent — a
+    // line every four seconds for a thing that is still standing there would be
+    // its own kind of noise.
+    if (!chance(FIRE_FLEE_CHANCE)) return false;
     z.send(victim, `${cap(tmpl.name)} shrinks from ${inHand ? "your flame" : "the burning torch"} and breaks away.`);
-    z.roomFeed(creature.roomId, `${cap(tmpl.name)} shrinks from the flame.`, victim.pubkey, false); // local: mob reaction (fires every torch-near-mob tick)
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} shrinks from the flame.`, victim.pubkey, false);
     return true;
   }
 

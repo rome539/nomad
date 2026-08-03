@@ -158,7 +158,7 @@ async function swingAt(
     const rip = shield ? trait(shield.tmpl, "riposte") : undefined;
     if (rip && attacker.hp > 0) {
       const fresh = !attacker.bleedTicks;
-      attacker.bleedTicks = BLEED_TICKS;
+      attacker.bleedTicks = z.bleedTicksFor(attacker); // staunched gear clots it sooner
       // The riposte STACKS on top of any weapon bleed (capped) — a separate wound.
       attacker.bleedDmg = Math.min(BLEED_STACK_CAP, (attacker.bleedDmg ?? 0) + rip);
       if (fresh) z.send(defender, `You answer over the turned blow — the point nicks deep, and ${attacker.name} starts to bleed.`, "dmgout");
@@ -266,7 +266,7 @@ async function swingAt(
       z.send(defender, `${attacker.name}'s edge drags across the thick hide — it holds.`, "block");
     } else {
       const fresh = !defender.bleedTicks;
-      defender.bleedTicks = BLEED_TICKS;
+      defender.bleedTicks = z.bleedTicksFor(defender); // staunched gear clots it sooner
       defender.bleedDmg = Math.max(defender.bleedDmg ?? 0, weapon.tmpl.bleed);
       if (fresh) z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_BLEED, attacker.name, defender.name), "bleed", true, defender.pubkey);
     }

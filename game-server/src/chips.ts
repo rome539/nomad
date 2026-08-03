@@ -173,7 +173,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   if (gearless) suggest.push(`equip ${shortName(world.itemTemplates.get(gearless.itemId)!.name)}`);
   // Standing blind in the lightless deep with a light in the pack: the chip
   // that saves you. Both offered if you carry both — they're different tools.
-  if (z.isDark(session.roomId) && !z.carriesLight(session)) {
+  // Only when the room is actually dark FOR YOU — no point urging a torch when
+  // one already burns on the floor or in a companion's hand.
+  if (!z.litFor(session)) {
     if (session.items.some((c) => c.itemId === TORCH_ITEM)) suggest.push("light torch");
     // The brand chip only when no plain torch — the chip must never be the
     // thing that spends the rare flame while common sticks sit in the pack.

@@ -270,7 +270,11 @@ compass points.
    make sense").** `FEARS_FIRE` grew from one dungeon rat to 63 of the wood's 87
    bodies: roe-deer, grey-wolf, wild-boar and root-thing, plus the rare bloods
    (white-roe, dire-wolf, old-boar). An engaged one breaks and runs from an open
-   flame at any health. **Out on purpose:** the charcoal burner (fire is his
+   flame — **on a roll each round (`FIRE_FLEE_CHANCE` 0.35), not on sight**
+   (rome, same day: "they're running away too much... it should be a chance they
+   run away during the rounds"). It shipped absolute, which made a torch a
+   no-fight button; now the fire argues with them round after round — 65% still
+   on you after one, 42% after two, 27% after three. **Out on purpose:** the charcoal burner (fire is his
    trade), the mire-walker (it comes out of standing water), and the three that
    hold ground — the woodward and the keeper, because a boss that runs from a
    stick isn't a boss. **Left out pending rome:** the-follower and
@@ -282,6 +286,36 @@ compass points.
    whoever walks in by lantern-light or none. And the MANCATCHER still holds a
    fire-flinch like any other bolt, so torch + barbed collar means the wood
    can't run from you either.
+   **WHAT THE WOOD MAKES (mig 153, rome 2026-08-03: "what new gear can we
+   introduce with the new mobs... what about the woodward gear you can make?
+   what is the keeper dropping?").** Two structural holes closed. The forge's
+   seven materials were ALL dungeon trophies, so the wood's eight trophy types
+   fed nothing and the bench only paid you for going down; and the wood dropped
+   **no armour at all**, in the one zone tuned for fresh keys (mig 148). Six
+   recipes now cut in wood materials — wolfskin cloak (a2, hooded), tusk-goad
+   (dmg 3, pierces 1), moss-packed jerkin (a2, staunched), white-hide coat (a3,
+   wardhide), wolf-skull helm (a2, padded), and **the woodward's coat** (epic,
+   a4, wardhide+strapped, 5 scrap + 1 bounds tally, the first use that token has
+   ever had). **The keeper stops dropping a graveblade** — an uncommon barrow
+   sword from mig 004 that had been standing in as a 130 hp boss's signature —
+   and drops **the keeper's wrap**: epic cloak, a2, staunched + hooded. The
+   deep's three epics are greatplate, weapon, shield, all heavy; the surface
+   answers with a LIGHT capstone, which costs the armour ladder nothing because
+   cloaks cap at 2 armour even at epic.
+   **TWO NEW TRAITS, both hooks into what the wood taught us.** `staunched` — a
+   wound clots a tick sooner (3→2): the FIRST thing in the game that touches
+   bleed after it opens, since wardhide/mailward only stop one starting and
+   armour cannot help at all (a bleed is subtracted raw — the exact reason the
+   surface bosses hit above their damage column, mig 151). `hooded` — a torch
+   catches in the rain, which `raining()` had refused flatly in the one region
+   that is outdoors end to end. Both joined TRAIT_POOL for their slots, so found
+   gear rolls them too.
+   **THE LOAD LAW HELD.** I proposed light armour (3 armour at weight 1) and was
+   wrong — mig 096 sets weight by formula (body/helm = armour−1) and is
+   idempotent, so it would have flattened it on the next run. The wood pays for
+   its identity in traits, not in cheap armour; every one of the seven pieces
+   matches what 096 would compute. Still unfed on purpose: the mire-walker's
+   grave-pearl, and the woodward's axe stays rare at 5 dmg (mig 145's ruling).
    **THE WOODWARD — the maze's boss (mig 135, rome 2026-08-02: "we need a boss,
    a minotaur or equivalent").** NOT a minotaur: same objection as the dragon —
    a bull-headed man out of Greek myth would be the first borrowed thing in this

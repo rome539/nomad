@@ -262,7 +262,9 @@ export function describePlayer(z: ZoneDO, session: Session, other: Session): str
   // looks a player up while blind (naming one must not confirm they're there).
   // This branch is defense-in-depth for any future caller, and it does NOT
   // echo the name back for the same reason.
-  if (z.isDark(roomId) && !z.carriesLight(session)) {
+  // Any light in the room answers, not just your own — the floor's, or the one
+  // in the hand of whoever you are trying to look at (litFor, zone.ts).
+  if (!z.litFor(session)) {
     return "You can make out no one in this dark — shapes and breath and nothing you would swear to. (a light would show the room)";
   }
   // The fog blanks a man exactly as it blanks a beast (fogTell): you can see
@@ -376,7 +378,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // the same law, or you could read a beast's wounds and a blade's wear in pitch
   // black (rome, 2026-07-12). Your OWN pack still answers: you know your kit by
   // touch, so carried gear and the lockbox stay readable below.
-  const blind = z.isDark(session.roomId) && !z.carriesLight(session);
+  const blind = !z.litFor(session); // your flame, the floor's, or a companion's
 
   // Still water throws your face back — and once in a rare while, something that
   // isn't quite your face. Only where the water actually stands still (a fishing
@@ -1199,7 +1201,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
       session.litSource = undefined;
       session.torchWarned = false;
       z.sendStatus(session);
-      const dark = z.isDark(session.roomId) && !z.outOfWorld(session) ? ", and the dark closes back in" : "";
+      const dark = !z.outOfWorld(session) && !z.litFor(session) ? ", and the dark closes back in" : "";
       z.send(session, `You ${wasLantern ? "shutter the lantern" : "lower the torch"} and swing ${tmpl.name} off your back — your guard returns${dark}.`);
       z.send(session, z.describeRoom(session, false)); // the dark may close over the room again
       return;
