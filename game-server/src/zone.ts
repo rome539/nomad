@@ -1402,6 +1402,20 @@ export class ZoneDO implements DurableObject {
       return this.send(session, "Nothing by that name is here to fight.");
     }
     const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
+    // Rung senseless: the swing is gone, whether the tick asked for it or YOU
+    // did. The combat round (tickCombat) and the steel exchange (tickPvp) both
+    // pay this debt, and the two VERBS never did — so a stunned player could
+    // type `attack` and swing anyway, and if the thing hadn't marked them yet
+    // they collected the AMBUSH_MULT opening blow for it. The stun was real the
+    // whole time; it just cost nothing to anyone who kept typing.
+    // Spent AFTER the target resolves, so a fumbled name doesn't eat the debt,
+    // and BEFORE initiative, so the free heavy blow is what you lose.
+    if (session.stunned) {
+      session.stunned = false;
+      this.send(session, "Your head still rings — the moment to swing slips past you.", "stun");
+      this.sendStatus(session);
+      return;
+    }
     // Initiative: strike something that hasn't marked you — no fight on, no
     // grudge held — and the first blow lands heavy, before it can answer.
     // A SLEEPER is unaware by definition (grudge or not: it's asleep) — the
@@ -1504,6 +1518,17 @@ export class ZoneDO implements DurableObject {
     // pull one thing off a pack). Soft things just thud and carry nothing.
     if (!creature) return this.throwForNoise(session, carried, itmpl);
     const tmpl = world.mobTemplates.get(creature.templateId)!;
+
+    // Rung senseless: the arm owes the same debt the blade does. Placed BELOW
+    // the noise-throw, deliberately — the daze costs you the AIMED throw, not
+    // the ability to fling something into a corner and listen. You can still be
+    // clever while your head rings; you just can't hit anything with it.
+    if (session.stunned) {
+      session.stunned = false;
+      this.send(session, "Your head still rings — your arm won't find the line.", "stun");
+      this.sendStatus(session);
+      return;
+    }
 
     // One throw per round: the arm owes its follow-through. (Without this, a
     // recycled rock out-damages a graveblade — the machine-gun, not the sling.)

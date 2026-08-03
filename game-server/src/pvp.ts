@@ -42,6 +42,15 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
   if (z.outOfWorld(other)) {
     return z.send(session, `${other.name} has stepped out of the world — nothing can reach them at the gate's bench.`);
   }
+  // Rung senseless: the same debt tickPvp pays below, owed by the VERB too.
+  // Without this a stunned fighter could open on a wanderer by hand and keep
+  // the ambush blow — the one swing the daze is supposed to cost them.
+  if (session.stunned) {
+    session.stunned = false;
+    z.send(session, "Your head still rings — the moment to swing slips past you.", "stun");
+    z.sendStatus(session);
+    return;
+  }
   const unaware = other.pvpTarget !== session.pubkey;
   session.pvpTarget = other.pubkey;
   if (!other.pvpTarget) other.pvpTarget = session.pubkey; // steel answers steel
