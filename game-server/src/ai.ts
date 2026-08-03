@@ -975,10 +975,11 @@ export function carriesFire(session: Session): boolean {
     return session.items.some((c) => FIRE_ITEMS.has(c.itemId));
   }
 
-  // A fire-fearing thing (the albino rat, for now) will not stand against an open
-  // flame: cornered by a fire-bearer it recoils, and the combat tick turns that
-  // into a flat flee whatever its health. Dormant until torches exist (carriesFire
-  // is false today). Returns true when it's recoiling, having said so.
+  // A fire-fearing thing will not stand against an open flame: cornered by a
+  // fire-bearer it recoils, and the combat tick turns that into a flat flee
+  // whatever its health. Live since torches landed (057), and since 2026-08-03
+  // it is most of the wood — the deer, the wolves, the boars and the root-things
+  // (FEARS_FIRE, zone-data.ts). Returns true when it's recoiling, having said so.
 export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): boolean {
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
     if (!FEARS_FIRE.has(tmpl.id)) return false;

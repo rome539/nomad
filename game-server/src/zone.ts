@@ -2952,9 +2952,12 @@ export class ZoneDO implements DurableObject {
         // health. You already swung this tick (the living go first), so your
         // blow lands as it breaks for the door; then it's gone and you give
         // chase. Brooders are the opposite: they never leave the nest.
-        // A fire-fearing thing (the albino rat, for now) breaks and runs from a
-        // flame-bearer whatever its health — see ai.dreadsFire. Dormant until
-        // torches exist (carriesFire is false today).
+        // A fire-fearing thing breaks and runs from a flame-bearer whatever its
+        // health — see ai.dreadsFire. Since 2026-08-03 that is most of the wood,
+        // so an open flame walks you through it and a lantern doesn't (the
+        // shutter tames the fear). Note what still holds them: the MANCATCHER
+        // below catches a fire-flinch like any other bolt, so a torch and a
+        // barbed collar together mean the wood can't run from you either.
         // Empty bone knows no fear: the hollow fight until they come apart.
         // A HOARDER doesn't run either, and that's a fairness rule as much as a
         // flavor one: it is a 100 hp grind, and a version of it that broke for
@@ -5227,6 +5230,11 @@ export class ZoneDO implements DurableObject {
     if (session.hobbled) fx.push("hobbled");
     if (session.bleedTicks && session.bleedTicks > 0) fx.push("bleeding");
     if (session.resting) fx.push("resting");
+    // A flame in the shield hand is a real debuff and it was the only invisible
+    // one left: the shield stays equipped (so it can't be lost loose in the
+    // pack), equippedBlock quietly returns 0, and every surface but the sheet's
+    // block figure went on saying you were guarded. Now it says so on the bar.
+    if (this.carriesLight(session) && light.guardingShield(this, session)) fx.push("guard-down");
     try {
       session.ws.send(
         JSON.stringify({

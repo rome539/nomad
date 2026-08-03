@@ -1,21 +1,24 @@
 # THE WOOD, SLAB 1 — 27 rooms: the honest band, the threshold, the first core.
 #
-# rome ruled the HYBRID (2026-08-01): an honest outer band, a lying core.
+# THE WOOD STOPPED LYING (rome, 2026-08-03: "just a regular maze"). It was
+# built as a hybrid — an honest outer band around cores where every exit was
+# one-way and no two of them paired, so turning round never retraced. That is
+# gone. All eight cores are ordinary mazes now: a grid of rooms with a spanning
+# tree cut through it, walls where the carve left them, and EVERY exit in the
+# wood answering with its opposite. North in, south back out, no exceptions.
 #
-# THE HONEST BAND is a 5x3 lattice west of the Gap in the Trees. Every exit
-# has its proper return — north in, south back out — so the near edge of the
-# wood is somewhere you can walk into and walk out of, and the dens at the
-# wood's edge stay reachable. It is disorienting only because it is trees.
+# What that changes. Most core rooms had four exits and now have two, because a
+# maze is mostly walls; there are 21 dead ends in the wood where there were
+# none; and the old SPILLS are cut — the exits that threw you out of a core
+# onto the band somewhere you had not gone in by. Each maze is now entered and
+# left by its own doors. You get lost the way you get lost in a real wood: by
+# taking a turning you can't tell from the other three.
+#
+# THE HONEST BAND is a 5x3 lattice west of the Gap in the Trees, untouched.
 #
 # THE THRESHOLD is the lattice's west column (the Turning, the Close Ground,
-# the Swallowing). Nothing marks it. Walk west out of any of the three and the
-# returns stop matching.
-#
-# THE CORE lies. Every exit in it is one-way and no two of them pair up, so
-# turning round never retraces anything. It is NOT a trap: two rooms spill you
-# back onto the honest band (the Turned Ground east, the Heart of It south) at
-# places you did not go in by. You always get out of the wood. You never get out
-# where you expect, and you cannot walk back to where you were.
+# the Swallowing). Nothing marks it. Walk west out of any of the three and you
+# are in the maze — and can turn round and walk straight back out of it.
 #
 # The core rooms are written to be describable but unmemorable on purpose —
 # real detail, nothing you could use to tell one from another afterwards.
@@ -152,70 +155,57 @@ The trees stand closer together west of here, and the ground begins to lift and 
 > east the-boundary-oak
 > north the-close-ground
 > south the-swallowing
-> west the-close-dark  oneway
+> west the-close-dark
 
 ## the-close-ground | The Close Ground
 The stand crowds in until you are turning your shoulders to get between trunks, and the canopy closes over so completely that the floor is bare, brown, and silent. Sound stops carrying. You can hear your own pulse in your ears, which means there is nothing else to hear.
 > east the-ash-stand
 > south the-turning
-> west the-turned-ground  oneway
+> west the-turned-ground
 
 ## the-swallowing | The Swallowing
 Ivy has come up every trunk and out along every branch until the shapes overhead are not trees any more, only a mass. The light that gets down is green and even and comes from no particular direction, so nothing casts a shadow, so nothing has a side.
 > east the-charcoal-flat
 > north the-turning
-> west the-hollow-beeches  oneway
+> west the-hollow-beeches
 
-# ---- the core: every exit one-way, nothing pairs, no way back --------------
+# ---- the core: six rooms, cut as a maze -------------------------------------
 #
-# EVERY core room has all four compass exits, and that is the important part.
-# If a core room simply lacked an east exit, stepping back the way you came
-# would answer "there is no way east from here" — which ANNOUNCES the trick.
-# The lie has to be that east works perfectly and puts you somewhere else.
+# Three doors in, one off each room of the threshold column, and one place
+# where the floor gives way into the sunken wood. Every corridor two-way, one
+# branch that goes nowhere.
 #
-# No exit in here pairs with its opposite (verified by script, not by eye), so
-# turning round never retraces. Two rooms spill you back onto the honest band —
-# the Turned Ground east, the Heart of It south — at places you did not come in
-# by. You always get out of the wood. You never get out where you expect.
+# This is the woodward's ground and he still walks all of it (PATROLS, in
+# zone-data.ts). He no longer needs the ground to be impossible in order to be
+# the only thing that knows its way around.
 
 ## the-close-dark | The Close Dark
 Trunks in every direction at about the same spacing, going back into a green-brown dimness that ends wherever your eye gives up. The floor is leaf-mould, deep and soft and unmarked. There is a fallen limb here, half rotted, with a fern growing out of the split.
-> north the-turned-ground  oneway
-> south the-hollow-beeches  oneway
-> east the-listening-stand  oneway
-> west the-same-tree  oneway
+> west the-same-tree
+> east the-turning
 
 ## the-turned-ground | The Turned Ground
 The floor has been worked over — turned, rooted through, the leaf-litter thrown up in ridges across a good stretch of ground. It was done thoroughly and it was not done recently. Beyond the worked ground the trees stand as they stand everywhere.
-> north the-heart-of-it  oneway
-> south the-same-tree  oneway
-> east the-ash-stand  oneway
-> west the-listening-stand  oneway
+> south the-same-tree
+> north the-listening-stand
+> east the-close-ground
 
 ## the-same-tree | The Same Tree
 A beech with a burl on it the size of a head, grey bark, one dead branch out to the left, standing among others. You have not seen this tree before. You are fairly sure you have not seen this tree before.
-> north the-heart-of-it  oneway
-> south the-listening-stand  oneway
-> east the-turned-ground  oneway
-> west the-hollow-beeches  oneway
+> north the-turned-ground
+> east the-close-dark
 
 ## the-listening-stand | The Listening Stand
 Somewhere close, a wood-pigeon is working through its two notes over and over, and it does not stop or move when you do. Everything else here has decided to be quiet. The trees are ordinary. The quiet is not, quite.
-> north the-hollow-beeches  oneway
-> south the-heart-of-it  oneway
-> east the-same-tree  oneway
-> west the-turned-ground  oneway
+> south the-turned-ground
+> north the-heart-of-it
+> east the-hollow-beeches
 
 ## the-hollow-beeches | The Hollow Beeches
 Old beeches gone hollow standing on their own roots, each one a shell you could step inside if you wanted to be inside something. The ground between them is bare and pale and takes a footprint well. There are footprints. Some of them are the right size.
-> north the-same-tree  oneway
-> south the-close-dark  oneway
-> east the-heart-of-it  oneway
-> west the-listening-stand  oneway
+> west the-listening-stand
+> east the-swallowing
 
 ## the-heart-of-it | The Heart of It
 Nothing announces this place. The trees are the same trees, the light is the same green, the floor is the same soft depth of years of leaves — and the wood is very obviously not the same here, in a way you could not put into a sentence if you had to. Southward the ground falls away and lightens, slightly.
-> north the-turned-ground  oneway
-> south the-charcoal-flat  oneway
-> east the-listening-stand  oneway
-> west the-same-tree  oneway
+> south the-listening-stand

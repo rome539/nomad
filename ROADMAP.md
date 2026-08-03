@@ -177,8 +177,31 @@ compass points.
   GATEHOUSE — the safe room behind a gate's door. Don't invent a parallel name.)*
 
 **Open calls (need rome before the wood is built):**
-1. ~~**Does the wood lie about direction?**~~ **RULED: THE HYBRID** *(rome,
-   2026-08-01)* — an honest outer band, a lying core. Pure-honest is solvable
+1. ~~**Does the wood lie about direction?**~~ ~~**RULED: THE HYBRID**~~
+   **OVERRULED — THE WOOD DOES NOT LIE** *(rome, 2026-08-03: "i think we need to
+   change the lying woods into just a regular maze")*. **Mig 149** re-cut all 82
+   core rooms as ordinary mazes: each core's rooms laid on a small grid (3×2,
+   3×3, 4×3) with a randomised depth-first spanning tree carved through it, both
+   directions written for every corridor. **Every exit in the wood now answers
+   with its opposite.** Core rooms went from 4 exits each to ~2 (a maze is
+   mostly walls), the wood gained **21 dead ends** where it had none, and the
+   longest true path inside a core runs 4 rooms (the centre) to 10 (the sunken
+   wood and core G). The eleven **SPILLS are cut** — every one landed on a band
+   room whose facing side was already a door, so none could be made two-way
+   where it stood, and re-hosting them put a core's south exit four rooms away
+   in the far north, which is the old disorientation in a new hat. Each maze is
+   now entered and left by its own threshold and its own falls. Two other exits
+   went too: a west door between cores D and E, and a redundant second door
+   between core H and the Boar Ground. **Measured side effect:** 192 exits in
+   the world had no return by ANY direction, which failed `exitsSymmetric` in
+   `zone.ts buildWorldMaps` and forced the distance cache into strict forward
+   lookups **world-wide, dungeon included**. That is now 0, so the reverse
+   lookup is valid again. The woodward's round was re-walked to match (a
+   depth-first out-and-back, like the surface warden's). Untouched: every room
+   id/name/description, all 115 spawns and the depth ladder, the far side's
+   arrive-from-underneath shape. *The record of the old design, kept because
+   it is why the wood is shaped the way it is:* an honest outer band, a lying
+   core. Pure-honest is solvable
    once and permanently (someone posts a route and the maze is a corridor);
    pure-lying makes the dens hostile to reach and stepping off the road feel
    unfair rather than dangerous. Slab 1 built (mig 130): a 5×3 honest lattice
@@ -243,6 +266,22 @@ compass points.
    the lying cores, so it finds you exactly when you have stopped knowing the
    way), the charcoal burner, root-things, the mire-walker, and the keeper of
    the holding.
+   **THE WOOD FEARS FIRE (rome, 2026-08-03: "most of the mobs... the ones that
+   make sense").** `FEARS_FIRE` grew from one dungeon rat to 63 of the wood's 87
+   bodies: roe-deer, grey-wolf, wild-boar and root-thing, plus the rare bloods
+   (white-roe, dire-wolf, old-boar). An engaged one breaks and runs from an open
+   flame at any health. **Out on purpose:** the charcoal burner (fire is his
+   trade), the mire-walker (it comes out of standing water), and the three that
+   hold ground — the woodward and the keeper, because a boss that runs from a
+   stick isn't a boss. **Left out pending rome:** the-follower and
+   something-ahead — it fits the fiction, but 8 of them exist and a torch would
+   switch the wood's whole dread off at once. **Why this doesn't flatten the
+   wood:** the hooded lantern is NOT fire (the shutter tames it), so the long
+   light scares nothing — a torch buys passage but burns out fast and costs your
+   shield guard, while hunting for pelts, haunches and tusks now belongs to
+   whoever walks in by lantern-light or none. And the MANCATCHER still holds a
+   fire-flinch like any other bolt, so torch + barbed collar means the wood
+   can't run from you either.
    **THE WOODWARD — the maze's boss (mig 135, rome 2026-08-02: "we need a boss,
    a minotaur or equivalent").** NOT a minotaur: same objection as the dragon —
    a bull-headed man out of Greek myth would be the first borrowed thing in this

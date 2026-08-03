@@ -21,6 +21,54 @@ export function carriesLight(session: Session): boolean {
   return !!session.litUntil && Date.now() < session.litUntil;
 }
 
+// THE ONE GATE INTO A LIT HAND (rome, 2026-08-03: the light-a-torch path and the
+// take-one-off-the-floor path were two different pieces of code, and only one of
+// them had the rules). `light` refused to let you drop your guard mid-fight and
+// told you what the flame cost; `get torch` set litUntil directly and checked
+// nothing but your weapon hand, so you could pick a burning torch up in the
+// middle of a fight and zero your own block in silence. Both doors come through
+// here now. Returns the refusal, or null if your hand is free to take a light.
+export function blockedFromLight(z: ZoneDO, session: Session): string | null {
+  const weapon = z.equippedItem(session, "weapon");
+  if (weapon && hasTrait(weapon.tmpl, "two-handed")) {
+    return `Both your hands are full of ${weapon.tmpl.name} — no free hand for a light. Lower it first.`;
+  }
+  if (guardingShield(z, session) && z.inCombat(session)) {
+    return "You can't drop your guard for a light while something wants your blood.";
+  }
+  return null;
+}
+
+// The shield that a flame costs you — one that is actually on your arm and
+// actually blocks. A buckler with no block stat loses you nothing, so it should
+// never be mentioned.
+export function guardingShield(z: ZoneDO, session: Session) {
+  const s = z.equippedItem(session, "shield");
+  return s && s.tmpl.block > 0 ? s : null;
+}
+
+// What the flame costs, said the same way whichever door you came through.
+//
+// It also stopped claiming something untrue. The old line said you swung the
+// shield ONTO YOUR BACK — but the shield is never unequipped (that was
+// deliberate: a loose shield in the pack was getting lost), so your inventory
+// went on calling it worn and the sheet went on showing 0% block, and all three
+// surfaces disagreed. What is true is that it stays strapped and the hand that
+// works it is full of fire.
+export function guardNote(z: ZoneDO, session: Session, flame = "the light"): string {
+  const shield = guardingShield(z, session);
+  return shield
+    ? ` (${shield.tmpl.name} stays on your arm, but the hand that works it is holding ${flame} — no guard until you 'equip shield'.)`
+    : "";
+}
+
+// And the other way: a flame that ends gives the guard back, so say so. Silence
+// here was the same bug from the far side — the block came back on the tick that
+// killed the light and nothing told you.
+export function guardBack(z: ZoneDO, session: Session): string {
+  return guardingShield(z, session) ? " Your shield hand is free again." : "";
+}
+
 // Kindle a light. No arg lights the torch first, the lantern if you carry no
 // torch; "light lantern" / "light torch" choose. One at a time either way.
 export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<void> {
@@ -61,22 +109,17 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   if (!wantLantern && events.tideFlooded(z, session.roomId)) {
     return z.send(session, "You are standing in the tide. The pitch would drink water before it ever drank fire. A hooded lantern, held high, wouldn't care.");
   }
-  // Both hands on a two-handed weapon leave nowhere to hold a light; a shield
-  // gets set aside for the flame.
-  const weapon = z.equippedItem(session, "weapon");
-  if (weapon && hasTrait(weapon.tmpl, "two-handed")) {
-    return z.send(session, `Both your hands are full of ${weapon.tmpl.name} — no free hand for a light. Lower it first.`);
-  }
+  // Both hands full, or a guard you can't drop with something on you: the same
+  // gate the floor-torch path goes through (blockedFromLight, above).
+  //
   // A lit light fills the shield hand: your shield STAYS on your arm (it is
   // never unequipped, so it can never become a loose pack item to lose), but it
   // gives no guard while the flame burns — equippedBlock reads carriesLight and
   // zeroes the block. Raise the shield again ('equip shield') to lower the flame
   // and trade the light back for the guard. (Old behaviour set equipped=false
   // and dropped the shield into the pack; that loose shield was getting lost.)
-  const shield = z.equippedItem(session, "shield");
-  if (shield && z.inCombat(session)) {
-    return z.send(session, "You can't drop your guard for a light while something wants your blood.");
-  }
+  const refusal = blockedFromLight(z, session);
+  if (refusal) return z.send(session, refusal);
   if (wantLantern) {
     // The oil is committed the moment the wick takes — the wear lands now, and
     // the burnout tick spends the lantern itself when the last of it is gone.
@@ -85,7 +128,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litUntil = Date.now() + LANTERN_BURN_MS;
     session.litSource = "lantern";
     session.torchWarned = false;
-    z.send(session, `You ${shield ? `swing ${shield.tmpl.name} onto your back, then ` : ""}slide the shutter and touch flame to the wick — a low, steady light settles around you. Nothing flinches from it.${shield ? " (No guard while the light burns — 'equip shield' brings it back.)" : ""}`, "gain");
+    z.send(session, `You slide the shutter and touch flame to the wick — a low, steady light settles around you. Nothing flinches from it.${guardNote(z, session, "the lantern")}`, "gain");
     z.roomFeed(session.roomId, `${session.name} raises a hooded lantern; a patient light spreads.`, session.pubkey, false);
   } else {
     session.items.splice(session.items.indexOf(light), 1);
@@ -99,8 +142,8 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litSource = "torch";
     session.torchWarned = false;
     z.send(session, isBrand
-      ? `You ${shield ? `swing ${shield.tmpl.name} onto your back, then ` : ""}touch a spark to the seal and the longbrand takes it slow — a fat, even flame that means to stay${coldMult < 1 ? ", though the cold pinches even this one" : ""}.${shield ? " (No guard while the flame burns — 'equip shield' brings it back.)" : ""}`
-      : `You ${shield ? `swing ${shield.tmpl.name} onto your back, then ` : ""}touch a spark to the pitch and the torch catches — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.${shield ? " (No guard while the flame burns — 'equip shield' brings it back.)" : ""}`, "gain");
+      ? `You touch a spark to the seal and the longbrand takes it slow — a fat, even flame that means to stay${coldMult < 1 ? ", though the cold pinches even this one" : ""}.${guardNote(z, session, "the flame")}`
+      : `You touch a spark to the pitch and the torch catches — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.${guardNote(z, session, "the flame")}`, "gain");
     z.roomFeed(session.roomId, isBrand
       ? `${session.name} kindles a longbrand; its light is steadier than any torch has a right to be.`
       : `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey, false);
@@ -137,7 +180,7 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
       session.litUntil = undefined;
       session.litSource = undefined;
       session.torchWarned = false;
-      z.send(session, "The lantern is out of your hands — its light goes with it.", "dmgin");
+      z.send(session, `The lantern is out of your hands — its light goes with it.${guardBack(z, session)}`, "dmgin");
       z.sendStatus(session);
       continue;
     }
@@ -148,18 +191,18 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
       session.torchWarned = false;
       const inDark = z.isDark(session.roomId) && !z.outOfWorld(session);
       if (lantern) {
-        z.send(session, inDark
+        z.send(session, (inDark
           ? "The lantern's flame shrinks to a bead and drowns in its own oil — and the dark closes over you completely."
-          : "The lantern's flame shrinks to a bead and drowns. The pane goes dark.", "dmgin");
+          : "The lantern's flame shrinks to a bead and drowns. The pane goes dark.") + guardBack(z, session), "dmgin");
         if (held && held.condition <= 0) {
           session.items.splice(session.items.indexOf(held), 1);
           await removeItemRow(z.env.DB, held.rowId);
           z.send(session, "That was the last of it: the wick is ash, and the cracked tin comes apart in your hands.");
         }
       } else {
-        z.send(session, inDark
+        z.send(session, (inDark
           ? "Your torch gutters, flares, and dies — and the dark closes over you completely."
-          : "Your torch gutters, flares, and dies. The last of it falls as ash.", "dmgin");
+          : "Your torch gutters, flares, and dies. The last of it falls as ash.") + guardBack(z, session), "dmgin");
       }
       z.sendStatus(session);
       if (inDark) z.send(session, z.describeRoom(session, false));

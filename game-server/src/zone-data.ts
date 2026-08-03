@@ -650,7 +650,7 @@ export const MOUTHS = [
   // burrows, brakes, a quarry, a hollow, an earth-fall — never open ground.
   "the-flooded-quarry", "the-beggars-hollow",                    // the road
   "the-holly-brake", "the-fox-earths", "the-badger-ground", "the-alder-carr", // the wood, honest band
-  "the-hollow-beeches", "the-grey-thicket", "the-rush-bed",      // the lying cores
+  "the-hollow-beeches", "the-grey-thicket", "the-rush-bed",      // the cores
   "the-earth-fall", "the-under-roots",                           // the sunken wood, and below it
   "the-wolf-pits", "the-icehouse",                               // the far side
   // TWO MORE DEEP MOUTHS (rome, 2026-07-27: "the mobs in the deep are just all
@@ -720,17 +720,22 @@ export const PATROLS: Record<string, string[]> = {
     "the-elder-hedge", "the-first-milestone", "the-broken-paving",
   ],
   // THE WOODWARD (rome, 2026-08-02: "we need a boss in the center of the maze").
-  // He walks a closed circuit of the CENTRE CORE — the first lying core, the one
-  // behind the Turning — and that is the entire idea of him. You cannot navigate
-  // that core: turning round never retraces, and you get spat out somewhere you
-  // did not choose. He walks it correctly, forever, because it is his. The maze
-  // is not a place he is kept in. It is a place he keeps.
+  // He walks the CENTRE CORE, the one behind the Turning, and that is the entire
+  // idea of him. The maze is not a place he is kept in. It is a place he keeps.
   //
-  // Every leg is a real exit in the core's one-way tangle (checked by script),
-  // and the ring closes: the-hollow-beeches south returns to the-close-dark.
+  // Re-walked 2026-08-03, when the wood stopped lying (mig 149). His old round
+  // was a closed ring through a core where nothing paired with its opposite; the
+  // core is a cut maze now, so his round is a depth-first walk of it and back out
+  // of every branch — the same shape as the surface warden's and the carrier's.
+  // He still covers all six rooms and passes the Listening Stand three times,
+  // which is right: it is the junction the whole core hangs off.
+  //
+  // Every leg is a real exit (checked by script), and the round closes: the Same
+  // Tree east returns to the Close Dark.
   "the-woodward": [
-    "the-close-dark", "the-turned-ground", "the-heart-of-it",
-    "the-listening-stand", "the-same-tree", "the-hollow-beeches",
+    "the-close-dark", "the-same-tree", "the-turned-ground", "the-listening-stand",
+    "the-heart-of-it", "the-listening-stand", "the-hollow-beeches",
+    "the-listening-stand", "the-turned-ground", "the-same-tree",
   ],
 };
 
@@ -1595,7 +1600,43 @@ export const HOUND_WAKE_MS = 900_000; // 15 minutes
 // light system lands — at which point one id in FIRE_ITEMS wakes it. The albino
 // rat is the first of the timid: strong enough to maul you in the dark, but it
 // remembers being a rat the instant it sees flame.
-export const FEARS_FIRE = new Set(["albino-rat"]);
+// THE WOOD IS AFRAID OF FIRE (rome, 2026-08-03: "most of the mobs in the new
+// woods... the ones that make sense"). 63 of the wood's 87 bodies, and the line
+// between in and out is whether the thing would run from a flame in a real wood:
+//
+//   IN — the animals. Deer bolt from fire, wolves have been kept off by a
+//   campfire for as long as there have been campfires, and a boar wants nothing
+//   to do with it either. Their rare bloods come with them (a dire wolf is still
+//   a wolf). And the ROOT-THING, which is the one that isn't an animal but is
+//   the most obvious of all: it is dry wood and old roots walking, and fire is
+//   simply what ends it.
+//
+//   OUT — the charcoal burner, because burning wood is his TRADE and a man who
+//   sleeps beside a smouldering stack does not flinch at a torch. The
+//   mire-walker, because it comes out of standing water with the bog still
+//   running off it — there is nothing on it to catch. And the three that hold
+//   ground on purpose: the woodward, who coppiced and burned this wood himself,
+//   and the keeper of the holding. A boss that runs from a stick isn't a boss.
+//
+// Left out on purpose, one word from rome away: THE FOLLOWER (and its
+// something-ahead blood). It fits the fiction — the thing that keeps to the
+// dark and is never quite seen would plausibly keep its distance from a flame —
+// but it is the wood's whole dread, and 8 of them exist, and a torch would
+// switch all of them off at once. That's his call, not mine.
+//
+// What keeps this from making the wood a walk: the hooded lantern is NOT fire
+// (carriesFire, ai.ts — the shutter tames it), so the long light doesn't scare
+// anything. A torch clears your path but burns out fast and costs your shield
+// guard; a lantern lets you see for three torches' worth and leaves the wood
+// exactly as dangerous as it was. And you can't hunt what runs from you: pelts,
+// haunches and tusks now come to whoever walks in by lantern-light, or by none.
+export const FEARS_FIRE = new Set([
+  "albino-rat",
+  "roe-deer", "white-roe",       // the wood's food, and it survives by leaving
+  "grey-wolf", "dire-wolf",      // the oldest reason there are campfires
+  "wild-boar", "old-boar",
+  "root-thing",                  // dry wood on the move: fire is what ends it
+]);
 // Items that count as an open flame in hand ON THEIR OWN (always burning). Still
 // empty — the torch isn't here: a torch is fire only while LIT, which is session
 // state (litUntil), so carriesFire() reads that too. This set stays for a future

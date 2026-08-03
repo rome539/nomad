@@ -940,15 +940,18 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // only when no unlit torch actually lies here (that one is ordinary loot).
   if (!itemId && z.roomLit(session.roomId) && /\b(torch|brand|light|flame|fire)\b/i.test(arg)) {
     if (z.carriesLight(session)) return z.send(session, "Your hand already holds a light — leave this one burning where it is.");
-    const inHand = z.equippedItem(session, "weapon");
-    if (inHand && hasTrait(inHand.tmpl, "two-handed")) {
-      return z.send(session, `Both your hands are full of ${inHand.tmpl.name} — no free hand for the flame. Lower it first.`);
-    }
+    // Same gate as `light` (light.ts blockedFromLight): a hand full of a
+    // two-hander can't take it, and you can't drop your guard for it with
+    // something already on you. Taking a flame up off the floor used to check
+    // only the weapon — it was the way to zero your own block mid-fight in
+    // silence, in the one situation `light` refuses outright.
+    const refusal = light.blockedFromLight(z, session);
+    if (refusal) return z.send(session, refusal);
     session.litUntil = z.groundTorch.get(session.roomId)!;
     session.litSource = "torch";
     session.torchWarned = false;
     z.groundTorch.delete(session.roomId);
-    z.send(session, "You take the burning torch up off the stone — its light is yours again.", "gain");
+    z.send(session, `You take the burning torch up off the stone — its light is yours again.${light.guardNote(z, session, "the torch")}`, "gain");
     z.roomFeed(session.roomId, `${session.name} takes up the burning torch.`, session.pubkey, false);
     z.sendStatus(session);
     z.refreshRoomCtx(session.roomId);
@@ -1270,11 +1273,18 @@ export async function cmdRemove(z: ZoneDO, session: Session, arg: string): Promi
   z.sendCtx(session); // loadout changed — refresh the chips
 }
 
-export function itemLine(z: ZoneDO, c: CarriedItem): string {
+export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session): string {
   const t = z.world!.itemTemplates.get(c.itemId);
   let s = `  ${z.displayName(c)} [${t?.rarity ?? "?"}]${z.itemStat(t)}`;
   const tags: string[] = [];
   if (c.equipped) tags.push(t?.slot === "weapon" ? "wielded" : "worn");
+  // A shield keeps saying "worn" while a flame burns, because it IS still on
+  // your arm — but equippedBlock is returning 0 for it, so the list has to say
+  // that too. It was the surface that made the whole thing look broken (rome,
+  // 2026-08-03: "how come i light the lantern but i still have my shield equip").
+  if (c.equipped && t?.slot === "shield" && (t?.block ?? 0) > 0 && holder && z.carriesLight(holder)) {
+    tags.push("guard down — hand full of flame");
+  }
   if (c.serial !== null) tags.push(`sealed #${c.serial}`);
   // Gear shows its wear whether sealed or not — sealed just wears slower, and
   // you need to see it to know when to mend it.
@@ -1291,7 +1301,7 @@ export function itemLine(z: ZoneDO, c: CarriedItem): string {
 
 // One keeping's contents as text, grouped like the modal: fungibles collapse
 // to a count, gear/equipped/sealed list on their own line.
-export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string): string[] {
+export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, holder?: Session): string[] {
   const world = z.world!;
   const lines = [header];
   if (items.length === 0) { lines.push("  — empty —"); return lines; }
@@ -1307,7 +1317,7 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string): s
   }
   for (const c of items) {
     if (z.stackable(c.itemId, c.serial, c.journalId) && !c.equipped) continue; // stacked above
-    lines.push(itemLine(z, c));
+    lines.push(itemLine(z, c, holder));
   }
   return lines;
 }
@@ -1327,7 +1337,7 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     ? ["The loose iron rides heavy and loud — you won't slip a blow under this load, and moving carries."]
     : [];
   if (z.inCombat(session)) {
-    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`), ...loud].join("\n"));
+    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`, session), ...loud].join("\n"));
   }
   const atGate = world.entryRooms.has(session.roomId);
   // Out in the world, 'inv' crouches you over the pack a moment — the same
@@ -1337,14 +1347,14 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   if (!atGate) {
     z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
     return z.send(session, [
-      ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`),
+      ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`, session),
       ...loud,
       "('burn <item>' to destroy it, 'drop <item>' to shed it, 'equip'/'remove' to swap gear.)",
     ].join("\n"));
   }
   const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
   const out: string[] = [];
-  out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`));
+  out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`, session));
   out.push(...loud);
   out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox, "lockbox")}/${LOCKBOX_CAP}):`));
   const vault = await loadContainer(z.env.DB, session.pubkey, "vault");

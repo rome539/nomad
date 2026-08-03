@@ -1089,7 +1089,8 @@ var FX_META = {
   stunned:  { label: "stunned",  cls: "fx-warn" },
   hobbled:  { label: "hobbled",  cls: "fx-blood" },
   bleeding: { label: "bleeding", cls: "fx-blood" },
-  resting:  { label: "resting",  cls: "fx-heal" }
+  resting:  { label: "resting",  cls: "fx-heal" },
+  "guard-down": { label: "guard down", cls: "fx-warn" }
 };
 function renderFx(list) {
   fxEl.textContent = "";
