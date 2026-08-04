@@ -1,0 +1,27 @@
+-- THE STRATA CLOSE UP (rome, 2026-08-04: "why is the halls so far away from the
+-- surface on the map").
+--
+-- Because the gap was never chosen. Mig 168 stacked each stratum below the last
+-- with clearance for the one above it, and the surface at the time it measured
+-- ran a long way south. It has since been re-laid twice (167's stair slide, 169's
+-- wood), and the surface now ends at row 24 — but the halls were still nailed to
+-- row 43, so the map opened with EIGHTEEN blank rows in it, more empty paper than
+-- the halls, the warrens and the deep have rooms. You scrolled through nothing to
+-- get from the keep's gate to the floor directly under it.
+--
+-- The gap between the other three is 3 blank rows, and that number is not
+-- decoration: the room pipeline reads the sheet back and calls any run of more
+-- than 2 blank rows a stratum boundary (scripts/build-rooms.mjs). Three is the
+-- smallest gap that says "different floor" to the tool that has to tell them
+-- apart. So the halls, the warrens and the deep all come up 15 rows together —
+-- one rigid move, x untouched, so mig 167's law holds and every stair still falls
+-- straight down onto the room below it.
+--
+--   surface  -7 .. 24        (unchanged — the whole world above ground)
+--   halls    43 .. 51   ->   28 .. 36
+--   warrens  55 .. 59   ->   40 .. 44
+--   deep     63 .. 70   ->   48 .. 55
+--
+-- Everything at or below row 43 is underground; nothing else on the sheet is
+-- within 18 rows of it, so this cannot catch a surface room by accident.
+UPDATE rooms SET map_y = map_y - 15 WHERE map_y >= 43;

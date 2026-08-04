@@ -189,18 +189,48 @@ export function worldGrid(z: ZoneDO): WorldGrid {
     if (room.map_x === null || room.map_x === undefined) continue;
     at.set(room.id, { x: room.map_x, y: room.map_y ?? 0 });
   }
-  // The stratum labels hang off the baked coordinates — top-left of whatever
-  // that band actually occupies, so they follow the ground rather than leading it.
-  const box = new Map<number, { minX: number; minY: number }>();
+  // THE LABELS HANG ON THE SPINE (rome, 2026-08-04: "the fucking labeling is all
+  // fucking off for the map (the surface is apearing right above the wood) the
+  // surface should be that part above the halls").
+  //
+  // They used to hang at the top-left of everything the band contained, which was
+  // right while a stratum was one block of fortress. It stopped being right the
+  // moment the surface grew a road, a den ground and a 170-room wood: the surface
+  // band's westmost, northmost corner is now the far top of the WOOD, forty-eight
+  // squares west of the keep, so "THE SURFACE" was captioning the trees while the
+  // ground it names — the fortress's own open ground, the part directly above the
+  // halls — sat unlabelled. Each new region west will drag it further.
+  //
+  // A stratum is a slice of the SAME PLACE at a different depth, so its caption
+  // belongs where the strata stack: the columns you go up and down through. The
+  // spine is measured, not written down — the columns carrying rooms from the most
+  // strata, which is the keep and always will be, because the keep is the only
+  // thing in this world with five floors. Regions added west or east widen the
+  // surface and cannot move a single caption.
+  const pts = new Map<number, { x: number; y: number }[]>();
+  const strataAt = new Map<number, Set<number>>();
   for (const [id, p] of at) {
     const band = MAP_BAND_OF[mapRegionOf(z, id)] ?? 1;
-    const b = box.get(band);
-    if (!b) box.set(band, { minX: p.x, minY: p.y });
-    else { b.minX = Math.min(b.minX, p.x); b.minY = Math.min(b.minY, p.y); }
+    (pts.get(band) ?? pts.set(band, []).get(band)!).push(p);
+    (strataAt.get(p.x) ?? strataAt.set(p.x, new Set()).get(p.x)!).add(band);
   }
-  const bands = [...box.entries()]
+  let deepest = 0;
+  for (const s of strataAt.values()) deepest = Math.max(deepest, s.size);
+  const spine = [...strataAt].filter(([, s]) => s.size === deepest).map(([x]) => x);
+  const lo = Math.min(...spine), hi = Math.max(...spine);
+  const bands = [...pts.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([band, b]) => ({ band, x: b.minX - 0.35, y: b.minY - 1.05 }));
+    .map(([band, list]) => {
+      // A band that somehow misses the spine keeps the old reading rather than
+      // losing its caption altogether.
+      const on = list.filter((p) => p.x >= lo && p.x <= hi);
+      const use = on.length ? on : list;
+      return {
+        band,
+        x: Math.min(...use.map((p) => p.x)) - 0.35,
+        y: Math.min(...use.map((p) => p.y)) - 1.05,
+      };
+    });
   z.mapGrid = { at, bands };
   return z.mapGrid;
 }
