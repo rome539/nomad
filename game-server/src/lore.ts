@@ -9,6 +9,7 @@ import type { CarriedItem, JournalRow } from "./world";
 import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import { uuid } from "./rng";
+import * as den from "./den";
 import {
   MAP_ITEMS, DETAILED_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
@@ -336,6 +337,14 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({
       id, name: room.name, exits, here: id === session.roomId,
       gate: world.entryRooms.has(id) ? 1 : 0,
+      // YOUR ROOF IS FINDABLE ON THE PAPER (rome, 2026-08-04: "on the map your
+      // den should be easily noticed"). A den is a fixed point you have to be
+      // able to steer for from anywhere — that is most of what makes the walk
+      // home a thing you plan — and it was drawn as one more plate among four
+      // hundred. It gets a gate's weight now, in gold, with a roof on it.
+      // Somebody ELSE's house is never marked: the map would become the
+      // directory of who sleeps where that the room prose refuses to be.
+      home: den.homeMark(z, id, session.pubkey),
       band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
       x: at?.x, y: at?.y,
     });

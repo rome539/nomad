@@ -339,6 +339,9 @@ export const PAGE = `<!doctype html>
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
   }
   #bench.nogate .bcols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Under a roof of your own the shelf takes the third column. A den is never a
+     gate, so the vault and the shelf can never both want it. */
+  #bench.nogate.hasden .bcols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #bench .bcol {
     border: 1px solid var(--line); border-radius: 8px; padding: 0 10px 8px;
     overflow-y: auto; min-width: 0; min-height: 120px;
@@ -967,6 +970,7 @@ export const PAGE = `<!doctype html>
         <div class="bcol" id="bpack"></div>
         <div class="bcol" id="block"></div>
         <div class="bcol" id="bvault"></div>
+        <div class="bcol" id="bshelf"></div>
       </div>
     </div>
   </div>
@@ -2257,6 +2261,11 @@ var lastCombat = false;
 // text — typing 'inventory' still prints the plain list. Must match BENCH_CHIP
 // / TRADE_CHIP in zone.ts.
 var BENCH_CHIP = "inventory";
+// THE SHELF CHIP OPENS THE MODAL (rome, 2026-08-04: "keep the command you write
+// text, but the chip opens a fucking model like the gatehouse"). Same bargain as
+// 'inventory': the chip is a door to the box, the typed 'stow <item>' still
+// moves one thing by name. Must match DEN_CHIP in chips.ts.
+var DEN_CHIP = "stow";
 var TRADE_CHIP = "barter with the keeper";
 // The 'forge' chip opens the forge modal (reads your pack, shows what the bench
 // can make); typing 'forge' still reads the slate. Must match FORGE_CHIP in zone.ts.
@@ -2304,7 +2313,7 @@ function chipButton(s) {
   b.textContent = chipLabel(s);
   b.addEventListener("click", function (e) {
     e.stopPropagation();
-    if (s === BENCH_CHIP) {
+    if (s === BENCH_CHIP || s === DEN_CHIP) {
       benchSend("open");
     } else if (s === TRADE_CHIP) {
       tradeSend("open");
@@ -2368,8 +2377,10 @@ var benchEl = document.getElementById("bench");
 var bpack = document.getElementById("bpack");
 var block = document.getElementById("block");
 var bvault = document.getElementById("bvault");
+var bshelf = document.getElementById("bshelf");
 var bnote = document.getElementById("bnote");
 var benchAtGate = false; // vault + seal only when the bench is opened at a gate
+var benchAtDen = false;  // the shelf column, only under a roof you may keep in
 document.getElementById("bclose").addEventListener("click", function () { benchSend("close"); });
 
 function benchSend(action, row) {
@@ -2451,6 +2462,9 @@ function benchItemNode(it, place) {
       else btn(it.slot === "weapon" ? "wield" : "wear", "equip");
     }
     btn("\\u2192 box", "stash");
+    // The shelf, when you're standing under your own roof. Sits next to the box
+    // because it is the same act — putting a thing down somewhere it keeps.
+    if (benchAtDen) btn("\\u2192 shelf", "stow");
     // The vault and the seal are the gate's business — only offered at a gate.
     // Sealed wealth and raw fungibles both bank in the vault; only unsealed gear
     // needs the seal first (trophies and the like carry no title to seal).
@@ -2464,6 +2478,10 @@ function benchItemNode(it, place) {
       if (it.cond !== null && it.cond < 100) btn("repair", "repair");
       if (it.slot) armBtn("scrap", "salvage", "scrap");
     }
+  } else if (place === "shelf") {
+    // Off the shelf, one at a time, same reason as the vault: a stack fanning
+    // into the pack spends slots you didn't mean to spend.
+    btn1("\\u2192 pack", "fetch");
   } else {
     // Take ONE of a stack back to the pack, not the pile — banking in bulk is
     // fine (the vault is bottomless for fungibles), but withdrawing fans out a
@@ -2614,14 +2632,20 @@ function renderDoll(sheet) {
 
 function renderBench(state) {
   benchAtGate = !!state.atGate;
+  benchAtDen = !!state.den;
   // At a gate you truly step out of the world; in the dungeon you only crouch to
   // dig through your lockbox — still in the open, still in reach. Say so plainly.
-  document.getElementById("btitle").textContent = benchAtGate ? "The gatehouse bench" : "Your lockbox";
+  document.getElementById("btitle").textContent = benchAtGate ? "The gatehouse bench" : benchAtDen ? "Under your own roof" : "Your lockbox";
   document.getElementById("bsub").textContent = benchAtGate
     ? "You've stepped out of the world. Nothing can reach you here \\u2014 sort your kit."
+    : benchAtDen
+    ? "Your shelf, your pack, your box. A door only keeps things out if you barred it \\u2014 keep your eyes up."
     : "You crouch to dig through your kit \\u2014 but you're still in the dungeon, in the open and in reach. Keep your eyes up.";
-  bnote.textContent = state.note || (benchAtGate ? "" : "Away from a gate \\u2014 lockbox only. The vault and the seal wait at the gates.");
+  bnote.textContent = state.note || (benchAtGate ? ""
+    : benchAtDen ? "Nothing here is sealed against time: food ages on the shelf and iron rusts \\u2014 though iron left here never rusts away to nothing."
+    : "Away from a gate \\u2014 lockbox only. The vault and the seal wait at the gates.");
   benchEl.classList.toggle("nogate", !benchAtGate);
+  benchEl.classList.toggle("hasden", benchAtDen);
   renderDoll(state.sheet);
   fillBenchCol(bpack, "Your pack", state.pack || [], state.packCap || 0, "pack", state.packUsed, state.packFood, state.packFoodCap);
   fillBenchCol(block, "Lockbox", state.lockbox || [], state.lockboxCap, "lockbox", state.lockboxUsed);
@@ -2631,6 +2655,19 @@ function renderBench(state) {
   } else {
     bvault.style.display = "none";
     bvault.textContent = "";
+  }
+  // The shelf. Its header carries the den's own law instead of an n/cap, because
+  // its law is not an n/cap: gear on it is endless and everything else is
+  // capped, and the header is the only place that can say so at a glance.
+  if (benchAtDen) {
+    bshelf.style.display = "";
+    fillBenchCol(bshelf, "Your shelf \\u00b7 " + (state.denName || "your den"), state.shelf || [], 0, "shelf");
+    var lawEl = bshelf.querySelector(".cnt");
+    if (lawEl) lawEl.textContent = (state.shelfGear || 0) + " gear, no limit \\u00b7 "
+      + (state.shelfRest || 0) + "/" + (state.denCap || 0) + " else";
+  } else {
+    bshelf.style.display = "none";
+    bshelf.textContent = "";
   }
   benchEl.classList.add("open");
 }
@@ -3149,7 +3186,7 @@ function buildMapGraph(f) {
       // The band is the SERVER's now (zone-data.MAP_BAND_OF) — it ships on the
       // frame, so there is one copy of the strata and not two to drift apart.
       var band = (rm.band !== undefined && rm.band !== null) ? rm.band : 1;
-      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate,
+      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate, home: rm.home || 0,
                        gx: rm.x, gy: rm.y };
       order.push(rm.id);
     }
@@ -3371,11 +3408,22 @@ function drawMap() {
     // is not fine now that one can stand alone in an otherwise empty band. A
     // gate gets a solid steel plate and a heavy stroke: it is the single most
     // important tile on the paper, because it is the bank and the way out.
-    ctx.globalAlpha = nd.here ? 0.30 : (nd.gate ? 0.42 : 0.15); ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1;
+    // AND YOUR OWN ROOF LOOKS LIKE ONE (rome, 2026-08-04: "on the map your den
+    // should be easily noticed"). Same argument as the gate, for the same
+    // reason: it is a fixed point you steer for from anywhere on the paper, and
+    // it was a plate among four hundred plates. It takes the gate's weight — a
+    // solid wash, a heavy stroke and a glow — in GOLD, which is the colour this
+    // client has always used for what is yours. A bunk you hold a key to gets
+    // the stroke without the glow: somewhere you can sleep, not somewhere you
+    // live. Nobody else's house is marked at all.
+    var mine = nd.home === 2, bunked = nd.home === 1;
+    ctx.globalAlpha = nd.here ? 0.30 : (nd.gate || mine ? 0.42 : bunked ? 0.26 : 0.15);
+    ctx.fillStyle = mine || bunked ? gold : col; ctx.fill(); ctx.globalAlpha = 1;
     if (nd.here) { ctx.shadowColor = heal; ctx.shadowBlur = 16 * s; }
+    else if (mine) { ctx.shadowColor = gold; ctx.shadowBlur = 12 * s; }
     else if (nd.gate) { ctx.shadowColor = col; ctx.shadowBlur = 10 * s; }
-    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : nd.gate ? Math.max(2, 2.0 * s) : Math.max(1, 1.1 * s);
-    ctx.strokeStyle = nd.here ? heal : col;
+    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : (nd.gate || mine) ? Math.max(2, 2.0 * s) : bunked ? Math.max(1, 1.5 * s) : Math.max(1, 1.1 * s);
+    ctx.strokeStyle = nd.here ? heal : (mine || bunked) ? gold : col;
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s); ctx.stroke();
     ctx.shadowBlur = 0;
     var hasU = false, hasD = false;
@@ -3384,12 +3432,22 @@ function drawMap() {
       ctx.fillStyle = gold; ctx.font = ((10 * s) | 0) + "px ui-monospace, monospace"; ctx.textAlign = "right"; ctx.textBaseline = "top";
       ctx.fillText((hasU ? "\\u25b2" : "") + (hasD ? "\\u25bc" : ""), cx + tw / 2 - 3 * s, cy - th / 2 + 2 * s);
     }
+    // The roof, top-LEFT, where nothing else sits — the stair badges own the
+    // right corner. Full weight for your own door, half for a bunk.
+    if (mine || bunked) {
+      ctx.globalAlpha = mine ? 1 : 0.55;
+      ctx.fillStyle = gold; ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
+      ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText("\\u2302", cx - tw / 2 + 4 * s, cy - th / 2 + 2 * s);
+      ctx.globalAlpha = 1;
+    }
     if (mapCam.scale >= 0.6) {
       ctx.fillStyle = nd.here ? cream : bone; ctx.font = (((nd.here ? 11.5 : 11) * s) | 0) + "px ui-monospace, monospace";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       // clip to the plate so even a mis-measured label can't bleed out; leave
-      // extra right margin when an up/down badge shares the top corner.
-      var maxW = tw - ((hasU || hasD) ? 24 * s : 12 * s);
+      // extra right margin when an up/down badge shares the top corner, and
+      // extra left when a roof shares the other one.
+      var maxW = tw - ((hasU || hasD) ? 24 * s : 12 * s) - ((mine || bunked) ? 12 * s : 0);
       ctx.save();
       mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s); ctx.clip();
       ctx.fillText(mapFitLabel(ctx, nd.name, maxW), cx, cy);

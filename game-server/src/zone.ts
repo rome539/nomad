@@ -111,6 +111,10 @@ export class ZoneDO implements DurableObject {
   // load and written through to D1 on every change — six rows today, a few
   // hundred at the arc's full size, and every read of it is a room lookup.
   public dens = new Map<string, den.Den>();
+  // Who has spilled blood under which roof, and is barred from it for good
+  // (mig 171). Outlives the hold that was standing at the time, so it is kept
+  // apart from `dens` and never cleared by a lapse or an abandon.
+  public denBlood = new Map<string, Set<string>>();
   // Open player-to-player trades (trade.ts) — dealId -> Deal. In-memory only,
   // same as `buying`: a DO wake never restores one, and it needs no D1 row of
   // its own (settlement is the only part that touches D1, and it's atomic).
@@ -364,6 +368,7 @@ export class ZoneDO implements DurableObject {
     const world = await loadWorld(this.env.DB, zone);
     this.world = world;
     this.dens = await den.loadDens(this);
+    this.denBlood = await den.loadDenBlood(this);
     this.buildWorldMaps(world);
     // WHAT COUNTS AS OUTDOORS, assembled rather than hardcoded (2026-08-01).
     // Rain, fog, cold, crows, the night dark and the night hunt multiplier all

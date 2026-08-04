@@ -11,6 +11,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { chance, randInt, pick } from "./rng";
+import * as den from "./den";
 import { recordPvpKill, deedsBump, trait, hasTrait } from "./world";
 import {
   STANCE, RECKLESS_MISS, ARMOR_K, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE,
@@ -59,6 +60,10 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
     : unaware ? `${session.name} falls on ${other.name} without warning!`
     : `${session.name} turns on ${other.name}!`, "fight", true, other.pubkey); // the target reads the blow in their own log — don't echo the third-person account back to them
   z.combatNoise(session.roomId);
+  // STEEL UNDER SOMEBODY ELSE'S ROOF ENDS YOUR WELCOME IN IT, for good (mig
+  // 171). Fires on the SWING, not the kill: the betrayal is drawing on your host
+  // at all, and a failed murder must not be cheaper than a successful one.
+  await den.bloodDrawn(z, session.roomId, session, other);
   await swingAt(z, session, other, { body: true, ambush: unaware });
   z.refreshRoomCtx(session.roomId);
   await z.persist();

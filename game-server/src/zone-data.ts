@@ -230,6 +230,11 @@ export const BOX_WORD = "box-word";
 // command (see renderChips). It rides on the 'inventory' chip — tapping opens
 // the modal, while TYPING 'inventory' still prints the plain text list.
 export const BENCH_CHIP = "inventory";
+// The same sentinel for a den's shelf: tapping 'stow' opens that keeping modal
+// with the shelf as a fourth column; typing 'stow <item>' still moves one thing
+// by name (rome, 2026-08-04). The shelf was the last store in the game you could
+// only reach by typing, and it is the biggest one.
+export const DEN_CHIP = "stow";
 // Same trick for the keeper's hatch: the client opens the trade modal instead
 // of sending it as text. (Typed 'barter'/'buy'/'offer' still work bare.)
 export const TRADE_CHIP = "barter with the keeper";

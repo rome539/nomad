@@ -14,7 +14,8 @@ import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
-  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF } from "./zone-data";
+  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP } from "./zone-data";
+import * as den from "./den";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
 import { dropCarried, describePlayer, lookKeepingItem } from "./verbs";
@@ -932,7 +933,7 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     const rows = Array.isArray(frame.rows)
       ? frame.rows.filter((r: unknown): r is string => typeof r === "string")
       : (typeof frame.row === "string" && frame.row ? [frame.row] : []);
-    const KNOWN = new Set(["stash", "vault", "seal", "take", "equip", "remove", "burn", "drop", "salvage", "repair"]);
+    const KNOWN = new Set(["stash", "vault", "seal", "take", "equip", "remove", "burn", "drop", "salvage", "repair", "stow", "fetch"]);
     if (!KNOWN.has(action) || !rows.length) return;
     const gateOnly = "That's the gatehouse's work — reach a gate for the vault and the seal.";
     const one = async (row: string): Promise<string | undefined> => {
@@ -940,6 +941,9 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
       if (action === "vault") return atGate ? benchStore(z, session, row, "vault") : gateOnly;
       if (action === "seal") return atGate ? benchSeal(z, session, row) : gateOnly;
       if (action === "take") return benchTake(z, session, row);
+      // The den's shelf, from the same box. den.ts owns the law; this only routes.
+      if (action === "stow") return den.benchStow(z, session, row);
+      if (action === "fetch") return den.benchFetch(z, session, row);
       if (action === "equip") return benchEquip(z, session, row);
       if (action === "remove") return benchRemove(z, session, row);
       if (action === "burn") return benchBurn(z, session, row);
@@ -1021,6 +1025,12 @@ export async function benchBurn(z: ZoneDO, session: Session, row: string): Promi
         const held = await loadContainer(z.env.DB, session.pubkey, key);
         const found = held.find((c) => c.rowId === row);
         if (found) { carried = found; break; }
+      }
+      // And the den's shelf, now that it is a column of this modal — otherwise
+      // the burn button sitting on every shelf row would refuse every time.
+      if (!carried) {
+        const shelf = await den.shelfHere(z, session);
+        carried = shelf?.held.find((c) => c.rowId === row);
       }
     }
     if (!carried) return "There's nothing like that to burn.";
@@ -1226,10 +1236,23 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
       }
       return out;
     };
+    // THE DEN'S SHELF IS A COLUMN OF THIS MODAL when you are standing under a
+    // roof you may keep things in (den.ts). Nothing else about the modal changes
+    // — same box, same buttons — and it is gone the moment you step outside.
+    const shelf = await den.shelfHere(z, session);
+    const shelfRest = shelf ? z.slotsUsed(shelf.held.filter((c) => !z.isGear(c.itemId)), "lockbox") : 0;
     const payload = {
       v: 0, t: "bench", open: true, note: note ?? "",
       sheet: z.sheetFor(session), // the paperdoll: gear worn + the combat math it adds up to
       atGate: world.entryRooms.has(session.roomId), // vault + seal only shown at a gate
+      // The shelf's own accounting is unlike every other column's, because its
+      // law is unlike theirs: gear on it is UNLIMITED and everything else is
+      // capped, so it reports two numbers rather than one out of a ceiling.
+      den: shelf ? 1 : 0,
+      denName: shelf ? z.world!.rooms.get(shelf.den.roomId)!.name : "",
+      shelf: shelf ? sortKit(group(shelf.held)) : [],
+      shelfGear: shelf ? shelf.held.filter((c) => z.isGear(c.itemId)).length : 0,
+      shelfRest, denCap: DEN_CAP,
       pack: sortKit(group(session.items)),
       lockbox: sortKit(group(lockbox)),
       vault: sortKit(group(vault)),

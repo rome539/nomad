@@ -72,6 +72,46 @@ export async function loadDens(z: ZoneDO): Promise<Map<string, Den>> {
   return dens;
 }
 
+// BLOOD UNDER THE ROOF (mig 171). Loaded whole beside the dens and kept APART
+// from them, because it outlives them: a lapse, an abandon or a new holder does
+// not wash a killing out of a room.
+export async function loadDenBlood(z: ZoneDO): Promise<Map<string, Set<string>>> {
+  const out = new Map<string, Set<string>>();
+  const rows = (await z.env.DB.prepare("SELECT room_id, pubkey FROM den_blood")
+    .all<{ room_id: string; pubkey: string }>()).results ?? [];
+  for (const r of rows) (out.get(r.room_id) ?? out.set(r.room_id, new Set()).get(r.room_id)!).add(r.pubkey);
+  return out;
+}
+
+export function spilledHere(z: ZoneDO, roomId: string, pubkey: string): boolean {
+  return z.denBlood.get(roomId)?.has(pubkey) === true;
+}
+
+// Called the instant one player swings at another (pvp.attackPlayer). Steel
+// drawn under a roof you do not hold ends your welcome in it — permanently, and
+// the holder hears about it wherever they are.
+export async function bloodDrawn(z: ZoneDO, roomId: string, killer: Session, victim: Session): Promise<void> {
+  const den = denAt(z, roomId);
+  // A man may fight in his own house. What he loses is the person he gave the
+  // bunk to, and whatever they tell the rest of the world.
+  if (!den || den.holder === killer.pubkey) return;
+  if (spilledHere(z, roomId, killer.pubkey)) return; // already marked; don't re-tell
+  const room = z.world!.rooms.get(roomId)!;
+  const had = den.keys.delete(killer.pubkey);
+  (z.denBlood.get(roomId) ?? z.denBlood.set(roomId, new Set()).get(roomId)!).add(killer.pubkey);
+  await z.env.DB.prepare("INSERT OR REPLACE INTO den_blood (room_id, pubkey, victim, at) VALUES (?, ?, ?, ?)")
+    .bind(roomId, killer.pubkey, victim.pubkey, Date.now()).run();
+  if (had) await z.env.DB.prepare("DELETE FROM den_keys WHERE room_id = ? AND pubkey = ?").bind(roomId, killer.pubkey).run();
+  z.send(killer, had
+    ? `You have drawn steel under this roof, and it is not your roof. Your bunk in ${room.name} is gone — and it will not be given back to you by anyone, ever. You can still take your own things off the shelf at the door.`
+    : `You have drawn steel under somebody's roof. ${room.name} is shut to you now, and no holder of it will ever be able to let you in.`);
+  // The holder is owed the account, wherever they are standing.
+  const h = z.sessions.get(den.holder);
+  if (h && h.pubkey !== victim.pubkey) {
+    z.send(h, `Word reaches you: ${killer.name} drew steel on ${victim.name} under your roof at ${room.name}. Their key is gone, and the door will not open for them again.`);
+  }
+}
+
 export function denAt(z: ZoneDO, roomId: string): Den | undefined {
   const den = z.dens.get(roomId);
   if (!den) return undefined;
@@ -80,6 +120,15 @@ export function denAt(z: ZoneDO, roomId: string): Den | undefined {
   // standing is somebody standing in it — and they will be, asking.
   if (Date.now() - den.tendedAt > DEN_LAPSE_MS) { void lapse(z, den); return undefined; }
   return den;
+}
+
+// What the map should make of this room, for THIS player: 2 = your own hold,
+// 1 = a roof you have a bunk under, 0 = everything else, including every house
+// somebody else lives in. Read by lore.ts when it draws a true map.
+export function homeMark(z: ZoneDO, roomId: string, pubkey: string): number {
+  const den = denAt(z, roomId);
+  if (!den) return 0;
+  return den.holder === pubkey ? 2 : den.keys.has(pubkey) ? 1 : 0;
 }
 
 export function isHolding(z: ZoneDO, roomId: string): boolean {
@@ -127,6 +176,32 @@ export async function cmdSettle(z: ZoneDO, session: Session, arg: string): Promi
     return z.send(session, "You could sleep here. You could not LIVE here — there is no door to shut and nothing to shut it against. A holding wants a roof, a way to close it, and somewhere to lie down.");
   }
   if (z.inCombat(session)) return z.send(session, "Not with something in the room that wants you dead.");
+  // AND YOU CANNOT WAIT OUT A KILLING BY TAKING THE HOUSE. Without this the
+  // whole rule has an obvious door in it: murder your host, sit out the
+  // fortnight, and settle the room you were barred from (mig 171).
+  if (spilledHere(z, roomId, session.pubkey)) {
+    return z.send(session, "You spilled blood in this room. It is not going to be your home, whoever else has come and gone from it since.");
+  }
+  // A MAN LIVES IN ONE PLACE (rome, 2026-08-04: "why the fuck can i settle
+  // multiple dens???").
+  //
+  // Nothing stopped you taking all six, and that is not a small hole — it is the
+  // whole scarcity of the feature. Six doors on this ground is the entire supply,
+  // and the design says the way in for the thirty-seventh nomad is to find
+  // somebody who will take him in, not an empty room. One player holding the lot
+  // makes that a lie, hands one man every shelf in the world, and turns the
+  // fourteen-day lapse into a chore rather than a risk.
+  //
+  // So: one hold, and the answer to wanting a different one is to give up the one
+  // you have. Which costs you nothing but the walk — your things do not live in
+  // the HOLD, they live in the ROOM, keyed to your name, and abandoning a house
+  // leaves every one of them exactly where you put it, still yours to fetch.
+  for (const other of z.dens.values()) {
+    if (other.holder !== session.pubkey || other.roomId === roomId) continue;
+    if (Date.now() - other.tendedAt > DEN_LAPSE_MS) continue; // already lapsed; denAt will clear it
+    const name = z.world!.rooms.get(other.roomId)?.name ?? "somewhere";
+    return z.send(session, `You already hold ${name}. A man lives in one place — go back and 'abandon' it if you would rather live here, and nothing on your shelf there moves an inch when you do.`);
+  }
   const room = z.world!.rooms.get(roomId)!;
   const held = denAt(z, roomId);
   if (held) {
@@ -231,6 +306,13 @@ export async function cmdBunk(z: ZoneDO, session: Session, arg: string): Promise
   const guest = [...z.sessions.values()].find((s) => s.roomId === session.roomId && s.pubkey !== session.pubkey && nameMatches(s.name, arg));
   if (!guest) return z.send(session, "Nobody here by that name. A key is handed over, not sent — they have to be standing in front of you.");
   if (den.keys.has(guest.pubkey)) return z.send(session, `${guest.name} already has a bunk here.`);
+  // The room remembers, past the hold that was standing when it happened — so a
+  // killer cannot be re-keyed by a forgetful holder, by a friend who takes the
+  // house on purpose, or by whoever settles it after a lapse. Without this the
+  // rule is a rule you wait out (mig 171).
+  if (spilledHere(z, den.roomId, guest.pubkey)) {
+    return z.send(session, `${guest.name} has spilled blood in this room. Whatever was agreed since, the door does not open for them, and you cannot make it.`);
+  }
   if (den.keys.size >= DEN_BUNKS) return z.send(session, `Every bunk under this roof is spoken for (${DEN_BUNKS}). Turn somebody out first, if it comes to that.`);
   const now = Date.now();
   den.keys.set(guest.pubkey, now);
@@ -400,6 +482,67 @@ export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promis
   z.sendCtx(session);
 }
 
+// ---------------------------------------------------------------------------
+// THE SHELF AS A MODAL (rome, 2026-08-04: "why the fuck did you make the
+// fucking stow command chip not a fucking modal (keep the command you write
+// text, but the chip opens a fucking model like the gatehouse)").
+//
+// He is right and the inconsistency was mine: every other keeping-place in the
+// game — pack, lockbox, vault — is a column in ONE modal you tap open, and the
+// den's shelf was the only one that made you type a name at a time to see or
+// move anything. The den is the biggest store in the world (gear is unlimited
+// on it); it was the one with the worst hands.
+//
+// So the shelf is not a new modal. It is a FOURTH COLUMN of the keeping modal,
+// shown when you are standing under a roof you may keep things in, and it
+// disappears the moment you step outside. Same box, same buttons, same rules —
+// which is the point: you already know how to use it. The typed commands are
+// untouched ('stow <item>', 'fetch <item>', 'den'), because the chip has never
+// been the only way to do anything.
+
+export async function shelfHere(z: ZoneDO, session: Session): Promise<{ den: Den; held: CarriedItem[] } | null> {
+  const den = denAt(z, session.roomId);
+  if (!den || !mayEnterKeeping(den, session.pubkey)) return null;
+  return { den, held: await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId))) };
+}
+
+// Pack -> shelf, one row, from the modal. Same law as cmdStow: gear is
+// unlimited, everything else is capped, and a piece's wear is written down
+// before it goes on the shelf so the lazy rust has an honest starting point.
+export async function benchStow(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
+  const den = denAt(z, session.roomId);
+  if (!den) return "There is no shelf here.";
+  if (!mayEnterKeeping(den, session.pubkey)) return `This is ${holderName(z, den)}'s roof, not yours to leave things under.`;
+  const carried = session.items.find((c) => c.rowId === row);
+  if (!carried) return "You aren't carrying that.";
+  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)));
+  if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= DEN_CAP) {
+    return `Your shelf here holds ${DEN_CAP} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.`;
+  }
+  if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
+  carried.equipped = false;
+  session.items.splice(session.items.indexOf(carried), 1);
+  await setContainer(z.env.DB, carried.rowId, container(den.roomId));
+  return undefined;
+}
+
+// Shelf -> pack, one row. Every pack ceiling the typed 'fetch' respects is
+// respected here too — a modal must never be a way around a cap.
+export async function benchFetch(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
+  const den = denAt(z, session.roomId);
+  if (!den || !mayEnterKeeping(den, session.pubkey)) return "There is no shelf of yours here.";
+  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)));
+  const entry = held.find((c) => c.rowId === row);
+  if (!entry) return "Nothing of yours here by that name.";
+  if (z.foodCapped(session, entry.itemId)) return z.foodFullNote();
+  if (z.torchCapped(session, entry.itemId)) return z.torchFullNote();
+  if (z.dressingCapped(session, entry.itemId)) return z.dressingFullNote();
+  if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${PACK_CAP} slots). Make room first.`;
+  await setContainer(z.env.DB, entry.rowId, "");
+  session.items.push(entry);
+  return undefined;
+}
+
 function shelfList(z: ZoneDO, den: Den | undefined, held: CarriedItem[]): string {
   if (held.length === 0) return "Your corner of this place is bare.";
   const gear = held.filter((c) => z.isGear(c.itemId)).length;
@@ -509,9 +652,32 @@ export function windowLine(z: ZoneDO, session: Session): string {
 // The line the room itself carries, appended to a holding's description so the
 // state of the place is something you SEE rather than something you query.
 export function denRoomLine(z: ZoneDO, roomId: string, session: Session): string {
-  if (!isHolding(z, roomId)) return "";
+  // YOU CAN SEE A HOUSE FROM THE STREET. Sixty rooms of den ground and six doors
+  // in it: walking onto the ground told you nothing, so unless you happened to
+  // step through the right doorway out of sixty you never learned the holdings
+  // existed at all. A hamlet is not a maze — you stand in the street and you can
+  // SEE which buildings have a roof on them. So a room next door to a holding
+  // names it, and points. Six doors is the whole supply, so this can never become
+  // a wall of text, and it can never point at something that is not there.
+  if (!isHolding(z, roomId)) {
+    if (z.regionOf(roomId) !== "den") return "";
+    const near: string[] = [];
+    for (const e of z.world!.exits.get(roomId) ?? []) {
+      if (!isHolding(z, e.to_room)) continue;
+      const name = z.world!.rooms.get(e.to_room)?.name ?? "a house";
+      near.push(denAt(z, e.to_room) ? `${name} (${e.dir}), lived in` : `${name} (${e.dir}), empty`);
+    }
+    return near.length ? `A roof worth living under stands off this one: ${near.join("; ")}.` : "";
+  }
   const den = denAt(z, roomId);
-  if (!den) return "Nobody lives here. The door is shut and nobody shut it.";
+  // AN EMPTY ROOF NAMES THE VERB (rome, 2026-08-04: "no where tells you how to
+  // settle"). This said "Nobody lives here. The door is shut and nobody shut it."
+  // — atmosphere, and nothing else. The chip row carries 'settle' when you are
+  // standing in a holding, but that is the ONLY place the word exists in the
+  // world outside a hundred-line help wall, so the six doors read as scenery to
+  // anyone who has not already been told what they are. A room you can take says
+  // so, the way the milestone says to carve and the gate says to go in.
+  if (!den) return "Nobody lives here. The door is shut and nobody shut it. ('settle' and it is yours.)";
   if (den.holder === session.pubkey) return den.barred ? "Yours. The bar is across the door." : "Yours, and the door still does not shut.";
   const who = holderName(z, den);
   if (den.keys.has(session.pubkey)) return `${who} lives here, and you have a bunk under the roof.`;

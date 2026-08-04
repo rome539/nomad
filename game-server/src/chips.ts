@@ -11,7 +11,7 @@ import * as den from "./den";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
-  FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, MAP_ITEMS, DROWNERS,
+  FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOM, CURE_RECIPES, MILESTONES,
 } from "./zone-data";
 
@@ -230,13 +230,18 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // can do with a house that is not yours.
     if (den.isHolding(z, session.roomId)) {
       const here = den.denAt(z, session.roomId);
+      // 'stow' is the DEN_CHIP: the client intercepts it and opens the keeping
+      // modal with the shelf as a column, exactly as 'inventory' does (rome,
+      // 2026-08-04). Typing 'stow <item>' still moves one thing by name — the
+      // chip has never been the only way to do anything. Must match DEN_CHIP in
+      // public.ts.
       if (!here) suggest.push("settle");
       else if (here.holder === session.pubkey) {
         suggest.push("den");
         if (!here.barred) suggest.push("bar");
-        suggest.push("stow");
+        suggest.push(DEN_CHIP);
       } else if (here.keys.has(session.pubkey)) {
-        suggest.push("den", "stow");
+        suggest.push("den", DEN_CHIP);
       }
     }
     // Knowledge you carry: open a map or the journal (each pops its modal).
