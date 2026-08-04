@@ -3,6 +3,7 @@
 // boss's rage, and the migration that refills the world. Free functions over a
 // ZoneDO (its tick and combat live in zone.ts and call in here).
 import type { ZoneDO } from "./zone";
+import { denBarred } from "./den";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
 import { hasTrait } from "./world";
@@ -435,8 +436,13 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     );
     // Hideaways — a crack in the wall — let nothing in, not even the King. A
     // fled foe who folds into one is out of reach until they step back out.
-    if (world.safeRooms.size) {
-      const open = exits.filter((e) => !world.safeRooms.has(e.to_room));
+    // A DEN WITH ITS BAR UP IS A HIDEAWAY SOMEBODY MADE (mig 162). Same rule,
+    // different reason: the crack in the wall is safe because the world built it
+    // that way, a den is safe because a nomad carried iron out here and hung a
+    // door on it. An unbarred den is an ordinary room and things walk straight
+    // in, which is the whole point of the upgrade.
+    if (world.safeRooms.size || z.dens.size) {
+      const open = exits.filter((e) => !world.safeRooms.has(e.to_room) && !denBarred(z, e.to_room));
       if (open.length) exits = open; // never strand (creatures are never inside one)
     }
     // Every gate is the dungeon's threshold — cold air and the way out. No

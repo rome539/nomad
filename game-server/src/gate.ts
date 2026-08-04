@@ -1676,6 +1676,7 @@ export function wallStudy(z: ZoneDO, session: Session): void {
     deep: { key: "deep", label: "The Deep", rooms: [] },
     road: { key: "road", label: "The Roads", rooms: [] },
     wood: { key: "wood", label: "The Wood", rooms: [] },
+    den: { key: "den", label: "The Dens", rooms: [] },
     mountain: { key: "mountain", label: "The Mountain", rooms: [] },
   };
   for (const id of shown) {

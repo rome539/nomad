@@ -1,0 +1,215 @@
+# THE DENS, SLAB 2 — THE WASTE: 26 rooms, ground nobody owned.
+#
+# The other half of the den ground, and deliberately the OPPOSITE KIND OF PLACE
+# to the Field End north of the road. That matters more than the room count:
+#
+#   THE FIELD END — a hamlet. Stone walls, a street, a chapel, hearths with
+#   lintels. Somebody built it properly and then left. You would be moving into
+#   a dead family's house.
+#
+#   THE WASTE — common ground south of the road, too wet and too poor to plough,
+#   so it was never anybody's. People with no land squatted on it: turf huts
+#   raised in a night, hurdle pens, a bark-peelers' camp, a warrener working
+#   rabbits on the dry bank. Nothing here has a deed and nothing here is square.
+#   You would be building.
+#
+# Two answers to the same question, which is the whole argument the den system
+# will have to settle later: is a den something you INHERIT or something you
+# MAKE. Both grounds are here now so that argument can be had on real rooms.
+#
+# WHERE IT IS. South of the Gap in the Trees, east of the wood's outer column
+# below the Eaves. Three doors out of the wood (the Bramble Margin, the Sunken
+# Ditch, the Lime Kiln) and one off the road's end. The wood's own lime kiln is
+# on the far side of that last door, which is exactly why the kiln track exists:
+# somebody carted stone out to it from here.
+#
+# DENSITY 0.05 — one body in 26 rooms, on the gorse common. See slab 1.
+#
+# GEOGRAPHY (x east, y NORTH, origin at The Eaves — so all of this is negative):
+#   y=-1  the-waste-edge . the-turf-cutting . the-broom-scrub . the-marl-pit
+#   y=-2  the-squatters-row . the-hurdle-yard . the-drying-green . the-empty-toft . the-withy-rows
+#   y=-3  the-kiln-track . the-black-hut . the-shallow-well . the-fever-graves . the-scrub-end
+#   y=-4  the-bark-heap . the-peelers-camp . the-hearth-stones . the-thorn-corner
+#   y=-5  the-gorse-common . the-warren-bank . the-warreners-lodge . the-lodge-yard
+#   y=-6  the-pillow-mounds . the-far-waste
+#   off-grid: the-marl-water (under the pit), the-lodge-loft (over the lodge)
+
+!region den
+
+# ---- the ways in ------------------------------------------------------------
+
+## the-bramble-margin | attachment: out of the wood, east
+!existing
+> east the-waste-edge
+
+## the-sunken-ditch | attachment: out of the wood, east
+!existing
+> east the-squatters-row
+
+## the-lime-kiln | attachment: out of the wood, east
+!existing
+> east the-kiln-track
+
+# ---- y=-1: the edge of the common --------------------------------------------
+
+## the-waste-edge | The Waste Edge
+The road's last bank falls away south into ground that was never worth anything: rush and sedge and thin sour grass, standing water in the low places all year, a scatter of thorn. Nobody enclosed it because nobody wanted it, and that is exactly why there are people's leavings all over it.
+> north the-gap-in-the-trees
+> west the-bramble-margin
+> east the-turf-cutting
+> south the-squatters-row
+
+## the-turf-cutting | The Turf Cutting
+Long rectangular bites have been taken out of the ground here, each one a spade's width and a spade's depth, and the water has come up in the bottom of every one of them. Turf was fuel, and turf was walls, and this is where both came from. The cuts nearest the road are the newest and they are not new.
+> west the-waste-edge
+> east the-broom-scrub
+> south the-hurdle-yard
+
+## the-broom-scrub | The Broom Scrub
+Broom has taken a dry rise in the middle of the wet, dense and green-stemmed and shoulder-high, and in summer the pods crack open in the heat with a sound like something small breaking. There are paths through it that are not wide enough for a person, and one that is.
+> west the-turf-cutting
+> east the-marl-pit
+> south the-drying-green
+
+## the-marl-pit | The Marl Pit
+A steep-sided hole dug out for the clay under the peat, which they spread on the fields to sweeten them. It is thirty feet across and the sides are sheer and the bottom is water. There is a way down the collapsed corner if you want it, and the cattle rail somebody put round the lip has fallen in.
+> west the-broom-scrub
+> south the-empty-toft
+> down the-marl-water
+
+## the-marl-water | The Marl Water
+Down at the bottom of the pit, on a ledge of blue clay, with the water going away from your feet into a colour nothing else in the world is. It is cold down here out of the wind and completely out of sight of everything, and the sky is a circle a long way up. Things have fallen in and stayed.
+> up the-marl-pit
+
+# ---- y=-2: the row -----------------------------------------------------------
+
+## the-squatters-row | The Squatters' Row
+Six dwellings in a line along the dry contour, none of them the same as the next: turf, hurdle, salvaged timber, one with a real stone gable somebody must have carried here piece by piece. There was a custom that if you could raise a roof between dusk and dawn and have smoke coming out of it by morning, the ground was yours. Somebody kept that agreement here, six times.
+> north the-waste-edge
+> west the-sunken-ditch
+> east the-hurdle-yard
+> south the-kiln-track
+
+## the-hurdle-yard | The Hurdle Yard
+A working yard of woven hazel panels, dozens of them, stacked and leaning and some still standing in the lines they were set in. Hurdles were how you made a pen anywhere you needed one, and somebody here made them to sell. The half-finished one on the trestle has been half-finished a very long time.
+> west the-squatters-row
+> north the-turf-cutting
+> east the-drying-green
+> south the-black-hut
+
+## the-drying-green | The Drying Green
+Level ground with lines of low posts across it, and between the posts nothing now but the weather. Washing was dried here, and hides were pegged out here, and the two things went on side by side because the ground was common and nobody could stop either. The grass under the drying lines is a different green from the rest.
+> west the-hurdle-yard
+> north the-broom-scrub
+> east the-empty-toft
+> south the-shallow-well
+
+## the-empty-toft | The Empty Toft
+A house-sized rectangle of levelled ground with a low bank round it, and inside the bank not one stone left standing — the walls went to somebody else's walls, the roof went for firewood, and what is left is the shape of a home printed on the ground like a coin under paper. There is a doorstep, still, worn hollow.
+> west the-drying-green
+> north the-marl-pit
+> east the-withy-rows
+> south the-fever-graves
+
+## the-withy-rows | The Withy Rows
+Willow grown as a crop: cut off at the ground every year so it throws up a fist of long straight rods, harvested for baskets and hurdles and eel-traps. Nobody has cut these in decades, so each stool has become a small mad tree of its own, forty trunks out of one root, and the rows are still perfectly straight underneath the chaos.
+> west the-empty-toft
+> south the-scrub-end
+
+# ---- y=-3: the middle of the common ------------------------------------------
+
+## the-kiln-track | The Kiln Track
+A causeway of dumped stone and clinker across the wet, made so a cart could get west to the lime kiln in the wood without going in to the axle. It has sunk unevenly and it is a bad surface, but it is a surface, and it is the only way across this corner that does not involve your knees.
+> north the-squatters-row
+> west the-lime-kiln
+> east the-black-hut
+> south the-bark-heap
+
+## the-black-hut | The Black Hut
+Turf walls two feet thick, a roof of turf on rafters of bent alder, no window, and a door you go through bent double. Inside it is black — smoke-black, floor to roof, from a fire that had no chimney and did not need one. It is bone dry and it is warm the moment you are out of the wind, and there is old bracken bedding along one wall.
+> north the-hurdle-yard
+> west the-kiln-track
+
+## the-shallow-well | The Shallow Well
+Not a well so much as a hole with a barrel sunk in it — a common trick where the water sits close to the surface. The barrel staves are still sound in the wet and the water inside is clear and about three feet down and full of the sky. There is a hoof-print in the mud on every side of it.
+> north the-drying-green
+> east the-fever-graves
+> south the-hearth-stones
+
+## the-fever-graves | The Fever Graves
+Twenty-odd low mounds in rows, unmarked except by the rushes growing greener over them, on ground outside every boundary there was. When something went through here quickly they buried the dead quickly and away from everyone, which is what this is. It is a tidier piece of ground than anything else on the common.
+> west the-shallow-well
+> north the-empty-toft
+> east the-scrub-end
+> south the-thorn-corner
+
+## the-scrub-end | The Scrub End
+The common gives out eastward into thorn and bramble and standing water with no way through that a person would choose. You can see a long way over the top of it and there is nothing to see: more of the same, going on until the light stops.
+> west the-fever-graves
+> north the-withy-rows
+
+# ---- y=-4: the working ground ------------------------------------------------
+
+## the-bark-heap | The Bark Heap
+Oak bark, stripped in long curls and stacked in a great heap to dry, worth more per cart than the timber it came off because the tanners could not work without it. The heap has slumped and gone to leaf-mould at the bottom and is still recognisably a heap at the top. It smells sharp and dry and faintly of tea.
+> north the-kiln-track
+> east the-peelers-camp
+> south the-gorse-common
+
+## the-peelers-camp | The Peelers' Camp
+Where the bark-peelers lived for the six weeks of the year the sap was up and the bark would come away: a ring of lean-to shelters against a fallen trunk, a cooking pit, a rack for the tools. It was never meant to last past midsummer and it has lasted a great deal longer than that, because nobody came to take it down.
+> west the-bark-heap
+> east the-hearth-stones
+> south the-warren-bank
+
+## the-hearth-stones | The Hearth Stones
+Four hearths in open ground, each one a ring of stones with the fire's red still baked into them, standing well apart in what was obviously an agreed arrangement. No walls anywhere. People camped here in numbers, more than once, and knew each other well enough to leave that much room and no more.
+> west the-peelers-camp
+> north the-shallow-well
+> east the-thorn-corner
+> south the-warreners-lodge
+
+## the-thorn-corner | The Thorn Corner
+The common's east corner, where the thorn has been let go entirely and stands twice head height in a solid mass, with one path into it that has been kept open by something walking it. Blackthorn, mostly, which is the one that goes septic.
+> west the-hearth-stones
+> north the-fever-graves
+> south the-lodge-yard
+
+# ---- y=-5: the warren --------------------------------------------------------
+
+## the-gorse-common | The Gorse Common
+Gorse over the whole rise, dark green and armed to the last inch and flowering yellow in every month of the year, with tunnels through the bottom of it worn by things much lower than you. It burns hot and fast in a dry summer and comes back thicker. Nothing has burned it in a while.
+> north the-bark-heap
+> east the-warren-bank
+
+## the-warren-bank | The Warren Bank
+Dry sandy bank, south-facing, and worked from end to end with burrows — but the bank itself is man-made, a long earthwork raised and planted with sand specifically so rabbits would take to it. Rabbits were farmed here, not hunted. They have been managing the arrangement themselves for a long time now and there are a great many of them.
+> west the-gorse-common
+> north the-peelers-camp
+> south the-pillow-mounds
+
+## the-warreners-lodge | The Warrener's Lodge
+The one solid building on the common, and built solid for a reason: a warrener slept out here with the stock he was responsible for, alone, with people who wanted his rabbits on every side of him. Thick walls, a barred shutter, a door with three sockets for a bar, and a hearth. Inside it is dry and dim and smells of stone.
+> north the-hearth-stones
+> east the-lodge-yard
+> up the-lodge-loft
+
+## the-lodge-loft | The Lodge Loft
+The floor above, reached by a ladder that can be pulled up after you, which is not an accident. A slit window on each of the four walls looks out over the whole warren, and that is what this room is for: sitting in the dark, seeing everything, and being seen by nothing.
+> down the-warreners-lodge
+
+## the-lodge-yard | The Lodge Yard
+A walled yard behind the lodge with the nets and traps still hanging in it — long purse-nets gone to grey thread, and the hoops of things that were meant to be entered and not left. There is a stone slab at working height by the door, scrubbed white by weather now, and a drain cut in it.
+> west the-warreners-lodge
+> north the-thorn-corner
+
+# ---- y=-6: the far end -------------------------------------------------------
+
+## the-pillow-mounds | The Pillow Mounds
+Long low rectangular banks laid out in a pattern across the grass, a stride high and twenty long, each one dug through with a channel — artificial burrows, made for the rabbits to take to. From the ground they look like graves for something the wrong shape. From the top of one you can see they are laid out in a comb.
+> north the-warren-bank
+> east the-far-waste
+
+## the-far-waste | The Far Waste
+The common stops meaning anything here. The ground goes flat and wet and open and keeps going south with nothing on it but rush and sky and, a long way out, one thorn tree standing by itself with the wind bent into it. Nobody has put anything here. There is nothing here to put anything on.
+> west the-pillow-mounds

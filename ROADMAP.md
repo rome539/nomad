@@ -387,8 +387,161 @@ compass points.
   Real code, not a migration.
 - **Per-region** mouths, water/forage rooms, chest tiers, names.
 
-**Build order:** ~~pipeline~~ → ~~region plumbing~~ → ~~west road~~ → wood → den
-ground → east road + crossing → mountain → dragon → den system.
+**Build order:** ~~pipeline~~ → ~~region plumbing~~ → ~~west road~~ → ~~wood~~ →
+~~den ground~~ → ~~den system~~ → east road + crossing → mountain → dragon.
+*(The den system jumped its slot: rome, 2026-08-03, on being shown 60 quiet rooms
+with a larder in them — "ITS SUPPOSED TO BE A FUCKING PLACE WHERE NOMADS FUCKING
+LIVE." He is right; ground with nothing to claim on it is scenery, and "walk the
+space first" was me deferring the only thing that makes the region a region.)*
+
+**THE WEST GETS A SECOND ARTERY — AND THE PIPELINE LEARNS TO COUNT THROATS**
+*(2026-08-03, migs 163 + 164, source in `game-server/regions/the-fen-road.rooms`,
+check in `scripts/build-rooms.mjs`)*. Measuring the den ground's exposure to
+gankers turned up something older and far worse: **four rooms sealed off 241 of
+the world's 390** — the whole wood, the whole den ground, most of the road — with
+**not one of the eight gates inside that pocket**. The Mustering Yard (one room
+from a gate) and three of the wood's rides. Four people standing still could cut
+the western half of the world off from every bank in the game. Nobody built it;
+it accumulated, one region at a time, and was invisible until the dens gave
+people a reason to walk it with full pockets.
+- **What did NOT work, all measured before building anything.** More doors onto
+  the den ground: 4. More approaches to it: 4. One fen road with three landfalls:
+  5. More mouths onto that road: 5 (its middle becomes the throat). Braiding its
+  middle: 5 (the junction becomes the throat). **A CORRIDOR IS A CORRIDOR** —
+  redundancy is not doors, not mouths, and not a loop in the middle; it is
+  independent routes END TO END, and anything that funnels even briefly is worth
+  exactly one route.
+- **THE FEN (18 rooms, three ways, sharing no room).** The way west before the
+  road was cut. *The Sally Way* out of the postern ditch, ashore at the wood's
+  Willow Margin. *The Black Way* south out of the Black Fen through the peat
+  workings, ashore on the den ground's Far Waste. *The Grave Path* — the drain
+  out of the **Mass-Grave, a dead end for this world's whole life** — ashore at
+  the wood's Osier Beds. Two cross-rungs so it reads as one country, not three
+  tunnels. The trade against the road is real: no throat, no patrol, and no
+  floor. **4 rooms → 7.** World at 408.
+- **THE THROAT CHECK, and this is the scalable half.** The room pipeline now
+  runs a max-flow/min-cut on every region it builds — every room worth 1 (a room
+  is a place one person can stand), sources every gate and spawn — and reports
+  *how many people it takes to own this ground* against a threshold that scales
+  with what is shut in behind it (one route per 40 rooms, floor of 2). A pocket
+  may hang off one door; a province may not. **The east road, the Crossing and
+  the mountain cannot repeat this quietly** — which is the whole point, because
+  every one of them is a single line hanging off one seam by default.
+
+**THE MAP LEARNED TO DRAW A COUNTRY** *(2026-08-03, `lore.ts worldGrid`, no
+migration)*. rome walked east from the Street Head and the map drew the room to
+the NORTH. Real bug, and bigger than the one room: the canonical grid laid rooms
+out ONE GRID PER BAND, correct while a band WAS a region (the fortress's three
+strata) and wrong the day band 1 came to hold the fortress, the road, the wood
+and the dens — 390 rooms on one plane, colliding, each collision shoving a room
+to the nearest free square and every room reached THROUGH it inheriting the
+shove. **30 of the den's 154 horizontal exits were drawn pointing the wrong way.**
+Now: the world is cut into pieces of ground that don't contradict themselves
+(embed a piece; any door that comes out wrong IS a contradiction, so cut it and
+embed the parts — the wood's eight maze cores separate themselves), each piece is
+embedded on its own grid, and pieces are placed most-connected-first where the
+average of their doors says they belong. **A small clash moves the few rooms in
+the way, not the whole piece** — the hamlet was landing nine cells off the road
+because exactly THREE of its 34 squares wanted ground a road pocket held, which
+is what "the dens isnt even fucking connected" was. Verified against the live map
+frame, not a model of it: **den arrows 30 wrong → 0, seven of its eight doorways
+drawn touching, zero overlapping cells, and the wood's own wrong arrows 214 →
+188.** Two wrong turns on the way, both recorded in the code: one grid per REGION
+(the den ground is two places joined through a ROAD room, so it carried a 40-cell
+hole and got spiralled into a corner — worse than the bug) and a settle pass
+(traded 14 loose seams for 20+ to buy one cell).
+- **STILL BROKEN, and it is the wood, not the map.** The wood's eight cores were
+  wired together for CONNECTIVITY, not geometry, so its loops don't close and
+  **no grid can draw it honestly** — 188 of its 410 exits are wrong whatever the
+  layout does, and its one bad door drags the Squatters' Row 11 cells off the
+  Sunken Ditch. The fix is re-cutting the doors between the cores, which is a
+  world change, not a rendering change. rome's call, not mine.
+
+**THE DEN SYSTEM IS BUILT** *(2026-08-03, mig 162 + `game-server/src/den.ts`)*.
+Every ruling below is his, from the arc pass and the dens→towns design — this
+build settled no design questions, it implemented the ones already settled.
+- **A HOLDING WITH BUNKS.** `settle` takes a roof; the roof holds you plus
+  **six** (`DEN_BUNKS`, his own proposed number and the roadmap's one open
+  question on it — confirmed). Six doors on this ground, thirty-six beds behind
+  them. **The scarce thing is the DOOR, never the bed**, so nobody is locked out
+  of the world for want of property and the thirty-seventh nomad's way in is to
+  find somebody who will take them in. A key is handed over FACE TO FACE
+  (`bunk <name>`, they must be standing in the room) — taking someone in is
+  something you did in a place, not a name typed at a menu.
+- **IT OPENS EXPOSED.** A fresh den is an ordinary room and creatures walk in.
+  `bar` — 2 iron and 3 scrap — hangs a bar, and only then does `ai.ts` treat it
+  like a hideaway. **The gatehouse is safe because it is nobody's; a den is safe
+  only as far as you have made it so**, and the iron that makes it safe has to be
+  carried out of somewhere dangerous.
+- **IT LAPSES, and that is the entire upkeep system.** No rent, no meter, no
+  chore: `tended_at` is the last time the holder stood in their own doorway, and
+  a fortnight of not coming home drops the hold to whoever is standing there.
+  Walking home IS the upkeep. Simulation-native — real state that changed because
+  something real happened.
+- **NOTHING IS FROZEN IN IT.** `stow`/`fetch` ride the same `container` column as
+  the lockbox and vault (`den:<room_id>`), so a den inherits the world's clock
+  for free: food ages on your shelf, iron wears. **The vault stops time; the house
+  does not.** 12 slots — more than you can carry, less than a bank.
+- **A lapsed or handed-over den keeps other people's things in it.** Rows keep
+  their owner's pubkey, so a new holder finds somebody else's belongings and
+  cannot touch them, and the old holder can still walk in and clear their own out
+  — even past the bar. A house somebody stopped coming back to should still have
+  their things in it.
+- **Six holdings, flagged `is_holding` on the room** (the Reeve's House, the North
+  House, the Smithy, the Mill, the Black Hut, the Warrener's Lodge). The Bare
+  Chapel is deliberately not one: it stays the ground's communal bolthole.
+- Verified end to end on local: settle → look (the room names its holder) → bar →
+  stow → den → fetch → abandon, plus every refusal path.
+- **STILL OPEN, and next:** the TOWN layer (3+ dens clustered → a shared front
+  gate, a fire that stays lit, a trader who only shows where people live);
+  MONSTER-driven raids, which is what the bar is waiting for; and the hearth as
+  where real cooking happens. **Player raiding stays out** per his ruling.
+
+**THE DEN GROUND IS BUILT** *(2026-08-03, migs 160 + 161, source in
+`game-server/regions/the-dens-1.rooms` and `-2`)*. 60 rooms in the angle between
+the road's last room and the wood's near edge — reachable **without entering the
+maze**, which is the point: this is the safe edge of the far country, the place a
+person stops walking. Built to the arc's own ruling — *the den GROUND now, the
+den SYSTEM later*: sixty rooms obviously meant for something, with nothing to
+claim yet, until the space has been walked. **The world is 390 rooms.**
+- **Two grounds, on purpose, because they are the argument the den system will
+  have to settle.** THE FIELD END (34 rooms, north of the road's end) is a
+  hamlet that emptied: a street, five holdings, a smithy, a reeve's house with a
+  loft, a pinfold, a stone-roofed chapel, a mill with its wheel-pit, ridge and
+  furrow under the grass. Nothing grand and nothing ruined — the doors were shut
+  on the way out by people who expected to want them shut. THE WASTE (26 rooms,
+  south) is common ground nobody owned: turf huts raised overnight, a hurdle
+  yard, a bark-peelers' camp, fever graves, a warrener's lodge with a ladder you
+  can pull up after you. **Inherit a dead family's house, or build on ground with
+  no deed.** Both grounds exist now so that call can be made on real rooms.
+- **Density 0.05, and it is the most important number in the region.** Three
+  bodies in sixty rooms — a roe deer on the common field, a masterless dog over
+  the rabbit warren, one footpad who had the same idea about this place and got
+  here first. The wood's 195-in-170 is what makes this quiet mean anything. Both
+  the dog and the footpad are in `ROAMING_DENS`, so the dens have a footpad and
+  you never learn where.
+- **No gate and no spawn region.** A gatehouse here would make the dens the best
+  place in the world to *stand* rather than a place worth walking to. One safe
+  room, the Bare Chapel (the only stone roof for a long way) — the Warrener's
+  Lodge and the Black Hut are shelter you can be *found* in, which is a different
+  offer. Payoff is UPKEEP, not gear: food, water, fuel, rock, scrap, and one
+  locked box under the reeve's floor.
+- **Engine gap this closed: `INDOOR_ROOMS`.** A band declares itself outdoors as
+  a whole, which was true enough for a road and a wood. The dens are the first
+  outdoor band that is partly ROOF, and rain falling on someone sitting in a mill
+  with the door shut is simply wrong. The exception set reaches back and covers
+  the wood's Charcoal Hut and Withy Hut too — the two rooms in that region where
+  being under cover is the entire point, both rained on since the wood shipped.
+- Plumbing that lands with every new band: `den` in `REGIONS`, `OUTDOOR_REGIONS`,
+  `FORAGE_REGIONS`, `SURFACE_BANDS`, `MAP_BAND_OF`; a map stratum labelled *The
+  Dens* on both the surveyor's map and the gatehouse wall; a map colour (`--heal`,
+  the only green in the palette, and the dens are the only band that is grass);
+  its own `listen` line; 44 `ROOM_AMBIENCE` pools and 12 `DARK_TOUCH` lines,
+  every one of them the building or the ground doing something on its own,
+  because nothing here implies a body — there isn't one. Three made waters into
+  `WATER_ROOMS` (mill pond, barrel-well, marl pit): the dens are the first band
+  with no natural running water at all, and every drop in them is something
+  somebody built to hold it.
 
 **THE WEST ROAD IS BUILT** *(2026-08-01, uncommitted: migs 127 + 128, source in
 `game-server/regions/west-road.rooms`)*. 30 rooms hung off the Drowned Orchard's

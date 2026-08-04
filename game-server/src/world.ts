@@ -12,6 +12,7 @@ export interface Room {
   is_safe: number; // a hideaway ("a crack in the wall") no creature will enter
   region: string; // which band it belongs to ('' = derive it the old way, see regionOf)
   is_spawn: number; // players wake here (a gate is a SERVICE; a spawn is a doorway — mig 126)
+  is_holding: number; // a roof a nomad can take and live under (mig 162) — see den.ts
 }
 
 // The bands of the world. A room either declares its own (the `region` column,
@@ -20,8 +21,8 @@ export interface Room {
 // map; a room whose region isn't listed here is treated as blank rather than
 // trusted, so a typo in a .rooms file can't quietly invent a band the rest of
 // the engine has never heard of.
-export type Region = "gate" | "deep" | "upper" | "road" | "wood" | "mountain";
-export const REGIONS = new Set<string>(["gate", "deep", "upper", "road", "wood", "mountain"]);
+export type Region = "gate" | "deep" | "upper" | "road" | "wood" | "mountain" | "den";
+export const REGIONS = new Set<string>(["gate", "deep", "upper", "road", "wood", "mountain", "den"]);
 
 export interface Exit {
   room_id: string;
@@ -246,6 +247,7 @@ export async function loadWorld(db: D1Database, zone: string): Promise<World> {
   for (const r of rooms) {
     r.region = REGIONS.has(r.region) ? r.region : "";
     r.is_spawn = r.is_spawn ?? 0;
+    r.is_holding = r.is_holding ?? 0;
   }
   const spawns = rooms.filter((r) => r.is_spawn === 1);
 
@@ -420,6 +422,7 @@ export interface CarriedItem {
   journalId?: string; // only a journal: the stable id its pages are keyed to
   loreId?: string; // engraved gear: the gate's mark — its deeds-ledger key, enduring past every serial (077)
   acquiredAt?: number; // unix seconds the row was cut/taken — the deep-heart rots against this
+  containerAt?: number; // ms epoch this row entered its current container (mig 165) — the den's rust is worked out against it, lazily
   // THE TRAIT LOTTERY (099): what THIS copy rolled when it entered the world —
   // a comma list like the template's, on top of the template's own tags. Blank
   // for most gear. Parsed once into rolledMap; combat reads both (wearsTrait).
@@ -453,16 +456,21 @@ export async function setEquipped(db: D1Database, rowId: string, equipped: boole
 // anything that happens to the body that owns it. Condition is preserved.
 export async function loadContainer(db: D1Database, pubkey: string, container: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id, acquired_at, rolled_traits FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id, acquired_at, rolled_traits, container_at FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
     .bind(pubkey, container)
-    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits) }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string; container_at: number | null }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, containerAt: r.container_at ?? undefined, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits) }));
 }
 
 // Move a pack instance into a gate container, or back onto the body (''). The
 // equipped flag is always cleared — nothing stays wielded in a box.
 export async function setContainer(db: D1Database, rowId: string, container: string): Promise<void> {
-  await db.prepare("UPDATE player_items SET container = ?, equipped = 0 WHERE id = ?").bind(container, rowId).run();
+  // container_at stamps WHEN it went in (mig 165). The den works its rust out
+  // against this rather than on a tick, so the stamp has to move every time the
+  // row changes hands between keepings — otherwise a piece shuffled box-to-box
+  // would carry an old clock and rust for time it spent somewhere else.
+  await db.prepare("UPDATE player_items SET container = ?, equipped = 0, container_at = ? WHERE id = ?")
+    .bind(container, Date.now(), rowId).run();
 }
 
 // The gate seals a claim: one mint row, serial-numbered, and the pack entry

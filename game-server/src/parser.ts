@@ -55,6 +55,14 @@ export type Verb =
   | "tell"
   | "xyzzy"
   | "deal"
+  | "settle"
+  | "abandon"
+  | "bar"
+  | "bunk"
+  | "unbunk"
+  | "den"
+  | "stow"
+  | "fetch"
   | "help";
 
 export interface Command {
@@ -111,7 +119,18 @@ const VERB_ALIASES: Record<string, Verb> = {
   light: "light", kindle: "light", ignite: "light", torch: "light", lantern: "light",
   carve: "carve", scratch: "carve", etch: "carve", inscribe: "carve", write: "carve",
   claim: "claim", seal: "claim", extract: "claim", sign: "claim",
-  stash: "stash", store: "stash", box: "stash", stow: "stash",
+  stash: "stash", store: "stash", box: "stash",
+  // THE DENS (mig 162). 'stow' moved off the lockbox and onto the den on
+  // purpose: you STASH in a box you carry the key to, you STOW something in the
+  // place you live. 'stash/store/box' still reach the lockbox untouched.
+  settle: "settle", homestead: "settle", inhabit: "settle",
+  abandon: "abandon", forsake: "abandon", vacate: "abandon",
+  bar: "bar", barricade: "bar", fortify: "bar",
+  bunk: "bunk", invite: "bunk", house: "bunk", shelter: "bunk",
+  unbunk: "unbunk", evict: "unbunk", turnout: "unbunk",
+  den: "den", home: "den", holding: "den", hearth: "den",
+  stow: "stow", shelve: "stow",
+  fetch: "fetch", unstow: "fetch",
   unstash: "unstash", unbox: "unstash",
   vault: "vault", bank: "vault", deposit: "vault",
   unvault: "unvault", withdraw: "unvault", retrieve: "unvault",
@@ -319,6 +338,22 @@ export const HELP_TEXT = [
   "                    gatehouse ANYTHING YOU TYPE IS SPOKEN ALOUD, unless it's a",
   "                    command — it is the one room where a wanderer can be heard.",
   "  out               (exit) — back through the door, into the world.",
+  "  settle            take a roof on the den ground and live under it. A",
+  "                    holding is scarce and the beds behind it are not: it",
+  "                    holds you plus six, and you decide who. It opens with",
+  "                    NOTHING shut — things walk in — until you carry iron out",
+  "                    here and 'bar' the door. Come home now and then or the",
+  "                    hold falls in and it goes to whoever is standing there.",
+  "  bar               fit a bar and its sockets to your own door. Iron and",
+  "                    scrap. Nothing walks in after that.",
+  "  bunk <name>       hand somebody a key. They have to be standing in front of",
+  "                    you. (unbunk takes it back.)",
+  "  stow <item>       put something down in your den. (fetch takes it back.)",
+  "                    Nothing here is sealed against time the way the vault",
+  "                    seals it — food ages on your shelf and iron wears. That",
+  "                    is the difference between a bank and a house.",
+  "  den               how your holding stands: the door, the bunks, the shelf,",
+  "                    and how long it has left if you stop coming back.",
   "  deal <name>      strike an item-for-item trade with another wanderer —",
   "                    anywhere, in the world or the gatehouse. Both sides lay",
   "                    goods down; either side changing the table un-shakes both",

@@ -264,6 +264,106 @@ if (worldKnown && !errors.length) {
   }
 }
 
+// THE THROAT CHECK — how many rooms would somebody have to stand in to seal
+// this ground off from every gate in the world? (rome, 2026-08-03, after the
+// dens: "AND IS THIS EVEN SCALABLE FOR WHEN MORE FUCKING PLAYERS FUCKING
+// ARRIVE?" and then, on the fix: "1 and how will we make this scaleble?")
+//
+// This is the check that makes the answer scalable instead of a one-off repair.
+// The den ground turned out to be sealable by FOUR rooms — and so was the whole
+// west with it, 241 of 390 rooms and not one gate among them, because the road
+// was authored as a single line and the wood funnels through its rides. Nobody
+// wrote that; it accumulated, one region at a time, and it was invisible until
+// somebody had a reason to walk it with full pockets.
+//
+// Every region added from here — the east road, the Crossing, the mountain —
+// can do exactly the same thing, and will, unless something counts. So the
+// pipeline counts it: a max-flow/min-cut with every room worth 1 (a room is a
+// place one person can stand), sources = every gate and spawn, sink = the new
+// ground. The answer is literally "how many people does it take to own this".
+//
+// It is a WARNING, not an error. A dead-end pocket hanging off one room is
+// legitimate level design; 200 rooms behind one is a mistake. The threshold
+// scales with what is behind it, because that is the thing that actually
+// matters: sealing off a 6-room pocket costs the world nothing, sealing off a
+// quarter of it costs everything.
+function throatOf(adj, sources, target) {
+  // Vertex capacities: split each room into in/out with capacity 1, except the
+  // sources and the target ground (infinite — you cannot camp your objective).
+  const INF = 1e9;
+  const cap = new Map(), nbr = new Map();
+  const key = (a, b) => `${a}\u0000${b}`;
+  const add = (u, v, c) => {
+    cap.set(key(u, v), (cap.get(key(u, v)) ?? 0) + c);
+    if (!nbr.has(u)) nbr.set(u, new Set());
+    if (!nbr.has(v)) nbr.set(v, new Set());
+    nbr.get(u).add(v); nbr.get(v).add(u);
+    if (!cap.has(key(v, u))) cap.set(key(v, u), 0);
+  };
+  const all = new Set([...adj.keys()]);
+  for (const es of adj.values()) for (const to of es) all.add(to);
+  for (const r of all) add(`${r}>in`, `${r}>out`, (sources.has(r) || target.has(r)) ? INF : 1);
+  for (const [u, es] of adj) for (const to of es) add(`${u}>out`, `${to}>in`, INF);
+  const S = "SRC>out", T = "SNK>in";
+  for (const r of sources) add(S, `${r}>in`, INF);
+  for (const r of target) add(`${r}>out`, T, INF);
+  let flow = 0;
+  for (;;) {
+    const par = new Map([[S, null]]);
+    const q = [S];
+    for (let h = 0; h < q.length && !par.has(T); h++) {
+      for (const v of nbr.get(q[h]) ?? []) {
+        if (!par.has(v) && (cap.get(key(q[h], v)) ?? 0) > 0) { par.set(v, q[h]); q.push(v); }
+      }
+    }
+    if (!par.has(T)) break;
+    let f = INF;
+    for (let v = T; par.get(v) !== null; v = par.get(v)) f = Math.min(f, cap.get(key(par.get(v), v)));
+    for (let v = T; par.get(v) !== null; v = par.get(v)) {
+      cap.set(key(par.get(v), v), cap.get(key(par.get(v), v)) - f);
+      cap.set(key(v, par.get(v)), (cap.get(key(v, par.get(v))) ?? 0) + f);
+    }
+    flow += f;
+  }
+  // The cut itself, for the report: rooms whose in-side is reachable and
+  // out-side isn't. Those are the squares somebody would stand in.
+  const seen = new Set([S]); const q2 = [S];
+  for (let h = 0; h < q2.length; h++) for (const v of nbr.get(q2[h]) ?? []) {
+    if (!seen.has(v) && (cap.get(key(q2[h], v)) ?? 0) > 0) { seen.add(v); q2.push(v); }
+  }
+  const cut = [...all].filter((r) => seen.has(`${r}>in`) && !seen.has(`${r}>out`));
+  // And what is sealed off behind it.
+  const behind = new Set(target); const q3 = [...target];
+  const cutSet = new Set(cut);
+  for (let h = 0; h < q3.length; h++) for (const to of adj.get(q3[h]) ?? []) {
+    if (!behind.has(to) && !cutSet.has(to)) { behind.add(to); q3.push(to); }
+  }
+  return { flow, cut, behind: behind.size };
+}
+
+if (worldKnown && !errors.length && rooms.size) {
+  const adj = new Map();
+  const push = (a, b) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push(b); };
+  for (const [room, es] of liveExits) for (const e of es) push(room, e.to);
+  for (const r of rooms.values()) for (const e of r.exits) push(r.id, e.target);
+  const sources = new Set([...liveEntries, ...[...rooms.values()].filter((r) => r.entry || r.spawn).map((r) => r.id)]);
+  // The GROUND BEING ADDED — the genuinely new rooms only. An `!existing` entry
+  // is an attachment point that already stands in the world (and is often right
+  // next to a gate), so counting it as new ground gives every route a free ride
+  // and the check reads as infinitely well-connected.
+  const target = new Set([...rooms.values()].filter((r) => !r.existing).map((r) => r.id));
+  for (const s of sources) target.delete(s);
+  if (target.size && sources.size) {
+    const { flow, cut, behind } = throatOf(adj, sources, target);
+    // One route per ~40 rooms shut in behind it, floor of 2: a pocket may hang
+    // off a single door, a province may not.
+    const want = Math.max(2, Math.ceil(behind / 40));
+    const line = `THROAT: it takes ${flow} room${flow === 1 ? "" : "s"} to seal this ground off from every gate (${cut.join(", ")}) — ${behind} rooms shut in behind them.`;
+    if (flow < want) warnings.push(`${line} That wants at least ${want}. Give this ground another way in that doesn't share the others' route, or it belongs to whoever stands in ${flow === 1 ? "that room" : "those rooms"}.`);
+    else console.log(`  ${line} (wants ${want}) ok`);
+  }
+}
+
 // ---- report --------------------------------------------------------------
 
 for (const w of warnings) console.warn(`  warn  ${w}`);

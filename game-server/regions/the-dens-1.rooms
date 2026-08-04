@@ -1,0 +1,281 @@
+# THE DENS, SLAB 1 — THE FIELD END: 34 rooms, a hamlet that emptied.
+#
+# Next on the build order (pipeline -> region plumbing -> west road -> wood ->
+# DEN GROUND -> east road + crossing -> mountain -> dragon -> den system), and
+# built to the arc's own ruling: BUILD THE DEN GROUND NOW, THE DEN SYSTEM LATER.
+# Sixty rooms that are obviously meant for something, with nothing to claim yet,
+# until the space has been walked.
+#
+# WHERE IT IS. In the angle between the road's last room and the wood's near
+# edge — north of the Gap in the Trees, east of the wood's outer column. You
+# reach it without entering the maze, which is the whole point: this is the SAFE
+# EDGE of the far country, the place a person would stop walking.
+#
+# WHAT IT IS. An assart — land cut out of the wood and farmed — and the hamlet
+# that worked it. Ridge and furrow still under the grass, a lane, a street, five
+# holdings, a pinfold, a chapel, a mill on the beck. The people here worked for
+# the holding the wood swallowed on the far side (the Well Court, the Hall Floor,
+# the Solar). When the holding went, this went with it, in the ordinary way: not
+# burned, not fought over. Emptied. The doors are shut and the roofs are mostly
+# on and the hearths are cold and that is all.
+#
+# THE REGISTER. The wood's manor is the same century as this and must not read
+# the same: that is a lord's house going back to nature, this is ten families'
+# worth of ordinary building standing there waiting. Nothing here is grand and
+# nothing here is ruined. It is a place you could live in tonight.
+#
+# DENSITY 0.05, deliberately — near-empty, per the arc's table. Two bodies in 34
+# rooms. A wood with 195 mobs in 170 rooms is what makes this quiet mean
+# something. Do not fill it later without a reason.
+#
+# GEOGRAPHY (x east, y north, origin at The Eaves):
+#   y=8   the-mill . the-mill-dam
+#   y=7   the-dead-orchard . the-bare-chapel . the-mill-lane
+#   y=6   the-burnt-croft . the-chapel-green . the-street-head . the-north-croft . the-north-house
+#   y=5   the-headland-baulk . the-croft-backs . the-street-cross . the-reeves-yard . the-reeves-house
+#   y=4   the-far-furlong . the-common-field . the-street . the-smithy-yard . the-smithy
+#   y=3   the-thorn-hedge . the-ridge-and-furrow . the-street-foot . the-village-pound
+#   y=2   the-old-assart . the-cow-pasture . the-sunken-way . the-well-green
+#   y=1   the-hurdle-gate . the-drift-lane . the-lane-head . the-cart-turn
+#
+# Three doors in from the wood's outer column (the Birch Edge, the Wind-Shorn
+# Edge, the Outer Scrub) and one off the road's end. Nothing east: that is the
+# unbuilt country the east road will want.
+
+!region den
+
+# ---- the ways in ------------------------------------------------------------
+
+# Both of the road's own doors into the den ground are declared here, north AND
+# south, even though the south one lands in slab 2 — a room may only be declared
+# once across the whole build, and the gap is the road's last room, not the
+# waste's. Build the two slabs together.
+## the-gap-in-the-trees | attachment: the road's end looks north and south
+!existing
+> north the-hurdle-gate
+> south the-waste-edge
+
+## the-birch-edge | attachment: out of the wood, east
+!existing
+> east the-hurdle-gate
+
+## the-wind-shorn-edge | attachment: out of the wood, east
+!existing
+> east the-old-assart
+
+## the-outer-scrub | attachment: out of the wood, east
+!existing
+> east the-thorn-hedge
+
+# ---- y=1: the lane along the wood -------------------------------------------
+
+## the-hurdle-gate | The Hurdle Gate
+A gap in a bank and ditch, with a hurdle across it — woven hazel, grey and light as basketwork, dropped into two posts. It was made to keep stock in, not people out, and it still would. Beyond it the ground opens and goes green in a way the wood has not been since you entered it, and the sky is back.
+> south the-gap-in-the-trees
+> west the-birch-edge
+> east the-drift-lane
+> north the-old-assart
+
+## the-drift-lane | The Drift Lane
+Two banks with a way between them, running east, grassed over and sunk a foot below the fields either side by nothing but use. Nothing has been driven along it in a long time. In the middle of the track a line of taller grass has come up where the wheels never touched.
+> west the-hurdle-gate
+> east the-lane-head
+> north the-cow-pasture
+
+## the-lane-head | The Lane Head
+The lane widens where it met something — another track, or a yard, or a gate that has gone. The banks stop dead on both sides and the grass takes over. There is a mounting-block still standing here, two worn steps of stone, for getting onto a horse that nobody has ridden in for lifetimes.
+> west the-drift-lane
+> east the-cart-turn
+> north the-sunken-way
+
+## the-cart-turn | The Cart Turn
+A bare circle of hard ground where carts were backed and swung, still bare, the earth beaten too dead to grow anything but moss. One cart is here, or the frame of one, sunk to the axle and gone soft. Its shafts point east at nothing.
+> west the-lane-head
+
+# ---- y=2: the assart ---------------------------------------------------------
+
+## the-old-assart | The Old Assart
+This was taken out of the wood with axes and fire, and you can still see the shape of the taking: the field is a rough oval and the trees stand around it in a wall, and every stump inside was grubbed out by somebody who then had to carry it somewhere. Grass now, thigh-high, and going back to thorn at the edges.
+> south the-hurdle-gate
+> west the-wind-shorn-edge
+> east the-cow-pasture
+> north the-thorn-hedge
+
+## the-cow-pasture | The Cow Pasture
+Old grazing, close-cropped once and shaggy now, with a drinking hollow at the low end that still holds water and a rubbing-post in the middle worn smooth and shiny at cow height. The grass grows in the dark rings where the muck fell.
+> south the-drift-lane
+> west the-old-assart
+> east the-sunken-way
+> north the-ridge-and-furrow
+
+## the-sunken-way | The Sunken Way
+The track up to the houses, cut into the slope by feet and rain until it runs a body's depth below the field on either hand, roots showing in both banks like pipework. Walking it, you can see nothing but sky and the two walls of earth, and nothing can see you.
+> south the-lane-head
+> west the-cow-pasture
+> east the-well-green
+> north the-street-foot
+
+## the-well-green | The Well Green
+A shelf of level grass with the village well in the middle of it — a stone ring, waist-high, capped with a slab somebody dragged on and left crooked. Under the slab the water is a long way down and perfectly still, and the bucket rope has rotted off at the windlass.
+> west the-sunken-way
+> north the-village-pound
+
+# ---- y=3: the near fields ----------------------------------------------------
+
+## the-thorn-hedge | The Thorn Hedge
+A hedge laid by hand — every stem half-cut and bent over and woven along, a craft that takes years to learn — and then left, so it has grown up out of its own weaving into a line of small crooked trees standing in a row with their old wounds healed over sideways. It marks a boundary nobody argues about now.
+> south the-old-assart
+> west the-outer-scrub
+> east the-ridge-and-furrow
+> north the-far-furlong
+
+## the-ridge-and-furrow | The Ridge and Furrow
+The ground here runs in long parallel waves, a stride from crest to crest, and if you walk across them you are climbing and dropping all the way and if you walk along them you are on the flat. It is ploughing. Somebody's ox turned at the end of every one of these for a few hundred years, and the shape has outlasted them by a few hundred more.
+> west the-thorn-hedge
+> south the-cow-pasture
+> east the-street-foot
+> north the-common-field
+
+## the-street-foot | The Street Foot
+Where the field stops and the houses start. There is no boundary except that the grass gives way to a hard rutted surface and the first walls stand up on your left. Somebody has been here more recently than the rest of it: a fire was lit against the gable end and put out badly, and the scorch is still black.
+> west the-ridge-and-furrow
+> south the-sunken-way
+> north the-street
+> east the-village-pound
+
+## the-village-pound | The Village Pound
+A round stone pen with a gate that still swings, built to hold animals found straying until their owner paid to have them back. It is four courses high and dry-laid and in better repair than anything with a roof on it. Whatever was last shut in here got out over the top.
+> west the-street-foot
+> south the-well-green
+
+# ---- y=4: the street, and the first holdings ---------------------------------
+
+## the-far-furlong | The Far Furlong
+The last strip before the wood, and the wood has been coming for it: birch saplings stand all across the top end in their hundreds, none of them older than a person, all of them winning. The plough-ridges are still there under the leaf-litter if you scuff it with a foot.
+> south the-thorn-hedge
+> east the-common-field
+> north the-headland-baulk
+
+## the-common-field | The Common Field
+The big field, open, no hedge anywhere in it, worked in strips by everybody at once and grazed by everybody's stock after harvest. It has not been either since. What is left is a great quiet meadow that goes yellow-brown in a wind, and deer come out onto it in the evening because nothing here objects.
+> west the-far-furlong
+> south the-ridge-and-furrow
+> east the-street
+> north the-croft-backs
+
+## the-street | The Street
+The one street, running north, wide enough for two carts, with the crofts standing back off it behind their own low walls. The surface is stone where somebody laid stone and mud where nobody did. Every door in sight is shut. That is the thing you notice, and then cannot stop noticing: they were shut on the way out, by people who expected to want them shut.
+> south the-street-foot
+> west the-common-field
+> north the-street-cross
+> east the-smithy-yard
+
+## the-smithy-yard | The Smithy Yard
+A yard black underfoot with a century of hammer-scale trodden into it, and it will never grow anything again. There is a stone trough at the wall, cracked through and empty, and a heap of clinker gone half to earth, and the smell of old iron still coming up out of the ground when it rains.
+> west the-street
+> east the-smithy
+> north the-reeves-yard
+
+## the-smithy | The Smithy
+Inside, the roof holds and the light comes through the door and one wind-eye. The hearth is a stone box with a hood over it, the anvil block is still bolted down though the anvil went with somebody, and there is a wall of hooks with nothing on them. Everything is in its place. The place is just empty.
+> west the-smithy-yard
+
+# ---- y=5: the middle of it ---------------------------------------------------
+
+## the-headland-baulk | The Headland Baulk
+The turning-strip at the top of the furlongs, left unploughed so the team had somewhere to swing, and so kept as rough grass for three hundred years. It runs east and west like a green road that goes nowhere and was never meant to.
+> south the-far-furlong
+> east the-croft-backs
+> north the-burnt-croft
+
+## the-croft-backs | The Croft Backs
+Behind the houses: the long thin gardens that came with them, each one walled off from the next, all of them gone to nettle and currant and a few gaunt apple trees still fruiting out of habit. There are gaps in the back walls where people took the short way to the field, worn into the stone.
+> west the-headland-baulk
+> south the-common-field
+> east the-street-cross
+> north the-chapel-green
+
+## the-street-cross | The Street Cross
+The middle of the place: a stone cross on three steps, the head of it broken off level and the stump worn round. People met here, and were told things here, and the steps are dished where they sat. Somebody has scratched a tally into the bottom step, a great many strokes, and then stopped.
+> south the-street
+> west the-croft-backs
+> north the-street-head
+> east the-reeves-yard
+
+## the-reeves-yard | The Reeve's Yard
+The biggest yard on the street, cobbled, with a barn on one side that has lost half its roof and a house on the other that has lost none of its. A reeve was a farmer the lord made responsible for everybody else's work, which made him neither one thing nor the other, and he got a better house for it.
+> west the-street-cross
+> south the-smithy-yard
+> east the-reeves-house
+> north the-north-croft
+
+## the-reeves-house | The Reeve's House
+Two rooms and a floor above, which was wealth here. The hearth is a proper one against a stone gable with a lintel and a hook still in it. There is a bench built into the wall, a bedstead frame with nothing on it, and a shuttered window that shuts. Somebody swept this floor before they left it.
+> west the-reeves-yard
+> up the-reeves-loft
+
+## the-reeves-loft | The Reeve's Loft
+Up the ladder, under the thatch, where the family slept and the grain was kept dry. It is close and dark and warmer than downstairs by the whole width of a winter. The boards are sound. Along the wall, five pegs, and on the last of them a child's coat gone stiff as bark.
+> down the-reeves-house
+
+# ---- y=6: the north end ------------------------------------------------------
+
+## the-burnt-croft | The Burnt Croft
+One house did burn, and only one, a long time before the rest of it emptied — the walls stand to shoulder height with the fire's black still on the inside face, and an ash tree has grown up through where the hearth was. Nobody built here again. Whatever the story was, everybody who knew it agreed about it.
+> south the-headland-baulk
+> east the-chapel-green
+> north the-dead-orchard
+
+## the-chapel-green | The Chapel Green
+A patch of level ground in front of the chapel, kept clear of graves and used for everything else — the ground is still bare in the middle from whatever it was used for. Two yews, both enormous, both older than the chapel, standing where yews always stand.
+> west the-burnt-croft
+> south the-croft-backs
+> east the-street-head
+> north the-bare-chapel
+
+## the-street-head | The Street Head
+The street ends at a gate in a wall, and past the gate the ground drops toward the sound of water. From here you can see the whole place at once, down the length of it, and count the roofs, and see that they are all still on.
+> south the-street-cross
+> west the-chapel-green
+> east the-north-croft
+> north the-mill-lane
+
+## the-north-croft | The North Croft
+The last yard before the wall, and the poorest — a house with a byre built onto the end of it under the same roof, so the family and the cow lived a partition apart and kept each other warm. The muck channel still runs out through the wall and away downhill.
+> west the-street-head
+> south the-reeves-yard
+> east the-north-house
+
+## the-north-house | The North House
+One room, and the byre through the gap where a partition was. The floor is beaten earth with a hearth-stone set in the middle of it and no chimney at all — the smoke went up through the thatch, and the underside of the thatch is black with it and hard as a shell, and that is what has kept the rain out this long.
+> west the-north-croft
+
+# ---- the chapel, the orchard, the mill ---------------------------------------
+
+## the-bare-chapel | The Bare Chapel
+!safe
+Stone, and small, and the roof is stone too — the only stone roof for a very long way, which is why it is the only building here that will certainly still be standing in another hundred years. Everything inside that could be carried was carried out. What is left is a font cut from a single block, a stone bench along the north wall, and a door that shuts on the world and is thick enough to mean it.
+> south the-chapel-green
+
+## the-dead-orchard | The Dead Orchard
+The chapel's orchard, and half of it is standing dead — bare grey trunks with the bark coming off in sheets — while the other half goes on flowering and fruiting out of the same soil for no reason anyone could explain. Windfalls rot in the grass under the living half every year, and something comes for them every night.
+> south the-burnt-croft
+
+## the-mill-lane | The Mill Lane
+Down off the shoulder of the hill on a made surface, laid with flat stones set on edge because a mill lane has to take a loaded cart in the wet. Alder starts on both sides as the ground goes soft, and you can hear water working somewhere below before you can see any.
+> south the-street-head
+> north the-mill-dam
+
+## the-mill-dam | The Mill Dam
+An earth bank thrown across the beck with a stone sluice through it, and behind the bank a long still pond gone half to reed. The sluice is shut, or shut enough — water goes over the top of the bank in a wide shallow sheet instead of through the gate, which is why the pond has stayed a pond and the wheel has stayed dry.
+> south the-mill-lane
+> west the-mill
+
+## the-mill | The Mill
+A tall narrow building with the beck under one end of it. Inside, the machinery is nearly all there: the great wooden gear, the shaft, the tun, the two stones lying face to face with a lifetime of flour still grey in the seams. It smells of meal and cold water. Nothing turns, because the sluice is shut.
+> east the-mill-dam
+> down the-wheel-pit
+
+## the-wheel-pit | The Wheel Pit
+Under the floor, where the wheel hangs in its slot with the dry channel beneath it. The wheel is oak and iron-shod and rotted through in three of its buckets, and it is enormous seen from below. The stone walls are green to head height where the water used to reach and dry above that. It is very dark down here and the beck talks the whole time on the other side of the sluice.
+> up the-mill

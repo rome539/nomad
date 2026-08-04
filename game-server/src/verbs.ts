@@ -18,6 +18,7 @@ import * as light from "./light";
 import * as events from "./events";
 import * as pvp from "./pvp";
 import * as lore from "./lore";
+import * as den from "./den";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
@@ -687,6 +688,12 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     z.creatureNoise(session.roomId);
   }
 
+  // A BARRED DEN IS SHUT TO YOU (mig 162). Checked before anything else that
+  // could cost you a beat: you never pay a parting blow or wake a listener
+  // walking into a door that was never going to open.
+  const barred = den.barredAgainst(z, exit.to_room, session.pubkey);
+  if (barred) return z.send(session, barred);
+
   // A SENTINEL guards the way deeper. Asleep, you can step over it — and that
   // rouses it (you've opened the deep, and now it's up for whoever comes next).
   // Awake, it bars the descent outright: the only way down is to put it down.
@@ -815,6 +822,9 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const from = session.roomId;
   session.roomId = exit.to_room;
   z.addTrace(session.roomId, { kind: "passage", at: Date.now() });
+  // Standing in your own doorway IS the upkeep (mig 162). No rent, no chore —
+  // walking home is the whole of it, and it writes at most once an hour.
+  den.tend(z, session);
   // A carried surveyor's map sets down every hall its carrier walks (the ink
   // lives with the copy — lore.inkRooms). One cheap INSERT the first time a
   // copy meets a room; pure cache after.
@@ -1660,6 +1670,7 @@ function heardIn(z: ZoneDO, roomId: string): string {
   // rooms of wood, where there is no stone to drip off (2026-08-02).
   const region = z.regionOf(roomId);
   if (region === "wood") return "nothing — leaves, and the wood working somewhere further off";
+  if (region === "den") return "nothing — grass, and somewhere a shutter or a hurdle knocking on its own";
   if (region === "road") return "nothing — wind, and a long way of open ground";
   if (region === "mountain") return "nothing — wind off the rock, and the cold under it";
   return "nothing — stone, and a far-off drip";

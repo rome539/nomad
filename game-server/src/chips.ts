@@ -7,6 +7,7 @@ import type { Session } from "./zone-types";
 import * as events from "./events";
 import * as pvp from "./pvp";
 import * as gate from "./gate";
+import * as den from "./den";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
@@ -222,6 +223,21 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (MILESTONES.has(session.roomId)) {
       suggest.push("read stone");
       if (!(z.stoneNames.get(session.roomId) ?? []).some((c) => c.name === session.name)) suggest.push("carve");
+    }
+    // A HOLDING says what it will take from you, right there in the chip row
+    // (mig 162). An empty roof offers 'settle'; your own offers the door and the
+    // shelf; somebody else's offers nothing at all, because there is nothing you
+    // can do with a house that is not yours.
+    if (den.isHolding(z, session.roomId)) {
+      const here = den.denAt(z, session.roomId);
+      if (!here) suggest.push("settle");
+      else if (here.holder === session.pubkey) {
+        suggest.push("den");
+        if (!here.barred) suggest.push("bar");
+        suggest.push("stow");
+      } else if (here.keys.has(session.pubkey)) {
+        suggest.push("den", "stow");
+      }
     }
     // Knowledge you carry: open a map or the journal (each pops its modal).
     if (session.items.some((c) => MAP_ITEMS.has(c.itemId))) suggest.push("map");

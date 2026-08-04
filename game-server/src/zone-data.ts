@@ -1009,8 +1009,20 @@ export const GORGE_NAP_ODDS = 0.5;    // a hyena that just fed likely lies down 
 // on it — the ford is the only drinkable thing for a dozen rooms in either
 // direction, which makes it the road's natural ambush, and the masterless dogs
 // path to it on their own.
+// The den ground's three: the mill pond behind its dam, the barrel-well on the
+// waste, and the water in the bottom of the marl pit. A settlement is built
+// around water before it is built around anything else, and the dens are the
+// first band with no natural running water in them at all — every one of these
+// is a thing somebody MADE hold water, which is the difference between the dens
+// and everywhere else in the world.
 export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-drowned-orchard", "well", "the-dry-moat",
-  "the-shallow-ford", "the-flooded-quarry"]);
+  "the-shallow-ford", "the-flooded-quarry",
+  "the-mill-dam", "the-shallow-well", "the-marl-water",
+  // The fen, which is water with paths across it rather than land with water in
+  // it. Every thirsty thing west of the fortress can now drink somewhere that
+  // isn't the road's one ford — which was the only drinkable thing for a dozen
+  // rooms and therefore the road's natural ambush.
+  "the-open-water", "the-tussock-ford", "the-fen-gut", "the-quaking-flat"]);
 export const THIRST_MIN_MS = 2 * 3_600_000;
 export const THIRST_MAX_MS = 4 * 3_600_000;
 // CALLS: one primitive, three meanings — prey calls AWAY (a fleeing rat's
@@ -1671,6 +1683,15 @@ export const DARK_ROOMS = new Set([
   // closed over it. Dark at noon, not just at night — the one room on the road
   // that needs a torch in daylight, and it is the last room before the wood.
   "the-holloway",
+  // The den ground's two lightless rooms, and both are INDOOR dark rather than
+  // canopy dark: a turf hut has no window by construction, and the wheel pit is
+  // under the mill's floor. Everything else in the dens has sky or a shutter.
+  "the-black-hut", "the-wheel-pit",
+  // The fen's two lightless places, and unlike everywhere else in the world
+  // being caught here without a light is a drowning rather than a delay: the
+  // dead alders stand thick enough to shut out noon, and the grave drain is a
+  // stone channel you walk bent double.
+  "the-dead-alders", "the-grave-drain",
 ]);
 // The 058 blocks, named for the MAP's display regions only — game logic (chest
 // tiers, ambience fallback) still reads them as "upper" via regionOf. The map
@@ -1714,7 +1735,11 @@ export const WARRENS_ROOMS = new Set([
 // world load. The wood is the obvious one; the road's verges are grass and hedge
 // and count too. Kept a Set of ids rather than a predicate because the hunger
 // walk reads it per-exit while choosing where to go.
-export const FORAGE_REGIONS = new Set<string>(["road", "wood"]);
+// The dens count: fields gone back to grass, a common that was grazed by
+// everyone, an orchard still dropping windfalls. It is the most food-per-room
+// on the surface and it holds almost nothing that eats — which is the shape of
+// a place people left.
+export const FORAGE_REGIONS = new Set<string>(["road", "wood", "den"]);
 export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS]);
 // WHO EATS THE GROUND. Was the bare union VERMIN + THIEVES, written inline at
 // two call sites — which quietly left the boar out, and a boar is a rooting
@@ -1735,7 +1760,71 @@ export const OUTDOOR_ROOMS = new Set([...GROUNDS_ROOMS, ...OVERWORKS_ROOMS]);
 // the night dark reach them without anyone listing a thousand room ids. The
 // wood counts: a canopy is a roof you still get rained through, and its own
 // dark is a matter for DARK_ROOMS, room by room.
-export const OUTDOOR_REGIONS = new Set<string>(["road", "wood", "mountain"]);
+// ---- THE DENS (mig 162) — see den.ts for what each of these means ----------
+// SIX BUNKS, which was rome's own proposal and the roadmap's one open question
+// on it ("six bunks per den — confirm or change"). Six is the number that makes
+// the DOOR the scarce thing and the bed abundant behind it: six roofs on this
+// ground house thirty-six nomads, so nobody is locked out of the world for want
+// of property, and the thirty-seventh still has to find somebody who will take
+// them in. One-room-one-nomad was the thing this number exists to avoid.
+export const DEN_BUNKS = 6;
+// GEAR IN A DEN IS UNLIMITED (rome, 2026-08-03). This cap governs everything
+// that ISN'T gear — food, rock, trophies, keys — twelve slots counted the
+// lockbox's way. The split is what makes the den a different institution from
+// the vault rather than a bigger copy of it:
+//
+//   THE VAULT   hard cap, sealed against time, open at any of eight gates.
+//               CONVENIENCE, paid for in scarcity.
+//   THE DEN     endless for gear, fifty rooms out, nothing sealed against
+//               anything (food ages, iron wears), and the hold lapses if you
+//               stop coming home. CAPACITY, paid for in the walk.
+//
+// An endless larder would be a food faucet and an endless rock pile a scrap
+// faucet; a wall of hung armour is the whole point of having somewhere to put
+// your things. So: gear free, the rest capped.
+export const DEN_CAP = 12;
+// A fortnight of not coming home and the hold falls in. Long enough that a bad
+// week doesn't cost you your house, short enough that a ghost can't sit on one
+// of six doors forever. This is the whole upkeep system: no rent, no meter —
+// the only question it asks is whether you still live here.
+export const DEN_LAPSE_MS = 14 * 24 * 3_600_000;
+// What a bar and its sockets cost. Iron is the deep's and the forge's currency,
+// which is the point: the thing that makes your house safe has to be carried out
+// of somewhere dangerous, so security is EARNED and never issued.
+// WHAT THE SHELF COSTS (mig 165). Carried steel rusts at RUST_PER_TICK — about
+// 1.8 condition an hour, ~55 hours from new to nothing. A den is indoors and
+// put away, so it is a QUARTER of that: leave a plate on the shelf for a week
+// and it comes off notched; leave it the full fourteen days it takes the hold
+// itself to lapse and it comes off wrecked. Which is the right pairing — the
+// house and the things in it fall down on the same clock.
+export const DEN_RUST_PER_HOUR = 0.45;
+// AND IT NEVER GOES. Floors below GEAR_FAILING_AT (12), so a long-abandoned
+// piece reads as barely holding together and says so — and above zero, always.
+// The ordinary wear path deletes at 0; the shelf cannot reach it. A floored
+// piece is a bench job, not a loss: a den charges upkeep on what you hoard, it
+// does not confiscate it.
+export const DEN_RUST_FLOOR = 8;
+export const DEN_BAR_IRON = 2;
+export const DEN_BAR_SCRAP = 3;
+
+export const OUTDOOR_REGIONS = new Set<string>(["road", "wood", "mountain", "den"]);
+// ...AND THE ROOMS INSIDE THEM THAT ARE NOT. A band declares itself outdoors as
+// a whole, which was true enough while the outdoor bands were a road and a wood.
+// The dens are the first band that is mostly weather and partly ROOF — a smithy,
+// a mill, a chapel with a stone roof, a turf hut — and rain falling on a man
+// sitting inside a building with the door shut is simply wrong. This is the
+// per-room exception the fold has always said belonged in a static set.
+//
+// It also closes a standing bug: the wood's Charcoal Hut and Withy Hut have been
+// rained on and gone dark with the sky since the wood shipped, and both of them
+// are hideaways — the two rooms in that region where being under cover is the
+// entire point of the room.
+export const INDOOR_ROOMS = new Set<string>([
+  "the-charcoal-hut", "the-withy-hut",                                  // the wood's two boltholes
+  "the-smithy", "the-reeves-house", "the-reeves-loft", "the-north-house", // the Field End
+  "the-bare-chapel", "the-mill", "the-wheel-pit",
+  "the-black-hut", "the-warreners-lodge", "the-lodge-loft",             // the Waste
+]);
 // A day/night world-clock (rome, 2026-07-22): every OUTDOOR room only, deep/
 // warrens/keep are always their own dark regardless. Deliberately faster than
 // a real day — a full cycle every DAY_CYCLE_MS — so a single play session
@@ -2466,6 +2555,80 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
   "pocket-of-air": ["The air here is thin and breathable and does not smell of the water. You breathe while you can."],
   "sunken-throne": ["The flooded dark hums, low, as if the throne remembers being sat.", "The water around the throne is very, very still."],
   "kings-hoard": ["Gold gleams once in the dark, and is swallowed again."],
+  // ---- the fen: the second way west (2026-08-03) ----
+  // Water on both sides of every step. The register is deliberately unlike the
+  // road's (wind and open ground) and unlike the wood's (leaves and something
+  // keeping pace): here it is the sound of things MOVING IN water you cannot
+  // see the bottom of, and the ground itself never being quite trustworthy.
+  "the-ditch-end": ["The plank walk gives under you, takes the weight, and gives again.", "Somewhere behind, the ditch lets go of a bubble."],
+  "the-fen-edge": ["Reed goes over in one long ripple, all the way to where you can't see.", "Your heel finds firm ground, then doesn't, then does."],
+  "the-sinking-path": ["Stone shifts underfoot and settles an inch lower than it was.", "Water finds its way over the causeway in a thin sheet, and goes back."],
+  "the-drowned-hurdles": ["The weave flexes under your boots, springy as a floor that isn't one.", "Down through the clear water, three more layers of hurdle, going away into the dark."],
+  "the-tussock-ford": ["The tussock you're standing on rocks, and keeps rocking after you've stopped.", "Between the tussocks the water goes down and down and does not get any less clear."],
+  "the-willow-landing": ["The mooring ring turns in its socket, unhurried, though nothing is turning it.", "Grey willow moves all together, and the wood beyond it doesn't move at all."],
+  "the-fen-gut": ["The gut runs slow and black and warm, carrying the fortress's smell out and thinning it.", "Something goes down the channel under the surface, unhurried, and does not come up."],
+  "the-peat-road": ["The ruts hold the sky in two long parallel lines, and something crosses one of them.", "Brushwood shifts under the road with a sound like a held breath."],
+  "the-peat-cuts": ["Water in a cutting shivers from one end to the other, from no wind at all.", "The turf-banks give off a smell of old smoke that has never been lit."],
+  "the-open-water": ["The lake goes flat and silver and you cannot tell how deep any of it is.", "A ring spreads out where nothing broke the surface."],
+  "the-dead-alders": ["A dead alder ticks somewhere in the dark, drying out a century too late.", "Nothing moves in here, because there is no wind down here to move it. Something moves in here."],
+  "the-rush-shore": ["The rush hisses along both sides of the boards, keeping pace at about knee height.", "A board lifts at one end as you leave it and settles back."],
+  "the-eel-traps": ["A shut trap knocks against its stake, once, from the inside.", "Forty stakes, standing in a row, going out to where you can't see."],
+  "the-waste-foot": ["The one thorn tree out on the waste leans the way the wind has always come from.", "Water lets go of your boots for the first time in a long while."],
+  "the-grave-drain": ["The channel carries a sound down from the pit above — settling, or something like it.", "Stone drips on stone, patient, in the dark ahead of you."],
+  "the-quaking-flat": ["The ground swells under you in a slow wave and keeps moving after you stop.", "Somewhere out on the raft, a leg-deep hole closes over with moss again."],
+  "the-heron-stand": ["The herons turn, together, and watch, and do not go up.", "Bones shift under your boot — small ones, in their thousands."],
+  "the-osier-landing": ["Cut willow stands in its flooded rows, gone wild and still in its lines.", "The water shallows to mud without ever once looking like it has."],
+  // ---- the den ground: a place with nobody in it (2026-08-03) ----
+  // The dens are near-empty by design (3 bodies in 60 rooms), so ambience is
+  // doing most of the work of making them feel inhabited-and-not. Every line
+  // here is the building or the ground doing something on its own — nothing
+  // that implies a body, because there isn't one, and a rustle that turns out
+  // to be nothing is worth more here than anywhere else in the world.
+  "the-hurdle-gate": ["The hurdle knocks once in its posts, and settles.", "Behind you the wood makes its noise. Ahead, nothing does."],
+  "the-drift-lane": ["The grass down the middle of the track leans all one way and comes back.", "Something small goes along the top of the bank, keeping pace, and then doesn't."],
+  "the-cart-turn": ["The old cart frame ticks as the sun comes off it.", "Grit blows across the bare ground and finds nowhere to stop."],
+  "the-old-assart": ["Wind moves the whole field at once, one long shudder from the wood's edge to the far bank.", "A stump under the grass turns your ankle. There are hundreds of them out here."],
+  "the-cow-pasture": ["The rubbing-post creaks, though nothing is rubbing on it.", "Water in the drinking hollow shivers, ring after ring, and goes still."],
+  "the-sunken-way": ["Earth crumbles from the bank at your shoulder in a thin dry trickle.", "Down here you can hear something walking on the field above. It stops when you do."],
+  "the-well-green": ["Air comes up past the crooked slab, cold, smelling of stone and deep water.", "The rotted rope-end swings a little at the windlass."],
+  "the-ridge-and-furrow": ["The furrows hold the wind in lines, so the grass moves in stripes.", "You come down into a furrow harder than you meant to. The field has been catching feet for centuries."],
+  "the-street": ["A shutter somewhere along the row bangs, once, and is quiet.", "Every door in sight stays shut. That does not change.", "Thatch gives up a handful of straw off a roof and drops it in the street."],
+  "the-street-cross": ["The broken cross throws its short shadow round a step as the light moves.", "Wind comes down the length of the street and goes past you and out the other end."],
+  "the-smithy-yard": ["The cracked trough holds nothing and rings faintly anyway when the wind crosses it.", "Rain, or damp, brings the smell of old iron up out of the black ground."],
+  "the-smithy": ["The empty hooks along the wall move, very slightly, together.", "The hood over the cold hearth breathes a little soot down onto the stones."],
+  "the-reeves-house": ["The hook in the lintel turns a few degrees and stops.", "The shutter holds. Whatever is outside stays outside."],
+  "the-reeves-loft": ["The thatch overhead shifts its weight and resettles.", "The stiff little coat on the last peg swings once in a draught you can't feel."],
+  "the-north-house": ["Smoke that has been in this thatch for two hundred years still comes off it in the heat.", "The muck channel gurgles under the wall — something is running through it."],
+  "the-bare-chapel": ["The stone roof holds out every sound the world is making. It is very quiet in here.", "Water stands in the font. Nobody put it there and it has not gone."],
+  "the-chapel-green": ["The yews take the wind and give back a sound like water.", "The bare patch in the middle of the green stays bare. Nothing has ever grown back on it."],
+  "the-burnt-croft": ["The ash tree in the hearth-place moves and the black walls stay where they are.", "Old charcoal cracks underfoot, still sharp after all this."],
+  "the-dead-orchard": ["Bark comes off a dead trunk in a sheet and lands flat in the grass.", "A windfall drops on the living side with a soft wet knock.", "Wasps work over the rotting fruit, unhurried, in numbers."],
+  "the-common-field": ["The whole field goes over yellow-brown as the wind crosses it, and comes back green.", "Something is out in the middle of the grass, standing still, and then it isn't."],
+  "the-mill-dam": ["Water goes over the top of the bank in a wide flat whisper that never stops.", "Reeds knock against each other out in the pond."],
+  "the-mill": ["The great gear ticks somewhere in the frame, taking up the damp.", "Meal-dust lifts off the stones in a shaft of light and turns over slowly."],
+  "the-wheel-pit": ["The beck talks the whole time on the other side of the sluice, close enough to touch and shut away.", "Water drips off the rotted buckets in no rhythm at all."],
+  // ---- the waste: self-built ground, and every line says nobody's ----
+  "the-waste-edge": ["Rush hisses across the whole flat at once.", "Standing water sits in the low places, flat as glass, holding the sky."],
+  "the-turf-cutting": ["Water settles in the bottom of a cut with a small sucking noise.", "The spade-edges of the old cuts are still sharp. Nothing has softened them."],
+  "the-broom-scrub": ["A broom pod cracks open in the heat like something small breaking.", "The scrub shifts along one line, low down, and stops."],
+  "the-marl-pit": ["Clay slumps off the pit wall and hits the water a long way below.", "The fallen cattle-rail moves in the wind down there, on the water."],
+  "the-marl-water": ["The water goes away from your feet into a blue nothing has any business being.", "Up above, the circle of sky has a bird cross it, and nothing else."],
+  "the-squatters-row": ["Six roofs, six different ways of making a roof, and all of them creak differently.", "Turf slumps off a wall in a wet handful, and the wall goes on standing."],
+  "the-hurdle-yard": ["The stacked hurdles knock together down the whole row, one after another.", "The half-made hurdle on the trestle stays half-made."],
+  "the-drying-green": ["The drying posts stand in their lines with nothing between them.", "The grass under the old lines is a different green, and stays that way."],
+  "the-empty-toft": ["The hollowed doorstep holds a puddle. It is the only thing left of the doorway.", "Wind crosses the levelled ground and finds no wall to do anything with."],
+  "the-black-hut": ["Soot comes off the roof in a soft black flake and lands on your sleeve.", "It is warm in here, out of the wind, the moment the door is behind you."],
+  "the-shallow-well": ["The barrel-staves creak in the wet, holding.", "The water three feet down holds the sky, perfectly still, until something touches it."],
+  "the-fever-graves": ["The rushes over the mounds are greener than everything around them, and taller.", "The ground here is tidy, and stays tidy, and nobody tidies it."],
+  "the-bark-heap": ["The heap gives off a dry sharp smell, like tea, when the sun is on it.", "A curl of oak bark slides off the top and lands without a sound."],
+  "the-peelers-camp": ["A lean-to gives a little more than it did and doesn't fall.", "The cooking pit holds cold ash and rainwater in layers."],
+  "the-hearth-stones": ["Four cold rings of stone, well apart, keeping the arrangement they were left in.", "The stones are still red inside where the fire got into them."],
+  "the-gorse-common": ["Gorse crackles in the heat all across the rise.", "Something goes through the tunnels under the gorse, low and fast, and is gone."],
+  "the-warren-bank": ["The whole bank moves at once, and then holds still, and then moves again.", "Sand trickles out of a burrow mouth. Something is at home."],
+  "the-warreners-lodge": ["The barred shutter takes a gust and holds it.", "Three sockets in the door frame for a bar that isn't there any more."],
+  "the-lodge-loft": ["From the slits you can see the whole warren at once, and the whole warren cannot see you.", "The ladder rungs are worn hollow in the middle. Somebody went up and down them for years."],
+  "the-pillow-mounds": ["The mounds lie in their comb across the grass, holding their shape.", "Something goes into a mound's channel and does not come out the other end."],
+  "the-far-waste": ["The one thorn tree out there leans the way the wind has always come from.", "The rush goes on hissing south until the light stops."],
   // ---- the west road: the places on it worth stopping at (2026-08-01) ----
   // The Roadwarden's Post NEEDS its own pool. It is a gate, and regionOf calls
   // every gate "gate" wherever it stands, so without this it would draw the
@@ -2533,6 +2696,20 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
 // sight, since you genuinely can't see. Rooms with nothing here just get the
 // plain generic line, same as before.
 export const DARK_TOUCH: Record<string, string> = {
+  // The dens at night: no lamp anywhere in sixty rooms, and the buildings are
+  // the point — you find a place you could be inside by touch (2026-08-03).
+  "the-street": "Walls stand close on both sides and every door in them is shut. You could try one. You'd be trying it blind.",
+  "the-street-cross": "Your shin finds the bottom step of the cross. Three steps, dished in the middle, and the stump of it above.",
+  "the-smithy-yard": "Clinker crunches underfoot and the ground gives off old iron. There is a doorway in the wall on your right — you can feel the cold coming out of it.",
+  "the-well-green": "The well's stone ring is at your hip before you see anything of it, and the slab across it is crooked enough to get a hand under.",
+  "the-hurdle-gate": "The hurdle knocks in its posts beside you. Behind it, the wood. Ahead, open ground and a lot of sky you can't see.",
+  "the-sunken-way": "Earth walls close on both sides at shoulder height. You could walk this in the pitch dark and it would still take you where it goes.",
+  "the-mill-dam": "Water goes over the bank in a wide flat sheet somewhere just below you. Step wrong and you're in it.",
+  "the-marl-pit": "The ground stops. You feel it stop before you feel anything else — a lip, and then nothing, and water somewhere a long way down.",
+  "the-waste-edge": "Rush and standing water in every direction, and the road's bank somewhere behind you, higher than the rest.",
+  "the-squatters-row": "Six roof-lines against a sky barely lighter than they are. One of them is turf, and turf means a door low enough to feel for.",
+  "the-warren-bank": "The bank is warm sand under your hand and full of holes, and things go through it all around you, none of them interested in you at all.",
+  "the-gorse-common": "Gorse finds you before you find it, from every side at once, and the only way through is the tunnel you can't see.",
   "the-bell-cote": "The bell hangs unseen at your shoulder — cold under your hand if you reach for it, the wind worrying at the one note it isn't ringing.",
   "the-black-fen": "Something with too many legs picks its way across the water near your feet — felt more than heard.",
   "the-briar-field": "Thorn hisses against itself all around you, and the field seems to be moving somewhere just out of sight.",
@@ -2644,10 +2821,10 @@ export const GATEHOUSE_AMBIENT_ODDS = 0.03;           // per 2s tick, once off c
 // is what puts a gatehouse sitter with the ground they came in from.
 export const FORTRESS_BANDS = new Set<string>(["gate", "upper", "deep"]);
 // And the surface's own news, for the things that happen out here.
-export const SURFACE_BANDS = new Set<string>(["gate", "road", "wood", "mountain"]);
+export const SURFACE_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den"]);
 
 export const MAP_BAND_OF: Record<string, number> = {
-  sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, upper: 2, warrens: 3, deep: 4,
+  sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, den: 1, upper: 2, warrens: 3, deep: 4,
 };
 
 // ---- WHAT THE KEEPER TELLS YOU: each region's story, across the hatch ------

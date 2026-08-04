@@ -66,6 +66,7 @@ import * as events from "./events";
 import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import * as trade from "./trade";
+import * as den from "./den";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
@@ -96,7 +97,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, playerBleedOdds,
-  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -106,6 +107,10 @@ import {
 export class ZoneDO implements DurableObject {
   public world: World | null = null;
   public sessions = new Map<string, Session>(); // pubkey -> session
+  // WHO LIVES WHERE (mig 162). Room id -> the hold on it. Loaded whole at world
+  // load and written through to D1 on every change — six rows today, a few
+  // hundred at the arc's full size, and every read of it is a room lookup.
+  public dens = new Map<string, den.Den>();
   // Open player-to-player trades (trade.ts) — dealId -> Deal. In-memory only,
   // same as `buying`: a DO wake never restores one, and it needs no D1 row of
   // its own (settlement is the only part that touches D1, and it's atomic).
@@ -358,6 +363,7 @@ export class ZoneDO implements DurableObject {
     if (this.world) return this.world;
     const world = await loadWorld(this.env.DB, zone);
     this.world = world;
+    this.dens = await den.loadDens(this);
     this.buildWorldMaps(world);
     // WHAT COUNTS AS OUTDOORS, assembled rather than hardcoded (2026-08-01).
     // Rain, fog, cold, crows, the night dark and the night hunt multiplier all
@@ -370,7 +376,12 @@ export class ZoneDO implements DurableObject {
     // the same ids. A room that is outdoors DESPITE its band (or indoors within
     // one) is a per-room exception and still belongs in the static sets.
     for (const room of world.rooms.values()) {
-      if (OUTDOOR_REGIONS.has(room.region)) OUTDOOR_ROOMS.add(room.id);
+      // ...minus the rooms inside those bands that have a ROOF (INDOOR_ROOMS).
+      // The dens are the first outdoor band that is partly buildings, and rain
+      // falling on someone sitting in a mill with the door shut is simply wrong.
+      // Same fix reaches back and covers the wood's two huts, which have been
+      // rained on since it shipped.
+      if (OUTDOOR_REGIONS.has(room.region) && !INDOOR_ROOMS.has(room.id)) OUTDOOR_ROOMS.add(room.id);
       // Same fold for the larder: a band that declares itself forage ground
       // (FORAGE_REGIONS) feeds the things that graze it. Without this the wood
       // was two hundred rooms of trees that a deer could starve in.
@@ -1332,6 +1343,15 @@ export class ZoneDO implements DurableObject {
       case "exit": return this.leaveGatehouse(session);
       case "tell": return gate.cmdTell(this, session, cmd.arg);
       case "deal": return trade.cmdDeal(this, session, cmd.arg);
+      // THE DENS (mig 162) — living somewhere, which is its own module.
+      case "settle": return den.cmdSettle(this, session, cmd.arg);
+      case "abandon": return den.cmdAbandon(this, session);
+      case "bar": return den.cmdBar(this, session);
+      case "bunk": return den.cmdBunk(this, session, cmd.arg);
+      case "unbunk": return den.cmdUnbunk(this, session, cmd.arg);
+      case "den": return den.cmdDen(this, session);
+      case "stow": return den.cmdStow(this, session, cmd.arg);
+      case "fetch": return den.cmdFetch(this, session, cmd.arg);
       case "smoke": return verbs.cmdSmoke(this, session, cmd.arg);
       case "cure": return verbs.cmdCure(this, session, cmd.arg);
       case "squink": return verbs.cmdSquink(this, session);
@@ -4552,6 +4572,17 @@ export class ZoneDO implements DurableObject {
       return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";
     }
     const lines = full ? [room.name, room.description] : [room.name];
+    // WHO LIVES HERE (mig 162). A holding says how it stands as part of the room
+    // rather than as something you have to ask for — an empty roof advertises
+    // itself, an occupied one names its holder, and a barred door is visible
+    // from the doorway. This is the whole discovery mechanic for the dens.
+    if (full) {
+      const dl = den.denRoomLine(this, room.id, session);
+      if (dl) lines.push(dl);
+      // And from inside your own barred house, what is waiting outside it.
+      const wl = den.windowLine(this, session);
+      if (wl) lines.push(wl);
+    }
     // The sky's phase, spoken where the sky can reach you: coming rain, rain,
     // or the mud it left. Legibility rule — you always know what weather
     // you're standing in.

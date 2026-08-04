@@ -1,0 +1,201 @@
+# THE FEN — 18 rooms, and THREE ways west, not one (rome, 2026-08-03: "1 and how
+# will we make this scaleble?").
+#
+# WHY IT EXISTS, and it was never really about the dens.
+#
+# Measuring the den ground's exposure turned up something older and much worse:
+# FOUR ROOMS sealed off 241 of the world's 390 — the whole wood, the whole den
+# ground, most of the road — with not one of the eight gates inside that pocket.
+# The Mustering Yard, one room from a gate, and three of the wood's rides. Four
+# people standing still could cut the western half of the world off from every
+# bank in the game.
+#
+# Nobody built that. It accumulated: the west road was authored as one line (the
+# drove fork rejoins), the wood funnels through its rides, and each region hung
+# off the last by a single seam. It was invisible until the dens gave people a
+# reason to walk it with full pockets.
+#
+# WHAT DIDN'T WORK, measured, in this order — every one of these is a shape that
+# LOOKS like redundancy and isn't:
+#   more doors onto the den ground .................. 4 (unchanged)
+#   more approaches to the den ground ............... 4 (unchanged)
+#   one fen road, one mouth, three landfalls ........ 5   <- the corridor
+#   ...+ more mouths onto that one road ............. 5   the middle becomes the throat
+#   ...+ braiding its middle ........................ 5   the junction becomes the throat
+#   THREE SEPARATE WAYS, sharing no room ............ 7
+#
+# THE LESSON, and it is the whole reason this file is shaped the way it is: A
+# CORRIDOR IS A CORRIDOR. Redundancy is not doors, and it is not mouths, and it
+# is not a loop in the middle — it is INDEPENDENT ROUTES END TO END. Anything
+# that funnels, however briefly, is worth exactly one route. That is now checked
+# by the room pipeline on every region that will ever be added (the THROAT
+# check, scripts/build-rooms.mjs), so the east road, the Crossing and the
+# mountain cannot repeat this quietly.
+#
+# WHAT IT IS. Before the road was cut, the way west was the fen — you went at
+# low water, on other people's hurdles, and you did not go at night. Three ways
+# through it, each leaving the fortress by its own door and coming ashore in its
+# own place, crossed by a couple of rungs so it reads as one country rather than
+# three tunnels:
+#
+#   THE SALLY WAY   out of the postern ditch, west along the old causeway, ashore
+#                   at the wood's Willow Margin.
+#   THE BLACK WAY   south out of the Black Fen through the peat workings, ashore
+#                   on the den ground's Far Waste — whose own prose has been
+#                   asking for it since it shipped ("keeps going south with
+#                   nothing on it but rush and sky").
+#   THE GRAVE PATH  the drain out of the Mass-Grave, which was a dead end for the
+#                   whole life of this world, ashore at the wood's Osier Beds.
+#                   The shortest, the foulest, and it goes where you'd expect a
+#                   pit's drain to go.
+#
+# THE TRADE, and it has to be real or nobody takes it:
+#   THE ROAD  dry, paved at the fortress end, a carrier walking it, milestones, a
+#             wayside shelter — and one throat anybody can stand in.
+#   THE FEN   no throat, no patrol, and no floor. Water on both sides of every
+#             step, and the tide and the rain both have opinions about it.
+#
+# Region `road`: it IS the second road west, and a `fen` band would cost an
+# ambience pool, a map colour, a listen line and a forage law to say something
+# the word already says.
+#
+# GRID (x west-negative, y north-positive, the fen's own):
+#   y=+2  the-heron-stand
+#   y=+1  the-osier-landing . the-quaking-flat . the-grave-drain      <- Grave Path
+#   y= 0  the-willow-landing . the-tussock-ford . the-drowned-hurdles .
+#         the-sinking-path . the-fen-edge . the-ditch-end             <- Sally Way
+#   y=-1  the-waste-foot . the-rush-shore . the-dead-alders .
+#         the-open-water . the-peat-road . the-fen-gut                <- Black Way
+#   y=-2  the-peat-cuts . the-eel-traps
+
+!region road
+
+# ---- the three doors out of the fortress -------------------------------------
+
+## the-sally-ditch | attachment: the postern's ditch runs west
+!existing
+> west the-ditch-end
+
+## the-black-fen | attachment: the fen has a south shore
+!existing
+> south the-fen-gut
+
+## the-mass-grave | attachment: the pit drains somewhere
+!existing
+> south the-grave-drain
+
+# ---- and the three places it comes ashore ------------------------------------
+
+## the-willow-margin | attachment: the causeway lands in the wood
+!existing
+> east the-willow-landing
+
+## the-far-waste | attachment: the boards land on the common
+!existing
+> south the-waste-foot
+
+## the-osier-beds | attachment: the drain lands in the withies
+!existing
+> east the-osier-landing
+
+# ---- THE SALLY WAY -----------------------------------------------------------
+
+## the-ditch-end | The Ditch End
+The sally ditch stops being a ditch about a hundred paces out — the revetting gives up, the sides slump, and what was a channel becomes simply the wettest line across a wet field. A plank walk runs along it, three boards wide, greened over and still taking weight.
+> east the-sally-ditch
+> west the-fen-edge
+
+## the-fen-edge | The Fen Edge
+The last of the firm ground, and you feel exactly where it ends: your heel stops ringing and starts sucking. Ahead the fen opens flat to the horizon in reed and standing water, the black lines of old cuttings running through it, and no high ground anywhere in it at all.
+> east the-ditch-end
+> west the-sinking-path
+> south the-open-water
+> north the-osier-landing
+
+## the-sinking-path | The Sinking Path
+A raised way of dumped stone and brushwood laid straight out into the water, settling into it at its own pace — in places it stands a foot proud, in places you are wading it, and you cannot tell which is coming until you are in it.
+> east the-fen-edge
+> west the-drowned-hurdles
+
+## the-drowned-hurdles | The Drowned Hurdles
+Hazel hurdles pegged edge to edge across the soft ground, a whole causeway of basketwork, and the water has taken it down a foot at a time. You are walking on the weave, and it flexes. In the clear water either side you can see three more layers of it going down, each one somebody's answer to the last one sinking.
+> east the-sinking-path
+> west the-tussock-ford
+> south the-rush-shore
+
+## the-tussock-ford | The Tussock Ford
+The crossing here is a line of sedge tussocks, each one a footfall, each one rocking when you land on it. Between them the peat is bottomless — not deep, bottomless, the kind with no floor at all, only colder and colder water going down.
+> east the-drowned-hurdles
+> west the-willow-landing
+
+## the-willow-landing | The Willow Landing
+The causeway runs up out of the water onto a bank of grey willow, and there is a mooring ring set into the last stone of it — iron, thick as your thumb, still turning in its socket. Beyond the willows the ground firms and greens and the wood starts, close and cold.
+> east the-tussock-ford
+> west the-willow-margin
+
+# ---- THE BLACK WAY -----------------------------------------------------------
+
+## the-fen-gut | The Fen Gut
+Where the Black Fen drains, and it drains south: a slow gut of water a stride across, black to the eye and warm to the hand, with a bank of trodden peat alongside it wide enough to walk. The smell is the fortress's own smell, carried out and thinned.
+> north the-black-fen
+> west the-peat-road
+
+## the-peat-road | The Peat Road
+A hauling way for peat carts, floated on brushwood and surfaced with the spoil off the cuttings, running dead straight west because there was nothing out here to make it bend. Ruts a foot deep, filled with water, holding the sky in two parallel lines.
+> east the-fen-gut
+> west the-open-water
+> south the-peat-cuts
+
+## the-peat-cuts | The Peat Cuts
+Black rectangular pits, water-filled, cut in ranks with the turf-banks still stacked between them to dry. The peat here comes up with things in it: bog oak, and once in a while something that was not oak, tanned the colour of a saddle and perfectly preserved.
+> north the-peat-road
+
+## the-open-water | The Open Water
+The reed gives out and there is simply water, a long shallow lake of it, and the way goes under and comes up again forty paces on. Knee-deep on a good day. There is no telling today from a good day until you are in it.
+> east the-peat-road
+> west the-dead-alders
+> north the-fen-edge
+
+## the-dead-alders | The Dead Alders
+A drowned alder wood, every tree standing and every tree dead, killed by the water rising round their roots a wet century ago. They have not fallen because there is no wind down here to push them. Under them it is dark enough at noon to want a light.
+> east the-open-water
+> west the-rush-shore
+
+## the-rush-shore | The Rush Shore
+Boards laid on trestles a foot above the water, running west through rush that stands higher than a man on both sides, so there is nothing to see but the boards and the sky. Things move in the rush alongside you, keeping pace, at about knee height.
+> east the-dead-alders
+> west the-waste-foot
+> north the-drowned-hurdles
+> south the-eel-traps
+
+## the-eel-traps | The Eel Traps
+A row of stakes out in the shallows with wicker traps still lashed to them, most collapsed, two not. Somebody worked this water hard enough to leave forty traps in it and never came back for one of them. Things move in the two that are still shut.
+> north the-rush-shore
+
+## the-waste-foot | The Waste Foot
+The boards end at a stone step and the ground comes up out of the water at last — sour and rushy and open, with one thorn tree standing out in it, bent the way the wind has always come from. You have seen that tree from the other side.
+> east the-rush-shore
+> north the-far-waste
+
+# ---- THE GRAVE PATH ----------------------------------------------------------
+
+## the-grave-drain | The Grave Drain
+They cut a drain out of the bottom of the pit, because a pit that holds water does not settle and they needed it to settle. It runs south in a stone-lined channel you can walk bent-double, and it has not carried anything but rain in a long time. It is still the fastest way out of the Mass-Grave that is not back up the hill.
+> north the-mass-grave
+> west the-quaking-flat
+
+## the-quaking-flat | The Quaking Flat
+A hundred paces of ground that is not ground: a raft of root and moss floating on water, and it moves under you in a slow swell that goes on moving after you stop. Step wrong and your leg goes through to the hip, into cold that has never once seen the sun.
+> east the-grave-drain
+> west the-osier-landing
+> north the-heron-stand
+
+## the-heron-stand | The Heron Stand
+A gravel spit rising a foot out of the water, white with two centuries of heron lime and littered with the bones of everything they have ever eaten here. They are standing on it now, a dozen of them, absolutely still, and they do not go up as you come. They turn, and watch.
+> south the-quaking-flat
+
+## the-osier-landing | The Osier Landing
+Cut willow in flooded rows, worked once for basket rods and long gone wild, and the water shallows out among them until it is only mud. There is no landing here really — just the point where you stop wading and start walking, with the wood's withies standing ahead of you in the same water.
+> east the-quaking-flat
+> west the-osier-beds
+> south the-fen-edge

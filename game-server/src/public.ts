@@ -3086,6 +3086,14 @@ function mapRegionColor(region, isGate) {
   // down, never on screen beside a road.
   if (region === "road") return mapCssVar("--voice");
   if (region === "wood") return mapCssVar("--omen");
+  // THE DENS. They sit physically between the road and the wood on the chart, so
+  // they have to read as a third thing at a glance against BOTH of those and
+  // against the halls' gold, which is the default everything else falls back to.
+  // Heal is 85deg — 45 clear of gold, 100+ clear of voice and omen — and it is
+  // the only green in the palette, which is what the dens are: grass, fields, a
+  // common. Narrower clearance than the road and the wood got, but green against
+  // amber is a hue difference the eye names, not just measures.
+  if (region === "den") return mapCssVar("--heal");
   // No colour for the mountain until the mountain exists — the cream I first
   // gave it was the overworks exactly.
   return mapCssVar("--gold"); // the halls / default
