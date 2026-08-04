@@ -13,6 +13,11 @@ export interface Room {
   region: string; // which band it belongs to ('' = derive it the old way, see regionOf)
   is_spawn: number; // players wake here (a gate is a SERVICE; a spawn is a doorway — mig 126)
   is_holding: number; // a roof a nomad can take and live under (mig 162) — see den.ts
+  // WHERE THIS ROOM SITS ON THE PAPER (mig 166). Authored, not derived: the map
+  // reads these and draws what you've walked. Null on a world older than the
+  // bake, which simply draws nothing for that room rather than guessing.
+  map_x: number | null;
+  map_y: number | null;
 }
 
 // The bands of the world. A room either declares its own (the `region` column,

@@ -428,34 +428,36 @@ people a reason to walk it with full pockets.
   the mountain cannot repeat this quietly** — which is the whole point, because
   every one of them is a single line hanging off one seam by default.
 
-**THE MAP LEARNED TO DRAW A COUNTRY** *(2026-08-03, `lore.ts worldGrid`, no
-migration)*. rome walked east from the Street Head and the map drew the room to
-the NORTH. Real bug, and bigger than the one room: the canonical grid laid rooms
-out ONE GRID PER BAND, correct while a band WAS a region (the fortress's three
-strata) and wrong the day band 1 came to hold the fortress, the road, the wood
-and the dens — 390 rooms on one plane, colliding, each collision shoving a room
-to the nearest free square and every room reached THROUGH it inheriting the
-shove. **30 of the den's 154 horizontal exits were drawn pointing the wrong way.**
-Now: the world is cut into pieces of ground that don't contradict themselves
-(embed a piece; any door that comes out wrong IS a contradiction, so cut it and
-embed the parts — the wood's eight maze cores separate themselves), each piece is
-embedded on its own grid, and pieces are placed most-connected-first where the
-average of their doors says they belong. **A small clash moves the few rooms in
-the way, not the whole piece** — the hamlet was landing nine cells off the road
-because exactly THREE of its 34 squares wanted ground a road pocket held, which
-is what "the dens isnt even fucking connected" was. Verified against the live map
-frame, not a model of it: **den arrows 30 wrong → 0, seven of its eight doorways
-drawn touching, zero overlapping cells, and the wood's own wrong arrows 214 →
-188.** Two wrong turns on the way, both recorded in the code: one grid per REGION
-(the den ground is two places joined through a ROAD room, so it carried a 40-cell
-hole and got spiralled into a corner — worse than the bug) and a settle pass
-(traded 14 loose seams for 20+ to buy one cell).
-- **STILL BROKEN, and it is the wood, not the map.** The wood's eight cores were
-  wired together for CONNECTIVITY, not geometry, so its loops don't close and
-  **no grid can draw it honestly** — 188 of its 410 exits are wrong whatever the
-  layout does, and its one bad door drags the Squatters' Row 11 cells off the
-  Sunken Ditch. The fix is re-cutting the doors between the cores, which is a
-  world change, not a rendering change. rome's call, not mine.
+**THE MAP IS LAID OUT FLAT, ONCE — IT IS DATA NOW** *(2026-08-03, mig 166 +
+`lore.ts worldGrid` + the pipeline)*. rome, after the third time I broke it:
+*"HAVE THE FUCKING MAP LAID OUT FUCKING FLAT AND THEN JUST FILL IN THE FUCKING
+ROOMS WHEN YOU FUCKING EXPLORE IT."* He had said it before and was right every
+time. **I kept treating a room's place on the paper as something to COMPUTE** —
+walk the graph at load, drop rooms onto a plane, resolve the collisions. Three
+versions, all failing identically, because a collision anywhere moves a room and
+a moved room drags everything placed through it: one grid per band (30 den arrows
+wrong), one per region (the den ground spiralled into a corner), one per
+contradiction-free piece with small-clash eviction (**96 rooms punted out of
+position, including a GATE** — which is what he caught: the Roadwarden's Post
+drawn nowhere near the Weed Paving it opens onto).
+- **A room's square is a FACT about the room, like its name.** `map_x`/`map_y` on
+  the row, baked once by mig 166 for all 408 rooms. `worldGrid` now *reads* them
+  — two hundred lines of placement machinery deleted. Nothing derived, nothing
+  collides, nothing moves, and **adding a region cannot disturb a single room
+  that is already drawn**, so a square you learned last week is the same square
+  next week. That is what a map is for.
+- **The pipeline authors squares for new ground**, walked outward from the baked
+  coordinates of the rooms it attaches to, and emits them in the migration. New
+  regions land against the world in the direction their own doors say.
+- **Measured off the live frame: 408 rooms, 0 overlapping squares**, den 0/154
+  arrows wrong, road 4/136, sky 0/10, warrens 2/22, out 4/26, upper 10/54,
+  deep 21/55.
+- **The wood is 226/410 and that is now a DATA defect, not a layout one.** Its
+  eight maze cores were wired for connectivity rather than geometry so its loops
+  do not close, and no grid can satisfy them. Frozen wrong beats differently
+  wrong every deploy: it can now be corrected one door at a time. Same for the
+  handful of cross-region seams still drawn a few squares apart — they are
+  numbers in a table now, editable by hand.
 
 **THE DEN SYSTEM IS BUILT** *(2026-08-03, mig 162 + `game-server/src/den.ts`)*.
 Every ruling below is his, from the arc pass and the dens→towns design — this

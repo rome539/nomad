@@ -166,312 +166,41 @@ export interface WorldGrid {
 export function worldGrid(z: ZoneDO): WorldGrid {
   if (z.mapGrid) return z.mapGrid;
   const world = z.world!;
+  // THE MAP IS LAID OUT FLAT, AND THIS JUST READS IT (rome, 2026-08-03: "HAVE
+  // THE FUCKING MAP LAID OUT FUCKING FLAT AND THEN JUST FILL IN THE FUCKING
+  // ROOMS WHEN YOU FUCKING EXPLORE IT").
+  //
+  // What used to be here: two hundred lines that walked the whole graph at load,
+  // dropped every room onto a shared plane, and resolved the collisions — by
+  // shoving rooms aside, then by shoving whole regions aside, then by evicting
+  // the few rooms in the way. Every version failed identically, because they all
+  // shared one assumption: that a room's place is something to WORK OUT. It
+  // isn't. A collision anywhere moves a room, a moved room drags everything
+  // placed through it, and the answer changes every time the world grows — so a
+  // square you learned last week is somewhere else this week. That is the
+  // opposite of a map.
+  //
+  // A room's place on the paper is a FACT about the room, like its name. It
+  // lives in the row (map_x / map_y, mig 166), baked once. Nothing is derived,
+  // nothing collides, nothing moves, and adding a region cannot disturb a single
+  // room that was already drawn. The client fills in what you have walked.
   const at = new Map<string, { x: number; y: number }>();
-  const bands: { band: number; x: number; y: number }[] = [];
-  const DELTA: Record<string, [number, number]> = {
-    north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0], up: [-1, -1], down: [1, 1],
-  };
-  const bandOf = (id: string) => MAP_BAND_OF[mapRegionOf(z, id)] ?? 1;
-  const byBand = new Map<number, string[]>();
-  for (const id of world.rooms.keys()) {
-    const b = bandOf(id);
-    const list = byBand.get(b) ?? [];
-    list.push(id);
-    byBand.set(b, list);
+  for (const room of world.rooms.values()) {
+    if (room.map_x === null || room.map_x === undefined) continue;
+    at.set(room.id, { x: room.map_x, y: room.map_y ?? 0 });
   }
-  // LAY EACH PIECE OF GROUND OUT SEPARATELY, NOT EACH BAND (rome, 2026-08-03:
-  // "why the fuck when i go east from the street head to north croft, on the
-  // fucking map north croft looks fucking north").
-  //
-  // He is right and it was a real bug. The walk was one grid per BAND, correct
-  // while a band WAS a region — the fortress's three strata — and wrong the day
-  // band 1 came to hold the fortress, the road, the wood and the dens, 390 rooms
-  // on one coordinate plane. Two rooms nowhere near each other land on the same
-  // cell, `claim` shoves the loser to the nearest free square, and every room
-  // the walk reaches THROUGH that one inherits the shove. The wood is a 170-room
-  // maze that folds back on itself constantly; it was scattering displaced rooms
-  // across the plane and the dens were laid into the wreckage. Measured: 30 of
-  // the den's 154 horizontal exits drawn pointing the wrong way.
-  //
-  // THE UNIT IS A PIECE OF GROUND THAT DOESN'T CONTRADICT ITSELF.
-  //
-  // Two wrong answers on the way here, both worth recording because both are
-  // tempting. (1) One grid per REGION: the den ground is two places joined only
-  // through a ROAD room, so as one patch it carried a 40-cell hole between its
-  // halves, fitted nowhere, and got spiralled into the corner — "the dens isnt
-  // even fucking connected to the road or woods, ITS FUCKING ALL THE WAY ON THE
-  // BOTTOM LEFT". Worse than the bug. (2) One grid per CONNECTED region-piece:
-  // fixes that, but the wood is one connected piece whose doors genuinely
-  // contradict each other, so it still embeds as a huge misshapen blob that
-  // shoulders its neighbours out of position.
-  //
-  // So a piece is cut where the ground argues with itself: embed it, and if any
-  // door comes out drawn wrong, that door is a contradiction — cut it and embed
-  // the parts. Repeat. What falls out is the natural joints of the place (the
-  // wood's eight maze cores separate themselves), and each piece is then a
-  // patch that CAN be drawn honestly. Measured: every horizontal den exit right,
-  // and the wood's own wrong-arrow count 214 -> 154.
-  const regionOfId = (id: string) => mapRegionOf(z, id);
-  const OPP: Record<string, string> = { north: "south", south: "north", east: "west", west: "east" };
-  type Piece = { region: string; band: number; rooms: string[]; local: Map<string, { x: number; y: number }> };
-
-  // Flood a set of rooms into connected groups, refusing to cross a cut door.
-  const groupsOf = (ids: Set<string>, cut: Set<string>): Set<string>[] => {
-    const seen = new Set<string>();
-    const out: Set<string>[] = [];
-    for (const id of [...ids].sort()) {
-      if (seen.has(id)) continue;
-      const group = new Set<string>([id]);
-      seen.add(id);
-      const stack = [id];
-      while (stack.length) {
-        const cur = stack.pop()!;
-        for (const e of world.exits.get(cur) ?? []) {
-          if (seen.has(e.to_room) || !ids.has(e.to_room) || cut.has(`${cur}|${e.dir}|${e.to_room}`)) continue;
-          seen.add(e.to_room);
-          group.add(e.to_room);
-          stack.push(e.to_room);
-        }
-      }
-      out.push(group);
-    }
-    return out;
-  };
-
-  // Walk a group onto its own grid, and report every door that came out wrong.
-  const embed = (ids: Set<string>) => {
-    const local = new Map<string, { x: number; y: number }>();
-    const occupied = new Set<string>();
-    const claim = (id: string, x: number, y: number) => {
-      if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); local.set(id, { x, y }); return; }
-      for (let ring = 1; ring <= 60; ring++) {
-        for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
-          if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
-          if (!occupied.has(`${x + dx},${y + dy}`)) {
-            occupied.add(`${x + dx},${y + dy}`);
-            local.set(id, { x: x + dx, y: y + dy });
-            return;
-          }
-        }
-      }
-      local.set(id, { x, y });
-    };
-    const sorted = [...ids].sort();
-    const anchor = sorted.find((r) => world.entryRooms.has(r)) ?? sorted[0];
-    claim(anchor, 0, 0);
-    const queue = [anchor];
-    while (queue.length) {
-      const cur = queue.shift()!;
-      const p = local.get(cur)!;
-      for (const e of world.exits.get(cur) ?? []) {
-        if (local.has(e.to_room) || !ids.has(e.to_room)) continue;
-        const d = DELTA[e.dir];
-        if (!d) continue;
-        claim(e.to_room, p.x + d[0], p.y + d[1]);
-        queue.push(e.to_room);
-      }
-    }
-    const wrong: { from: string; dir: string; to: string }[] = [];
-    for (const id of ids) {
-      for (const e of world.exits.get(id) ?? []) {
-        if (!ids.has(e.to_room) || !OPP[e.dir]) continue;
-        const a = local.get(id)!, b = local.get(e.to_room)!;
-        const d = DELTA[e.dir];
-        if (a.x + d[0] !== b.x || a.y + d[1] !== b.y) wrong.push({ from: id, dir: e.dir, to: e.to_room });
-      }
-    }
-    return { local, wrong };
-  };
-
-  const byRegion = new Map<string, Set<string>>();
-  for (const id of world.rooms.keys()) {
-    const r = regionOfId(id);
-    const set = byRegion.get(r) ?? new Set<string>();
-    set.add(id);
-    byRegion.set(r, set);
+  // The stratum labels hang off the baked coordinates — top-left of whatever
+  // that band actually occupies, so they follow the ground rather than leading it.
+  const box = new Map<number, { minX: number; minY: number }>();
+  for (const [id, p] of at) {
+    const band = MAP_BAND_OF[mapRegionOf(z, id)] ?? 1;
+    const b = box.get(band);
+    if (!b) box.set(band, { minX: p.x, minY: p.y });
+    else { b.minX = Math.min(b.minX, p.x); b.minY = Math.min(b.minY, p.y); }
   }
-  const pieces: Piece[] = [];
-  for (const [region, rooms] of byRegion) {
-    const band = MAP_BAND_OF[region] ?? 1;
-    const work = groupsOf(rooms, new Set());
-    let guard = 0;
-    while (work.length && guard++ < 4000) {
-      const group = work.pop()!;
-      const { local, wrong } = embed(group);
-      // A tiny group is kept whatever it says — cutting a handful of rooms into
-      // singletons buys nothing and costs every arrow between them.
-      if (wrong.length && group.size > 4) {
-        const cut = new Set<string>();
-        for (const w of wrong) { cut.add(`${w.from}|${w.dir}|${w.to}`); cut.add(`${w.to}|${OPP[w.dir]}|${w.from}`); }
-        const parts = groupsOf(group, cut);
-        if (parts.length > 1) { work.push(...parts); continue; }
-        // Cutting didn't separate it (the contradiction is inside a loop) — keep
-        // it as it is. This is ground that no grid can draw honestly.
-      }
-      pieces.push({ region, band, rooms: [...group], local });
-    }
-  }
-
-  // NOW PUT THE PIECES BACK NEXT TO EACH OTHER, band by band. A piece goes where
-  // the average of its doors into already-placed ground puts it — a road leaving
-  // the wood heading east lands east of the wood — and the order is GREEDY BY
-  // DOOR COUNT, so nothing is ever positioned off one lucky exit. A piece moves
-  // WHOLE and is never reshaped: a crowded seam costs a gap BETWEEN two pieces,
-  // never a wrong arrow inside one.
-  const localOf = new Map<number, Map<string, { x: number; y: number }>>();
-  for (const band of [...byBand.keys()].sort((a, b) => a - b)) {
-    const mine = pieces.filter((p) => p.band === band);
-    if (!mine.length) { localOf.set(band, new Map()); continue; }
-    const local = new Map<string, { x: number; y: number }>();
-    const placed = new Set<Piece>();
-    const wanted = (piece: Piece) => {
-      let sx = 0, sy = 0, n = 0;
-      for (const [id, p] of piece.local) {
-        for (const e of world.exits.get(id) ?? []) {
-          const to = local.get(e.to_room);
-          const d = DELTA[e.dir];
-          if (!to || !d) continue;
-          sx += (to.x - d[0]) - p.x;
-          sy += (to.y - d[1]) - p.y;
-          n++;
-        }
-      }
-      return { x: n ? Math.round(sx / n) : 0, y: n ? Math.round(sy / n) : 0, votes: n };
-    };
-    // A SMALL CLASH MOVES THE FEW ROOMS IN THE WAY, NOT THE WHOLE PIECE (rome,
-    // 2026-08-03, third time round on this map: "it still looks fucking off").
-    //
-    // Measured why: the hamlet — 34 rooms — was landing NINE cells off the road
-    // it opens onto, because exactly THREE of its squares wanted ground a road
-    // pocket already held. Insisting the whole patch clear meant a 3-cell clash
-    // threw 34 rooms across the paper, which is the "not even connected to the
-    // road" he was looking at. So: if only a handful of squares clash, the piece
-    // goes down exactly where its doors say and the few ALREADY-PLACED rooms
-    // sitting there are pushed to the nearest free square instead. The piece
-    // that arrives has more evidence behind it (it is chosen for having the most
-    // doors into placed ground), and one nudged pocket room costs the map far
-    // less than a detached hamlet. Only a big clash still moves the whole patch.
-    const SMALL_CLASH = (n: number) => Math.max(2, Math.floor(n * 0.1));
-    const owner = new Map<string, string>();
-    const drop = (piece: Piece, want: { x: number; y: number }) => {
-      const clash: string[] = [];
-      for (const p of piece.local.values()) {
-        const k = `${p.x + want.x},${p.y + want.y}`;
-        if (owner.has(k)) clash.push(k);
-      }
-      let ox = want.x, oy = want.y;
-      if (clash.length > SMALL_CLASH(piece.local.size)) {
-        const fits = (dx: number, dy: number) => {
-          for (const p of piece.local.values()) if (owner.has(`${p.x + dx},${p.y + dy}`)) return false;
-          return true;
-        };
-        if (!fits(ox, oy)) {
-          outer: for (let ring = 1; ring <= 400; ring++) {
-            for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
-              if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
-              if (fits(want.x + dx, want.y + dy)) { ox = want.x + dx; oy = want.y + dy; break outer; }
-            }
-          }
-        }
-      }
-      // Claim the whole patch FIRST — an evicted room must never be pushed onto
-      // a square this piece is about to stand on.
-      const evicted: string[] = [];
-      for (const [id, p] of piece.local) {
-        const c = { x: p.x + ox, y: p.y + oy };
-        const k = `${c.x},${c.y}`;
-        const sitting = owner.get(k);
-        if (sitting) evicted.push(sitting);
-        owner.set(k, id);
-        local.set(id, c);
-      }
-      for (const id of evicted) {
-        const from = local.get(id)!;
-        found: for (let ring = 1; ring <= 60; ring++) {
-          for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
-            if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
-            const k = `${from.x + dx},${from.y + dy}`;
-            if (!owner.has(k)) {
-              owner.set(k, id);
-              local.set(id, { x: from.x + dx, y: from.y + dy });
-              break found;
-            }
-          }
-        }
-      }
-      placed.add(piece);
-    };
-    drop(mine.find((p) => p.rooms.includes(world.entryRoom))
-      ?? mine.slice().sort((a, b) => b.rooms.length - a.rooms.length)[0], { x: 0, y: 0 });
-    for (;;) {
-      let best: Piece | undefined;
-      let bestWant = { x: 0, y: 0, votes: 0 };
-      for (const piece of mine) {
-        if (placed.has(piece)) continue;
-        const w = wanted(piece);
-        if (w.votes > bestWant.votes) { best = piece; bestWant = w; }
-      }
-      if (best) { drop(best, bestWant); continue; }
-      // Nothing left with a door into placed ground — park the rest clear to the
-      // right rather than dropping them on somebody. (Only ever islands: ground
-      // that connects to this band solely through another one.)
-      const rest = mine.filter((p) => !placed.has(p));
-      if (!rest.length) break;
-      let edge = 0;
-      for (const p of local.values()) edge = Math.max(edge, p.x);
-      for (const piece of rest.sort((a, b) => b.rooms.length - a.rooms.length)) {
-        drop(piece, { x: edge + 6, y: 0 });
-        for (const p of local.values()) edge = Math.max(edge, p.x);
-      }
-      break;
-    }
-    localOf.set(band, local);
-  }
-
-  // ALIGN THE STRATA BY THEIR STAIRS (rome, 2026-08-02: "the overworks and deep
-  // are so far left"). Each band was previously pushed to its own left edge, so
-  // a 7-room overworks and a 216-room surface both started at x=0 and the deep
-  // sat nowhere near the fortress it lies under. A cutaway is only honest if a
-  // stair goes straight down: so a band's horizontal offset is chosen to line
-  // its stair-heads up with the band it descends from. Averaged over every link,
-  // because a band with several stairs cannot satisfy all of them exactly.
-  const order = [...byBand.keys()].sort((a, b) => a - b);
-  const offX = new Map<number, number>();
-  const rootBand = bandOf(world.entryRoom);
-  offX.set(rootBand, 0);
-  for (let pass = 0; pass < order.length; pass++) {
-    for (const band of order) {
-      if (offX.has(band)) continue;
-      const local = localOf.get(band)!;
-      let sum = 0, n = 0;
-      for (const [id, p] of local) {
-        for (const e of world.exits.get(id) ?? []) {
-          const other = bandOf(e.to_room);
-          if (other === band || !offX.has(other)) continue;
-          const op = localOf.get(other)!.get(e.to_room);
-          if (!op) continue;
-          sum += (op.x + offX.get(other)!) - p.x;
-          n++;
-        }
-      }
-      if (n) offX.set(band, Math.round(sum / n));
-    }
-  }
-  // Strata stack in order, each below the last, with a fixed gap for its label.
-  let stackY = 0;
-  for (const band of order) {
-    const local = localOf.get(band)!;
-    let minY = Infinity, maxY = -Infinity, minX = Infinity;
-    for (const p of local.values()) {
-      if (p.y < minY) minY = p.y;
-      if (p.y > maxY) maxY = p.y;
-      if (p.x < minX) minX = p.x;
-    }
-    const dx = offX.get(band) ?? 0;
-    for (const [id, p] of local) at.set(id, { x: p.x + dx, y: p.y - minY + stackY });
-    bands.push({ band, x: minX + dx - 0.35, y: stackY - 1.05 });
-    stackY += (maxY - minY) + 3.4;
-  }
+  const bands = [...box.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([band, b]) => ({ band, x: b.minX - 0.35, y: b.minY - 1.05 }));
   z.mapGrid = { at, bands };
   return z.mapGrid;
 }

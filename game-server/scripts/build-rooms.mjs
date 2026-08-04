@@ -50,6 +50,12 @@ import { execFileSync } from "node:child_process";
 
 const DIRS = new Set(["north", "south", "east", "west", "up", "down"]);
 const OPPOSITE = { north: "south", south: "north", east: "west", west: "east", up: "down", down: "up" };
+// A compass step on the paper (mig 166). Up/down are drawn as diagonals — a
+// cutaway, so a stair reads as going somewhere rather than landing on its own
+// landing. Same table the bake used, and it must stay the same table.
+const DELTA = {
+  north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0], up: [-1, -1], down: [1, 1],
+};
 const ID_RE = /^[a-z][a-z0-9-]*$/;
 const MIN_DESC = 40; // shorter than this is a placeholder, not a room
 
@@ -168,6 +174,7 @@ for (const file of files) {
 let liveRooms = new Set();
 let liveExits = new Map(); // room -> [{dir, to}]
 let liveEntries = new Set();
+const liveCoords = new Map(); // room id -> its baked square on the paper (mig 166)
 let worldKnown = false;
 
 if (!flags.has("--offline")) {
@@ -179,9 +186,12 @@ if (!flags.has("--offline")) {
         { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024 });
       return JSON.parse(out)[0].results;
     };
-    for (const r of q("SELECT id, is_entry FROM rooms;")) {
+    for (const r of q("SELECT id, is_entry, map_x, map_y FROM rooms;")) {
       liveRooms.add(r.id);
       if (r.is_entry) liveEntries.add(r.id);
+      // Where the world already sits on the paper (mig 166) — the seed the new
+      // ground is laid out from, so nothing already drawn ever moves.
+      if (r.map_x !== null && r.map_x !== undefined) liveCoords.set(r.id, { x: r.map_x, y: r.map_y ?? 0 });
     }
     for (const e of q("SELECT room_id, dir, to_room FROM exits;")) {
       if (!liveExits.has(e.room_id)) liveExits.set(e.room_id, []);
@@ -379,6 +389,77 @@ console.log(`ok: ${rooms.size} rooms, ${exitCount} exits, ${warnings.length} war
 if (flags.has("--check")) process.exit(0);
 if (!outFile) { console.log("(no --out given; nothing written)"); process.exit(0); }
 
+// ---- lay the new ground out on the paper ---------------------------------
+//
+// THE MAP IS DATA (mig 166). A room's square is a fact about the room, not
+// something the server works out at load, so the pipeline has to author it —
+// exactly the way it authors the room's name. New rooms are walked out from the
+// EXISTING rooms they attach to, using their baked coordinates as the seed, so a
+// new region lands against the world in the direction its own doors say and not
+// one square anywhere else moves.
+//
+// Where the new ground contradicts itself (a loop whose compass steps don't
+// close) the walk puts the loser on the nearest free square, same as the bake
+// did. That is a defect in the ROOMS, and it is now visible, fixed, and fixable
+// one door at a time instead of shifting under you every deploy.
+const coords = new Map();
+if (worldKnown) {
+  for (const [id, p] of liveCoords) coords.set(id, p);
+  const occupied = new Set([...coords.values()].map((p) => `${p.x},${p.y}`));
+  const claim = (id, x, y) => {
+    if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); coords.set(id, { x, y }); return true; }
+    for (let ring = 1; ring <= 200; ring++) {
+      for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
+        if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
+        if (!occupied.has(`${x + dx},${y + dy}`)) {
+          occupied.add(`${x + dx},${y + dy}`);
+          coords.set(id, { x: x + dx, y: y + dy });
+          return false;
+        }
+      }
+    }
+    coords.set(id, { x, y });
+    return false;
+  };
+  // Seed: every new room that touches ground already on the paper.
+  const queue = [];
+  let shoved = 0;
+  for (const r of rooms.values()) {
+    if (r.existing || coords.has(r.id)) continue;
+    for (const e of r.exits) {
+      const anchor = coords.get(e.target);
+      const d = DELTA[e.dir];
+      if (!anchor || !d) continue;
+      // MINUS, not plus: `dir` points from the NEW room to the old one, so the
+      // new room sits back the other way. (Got this backwards first time and the
+      // probe landed three squares west of where its own door said.)
+      if (!claim(r.id, anchor.x - d[0], anchor.y - d[1])) shoved++;
+      queue.push(r.id);
+      break;
+    }
+  }
+  // ...and outward from those, through the new ground.
+  for (let h = 0; h < queue.length; h++) {
+    const p = coords.get(queue[h]);
+    for (const e of (rooms.get(queue[h])?.exits ?? [])) {
+      if (coords.has(e.target) || !rooms.has(e.target)) continue;
+      const d = DELTA[e.dir];
+      if (!d) continue;
+      if (!claim(e.target, p.x + d[0], p.y + d[1])) shoved++;
+      queue.push(e.target);
+    }
+  }
+  // Anything the walk never reached (an island attached only through a room in
+  // another region) goes clear to the right of everything, once.
+  let edge = 0;
+  for (const p of coords.values()) edge = Math.max(edge, p.x);
+  for (const r of rooms.values()) {
+    if (r.existing || coords.has(r.id)) continue;
+    claim(r.id, edge += 3, 0);
+  }
+  if (shoved) warnings.push(`${shoved} new room${shoved === 1 ? "" : "s"} could not sit where ${shoved === 1 ? "its" : "their"} own exits say — the ground contradicts itself there (a loop whose compass steps don't close). Drawn on the nearest free square; fix the doors if it matters.`);
+}
+
 // ---- emit ----------------------------------------------------------------
 
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
@@ -391,8 +472,9 @@ out.push("");
 for (const r of rooms.values()) {
   if (r.existing) out.push(`-- ${r.id}: existing room, new doors only`);
   else {
-    out.push(`INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn) VALUES`);
-    out.push(`  (${q(r.id)}, 'door', ${q(r.name)}, ${q(r.desc)}, ${r.entry ? 1 : 0}, ${r.safe ? 1 : 0}, ${q(r.region)}, ${r.spawn ? 1 : 0});`);
+    const at = coords.get(r.id);
+    out.push(`INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, map_x, map_y) VALUES`);
+    out.push(`  (${q(r.id)}, 'door', ${q(r.name)}, ${q(r.desc)}, ${r.entry ? 1 : 0}, ${r.safe ? 1 : 0}, ${q(r.region)}, ${r.spawn ? 1 : 0}, ${at ? at.x : "NULL"}, ${at ? at.y : "NULL"});`);
   }
   for (const e of r.exits) {
     out.push(`INSERT INTO exits (room_id, dir, to_room, key_item) VALUES (${q(r.id)}, ${q(e.dir)}, ${q(e.target)}, ${e.key ? q(e.key) : "NULL"});`);
