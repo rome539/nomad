@@ -3,7 +3,7 @@
 // boss's rage, and the migration that refills the world. Free functions over a
 // ZoneDO (its tick and combat live in zone.ts and call in here).
 import type { ZoneDO } from "./zone";
-import { denBarred } from "./den";
+import { shelteredInDen } from "./den";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
 import { hasTrait } from "./world";
@@ -441,8 +441,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // that way, a den is safe because a nomad carried iron out here and hung a
     // door on it. An unbarred den is an ordinary room and things walk straight
     // in, which is the whole point of the upgrade.
-    if (world.safeRooms.size || z.dens.size) {
-      const open = exits.filter((e) => !world.safeRooms.has(e.to_room) && !denBarred(z, e.to_room));
+    // (A den no longer makes its ROOM unenterable — it is a door off a public
+    // site now, mig 172 — so only the world's own safe rooms steer a wanderer.
+    // What a barred door does is put the person behind it out of reach, which is
+    // enforced where creatures choose a target, not where they choose a step.)
+    if (world.safeRooms.size) {
+      const open = exits.filter((e) => !world.safeRooms.has(e.to_room));
       if (open.length) exits = open; // never strand (creatures are never inside one)
     }
     // Every gate is the dungeon's threshold — cold air and the way out. No
@@ -735,7 +739,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // instead (the act loop's rouse handles it next tick), so a grudge is the
       // only thing that strikes on arrival here.
       for (const s of z.sessions.values()) {
-        if (s.roomId === creature.roomId && !z.outOfWorld(s) && !creature.target
+        if (s.roomId === creature.roomId && z.reachable(s) && !creature.target
             && remembers(z, creature, s.pubkey, now)) {
           creature.target = s.pubkey;
           z.send(s, `${cap(tmpl.name)} remembers you — and comes for you.`);
@@ -966,7 +970,10 @@ export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
   }
 
 export function playerPresent(z: ZoneDO, roomId: string): boolean {
-    for (const s of z.sessions.values()) if (s.roomId === roomId && !z.outOfWorld(s)) return true;
+    // Somebody behind a barred den door is IN the room and out of reach of
+    // everything in it (mig 172) — a creature neither smells them, waits for
+    // them, nor counts them as company.
+    for (const s of z.sessions.values()) if (s.roomId === roomId && z.reachable(s)) return true;
     return false;
   }
 
@@ -1164,7 +1171,7 @@ export function deadRemembers(z: ZoneDO, creature: Creature, now: number): void 
     if (!HOLLOW.has(creature.templateId) || creature.target) return;
     if (creature.murmuredAt && now - creature.murmuredAt < MURMUR_COOLDOWN_MS) return;
     const ears = [...z.sessions.values()].filter(
-      (s) => s.roomId === creature.roomId && !z.outOfWorld(s) && s.hp > 0,
+      (s) => s.roomId === creature.roomId && z.reachable(s) && s.hp > 0,
     );
     if (ears.length === 0 || !chance(MURMUR_ODDS)) return;
     const world = z.world!;

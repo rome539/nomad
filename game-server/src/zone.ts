@@ -115,6 +115,11 @@ export class ZoneDO implements DurableObject {
   // (mig 171). Outlives the hold that was standing at the time, so it is kept
   // apart from `dens` and never cleared by a lapse or an abandon.
   public denBlood = new Map<string, Set<string>>();
+  // Who has stepped through a den's door: pubkey -> the HOLDER of the den they
+  // are inside (the room is their session's room). The street outside stays
+  // public; a BARRED door is what actually puts you out of the world's reach
+  // (mig 172). Persisted, so a dropped socket does not put you out in the open.
+  public inDen = new Map<string, string>();
   // Open player-to-player trades (trade.ts) — dealId -> Deal. In-memory only,
   // same as `buying`: a DO wake never restores one, and it needs no D1 row of
   // its own (settlement is the only part that touches D1, and it's atomic).
@@ -439,6 +444,7 @@ export class ZoneDO implements DurableObject {
       this.groundRolled = new Map(Object.entries(saved.groundRolled ?? {}));
       this.groundHeart = new Map(Object.entries(saved.groundHeart ?? {}));
       this.inGatehouse = new Set(saved.inGatehouse ?? []);
+      this.inDen = new Map(saved.inDen ?? []);
       this.wallMarks = new Set(saved.wallMarks ?? []);
       this.stoneNames = new Map(Object.entries(saved.stoneNames ?? {}));
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
@@ -706,6 +712,7 @@ export class ZoneDO implements DurableObject {
       groundRolled: Object.fromEntries(this.groundRolled),
       groundHeart: Object.fromEntries(this.groundHeart),
       inGatehouse: [...this.inGatehouse],
+      inDen: [...this.inDen],
       wallMarks: [...this.wallMarks],
       stoneNames: Object.fromEntries(this.stoneNames),
       cacheSpent: Object.fromEntries(this.cacheSpent),
@@ -1344,8 +1351,16 @@ export class ZoneDO implements DurableObject {
       case "listen": return verbs.cmdListen(this, session, cmd.arg);
       case "dive": return verbs.cmdDive(this, session, cmd.arg);
       case "wash": return verbs.cmdWash(this, session);
-      case "enter": return gate.enterGatehouse(this, session);
-      case "exit": return this.leaveGatehouse(session);
+      // 'in' and 'out' mean the nearest door. On a den site that is somebody's
+      // own door off a public street (mig 172); everywhere else it is the gate's,
+      // as it always was. den.cmdEnterDen returns false when no door here opens
+      // to you, so the gatehouse keeps every case it ever had.
+      case "enter":
+        if (den.cmdEnterDen(this, session, cmd.arg)) return;
+        return gate.enterGatehouse(this, session);
+      case "exit":
+        if (den.cmdLeaveDen(this, session)) return;
+        return this.leaveGatehouse(session);
       case "tell": return gate.cmdTell(this, session, cmd.arg);
       case "deal": return trade.cmdDeal(this, session, cmd.arg);
       // THE DENS (mig 162) — living somewhere, which is its own module.
@@ -2475,6 +2490,21 @@ export class ZoneDO implements DurableObject {
     // twice). Trust inGatehouse FIRST so that drift can never un-insulate you;
     // `away && at-a-gate` still covers the pack-crouch at a gate (never inGatehouse).
     return this.inGatehouse.has(s.pubkey) || (s.away && this.world!.entryRooms.has(s.roomId));
+  }
+
+  // BEHIND A BARRED DOOR (mig 172). Not the same as outOfWorld — you are still
+  // in the room, you can still be shouted at, and the chip row is the den's, not
+  // the gatehouse's. What it means is that nothing out on the ground can put a
+  // hand on you: creatures do not see you, steel cannot find you, and you are not
+  // listed among the people standing there. An UNBARRED door gives none of this,
+  // which is the whole of the den's founding rule.
+  public shelteredInDen(pubkey: string): boolean {
+    return den.shelteredInDen(this, pubkey);
+  }
+
+  // Can the world reach this wanderer at all, right now?
+  public reachable(s: Session): boolean {
+    return !this.outOfWorld(s) && !this.shelteredInDen(s.pubkey);
   }
 
   // The dogpile cap, shared across every blow-landing path in a tick: swings in
@@ -4399,6 +4429,11 @@ export class ZoneDO implements DurableObject {
       await clearCarriedInventory(this.env.DB, victim.pubkey, this.tradeLocked.size ? [...this.tradeLocked] : undefined);
     }
     victim.items = [];
+    // Dying puts you out of whatever door you were behind (mig 172). You wake at
+    // a gate; nothing of yours is left inside — a shelf was never carried — and
+    // the flag must not survive you, or a corpse would respawn "indoors" in a
+    // room it is no longer standing in.
+    den.leaveDen(this, victim.pubkey);
     // The relay hears that someone died — never who did it. The killer's name
     // is spoken only into the room itself (witnesses are eyes, not feeds);
     // everywhere else the evidence is the blood on their hands (pvp.bloodClause).
@@ -4709,7 +4744,10 @@ export class ZoneDO implements DurableObject {
     // that lets you see it — same law as the look (verbs.describePlayer).
     const canReadStains = !events.foggy(this, room.id) && !events.raining(this, room.id);
     for (const s of this.sessions.values()) {
-      if (s.pubkey !== session.pubkey && s.roomId === room.id && !this.outOfWorld(s)) {
+      // Somebody behind a barred door is not standing on the ground with you
+      // (mig 172) — you cannot see them, name them, or put steel in them. The
+      // doors themselves are counted by denRoomLine, without names.
+      if (s.pubkey !== session.pubkey && s.roomId === room.id && this.reachable(s)) {
         lines.push(`${s.name} is here${s.resting ? ", resting" : ""}.${canReadStains ? pvp.bloodClause(this, s.pubkey) : ""}`);
       }
     }

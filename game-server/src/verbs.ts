@@ -688,11 +688,13 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     z.creatureNoise(session.roomId);
   }
 
-  // A BARRED DEN IS SHUT TO YOU (mig 162). Checked before anything else that
-  // could cost you a beat: you never pay a parting blow or wake a listener
-  // walking into a door that was never going to open.
-  const barred = den.barredAgainst(z, exit.to_room, session.pubkey);
-  if (barred) return z.send(session, barred);
+  // A ROOM IS NEVER BARRED ANY MORE — A DOOR IS (mig 172). While a holding was
+  // one house, barring it barred the whole ROOM, which meant one nomad with a
+  // piece of iron could shut a public street. The site model puts the bar back
+  // where it belongs: on the door of the den itself. So walking on is never
+  // refused; it just takes you out of your own doorway first, because you cannot
+  // leave the ground without stepping onto it.
+  den.leaveDen(z, session.pubkey);
 
   // A SENTINEL guards the way deeper. Asleep, you can step over it — and that
   // rouses it (you've opened the deep, and now it's up for whoever comes next).
@@ -1646,7 +1648,7 @@ function heardIn(z: ZoneDO, roomId: string): string {
   // People never hide under the beasts: stillness leaks sound (shifting,
   // breath, gear creak), so a gate-camper is always there for a pressed ear
   // to find. rome's anti-camping law, made a read.
-  const folk = [...z.sessions.values()].filter((s) => s.roomId === roomId && !z.outOfWorld(s));
+  const folk = [...z.sessions.values()].filter((s) => s.roomId === roomId && z.reachable(s));
   if (folk.length > 0) {
     // A full pack betrays its owner even standing still — loose iron can't
     // hold its breath. The other half of the burden law: the fat run is loud.
@@ -2010,7 +2012,7 @@ export function findItemIn(z: ZoneDO, itemIds: string[], arg: string, roomId?: s
 // already refuses them, so look must not describe them either (rome, 2026-07-12).
 export function findPlayerIn(z: ZoneDO, roomId: string, arg: string): Session | null {
   for (const s of z.sessions.values()) {
-    if (s.roomId === roomId && !z.outOfWorld(s) && s.name.toLowerCase().startsWith(arg)) return s;
+    if (s.roomId === roomId && z.reachable(s) && s.name.toLowerCase().startsWith(arg)) return s;
   }
   return null;
 }

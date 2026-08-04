@@ -224,24 +224,29 @@ export function sendCtx(z: ZoneDO, session: Session): void {
       suggest.push("read stone");
       if (!(z.stoneNames.get(session.roomId) ?? []).some((c) => c.name === session.name)) suggest.push("carve");
     }
-    // A HOLDING says what it will take from you, right there in the chip row
-    // (mig 162). An empty roof offers 'settle'; your own offers the door and the
-    // shelf; somebody else's offers nothing at all, because there is nothing you
-    // can do with a house that is not yours.
+    // A SITE says what you can do on it, right there in the chip row (migs
+    // 162/172). Out on the ground: step through a door of yours, or raise one —
+    // and raising one is offered to EVERYBODY, because the ground is never used
+    // up. Behind a door: the shelf, the bar, and the way out.
     if (den.isHolding(z, session.roomId)) {
-      const here = den.denAt(z, session.roomId);
+      const inside = den.insideOf(z, session.pubkey);
+      const doors = den.doorsOpenTo(z, session.roomId, session.pubkey);
       // 'stow' is the DEN_CHIP: the client intercepts it and opens the keeping
       // modal with the shelf as a column, exactly as 'inventory' does (rome,
       // 2026-08-04). Typing 'stow <item>' still moves one thing by name — the
       // chip has never been the only way to do anything. Must match DEN_CHIP in
       // public.ts.
-      if (!here) suggest.push("settle");
-      else if (here.holder === session.pubkey) {
-        suggest.push("den");
-        if (!here.barred) suggest.push("bar");
+      if (inside) {
+        // Behind your own door: the shelf, the bar, and the way back out.
+        suggest.push("out", "den");
+        if (inside.holder === session.pubkey && !inside.barred) suggest.push("bar");
         suggest.push(DEN_CHIP);
-      } else if (here.keys.has(session.pubkey)) {
-        suggest.push("den", DEN_CHIP);
+      } else {
+        // Out on the site. A door of yours to step through, and always the
+        // option of raising one — the ground is never used up (mig 172).
+        if (doors.length) suggest.push("in");
+        if (!den.myDen(z, session.pubkey)) suggest.push("settle");
+        if (doors.length) suggest.push("den", DEN_CHIP);
       }
     }
     // Knowledge you carry: open a map or the journal (each pops its modal).

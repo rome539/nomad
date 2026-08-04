@@ -1,0 +1,35 @@
+-- THE ROAD KEEPS ONE DOOR (rome, 2026-08-04: "when i said haveing people spawn
+-- on the road i mean randomly and only have it as '1 gate'").
+--
+-- The road had TWO gates. He asked for one, and he was right that it was wrong —
+-- he just pointed at the wrong one, and the walk-lengths say so plainly:
+--
+--   road keeps both (today) ........... worst walk to a bank on the road: 10
+--   road keeps the Roadwarden's Post .. 11
+--   road keeps the First Milestone .... 21   <- the west end goes to ruin
+--
+-- THE FIRST MILESTONE IS THE REDUNDANT ONE. It stands four rooms out from the
+-- fortress's own three doors: a fourth fortress gate wearing a road's name.
+-- Cutting it costs exactly one room of walking, because anybody who could reach
+-- it could already see the keep. The Roadwarden's Post is what actually banks the
+-- far road — cut THAT and the west end goes from a ten-room walk to twenty-one.
+--
+-- It is the better gate in fiction too. A warden's post is a garrison station,
+-- which is what a gate IS: a door, a keeper, a fire. A milestone is a stone with
+-- names cut into it and it already has a job — the permanent register (mig 143),
+-- which it keeps in full. You can still read it and still carve your name on it.
+-- It simply stops being a bank.
+--
+-- WHAT ELSE CHANGES, and it is all improvement: an un-gated room is ordinary
+-- road. Creatures may wander over it and spawn near it (gates hold no doorway),
+-- the road's dark and weather reach it, and the four-room stretch out of the
+-- fortress stops being a safe corridor with a bank at the end of it. The road's
+-- keeper-telling is unaffected: it is keyed to the REGION, and the Roadwarden's
+-- Post is still the road's.
+--
+-- SPAWNING IS NOT TOUCHED, because it was already right: the road is one slot in
+-- five (four fortress spawn rooms plus the road as a single region), it resolves
+-- to a random room anywhere on the road, and gates are excluded from that pool —
+-- so nobody has ever woken on a doorstep, and the road is a fifth of arrivals
+-- rather than all of them.
+UPDATE rooms SET is_entry = 0 WHERE id = 'the-first-milestone';

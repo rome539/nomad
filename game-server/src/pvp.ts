@@ -43,6 +43,15 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
   if (z.outOfWorld(other)) {
     return z.send(session, `${other.name} has stepped out of the world — nothing can reach them at the gate's bench.`);
   }
+  // A BARRED DOOR STOPS PEOPLE (mig 172). Either side of it: you cannot reach
+  // in, and you cannot reach out — the bar is a piece of oak, not a shooting
+  // slit. Steel between two people inside the SAME den is another matter, and
+  // it is exactly the betrayal bloodDrawn exists to punish.
+  if (!den.reachable(z, session.pubkey, other.pubkey)) {
+    return z.send(session, den.shelteredInDen(z, other.pubkey)
+      ? `${other.name} is behind a barred door. It does not move for you.`
+      : "You are behind your own bar. Lift it and step out if you want this.");
+  }
   // Rung senseless: the same debt tickPvp pays below, owed by the VERB too.
   // Without this a stunned fighter could open on a wanderer by hand and keep
   // the ambush blow — the one swing the daze is supposed to cost them.

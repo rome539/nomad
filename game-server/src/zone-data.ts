@@ -235,6 +235,14 @@ export const BENCH_CHIP = "inventory";
 // by name (rome, 2026-08-04). The shelf was the last store in the game you could
 // only reach by typing, and it is the biggest one.
 export const DEN_CHIP = "stow";
+// WHAT A DEN COSTS TO RAISE (mig 172). The room is a site, not a seat — anybody
+// may build on it — so this price is the ONLY thing rationing homes, and it has
+// to be a real errand rather than a formality. Dearer than the bar (2 iron / 3
+// scrap), because the bar is an upgrade to something standing and this is the
+// something: a frame, hinges, nails, and the walk out there with them in a pack
+// that is riding loud the whole way.
+export const DEN_RAISE_IRON = 4;
+export const DEN_RAISE_SCRAP = 10;
 // Same trick for the keeper's hatch: the client opens the trade modal instead
 // of sending it as text. (Typed 'barter'/'buy'/'offer' still work bare.)
 export const TRADE_CHIP = "barter with the keeper";

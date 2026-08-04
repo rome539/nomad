@@ -196,6 +196,7 @@ export interface SimState {
   groundRolled?: Record<string, string>; // "itemId@roomId" -> rolled_traits of lottery gear on the floor, so the roll survives a drop/pickup (099)
   groundHeart?: Record<string, number>; // "itemId@roomId" -> a dropped heart's acquired_at, so the floor can't wash its rot off
   inGatehouse?: string[]; // pubkeys standing INSIDE — a dropped socket must not throw you out the door
+  inDen?: [string, string][]; // pubkey -> the holder whose den they stepped into (mig 172); a dropped socket must not put you out on the street
   wallMarks?: string[]; // roomIds carved onto the gatehouse wall chart — the players' own map of the shallow ring
   stoneNames?: Record<string, { name: string; at: number }[]>; // milestone roomId -> the register cut into it, oldest first (the road's record of who walked it)
   cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills
