@@ -1,0 +1,36 @@
+-- THE STRATA HANG UNDER THE FORTRESS AGAIN (rome, 2026-08-03: "THE BOTTOM
+-- PORTIONS LIKE THE WARRENS AND DEEP ARE SHIFTED ALL THE WAY FUCKING LEFT... WE
+-- LITERALLY HAD THIS ONE FUCKING ISSUE RIGHT BEFORE").
+--
+-- He is right that we had it before, and that is the whole lesson here. On
+-- 2026-08-02 the map grew a rule called ALIGN THE STRATA BY THEIR STAIRS,
+-- written for this exact complaint ("the overworks and deep are so far left"):
+-- each band used to be pushed to its own left edge, so a 7-room overworks and a
+-- 300-room surface both started at x=0 and the deep sat nowhere near the
+-- fortress it lies under. A cutaway is only honest if a stair goes straight
+-- down, so a band's horizontal offset was chosen to line its stair-heads up with
+-- the band it descends from.
+--
+-- Mig 166 replaced the computed layout with a baked one — the right call, and I
+-- REGRESSED THIS while doing it. The bake laid every band out from x=0
+-- independently and I deleted the alignment code along with the rest of the
+-- machinery, so the fix from the day before was thrown away silently. Nothing
+-- caught it because nothing checks it.
+--
+-- This re-bakes the horizontal offsets by averaging every stair between a band
+-- and the bands already placed, rooted at band 1 (the fortress and the surface,
+-- which holds the canonical gate):
+--
+--   band 1 surface  +0     band 2 halls    +12
+--   band 0 overworks +11   band 3 warrens  +12    band 4 deep +15
+--
+-- Average horizontal drift across a stair: 7.6 squares -> 1.8. Vertical stacking
+-- is untouched; only x moves, and only for the bands that were adrift.
+--
+-- FOR WHOEVER RE-BAKES NEXT: a bake is (1) walk each connected piece of each
+-- display region onto its own grid, (2) place pieces by their doors, whole and
+-- unbroken, (3) stack the bands vertically, AND (4) SLIDE EACH BAND SIDEWAYS SO
+-- ITS STAIRS FALL STRAIGHT DOWN. Step 4 is the one that gets forgotten. It has
+-- now been forgotten once and re-fixed twice.
+UPDATE rooms SET map_x = CASE id WHEN 'a-dry-burrow' THEN 12 WHEN 'armory' THEN 12 WHEN 'barracks' THEN 13 WHEN 'black-canal' THEN 15 WHEN 'black-threshold' THEN 16 WHEN 'blackreach' THEN 13 WHEN 'bone-nook' THEN 15 WHEN 'bone-processional' THEN 15 WHEN 'bone-reliquary' THEN 16 WHEN 'carrion-gallery' THEN 12 WHEN 'catacomb' THEN 12 WHEN 'cells' THEN 14 WHEN 'chapel' THEN 13 WHEN 'chapter-house' THEN 12 WHEN 'cistern' THEN 14 WHEN 'crypt-steps' THEN 12 WHEN 'debtors-pit' THEN 15 WHEN 'deep-ossuary' THEN 13 WHEN 'drowned-barracks' THEN 15 WHEN 'drowned-court' THEN 17 WHEN 'drowned-nave' THEN 14 WHEN 'forge' THEN 13 WHEN 'gallery' THEN 12 WHEN 'guardroom' THEN 14 WHEN 'hall' THEN 13 WHEN 'hollow-crack' THEN 10 WHEN 'kennels' THEN 12 WHEN 'kings-hoard' THEN 18 WHEN 'kings-oratory' THEN 15 WHEN 'larder' THEN 11 WHEN 'leech-pools' THEN 16 WHEN 'library' THEN 14 WHEN 'muster' THEN 13 WHEN 'ossuary' THEN 13 WHEN 'oubliette' THEN 16 WHEN 'pocket-of-air' THEN 17 WHEN 'refectory' THEN 11 WHEN 'root-vault' THEN 14 WHEN 'scriptorium' THEN 12 WHEN 'scullery' THEN 11 WHEN 'sewer' THEN 11 WHEN 'shrine' THEN 12 WHEN 'silted-stair' THEN 15 WHEN 'smokehouse' THEN 12 WHEN 'stair' THEN 11 WHEN 'sunken-gallery' THEN 14 WHEN 'sunken-throne' THEN 17 WHEN 'sunless-well' THEN 14 WHEN 'the-bell-cote' THEN 11 WHEN 'the-bone-midden' THEN 14 WHEN 'the-breathing-hall' THEN 19 WHEN 'the-broken-battlement' THEN 13 WHEN 'the-buried-chapel' THEN 12 WHEN 'the-cistern' THEN 16 WHEN 'the-cold-hearth' THEN 18 WHEN 'the-crawl-of-teeth' THEN 13 WHEN 'the-death-cell' THEN 17 WHEN 'the-descent' THEN 14 WHEN 'the-dripping-gallery' THEN 14 WHEN 'the-drowning-stair' THEN 17 END WHERE id IN ('a-dry-burrow','armory','barracks','black-canal','black-threshold','blackreach','bone-nook','bone-processional','bone-reliquary','carrion-gallery','catacomb','cells','chapel','chapter-house','cistern','crypt-steps','debtors-pit','deep-ossuary','drowned-barracks','drowned-court','drowned-nave','forge','gallery','guardroom','hall','hollow-crack','kennels','kings-hoard','kings-oratory','larder','leech-pools','library','muster','ossuary','oubliette','pocket-of-air','refectory','root-vault','scriptorium','scullery','sewer','shrine','silted-stair','smokehouse','stair','sunken-gallery','sunken-throne','sunless-well','the-bell-cote','the-bone-midden','the-breathing-hall','the-broken-battlement','the-buried-chapel','the-cistern','the-cold-hearth','the-crawl-of-teeth','the-death-cell','the-descent','the-dripping-gallery','the-drowning-stair');
+UPDATE rooms SET map_x = CASE id WHEN 'the-earth-throat' THEN 13 WHEN 'the-eel-run' THEN 17 WHEN 'the-gasping-dark' THEN 13 WHEN 'the-gnaw-hollow' THEN 13 WHEN 'the-hyena-den' THEN 14 WHEN 'the-leaning-spire' THEN 14 WHEN 'the-lightless-march' THEN 12 WHEN 'the-long-swallow' THEN 18 WHEN 'the-marrow-road' THEN 14 WHEN 'the-rat-warren' THEN 14 WHEN 'the-root-gnawed-run' THEN 14 WHEN 'the-rotted-scaffold' THEN 15 WHEN 'the-salt-vault' THEN 18 WHEN 'the-sewer-slip' THEN 13 WHEN 'the-silt-chapel' THEN 19 WHEN 'the-still-cradle' THEN 21 WHEN 'the-sump' THEN 13 WHEN 'the-tide-gate' THEN 18 WHEN 'the-tide-throat' THEN 20 WHEN 'the-under-weir' THEN 17 WHEN 'the-undermine' THEN 13 WHEN 'the-undertow' THEN 13 WHEN 'the-wall-walk' THEN 12 WHEN 'the-watch-turret' THEN 12 WHEN 'the-weepers-crown' THEN 15 WHEN 'the-weir' THEN 16 WHEN 'tide-vault' THEN 16 WHEN 'undercroft' THEN 14 WHEN 'warden-post' THEN 13 WHEN 'weeper-hall' THEN 15 WHEN 'weeping-cells' THEN 12 WHEN 'well' THEN 15 WHEN 'worm-bore' THEN 10 WHEN 'worm-cloister' THEN 11 END WHERE id IN ('the-earth-throat','the-eel-run','the-gasping-dark','the-gnaw-hollow','the-hyena-den','the-leaning-spire','the-lightless-march','the-long-swallow','the-marrow-road','the-rat-warren','the-root-gnawed-run','the-rotted-scaffold','the-salt-vault','the-sewer-slip','the-silt-chapel','the-still-cradle','the-sump','the-tide-gate','the-tide-throat','the-under-weir','the-undermine','the-undertow','the-wall-walk','the-watch-turret','the-weepers-crown','the-weir','tide-vault','undercroft','warden-post','weeper-hall','weeping-cells','well','worm-bore','worm-cloister');

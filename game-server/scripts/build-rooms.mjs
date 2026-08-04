@@ -175,6 +175,7 @@ let liveRooms = new Set();
 let liveExits = new Map(); // room -> [{dir, to}]
 let liveEntries = new Set();
 const liveCoords = new Map(); // room id -> its baked square on the paper (mig 166)
+const liveBands = new Map();  // room id -> which stratum it is drawn in (mig 167's stair check)
 let worldKnown = false;
 
 if (!flags.has("--offline")) {
@@ -192,6 +193,9 @@ if (!flags.has("--offline")) {
       // Where the world already sits on the paper (mig 166) — the seed the new
       // ground is laid out from, so nothing already drawn ever moves.
       if (r.map_x !== null && r.map_x !== undefined) liveCoords.set(r.id, { x: r.map_x, y: r.map_y ?? 0 });
+      // The band a room is drawn in, read off its own y once the bake exists —
+      // strata are stacked and never overlap, so the row IS the stratum.
+      if (r.map_y !== null && r.map_y !== undefined) liveBands.set(r.id, r.map_y);
     }
     for (const e of q("SELECT room_id, dir, to_room FROM exits;")) {
       if (!liveExits.has(e.room_id)) liveExits.set(e.room_id, []);
@@ -272,6 +276,77 @@ if (worldKnown && !errors.length) {
   for (const r of rooms.values()) {
     if (!seen.has(r.id)) err(r.file, r.line, `"${r.id}" cannot be reached from any gate — it's an orphan`);
   }
+}
+
+// ---- lay the new ground out on the paper ---------------------------------
+//
+// THE MAP IS DATA (mig 166). A room's square is a fact about the room, not
+// something the server works out at load, so the pipeline has to author it —
+// exactly the way it authors the room's name. New rooms are walked out from the
+// EXISTING rooms they attach to, using their baked coordinates as the seed, so a
+// new region lands against the world in the direction its own doors say and not
+// one square anywhere else moves.
+//
+// Where the new ground contradicts itself (a loop whose compass steps don't
+// close) the walk puts the loser on the nearest free square, same as the bake
+// did. That is a defect in the ROOMS, and it is now visible, fixed, and fixable
+// one door at a time instead of shifting under you every deploy.
+const coords = new Map();
+if (worldKnown) {
+  for (const [id, p] of liveCoords) coords.set(id, p);
+  const occupied = new Set([...coords.values()].map((p) => `${p.x},${p.y}`));
+  const claim = (id, x, y) => {
+    if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); coords.set(id, { x, y }); return true; }
+    for (let ring = 1; ring <= 200; ring++) {
+      for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
+        if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
+        if (!occupied.has(`${x + dx},${y + dy}`)) {
+          occupied.add(`${x + dx},${y + dy}`);
+          coords.set(id, { x: x + dx, y: y + dy });
+          return false;
+        }
+      }
+    }
+    coords.set(id, { x, y });
+    return false;
+  };
+  // Seed: every new room that touches ground already on the paper.
+  const queue = [];
+  let shoved = 0;
+  for (const r of rooms.values()) {
+    if (r.existing || coords.has(r.id)) continue;
+    for (const e of r.exits) {
+      const anchor = coords.get(e.target);
+      const d = DELTA[e.dir];
+      if (!anchor || !d) continue;
+      // MINUS, not plus: `dir` points from the NEW room to the old one, so the
+      // new room sits back the other way. (Got this backwards first time and the
+      // probe landed three squares west of where its own door said.)
+      if (!claim(r.id, anchor.x - d[0], anchor.y - d[1])) shoved++;
+      queue.push(r.id);
+      break;
+    }
+  }
+  // ...and outward from those, through the new ground.
+  for (let h = 0; h < queue.length; h++) {
+    const p = coords.get(queue[h]);
+    for (const e of (rooms.get(queue[h])?.exits ?? [])) {
+      if (coords.has(e.target) || !rooms.has(e.target)) continue;
+      const d = DELTA[e.dir];
+      if (!d) continue;
+      if (!claim(e.target, p.x + d[0], p.y + d[1])) shoved++;
+      queue.push(e.target);
+    }
+  }
+  // Anything the walk never reached (an island attached only through a room in
+  // another region) goes clear to the right of everything, once.
+  let edge = 0;
+  for (const p of coords.values()) edge = Math.max(edge, p.x);
+  for (const r of rooms.values()) {
+    if (r.existing || coords.has(r.id)) continue;
+    claim(r.id, edge += 3, 0);
+  }
+  if (shoved) warnings.push(`${shoved} new room${shoved === 1 ? "" : "s"} could not sit where ${shoved === 1 ? "its" : "their"} own exits say — the ground contradicts itself there (a loop whose compass steps don't close). Drawn on the nearest free square; fix the doors if it matters.`);
 }
 
 // THE THROAT CHECK — how many rooms would somebody have to stand in to seal
@@ -374,6 +449,54 @@ if (worldKnown && !errors.length && rooms.size) {
   }
 }
 
+// THE STAIRS MUST FALL STRAIGHT DOWN (mig 167). A cutaway is only honest if the
+// way between two strata is drawn as a short thread, not a long diagonal across
+// the sheet. This has now been broken twice — once by laying every band out from
+// its own left edge, and once by me deleting the fix while replacing the layout
+// with a bake — and nothing caught it either time, because nothing measured it.
+// Now something does, on every build, whether or not this file touched a stair.
+if (worldKnown && !errors.length && liveCoords.size) {
+  // Strata are stacked with a gap between them, so the stripes fall out of the
+  // sorted rows: any jump of more than 2 rows starts a new stratum.
+  const rowsUsed = [...new Set(liveBands.values())].sort((a, b) => a - b);
+  const stripe = new Map();
+  let band = 0;
+  for (let i = 0; i < rowsUsed.length; i++) {
+    if (i && rowsUsed[i] - rowsUsed[i - 1] > 2) band++;
+    stripe.set(rowsUsed[i], band);
+  }
+  const bandOfId = new Map();
+  for (const [id, y] of liveBands) bandOfId.set(id, stripe.get(y));
+  for (const r of rooms.values()) {
+    const c = coords.get(r.id);
+    if (!r.existing && c) bandOfId.set(r.id, stripe.get(c.y) ?? 1);
+  }
+  let drift = 0, stairs = 0, worst = 0, worstAt = "";
+  const seen = new Set();
+  const allExits = new Map(liveExits);
+  for (const r of rooms.values()) allExits.set(r.id, (allExits.get(r.id) ?? []).concat(r.exits.map((e) => ({ dir: e.dir, to: e.target }))));
+  for (const [from, es] of allExits) {
+    for (const e of es) {
+      const a = coords.get(from) ?? liveCoords.get(from);
+      const b = coords.get(e.to) ?? liveCoords.get(e.to);
+      const ba = bandOfId.get(from), bb = bandOfId.get(e.to);
+      if (!a || !b || ba === undefined || bb === undefined || ba === bb) continue;
+      const key = from < e.to ? `${from}|${e.to}` : `${e.to}|${from}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const d = Math.abs(a.x - b.x);
+      drift += d; stairs++;
+      if (d > worst) { worst = d; worstAt = `${from} <-> ${e.to}`; }
+    }
+  }
+  if (stairs) {
+    const avg = drift / stairs;
+    const line = `STAIRS: ${stairs} ways between strata, average ${avg.toFixed(1)} squares of sideways drift (worst ${worst}, ${worstAt}).`;
+    if (avg > 4) warnings.push(`${line} A stratum is hanging off to one side instead of under the one it descends from — re-bake the band offsets (see mig 167).`);
+    else console.log(`  ${line} ok`);
+  }
+}
+
 // ---- report --------------------------------------------------------------
 
 for (const w of warnings) console.warn(`  warn  ${w}`);
@@ -388,77 +511,6 @@ console.log(`ok: ${rooms.size} rooms, ${exitCount} exits, ${warnings.length} war
 
 if (flags.has("--check")) process.exit(0);
 if (!outFile) { console.log("(no --out given; nothing written)"); process.exit(0); }
-
-// ---- lay the new ground out on the paper ---------------------------------
-//
-// THE MAP IS DATA (mig 166). A room's square is a fact about the room, not
-// something the server works out at load, so the pipeline has to author it —
-// exactly the way it authors the room's name. New rooms are walked out from the
-// EXISTING rooms they attach to, using their baked coordinates as the seed, so a
-// new region lands against the world in the direction its own doors say and not
-// one square anywhere else moves.
-//
-// Where the new ground contradicts itself (a loop whose compass steps don't
-// close) the walk puts the loser on the nearest free square, same as the bake
-// did. That is a defect in the ROOMS, and it is now visible, fixed, and fixable
-// one door at a time instead of shifting under you every deploy.
-const coords = new Map();
-if (worldKnown) {
-  for (const [id, p] of liveCoords) coords.set(id, p);
-  const occupied = new Set([...coords.values()].map((p) => `${p.x},${p.y}`));
-  const claim = (id, x, y) => {
-    if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); coords.set(id, { x, y }); return true; }
-    for (let ring = 1; ring <= 200; ring++) {
-      for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
-        if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
-        if (!occupied.has(`${x + dx},${y + dy}`)) {
-          occupied.add(`${x + dx},${y + dy}`);
-          coords.set(id, { x: x + dx, y: y + dy });
-          return false;
-        }
-      }
-    }
-    coords.set(id, { x, y });
-    return false;
-  };
-  // Seed: every new room that touches ground already on the paper.
-  const queue = [];
-  let shoved = 0;
-  for (const r of rooms.values()) {
-    if (r.existing || coords.has(r.id)) continue;
-    for (const e of r.exits) {
-      const anchor = coords.get(e.target);
-      const d = DELTA[e.dir];
-      if (!anchor || !d) continue;
-      // MINUS, not plus: `dir` points from the NEW room to the old one, so the
-      // new room sits back the other way. (Got this backwards first time and the
-      // probe landed three squares west of where its own door said.)
-      if (!claim(r.id, anchor.x - d[0], anchor.y - d[1])) shoved++;
-      queue.push(r.id);
-      break;
-    }
-  }
-  // ...and outward from those, through the new ground.
-  for (let h = 0; h < queue.length; h++) {
-    const p = coords.get(queue[h]);
-    for (const e of (rooms.get(queue[h])?.exits ?? [])) {
-      if (coords.has(e.target) || !rooms.has(e.target)) continue;
-      const d = DELTA[e.dir];
-      if (!d) continue;
-      if (!claim(e.target, p.x + d[0], p.y + d[1])) shoved++;
-      queue.push(e.target);
-    }
-  }
-  // Anything the walk never reached (an island attached only through a room in
-  // another region) goes clear to the right of everything, once.
-  let edge = 0;
-  for (const p of coords.values()) edge = Math.max(edge, p.x);
-  for (const r of rooms.values()) {
-    if (r.existing || coords.has(r.id)) continue;
-    claim(r.id, edge += 3, 0);
-  }
-  if (shoved) warnings.push(`${shoved} new room${shoved === 1 ? "" : "s"} could not sit where ${shoved === 1 ? "its" : "their"} own exits say — the ground contradicts itself there (a loop whose compass steps don't close). Drawn on the nearest free square; fix the doors if it matters.`);
-}
 
 // ---- emit ----------------------------------------------------------------
 
