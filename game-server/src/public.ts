@@ -3214,75 +3214,80 @@ function buildMapGraph(f) {
     for (var pid in lp) { var p = lp[pid]; if (p.x < mnx) mnx = p.x; if (p.y < mny) mny = p.y; if (p.x > mxx) mxx = p.x; if (p.y > mxy) mxy = p.y; }
     return { lp: lp, mnx: mnx, mny: mny, w: mxx - mnx, h: mxy - mny };
   }
-  // Strata stack top to bottom in true vertical order; within each, the pieces
-  // (one whole piece on a true map; a crude copy's shattered fragments) pack
-  // into rows, then the whole stratum centers on the shared axis — a cutaway,
-  // not a staircase. The camera opens on your room, wherever it landed.
+  // THE SHEET IS ALREADY DRAWN. YOU ARE ONLY UNCOVERING IT.
+  //
+  // rome has said this every single time and I kept only half-doing it: "HAVE
+  // THE FUCKING MAP LAID OUT FUCKING FLAT AND THEN JUST FILL IN THE FUCKING
+  // ROOMS WHEN YOU FUCKING EXPLORE IT", "LET THE FUCKING ROOMS MAP THE FUCKING
+  // WORLD". I baked the coordinates into the rooms (mig 166/167) and then left
+  // ALL OF THIS still here — a walker, a packer, a per-band row-filler and a
+  // centring pass — so the moment anything was missing the client threw the
+  // baked sheet away and re-laid the whole stratum around x = 0. That is why a
+  // band kept appearing shoved off to one side no matter what the server said.
+  //
+  // So a TRUE map does none of it. Every room carries its square; plot the
+  // square. No walking, no packing, no per-band stacking, no centring, no
+  // normalising against what you happen to know. A room you have never seen is
+  // a gap in the paper, and every room you HAVE seen is in the same square it
+  // was in last week and will be in next year.
+  //
+  // The one exception stays the crude map, which ships no coordinates on
+  // purpose: it is a shattered pack of lies and gets laid out here, locally,
+  // because there is nothing true to plot.
   var placed = {}, labels = [];
-  var bandY = 0;
-  for (var bi = 0; bi < MAP_BANDS.length; bi++) {
-    var bcomps = [];
-    for (var c2 = 0; c2 < comps.length; c2++) {
-      if (nodes[comps[c2][0]].band === MAP_BANDS[bi].band) bcomps.push(comps[c2]);
+  var canon = true;
+  for (var cq = 0; cq < order.length; cq++) {
+    var gq = nodes[order[cq]];
+    if (gq.gx === undefined || gq.gx === null) { canon = false; break; }
+  }
+  if (canon) {
+    for (var g4 = 0; g4 < order.length; g4++) {
+      var gid = order[g4], gnn = nodes[gid];
+      placed[gid] = { x: gnn.gx, y: gnn.gy, displaced: false };
     }
-    if (!bcomps.length) continue;
-    bcomps.sort(function (a, b) { return b.length - a.length; });
-    var bandIds = [];
-    // A TRUE map ships every room's canonical position, laid out server-side
-    // from the WHOLE world graph. Use it verbatim: the islands on a half-carved
-    // chart then sit where they really are relative to each other, with honest
-    // gaps where nobody has been. Packing them into rows — right for a crude
-    // map, which is a shattered pack of lies — made the wall chart "clusters in
-    // the centre, not real with how it looks on a map" (rome, 2026-08-02).
-    var canon = true;
-    for (var cq = 0; cq < bcomps.length && canon; cq++)
-      for (var cr = 0; cr < bcomps[cq].length; cr++)
-        if (nodes[bcomps[cq][cr]].gx === undefined || nodes[bcomps[cq][cr]].gx === null) { canon = false; break; }
-    if (canon) {
-      // THE SHEET IS ALREADY DRAWN; YOU ARE ONLY UNCOVERING IT (rome, 2026-08-02:
-      // "why does the surface keep shifting right when I expand westward? make
-      // the map already made behind BUT invisible and the rooms just fill in").
-      // Plot the server's ABSOLUTE coordinates verbatim. The first cut of this
-      // normalised to the extent of the rooms YOU know, so every new room found
-      // to the west moved the origin and shoved the whole world right under you.
-      // No normalising here, no per-band stacking here: both are baked into the
-      // grid server-side, measured against the WHOLE world, and neither can move.
-      for (var g3 = 0; g3 < bcomps.length; g3++) for (var g4 = 0; g4 < bcomps[g3].length; g4++) {
-        var gid = bcomps[g3][g4], gnn = nodes[gid];
-        placed[gid] = { x: gnn.gx, y: gnn.gy, displaced: false };
-        bandIds.push(gid);
-      }
-    } else {
-    var cursorX = 0, cursorY = bandY, rowH = 0, targetW = 12;
-    for (var oi = 0; oi < bcomps.length; oi++) {
-      var lo = layoutComp(bcomps[oi], bcomps[oi][0]);
-      if (cursorX > 0 && cursorX + (lo.w + 1) > targetW) { cursorX = 0; cursorY += rowH + 2; rowH = 0; }
-      var offx = cursorX - lo.mnx, offy = cursorY - lo.mny;
-      for (var pid2 in lo.lp) {
-        placed[pid2] = { x: lo.lp[pid2].x + offx, y: lo.lp[pid2].y + offy, displaced: lo.lp[pid2].displaced };
-        bandIds.push(pid2);
-      }
-      cursorX += (lo.w + 1) + 2; if (lo.h > rowH) rowH = lo.h;
-    }
-    }
-    // center this stratum on x = 0
-    var bx0 = 1e9, bx1 = -1e9, by1 = -1e9;
-    for (var bb = 0; bb < bandIds.length; bb++) {
-      var bp = placed[bandIds[bb]];
-      if (bp.x < bx0) bx0 = bp.x; if (bp.x > bx1) bx1 = bp.x; if (bp.y > by1) by1 = bp.y;
-    }
-    if (canon) {
-      // A fixed sheet gets a fixed label: the server hands back where each
-      // stratum hangs, measured against the whole band. Centring on what YOU
-      // know would slide the label the same way the rooms used to slide.
+    // The stratum labels ride on the server's own measure of where each band
+    // hangs — against the WHOLE world, not against your corner of it, so a label
+    // never slides when you find a new room.
+    for (var bl = 0; bl < MAP_BANDS.length; bl++) {
       var ba = null;
-      for (var bk = 0; bk < (f.bands || []).length; bk++) if (f.bands[bk].band === MAP_BANDS[bi].band) ba = f.bands[bk];
-      labels.push({ x: (ba ? ba.x : bx0 - 0.35), y: (ba ? ba.y : bandY - 1.05), text: MAP_BANDS[bi].label });
-    } else {
+      for (var bk = 0; bk < (f.bands || []).length; bk++) if (f.bands[bk].band === MAP_BANDS[bl].band) ba = f.bands[bk];
+      if (!ba) continue;
+      var anyHere = false;
+      for (var ah = 0; ah < order.length && !anyHere; ah++) if (nodes[order[ah]].band === MAP_BANDS[bl].band) anyHere = true;
+      if (anyHere) labels.push({ x: ba.x, y: ba.y, text: MAP_BANDS[bl].label });
+    }
+  } else {
+    // A CRUDE COPY ONLY. Pieces packed into rows and each stratum centred — the
+    // right shape for a map that is lying to you, and reached by nothing else.
+    var bandY = 0;
+    for (var bi = 0; bi < MAP_BANDS.length; bi++) {
+      var bcomps = [];
+      for (var c2 = 0; c2 < comps.length; c2++) {
+        if (nodes[comps[c2][0]].band === MAP_BANDS[bi].band) bcomps.push(comps[c2]);
+      }
+      if (!bcomps.length) continue;
+      bcomps.sort(function (a, b) { return b.length - a.length; });
+      var bandIds = [];
+      var cursorX = 0, cursorY = bandY, rowH = 0, targetW = 12;
+      for (var oi = 0; oi < bcomps.length; oi++) {
+        var lo = layoutComp(bcomps[oi], bcomps[oi][0]);
+        if (cursorX > 0 && cursorX + (lo.w + 1) > targetW) { cursorX = 0; cursorY += rowH + 2; rowH = 0; }
+        var offx = cursorX - lo.mnx, offy = cursorY - lo.mny;
+        for (var pid2 in lo.lp) {
+          placed[pid2] = { x: lo.lp[pid2].x + offx, y: lo.lp[pid2].y + offy, displaced: lo.lp[pid2].displaced };
+          bandIds.push(pid2);
+        }
+        cursorX += (lo.w + 1) + 2; if (lo.h > rowH) rowH = lo.h;
+      }
+      var bx0 = 1e9, bx1 = -1e9, by1 = -1e9;
+      for (var bb = 0; bb < bandIds.length; bb++) {
+        var bp = placed[bandIds[bb]];
+        if (bp.x < bx0) bx0 = bp.x; if (bp.x > bx1) bx1 = bp.x; if (bp.y > by1) by1 = bp.y;
+      }
       var shiftX = -Math.round((bx0 + bx1) / 2);
       for (var bs = 0; bs < bandIds.length; bs++) placed[bandIds[bs]].x += shiftX;
       labels.push({ x: bx0 + shiftX - 0.35, y: bandY - 1.05, text: MAP_BANDS[bi].label });
-      bandY = by1 + 3.4; // the gap between strata: room for the label beneath
+      bandY = by1 + 3.4;
     }
   }
   var anchor = (f.here && placed[f.here]) ? f.here : (order.length ? order[0] : null);
