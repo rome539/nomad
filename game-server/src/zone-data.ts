@@ -210,6 +210,55 @@ export const PACK_TORCH_CAP = 5;
 // (rome, 2026-07-18). Count, not a slot. grave-moss doubles as food, so it
 // rides the FOOD cap instead — no double jeopardy (dressingCapped skips edibles).
 export const PACK_DRESSING_CAP = 6;
+
+// ---------------------------------------------------------------------------
+// THE FEN CARRIES YOU, NOT YOUR GOODS (rome, 2026-08-06: "you made it into a
+// complete shortcut of the roaad" — measured, and he is right).
+//
+// WHAT WAS WRONG. From the fortress gate: the Osier Beds are 8 rooms through the
+// fen and 44 by road. The Willow Margin 11 against 41. The Far Waste 11 against
+// 44. An eighteen-room bog was not a shortcut past the road's throat, it DELETED
+// the road — both milestones, the carrier, the ford, the whole 68-room spine
+// reduced to optional scenery. And the den price (12 iron + 20 scrap, carried
+// out there) rests entirely on that walk being long.
+//
+// WHY NOT JUST SHUT ITS FORTRESS DOORS. Measured too, and it is the wrong fix:
+//   rooms needed to cut the fortress off from the den ground
+//     road + fen, as it stands ....................  4
+//     fen deleted entirely ........................  1
+//     fen kept, its three fortress-end rooms cut ..  1
+// The fen is load-bearing. It is the only reason the west is not hanging off the
+// keep by a single room — the exact defect it was built to fix. Close it and one
+// person standing in one room seals half the world off again.
+//
+// SO IT COSTS SOMETHING OTHER THAN LENGTH: you cannot carry through a bog.
+//
+// AND IT MUST BE COUNTED IN RAW ITEMS, which took two wrong answers to find:
+//   loadOf ... skips anything with no equip slot, so 12 iron + 20 scrap weighs 0
+//   slots .... collapse stackables to one per kind, so that haul is 2, food free
+// Raw items is the only measure that can see cargo at all: that haul is 32.
+//
+// EXCEPT WHAT KEEPS YOU ALIVE. The pack caps are 8 food, 5 torches, 6 dressings —
+// a properly provisioned runner carries 19 consumables before any gear, and
+// stopping a hunter with a full kit is not stopping cargo. So rations, torches
+// and dressings are free of this count, and the rule reads as one sentence a
+// player never needs told twice: THE FEN CARRIES YOU AND WHAT KEEPS YOU ALIVE.
+// IT DOES NOT CARRY GOODS.
+export const FEN_CARRY_CAP = 6;
+// Every room of the three ways across. The gate is on ENTERING any of them, so
+// it fires at the fortress doors, at both landfalls, and at every rung between —
+// there is no way to be halfway across with a haul, and no direction of travel
+// is privileged: goods do not move west through here and they do not move east.
+export const FEN_ROOMS = new Set<string>([
+  // the Sally Way
+  "the-ditch-end", "the-fen-edge", "the-sinking-path", "the-drowned-hurdles",
+  "the-tussock-ford", "the-willow-landing",
+  // the Black Way
+  "the-fen-gut", "the-peat-road", "the-peat-cuts", "the-open-water",
+  "the-dead-alders", "the-rush-shore", "the-eel-traps", "the-waste-foot",
+  // the Grave Path
+  "the-grave-drain", "the-quaking-flat", "the-heron-stand", "the-osier-landing",
+]);
 export const FLOOR_ITEMS_BRIEF = 3; // walking in, a floor with more loose loot than this condenses to a count — you 'look' to see it all (rome, 2026-07-20)
 export const LOCKBOX_CAP = 8; // the run closet — small, takes anything, sealed or raw
 export const FOOD_LOCKBOX_STACK = 8; // rations stack in the run closet: a kind rides ONE slot this deep, then spills to a second (rome, 2026-07-20)

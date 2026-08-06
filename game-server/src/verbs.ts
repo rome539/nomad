@@ -26,7 +26,7 @@ import {
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP, FEN_ROOMS, FEN_CARRY_CAP,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
   MILESTONES,
@@ -695,6 +695,22 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // refused; it just takes you out of your own doorway first, because you cannot
   // leave the ground without stepping onto it.
   den.leaveDen(z, session.pubkey);
+
+  // THE FEN CARRIES YOU, NOT YOUR GOODS (zone-data.FEN_CARRY_CAP). Checked
+  // before anything that could cost you a beat, like the old den bar was: you
+  // never pay a parting blow or wake a listener walking at water that was never
+  // going to take you. It fires on ENTERING any fen room, from either side, so
+  // there is no halfway and no privileged direction — goods do not move west
+  // through here and they do not move east.
+  if (FEN_ROOMS.has(exit.to_room) && !FEN_ROOMS.has(session.roomId)) {
+    const goods = fenGoods(z, session);
+    if (goods > FEN_CARRY_CAP) {
+      return z.send(session, [
+        `You get a boot in and feel the ground take it, and go on taking it. With ${goods} things on your back you would not come up.`,
+        `The fen carries a man and what keeps him alive — food, torches, dressings, and no more than ${FEN_CARRY_CAP} things besides. Everything else goes round by the road.`,
+      ].join("\n"));
+    }
+  }
 
   // A SENTINEL guards the way deeper. Asleep, you can step over it — and that
   // rouses it (you've opened the deep, and now it's up for whoever comes next).
@@ -1676,6 +1692,26 @@ function heardIn(z: ZoneDO, roomId: string): string {
   if (region === "road") return "nothing — wind, and a long way of open ground";
   if (region === "mountain") return "nothing — wind off the rock, and the cold under it";
   return "nothing — stone, and a far-off drip";
+}
+
+// What the fen counts: everything loose in the pack EXCEPT the three things
+// that keep you alive out there. Rations, torches and dressings each have a cap
+// of their own already (8/5/6), and a provisioned hunter carries nineteen of
+// them before any gear — stopping him is not stopping cargo. Everything else,
+// counted as RAW ITEMS and not slots, because a stack of twenty scrap is one
+// slot and twenty things to carry.
+export function fenGoods(z: ZoneDO, session: Session): number {
+  let n = 0;
+  for (const c of session.items) {
+    if (c.equipped) continue; // worn and wielded is you, not cargo
+    const t = z.world!.itemTemplates.get(c.itemId);
+    if (!t) continue;
+    if (t.edible) continue;                       // rations
+    if (c.itemId === TORCH_ITEM) continue;        // light
+    if ((t.staunch ?? 0) > 0) continue;           // dressings
+    n++;
+  }
+  return n;
 }
 
 export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
