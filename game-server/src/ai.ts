@@ -21,6 +21,7 @@ import {
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
+  QUIET_WANDER_MULT, QUIET_HEED_MULT,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
 } from "./zone-data";
@@ -195,8 +196,10 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
       // scrums) — RUNNERS is that same rule stated as a family, and it now also
       // covers the wood's roe deer, which were "throwing themselves into the
       // fight" and then immediately fleeing it (2026-08-02).
-      if (RUNNERS.has(tmpl.id)) continue;
-      if (!chance(NOISE_HEED_ODDS)) continue;                       // not every one piles on at once
+      if (bolts(z, tmpl.id, creature.roomId)) continue;
+      // ...and in the QUIET a great deal more of them do: there is nothing else
+      // to hear. The silence is not safety, it is a better microphone.
+      if (!chance(NOISE_HEED_ODDS * (events.quieted(z, creature.roomId) ? QUIET_HEED_MULT : 1))) continue;
       for (const s of z.sessions.values()) {
         if (s.roomId === roomId && z.inCombat(s) && !z.outOfWorld(s)) {
           creature.target = s.pubkey;
@@ -649,6 +652,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       z.addTrace(creature.roomId, { kind: "drip", at: now, label: tmpl.name });
     }
     creature.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
+    // THE QUIET (2026-08-06): nothing in the wood moves. Not frozen — a step it
+    // would have taken in a minute it now takes in six, so the wood goes still
+    // without a single creature being taken off the board.
+    if (events.quieted(z, creature.roomId)) {
+      creature.nextWanderAt = now + (creature.nextWanderAt - now) * QUIET_WANDER_MULT;
+    }
     // Beyond its territory a creature travels with purpose — the walk in from
     // a dark mouth (or back from a rout) is minutes, not an afternoon.
     if (creature.home && !tmpl.is_boss && !z.withinRadius(creature.roomId, creature.home, TERRITORY_RADIUS)) {
@@ -689,7 +698,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // The hollow don't bleed — they come apart in their own way. A runner
       // isn't wounded at all: it just darts, whole and gone.
       const hurt = HURT_STYLE[tmpl.id];
-      const runner = RUNNERS.has(tmpl.id);
+      const runner = bolts(z, tmpl.id, creature.roomId);
       const fleeFam = FLEE_TELL[fledFrom ? z.fleeStyleOf(fledFrom) : "plain"] ?? FLEE_TELL.plain;
       const outLine = mode !== "flee"
         ? `${cap(tmpl.name)} ${tmpl.is_boss ? "moves" : "slips away"} ${exit.dir}.`
@@ -762,7 +771,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // generalised earlier today and this one was missed. Every other
       // investigator — the scabby rat very much included — still pays the price.
       if (investigating && !creature.target && !LISTENERS.has(tmpl.id)
-          && !RUNNERS.has(tmpl.id)) {
+          && !bolts(z, tmpl.id, creature.roomId)) {
         for (const s of z.sessions.values()) {
           if (s.roomId === creature.roomId && z.inCombat(s)) {
             creature.target = s.pubkey;
@@ -968,6 +977,16 @@ export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
     return events.raining(z, creature.roomId) || events.foggy(z, creature.roomId)
       || (OUTDOOR_ROOMS.has(creature.roomId) && isNight());
   }
+
+// DOES THIS THING RUN, RIGHT NOW. RUNNERS is a permanent fact about a template
+// — except in the rut, when the roe stop being deer that run and become deer
+// that stand (events.rutting, 2026-08-06). One place to ask, so the flee prose,
+// the fight-joining and the scrum rule all change together and cannot drift.
+export function bolts(z: ZoneDO, templateId: string, roomId: string): boolean {
+  if (!RUNNERS.has(templateId)) return false;
+  if (templateId === "roe-deer" && events.rutting(z, roomId)) return false;
+  return true;
+}
 
 export function playerPresent(z: ZoneDO, roomId: string): boolean {
     // Somebody behind a barred den door is IN the room and out of reach of

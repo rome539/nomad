@@ -80,7 +80,7 @@ import {
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
   GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, STRAY_DECAY,
-  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
+  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FEVER_MEND_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
@@ -120,6 +120,9 @@ export class ZoneDO implements DurableObject {
   // public; a BARRED door is what actually puts you out of the world's reach
   // (mig 172). Persisted, so a dropped socket does not put you out in the open.
   public inDen = new Map<string, string>();
+  // Per-room throttle on the rut's roaring, so a ride with three stags in it
+  // does not shout three times a beat. Ephemeral — a restart just starts quiet.
+  public rutRoarAt = new Map<string, number>();
   // Open player-to-player trades (trade.ts) — dealId -> Deal. In-memory only,
   // same as `buying`: a DO wake never restores one, and it needs no D1 row of
   // its own (settlement is the only part that touches D1, and it's atomic).
@@ -3645,7 +3648,13 @@ export class ZoneDO implements DurableObject {
         // rest both keep the slow rate. (And the cold never reaches the fire.)
         const byFire = session.resting && this.outOfWorld(session);
         if (!byFire && !warmed && events.coldBites(this, session.roomId) && chance(COLD_REST_SKIP)) continue;
-        session.hp = Math.min(session.maxHp, session.hp + (byFire ? FIRE_REST_REGEN_PER_TICK : REST_REGEN_PER_TICK));
+        // THE FEVER (2026-08-06). On bad ground sleep will not take: an hour
+        // off your feet is worth a fraction of an hour. It is not a cure you
+        // can buy or a fight you can win — the answer is to leave, which is the
+        // whole point of putting it on the ground people LIVE on. The gate's
+        // fire is unreachable by it (the fever is the den band's own).
+        const feverMult = events.fevered(this, session.roomId) ? FEVER_MEND_MULT : 1;
+        session.hp = Math.min(session.maxHp, session.hp + (byFire ? FIRE_REST_REGEN_PER_TICK : REST_REGEN_PER_TICK) * feverMult);
         this.sendStatus(session);
         if (session.hp >= session.maxHp) {
           // Fully healed: save it now so a restart can't revert a finished rest.
@@ -5413,12 +5422,21 @@ export class ZoneDO implements DurableObject {
   // A noisy event in one room is heard, degraded and directional, in every
   // room with an open exit toward it. Closed iron blocks sound. "{dir}" in
   // the template becomes "to the east" / "from below" for each listener.
-  public roomSound(sourceRoomId: string, template: string, excludeRoomId?: string, cls?: string): void {
+  // `loud` = this sound IS the din, so the din must not swallow it. The rut's
+  // roaring is the only thing that sets it: masking a stag's bellow behind the
+  // noise of stags bellowing would be circular, and worse, it would mute the
+  // creatureNoise pull that makes the wolves a consequence instead of a script.
+  public roomSound(sourceRoomId: string, template: string, excludeRoomId?: string, cls?: string, loud = false): void {
     const world = this.world;
     if (!world) return;
     // A downpour eats sound made under it — half of what happens in the rain
     // simply never carries. (Hunting weather.)
     if (events.raining(this, sourceRoomId) && chance(RAIN_NOISE_MASK)) return;
+    // THE RUT MASKS TOO, for the opposite reason: not because the sky is loud
+    // but because the WOOD is, and none of it is yours. The one window where a
+    // heavy pack costs you nothing to carry — bought at the price of every
+    // predator in the wood already walking toward the same noise.
+    if (!loud && events.rutting(this, sourceRoomId) && chance(RUT_NOISE_MASK)) return;
     const heard = new Set<string>();
     for (const [rid, exits] of world.exits) {
       if (rid === sourceRoomId || rid === excludeRoomId) continue;
@@ -5472,12 +5490,13 @@ export class ZoneDO implements DurableObject {
   // Creatures have ears too. Player-made noise makes everything idle in
   // earshot curious — it comes to look, soon. Creature-made sounds never
   // attract (no feedback loops); quiet players attract nothing.
-  public creatureNoise(sourceRoomId: string): void {
+  public creatureNoise(sourceRoomId: string, loud = false): void {
     const world = this.world;
     if (!world) return;
     // The rain masks creature-ward too: what the downpour swallows, nothing
     // comes to investigate.
     if (events.raining(this, sourceRoomId) && chance(RAIN_NOISE_MASK)) return;
+    if (!loud && events.rutting(this, sourceRoomId) && chance(RUT_NOISE_MASK)) return; // ...and so does the roaring
     const now = Date.now();
     // What runs FROM noise — the hoarder, and every RUNNER — is handled before
     // the crowd guard below: that guard exists to stop a busy room pulling in

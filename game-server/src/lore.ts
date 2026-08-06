@@ -382,8 +382,33 @@ function creatureNature(id: string): string {
   return "A living thing of the dark, and hungry.";
 }
 
-function journalTier(kills: number, studied: boolean): number {
-  if (studied && kills >= 3) return 3; // the full account
+// WHAT A FULL ACCOUNT COSTS, and it is not a flat number any more (rome,
+// 2026-08-06: "make lvl 6 3 and then scale up from there").
+//
+// Every creature in the game used to want the same three kills, which charged
+// the LEAST for the things hardest to meet. A scabby rat and the Gaunt cost the
+// same page — and the Gaunt respawns once a day, so its account was a three-day
+// project while the rat's filled off the first one you tripped over. Killing a
+// thing designed not to be farmed three times is not difficulty, it is waiting.
+//
+// So the price runs the other way, on the creature's own level, which is the
+// design's existing statement of how heavy a thing is:
+//
+//   level 6 (and the bosses) .. 3    the Gaunt, the Woodward, the drowned god
+//   level 5 ................... 4
+//   level 4 ................... 5
+//   level 3 ................... 6    the bulk of the world
+//   level 2 ................... 7
+//   level 1 ................... 8    the small stuff you kill by the dozen
+//
+// A rat's page becomes a record that you really did hunt them. A boss's page is
+// the trophy of having got there at all.
+export function killsForAccount(level: number): number {
+  return 9 - Math.max(1, Math.min(6, level || 1));
+}
+
+function journalTier(kills: number, studied: boolean, level: number): number {
+  if (studied && kills >= killsForAccount(level)) return 3; // the full account
   if (kills >= 1) return 2;            // a rough read, from the killing
   if (studied) return 1;              // habits only, from watching
   return 0;
@@ -466,9 +491,10 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   if (z.inCombat(session)) { session.staggered = true; opening = " Your eyes leave the fight to do it — an opening."; }
   const rows = await journalLoad(z.env.DB, journal.journalId);
   const row = rows.find((r) => r.templateId === tmpl.id);
-  const tier = journalTier(row?.kills ?? 0, true);
+  const tier = journalTier(row?.kills ?? 0, true, tmpl.level);
+  const want = killsForAccount(tmpl.level) - (row?.kills ?? 0);
   z.send(session, `You watch ${tmpl.name} a while and set down what you see.` +
-    (tier < 3 ? ` (Its full account wants ${3 - (row?.kills ?? 0)} more kill${3 - (row?.kills ?? 0) === 1 ? "" : "s"}.)` : " Its account is complete.") + opening, "study");
+    (tier < 3 ? ` (Its full account wants ${want} more kill${want === 1 ? "" : "s"}.)` : " Its account is complete.") + opening, "study");
   z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey, false);
   z.sendCtx(session); // drop the now-redundant `study` chip without waiting for the next refresh
 }
@@ -499,9 +525,10 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
     for (const r of await journalLoad(z.env.DB, id)) {
       if (r.studied) studied.add(r.templateId); // free refresh of the chip cache — the rows are already in hand
       const cur = byMob.get(r.templateId);
-      const tier = journalTier(r.kills, r.studied);
-      if (!cur || tier > journalTier(cur.kills, cur.studied)
-        || (tier === journalTier(cur.kills, cur.studied) && r.kills > cur.kills)) {
+      const lvl = z.world!.mobTemplates.get(r.templateId)?.level ?? 1;
+      const tier = journalTier(r.kills, r.studied, lvl);
+      if (!cur || tier > journalTier(cur.kills, cur.studied, lvl)
+        || (tier === journalTier(cur.kills, cur.studied, lvl) && r.kills > cur.kills)) {
         byMob.set(r.templateId, r);
       }
     }
@@ -513,8 +540,8 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
     .map((r) => {
       const tmpl = world.mobTemplates.get(r.templateId);
       if (!tmpl) return null;
-      const tier = journalTier(r.kills, r.studied);
-      const e: any = { id: tmpl.id, name: tmpl.name, tier, kills: r.kills, studied: r.studied ? 1 : 0 };
+      const tier = journalTier(r.kills, r.studied, tmpl.level);
+      const e: any = { id: tmpl.id, name: tmpl.name, tier, kills: r.kills, studied: r.studied ? 1 : 0, want: killsForAccount(tmpl.level) };
       if (tier >= 1) { e.nature = creatureNature(tmpl.id); e.note = tmpl.description; }
       if (tier >= 3) {
         e.level = tmpl.level;

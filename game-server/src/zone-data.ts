@@ -235,14 +235,30 @@ export const BENCH_CHIP = "inventory";
 // by name (rome, 2026-08-04). The shelf was the last store in the game you could
 // only reach by typing, and it is the biggest one.
 export const DEN_CHIP = "stow";
-// WHAT A DEN COSTS TO RAISE (mig 172). The room is a site, not a seat — anybody
-// may build on it — so this price is the ONLY thing rationing homes, and it has
-// to be a real errand rather than a formality. Dearer than the bar (2 iron / 3
-// scrap), because the bar is an upgrade to something standing and this is the
-// something: a frame, hinges, nails, and the walk out there with them in a pack
-// that is riding loud the whole way.
-export const DEN_RAISE_IRON = 4;
-export const DEN_RAISE_SCRAP = 10;
+// WHAT A DEN COSTS TO RAISE (mig 172, repriced 2026-08-04: rome, "even that
+// seems a bit cheap"). The room is a site, not a seat — anybody may build on it,
+// and the ground never runs out — so this price is the ONLY thing rationing
+// homes in the entire game. It has to read as an expedition, not an errand.
+//
+// THE SCALE IT IS PRICED AGAINST, because the number is meaningless without it:
+// salvage yields 1/2/4/8 scrap by rarity, smelt is 5 scrap to the iron bar, the
+// dearest thing the forge can make is 6 scrap, and a repair is 1 to 3. So the
+// whole economy is denominated in scrap, and a den is worth stating that way:
+//
+//   the first cut ... 4 iron + 10 scrap  =  30 scrap   (five forge recipes)
+//   NOW ............ 12 iron + 20 scrap  =  80 scrap
+//   the bar, after .. 2 iron +  3 scrap  =  13 scrap
+//
+// 80 scrap is 80 common pieces rendered down, or 40 uncommon, or 20 rare, or 10
+// epic. That is a real haul, and — this is the point of the number — it competes
+// directly with keeping your OWN kit repaired and forged, out of the same pile.
+// A home should cost you a run you would otherwise have spent on yourself.
+//
+// IRON CARRIES MOST OF IT ON PURPOSE. Iron only exists by melting five scrap, so
+// it is the one material you cannot pick up off a floor: 12 bars is sixty scrap
+// that went through a gate's fire, which is a walk, a bench and a decision.
+export const DEN_RAISE_IRON = 12;
+export const DEN_RAISE_SCRAP = 20;
 // Same trick for the keeper's hatch: the client opens the trade modal instead
 // of sending it as text. (Typed 'barter'/'buy'/'offer' still work bare.)
 export const TRADE_CHIP = "barter with the keeper";
@@ -999,6 +1015,110 @@ export const GLOAM_TELEGRAPH_MS = 90_000;      // the light goes thin and brown 
 export const GLOAM_STEP_MS = 150_000;          // it takes a new room every 2.5 min
 export const GLOAM_ACTIVE_MS = 45 * 60_000;    // the walk's ceiling
 export const GLOAM_AFTERMATH_MS = 10 * 60_000; // the halls stay wrong a while
+
+// ---------------------------------------------------------------------------
+// THE NEW GROUND'S WEATHER (rome, 2026-08-06: "we hvae new areas now such as
+// the woods and dens, lets add some events").
+//
+// The wood is 170 rooms and the den ground 60 — 230 of the world's 408 — and
+// between them they had NOT ONE arc. Every event in the pool was written for a
+// fortress: the boil and the corpse-wake are the warrens', the exhale and the
+// marrow-song are the deep's, the gloam is the keep's, and the weather (rain,
+// fog, cold, crows, lights) falls on "outdoors" as a single undifferentiated
+// sheet. So the west half of the world had sky and nothing else.
+//
+// Five arcs, three for the wood and two for the dens, and every one of them is
+// a bundle of toggles on rules that already exist — the law this file has kept
+// since the first event.
+
+// ---- THE RUT (wood) ----
+// The roe come into season. Game everywhere, stags that will NOT run, and the
+// wolves come in behind the noise. The wood's one good hunting window and the
+// one time it is full of things that hunt back.
+export const RUT_TELEGRAPH_MS = 60_000;
+export const RUT_ACTIVE_MIN_MS = 20 * 60_000;
+export const RUT_ACTIVE_MAX_MS = 35 * 60_000;
+export const RUT_AFTERMATH_MS = 8 * 60_000;
+export const RUT_DEER = 7;    // put on the wood for the window, cleared after
+export const RUT_WOLVES = 3;  // they follow the noise, they do not arrive with it
+export const RUT_WOLF_DELAY_MS = 4 * 60_000; // ...and they are LATE, which is the whole shape of it
+// AND THE ROARING IS REAL NOISE (rome, 2026-08-06: "when deers are in the rut,
+// are the making noise? (mateing call)"). It was prose only — the stags roared
+// in the ambient lines and the noise system never heard a thing, which left the
+// wolves arriving on a timer because I said so rather than because anything
+// called them. Now a rutting stag ROARS: it carries to the neighbouring rooms
+// like any other sound, and it pulls what hunts the same way a fight does.
+//
+// So the arc has two sides instead of one. The roaring MASKS you — the wood is
+// full of noise that is not yours, and this is the one window where a loud pack
+// costs you nothing — and the roaring DRAWS, because every wolf and hyena
+// already in the wood is converging on exactly the rooms you want to be in.
+// The wolves that arrive late are not the danger; they are the confirmation.
+export const RUT_ROAR_EVERY_MS = 25_000; // per room holding a stag, at most
+export const RUT_ROAR_ODDS = 0.45;       // ...and not every window
+export const RUT_NOISE_MASK = 0.4;       // your own noise the roaring swallows, in the wood, while it runs
+
+// ---- THE WOODWARD WALKS (wood) ----
+// He is a boss with a patrol route around the centre core, and the entire idea
+// of him is "the maze is not a place he is kept in, it is a place he keeps".
+// This is the day he keeps all of it: the route is dropped and he strides the
+// whole wood. No spawn, no new creature — the one already standing there simply
+// stops staying home.
+export const WALK_TELEGRAPH_MS = 90_000;
+export const WALK_ACTIVE_MIN_MS = 18 * 60_000;
+export const WALK_ACTIVE_MAX_MS = 30 * 60_000;
+export const WALK_AFTERMATH_MS = 10 * 60_000;
+export const WALK_STRIDE_MIN_MS = 25_000; // a patrol's pace is slow; this is not a patrol
+export const WALK_STRIDE_MAX_MS = 50_000;
+export const WOODWARD_TMPL = "the-woodward";
+
+// ---- THE QUIET (wood) ----
+// Every bird stops. Nothing wanders, and SOUND CARRIES: you hear a room
+// further than you could, and everything with ears hears you the same way. The
+// only arc in the game that is an ABSENCE, and it cuts exactly both ways.
+export const QUIET_TELEGRAPH_MS = 45_000;
+export const QUIET_ACTIVE_MIN_MS = 12 * 60_000;
+export const QUIET_ACTIVE_MAX_MS = 20 * 60_000;
+export const QUIET_AFTERMATH_MS = 6 * 60_000;
+export const QUIET_WANDER_MULT = 6;   // a creature's next step is six times further off
+export const QUIET_HEED_MULT = 2.2;   // ...and a noise it does hear pulls that much harder
+
+// ---- THE PACK COMES IN (dens) ----
+// Things off the Waste take the hamlet. It exists to serve the den's founding
+// bar (rome: "does having a den make leaving it feel MORE dangerous") — the
+// walk home becomes the fight, and a barred door becomes a real choice rather
+// than an upgrade you fitted once.
+//
+// IT HAS A HEAD, AND THAT IS THE POINT. Kill it and the pack breaks: the dogs
+// scatter for the Waste, the wolves go back to the wood, the arc ends early.
+// An event you can END, not one you wait out — and it makes the den ground the
+// one place in the world where clearing a room changes the weather.
+export const PACK_TELEGRAPH_MS = 75_000;
+export const PACK_ACTIVE_MIN_MS = 25 * 60_000;
+export const PACK_ACTIVE_MAX_MS = 40 * 60_000;
+export const PACK_AFTERMATH_MS = 10 * 60_000;
+export const PACK_DOGS = 5;      // the body of it
+export const PACK_WOLVES = 2;    // came in behind the dogs, and do not mix with them
+export const PACK_HYENAS = 2;    // follow packs, never join them
+export const PACK_HEAD_ODDS = 0.3; // ...that it is something worse than the lead dog
+export const PACK_HEADS_BAD = ["dire-wolf", "two-hound"];
+export const PACK_HEAD = "lead-dog";
+export const PACK_DOG = "masterless-dog";
+export const PACK_WOLF = "grey-wolf";
+export const PACK_HYENA = "grave-hyena";
+
+// ---- THE FEVER (dens) ----
+// Off the fever graves, which have been standing on that ground since it
+// shipped. ONE RULE, THREE HOOKS: on fevered ground NOTHING MENDS — rest, food
+// and dressings all pay the same fraction. There is no cure to buy and nothing
+// to fight; the answer is to leave, which is the whole point of putting it on
+// the ground people LIVE on, and it is the only arc in the game whose counter
+// is "go somewhere else".
+export const FEVER_TELEGRAPH_MS = 60_000;
+export const FEVER_ACTIVE_MIN_MS = 25 * 60_000;
+export const FEVER_ACTIVE_MAX_MS = 45 * 60_000;
+export const FEVER_AFTERMATH_MS = 12 * 60_000;
+export const FEVER_MEND_MULT = 0.35;  // what rest, food and a bandage are all worth on bad ground
 // ---- the small lives (rome, 2026-07-13): sleep, thirst, calls, and fear ----
 // Nothing blanket: each need lands only where it CHARACTERIZES, and the
 // refusals are design too — the dead never sleep, never drink, never call.
@@ -1868,13 +1988,36 @@ export const NIGHT_HUNT_MULT = 1.6;
 // hours, picks ONE event from the whole pool — four to six a day, never a
 // schedule, so the world surprises. An arc that isn't mid-run parks at
 // "never"; only the roll (or the bell's hours) starts one.
-export const ROLL_EVERY_MIN_MS = 3 * 3_600_000; // between rolls: 3-6h -> 4-6 events/day
-export const ROLL_EVERY_MAX_MS = 6 * 3_600_000;
+// HOW OFTEN THE WORLD DOES SOMETHING (rome, 2026-08-06: "then figure out how
+// many events happens"). It was 3-6h — about five rolls a day — and that number
+// was set when one arc at a time locked the WHOLE world, so five a day was five
+// a day everywhere. It is now one arc per GROUND, and the pool went from 12 to
+// 17, so five rolls spread across eight grounds is almost nothing. Measured, at
+// the old cadence:
+//
+//   the wood ..... 2.3 arcs/day, something happening  6% of the time
+//   the dens ..... 2.1 arcs/day,                      6%
+//   the road ..... 1.8 arcs/day,                      5%
+//   the deep ..... 0.8 arcs/day,                      1%
+//   the warrens .. 0.6 arcs/day,                      1%
+//
+// A player with an hour to spend saw weather roughly never. At 1-2h it is 16
+// rolls a day and the surface bands run 18-19% — about one session in five has
+// something in it, which is what "the world has weather" should mean. It is not
+// louder in any one place than the old number was: the same ground carries the
+// same single arc; there is simply more world now, and the die has to cover it.
+//
+// THE UNDERGROUND IS STILL THIN (2-5%) and that is a CONTENT gap, not a clock
+// one: the deep has two arcs, the warrens two, the keep one, and none of them
+// catch the outdoor weather. More rolls cannot fix that — more arcs down there
+// can. Noted, not papered over.
+export const ROLL_EVERY_MIN_MS = 1 * 3_600_000; // between rolls: 1-2h -> ~16/day across 8 grounds
+export const ROLL_EVERY_MAX_MS = 2 * 3_600_000;
 export const ROLL_FIRST_MIN_MS = 20 * 60_000; // a fresh world proves its sky within the hour
 export const ROLL_FIRST_MAX_MS = 60 * 60_000;
 export const ROLL_GRACE_MS = 10 * 60_000; // a roll slept past by more than this happened unobserved
 export const ROLL_MISSED_MIN_MS = 15 * 60_000; // ...and the next one lands mid-cycle, not instantly-on-login
-export const ROLL_MISSED_MAX_MS = 3 * 3_600_000;
+export const ROLL_MISSED_MAX_MS = 1 * 3_600_000;
 // Rain (the room-events opener, 067): telegraph -> active -> aftermath.
 export const RAIN_TELEGRAPH_MS = 2 * 60_000; // the iron-grey light before the first drops
 export const RAIN_ACTIVE_MIN_MS = 8 * 60_000;

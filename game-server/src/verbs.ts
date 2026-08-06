@@ -26,7 +26,7 @@ import {
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, DETAILED_MAP,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
   MILESTONES,
@@ -1695,10 +1695,23 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
       ? "No way opens that way — just your ear against cold stone."
       : "Stone all around. Nothing comes through.");
   }
-  const lines = ["You go still and give the dark your ear."];
+  const quiet = events.quieted(z, session.roomId);
+  const lines = [quiet
+    ? "You go still. There is nothing to listen past — the wood is holding its breath with you."
+    : "You go still and give the dark your ear."];
   for (const e of picked) {
     const sealed = e.key_item && !z.openDoors.has(`${session.roomId}:${e.dir}`);
     lines.push(`${cap(dirPhrase(e.dir))}: ${sealed ? "cold iron, and nothing through it" : heardIn(z, e.to_room)}.`);
+    // IN THE QUIET, SOUND CARRIES A ROOM FURTHER (2026-08-06). The silence is
+    // not safety, it is a better microphone — and it points BOTH ways: what you
+    // can hear two rooms out can hear you (ai.ts, QUIET_HEED_MULT).
+    if (!quiet || sealed) continue;
+    for (const f of world.exits.get(e.to_room) ?? []) {
+      if (f.to_room === session.roomId) continue;
+      const beyond = heardIn(z, f.to_room);
+      if (/^nothing/i.test(beyond)) continue; // only report the far room when there IS something
+      lines.push(`  ...and past that, ${dirPhrase(f.dir)} again: ${beyond}, faint.`);
+    }
   }
   z.send(session, lines.join("\n"), "study");
 }
@@ -1820,7 +1833,10 @@ export async function consumeFood(z: ZoneDO,
   // min 1, so it's still desperation food). Cured/keeping food never spoils, so
   // it's exempt (same FOOD_KEEPS gate as the freshness prose).
   const spoiled = !FOOD_KEEPS.has(carried.itemId) && foodState(carried.acquiredAt) === "spoiled";
-  const heal = spoiled ? Math.max(1, Math.round(tmpl.heal * FOOD_SPOIL_HEAL_MULT)) : tmpl.heal;
+  let heal = spoiled ? Math.max(1, Math.round(tmpl.heal * FOOD_SPOIL_HEAL_MULT)) : tmpl.heal;
+  // THE FEVER (2026-08-06): on that ground nothing mends, and food is not an
+  // exception to it — the same fraction rest pays and a dressing pays.
+  if (events.fevered(z, session.roomId)) heal = Math.max(1, Math.round(heal * FEVER_MEND_MULT));
   session.hp = Math.min(session.maxHp, session.hp + heal);
   return { before, tmpl, spoiled };
 }
@@ -1919,7 +1935,8 @@ export async function applyBandage(z: ZoneDO, session: Session, carried: Carried
   await removeItemRow(z.env.DB, carried.rowId);
   const before = session.hp;
   session.bleedTicks = 0; session.bleedDmg = 0; // the wound is bound
-  session.hp = Math.min(session.maxHp, session.hp + tmpl.staunch);
+  session.hp = Math.min(session.maxHp, session.hp + (events.fevered(z, session.roomId)
+    ? Math.max(1, Math.round(tmpl.staunch * FEVER_MEND_MULT)) : tmpl.staunch));
   z.send(session, (auto
     ? `Your hands move on their own — you bind the wound with ${tmpl.name}.`
     : `You bind your wounds with ${tmpl.name}.`)

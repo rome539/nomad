@@ -3566,11 +3566,14 @@ function renderJournal(f) {
       lk.className = "jlocked";
       // Name EXACTLY what's missing (rome, 2026-07-26): the old line read "Kill
       // and study it more for the hard numbers", which sent a player who'd
-      // already killed 83 of a thing off to kill more \\u2014 when kills past 3 do
-      // nothing and the account was only ever waiting on one 'study'. A full
-      // account is study AND 3 kills; say which half is short.
+      // already killed 83 of a thing off to kill more \\u2014 when kills past the
+      // mark do nothing and the account was only ever waiting on one 'study'. A
+      // full account is study AND its own number of kills; say which half is
+      // short. The number is the SERVER's (lore.killsForAccount, 9 minus the
+      // creature's level) and rides on the entry \\u2014 a boss wants three, a rat
+      // wants eight, and the client must never hold its own copy of that.
       if (e.tier >= 2) {
-        var need = 3 - e.kills;
+        var need = (e.want || 3) - e.kills;
         lk.textContent = !e.studied
           ? (need > 0
             ? "Study one alive, and " + need + " more kill" + (need === 1 ? "" : "s") + ", for the hard numbers."

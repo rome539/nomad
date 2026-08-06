@@ -13,6 +13,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
+import * as den from "./den";
 import {
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
   ROLL_EVERY_MIN_MS, ROLL_EVERY_MAX_MS, ROLL_FIRST_MIN_MS, ROLL_FIRST_MAX_MS,
@@ -39,6 +40,15 @@ import {
   BROODERS, SENTINELS, DROWNERS, DEEP_ROOMS,
   GLOAM_TELEGRAPH_MS, GLOAM_STEP_MS, GLOAM_ACTIVE_MS, GLOAM_AFTERMATH_MS,
   FORTRESS_BANDS,
+  RUT_TELEGRAPH_MS, RUT_ACTIVE_MIN_MS, RUT_ACTIVE_MAX_MS, RUT_AFTERMATH_MS,
+  RUT_DEER, RUT_WOLVES, RUT_WOLF_DELAY_MS, RUT_ROAR_EVERY_MS, RUT_ROAR_ODDS,
+  WALK_TELEGRAPH_MS, WALK_ACTIVE_MIN_MS, WALK_ACTIVE_MAX_MS, WALK_AFTERMATH_MS,
+  WALK_STRIDE_MIN_MS, WALK_STRIDE_MAX_MS, WOODWARD_TMPL,
+  QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
+  PACK_TELEGRAPH_MS, PACK_ACTIVE_MIN_MS, PACK_ACTIVE_MAX_MS, PACK_AFTERMATH_MS,
+  PACK_DOGS, PACK_WOLVES, PACK_HYENAS, PACK_HEAD_ODDS, PACK_HEADS_BAD,
+  PACK_HEAD, PACK_DOG, PACK_WOLF, PACK_HYENA,
+  FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS,
 } from "./zone-data";
 
 // An idle arc waits here until the roll (or the bell's hours) wakes it.
@@ -46,13 +56,50 @@ const NEVER = 9_000_000_000_000_000;
 
 // The pool the roll draws from, weighted: weather stays the commonest sky,
 // the loosed Gaunt the rarest. The bell is NOT here — it keeps its own hours.
-const POOL: [string, number][] = [
-  ["rain", 3], ["boil", 2], ["wake", 2], ["want", 2], ["lights", 2], ["crows", 2],
-  ["exhale", 2], ["song", 2], ["fog", 2], ["cold", 2], ["gloam", 2], ["escape", 1],
-  // ["breach", 1], — PARKED (rome, 2026-07-11: "park the breech"). The whole
-  // arc (tickBreach, BREACH_PAIRS, the wall prose) stays built and idle;
+// ONE ARC AT A TIME PER BAND, NOT PER WORLD (rome, 2026-08-06). The old rule
+// was global: any arc mid-run anywhere blocked every other arc everywhere. That
+// was right when the world WAS a fortress. It is now five bands over 408 rooms,
+// and rain in the wood has nothing whatever to do with the boil in the warrens —
+// a player can only ever stand in one of them. Gating globally meant the sky was
+// empty almost everywhere, almost always, and adding five arcs would have made
+// each one RARER.
+//
+// So each arc declares the ground it falls on, and the roll draws only from
+// arcs whose ground is free. Same die, same cadence, same weights; the world
+// simply stops pretending the wood and the deep share a sky. The weather arcs
+// (rain, fog, cold, crows) claim "*" — they fall on everything outdoors, which
+// includes the wood, the road and the dens, so they still lock those out and
+// each other. The bell and the tide keep their own locks, as before.
+const ANY = "*";
+const POOL: [string, number, string][] = [
+  // the sky, on everything out of doors at once
+  ["rain", 3, ANY], ["fog", 2, ANY], ["cold", 2, ANY], ["crows", 2, ANY],
+  // the fortress's own
+  ["boil", 2, "warrens"], ["wake", 2, "warrens"],
+  ["exhale", 2, "deep"], ["song", 2, "deep"],
+  ["gloam", 2, "upper"], ["want", 2, "gate"],
+  ["lights", 2, "road"], ["escape", 1, "deep"],
+  // THE WOOD (mig-less, 2026-08-06) — 170 rooms that had no weather of their own
+  ["rut", 2, "wood"], ["walk", 1, "wood"], ["quiet", 2, "wood"],
+  // THE DEN GROUND — 60 rooms, likewise
+  ["pack", 2, "den"], ["fever", 2, "den"],
+  // ["breach", 1, "upper"], — PARKED (rome, 2026-07-11: "park the breech"). The
+  // whole arc (tickBreach, BREACH_PAIRS, the wall prose) stays built and idle;
   // restoring it is uncommenting this ticket.
 ];
+
+// Which grounds are busy right now, so the roll can skip them. An arc on ANY
+// blocks every band and is blocked by every band, because that is what weather
+// falling on the whole open sky actually means.
+function bandsBusy(z: ZoneDO): { any: boolean; bands: Set<string> } {
+  const bands = new Set<string>();
+  let any = false;
+  for (const [id, , band] of POOL) {
+    if (phaseOf(z, id) === "idle") continue;
+    if (band === ANY) any = true; else bands.add(band);
+  }
+  return { any, bands };
+}
 
 // ---- queries (the hooks elsewhere read these) ----
 
@@ -210,6 +257,23 @@ export function coldDrives(z: ZoneDO, creature: { roomId: string; templateId: st
 
 // A torch lit while the cold bites burns half as long (light.cmdLight reads
 // this); torches already burning lose half their remainder on the first beat.
+// ---- the new ground's queries (the hooks elsewhere read these) ----
+
+// THE RUT is on this room: the wood, and only while it runs.
+export function rutting(z: ZoneDO, roomId: string): boolean {
+  return phaseOf(z, "rut") === "active" && z.world!.rooms.get(roomId)?.region === "wood";
+}
+
+// THE QUIET. Nothing wanders, and everything hears further — both ways.
+export function quieted(z: ZoneDO, roomId: string): boolean {
+  return phaseOf(z, "quiet") === "active" && z.world!.rooms.get(roomId)?.region === "wood";
+}
+
+// THE FEVER is on this ground: the dens, and only while it runs.
+export function fevered(z: ZoneDO, roomId: string): boolean {
+  return phaseOf(z, "fever") === "active" && z.world!.rooms.get(roomId)?.region === "den";
+}
+
 export function coldTorchMult(z: ZoneDO, roomId: string): number {
   return coldBites(z, roomId) ? COLD_TORCH_MULT : 1;
 }
@@ -373,6 +437,37 @@ const LIGHTS_AMBIENT = [
   "Two pale lights now, keeping pace with each other out in the dark.",
   "The light stands still out there, as if whoever carries it is watching you back.",
 ];
+// ---- the new ground's ambience ----
+const RUT_AMBIENT = [
+  "A stag roars somewhere off through the trees, and something answers it much closer.",
+  "Two of them are going at it in a thicket nearby — antler on antler, a sound like dry wood breaking.",
+  "A roe crosses the ride ahead at a walk, and does not hurry, and does not look at you.",
+  "The wood smells of them: musk and trampled bracken and something sharper under it.",
+];
+const RUT_WOLF_AMBIENT = [
+  "Something is moving parallel to you, keeping the thicket between, matching your pace.",
+  "The roaring stops for a moment, all of it at once, and then starts again further off.",
+];
+const WALK_AMBIENT = [
+  "Every bird in this part of the wood goes up at once, and none of them come back down.",
+  "A tree comes down somewhere behind you. Nothing was cutting it.",
+  "The ride ahead is empty, and the ride behind is empty, and you are certain that a moment ago one of them was not.",
+];
+const QUIET_AMBIENT = [
+  "Nothing. Not a bird, not a branch, not water. Your own breathing sounds borrowed.",
+  "Your gear speaks every time you shift your weight, and there is nothing to cover it.",
+  "The silence has a shape to it, and the shape is listening.",
+];
+const PACK_AMBIENT = [
+  "Dogs somewhere among the houses — three or four of them, working out from a doorway.",
+  "Something goes through the nettles at the run, low and fast, and does not come out the other side.",
+  "A chorus starts up two streets over, and cuts off all together.",
+];
+const FEVER_AMBIENT = [
+  "The air off the graves is warm and sweetish and sits at the back of your throat.",
+  "Flies, in numbers, on a day with no cause for them.",
+  "You are sweating, and the wind is cold, and those two things are not agreeing.",
+];
 const CROWS_AMBIENT = [
   "A crow turns its head, following you.",
   "Wings resettle on the stone above, unhurried.",
@@ -416,6 +511,20 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
     if (phaseOf(z, "song") === "active") return pick(SONG_AMBIENT);
     if (phaseOf(z, "cold") === "active") return pick(COLD_AMBIENT);
     return null;
+  }
+  // THE NEW GROUND'S OWN WEATHER, ahead of the sky's — an arc that belongs to
+  // exactly this band should speak before the general outdoor weather does,
+  // or the wood would report fog while the woodward walked through it.
+  const region = z.world!.rooms.get(roomId)?.region;
+  if (region === "wood") {
+    if (phaseOf(z, "walk") === "active") return pick(WALK_AMBIENT);
+    if (phaseOf(z, "quiet") === "active") return pick(QUIET_AMBIENT);
+    if (phaseOf(z, "rut") === "active") {
+      return rutWolvesOut(z, Date.now()) && chance(0.3) ? pick(RUT_WOLF_AMBIENT) : pick(RUT_AMBIENT);
+    }
+  } else if (region === "den") {
+    if (phaseOf(z, "pack") === "active") return pick(PACK_AMBIENT);
+    if (phaseOf(z, "fever") === "active") return pick(FEVER_AMBIENT);
   }
   if (!OUTDOOR_ROOMS.has(roomId)) return null;
   const p = phaseOf(z, "rain");
@@ -494,6 +603,323 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickGloam(z, now);
   await tickBreach(z, now);
   await tickTide(z, now);
+  await tickRut(z, now);
+  await tickWalk(z, now);
+  await tickQuiet(z, now);
+  await tickPack(z, now);
+  await tickFever(z, now);
+  rutWolves(z, now);
+  rutRoars(z, now);
+}
+
+// THE ROARING, as a thing the world can hear. Every room holding a rutting
+// stag speaks, at most every RUT_ROAR_EVERY_MS: it carries to the neighbours
+// like any other sound (roomSound) and it PULLS what hunts (creatureNoise), so
+// the wolves converging on the deer is a consequence and not a script.
+const ROAR_LINES = [
+  "A stag roars {dir} — a long, cracked bellow with nothing of the deer in it.",
+  "Something bellows {dir}, and is answered further off.",
+  "Antlers go together {dir}, hard, like dry wood breaking.",
+];
+function rutRoars(z: ZoneDO, now: number): void {
+  const st = z.events.get("rut");
+  if (!st || st.phase !== "active") return;
+  const seen = new Set<string>();
+  for (const id of held(st)) {
+    const c = z.creatures.get(id);
+    if (!c || (c.templateId !== "roe-deer" && c.templateId !== "white-roe")) continue;
+    if (seen.has(c.roomId)) continue; // one voice a room, however many stand in it
+    seen.add(c.roomId);
+    if ((z.rutRoarAt.get(c.roomId) ?? 0) + RUT_ROAR_EVERY_MS > now) continue;
+    z.rutRoarAt.set(c.roomId, now);
+    if (!chance(RUT_ROAR_ODDS)) continue;
+    // `loud`: the roar is the din, so the din does not get to swallow it.
+    z.roomSound(c.roomId, pick(ROAR_LINES), undefined, undefined, true);
+    // It calls, and things come. The same pull a fight makes, from an animal
+    // that is advertising itself on purpose — which is what a rut IS.
+    z.creatureNoise(c.roomId, true);
+  }
+}
+
+// ---- the new ground's arcs: three for the wood, two for the dens ----
+
+// Which rooms a band actually owns, minus the places nothing is ever born in.
+function bandRooms(z: ZoneDO, band: string): string[] {
+  return [...z.world!.rooms.keys()].filter(
+    (r) => z.world!.rooms.get(r)!.region === band && !z.world!.safeRooms.has(r) && !z.world!.entryRooms.has(r),
+  );
+}
+
+// Put a creature on the ground, the way the escaped Gaunt is put on it.
+function hatch(z: ZoneDO, templateId: string, roomId: string, now: number, stride: [number, number]): string | null {
+  const tmpl = z.world!.mobTemplates.get(templateId);
+  if (!tmpl) return null;
+  const id = uuid();
+  z.creatures.set(id, {
+    id, templateId, roomId, hp: tmpl.max_hp, hunger: randInt(20, 60),
+    grudges: [], nextWanderAt: now + randInt(stride[0], stride[1]), target: null,
+  });
+  z.refreshRoomCtx(roomId);
+  return id;
+}
+
+// Take back everything an arc put down that is still standing. A creature a
+// player KILLED is simply not here to clear — the world keeps that.
+function recall(z: ZoneDO, ids: string[]): void {
+  for (const id of ids) {
+    const c = z.creatures.get(id);
+    if (!c) continue;
+    z.creatures.delete(id);
+    for (const s of z.sessions.values()) {
+      if (s.target === id) s.target = null;
+      if (s.seizedBy === id) s.seizedBy = undefined;
+    }
+    z.refreshRoomCtx(c.roomId);
+  }
+}
+
+// The ids an arc is holding, parked in its own state so a hibernation or a
+// deploy cannot orphan a wolf on the ground forever.
+function held(st: EventState): string[] {
+  if (!st.data) return [];
+  // The rut parks its wolf-due time after a pipe; everything before it is ids.
+  const bar = st.data.indexOf("|");
+  return (bar < 0 ? st.data : st.data.slice(0, bar)).split(",").filter(Boolean);
+}
+function hold(st: EventState, ids: (string | null)[]): void {
+  st.data = ids.filter(Boolean).join(",");
+}
+
+// ---- THE RUT (wood) ----
+// Game everywhere, stags that will not run, and the wolves in behind the noise.
+async function tickRut(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("rut");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("rut", st); }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + RUT_TELEGRAPH_MS;
+      z.roomFeedBands(new Set(["wood"]), "Somewhere off through the trees a stag roars — a sound with nothing of the deer about it — and is answered, and answered again.", "evt");
+      break;
+    }
+    case "telegraph": {
+      const rooms = bandRooms(z, "wood");
+      const ids: (string | null)[] = [];
+      for (let i = 0; i < RUT_DEER && rooms.length; i++) {
+        ids.push(hatch(z, chance(0.15) ? "white-roe" : "roe-deer", pick(rooms), now, [20_000, 60_000]));
+      }
+      hold(st, ids);
+      st.phase = "active";
+      st.until = now + randInt(RUT_ACTIVE_MIN_MS, RUT_ACTIVE_MAX_MS);
+      // The wolves are LATE on purpose. The window opens as a hunting window and
+      // turns into something else while you are still in it — that gap is the
+      // entire shape of this arc, and it is why the deer arrive alone.
+      st.data = (st.data ?? "") + "|" + (now + RUT_WOLF_DELAY_MS);
+      z.roomFeedBands(new Set(["wood"]), "The wood is full of them. Roe break across the rides in twos and threes, and the stags do not give way.", "evt");
+      break;
+    }
+    case "active": {
+      recall(z, held(st));
+      st.data = undefined;
+      st.phase = "aftermath";
+      st.until = now + RUT_AFTERMATH_MS;
+      z.roomFeedBands(new Set(["wood"]), "The roaring thins out and stops. What is left in the wood is what lives here.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
+}
+
+// The rut parks the wolves' due time after a pipe: "id,id,id|<when>". Once it
+// is past, they are on the ground and the wood knows it.
+function rutWolvesDue(st: EventState | undefined): number | null {
+  const bar = st?.data?.indexOf("|") ?? -1;
+  if (!st?.data || bar < 0) return null;
+  const at = Number(st.data.slice(bar + 1));
+  return Number.isFinite(at) ? at : null;
+}
+function rutWolvesOut(z: ZoneDO, now: number): boolean {
+  const st = z.events.get("rut");
+  if (!st || st.phase !== "active") return false;
+  const due = rutWolvesDue(st);
+  return due === null || now >= due; // no pipe left = they have already come in
+}
+
+// The wolves' late arrival, checked every tick while the rut runs.
+function rutWolves(z: ZoneDO, now: number): void {
+  const st = z.events.get("rut");
+  if (!st || st.phase !== "active") return;
+  const due = rutWolvesDue(st);
+  if (due === null || now < due) return; // not yet, or already in
+  const rooms = bandRooms(z, "wood");
+  const ids = st.data!.slice(0, st.data!.indexOf("|")).split(",").filter(Boolean);
+  for (let i = 0; i < RUT_WOLVES && rooms.length; i++) {
+    const id = hatch(z, "grey-wolf", pick(rooms), now, [15_000, 45_000]);
+    if (id) ids.push(id);
+  }
+  st.data = ids.join(",");
+  z.roomFeedBands(new Set(["wood"]), "The roaring has been going on long enough now that other things have heard it. Somewhere west, a wolf answers a stag.", "evt");
+}
+
+// ---- THE WOODWARD WALKS (wood) ----
+async function tickWalk(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("walk");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("walk", st); }
+  // While he walks, he strides. A patrol's pace is slow; this is not a patrol.
+  if (st.phase === "active") {
+    for (const c of z.creatures.values()) {
+      if (c.templateId !== WOODWARD_TMPL) continue;
+      if (c.nextWanderAt > now + WALK_STRIDE_MAX_MS) {
+        c.nextWanderAt = now + randInt(WALK_STRIDE_MIN_MS, WALK_STRIDE_MAX_MS);
+      }
+    }
+  }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      // No woodward standing, no walk. He is not conjured for this.
+      if (![...z.creatures.values()].some((c) => c.templateId === WOODWARD_TMPL)) { st.until = NEVER; break; }
+      st.phase = "telegraph";
+      st.until = now + WALK_TELEGRAPH_MS;
+      z.roomFeedBands(new Set(["wood"]), "The wood goes wrong all at once — birds up off every ride, and something big moving out from the middle of it that has not moved in a long while.", "evt");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + randInt(WALK_ACTIVE_MIN_MS, WALK_ACTIVE_MAX_MS);
+      z.roomFeedBands(new Set(["wood"]), "He is not where he was. Whatever the maze was keeping in its middle is walking it end to end.", "evt");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + WALK_AFTERMATH_MS;
+      z.roomFeedBands(new Set(["wood"]), "The wood settles, one ride at a time. Something has gone back to the middle of it.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
+}
+
+// ---- THE QUIET (wood) ----
+async function tickQuiet(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("quiet");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("quiet", st); }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + QUIET_TELEGRAPH_MS;
+      z.roomFeedBands(new Set(["wood"]), "The birds stop. Not one at a time — all of them, together, and the silence they leave has an edge on it.", "evt");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + randInt(QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS);
+      z.roomFeedBands(new Set(["wood"]), "Nothing moves in the whole wood. You can hear your own gear from further away than you would like.", "evt");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + QUIET_AFTERMATH_MS;
+      z.roomFeedBands(new Set(["wood"]), "A wood pigeon goes off somewhere, clattering, and the wood remembers how to make noise.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
+}
+
+// ---- THE PACK COMES IN (dens) ----
+// It has a HEAD. Kill it and the pack breaks and the arc ends early: an event
+// with a move in it, and the one place in the world where clearing a room
+// changes the weather.
+async function tickPack(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("pack");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("pack", st); }
+  if (st.phase === "active") {
+    const ids = held(st);
+    const headId = ids[0];
+    if (headId && !z.creatures.get(headId)) {
+      // Somebody put the head down. The rest go.
+      recall(z, ids.slice(1));
+      st.data = undefined;
+      st.phase = "aftermath";
+      st.until = now + PACK_AFTERMATH_MS;
+      z.roomFeedBands(new Set(["den"]), "The pack comes apart the moment the big one goes down — dogs breaking for the Waste in every direction, and nothing left on the ground but what you did to it.", "evt");
+      return;
+    }
+  }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + PACK_TELEGRAPH_MS;
+      z.roomFeedBands(new Set(["den"]), "Dogs, out on the Waste, a long way off and getting closer — a lot of them, and none of them hunting anything they have found yet.", "evt");
+      break;
+    }
+    case "telegraph": {
+      const rooms = bandRooms(z, "den");
+      if (!rooms.length) { st.phase = "idle"; st.until = NEVER; break; }
+      // The head first: its id is the one held at the front, because everything
+      // this arc does afterwards is measured against whether it is still alive.
+      const headTmpl = chance(PACK_HEAD_ODDS) ? pick(PACK_HEADS_BAD) : PACK_HEAD;
+      const ids: (string | null)[] = [hatch(z, headTmpl, pick(rooms), now, [25_000, 60_000])];
+      for (let i = 0; i < PACK_DOGS; i++) ids.push(hatch(z, PACK_DOG, pick(rooms), now, [20_000, 50_000]));
+      for (let i = 0; i < PACK_WOLVES; i++) ids.push(hatch(z, PACK_WOLF, pick(rooms), now, [20_000, 50_000]));
+      for (let i = 0; i < PACK_HYENAS; i++) ids.push(hatch(z, PACK_HYENA, pick(rooms), now, [30_000, 70_000]));
+      hold(st, ids);
+      st.phase = "active";
+      st.until = now + randInt(PACK_ACTIVE_MIN_MS, PACK_ACTIVE_MAX_MS);
+      const headName = z.world!.mobTemplates.get(headTmpl)?.name ?? "something at the head of them";
+      z.roomFeedBands(new Set(["den"]), `They are in among the houses. ${headName[0].toUpperCase()}${headName.slice(1)} is at the head of it, and the rest read off it.`, "evt");
+      // If you LIVE here you are owed the specific: you would know the sound.
+      for (const s of z.sessions.values()) {
+        if (z.regionOf(s.roomId) === "den") continue; // they can hear it themselves
+        const mine = den.myDen(z, s.pubkey);
+        if (mine && z.world!.rooms.get(mine.roomId)?.region === "den") {
+          z.send(s, `Word travels the way it does out here: there are dogs in the houses at ${z.world!.rooms.get(mine.roomId)!.name}, and ${headName} at the head of them. Your door is out there.`, "evt");
+        }
+      }
+      break;
+    }
+    case "active": {
+      recall(z, held(st));
+      st.data = undefined;
+      st.phase = "aftermath";
+      st.until = now + PACK_AFTERMATH_MS;
+      z.roomFeedBands(new Set(["den"]), "Whatever the dogs came for, they have stopped looking for it here. They go off west in a loose string and the ground is quiet again.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
+}
+
+// ---- THE FEVER (dens) ----
+async function tickFever(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("fever");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("fever", st); }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + FEVER_TELEGRAPH_MS;
+      z.roomFeedBands(new Set(["den"]), "The wind turns and comes off the graves, and it is warm, and it is wrong. Everything on this ground smells faintly of the pit.", "evt");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + randInt(FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS);
+      z.roomFeedBands(new Set(["den"]), "It settles over the whole ground. Sleep will not take, food does you no good, and a dressing may as well be a rag. There is nothing here to fight and nothing to mend.", "evt");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + FEVER_AFTERMATH_MS;
+      z.roomFeedBands(new Set(["den"]), "The wind comes round again off the fen, cold and clean, and the ground lets go of it.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
 }
 
 // ---- the roll (the world's dice) ----
@@ -520,14 +946,18 @@ function tickRoll(z: ZoneDO, now: number): void {
     return;
   }
   st.until = now + randInt(ROLL_EVERY_MIN_MS, ROLL_EVERY_MAX_MS);
-  // Only one thing at a time falls out of the sky: if any arc is still
-  // mid-run (or the bell rings, or the tide is in), this roll passes — quiet
-  // is a result too.
-  if (POOL.some(([id]) => phaseOf(z, id) !== "idle") || phaseOf(z, "bell") !== "idle" || phaseOf(z, "tide") !== "idle") return;
-  const total = POOL.reduce((sum, [, w]) => sum + w, 0);
+  // One thing at a time PER GROUND. The bell and the tide still stop the world
+  // — they are the two arcs that are events in the whole keep's life rather than
+  // weather on one band. Everything else only has to find its own ground free,
+  // and if nothing's ground is free this roll passes: quiet is a result too.
+  if (phaseOf(z, "bell") !== "idle" || phaseOf(z, "tide") !== "idle") return;
+  const busy = bandsBusy(z);
+  const open = POOL.filter(([, , band]) => band === ANY ? (!busy.any && !busy.bands.size) : (!busy.any && !busy.bands.has(band)));
+  if (!open.length) return;
+  const total = open.reduce((sum, [, w]) => sum + w, 0);
   let n = randInt(1, total);
-  let picked = POOL[0][0];
-  for (const [id, w] of POOL) {
+  let picked = open[0][0];
+  for (const [id, w] of open) {
     n -= w;
     if (n <= 0) { picked = id; break; }
   }
