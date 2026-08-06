@@ -1714,6 +1714,7 @@ export function wallStudy(z: ZoneDO, session: Session): void {
     (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({
       id, name: room.name, exits, here: id === session.roomId,
       gate: world.entryRooms.has(id) ? 1 : 0, // a door draws as a door on the wall too
+      safe: world.safeRooms.has(id) && !world.entryRooms.has(id) ? 1 : 0, // ...and a bolthole as a bolthole
       band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
       x: at?.x, y: at?.y,
     });

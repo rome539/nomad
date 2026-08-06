@@ -161,7 +161,7 @@ function crudeHand(rowId: string): number {
 // hundred cheap steps.
 export interface WorldGrid {
   at: Map<string, { x: number; y: number }>;      // absolute, band offset already baked in
-  bands: { band: number; x: number; y: number }[]; // where each stratum's label hangs, fixed forever
+  bands: { region: string; x: number; y: number }[]; // where each REGION's caption hangs, fixed forever
 }
 
 export function worldGrid(z: ZoneDO): WorldGrid {
@@ -190,48 +190,34 @@ export function worldGrid(z: ZoneDO): WorldGrid {
     if (room.map_x === null || room.map_x === undefined) continue;
     at.set(room.id, { x: room.map_x, y: room.map_y ?? 0 });
   }
-  // THE LABELS HANG ON THE SPINE (rome, 2026-08-04: "the fucking labeling is all
-  // fucking off for the map (the surface is apearing right above the wood) the
-  // surface should be that part above the halls").
+  // EVERY REGION IS NAMED, NOT EVERY STRATUM (rome, 2026-08-06: "make it so on
+  // the map all regions are labled (like it is with overworks, warrens, etc)").
   //
-  // They used to hang at the top-left of everything the band contained, which was
-  // right while a stratum was one block of fortress. It stopped being right the
-  // moment the surface grew a road, a den ground and a 170-room wood: the surface
-  // band's westmost, northmost corner is now the far top of the WOOD, forty-eight
-  // squares west of the keep, so "THE SURFACE" was captioning the trees while the
-  // ground it names — the fortress's own open ground, the part directly above the
-  // halls — sat unlabelled. Each new region west will drag it further.
+  // The captions used to be one per BAND, which meant the five strata got names
+  // and the surface — 311 of 408 rooms — got exactly one: "THE SURFACE",
+  // covering the keep's own ground, a 68-room road, a 170-room wood and the den
+  // hamlet all at once. The underground was better labelled than the half of the
+  // world people actually walk.
   //
-  // A stratum is a slice of the SAME PLACE at a different depth, so its caption
-  // belongs where the strata stack: the columns you go up and down through. The
-  // spine is measured, not written down — the columns carrying rooms from the most
-  // strata, which is the keep and always will be, because the keep is the only
-  // thing in this world with five floors. Regions added west or east widen the
-  // surface and cannot move a single caption.
-  const pts = new Map<number, { x: number; y: number }[]>();
-  const strataAt = new Map<number, Set<number>>();
+  // So a caption belongs to a REGION now. Each hangs at the top-left of its own
+  // rooms, which needs no spine and no measuring: the regions are separate
+  // places on the sheet, so their own corners are the honest anchors. The one
+  // exception is `gate` — the fortress's three doors stand ON its open ground
+  // and would print a second caption inside the first. They need no label; a
+  // gate is already the loudest tile on the paper.
+  const pts = new Map<string, { x: number; y: number }[]>();
   for (const [id, p] of at) {
-    const band = MAP_BAND_OF[mapRegionOf(z, id)] ?? 1;
-    (pts.get(band) ?? pts.set(band, []).get(band)!).push(p);
-    (strataAt.get(p.x) ?? strataAt.set(p.x, new Set()).get(p.x)!).add(band);
+    let region = mapRegionOf(z, id);
+    if (region === "gate") region = "out"; // a door is drawn on the ground it stands on
+    (pts.get(region) ?? pts.set(region, []).get(region)!).push(p);
   }
-  let deepest = 0;
-  for (const s of strataAt.values()) deepest = Math.max(deepest, s.size);
-  const spine = [...strataAt].filter(([, s]) => s.size === deepest).map(([x]) => x);
-  const lo = Math.min(...spine), hi = Math.max(...spine);
   const bands = [...pts.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([band, list]) => {
-      // A band that somehow misses the spine keeps the old reading rather than
-      // losing its caption altogether.
-      const on = list.filter((p) => p.x >= lo && p.x <= hi);
-      const use = on.length ? on : list;
-      return {
-        band,
-        x: Math.min(...use.map((p) => p.x)) - 0.35,
-        y: Math.min(...use.map((p) => p.y)) - 1.05,
-      };
-    });
+    .sort((a, b) => Math.min(...a[1].map((p) => p.y)) - Math.min(...b[1].map((p) => p.y)))
+    .map(([region, list]) => ({
+      region,
+      x: Math.min(...list.map((p) => p.x)) - 0.35,
+      y: Math.min(...list.map((p) => p.y)) - 1.05,
+    }));
   z.mapGrid = { at, bands };
   return z.mapGrid;
 }
@@ -337,6 +323,12 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({
       id, name: room.name, exits, here: id === session.roomId,
       gate: world.entryRooms.has(id) ? 1 : 0,
+      // A HIDEAWAY IS THE OTHER KIND OF SAFETY, and the map was silent about it
+      // (rome, 2026-08-06). A gate is where you BANK; a bolthole is where you
+      // stop being followed. Both are worth steering for and only one of them
+      // was drawn. Sent per-room, so it can only ever appear on ground your copy
+      // has actually charted.
+      safe: world.safeRooms.has(id) && !world.entryRooms.has(id) ? 1 : 0,
       // YOUR ROOF IS FINDABLE ON THE PAPER (rome, 2026-08-04: "on the map your
       // den should be easily noticed"). A den is a fixed point you have to be
       // able to steer for from anywhere — that is most of what makes the walk

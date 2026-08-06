@@ -3175,6 +3175,25 @@ var MAP_BANDS = [
   { band: 3, label: "THE WARRENS" },
   { band: 4, label: "THE DEEP" },
 ];
+// EVERY REGION IS NAMED ON A TRUE MAP (rome, 2026-08-06). The strata above are
+// still what a CRUDE copy stacks by — it is a shattered pack of lies laid out
+// locally, and bands are the only shape it has. A true sheet captions PLACES:
+// the five strata got names while the surface, 311 of 408 rooms, got one word
+// covering the keep's ground, the road, the wood and the hamlet together. The
+// anchor for each rides on the frame (lore.worldGrid) so a caption never moves
+// when you find a new room. The 'gate' region is deliberately absent: the three
+// fortress doors stand on its open ground, and would caption inside a caption.
+var MAP_REGION_LABELS = {
+  sky: "THE OVERWORKS",
+  out: "THE OPEN GROUND",
+  upper: "THE HALLS",
+  warrens: "THE WARRENS",
+  deep: "THE DEEP",
+  road: "THE WEST ROAD",
+  wood: "THE WOOD",
+  den: "THE DENS",
+  mountain: "THE MOUNTAIN",
+};
 function buildMapGraph(f) {
   var nodes = {}, order = [];
   var regions = f.regions || [];
@@ -3186,7 +3205,7 @@ function buildMapGraph(f) {
       // The band is the SERVER's now (zone-data.MAP_BAND_OF) — it ships on the
       // frame, so there is one copy of the strata and not two to drift apart.
       var band = (rm.band !== undefined && rm.band !== null) ? rm.band : 1;
-      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate, home: rm.home || 0,
+      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate, home: rm.home || 0, safe: !!rm.safe,
                        gx: rm.x, gy: rm.y };
       order.push(rm.id);
     }
@@ -3285,13 +3304,20 @@ function buildMapGraph(f) {
     // The stratum labels ride on the server's own measure of where each band
     // hangs — against the WHOLE world, not against your corner of it, so a label
     // never slides when you find a new room.
-    for (var bl = 0; bl < MAP_BANDS.length; bl++) {
-      var ba = null;
-      for (var bk = 0; bk < (f.bands || []).length; bk++) if (f.bands[bk].band === MAP_BANDS[bl].band) ba = f.bands[bk];
-      if (!ba) continue;
+    var anchors = f.bands || [];
+    for (var bl = 0; bl < anchors.length; bl++) {
+      var ba = anchors[bl];
+      var text = MAP_REGION_LABELS[ba.region];
+      if (!text) continue;
+      // Only caption ground you have actually walked some of — an unvisited
+      // region is a gap in the paper, and a name floating over a gap would be
+      // telling you a place exists that your copy has never charted.
       var anyHere = false;
-      for (var ah = 0; ah < order.length && !anyHere; ah++) if (nodes[order[ah]].band === MAP_BANDS[bl].band) anyHere = true;
-      if (anyHere) labels.push({ x: ba.x, y: ba.y, text: MAP_BANDS[bl].label });
+      for (var ah = 0; ah < order.length && !anyHere; ah++) {
+        var nr = nodes[order[ah]].region;
+        if (nr === ba.region || (ba.region === "out" && nr === "gate")) anyHere = true;
+      }
+      if (anyHere) labels.push({ x: ba.x, y: ba.y, text: text });
     }
   } else {
     // A CRUDE COPY ONLY. Pieces packed into rows and each stratum centred — the
@@ -3368,7 +3394,7 @@ function drawMap() {
   ctx.clearRect(0, 0, W, H);
   function sx(gx) { return (gx - mapCam.cx) * MAP_CELL * s + W / 2; }
   function sy(gy) { return (gy - mapCam.cy) * MAP_CELL * s + H / 2; }
-  var dim = mapCssVar("--dim"), cream = mapCssVar("--cream"), bone = mapCssVar("--bone"), gold = mapCssVar("--gold"), heal = mapCssVar("--heal");
+  var dim = mapCssVar("--dim"), cream = mapCssVar("--cream"), bone = mapCssVar("--bone"), gold = mapCssVar("--gold"), heal = mapCssVar("--heal"), steel = mapCssVar("--steel");
   // exits
   ctx.lineWidth = Math.max(1, 1.4 * s);
   for (var i = 0; i < g.edges.length; i++) {
@@ -3417,13 +3443,20 @@ function drawMap() {
     // the stroke without the glow: somewhere you can sleep, not somewhere you
     // live. Nobody else's house is marked at all.
     var mine = nd.home === 2, bunked = nd.home === 1;
-    ctx.globalAlpha = nd.here ? 0.30 : (nd.gate || mine ? 0.42 : bunked ? 0.26 : 0.15);
-    ctx.fillStyle = mine || bunked ? gold : col; ctx.fill(); ctx.globalAlpha = 1;
+    // A BOLTHOLE READS AS ONE (rome, 2026-08-06: "lets color the hidding
+    // spots"). It takes the STEEL of the defensive chip — the colour this
+    // client already uses for the thing that guards you — at a gate's weight
+    // but without a gate's glow: you steer for it, but it is not a bank and
+    // must never be mistaken for one at a glance. Your own roof still wins,
+    // because a den you barred is better than a hole you found.
+    var hide = nd.safe && !mine && !bunked;
+    ctx.globalAlpha = nd.here ? 0.30 : (nd.gate || mine ? 0.42 : hide ? 0.34 : bunked ? 0.26 : 0.15);
+    ctx.fillStyle = mine || bunked ? gold : hide ? steel : col; ctx.fill(); ctx.globalAlpha = 1;
     if (nd.here) { ctx.shadowColor = heal; ctx.shadowBlur = 16 * s; }
     else if (mine) { ctx.shadowColor = gold; ctx.shadowBlur = 12 * s; }
     else if (nd.gate) { ctx.shadowColor = col; ctx.shadowBlur = 10 * s; }
-    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : (nd.gate || mine) ? Math.max(2, 2.0 * s) : bunked ? Math.max(1, 1.5 * s) : Math.max(1, 1.1 * s);
-    ctx.strokeStyle = nd.here ? heal : (mine || bunked) ? gold : col;
+    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : (nd.gate || mine) ? Math.max(2, 2.0 * s) : (hide || bunked) ? Math.max(1, 1.5 * s) : Math.max(1, 1.1 * s);
+    ctx.strokeStyle = nd.here ? heal : (mine || bunked) ? gold : hide ? steel : col;
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s); ctx.stroke();
     ctx.shadowBlur = 0;
     var hasU = false, hasD = false;
@@ -3434,11 +3467,13 @@ function drawMap() {
     }
     // The roof, top-LEFT, where nothing else sits — the stair badges own the
     // right corner. Full weight for your own door, half for a bunk.
-    if (mine || bunked) {
-      ctx.globalAlpha = mine ? 1 : 0.55;
-      ctx.fillStyle = gold; ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
+    if (mine || bunked || hide) {
+      ctx.globalAlpha = mine ? 1 : bunked ? 0.55 : 0.85;
+      ctx.fillStyle = hide ? steel : gold; ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
       ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText("\\u2302", cx - tw / 2 + 4 * s, cy - th / 2 + 2 * s);
+      // A roof for a door of your own; an arch \\u2014 a burrow mouth \\u2014 for a hole
+      // the world left lying about.
+      ctx.fillText(hide ? "\\u2229" : "\\u2302", cx - tw / 2 + 4 * s, cy - th / 2 + 2 * s);
       ctx.globalAlpha = 1;
     }
     if (mapCam.scale >= 0.6) {
@@ -3447,7 +3482,7 @@ function drawMap() {
       // clip to the plate so even a mis-measured label can't bleed out; leave
       // extra right margin when an up/down badge shares the top corner, and
       // extra left when a roof shares the other one.
-      var maxW = tw - ((hasU || hasD) ? 24 * s : 12 * s) - ((mine || bunked) ? 12 * s : 0);
+      var maxW = tw - ((hasU || hasD) ? 24 * s : 12 * s) - ((mine || bunked || hide) ? 12 * s : 0);
       ctx.save();
       mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s); ctx.clip();
       ctx.fillText(mapFitLabel(ctx, nd.name, maxW), cx, cy);
