@@ -21,7 +21,7 @@ import {
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
-  QUIET_WANDER_MULT, QUIET_HEED_MULT,
+  QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_ODDS, MIGRATE_KEEP, FORAGE_REGIONS,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
 } from "./zone-data";
@@ -466,6 +466,16 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     if (SENTINEL_ROOMS.size) {
       const notHeld = exits.filter((e) => !SENTINEL_ROOMS.has(e.to_room));
       if (notHeld.length) exits = notHeld;
+    }
+    // MIGRATION. Before the territory pull is applied, the rare roll that moves
+    // where "home" even is — so a creature that takes it spends this very step
+    // walking the new way instead of the old. It is deliberately the smallest
+    // die in the game (MIGRATE_ODDS): under one an hour across the whole
+    // surface, so nobody ever watches it happen, and the thing you notice is
+    // that there are wolves on the road this month and there were not before.
+    if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id]
+        && MIGRANTS.has(tmpl.id) && chance(MIGRATE_ODDS)) {
+      migrate(z, creature, tmpl.id);
     }
     // Territory: idle wandering keeps to the ground around the den. Beyond the
     // edge (fled, or freshly walked in from a dark mouth), every idle step is
@@ -986,6 +996,56 @@ export function bolts(z: ZoneDO, templateId: string, roomId: string): boolean {
   if (!RUNNERS.has(templateId)) return false;
   if (templateId === "roe-deer" && events.rutting(z, roomId)) return false;
   return true;
+}
+
+// ---- migration: where a thing may go, and whether it may leave ----
+//
+// The whole rule is that the DESTINATION has to be able to hold the animal and
+// the SOURCE has to survive losing it. Both are read off the live world at the
+// moment of the roll, never off the spawn table — which is what makes it
+// self-correcting: nothing can follow prey that is not there, and the moment
+// prey does drift somewhere, its hunters become able to follow.
+function canLiveIn(z: ZoneDO, templateId: string, band: string): boolean {
+  // A grazer needs ground that grows something. The fortress ring does not.
+  if (GRAZERS.has(templateId) && !THIEVES.has(templateId)) return FORAGE_REGIONS.has(band);
+  // A hunter needs something it hunts, standing there NOW.
+  const prey = PREYS_ON.get(templateId);
+  if (prey && prey.size) {
+    for (const c of z.creatures.values()) {
+      if (prey.has(c.templateId) && z.regionOf(c.roomId) === band) return true;
+    }
+    return false;
+  }
+  // People follow people. A footpad goes where the traffic is, and traffic is
+  // the road, the ground people live on, and the ring under the walls.
+  return true;
+}
+
+// How many of this line are living on a given band right now.
+function countOn(z: ZoneDO, templateId: string, band: string): number {
+  let n = 0;
+  for (const c of z.creatures.values()) {
+    if (c.templateId === templateId && z.regionOf(c.roomId) === band) n++;
+  }
+  return n;
+}
+
+export function migrate(z: ZoneDO, creature: Creature, templateId: string): void {
+  const here = z.regionOf(creature.home ?? creature.roomId);
+  // Never strip a band bare. The wood can lose wolves; it cannot be emptied of
+  // them, and no amount of dice may do what a migration file would not.
+  if (countOn(z, templateId, here) <= MIGRATE_KEEP) return;
+  const bands = [...MIGRATE_BANDS].filter((b) => b !== here && canLiveIn(z, templateId, b));
+  if (!bands.length) return; // nowhere out there could keep it: it stays home
+  const band = bands[randInt(0, bands.length - 1)];
+  const pool = [...z.world!.rooms.keys()].filter(
+    (r) => z.regionOf(r) === band && !z.world!.safeRooms.has(r) && !z.world!.entryRooms.has(r),
+  );
+  if (!pool.length) return;
+  // It does not TELEPORT. It gets a new idea of home and starts walking; the
+  // territory pull does the rest, one room at a time, for as long as it takes —
+  // and it can be met, fought and killed the whole way there.
+  creature.home = pool[randInt(0, pool.length - 1)];
 }
 
 export function playerPresent(z: ZoneDO, roomId: string): boolean {

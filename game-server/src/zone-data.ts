@@ -714,6 +714,89 @@ export const STILL_SOUNDS: Record<string, string> = {
 // out of rooms three corridors from their nest. Patrollers (PATROLS) are
 // exempt: their route is their territory. The boss goes where it pleases.
 export const TERRITORY_RADIUS = 3;
+
+// ---------------------------------------------------------------------------
+// MIGRATION (rome, 2026-08-06: "can we make it so that some mobs can migrate to
+// different areas? (on a very very small rng roll)").
+//
+// HOW IT WORKS, and it is almost no new machinery: a creature's territory is
+// the ground around its `home`, and the wander code already walks a creature
+// BACK to a home it is far from — with purpose, at a travelling pace, over
+// minutes (ai.ts, "carries a migrant from the mouth to its range"). So a
+// migration is one line: rarely, give it a different home. The animal then
+// makes its own way there, room by room, through whatever is in between, and
+// anybody standing on that road sees a wolf going somewhere.
+//
+// WHO MOVES. Things with legs and a reason. Wolves, dogs, hyenas, boar, deer,
+// and the men who follow them — a footpad goes where the traffic is. NOT the
+// bosses (they are a place, not a population), not the patrols (their route is
+// their territory), not the hollow or the drowned or the deep's own kin: those
+// are bound to what made them, and the surface trip they get is SURFACERS, a
+// different rule with a different meaning.
+export const MIGRANTS = new Set<string>([
+  "roe-deer", "white-roe", "wild-boar", "old-boar",          // the game
+  "grey-wolf", "dire-wolf", "grave-hyena", "dire-hyena",     // what follows the game
+  "masterless-dog", "lead-dog", "two-hound", "three-hound",  // the pack
+  "footpad", "cutthroat", "wayman",                          // what follows the people
+  "fleet-rat",
+]);
+// The ground they may move BETWEEN. Surface only, and the whole surface: an
+// animal that walks from the wood to the den ground has walked somewhere it
+// could plausibly get to, and the map now says so — they share borders.
+export const MIGRATE_BANDS = new Set<string>(["road", "wood", "den", "out"]);
+
+// THE DESTINATION HAS TO BE ABLE TO HOLD IT (rome, 2026-08-06: "do we have the
+// right eco system for thse migrants? ... it should be proper with the mob
+// type"). It could not, and the census says so plainly:
+//
+//   where they live       road  wood  den  fortress
+//     roe deer               0    30    1     0
+//     wild boar              0     7    0     0
+//     grey wolf              0    16    0     0
+//     grave hyena            0     0    0     9
+//     masterless dog         6     0    1     0
+//
+// THE WOOD IS THE ONLY BAND WITH A FOOD WEB. Everything else is a monoculture,
+// which broke migration three ways: a wolf that left the wood found nothing to
+// eat and STARVED — and starving is what drives starvingHunts, so migration
+// would have quietly turned wolves into player-hunters, a difficulty spike with
+// a nature-documentary excuse. Hyenas eat rats and rats are fortress-only, so
+// every hyena migration was a one-way trip to famine. And the wood, the one
+// working web, was the only donor to all of it.
+//
+// So the destination proves itself, LIVE, at the moment of the roll:
+//
+//   GRAZERS go where the ground grows something (FORAGE_REGIONS). Never onto
+//   the fortress ring, which grows nothing.
+//
+//   PREDATORS go where something they actually prey on is STANDING RIGHT NOW —
+//   the live world, not the spawn table. A wolf follows deer. No deer on the
+//   road, no wolf on the road. Which makes the whole thing self-correcting: the
+//   moment deer drift out, wolves become ABLE to follow, and the web builds
+//   itself outward instead of being drained.
+//
+//   PEOPLE follow traffic, not animals — the road, the dens, the fortress ring.
+//   That is what a footpad is FOR.
+//
+// And a floor under the band it leaves, so nowhere is ever emptied out.
+export const MIGRATE_KEEP = 3; // a band never gives up its last this-many of a line
+// VERY, VERY SMALL, and here is the arithmetic behind the number rather than a
+// guess. 83 eligible creatures stand on the surface; each rolls once per wander
+// (45-150s), which is about 3,065 rolls an hour across all of them.
+//
+//   0.00200 -> 6.1 an hour   (147/day)  a visible churn; the world stops having places
+//   0.00100 -> 3.1 an hour    (74/day)
+//   0.00050 -> 1.5 an hour    (37/day)
+//   0.00025 -> 0.8 an hour    (18/day)  <- this
+//
+// Under one an hour, world-wide, across four bands, and the ecology gate above
+// will refuse a good share of those outright. You will not watch it happen.
+// What you will notice, weeks apart, is that there are wolves on the road this
+// month and there were not before — which is the entire point: the distribution
+// of animals should be something the world arrives at, not something I typed
+// into a migration file once.
+export const MIGRATE_ODDS = 0.00025;
+
 // The dark mouths: where migrants physically enter the world — a well shaft,
 // a forgotten hole, cracks the dungeon never sealed. A refill surfaces at the
 // mouth nearest its den and walks in; nothing materializes in a watched room.
@@ -1231,10 +1314,18 @@ export const LURKER_DRIFT_MS = 3 * 3_600_000;
 // throw bait to start a scrap and slip past. Read/applied in ai.ts (predation).
 export const PREYS_ON = new Map<string, Set<string>>([
   ["three-hound", new Set(["rat", "fleet-rat", "grave-hyena", "dire-hyena"])], // apex at the threshold — bullies all comers
-  ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena"])],                // the mean cousin drives off the plain one
-  ["grave-hyena", new Set(["rat", "fleet-rat"])],                              // hyenas eat rats
+  // A HYENA EATS MORE THAN RATS (rome, 2026-08-06: "we can just make heyans eat
+  // another thing like a dear or fight with a wolf"). It used to eat vermin and
+  // nothing else, and since rats live only under the keep that made the whole
+  // line fortress-bound — the migration gate correctly refused every hyena a
+  // destination, which is the gate telling you the ECOLOGY was too thin rather
+  // than the gate being wrong. A hyena runs down deer and takes kills off other
+  // hunters; that is what the animal IS. So it eats what it can catch, and the
+  // big cousin bullies wolves the way the old boar does.
+  ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena", "roe-deer", "white-roe", "grey-wolf"])], // drives off the plain hyena AND the plain wolf: 45hp/armor against 26hp
+  ["grave-hyena", new Set(["rat", "fleet-rat", "roe-deer", "white-roe"])],      // vermin when there is nothing better, deer when there is
   ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
-  ["grey-wolf", new Set(["roe-deer", "white-roe"])],                          // the wood's own food web: wolves run deer, and you can walk into the middle of it
+  ["grey-wolf", new Set(["roe-deer", "white-roe", "grave-hyena"])],           // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
   ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar"])],             // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148)
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
   ["lead-dog", new Set(["masterless-dog"])],                                  // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and the only food web the road has
@@ -1269,8 +1360,10 @@ export const PREYS_ON = new Map<string, Set<string>>([
 // boar's OWN prey list. Walk in on one wolf and a boar and you know how that
 // ends. Walk in on four wolves and a boar and you do not.
 export const PACK_PREY = new Map<string, Map<string, number>>([
-  ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3]])],
+  ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3], ["grave-hyena", 2]])], // one wolf yields a carcass to a hyena; two do not
   ["dire-wolf", new Map([["old-boar", 2]])],
+  ["grave-hyena", new Map([["roe-deer", 2]])],  // a lone hyena harries a roe; a pair brings it down
+  ["dire-hyena", new Map([["grey-wolf", 2]])],  // ...and it takes two of them to push a wolf off a kill
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // Who turns on a PLAYER when starved past all patience (STARVING_AT). Kept apart
