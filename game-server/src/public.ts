@@ -3394,7 +3394,7 @@ function drawMap() {
   ctx.clearRect(0, 0, W, H);
   function sx(gx) { return (gx - mapCam.cx) * MAP_CELL * s + W / 2; }
   function sy(gy) { return (gy - mapCam.cy) * MAP_CELL * s + H / 2; }
-  var dim = mapCssVar("--dim"), cream = mapCssVar("--cream"), bone = mapCssVar("--bone"), gold = mapCssVar("--gold"), heal = mapCssVar("--heal"), steel = mapCssVar("--steel");
+  var dim = mapCssVar("--dim"), cream = mapCssVar("--cream"), bone = mapCssVar("--bone"), gold = mapCssVar("--gold"), heal = mapCssVar("--heal");
   // exits
   ctx.lineWidth = Math.max(1, 1.4 * s);
   for (var i = 0; i < g.edges.length; i++) {
@@ -3443,21 +3443,35 @@ function drawMap() {
     // the stroke without the glow: somewhere you can sleep, not somewhere you
     // live. Nobody else's house is marked at all.
     var mine = nd.home === 2, bunked = nd.home === 1;
-    // A BOLTHOLE READS AS ONE (rome, 2026-08-06: "lets color the hidding
-    // spots"). It takes the STEEL of the defensive chip — the colour this
-    // client already uses for the thing that guards you — at a gate's weight
-    // but without a gate's glow: you steer for it, but it is not a bank and
-    // must never be mistaken for one at a glance. Your own roof still wins,
-    // because a den you barred is better than a hole you found.
+    // A BOLTHOLE READS AS ONE, AND NOT AS A GATE (rome, 2026-08-06: "lets color
+    // the hidding spots", then "it kind of looks like the gate" — and he is
+    // right, that one was mine). I gave it STEEL, which is the one colour that
+    // was already spoken for: mapRegionColor returns steel for every gate,
+    // wherever it stands. So a bolthole was drawn in the bank's own colour.
+    //
+    // AND NO OTHER HUE IS FREE. blood is the deep, cream the overworks, dim the
+    // warrens, bone the road, omen the wood, heal the open ground and where you
+    // stand, gold your own roof — and voice-rose is spoken for hardest of all,
+    // because in this client rose means PEOPLE, which is the opposite of what a
+    // hole in the ground is for.
+    //
+    // So it is not a colour, it is a TREATMENT: the ground's own colour, drawn
+    // as a broken outline. Which is also the truer statement — a bolthole is not
+    // another kind of place, it is a gap in the place you are already in. A gate
+    // is solid, heavy and lit; a hideaway is the same ground with a way into it.
     var hide = nd.safe && !mine && !bunked;
-    ctx.globalAlpha = nd.here ? 0.30 : (nd.gate || mine ? 0.42 : hide ? 0.34 : bunked ? 0.26 : 0.15);
-    ctx.fillStyle = mine || bunked ? gold : hide ? steel : col; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.globalAlpha = nd.here ? 0.30 : (nd.gate || mine ? 0.42 : hide ? 0.24 : bunked ? 0.26 : 0.15);
+    ctx.fillStyle = mine || bunked ? gold : col; ctx.fill(); ctx.globalAlpha = 1;
     if (nd.here) { ctx.shadowColor = heal; ctx.shadowBlur = 16 * s; }
     else if (mine) { ctx.shadowColor = gold; ctx.shadowBlur = 12 * s; }
     else if (nd.gate) { ctx.shadowColor = col; ctx.shadowBlur = 10 * s; }
-    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : (nd.gate || mine) ? Math.max(2, 2.0 * s) : (hide || bunked) ? Math.max(1, 1.5 * s) : Math.max(1, 1.1 * s);
-    ctx.strokeStyle = nd.here ? heal : (mine || bunked) ? gold : hide ? steel : col;
+    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : (nd.gate || mine) ? Math.max(2, 2.0 * s) : (hide || bunked) ? Math.max(1, 1.6 * s) : Math.max(1, 1.1 * s);
+    ctx.strokeStyle = nd.here ? heal : (mine || bunked) ? gold : col;
+    // The broken line. Set on the stroke only, and cleared straight after, so
+    // nothing else drawn this frame inherits it.
+    if (hide && !nd.here) ctx.setLineDash([4 * s, 3 * s]);
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s); ctx.stroke();
+    ctx.setLineDash([]);
     ctx.shadowBlur = 0;
     var hasU = false, hasD = false;
     for (var x = 0; x < nd.exits.length; x++) { if (nd.exits[x].dir === "up") hasU = true; if (nd.exits[x].dir === "down") hasD = true; }
@@ -3468,8 +3482,8 @@ function drawMap() {
     // The roof, top-LEFT, where nothing else sits — the stair badges own the
     // right corner. Full weight for your own door, half for a bunk.
     if (mine || bunked || hide) {
-      ctx.globalAlpha = mine ? 1 : bunked ? 0.55 : 0.85;
-      ctx.fillStyle = hide ? steel : gold; ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
+      ctx.globalAlpha = mine ? 1 : bunked ? 0.55 : 0.9;
+      ctx.fillStyle = hide ? col : gold; ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       // A roof for a door of your own; an arch \\u2014 a burrow mouth \\u2014 for a hole
       // the world left lying about.
