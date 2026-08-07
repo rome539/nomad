@@ -1833,11 +1833,243 @@ async function publishFeed(room, text, fx) {
 // anyone can verify the numbers against the dungeon's signature, and a "t":nomad
 // tag so the posts are findable. Deliberate and rare: only 'publish kind 1' does
 // this — publishing your sheet never touches your feed.
-async function publishNote(text, atag) {
+// ---- THE CARD: the brag as a picture -------------------------------------
+//
+// A wall of text in a Nostr timeline is invisible. So the brag draws itself
+// onto one of the door's own scenes and goes out as an IMAGE.
+//
+// WHY THIS IS AN UPLOAD AND NOT AN ATTACHMENT. A kind-1 note is a text field;
+// there is no such thing as image bytes inside an event. Every photo you have
+// ever seen on Nostr is a URL that the client fetched — Damus and Primal just
+// hide the upload step. So we do exactly what they do: draw it here, put it on
+// a Blossom server under the WANDERER'S OWN key, and carry the address. The
+// reader never sees a link; their client fetches it and renders the picture.
+//
+// DRAWN IN THE BROWSER, on a canvas, which is the whole reason this needs no
+// image library on the server. The scenes are served from our own origin, so
+// the canvas never tucks tainted pixels and toBlob works.
+// The card set is its OWN art (2026-08-07) — creature plates painted for this,
+// not the door's wide backdrops, which keep their middle empty for a title.
+var CARD_SCENES = ["whiteroe", "gaunt", "wolves", "nomad"];
+var CARD_PX = 1080;
+
+function cardScene() {
+  return CARD_SCENES[Math.floor(Math.random() * CARD_SCENES.length)];
+}
+function loadImg(src) {
+  return new Promise(function (res, rej) {
+    var im = new Image();
+    im.onload = function () { res(im); };
+    im.onerror = rej;
+    im.src = src;
+  });
+}
+// Cover-crop: the scenes are landscape and the card is square, so take the
+// middle rather than squashing somebody's face into a box.
+function drawCover(ctx, im, w, h) {
+  var s = Math.max(w / im.width, h / im.height);
+  var dw = im.width * s, dh = im.height * s;
+  ctx.drawImage(im, (w - dw) / 2, (h - dh) / 2, dw, dh);
+}
+// Drawing and encoding are separate on purpose: the drawing half has to be
+// runnable against any canvas (the preview harness paints straight to a visible
+// one), and only the encoding half can taint.
+async function drawCardTo(ctx, card, W) {
+  ctx.fillStyle = "#16120c";
+  ctx.fillRect(0, 0, W, W);
+  try { drawCover(ctx, await loadImg("/card-bg/" + cardScene() + ".jpg"), W, W); } catch (e) {}
+
+  // THE PAINTINGS DECIDE THE LAYOUT, not the other way round. Every one of the
+  // card scenes is composed the same way — a dark top third, the subject low
+  // and centre, a busy floor. So all the type lives in the top band where the
+  // canvas is already black, and the bottom two-thirds are left to the picture.
+  // The first cut ran the ledger down the middle of the card and put the
+  // figures across the deer's flank and the wolves' faces.
+  var top = ctx.createLinearGradient(0, 0, 0, W * 0.54);
+  top.addColorStop(0, "rgba(22,18,12,.94)");
+  top.addColorStop(0.55, "rgba(22,18,12,.84)");
+  top.addColorStop(1, "rgba(22,18,12,0)");
+  ctx.fillStyle = top;
+  ctx.fillRect(0, 0, W, W * 0.54);
+  // Just enough at the foot to seat the mark; the art keeps the rest.
+  var bot = ctx.createLinearGradient(0, W * 0.86, 0, W);
+  bot.addColorStop(0, "rgba(22,18,12,0)");
+  bot.addColorStop(1, "rgba(22,18,12,.86)");
+  ctx.fillStyle = bot;
+  ctx.fillRect(0, W * 0.86, W, W * 0.14);
+
+  var MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  var M = 84; // margin
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = "left";
+
+  ctx.fillStyle = "#d8a94e";
+  ctx.font = "700 30px " + MONO;
+  ctx.letterSpacing = "10px";
+  ctx.fillText("NOMAD", M, 96);
+  ctx.letterSpacing = "0px";
+
+  // Shrink to fit rather than clip: names run to sixteen characters.
+  ctx.fillStyle = "#ede3cc";
+  var size = 84;
+  do { ctx.font = "700 " + size + "px " + MONO; size -= 4; }
+  while (size > 36 && ctx.measureText(card.name).width > W - M * 2);
+  ctx.fillText(card.name, M, 204);
+
+  ctx.fillStyle = "#9a8b66";
+  ctx.font = "400 23px " + MONO;
+  ctx.fillText(card.days === 0 ? "born this very day"
+    : card.days === 1 ? "one day under this name"
+    : card.days + " days under this name", M, 248);
+
+  // The ledger as a strip of four: figure over label, evenly spaced. Compact
+  // enough to stay inside the dark band, and it reads at thumbnail size, which
+  // a column of prose rows never did.
+  var cells = [
+    [String(card.kills), "KILLS"],
+    [String(card.bosses), "KINGS"],
+    [String(card.pvp), "BLOOD"],
+    [String(card.deaths), "DEATHS"]
+  ];
+  var span = (W - M * 2) / cells.length;
+  ctx.textAlign = "center";
+  for (var i = 0; i < cells.length; i++) {
+    var cx = M + span * i + span / 2;
+    ctx.fillStyle = "#d8a94e";
+    ctx.font = "700 54px " + MONO;
+    ctx.fillText(cells[i][0], cx, 356);
+    ctx.fillStyle = "#9a8b66";
+    ctx.font = "400 17px " + MONO;
+    ctx.letterSpacing = "3px";
+    ctx.fillText(cells[i][1], cx, 390);
+    ctx.letterSpacing = "0px";
+  }
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#c9bda3";
+  ctx.font = "400 23px " + MONO;
+  ctx.fillText("nomadmud.com", M, W - 62);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#8a7a56";
+  ctx.font = "400 20px " + MONO;
+  ctx.fillText("the dead stay dead", W - M, W - 62);
+  ctx.textAlign = "left";
+}
+async function buildCard(card) {
+  var cv = document.createElement("canvas");
+  cv.width = CARD_PX; cv.height = CARD_PX;
+  await drawCardTo(cv.getContext("2d"), card, CARD_PX);
+  return await new Promise(function (res) { cv.toBlob(res, "image/jpeg", 0.92); });
+}
+
+// Blossom (BUD-02): PUT the bytes, authorised by a kind-24242 event signed with
+// the wanderer's own key. Content-addressed — the server hands back a URL whose
+// name is the SHA-256 of what we sent, so the picture cannot be swapped later.
+// YOUR OWN SERVERS FIRST (BUD-03). A wanderer who uses Nostr already has a
+// Blossom list configured in their client — kind 10063, a replaceable event of
+// "server" tags — and their card belongs on THEIR hosts, not on whichever ones
+// we happened to hardcode. So we look that up and put it in front; the list
+// below is only what a brand-new key with no configuration falls back to.
+//
+// All three were verified to accept an anonymous key and serve the bytes back
+// (2026-08-07). NOT cdn.satellite.earth: it answers 401 "blossom.upload
+// required" without a paid account, so it could only ever cost a round trip.
+var BLOSSOM_SERVERS = ["https://blossom.primal.net", "https://blossom.band", "https://nostr.download"];
+var blossomMine = null; // cached per session; one lookup is enough
+async function blossomServers() {
+  if (blossomMine) return blossomMine;
+  var mine = [];
+  try {
+    if (!gpubPool) {
+      var poolMod = await import("/nostr.js");
+      gpubPool = new poolMod.SimplePool();
+    }
+    var me = await currentIdentityPubkey(); // handles extension, bunker and local key
+    if (!me) return BLOSSOM_SERVERS;
+    // Short leash: the brag must not sit waiting on a relay that is having a
+    // bad day. No answer inside two seconds and we just use the defaults.
+    var ev = await Promise.race([
+      gpubPool.get(SPEECH_RELAYS, { kinds: [10063], authors: [me] }),
+      new Promise(function (r) { setTimeout(function () { r(null); }, 2000); })
+    ]);
+    if (ev && ev.tags) {
+      for (var i = 0; i < ev.tags.length; i++) {
+        var t = ev.tags[i];
+        if (t[0] === "server" && typeof t[1] === "string" && t[1].indexOf("https://") === 0) {
+          mine.push(t[1].replace(/\\/+$/, ""));
+        }
+      }
+    }
+  } catch (e) { /* no list, or no relay: the defaults are perfectly good */ }
+  var seen = {}, out = [];
+  for (var j = 0; j < mine.length + BLOSSOM_SERVERS.length; j++) {
+    var srv = j < mine.length ? mine[j] : BLOSSOM_SERVERS[j - mine.length];
+    if (seen[srv]) continue;
+    seen[srv] = 1; out.push(srv);
+  }
+  blossomMine = out;
+  return out;
+}
+function hex(buf) {
+  var b = new Uint8Array(buf), out = "";
+  for (var i = 0; i < b.length; i++) out += b[i].toString(16).padStart(2, "0");
+  return out;
+}
+// btoa throws on anything above U+00FF; names are ASCII by the name rule, but a
+// signer is not ours to make promises about, so encode properly.
+function b64utf8(str) {
+  var bytes = new TextEncoder().encode(str), bin = "";
+  for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+async function blossomUpload(blob) {
+  var buf = await blob.arrayBuffer();
+  var sha = hex(await crypto.subtle.digest("SHA-256", buf));
+  var evt = {
+    kind: 24242,
+    created_at: Math.floor(Date.now() / 1000),
+    tags: [["t", "upload"], ["x", sha], ["expiration", String(Math.floor(Date.now() / 1000) + 300)]],
+    content: "NOMAD card"
+  };
+  var ev;
+  if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
+  else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
+  else ev = finalizeEvent(evt, sk);
+  var auth = "Nostr " + b64utf8(JSON.stringify(ev));
+  var servers = await blossomServers();
+  for (var i = 0; i < servers.length; i++) {
+    try {
+      var r = await fetch(servers[i] + "/upload", {
+        method: "PUT", body: blob, headers: { Authorization: auth, "Content-Type": "image/jpeg" }
+      });
+      if (!r.ok) continue;
+      var d = await r.json();
+      if (d && d.url) return { url: d.url, sha: sha, size: buf.byteLength };
+    } catch (e) { /* try the next host */ }
+  }
+  return null;
+}
+
+async function publishNote(text, atag, card) {
   if (!text) return;
   try {
     var tags = [["t", "nomad"]];
     if (atag) tags.push(["a", atag]);
+    // THE PICTURE IS BEST-EFFORT AND THE BRAG IS NOT. If the canvas, the
+    // signer or every Blossom host fails, the note still goes out as the text
+    // it has always been — a failed upload must never eat somebody's post.
+    if (card) {
+      try {
+        var up = await blossomUpload(await buildCard(card));
+        if (up) {
+          text = text.replace("\\n\\n#nomad", "\\n\\n" + up.url + "\\n\\n#nomad");
+          // NIP-92: tells a client this URL IS the image, so it renders the
+          // picture instead of printing the address.
+          tags.push(["imeta", "url " + up.url, "m image/jpeg", "x " + up.sha,
+                     "size " + up.size, "dim " + CARD_PX + "x" + CARD_PX]);
+        }
+      } catch (e) { console.warn("[card] " + (e && e.message ? e.message : e)); }
+    }
     var evt = {
       kind: 1,
       created_at: Math.floor(Date.now() / 1000),
@@ -2010,7 +2242,7 @@ async function connect() {
     } else if (f.t === "fpub") {
       publishFeed(f.room, f.text, f.fx);  // your deed, your key — the arena broadcast
     } else if (f.t === "npost") {
-      publishNote(f.text, f.atag);  // your brag, your key — a kind 1 in your own feed
+      publishNote(f.text, f.atag, f.card);  // your brag, your key — a kind 1 in your own feed
     }
   };
   // The fray line names its cause: the close code (and reason, when the server
@@ -4655,7 +4887,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var THR_SCENES = { torch: "center 65%", hound: "center 55%", rain: "center 45%", arch: "center 40%", door: "center 50%", tide: "center 55%" };
+var THR_SCENES = { torch: "center 65%", warrens: "35% 60%", hound: "center 55%", rain: "center 45%", arch: "center 40%", door: "center 50%", tide: "center 55%" };
 var thrPick = new URLSearchParams(location.search).get("scene");
 if (!THR_SCENES[thrPick]) {
   var thrNames = Object.keys(THR_SCENES);

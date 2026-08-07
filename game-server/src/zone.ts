@@ -2612,7 +2612,20 @@ export class ZoneDO implements DurableObject {
       const text = verbs.ledgerLines(session, false).join("\n") + "\n\n#nomad";
       const dpk = gamePubkey(this.env);
       const atag = dpk ? `31573:${dpk}:${session.pubkey}` : "";
-      try { session.ws.send(JSON.stringify({ v: 0, t: "npost", text, atag })); } catch {}
+      // THE CARD'S NUMBERS, STRUCTURED (2026-08-07). The brag draws itself onto
+      // an image client-side, and a card wants FIELDS to lay out — not a block
+      // of prose to unpick with regexes. The text above is unchanged and still
+      // carries the post on its own if the image never happens.
+      const days = Math.max(0, Math.floor((Date.now() / 1000 - session.born) / 86_400));
+      const card = {
+        name: session.name,
+        kills: session.kills,
+        bosses: session.bossKills,
+        pvp: session.pvpKills,
+        deaths: session.deaths,
+        days,
+      };
+      try { session.ws.send(JSON.stringify({ v: 0, t: "npost", text, atag, card })); } catch {}
       return this.send(session, `You speak your own name beyond the walls — ${session.name}, in your own hand, to your own feed. ('publish sheet' backs it with the dungeon's signature.)`);
     }
     if (!isGameKeyConfigured(this.env)) {

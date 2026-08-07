@@ -5,7 +5,7 @@ import { GOOGLE_CLIENT_ID } from "./google";
 import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
-import { touchIconBytes, iconN512Bytes, ogImageBytes, doorSceneBytes } from "./assets";
+import { touchIconBytes, iconN512Bytes, ogImageBytes, doorSceneBytes, cardSceneBytes } from "./assets";
 import { signProfileEvent, signSheetEvent, signDeleteEvent, signRetireScoreEvent, isGameKeyConfigured } from "./signing";
 import type { PlayerRow } from "./world";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -132,6 +132,18 @@ export default {
         const scene = doorSceneBytes(mScene[1]);
         if (scene) {
           return new Response(scene, {
+            headers: { "content-type": "image/jpeg", "cache-control": IMMUTABLE },
+          });
+        }
+      }
+
+      // The brag card's plates: /card-bg/<name>.jpg. Same immutable caching as
+      // the door scenes — content never changes under a name, only the set grows.
+      const mCard = pathname.match(/^\/card-bg\/([a-z]+)\.jpg$/);
+      if (m === "GET" && mCard) {
+        const plate = cardSceneBytes(mCard[1]);
+        if (plate) {
+          return new Response(plate, {
             headers: { "content-type": "image/jpeg", "cache-control": IMMUTABLE },
           });
         }
