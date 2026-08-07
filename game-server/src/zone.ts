@@ -4571,7 +4571,11 @@ export class ZoneDO implements DurableObject {
     this.creatureNoise(fell);
     this.addTrace(fell, { kind: "blood", at: Date.now(), label: victim.name });
 
-    victim.roomId = this.randomGate();
+    // A small chance the dark gives you back at your own door instead of a gate
+    // (den.wakeAtDen sets the room and puts you behind it). Rolled AFTER
+    // leaveDen above, so the flag it sets is the one that survives.
+    const home = den.wakeAtDen(this, victim);
+    if (!home) victim.roomId = this.randomGate();
     victim.hp = victim.maxHp;
     const fate =
       scattered.length > 0
@@ -4579,7 +4583,19 @@ export class ZoneDO implements DurableObject {
           ? "Everything you carried lies where you fell — the gate's seals cracked as they left your hands. Only the lockbox and vault keep."
           : "Everything you carried lies where you fell."
         : "You carried nothing worth scattering.";
-    const end = slayerName ? pick([
+    // Woken at home, the gate is never mentioned — you didn't come through one.
+    // The killing clause is kept; only where you surface changes, and the bar
+    // (or the empty sockets) is the first thing you'd know about the room.
+    const end = home ? [
+      slayerName ? `${slayerName} kills you.`
+        : tmpl ? `${cap(tmpl.name)} kills you.`
+        : "The bleeding doesn't stop.",
+      pick([
+        "Darkness. Then your own roof over you, and no memory of the walk.",
+        "The dark takes you — and gives you back at your own door.",
+        "Some while later: your own floor under your back, and the smell of home.",
+      ]) + (home.barred ? " The bar is in its sockets." : " There is no bar in the sockets, and the doorway is a doorway."),
+    ].join("\n") : slayerName ? pick([
       `${slayerName} kills you.\nDarkness. Then the gate, again.`,
       `${slayerName} puts you down on the stones.\nThe dark takes you — and gives you back at the gate.`,
       `The last thing you see is ${slayerName}, already stooping for your pack.\nThen cold air, and the gate, and breath again.`,
@@ -4594,7 +4610,9 @@ export class ZoneDO implements DurableObject {
       `The stones go red beneath you, then grey.\nThen cold air, and the gate, and breath again.`,
     ]);
     this.send(victim, `${end} ${fate}`, "death big");
-    this.roomFeed(victim.roomId, `${victim.name} staggers back through the gate, pale.`, victim.pubkey, false);
+    // Nobody watches you arrive when you wake behind your own door — the street
+    // outside sees a shut door, the same as it did a moment ago.
+    if (!home) this.roomFeed(victim.roomId, `${victim.name} staggers back through the gate, pale.`, victim.pubkey, false);
     this.send(victim, this.describeRoom(victim));
     this.sendStatus(victim);
     this.refreshRoomCtx(fell);

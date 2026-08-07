@@ -2106,6 +2106,12 @@ export const DEN_CAP = 12;
 // of six doors forever. This is the whole upkeep system: no rent, no meter —
 // the only question it asks is whether you still live here.
 export const DEN_LAPSE_MS = 14 * 24 * 3_600_000;
+// WAKING AT YOUR OWN DOOR (rome, 2026-08-07). Death normally hands you back at a
+// gate; a small share of the time it hands you back home instead. Deliberately
+// SMALL — a den you woke at reliably would be a respawn point, and the walk back
+// out to where you died is most of what dying costs. At one in eight it's a
+// mercy that happens, not a route you can plan around.
+export const DEN_WAKE_CHANCE = 0.125;
 // What a bar and its sockets cost. Iron is the deep's and the forge's currency,
 // which is the point: the thing that makes your house safe has to be carried out
 // of somewhere dangerous, so security is EARNED and never issued.

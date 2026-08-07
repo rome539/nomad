@@ -46,7 +46,7 @@ import type { Session } from "./zone-types";
 import { type CarriedItem, loadContainer, setContainer, setItemCondition, removeItemRow } from "./world";
 import { SCRAP_ID, IRON_ID, PACK_CAP, DEN_BUNKS, DEN_CAP, DEN_LAPSE_MS, DEN_BAR_IRON, DEN_BAR_SCRAP,
   DEN_RAISE_IRON, DEN_RAISE_SCRAP,
-  DEN_RUST_PER_HOUR, DEN_RUST_FLOOR, SEALED_WEAR_MULT, GEAR_FAILING_AT, GEAR_WORN_AT } from "./zone-data";
+  DEN_RUST_PER_HOUR, DEN_RUST_FLOOR, DEN_WAKE_CHANCE, SEALED_WEAR_MULT, GEAR_FAILING_AT, GEAR_WORN_AT } from "./zone-data";
 import { nameMatches, shortName } from "./zone-util";
 
 export interface Den {
@@ -175,6 +175,28 @@ export function reachable(z: ZoneDO, attacker: string, target: string): boolean 
 }
 
 export function leaveDen(z: ZoneDO, pubkey: string): void { z.inDen.delete(pubkey); }
+
+// WAKING AT YOUR OWN DOOR (rome, 2026-08-07). The dark usually gives you back at
+// a gate. A small share of the time — DEN_WAKE_CHANCE — it gives you back home,
+// behind your own door, the way the road is one of the places the world can
+// hatch you. Only your OWN den: a bunk in somebody else's house is a bed you
+// were lent, not somewhere you belong.
+//
+// It does NOT tend the hold. The lapse clock asks one question — do you still
+// live here — and dying is not an answer to it. Otherwise a den could be kept
+// standing forever by a player who never once chose to walk home.
+//
+// You wake INSIDE, and the bar decides what that's worth: barred, you woke
+// somewhere nothing can reach you; unbarred, you woke in a doorway with no door
+// in it, which is exactly what an unbarred den has always been.
+export function wakeAtDen(z: ZoneDO, session: Session): Den | undefined {
+  const home = myDen(z, session.pubkey);
+  if (!home) return undefined;
+  if (Math.random() >= DEN_WAKE_CHANCE) return undefined;
+  session.roomId = home.roomId;
+  z.inDen.set(session.pubkey, home.holder);
+  return home;
+}
 
 export function spilledHere(z: ZoneDO, roomId: string, holder: string, pubkey: string): boolean {
   return z.denBlood.get(bloodKey(roomId, holder))?.has(pubkey) === true;
