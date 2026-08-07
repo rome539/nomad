@@ -242,11 +242,13 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         if (inside.holder === session.pubkey && !inside.barred) suggest.push("bar");
         suggest.push(DEN_CHIP);
       } else {
-        // Out on the site. A door of yours to step through, and always the
-        // option of raising one — the ground is never used up (mig 172).
+        // Out on the site — and that is ALL it is (rome, 2026-08-07). The street
+        // used to offer the shelf and the readout too, so the chip row outside
+        // your house looked like the chip row inside it and going in bought you
+        // nothing. The ground offers the door, and raising one; what is behind
+        // the door is behind the door.
         if (doors.length) suggest.push("in");
         if (!den.myDen(z, session.pubkey)) suggest.push("settle");
-        if (doors.length) suggest.push("den", DEN_CHIP);
       }
     }
     // Knowledge you carry: open a map or the journal (each pops its modal).

@@ -570,7 +570,12 @@ export async function shelvesOf(z: ZoneDO, pubkey: string): Promise<Map<string, 
 
 export async function cmdStow(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const den = keepingDen(z, session);
-  if (!den) return z.send(session, isHolding(z, session.roomId) ? "There is no door of yours on this ground. Raise one ('settle'), or get somebody to give you a bunk under theirs." : "There is no shelf here, and nothing here to keep anything.");
+  if (!den) {
+    return z.send(session, throughTheDoorNote(z, session)
+      ?? (isHolding(z, session.roomId)
+        ? "There is no door of yours on this ground. Raise one ('settle'), or get somebody to give you a bunk under theirs."
+        : "There is no shelf here, and nothing here to keep anything."));
+  }
   const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)));
   if (!arg) return z.send(session, shelfList(z, den, held));
   const carried = z.findCarried(session, arg);
@@ -618,6 +623,16 @@ export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promis
   // street is public now: whoever holds whichever door on this ground, you stand
   // on the ground and your own shelf is in reach. The collect-at-the-door path is
   // gone because the case it existed for cannot happen any more.
+  //
+  // WHICH IS NOW THE ONLY REASON THE STREET CAN REACH A SHELF AT ALL (rome,
+  // 2026-08-07). If a door of yours stands here, your things are behind it and
+  // you go in like anybody else. The ground-level reach survives for exactly the
+  // case it was written for: a shelf in a room where no door opens to you any
+  // more, which is the one way things could otherwise be lost for good.
+  if (!keepingDen(z, session)) {
+    const note = throughTheDoorNote(z, session);
+    if (note) return z.send(session, note);
+  }
   const roomId = session.roomId;
   const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(roomId)));
   if (held.length === 0) return z.send(session, "You have nothing of yours here.");
@@ -745,6 +760,13 @@ export async function cmdDen(z: ZoneDO, session: Session): Promise<void> {
     }
     const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(here.roomId)));
     if (held.length) lines.push(shelfList(z, here, held));
+  } else if (doorHere(z, session)) {
+    // A door of yours on this ground, and you outside it. The street is told
+    // where the house is, never what is in it.
+    const d = doorHere(z, session)!;
+    lines.push(d.holder === session.pubkey
+      ? `${z.world!.rooms.get(session.roomId)!.name} — your door is here, shut. ('in' opens it.)`
+      : `${holderName(z, d)}'s door is here, and you have a bunk behind it. ('in' opens it.)`);
   } else if (isHolding(z, session.roomId)) {
     lines.push(`${z.world!.rooms.get(session.roomId)!.name} — a roof, a door, and nobody under it. ('settle' takes it.)`);
   }
@@ -859,13 +881,31 @@ export function denRoomLine(z: ZoneDO, roomId: string, session: Session): string
 // else their own on this ground, else the single door open to them here. On a
 // street with several open to you, standing outside all of them, your own wins —
 // and if you have none of your own, you must be inside a friend's to use it.
+// THE SHELF IS INSIDE THE HOUSE (rome, 2026-08-07: "remove the den propties of
+// in the room i choose, make it so you enter"). This used to fall through from
+// "inside it" to "your den in this room" to "the one door here that opens to
+// you", which meant the shelf, the readout and the keeping modal all worked
+// while you stood on the open street — so the site room WAS the den, and
+// stepping through your own door bought you nothing but the bar. A house you
+// can use without going in isn't a house. Inside, or nothing.
 export function keepingDen(z: ZoneDO, session: Session): Den | undefined {
   const inside = insideOf(z, session.pubkey);
-  if (inside && inside.roomId === session.roomId) return inside;
-  const own = myDenAt(z, session.roomId, session.pubkey);
-  if (own) return own;
-  const open = doorsOpenTo(z, session.roomId, session.pubkey);
-  return open.length === 1 ? open[0] : undefined;
+  return inside && inside.roomId === session.roomId ? inside : undefined;
+}
+
+// A door on this ground that would open to you — used only to say "go in" in
+// the right words. Never to reach past it.
+export function doorHere(z: ZoneDO, session: Session): Den | undefined {
+  return doorsOpenTo(z, session.roomId, session.pubkey)[0];
+}
+
+// What to say to somebody reaching for their things from the street.
+export function throughTheDoorNote(z: ZoneDO, session: Session): string | undefined {
+  const d = doorHere(z, session);
+  if (!d) return undefined;
+  return d.holder === session.pubkey
+    ? "Your shelf is inside, behind your own door. ('in' opens it.)"
+    : `That is inside ${holderName(z, d)}'s, and you are standing in the street. ('in' opens it.)`;
 }
 
 function holderName(z: ZoneDO, den: Den): string {
