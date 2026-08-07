@@ -2608,8 +2608,16 @@ export class ZoneDO implements DurableObject {
     // NOT post to your feed (rome, 2026-07-15) — this, and only this, does.
     if (a === "kind 1" || a === "kind1" || a === "note" || a === "post") {
       // The published brag IS the in-game ledger, verbatim (verbs.ledgerLines),
-      // minus the "days under this name" clause — then just #nomad.
-      const text = verbs.ledgerLines(session, false).join("\n") + "\n\n#nomad";
+      // minus the "days under this name" clause — then just #nomad. When the
+      // card lands, the picture already carries the numbers, so the note keeps
+      // ONLY the name line (rome, 2026-08-07): printing the tally twice under
+      // its own portrait read like a bug. `text` stays the full ledger for the
+      // case the picture never happens; `alt` puts the numbers back on the
+      // image itself, for readers and clients that don't render pictures.
+      const led = verbs.ledgerLines(session, false);
+      const text = led.join("\n") + "\n\n#nomad";
+      const short = led[0] + "\n\n#nomad";
+      const alt = led.slice(1).map((l) => l.trim()).join(" · ");
       const dpk = gamePubkey(this.env);
       const atag = dpk ? `31573:${dpk}:${session.pubkey}` : "";
       // THE CARD'S NUMBERS, STRUCTURED (2026-08-07). The brag draws itself onto
@@ -2625,7 +2633,7 @@ export class ZoneDO implements DurableObject {
         deaths: session.deaths,
         days,
       };
-      try { session.ws.send(JSON.stringify({ v: 0, t: "npost", text, atag, card })); } catch {}
+      try { session.ws.send(JSON.stringify({ v: 0, t: "npost", text, short, alt, atag, card })); } catch {}
       return this.send(session, `You speak your own name beyond the walls — ${session.name}, in your own hand, to your own feed. ('publish sheet' backs it with the dungeon's signature.)`);
     }
     if (!isGameKeyConfigured(this.env)) {

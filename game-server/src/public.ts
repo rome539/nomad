@@ -2050,7 +2050,7 @@ async function blossomUpload(blob) {
   return null;
 }
 
-async function publishNote(text, atag, card) {
+async function publishNote(text, atag, card, short, alt) {
   if (!text) return;
   try {
     var tags = [["t", "nomad"]];
@@ -2062,11 +2062,15 @@ async function publishNote(text, atag, card) {
       try {
         var up = await blossomUpload(await buildCard(card));
         if (up) {
-          text = text.replace("\\n\\n#nomad", "\\n\\n" + up.url + "\\n\\n#nomad");
+          // The card carries the tally now, so the note drops to its name line
+          // and the numbers ride along as the image's alt text.
+          text = (short || text).replace("\\n\\n#nomad", "\\n\\n" + up.url + "\\n\\n#nomad");
           // NIP-92: tells a client this URL IS the image, so it renders the
           // picture instead of printing the address.
-          tags.push(["imeta", "url " + up.url, "m image/jpeg", "x " + up.sha,
-                     "size " + up.size, "dim " + CARD_PX + "x" + CARD_PX]);
+          var im = ["imeta", "url " + up.url, "m image/jpeg", "x " + up.sha,
+                    "size " + up.size, "dim " + CARD_PX + "x" + CARD_PX];
+          if (alt) im.push("alt " + alt);
+          tags.push(im);
         }
       } catch (e) { console.warn("[card] " + (e && e.message ? e.message : e)); }
     }
@@ -2242,7 +2246,7 @@ async function connect() {
     } else if (f.t === "fpub") {
       publishFeed(f.room, f.text, f.fx);  // your deed, your key — the arena broadcast
     } else if (f.t === "npost") {
-      publishNote(f.text, f.atag, f.card);  // your brag, your key — a kind 1 in your own feed
+      publishNote(f.text, f.atag, f.card, f.short, f.alt);  // your brag, your key — a kind 1 in your own feed
     }
   };
   // The fray line names its cause: the close code (and reason, when the server
