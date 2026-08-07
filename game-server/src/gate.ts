@@ -14,10 +14,12 @@ import * as events from "./events";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
-  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP } from "./zone-data";
+  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
+  KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS } from "./zone-data";
 import * as den from "./den";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
+import { WOOD_QUARTERS } from "./detail";
 import { dropCarried, describePlayer, lookKeepingItem } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -243,6 +245,7 @@ export function throughTheDoor(z: ZoneDO, session: Session): void {
   z.enterStep(session, "gatehouse"); // away + inGatehouse; the gate hears the door shut
   z.sendStatus(session); // the HUD reads "The Gatehouse" the moment you're in
   gatehouseFeed(z, `${session.name} pushes in out of the cold.`, session.pubkey, "who");
+  keeperNods(z, session);
 }
 
 export function cmdBarter(z: ZoneDO, session: Session): void {
@@ -1422,6 +1425,29 @@ export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key:
 // behind the door stays behind the door.
 
 // Everyone standing in the gatehouse, whichever door they used.
+// THE KEEPER LOOKS UP (zone-data.KEEPER_NODS). Called on a real entry through
+// the door, never on a lateral step to the hatch or the bench — he notices the
+// DOOR, not you moving about a room he already knows you are in.
+//
+// It is deliberately a room line and not a line to the arrival: he does not
+// greet anybody, and the person who just walked in reads it the same way as
+// everyone already sitting there. That is the difference between a barman and
+// a doorman, and it is the whole of what rome asked for when he said "soft".
+export function keeperNods(z: ZoneDO, arrival: Session): void {
+  const now = Date.now();
+  if (now - z.keeperNodAt < KEEPER_NOD_EVERY_MS) return; // one room, one gesture at a time
+  if (!chance(KEEPER_NOD_ODDS)) return;                  // and mostly, nothing
+  z.keeperNodAt = now;
+  // Anyone else already behind the door? Then the room is what he is minding,
+  // and the door only gets the corner of his eye.
+  const others = gatehouseFolk(z).filter((s) => s.pubkey !== arrival.pubkey).length;
+  const line = pick(others > 0 ? KEEPER_NODS_BUSY : KEEPER_NODS);
+  // "amb" is right here and wrong for his STORY: a gesture is scenery and may be
+  // hushed for a new player under the tutorial, where losing the opening line of
+  // a region's telling would be a real loss (see lore.keeperTells).
+  for (const s of gatehouseFolk(z)) z.send(s, line, "amb");
+}
+
 export function gatehouseFolk(z: ZoneDO): Session[] {
   return [...z.sessions.values()].filter((s) => z.outOfWorld(s));
 }
@@ -1492,6 +1518,7 @@ export async function enterGatehouse(z: ZoneDO, session: Session): Promise<void>
   z.sendStatus(session); // the HUD title becomes "The Gatehouse" the moment you're inside
   z.send(session, describeGatehouse(z, session));
   gatehouseFeed(z, `${session.name} pushes in out of the cold.`, session.pubkey, "who");
+  keeperNods(z, session);
   await z.sendGateCtx(session); // seed the smelt/cure chip availability on entry
 }
 
@@ -1716,6 +1743,7 @@ export function wallStudy(z: ZoneDO, session: Session): void {
       gate: world.entryRooms.has(id) ? 1 : 0, // a door draws as a door on the wall too
       safe: world.safeRooms.has(id) && !world.entryRooms.has(id) ? 1 : 0, // ...and a bolthole as a bolthole
       band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
+      q: WOOD_QUARTERS[id], // the wood's quarter — see the same field in lore.sendMap
       x: at?.x, y: at?.y,
     });
   }

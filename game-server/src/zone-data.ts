@@ -3,6 +3,12 @@
 // logic. Values and names are unchanged from when they lived in zone.ts.
 import type { Stance } from "./zone-types";
 import { type ItemTemplate, type Region, trait } from "./world";
+// The wood's own voice (detail.ts). Spread in below rather than pasted here:
+// ROOM_AMBIENCE and DARK_TOUCH must stay SINGLE tables — a lookup split across
+// two files is a lookup that will drift — but 170 rooms of new prose would push
+// this file past 3,700 lines, and rome's standing rule is that the spine stays
+// lean. So the tables live here and the wood's contribution lives there.
+import { WOOD_ROOM_AMBIENCE, WOOD_DARK } from "./detail";
 
 
 export const TICK_MS = 2000;
@@ -210,6 +216,43 @@ export const PACK_TORCH_CAP = 5;
 // (rome, 2026-07-18). Count, not a slot. grave-moss doubles as food, so it
 // rides the FOOD cap instead — no double jeopardy (dressingCapped skips edibles).
 export const PACK_DRESSING_CAP = 6;
+
+// ---------------------------------------------------------------------------
+// THE KEEPER LOOKS UP (rome, 2026-08-06: "the gatehouse literally feels like a
+// tavern, when new people join in" -> "that the keeper reacts to arrivals ...
+// but make it soft").
+//
+// He already tells the region's story while he works — at the room, never to
+// you — which is most of why the place reads as a tavern: there is always
+// something being said, so a newcomer walks into a conversation already going
+// rather than into silence. What he could not do was NOTICE anybody. He was on
+// a timer and the door might as well not have opened.
+//
+// SOFT MEANS SOFT, and every part of this is built to stay under the line:
+//   - he never addresses you. No welcome, no name, no "traveller". He is a man
+//     behind a hatch who happened to glance at the door, and the room sees it.
+//   - not every arrival: KEEPER_NOD_ODDS, so walking in is usually nothing.
+//   - and never twice in a hurry: KEEPER_NOD_EVERY_MS across the WHOLE room, so
+//     four people coming in off a bad run do not turn him into a performance.
+//   - the lines are gestures, not speech. A cup moved. A glance. Going back to
+//     what he was doing, which is the point: you are not an event.
+export const KEEPER_NOD_ODDS = 0.4;
+export const KEEPER_NOD_EVERY_MS = 90_000;
+// When somebody comes in and he is the only one there to see it.
+export const KEEPER_NODS = [
+  "The keeper looks up, marks who it is, and goes back to the tankard he was drying.",
+  "The keeper's eyes come up to the door and down again. The rag does not stop moving.",
+  "Behind the hatch the keeper shifts a cup along the counter an inch, as if that had been the plan all along.",
+  "The keeper glances over, says nothing, and sets a second cup out where it can be reached.",
+  "The keeper takes the weight off one elbow, looks, and puts it back.",
+];
+// ...and when there are already people in here. He is a barman: the door is
+// worth a look, and the room he is in is worth more.
+export const KEEPER_NODS_BUSY = [
+  "The keeper glances at the door, then back at the room, and lets whatever was being said go on being said.",
+  "The keeper looks up from the hatch, counts the room without seeming to, and goes back to it.",
+  "Somewhere behind the counter the keeper knocks the ash out of something and does not look up for long.",
+];
 
 // ---------------------------------------------------------------------------
 // THE FEN CARRIES YOU, NOT YOUR GOODS (rome, 2026-08-06: "you made it into a
@@ -2823,6 +2866,10 @@ export const MOTES: string[] = [
 ];
 export const MOTES_ODDS = 0.4; // when lit in a dark, voiceless room, this share of atmosphere beats are the dust in your light
 export const ROOM_AMBIENCE: Record<string, string[]> = {
+  // The wood's signature rooms, spread in first so a hand-written entry down
+  // here would still win — nothing overlaps today (the wood had none of these
+  // before 2026-08-06) and this keeps it that way if one ever does.
+  ...WOOD_ROOM_AMBIENCE,
   // ---- the grounds: the first OUTDOOR rooms — wind and sky, not drips (058) ----
   "the-causeway": ["The wind comes down the old road with nothing left to slow it.", "Somewhere high on the walls, loose stone ticks in the wind."],
   "the-old-road": ["The thorn wall creaks against itself, keeping whatever is east of it.", "For a moment the wind carries a smell that is not the fortress. Then it is gone.", "The gibbet chain creaks on the hill behind, slow as breathing."],
@@ -2994,6 +3041,8 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
 // sight, since you genuinely can't see. Rooms with nothing here just get the
 // plain generic line, same as before.
 export const DARK_TOUCH: Record<string, string> = {
+  ...WOOD_DARK, // same arrangement as ROOM_AMBIENCE above
+
   // The dens at night: no lamp anywhere in sixty rooms, and the buildings are
   // the point — you find a place you could be inside by touch (2026-08-03).
   "the-street": "Walls stand close on both sides and every door in them is shut. You could try one. You'd be trying it blind.",

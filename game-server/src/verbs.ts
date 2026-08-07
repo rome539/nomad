@@ -19,6 +19,7 @@ import * as events from "./events";
 import * as pvp from "./pvp";
 import * as lore from "./lore";
 import * as den from "./den";
+import * as detail from "./detail";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
@@ -509,6 +510,38 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
           + " Back it goes, and the latch clicks home.",
       );
     }
+  }
+  // THE ROOM ITSELF IS LOOKABLE-AT NOW (rome, 2026-08-06: "how and where can we
+  // make the lore deeper? (make the world feel alive)").
+  //
+  // Everything above this line answers about a THING — a cache, a piece on the
+  // floor, what you are carrying, another player, your own lockbox. Nothing has
+  // ever answered about the ROOM. So across 408 rooms and ~85,000 characters of
+  // description there was not one noun you could look closer at: the gibbet at
+  // the Crooked Gibbet, the wheel in the Wheel Pit, the slab over the shallow
+  // well. `x`, `examine`, `read` and `inspect` all fold into `look` (parser.ts),
+  // so a player who wanted more went straight from the best prose in the game to
+  // "You see nothing like that here."
+  //
+  // A feature is the second paragraph the room did not have room for, and it
+  // obeys one law (detail.ts): it may only tell you what is ALREADY TRUE. No
+  // item, no exit, no state, no lie. Three tables are tried — this room's own
+  // nouns, then its band's, then what is true anywhere — so a probe lands
+  // somewhere honest almost everywhere, and a near-miss still falls through to
+  // the refusal below, because a wrong answer would put a thing in the room
+  // that isn't in it.
+  //
+  // NOT WHEN BLIND, and this is the whole reason the check sits here rather than
+  // at the top: you cannot examine the carving on a lintel you cannot see. In
+  // the dark this falls straight through to the honest "you failed to SEE".
+  if (!blind) {
+    // mapRegionOf, not regionOf: the sim's own reading collapses the whole
+    // fortress interior to "upper" and every door to "gate", which would give
+    // the warrens the halls' dressed-ashlar answer about their walls when the
+    // warrens are dug, not built. The map's reading is the finer one and it is
+    // the honest one to describe ground with.
+    const feature = detail.lookFeature(session.roomId, lore.mapRegionOf(z, session.roomId), arg);
+    if (feature) return z.send(session, feature, "study");
   }
   // In the dark, "nothing like that here" would be a lie dressed as an answer —
   // you didn't fail to find it, you failed to SEE. Say which.

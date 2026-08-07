@@ -67,6 +67,7 @@ import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
+import { WOOD_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK } from "./detail";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
@@ -123,6 +124,9 @@ export class ZoneDO implements DurableObject {
   // Per-room throttle on the rut's roaring, so a ride with three stags in it
   // does not shout three times a beat. Ephemeral — a restart just starts quiet.
   public rutRoarAt = new Map<string, number>();
+  // The last time the keeper acknowledged the door. One room, one gesture at a
+  // time — ephemeral, so a restart just means the next arrival gets his eye.
+  public keeperNodAt = 0;
   // Open player-to-player trades (trade.ts) — dealId -> Deal. In-memory only,
   // same as `buying`: a DO wake never restores one, and it needs no D1 row of
   // its own (settlement is the only part that touches D1, and it's atomic).
@@ -3799,6 +3803,18 @@ export class ZoneDO implements DurableObject {
       const m = draw(MOTES);
       if (m && m !== avoid) return m;
     }
+    // THE WOOD SPEAKS AS ITS QUARTER, NOT AS "THE WOOD" (2026-08-06). 170 rooms
+    // shared one ten-line regional pool — a line per seventeen rooms — so the
+    // biggest region in the game was also the one that repeated itself fastest
+    // and told you least about where you were standing. A quarter (detail.ts)
+    // is a real place inside the wood with its own voice; it sits between the
+    // room's own pool and the band's, so a signature room still wins and the
+    // wood at large stops sounding like one undifferentiated green mass.
+    const quarter = WOOD_QUARTERS[roomId];
+    if (quarter) {
+      const q = draw(QUARTER_AMBIENCE[quarter] ?? []);
+      if (q) return q;
+    }
     // A region with no pool of its own simply has nothing to say — better a
     // quiet band than the dungeon's drips leaking into a wood. Add lines to
     // AMBIENCE and it starts breathing.
@@ -4614,8 +4630,13 @@ export class ZoneDO implements DurableObject {
         // once telling him it had started).
         const wet = events.raining(this, room.id) ? " Rain hisses down out of the black, cold on your skin." : "";
         // Blind isn't blank: a distinctive room still has touch, sound, smell
-        // to give even with nothing to see (DARK_TOUCH, zone-data.ts).
-        const touch = DARK_TOUCH[room.id] ? ` ${DARK_TOUCH[room.id]}` : "";
+        // to give even with nothing to see (DARK_TOUCH, zone-data.ts). Failing
+        // its own line, the wood answers as its QUARTER (detail.ts) — 170 rooms
+        // used to give one identical generic line in the dark, so the region you
+        // get lost in was also the one where being blind told you nothing at all
+        // about which part of it you were blind in.
+        const own = DARK_TOUCH[room.id] ?? QUARTER_DARK[WOOD_QUARTERS[room.id] ?? ""];
+        const touch = own ? ` ${own}` : "";
         return `Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind.${wet}${touch} A light would show it. (light a torch, or feel your way back the way you came)`;
       }
       return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";

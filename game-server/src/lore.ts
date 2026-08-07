@@ -10,6 +10,7 @@ import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId, 
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import { uuid } from "./rng";
 import * as den from "./den";
+import { WOOD_QUARTERS, MOB_LORE } from "./detail";
 import {
   MAP_ITEMS, DETAILED_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
@@ -209,6 +210,14 @@ export function worldGrid(z: ZoneDO): WorldGrid {
   for (const [id, p] of at) {
     let region = mapRegionOf(z, id);
     if (region === "gate") region = "out"; // a door is drawn on the ground it stands on
+    // AND THE WOOD IS CAPTIONED BY QUARTER (2026-08-06). One name over 170 rooms
+    // — 42% of the world — while the fortress's 110 carried five. The quarters
+    // (detail.ts) are caption-only: mapRegionOf still says "wood", so the colour,
+    // the gate telling, the spawn tables and every rule keyed on region are
+    // untouched. Nothing here moves a square either; a room's place is baked in
+    // its row and this only decides what gets written above it.
+    const quarter = WOOD_QUARTERS[id];
+    if (quarter) region = quarter;
     (pts.get(region) ?? pts.set(region, []).get(region)!).push(p);
   }
   const bands = [...pts.entries()]
@@ -338,6 +347,11 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       // directory of who sleeps where that the room prose refuses to be.
       home: den.homeMark(z, id, session.pubkey),
       band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
+      // Which quarter of the wood this square belongs to, so the client can hold
+      // a quarter's caption back until you have walked some of it — same law the
+      // region captions already keep: a name floating over ground your copy has
+      // never charted would be telling you a place exists.
+      q: WOOD_QUARTERS[id],
       x: at?.x, y: at?.y,
     });
   }
@@ -536,6 +550,19 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
       const e: any = { id: tmpl.id, name: tmpl.name, tier, kills: r.kills, studied: r.studied ? 1 : 0, want: killsForAccount(tmpl.level) };
       if (tier >= 1) { e.nature = creatureNature(tmpl.id); e.note = tmpl.description; }
       if (tier >= 3) {
+        // WHAT THE FULL ACCOUNT IS ACTUALLY FOR (2026-08-06). Tier 3 is the most
+        // expensive text in the game — study, then three kills on a boss and
+        // eight on a rat — and until now it paid out in NUMBERS plus the same
+        // creatureNature() sentence tier 1 already gave you, shared between 47
+        // templates and 14 behaviour families. So the page you worked for said
+        // exactly what every other scavenger's page said.
+        //
+        // MOB_LORE (detail.ts) is the third thing and the only one of the three
+        // that is knowledge: where the creature came from, what it wants, and
+        // what the world did to make it. It is the one place the history is
+        // allowed to be stated plainly, because you wrote it yourself, in your
+        // own book, after learning the animal properly.
+        e.lore = MOB_LORE[tmpl.id];
         e.level = tmpl.level;
         e.hp = tmpl.max_hp;
         e.dmg = `${tmpl.dmg_min}–${tmpl.dmg_max}`;

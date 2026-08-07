@@ -699,6 +699,11 @@ export const PAGE = `<!doctype html>
   .jent .jtier { color: var(--dim); font-size: 11px; letter-spacing: 0.06em; }
   .jent .jnat { color: var(--bone); font-size: 12.5px; margin-top: 5px; line-height: 1.4; }
   .jent .jnote { color: var(--dim); font-size: 12px; margin-top: 4px; line-height: 1.45; font-style: italic; }
+  /* The field note. Set apart with a rule rather than another colour: the card
+     already runs bone (behaviour) into dim italic (description), and a third
+     shade would read as a third kind of hedging. A line down the left says
+     "this is the part you earned" without changing the voice. */
+  .jent .jlore { color: var(--cream); font-size: 12.5px; margin-top: 8px; line-height: 1.5; border-left: 2px solid var(--steel); padding-left: 9px; }
   .jent .jstats { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
   .jent .jstats span { color: var(--dim); font-size: 12px; }
   .jent .jstats b { color: var(--steel); font-weight: 700; }
@@ -3193,6 +3198,18 @@ var MAP_REGION_LABELS = {
   wood: "THE WOOD",
   den: "THE DENS",
   mountain: "THE MOUNTAIN",
+  // THE WOOD'S SEVEN QUARTERS. It is 170 rooms — 42% of the world — and it
+  // carried one caption while the fortress's 110 carried five, so the biggest
+  // region on the paper was the one that told you least about where you were.
+  // These are caption-only: the wood stays one colour and one region, and every
+  // rule keyed on region is untouched. Server side is detail.WOOD_QUARTERS.
+  heath: "THE DRY HEATH",
+  holding: "THE LOST HOLDING",
+  sunken: "THE SUNKEN WOOD",
+  carr: "THE CARR",
+  worked: "THE WORKED WOOD",
+  enclosure: "THE OLD ENCLOSURE",
+  deepwood: "THE DEEP WOOD",
 };
 function buildMapGraph(f) {
   var nodes = {}, order = [];
@@ -3206,7 +3223,7 @@ function buildMapGraph(f) {
       // frame, so there is one copy of the strata and not two to drift apart.
       var band = (rm.band !== undefined && rm.band !== null) ? rm.band : 1;
       nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate, home: rm.home || 0, safe: !!rm.safe,
-                       gx: rm.x, gy: rm.y };
+                       q: rm.q || "", gx: rm.x, gy: rm.y };
       order.push(rm.id);
     }
   }
@@ -3312,10 +3329,13 @@ function buildMapGraph(f) {
       // Only caption ground you have actually walked some of — an unvisited
       // region is a gap in the paper, and a name floating over a gap would be
       // telling you a place exists that your copy has never charted.
+      // A wood quarter's caption is satisfied by having walked a room OF THAT
+      // QUARTER, not by having walked the wood — otherwise one step past the
+      // Eaves would print all seven names across ground you have never seen.
       var anyHere = false;
       for (var ah = 0; ah < order.length && !anyHere; ah++) {
-        var nr = nodes[order[ah]].region;
-        if (nr === ba.region || (ba.region === "out" && nr === "gate")) anyHere = true;
+        var nd = nodes[order[ah]], nr = nd.region;
+        if (nr === ba.region || nd.q === ba.region || (ba.region === "out" && nr === "gate")) anyHere = true;
       }
       if (anyHere) labels.push({ x: ba.x, y: ba.y, text: text });
     }
@@ -3593,6 +3613,10 @@ function renderJournal(f) {
     card.appendChild(tier);
     if (e.nature) { var nat = document.createElement("div"); nat.className = "jnat"; nat.textContent = e.nature; card.appendChild(nat); }
     if (e.note) { var no = document.createElement("div"); no.className = "jnote"; no.textContent = e.note; card.appendChild(no); }
+    // The field note: what a FULL account is worth, and the only part of the
+    // page that is knowledge rather than description or behaviour. Server-gated
+    // to tier 3 (lore.ts) — this is the reward for having filled the page.
+    if (e.lore) { var lo = document.createElement("div"); lo.className = "jlore"; lo.textContent = e.lore; card.appendChild(lo); }
     if (e.tier >= 3) {
       var st = document.createElement("div");
       st.className = "jstats";
