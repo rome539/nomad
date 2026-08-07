@@ -206,7 +206,17 @@ export function worldGrid(z: ZoneDO): WorldGrid {
   // exception is `gate` — the fortress's three doors stand ON its open ground
   // and would print a second caption inside the first. They need no label; a
   // gate is already the loudest tile on the paper.
+  //
+  // AND A CORNER IS NOT ALWAYS THE REGION'S OWN GROUND (rome, 2026-08-07: "the
+  // west road is inside of the dens"). The anchor was the BOUNDING BOX's corner,
+  // which is only honest when regions are rectangles that don't interleave. They
+  // aren't: the road's westmost room sits three rows below the den block's top,
+  // so min_x from the road and min_y from the road met at a point standing in
+  // the middle of the hamlet, and "THE WEST ROAD" printed across the dens.
+  // Anchors are chosen off REAL ROOMS now, and only where the caption has room
+  // to be read — see anchorFor.
   const pts = new Map<string, { x: number; y: number }[]>();
+  const owner = new Map<string, string>(); // "x,y" -> the region drawn on that cell
   for (const [id, p] of at) {
     let region = mapRegionOf(z, id);
     if (region === "gate") region = "out"; // a door is drawn on the ground it stands on
@@ -219,14 +229,37 @@ export function worldGrid(z: ZoneDO): WorldGrid {
     const quarter = WOOD_QUARTERS[id];
     if (quarter) region = quarter;
     (pts.get(region) ?? pts.set(region, []).get(region)!).push(p);
+    owner.set(`${p.x},${p.y}`, region);
   }
-  const bands = [...pts.entries()]
-    .sort((a, b) => Math.min(...a[1].map((p) => p.y)) - Math.min(...b[1].map((p) => p.y)))
-    .map(([region, list]) => ({
-      region,
+  // A caption is 11px type in a 108px cell, so the longest of them ("THE OLD
+  // ENCLOSURE") runs about a cell and a half — it touches the cell it starts in
+  // and the one after it, and nothing further.
+  const CAPTION_CELLS = 2;
+  // Hang the name over a room the region actually owns, in the first place along
+  // its top edge where the line has clear paper to sit on. Strict first (empty
+  // cells), then over the region's own rooms if that's all there is, and only
+  // then the old bounding-box corner — a caption somewhere imperfect still beats
+  // no caption at all.
+  const anchorFor = (region: string, list: { x: number; y: number }[]) => {
+    const cands = [...list].sort((a, b) => a.y - b.y || a.x - b.x);
+    for (const ownOk of [false, true]) {
+      for (const c of cands) {
+        let clear = true;
+        for (let dx = 0; dx < CAPTION_CELLS && clear; dx++) {
+          const o = owner.get(`${c.x + dx},${c.y - 1}`);
+          if (o !== undefined && !(ownOk && o === region)) clear = false;
+        }
+        if (clear) return { x: c.x - 0.35, y: c.y - 1.05 };
+      }
+    }
+    return {
       x: Math.min(...list.map((p) => p.x)) - 0.35,
       y: Math.min(...list.map((p) => p.y)) - 1.05,
-    }));
+    };
+  };
+  const bands = [...pts.entries()]
+    .sort((a, b) => Math.min(...a[1].map((p) => p.y)) - Math.min(...b[1].map((p) => p.y)))
+    .map(([region, list]) => ({ region, ...anchorFor(region, list) }));
   z.mapGrid = { at, bands };
   return z.mapGrid;
 }

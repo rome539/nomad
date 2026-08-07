@@ -266,8 +266,15 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   }
   // Two rats in a room shouldn't mean two identical chips.
   const unique = [...new Set(suggest)];
+  // WHICH DOOR 'in' AND 'out' MEAN HERE (rome, 2026-08-07). The client dresses
+  // the bare verbs up as "into the gatehouse" / "out into the dark", which was
+  // the whole truth when a gate was the only thing you could step inside. On den
+  // ground they're a door in a house and the ground outside it, and the chip row
+  // was telling a man standing in his own home to go to the tavern. A gate wins
+  // the tie if a site ever sits on one.
+  const door = den.isHolding(z, session.roomId) && !world.entryRooms.has(session.roomId) ? "den" : "";
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting }));
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door }));
   } catch {}
 }
 

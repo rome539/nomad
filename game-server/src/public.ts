@@ -2282,6 +2282,7 @@ async function connect() {
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
+      doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       renderChips(f.suggest, f.combat);
     } else if (f.t === "bench") {
       if (f.open) renderBench(f); else closeBench();
@@ -2384,6 +2385,10 @@ var GATEHOUSE_NOARG_CMDS = {
   rest: 1, sleep: 1, sit: 1, camp: 1, smoke: 1, puff: 1,
 };
 var inGatehouseNow = false;
+// Whether the 'in'/'out' the server is offering here is a den door rather than a
+// gate. Set from the ctx frame before the chips render; old servers send no
+// field, which reads false — the gatehouse wording, exactly as it was.
+var doorIsDen = false;
 function isSpeech(t) {
   if (!t) return false;
   if (t.charAt(0) === "'") return true; // the old MUD shorthand
@@ -2703,8 +2708,12 @@ function chipLabel(s) {
   // The door. A bare "in" / "out" reads as nothing at all sitting next to "barter
   // with the keeper" — and it is the most important thing at a gate: the way to
   // the only warm room in the world, and the way back into the dark.
-  if (s === "in") return "into the gatehouse";
-  if (s === "out") return "out into the dark";
+  // ...but only where that IS the door. On den ground the same two verbs are a
+  // house and the ground outside it, and dressing them as the gatehouse told a
+  // man standing in his own doorway to go to the tavern. The door it opens can
+  // be somebody else's (a bunk you were given), so the label stays "the door".
+  if (s === "in") return doorIsDen ? "through the door" : "into the gatehouse";
+  if (s === "out") return doorIsDen ? "out onto the ground" : "out into the dark";
   m = /^(attack|get) (.+)$/.exec(s);
   if (m) return m[2];
   return s;
