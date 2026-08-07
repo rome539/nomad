@@ -49,6 +49,7 @@ import {
   trait,
   hasTrait,
   parseTraits,
+  loadLeaderboard,
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
@@ -67,7 +68,7 @@ import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
-import { WOOD_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK } from "./detail";
+import { WOOD_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP } from "./detail";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
@@ -785,6 +786,25 @@ export class ZoneDO implements DurableObject {
     if (req.headers.get("x-admin") === "reseed") {
       const n = await this.reseed(req.headers.get("x-zone") ?? "door");
       return new Response(JSON.stringify({ reseeded: true, creatures: n }), { headers: { "content-type": "application/json" } });
+    }
+    // THE DOOR'S OWN NEWS (2026-08-07). What the threshold prints under the
+    // keys, and what the reckoning modal shows. It lives on the DO because only
+    // the DO knows who is awake and which arc is running; the boards come off
+    // D1 live. Everything in here is ALREADY PUBLIC — the boards are opt-in,
+    // boss falls and arcs ride the zone feed, and `who` prints the count
+    // in-game — so this leaks nothing that isn't on a relay already.
+    if (req.headers.get("x-world") === "1") {
+      // THE WORLD HAS TO BE LOADED FIRST, and this is the one path that can
+      // arrive before anybody has ever connected — a stranger on the threshold
+      // hits it with no session behind them. Without this, lbOpts() finds no
+      // itemTemplates, hands the trophy board an empty id list, and the board
+      // reads zero for everyone: caught locally with a wanderer holding 61
+      // trophies and an empty board (2026-08-07). The legend board hid it,
+      // because legend is pure player columns and needs no world at all.
+      await this.init(req.headers.get("x-zone") ?? "door");
+      return new Response(JSON.stringify(await this.worldSnapshot()), {
+        headers: { "content-type": "application/json" },
+      });
     }
     if (req.headers.get("Upgrade") !== "websocket") {
       return new Response("expected websocket", { status: 426 });
@@ -2156,6 +2176,55 @@ export class ZoneDO implements DurableObject {
   // those are tools and tender. The world's own drop table defines the set, so
   // it stays true as the bestiary changes.
   private trophyIds: Set<string> | null = null;
+  // Everything the threshold needs, in one object. Facts only — the door's own
+  // wording lives in public.ts with the rest of the client copy, except the arc
+  // phrase, which is world prose and belongs with world prose (detail.ts).
+  public async worldSnapshot(): Promise<{
+    awake: number;
+    boards: { legend: { name: string; score: number }[]; trophies: { name: string; score: number }[] };
+    fell: { name: string; ago: number } | null;
+    arc: string | null;
+  }> {
+    const opts = this.lbOpts();
+    const [legend, trophies] = await Promise.all([
+      loadLeaderboard(this.env.DB, "legend", DOOR_BOARD_TOP, opts).catch(() => []),
+      loadLeaderboard(this.env.DB, "trophies", DOOR_BOARD_TOP, opts).catch(() => []),
+    ]);
+    // The npub never leaves: the door needs a name and a number, and nothing
+    // about the boards should hand a scraper a key-to-name directory.
+    const strip = (rows: { name: string; score: number }[]) => rows.map((e) => ({ name: e.name, score: e.score }));
+    // Whichever arc is actually running. Only arcs with a door line are named —
+    // a bell tolling under the keep means nothing to somebody who has never
+    // been inside, and the door is written for people who have not.
+    let arc: string | null = null;
+    for (const [id, st] of this.events) {
+      if (st.phase !== "active") continue;
+      const line = DOOR_ARC_LINES[id];
+      if (line) { arc = line; break; }
+    }
+    return {
+      awake: this.sessions.size,
+      boards: { legend: strip(legend), trophies: strip(trophies) },
+      fell: this.lastBossFall ? { name: this.lastBossFall.name, ago: Date.now() - this.lastBossFall.at } : null,
+      arc,
+    };
+  }
+
+  // The last boss to go down, for the door. In memory on purpose: it is worth a
+  // line while the world is warm, and a cold DO simply has nothing to say about
+  // it rather than carrying a stale one — "the woodward fell" is only news if it
+  // is news.
+  public lastBossFall: { name: string; at: number } | null = null;
+
+  // What the boards need to compute a score in SQL: the two weights, and the
+  // set of item ids that count as trophies. One place, so the in-game board,
+  // `publish score` and the door outside all reckon the same way.
+  public lbOpts(): { bossPts: number; pvpPts: number; trophyIds: string[] } {
+    const ids: string[] = [];
+    if (this.world) for (const id of this.world.itemTemplates.keys()) if (this.isTrophy(id)) ids.push(id);
+    return { bossPts: LB_BOSS_PTS, pvpPts: LB_PVP_PTS, trophyIds: ids };
+  }
+
   public isTrophy(itemId: string): boolean {
     if (!this.trophyIds) {
       this.trophyIds = new Set<string>();
@@ -4240,6 +4309,9 @@ export class ZoneDO implements DurableObject {
       // WHERE IT FELL DECIDES WHO HEARS, AND IN WHAT WORDS. "A cry rolls through
       // the stone" is a line about a buried keep; the woodward dies under open
       // sky forty rooms west of any stone at all.
+      // The door outside wants to know (worldSnapshot): a boss going down is
+      // the best news the threshold ever has to print.
+      this.lastBossFall = { name: tmpl.name, at: Date.now() };
       const surface = SURFACE_BANDS.has(this.regionOf(creature.roomId));
       if (surface) {
         this.roomFeedBands(SURFACE_BANDS, `Somewhere out under the trees, a cry goes up and is not answered: ${tmpl.name} has fallen.`);

@@ -1471,9 +1471,11 @@ export async function cmdLeaderboard(z: ZoneDO, session: Session): Promise<void>
     { key: "legend", head: "— legend: kings felled, blood spilled, all slain —" },
     { key: "trophies", head: "— trophies: the deepest hoards —" },
   ];
-  const lines: string[] = ["THE DUNGEON'S RECKONING — the mighty, as they last spoke their names to it."];
+  // LIVE, not as-last-published: the numbers are computed at read time now, so
+  // a board can never show somebody's July figure in August.
+  const lines: string[] = ["THE DUNGEON'S RECKONING — the mighty, as they stand right now."];
   for (const b of boards) {
-    const top = await loadLeaderboard(z.env.DB, b.key, TOP);
+    const top = await loadLeaderboard(z.env.DB, b.key, TOP, z.lbOpts());
     lines.push("", b.head);
     if (top.length === 0) {
       lines.push("  (no names yet — be the first: 'publish score')");
@@ -1486,7 +1488,7 @@ export async function cmdLeaderboard(z: ZoneDO, session: Session): Promise<void>
       lines.push(`  ${String(i + 1).padStart(2)}. ${e.name.padEnd(16)} ${String(e.score).padStart(6)}${you ? "  <- you" : ""}`);
     });
     if (!shownSelf) {
-      const mine = await leaderboardRank(z.env.DB, session.pubkey, b.key);
+      const mine = await leaderboardRank(z.env.DB, session.pubkey, b.key, z.lbOpts());
       if (mine) {
         lines.push("   …");
         lines.push(`  ${String(mine.rank).padStart(2)}. ${session.name.padEnd(16)} ${String(mine.score).padStart(6)}  <- you`);

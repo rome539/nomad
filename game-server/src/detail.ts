@@ -1170,3 +1170,36 @@ export const MOB_LORE: Record<string, string> = {
   "something-ahead": "The step you have been hearing behind you all this time is in front of you now, keeping your pace, stopping when you stop. Nothing came past you. Go back through the last hour as carefully as you like: there is no version of it in which anything came past you.",
   "the-mire-walker": "It stands in water to the knee and it has been standing there, and how long is not a question with a comfortable answer. It does not lift its feet clear when it comes for you, it drags them, and the water goes on moving for a while after it has stopped.",
 };
+
+// ---------------------------------------------------------------------------
+// PART FOUR: WHAT THE DOOR SAYS
+// ---------------------------------------------------------------------------
+//
+// The threshold prints one live line under the keys, and an arc that is
+// actually running is the strongest thing it can say — better than any score,
+// because a stranger reading "something is roaring in the wood tonight" learns
+// the world is running without them, which is the whole pitch.
+//
+// WRITTEN FOR SOMEBODY WHO HAS NEVER BEEN INSIDE. No room names, no verbs, no
+// mechanics: a bell tolling under the keep means nothing to a person who has
+// never seen the keep. Only arcs whose meaning survives with no context get a
+// line here — the rest simply stay quiet, and the door says something else.
+export const DOOR_ARC_LINES: Record<string, string> = {
+  rut: "Something is roaring in the wood tonight.",
+  quiet: "The wood has gone quiet. All of it, at once.",
+  pack: "There are dogs out on the waste, and a lot of them.",
+  fever: "Something is wrong with the air over the old village.",
+  walk: "Whatever the maze keeps in its middle is walking it end to end.",
+  rain: "It is raining on the dead ground tonight.",
+  fog: "The fog is in, and nothing can see past its own hands.",
+  cold: "It is cold enough out there to matter.",
+  tide: "The water is rising in the deep.",
+  crows: "The crows are up over the keep and will not settle.",
+};
+
+// How deep the door's reckoning goes. The modal shows a PAGE of ten and pages
+// through the rest, so this is the total it will ever hand out — not what is
+// on screen. Fifty rows is about 2KB of JSON, which is nothing against a page
+// that is already edge-cached, and it means the boards keep working as a real
+// standing rather than a top-five trophy shelf.
+export const DOOR_BOARD_TOP = 50;

@@ -502,9 +502,15 @@ export async function setMintEvent(db: D1Database, serial: number, eventId: stri
   await db.prepare("UPDATE mints SET event_id = ? WHERE serial = ?").bind(eventId, serial).run();
 }
 
-// THE RECKONING (mig 101): a wanderer's opt-in leaderboard snapshot, written to
-// their own row when they run `publish score`. Read by both the in-game board
-// and the Gamestr broadcast — same opted-in numbers, one source of truth.
+// THE RECKONING (mig 101). `lb_published_at` is CONSENT and nothing else.
+//
+// It used to be consent AND a snapshot: `publish score` froze your two numbers
+// into lb_legend/lb_trophies and the board read those columns forever after. So
+// the board did not show standings — it showed what people's numbers were
+// whenever they last remembered to type the command, and an entry published in
+// July still read July's figure in August. Now the numbers are computed LIVE at
+// read time (see the boards below) and these columns are kept only as the
+// Gamestr broadcast's record of what was last SENT, which is a different job.
 export async function recordLeaderboard(db: D1Database, pubkey: string, legend: number, trophies: number): Promise<void> {
   await db
     .prepare("UPDATE players SET lb_legend = ?, lb_trophies = ?, lb_published_at = ? WHERE pubkey = ?")
@@ -518,28 +524,74 @@ export interface LbEntry {
   score: number;
 }
 
-// The top N on a board — opted-in wanderers only, best first. `board` is a fixed
-// whitelist (never user input), so the column name is safe to interpolate.
-export async function loadLeaderboard(db: D1Database, board: "legend" | "trophies", limit: number): Promise<LbEntry[]> {
-  const col = board === "trophies" ? "lb_trophies" : "lb_legend";
+// LEGEND, LIVE: boss kills and blood are columns on the row, so the whole board
+// is one cheap query and can never be stale. Weights are passed in rather than
+// imported — world.ts is the data layer and does not read tuning.
+function legendExpr(bossPts: number, pvpPts: number): string {
+  return `(boss_kills * ${bossPts} + pvp_kills * ${pvpPts} + kills)`;
+}
+
+// TROPHIES, LIVE: the barter value of every trophy a wanderer holds, anywhere
+// that survives their death — the pack, the lockbox, the vault. Summed with a
+// join rather than by loading each player's items, so this stays one query no
+// matter how many people are on the board. `trophyIds` comes from the world
+// (mob loot that is neither food nor gear); an empty list means the caller has
+// no world loaded, and the board simply reads zero rather than throwing.
+function trophySumSelect(trophyIds: string[]): string {
+  if (!trophyIds.length) return "0";
+  const marks = trophyIds.map(() => "?").join(",");
+  // ROUNDED, because barter values are fractional and a board is not the place
+  // to show somebody 617.1. Matches the Math.round the publish path has always
+  // applied.
+  //
+  // PACK + LOCKBOX + VAULT, exactly as `publish score` has always counted it —
+  // NOT the den shelf. A shelf hoard arguably belongs on a trophy board now
+  // that dens exist, but that is a design change nobody asked for, and silently
+  // moving people up the board is the wrong way to make it.
+  return `(SELECT IFNULL(ROUND(SUM(it.barter)), 0) FROM player_items pi
+             JOIN item_templates it ON it.id = pi.item_id
+            WHERE pi.pubkey = p.pubkey
+              AND IFNULL(pi.container,'') IN ('', 'lockbox', 'vault')
+              AND pi.item_id IN (${marks}))`;
+}
+
+export async function loadLeaderboard(
+  db: D1Database,
+  board: "legend" | "trophies",
+  limit: number,
+  opts: { bossPts: number; pvpPts: number; trophyIds: string[] },
+): Promise<LbEntry[]> {
+  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts);
+  // The expression appears TWICE (select list and filter), so a trophy board
+  // binds its id list twice before the limit. Legend binds nothing but the limit.
+  const ids = board === "trophies" ? opts.trophyIds : [];
   const res = await db
-    .prepare(`SELECT pubkey, name, ${col} AS score FROM players WHERE lb_published_at IS NOT NULL AND ${col} > 0 ORDER BY ${col} DESC, lb_published_at ASC LIMIT ?`)
-    .bind(limit)
+    .prepare(`SELECT p.pubkey, p.name, ${expr} AS score FROM players p
+               WHERE p.lb_published_at IS NOT NULL AND ${expr} > 0
+               ORDER BY score DESC, p.lb_published_at ASC LIMIT ?`)
+    .bind(...ids, ...ids, limit)
     .all<LbEntry>();
   return res.results ?? [];
 }
 
 // A wanderer's own rank on a board (1-based), or null if they've not entered it.
-export async function leaderboardRank(db: D1Database, pubkey: string, board: "legend" | "trophies"): Promise<{ rank: number; score: number } | null> {
-  const col = board === "trophies" ? "lb_trophies" : "lb_legend";
+export async function leaderboardRank(
+  db: D1Database,
+  pubkey: string,
+  board: "legend" | "trophies",
+  opts: { bossPts: number; pvpPts: number; trophyIds: string[] },
+): Promise<{ rank: number; score: number } | null> {
+  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts);
+  const meBinds = board === "trophies" ? [...opts.trophyIds, pubkey] : [pubkey];
   const me = await db
-    .prepare(`SELECT ${col} AS score, lb_published_at AS pub FROM players WHERE pubkey = ?`)
-    .bind(pubkey)
+    .prepare(`SELECT ${expr} AS score, p.lb_published_at AS pub FROM players p WHERE p.pubkey = ?`)
+    .bind(...meBinds)
     .first<{ score: number; pub: number | null }>();
   if (!me || me.pub === null || me.score <= 0) return null;
+  const aheadBinds = board === "trophies" ? [...opts.trophyIds, me.score] : [me.score];
   const ahead = await db
-    .prepare(`SELECT COUNT(*) AS n FROM players WHERE lb_published_at IS NOT NULL AND ${col} > ?`)
-    .bind(me.score)
+    .prepare(`SELECT COUNT(*) AS n FROM players p WHERE p.lb_published_at IS NOT NULL AND ${expr} > ?`)
+    .bind(...aheadBinds)
     .first<{ n: number }>();
   return { rank: (ahead?.n ?? 0) + 1, score: me.score };
 }

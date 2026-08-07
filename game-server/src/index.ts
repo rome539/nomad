@@ -275,6 +275,32 @@ export default {
         return await stub.fetch(new Request(req.url, { headers }));
       }
 
+      // THE DOOR'S NEWS. Public and unauthenticated on purpose: it is read by
+      // the threshold BEFORE anyone has a key, which is the whole point of it.
+      // Nothing in the payload is private — the boards are opt-in, the arc and
+      // the boss-fall already ride the zone feed to the relays, and the awake
+      // count is what `who` prints in-game. No npubs are returned.
+      //
+      // Edge-cached so the front door costs the DO one hit a minute however
+      // many people are looking at it.
+      if (m === "GET" && pathname === "/world.json") {
+        const zone = url.searchParams.get("zone") ?? "door";
+        if (!ZONES.has(zone)) return json({ error: "no_such_zone" }, 404);
+        const headers = new Headers();
+        headers.set("x-world", "1");
+        headers.set("x-zone", zone);
+        const stub = env.ZONE.get(env.ZONE.idFromName(zone));
+        const res = await stub.fetch(new Request(req.url, { headers }));
+        const body = await res.text();
+        return new Response(body, {
+          headers: {
+            "content-type": "application/json",
+            "cache-control": "public, max-age=45",
+            "access-control-allow-origin": "*", // the colosseum is on its own origin
+          },
+        });
+      }
+
       return json({ error: "not_found" }, 404);
     } catch (err: any) {
       return json({ error: "internal", message: err?.message ?? String(err) }, 500);

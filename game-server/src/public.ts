@@ -885,6 +885,77 @@ export const PAGE = `<!doctype html>
   #thr-keys { color: var(--dim); font-size: 12.5px; }
   #thr-keys span { color: var(--bone); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   #thr-keys span:hover { color: var(--cream); }
+  /* ---- the door's news: one live line under the keys, and the reckoning ----
+     The line is the hook (something is happening and you are not in it); the
+     board is for anyone the hook works on. Both hidden until /world.json
+  /* ---- the reckoning: top-left of the door, and nothing else ----
+     Absolutely positioned, so it sits outside the centred stack entirely:
+     it cannot compete with the enter button, and it cannot move the door by
+     a pixel whether the fetch lands, fails, or never returns. Hidden until
+     there is actually a board to show. */
+  /* A PLAQUE, NOT A LINK (rome, 2026-08-07: "it looks exactly like bring your
+     keys"). It did — dim text under a bone underline is the door's inline-link
+     style, so the boards read as a second footnote to the same sentence. This
+     is a different KIND of thing: a notice posted on the wall. Uppercase and
+     letter-spaced (the same treatment the boards' own column heads get), no
+     underline, and a hairline box around it so it reads as something nailed up
+     rather than something written in a line of prose. */
+  #thr-reck {
+    position: absolute; top: 16px; left: 16px; z-index: 2; display: none;
+    background: rgba(22, 18, 12, .55); border: 1px solid var(--border);
+    font-family: inherit; font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--dim); cursor: pointer; padding: 7px 12px;
+    transition: color .18s ease, border-color .18s ease;
+  }
+  #thr-reck.on { display: block; }
+  #thr-reck:hover, #thr-reck:focus-visible { color: var(--gold); border-color: var(--gold); outline: none; }
+  /* The reckoning modal reuses the map/journal shell verbatim. */
+  #reckm { display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,.82); align-items: center; justify-content: center; padding: 16px 12px; }
+  #reckm.open { display: flex; }
+  #reckm .lbox { background: var(--panel); border: 1px solid var(--border2); border-radius: 10px; padding: 14px 14px 0; width: min(720px, 96vw); max-height: 90vh; display: flex; flex-direction: column; gap: 10px; }
+  #reckm .lhead { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  #recktitle { color: var(--gold); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; }
+  #recksub { color: var(--dim); font-size: 12px; margin-top: 3px; max-width: 56ch; }
+  #reckclose { background: transparent; border: 1px solid var(--border2); border-radius: 5px; color: var(--cream); font: inherit; font-size: 13px; padding: 7px 14px; cursor: pointer; flex: 0 0 auto; white-space: nowrap; }
+  #reckclose:hover, #reckclose:focus-visible { color: var(--gold); border-color: var(--gold); outline: none; }
+  #reckbody { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  #reckbody h3 { color: var(--dim); font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; font-weight: 400; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  #reckbody .rrow { display: grid; grid-template-columns: 1.8em 1fr auto; gap: 10px; align-items: baseline; padding: 7px 0; font-size: 13.5px; border-bottom: 1px solid var(--line); }
+  /* THE PODIUM. Gold is the palette's own; the other two are mixed for THIS
+     ground rather than borrowed from the tokens — --steel is a cold blue that
+     reads as UI here, and --blood is the death colour and cannot mean "second
+     best". So: a warm-neutral silver that still reads as metal against a brown
+     ground, and a bronze pitched well under the gold so first and third are
+     never confused at a glance. Everything from 4th down stays dim: a podium
+     only means something if the rest of the list doesn't glow. */
+  #reckbody .rrk { color: var(--dim); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  #reckbody .rrk1 { color: var(--gold); font-weight: 700; }
+  #reckbody .rrk2 { color: #bcbdb4; font-weight: 700; }
+  #reckbody .rrk3 { color: #b07a4a; font-weight: 700; }
+  /* The name carries the rank too, or the medal is a detail nobody's eye lands
+     on — the name is what people actually read down. */
+  #reckbody .rnm1 { color: var(--cream); }
+  #reckbody .crown { width: 11px; height: 9px; margin-left: 7px; vertical-align: baseline; fill: var(--gold); flex: 0 0 auto; }
+  #reckbody .rnm { display: flex; align-items: center; min-width: 0; }
+  #reckbody .rnm span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #reckbody .rnm { color: var(--bone); }
+  #reckbody .rsc { color: var(--gold); font-variant-numeric: tabular-nums; }
+  #reckbody .rfoot { color: var(--dim); font-size: 11.5px; padding-top: 9px; }
+  #reckbody .rempty { color: var(--dim); font-size: 12.5px; font-style: italic; padding: 8px 0; }
+  /* The pager. Ten to a page; the arrows only appear when there is somewhere to
+     go, so a board of four looks exactly as it did before pagination existed. */
+  #reckbody .rpage { display: flex; align-items: center; gap: 10px; padding-top: 10px; }
+  #reckbody .rpage .rcount { color: var(--dim); font-size: 11px; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+  #reckbody .rpage button {
+    font-family: inherit; font-size: 12px; line-height: 1;
+    background: transparent; border: 1px solid var(--border); color: var(--bone);
+    padding: 4px 9px; cursor: pointer; border-radius: 3px;
+  }
+  #reckbody .rpage button:hover:not(:disabled), #reckbody .rpage button:focus-visible:not(:disabled) { color: var(--gold); border-color: var(--gold); outline: none; }
+  #reckbody .rpage button:disabled { opacity: .3; cursor: default; }
+  /* A short last page must not make the column jump as you step through it. */
+  #reckbody .rrows { display: flex; flex-direction: column; min-height: 266px; }
+  @media (max-width: 560px) { #reckbody { grid-template-columns: 1fr; gap: 20px; } }
 </style>
 </head>
 <body>
@@ -898,6 +969,19 @@ export const PAGE = `<!doctype html>
     <div id="thr-line">a shared dungeon, alive whether or not anyone is watching</div>
     <button id="thr-enter" type="button">enter</button>
     <div id="thr-keys">been here before? <span id="thr-keys-link">bring your keys</span></div>
+    <button id="thr-reck" type="button">the reckoning</button>
+  </div>
+  <div id="reckm" role="dialog" aria-modal="true" aria-labelledby="recktitle">
+    <div class="lbox">
+      <div class="lhead">
+        <div>
+          <div id="recktitle">The reckoning</div>
+          <div id="recksub">Wanderers who entered the boards. Nobody appears here without asking to.</div>
+        </div>
+        <button id="reckclose" type="button">close</button>
+      </div>
+      <div id="reckbody"></div>
+    </div>
   </div>
   <div id="setpanel">
     <span class="lbl">SETTINGS</span>
@@ -1329,28 +1413,62 @@ var SND = {
 };
 // The cave breathes for as long as sound is on: filtered noise + a slow 39Hz
 // heartbeat, the trailer's ambience minus the end time.
+// NOTHING STARTS OR STOPS AT FULL GAIN (rome, 2026-08-07: "the speakers pop").
+//
+// A waveform cut off at non-zero amplitude is a step change, and a step change
+// is what a speaker cone reproduces as a CLICK. The 39Hz heartbeat was the
+// worst of it: a low sine chopped mid-cycle is close to a pure DC jump, which
+// is the loudest pop a browser can make. Both the bed and the heartbeat used to
+// start at their working gain and be killed with a bare .stop().
+//
+// So every start ramps in and every stop ramps out. AMB_FADE is short enough
+// that toggling sound still feels instant and long enough (250ms is ~10 cycles
+// of the heartbeat) to land on silence rather than on an edge.
+var AMB_FADE = 0.25;
+function fadeGain(ctx, param, to, secs) {
+  if (!ctx || !param) return;
+  try {
+    var t = ctx.currentTime;
+    param.cancelScheduledValues(t);
+    // Anchor at the CURRENT value first, or the ramp starts from whatever was
+    // last scheduled and jumps — a pop cure that causes a pop.
+    param.setValueAtTime(param.value, t);
+    // Linear, not exponential: exponential can never reach zero, and "almost
+    // silent" is still a step when the node stops.
+    param.linearRampToValueAtTime(to, t + secs);
+  } catch (e) {}
+}
 function startAmb() {
   if (ambNodes || !actx) return;
   var src = actx.createBufferSource();
   src.buffer = SND._noise(); src.loop = true;
   var f = actx.createBiquadFilter();
   f.type = "lowpass"; f.frequency.value = 140;
-  var g = actx.createGain(); g.gain.value = 0.028;
+  var g = actx.createGain(); g.gain.value = 0;
   src.connect(f); f.connect(g); g.connect(aout());
   src.start();
+  fadeGain(actx, g.gain, 0.028, AMB_FADE);
   var o = actx.createOscillator(); o.frequency.value = 39;
-  var og = actx.createGain(); og.gain.value = 0.017;
+  var og = actx.createGain(); og.gain.value = 0;
   var lfo = actx.createOscillator(); lfo.frequency.value = 0.11;
   var lg = actx.createGain(); lg.gain.value = 0.008;
   lfo.connect(lg); lg.connect(og.gain);
   o.connect(og); og.connect(aout());
   o.start(); lfo.start();
-  ambNodes = [src, o, lfo];
+  fadeGain(actx, og.gain, 0.017, AMB_FADE);
+  // Gains kept alongside the sources: the stop needs something to ride down.
+  ambNodes = { srcs: [src, o, lfo], gains: [g, og] };
 }
 function stopAmb() {
   if (!ambNodes) return;
-  for (var i = 0; i < ambNodes.length; i++) { try { ambNodes[i].stop(); } catch (e) {} }
+  var dying = ambNodes;
   ambNodes = null;
+  for (var i = 0; i < dying.gains.length; i++) fadeGain(actx, dying.gains[i].gain, 0, AMB_FADE);
+  // Stop only once the ramp has actually reached zero. Stopping on the same
+  // beat as the fade is exactly the hard cut this is here to avoid.
+  setTimeout(function () {
+    for (var j = 0; j < dying.srcs.length; j++) { try { dying.srcs[j].stop(); } catch (e) {} }
+  }, AMB_FADE * 1000 + 60);
 }
 function sndInit() {
   if (!actx) {
@@ -4558,7 +4676,10 @@ if (thrKnown && stored) thrEnter.textContent = "enter as " + thrKnown;
 // tolling now and then on the root or its fifth. Browsers refuse audio
 // before a gesture, so it starts at the page's first touch; the enter click
 // hands it a long fade through the door. A saved sound-off is silence here.
-var thrCtx = null, thrMaster = null, thrTimers = [];
+// thrOut is the LAST node before the speakers and NOTHING modulates it — see
+// thrMusicStart for why that matters. thrMaster carries the LFO; thrOut is the
+// only handle that can actually reach silence.
+var thrCtx = null, thrMaster = null, thrOut = null, thrTimers = [];
 var THR_STEPS = [110, 116.54, 110, 98]; // A, B-flat (the rub), A, G — and around again
 function thrMusicStart() {
   if (thrCtx || crossed) return;
@@ -4567,10 +4688,20 @@ function thrMusicStart() {
   if (thrCtx.state === "suspended") { try { thrCtx.resume(); } catch (e) {} }
   var c = thrCtx;
   var t0 = c.currentTime;
+  // A CLEAN LAST NODE. The tremor below connects an oscillator INTO
+  // thrMaster.gain, and an audio-rate connection to an AudioParam is SUMMED
+  // with the param's own value — so ramping thrMaster.gain to zero still leaves
+  // the LFO swinging +/-0.02 through it. That is why the fade-outs did not
+  // silence anything and the refresh still popped (rome, 2026-08-07). thrOut
+  // hangs below the master with nothing modulating it, so it is the one handle
+  // that can truly reach zero.
+  thrOut = c.createGain();
+  thrOut.gain.value = 1;
+  thrOut.connect(c.destination);
   thrMaster = c.createGain();
   thrMaster.gain.setValueAtTime(0.0001, t0);
   thrMaster.gain.exponentialRampToValueAtTime(0.16, t0 + 4);
-  thrMaster.connect(c.destination);
+  thrMaster.connect(thrOut);
   var lp = c.createBiquadFilter();
   lp.type = "lowpass"; lp.frequency.value = 650; lp.Q.value = 0.5;
   lp.connect(thrMaster);
@@ -4580,7 +4711,12 @@ function thrMusicStart() {
     var po = c.createOscillator();
     po.type = i ? "triangle" : "sine";
     po.frequency.value = pedal[i] * (i ? 1.002 : 1);
-    var pg = c.createGain(); pg.gain.value = i ? 0.032 : 0.07;
+    // Ramped in, not switched on: a 110Hz sine jumping straight to working
+    // gain is a step change, and a step change is a click. Two seconds is well
+    // inside the master's own four-second bloom, so nothing sounds slower.
+    var pg = c.createGain();
+    pg.gain.setValueAtTime(0.0001, t0);
+    pg.gain.exponentialRampToValueAtTime(i ? 0.032 : 0.07, t0 + 2);
     po.connect(pg); pg.connect(lp); po.start();
   }
   // A slow tremor under it all — the ground is not quite still.
@@ -4642,8 +4778,8 @@ function thrMusicStop() {
   if (!thrCtx) return;
   for (var i = 0; i < thrTimers.length; i++) clearTimeout(thrTimers[i]);
   thrTimers = [];
-  var c = thrCtx, m = thrMaster, t = c.currentTime;
-  thrCtx = null; thrMaster = null;
+  var c = thrCtx, m = thrMaster, out = thrOut, t = c.currentTime;
+  thrCtx = null; thrMaster = null; thrOut = null;
   try {
     m.gain.cancelScheduledValues(t);
     m.gain.setValueAtTime(Math.max(m.gain.value, 0.0001), t);
@@ -4651,11 +4787,180 @@ function thrMusicStop() {
     // so even the instant-clicker hears the door as they pass through it.
     if (t < 1.5) m.gain.exponentialRampToValueAtTime(0.07, t + 1.2);
     m.gain.exponentialRampToValueAtTime(0.0001, t + 7);
+    // The master's exponential can only ever approach zero, and the LFO summed
+    // into it keeps swinging regardless — so the last half second is taken on
+    // the CLEAN node, linearly, all the way to true silence. Without this the
+    // close() below cut a live waveform and popped on the way through the door.
+    if (out) {
+      out.gain.setValueAtTime(1, t);
+      out.gain.setValueAtTime(1, t + 6.5);
+      out.gain.linearRampToValueAtTime(0, t + 7);
+    }
   } catch (e) {}
   setTimeout(function () { try { c.close(); } catch (e) {} }, 7500);
 }
 document.addEventListener("pointerdown", thrMusicStart, true);
 document.addEventListener("keydown", thrMusicStart, true);
+
+// THE REFRESH POP (rome, 2026-08-07: "I refresh the page and then the speakers
+// pop"). Nothing here ever handled the page going away, so a reload tore the
+// audio graph down mid-waveform — the drone and the heartbeat were both still
+// sounding — and the device got a step change straight to zero.
+//
+// A very fast ramp fixes it. The audio thread renders in 128-sample quanta
+// (under 3ms), so a 40ms ramp is silent long before the page is destroyed, and
+// unlike close() it never cuts a cycle in half. We deliberately do NOT close
+// the contexts: close() is itself an abrupt stop, and a context on a dying page
+// is collected anyway — silent.
+//
+// pagehide, not beforeunload: it fires for the bfcache and for tab-close on
+// mobile Safari, which beforeunload does not.
+function hushAudio() {
+  fadeGain(actx, amaster && amaster.gain, 0, 0.04);
+  // thrOut, NOT thrMaster: the master has the tremor LFO summed into its gain
+  // and can never actually reach zero.
+  fadeGain(thrCtx, thrOut && thrOut.gain, 0, 0.04);
+}
+window.addEventListener("pagehide", hushAudio);
+// Safari desktop can skip pagehide on a same-document reload; this is the belt.
+window.addEventListener("beforeunload", hushAudio);
+
+// ---- THE RECKONING, ON THE DOOR (2026-08-07) -------------------------------
+//
+// A leaderboard nobody outside the game can see is a leaderboard that does no
+// work. So the threshold carries one button, top-left, and the boards open in
+// the same modal shell the map and journal already use.
+//
+// IT FAILS QUIET. /world.json is fetched once, unauthenticated, before anyone
+// has a key. If it is slow, errors, or comes back with nobody on the boards,
+// the button never appears and the door is exactly what it has always been.
+// Nothing here can block or move the enter button.
+var thrBoards = null;
+
+function thrSpan(cls, text) {
+  var s = document.createElement("span");
+  s.className = cls;
+  s.textContent = text;
+  return s;
+}
+// DRAWN, NOT TYPED. A crown glyph would be at the mercy of the font: the
+// monospace stack falls through SF Mono, Menlo and Consolas, and the ones that
+// have no chess/crown codepoint render a tofu box in its place. An inline SVG
+// is the same eleven pixels on every machine and inherits its colour from CSS.
+function thrCrown() {
+  var ns = "http://www.w3.org/2000/svg";
+  var svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 20");
+  svg.setAttribute("class", "crown");
+  svg.setAttribute("aria-hidden", "true");
+  var p = document.createElementNS(ns, "path");
+  p.setAttribute("d", "M1 4 L6 11 L12 2 L18 11 L23 4 L21 18 L3 18 Z");
+  svg.appendChild(p);
+  return svg;
+}
+// Ten to a page, and the page index is per board so the two columns move
+// independently. RANK IS ABSOLUTE, never the row's position on the page — the
+// crown and the medals belong to the top of the BOARD, and page two must not
+// grow a second first place.
+var RECK_PAGE = 10;
+var reckPage = { legend: 0, trophies: 0 };
+
+function thrRenderBoards() {
+  var body = document.getElementById("reckbody");
+  body.replaceChildren();
+  var defs = [
+    { key: "legend", head: "Legend \\u00b7 blood owed", foot: "Bosses felled, wanderers put down, and everything else that died." },
+    { key: "trophies", head: "Trophies \\u00b7 what they carry", foot: "Barter value held in the pack, the lockbox and the vault." }
+  ];
+  for (var d = 0; d < defs.length; d++) {
+    var def = defs[d];
+    var col = document.createElement("div"), h = document.createElement("h3");
+    h.textContent = def.head;
+    col.appendChild(h);
+    var rows = (thrBoards && thrBoards[def.key]) || [];
+    var pages = Math.max(1, Math.ceil(rows.length / RECK_PAGE));
+    if (reckPage[def.key] > pages - 1) reckPage[def.key] = pages - 1;
+    var page = reckPage[def.key];
+    var from = page * RECK_PAGE;
+    var slice = rows.slice(from, from + RECK_PAGE);
+
+    var rowsBox = document.createElement("div");
+    rowsBox.className = "rrows";
+    if (!rows.length) {
+      var em = document.createElement("div");
+      em.className = "rempty";
+      em.textContent = "No names on this board yet.";
+      rowsBox.appendChild(em);
+    }
+    for (var r = 0; r < slice.length; r++) {
+      var rank = from + r + 1; // absolute
+      // Built as NODES, never innerHTML: a wanderer picks their own name, and
+      // textContent-only is the law that makes this client structurally
+      // XSS-proof. The door does not get to be the exception.
+      var row = document.createElement("div");
+      row.className = "rrow";
+      row.appendChild(thrSpan("rrk" + (rank <= 3 ? " rrk" + rank : ""), String(rank)));
+      var nameCell = document.createElement("span");
+      nameCell.className = "rnm" + (rank === 1 ? " rnm1" : "");
+      nameCell.appendChild(thrSpan("", slice[r].name));
+      if (rank === 1) nameCell.appendChild(thrCrown());
+      row.appendChild(nameCell);
+      row.appendChild(thrSpan("rsc", Number(slice[r].score).toLocaleString()));
+      rowsBox.appendChild(row);
+    }
+    col.appendChild(rowsBox);
+
+    // Only when there is somewhere to go: a board of four shows no controls at
+    // all, which is how it looked before any of this existed.
+    if (pages > 1) {
+      var pg = document.createElement("div");
+      pg.className = "rpage";
+      pg.appendChild(thrPageBtn(def.key, -1, "\\u2039", page <= 0));
+      pg.appendChild(thrPageBtn(def.key, 1, "\\u203a", page >= pages - 1));
+      var count = document.createElement("span");
+      count.className = "rcount";
+      count.textContent = (from + 1) + "\\u2013" + (from + slice.length) + " of " + rows.length;
+      pg.appendChild(count);
+      col.appendChild(pg);
+    }
+
+    var f = document.createElement("div");
+    f.className = "rfoot";
+    f.textContent = def.foot;
+    col.appendChild(f);
+    body.appendChild(col);
+  }
+}
+function thrPageBtn(key, delta, label, disabled) {
+  var b = document.createElement("button");
+  b.type = "button";
+  b.textContent = label;
+  b.setAttribute("aria-label", delta < 0 ? "previous page" : "next page");
+  if (disabled) b.disabled = true;
+  else b.addEventListener("click", function () { reckPage[key] += delta; thrRenderBoards(); });
+  return b;
+}
+function thrWorld() {
+  fetch("/world.json", { cache: "no-store" }).then(function (r) {
+    return r.ok ? r.json() : null;
+  }).then(function (w) {
+    if (!w || crossed) return;
+    var lg = (w.boards && w.boards.legend) || [], tr = (w.boards && w.boards.trophies) || [];
+    if (!lg.length && !tr.length) return; // nobody has entered: no button, no empty modal
+    thrBoards = w.boards;
+    document.getElementById("thr-reck").classList.add("on");
+  }).catch(function () { /* the door is not held up by its own news */ });
+}
+var reckm = document.getElementById("reckm");
+function reckOpen() { reckPage = { legend: 0, trophies: 0 }; thrRenderBoards(); reckm.classList.add("open"); document.getElementById("reckclose").focus(); }
+function reckClose() { reckm.classList.remove("open"); document.getElementById("thr-reck").focus(); }
+document.getElementById("thr-reck").addEventListener("click", reckOpen);
+document.getElementById("reckclose").addEventListener("click", reckClose);
+reckm.addEventListener("click", function (e) { if (e.target === reckm) reckClose(); });
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && reckm.classList.contains("open")) { e.stopPropagation(); reckClose(); }
+}, true);
+thrWorld();
 
 var crossed = false;
 function crossThreshold() {
