@@ -311,14 +311,21 @@ export const HELP_TEXT = [
   "  body stands there and keeps swinging for 45 seconds. Pulling the plug is",
   "  not an escape.)",
   "",
-  "  Dying is what costs you. A gate is not a save — it is insurance:",
-  "    killed by the WORLD    what a gate sealed comes back to you. Anything",
-  "                           unsealed scatters on the stones where you fell.",
-  "    killed by a WANDERER   they take everything. Seals and all.",
-  "  So bank what you would hate to lose BEFORE you go deep. Four places hold",
-  "  things: your pack (20 slots, on you, at risk), the lockbox (8, at any",
-  "  gate, takes anything), the vault (50, at any gate, sealed wealth only),",
-  "  and your own den's shelf (12, out where you built it).",
+  "  Dying costs you EVERYTHING YOU ARE CARRYING — sealed or not. The seal is",
+  "  title, not armor: it cracks as the thing leaves your hands, and your gear",
+  "  lies on the stones where you fell for anyone, or anything, to pick up.",
+  "  There is no version of dying where the dungeon hands your pack back.",
+  "",
+  "  So the only things that are still yours tomorrow are the ones you LEFT",
+  "  BEHIND. Bank before you go deep:",
+  "    your pack     20 slots, on your body, every one of them at risk",
+  "    the lockbox    8 slots, at any gate, takes anything, sealed or raw",
+  "    the vault     50 slots, at any gate, sealed wealth only",
+  "    your shelf    12 slots, in the den you built, out where you built it",
+  "",
+  "  Sealing ('claim', at a gate) puts the dungeon's mint on a piece and its",
+  "  name in the book — that is what makes it provable, publishable, and the",
+  "  vault's price of entry. It buys you nothing at all when you die.",
   "",
   "  GEAR WEARS OUT. Every blow you take grinds down what you are wearing and",
   "  every blow you land wears what you swing: sound, then worn, battered,",
@@ -502,8 +509,16 @@ export const HELP_TEXT = [
   "",
   "Wounds do not close on their own. The dead stay dead until something",
   "new finds its way in. What you drop stays where you dropped it.",
-  "What you carry is provisional until a gate seals it: unsealed loot",
-  "scatters where you die; what the dungeon sealed, the dungeon returns.",
+  // This said "unsealed loot scatters where you die; what the dungeon sealed,
+  // the dungeon returns" — the ORIGINAL loot rule, from before 2026-07-05.
+  // zone.ts's death path has said the opposite ever since: everything carried
+  // scatters, sealed included, and the mint is VOIDED on the way down (the seal
+  // is title, not armor — only the lockbox protects). The footer outlived the
+  // rule by a year and taught every reader exactly the wrong lesson about the
+  // one decision that matters most.
+  "What you carry, you carry at risk. Everything on your body scatters where",
+  "you die — seal and all, and the mint voided. Only what you left behind at",
+  "a gate, or on your own shelf, is still yours in the morning.",
   // THE DOORS MOVED AND THIS DID NOT (2026-08-07). It still said "four gates:
   // three on the walls, and the waystation out on the old road" — which was
   // true before the road's door moved (mig 174) and before the wood got three
