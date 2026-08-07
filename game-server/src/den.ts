@@ -110,17 +110,37 @@ export function densAt(z: ZoneDO, roomId: string): Den[] {
   const out: Den[] = [];
   for (const d of z.dens.values()) {
     if (d.roomId !== roomId) continue;
-    if (Date.now() - d.tendedAt > DEN_LAPSE_MS) { void lapse(z, d); continue; }
+    if (lapsed(d)) { void lapse(z, d); continue; }
     out.push(d);
   }
   return out;
+}
+
+// ONLY AN UNBARRED HOLD FALLS IN (rome, 2026-08-07).
+//
+// The fourteen days were written when a room was a SLOT — six doors on the den
+// ground was the whole housing supply, and the clock was there so a dead account
+// couldn't squat one forever. Mig 172 made a room a SITE instead: any number of
+// nomads build on the same ground, nobody is ever locked out by whoever got
+// there first, and what rations housing is the iron and scrap carried out there.
+// The scarcity the clock defended stopped existing, and the clock outlived it —
+// so it was left punishing the one thing it was never aimed at, a player taking
+// a fortnight off.
+//
+// So the bar decides this too. A door you paid iron to shut stays shut, for as
+// long as it takes you to come back. A frame you never finished falls in. That
+// makes the bar the difference between camping somewhere and living there, which
+// is the same job it already does for safety, and it costs nothing to anyone
+// else — the ground under a standing hold was never scarce.
+function lapsed(d: Den): boolean {
+  return !d.barred && Date.now() - d.tendedAt > DEN_LAPSE_MS;
 }
 
 // The one den a player holds, anywhere in the world, or nothing.
 export function myDen(z: ZoneDO, pubkey: string): Den | undefined {
   const d = z.dens.get(pubkey);
   if (!d) return undefined;
-  if (Date.now() - d.tendedAt > DEN_LAPSE_MS) { void lapse(z, d); return undefined; }
+  if (lapsed(d)) { void lapse(z, d); return undefined; }
   return d;
 }
 
@@ -342,7 +362,7 @@ export async function cmdSettle(z: ZoneDO, session: Session, arg: string): Promi
     `You raise a den at ${room.name}. A frame, a floor you did not have to dig, and a door that is yours.`,
     neighbours > 0
       ? `You are not the only one living on this ground — ${neighbours} other door${neighbours === 1 ? "" : "s"} here, and none of them are your business.`
-      : "Nobody witnesses it and nothing marks it. What makes it yours is that you came back, and that you keep coming back — leave it standing empty long enough and it falls in.",
+      : "Nobody witnesses it and nothing marks it. What makes it yours is that you came back, and that you keep coming back — leave an unbarred frame standing empty long enough and it falls in. A bar on the door ends that, and it stands until you give it up.",
     `The door does not shut yet. Fit a bar to it (${DEN_BAR_IRON} iron and ${DEN_BAR_SCRAP} scrap, then 'bar') and nothing walks in after you.`,
     `Step through it with 'in', and back out to the ground with 'out'. You can put ${DEN_BUNKS} other nomads under this roof — hand them a key face to face ('bunk <name>').`,
   ].join("\n"));
@@ -454,7 +474,7 @@ export async function cmdBar(z: ZoneDO, session: Session): Promise<void> {
   }
   den.barred = true;
   await z.env.DB.prepare("UPDATE dens SET barred = 1 WHERE room_id = ? AND holder = ?").bind(den.roomId, den.holder).run();
-  z.send(session, "You cut the sockets, hang the bar, and drop it once to hear it seat.\nNothing walks in here now. That is not the same as nothing knowing you are in here.");
+  z.send(session, "You cut the sockets, hang the bar, and drop it once to hear it seat.\nNothing walks in here now. That is not the same as nothing knowing you are in here.\nAnd the hold stops counting: a barred door stands however long you are gone.");
   z.roomFeed(den.roomId, `${session.name} hangs a bar on the door.`, session.pubkey, false);
   z.sendCtx(session);
 }
@@ -755,8 +775,12 @@ export async function cmdDen(z: ZoneDO, session: Session): Promise<void> {
     lines.push(here.barred ? "The bar is on the door." : "The door does not shut. Anything out there can walk in.");
     if (mine) {
       lines.push(bunkList(z, here));
-      const days = Math.max(0, Math.round((DEN_LAPSE_MS - (Date.now() - here.tendedAt)) / 86_400_000));
-      lines.push(`Empty for another ${days} day${days === 1 ? "" : "s"} and the hold falls in.`);
+      if (here.barred) {
+        lines.push("The bar holds the hold. It stands empty as long as it has to — you will find it here.");
+      } else {
+        const days = Math.max(0, Math.round((DEN_LAPSE_MS - (Date.now() - here.tendedAt)) / 86_400_000));
+        lines.push(`Nothing shuts this door, so nothing keeps it: empty another ${days} day${days === 1 ? "" : "s"} and the hold falls in. A bar ends that.`);
+      }
     } else if (here.keys.has(session.pubkey)) {
       lines.push("You have a bunk here.");
     }
@@ -774,8 +798,13 @@ export async function cmdDen(z: ZoneDO, session: Session): Promise<void> {
   }
   const own = [...z.dens.values()].filter((d) => d.holder === session.pubkey && d.roomId !== session.roomId);
   for (const d of own) {
-    const days = Math.max(0, Math.round((DEN_LAPSE_MS - (Date.now() - d.tendedAt)) / 86_400_000));
-    lines.push(`You also hold ${z.world!.rooms.get(d.roomId)!.name}${d.barred ? ", barred" : ", open"} — ${days} day${days === 1 ? "" : "s"} before it falls in.`);
+    const where = z.world!.rooms.get(d.roomId)!.name;
+    if (d.barred) {
+      lines.push(`You also hold ${where}, barred — it stands until you give it up.`);
+    } else {
+      const days = Math.max(0, Math.round((DEN_LAPSE_MS - (Date.now() - d.tendedAt)) / 86_400_000));
+      lines.push(`You also hold ${where}, open — ${days} day${days === 1 ? "" : "s"} before it falls in, unless you bar it.`);
+    }
   }
   const bunks = [...z.dens.values()].filter((d) => d.keys.has(session.pubkey));
   for (const d of bunks) lines.push(`You have a bunk in ${z.world!.rooms.get(d.roomId)!.name}, under ${holderName(z, d)}.`);

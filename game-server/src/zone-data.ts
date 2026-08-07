@@ -2101,10 +2101,16 @@ export const DEN_BUNKS = 6;
 // faucet; a wall of hung armour is the whole point of having somewhere to put
 // your things. So: gear free, the rest capped.
 export const DEN_CAP = 12;
-// A fortnight of not coming home and the hold falls in. Long enough that a bad
-// week doesn't cost you your house, short enough that a ghost can't sit on one
-// of six doors forever. This is the whole upkeep system: no rent, no meter —
-// the only question it asks is whether you still live here.
+// A fortnight of not coming home and an UNBARRED hold falls in. This is the
+// whole upkeep system: no rent, no meter — the only question it asks is whether
+// you still live here.
+//
+// It used to apply to every den, on the argument that a ghost mustn't squat one
+// of six finite doors. Mig 172 made a room a site rather than a slot, so that
+// scarcity stopped existing and the clock was left punishing nothing but a
+// player taking a fortnight off (rome, 2026-08-07). Now the bar decides: a door
+// somebody paid iron to shut stays shut, a frame nobody finished falls in. See
+// den.lapsed.
 export const DEN_LAPSE_MS = 14 * 24 * 3_600_000;
 // WAKING AT YOUR OWN DOOR (rome, 2026-08-07). Death normally hands you back at a
 // gate; a small share of the time it hands you back home instead. Deliberately
