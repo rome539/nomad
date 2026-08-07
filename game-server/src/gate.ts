@@ -258,10 +258,17 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
   z.enterStep(session, "trading"); // then a lateral step up to the counter
   if (walkedIn) z.send(session, "You push in out of the cold and step up to the keeper's hatch.");
   const lines = ["The keeper unshutters the hatch and lays out what he'll part with:"];
+  const absent: string[] = [];
   for (const s of [...world.fenceStock].sort((a, b) => a.cost - b.cost)) {
     const t = world.itemTemplates.get(s.itemId);
-    if (!t || !inStock(z, s.itemId)) continue; // what he isn't carrying just isn't shown — no bare shelf
+    if (!t) continue;
+    // What he isn't carrying is still named, without a price — you can't buy it,
+    // but you can know it exists and come back for it.
+    if (!inStock(z, s.itemId)) { absent.push(t.name); continue; }
     lines.push(`  ${t.name}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade`);
+  }
+  if (absent.length) {
+    lines.push(`Not carrying today: ${absent.join(", ")}. "They come and go," he says. "Check back."`);
   }
   lines.push("He deals in kind — bones, teeth, oddments. 'buy <thing>' starts a trade; 'offer <thing>' pays until he's square. He gives no change. ('out' steps you back into the world.)");
   return z.send(session, lines.join("\n"));
@@ -645,6 +652,19 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
       } : null;
     })
     .filter((s) => s !== null);
+  // WHAT HE ISN'T CARRYING (rome, 2026-08-07). A third of the rotating catalog
+  // is off the shelf at any moment, and dropping it silently meant an absent
+  // thing and a thing that never existed looked identical — the shop read
+  // smaller than it is and nothing told you to come back. Named and dimmed, with
+  // no price and no button: it's a shelf you can't buy from, not a bare shelf.
+  const gone = [...world.fenceStock]
+    .filter((s) => !inStock(z, s.itemId))
+    .sort((a, b) => a.cost - b.cost)
+    .map((s) => {
+      const t = world.itemTemplates.get(s.itemId);
+      return t ? { id: s.itemId, name: t.name, rarity: t.rarity, kind: kindOf(t) } : null;
+    })
+    .filter((s) => s !== null);
   // Your side of the counter, one tab per keeping: pack, lockbox, vault.
   // What he'd take, collapsed by kind — never a value shown; his manner
   // when you offer is the only appraisal. Sealed goods trade too (he
@@ -684,7 +704,7 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
   } : null;
   const payload = {
     v: 0, t: "trade", open: true, note: note ?? "",
-    stock, goods, want,
+    stock, gone, goods, want,
   };
   try { session.ws.send(JSON.stringify(payload)); } catch {}
 }

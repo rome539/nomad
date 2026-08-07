@@ -379,7 +379,13 @@ export const PAGE = `<!doctype html>
   /* Phone: columns stack, the stack scrolls as one, headers still stick. */
   @media (max-width: 680px) {
     #bench .bbox { max-height: 92vh; }
-    #bench .bcols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+    /* Rows sized to their lists, never to the leftover height — see the note in
+       the hatch's phone block. Four keepings sharing 155px between them put the
+       pack straight on top of the lockbox. */
+    #bench .bcols {
+      grid-template-columns: minmax(0, 1fr); overflow-y: auto;
+      grid-auto-rows: max-content; align-content: start;
+    }
     #bench .bcol { overflow-y: visible; min-height: 0; }
     /* The paperdoll stacks on a phone: figure+slots one row, the math below. */
     #bdoll { gap: 8px; padding: 8px 10px; }
@@ -491,6 +497,10 @@ export const PAGE = `<!doctype html>
   #trade .st-gain, #bench .st-gain { color: var(--gold);  font-weight: 600; }
   #trade .st-dim,  #bench .st-dim  { color: var(--dim); }
   #trade .trow .tcost { color: var(--gold); font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+  /* Off the shelf, not out of the world: dim, no price, nothing to press. */
+  #trade .trow.tgone .nm { color: var(--dim); }
+  #trade .trow.tgone .tcost { color: var(--line); }
+  #trade .tgnote { color: var(--dim); font-size: 11px; font-style: italic; padding: 5px 0 2px; }
   #trade .trow button {
     background: transparent; border: 1px solid var(--border); border-radius: 4px;
     color: var(--bone); font: inherit; font-size: 11.5px; padding: 3px 9px; cursor: pointer;
@@ -499,7 +509,19 @@ export const PAGE = `<!doctype html>
   #trade .trow button:disabled { color: var(--dim); border-color: var(--line); cursor: default; }
   @media (max-width: 680px) {
     #trade .bbox { max-height: 92vh; }
-    #trade .bcols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+    /* grid-auto-rows is LOAD-BEARING, not tidying. Stacked columns are
+       min-height: 0 so they can't hold the grid open, which also drops each
+       row's base size to nothing — and a grid with a definite height then
+       shares that height out evenly between the rows instead of sizing them to
+       what's in them. His stock got 237px to show 898px of shelves, and since
+       these columns are overflow: visible on a phone the surplus wasn't
+       scrolled or clipped, it was PAINTED over the column below: his goods on
+       top of yours. Pinning the rows to their content is what stops the share-
+       out; .bcols does the scrolling for both columns. */
+    #trade .bcols {
+      grid-template-columns: minmax(0, 1fr); overflow-y: auto;
+      grid-auto-rows: max-content; align-content: start;
+    }
     #trade .bcol { overflow-y: visible; min-height: 0; }
     /* Finger-friendly tap targets: the cart's \\u2715, the tabs, and the
        buy/offer buttons all grow to a comfortable touch size on phones. */
@@ -586,7 +608,13 @@ export const PAGE = `<!doctype html>
   #swap .trow button:disabled { color: var(--dim); border-color: var(--line); cursor: default; }
   @media (max-width: 680px) {
     #swap .bbox { max-height: 92vh; }
-    #swap .bcols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+    /* Rows sized to their lists, never to the leftover height — see the note in
+       the hatch's phone block. Three stacked sides put your offer on top of
+       theirs, which is the last table you want to misread. */
+    #swap .bcols {
+      grid-template-columns: minmax(0, 1fr); overflow-y: auto;
+      grid-auto-rows: max-content; align-content: start;
+    }
     #swap .bcol { overflow-y: visible; min-height: 0; }
     #swconfirm button { padding: 8px 14px; font-size: 13px; }
     #swap .trow button { padding: 8px 14px; font-size: 13px; }
@@ -1874,6 +1902,23 @@ function drawCover(ctx, im, w, h) {
 // Drawing and encoding are separate on purpose: the drawing half has to be
 // runnable against any canvas (the preview harness paints straight to a visible
 // one), and only the encoding half can taint.
+// A LEDGER FIGURE THAT CANNOT OUTGROW ITS CELL. Kills only ever go up, so any
+// layout with a fixed-width slot is a layout with a breaking point in it. Under
+// six digits the number is printed whole, the way it reads in game; above that
+// it compacts, so the longest string this can ever return is five characters
+// (9007T at the top of what a JS integer holds) — a bound, not a bet.
+function cardNum(n) {
+  n = Math.max(0, Math.floor(Number(n) || 0));
+  if (n < 100000) return String(n);
+  var u = [["T", 1e12], ["B", 1e9], ["M", 1e6], ["K", 1e3]];
+  for (var i = 0; i < u.length; i++) {
+    if (n >= u[i][1]) {
+      var v = n / u[i][1];
+      return (v < 10 ? v.toFixed(1).replace(/\\.0$/, "") : String(Math.floor(v))) + u[i][0];
+    }
+  }
+  return String(n);
+}
 async function drawCardTo(ctx, card, W) {
   ctx.fillStyle = "#16120c";
   ctx.fillRect(0, 0, W, W);
@@ -1909,12 +1954,17 @@ async function drawCardTo(ctx, card, W) {
   ctx.fillText("NOMAD", M, 96);
   ctx.letterSpacing = "0px";
 
-  // Shrink to fit rather than clip: names run to sixteen characters.
+  // Shrink to fit rather than clip: names run to sixteen characters. The floor
+  // is 36px so the name never shrinks into the furniture — and below that floor
+  // it gets cut with an ellipsis, because a claimed kind-0 name is whatever its
+  // owner typed and the shrink alone would happily draw it off both edges.
   ctx.fillStyle = "#ede3cc";
+  var nm = String(card.name || "");
   var size = 84;
   do { ctx.font = "700 " + size + "px " + MONO; size -= 4; }
-  while (size > 36 && ctx.measureText(card.name).width > W - M * 2);
-  ctx.fillText(card.name, M, 204);
+  while (size > 36 && ctx.measureText(nm).width > W - M * 2);
+  while (nm.length > 1 && ctx.measureText(nm).width > W - M * 2) nm = nm.slice(0, -2) + "…";
+  ctx.fillText(nm, M, 204);
 
   ctx.fillStyle = "#9a8b66";
   ctx.font = "400 23px " + MONO;
@@ -1926,17 +1976,25 @@ async function drawCardTo(ctx, card, W) {
   // enough to stay inside the dark band, and it reads at thumbnail size, which
   // a column of prose rows never did.
   var cells = [
-    [String(card.kills), "KILLS"],
-    [String(card.bosses), "KINGS"],
-    [String(card.pvp), "BLOOD"],
-    [String(card.deaths), "DEATHS"]
+    [cardNum(card.kills), "KILLS"],
+    [cardNum(card.bosses), "KINGS"],
+    [cardNum(card.pvp), "BLOOD"],
+    [cardNum(card.deaths), "DEATHS"]
   ];
   var span = (W - M * 2) / cells.length;
+  // Belt and braces: one size shared by all four figures, fitted to the widest.
+  // Compaction alone keeps them short, but the strip is measured, not assumed —
+  // and it must be ONE size, since four figures at four sizes would read worse
+  // than a collision. Nothing under six digits moves off 54px.
+  ctx.font = "700 54px " + MONO;
+  var wmax = 1;
+  for (var i = 0; i < cells.length; i++) wmax = Math.max(wmax, ctx.measureText(cells[i][0]).width);
+  var numSize = Math.max(28, Math.min(54, Math.floor(54 * (span - 28) / wmax)));
   ctx.textAlign = "center";
   for (var i = 0; i < cells.length; i++) {
     var cx = M + span * i + span / 2;
     ctx.fillStyle = "#d8a94e";
-    ctx.font = "700 54px " + MONO;
+    ctx.font = "700 " + numSize + "px " + MONO;
     ctx.fillText(cells[i][0], cx, 356);
     ctx.fillStyle = "#9a8b66";
     ctx.font = "400 17px " + MONO;
@@ -3123,13 +3181,39 @@ function renderItemList(el, items, place) {
   }
   items.forEach(function (it) { el.appendChild(tradeItemNode(it, place)); });
 }
-function fillTradeCol(el, title, items, place) {
+function fillTradeCol(el, title, items, place, gone) {
   el.textContent = "";
   var h = document.createElement("div");
   h.className = "bcolh";
   h.textContent = title;
   el.appendChild(h);
   renderItemList(el, items, place);
+  // What he isn't carrying, at the foot of his own shelf: named so you know it
+  // exists, dimmed and priceless so it never reads as something you can take.
+  // Without it a rotated-out thing and a thing that was never in the world
+  // looked exactly alike \\u2014 an empty space with nothing to come back for.
+  if (place !== "stock" || !gone || !gone.length) return;
+  var sh = document.createElement("div");
+  sh.className = "tsech";
+  sh.textContent = "NOT CARRYING";
+  el.appendChild(sh);
+  gone.forEach(function (it) {
+    var row = document.createElement("div");
+    row.className = "trow tgone";
+    var nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = it.name;
+    row.appendChild(nm);
+    var dash = document.createElement("span");
+    dash.className = "tcost";
+    dash.textContent = "\\u2014";
+    row.appendChild(dash);
+    el.appendChild(row);
+  });
+  var note = document.createElement("div");
+  note.className = "tgnote";
+  note.textContent = "he'll have these again before long";
+  el.appendChild(note);
 }
 
 // The goods column: tabs across your three keepings, so the lockbox and the
@@ -3207,7 +3291,7 @@ function renderTrade(state) {
     hint.textContent = "Name your wants from his stock (buy as many as you like, the same twice if you want); then offer goods until he's square.";
     twant.appendChild(hint);
   }
-  fillTradeCol(tstock, "His stock", state.stock || [], "stock");
+  fillTradeCol(tstock, "His stock", state.stock || [], "stock", state.gone || []);
   renderGoods();
   tradeEl.classList.add("open");
 }
