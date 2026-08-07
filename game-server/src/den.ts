@@ -378,6 +378,7 @@ export function cmdEnterDen(z: ZoneDO, session: Session, arg: string): boolean {
       : "Anything on the ground outside can walk straight in after you. A bar would end that.",
   ].join("\n"));
   z.roomFeed(session.roomId, `${session.name} steps through a door and it closes.`, session.pubkey, false);
+  z.sendStatus(session); // the bar has to say you're inside the moment you are
   z.sendCtx(session);
   return true;
 }
@@ -388,6 +389,7 @@ export function cmdLeaveDen(z: ZoneDO, session: Session): boolean {
   z.inDen.delete(session.pubkey);
   z.send(session, "You put your shoulder to the door and step back out onto the ground.");
   z.roomFeed(session.roomId, `${session.name} comes out of a doorway.`, session.pubkey, false);
+  z.sendStatus(session); // and drop the den off the bar the moment you're out
   z.sendCtx(session);
   return true;
 }
@@ -891,6 +893,19 @@ export function denRoomLine(z: ZoneDO, roomId: string, session: Session): string
 export function keepingDen(z: ZoneDO, session: Session): Den | undefined {
   const inside = insideOf(z, session.pubkey);
   return inside && inside.roomId === session.roomId ? inside : undefined;
+}
+
+// THE NAME SAYS WHICH SIDE OF THE DOOR YOU ARE ON (rome, 2026-08-07). The room
+// title and the HUD both read the bare room name, so being inside a house looked
+// exactly like standing in the street outside it — the same failure the shelf
+// had. The gatehouse already does this ("The Gatehouse", not the gate room's
+// name); a den is the same shape and gets the same honesty.
+export function roomTitle(z: ZoneDO, session: Session, name: string): string {
+  const inside = insideOf(z, session.pubkey);
+  if (!inside || inside.roomId !== session.roomId) return name;
+  return inside.holder === session.pubkey
+    ? `${name} > den`
+    : `${name} > ${holderName(z, inside)}'s den`;
 }
 
 // A door on this ground that would open to you — used only to say "go in" in

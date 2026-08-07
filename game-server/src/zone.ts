@@ -4752,7 +4752,8 @@ export class ZoneDO implements DurableObject {
       }
       return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";
     }
-    const lines = full ? [room.name, room.description] : [room.name];
+    const title = den.roomTitle(this, session, room.name);
+    const lines = full ? [title, room.description] : [title];
     // WHO LIVES HERE (mig 162). A holding says how it stands as part of the room
     // rather than as something you have to ask for — an empty roof advertises
     // itself, an occupied one names its holder, and a barred door is visible
@@ -5527,7 +5528,7 @@ export class ZoneDO implements DurableObject {
           // Inside, the HUD must say INSIDE. You are not at the Weeper's Arch —
           // you are behind its door, and the bar saying otherwise was the visible
           // face of a deeper lie: the world still had you standing in the gate room.
-          room: this.outOfWorld(session) ? "The Gatehouse" : (room?.name ?? session.roomId),
+          room: this.outOfWorld(session) ? "The Gatehouse" : den.roomTitle(this, session, room?.name ?? session.roomId),
           fx,
         }),
       );
