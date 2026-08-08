@@ -83,5 +83,8 @@ const ok = await publishEvent(signed);   // true if ≥1 relay accepted
   pool edge case where an in-flight event ref gets nulled).
 - **`publishEvent` requires a signed event** (`id` + `sig`). It won't sign for you —
   that's the auth kit's job, on purpose (private keys never reach this module).
-- **Verify signatures** on anything security-sensitive you read — relays don't
-  re-verify on read. (`NostrTools.verifyEvent(ev)`.)
+- **Inbound events are verified for you.** Every read path (`queryEvents`,
+  `subscribeEvents`, `fetchProfile`, `fetchContactList`) drops events whose
+  schnorr signature doesn't verify, and the two profile helpers additionally
+  require the author to be the pubkey you asked about — a relay's filter
+  response is a claim, not proof. Forged events never reach your handler.

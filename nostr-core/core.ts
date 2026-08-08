@@ -23,6 +23,19 @@ export async function loadNostrTools(): Promise<void> {
   pool = new SimplePool();
 }
 
+// ── Inbound verification ──────────────────────────────────────────────────────
+// A RELAY'S WORD IS NOTHING. Anything off a socket is hostile until the schnorr
+// signature verifies: a relay (or whoever can answer a REQ) can hand back a
+// fully forged event under any pubkey, and downstream of a forged kind:0 sits
+// the zap flow paying whatever lud16 it contains. verifyEvent is sync (noble)
+// in nostr-tools v2 — one lazy import, then microseconds per event.
+function eventValid(ev: any): boolean {
+  try {
+    return !!ev && typeof ev.id === 'string' && typeof ev.sig === 'string' &&
+      typeof ev.pubkey === 'string' && !!NostrTools?.verifyEvent(ev);
+  } catch { return false; }
+}
+
 // ── Shared raw-WebSocket relay pool ───────────────────────────────────────────
 // One persistent socket per relay, reused across every query/subscription and
 // multiplexed by subscription id.
@@ -70,6 +83,14 @@ function removeSub(r: PooledRelay, subId: string): void {
  * EOSE or a 6s timeout, then dedupes by id. Defaults to the configured read relays.
  */
 export async function queryEvents(filter: any, relayUrls?: string[]): Promise<any[]> {
+  // Verification needs it. If the import itself fails we return nothing rather
+  // than throwing: queryEvents has never rejected, callers don't guard it, and
+  // an unverifiable read must come back empty — not take the caller down with
+  // it, and never fall through to handing back unchecked events.
+  if (!NostrTools) {
+    try { await loadNostrTools(); }
+    catch (e) { console.warn('[nostr-core] nostr-tools load failed:', e); return []; }
+  }
   const relays = relayUrls ?? readRelays();
   const subId = 'q' + Math.random().toString(36).slice(2, 10);
 
@@ -81,7 +102,7 @@ export async function queryEvents(filter: any, relayUrls?: string[]): Promise<an
       const finish = () => { if (done) return; done = true; clearTimeout(timer); removeSub(r, subId); resolve(collected); };
       const timer = setTimeout(finish, 6000);
       addSub(r, subId, JSON.stringify(['REQ', subId, filter]), (d) => {
-        if (d[0] === 'EVENT' && d[1] === subId) collected.push(d[2]);
+        if (d[0] === 'EVENT' && d[1] === subId && eventValid(d[2])) collected.push(d[2]);
         else if (d[0] === 'EOSE' && d[1] === subId) finish();
       });
     });
@@ -100,11 +121,28 @@ export function subscribeEvents(filter: any, onEvent: (ev: any) => void, relayUr
   const relays = relayUrls ?? readRelays();
   const subId = 's' + Math.random().toString(36).slice(2, 10);
   const seen = new Set<string>();
+  // Verify before dispatch; the nostr-tools load is a one-time lazy import.
+  const ready = NostrTools
+    ? Promise.resolve()
+    : loadNostrTools().catch((e) => console.warn('[nostr-core] nostr-tools load failed:', e));
 
   for (const url of relays) {
     const r = getRelay(url);
     addSub(r, subId, JSON.stringify(['REQ', subId, filter]), (d) => {
-      if (d[0] === 'EVENT' && d[1] === subId && !seen.has(d[2].id)) { seen.add(d[2].id); onEvent(d[2]); }
+      if (d[0] === 'EVENT' && d[1] === subId && !seen.has(d[2].id)) {
+        const ev = d[2];
+        // MARK IT SEEN ONLY ONCE IT VERIFIES. Marking first lets any relay in
+        // the read set SUPPRESS an event it doesn't want delivered: send junk
+        // carrying the target's id, it fails the check and is dropped, but the
+        // id is now in `seen` and the genuine event is silently swallowed when
+        // it arrives. A forgery must cost the forger nothing more than a
+        // dropped message — never the real event.
+        ready.then(() => {
+          if (seen.has(ev.id) || !eventValid(ev)) return;
+          seen.add(ev.id);
+          onEvent(ev);
+        });
+      }
     });
   }
 
@@ -160,7 +198,14 @@ export async function fetchProfile(pubkey: string): Promise<any> {
   if (!pool) await loadNostrTools();
   try {
     const event = await pool.get(readRelays(), { kinds: [0], authors: [pubkey] });
-    if (event) return JSON.parse(event.content);
+    // SimplePool.get does NOT verify, and the filter is a request, not proof —
+    // a hostile relay can answer authors:[victim] with any pubkey's kind:0.
+    // Downstream of this object sits the zap flow's lud16, where a forged
+    // profile is a redirected payment. Trust only what verifies AND names
+    // the author we asked about.
+    if (event && event.kind === 0 && event.pubkey === pubkey && eventValid(event)) {
+      return JSON.parse(event.content);
+    }
   } catch (e) {
     console.warn('[nostr-core] fetchProfile failed:', e);
   }
@@ -176,7 +221,10 @@ export async function fetchContactList(pubkey: string): Promise<{ tags: string[]
   if (!pool) await loadNostrTools();
   try {
     const event = await pool.get(readRelays(), { kinds: [3], authors: [pubkey] });
-    if (!event) return { tags: [], follows: new Set() };
+    // Same law as fetchProfile: verify, and the author must be who we asked about.
+    if (!event || event.kind !== 3 || event.pubkey !== pubkey || !eventValid(event)) {
+      return { tags: [], follows: new Set() };
+    }
     const follows = new Set<string>(
       event.tags.filter((t: string[]) => t[0] === 'p').map((t: string[]) => t[1])
     );
