@@ -147,6 +147,8 @@ export const GUIDE_PAGE = `<!doctype html>
     <li><b>The world runs while you are logged out.</b> Things get hungry, move,
     hold grudges; food spoils and iron rusts.</li>
     <li><b>Your key is your character.</b> No accounts, no wipes.</li>
+    <li><b>Nothing about you is published unless you ask.</b> The leaderboards are
+    opt-in, and only one command ever posts to your own feed.</li>
   </ul>
   <div class="tail">The rest of this page is why each of those is true.</div>
 </div>
@@ -169,6 +171,7 @@ export const GUIDE_PAGE = `<!doctype html>
     <li><span class="n">13</span> <a href="#know">Knowing where you are</a></li>
     <li><span class="n">14</span> <a href="#others">Other wanderers</a></li>
     <li><span class="n">15</span> <a href="#key">Your key is your character</a></li>
+    <li><span class="n">16</span> <a href="#boards">Your standing, and saying so</a></li>
   </ol>
 </nav>
 
@@ -460,9 +463,51 @@ export const GUIDE_PAGE = `<!doctype html>
   <div class="law">There are no wipes. <b>The dead stay dead</b> and the living
   keep going, and both of those are permanent on purpose.</div>
   <p>The dungeon can put its own signature to what you have done — your standing,
-  your ledger, a thing you own — and you can post it to your own feed under your
-  own name. That is your business and nobody else's; nothing about you is
-  published unless you publish it.</p>
+  your ledger, a thing you own. What that is worth, and how you use it, is the
+  next section.</p>
+</section>
+
+<section id="boards">
+  <h2>16 &nbsp;Your standing, and saying so</h2>
+  <p>Everything you do is counted. <b>sheet</b> shows you the count: what you have
+  killed, what has killed you, kings put down, wanderers put down, and how long you
+  have been alive under this name. That ledger is yours and it is private.</p>
+  <div class="law">Nothing about you leaves this world unless you ask for it. There
+  is no profile, no directory, no automatic posting. <b>The world does not
+  snitch.</b></div>
+  <p>When you do want to be seen, there are three separate things you can do, and
+  they are separate on purpose.</p>
+  <h3>The reckoning</h3>
+  <p><b>publish score</b> enters you into the boards. <b>leaderboard</b> reads them,
+  and so does the plaque on the door before you have even entered. There are two,
+  and they reward opposite lives:</p>
+  <ul>
+    <li><b>Trophies</b> — what every trophy you hold is worth, counting your pack,
+    your lockbox and your vault together. This board is about what you have
+    <em>brought home and kept</em>. Die with it all on your back and the board
+    knows.</li>
+    <li><b>Legend</b> — everything you have killed for as long as you have lived,
+    with kings and wanderers weighing heaviest. This one cannot be lost, only
+    added to.</li>
+  </ul>
+  <p>Your entry is <strong>signed by the dungeon, not by you</strong>. That is the
+  whole point: the world attests the number, so nobody can post a legend they did
+  not earn. Publish again whenever you like — a new score replaces your old one
+  rather than piling up beside it. The boards reach outside as well as in, so a
+  score put up here is a score standing on the open network.</p>
+  <h3>Your own feed</h3>
+  <p><b>publish kind 1</b> posts your wanderer to your own timeline, in your own
+  hand, signed with your own key — an ordinary note, in front of whoever follows
+  you, permanent. It draws your ledger onto a card so the post carries the numbers
+  as a picture, and tags the dungeon's signed copy so anyone who cares can check
+  the figures against the world's own word.</p>
+  <div class="law">This is the only thing that touches your feed. Entering the
+  boards does not post anything to it, and neither does anything else you do here.</div>
+  <h3>Claims</h3>
+  <p><b>publish sheet</b> speaks who you are with the dungeon's signature behind it,
+  and <b>publish &lt;sealed item&gt;</b> proclaims a thing you own. These are
+  certificates, not announcements — proof you can show, made when you ask for it.</p>
+  <p>None of it is required. You can play the whole game and never appear anywhere.</p>
 </section>
 
 <footer>

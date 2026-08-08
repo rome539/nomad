@@ -1,0 +1,35 @@
+// THE KITS' TSCONFIG — editor only, compiles nothing.
+//
+// nostr-core, nostr-auth, nostr-lightning and nostr-i18n are standalone kits:
+// bare .ts folders meant to be dropped into a host project, with no package.json
+// and no node_modules of their own. That is deliberate, but it means an editor
+// opening one of them has no way to resolve `nostr-tools` and reports every
+// import of it as TS2307 "cannot find module" — errors that are not real, since
+// nothing here is built by this config and the host project supplies the dep.
+//
+// So: point TypeScript at the copy the game server already has installed. The
+// bare specifier resolves through the package's own types; the subpath one has
+// to be aimed at lib/types directly, because a paths mapping bypasses the
+// package's exports map and there is no ./pool on disk to find.
+//
+// game-server/ is excluded — it has its own tsconfig (include: ["src"]) and that
+// one wins for anything underneath it. This file must never change what the
+// worker builds; it exists so the kits stop lighting up red.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "nostr-tools": ["game-server/node_modules/nostr-tools"],
+      "nostr-tools/*": ["game-server/node_modules/nostr-tools/lib/types/*"]
+    }
+  },
+  "include": ["nostr-core", "nostr-auth", "nostr-lightning", "nostr-i18n"],
+  "exclude": ["game-server", "arena", "**/node_modules"]
+}
