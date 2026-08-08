@@ -92,7 +92,7 @@ import {
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, REVENANTS,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
@@ -635,7 +635,7 @@ export class ZoneDO implements DurableObject {
         // has a PATROLS route is exempt, because its route IS where it lives.
         // No existing boss has a route, so nothing else changes.
         if (c.nextWanderAt <= t && (!tmpl.is_boss || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
-            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId)) {
+            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId) && !ROOTED.has(c.templateId)) {
           // Silent catch-up runs with no one connected, so no ambush fires here.
           void ai.creatureMoves(this, c, t, "wander", true);
         }
@@ -702,7 +702,7 @@ export class ZoneDO implements DurableObject {
       if (HOARDERS.has(c.templateId)) ai.scavengerScoops(this, c);
       const hunted = await ai.predation(this, c, now);
       if (!hunted && c.nextWanderAt <= now && (!tmpl.is_boss || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
-          && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId)) {
+          && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId) && !ROOTED.has(c.templateId)) {
         await ai.creatureMoves(this, c, now, "wander", true);
       }
     }
@@ -1451,7 +1451,19 @@ export class ZoneDO implements DurableObject {
   // its remaining life down and guts out (tickLights), and the dark returns.
   public roomLit(roomId: string): boolean {
     const until = this.groundTorch.get(roomId);
-    return !!until && Date.now() < until;
+    if (!!until && Date.now() < until) return true;
+    // A FIREKEEPER'S CLAMP burns while he does. Not a torch on the floor with a
+    // clock on it — a banked mound that has been alight for days and will be
+    // alight tomorrow. Kill him and the wood takes its dark back.
+    return this.roomHasFirekeeper(roomId);
+  }
+
+  /** Is somebody's fire burning here? (A living firekeeper, tending it.) */
+  public roomHasFirekeeper(roomId: string): boolean {
+    for (const c of this.creatures.values()) {
+      if (c.roomId === roomId && !c.hidden && FIREKEEPERS.has(c.templateId)) return true;
+    }
+    return false;
   }
 
   // CAN THIS PERSON SEE, RIGHT HERE, RIGHT NOW (rome, 2026-08-03, standing in
@@ -3702,7 +3714,7 @@ export class ZoneDO implements DurableObject {
           // Never settles while there's someone to run from — it keeps moving,
           // room to room, and you only land a blow the tick you have it cornered.
           await ai.creatureMoves(this, creature, now, "wander", false);
-        } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && !AGGRESSIVE.has(creature.templateId)) {
+        } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && !AGGRESSIVE.has(creature.templateId) && !ROOTED.has(creature.templateId)) {
           // Mid-wind-up (rouseAt) it holds its ground — a thing that's telegraphed
           // a lunge doesn't stroll off before it commits (keeps the thief's rob,
           // the meal-guard's spring, and the starve-lunge from fizzling out).
@@ -4835,7 +4847,8 @@ export class ZoneDO implements DurableObject {
     } else {
       // A torch someone set (or dropped) on the stone, still burning — the room's
       // own light while it lasts.
-      if (this.roomLit(room.id)) lines.push("A torch burns on the floor here, throwing the dark back off the walls.");
+      if (this.roomHasFirekeeper(room.id)) lines.push("A charcoal clamp stands smouldering under its turf, a low red seam breathing at the foot of it — banked days ago, and warm the whole way round.");
+      else if (this.roomLit(room.id)) lines.push("A torch burns on the floor here, throwing the dark back off the walls.");
       // Or the light is in somebody's hand. Say whose work you're seeing by —
       // in the dark it is the difference between the room being lit and you
       // wondering why you can suddenly see (rome, 2026-08-03).
@@ -5678,6 +5691,7 @@ export class ZoneDO implements DurableObject {
       if (tmpl.is_boss) continue; // the King waits; the noise comes to him
       if (DROWNERS.has(c.templateId)) continue; // it holds its water; noise doesn't move it
       if (SENTINELS.has(c.templateId) || AGGRESSIVE.has(c.templateId)) continue; // a guardian holds its post; noise doesn't draw it off the door
+      if (ROOTED.has(c.templateId)) continue; // it IS the ground here; a noise elsewhere is nothing to it
       if (SCAVENGERS.has(c.templateId)) continue; // hyenas track the scent of the dead, not the din of the living
       if (HOARDERS.has(c.templateId)) continue; // it already ran the other way (spookFromNoise, above) — never also draw it in
       // A RUNNER is not one of the "good majority" whose ears prick up. Its whole

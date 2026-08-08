@@ -18,7 +18,7 @@ import {
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS,
-  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
+  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_ODDS, MIGRATE_KEEP, FORAGE_REGIONS,
@@ -187,7 +187,7 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
       const tmpl = z.world!.mobTemplates.get(creature.templateId);
       if (!tmpl) continue;
       if (tmpl.is_boss) continue;                                   // the king waits; he doesn't scrum
-      if (DROWNERS.has(tmpl.id) || SENTINELS.has(tmpl.id)) continue; // holds its water / its post
+      if (DROWNERS.has(tmpl.id) || SENTINELS.has(tmpl.id) || ROOTED.has(tmpl.id)) continue; // holds its water / its post / its ground
       if (SCAVENGERS.has(tmpl.id)) continue;                        // tracks the dead, not the din
       if (BROODERS.has(tmpl.id)) continue;                          // the brood-mother spawns; her young do the fighting
       if (LISTENERS.has(tmpl.id)) continue;                         // the bone-sleeper stays dormant till you move
@@ -1091,7 +1091,10 @@ export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): bool
     // line every four seconds for a thing that is still standing there would be
     // its own kind of noise.
     if (!chance(FIRE_FLEE_CHANCE)) return false;
-    z.send(victim, `${cap(tmpl.name)} shrinks from ${inHand ? "your flame" : "the burning torch"} and breaks away.`);
+    // Name the fire that actually did it — a banked charcoal mound is not a
+    // torch on the floor, and the line reads as a bug when it says otherwise.
+    const flame = inHand ? "your flame" : z.roomHasFirekeeper(creature.roomId) ? "the burner's fire" : "the burning torch";
+    z.send(victim, `${cap(tmpl.name)} shrinks from ${flame} and breaks away.`);
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} shrinks from the flame.`, victim.pubkey, false);
     return true;
   }
@@ -1764,7 +1767,7 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
       // 2026-07-10). The deep is below the mouths; its things crawl up from
       // further down, never in through the front door.
       let roomId = home;
-      if (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id)) {
+      if (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !ROOTED.has(tmpl.id)) {
         const deepHome = DEEP_ROOMS.has(home);
         let bestD = Number.POSITIVE_INFINITY;
         for (const m of MOUTHS) {

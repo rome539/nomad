@@ -1466,7 +1466,16 @@ export const BOLD_DMG_MULT = 1.35; // a gorged scavenger swings harder
 // DROWNERS grapple: a landed blow can SEIZE you — held fast (can't flee) and hit
 // harder — until you wrench free or put the thing down. They never chase or flee;
 // they hold their patch of water. Wade in on your own terms, or not at all.
-export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god"]);
+// The mire-walker joined 2026-08-08. It was in no behaviour set at all — pure
+// prose, wandering the wood at wolf speed while its own sound line said "water
+// drags around something that will not lift its feet clear". This set is
+// already the three things it claims to be: bound to its water, never chases,
+// and takes hold of what wades in. All eleven of its spawns are already wet
+// ground (Black Pool, Brown Water, Flooded Ride, Quaking Ground, Rush Bed,
+// Silted Pond, Wet Hollow, Tussock Ford, Dead Alders, Quaking Flat), so this
+// costs nothing to place and gives the WOOD what the deep already had: water
+// you decide to enter, and dry ground that is honestly safer.
+export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "the-mire-walker"]);
 export const SEIZE_ODDS = 0.2;        // soft: a blow only sometimes takes hold
 export const SEIZE_BREAK_ODDS = 0.5;  // soft: about half the time you wrench loose each beat
 export const SEIZE_DMG_MULT = 1.25;   // it hits a little harder while it has you
@@ -1483,7 +1492,40 @@ export const SEIZE_DROWN_FRACTION = 0.15; // unmitigated, as a share of max hp
 // room until it drops on you, which is the only honest way to write a thing
 // you never catch sight of. It lives in the lying cores, so it finds you at
 // exactly the moment you have stopped knowing the way back.
-export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", "something-ahead"]);
+export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", "something-ahead", "root-thing"]);
+// ROOTED things never move. Not a sentinel — a sentinel guards a door, sleeps
+// until the deep is opened, and carries a pile of deep-specific machinery a
+// wood creature has no business inheriting. This is the plainer fact: it is
+// PART OF THE GROUND. It does not wander, offline or on; noise does not draw
+// it; it never joins a scrum; it arrives where it belongs and stays.
+//
+// The root-thing (2026-08-08) had exactly one behaviour to its name — it feared
+// fire — and otherwise drifted the wood at the same speed as a wolf, while its
+// own sound line said "earth and root shift, slowly, like a bank giving way".
+// Rooted AND a lurker: it is not in the room until it moves, and it never goes
+// anywhere, because it is terrain that turns out to be alive. Both halves have
+// answers you already carry — a lurker wakes on entry and noise odds, so a
+// quiet pack walks past one, and it fears a torch.
+export const ROOTED = new Set(["root-thing"]);
+
+// FIREKEEPERS tend a fire, and the fire is REAL — the room they are standing in
+// is lit for everyone in it, and an open flame will catch there even in rain.
+//
+// The charcoal burner (2026-08-08) was the worst of the wood's costumes: his
+// still-sound is "wood being laid on wood, one piece at a time, patiently, by
+// somebody who is not hurrying" — a man described mid-job — and he had no job.
+// Not in a single behaviour set. A clamp is a smouldering earth mound a burner
+// tends for days, and his clamp is wherever he built it: he is not a patroller
+// converging on one room, he is six men each sat by his own fire. He keeps to
+// his ground already (no MIGRANTS membership, so territory holds him near
+// home) — what was missing was the fire.
+//
+// What it buys is bigger than the mob. The wood is outdoors end to end and had
+// NO fire in it: torches gutter, rain refuses them outright unless you are
+// hooded, and the region's whole light economy is things running out. A living
+// fire you can walk to is a landmark — and because he is not hostile, taking it
+// is a choice you make about a man, not a fight you walked into.
+export const FIREKEEPERS = new Set(["charcoal-burner"]);
 // REVENANTS don't stay down: put one to 0 and it RISES ONCE, at part health, and
 // comes again. The second death is the real one. A longer fight, not a lost one.
 export const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);

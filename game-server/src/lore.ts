@@ -14,7 +14,7 @@ import { WOOD_QUARTERS, MOB_LORE } from "./detail";
 import {
   MAP_ITEMS, DETAILED_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
-  THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, CORRODERS,
+  THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, ROOTED, FIREKEEPERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
   MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF,
   GATE_TELLINGS,
@@ -409,7 +409,13 @@ function creatureNature(id: string): string {
   if (RUNNERS.has(id)) return "It never stands and fights; it bolts the instant it can. Catch it on the break.";
   if (BROODERS.has(id)) return "A brood-mother. Nest-bound, and while it lives the room keeps filling with young.";
   if (SENTINELS.has(id)) return "A sentinel. It guards one door and never leaves it — deaf to lures, it sleeps until the deep is opened, then wakes and bars the way. Getting past means going through.";
-  if (DROWNERS.has(id)) return "A drowned thing. It holds its patch of water and seizes what wades in.";
+  // Not "a drowned thing" any more — the mire-walker is one of these and is no
+  // such thing. What the family actually IS: it holds water and takes hold.
+  if (DROWNERS.has(id)) return "It holds its patch of water and never leaves it. It will not come to you — but wade in, and it takes hold.";
+  // Before LURKERS: a rooted lurker is not drawn by anything, because it cannot
+  // go anywhere. Same unseen waiting, opposite reason.
+  if (FIREKEEPERS.has(id)) return "A collier, and the mound beside him is his work — turf over a slow burn, days in the making. It will not come at you. The fire it keeps holds off everything in this wood that fears one, and it will take a flame in weather that would drown a torch.";
+  if (ROOTED.has(id)) return "It does not move, ever — it is part of the ground until it is not, and you will not see it until it is. It cannot follow, and it cannot be lured. It burns.";
   if (LURKERS.has(id)) return "It waits unseen and drops on the careless. Noise and movement draw it.";
   if (CORRODERS.has(id)) return "It does not want your blood. Its touch is rust — every blow blooms green on what you WEAR, and it will patiently eat you out of your kit. Fight it naked or fight it fast.";
   if (REVENANTS.has(id)) return "It does not stay down — put it to nothing and it rises again, weaker, to come once more.";

@@ -100,10 +100,15 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   // something you can hunch over it: HOODED gear (2026-08-03) is the wood's
   // weather answer, and the wood is the one region that is outdoors end to end.
   // It does not make you dry. It buys you the one lit match.
-  if (!wantLantern && events.raining(z, session.roomId) && !z.wearsTrait(session, "hooded")) {
+  // A CLAMP IS ALREADY ALIGHT. Standing at a firekeeper's mound you are not
+  // striking a spark in the wet — you are taking fire off a bed of it that has
+  // been burning for days under its own turf. It is the wood's one answer to a
+  // region that is outdoors end to end (zone-data.ts FIREKEEPERS).
+  const atClamp = z.roomHasFirekeeper(session.roomId);
+  if (!wantLantern && events.raining(z, session.roomId) && !z.wearsTrait(session, "hooded") && !atClamp) {
     return z.send(session, "The rain would drown a torch before it caught. A hooded lantern wouldn't care.");
   }
-  const hoodedFlame = !wantLantern && events.raining(z, session.roomId);
+  const hoodedFlame = !wantLantern && events.raining(z, session.roomId) && !atClamp;
   // While the deep exhales, the current pulls an open flame apart before it
   // catches — the exhale is the lantern's other argument.
   if (!wantLantern && events.exhaling(z, session.roomId)) {
