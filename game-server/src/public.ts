@@ -835,6 +835,18 @@ export const PAGE = `<!doctype html>
     white-space: nowrap;
   }
   #chips button:hover, #chips button:active { color: var(--gold); border-color: var(--gold); }
+  /* A chip that just took this slot refuses the click it caught on the way in
+     (CHIP_ARM_MS). The refusal has to be visible or it reads as a dead button —
+     one short shake, no colour change, so it never looks like an error. */
+  #chips button.c-block { animation: chipnope 0.2s ease-out; }
+  @keyframes chipnope {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #chips button.c-block { animation: none; opacity: 0.55; }
+  }
   /* chips carry their meaning in colour (soft wash): a faint tint of the
      category hue under its full-strength outline, with the theme's OWN text
      colour on top — so it stays legible on any ground: the dark Door, the light
@@ -910,9 +922,23 @@ export const PAGE = `<!doctype html>
     color: var(--bg); background: var(--gold); border: 0; padding: 12px 34px; cursor: pointer;
   }
   #thr-enter:hover, #thr-enter:focus-visible { background: var(--cream); outline: none; }
-  #thr-keys { color: var(--dim); font-size: 12.5px; }
-  #thr-keys span { color: var(--bone); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-  #thr-keys span:hover { color: var(--cream); }
+  /* There is no "bring your keys" line any more (rome, 2026-08-08). It pressed
+     enter for you and opened the identity panel — a panel that is already one
+     tap away in the top-right of the bar, and that crossing the door already
+     points you at in so many words. A door with one button on it should have
+     one button on it. */
+  /* THE FOOTER LINE. Pinned to the bottom of the door and taken out of flow
+     entirely, so the centred stack above it — title, line, button, keys — sits
+     exactly where it has always sat and does not move by a pixel whether this
+     is here or not (rome, 2026-08-08: "you shifted everything up"). It used to
+     be a plaque in the top-right corner, which nobody was ever going to look
+     at; the bottom of a page is where a first-timer looks for the small print. */
+  #thr-help {
+    position: absolute; left: 0; right: 0; bottom: 20px; z-index: 2;
+    color: var(--dim); font-size: 12.5px; text-align: center; padding: 0 16px;
+  }
+  #thr-guide { color: var(--bone); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  #thr-guide:hover, #thr-guide:focus-visible { color: var(--cream); outline: none; }
   /* ---- the door's news: one live line under the keys, and the reckoning ----
      The line is the hook (something is happening and you are not in it); the
      board is for anyone the hook works on. Both hidden until /world.json
@@ -996,8 +1022,8 @@ export const PAGE = `<!doctype html>
     <div id="thr-title">NOMAD</div>
     <div id="thr-line">a shared dungeon, alive whether or not anyone is watching</div>
     <button id="thr-enter" type="button">enter</button>
-    <div id="thr-keys">been here before? <span id="thr-keys-link">bring your keys</span></div>
     <button id="thr-reck" type="button">the reckoning</button>
+    <div id="thr-help">first time? <a id="thr-guide" href="/guide">how it works</a></div>
   </div>
   <div id="reckm" role="dialog" aria-modal="true" aria-labelledby="recktitle">
     <div class="lbox">
@@ -2706,6 +2732,9 @@ function logout() {
 var chipsOn = localStorage.getItem("nomad_chips") !== "0"; // default on
 var lastSuggest = [];
 var lastCombat = false;
+// What each chip slot held on the previous render, so a slot whose command
+// changed under the cursor can refuse the click that was already on its way.
+var prevChipCmds = [];
 // The one chip that isn't a command: tapping 'inventory' opens the keeping
 // modal (pack + lockbox, plus the vault & seal at a gate) instead of sending
 // text — typing 'inventory' still prints the plain list. Must match BENCH_CHIP
@@ -2760,13 +2789,36 @@ function chipKind(s) {
   if (s === "in" || s === "out") return "c-door";
   return "";
 }
-function chipButton(s) {
+// A CHIP THAT JUST ARRIVED DOES NOT TAKE A CLICK (rome, 2026-08-07: "the deer
+// runs away before i even click the chip and i always end up clicking a
+// different command").
+//
+// The row is rebuilt whole on every ctx frame, so when a creature leaves, its
+// chip goes and every chip to its right slides one slot left — arriving under a
+// cursor that was already coming down. A roe deer bolts on sight, which makes
+// this constant in the wood: you aim at "attack a roe deer" and you eat, or
+// walk, or rest instead.
+//
+// Layout can't be frozen (the row has to tell the truth about the room), so the
+// CLICK is guarded instead: a chip whose slot changed in the last CHIP_ARM_MS
+// refuses the press and flashes. The cost is having to click twice in the rare
+// case you genuinely wanted the new chip that instant; the thing it buys is that
+// a moving row can never fire a command you didn't choose.
+var CHIP_ARM_MS = 400;
+function chipButton(s, fresh) {
   var b = document.createElement("button");
   b.type = "button";
   b.className = chipKind(s);
   b.textContent = chipLabel(s);
+  if (fresh) b._armAt = Date.now() + CHIP_ARM_MS;
   b.addEventListener("click", function (e) {
     e.stopPropagation();
+    if (b._armAt && Date.now() < b._armAt) {
+      // Not yours to click yet — say so, and let them aim again.
+      b.classList.add("c-block");
+      setTimeout(function () { b.classList.remove("c-block"); }, 220);
+      return;
+    }
     if (s === BENCH_CHIP || s === DEN_CHIP) {
       benchSend("open");
     } else if (s === TRADE_CHIP) {
@@ -2812,7 +2864,13 @@ function renderChips(suggest, combat) {
     folded = ordered.length - CHIP_FOLD;
     ordered = ordered.slice(0, CHIP_FOLD);
   }
-  ordered.forEach(function (s) { chipsEl.appendChild(chipButton(s)); });
+  // Fresh = this SLOT now holds a different command than it did a moment ago.
+  // That is the exact condition under which a click lands on the wrong thing,
+  // and the only one worth guarding: a chip that hasn't moved stays live.
+  ordered.forEach(function (s, i) {
+    chipsEl.appendChild(chipButton(s, prevChipCmds[i] !== undefined && prevChipCmds[i] !== s));
+  });
+  prevChipCmds = ordered.slice();
   if (folded > 0) {
     var more = document.createElement("button");
     more.type = "button";
@@ -5317,6 +5375,9 @@ reckm.addEventListener("click", function (e) { if (e.target === reckm) reckClose
 document.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && reckm.classList.contains("open")) { e.stopPropagation(); reckClose(); }
 }, true);
+// The guide is plain markup in the stack now, visible from the first paint. It
+// waits on no fetch and no boards — the door being empty is precisely when
+// somebody wants to know how any of this works.
 thrWorld();
 
 var crossed = false;
@@ -5335,14 +5396,6 @@ function crossThreshold() {
   if (guideFresh) setTimeout(guideStart, 3500);
 }
 thrEnter.addEventListener("click", crossThreshold);
-document.getElementById("thr-keys-link").addEventListener("click", function (e) {
-  // The returning-player path: cross as whoever's in the pocket, with the
-  // identity panel already open to restore the keys that matter.
-  e.stopPropagation();
-  crossThreshold();
-  refreshIdPanel();
-  idpanel.classList.add("open");
-});
 
 // THE FIRST WALK: five lessons printed into the log — where this game's
 // teaching belongs — each one explaining a real system, each advancing only

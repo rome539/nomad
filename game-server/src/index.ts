@@ -4,6 +4,7 @@ import { handleChallenge, handleVerify, handleTicket } from "./auth";
 import { GOOGLE_CLIENT_ID } from "./google";
 import { verifyJwt, timingSafeEqual } from "./jwt";
 import { PAGE } from "./public";
+import { GUIDE_PAGE } from "./guide";
 import { iconBytes } from "./icon";
 import { touchIconBytes, iconN512Bytes, ogImageBytes, doorSceneBytes, cardSceneBytes } from "./assets";
 import { signProfileEvent, signSheetEvent, signDeleteEvent, signRetireScoreEvent, isGameKeyConfigured } from "./signing";
@@ -53,6 +54,13 @@ export default {
             // alive; plain `same-origin` makes them fail as popup_closed.
             "cross-origin-opener-policy": "same-origin-allow-popups",
           },
+        });
+      }
+      // HOW IT WORKS. `help` is the command reference; this is the document —
+      // the shape of every rule, and deliberately not one constant of it.
+      if (m === "GET" && (pathname === "/guide" || pathname === "/wiki")) {
+        return new Response(GUIDE_PAGE, {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" },
         });
       }
       if (m === "GET" && pathname === "/nip46-bunker.js") {

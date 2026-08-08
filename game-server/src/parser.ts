@@ -534,4 +534,11 @@ export const HELP_TEXT = [
   "them, and death wakes you at one of them. Which door you bank at decides",
   "what the keeper tells you, so a wanderer who only ever runs for the keep",
   "never hears a word about the wood.",
+  "",
+  // This list is WHAT TO TYPE. How any of it actually works — armour, weight,
+  // bleeding, the dens, why the world keeps going while you are away — is the
+  // guide's job, and it deliberately prints no numbers.
+  "This is the list of commands. For how the world actually WORKS — what",
+  "armour does, what weight costs you, why some things bleed you and some",
+  "cave you in — read nomadmud.com/guide.",
 ].join("\n");

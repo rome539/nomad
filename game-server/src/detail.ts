@@ -409,6 +409,16 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
     "wood|trees|light|floor|ground":
       "The trees are the same trees and the light is the same green and the floor is the same soft depth of years. Nothing about the place is different and the place is not the same, and you could not put the difference into a sentence if somebody made you.",
   },
+  "the-bounds-house": {
+    "shelf|shelves|rods|hazel|bundles|tallies|tally":
+      "Bundles of hazel rods, tied in fives and stacked in their hundreds, each one notched down its length and labelled at the butt. Pull one out and it is a year: so many oaks standing, so many felled and by whose leave, so many trespasses and what was done about them. The hand is the same in the oldest bundle and the newest, which is not possible, and you put it back where you found it.",
+    "table|stool|seat":
+      "A plank table worn hollow in one place, and a three-legged stool polished on the near side only — somebody sits here, always from the same side, and has for a very long time. There is no dust on the seat.",
+    "mark|stamp|crown|notches":
+      "The same mark is everywhere once you see it: a crown over three notches, struck into the door frame, the table edge, the lid of the box. It is not decoration. It is a claim, made once, in iron, and never argued with since.",
+    "clearing|coppice|line|trees":
+      "The coppice stops in a line thirty feet from the walls, all the way round, and has been made to stop there — the stools are cut low and cut recently. Nothing gets to come at this building through cover.",
+  },
 
   // ======================= THE ROAD ======================================
   "the-crooked-gibbet": {
@@ -755,6 +765,9 @@ const QUARTER_ROOMS: Record<string, string[]> = {
     "the-old-coppice", "the-wind-shorn-edge", "the-stone-pile",
   ],
   deepwood: [
+    // The Bounds House sits one north of the Heart of It (mig 178) — the maze's
+    // centre stopped being a dead end, so the quarter gains a room.
+    "the-bounds-house",
     "the-heart-of-it", "the-listening-stand", "the-same-tree", "the-turned-ground", "the-close-ground",
     "the-ash-stand", "the-lightning-split", "the-pollard-row", "the-holly-brake", "the-birch-edge",
     "the-close-dark", "the-turning", "the-boundary-oak", "the-fallen-giant", "the-first-clearing",
@@ -878,6 +891,13 @@ export const QUARTER_DARK: Record<string, string> = {
 // they go into ROOM_AMBIENCE proper (zone-data spreads them in), so they take
 // priority over the quarter exactly the way a fortress signature room does.
 export const WOOD_ROOM_AMBIENCE: Record<string, string[]> = {
+  // The one building on his ground. It is not haunted; it is IN USE, which is
+  // worse — everything here is the sound of somebody keeping up with the work.
+  "the-bounds-house": [
+    "A rod slips out of a bundle on the shelf and rolls to the edge and stops. Nothing pushed it. The stack has been settling for a hundred years and has not finished.",
+    "The shingles tick overhead as the sun crosses them, the way a roof does when somebody is still keeping it whole.",
+    "There is a draught through the door frame, and it smells of the clearing outside: cut hazel, and iron.",
+  ],
   "the-frog-chorus": [
     "The noise stops. Not fades — stops, all of it, on the same instant, and the silence it leaves is much louder than the noise was.",
     "It starts again behind you, one voice, then a dozen, then all of it, and none of it is in front of you.",

@@ -1,0 +1,21 @@
+-- THE WOODWARD WEARS NO PLATE (rome, 2026-08-07).
+--
+-- He is a working man in an oiled leather coat, and he was carrying armor 3 —
+-- the same as the keep's own dead kings. Armor is flat subtraction per hit, and
+-- EDGE is the one damage type with no permanent armor-ignore (blunt has 2 by
+-- default, pierce has its trait; a sword's answer to armor is bleed, never the
+-- direct blow). So 3 points came off every sword swing and off nothing else:
+-- the hardest thing on the surface was specifically hard for the most ordinary
+-- weapon in the game.
+--
+-- Armor 1. A sword now lands ~7.5 where it landed ~5.5, which is a third more
+-- per swing, and the axe-and-leather fight reads the way it looks.
+--
+-- HP 145 -> 175 takes back about half of what the armor was worth (effective
+-- HP 224 -> 198), NOT all of it. Handing the armor back as hitpoints would
+-- cancel the change; this keeps him the longest fight on the surface and the
+-- highest-HP boss in the game while making the blade actually work on him.
+--
+-- Deliberately HIM ONLY. The keeper of the holding also carries armor 3 and is
+-- untouched — this is one man's coat, not a rule about the wood.
+UPDATE mob_templates SET armor = 1, max_hp = 175 WHERE id = 'the-woodward';
