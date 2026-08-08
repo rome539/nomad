@@ -140,25 +140,41 @@ export function hasWebLN(): boolean { return typeof (window as any).webln !== 'u
 
 type EncryptionScheme = 'nip44' | 'nip04';
 
-async function fetchEncryptionScheme(walletPubkey: string, relayUrl: string, timeoutMs = 5000): Promise<EncryptionScheme> {
+// A FAILED LOOKUP IS NOT AN ANSWER OF "USE THE WEAKER ONE".
+//
+// Every path out of this used to resolve 'nip04': the timeout, the socket
+// error, the close, and the parse failure alike. So anything that could stop
+// the info event arriving — a slow relay, a dropped connection, or someone
+// simply not forwarding kind 13194 — silently downgraded the payment request
+// from nip44 to the deprecated nip04. A downgrade you can cause by dropping
+// packets is a downgrade attack, and the payload here is a payment.
+//
+// Only a real answer decides now. EOSE is a real answer: the relay looked, the
+// wallet has published no info event, and a wallet that old is legitimately
+// nip04. A timeout or a broken socket is not an answer, and returns null so
+// the caller can refuse rather than encrypt a payment with the weaker scheme
+// to a wallet whose capabilities it never learned.
+async function fetchEncryptionScheme(walletPubkey: string, relayUrl: string, timeoutMs = 5000): Promise<EncryptionScheme | null> {
   return new Promise((resolve) => {
     let done = false;
-    const finish = (scheme: EncryptionScheme) => { if (done) return; done = true; clearTimeout(timer); try { ws.close(); } catch {} resolve(scheme); };
-    const timer = setTimeout(() => finish('nip04'), timeoutMs);
+    const finish = (scheme: EncryptionScheme | null) => { if (done) return; done = true; clearTimeout(timer); try { ws.close(); } catch {} resolve(scheme); };
+    const timer = setTimeout(() => finish(null), timeoutMs); // no answer, not "nip04"
     let ws: WebSocket;
-    try { ws = new WebSocket(relayUrl); } catch { finish('nip04'); return; }
+    try { ws = new WebSocket(relayUrl); } catch { finish(null); return; }
     const subId = 'nwc_info_' + Math.random().toString(36).slice(2, 8);
     ws.onopen = () => ws.send(JSON.stringify(['REQ', subId, { kinds: [13194], authors: [walletPubkey], limit: 1 }]));
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data as string);
+        // The relay answered and had nothing: a wallet with no info event is a
+        // pre-nip44 wallet. That is a fact about the wallet, not a network fault.
         if (msg[0] === 'EOSE') { finish('nip04'); return; }
         if (msg[0] !== 'EVENT' || msg[2]?.kind !== 13194) return;
         finish((msg[2].content || '').includes('nip44') ? 'nip44' : 'nip04');
       } catch {}
     };
-    ws.onerror = () => finish('nip04');
-    ws.onclose = () => finish('nip04');
+    ws.onerror = () => finish(null);
+    ws.onclose = () => finish(null);
   });
 }
 
@@ -177,6 +193,9 @@ export async function nwcPayInvoice(invoice: string): Promise<NWCPayResult> {
     const clientPubkey = await privkeyToPubkey(secret);
     const secretBytes  = hexToBytes(secret);
     const scheme = await fetchEncryptionScheme(walletPubkey, relayUrl);
+    // Never guess. Without a real answer we do not know whether this wallet
+    // speaks nip44, and guessing wrong downwards is the attack.
+    if (scheme === null) return { error: 'Could not reach the wallet relay to agree on encryption' };
 
     const requestPayload = JSON.stringify({ method: 'pay_invoice', params: { invoice } });
     let encrypted: string;

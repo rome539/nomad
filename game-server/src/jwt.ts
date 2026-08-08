@@ -30,7 +30,9 @@ async function hmac(secret: string, msg: string): Promise<Uint8Array> {
   return new Uint8Array(sig);
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
+// Exported because the admin routes need the same comparison: a secret checked
+// with === leaks its prefix through how long the comparison takes.
+export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);

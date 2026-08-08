@@ -35,12 +35,35 @@ async function nip44Decrypt(sk, pk, ct) {
 // UTIL
 // =========================================================================
 
+// PROTOCOL CHATTER IS OFF BY DEFAULT (2026-08-07).
+//
+// This logged the client pubkey, the signer pubkey, the relay set, every
+// response id and every session save — forty lines of running commentary on
+// who is signed in as whom. None of it is secret (the secrets were taken out
+// separately), but a browser console is a shared surface: a screen-share, a
+// support screenshot, or someone else's turn at the machine reads it all.
+// Real failures still print through console.warn/error; the narration needs
+// asking for.
+let DEBUG = false;
+export function setBunkerDebug(on) { DEBUG = !!on; }
+function dlog(...a) { if (DEBUG) console.log(...a); }
+
 function randomHex(n = 16) {
     const a = new Uint8Array(n); crypto.getRandomValues(a);
     return Array.from(a).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 function skToHex(sk) { return Array.from(sk).map(b => b.toString(16).padStart(2, '0')).join(''); }
-function hexToSk(h) { return new Uint8Array(h.match(/.{2}/g).map(x => parseInt(x, 16))); }
+// A KEY IS 64 HEX CHARACTERS OR IT IS NOT A KEY. The old version took whatever
+// it was handed: an odd-length string threw a TypeError on the null match, and
+// anything non-hex became NaN bytes, which Uint8Array silently writes as zero.
+// The input is a saved session blob — corrupted, truncated, or edited — so the
+// failure mode was a key quietly made of zeros rather than a clean rejection.
+function hexToSk(h) {
+    if (typeof h !== 'string' || !/^[0-9a-f]{64}$/i.test(h)) {
+        throw new Error('Invalid secret key: expected 64 hex characters');
+    }
+    return new Uint8Array(h.match(/.{2}/g).map(x => parseInt(x, 16)));
+}
 
 // =========================================================================
 // RAW WEBSOCKET RELAY POOL
@@ -67,14 +90,14 @@ class RawRelayPool {
         this._queue.set(url, []);
 
         ws.onopen = () => {
-            console.log(`[NIP-46 WS] Connected: ${url}`);
+            dlog(`[NIP-46 WS] Connected: ${url}`);
             const q = this._queue.get(url) || [];
             this._queue.delete(url);
             let flushed = 0;
             for (const msg of q) {
                 try { ws.send(msg); flushed++; } catch(e) {}
             }
-            if (flushed > 0) console.log(`[NIP-46 WS] Flushed ${flushed} queued msg(s) to ${url}`);
+            if (flushed > 0) dlog(`[NIP-46 WS] Flushed ${flushed} queued msg(s) to ${url}`);
             for (const { subId, filter } of this._listeners) {
                 try { ws.send(JSON.stringify(['REQ', subId, filter])); } catch(e) {}
             }
@@ -86,7 +109,7 @@ class RawRelayPool {
                 if (data[0] === 'EVENT' && data[2]) {
                     const ev = data[2];
                     const subId = data[1];
-                    console.log(`[NIP-46 WS] EVENT received from ${url} sub=${subId} kind=${ev.kind}`);
+                    dlog(`[NIP-46 WS] EVENT received from ${url} sub=${subId} kind=${ev.kind}`);
                     for (const listener of this._listeners) {
                         if (listener.subId === subId) {
                             listener.onEvent(ev, url);
@@ -95,7 +118,7 @@ class RawRelayPool {
                 } else if (data[0] === 'NOTICE') {
                     console.warn(`[NIP-46 WS] NOTICE from ${url}: ${data[1]}`);
                 } else if (data[0] === 'OK') {
-                    console.log(`[NIP-46 WS] OK from ${url}: id=${data[1]} accepted=${data[2]} msg=${data[3] || ''}`);
+                    dlog(`[NIP-46 WS] OK from ${url}: id=${data[1]} accepted=${data[2]} msg=${data[3] || ''}`);
                 }
             } catch(e) {}
         };
@@ -145,7 +168,7 @@ class RawRelayPool {
                 queued++;
             }
         }
-        console.log(`[NIP-46 WS] Published to ${sent} relays, queued for ${queued}`);
+        dlog(`[NIP-46 WS] Published to ${sent} relays, queued for ${queued}`);
     }
 
     destroy() {
@@ -267,8 +290,8 @@ export class BunkerClient {
         if (this.perms) parts.push(`perms=${encodeURIComponent(this.perms)}`);
         const connectUri = parts.join('&');
 
-        console.log('[NIP-46] Client pubkey:', clientPk);
-        console.log('[NIP-46] Connecting to relays:', relays);
+        dlog('[NIP-46] Client pubkey:', clientPk);
+        dlog('[NIP-46] Connecting to relays:', relays);
 
         // Open raw WebSocket connections FIRST
         this._rawPool = new RawRelayPool();
@@ -294,7 +317,7 @@ export class BunkerClient {
                 const decrypted = await nip44Decrypt(clientSk, ev.pubkey, ev.content);
                 const resp = JSON.parse(decrypted);
                 // Never log resp wholesale — resp.result IS the secret on success.
-                console.log('[NIP-46] Response id:', resp.id, 'relay:', relayUrl);
+                dlog('[NIP-46] Response id:', resp.id, 'relay:', relayUrl);
 
                 if (resp.result === 'auth_url' && resp.error) {
                     self._emitAuthUrl(resp.error);
@@ -311,7 +334,7 @@ export class BunkerClient {
                 // out-of-band nostrconnect URI — anyone can encrypt a kind-24133
                 // to our published clientPk, so a bare 'ack' proves nothing.
                 if (resp.result !== secret) {
-                    console.log('[NIP-46] Ignoring response: secret mismatch');
+                    dlog('[NIP-46] Ignoring response: secret mismatch');
                     return;
                 }
 
@@ -319,7 +342,7 @@ export class BunkerClient {
                 self._rawPool.unsubscribe(subId);
                 self._signerPk = ev.pubkey;
                 self.onStatusChange('waiting', 'Fetching identity…');
-                console.log('[NIP-46] Signer approved! pubkey:', ev.pubkey);
+                dlog('[NIP-46] Signer approved! pubkey:', ev.pubkey);
 
                 try { self._userPk = await self._request('get_public_key'); }
                 catch (e) {
@@ -369,18 +392,18 @@ export class BunkerClient {
         const clientPk = this.NostrTools.getPublicKey(clientSk);
         this._clientSk = clientSk; this._clientPk = clientPk;
         this._signerPk = signerPk; this._relays = relays;
-        if (this._fixedClientSk) console.log('[NIP-46] Reusing saved clientSk, clientPk:', clientPk);
+        if (this._fixedClientSk) dlog('[NIP-46] Reusing saved clientSk, clientPk:', clientPk);
 
         // SimplePool path (preferred when injected) — copies the Fren-finder
         // pattern exactly: await ensureRelay on every relay, then subscribe,
         // then publish. RawRelayPool path below is the legacy fallback.
         if (this._simplePool) {
-            console.log('[BUNKER-URL] using SimplePool, signerPk:', signerPk, 'relays:', relays);
+            dlog('[BUNKER-URL] using SimplePool, signerPk:', signerPk, 'relays:', relays);
             const pool = this._simplePool;
 
-            console.log('[BUNKER-URL] ensuring relays...');
+            dlog('[BUNKER-URL] ensuring relays...');
             await Promise.allSettled(relays.map(u => pool.ensureRelay(u).then(
-                () => console.log('[BUNKER-URL] relay open:', u),
+                () => dlog('[BUNKER-URL] relay open:', u),
                 (e) => console.warn('[BUNKER-URL] relay failed:', u, e?.message),
             )));
 
@@ -405,10 +428,10 @@ export class BunkerClient {
                     reject(err);
                 };
 
-                console.log('[BUNKER-URL] subscribing to', relays, 'filter', { kinds: [24133], '#p': [clientPk], since });
+                dlog('[BUNKER-URL] subscribing to', relays, 'filter', { kinds: [24133], '#p': [clientPk], since });
                 sub = pool.subscribeMany(relays, [{ kinds: [24133], '#p': [clientPk], since }], {
                     onevent: async (ev) => {
-                        console.log('[BUNKER-URL] event from', ev.pubkey.slice(0, 16), 'kind', ev.kind);
+                        dlog('[BUNKER-URL] event from', ev.pubkey.slice(0, 16), 'kind', ev.kind);
                         if (settled) return;
                         // ONLY THE SIGNER NAMED IN THE bunker:// URL. Our clientPk is
                         // public and anyone may nip44-encrypt to it, so "it decrypted"
@@ -418,7 +441,7 @@ export class BunkerClient {
                         if (ev.pubkey !== signerPk) return;
                         try {
                             const resp = JSON.parse(await nip44Decrypt(clientSk, ev.pubkey, ev.content));
-                            console.log('[BUNKER-URL] response id:', resp.id);
+                            dlog('[BUNKER-URL] response id:', resp.id);
                             if (resp.result === 'auth_url' && resp.error) { this._emitAuthUrl(resp.error); return; }
                             // ...and only an answer to the connect we actually sent.
                             if (resp.id && resp.id !== reqId) return;
@@ -430,7 +453,7 @@ export class BunkerClient {
                                 return;
                             }
                             settled = true; cleanup();
-                            console.log('[BUNKER-URL] connect ack, calling get_public_key');
+                            dlog('[BUNKER-URL] connect ack, calling get_public_key');
                             // Fail closed. Falling back to signerPk reports an identity
                             // the signer never confirmed as "signed in" — and a signer
                             // pubkey is not a user pubkey even when the URL is honest.
@@ -442,14 +465,14 @@ export class BunkerClient {
                                 reject(new Error('Signer connected but get_public_key failed'));
                                 return;
                             }
-                            console.log('[BUNKER-URL] connected, userPk:', this._userPk);
+                            dlog('[BUNKER-URL] connected, userPk:', this._userPk);
                             this._finishConnect();
                             resolve(this._userPk);
                         } catch (e) {
                             console.warn('[BUNKER-URL] decrypt/parse failed (ignoring):', e?.message);
                         }
                     },
-                    oneose: () => console.log('[BUNKER-URL] EOSE'),
+                    oneose: () => dlog('[BUNKER-URL] EOSE'),
                 });
                 this._urlFlowSub = sub;
 
@@ -459,7 +482,7 @@ export class BunkerClient {
                         const payload = JSON.stringify({
                             id: reqId, method: 'connect', params: [signerPk, secret, this.perms],
                         });
-                        console.log('[BUNKER-URL] encrypting + publishing connect, reqId:', reqId);
+                        dlog('[BUNKER-URL] encrypting + publishing connect, reqId:', reqId);
                         const enc = await nip44Encrypt(clientSk, signerPk, payload);
                         const signed = this.NostrTools.finalizeEvent({
                             kind: 24133, created_at: Math.floor(Date.now() / 1000),
@@ -468,10 +491,10 @@ export class BunkerClient {
                         const results = await Promise.allSettled(relays.map(async u => {
                             const r = await pool.ensureRelay(u);
                             await r.publish(signed);
-                            console.log('[BUNKER-URL] published to:', u);
+                            dlog('[BUNKER-URL] published to:', u);
                         }));
                         const ok = results.filter(r => r.status === 'fulfilled').length;
-                        console.log(`[BUNKER-URL] publish summary: ${ok}/${relays.length} relays`);
+                        dlog(`[BUNKER-URL] publish summary: ${ok}/${relays.length} relays`);
                         if (ok === 0 && !settled) {
                             settled = true; cleanup();
                             this._connecting = false;
@@ -514,7 +537,7 @@ export class BunkerClient {
                 try {
                     const decrypted = await nip44Decrypt(clientSk, ev.pubkey, ev.content);
                     const resp = JSON.parse(decrypted);
-                    console.log('[BUNKER-URL] response id:', resp.id);
+                    dlog('[BUNKER-URL] response id:', resp.id);
                     if (resp.result === 'auth_url' && resp.error) { this._emitAuthUrl(resp.error); return; }
                     if (resp.id && resp.id !== reqId) return; // and only our connect
                     if (resp.error && resp.result !== 'auth_url') {
@@ -534,7 +557,7 @@ export class BunkerClient {
                         reject(new Error('Signer connected but get_public_key failed'));
                         return;
                     }
-                    console.log('[BUNKER-URL] Connect complete, userPk:', this._userPk);
+                    dlog('[BUNKER-URL] Connect complete, userPk:', this._userPk);
                     this._finishConnect();
                     resolve(this._userPk);
                 } catch (e) {
@@ -704,10 +727,10 @@ export class BunkerClient {
                     this._request('ping'),
                     new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000)),
                 ]);
-                if (pong === 'pong') console.log('[NIP-46] Heartbeat OK');
+                if (pong === 'pong') dlog('[NIP-46] Heartbeat OK');
                 else throw new Error('bad response');
             } catch (e) {
-                console.log('[NIP-46] Heartbeat failed:', e.message);
+                dlog('[NIP-46] Heartbeat failed:', e.message);
                 this._handleDisconnect();
             }
         }, this.heartbeatMs);
@@ -756,7 +779,7 @@ export class BunkerClient {
                 signer: this._signerPk, user: this._userPk,
                 relays: this._relays, t: Date.now(),
             }));
-            console.log('[NIP-46] Session saved');
+            dlog('[NIP-46] Session saved');
         } catch (e) {}
     }
 
@@ -776,8 +799,17 @@ export class BunkerClient {
             this.clearSession(); return false;
         }
 
-        console.log('[NIP-46] Restoring session…');
-        this._clientSk = hexToSk(d.sk); this._clientPk = d.pk;
+        dlog('[NIP-46] Restoring session…');
+        // A stored blob is not trusted input. hexToSk now refuses anything that
+        // isn't 64 hex, so a truncated or edited session must clear itself and
+        // send the user back through a real login rather than throw out of here.
+        try {
+            this._clientSk = hexToSk(d.sk);
+        } catch (e) {
+            console.warn('[NIP-46] stored session is malformed; clearing');
+            this.clearSession(); return false;
+        }
+        this._clientPk = d.pk;
         this._signerPk = d.signer; this._userPk = d.user; this._relays = d.relays;
 
         this._rawPool = new RawRelayPool();
@@ -791,7 +823,7 @@ export class BunkerClient {
             ]);
             if (pong !== 'pong') throw new Error('bad pong');
         } catch (e) {
-            console.log('[NIP-46] Saved session dead:', e.message);
+            dlog('[NIP-46] Saved session dead:', e.message);
             this._clientSk = null; this._clientPk = null;
             this._signerPk = null; this._userPk = null; this._relays = null;
             if (this._rawPool) { this._rawPool.destroy(); this._rawPool = null; }
@@ -799,7 +831,7 @@ export class BunkerClient {
             return false;
         }
 
-        console.log('[NIP-46] Session restored');
+        dlog('[NIP-46] Session restored');
         this.startHeartbeat();
         this.onStatusChange('connected', 'Session restored');
         return true;

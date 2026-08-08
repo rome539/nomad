@@ -2,7 +2,7 @@ import type { Env } from "./env";
 import { CORS, json } from "./http";
 import { handleChallenge, handleVerify, handleTicket } from "./auth";
 import { GOOGLE_CLIENT_ID } from "./google";
-import { verifyJwt } from "./jwt";
+import { verifyJwt, timingSafeEqual } from "./jwt";
 import { PAGE } from "./public";
 import { iconBytes } from "./icon";
 import { touchIconBytes, iconN512Bytes, ogImageBytes, doorSceneBytes, cardSceneBytes } from "./assets";
@@ -154,7 +154,7 @@ export default {
       // speak it to the relays. Guarded by ADMIN_TOKEN; shut if unset.
       if (m === "POST" && pathname === "/admin/publish-profile") {
         const token = env.ADMIN_TOKEN?.trim();
-        if (!token || req.headers.get("x-admin-token") !== token) {
+        if (!token || !timingSafeEqual(req.headers.get("x-admin-token") ?? "", token)) {
           return json({ error: "unauthorized" }, 401);
         }
         if (!isGameKeyConfigured(env)) return json({ error: "no_game_key" }, 409);
@@ -170,7 +170,7 @@ export default {
       // Gamestr relay too, since 30762 scores are published there.
       if (m === "POST" && pathname === "/admin/publish-deletion") {
         const token = env.ADMIN_TOKEN?.trim();
-        if (!token || req.headers.get("x-admin-token") !== token) {
+        if (!token || !timingSafeEqual(req.headers.get("x-admin-token") ?? "", token)) {
           return json({ error: "unauthorized" }, 401);
         }
         if (!isGameKeyConfigured(env)) return json({ error: "no_game_key" }, 409);
@@ -189,7 +189,7 @@ export default {
       // entry. Body: one of { entries: [{d, game, player, board, content}] }.
       if (m === "POST" && pathname === "/admin/retire-score") {
         const token = env.ADMIN_TOKEN?.trim();
-        if (!token || req.headers.get("x-admin-token") !== token) {
+        if (!token || !timingSafeEqual(req.headers.get("x-admin-token") ?? "", token)) {
           return json({ error: "unauthorized" }, 401);
         }
         if (!isGameKeyConfigured(env)) return json({ error: "no_game_key" }, 409);
@@ -216,7 +216,7 @@ export default {
       // ADMIN_TOKEN. Best run when no one's connected. POST /admin/reseed?zone=door
       if (m === "POST" && pathname === "/admin/reseed") {
         const token = env.ADMIN_TOKEN?.trim();
-        if (!token || req.headers.get("x-admin-token") !== token) {
+        if (!token || !timingSafeEqual(req.headers.get("x-admin-token") ?? "", token)) {
           return json({ error: "unauthorized" }, 401);
         }
         const zone = url.searchParams.get("zone") ?? "door";
@@ -340,7 +340,16 @@ export default {
 
       return json({ error: "not_found" }, 404);
     } catch (err: any) {
-      return json({ error: "internal", message: err?.message ?? String(err) }, 500);
+      // THE CALLER GETS "internal" AND NOTHING ELSE. This used to hand back
+      // err.message, which is written by D1, by the runtime, by nostr-tools —
+      // none of them writing for a stranger's eyes. A thrown SQL error names
+      // tables and columns; a binding error names bindings. That is a free map
+      // of the inside of the server, handed to whoever managed to break it.
+      //
+      // The message still goes to the log, where the keeper can read it and the
+      // player can't (wrangler tail).
+      console.error("[500]", req.method, new URL(req.url).pathname, err?.stack || err?.message || String(err));
+      return json({ error: "internal" }, 500);
     }
   },
 

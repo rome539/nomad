@@ -21,6 +21,7 @@
 //          outgoing epoch closed `until` now. Certs signed inside a closed
 //          window keep verifying forever; see NIP.md "The dungeon's keys".
 import { webcrypto } from "node:crypto";
+import { writeFileSync } from "node:fs";
 globalThis.crypto ??= webcrypto;
 const { generateSecretKey, getPublicKey, finalizeEvent, nip19 } = await import("nostr-tools");
 
@@ -95,7 +96,25 @@ console.log("=== THE DUNGEON'S KEYS — this prints once, save it now ===\n");
 console.log("ROOT (the identity; cold storage, never a server):");
 console.log("  npub :", nip19.npubEncode(rootPk));
 if (!process.env.ROOT_NSEC) {
-  console.log("  nsec :", nip19.nsecEncode(rootSk));
+  // THE ROOT KEY DOES NOT GO IN THE SCROLLBACK. It is the dungeon's identity
+  // for good — there is no rotating it, only the epoch beneath it — and stdout
+  // is the worst place to put it: terminal scrollback, tmux buffers, CI logs,
+  // and a screen-share all keep it long after the ceremony. It goes to a
+  // 0600 file instead, which is one `shred` away from gone.
+  //
+  // SHOW_ROOT=1 prints it inline for anyone who would rather transcribe it
+  // straight to paper and never touch the disk. Both are defensible; the
+  // difference is that this way the careless path is the safe one.
+  const nsec = nip19.nsecEncode(rootSk);
+  if (process.env.SHOW_ROOT === "1") {
+    console.log("  nsec :", nsec);
+  } else {
+    const file = `dungeon-root-${nip19.npubEncode(rootPk).slice(0, 12)}.txt`;
+    writeFileSync(file, nsec + "\n", { mode: 0o600 });
+    console.log("  nsec : written to", file, "(chmod 600)");
+    console.log("         copy it to paper, twice, then delete the file.");
+    console.log("         (SHOW_ROOT=1 prints it here instead of writing it.)");
+  }
 } else {
   console.log("  nsec : (yours already — unchanged)");
 }
