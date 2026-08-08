@@ -280,7 +280,20 @@ export default {
         const zone = url.searchParams.get("zone") ?? "door";
         if (!ZONES.has(zone)) return json({ error: "no_such_zone" }, 404);
 
-        const headers = new Headers(req.headers);
+        // NOTHING OF THE CLIENT'S REACHES THE DURABLE OBJECT. This used to copy
+        // the request's headers wholesale and set x-pubkey/x-zone on top, which
+        // meant every other header rode through untouched — including x-admin,
+        // which the DO obeys unconditionally ("x-admin: reseed" re-seeds the
+        // whole world sim). A guest token was all it took to send it.
+        //
+        // An ALLOWLIST, not a denylist: the two dangerous headers today are
+        // x-admin and x-world, but the DO grows and the next privileged header
+        // would arrive smuggle-able unless the default is deny. The DO needs
+        // exactly one thing off the wire — the upgrade — and it reads the rest
+        // from what we set here. /admin/reseed and /world.json already build
+        // their headers from scratch, so /ws was the only way in.
+        const headers = new Headers();
+        headers.set("Upgrade", "websocket"); // the guard above already proved it
         headers.set("x-pubkey", pubkey);
         headers.set("x-zone", zone);
         const stub = env.ZONE.get(env.ZONE.idFromName(zone));

@@ -284,7 +284,8 @@ export class BunkerClient {
             try {
                 const decrypted = await nip44Decrypt(clientSk, ev.pubkey, ev.content);
                 const resp = JSON.parse(decrypted);
-                console.log('[NIP-46] Response:', JSON.stringify(resp), 'relay:', relayUrl);
+                // Never log resp wholesale — resp.result IS the secret on success.
+                console.log('[NIP-46] Response id:', resp.id, 'relay:', relayUrl);
 
                 if (resp.result === 'auth_url' && resp.error) {
                     self.onAuthUrl(resp.error);
@@ -297,8 +298,11 @@ export class BunkerClient {
                     rejectFn(new Error(resp.error));
                     return;
                 }
-                if (resp.result !== secret && resp.result !== 'ack') {
-                    console.log('[NIP-46] Ignoring response, secret mismatch. Got:', resp.result, 'Expected:', secret);
+                // The secret echo is the ONLY proof the responder saw the
+                // out-of-band nostrconnect URI — anyone can encrypt a kind-24133
+                // to our published clientPk, so a bare 'ack' proves nothing.
+                if (resp.result !== secret) {
+                    console.log('[NIP-46] Ignoring response: secret mismatch');
                     return;
                 }
 
@@ -310,8 +314,13 @@ export class BunkerClient {
 
                 try { self._userPk = await self._request('get_public_key'); }
                 catch (e) {
-                    console.warn('[NIP-46] get_public_key failed, using signer pubkey');
-                    self._userPk = ev.pubkey;
+                    // Fail closed: adopting ev.pubkey here would report an
+                    // unverified (attacker-chosen) identity as "signed in".
+                    console.warn('[NIP-46] get_public_key failed:', e?.message || e);
+                    self._signerPk = null; self._connecting = false;
+                    self.onStatusChange('error', 'Identity fetch failed');
+                    rejectFn(new Error('Signer connected but get_public_key failed'));
+                    return;
                 }
 
                 self._finishConnect();
@@ -367,6 +376,11 @@ export class BunkerClient {
             )));
 
             const since = Math.floor(Date.now() / 1000) - 60;
+            // The request id is minted BEFORE the subscription so the handler can
+            // insist the response answers THIS connect and not some other traffic
+            // on the wire. It never leaves the client in the clear (the payload is
+            // nip44-sealed to the signer), so it doubles as a nonce.
+            const reqId = randomHex(8);
             return new Promise((resolve, reject) => {
                 let settled = false;
                 let sub = null;
@@ -387,10 +401,18 @@ export class BunkerClient {
                     onevent: async (ev) => {
                         console.log('[BUNKER-URL] event from', ev.pubkey.slice(0, 16), 'kind', ev.kind);
                         if (settled) return;
+                        // ONLY THE SIGNER NAMED IN THE bunker:// URL. Our clientPk is
+                        // public and anyone may nip44-encrypt to it, so "it decrypted"
+                        // proves the sender chose to talk to us and nothing else. Here
+                        // the signer's pubkey came from the URL the user pasted, so the
+                        // check is free and the trust anchor is theirs, not a relay's.
+                        if (ev.pubkey !== signerPk) return;
                         try {
                             const resp = JSON.parse(await nip44Decrypt(clientSk, ev.pubkey, ev.content));
-                            console.log('[BUNKER-URL] decrypted response:', resp);
+                            console.log('[BUNKER-URL] response id:', resp.id);
                             if (resp.result === 'auth_url' && resp.error) { this.onAuthUrl(resp.error); return; }
+                            // ...and only an answer to the connect we actually sent.
+                            if (resp.id && resp.id !== reqId) return;
                             if (resp.error && resp.result !== 'auth_url') {
                                 settled = true; cleanup();
                                 this._connecting = false;
@@ -400,8 +422,17 @@ export class BunkerClient {
                             }
                             settled = true; cleanup();
                             console.log('[BUNKER-URL] connect ack, calling get_public_key');
+                            // Fail closed. Falling back to signerPk reports an identity
+                            // the signer never confirmed as "signed in" — and a signer
+                            // pubkey is not a user pubkey even when the URL is honest.
                             try { this._userPk = await this._request('get_public_key'); }
-                            catch (e) { console.warn('[BUNKER-URL] get_public_key failed:', e?.message); this._userPk = signerPk; }
+                            catch (e) {
+                                console.warn('[BUNKER-URL] get_public_key failed:', e?.message);
+                                this._signerPk = null; this._connecting = false;
+                                this.onStatusChange('error', 'Identity fetch failed');
+                                reject(new Error('Signer connected but get_public_key failed'));
+                                return;
+                            }
                             console.log('[BUNKER-URL] connected, userPk:', this._userPk);
                             this._finishConnect();
                             resolve(this._userPk);
@@ -415,7 +446,7 @@ export class BunkerClient {
 
                 (async () => {
                     try {
-                        const reqId = randomHex(8);
+                        // reqId is the one minted above — the handler matches on it.
                         const payload = JSON.stringify({
                             id: reqId, method: 'connect', params: [signerPk, secret, this.perms],
                         });
@@ -457,6 +488,9 @@ export class BunkerClient {
         const since = Math.floor(Date.now() / 1000) - 300;
         const subId = 'nip46-bunker-' + randomHex(4);
         let settled = false;
+        // Minted before the subscription for the same reason as the SimplePool
+        // path above: the handler has to be able to say "this answers MY connect".
+        const reqId = randomHex(8);
 
         return new Promise((resolve, reject) => {
             this._cancelReject = (err) => {
@@ -467,11 +501,13 @@ export class BunkerClient {
             };
             this._rawPool.subscribe(subId, { kinds: [24133], '#p': [clientPk], since }, async (ev) => {
                 if (settled) return;
+                if (ev.pubkey !== signerPk) return; // only the signer the user named
                 try {
                     const decrypted = await nip44Decrypt(clientSk, ev.pubkey, ev.content);
                     const resp = JSON.parse(decrypted);
-                    console.log('[BUNKER-URL] Decrypted response:', resp);
+                    console.log('[BUNKER-URL] response id:', resp.id);
                     if (resp.result === 'auth_url' && resp.error) { this.onAuthUrl(resp.error); return; }
+                    if (resp.id && resp.id !== reqId) return; // and only our connect
                     if (resp.error && resp.result !== 'auth_url') {
                         settled = true; this._cancelReject = null; this._rawPool.unsubscribe(subId);
                         this._connecting = false;
@@ -480,8 +516,15 @@ export class BunkerClient {
                     }
                     settled = true; this._cancelReject = null;
                     this._rawPool.unsubscribe(subId);
+                    // Fail closed, same as every other flow.
                     try { this._userPk = await this._request('get_public_key'); }
-                    catch (e) { console.warn('[BUNKER-URL] get_public_key failed:', e?.message); this._userPk = signerPk; }
+                    catch (e) {
+                        console.warn('[BUNKER-URL] get_public_key failed:', e?.message);
+                        this._signerPk = null; this._connecting = false;
+                        this.onStatusChange('error', 'Identity fetch failed');
+                        reject(new Error('Signer connected but get_public_key failed'));
+                        return;
+                    }
                     console.log('[BUNKER-URL] Connect complete, userPk:', this._userPk);
                     this._finishConnect();
                     resolve(this._userPk);
@@ -490,7 +533,6 @@ export class BunkerClient {
                 }
             });
 
-            const reqId = randomHex(8);
             nip44Encrypt(clientSk, signerPk, JSON.stringify({
                 id: reqId, method: 'connect', params: [signerPk, secret, this.perms]
             })).then(enc => {
@@ -768,6 +810,10 @@ export class BunkerClient {
 
                 sub = pool.subscribeMany(relays, [{ kinds: [24133], '#p': [pk], since }], {
                     onevent: async (ev) => {
+                        // The id already has to match, and it never travels in the
+                        // clear — but the signer is known here, so require it too
+                        // rather than resting the whole check on one secret.
+                        if (ev.pubkey !== spk) return;
                         try {
                             const r = JSON.parse(await nip44Decrypt(sk, ev.pubkey, ev.content));
                             if (r.id !== id) return;
@@ -800,6 +846,7 @@ export class BunkerClient {
 
             if (this._rawPool) {
                 this._rawPool.subscribe(subId, { kinds: [24133], '#p': [pk], since }, async (ev) => {
+                    if (ev.pubkey !== spk) return; // same law as the SimplePool path
                     try {
                         const r = JSON.parse(await nip44Decrypt(sk, ev.pubkey, ev.content));
                         if (r.id !== id) return;

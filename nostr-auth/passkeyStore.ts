@@ -269,7 +269,7 @@ export async function loginWithPasskey(credentialId: string): Promise<string> {
   if (!assertion) throw new Error('Passkey unlock cancelled');
 
   const extResults = assertion.getClientExtensionResults() as any;
-  console.log('[passkey] extension results:', extResults);
+  // NEVER log extResults — prf.results.first is the raw key-derivation secret.
   const prf = extResults?.prf?.results?.first as ArrayBuffer | undefined;
   if (!prf) {
     throw new Error(
