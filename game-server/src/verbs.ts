@@ -32,7 +32,7 @@ import {
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
   MILESTONES,
 } from "./zone-data";
-import { gatehouseFeed, throughTheDoor } from "./gate";
+import { gatehouseFeed, throughTheDoor, worksBar } from "./gate";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
 export function cmdXyzzy(z: ZoneDO, session: Session): void {
@@ -1403,13 +1403,19 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`, session), ...loud].join("\n"));
   }
   const atGate = world.entryRooms.has(session.roomId);
+  // A gate whose gatehouse is shut for works is not a gate for this purpose:
+  // the lockbox and the deep keep are both BEHIND the boarded door, so there is
+  // nothing here to lay out and nowhere safe to lay it. It falls through to the
+  // same crouch over the pack you'd get anywhere else in the world (works.ts).
+  const boarded = worksBar(z, session);
   // Out in the world, 'inv' crouches you over the pack a moment — the same
   // NOT-sanctuary beat the old modal had (still in reach, creatures keep
   // their target, wounds keep bleeding) — but resolves straight to text
   // instead of opening a modal. Only the gate's door (below) is safe.
-  if (!atGate) {
+  if (!atGate || boarded) {
     z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
     return z.send(session, [
+      ...(boarded ? [boarded, ""] : []),
       ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`, session),
       ...loud,
       "('burn <item>' to destroy it, 'drop <item>' to shed it, 'equip'/'remove' to swap gear.)",

@@ -8,6 +8,7 @@ import * as events from "./events";
 import * as pvp from "./pvp";
 import * as gate from "./gate";
 import * as den from "./den";
+import * as works from "./works";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
@@ -216,7 +217,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // wall, on the other side of the door — so their chips belong in the room that
     // holds them, not out in the dark beside a loose rock. The gate offers the
     // door, and the door offers everything else.
-    if (world.entryRooms.has(session.roomId) && !session.away) suggest.push("in");
+    // ...unless the door is boarded over for works, in which case the one thing
+    // to do here is not offerable and the chip row must not pretend otherwise
+    // (works.ts). The gate ROOM is untouched — everything else it offers stays.
+    if (world.entryRooms.has(session.roomId) && !session.away && !works.shutForWorks(z, session.roomId)) suggest.push("in");
     // A milestone offers exactly the two things a milestone is for. `read stone`
     // rather than bare `read` — the parser folds read into look, and a bare look
     // is the room. The carve chip goes quiet once your name is on this one.

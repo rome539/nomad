@@ -204,4 +204,6 @@ export interface SimState {
   nextSurfaceAt?: number; // ms epoch the deep next surfaces a dweller (corpse-key minting; only while the deep door is sealed)
   events?: Record<string, EventState>; // room events mid-arc (rain and its kin) — the sky survives hibernation
   fishStock?: Record<string, { left: number; at: number }>; // per-water catch budget: what's left, and when a fished-out pool forgets (survives deploys — no free refill)
+  works?: Record<string, number>; // gate roomId -> ms epoch its door reopens (the gatehouse shut for works; the gate ROOM is untouched)
+  nextWorksAt?: number; // ms epoch the world next considers shutting a gatehouse
 }

@@ -589,6 +589,20 @@ export const STONE_GROUND_CAP = 2; // at most this many lying loose in the haunt
 export const ROCK_SMASH_ODDS = 0.10;
 export const HAMMERSTONE_SMASH_ODDS = 0.80;
 export const STONE_WEAR = 20; // condition per smash attempt: ~5 latches in a stone, then it cracks through — and NO mend refills it (rome: "no repairs for this rock")
+// THE GATEHOUSE CLOSES FOR WORKS (works.ts). The cadence dials, and ONLY the
+// cadence dials — which door shuts is measured off the live map every load, not
+// listed here, because the map is still growing.
+export const WORKS_GAP_MIN_MS = 5 * 3_600_000;  // the world considers works every 5–9h
+export const WORKS_GAP_MAX_MS = 9 * 3_600_000;
+export const WORKS_LEN_MIN_MS = 2 * 3_600_000;  // and when it does, they last 2–5h: hours, not minutes,
+export const WORKS_LEN_MAX_MS = 5 * 3_600_000;  // so it is a thing you plan around rather than wait out
+export const WORKS_MAX_SHUT = 2;                // never more than two doors at once
+export const WORKS_SECOND_ODDS = 0.2;           // and the second is rare — it is the case that really bites
+// The floor under a measured draw weight. A door worth ~nothing to shut should
+// be nearly never drawn, but never absolutely impossible: today's dead-cheap
+// fortress door is tomorrow's only way out of a new wing, and the weight will
+// say so on its own the moment that is true.
+export const WORKS_MIN_WEIGHT = 0.02;
 export const STONE_ROLL_MIN_MS = 2 * 3_600_000; // the world checks every 2–4h...
 export const STONE_ROLL_MAX_MS = 4 * 3_600_000;
 export const STONE_MINT_ODDS = 0.25;             // ...and 1 check in 4 mints — ~twice a day, on dice

@@ -11,6 +11,7 @@ import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
+import * as works from "./works";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
@@ -26,6 +27,8 @@ export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promis
   const world = z.world!;
   const bar = z.benchGuard(session, "forge work");
   if (bar) return z.send(session, bar);
+  const shut = worksBar(z, session);
+  if (shut) return z.send(session, shut, "evt");
   if (!world.forgeRecipes.length) return z.send(session, "The brazier is cold and the recipe slate is blank.");
   const walkedIn = !z.outOfWorld(session);
   throughTheDoor(z, session); // the brazier is inside — the door comes first
@@ -115,6 +118,8 @@ export async function handleForge(z: ZoneDO, session: Session, frame: any): Prom
     if (session.away && !lateral) return; // one step-out at a time (mid-dungeon crouch)
     const bar = forgeGuard(z, session);
     if (bar) return z.send(session, bar);
+    const shut = worksBar(z, session);
+    if (shut) return z.send(session, shut, "evt");
     // The front door rule: from the gate room this walks you INSIDE first (a
     // real, announced entry), then steps to the brazier. From inside, a lateral.
     throughTheDoor(z, session);
@@ -240,8 +245,21 @@ export function tickFence(z: ZoneDO, now: number): void {
 // the door first: a real entry — announced on both sides, HUD flipped — and
 // then the counter is a lateral step from the fire. No-op if you're already in.
 // Combat is refused upstream (fence/bench/forge guards + the door's own rule).
+/**
+ * THE WORKS GUARD. One check, at the one chokepoint — the hatch, the bench, the
+ * forge, the vault and the plain `in` all reach the gatehouse through
+ * throughTheDoor, so a shut door shuts all of them at once and none of them can
+ * be conjured from the gate room while the boards are up. Returns the refusal
+ * to send, or null when the door opens as normal.
+ */
+export function worksBar(z: ZoneDO, session: Session): string | null {
+  if (z.outOfWorld(session)) return null; // already inside — the works can't reach in and evict you twice
+  return works.shutForWorks(z, session.roomId) ? works.worksRefusal() : null;
+}
+
 export function throughTheDoor(z: ZoneDO, session: Session): void {
   if (z.outOfWorld(session)) return;
+  if (works.shutForWorks(z, session.roomId)) return z.send(session, works.worksRefusal(), "evt");
   z.enterStep(session, "gatehouse"); // away + inGatehouse; the gate hears the door shut
   z.sendStatus(session); // the HUD reads "The Gatehouse" the moment you're in
   gatehouseFeed(z, `${session.name} pushes in out of the cold.`, session.pubkey, "who");
@@ -252,6 +270,8 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
   const world = z.world!;
   const bar = fenceGuard(z, session);
   if (bar) return z.send(session, bar);
+  const shut = worksBar(z, session);
+  if (shut) return z.send(session, shut, "evt");
   if (!world.fenceStock.length) return z.send(session, "The hatch is shuttered, and stays that way.");
   const walkedIn = !z.outOfWorld(session);
   throughTheDoor(z, session); // the hatch is inside — the door comes first
@@ -553,6 +573,8 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
     if (session.away && !lateral) return; // one step-out at a time (mid-dungeon crouch)
     const bar = fenceGuard(z, session);
     if (bar) return z.send(session, bar);
+    const shut = worksBar(z, session);
+    if (shut) return z.send(session, shut, "evt");
     if (!world.fenceStock.length) return z.send(session, "The hatch is shuttered, and stays that way.");
     // The front door rule: from the gate room this walks you INSIDE first (a
     // real, announced entry), then steps to the hatch — the modal never again
@@ -761,6 +783,8 @@ export async function cmdSalvage(z: ZoneDO, session: Session, arg: string): Prom
 export async function cmdSmelt(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const bar = z.benchGuard(session, "smelting");
   if (bar) return z.send(session, bar);
+  const shut = worksBar(z, session);
+  if (shut) return z.send(session, shut, "evt");
   const walkedIn = !z.outOfWorld(session);
   throughTheDoor(z, session); // the brazier is inside — the door comes first
   z.enterStep(session, "forging");
@@ -1530,6 +1554,12 @@ export async function enterGatehouse(z: ZoneDO, session: Session): Promise<void>
   if (z.inCombat(session)) {
     return z.send(session, "The door won't take you — not with steel out. Finish it, or run.");
   }
+  // THE WORKS. Boarded over, and it stays boarded until they're done — checked
+  // BEFORE the idempotent re-show below, but after it, in the sense that a
+  // player already inside is never thrown out by their own 'in' (worksBar reads
+  // outOfWorld and stands down).
+  const boarded = worksBar(z, session);
+  if (boarded) return z.send(session, boarded, "evt");
   // Already behind the door — 'in' is idempotent, just re-show it. Re-assert
   // `away` here too, so if the flag had drifted false under inGatehouse this
   // heals it (outOfWorld already trusts inGatehouse; this re-syncs the rest).

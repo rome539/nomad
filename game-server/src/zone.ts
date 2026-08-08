@@ -68,6 +68,8 @@ import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
+import * as works from "./works";
+import type { WorksPlan } from "./works";
 import { WOOD_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP } from "./detail";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
@@ -165,6 +167,13 @@ export class ZoneDO implements DurableObject {
   private nextBrandAt = 0;
   private nextSmokeTorchAt = 0; // the world next rolls a plain torch into the smokehouse (dice, capped — a find, not a refill)
   private nextCarrionAt = 0; // the world next rolls a carcass into a random deep room (dice — feeds the pale hunters, one body at a time)
+  // THE GATEHOUSE CLOSES FOR WORKS (works.ts). `works` is gate roomId -> ms its
+  // door reopens; the gate ROOM stays open and walkable throughout. The plan is
+  // measured off the live map at init and deliberately NOT persisted — a map
+  // that grew must be re-read, never remembered.
+  public works = new Map<string, number>();
+  public nextWorksAt = 0;
+  public worksPlan: WorksPlan | null = null;
   public traces = new Map<string, Trace[]>();
   public rot: RotEntry[] = [];
   private placedSpawns = new Set<string>(); // ground spawns already laid once
@@ -383,6 +392,10 @@ export class ZoneDO implements DurableObject {
     this.dens = await den.loadDens(this);
     this.denBlood = await den.loadDenBlood(this);
     this.buildWorldMaps(world);
+    // MEASURE THE MAP FOR THE WORKS. One BFS per gate over the graph as it is
+    // right now, so which door is worth shutting is re-derived every load and a
+    // map that grew is never judged on yesterday's distances (works.ts).
+    this.worksPlan = works.planWorks(world);
     // WHAT COUNTS AS OUTDOORS, assembled rather than hardcoded (2026-08-01).
     // Rain, fog, cold, crows, the night dark and the night hunt multiplier all
     // ask OUTDOOR_ROOMS, which was a static set of the fortress's 20 grounds and
@@ -439,6 +452,8 @@ export class ZoneDO implements DurableObject {
       this.nextBrandAt = saved.nextBrandAt ?? 0;
       this.nextSmokeTorchAt = saved.nextSmokeTorchAt ?? 0;
       this.nextCarrionAt = saved.nextCarrionAt ?? 0;
+      this.works = new Map(Object.entries(saved.works ?? {}));
+      this.nextWorksAt = saved.nextWorksAt ?? 0;
       this.traces = new Map(Object.entries(saved.traces ?? {}));
       this.rot = saved.rot ?? [];
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
@@ -710,6 +725,8 @@ export class ZoneDO implements DurableObject {
       nextBrandAt: this.nextBrandAt,
       nextSmokeTorchAt: this.nextSmokeTorchAt,
       nextCarrionAt: this.nextCarrionAt,
+      works: Object.fromEntries(this.works),
+      nextWorksAt: this.nextWorksAt,
       traces: Object.fromEntries(this.traces),
       rot: this.rot,
       placedSpawns: [...this.placedSpawns],
@@ -756,6 +773,8 @@ export class ZoneDO implements DurableObject {
     this.nextBrandAt = 0;
     this.nextSmokeTorchAt = 0;
     this.nextCarrionAt = 0;
+    this.works.clear();
+    this.nextWorksAt = 0;
     this.traces.clear();
     this.rot = [];
     this.placedSpawns.clear();
@@ -3491,6 +3510,10 @@ export class ZoneDO implements DurableObject {
     // off-screen customer buys him out of some one thing.
     gate.tickFence(this, now);
 
+    // A gatehouse shuts for works now and then, and opens again when they're
+    // done. The gate ROOM is never touched — only what's behind the door.
+    works.tickWorks(this, now);
+
     // The hammerstone is DICE now (the floor-renewal law): the world checks
     // itself every few hours and only sometimes coughs one up, into a random
     // haunt — graves, scree, mine-throats, the tide's midden. No spot to farm,
@@ -4791,9 +4814,17 @@ export class ZoneDO implements DurableObject {
 
     lines.push(...this.traceLines(room.id, Date.now()));
 
-    // Every gate keeps a keeper: a fence at a shuttered hatch, dealing in kind.
-    // (Static, so it's part of the full look only — you know he's there.)
-    if (full && world.entryRooms.has(room.id) && world.fenceStock.length > 0) {
+    // THE WORKS (works.ts). Boards over the door, and the keeper is not behind
+    // it — this REPLACES his line rather than sitting beside it, or the room
+    // would advertise a hatch nobody can reach. It rides the plain look, not
+    // just the full one: whether the bank is open is the single most important
+    // fact about a gate room, and you must not have to walk into the door to
+    // learn it.
+    if (world.entryRooms.has(room.id) && works.shutForWorks(this, room.id)) {
+      lines.push(works.worksBlurb());
+    } else if (full && world.entryRooms.has(room.id) && world.fenceStock.length > 0) {
+      // Every gate keeps a keeper: a fence at a shuttered hatch, dealing in kind.
+      // (Static, so it's part of the full look only — you know he's there.)
       lines.push("A keeper waits at a shuttered hatch in the gatehouse wall, dealing in kind.");
     }
 
