@@ -1,6 +1,6 @@
 import type { Env } from "./env";
 import { CORS, json } from "./http";
-import { handleChallenge, handleVerify } from "./auth";
+import { handleChallenge, handleVerify, handleTicket } from "./auth";
 import { GOOGLE_CLIENT_ID } from "./google";
 import { verifyJwt } from "./jwt";
 import { PAGE } from "./public";
@@ -77,6 +77,7 @@ export default {
       }
       if (m === "POST" && pathname === "/auth/challenge") return await handleChallenge(env);
       if (m === "POST" && pathname === "/auth/verify") return await handleVerify(req, env);
+      if (m === "POST" && pathname === "/auth/ticket") return await handleTicket(req, env);
       // Google is now self-custody only: the browser talks straight to Drive
       // (see /vault.js). The old custodial /auth/google endpoint is retired.
 
@@ -267,15 +268,26 @@ export default {
       }
 
       // The direct door: same protocol the relay door will speak, minus the relay.
-      // Auth via ?token= because browser WebSocket can't set headers.
+      // The credential rides in the query string because a browser WebSocket
+      // cannot set headers — but it is a 90-SECOND TICKET (POST /auth/ticket),
+      // not the seven-day session token. A query string ends up in history, in
+      // proxy logs and in screenshots; a ticket that opens one socket and dies
+      // makes all three places worthless.
+      //
+      // ?token= is still accepted so a page cached from before this shipped keeps
+      // working. Drop it once nobody is running the old client.
       if (m === "GET" && pathname === "/ws") {
         if (req.headers.get("Upgrade") !== "websocket") {
           return json({ error: "expected_websocket" }, 426);
         }
-        const token = url.searchParams.get("token") ?? "";
-        const payload = await verifyJwt(token, env.JWT_SECRET);
+        const ticket = url.searchParams.get("ticket") ?? "";
+        const legacy = url.searchParams.get("token") ?? "";
+        const payload = await verifyJwt(ticket || legacy, env.JWT_SECRET);
         const pubkey = typeof payload?.sub === "string" ? payload.sub : null;
-        if (!pubkey) return json({ error: "unauthorized" }, 401);
+        // A ticket must BE a ticket; the legacy path must be a plain session
+        // token. Neither may be a challenge — those carry no sub anyway.
+        const okPurpose = ticket ? payload?.purpose === "ws" : payload?.purpose === undefined;
+        if (!pubkey || !okPurpose) return json({ error: "unauthorized" }, 401);
 
         const zone = url.searchParams.get("zone") ?? "door";
         if (!ZONES.has(zone)) return json({ error: "no_such_zone" }, 404);

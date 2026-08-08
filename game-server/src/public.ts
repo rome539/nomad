@@ -1670,7 +1670,21 @@ async function makeBunkerClient() {
     storageKey: "nomad_bunker_session",
     sessionMaxAge: 30 * 24 * 3600 * 1000,
     heartbeatMs: 0,
-    onAuthUrl: function (url) { window.open(url, "_blank", "width=600,height=700"); },
+    // The signer can ask us to open a page so the user can approve there. It
+    // arrives before anything about the sender is verified (see _emitAuthUrl),
+    // so the client has already forced it to https — and we still name the host
+    // and wait to be told. An unasked-for popup during a login is exactly the
+    // shape of a phishing page.
+    onAuthUrl: function (url) {
+      var host = url;
+      try { host = new URL(url).host; } catch (e) {}
+      print("\\u2014 your signer wants to open " + host + " to approve this \\u2014", "sys");
+      if (confirm("Your signer is asking to open:\\n\\n" + host + "\\n\\nOpen it to approve the login?")) {
+        window.open(url, "_blank", "width=600,height=700");
+      } else {
+        print("\\u2014 left it closed \\u2014", "sys");
+      }
+    },
     onStatusChange: function (st, msg) { if (st === "error" && msg) print("\\u2014 signer: " + msg + " \\u2014", "sys"); },
   });
 }
@@ -2240,9 +2254,23 @@ async function connect() {
     catch (e) { print("— the gate does not answer (" + e.message + "); retrying —", "sys"); return scheduleRetry(); }
   }
 
+  // THE WEEK-LONG TOKEN NEVER TOUCHES THE URL. A browser socket can't send
+  // headers, so something has to go in the query string — trade the session
+  // token for a 90-second ticket that opens one socket and is good for nothing
+  // else. If the exchange fails (an old worker, a blip), fall back to the token
+  // rather than refuse to connect: this is hardening, not a gate.
+  var wsAuth = "token=" + encodeURIComponent(token);
+  try {
+    var tr = await fetch("/auth/ticket", { method: "POST", headers: { authorization: "Bearer " + token } });
+    if (tr.ok) {
+      var tj = await tr.json();
+      if (tj && tj.ticket) wsAuth = "ticket=" + encodeURIComponent(tj.ticket);
+    }
+  } catch (e) {}
+
   var proto = location.protocol === "https:" ? "wss://" : "ws://";
   var opened = false;
-  ws = new WebSocket(proto + location.host + "/ws?token=" + encodeURIComponent(token) + (freshLoad ? "&fresh=1" : ""));
+  ws = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : ""));
 
   ws.onopen = function () {
     opened = true;

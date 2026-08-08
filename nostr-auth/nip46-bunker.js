@@ -205,7 +205,16 @@ export class BunkerClient {
         this.storageKey = opts.storageKey || null;
         this.sessionMaxAge = opts.sessionMaxAge || 24 * 60 * 60 * 1000;
         this.heartbeatMs = opts.heartbeatMs !== undefined ? opts.heartbeatMs : 30000;
-        this.onAuthUrl = opts.onAuthUrl || (url => window.open(url, '_blank', 'width=600,height=700'));
+        // Default stays a popup for drop-in use, but only ever reached through
+        // _emitAuthUrl's https check — and it asks, because the URL came off a
+        // relay and nothing proves who sent it.
+        this.onAuthUrl = opts.onAuthUrl || (url => {
+            let host = url;
+            try { host = new URL(url).host; } catch (e) {}
+            if (confirm('Your signer wants to open ' + host + ' to approve this login.\n\nOpen it?')) {
+                window.open(url, '_blank', 'width=600,height=700');
+            }
+        });
         this.onStatusChange = opts.onStatusChange || (() => {});
         this.onDisconnect = opts.onDisconnect || (() => {});
 
@@ -288,7 +297,7 @@ export class BunkerClient {
                 console.log('[NIP-46] Response id:', resp.id, 'relay:', relayUrl);
 
                 if (resp.result === 'auth_url' && resp.error) {
-                    self.onAuthUrl(resp.error);
+                    self._emitAuthUrl(resp.error);
                     return;
                 }
                 if (resp.error && resp.result !== 'auth_url') {
@@ -410,7 +419,7 @@ export class BunkerClient {
                         try {
                             const resp = JSON.parse(await nip44Decrypt(clientSk, ev.pubkey, ev.content));
                             console.log('[BUNKER-URL] response id:', resp.id);
-                            if (resp.result === 'auth_url' && resp.error) { this.onAuthUrl(resp.error); return; }
+                            if (resp.result === 'auth_url' && resp.error) { this._emitAuthUrl(resp.error); return; }
                             // ...and only an answer to the connect we actually sent.
                             if (resp.id && resp.id !== reqId) return;
                             if (resp.error && resp.result !== 'auth_url') {
@@ -506,7 +515,7 @@ export class BunkerClient {
                     const decrypted = await nip44Decrypt(clientSk, ev.pubkey, ev.content);
                     const resp = JSON.parse(decrypted);
                     console.log('[BUNKER-URL] response id:', resp.id);
-                    if (resp.result === 'auth_url' && resp.error) { this.onAuthUrl(resp.error); return; }
+                    if (resp.result === 'auth_url' && resp.error) { this._emitAuthUrl(resp.error); return; }
                     if (resp.id && resp.id !== reqId) return; // and only our connect
                     if (resp.error && resp.result !== 'auth_url') {
                         settled = true; this._cancelReject = null; this._rawPool.unsubscribe(subId);
@@ -654,6 +663,34 @@ export class BunkerClient {
     }
 
     // ------------------------------------------------------------------
+    // auth_url — THE ONE THING A STRANGER CAN MAKE US DO
+    // ------------------------------------------------------------------
+    //
+    // Every other response is gated: the nostrconnect flow wants the secret
+    // echoed, the bunker flow wants the pubkey from the URL the user pasted.
+    // auth_url is handled BEFORE any of that, and it has to be — a signer sends
+    // it to say "the user must approve in a browser first", which by definition
+    // arrives before we can verify anything. So anybody who can encrypt to our
+    // published clientPk can hand us a URL, and the default handler opened it in
+    // a popup. That is a phishing primitive with our own app's login flow as the
+    // pretext: the window appears exactly when the user is expecting one.
+    //
+    // It cannot be authenticated, so it is CONSTRAINED instead: https only (no
+    // javascript:, no data:, no blob:), parseable, and length-capped. The
+    // consumer still decides whether to open it — the game asks first, naming
+    // the host — but nothing that isn't a real https URL gets that far.
+    _emitAuthUrl(raw) {
+        if (typeof raw !== 'string' || raw.length > 2048) return;
+        let u;
+        try { u = new URL(raw); } catch (e) { return; }
+        if (u.protocol !== 'https:') {
+            console.warn('[NIP-46] refusing non-https auth_url:', u.protocol);
+            return;
+        }
+        this.onAuthUrl(u.href);
+    }
+
+    // ------------------------------------------------------------------
     // HEARTBEAT
     // ------------------------------------------------------------------
 
@@ -694,6 +731,23 @@ export class BunkerClient {
     // SESSION PERSISTENCE
     // ------------------------------------------------------------------
 
+    // WHAT IS IN localStorage, AND WHY IT IS NOT THE nsec.
+    //
+    // `sk` here is the CLIENT key of the NIP-46 pair — the identity this browser
+    // uses to talk to the remote signer. It is not the user's key and it cannot
+    // become one: the signer holds that, every signature is the signer's own
+    // decision, the permissions we asked for are the narrow pair declared at
+    // construction, and the user can revoke this client in their signer app.
+    // What it does buy an attacker who reads it is the ability to ASK for those
+    // signatures as us until it is revoked or expires.
+    //
+    // A browser has nowhere confidential to put it. sessionStorage dies with the
+    // tab (so every reload re-prompts the signer), IndexedDB is exactly as
+    // readable, and a non-extractable CryptoKey can't be used for schnorr here.
+    // Anything that can read localStorage is already running as this origin,
+    // which is game over regardless. So the mitigations are the only ones that
+    // exist: keep the permissions narrow, age the session out (sessionMaxAge),
+    // and clear it on logout — all three of which this class does.
     saveSession() {
         if (!this.storageKey || !this._clientSk || !this._signerPk || !this._userPk) return;
         try {
@@ -817,7 +871,7 @@ export class BunkerClient {
                         try {
                             const r = JSON.parse(await nip44Decrypt(sk, ev.pubkey, ev.content));
                             if (r.id !== id) return;
-                            if (r.result === 'auth_url' && r.error) { this.onAuthUrl(r.error); return; }
+                            if (r.result === 'auth_url' && r.error) { this._emitAuthUrl(r.error); return; }
                             if (done) return;
                             done = true; clearTimeout(to);
                             if (sub) { try { sub.close(); } catch (e) {} }
@@ -850,7 +904,7 @@ export class BunkerClient {
                     try {
                         const r = JSON.parse(await nip44Decrypt(sk, ev.pubkey, ev.content));
                         if (r.id !== id) return;
-                        if (r.result === 'auth_url' && r.error) { this.onAuthUrl(r.error); return; }
+                        if (r.result === 'auth_url' && r.error) { this._emitAuthUrl(r.error); return; }
                         if (done) return;
                         done = true; clearTimeout(to);
                         if (this._rawPool) this._rawPool.unsubscribe(subId);

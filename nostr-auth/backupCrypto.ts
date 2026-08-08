@@ -115,9 +115,23 @@ async function aeadDec(payload: string, convKey32: Uint8Array<ArrayBuffer>): Pro
 }
 
 // ── KDFs → raw 32-byte keys (used as NIP-44 conversation keys) ───────────────
+// THE ITERATION COUNT COMES OFF THE BLOB, AND A BLOB CAN BE HOSTILE. Every
+// unlock path reads `wrap.iter` from a vault file — which may have been handed
+// to the user (a shared Drive file, an imported backup) rather than written by
+// us. deriveBits with iterations: 2_000_000_000 pins the main thread until the
+// tab dies, and there is no cancelling it. Clamped at the one place all callers
+// funnel through, both ways: the ceiling stops the hang, and the floor stops a
+// blob quietly downgrading its own KDF to something brute-forceable.
+//
+// A file written outside this range is not one of ours, so refusing to honour
+// its number costs nothing real: 600k is what we write, and 2M is still under
+// two seconds on the slow phones this has to work on.
+const PBKDF2_MIN_ITER = 100_000;
+const PBKDF2_MAX_ITER = 2_000_000;
 async function pbkdf2Raw(pin: string, salt: Uint8Array<ArrayBuffer>, iter: number): Promise<Uint8Array<ArrayBuffer>> {
+  const safe = Math.min(PBKDF2_MAX_ITER, Math.max(PBKDF2_MIN_ITER, Math.floor(Number(iter) || 0)));
   const base = await crypto.subtle.importKey('raw', utf8(pin), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, 256);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: safe, hash: 'SHA-256' }, base, 256);
   return new Uint8Array(bits);
 }
 // The PRF output is already 32 bytes of high-entropy material; HKDF domain-

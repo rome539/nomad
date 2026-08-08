@@ -44,6 +44,31 @@ async function fetchLNURLPData(url: string): Promise<any> {
   return r.json();
 }
 
+// WHAT THE INVOICE ACTUALLY ASKS FOR. A bolt11 states its amount in the human
+// readable part — "lnbc" + an amount + a multiplier — before the '1' separator.
+// Returns msats, or null for an open-amount invoice (no figure at all), which is
+// a blank cheque and must never be paid automatically.
+//
+//   m (milli) = 1e-3 BTC, u (micro) = 1e-6, n (nano) = 1e-9, p (pico) = 1e-12
+//   1 BTC = 1e11 msat
+export function invoiceMsats(bolt11: string): number | null {
+  const s = String(bolt11).trim().toLowerCase();
+  // The separator is the LAST '1' in the string — bech32 leaves '1' out of its
+  // data charset precisely so this is unambiguous. Splitting on the first one
+  // instead reads the separator of an amountless "lnbc1p..." as an amount.
+  const cut = s.lastIndexOf('1');
+  if (cut <= 0) return null;
+  const m = /^ln(?:bc|tb|bcrt|sb)(\d*)([munp]?)$/.exec(s.slice(0, cut));
+  if (!m) return null;
+  if (!m[1]) return null; // no figure at all: an open invoice is a blank cheque
+  const n = Number(m[1]);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const mult: Record<string, number> = { m: 1e8, u: 1e5, n: 1e2, p: 1e-1 };
+  const msats = m[2] ? n * mult[m[2]] : n * 1e11; // no multiplier = whole bitcoin
+  if (!Number.isFinite(msats) || msats < 1) return null;
+  return Math.round(msats);
+}
+
 async function fetchInvoice(callbackUrl: string, amountMsats: number, zapRequestJson: string | null): Promise<{ pr: string; verify?: string } | null> {
   const params = new URLSearchParams({ amount: String(amountMsats) });
   if (zapRequestJson) params.set('nostr', zapRequestJson);
@@ -51,6 +76,17 @@ async function fetchInvoice(callbackUrl: string, amountMsats: number, zapRequest
     const r = await fetch(`${callbackUrl}?${params}`);
     const data = await r.json();
     if (!data.pr) return null;
+    // NEVER PAY WHAT YOU DIDN'T ASK FOR. The invoice comes back from the
+    // recipient's LNURL server, and the next thing that happens is a wallet
+    // paying it without anyone reading it. A hostile (or compromised) server
+    // answering a 100-sat request with a 100,000-sat invoice would simply be
+    // paid. An amountless invoice is worse — the wallet picks, or the recipient
+    // does. So the figure in the bolt11 has to be the figure we asked for.
+    const got = invoiceMsats(data.pr);
+    if (got === null || got !== amountMsats) {
+      console.warn(`[zap] invoice amount mismatch: asked ${amountMsats} msats, invoice says ${got}`);
+      return null;
+    }
     return { pr: data.pr, verify: data.verify || undefined };
   } catch { return null; }
 }

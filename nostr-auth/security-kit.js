@@ -87,16 +87,28 @@ export function escapeHtml(unsafe) {
  */
 export function sanitizeUrl(url) {
     if (!url || typeof url !== 'string') return '';
-    const trimmed = url.trim().toLowerCase();
-    if (
-        trimmed.startsWith('javascript:') ||
-        trimmed.startsWith('data:') ||
-        trimmed.startsWith('vbscript:') ||
-        trimmed.startsWith('file:')
-    ) {
+    // AN ALLOWLIST, BECAUSE A BLACKLIST OF SCHEMES CANNOT BE COMPLETED.
+    //
+    // This used to reject four prefixes. Every one of them is reachable around:
+    // HTML entity-decodes and strips control characters before the navigation,
+    // so "java\tscript:" , "java\nscript:" and "  javascript:" all survive a
+    // startsWith check and still run. And the list was missing live schemes
+    // anyway — blob:, filesystem:, and about: among them.
+    //
+    // The set of protocols a profile picture or a relay-supplied link may use is
+    // tiny and known, so name it and refuse everything else. URL parsing does
+    // the normalising, so there is no string trick left to play.
+    const raw = url.trim();
+    if (!raw) return '';
+    let u;
+    try {
+        // A base makes relative URLs ("/x", "img.png") resolve rather than throw.
+        u = new URL(raw, typeof location !== 'undefined' ? location.href : 'https://invalid.example');
+    } catch (e) {
         return '';
     }
-    return url.trim();
+    const ALLOWED = ['https:', 'http:', 'mailto:'];
+    return ALLOWED.includes(u.protocol) ? raw : '';
 }
 
 /**
