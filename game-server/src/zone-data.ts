@@ -752,6 +752,27 @@ export const TRACE_LIFE_MS: Record<string, number> = {
 export const TRACE_CAP = 12; // per room; oldest non-carving forgotten first
 export const CARVE_CAP = 5; // wall space is finite
 export const CARVE_MAX_LEN = 40;
+
+// ---- THE BOARD (rome, 2026-08-09) ----
+//
+// The gatehouse gets the one thing the world has never had: a place a player
+// can say something that OUTLIVES them logging off. Every human voice in NOMAD
+// until now was live-only — say, gatehouse talk, a shout held fifteen seconds —
+// so at a quiet hour the world carries no evidence that anyone else exists.
+//
+// It is not a second `carve`. Carve is forty characters, scattered over 410
+// rooms, and gone inside a day: to read one you must happen to stand in that
+// exact room within that exact day, which almost never happens. Three numbers
+// separate the board from it, and they are the whole feature — it lasts a WEEK,
+// it holds a SENTENCE, and it hangs in the one room everybody walks through.
+export const BOARD_MAX_LEN = 120;              // a notice, not a shout — and long enough to lie well
+export const BOARD_LIFE_MS = 7 * 24 * 3_600_000; // a week, then the damp takes it
+export const BOARD_CAP = 20;                   // the board is finite: the twenty-first crowds the oldest off
+// A NOTICE IS TORN DOWN BY ANYBODY, at no cost and with no permission asked.
+// That is the entire moderation story and it is deliberate: with the week-long
+// decay behind it, nothing anyone posts is permanent and anything vile is one
+// word from gone, without an admin, a filter, or a report queue existing. The
+// wall belongs to whoever is standing at it.
 export const ROT_MS = 4 * 3_600_000; // food on the floor keeps this long, then rots to scraps (was 12h — rome 2026-07-17: too long; 4h still outlasts any delve, and the scraps feed the scavengers sooner)
 
 // What a creature on the move sounds like from one room away. Every dweller
@@ -3532,6 +3553,10 @@ export const GATEHOUSE_BARRED = new Set([
 export const GATEHOUSE_NOARG = new Set([
   "who", "inventory", "rest", "enter", "exit", "barter",
   "map", "study", "carve", "journal", "sheet", "help", "smoke",
+  // `board` reads the notices and takes nothing — so "board up that door" is a
+  // sentence spoken at the fire, not a read. `post` and `tear` are NOT here:
+  // they carry their words, and an explicit command must run.
+  "board",
 ]);
 // The gatehouse breathes SLOWER than the dungeon (rome, 2026-07-13): a 3-minute
 // floor, and with the roll on top the lines land about every 3-5 minutes. It is a

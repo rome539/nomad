@@ -2422,6 +2422,14 @@ var GATEHOUSE_CMDS = {
   map: 1, study: 1, journal: 1, rest: 1, sleep: 1, sit: 1, camp: 1,
   eat: 1, bandage: 1, bind: 1, equip: 1, wield: 1, wear: 1, remove: 1,
   unequip: 1, name: 1, rename: 1, smoke: 1, puff: 1, theme: 1, login: 1,
+  // The board. post/tear carry words so they must always read as commands;
+  // board is bare-only and is listed in the no-arg table below as well.
+  board: 1, noticeboard: 1, notices: 1,
+  post: 1, pin: 1, notice: 1, tear: 1, rip: 1, unpin: 1,
+  // carve was missing from this list entirely, so the gatehouse's own wall-chart
+  // verb read as speech here and its echo was swallowed. The server has always
+  // carved it; only the local echo was wrong.
+  carve: 1, scratch: 1, etch: 1, inscribe: 1,
 };
 // No-argument commands (aliases). Mirrors the server's GATEHOUSE_NOARG: bare
 // they command, but with words after them they were a sentence. Kept in sync so
@@ -2437,6 +2445,7 @@ var GATEHOUSE_NOARG_CMDS = {
   barter: 1, trade: 1, shop: 1, browse: 1, fence: 1,
   map: 1, study: 1, carve: 1, journal: 1, sheet: 1,
   rest: 1, sleep: 1, sit: 1, camp: 1, smoke: 1, puff: 1,
+  board: 1, noticeboard: 1, notices: 1,
 };
 var inGatehouseNow = false;
 // Whether the 'in'/'out' the server is offering here is a den door rather than a

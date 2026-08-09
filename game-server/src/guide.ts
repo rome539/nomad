@@ -206,7 +206,7 @@ export const GUIDE_PAGE = `<!doctype html>
   <strong>gatehouse</strong> — the only warm room there is. Step in and you are
   out of the world entirely: nothing can reach you, and everything is there —
   your lockbox and vault, the keeper's hatch, the forge, the smoke racks, the
-  wall chart.</p>
+  wall chart, the board.</p>
   <div class="law">There is <b>no timer and no queue</b>. Nobody makes you leave
   and nothing calls the raid. The only thing deciding whether you push on or turn
   back is how far you are from a door and how much you are carrying — which is
@@ -432,6 +432,12 @@ export const GUIDE_PAGE = `<!doctype html>
     <li>A <b>journal</b> is somebody's record. It can be taken off them.</li>
     <li>The <b>wall chart</b> in the gatehouse is shared: what one wanderer carves
     into it, every wanderer reads.</li>
+    <li>The <b>board</b> in the gatehouse is where people leave word for each
+    other. A notice keeps for a week, and it is the only thing anyone says here
+    that is still there after they log off. Nobody checks a word of it, anybody
+    can tear any of it down, and some of it is a lie somebody wants you to
+    believe. <code>board</code> reads it, <code>post &lt;words&gt;</code> pins
+    one up.</li>
     <li>Some things out in the world <b>keep a list of names</b>, and comparing
     two such lists tells you who went on and who turned back.</li>
   </ul>

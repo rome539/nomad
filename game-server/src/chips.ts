@@ -51,6 +51,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // you walked shallow halls it doesn't have yet.
     if (z.wallMarks.size) inside.push("study");
     if ([...session.visited].some((r) => !z.wallMarks.has(r) && gate.shallowRing(z).has(r))) inside.push("carve");
+    // The board, offered only when somebody has actually pinned something —
+    // a chip for an empty board teaches nothing and costs a row.
+    if (gate.boardCount(z)) inside.push("board");
     inside.push(BENCH_CHIP);
     // A typed trade left open still offers its tender chips — the deal is HERE
     // now, so the chips that close it have to be here too.

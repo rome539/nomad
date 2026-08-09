@@ -16,12 +16,13 @@ import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord,
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
+  BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
   KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS } from "./zone-data";
 import * as den from "./den";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
 import { WOOD_QUARTERS } from "./detail";
-import { dropCarried, describePlayer, lookKeepingItem } from "./verbs";
+import { dropCarried, describePlayer, lookKeepingItem, selfExamine } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -1515,6 +1516,136 @@ export function gatehouseSay(z: ZoneDO, session: Session, raw: string): void {
   // frame back to the speaker's client, nothing reaches a relay in any form.
 }
 
+// ---- THE BOARD ----
+//
+// Notices weather off after a week. Pruned on every read and every write rather
+// than on a clock: the board is only ever looked at from in here, so there is
+// nothing to sweep in the background and nothing to get out of step.
+function boardLive(z: ZoneDO): { name: string; words: string; at: number }[] {
+  const cut = Date.now() - BOARD_LIFE_MS;
+  if (z.board.some((n) => n.at <= cut)) z.board = z.board.filter((n) => n.at > cut);
+  return z.board;
+}
+
+// How old a notice is, in the only precision that matters. A warning's age is
+// most of its worth — "the woodward's moved west" is worth acting on today and
+// worth nothing next week — so every line wears its age where you can't miss it.
+function boardAge(at: number): string {
+  const mins = Math.floor((Date.now() - at) / 60_000);
+  if (mins < 60) return mins <= 1 ? "just now" : `${mins} minutes back`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours === 1 ? "an hour back" : `${hours} hours back`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "a day back" : `${days} days back`;
+}
+
+// How many notices are actually readable right now — the chip builder is
+// synchronous and must not be the thing that prunes, so it only counts.
+export function boardCount(z: ZoneDO): number {
+  const cut = Date.now() - BOARD_LIFE_MS;
+  return z.board.reduce((n, x) => n + (x.at > cut ? 1 : 0), 0);
+}
+
+export function boardRead(z: ZoneDO, session: Session): void {
+  const live = boardLive(z);
+  if (!live.length) {
+    return z.send(session, "A square of cork and boards by the hatch, studded all over with old pin-holes and holding nothing at all. Whatever was on it has been taken down or rotted off. ('post <words>' to pin one up)", "study");
+  }
+  const lines = [`Pinned to the board by the hatch, the newest at the top:`];
+  const newestFirst = [...live].reverse();
+  newestFirst.forEach((n, i) => {
+    lines.push(`  ${i + 1}. "${n.words}"`);
+    lines.push(`     — ${n.name}, ${boardAge(n.at)}`);
+  });
+  lines.push(`(${live.length} of ${BOARD_CAP}. 'post <words>' pins one; 'tear <number>' takes one down. Nothing here is checked by anybody.)`);
+  z.send(session, lines.join("\n"), "study");
+}
+
+export async function boardPost(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const words = arg.replace(/[\r\n\t]+/g, " ").replace(/"/g, "'").trim();
+  if (!words) return z.send(session, `Post what? ('post <words>', up to ${BOARD_MAX_LEN} characters)`);
+  if (words.length > BOARD_MAX_LEN) {
+    return z.send(session, `${words.length} characters, and the scrap of paper takes ${BOARD_MAX_LEN}. Say it shorter.`);
+  }
+  const live = boardLive(z);
+  live.push({ name: session.name, words, at: Date.now() });
+  // The board is finite. A new notice crowds the oldest off the bottom — which
+  // is the only pressure on it besides the week, and it means a busy board
+  // forgets faster than a quiet one, exactly like a real one does.
+  const crowded = live.length > BOARD_CAP ? live.splice(0, live.length - BOARD_CAP) : [];
+  z.board = live;
+  z.send(session, `You pin it up where it will be read: "${words}"`
+    + (crowded.length ? ` The oldest notice comes down to make the room — ${crowded[0].name}'s, and nobody will miss it.` : ""), "study");
+  gatehouseFeed(z, `${session.name} pins something to the board.`, session.pubkey);
+  await z.persist();
+}
+
+export async function boardTear(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const live = boardLive(z);
+  if (!live.length) return z.send(session, "There is nothing on the board to take down.");
+  const n = parseInt(arg.trim(), 10);
+  if (!Number.isFinite(n) || n < 1 || n > live.length) {
+    return z.send(session, `Tear which? They are numbered on the board — 'tear 1' through 'tear ${live.length}'.`);
+  }
+  // Numbered as READ: newest first. The list underneath is oldest-first.
+  const gone = live[live.length - n];
+  z.board = live.filter((x) => x !== gone);
+  // ANYONE takes down ANYTHING. No ownership test on purpose — see zone-data
+  // BOARD_*: the decay and this are the whole moderation story, and a wall you
+  // need permission to clean is not the room's wall, it is somebody's.
+  const mine = gone.name === session.name;
+  z.send(session, mine
+    ? `You take your own notice back down and put it in the fire: "${gone.words}"`
+    : `You pull it off the board, pin and all: "${gone.words}" — ${gone.name}'s. It goes in the brazier.`, "study");
+  gatehouseFeed(z, `${session.name} tears something off the board and drops it in the fire.`, session.pubkey);
+  await z.persist();
+}
+
+/**
+ * THE FIXTURES OF THE GATEHOUSE. Everything describeGatehouse names, and the
+ * handful of words a player reaches for when they mean the room itself.
+ *
+ * Returns null for anything that isn't here, which is what sends the line back
+ * to being speech — the mouth is still the default, this only stops the room's
+ * OWN furniture being shouted at the fire.
+ */
+function gatehouseFixture(z: ZoneDO, session: Session, target: string): string | null {
+  const t = target.toLowerCase().replace(/^(the|at|a)\s+/, "").trim();
+  const is = (...words: string[]) => words.includes(t);
+
+  // The wall chart. 'carve' and 'study' answer here too: the room's own line
+  // names those two words, so they are what a player types when they mean the
+  // wall — and being told to say them out loud instead is a small insult.
+  if (is("wall", "chart", "wall chart", "plaster", "frame", "carve", "study", "marks", "scratches")) {
+    const marks = [...z.wallMarks].filter((r) => z.world!.rooms.has(r)).length;
+    return marks === 0
+      ? "A stretch of the wall by the door, plastered smooth and scored with an empty frame — corners, a scale, and nothing inside them. Somebody meant this to be filled. ('carve' what you've walked)"
+      : `Plaster gone grey with handling, and inside the scratched frame ${marks} of the shallow halls, cut by a dozen different hands over a long time — some scored deep and square, some barely there. Nobody signed any of it. ('study' it to read it; 'carve' to add what you've walked)`;
+  }
+  if (is("hatch", "keeper", "shutter", "keepers hatch", "keeper's hatch", "counter")) {
+    return "A shutter of banded oak set into the far wall at chest height, closed. There is a worn place on the sill where hands have rested, and a deeper one where things have been slid across. Whoever is behind it does not open it to be looked at. ('barter' opens it)";
+  }
+  if (is("board", "notices", "notice", "cork", "notice board", "posts")) {
+    const live = boardLive(z);
+    return live.length === 0
+      ? "A square of cork and old boards hung beside the hatch, studded all over with pin-holes and holding nothing. ('post <words>' to pin one up)"
+      : `A square of cork and old boards beside the hatch, ${live.length === 1 ? "holding a single notice" : `shingled with ${live.length} notices`}, pinned over each other at every angle. ('board' to read them)`;
+  }
+  if (is("bench", "seat")) {
+    return "A long bench under the hatch, worn to a shine down the middle and gouged all along the front edge — a hundred people's boots, and a hundred people's knives, waiting for the same shutter to open.";
+  }
+  if (is("brazier", "coals", "fire", "flame", "embers", "hearth")) {
+    return "An iron basket on three legs, standing in a dish of its own ash. The coals are low and orange and somebody keeps them that way — there is a scuttle beside it that never seems to empty. It is the only heat on this side of the door.";
+  }
+  if (is("door", "old door", "very old door", "dungeon", "gate")) {
+    return "Oak that has gone almost black, banded and studded, hung in a frame far older than the boards. It is shut, and it is not locked — it does not need to be. Everything on the other side of it is the reason you came in here. ('out' opens it)";
+  }
+  if (is("room", "here", "around", "gatehouse", "inside", "place")) {
+    return describeGatehouse(z, session);
+  }
+  return null;
+}
+
 export function describeGatehouse(z: ZoneDO, session: Session): string {
   const others = gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey);
   // Titled exactly as the status bar names it, so the client's knownRooms map
@@ -1529,6 +1660,14 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
   lines.push(marks === 0
     ? "By the door, a stretch of wall has been plastered smooth and scratched with an empty frame — a chart waiting for a first hand."
     : `By the door, a wall chart scratched by many hands maps ${marks} of the shallow halls. ('study' it; 'carve' to add what you've walked)`);
+  // The board, beside the hatch. Only spoken of when it has something on it: an
+  // empty board is furniture, and the room already has enough of that.
+  const notices = boardLive(z).length;
+  if (notices > 0) {
+    lines.push(notices === 1
+      ? "One notice hangs on the board beside the hatch, pinned at a corner. ('board' to read it)"
+      : `The board beside the hatch carries ${notices} notices, pinned over one another. ('board' to read them)`);
+  }
   if (others.length === 0) {
     lines.push("You have it to yourself. The fire ticks.");
   } else {
@@ -1598,12 +1737,25 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     // the gate roomId is shared, but gatehouse folk are OUT of the world, so the
     // dungeon's own player-lookup skips them — the fire keeps its own roll-call.
     if (!target) return z.send(session, describeGatehouse(z, session));
+    // Yourself, same as out in the dark. It was the world's look that answered
+    // this and the world's look never runs in here.
+    if (/^(self|me|myself)$/i.test(target)) return z.send(session, selfExamine(z, session), "study");
     const who = gatehouseFolk(z).find((s) => s.pubkey !== session.pubkey && nameMatches(s.name, target));
     if (who) return z.send(session, describePlayer(z, session, who), "study");
     // Then your own things: at a gate the pack, lockbox and vault are all at your
     // elbow, so 'look flanged mace' reads it wherever you keep it.
     const item = await lookKeepingItem(z, session, target);
     if (item) return z.send(session, item, "study");
+    // THE ROOM'S OWN THINGS. The gatehouse describes a hatch, a bench, a
+    // brazier, a very old door and a wall chart, and until now not one of them
+    // could be looked at: every `look keeper` and `look door` fell through to
+    // the mouth and got said out loud instead (rome, 2026-08-09). A room that
+    // names a thing has to answer for it.
+    //
+    // Read AFTER your own kit on purpose, so a name you own always wins — a bar
+    // of forge iron in the vault answers `look forge` before the brazier does.
+    const fixture = gatehouseFixture(z, session, target);
+    if (fixture) return z.send(session, fixture, "study");
     // "look at his hair" — extra words that name nobody and nothing here weren't
     // a command. Say them.
     return gatehouseSay(z, session, text);
@@ -1618,6 +1770,13 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // (Out in the dark, carve still scratches a room and study still reads corpses.)
   if (v === "carve") return wallCarve(z, session);
   if (v === "study") return wallStudy(z, session);
+  // The board: the one thing said in here that outlives the saying. `post` and
+  // `tear` take arguments so they must stay OUT of GATEHOUSE_NOARG (an explicit
+  // command has to run, not be eaten as chat); bare `board` is IN it, so "board
+  // up that door" is a sentence and not a read.
+  if (v === "board") return boardRead(z, session);
+  if (v === "post") return boardPost(z, session, cmd.arg);
+  if (v === "tear") return boardTear(z, session, cmd.arg);
   // THE FIRE'S REST: 'rest' in here is its own kind — a deliberate doze by the
   // fire, truly safe, and wounds close at double time (FIRE_REST_REGEN_PER_TICK;
   // the dungeon's cold-stone rest keeps the slow rate and the open eye). Never

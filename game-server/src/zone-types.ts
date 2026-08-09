@@ -207,6 +207,7 @@ export interface SimState {
   inGatehouse?: string[]; // pubkeys standing INSIDE — a dropped socket must not throw you out the door
   inDen?: [string, string][]; // pubkey -> the holder whose den they stepped into (mig 172); a dropped socket must not put you out on the street
   wallMarks?: string[]; // roomIds carved onto the gatehouse wall chart — the players' own map of the shallow ring
+  board?: { name: string; words: string; at: number }[]; // the gatehouse board, oldest first — the one thing said here that outlives the saying
   stoneNames?: Record<string, { name: string; at: number }[]>; // milestone roomId -> the register cut into it, oldest first (the road's record of who walked it)
   cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills
   cacheRoom?: Record<string, string>; // cacheId -> its CURRENT room (roaming chests relocate on refill; unset = place on first access)

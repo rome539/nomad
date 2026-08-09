@@ -201,6 +201,9 @@ export class ZoneDO implements DurableObject {
   // so the wall cannot lie. It also cannot reach the deep: that stays the paid
   // map's territory, forever (gate.shallowRing).
   public wallMarks = new Set<string>();
+  // The gatehouse board, oldest first. The only place a player's words outlive
+  // the session they were said in (zone-data BOARD_*).
+  public board: { name: string; words: string; at: number }[] = [];
   // The road's own record, and a different thing from the wall: the wall holds
   // HALLS, this holds PEOPLE. Milestone roomId -> names cut into it, oldest
   // first (see MILESTONES; lore.milestoneCarve writes it).
@@ -491,6 +494,7 @@ export class ZoneDO implements DurableObject {
       this.inGatehouse = new Set(saved.inGatehouse ?? []);
       this.inDen = new Map(saved.inDen ?? []);
       this.wallMarks = new Set(saved.wallMarks ?? []);
+      this.board = saved.board ?? [];
       this.stoneNames = new Map(Object.entries(saved.stoneNames ?? {}));
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
       this.cacheRoom = new Map(Object.entries(saved.cacheRoom ?? {}));
@@ -763,6 +767,7 @@ export class ZoneDO implements DurableObject {
       inGatehouse: [...this.inGatehouse],
       inDen: [...this.inDen],
       wallMarks: [...this.wallMarks],
+      board: this.board,
       stoneNames: Object.fromEntries(this.stoneNames),
       cacheSpent: Object.fromEntries(this.cacheSpent),
       cacheRoom: Object.fromEntries(this.cacheRoom),
@@ -811,6 +816,7 @@ export class ZoneDO implements DurableObject {
     this.groundRolled.clear();
     this.groundHeart.clear();
     this.wallMarks.clear(); // a fresh world has fresh plaster — old room ids mean nothing here
+    this.board = [];         // a bare board: nobody has pinned anything to it yet
     this.stoneNames.clear(); // and fresh stone: the road has nobody's name on it yet
     this.cacheSpent.clear();
     this.cacheRoom.clear();
@@ -1410,6 +1416,13 @@ export class ZoneDO implements DurableObject {
       case "sheet": return verbs.cmdSheet(this, session);
       case "leaderboard": return verbs.cmdLeaderboard(this, session);
       case "carve": return verbs.cmdCarve(this, session, cmd.arg);
+      // The board hangs in the gatehouse and nowhere else. Out here these three
+      // point at the door rather than failing silently — a player who learned
+      // 'post' inside will try it outside exactly once.
+      case "board": case "post": case "tear":
+        return this.send(session, this.world!.entryRooms.has(session.roomId)
+          ? "The board is inside, by the keeper's hatch. ('in' through the door.)"
+          : "Nothing to pin anything to out here. The board hangs in the gatehouse, at any gate.");
       case "claim": return gate.cmdClaim(this, session, cmd.arg);
       case "stash": return gate.cmdStore(this, session, cmd.arg, "lockbox");
       case "unstash": return gate.cmdRetrieve(this, session, cmd.arg, "lockbox");

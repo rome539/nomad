@@ -4,6 +4,9 @@
 
 export type Verb =
   | "look"
+  | "board"
+  | "post"
+  | "tear"
   | "go"
   | "say"
   | "shout"
@@ -118,6 +121,12 @@ const VERB_ALIASES: Record<string, Verb> = {
   bandage: "bandage", bind: "bandage", dress: "bandage", bandages: "bandage",
   light: "light", kindle: "light", ignite: "light", torch: "light", lantern: "light",
   carve: "carve", scratch: "carve", etch: "carve", inscribe: "carve", write: "carve",
+  // The gatehouse board. `board` is bare-only in there (GATEHOUSE_NOARG), so
+  // "board up the door" stays a sentence; post/tear take arguments and must
+  // always command.
+  board: "board", noticeboard: "board", notices: "board",
+  post: "post", pin: "post", notice: "post",
+  tear: "tear", rip: "tear", unpin: "tear",
   claim: "claim", seal: "claim", extract: "claim", sign: "claim",
   stash: "stash", store: "stash", box: "stash",
   // THE DENS (mig 162). 'stow' moved off the lockbox and onto the den on
