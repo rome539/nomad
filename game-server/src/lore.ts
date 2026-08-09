@@ -12,7 +12,7 @@ import { uuid } from "./rng";
 import * as den from "./den";
 import { WOOD_QUARTERS, MOB_LORE } from "./detail";
 import {
-  MAP_ITEMS, DETAILED_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
+  MAP_ITEMS, DETAILED_MAP, FULL_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, ROOTED, FIREKEEPERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
@@ -108,10 +108,19 @@ export async function cmdMap(z: ZoneDO, session: Session, arg: string): Promise<
   }
   // Name one, or default to the best you hold (a true map over a crude one).
   let carried = arg ? maps.find((c) => nameMatches(z.world!.itemTemplates.get(c.itemId)!.name, arg)) : null;
-  if (!carried) carried = maps.find((c) => c.itemId === DETAILED_MAP) ?? maps[0];
-  const detailed = carried.itemId === DETAILED_MAP;
-  if (detailed) await inkRooms(z, session); // unrolling it sets down where you stand
+  // The finished chart outranks everything — there is nothing a surveyor's
+  // blank can tell you that it does not already say.
+  if (!carried) carried = maps.find((c) => c.itemId === FULL_MAP)
+    ?? maps.find((c) => c.itemId === DETAILED_MAP) ?? maps[0];
+  const whole = carried.itemId === FULL_MAP;
+  const detailed = whole || carried.itemId === DETAILED_MAP;
+  // A chart records nothing: it was finished before you were born, and walking
+  // around holding it does not teach it anything.
+  if (detailed && !whole) await inkRooms(z, session);
   sendMap(z, session, carried, detailed);
+  if (whole) {
+    return z.send(session, "You unfold the finished chart. All of it, at once — every hall and ride and stair, in one hand. Somebody walked this whole place with a chain and wrote down what they found, and then, apparently, stopped.");
+  }
   if (detailed) {
     const inked = session.mapInk?.get(carried.journalId!)?.size ?? 1;
     return z.send(session, inked <= 1
@@ -292,6 +301,12 @@ export function mapRegionOf(z: ZoneDO, id: string): string {
 // (not randomly) wrong, and it reveals nothing it can be trusted on.
 function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: boolean): void {
   const world = z.world!;
+  // A FINISHED CHART IS ALREADY EVERYWHERE. It carries no ink of its own — the
+  // rooms are not something it learns, they are what it IS — so it draws the
+  // whole grid and keeps drawing it as the world grows (mig 182). Everything
+  // below this line is the machinery for a map that has to be earned; a chart
+  // that was earned by somebody else, a long time ago, skips all of it.
+  const complete = carried.itemId === FULL_MAP;
   const rnd = detailed ? null : mulberry32(hashSeed(carried.rowId));
   // A bad hand slides both lie rates toward their worst rail; a careful one
   // toward the best. The hand is per-copy and permanent (see crudeHand).
@@ -304,7 +319,9 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
   // (communal signposts; the map must never hide the bank) and the ground
   // underfoot. A CRUDE map shows the gates, where you stand, and a coin-weighted
   // scatter of everything else, right or not.
-  const ink = detailed ? (session.mapInk?.get(carried.journalId ?? "") ?? new Set<string>()) : null;
+  const ink = complete
+    ? new Set<string>(roomIds)   // all of it, and it stays all of it
+    : detailed ? (session.mapInk?.get(carried.journalId ?? "") ?? new Set<string>()) : null;
   const shown = new Set<string>();
   for (const id of roomIds) {
     if (detailed) {

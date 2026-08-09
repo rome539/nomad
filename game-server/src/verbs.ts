@@ -26,7 +26,7 @@ import {
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
-  DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
+  BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
   DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP, FEN_ROOMS, FEN_CARRY_CAP,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
@@ -645,6 +645,22 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const exit = (world.exits.get(session.roomId) ?? []).find((e) => e.dir === dir);
   if (!exit) return z.send(session, "There is no way " + dir + " from here.");
 
+  // THE PACK HAS THE GAPS. Every wolf past the first stands in a way out, and
+  // that way out is shut while it does. Never all of them (ai.heldExits caps at
+  // one short), so this is always a narrowing and never a cage — but the door
+  // they left you is the door THEY chose.
+  const held = ai.heldExits(z, session);
+  const holder = held.get(dir);
+  if (holder) {
+    const open = (world.exits.get(session.roomId) ?? []).map((e) => e.dir).filter((d) => !held.has(d));
+    return z.send(session, [
+      `${cap(holder)} is standing in the gap ${dir}, side-on, not even looking at you. That way is shut.`,
+      open.length === 1
+        ? `They have left you ${open[0]}. That is not carelessness.`
+        : `Still open: ${open.join(", ")}.`,
+    ].join("\n"), "dmgin");
+  }
+
   // Held by a drowned thing: you can't just walk off. Trying is a struggle —
   // sometimes you tear loose and go, sometimes it drags you back.
   if (session.seizedBy) {
@@ -902,6 +918,11 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // prints — the name line paints gold even the very first time you see it.
   z.sendStatus(session);
   z.send(session, z.enterDescribe(session));
+  // A man at his fire notices you come in. Mostly he doesn't (BURNER_NOD_ODDS)
+  // — a gesture every time you walk through would be a machine, not a man.
+  if (z.roomHasFirekeeper(session.roomId) && chance(BURNER_NOD_ODDS)) {
+    z.send(session, pick(BURNER_NODS), "amb");
+  }
   // Carrying an open flame out under the downpour: the rain takes it.
   events.rainSoaksTorch(z, session);
   // Carrying one down into the deep's exhale: the cold current takes it.

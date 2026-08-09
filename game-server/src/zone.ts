@@ -92,7 +92,8 @@ import {
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
+  CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
@@ -173,6 +174,7 @@ export class ZoneDO implements DurableObject {
   // that grew must be re-read, never remembered.
   public works = new Map<string, number>();
   public nextWorksAt = 0;
+  private nextChainmanAt = 0; // the world next rolls whether the chainman turns up (0 = schedule on first tick)
   public worksPlan: WorksPlan | null = null;
   public traces = new Map<string, Trace[]>();
   public rot: RotEntry[] = [];
@@ -467,6 +469,7 @@ export class ZoneDO implements DurableObject {
       this.nextCarrionAt = saved.nextCarrionAt ?? 0;
       this.works = new Map(Object.entries(saved.works ?? {}));
       this.nextWorksAt = saved.nextWorksAt ?? 0;
+      this.nextChainmanAt = saved.nextChainmanAt ?? 0;
       this.traces = new Map(Object.entries(saved.traces ?? {}));
       this.rot = saved.rot ?? [];
       this.placedSpawns = new Set(saved.placedSpawns ?? []);
@@ -713,7 +716,7 @@ export class ZoneDO implements DurableObject {
       // time and the scoop's grace/telegraph windows read the real clock, so a
       // frozen world would yield one pickup for the whole gap either way.)
       if (HOARDERS.has(c.templateId)) ai.scavengerScoops(this, c);
-      const hunted = await ai.predation(this, c, now);
+      const hunted = (await ai.worryPrey(this, c, now)) || await ai.predation(this, c, now);
       if (!hunted && c.nextWanderAt <= now && (!tmpl.is_boss || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
           && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId) && !ROOTED.has(c.templateId)) {
         await ai.creatureMoves(this, c, now, "wander", true);
@@ -740,6 +743,7 @@ export class ZoneDO implements DurableObject {
       nextCarrionAt: this.nextCarrionAt,
       works: Object.fromEntries(this.works),
       nextWorksAt: this.nextWorksAt,
+      nextChainmanAt: this.nextChainmanAt,
       traces: Object.fromEntries(this.traces),
       rot: this.rot,
       placedSpawns: [...this.placedSpawns],
@@ -788,6 +792,7 @@ export class ZoneDO implements DurableObject {
     this.nextCarrionAt = 0;
     this.works.clear();
     this.nextWorksAt = 0;
+    this.nextChainmanAt = 0;
     this.traces.clear();
     this.rot = [];
     this.placedSpawns.clear();
@@ -1474,7 +1479,17 @@ export class ZoneDO implements DurableObject {
   /** Is somebody's fire burning here? (A living firekeeper, tending it.) */
   public roomHasFirekeeper(roomId: string): boolean {
     for (const c of this.creatures.values()) {
-      if (c.roomId === roomId && !c.hidden && FIREKEEPERS.has(c.templateId)) return true;
+      // THE CLAMP IS AT HIS HOME, NOT UNDER HIS FEET (rome, 2026-08-08, asking
+      // whether the burner's fire lights a dark room). It does — but the first
+      // cut read `c.roomId === roomId`, which made the fire follow the man
+      // around the wood. A clamp is a turfed earth mound banked over days. It
+      // does not walk. So it burns at the den he keeps, whether he is standing
+      // in it or off fetching wood a room away, and it goes out when he does.
+      //
+      // Which is the better mechanic anyway: the fire is a PLACE. Six of them,
+      // at rooms you can learn and come back to, in a region that is otherwise
+      // pitch dark half of every cycle. Kill him and the wood takes one back.
+      if (FIREKEEPERS.has(c.templateId) && (c.home ?? c.roomId) === roomId) return true;
     }
     return false;
   }
@@ -2796,6 +2811,17 @@ export class ZoneDO implements DurableObject {
         session.openedHeavy = false; // a heavy-opener that never resolved (fled, or the foe fell to something else) must not eat a swing in the next fight
         continue;
       }
+      // THE GAP CLOSING IS AN EVENT. Announced the beat it happens rather than
+      // left for you to find by walking into it — the whole value of the pack
+      // taking the doors is that you can watch it happen and decide early.
+      const heldNow = ai.heldExits(this, session).size;
+      if (heldNow > (session.wolvesHeld ?? 0)) {
+        this.send(session, heldNow === 1
+          ? "One of the wolves breaks off, trots wide, and plants itself in a gap. It has stopped trying to bite you."
+          : `Another one peels away and takes a second way out. ${heldNow} of the doors are theirs now.`, "dmgin");
+      }
+      session.wolvesHeld = heldNow;
+
       // Rung senseless last beat: your swing is gone. It clears now — one hit,
       // one lost round, same as when you stun a mob.
       if (session.stunned) {
@@ -3185,6 +3211,9 @@ export class ZoneDO implements DurableObject {
         // in the fight, which is what makes a slow kill expensive: the pack is
         // the price of taking too long (ai.packCall).
         ai.packCall(this, creature, now);
+        // ...unless the cantor has it. A held thing does not swing: the song
+        // outranks the fight, which is exactly what makes the cantor a lever.
+        if (ai.heldBySong(creature, now)) continue;
         // A runner bolts the instant it has the initiative — every time, at any
         // health. You already swung this tick (the living go first), so your
         // blow lands as it breaks for the door; then it's gone and you give
@@ -3533,6 +3562,32 @@ export class ZoneDO implements DurableObject {
           : "Dawn breaks over the grounds — the dark thins and lifts.", "evt");
       }
     }
+    // ...and on a full moon the wood answers it. Only at moonrise, only from
+    // things with a voice, and it changes nothing at all.
+    if (this.lastNightPhase !== undefined && this.lastNightPhase !== nightNow && nightNow && isFullMoon(now)) {
+      const sang = new Set<string>();
+      for (const c of this.creatures.values()) {
+        if (!PACK_CALLERS.has(c.templateId) || c.asleep || c.target) continue;
+        if (sang.has(c.roomId) || !chance(MOON_HOWL_ODDS)) continue;
+        sang.add(c.roomId);
+        this.roomFeed(c.roomId, "It puts its head back and howls at the white of it — long, and not at anything.", undefined, false, "evt");
+        this.roomSound(c.roomId, "A howl goes up {dir}, and hangs.");
+      }
+      if (sang.size) {
+        this.roomFeedBands(SURFACE_BANDS, sang.size > 2
+          ? "The howling starts somewhere west and is answered, and answered again, until the whole wood is at it."
+          : "Somewhere out under the moon, something howls, and is answered.", "evt");
+      }
+    }
+    // THE LAST WATCHMAN CALLS THE HOUR. He has walked the high circuit since
+    // before anything here died, and at nightfall he reports the watch — to a
+    // fortress with nobody left in it to be reassured. Only while he lives, and
+    // only to the fortress: the wood has its own voice for the dark (the howl
+    // above), and this one is a man's, and worse for it.
+    if (this.lastNightPhase !== undefined && this.lastNightPhase !== nightNow && nightNow) {
+      const watch = [...this.creatures.values()].find((c) => c.templateId === "last-watchman" && !c.target);
+      if (watch) this.roomFeedBands(FORTRESS_BANDS, pick(WATCH_CALLS), "evt");
+    }
     this.lastNightPhase = nightNow;
 
     // The keeper's shelves breathe: restocks come in, and every few hours an
@@ -3542,6 +3597,49 @@ export class ZoneDO implements DurableObject {
     // A gatehouse shuts for works now and then, and opens again when they're
     // done. The gate ROOM is never touched — only what's behind the door.
     works.tickWorks(this, now);
+
+    // ---- THE CHAINMAN COMES, AND THE CHAINMAN GOES ----
+    // A world-roll rather than a den, because he can turn up ANYWHERE. Same
+    // shape as the hammerstone: check every few hours, and mostly nothing.
+    if (!this.nextChainmanAt) {
+      this.nextChainmanAt = now + randInt(CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS);
+    } else if (now >= this.nextChainmanAt) {
+      this.nextChainmanAt = now + randInt(CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS);
+      const already = [...this.creatures.values()].some((c) => c.templateId === CHAINMAN_TMPL);
+      const tmpl = world.mobTemplates.get(CHAINMAN_TMPL);
+      if (!already && tmpl && chance(CHAINMAN_ODDS)) {
+        // Anywhere at all — every room in the world is a candidate. He is
+        // measuring the place; he does not care which part of it he is in.
+        const ids = [...world.rooms.keys()];
+        const roomId = ids[randInt(0, ids.length - 1)];
+        const c: Creature = {
+          id: uuid(),
+          templateId: CHAINMAN_TMPL,
+          roomId,
+          hp: tmpl.max_hp,
+          hunger: 0,
+          grudges: [],
+          nextWanderAt: now + randInt(20_000, 60_000),
+          target: null,
+          carries: this.rollCarry(tmpl),
+          home: roomId,
+          // THE THING NOTHING ELSE HAS: a time he is done here.
+          leavesAt: now + randInt(CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS),
+        };
+        this.creatures.set(c.id, c);
+        this.refreshRoomCtx(roomId);
+      }
+    }
+    // ...and anything with somewhere else to be, goes. Not killed, not
+    // despawned in front of you if it can be helped: it walks off, and the line
+    // only prints for whoever was standing there to watch it happen.
+    for (const c of [...this.creatures.values()]) {
+      if (!c.leavesAt || now < c.leavesAt || c.target) continue;
+      const seen = [...this.sessions.values()].some((s) => s.roomId === c.roomId && !this.outOfWorld(s));
+      if (seen) this.roomFeed(c.roomId, pick(CHAINMAN_LEAVES), undefined, false, "amb");
+      this.creatures.delete(c.id);
+      this.refreshRoomCtx(c.roomId);
+    }
 
     // The hammerstone is DICE now (the floor-renewal law): the world checks
     // itself every few hours and only sometimes coughs one up, into a random
@@ -3718,6 +3816,10 @@ export class ZoneDO implements DurableObject {
         ai.waters(this, creature, now);
         // ...and the unseen things shift their ambushes to where the feet go.
         ai.lurkerDrifts(this, creature, now);
+        // The cantor opens its jaw and the dead stop where they stand.
+        ai.cantorSings(this, creature, now);
+        // ...and the rag-and-bone man decides he likes the look of your pack.
+        ai.hoarderCovets(this, creature, now);
         // A brood-mother swells the nest while she's left alone.
         if (BROODERS.has(creature.templateId)) ai.broodBirths(this, creature, now);
         // The bone-country remembers its dead: a hollow thing, idle with a living
@@ -3726,7 +3828,9 @@ export class ZoneDO implements DurableObject {
         if (creature.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, creature, false);
         // The food web: a predator turns on weaker prey sharing its room. If it
         // strikes, that's its action this tick — it doesn't also wander.
-        const hunted = await ai.predation(this, creature, now);
+        // A grip already taken outranks looking for a fresh one — it worries
+        // what it has until that kills or slips (ai.worryPrey).
+        const hunted = (await ai.worryPrey(this, creature, now)) || await ai.predation(this, creature, now);
         if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)) {
           // Never settles while there's someone to run from — it keeps moving,
           // room to room, and you only land a blow the tick you have it cornered.
@@ -4276,6 +4380,16 @@ export class ZoneDO implements DurableObject {
   }
 
   private async onCreatureDeath(killer: Session, creature: Creature, tmpl: MobTemplate, killLine?: string, vital = false): Promise<void> {
+    // KILL THE SINGER MID-SONG AND THE SONG DOES NOT END — it stops, and the
+    // things standing to it are never told. They hold the pose they were in,
+    // facing a silence, until something else moves them. (The held clock is
+    // left exactly where it was on purpose: it runs out on its own eventually,
+    // the way everything down here does, without anyone deciding it should.)
+    ai.releaseHold(this, creature); // whatever had it, or what it had, lets go
+    if (creature.templateId === "marrow-cantor" && creature.singUntil && Date.now() < creature.singUntil) {
+      creature.singUntil = undefined;
+      this.roomFeed(creature.roomId, pick(CANTOR_CUT_LINES), undefined, false, "evt");
+    }
     // A revenant doesn't die the first time: it rises weakened and comes again,
     // up to its limit (most rise once; the cairn-wight twice). Only the final
     // fall is real — so bail out of death entirely while it still has a rise.
@@ -4839,7 +4953,18 @@ export class ZoneDO implements DurableObject {
     }
 
     const exits = world.exits.get(room.id) ?? [];
-    lines.push(exits.length ? `Exits: ${exits.map((e) => e.dir).join(", ")}.` : "There is no way out.");
+    // THE PACK'S GAPS ARE MARKED. A refusal you only discover by walking into it
+    // is a trap; a line that shows you which ways are shut is a DECISION. You
+    // can see the shape of what they have done to the room before you commit.
+    const heldWays = ai.heldExits(this, session);
+    lines.push(exits.length
+      ? `Exits: ${exits.map((e) => heldWays.has(e.dir) ? `${e.dir} (held)` : e.dir).join(", ")}.`
+      : "There is no way out.");
+    if (heldWays.size) {
+      lines.push(heldWays.size === 1
+        ? "One of them has put itself in a gap and stopped moving. They are closing the ways out."
+        : `They have taken ${heldWays.size} of the ways out and are working on the rest.`);
+    }
 
     lines.push(...this.traceLines(room.id, Date.now()));
 

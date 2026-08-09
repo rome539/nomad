@@ -60,6 +60,7 @@ export interface Session {
   keeperDueAt?: number; // ms the keeper gets round to saying his one line this visit; 0/unset = already said it, or you aren't behind a door
   lastFishAt?: number; // ms of the last fishing cast (a short patience between casts)
   lastActiveAt: number; // ms of the last real frame (or connect) — the tick's idle sweep sleeps sockets silent past IDLE_TIMEOUT_MS. Rides the socket attachment as `la` so a hibernation rebuild doesn't read a parked socket as fresh.
+  wolvesHeld?: number; // how many exits the pack had taken last beat — so the CLOSING is announced, not just discovered
   rainPhaseSeen?: string; // last rain phase this session was shown the violet line for — describeRoom plays catch-up on a phase it hasn't announced to THIS player yet (walked in after it started), never repeats one already shown
 }
 
@@ -112,6 +113,13 @@ export interface Creature {
   wateringTo?: string; // hyenas: the water room it's padding toward (wander steers by roomDist)
   avoids?: { roomId: string; until: number }[]; // place-fear: rooms this one steers around (a rat's bad memory, a thief's warning)
   calledTo?: string; // call-bus guard: it was SUMMONED here — it never calls from this room (a call must never trigger a call)
+  leavesAt?: number; // TRANSIENT creatures have somewhere else to be: the ms they walk off the map for good (the chainman)
+  holding?: string;  // creature id this predator has by the throat (a kill in progress, one room, no pursuit)
+  heldBy?: string;   // ...and the other end of that grip
+  covets?: string;      // rag-and-bone: pubkey of the wanderer whose kit he has fixed on
+  covetUntil?: number;  // ...and when he loses interest
+  singUntil?: number; // ms the marrow-cantor's note runs to; the hollow in earshot hold until it stops
+  heldUntil?: number; // ms a hollow thing stands frozen to that note (cleared early only by the singer dying — then it just... stays)
   repositionAt?: number; // lurkers: next time it re-reads the traffic and shifts its ambush
   hurtBy?: string[]; // BOSSES only: every pubkey whose blow drew blood — when the boss falls, all of them share the horror on their sheet (assist credit; the kill itself stays the killer's)
 }
@@ -204,6 +212,7 @@ export interface SimState {
   nextSurfaceAt?: number; // ms epoch the deep next surfaces a dweller (corpse-key minting; only while the deep door is sealed)
   events?: Record<string, EventState>; // room events mid-arc (rain and its kin) — the sky survives hibernation
   fishStock?: Record<string, { left: number; at: number }>; // per-water catch budget: what's left, and when a fished-out pool forgets (survives deploys — no free refill)
+  nextChainmanAt?: number; // ms the world next rolls whether the chainman turns up somewhere
   works?: Record<string, number>; // gate roomId -> ms epoch its door reopens (the gatehouse shut for works; the gate ROOM is untouched)
   nextWorksAt?: number; // ms epoch the world next considers shutting a gatehouse
 }

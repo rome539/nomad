@@ -9,6 +9,7 @@ import * as pvp from "./pvp";
 import * as gate from "./gate";
 import * as den from "./den";
 import * as works from "./works";
+import * as ai from "./ai";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
@@ -119,7 +120,12 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   const exitsHere = [...(world.exits.get(session.roomId) ?? [])].sort(
     (a, b) => (DIR_ORDER[a.dir] ?? 9) - (DIR_ORDER[b.dir] ?? 9),
   );
-  for (const e of exitsHere) suggest.push(`go ${e.dir}`);
+  // ...minus the ones the pack is standing in. A chip that refuses is a wasted
+  // tap in the middle of a fight you are losing; the room text already names
+  // the held gaps, so the chip row shows what is actually still open (ai.heldExits
+  // never takes the last one, so this can never leave you with no exit chips).
+  const shutWays = ai.heldExits(z, session);
+  for (const e of exitsHere) if (!shutWays.has(e.dir)) suggest.push(`go ${e.dir}`);
   // Combat-legal at the cost of an opening: stoop for a fallen weapon, eat,
   // or swap your steel (armor on/off is refused mid-fight, so no armor chip).
   // A tide-drowned floor offers no get chips (cmdGet refuses them) — the

@@ -15,6 +15,10 @@ import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, DRINKERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_MS, HOARD_TRAIL_MS, HOARD_SPOOK_MS,
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
+  HOARD_COVET_RARITY, HOARD_COVET_ODDS, HOARD_COVET_MS, HOARD_COVET_LINES, RARITY_RANK,
+  PACK_HOLDERS, PREY_BREAK_ODDS, PREY_WORRY_MULT, HOLD_LINES, BREAK_LINES,
+  CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
+  DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
@@ -233,7 +237,28 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     }
     // The sleeper reads plainly (legibility law): what you do with the window
     // is your call — walk past soft, or spend the one heavy blow it grants.
+    if (creature.heldBy) return "down and thrashing, with something's teeth in it";
+    if (creature.holding) {
+      const v = z.creatures.get(creature.holding);
+      const vt = v && z.world!.mobTemplates.get(v.templateId);
+      return vt ? `stood over ${vt.name}, killing it` : "killing something on the ground";
+    }
     if (creature.asleep) {
+      // THE HEAP. Things that den together sleep together — walk into the Wolf
+      // Earth and it is not three wolves, it is one animal with several heads.
+      // Read from the room rather than the template, so it is true wherever it
+      // happens and nowhere it doesn't: two of a kind, asleep, same floor.
+      const line = z.variantBase.get(creature.templateId) ?? creature.templateId;
+      let alsoDown = 0;
+      for (const c of z.creatures.values()) {
+        if (c.id === creature.id || c.roomId !== creature.roomId || !c.asleep) continue;
+        if ((z.variantBase.get(c.templateId) ?? c.templateId) === line) alsoDown++;
+      }
+      if (alsoDown > 0) {
+        return alsoDown > 1
+          ? "asleep in the heap, so tangled together you cannot tell where one stops"
+          : "asleep back-to-back with the other, breathing in the same slow time";
+      }
       return SCAVENGERS.has(creature.templateId)
         ? "stretched out asleep beside the stripped bones of its meal, flank rising slow"
         : creature.templateId === "cutpurse"
@@ -390,6 +415,7 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       // room told you it was asleep — the flag this loop actually checked never
       // applied to it, so a standing grudge went straight through.
       if (SENTINELS.has(creature.templateId) ? !z.sentinelAwake(creature) : creature.asleep) continue;
+      if (heldBySong(creature, now)) continue; // standing to the note; it will not come for you until it ends
       const holdsGrudge = remembers(z, creature, session.pubkey, now);
       const guards = hyenaGuardsMeal(z, creature);
       // A hostile guardian (AGGRESSIVE) needs no grudge — it bars its post to
@@ -695,6 +721,8 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // A summoned hyena that walks OFF the dinner floor may laugh again someday;
     // while it stood there, it never re-called (a call must not trigger a call).
     if (creature.calledTo && from === creature.calledTo) creature.calledTo = undefined;
+    // Arriving where another of the watch already stands: the drill fires.
+    drill(z, creature, now);
     // A watering run keeps a brisk pace — minutes to the hole, not an afternoon.
     if (creature.wateringTo) creature.nextWanderAt = now + randInt(8000, 25_000);
     // The calls: breaking from a PLAYER, prey squeals the warren away and a
@@ -959,10 +987,67 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.");
       z.refreshRoomCtx(creature.roomId);
     } else {
-      // It lived — it bolts. A scrap, not a slaughter.
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} lunges at ${vt.name}, which breaks and runs.`, undefined, false);
-      await creatureMoves(z, victim, now, "flee", false);
+      // IT LIVED — SO IT IS HELD. This used to bolt (a scrap, not a slaughter),
+      // which is precisely why nothing bigger than a rat ever died out here.
+      // The grip keeps them both in this room until it kills or it slips.
+      creature.holding = victim.id;
+      victim.heldBy = creature.id;
+      victim.nextWanderAt = Math.max(victim.nextWanderAt, now + 60_000);
+      creature.nextWanderAt = Math.max(creature.nextWanderAt, now + 60_000);
+      z.roomFeed(creature.roomId,
+        pick(HOLD_LINES).replace("{a}", cap(tmpl.name)).replace("{b}", vt.name), undefined, false);
+      z.roomSound(creature.roomId, "Something is being killed {dir}, and taking its time about it.");
     }
+    return true;
+  }
+
+/** Let go, whatever the reason — death, escape, or the pair being separated. */
+export function releaseHold(z: ZoneDO, creature: Creature): void {
+  if (creature.holding) {
+    const v = z.creatures.get(creature.holding);
+    if (v && v.heldBy === creature.id) v.heldBy = undefined;
+    creature.holding = undefined;
+  }
+  if (creature.heldBy) {
+    const p = z.creatures.get(creature.heldBy);
+    if (p && p.holding === creature.id) p.holding = undefined;
+    creature.heldBy = undefined;
+  }
+}
+
+  // WORRYING IT. A predator with hold of something keeps killing it where it
+  // stands, and the held thing keeps trying the grip. One room, no pursuit —
+  // and a wanderer can walk in on the middle of it.
+export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Promise<boolean> {
+    if (!creature.holding) return false;
+    const victim = z.creatures.get(creature.holding);
+    // Lost it: dead, gone, or something dragged one of them elsewhere.
+    if (!victim || victim.roomId !== creature.roomId || creature.target) {
+      releaseHold(z, creature);
+      return false;
+    }
+    const world = z.world!;
+    const tmpl = world.mobTemplates.get(creature.templateId)!;
+    const vt = world.mobTemplates.get(victim.templateId)!;
+    // It tries the grip first — the bite it is about to take is the one it
+    // escapes, or doesn't.
+    if (chance(PREY_BREAK_ODDS)) {
+      releaseHold(z, creature);
+      z.roomFeed(creature.roomId,
+        pick(BREAK_LINES).replace("{a}", tmpl.name).replace("{b}", cap(vt.name)), undefined, false);
+      await creatureMoves(z, victim, now, "flee", false);
+      return true;
+    }
+    victim.hp -= Math.max(1, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) * PREY_WORRY_MULT));
+    if (victim.hp > 0) return true;
+    releaseHold(z, creature);
+    preyFalls(z, victim, vt);
+    creature.hunger = 0;
+    creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
+    if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} finishes it, and stands over what is left.`, undefined, false);
+    z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.");
+    z.refreshRoomCtx(creature.roomId);
     return true;
   }
 
@@ -971,6 +1056,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
   // (emergent loot to recover), a corpse trace feeds the scavengers, and
   // migration refills it like any other death.
 function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate): void {
+    releaseHold(z, victim); // it may have had something by the throat itself
     for (const s of z.sessions.values()) {
       if (s.target === victim.id) s.target = null;
       if (s.seizedBy === victim.id) s.seizedBy = undefined;
@@ -1443,6 +1529,126 @@ export function alarmBark(z: ZoneDO, roomId: string, now: number, caller: Creatu
       }
     }
   }
+
+  // HE WANTS IT. A hoarder sharing a room with somebody carrying something rare
+  // fixes on it and follows for a while. He never takes it — he is not a thief
+  // and he is not hostile — he just comes along, which in a full-loot game is
+  // its own kind of pressure. Reuses `curious` (the drift-toward machinery) so
+  // he trails rather than teleports, and `calledTo` so nothing else calls him.
+export function hoarderCovets(z: ZoneDO, creature: Creature, now: number): void {
+    if (!HOARDERS.has(creature.templateId) || creature.target || creature.asleep) return;
+    // Already following someone: keep on while the clock runs and they're near.
+    if (creature.covetUntil && now < creature.covetUntil) {
+      const mark = [...z.sessions.values()].find((s) => s.pubkey === creature.covets);
+      if (mark && !z.outOfWorld(mark) && mark.roomId !== creature.roomId) {
+        creature.curious = mark.roomId;
+        creature.nextWanderAt = Math.min(creature.nextWanderAt, now + randInt(3000, 9000));
+      }
+      return;
+    }
+    creature.covetUntil = undefined;
+    creature.covets = undefined;
+    const here = [...z.sessions.values()].find(
+      (s) => s.roomId === creature.roomId && !z.outOfWorld(s) && s.hp > 0
+        && s.items.some((c) => (RARITY_RANK[z.world!.itemTemplates.get(c.itemId)?.rarity ?? "common"] ?? 0) >= HOARD_COVET_RARITY),
+    );
+    if (!here) return;
+    if (!chance(HOARD_COVET_ODDS)) return;
+    creature.covets = here.pubkey;
+    creature.covetUntil = now + HOARD_COVET_MS;
+    z.send(here, pick(HOARD_COVET_LINES), "amb");
+  }
+
+  // THE CANTOR'S SONG. Rolled on an idle cantor; holds every hollow thing in the
+  // room and the rooms next door. Nothing else in the deep can stop a bone-knight
+  // mid-stride, including you.
+export function cantorSings(z: ZoneDO, creature: Creature, now: number): void {
+    if (creature.templateId !== "marrow-cantor" || creature.asleep) return;
+    if (creature.singUntil && now < creature.singUntil) return;   // mid-verse
+    if (creature.singUntil && now >= creature.singUntil) {        // just finished
+      creature.singUntil = undefined;
+      z.roomFeed(creature.roomId, pick(CANTOR_END_LINES), undefined, false, "evt");
+      return;
+    }
+    if (!chance(CANTOR_SING_ODDS)) return;
+    creature.singUntil = now + CANTOR_SONG_MS;
+    z.roomFeed(creature.roomId, pick(CANTOR_SONG_LINES), undefined, false, "evt");
+    z.roomSound(creature.roomId, "One held note comes {dir}, and does not waver.");
+    let held = 0;
+    for (const c of z.creatures.values()) {
+      if (c.id === creature.id || !HOLLOW.has(c.templateId)) continue;
+      const near = c.roomId === creature.roomId
+        || (z.world!.exits.get(c.roomId) ?? []).some((e) => e.to_room === creature.roomId);
+      if (!near) continue;
+      c.heldUntil = creature.singUntil;
+      c.nextWanderAt = Math.max(c.nextWanderAt, creature.singUntil);
+      held++;
+    }
+    if (held) z.roomFeed(creature.roomId, pick(CANTOR_HELD_LINES), undefined, false, "evt");
+  }
+
+/** Is this thing frozen to the cantor's note right now? */
+export function heldBySong(creature: Creature, now: number): boolean {
+  return !!creature.heldUntil && now < creature.heldUntil;
+}
+
+  // THE DRILL. Two hollow soldiers in a room together do what they were trained
+  // to do, at each other, forever. Rolled when one ARRIVES somewhere the other
+  // already is, so it reads as a meeting rather than a thing the room does.
+  // Silent unless somebody is standing there to see it — the fortress does not
+  // perform for an empty hall (it just goes on doing it).
+export function drill(z: ZoneDO, creature: Creature, now: number): void {
+    void now;
+    if (!DRILL_SOLDIERS.has(creature.templateId) || creature.target) return;
+    if (!playerPresent(z, creature.roomId)) return;
+    const other = [...z.creatures.values()].find(
+      (c) => c.id !== creature.id && c.roomId === creature.roomId && !c.target && !c.asleep
+        && DRILL_SOLDIERS.has(c.templateId),
+    );
+    if (!other) return;
+    if (!chance(DRILL_ODDS)) return;
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    const ot = z.world!.mobTemplates.get(other.templateId)!;
+    // Rank is answered, not exchanged: the lesser one gives way.
+    const iAmRank = DRILL_RANK.has(creature.templateId);
+    const theyAreRank = DRILL_RANK.has(other.templateId);
+    const line = iAmRank !== theyAreRank
+      ? pick(DRILL_RANK_LINES)
+          .replace("{a}", cap(theyAreRank ? tmpl.name : ot.name))
+          .replace("{b}", theyAreRank ? ot.name : tmpl.name)
+      : pick(DRILL_LINES).replace("{a}", cap(tmpl.name)).replace("{b}", ot.name);
+    z.roomFeed(creature.roomId, line, undefined, false, "amb");
+  }
+
+/**
+ * WHICH WAYS OUT THE PACK HAS TAKEN. Every wolf in the room BEYOND THE FIRST
+ * puts itself in a gap: two wolves hold one exit, three hold two, and so on.
+ * Capped at one short of the room's exits so a way out always exists.
+ *
+ * Assignment is stable, not random — exits sorted, wolves sorted by id — so the
+ * same gaps stay held for the length of a fight instead of shuffling under you
+ * every time you look. Only wolves ENGAGED with you count; a wolf asleep in the
+ * corner is not blocking anything.
+ */
+export function heldExits(z: ZoneDO, session: Session): Map<string, string> {
+  const out = new Map<string, string>();
+  const holders: Creature[] = [];
+  for (const c of z.creatures.values()) {
+    if (c.roomId !== session.roomId || !PACK_HOLDERS.has(c.templateId)) continue;
+    if (c.target !== session.pubkey || c.asleep || c.heldBy) continue;
+    holders.push(c);
+  }
+  if (holders.length < 2) return out;
+  const exits = (z.world!.exits.get(session.roomId) ?? []).map((e) => e.dir).sort();
+  if (exits.length < 2) return out; // a dead end has nothing to take
+  const take = Math.min(holders.length - 1, exits.length - 1);
+  holders.sort((a, b) => (a.id < b.id ? -1 : 1));
+  for (let i = 0; i < take; i++) {
+    const tmpl = z.world!.mobTemplates.get(holders[i].templateId)!;
+    out.set(exits[i], tmpl.name);
+  }
+  return out;
+}
 
   // THE PACK CALL. A wolf with hold of somebody throws its head up and calls,
   // and one packmate next door comes. Rolled every round it is still fighting,

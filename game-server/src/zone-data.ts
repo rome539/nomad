@@ -374,7 +374,30 @@ export const NO_SALVAGE = new Set(["rusted-pick"]);
 // Knowledge as loot (see migration 029). Read by id, like the scrap above.
 export const DETAILED_MAP = "surveyor-map";
 export const CRUDE_MAP = "crude-map";
-export const MAP_ITEMS = new Set([DETAILED_MAP, CRUDE_MAP]);
+// A chart somebody already finished. Holds no map_ink at all — the renderer
+// treats it as complete, so it STAYS complete as the world grows (mig 182).
+export const FULL_MAP = "finished-chart";
+export const MAP_ITEMS = new Set([DETAILED_MAP, CRUDE_MAP, FULL_MAP]);
+// ---- THE CHAINMAN (mig 182) ----
+// A world-roll, not a den: he can turn up ANYWHERE, so he has no mob_spawns
+// rows and arrives on the hammerstone's pattern — the world checks every few
+// hours and mostly nothing happens.
+//
+// AND HE LEAVES. Nothing else in this world does; everything that arrives stays
+// until something kills it. He has somewhere else to be, and goes whether or not
+// you ever found him. That is the whole of his difficulty — he is not hard to
+// kill, he is hard to BE THERE FOR.
+export const CHAINMAN_TMPL = "the-chainman";
+export const CHAINMAN_ROLL_MIN_MS = 3 * 3_600_000; // the world checks every 3-6h...
+export const CHAINMAN_ROLL_MAX_MS = 6 * 3_600_000;
+export const CHAINMAN_ODDS = 0.3;                  // ...and 3 in 10 put him somewhere: ~1.3 visits a day
+export const CHAINMAN_STAY_MIN_MS = 25 * 60_000;   // he works that ground 25-45 min, then moves on
+export const CHAINMAN_STAY_MAX_MS = 45 * 60_000;
+export const CHAINMAN_LEAVES = [
+  "The chainman coils his chain, links it over his shoulder, writes one last thing down, and walks off without saying goodbye.",
+  "The chainman closes his satchel, looks once at the way he came, and goes the other way.",
+  "The chainman finishes his count, marks it, and is walking before he has the pencil away.",
+];
 export const JOURNAL_ITEM = "hunters-journal";
 // Fishing: only off the dry shelf of the Pocket of Air, dropping a line into
 // the flood below (where the water — and what swims in it — can't reach you).
@@ -1189,6 +1212,24 @@ export const HOARD_CARRY_CAP = 8;   // the deep pocket (a hyena's jaws hold 3)
 // silts up into a warning — something big walks here, and it has been busy.
 // It never sheds below HOARD_KEEP, so killing it is always worth the fight.
 export const HOARD_KEEP = 4;
+// HE NOTICES WHAT YOU ARE CARRYING. The rag-and-bone man is the game's only
+// hoarder and he hoards PASSIVELY — he picks things off the floor and never
+// once looks at the person walking past him with something better. He is not
+// going to rob you (he is not a thief, and he is not hostile until you make
+// him). He is going to WANT it, visibly, and follow you a little way while he
+// thinks about it, which is worse.
+export const HOARD_COVET_RARITY = 2;    // rare and up — RARITY_RANK, so rare/epic/legendary
+export const HOARD_COVET_ODDS = 0.25;   // per idle tick sharing a room with someone carrying one
+export const HOARD_COVET_MS = 90_000;   // how long he trails it before he loses interest
+export const HOARD_COVET_LINES = [
+  "The rag-and-bone man's head comes round, and stays round. He is not looking at you.",
+  "The rag-and-bone man goes very still, and his eyes go to what you are carrying, and stay there.",
+  "The rag-and-bone man sucks his teeth, once, looking at your hands, and says nothing at all.",
+];
+export const HOARD_TRAIL_LINES = [
+  "The rag-and-bone man comes in after you, unhurried, and takes up a position by the wall.",
+  "The rag-and-bone man arrives behind you, sack shifting, and does not explain himself.",
+];
 // Shed rates are WALL-CLOCK intervals, not per-beat odds, and that distinction
 // is load-bearing (rome caught this 2026-08-01). The scoop runs on two different
 // clocks: the live tick every TICK_MS (2s) for anything inside the SIM_RADIUS
@@ -1473,6 +1514,95 @@ export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters nex
 // that was itself summoned, and the call rides its own channel so nothing
 // cascades.
 export const PACK_CALLERS = new Set(["grey-wolf", "dire-wolf", "masterless-dog", "lead-dog"]);
+// WOLVES CUT THE LINES OF RETREAT (rome, 2026-08-08: "the more you fight
+// together, they start closing room exits — 2 wolves equals 1 exit closed, 3 is
+// 2 exits closed").
+//
+// This is what a pack IS. Not more teeth — fewer ways out. One wolf is a fight
+// you can leave; four is a room with one door, and they picked which one.
+// Every other threat in the game scales by hurting you harder; this one scales
+// by taking the exits, which in a full-loot game where flight is the only out
+// is a completely different kind of frightening.
+//
+// THE LAW: never the last way out. Held exits are capped at (exits - 1), so
+// there is ALWAYS somewhere to run — they are making the choice expensive, not
+// making it for you. Same rule as the gatehouse works: never the last door.
+//
+// Only wolves. Dogs call their pack but do not have the discipline for this.
+export const PACK_HOLDERS = new Set(["grey-wolf", "dire-wolf"]);
+// THE MOON GETS AN ANSWER. isFullMoon() has only ever decided whether the
+// grounds stay lit — every sixth night the dark does not come, and nothing in
+// the world remarks on it. The things that call already have a voice
+// (PACK_CALLERS); on that one night in six they use it for nothing, at nobody,
+// and every wolf in the wood answers every other. It buys no advantage and
+// costs nothing. It is the world being somewhere.
+export const MOON_HOWL_ODDS = 0.5; // per calling creature at moonrise — a chorus, not a roll-call
+// THE BURNER LOOKS UP. He is the one thing in the wood that is not hostile and
+// not a shopkeeper, and until now he ignored a person walking into his clearing
+// completely. He is not going to talk to you. He is going to notice you, and go
+// back to work — which is more than the wood does otherwise. Same shape as the
+// keeper's nod at the hatch, dialled quieter: mostly nothing.
+// THE HOLLOW KEEP THE WATCH. Wardens and bone-knights patrol the same halls and
+// have passed each other for centuries without a flicker. They were soldiers.
+// Soldiers salute, stand aside for rank, and change guard — and none of it has
+// meant anything since whatever killed them. That is the whole point: the drill
+// outlived the reason for it, and nobody has told them.
+//
+// Costs nothing, changes nothing, and is only ever seen by someone standing in
+// the room when two of them happen to meet.
+export const DRILL_ODDS = 0.35;         // when two hollow soldiers share a room
+export const DRILL_RANK = new Set(["warden-captain", "forgotten-king", "marrow-king"]); // stood aside for
+export const DRILL_SOLDIERS = new Set(["warden", "warden-surface", "warden-captain", "bone-knight", "last-watchman"]);
+export const DRILL_LINES = [
+  "{a} and {b} pass each other, and each brings a fist to its chestplate. Neither slows. Neither looks.",
+  "{a} steps aside to let {b} by, boots grinding a quarter-turn on the stone, and falls back into step behind nothing.",
+  "{a} halts, plants its spear, and holds until {b} has gone by. Then it walks on.",
+  "{a} and {b} come level, exchange some small motion of the head that must once have been a word, and part.",
+];
+export const DRILL_RANK_LINES = [
+  "{b} passes, and {a} goes rigid against the wall — helm up, eyes on nothing, holding the salute long after there is anyone to hold it for.",
+  "{a} drops to one knee as {b} comes through, and stays down until the sound of it is gone.",
+];
+// THE CANTOR SINGS. He is called a cantor and has never once sung. When he
+// does, every hollow thing that can hear him stops where it stands and holds
+// until he is done — the only thing in the deep that outranks whatever they
+// were doing, including coming for you.
+//
+// Which makes him a lever you can pull: a room full of bone-knights goes still
+// for the length of a verse. And it makes him a target — kill him mid-song and
+// they do not resume. They just stay stopped, until something else moves them.
+export const CANTOR_SING_ODDS = 0.03;   // per idle tick; a song is an event, not a soundtrack
+export const CANTOR_SONG_MS = 24_000;   // six combat beats of standing still
+export const CANTOR_SONG_LINES = [
+  "The marrow-cantor opens its jaw wider than a jaw goes and begins to sing — no words, one note, held far past any breath.",
+  "The cantor lifts its head and lets out a single sustained tone, and the stone takes it up and will not let it go.",
+];
+export const CANTOR_HELD_LINES = [
+  "Every dead thing in the room stops mid-stride and stands, faces turned toward the sound.",
+  "The hollow around you go still as furniture, heads coming round to the note like flowers to a light.",
+];
+export const CANTOR_END_LINES = [
+  "The note frays, and stops. One by one the hollow remember what they were doing.",
+  "The song ends. The stone lets go of it. Whatever was walking, walks again.",
+];
+export const CANTOR_CUT_LINES = [
+  "The note stops with him. The hollow do not move. They stay exactly as the song left them, faces turned to a silence, and go on standing there.",
+];
+// THE WATCHMAN CALLS THE HOUR. He walks the high circuit forever. At nightfall
+// he calls it, to a fortress with nobody left in it to be reassured.
+export const WATCH_CALLS = [
+  "From somewhere up on the wall, a voice calls the hour — flat, carrying, and entirely certain — and reports all well.",
+  "A voice goes up from the wall-walk, calling the hour and the watch, in the tone of a man who has never once been answered.",
+  "Up on the battlement a voice calls the turn of the night, and adds, to nobody, that the gate is secure.",
+];
+export const BURNER_NOD_ODDS = 0.3;
+export const BURNER_NODS = [
+  "The burner glances up from the clamp, takes you in, and goes back to laying wood.",
+  "The burner straightens, one hand on his back, watches you a moment, and says nothing.",
+  "The burner sets another billet on the mound, turns it with his boot, and does not look at you again.",
+  "The burner spits into the fire, wipes his hands down his front, and carries on.",
+  "The burner lifts his chin at you — barely — and goes back to the turf.",
+];
 export const PACK_CALL_ODDS = 0.09; // per combat round: ~1 call across a 7-8 round fight, rarely two
 // PLACE-FEAR decays and dies with the creature — migration replaces the dead
 // with amnesiacs, so the world never accumulates permanent fright. LURKERS
@@ -1540,6 +1670,41 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   ["dire-hyena", new Map([["grey-wolf", 2]])],  // ...and it takes two of them to push a wolf off a kill
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
+// A LANDED BITE HOLDS (rome, 2026-08-08: "the landed bite lets go sometimes —
+// the prey just got away").
+//
+// It used to let go EVERY time. A non-lethal bite sent the prey bolting to
+// another room and nothing made the predator follow, so a kill needed N
+// separate re-encounters while the prey healed 1 HP/min in between. Measured
+// across all 31 predator-prey pairs in the game: exactly ONE could kill in a
+// single bite, nine could manage it in two, and FOURTEEN — every large pairing,
+// the whole surface food web — needed four or more and therefore never
+// finished. Wolves have been scratching deer since the day they were written.
+// The only predation that ever completed was things eating rats.
+//
+// So a bite takes HOLD. The prey cannot wander off; the predator worries it
+// where it stands; and each beat the prey rolls to break the grip. Break it and
+// it genuinely escapes — that is the out, and it is why this is not a treadmill.
+// Everything stays in ONE ROOM, so there is no pursuit and no pathfinding, and
+// a wanderer can walk in on a kill in progress. Which the flavour has always
+// promised and never delivered: the line on a completed kill is "A short, wet
+// scuffle ends somewhere" — the writing assumed an ending the code never had.
+//
+// Note what falls out rather than being tuned: big prey takes more beats to
+// kill, so big prey escapes more often. A dire wolf usually gets out from under
+// an old boar (8 beats, ~49%); a roe deer usually does not (4.6 beats, ~32%).
+export const PREY_BREAK_ODDS = 0.08;  // per beat the held thing tries the grip
+export const PREY_WORRY_MULT = 1.0;   // damage per beat while held (a grip is not a fresh charge)
+export const HOLD_LINES = [
+  "{a} has {b} down and by the throat, and is not letting go.",
+  "{a} has hold of {b}. The two of them are a single thrashing shape on the ground.",
+  "{b} is down under {a}, kicking, and getting nowhere.",
+];
+export const BREAK_LINES = [
+  "{b} gets a leg under itself, wrenches free of {a}, and is gone.",
+  "{b} twists out of {a}'s jaws leaving a mouthful behind, and runs.",
+  "{a} loses its grip for half a second, and half a second is all {b} needs.",
+];
 // Who turns on a PLAYER when starved past all patience (STARVING_AT). Kept apart
 // from PREYS_ON on purpose: hunting a lone delver for meat isn't the same list as
 // "eats which weaker mob." The surface hunters carry a prey map too, so they run
