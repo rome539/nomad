@@ -20,7 +20,7 @@ import {
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST,
-  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
+  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_ODDS, MIGRATE_KEEP, FORAGE_REGIONS,
@@ -2032,8 +2032,20 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
 //               same trap the drowners were in. Keep it off the clock rather
 //               than give it a mouth with nothing to put in it.
 export function hungers(templateId: string): boolean {
+  // A CREATURE THE SIM GIVES NO WAY TO EAT MUST NOT DISPLAY HUNGER (rome,
+  // 2026-08-08, reading "A root-thing is here, restless with hunger"). The rule
+  // was already here for the drowners and the rest; the wood's non-eaters were
+  // simply never added, so seven of its thirteen banked hunger to the cap and
+  // sat there advertising it. Note the callers all do `else hunger = 0`, so
+  // adding a line here CLEARS what the old rules already banked — the live
+  // world repairs itself on the next tick with no reseed.
+  //
+  // ROOTED is earth and root and does not eat (the root-thing already has
+  // bleed 0 — nothing in it pumps). PROVISIONED are men with camps and larders.
+  // Anything with a real feeding route — graze, corpse, prey, or you — is not
+  // on this list and hungers exactly as it always did.
   return !HOLLOW.has(templateId) && !CORRODERS.has(templateId) && !DROWNERS.has(templateId)
-    && !HOARDERS.has(templateId);
+    && !HOARDERS.has(templateId) && !ROOTED.has(templateId) && !PROVISIONED.has(templateId);
 }
 
 export function creaturesIn(z: ZoneDO, roomId: string): number {

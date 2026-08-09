@@ -392,6 +392,19 @@ export class ZoneDO implements DurableObject {
     this.dens = await den.loadDens(this);
     this.denBlood = await den.loadDenBlood(this);
     this.buildWorldMaps(world);
+    // LURKERS THAT PREDATE THEIR OWN LAW. `hidden` is stamped at CREATION, so a
+    // creature that joined LURKERS in a migration stays visible for the rest of
+    // its life — and a ROOTED one never wanders off or gets replaced, so the
+    // root-things already standing in the wood would have stayed plainly in the
+    // room forever (rome, 2026-08-08: "A root-thing is here, restless with
+    // hunger" — it should not have been there to read). One sweep at load
+    // brings the standing population under the current law. Never touches one
+    // mid-fight: a lurker that has struck is unseen no longer, and re-hiding it
+    // in front of the person it is biting would be a ghost, not an ambush.
+    for (const c of this.creatures.values()) {
+      if (LURKERS.has(c.templateId) && !c.target && c.hidden === undefined) c.hidden = true;
+    }
+
     // MEASURE THE MAP FOR THE WORKS. One BFS per gate over the graph as it is
     // right now, so which door is worth shutting is re-derived every load and a
     // map that grew is never judged on yesterday's distances (works.ts).

@@ -1643,6 +1643,19 @@ export const ROOTED = new Set(["root-thing"]);
 // fire you can walk to is a landmark — and because he is not hostile, taking it
 // is a choice you make about a man, not a fight you walked into.
 export const FIREKEEPERS = new Set(["charcoal-burner"]);
+
+// PROVISIONED — men who eat off-screen. Not a behaviour so much as an honesty
+// rule: the sim gives these three no way to feed (they do not graze, scavenge
+// or hunt), so without this they bank hunger forever and `look` reports them
+// "restless with hunger" for all time. The tell is supposed to be a state a
+// creature PASSES THROUGH — that is the whole reason it is worth reading — and
+// a permanent one on half the wood makes it noise.
+//
+// The fiction costs nothing: the burner has a camp and a fire, the woodward
+// walks a patrol of ground he has kept his whole life, and the keeper holds a
+// hall with a kitchen range in it. They have provisions. The simulation does
+// not need to model a packed lunch.
+export const PROVISIONED = new Set(["charcoal-burner", "the-woodward", "the-keeper-of-the-holding"]);
 // REVENANTS don't stay down: put one to 0 and it RISES ONCE, at part health, and
 // comes again. The second death is the real one. A longer fight, not a lost one.
 export const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);
