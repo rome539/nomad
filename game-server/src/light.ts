@@ -9,6 +9,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import * as events from "./events";
+import { underCover } from "./detail";
 import { setItemCondition, removeItemRow, hasTrait } from "./world";
 import {
   TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR,
@@ -105,10 +106,15 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   // been burning for days under its own turf. It is the wood's one answer to a
   // region that is outdoors end to end (zone-data.ts FIREKEEPERS).
   const atClamp = z.roomHasFirekeeper(session.roomId);
-  if (!wantLantern && events.raining(z, session.roomId) && !z.wearsTrait(session, "hooded") && !atClamp) {
+  // ...and so does a closed canopy. Standing in the deepwood or the sunken wood
+  // the rain is a sound somewhere above you, not something landing on your
+  // hands (detail.ts underCover). Knowing which parts of the wood those are is
+  // worth something in a downpour.
+  const sheltered = atClamp || underCover(session.roomId);
+  if (!wantLantern && events.raining(z, session.roomId) && !z.wearsTrait(session, "hooded") && !sheltered) {
     return z.send(session, "The rain would drown a torch before it caught. A hooded lantern wouldn't care.");
   }
-  const hoodedFlame = !wantLantern && events.raining(z, session.roomId) && !atClamp;
+  const hoodedFlame = !wantLantern && events.raining(z, session.roomId) && !sheltered;
   // While the deep exhales, the current pulls an open flame apart before it
   // catches — the exhale is the lantern's other argument.
   if (!wantLantern && events.exhaling(z, session.roomId)) {

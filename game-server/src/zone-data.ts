@@ -510,6 +510,50 @@ export const MIGRATION_FACTOR = 10; // respawn_secs * this = how long an EMPTY/s
 // of players in the zone (solo = unchanged), down to a floor so even a crowd
 // keeps some scarcity. Bosses are exempt — the King reforms on its own clock.
 export const MIGRATION_MIN_FACTOR = 5;
+
+// ---- THE ECOLOGY (rome, 2026-08-08: "cant we just still have the spawn points
+// and still make it work") ----
+//
+// Yes, and keeping them is what makes this safe. The refill machinery was
+// already the right shape and nothing here replaces it:
+//
+//   spawn rows -> caps      the CEILING. Never more bodies than the ground holds.
+//   alive       -> count    what is actually out there now.
+//   empty slot  -> refills after respawn_secs * factor.
+//
+// Population was pinned only because that factor ignored the state of the
+// world. So the ecology is a change to the FACTOR and nothing else. The cap
+// still bounds the top, the refill still guarantees the bottom, and the swing
+// lives entirely in how long an empty den stays empty.
+//
+// TWO RULES, one per side of the food web:
+//
+//   PREY breed from what survived. Kill most of the deer and the few left are
+//   slow to make more — overhunting has a long tail, and the ground you strip
+//   stays stripped for a while. Stock recovers faster the more of it there is.
+//
+//   PREDATORS refill on what there is to eat. Wipe the deer and the wolves do
+//   not come back, because there is nothing here for a wolf. They return when
+//   the game does, behind it.
+//
+// Which produces the loop without anyone scripting it: hunt a region hard ->
+// prey crashes -> wolves stop refilling -> the wood goes quiet -> prey recovers
+// (accelerating as stock builds) -> wolves come back behind them.
+//
+// NOTHING EVER GOES EXTINCT. The multiplier is CAPPED, so the worst case is a
+// slow refill, never a stopped one — there is always something wandering in
+// off the map eventually. That cap is the safety rail on a system that runs
+// unattended for days in the offline sim.
+export const ECO_SLOWEST = 4;      // hardest case: an empty den takes 4x as long to fill. Never never.
+// Only the living eat. The hollow do not hunger and are not food, so the deep's
+// bone-things keep the flat clock they always had.
+export const ECO_LINES = new Set([
+  "roe-deer", "white-roe", "wild-boar", "old-boar",              // the wood's game
+  "grey-wolf", "dire-wolf",                                      // and what eats it
+  "grave-hyena", "dire-hyena",                                   // the fortress's own web
+  "masterless-dog", "lead-dog",                                  // the road's strays
+  "rat", "fleet-rat", "brood-rat",                               // the bottom of it
+]);
 // Regrowing ground spawns (rocks, provisions, the rusted pick) come back after
 // a RANDOM delay in this window, not a fixed metronome — so the world doesn't
 // tick out a predictable stream you can stand and farm. 5–25 min, mean ~15.
@@ -1318,7 +1362,33 @@ export const FEVER_MEND_MULT = 0.35;  // what rest, food and a bandage are all w
 // noise odds, QUIET gear, the bell); a blow wakes instantly and the striker's
 // hit rides the existing unaware/ambush multiplier — one heavy blow, never a
 // coup de grace (the sentinel rouse law, reused).
-export const NAPPERS = new Set(["rat", "fleet-rat", "albino-rat", "cutpurse"]); // hyenas nap via the gorge only
+// THE WOOD'S GAME BEDS DOWN (rome, 2026-08-08). Nothing in the wood slept —
+// NAPPERS was four fortress creatures, so a roe deer was exactly as available
+// at three in the morning as at noon, and the wolves' night surge (they hunt
+// 1.6x harder and hit 1.35x harder after dark) had nothing to point at. Now
+// the prey goes down and the hunters stay up: night stops being the same wood
+// with the lights off and becomes the hours the predators own.
+//
+// A sleeping boar is the reason this is worth having. The boar is AGGRESSIVE —
+// awake, it commits at anything that walks into its rooting ground, and it is
+// the one room in the honest band you cannot cross casually. Asleep it does
+// not (the aggro loop skips sleepers), so the same room at night is a thing
+// you can creep past, or open on. Same creature, opposite problem, by the hour.
+export const NAPPERS = new Set([
+  "rat", "fleet-rat", "albino-rat", "cutpurse",  // the fortress's own dozers
+  "roe-deer", "white-roe", "wild-boar", "old-boar", // the wood's game, after dark
+]); // hyenas nap via the gorge only
+// OUTDOOR GAME KEEPS DIFFERENT HOURS, and needs its own two rates rather than a
+// multiplier on the indoor one. NAP_ODDS is tuned for a rat in a quiet corner —
+// a "now and then" that works out to dozing about half the time, which is right
+// for a rat and wrong for a deer, because a deer GRAZES by day. Simply reusing
+// it would have bedded the wood's game down for half of every afternoon.
+//
+// Measured against the nap length below (3-8 min, avg 5.5): these land the game
+// asleep roughly 15% of the day and 65% of the night. Not 90 — the wolves' night
+// surge has to have something left to actually find.
+export const NAP_ODDS_DAY_OUT = 0.0011;   // grazing; bedded now and then
+export const NAP_ODDS_NIGHT_OUT = 0.0113; // lying up
 export const NAP_ODDS = 0.006;        // per idle 2s tick — a doze now and then, not a schedule
 export const NAP_MIN_MS = 3 * 60_000; // a doze, not a hibernation
 export const NAP_MAX_MS = 8 * 60_000;
@@ -1345,6 +1415,18 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
   // isn't the road's one ford — which was the only drinkable thing for a dozen
   // rooms and therefore the road's natural ambush.
   "the-open-water", "the-tussock-ford", "the-fen-gut", "the-quaking-flat"]);
+// WHO DRINKS. Was the scavengers alone, which left the wood's waters — the
+// Black Pool, the Brown Water, the Drinking Pool, eleven wet rooms of fen —
+// as ambush ground with nothing to ambush. Prey drinks too, and now the two
+// halves of the food web keep an appointment at the same holes: a wolf's run
+// and a deer's cross, and a player who learns the rhythm owns both.
+// The boar is on the list because a boar in water is a boar WALLOWING, which
+// is the other thing a boar is for.
+export const DRINKERS = new Set([
+  "grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf",        // what already drank
+  "roe-deer", "white-roe", "wild-boar", "old-boar",             // the wood's game
+  "masterless-dog", "lead-dog",                                 // the road's strays
+]);
 export const THIRST_MIN_MS = 2 * 3_600_000;
 export const THIRST_MAX_MS = 4 * 3_600_000;
 // CALLS: one primitive, three meanings — prey calls AWAY (a fleeing rat's
@@ -1357,6 +1439,41 @@ export const THIRST_MAX_MS = 4 * 3_600_000;
 export const RAT_AVOID_MS = 2 * 3_600_000;    // a squeal-marked (or fled) room is shunned a couple hours
 export const WHISTLE_AVOID_MS = 10 * 60_000;  // a warned thief keeps clear ten minutes
 export const DINNER_LAUGH_ODDS = 0.35;
+// THE ALARM BARK (2026-08-08) — the first call in the game that CROSSES SPECIES.
+// Every other one is a private channel: a rat squeals and rats hear it, a thief
+// whistles and thieves hear it. Each helps its own kind and costs the caller
+// nothing. A roe deer's bark is not like that. It does two opposed things with
+// one sound: it puts every other head of game in earshot off this room, AND it
+// tells every hunter within a room exactly where a person is standing.
+//
+// That is the point of it. NOMAD already leaks your position by WEIGHT — the
+// load law turns your kit into noise. This is the next turn of the same screw:
+// the wildlife informs on you. Spook a deer and you have announced yourself.
+// The counter is the one the game already teaches — be quiet, and the deer that
+// never noticed you never barks.
+//
+// Obeys the hard law like every other call: a summoned creature never re-calls
+// (calledTo), the bark rides its own channel and never creatureNoise, so there
+// are no cascades.
+export const ALARM_CALLERS = new Set(["roe-deer", "white-roe"]);
+export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-boar"]); // the game takes the warning
+export const ALARM_AVOID_MS = 20 * 60_000;  // warned game keeps off that ground twenty minutes
+export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters next door come to look
+
+// THE PACK CALL (2026-08-08). A wolf that has hold of somebody calls one
+// packmate in from next door. Wolves had pack machinery — PACK_PREY thresholds
+// deciding who yields a carcass to whom — but in a FIGHT they were individuals
+// who happened to be standing together: nothing coordinated, and nothing
+// called. The scariest thing a wolf can do is not be alone.
+//
+// Rolled PER ROUND rather than once on engagement, and that is the design, not
+// a shortcut: it means a long fight draws the pack and a short one does not.
+// Kill it fast and nobody comes. Let it drag and you are answering the wood.
+// Same hard law as the dinner-laugh — one packmate, adjacent only, never one
+// that was itself summoned, and the call rides its own channel so nothing
+// cascades.
+export const PACK_CALLERS = new Set(["grey-wolf", "dire-wolf", "masterless-dog", "lead-dog"]);
+export const PACK_CALL_ODDS = 0.09; // per combat round: ~1 call across a 7-8 round fight, rarely two
 // PLACE-FEAR decays and dies with the creature — migration replaces the dead
 // with amnesiacs, so the world never accumulates permanent fright. LURKERS
 // read the traffic instead: every few hours an unseen one shifts its ambush
@@ -2050,6 +2167,9 @@ export const FIRE_ITEMS = new Set<string>([]);
 // without a lit light source and you see NOTHING — no room, no exits, no way to
 // map it. A torch reveals it. (057; search/flood/map-blackout are follow-ons.)
 export const DARK_ROOMS = new Set([
+  // A hole in the earth under a root plate (mig 180): you go in with a light
+  // or you go in blind, and either way you are going in where they sleep.
+  "the-wolf-earth",
   "blackreach", "the-lightless-march", "the-gasping-dark", "black-threshold", "black-canal",
   "the-crawl-of-teeth", "the-earth-throat", // the warrens' lightless squeezes (058)
   "the-long-swallow", "the-tide-throat", "the-silt-chapel", "the-still-cradle", // the Tideways' drowned half (069)
@@ -2273,9 +2393,30 @@ export const ROLL_MISSED_MIN_MS = 15 * 60_000; // ...and the next one lands mid-
 export const ROLL_MISSED_MAX_MS = 1 * 3_600_000;
 // Rain (the room-events opener, 067): telegraph -> active -> aftermath.
 export const RAIN_TELEGRAPH_MS = 2 * 60_000; // the iron-grey light before the first drops
-export const RAIN_ACTIVE_MIN_MS = 8 * 60_000;
-export const RAIN_ACTIVE_MAX_MS = 12 * 60_000;
+// RAIN COMES IN TWO KINDS (rome, 2026-08-08: "is it always the same length? we
+// should make it random how long it lasts"). It was random — 8 to 12 minutes —
+// but that is the NARROWEST spread of any event in the game (the quiet 12-20,
+// the walk 18-30, the rut 20-35, the pack 25-40, fever 25-45), and rain is the
+// one you meet most often. Four minutes of variance around ten reads as a fixed
+// length, and he is right that it does.
+//
+// Widening the band would not have fixed it: a uniform 3-to-40 spends most of
+// its time in the middle and still feels like one thing. Weather is not uniform
+// — it is a shower or it is set in for the afternoon, and those are different
+// events that happen to both be rain. So the arc rolls WHICH at telegraph time.
+//
+// Three in four are showers you can shelter out. One in four is settled rain
+// you have to make a decision about: sit under a canopy for half an hour, or
+// travel wet with no torch, tracks that read deep, and every outdoor scavenger
+// bolder for the noise. Mean lands ~11 min, close to the old 10, so this
+// changes the SHAPE of rain without making the world much wetter.
+export const RAIN_SETTLED_ODDS = 0.25;
+export const RAIN_SHOWER_MIN_MS = 3 * 60_000;   // a passing shower
+export const RAIN_SHOWER_MAX_MS = 7 * 60_000;
+export const RAIN_SETTLED_MIN_MS = 20 * 60_000; // set in for the afternoon
+export const RAIN_SETTLED_MAX_MS = 40 * 60_000;
 export const RAIN_AFTERMATH_MS = 15 * 60_000; // mud: deep tracks, quick forage
+export const RAIN_SETTLED_AFTERMATH_MULT = 1.6; // a long soaking leaves the ground wrong for longer
 export const RAIN_NOISE_MASK = 0.5; // odds an outdoor sound simply drowns in the rain
 // The bell (keep, SCHEDULED): one warning note, then the ringing — and while
 // it rings the keep hears EVERYTHING (quiet gear included; a bell outshouts

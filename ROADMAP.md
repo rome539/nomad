@@ -316,6 +316,29 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **CREATURES THAT HARDEN ON UNHUNTED GROUND** *(pinned 2026-08-08 — rome: "no I
+  don't like this, pin this for now")*. Two versions were explored and BOTH are
+  parked; the idea keeps coming back, so here is the whole thing including why
+  each shape failed, so it is not re-derived from scratch.
+
+  *Version A — promote the creature's VARIANT with age* (a grey wolf that lives
+  long enough becomes a dire wolf). Three problems, one of them fatal:
+  `reconcilePopulation` keys bloodlines by template and treats "a variant with
+  its own dens" as its own line, so a promoted wolf puts the dire line over cap
+  and the base line under — and gets CULLED as surplus on the next world load.
+  Beyond that it is a one-way ratchet (nothing turns a dire wolf back), and
+  variants carry richer drops, so free promotion is loot inflation with no kill
+  behind it.
+
+  *Version B — put it on the GROUND, not the creature.* Mark a room when a
+  PLAYER kills there; recently-hunted ground makes animals jumpy (bolt earlier),
+  long-unhunted ground makes them unafraid — reusing the `scavengerBold` shape
+  (suppresses flee, 1.35x damage), which is already a proven soft boost that
+  changes no template and touches no loot. Self-reversing by definition, since
+  hunting is what erases it, and it needs no road exemption because the road is
+  the most-trafficked band and therefore stays soft on its own. rome rejected
+  this. NOT re-proposed without him raising it.
+
 - **Dens → TOWNS** *(rome, 2026-07-22; the den system's own named next step)*.
   The den layer shipped and left this open. **3+ dens clustered on one ground
   become a town**: a shared front gate, a fire that stays lit, and a trader who

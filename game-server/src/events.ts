@@ -18,7 +18,8 @@ import {
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
   ROLL_EVERY_MIN_MS, ROLL_EVERY_MAX_MS, ROLL_FIRST_MIN_MS, ROLL_FIRST_MAX_MS,
   ROLL_GRACE_MS, ROLL_MISSED_MIN_MS, ROLL_MISSED_MAX_MS,
-  RAIN_TELEGRAPH_MS, RAIN_ACTIVE_MIN_MS, RAIN_ACTIVE_MAX_MS, RAIN_AFTERMATH_MS,
+  RAIN_TELEGRAPH_MS, RAIN_AFTERMATH_MS, RAIN_SETTLED_ODDS, RAIN_SETTLED_AFTERMATH_MULT,
+  RAIN_SHOWER_MIN_MS, RAIN_SHOWER_MAX_MS, RAIN_SETTLED_MIN_MS, RAIN_SETTLED_MAX_MS,
   BELL_HOURS_UTC, BELL_JITTER_MS, BELL_GRACE_MS,
   BELL_TELEGRAPH_MS, BELL_ACTIVE_MS, BELL_AFTERMATH_MS, BELL_AFTERMATH_WAKE_MULT,
   BOIL_TELEGRAPH_MS, BOIL_STEP_MS, BOIL_AFTERMATH_MS, BOIL_BITE,
@@ -978,7 +979,14 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
     case "idle": {
       st.phase = "telegraph";
       st.until = now + RAIN_TELEGRAPH_MS;
-      feedOutdoors(z, "The light goes iron-grey. The air smells of rain coming.");
+      // WHICH KIND, decided now rather than when it breaks — so the two minutes
+      // of warning are worth something. A shower you shelter out; settled rain
+      // you plan around. The sky tells you which, and you get to act on it.
+      const settled = chance(RAIN_SETTLED_ODDS);
+      st.data = settled ? "settled" : "shower";
+      feedOutdoors(z, settled
+        ? "The whole sky goes one flat colour, edge to edge, and the light dies with it. This is not a shower coming."
+        : "The light goes iron-grey. The air smells of rain coming.");
       // The beasts feel it first: everything under the open sky stirs now —
       // their run for cover IS the telegraph (see rainDrives in ai.ts).
       for (const c of z.creatures.values()) {
@@ -990,8 +998,13 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
     }
     case "telegraph": {
       st.phase = "active";
-      st.until = now + randInt(RAIN_ACTIVE_MIN_MS, RAIN_ACTIVE_MAX_MS);
-      feedOutdoors(z, "The sky opens. Rain comes down in earnest, loud on stone and thorn.");
+      const settled = st.data === "settled";
+      st.until = now + (settled
+        ? randInt(RAIN_SETTLED_MIN_MS, RAIN_SETTLED_MAX_MS)
+        : randInt(RAIN_SHOWER_MIN_MS, RAIN_SHOWER_MAX_MS));
+      feedOutdoors(z, settled
+        ? "The rain arrives all at once and does not ease — a steady, vertical, settled downpour with no end in the look of it."
+        : "The sky opens. Rain comes down in earnest, loud on stone and thorn.");
       for (const s of z.sessions.values()) rainSoaksTorch(z, s);
       // Fresh water wakes the still pools: the surface waters forget every
       // angler at once (the storm bite is real, not just faster misses).
@@ -999,9 +1012,15 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
       break;
     }
     case "active": {
+      const settled = st.data === "settled";
       st.phase = "aftermath";
-      st.until = now + RAIN_AFTERMATH_MS;
-      feedOutdoors(z, "The rain slackens, and stops. What blood and tracks the ground held have run off into the mud.");
+      // A long soaking leaves the ground wrong for longer — the mud outlasts
+      // the weather that made it, and by more when there was more of it.
+      st.until = now + Math.round(RAIN_AFTERMATH_MS * (settled ? RAIN_SETTLED_AFTERMATH_MULT : 1));
+      st.data = undefined; // the kind belonged to that storm; the next one rolls its own
+      feedOutdoors(z, settled
+        ? "The rain thins at last, and stops, and the quiet after it is enormous. Everything underfoot has turned to mud, and it will be mud for a long while."
+        : "The rain slackens, and stops. What blood and tracks the ground held have run off into the mud.");
       // The wash: the open ground forgets — blood, remains, camps, passage —
       // all but what was cut into stone. (The murderer's weather, one day.)
       for (const roomId of OUTDOOR_ROOMS) {

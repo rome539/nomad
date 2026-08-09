@@ -735,6 +735,9 @@ const QUARTER_ROOMS: Record<string, string[]> = {
     "the-hollow-yew", "the-stew-pond", "the-standing-water", "the-still-pool", "the-far-mire",
   ],
   sunken: [
+    // The Wolf Earth (mig 180) — a hole under a root plate, west off the
+    // Under-Eaves. The sunken wood is COVER, which is why an animal dens here.
+    "the-wolf-earth",
     "the-old-course", "the-lower-ditch", "the-under-roots", "the-last-light", "the-buried-lane",
     "the-low-sump", "the-tree-fall", "the-clay-shelf", "the-flint-floor", "the-black-loam",
     "the-drip-line", "the-lost-stand", "the-sunken-wood", "the-buried-wall", "the-under-eaves",
@@ -777,6 +780,26 @@ const QUARTER_ROOMS: Record<string, string[]> = {
   ],
 };
 for (const quarter in QUARTER_ROOMS) for (const id of QUARTER_ROOMS[quarter]) WOOD_QUARTERS[id] = quarter;
+
+// UNDER COVER (rome, 2026-08-08). The wood is outdoors end to end — all 171
+// rooms — which is what lets rain, cold and the night dark reach it, and also
+// meant that when it rained it rained EVERYWHERE equally. There was nowhere in
+// the wood to get out of the weather, for a deer or for you.
+//
+// Rather than judge 171 rooms one at a time, the wood's own quarters answer it.
+// Two of them are already written as closed canopy — the deepwood (the Close
+// Dark, the Hollow Beeches, the Swallowing) and the sunken wood (the
+// Under-Roots, the Under-Eaves, the Green Dark, and a Drip Line named for what
+// canopy does to rain). Those are cover. The heath is open by definition, the
+// carr is standing water, the worked coppice is thin by management, and the
+// enclosure and the holding are parkland. About a third of the wood keeps the
+// rain off, and it is the third that was already described that way.
+const COVER_QUARTERS = new Set(["deepwood", "sunken"]);
+
+/** Does this room have canopy enough to keep the rain off what stands under it? */
+export function underCover(roomId: string): boolean {
+  return COVER_QUARTERS.has(WOOD_QUARTERS[roomId] ?? "");
+}
 
 // The quarter's own voice. Read when a wood room has no pool of its own, which
 // after this file is most of them — so this is what the wood mostly sounds like,

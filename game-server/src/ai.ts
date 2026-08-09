@@ -10,14 +10,16 @@ import { hasTrait } from "./world";
 import { randInt, chance, uuid, pick } from "./rng";
 import { cap, isNight } from "./zone-util";
 import * as events from "./events";
+import { underCover } from "./detail";
 import {
-  FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
+  FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, DRINKERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_MS, HOARD_TRAIL_MS, HOARD_SPOOK_MS,
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
-  NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS,
+  ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
+  NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
-  PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS,
+  PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
@@ -572,7 +574,13 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // what's coming before the first drop. (Scavengers stay out in it; the
     // downpour is their hunting weather — see scavengerBold.)
     if (mode === "wander" && events.rainDrives(z, creature.roomId) && !SCAVENGERS.has(tmpl.id)) {
-      const covered = exits.filter((e) => !OUTDOOR_ROOMS.has(e.to_room));
+      // Indoors, or under a closed canopy. The canopy half is new (2026-08-08):
+      // every wood room is OUTDOOR_ROOMS, so out here this filter matched
+      // nothing at all and the wood's game stood in the rain because there was
+      // nowhere the code would let it go. Now the deepwood and the sunken wood
+      // count, and bad weather pushes the game into the thick stuff — where you
+      // can also strike a light, and where the wolves already know to look.
+      const covered = exits.filter((e) => !OUTDOOR_ROOMS.has(e.to_room) || underCover(e.to_room));
       if (covered.length) exits = covered;
     }
     // The bell drives the keep's vermin down into the earth: while it rings,
@@ -584,7 +592,10 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // The cold sends the LIVING to warm ground (keep walls, warrens earth) —
     // and what's still out walking in it was never alive: the free tell.
     if (mode === "wander" && events.coldDrives(z, creature)) {
-      const warm = exits.filter((e) => !OUTDOOR_ROOMS.has(e.to_room) && !events.deepRoom(z, e.to_room));
+      // Same blind spot as the rain: out in the wood there was no warm ground to
+      // send anything to. Canopy is not a wall, but it is the difference between
+      // a frost and a hard frost, and it is what the wood has.
+      const warm = exits.filter((e) => (!OUTDOOR_ROOMS.has(e.to_room) || underCover(e.to_room)) && !events.deepRoom(z, e.to_room));
       if (warm.length) exits = warm;
     }
     // The tide sends everything living in the Tideways CLIMBING — up toward
@@ -702,6 +713,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
           { roomId: from, until: now + WHISTLE_AVOID_MS },
         ];
         thiefWhistle(z, from, now, creature);
+      } else if (ALARM_CALLERS.has(creature.templateId)) {
+        creature.avoids = [
+          ...(creature.avoids ?? []).filter((a) => a.until > now && a.roomId !== from),
+          { roomId: from, until: now + ALARM_AVOID_MS },
+        ];
+        alarmBark(z, from, now, creature);
       }
     }
     if (!silent) {
@@ -1304,7 +1321,13 @@ export function naps(z: ZoneDO, creature: Creature, now: number): void {
     if (!NAPPERS.has(creature.templateId) || creature.asleep || creature.target || creature.cuddling) return;
     if (creature.templateId === "cutpurse" && creature.roomId !== creature.home) return;
     if (playerPresent(z, creature.roomId)) return;
-    if (!chance(NAP_ODDS)) return;
+    // Outdoors, the hour decides: the wood's game grazes by day and lies up
+    // after dark, which is what the wolves' night surge is FOR. Indoors keeps
+    // the old flat rate — the deep and the warrens do not have an hour.
+    const odds = OUTDOOR_ROOMS.has(creature.roomId)
+      ? (isNight(now) ? NAP_ODDS_NIGHT_OUT : NAP_ODDS_DAY_OUT)
+      : NAP_ODDS;
+    if (!chance(odds)) return;
     fallAsleep(z, creature, now);
   }
 
@@ -1320,13 +1343,17 @@ export function fallAsleep(z: ZoneDO, creature: Creature, now: number): void {
   // and heads home. One drinker at a hole at a time, and rain IS water.
   // Players who learn the rhythm own the ambush; so do the hyenas.
 export function waters(z: ZoneDO, creature: Creature, now: number): void {
-    if (!SCAVENGERS.has(creature.templateId) || creature.target || creature.asleep) return;
+    if (!DRINKERS.has(creature.templateId) || creature.target || creature.asleep) return;
     if (creature.wateringTo) {
       if (creature.roomId === creature.wateringTo) {
         const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
         creature.wateringTo = undefined;
         creature.thirstAt = now + randInt(THIRST_MIN_MS, THIRST_MAX_MS);
-        z.roomFeed(creature.roomId, `${cap(tmpl.name)} lowers its muzzle to the water and drinks, long and unhurried.`, undefined, false);
+        // A boar at water is not drinking politely, it is getting in.
+        const wallows = creature.templateId === "wild-boar" || creature.templateId === "old-boar";
+        z.roomFeed(creature.roomId, wallows
+          ? `${cap(tmpl.name)} walks straight into the shallows and lies down in it, and the water goes brown around it.`
+          : `${cap(tmpl.name)} lowers its muzzle to the water and drinks, long and unhurried.`, undefined, false);
       }
       return;
     }
@@ -1380,6 +1407,63 @@ export function ratSqueal(z: ZoneDO, roomId: string, now: number, squealer: Crea
       ];
       c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(2000, 8000));
     }
+  }
+
+  // THE ALARM BARK. A roe deer that breaks from a PERSON barks once, and the
+  // sound does two opposed things: the game hears a warning, and the hunters
+  // hear an address. It is the only call in the game with two audiences, and
+  // the second one is not on your side.
+export function alarmBark(z: ZoneDO, roomId: string, now: number, caller: Creature): void {
+    const tmpl = z.world!.mobTemplates.get(caller.templateId)!;
+    z.roomFeed(roomId, `${cap(tmpl.name)} barks once — a flat, carrying cough of a sound, nothing like an animal in pain.`, undefined, false);
+    z.roomSound(roomId, "A deer barks {dir}, once, and does not repeat it.");
+    const exitsOf = (id: string) => (z.world!.exits.get(id) ?? []);
+    for (const c of z.creatures.values()) {
+      if (c.id === caller.id || c.target) continue;
+      const adjacent = exitsOf(c.roomId).some((e) => !e.key_item && e.to_room === roomId);
+      if (c.roomId !== roomId && !adjacent) continue;
+      // THE GAME TAKES THE WARNING and keeps off that ground for a while —
+      // which is what makes the bark worth having if you are a deer.
+      if (ALARM_HEEDS.has(c.templateId)) {
+        c.asleep = false;               // bedded game gets up: the whole value of the call
+        c.sleepUntil = undefined;
+        c.avoids = [
+          ...(c.avoids ?? []).filter((a) => a.until > now && a.roomId !== roomId),
+          { roomId, until: now + ALARM_AVOID_MS },
+        ];
+        c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(2000, 8000));
+        continue;
+      }
+      // THE HUNTERS TAKE AN ADDRESS. Adjacent only, odds-gated, and never a
+      // creature that was itself summoned — a call must not trigger a call.
+      if (STARVE_HUNTERS.has(c.templateId) && adjacent && !c.calledTo && !c.asleep && chance(ALARM_DRAW_ODDS)) {
+        c.calledTo = roomId;
+        c.curious = roomId;
+        c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(3000, 9000));
+      }
+    }
+  }
+
+  // THE PACK CALL. A wolf with hold of somebody throws its head up and calls,
+  // and one packmate next door comes. Rolled every round it is still fighting,
+  // so the pack is the price of a slow kill (zone-data.ts PACK_CALL_ODDS).
+export function packCall(z: ZoneDO, creature: Creature, now: number): void {
+    if (!PACK_CALLERS.has(creature.templateId)) return;
+    if (creature.calledTo === creature.roomId) return; // a call must never trigger a call
+    if (!chance(PACK_CALL_ODDS)) return;
+    const line = z.variantBase.get(creature.templateId) ?? creature.templateId;
+    const mate = [...z.creatures.values()].find(
+      (c) => c.id !== creature.id && !c.target && !c.asleep && !c.calledTo
+        && (z.variantBase.get(c.templateId) ?? c.templateId) === line
+        && (z.world!.exits.get(c.roomId) ?? []).some((e) => !e.key_item && e.to_room === creature.roomId),
+    );
+    if (!mate) return;
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} throws its head up and calls — one long note, and it is not calling to you.`, undefined, false);
+    z.roomSound(creature.roomId, "A long call goes up {dir}, and something answers it.");
+    mate.calledTo = creature.roomId;
+    mate.curious = creature.roomId;
+    mate.nextWanderAt = Math.min(mate.nextWanderAt, now + randInt(3000, 9000));
   }
 
   // Thieves warn: a cutpurse that gets AWAY whistles, and the others shun the
@@ -1719,10 +1803,47 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
         const factor = tmpl.is_boss
           ? MIGRATION_FACTOR
           : Math.max(MIGRATION_MIN_FACTOR, MIGRATION_FACTOR / Math.max(1, z.sessions.size));
-        z.arrivals.set(templateId, now + tmpl.respawn_secs * 1000 * factor);
+        // ...and then the food web has its say: how long this den stays empty
+        // depends on what is left to breed, or what is left to eat.
+        z.arrivals.set(templateId, now + tmpl.respawn_secs * 1000 * factor * ecologyDrag(z, templateId, caps, alive));
       }
     }
   }
+
+/**
+ * How much longer an empty den takes to fill, given the state of the food web.
+ * 1 = no drag (a healthy line refilling normally); ECO_SLOWEST = the hardest
+ * case. Never returns Infinity — a line can be driven down to a trickle but
+ * never to nothing, which is the safety rail on a system that runs for days
+ * unattended in the offline sim.
+ */
+function ecologyDrag(
+  z: ZoneDO, templateId: string, caps: Map<string, number>, alive: Map<string, number>,
+): number {
+  if (!ECO_LINES.has(templateId) || HOLLOW.has(templateId)) return 1;
+  const share = (line: string): number => {
+    const cap = caps.get(line) ?? 0;
+    return cap > 0 ? Math.min(1, (alive.get(line) ?? 0) / cap) : 1;
+  };
+  // A PREDATOR refills on what there is to eat: the standing stock of
+  // everything it hunts, as a share of what this world can hold. No prey, no
+  // wolves — they come back behind the game, not ahead of it.
+  const prey = PREYS_ON.get(templateId);
+  if (prey?.size) {
+    let held = 0, room = 0;
+    for (const line of prey) {
+      const cap = caps.get(line) ?? 0;
+      if (!cap) continue;
+      room += cap;
+      held += Math.min(cap, alive.get(line) ?? 0);
+    }
+    if (room > 0) return 1 + (1 - held / room) * (ECO_SLOWEST - 1);
+  }
+  // PREY breeds from what survived. A line cut to the bone is slow to come
+  // back; one barely touched refills at its own pace. This is what gives
+  // overhunting a tail longer than the afternoon that caused it.
+  return 1 + (1 - share(templateId)) * (ECO_SLOWEST - 1);
+}
 
 export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
     const world = z.world!;

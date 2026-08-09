@@ -3168,6 +3168,10 @@ export class ZoneDO implements DurableObject {
         if (!victim.target || !this.creatures.has(victim.target)) {
           victim.target = creature.id;
         }
+        // It has hold of somebody — so it calls. Rolled every round it is still
+        // in the fight, which is what makes a slow kill expensive: the pack is
+        // the price of taking too long (ai.packCall).
+        ai.packCall(this, creature, now);
         // A runner bolts the instant it has the initiative — every time, at any
         // health. You already swung this tick (the living go first), so your
         // blow lands as it breaks for the door; then it's gone and you give
