@@ -703,7 +703,9 @@ export function lookFeature(roomId: string, region: string, arg: string): string
 //   THE CARR ............ 32 alder and standing water; the wet half
 //   THE WORKED WOOD ..... 22 coppice, charcoal, timber — the part that was a job
 //   THE OLD ENCLOSURE ... 23 fences, kilns, boundaries; somebody owned this
-//   THE DEEP WOOD ....... 26 the maze, and the reason people talk about the wood
+//   THE DEEP WOOD ....... 19 dense, unreadable wood; the approach to the maze
+//   THE HEART ...........  7 the maze itself, and the only ground the woodward
+//                            walks — moved to the far north-west by mig 184
 //
 // EACH QUARTER IS THREE THINGS AT ONCE, which is why this is worth doing rather
 // than just writing more lines:
@@ -768,15 +770,30 @@ const QUARTER_ROOMS: Record<string, string[]> = {
     "the-old-coppice", "the-wind-shorn-edge", "the-stone-pile",
   ],
   deepwood: [
-    // The Bounds House sits one north of the Heart of It (mig 178) — the maze's
-    // centre stopped being a dead end, so the quarter gains a room.
-    "the-bounds-house",
-    "the-heart-of-it", "the-listening-stand", "the-same-tree", "the-turned-ground", "the-close-ground",
+    "the-close-ground",
     "the-ash-stand", "the-lightning-split", "the-pollard-row", "the-holly-brake", "the-birch-edge",
-    "the-close-dark", "the-turning", "the-boundary-oak", "the-fallen-giant", "the-first-clearing",
-    "the-deer-path", "the-eaves", "the-hollow-beeches", "the-swallowing", "the-charcoal-flat",
+    "the-turning", "the-boundary-oak", "the-fallen-giant", "the-first-clearing",
+    "the-deer-path", "the-eaves", "the-swallowing", "the-charcoal-flat",
     "the-badger-ground", "the-wet-hollow", "the-nettle-glade", "the-bramble-margin", "the-charcoal-hut",
     "the-drinking-pool",
+  ],
+  // THE HEART — the woodward's core, and its own quarter as of mig 184 (rome,
+  // 2026-08-09: the woodward should not be near any gate, and the fix is to move
+  // his rooms).
+  //
+  // These seven were the middle of the DEEPWOOD and are now the far north-west
+  // corner of the world, hung off the Grey Scrub at the end of the heath. The
+  // rooms did not change and neither did the cut maze inside them; what changed
+  // is which door you reach them by. See the migration for the whole reasoning.
+  //
+  // Its own quarter for a plain mechanical reason as well as a true one: the map
+  // captions the wood BY QUARTER and hangs each name at the top-left room the
+  // quarter owns, so leaving these seven in `deepwood` after moving them would
+  // have dragged "THE DEEP WOOD" out to the heath and left the nineteen rooms it
+  // actually names with no caption at all.
+  heart: [
+    "the-close-dark", "the-same-tree", "the-turned-ground", "the-listening-stand",
+    "the-heart-of-it", "the-hollow-beeches", "the-bounds-house",
   ],
 };
 for (const quarter in QUARTER_ROOMS) for (const id of QUARTER_ROOMS[quarter]) WOOD_QUARTERS[id] = quarter;
@@ -794,7 +811,11 @@ for (const quarter in QUARTER_ROOMS) for (const id of QUARTER_ROOMS[quarter]) WO
 // carr is standing water, the worked coppice is thin by management, and the
 // enclosure and the holding are parkland. About a third of the wood keeps the
 // rain off, and it is the third that was already described that way.
-const COVER_QUARTERS = new Set(["deepwood", "sunken"]);
+// The heart joins them: it IS the closed canopy — the seven rooms the deepwood's
+// cover lines were written about in the first place (mig 184 moved them out into
+// their own quarter, and cover has to move with them or the rain starts falling
+// through the thickest wood in the world).
+const COVER_QUARTERS = new Set(["deepwood", "sunken", "heart"]);
 
 /** Does this room have canopy enough to keep the rain off what stands under it? */
 export function underCover(roomId: string): boolean {
@@ -894,6 +915,20 @@ export const QUARTER_AMBIENCE: Record<string, string[]> = {
     "Something has come through the nettles recently — a green wound of crushed stems, already lifting back upright.",
     "The way you came looks exactly like the way you did not come.",
   ],
+  // THE HEART. The deepwood's pool is a wood that is hard to read; this one is a
+  // wood that is being kept. Every line is somebody's work, or the absence of a
+  // person who has just finished some — because that is the whole of the
+  // woodward, and these seven rooms are the only place in the world he walks.
+  heart: [
+    "Every tree in reach has been looked at. You could not say how you know that, and you know it.",
+    "A branch that should be across this path is not across it, and the cut end is pale and clean.",
+    "Something has been walking here at a steady pace for a long time — the leaf-mould is pressed into a line, and the line goes both ways.",
+    "The wood is quieter here than quiet, in the specific way of a room somebody has just left.",
+    "There is no deadfall anywhere. Not a stick, not a limb, nothing rotting where it dropped. Somebody clears this.",
+    "You have passed this tree. You have passed this exact tree, and the last time, you were going the other way.",
+    "A count carries from somewhere off in the trees — low, even, unhurried — and stops before you can catch the number.",
+    "The light does not change from one of these rooms to the next, which is how you know how far in you are.",
+  ],
 };
 
 // Blind in the wood used to be one line, everywhere, for 170 rooms. Now the
@@ -907,6 +942,7 @@ export const QUARTER_DARK: Record<string, string> = {
   worked: "Bare needle or bare swept floor underfoot, no undergrowth to speak of, and the trunks come up in an order you can feel — spaced, regular, planted. Whatever was done here was done in rows.",
   enclosure: "Deep leaf-mould, soft and silent, and then something hard and straight under your hand at waist height that turns out to be a post. There is wire in the litter somewhere near it.",
   deepwood: "Trunks at about the same spacing in every direction and leaf-mould deep enough to swallow the sound of your own feet. You have no way at all of knowing which way you came in, and standing still does not improve it.",
+  heart: "Leaf-mould so deep your feet make no sound at all, and no deadfall anywhere to bark your shins on — the floor has been cleared, and you can feel that it has. The trunks come to your hands at an even spacing in every direction. Somewhere off in it, something is keeping a slow count.",
 };
 
 // The standouts keep their own voice. These are rooms whose whole character is

@@ -185,6 +185,7 @@ export interface SimState {
   ground: Record<string, string[]>;
   groundInstances?: Record<string, GroundInstance[]>; // instanced items on the floor (journals: they carry their pages)
   regrow: Regrow[];
+  roamRocks?: string[]; // rooms currently holding a WANDERING fortress rock — the rubble shifts, so a rock's home is state, not a spawn row
   arrivals: Record<string, number>; // templateId -> ms when a migrant arrives
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
   doorCloseAt?: Record<string, number>; // "roomId:dir" -> ms epoch a timed door re-seals (the deep door: a heart buys a window, not a thoroughfare)

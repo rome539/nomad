@@ -73,7 +73,7 @@ type PerBlobField = "creatures" | "ground" | "groundInstances" | "groundCond"
   | "groundLore" | "groundRolled" | "groundHeart" | "groundTorch" | "traces";
 type MetaField = Exclude<keyof SimState, PerBlobField>;
 const META_FIELDS = [
-  "savedAt", "regrow", "arrivals", "openDoors", "doorCloseAt", "fenceOut",
+  "savedAt", "regrow", "roamRocks", "arrivals", "openDoors", "doorCloseAt", "fenceOut",
   "bloodOn", "nextStoneAt", "nextBrandAt", "nextSmokeTorchAt", "nextCarrionAt", "rot", "placedSpawns", "seededDens", "inGatehouse", "inDen", "wallMarks", "stoneNames",
   "cacheSpent", "cacheRoom", "nextSurfaceAt", "events", "fishStock", "works", "nextWorksAt", "nextChainmanAt",
 ] as const satisfies readonly MetaField[];

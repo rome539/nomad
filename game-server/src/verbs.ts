@@ -1082,7 +1082,12 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // one AND nothing's already regrowing here — otherwise throwing a rock and
   // fetching it back mid-fight would queue a fresh regrow every grab, and the
   // stones would breed. (`here` already had the taken item spliced out above.)
-  if (z.world!.groundSpawns.some((g) => g.item_id === itemId && g.room_id === session.roomId && g.regrows)) {
+  // A WANDERING ROCK has no spawn row where it lies — the ruin put it there, and
+  // the row it came from is somewhere else entirely. It re-arms off z.roamRocks
+  // instead, and stops counting as living here the moment it's in your hand.
+  const tookRoamRock = itemId === "loose-rock" && z.roamRocks.includes(session.roomId);
+  if (tookRoamRock) z.roamRocks = z.roamRocks.filter((r) => r !== session.roomId);
+  if (tookRoamRock || z.world!.groundSpawns.some((g) => g.item_id === itemId && g.room_id === session.roomId && g.regrows)) {
     const stillHere = here.includes(itemId);
     const alreadyRegrowing = z.regrow.some((r) => r.itemId === itemId && r.roomId === session.roomId);
     if (!stillHere && !alreadyRegrowing) {

@@ -194,7 +194,23 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
       if (!tmpl) continue;
       if (tmpl.is_boss) continue;                                   // the king waits; he doesn't scrum
       if (DROWNERS.has(tmpl.id) || SENTINELS.has(tmpl.id) || ROOTED.has(tmpl.id)) continue; // holds its water / its post / its ground
-      if (SCAVENGERS.has(tmpl.id)) continue;                        // tracks the dead, not the din
+      // Carrion-followers track the dead, not the din — UNLESS they hunt in a
+      // pack. This line read a bare `SCAVENGERS.has` and it was written when
+      // that set was hyenas; the wolves were added to it later for their
+      // feeding, and silently inherited a hyena's indifference to a brawl
+      // (rome, 2026-08-09: "when theres 2 wolves in a room and i start fighting
+      // one, that second wolf doesnt join in the fight, they only join when
+      // their one room away"). Exactly inverted: the noise-draw next door has
+      // no such exemption, so the far wolf came and the one standing at your
+      // elbow watched. PACK_CALLERS ∩ SCAVENGERS is precisely the two wolves —
+      // the dogs aren't carrion, the hyenas don't call — so the hyena keeps its
+      // rule and the wolf gets a wolf's.
+      if (SCAVENGERS.has(tmpl.id) && !PACK_CALLERS.has(tmpl.id)) continue;
+      // ...and nothing walks away from a kill it already has in its teeth. A
+      // wolf with a deer down keeps the deer; the fight in the room is not its
+      // business (creature-on-creature holds don't set `target`, so the guard
+      // above never saw them).
+      if (creature.holding) continue;
       if (BROODERS.has(tmpl.id)) continue;                          // the brood-mother spawns; her young do the fighting
       if (LISTENERS.has(tmpl.id)) continue;                         // the bone-sleeper stays dormant till you move
       // Nothing that bolts for a living joins a scrum. This was `tmpl.id ===
@@ -1632,22 +1648,50 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
  */
 export function heldExits(z: ZoneDO, session: Session): Map<string, string> {
   const out = new Map<string, string>();
+  const { holders, exits, take } = packGaps(z, session);
+  for (let i = 0; i < take; i++) {
+    const tmpl = z.world!.mobTemplates.get(holders[i].templateId)!;
+    out.set(exits[i], tmpl.name);
+  }
+  return out;
+}
+
+// The shared reckoning behind heldExits: WHICH wolves are in the gaps, in the
+// same stable order, so the two questions ("what's shut" and "who shut it")
+// can never disagree.
+function packGaps(z: ZoneDO, session: Session): { holders: Creature[]; exits: string[]; take: number } {
   const holders: Creature[] = [];
   for (const c of z.creatures.values()) {
     if (c.roomId !== session.roomId || !PACK_HOLDERS.has(c.templateId)) continue;
     if (c.target !== session.pubkey || c.asleep || c.heldBy) continue;
     holders.push(c);
   }
-  if (holders.length < 2) return out;
   const exits = (z.world!.exits.get(session.roomId) ?? []).map((e) => e.dir).sort();
-  if (exits.length < 2) return out; // a dead end has nothing to take
-  const take = Math.min(holders.length - 1, exits.length - 1);
+  // Fewer than two wolves is not a pack, and a dead end has nothing to take.
+  const take = holders.length < 2 || exits.length < 2
+    ? 0
+    : Math.min(holders.length - 1, exits.length - 1);
   holders.sort((a, b) => (a.id < b.id ? -1 : 1));
-  for (let i = 0; i < take; i++) {
-    const tmpl = z.world!.mobTemplates.get(holders[i].templateId)!;
-    out.set(exits[i], tmpl.name);
-  }
-  return out;
+  return { holders, exits, take };
+}
+
+/**
+ * IS THIS WOLF IN A GAP RATHER THAN IN THE FIGHT? A wolf that has taken a door
+ * is not also biting you — the whole design sentence for the pack is "not more
+ * teeth, fewer ways out" (zone-data PACK_HOLDERS), and the beat that announces
+ * it says in as many words that it has stopped trying to bite you. Only the
+ * announcement was ever wired: the holder went on swinging anyway, so the pack
+ * scaled BOTH ways and the line the player read was a lie.
+ *
+ * The trade is now real, and it is the counterweight to the same-room join
+ * above: two wolves used to mean one biting and one idle, and now mean one
+ * biting and one door gone.
+ */
+export function holdsExit(z: ZoneDO, creature: Creature, session: Session): boolean {
+  if (!PACK_HOLDERS.has(creature.templateId)) return false;
+  const { holders, take } = packGaps(z, session);
+  for (let i = 0; i < take; i++) if (holders[i].id === creature.id) return true;
+  return false;
 }
 
   // THE PACK CALL. A wolf with hold of somebody throws its head up and calls,

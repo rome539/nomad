@@ -3743,6 +3743,7 @@ var MAP_REGION_LABELS = {
   worked: "THE WORKED WOOD",
   enclosure: "THE OLD ENCLOSURE",
   deepwood: "THE DEEP WOOD",
+  heart: "THE HEART",
 };
 function buildMapGraph(f) {
   var nodes = {}, order = [];
