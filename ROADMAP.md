@@ -161,6 +161,51 @@ is connected, which is why an idle NOMAD bills zero.
 
 ## Shipped systems — open ends only
 
+- **THE FULL MOON CHANGES WHO IS OUT** *(rome, 2026-08-10 — BUILT)*. The moon
+  had always been a six-night modulo asked as a yes/no question, and the one
+  night it said yes it did exactly one thing: `isDark()` skipped its outdoor
+  check, so the grounds stayed lit and nothing in the world remarked on it.
+
+  The organising rule, and the reason the list is short: **the moon is light,
+  and it only falls outdoors.** It reaches things with eyes that are out in it
+  and nothing else. Six behaviours, each an existing roll made likelier or
+  unlikelier — no new machinery, one shared gate (`ai.moonlit`: outdoors, at
+  night, and genuinely lit, so a gloamed room gets none of it).
+
+  1. **The road's thieves stop working** — `THIEF_ROB_ODDS` x `MOON_THIEF_MULT`
+     (0.15). A footpad's trade is not being seen. The one that makes the moon a
+     thing worth planning a journey around.
+  2. **Ambush is spoiled outdoors** — moonlight joins torch-in-hand and
+     torch-on-the-floor in `wakeListeners`. The room description had ALWAYS
+     shown an outdoor lurker on a lit night (`lurkerUnseen` reads `litFor`
+     reads `isDark`); this is the strike side finally agreeing with it. The
+     deep's crawlers and stalkers are untouched — no sky.
+  3. **The game grazes instead of lying up** — `NAP_ODDS_MOON_OUT` (0.003):
+     ~33% bedded, against night's 65% and day's 15%.
+  4. **The pack hunts harder and gathers faster** — `MOON_PACK_HUNT_MULT` (1.5)
+     on top of night's 1.6, and `MOON_PACK_CALL_MULT` (1.6) on the call.
+     `PACK_CALLERS` only; every other predator keeps night's plain multiplier.
+  5. **The hyenas lose their boldness** — `scavengerBold`'s night clause now
+     reads `z.isDark()` instead of `isNight()`, so the moon takes the dark away
+     and the boldness with it. Rain and fog are their own weather and are
+     untouched. NOTE: `SCAVENGERS` is hyenas AND wolves, so the wolves lose it
+     too — one law, not carved. Behaviour 4 more than pays them back.
+  6. **The alarm-callers call sooner** — new `ai.alarmWatch`: on open moonlit
+     ground a roe deer barks at a person a room away, BEFORE they arrive.
+     Both rooms must be under the moon (it is seeing across, not around a
+     corner into the dark); the bark is the one the game already has, with its
+     same two audiences; the caller's own `avoids` are the cooldown.
+
+  WHAT IT DELIBERATELY DOESN'T TOUCH: the HOLLOW have no eyes and no hours, the
+  DROWNERS hold their water whatever the sky does, the LISTENERS wake to
+  movement and not light, the BROODERS keep the nest, the DRILL_SOLDIERS and
+  the cantor keep the fortress's own time (which is the horror of them), and
+  nothing in the deep or the warrens has seen a moon. A moon that changed
+  everything would be noise.
+
+  Net shape: **on a full moon the ambushers stop and the hunters start** — the
+  road gets safer, the wood gets worse, and you can see across both.
+
 - **Room events / the weather** (events.ts): the **undertow-grasper** (anti-turtle,
   designed not built — build only if the pavise-turtle proves too safe); **pack
   weight slowing the wade, exits sealing on flood, float-ups** (the tide's deferred

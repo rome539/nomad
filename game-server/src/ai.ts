@@ -20,7 +20,8 @@ import {
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
   DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
-  NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT,
+  NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
+  MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST,
@@ -380,8 +381,13 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       // A torch spoils the ambush: a lurker caught in your light can't drop from
       // the dark (it shows in the room instead, revealed — see describeRoom).
       // A torch burning on the FLOOR spoils it the same way — the glow is the
-      // glow, whoever's hand it left.
-      if (lurker && (carriesFire(session) || z.roomLit(roomId))) continue;
+      // glow, whoever's hand it left. So is a full moon: light is light, and the
+      // room description has ALWAYS shown an outdoor lurker on a lit night
+      // (lurkerUnseen reads litFor, which reads isDark) — this is the strike
+      // side finally agreeing with it, instead of a thing you can plainly see
+      // dropping on you out of a dark that isn't there. Outdoors only, so the
+      // deep's crawlers and stalkers are untouched: they have never seen a sky.
+      if (lurker && (carriesFire(session) || z.roomLit(roomId) || moonlit(z, roomId, now))) continue;
       // The din of a fight no longer rouses the bone-sleepers — they wake to
       // movement (in or past) and to a grudge, not to noise alone. Blind lurkers
       // still strike at sound; that's the whole of what they are.
@@ -1103,9 +1109,32 @@ export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
     // and the dark itself — an outdoor scavenger is bolder at night same as
     // under a storm (the world-clock, isNight; deep/warrens are already dark
     // regardless of the hour, so this only ever adds anything outdoors).
+    // ...and the moon takes the third one back. isDark() is the honest read of
+    // "is it actually dark here" — it already knows the full moon lights the
+    // grounds — so on that one night in six the dark is not there to be bold in,
+    // and the boldness goes with it. Rain and fog are their own weather and are
+    // untouched: a storm under a full moon is still hunting weather.
     return events.raining(z, creature.roomId) || events.foggy(z, creature.roomId)
-      || (OUTDOOR_ROOMS.has(creature.roomId) && isNight());
+      || (OUTDOOR_ROOMS.has(creature.roomId) && z.isDark(creature.roomId));
   }
+
+// IS THIS ROOM UNDER THE MOON RIGHT NOW — the single gate every full-moon
+// behaviour reads (rome, 2026-08-10). Outdoors, at night, and genuinely lit:
+// isDark() is false out here only when the moon is full, so this is the full
+// moon stated as a question about a ROOM rather than about the calendar. That
+// matters because the gloam blots out a sky (events.gloamed feeds isDark), and
+// a room the dark is standing in gets none of this no matter what the moon is.
+export function moonlit(z: ZoneDO, roomId: string, now = Date.now()): boolean {
+  return OUTDOOR_ROOMS.has(roomId) && isNight(now) && !z.isDark(roomId);
+}
+
+// The pack's share of the moon: on top of the night multiplier, never instead
+// of it. Only the callers — the wolves and the dogs — get it. Everything else
+// hunting outdoors keeps night's plain 1.6, because this is about a pack that
+// can SEE its ground, not about predators in general.
+export function moonHuntMult(z: ZoneDO, creature: Creature, now: number): number {
+  return PACK_CALLERS.has(creature.templateId) && moonlit(z, creature.roomId, now) ? MOON_PACK_HUNT_MULT : 1;
+}
 
 // DOES THIS THING RUN, RIGHT NOW. RUNNERS is a permanent fact about a template
 // — except in the rut, when the roe stop being deer that run and become deer
@@ -1426,8 +1455,14 @@ export function naps(z: ZoneDO, creature: Creature, now: number): void {
     // Outdoors, the hour decides: the wood's game grazes by day and lies up
     // after dark, which is what the wolves' night surge is FOR. Indoors keeps
     // the old flat rate — the deep and the warrens do not have an hour.
+    //
+    // And the moon is a third hour. On a lit night it is light enough to feed,
+    // so the game stays up and out in the open instead of bedding down — which
+    // is the other half of the wolves' full moon: they hunt harder AND there is
+    // something out there to hunt.
     const odds = OUTDOOR_ROOMS.has(creature.roomId)
-      ? (isNight(now) ? NAP_ODDS_NIGHT_OUT : NAP_ODDS_DAY_OUT)
+      ? (moonlit(z, creature.roomId, now) ? NAP_ODDS_MOON_OUT
+        : isNight(now) ? NAP_ODDS_NIGHT_OUT : NAP_ODDS_DAY_OUT)
       : NAP_ODDS;
     if (!chance(odds)) return;
     fallAsleep(z, creature, now);
@@ -1544,6 +1579,36 @@ export function alarmBark(z: ZoneDO, roomId: string, now: number, caller: Creatu
         c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(3000, 9000));
       }
     }
+  }
+
+  // THE DEER SEE YOU COMING. The bark has always been a thing you CAUSE: put a
+  // deer to flight and it barks on the way out, which means the wood only ever
+  // learns about you after you have already touched it. On a lit night that is
+  // backwards — a roe deer's whole living is seeing first, and on open moonlit
+  // ground it can see a room further than you can move quietly.
+  //
+  // So it calls before you get there. Both rooms have to be under the moon
+  // (it is looking ACROSS open ground, not around a corner into a dark one),
+  // and the bark itself is the one the game already has — the same two
+  // audiences, the warning and the address, one of which is not on your side.
+  // Its own avoids double as the cooldown: a caller that has barked here is
+  // leaving here, and will not bark this ground again until it comes back.
+export function alarmWatch(z: ZoneDO, creature: Creature, now: number): void {
+    if (!ALARM_CALLERS.has(creature.templateId) || creature.target || creature.asleep) return;
+    if (!moonlit(z, creature.roomId, now)) return;
+    if ((creature.avoids ?? []).some((a) => a.until > now && a.roomId === creature.roomId)) return;
+    // Someone in the room is the flee rule's business (RUNNERS never settle with
+    // a person standing there); this is the room BEYOND, which nothing else has
+    // ever reacted to.
+    if (playerPresent(z, creature.roomId)) return;
+    const seen = (z.world!.exits.get(creature.roomId) ?? [])
+      .some((e) => !e.key_item && moonlit(z, e.to_room, now) && playerPresent(z, e.to_room));
+    if (!seen || !chance(ALARM_MOON_ODDS)) return;
+    creature.avoids = [
+      ...(creature.avoids ?? []).filter((a) => a.until > now && a.roomId !== creature.roomId),
+      { roomId: creature.roomId, until: now + ALARM_AVOID_MS },
+    ];
+    alarmBark(z, creature.roomId, now, creature);
   }
 
   // HE WANTS IT. A hoarder sharing a room with somebody carrying something rare
@@ -1700,7 +1765,9 @@ export function holdsExit(z: ZoneDO, creature: Creature, session: Session): bool
 export function packCall(z: ZoneDO, creature: Creature, now: number): void {
     if (!PACK_CALLERS.has(creature.templateId)) return;
     if (creature.calledTo === creature.roomId) return; // a call must never trigger a call
-    if (!chance(PACK_CALL_ODDS)) return;
+    // Under a full moon the pack gathers faster — the same call, thrown more
+    // often, because it can see who is coming and from where.
+    if (!chance(Math.min(1, PACK_CALL_ODDS * (moonlit(z, creature.roomId, now) ? MOON_PACK_CALL_MULT : 1)))) return;
     const line = z.variantBase.get(creature.templateId) ?? creature.templateId;
     const mate = [...z.creatures.values()].find(
       (c) => c.id !== creature.id && !c.target && !c.asleep && !c.calledTo

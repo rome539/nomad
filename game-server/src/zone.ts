@@ -53,7 +53,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, nightHuntMult } from "./zone-util";
+import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, moonPhase, nightHuntMult } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -92,7 +92,7 @@ import {
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
@@ -3146,7 +3146,7 @@ export class ZoneDO implements DurableObject {
         if (!prey) {
           creature.rouseAt = undefined; // no one to hunt — the hunger settles back
         } else if (creature.rouseAt === undefined) {
-          if (chance(STARVE_HUNTS_ODDS * nightHuntMult(creature.roomId, now))) {
+          if (chance(STARVE_HUNTS_ODDS * nightHuntMult(creature.roomId, now) * ai.moonHuntMult(this, creature, now))) {
             creature.rouseAt = now + DIRE_ROUSE_MS;
             // A LURKER should have been foiled by your light — a lit room or a
             // torch in hand spoils its ambush (ai.wakeListeners). Naming that the
@@ -3178,7 +3178,7 @@ export class ZoneDO implements DurableObject {
         if (!prey) {
           creature.rouseAt = undefined; // healed up, left, or died — the interest settles
         } else if (creature.rouseAt === undefined) {
-          if (chance(WOUNDED_PREY_ODDS * nightHuntMult(creature.roomId, now))) {
+          if (chance(WOUNDED_PREY_ODDS * nightHuntMult(creature.roomId, now) * ai.moonHuntMult(this, creature, now))) {
             creature.rouseAt = now + DIRE_ROUSE_MS;
             const lurker = LURKERS.has(creature.templateId);
             if (lurker) creature.hidden = false;
@@ -3208,7 +3208,11 @@ export class ZoneDO implements DurableObject {
         if (!prey) {
           creature.rouseAt = undefined; // no mark — the itch settles
         } else if (creature.rouseAt === undefined) {
-          if (chance(THIEF_ROB_ODDS)) {
+          // A footpad's whole trade is not being seen. On a lit night he mostly
+          // does not work the open road at all — the same roll, cut hard, so a
+          // full moon is a thing worth planning a journey around rather than a
+          // flavor line at nightfall (rome, 2026-08-10).
+          if (chance(THIEF_ROB_ODDS * (ai.moonlit(this, creature.roomId, now) ? MOON_THIEF_MULT : 1))) {
             creature.rouseAt = now + DIRE_ROUSE_MS;
             this.send(prey, `${cap(tmpl.name)} eyes your pack, hungry, and edges closer — it hasn't sprung yet. (get out, or hit first)`);
             this.roomFeed(creature.roomId, `${cap(tmpl.name)} sidles toward ${prey.name}, eyeing the pack.`, prey.pubkey, false);
@@ -3614,15 +3618,25 @@ export class ZoneDO implements DurableObject {
       // A full-moon nightfall gets its own line — isDark() already skips the
       // outdoor-night check on these nights, so the grounds genuinely stay
       // lit; the announcement has to say so, not just that dark "settles".
-      const fullMoon = nightNow && isFullMoon(now);
+      // THE SKY NAMES ITS MOON (rome, 2026-08-10). Nightfall used to have two
+      // states, full or not, when the moon has always ridden a six-night modulo
+      // underneath — so five different nights all read "full dark settles" and
+      // the full moon arrived out of nowhere every sixth. Now the line says
+      // which night of the month this is, and the waxing half counts you down
+      // to the one night the grounds stay lit (zone-data MOON_NIGHTS).
+      const line = nightNow
+        ? MOON_NIGHTS[moonPhase(now)] ?? MOON_NIGHTS[3]
+        : "Dawn breaks over the grounds — the dark thins and lifts.";
       for (const s of this.sessions.values()) {
         if (this.outOfWorld(s) || !OUTDOOR_ROOMS.has(s.roomId)) continue;
-        this.send(s, fullMoon
-          ? "A full moon rises over the grounds, huge and white — plain as day out here tonight."
-          : nightNow
-          ? "The light fails outside — full dark settles over the grounds."
-          : "Dawn breaks over the grounds — the dark thins and lifts.", "evt");
+        this.send(s, line, "evt");
       }
+      // ...and the watchers get it too. The per-session sends above are gated on
+      // standing OUTDOORS under the actual sky, which no broadcast can express —
+      // but a spectator is watching the world, not standing in a room of it, so
+      // the sky's own news belongs in the feed (rome: "its still showing in the
+      // spectator feed right?").
+      this.relayFeed("mudzone-" + (this.world?.zone ?? "door"), line);
     }
     // ...and on a full moon the wood answers it. Only at moonrise, only from
     // things with a voice, and it changes nothing at all.
@@ -3874,6 +3888,8 @@ export class ZoneDO implements DurableObject {
         ai.ratCuddles(this, creature, now);
         // The small lives: warm blood dozes off in the quiet...
         ai.naps(this, creature, now);
+        // ...the deer bark at a person crossing open ground under a full moon...
+        ai.alarmWatch(this, creature, now);
         // ...the hyenas pad to water on their own clocks...
         ai.waters(this, creature, now);
         // ...and the unseen things shift their ambushes to where the feet go.
@@ -6028,10 +6044,33 @@ export class ZoneDO implements DurableObject {
   // so this puts them with the band they actually came in from, which is the
   // whole point. The relay copy still goes out whole — the arena watches the
   // world, not one band of it.
+  /**
+   * WHICH BAND'S NEWS A ROOM HEARS. Not regionOf, and the difference is the
+   * whole point: regionOf checks entryRooms FIRST and collapses every gate to
+   * "gate", which was right while all three doors were in the fortress. Since
+   * the gates spread, the wood's Timber Stack and Withy Hut and Gate Arch and
+   * the road's First Milestone have all been sitting in the FORTRESS's band —
+   * so the last watchman calling the hour off a battlement ten rooms and a
+   * whole region away was heard by anyone standing at a gatehouse in the wood
+   * (rome, 2026-08-10).
+   *
+   * lore.mapRegionOf was written to fix exactly this for the MAP, and this is
+   * the same fix for the FEED, by the same rule: a room that carries its own
+   * region is in that region, gate or not. Only the original 110, which carry
+   * no region column at all, still collapse to "gate" — and those three doors
+   * genuinely are the fortress.
+   */
+  private bandOf(roomId: string): string {
+    const own = this.world!.rooms.get(roomId)?.region;
+    if (own) return own;
+    if (this.world!.entryRooms.has(roomId)) return "gate";
+    return DEEP_ROOMS.has(roomId) ? "deep" : "upper";
+  }
+
   public roomFeedBands(bands: Set<string>, text: string, cls?: string): void {
     const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: "*", text, cls } : { v: 0, kind: 24913, room: "*", text });
     for (const s of this.sessions.values()) {
-      if (!bands.has(this.regionOf(s.roomId))) continue;
+      if (!bands.has(this.bandOf(s.roomId))) continue;
       try { s.ws.send(frame); } catch {}
     }
     this.relayFeed("mudzone-" + (this.world?.zone ?? "door"), text);

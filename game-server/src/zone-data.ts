@@ -2548,12 +2548,45 @@ export const DAY_CYCLE_MS = 4 * 3_600_000; // 2h day, 2h night
 // genuinely lights the grounds instead of just being a flavor label. One full
 // moon roughly once a day (6 * DAY_CYCLE_MS's 4h night-halves).
 export const MOON_FULL_EVERY = 6;
+// WHAT THE SKY SAYS AT NIGHTFALL, one line per night of the moon's month
+// (zone-util moonPhase; index 0 is the full moon). Written so the waxing half
+// counts you down out loud — the full moon is the one night the grounds stay
+// lit and the whole wood answers it, and a player standing outside ought to be
+// able to see it coming instead of being surprised by it every sixth night.
+export const MOON_NIGHTS = [
+  "A full moon rises over the grounds, huge and white — plain as day out here tonight.",
+  "The light fails, and the moon comes up a night past full, a shaving off one side of it. Not enough to walk by.",
+  "The light fails. A half moon rises behind the cloud and gives the grounds nothing but edges.",
+  "The light fails, and nothing comes up after it. No moon at all tonight — the dark out here is the whole of it.",
+  "The light fails. A thin moon climbs the other side of its month, and the grounds keep their dark a while yet.",
+  "The light fails, and the moon comes up very nearly whole. One more night of this and you will be able to see out here.",
+];
 // Predators hunt harder after dark: a straight multiplier on the two
 // wind-up odds (STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS), same shape as the
 // bell's bellWakeMult — never a new mechanic, just the existing roll made
 // more likely. OUTDOOR rooms + night only (nightHuntMult, zone-util.ts);
 // day/night has no opinion indoors at all, so this doesn't either.
 export const NIGHT_HUNT_MULT = 1.6;
+// WHAT THE FULL MOON ACTUALLY DOES (rome, 2026-08-10). Until now the moon was
+// a six-night modulo asked as a yes/no question, and the one night it said yes
+// it did exactly one thing: the grounds stayed lit. Now the things with eyes
+// answer it. The organising rule is the whole of it — THE MOON IS LIGHT, AND IT
+// ONLY FALLS OUTDOORS — so it reaches what is out under it and nothing else.
+// The HOLLOW have no eyes and no hours, the drowned hold their water whatever
+// the sky does, the listeners wake to movement and not light, and nothing in
+// the deep or the warrens has ever seen a moon. A moon that changed everything
+// would be noise; this one changes who is out.
+//
+// Net shape: on a full moon THE AMBUSHERS STOP AND THE HUNTERS START. The road
+// gets safer, the wood gets worse, and you can see across both. Every dial
+// below is an existing roll made likelier or unlikelier — no new machinery.
+// The gate for all five is ai.moonlit(): outdoors, night, and actually lit
+// (a gloamed room is dark whatever the sky is doing).
+export const MOON_THIEF_MULT = 0.15;    // a footpad's trade is not being seen — on a lit road he mostly doesn't work
+export const NAP_ODDS_MOON_OUT = 0.003; // the game grazes instead of lying up: ~33% bedded, against night's 65% and day's 15%
+export const MOON_PACK_HUNT_MULT = 1.5; // on TOP of the night multiplier — the pack can see, and there is something to see
+export const MOON_PACK_CALL_MULT = 1.6; // and it gathers faster; this is what the howling is FOR
+export const ALARM_MOON_ODDS = 0.2;     // per idle tick with a person in sight ACROSS open moonlit ground — the deer bark before you arrive
 // THE WORLD'S CLOCKS (the simulation's law, rome 2026-07-11): two tracks.
 // The BELL is scheduled — a keep rings its bell at its own hours, twice a day,
 // and a player can learn them. Everything else is ROLLED: one die, every few

@@ -14,7 +14,19 @@ export function isNight(now = Date.now()): boolean {
 // caller, and it's already gated on isNight() there) — a "full moon" at noon
 // is not a thing this asks about.
 export function isFullMoon(now = Date.now()): boolean {
-  return Math.floor(now / DAY_CYCLE_MS) % MOON_FULL_EVERY === 0;
+  return moonPhase(now) === 0;
+}
+// WHICH NIGHT OF THE MOON'S MONTH THIS IS: 0 is full, and it counts up from
+// there — waning, dark, waxing — back round to full again. isFullMoon has
+// always been this same modulo asked as a yes/no question; the sky has six
+// answers and only ever gave two (rome, 2026-08-10).
+//
+// Only phase 0 changes anything mechanically (isDark skips the outdoor-night
+// check on a full moon, so the grounds genuinely stay lit). The rest is a thing
+// to read: a wanderer who looks up on a waxing night knows how many nights
+// until the grounds are walkable after dark, and until the wood starts howling.
+export function moonPhase(now = Date.now()): number {
+  return Math.floor(now / DAY_CYCLE_MS) % MOON_FULL_EVERY;
 }
 // Predators hunt harder after dark, outdoors only — day/night has no opinion
 // on indoor rooms, so neither does this. 1 = no change, the common case.
