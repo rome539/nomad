@@ -194,6 +194,16 @@ export function reachable(z: ZoneDO, attacker: string, target: string): boolean 
   return !shelteredInDen(z, target) && !shelteredInDen(z, attacker);
 }
 
+/**
+ * ARE THESE TWO ON THE SAME SIDE OF THE SAME DOOR? A creature (or anything else
+ * with no pubkey) is always out on the ground, so it never shares a side with
+ * anyone indoors. Used by the room's feed: what happens in the street is not
+ * something you watch from inside a barred house.
+ */
+export function sameSide(z: ZoneDO, a: string | undefined, b: string): boolean {
+  return z.inDen.get(a ?? "") === z.inDen.get(b);
+}
+
 export function leaveDen(z: ZoneDO, pubkey: string): void { z.inDen.delete(pubkey); }
 
 // WAKING AT YOUR OWN DOOR (rome, 2026-08-07). The dark usually gives you back at

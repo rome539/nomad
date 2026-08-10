@@ -1011,6 +1011,9 @@ export function cmdShout(z: ZoneDO, session: Session, msg: string): void {
 
 export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive = false): Promise<void> {
   if (!arg) return z.send(session, "Get what?");
+  // The street's floor is not in reach from behind your own bar.
+  const barred = z.behindTheDoor(session);
+  if (barred) return z.send(session, barred);
   // A tide-drowned floor gives nothing to a standing reach — you go under
   // for it (cmdDive comes through here with the flag) or you wait it out.
   if (!fromDive && events.tideFlooded(z, session.roomId)) {

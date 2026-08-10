@@ -1585,6 +1585,8 @@ export class ZoneDO implements DurableObject {
 
   private async cmdAttack(session: Session, arg: string): Promise<void> {
     if (!arg) return this.send(session, "Attack what?");
+    const barred = this.behindTheDoor(session);
+    if (barred) return this.send(session, barred);
     const found = this.findCreatureIn(session.roomId, arg);
     // You cannot swing at what hasn't shown itself: an unseen lurker is not a
     // target, and naming it must not confirm it's there.
@@ -1682,6 +1684,8 @@ export class ZoneDO implements DurableObject {
   // A thrown thing: its own bite plus the arm behind it — resolved on the spot,
   // not on the tick. Then it lies where the fight is, anyone's to take back.
   private async cmdThrow(session: Session, arg: string): Promise<void> {
+    const barred = this.behindTheDoor(session);
+    if (barred) return this.send(session, barred);
     if (!arg) return this.send(session, "Throw what? (throw <item> at <creature>)");
     const world = this.world!;
     let itemArg = arg;
@@ -2668,6 +2672,25 @@ export class ZoneDO implements DurableObject {
   // which is the whole of the den's founding rule.
   public shelteredInDen(pubkey: string): boolean {
     return den.shelteredInDen(this, pubkey);
+  }
+
+  /**
+   * ...AND THE DOOR WORKS BOTH WAYS. The rule above was written entirely from
+   * the outside in — nothing on the ground can put a hand on you — and never
+   * said the obvious other half, so it was not enforced: from behind a barred
+   * door you could still swing at, throw at and pick up things out in the
+   * street, while the street could not answer. A free shot through a wall.
+   *
+   * Found alongside the deer (rome, 2026-08-10): the same missing law let the
+   * ground's business into his house and his hands out of it.
+   *
+   * SIGHT IS NOT REACH. Looking and studying still work — a house has windows
+   * (den.windowLine), and watching something out of one is the whole charm of
+   * it. What you cannot do is touch.
+   */
+  public behindTheDoor(session: Session): string | null {
+    if (!this.shelteredInDen(session.pubkey)) return null;
+    return "Not from in here — the bar is across your door, and your arms are the wrong side of it. ('out' puts you back on the ground.)";
   }
 
   // Can the world reach this wanderer at all, right now?
@@ -5969,6 +5992,18 @@ export class ZoneDO implements DurableObject {
       // wanderer blinking in, a bench being closed — doesn't carry through it.
       // (Their own room has its own feed; see gate.gatehouseFeed.)
       if (this.outOfWorld(s)) continue;
+      // AND THE SAME IS TRUE OF A BARRED HOUSE DOOR (rome, 2026-08-10: "theres a
+      // fucking deer in my den"). He was sitting behind his own bar, which the
+      // room had just told him nothing outside could reach through, and the
+      // street's roe deer walked across his feed as though it were in the room
+      // with him. The gatehouse has skipped its own door's noise since the day
+      // it was built; the den — much newer — never got the rule.
+      //
+      // Only what happens on the OTHER side of the door is cut. A creature has
+      // no pubkey and is always out on the ground, so its noise never carries
+      // in; a bunkmate sharing the same barred room is on your side of it and
+      // still speaks to you normally.
+      if (this.shelteredInDen(s.pubkey) && !den.sameSide(this, speaker?.pk ?? exceptPubkey, s.pubkey)) continue;
       try { s.ws.send(frame); } catch {}
     }
     // Players standing here always see it (a cheap in-memory send). The relay,
