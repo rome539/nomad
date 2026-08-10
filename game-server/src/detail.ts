@@ -656,6 +656,119 @@ function matches(aliases: string, arg: string): boolean {
 // The room first, then the band it stands in, then what is true anywhere.
 // Returns null when nothing answers, which puts the caller back on its own
 // honest refusal.
+// ---------------------------------------------------------------------------
+// THE FINGERPOSTS (rome, 2026-08-10: "we need to put cross road signs for the
+// roads — the room before the road")
+// ---------------------------------------------------------------------------
+//
+// The world has 512 rooms and four ways out of the fortress and no way at all
+// to learn where any of them go except by walking them and dying somewhere.
+// The map is knowledge-as-loot and should stay that way; a fingerpost is the
+// other thing, and it is what a real country actually has. The institution that
+// cut the milestones and set the toll stones put up arms at its junctions,
+// because a road nobody can navigate does not collect tolls.
+//
+// So these go at the room BEFORE the road — the last square where the choice is
+// still in front of you. They are TRUE. Everything else in this world lies to
+// you a little (the crude map's per-copy error, the reflection, the recut
+// eighth milestone), and the counterweight has to be somewhere: this is the
+// one piece of infrastructure that says what it means. What they do not tell
+// you is what is ON the road, which is the part that kills you.
+//
+// `post` is the line the room grows (describeRoom). `reads` is what the arms
+// say when you look at it — direction first, in the order a fingerpost's arms
+// would actually be read going round it.
+export const SIGNPOSTS: Record<string, { post: string; reads: string[] }> = {
+  // ---- THE FOUR DOORS OUT OF THE FORTRESS ----
+  "the-old-road": {
+    post: "A fingerpost stands at the verge with two arms still on it, and the cut on both is deep enough to have outlived the paint.",
+    reads: [
+      "EAST — THE EAST ROAD. The milestones count up. Posting house at the fifth, and the high country past the eighth.",
+      "WEST — THE FORTRESS. The gate, the hill, and what is under both.",
+    ],
+  },
+  "the-drowned-orchard": {
+    post: "A fingerpost leans out of the standing water at the orchard's edge, arms weathered pale but legible.",
+    reads: [
+      "WEST — THE WEST ROAD. Milestones down to the eaves of the wood, and the den ground south of that.",
+      "EAST — THE FORTRESS. The Waystation, the toll-house, and the east road beyond it.",
+    ],
+  },
+  "the-mass-grave": {
+    post: "A post at the edge of the pits with one arm on it, pointing away east over unbroken ground. The other arm has been taken off and the hole is empty.",
+    reads: [
+      "EAST — THE DROVE. Stock road over the shoulder. No toll on it, and nothing on it either.",
+      "(the second arm is gone, and by the wear on the socket it was taken rather than fell)",
+    ],
+  },
+  "sally-port": {
+    post: "Somebody has cut lettering into the stone of the postern arch itself, small and square, at about the height of a man crouching to go through it.",
+    reads: [
+      "EAST — the ditch runs to the beck. Mill, then the gill, then the head of the water.",
+      "It is cut on the INSIDE of the arch, which means it was written for people leaving, and quietly.",
+    ],
+  },
+  // ---- THE GREAT CROSSROADS. Four ways, three of them into whole regions.
+  "the-gap-in-the-trees": {
+    post: "A fingerpost stands square in the middle of the gap with four arms on it, and it is the most useful object on this road.",
+    reads: [
+      "WEST — THE WOOD. The eaves, and the rides past them. The wood is not marked further in.",
+      "NORTH — THE DENS, by the hurdle gate. Roofs, and other people under them.",
+      "SOUTH — THE WASTE. The den ground's poor end.",
+      "EAST — THE ROAD, and the fortress at the end of it.",
+    ],
+  },
+  // ---- WHERE THE EAST ROAD'S THREE ROUTES MEET ----
+  "the-cattle-grid": {
+    post: "A fingerpost stands beside the rotted gate, painted once, with the drove's arm noticeably older than the road's.",
+    reads: [
+      "NORTH — THE DROVE. Green way over the shoulder, back down to the burial ground.",
+      "EAST — THE ROAD, and the climb.",
+      "WEST — THE ROAD, and the fortress.",
+    ],
+  },
+  "the-drowned-ford": {
+    post: "A low post at the ford's edge, half its length under water, with one arm on it pointing downhill.",
+    reads: [
+      "SOUTH — THE BECK. The water's own valley: the mill, and the way down to the postern.",
+      "The arm is set lower than a rider's eye and higher than the flood, which tells you what this water does.",
+    ],
+  },
+  "the-scarp-foot": {
+    post: "A fingerpost at the turn, iron-shod against the weather, with three arms and a fourth socket empty.",
+    reads: [
+      "EAST — THE CLIMB. Hairpins to the top of the scarp, and the moor above it.",
+      "SOUTH — THE BECK HEAD. Stair down to the springs and the gill.",
+      "WEST — THE ROAD, and everything you have already walked.",
+    ],
+  },
+  // ---- THE WEST ROAD'S OWN LANDINGS ----
+  "the-osier-landing": {
+    post: "A stump of a post at the verge with the arm lying in the grass beside it, face up and still readable.",
+    reads: [
+      "WEST — THE WOOD, by the osier beds. Wet going, and the rides beyond.",
+      "The arm is off its post, which means whichever way you turn it is the way it points.",
+    ],
+  },
+  "the-waste-foot": {
+    post: "A post at the roadside with an arm on it that has been re-cut by a different hand, more recently and much worse.",
+    reads: [
+      "NORTH — THE WASTE, and the dens on it.",
+      "The original cut is still under the new one, and it said the same thing.",
+    ],
+  },
+};
+
+// The arms answer `look sign` (and every word a player would actually type for
+// one) without duplicating a line of it — the table above is the single source
+// and this folds it into the feature lookup at module load.
+const SIGN_WORDS = "sign|signpost|post|fingerpost|arm|arms|marker|lettering|board";
+for (const roomId in SIGNPOSTS) {
+  const sign = SIGNPOSTS[roomId];
+  const table = (ROOM_FEATURES[roomId] ??= {});
+  table[SIGN_WORDS] = `${sign.post}\n${sign.reads.map((r) => `  ${r}`).join("\n")}`;
+}
+
 export function lookFeature(roomId: string, region: string, arg: string): string | null {
   const tables: (FeatureTable | undefined)[] = [
     ROOM_FEATURES[roomId],

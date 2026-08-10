@@ -70,7 +70,7 @@ import * as trade from "./trade";
 import * as den from "./den";
 import * as works from "./works";
 import type { WorksPlan } from "./works";
-import { WOOD_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP } from "./detail";
+import { WOOD_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS } from "./detail";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
@@ -5070,6 +5070,13 @@ export class ZoneDO implements DurableObject {
       const wl = den.windowLine(this, session);
       if (wl) lines.push(wl);
     }
+    // THE FINGERPOST, where there is one (detail.SIGNPOSTS). The room says the
+    // post is there; reading the arms is a `look`, because a sign you have to
+    // walk up to is a sign, and one that recites itself at you is a menu. This
+    // sits past the pitch-dark return above on purpose — nobody reads a
+    // signpost in the black, and the dark is the one thing that beats it.
+    const sign = full ? SIGNPOSTS[room.id] : undefined;
+    if (sign) lines.push(`${sign.post} (look at the sign)`);
     // The sky's phase, spoken where the sky can reach you: coming rain, rain,
     // or the mud it left. Legibility rule — you always know what weather
     // you're standing in.
