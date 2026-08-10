@@ -418,6 +418,20 @@ export const FISHING_SURFACE = new Set(["the-black-fen", "the-drowned-orchard", 
   // goes down further than the light does, and the eel traps because they are
   // ALREADY FISHING — the withies have gone soft and the arrangement is intact.
   "the-millpond", "the-hatchpool", "the-trap-line"]);
+// ...AND THE BECK IS NOT THE FEN. Surface water was one thing when the only
+// surface water was standing and stagnant: the catch table gave a CAVE FISH and
+// the miss line said "the fen lies flat under its own scum", both of which are
+// true of a fen and neither of which survives being said about a millpond with
+// a wheel in it. So the beck's three are their own water, with their own fish
+// and their own way of refusing you.
+export const FISHING_BECK = new Set(["the-millpond", "the-hatchpool", "the-trap-line"]);
+// THE EEL TRAPS ARE ALREADY FISHING. That room is a weir of stakes with woven
+// traps set mouth-upstream, exactly as somebody left them — so what you are
+// doing there is not casting, it is CHECKING A LINE, and what a line of eel
+// traps catches is eels. Everywhere else on the beck it is a trout, and the
+// trap line gives one too when the eels have not obliged.
+export const BECK_EEL_ODDS = 0.06;   // the open beck: an eel now and then, same order as the fen's
+export const TRAP_EEL_ODDS = 0.55;   // the traps: more often than not, because that is what they are for
 export const FISHING_DEEP = new Set(["pocket-of-air", "the-weir", "black-canal", "leech-pools", "the-sump", "the-cistern",
   "the-eel-run", "the-breathing-hall"]); // the Tideways' waters (069) — the tide restocks them when it drains
 export const FISHING_ROOMS = new Set([...FISHING_SURFACE, ...FISHING_DEEP]);
@@ -2685,6 +2699,38 @@ export const MOON_NIGHTS = [
 // bell's bellWakeMult — never a new mechanic, just the existing roll made
 // more likely. OUTDOOR rooms + night only (nightHuntMult, zone-util.ts);
 // day/night has no opinion indoors at all, so this doesn't either.
+// ---- THE CARRIER'S RUN (the paving's own arc, 2026-08-10) --------------------
+// EVERY ARC IN THIS WORLD IS A HAZARD. The rain, the fog, the cold, the rat
+// tide, the wake, the gloam, the fever, the pack, the tide, the spate — all of
+// them are the world doing something TO you, and the correct response to every
+// one is to be somewhere else. That is a complete list, and a game whose every
+// event says "leave" has only taught its players one verb.
+//
+// This one is an OPPORTUNITY, and it is the first. A carrier is on the east
+// road tonight with a full satchel, walking a known route at a known pace, and
+// the word has already run ahead of him — which is exactly what makes him
+// dangerous to go after. Everybody heard. The band line goes out across the
+// whole surface on purpose: in an extraction game the most interesting thing
+// you can tell a player is where the money is, because it is also telling
+// everybody else.
+//
+// He is not a boss and he is not a quest. He is 40hp with a bag, and the risk
+// is not him — it is the road filling up with people who also heard.
+export const CARRIER_TELEGRAPH_MS = 90_000;      // the word, before the man
+export const CARRIER_ACTIVE_MIN_MS = 15 * 60_000;
+export const CARRIER_ACTIVE_MAX_MS = 25 * 60_000;
+export const CARRIER_AFTERMATH_MS = 10 * 60_000;
+export const CARRIER_FROM = "the-thorn-gap";     // the fortress end of the paving
+export const CARRIER_TO = "the-cattle-grid";     // ...and as far as one man walks in a window
+export const CARRIER_STRIDE: [number, number] = [9000, 22_000]; // a working pace, not a stroll and not a run
+export const CARRIER_ESCORT = 2;                 // waymen the word also reached
+export const CARRIER_ESCORT_ROOMS = ["the-hollow-way", "the-cut-bank", "the-verge-shrine", "the-hawthorn-narrows"];
+// WHAT IS IN THE BAG. Loaded onto the creature's `carries`, which means it is
+// VISIBLE on him (creatureTell) and spills on the floor when he goes down — no
+// roll, no drop table. You can see the prize before you decide, which is the
+// only honest way to price a decision like this one.
+export const CARRIER_SATCHEL = ["dry-cigarettes", "toll-token", "iron", "linen-strips"];
+
 // ---- THE SPATE (the east road's own arc, 2026-08-10) --------------------------
 // THE BECK RISES. The east road was built as three independent routes because a
 // corridor is a corridor — and redundancy that never gets tested is just extra

@@ -111,6 +111,7 @@ export interface Creature {
   sleepUntil?: number; // when the doze ends on its own
   thirstAt?: number; // hyenas: when the next watering run calls
   wateringTo?: string; // hyenas: the water room it's padding toward (wander steers by roomDist)
+  walkingTo?: string;  // this thing is GOING somewhere far off: every wander step closes the distance (roomDist), and it stops when it arrives. The watering run's wire, generalised — a hyena walks to water, a carrier walks a road, and whatever the Crossing puts on the water will walk it too.
   avoids?: { roomId: string; until: number }[]; // place-fear: rooms this one steers around (a rat's bad memory, a thief's warning)
   calledTo?: string; // call-bus guard: it was SUMMONED here — it never calls from this room (a call must never trigger a call)
   leavesAt?: number; // TRANSIENT creatures have somewhere else to be: the ms they walk off the map for good (the chainman)

@@ -41,6 +41,8 @@ import {
   BROODERS, SENTINELS, DROWNERS, DEEP_ROOMS,
   GLOAM_TELEGRAPH_MS, GLOAM_STEP_MS, GLOAM_ACTIVE_MS, GLOAM_AFTERMATH_MS,
   SPATE_ROOMS, SPATE_COURSE, SPATE_INDEX, SPATE_BITE, SPATE_SWEEP_ODDS, SPATE_CARRY_ODDS,
+  CARRIER_TELEGRAPH_MS, CARRIER_ACTIVE_MIN_MS, CARRIER_ACTIVE_MAX_MS, CARRIER_AFTERMATH_MS,
+  CARRIER_FROM, CARRIER_TO, CARRIER_STRIDE, CARRIER_ESCORT, CARRIER_ESCORT_ROOMS, CARRIER_SATCHEL,
   SPATE_SWEEP_MIN, SPATE_SWEEP_MAX, SPATE_TELEGRAPH_MS, SPATE_ACTIVE_MIN_MS, SPATE_ACTIVE_MAX_MS, SPATE_AFTERMATH_MS,
   FORTRESS_BANDS, SURFACE_BANDS, DEEP_HEARD_BANDS, KEEP_HEARD_BANDS, FEN_HEARD_BANDS, WANT_HEARD_BANDS, GLOAM_HEARD_BANDS,
   RUT_TELEGRAPH_MS, RUT_ACTIVE_MIN_MS, RUT_ACTIVE_MAX_MS, RUT_AFTERMATH_MS,
@@ -81,7 +83,7 @@ const POOL: [string, number, string][] = [
   ["boil", 2, "warrens"], ["wake", 2, "warrens"],
   ["exhale", 2, "deep"], ["song", 2, "deep"],
   ["gloam", 2, "upper"], ["want", 2, "gate"],
-  ["lights", 2, "road"], ["escape", 1, "deep"], ["spate", 2, "road"],
+  ["lights", 2, "road"], ["escape", 1, "deep"], ["spate", 2, "road"], ["carrier", 2, "road"],
   // THE WOOD (mig-less, 2026-08-06) — 170 rooms that had no weather of their own
   ["rut", 2, "wood"], ["walk", 1, "wood"], ["quiet", 2, "wood"],
   // THE DEN GROUND — 60 rooms, likewise
@@ -627,6 +629,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickEscape(z, now);
   await tickLights(z, now);
   await tickSpate(z, now);
+  await tickCarrier(z, now);
   await tickCrows(z, now);
   await tickExhale(z, now);
   await tickSong(z, now);
@@ -792,6 +795,81 @@ function rutWolves(z: ZoneDO, now: number): void {
   }
   st.data = ids.join(",");
   z.roomFeedBands(new Set(["wood"]), "The roaring has been going on long enough now that other things have heard it. Somewhere west, a wolf answers a stag.", "evt");
+}
+
+// ---- THE CARRIER'S RUN (the east road) ----
+// The first arc in this world that is an OPPORTUNITY rather than a hazard —
+// see zone-data CARRIER_SATCHEL for why that matters. A man with a full bag
+// walks the paving, the word has already gone out to everybody, and the danger
+// is the road filling up behind him.
+async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("carrier");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("carrier", st); }
+
+  // HE KEEPS WALKING. `curious` is the world's existing drift-toward-a-room
+  // machinery (the same wire the pack call and the hoarder's trail use), and it
+  // clears when he arrives — so while the window is open we simply keep pointing
+  // him east and keep his stride brisk. If something has him by the throat he
+  // stops walking, which is the whole of the fight: he is not going to run.
+  if (st.phase === "active" && st.data) {
+    const carrier = z.creatures.get(st.data.split(",")[0]);
+    if (carrier && !carrier.target && carrier.roomId !== CARRIER_TO) {
+      carrier.walkingTo = CARRIER_TO;
+      carrier.nextWanderAt = Math.min(carrier.nextWanderAt, now + randInt(CARRIER_STRIDE[0], CARRIER_STRIDE[1]));
+    }
+    // ARRIVING ENDS THE RUN. He walks it in about a third of the window, and a
+    // carrier who has got where he was going and then stands there for another
+    // quarter of an hour is not a moving target, he is a bag on a post. The
+    // window is a ceiling on how long he is out, not a duration he must serve.
+    if (carrier && carrier.roomId === CARRIER_TO && !carrier.target) st.until = now;
+  }
+
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + CARRIER_TELEGRAPH_MS;
+      z.roomFeedBands(SURFACE_BANDS, "Word runs the length of the roads before the man does: there is a carrier on the east paving tonight, and the bag is full.", "evt");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + randInt(CARRIER_ACTIVE_MIN_MS, CARRIER_ACTIVE_MAX_MS);
+      const ids: string[] = [];
+      const carrier = hatch(z, "road-carrier", CARRIER_FROM, now, CARRIER_STRIDE);
+      if (!carrier) { st.phase = "idle"; st.until = NEVER; break; }
+      ids.push(carrier);
+      // The bag goes ON him, not in a drop table: visible before you commit.
+      const c = z.creatures.get(carrier);
+      if (c) { c.carries = [...CARRIER_SATCHEL]; c.walkingTo = CARRIER_TO; }
+      // ...and the word reached the road's own people first.
+      const posts = [...CARRIER_ESCORT_ROOMS];
+      for (let i = 0; i < CARRIER_ESCORT && posts.length; i++) {
+        const at = posts.splice(randInt(0, posts.length - 1), 1)[0];
+        const w = hatch(z, "wayman", at, now, [20_000, 60_000]);
+        if (w) ids.push(w);
+      }
+      st.data = ids.join(",");
+      feedWhere(z, (roomId) => roomId === CARRIER_FROM, "A carrier comes through the thorn gap at a walking pace, satchel buckled, both hands free, and does not stop to talk.");
+      z.roomFeedBands(SURFACE_BANDS, "He is on the road. So, by now, is everybody who heard.", "evt");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + CARRIER_AFTERMATH_MS;
+      const ids = (st.data ?? "").split(",").filter(Boolean);
+      const carrier = z.creatures.get(ids[0]);
+      // Recall takes back only what is still standing — a thing a player killed
+      // is not here to clear, and the world keeps that.
+      recall(z, ids);
+      st.data = undefined;
+      z.roomFeedBands(SURFACE_BANDS, carrier
+        ? "The carrier got through. Whatever was in the bag went east with him, and the road is a road again."
+        : "Word comes back down the east road: the carrier did not get through, and somebody is better off tonight.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
 }
 
 // ---- THE SPATE (the east road) ----

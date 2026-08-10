@@ -610,6 +610,20 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         if (safe.length) exits = safe;
       }
     }
+    // A THING THAT IS GOING SOMEWHERE goes there. `curious` was never this — it
+    // looks for an exit that IS the room it wants and clears after one look, so
+    // it can only ever reach next door. This closes real distance, one room a
+    // step, the way the watering run below already does, and it is what any arc
+    // that puts a traveller on a road needs (the carrier's run, 2026-08-10).
+    if (mode === "wander" && creature.walkingTo) {
+      if (creature.walkingTo === creature.roomId) creature.walkingTo = undefined; // arrived
+      else {
+        const d = z.roomDist(creature.roomId, creature.walkingTo);
+        const closer = exits.filter((e) => z.roomDist(e.to_room, creature.walkingTo!) < d);
+        if (closer.length) exits = closer;
+        else creature.walkingTo = undefined; // no way on from here — the journey ends where it stops
+      }
+    }
     // A watering run walks with purpose: each step closes on the hole.
     if (mode === "wander" && creature.wateringTo) {
       const d = z.roomDist(creature.roomId, creature.wateringTo);

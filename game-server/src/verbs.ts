@@ -22,7 +22,7 @@ import * as den from "./den";
 import * as detail from "./detail";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS,
-  PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
+  PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
@@ -1645,6 +1645,8 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
     ]));
   }
   const surface = FISHING_SURFACE.has(session.roomId);
+  const beck = FISHING_BECK.has(session.roomId);
+  const traps = session.roomId === "the-trap-line";
   const biting = surface && events.raining(z, session.roomId);
   if (!chance(Math.min(0.9, FISH_ODDS * (biting ? RAIN_BITE_MULT : 1)))) {
     // The bottom keeps old iron; sometimes the hook finds that instead.
@@ -1661,6 +1663,14 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
     return z.send(session, pick(biting ? [
       "The rain pocks the water and something rolls near the line — not this cast.",
       "A hard tug in the downpour — then gone. They're moving down there.",
+    ] : traps ? [
+      "You lift the trap, tip it, and put it back. Weed, and a stone somebody used for a weight.",
+      "The withies come up heavy and come up empty — whatever was in this one got out the way it came in.",
+      "Nothing in this one. You reset it mouth-upstream, the way it was set, because it seems wrong not to.",
+    ] : beck ? [
+      "The line goes down the current and comes back with the current, and nothing has an opinion about it.",
+      "Something moves under the far bank — a shadow with a shadow's timing — and does not come out again.",
+      "The water goes over the stones and keeps going, and takes your line with it, and gives you nothing.",
     ] : surface ? [
       "The fen lies flat under its own scum. Nothing takes the line.",
       "A ripple crosses the still water, going somewhere else.",
@@ -1673,8 +1683,14 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
       "Something brushes the line and thinks better of it.",
     ]));
   }
-  // Depth writes the table: the lamprey never rises to surface water.
-  const fishId = surface
+  // Depth writes the table, and so does the WATER: the lamprey never rises to
+  // surface water, the cave fish never comes out of a river, and a line of eel
+  // traps catches what eel traps are for.
+  const fishId = traps
+    ? (chance(TRAP_EEL_ODDS) ? "pale-eel" : "river-trout")
+    : beck
+    ? (chance(BECK_EEL_ODDS) ? "pale-eel" : "river-trout")
+    : surface
     ? (chance(EEL_SURFACE_ODDS) ? "pale-eel" : "cave-fish")
     : chance(LAMPREY_ODDS) ? "marrow-lamprey"
     : chance(PALE_EEL_ODDS) ? "pale-eel" : "cave-fish";
@@ -1688,11 +1704,15 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   spendPool(z, session.roomId, pool);
   z.send(session, (fishId === "marrow-lamprey"
     ? `The line dives and holds — you fight it up hand over hand: ${fish.name}, coiling like a question.`
+    : traps
+    ? `The trap comes up heavy and moving. You get the mouth of it open over your hands and there is ${fish.name} in it, and it has been in there a while.`
     : fishId === "pale-eel"
     ? `The line goes taut and FIGHTS you — you haul up ${fish.name}, thrashing.`
+    : fishId === "river-trout"
+    ? `The line goes across the current and stops, and then everything happens at once — you bring ${fish.name} up the shingle, bright and hard and bending.`
     : `The line goes taut — you haul up ${fish.name}.`)
     + ` [${fish.rarity}] (unclaimed — good, fresh food)`, "gain");
-  z.roomFeed(session.roomId, `${session.name} lands a catch from the ${surface ? "still water" : "flood"}.`, session.pubkey, false);
+  z.roomFeed(session.roomId, `${session.name} lands a catch from the ${beck ? "beck" : surface ? "still water" : "flood"}.`, session.pubkey, false);
   z.sendCtx(session);
   await z.persist();
 }
