@@ -1,0 +1,248 @@
+# THE CROSSING, 3 of 5 — THE FORD and THE FERRY. 44 rooms.
+#
+# The two UNBUILT crossings: nobody made either of these, they are simply
+# places where the water happens to be crossable, and both are worse for it.
+#
+# THE FORD (24) is the long way. North of everything, where the crossing gives
+# up being a channel and spreads itself thin over gravel — a mile wide, shin
+# deep at the right hour, and utterly impassable at the wrong one because it is
+# not one crossing but nine, and the banks between them move. It is the safest
+# of the five and it costs you the whole day, which is exactly the trade a road
+# should offer and almost never does.
+#
+# THE FERRY (20) is the short way and it is the one that can simply refuse. A
+# rope across the deep channel and a boat that is wherever the last person to
+# use it left it. When the boat is on your side it is four rooms and done. When
+# it is on the far side you can see it from the stage, and you cannot have it,
+# and you walk north or south like everybody else.
+#
+# Both of these are OPEN WATER, and open water is where the Crossing keeps the
+# machinery it was built to bring to the surface: drowners, deep fishing, and
+# the tide. The ferry channel in particular is the first place above ground
+# where the water is deeper than a person is tall.
+
+!region crossing
+
+# ============================== THE FORD ====================================
+
+## the-ford-head | The Ford Head
+The shore road ends at a bank of shingle and the crossing opens out in front of it, a mile of grey water over grey gravel with the far side a low smudge. There is no road. There is a line of withies stuck in the gravel going out into it, and they are the ford, and somebody replaces them.
+> west the-gravel-flats
+> east the-first-shoal
+
+## the-first-shoal | The First Shoal
+A bank of gravel standing clear of the water, long and low and curved like a drawn bow, with the current going past both ends of it at different speeds. The withies march up onto it and off the other side. Walking on it is walking on a road made of marbles.
+> west the-ford-head
+> east the-first-channel
+> south the-net-stakes
+
+## the-first-channel | The First Channel
+Between the shoals, the water runs. It is over the boot and under the knee and it is cold enough to be an argument, and it is going sideways hard enough that you lean into it without deciding to. The gravel underfoot moves as you cross. That is normal. It does not stop being alarming.
+> west the-first-shoal
+> east the-second-shoal
+
+## the-second-shoal | The Second Shoal
+Wider than the first and higher, with a spine of coarse stone down the middle that stays dry when everything else is under. There are bird tracks all over it and, in the middle, the print of a boot, filled with water, pointing east.
+> west the-first-channel
+> east the-second-channel
+> north the-tern-scrape
+
+## the-tern-scrape | The Tern Scrape
+A hollow in the shingle at the top of the shoal, lined with nothing at all, holding two eggs the colour of the stones around them. The birds are up and screaming the moment you are near it and they do not stop and they do not go away. Everything within half a mile now knows exactly where you are standing.
+> south the-second-shoal
+
+## the-second-channel | The Second Channel
+Deeper. Not much — thigh, at the middle — but deep enough that the water has your weight rather than the gravel, and the pack on your back becomes a sail. Four strides of it. It takes longer than four strides should.
+> west the-second-shoal
+> east the-long-bank
+
+## the-long-bank | The Long Bank
+The biggest of them: a bank of gravel a quarter of a mile long lying with the current, dry down its whole length, with weed dried to a crust along the tideline on both sides. Walking it is the easiest part of the ford and it goes on long enough that you start to relax.
+> west the-second-channel
+> east the-third-channel
+> south the-stranded-hull
+> north the-quicksand-flat
+
+## the-stranded-hull | The Stranded Hull
+A boat on the bank, upright, whole, sitting on the gravel as neatly as if somebody had put it there. The oars are shipped. There is a bailer wedged under the thwart. It cannot have got up here except at a height of water that would have covered everything you have walked across.
+> north the-long-bank
+
+## the-third-channel | The Third Channel
+The main one. This is where the crossing's water actually goes when it is going anywhere, and it is waist deep in the middle at the best of times, and there is a rope stretched across it on two posts for exactly that reason. The rope is old. It is also the only rope.
+> west the-long-bank
+> east the-mid-ford
+> south the-drowned-withies
+
+## the-mid-ford | The Mid-Ford
+The middle of the whole thing, on a shoal no bigger than a room, with water on every side and the shores equally far away. There is a post here with a crosspiece — not a marker, a REST: something to hold onto and stand behind while the water goes past you both ways.
+> west the-third-channel
+> east the-fourth-channel
+> north the-gull-stand
+
+## the-fourth-channel | The Fourth Channel
+The water on this side runs the other way, which nobody warns you about and everybody discovers here. It is the same depth as the second and it is pushing you back the way you came instead of the way you were going, and the gravel is coarser and it grips better.
+> west the-mid-ford
+> east the-shell-bank
+> north the-tide-race
+
+## the-shell-bank | The Shell Bank
+A bank made of shell rather than gravel — cockle, mussel, razor, whole and broken, packed to a surface that crunches and gives. It is white enough to read a map by at dusk. There is a great deal of it and it is all the same three species, which means somebody was eating here for a very long time.
+> west the-fourth-channel
+> east the-fifth-channel
+> north the-midden
+
+## the-midden | The Midden
+Where the shell bank rises into a proper mound, layered, cut into on one side by the water so that you can read down through it: shell, ash, shell, ash, a bone, shell. Somebody sat on this spot and ate shellfish for generations. There is nothing else of them anywhere.
+> south the-shell-bank
+> north the-cockle-beds
+
+## the-fifth-channel | The Fifth Channel
+Shallow, wide, and full of weed that lies along the current in long green hair and wraps your ankles as you go through. It does not hold you. It only feels exactly like something holding you, once per stride, for forty yards.
+> west the-shell-bank
+> east the-withy-bank
+> south the-eel-grass
+
+## the-withy-bank | The Withy Bank
+The withies are thick here — a whole stand of them driven in a double row, marking the safe line where it bends. Half are new and half are grey and split, so this is maintained, and recently, and by somebody who is not here.
+> west the-fifth-channel
+> east the-last-shoal
+
+## the-last-shoal | The Last Shoal
+Gravel again, and the far bank close enough now to see individual stones on it. From here the ford looks like nothing — a mile of shallow water you could stroll across — and you know better than that now, and the knowing is the only thing you have brought over that you did not carry in.
+> west the-withy-bank
+> east the-ford-landing
+
+## the-ford-landing | The Ford Landing
+A shelf of shingle where the ford comes ashore, with a hard of laid stone at the top of it and cart-ruts leading away east. It is the least dramatic arrival possible: no arch, no bench, no marker. Somebody with a load came this way often enough to cut ruts, and they never once felt like commemorating it.
+> west the-last-shoal
+> east the-cart-ruts
+
+## the-drowned-withies | The Drowned Withies
+A stand of the marker withies out beyond the safe line, in water too deep to wade, bent over by the current and streaming. Somebody planted them in good faith when this was walkable ground. The channel moved. The withies did not.
+> north the-third-channel
+
+## the-gull-stand | The Gull Stand
+A shoal that gulls have taken, hundreds of them, standing all facing the same way into the wind and not one of them doing anything else. They lift when you come, in one enormous unhurried sheet, go round, and land again behind you facing the same way.
+> south the-mid-ford
+
+## the-eel-grass | The Eel Grass
+A meadow of it in the shallows, growing in real soil rather than gravel, green and dense and moving all together. Things live in eel grass. You can see the wakes of them leaving as you come, small and fast and low, and none of them surface.
+> north the-fifth-channel
+
+## the-quicksand-flat | The Quicksand Flat
+Ground that looks exactly like the shoals and is not: fine grey sand, wet through, standing water on it in sheets that do not drain. A stick pushed into it goes in to the hand. Somebody has fenced the near edge with three withies and a length of rope, which is either a warning or a boundary.
+> south the-long-bank
+
+## the-net-stakes | The Net Stakes
+A second fixed engine, out on the flats: two long converging lines of stakes leading to a pound at the point, so the tide walked the fish down the funnel and left them in the trap. The stakes stand. The netting has gone entirely, and the funnel now catches only weed and light.
+> north the-first-shoal
+
+## the-cockle-beds | The Cockle Beds
+Sand rather than gravel, and pocked all over with the little paired holes of things breathing under it. Rake it and they come up in handfuls. This is the most reliable food on the whole crossing and it is available exactly as often as the ford is, which is the same thing said twice.
+> south the-midden
+
+## the-tide-race | The Tide Race
+Where the ford's water finally meets the channel's, and the two disagree. A line of standing waves marks it, holding position while the water pours through them, and the noise is constant and unignorable and can be heard from every shoal on the ford.
+> south the-fourth-channel
+
+# ============================== THE FERRY ===================================
+
+## the-rope-run | The Rope Run
+The rope leaves the stage and goes out over the deep, sagging to touch the water at the middle and rising again beyond. Hand over hand along it is possible for exactly as long as your arms last and no longer, and the middle of it is under water, so it is not possible at all.
+> west the-channel-brink
+> east the-green-water
+> north the-drowned-mooring
+
+## the-green-water | The Green Water
+Where the bottom drops away. The colour of the water changes in a hard line you can stand on the edge of and look at — grey shallows behind, green deep in front, and the green does not lighten again anywhere you can see. This is the first water above ground that is over your head.
+> west the-rope-run
+> east the-ferry-boat
+> north the-cold-spring
+> south the-deep-mark
+
+## the-ferry-boat | The Ferry Boat
+The boat is here. Broad, flat-bottomed, tarred, with the rope running through a ring at bow and stern so it cannot go anywhere but across. There is water in the bottom of it and a bailer, and the bailer has been used recently enough to still be wet.
+> west the-green-water
+> east the-mid-channel
+> south the-eel-lines
+
+## the-mid-channel | The Mid-Channel
+The deepest water in the crossing, and from the middle of it both shores are a long way off and the rope is the only thing connecting anything to anything. It goes down into the water ahead of you and comes up out of it behind. Whatever is below is below by a distance that does not bear thinking about.
+> west the-ferry-boat
+> east the-far-rope-stage
+> down the-under-rope
+> south the-weed-raft
+> north the-slack
+
+## the-under-rope | Under the Rope
+Below the surface the rope goes on down and the light goes green and then brown, and there is a shape down here — a second rope, or a chain, going off at an angle from the main one toward something on the bottom that is too regular to be stone.
+> up the-mid-channel
+
+## the-far-rope-stage | The Far Rope Stage
+The stage on the eastern bank, twin to the one you left: bollard, block, fend-off post, all of it maintained to exactly the same standard, which is to say maintained. The rope is made fast here to a ring set in living rock.
+> west the-mid-channel
+> east the-far-ferry-steps
+
+## the-far-ferry-steps | The Far Ferry Steps
+Steps cut up the eastern bank from the water, worn into scoops in the middle of each tread. At the top there is a bench, and a place where a lantern was, and a view back across the channel to the ferry house that is exactly the view from the ferry house, reversed.
+> west the-far-rope-stage
+> east the-far-hard
+> south the-boat-house
+> north the-ferryman-stone
+
+## the-far-hard | The Far Hard
+The eastern ramp: laid stone into the water, grooved by keels, greener below the line and whiter above. Everything about it says the ferry ran both ways constantly for a very long time, and that whoever ran it cared about the stone at both ends equally.
+> west the-far-ferry-steps
+> east the-tar-shed
+> north the-warping-post
+
+## the-drowned-mooring | The Drowned Mooring
+Off the near stage: a line of mooring posts going out into the channel, of which the first three stand above water and the rest are visible below it, going down in a line into the green until they are only a suggestion. The channel was shallower here once. It is not now.
+> south the-rope-run
+
+## the-eel-lines | The Eel Lines
+A long line strung between two stakes in the deep water off the boat's course, with droppers every yard and a hook on every dropper. It is set, it is baited with something that has been down there a while, and it is not yours. Somebody is working this channel.
+> north the-ferry-boat
+
+## the-cold-spring | The Cold Spring
+A place in the channel's edge where fresh water comes up through the salt, and you can see it: a shimmer, a boil at the surface, and a patch where the weed grows differently. It is drinkable if you can get your face to the right part of it, and everything that lives in the channel knows exactly where it is.
+> south the-green-water
+
+## the-boat-house | The Boat House
+On the far bank above the stage, a shed of tarred board with a slipway running out of it, big enough for one boat and a man to work round it. There is a second boat in here, upside down on trestles, holed amidships and half-mended, with the tools still laid out along the keel.
+!safe
+> north the-far-ferry-steps
+> east the-oar-store
+
+## the-signal-mast | The Signal Mast
+A mast on the eastern bank with a yard and two blocks and a rotten halyard, for hoisting a shape that told the far side whether the boat was coming. There is a locker at the foot of it with the shapes still in it: a black ball, a black cone, a red diamond gone pink.
+> north the-oar-store
+
+## the-weed-raft | The Weed Raft
+A mat of cut weed and driftwood the current has pushed into the channel's slack corner and pinned there, acres of it, thick enough to walk on in some places and exactly not thick enough in others, and there is no way to tell which is which from the surface.
+> north the-mid-channel
+
+## the-ferryman-stone | The Ferryman's Stone
+A slab set upright on the eastern bank above the steps, with a name on it and two dates that are not far apart, and below them a line about the water. It faces the channel. Whoever set it up wanted him to go on looking at the crossing he did not get across.
+> south the-far-ferry-steps
+
+## the-deep-mark | The Deep Mark
+A stone post at the head of the green water with depths cut into it in bands, the deepest band well above the top of the post — which means the cutter ran out of post before he ran out of water, and marked that fact by cutting the last band on the underside of the cap.
+> north the-green-water
+
+## the-slack | The Slack
+The one place in the channel where the current stops, in the lee of a spur of rock, and the water simply stands. Everything the channel is carrying arrives here eventually and turns slowly in a circle. It is the calmest water in the crossing and it is full of things that used to belong to people.
+> south the-mid-channel
+
+## the-far-noust | The Far Noust
+A boat-shaped hollow above the eastern tideline, stone-lined, the twin of the empty one on the western shore. There is a boat in this one, upside down, tarred, sound, and far too heavy for one person to move an inch.
+> south the-tar-shed
+
+## the-warping-post | The Warping Post
+A massive post on the eastern hard with a groove worn all the way round it at chest height, where a rope was taken round to haul boats up out of the water. The groove is a hand deep. That is not one boat. That is every boat, for a lifetime.
+> south the-far-hard
+
+## the-oar-store | The Oar Store
+A rack under the boat house eaves holding six oars, blades up, all different lengths and all of them made for the same rowlock. Five are grey and cracked. One is not, and it has been used, and there is fresh water dripping off the blade of it.
+> west the-boat-house
+> south the-signal-mast

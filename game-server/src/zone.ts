@@ -70,7 +70,7 @@ import * as trade from "./trade";
 import * as den from "./den";
 import * as works from "./works";
 import type { WorksPlan } from "./works";
-import { WOOD_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS } from "./detail";
+import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS } from "./detail";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
@@ -4142,14 +4142,22 @@ export class ZoneDO implements DurableObject {
       const m = draw(MOTES);
       if (m && m !== avoid) return m;
     }
-    // THE WOOD SPEAKS AS ITS QUARTER, NOT AS "THE WOOD" (2026-08-06). 170 rooms
+    // A REGION SPEAKS AS ITS QUARTER, NOT AS ITSELF (2026-08-06, generalised
+    // 2026-08-10). Was keyed on WOOD_QUARTERS, so the layer the wood was given
+    // could never reach the east road or the Crossing however many quarters
+    // they declared. MAP_QUARTERS is the table that holds all of them, and a
+    // region with no pool for its quarter falls straight through to its band
+    // exactly as before — so this costs nothing anywhere it is not wanted.
+    //
+    // The original argument, which applies harder to the Crossing than it ever
+    // did to the wood: 170 rooms
     // shared one ten-line regional pool — a line per seventeen rooms — so the
     // biggest region in the game was also the one that repeated itself fastest
     // and told you least about where you were standing. A quarter (detail.ts)
     // is a real place inside the wood with its own voice; it sits between the
     // room's own pool and the band's, so a signature room still wins and the
     // wood at large stops sounding like one undifferentiated green mass.
-    const quarter = WOOD_QUARTERS[roomId];
+    const quarter = MAP_QUARTERS[roomId];
     if (quarter) {
       const q = draw(QUARTER_AMBIENCE[quarter] ?? []);
       if (q) return q;
@@ -5058,7 +5066,7 @@ export class ZoneDO implements DurableObject {
         // used to give one identical generic line in the dark, so the region you
         // get lost in was also the one where being blind told you nothing at all
         // about which part of it you were blind in.
-        const own = DARK_TOUCH[room.id] ?? QUARTER_DARK[WOOD_QUARTERS[room.id] ?? ""];
+        const own = DARK_TOUCH[room.id] ?? QUARTER_DARK[MAP_QUARTERS[room.id] ?? ""];
         const touch = own ? ` ${own}` : "";
         return `Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind.${wet}${touch} A light would show it. (light a torch, or feel your way back the way you came)`;
       }

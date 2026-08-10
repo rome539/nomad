@@ -10,7 +10,7 @@ import { hasTrait } from "./world";
 import { randInt, chance, uuid, pick } from "./rng";
 import { cap, isNight } from "./zone-util";
 import * as events from "./events";
-import { underCover } from "./detail";
+import { underCover, MAP_QUARTERS } from "./detail";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, DRINKERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_MS, HOARD_TRAIL_MS, HOARD_SPOOK_MS,
@@ -28,7 +28,7 @@ import {
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
-  QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_ODDS, MIGRATE_KEEP, FORAGE_REGIONS,
+  QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, FORAGE_REGIONS,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
 } from "./zone-data";
@@ -1200,8 +1200,12 @@ export function migrate(z: ZoneDO, creature: Creature, templateId: string): void
   const bands = [...MIGRATE_BANDS].filter((b) => b !== here && canLiveIn(z, templateId, b));
   if (!bands.length) return; // nowhere out there could keep it: it stays home
   const band = bands[randInt(0, bands.length - 1)];
+  // A band may restrict which of its ground a migrant will actually settle on
+  // (MIGRATE_QUARTERS) — the Crossing keeps them off the water and the reed.
+  const allow = MIGRATE_QUARTERS[band];
   const pool = [...z.world!.rooms.keys()].filter(
-    (r) => z.regionOf(r) === band && !z.world!.safeRooms.has(r) && !z.world!.entryRooms.has(r),
+    (r) => z.regionOf(r) === band && !z.world!.safeRooms.has(r) && !z.world!.entryRooms.has(r)
+      && (!allow || allow.has(MAP_QUARTERS[r] ?? "")),
   );
   if (!pool.length) return;
   // It does not TELEPORT. It gets a new idea of home and starts walking; the

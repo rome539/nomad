@@ -74,6 +74,9 @@ const REGIONS = (() => {
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith("--")));
+// --why: name every square collision as the walk hits it, so a contradicting
+// loop can be tracked to the door that causes it instead of guessed at.
+const why = flags.has("--why");
 const outIdx = args.indexOf("--out");
 const outFile = outIdx >= 0 ? args[outIdx + 1] : null;
 const files = args.filter((a, i) => !a.startsWith("--") && !(outIdx >= 0 && i === outIdx + 1));
@@ -295,13 +298,18 @@ const coords = new Map();
 if (worldKnown) {
   for (const [id, p] of liveCoords) coords.set(id, p);
   const occupied = new Set([...coords.values()].map((p) => `${p.x},${p.y}`));
+  // Who holds each square, so --why can name the room a loser collided with.
+  const holder = new Map();
+  for (const [id, p] of coords) holder.set(`${p.x},${p.y}`, id);
   const claim = (id, x, y) => {
-    if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); coords.set(id, { x, y }); return true; }
+    if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); holder.set(`${x},${y}`, id); coords.set(id, { x, y }); return true; }
+    if (why) console.log(`  square (${x}, ${y}) wanted by "${id}" is held by "${holder.get(`${x},${y}`) ?? "?"}"`);
     for (let ring = 1; ring <= 200; ring++) {
       for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
         if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
         if (!occupied.has(`${x + dx},${y + dy}`)) {
           occupied.add(`${x + dx},${y + dy}`);
+          holder.set(`${x + dx},${y + dy}`, id);
           coords.set(id, { x: x + dx, y: y + dy });
           return false;
         }
@@ -345,6 +353,11 @@ if (worldKnown) {
   for (const r of rooms.values()) {
     if (r.existing || coords.has(r.id)) continue;
     claim(r.id, edge += 3, 0);
+  }
+  if (why) for (const r of rooms.values()) {
+    if (r.existing) continue;
+    const p = coords.get(r.id);
+    console.log(`  AT ${p ? `${p.x},${p.y}` : "?"}\t${r.id}`);
   }
   if (shoved) warnings.push(`${shoved} new room${shoved === 1 ? "" : "s"} could not sit where ${shoved === 1 ? "its" : "their"} own exits say — the ground contradicts itself there (a loop whose compass steps don't close). Drawn on the nearest free square; fix the doors if it matters.`);
 }

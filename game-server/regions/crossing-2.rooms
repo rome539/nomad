@@ -1,0 +1,218 @@
+# THE CROSSING, 2 of 5 — THE CAUSEWAY and THE BRIDGE. 37 rooms.
+#
+# The two MADE crossings, in one file because they are the same argument told
+# twice: the institution built both, and the water has beaten one of them by
+# patience and the other by taking a bite out of it.
+#
+# THE CAUSEWAY (22) is a road. It is dead straight, two carts wide, properly
+# drained and milestoned, and for a good part of every day it is the bottom of
+# the sea. Nothing about it is dangerous when it is dry and nothing about it is
+# survivable when it is not, and the whole skill of it is reading a post on the
+# shore before you start. It is the fast way and the stupid way, depending
+# entirely on when you looked.
+#
+# THE BRIDGE (22) is the opposite bargain. It is never drowned and it is never
+# whole: four piers stand, both end arches stand, and the middle went into the
+# water long enough ago that the stone down there has weed on it. You cross on
+# the piers — a plank, a girder, a jump — and the tide does not care either way,
+# which makes this the one way over that is exactly as bad at every hour.
+#
+# Both land on the far bank's approaches (file 5). Neither touches the other in
+# the middle, on purpose: they are independent routes and a person standing on
+# one cannot help a person on the other, which is the entire point of counting
+# routes rather than doors.
+
+!region crossing
+
+# ============================ THE CAUSEWAY =================================
+
+## the-causeway-bend | The Causeway Bend
+The only bend in the whole thing, and it is here because the bank of shingle under it is here — the builders followed the one natural ridge in the crossing and took the dogleg rather than pay for the straight line. Weed lies combed flat along the road, all pointing the same way, which is the way the water goes out.
+> west the-weeded-milestone
+> east the-half-tide-post
+
+## the-half-tide-post | The Half-Tide Post
+A post set in the causeway's edge with a broad white band painted round it, and the band is at knee height. Everything you need to know is in where the water is against that band. Below it, you have time. On it, you are already deciding. Above it, the decision was made for you a while ago.
+> west the-causeway-bend
+> east the-second-crossing-stone
+
+## the-second-crossing-stone | The Second Crossing Stone
+Another milestone, weeded to the same height as the first, cut by the same hand, counting a distance that made sense to a man with a cart on a dry road. Barnacle on the north face and none on the south, which tells you which way the weather comes from out here.
+> west the-half-tide-post
+> east the-sunken-stretch
+
+## the-sunken-stretch | The Sunken Stretch
+The causeway dips. Not much — a foot, maybe two, over forty yards — but it is the lowest part of the whole crossing and it is standing in water when the rest of the road is dry. You wade it every time. It is where everybody learns that the causeway is not a road, it is a bargain.
+> west the-second-crossing-stone
+> east the-drain-arch
+> north the-crab-pools
+
+## the-drain-arch | The Drain Arch
+A low arch built through the causeway to let the water pass rather than pile against it — the one piece of humility in the design. The water goes through it fast, both ways, twice a day, and it has been doing that long enough to polish the stone inside to a shine you can see your hand in.
+> west the-sunken-stretch
+> east the-mid-causeway
+> south the-lantern-stump
+> north the-sluice-stone
+
+## the-mid-causeway | The Mid-Causeway
+Halfway, and there is nothing here but road and water and the fact that you are a long way from either end. Both shores are equally far and equally small. Whatever you decided on the strand you are now committed to, and the post back there is too distant to read.
+> west the-drain-arch
+> east the-refuge
+> north the-half-drowned-cart
+
+## the-refuge | The Refuge
+A stone platform built out from the causeway's side, six feet up on its own little pier, with three steps and a rail-socket and room for four people to stand. It is here because the builders knew people would misjudge it. Somebody has cut a tally into the top step, and it is a long tally.
+!safe
+> west the-mid-causeway
+> east the-far-milestone
+> south the-causeway-cross
+
+## the-far-milestone | The Far Milestone
+The third milestone, and this one is not weeded — it stands above the highest of it, and the cut face is clean and grey and reads perfectly. From here on the causeway climbs, imperceptibly, all the way to the far shore. The worst is behind you, which you can only know by having got here.
+> west the-refuge
+> east the-mussel-bank
+
+## the-mussel-bank | The Mussel Bank
+The causeway's stone has been colonised: mussel packed edge to edge over the whole northern face and out onto the road itself, so the walking surface is shell, and shell breaks, and the edges of it are exactly as sharp as they look.
+> west the-far-milestone
+> east the-cutting-water
+> south the-wreck-ribs
+
+## the-cutting-water | The Cutting Water
+A channel crosses the causeway here — a real one, deep enough to have its own current, gouged through the bank by two centuries of the water insisting. Somebody has laid three great slabs across it as a bridge and two of them are still where they were put.
+> west the-mussel-bank
+> east the-weed-flat
+> north the-oyster-scars
+> south the-bell-buoy
+
+## the-weed-flat | The Weed Flat
+Bladderwrack over everything, ankle deep, hiding the road entirely. You find the causeway by feel and by the fact that stepping off it is instantly obvious. In the sun the bladders pop under your boots one at a time, and the sound carries out over the water further than seems reasonable.
+> west the-cutting-water
+> east the-causeway-rise
+> south the-perch
+
+## the-causeway-rise | The Causeway Rise
+The bank lifts out of the weed and becomes a road again, dry, drained, with a proper camber and a verge. The far shore stops being a horizon and becomes a place with things on it. Behind you the whole crossing lies flat and grey and looks like nothing at all.
+> west the-weed-flat
+> east the-landing-arch
+
+## the-landing-arch | The Landing Arch
+The causeway comes ashore under a stone arch built for no structural reason whatever — the road does not need it and the bank does not need it. It is there so that arriving is an event. The keystone has a face on it, worn to a suggestion, and it is looking back the way you came.
+> west the-causeway-rise
+> north the-far-parting
+> south the-far-strand
+
+## the-lantern-stump | The Lantern Stump
+Off the causeway's edge on a stub of pier, the base of a lamp-standard, snapped off at the collar, with the lead still run into the socket. A light stood here to say where the road was after dark. Nothing says where the road is after dark now.
+> north the-drain-arch
+
+## the-oyster-scars | The Oyster Scars
+A ledge off the causeway's south side, exposed at low water, cut all over with the marks of tongs and rakes. This was somebody's ground and they worked it hard. The shells underfoot go down further than a spade would.
+> south the-cutting-water
+
+## the-wreck-ribs | The Wreck Ribs
+Off the north side: the frames of a boat, stuck upright in the mud at a slant, black and hard as iron, spaced like ribs because that is what they are. Whatever it was, it was bigger than anything the ferry-house ever ran, and it did not sink here — it was left here.
+> north the-mussel-bank
+
+## the-perch | The Perch
+A wooden beacon on a tripod of legs standing off the causeway in open water, tarred black, with a cage top for a fire. Reachable at low water by a spit of shingle. Nothing has burned in it in living memory and the cage is full of nest.
+> north the-weed-flat
+
+## the-crab-pools | The Crab Pools
+Rock pools in the causeway's shelter, deep and clear and cold, with weed hanging into them and things going about their business under the ledges. The pools do not empty when the water goes. They simply become a different, smaller, more concentrated water.
+> south the-sunken-stretch
+
+## the-sluice-stone | The Sluice Stone
+A great slab beside the drain arch with a groove cut down each edge — a gate ran in those grooves once, and could be dropped to shut the arch and hold the water on one side. It is not here. The grooves are, and they are worn, so it was used, often, by people who had a reason.
+> south the-drain-arch
+
+## the-bell-buoy | The Bell Buoy
+Aground on the shingle at the causeway's edge, on its side: an iron float the size of a cow with a cage on top and a bell in the cage, and the bell still has its clapper. It rang on the water for whoever was out in the dark. You could ring it now. Everything for a mile would hear.
+> north the-cutting-water
+
+## the-half-drowned-cart | The Half-Drowned Cart
+A cart in the water off the causeway's south side, up to its bed, one wheel gone and the other still turning a little when the current is running. It is not old. The wood is sound and the ironwork is barely rusted, and whatever was in it is not in it now.
+> south the-mid-causeway
+
+## the-causeway-cross | The Causeway Cross
+A stone cross set in the causeway's verge at the point where you can no longer see either shore clearly, weathered to a stump with the arms gone. People put these where the danger was, or where the dead were, and on a road that drowns twice a day those are the same place.
+> north the-refuge
+
+# ============================== THE BRIDGE ==================================
+
+## the-first-pier | The First Pier
+The near arch ends and the first pier begins: a plinth of dressed stone the size of a room, forty feet above green water, with the broken stubs of the arch springing off both sides of it. Somebody has laid a plank to the next one. The plank is not new and it is not thick.
+> west the-near-arch
+> east the-plank-span
+> south the-scaffold-stub
+
+## the-plank-span | The Plank Span
+Two planks, side by side, lashed at both ends, spanning the gap between the first pier and the second. They flex. They flex differently depending on where your weight is, which you find out in the middle. Below, the water goes past in a way that makes it very clear how fast it is going.
+> west the-first-pier
+> east the-second-pier
+
+## the-second-pier | The Second Pier
+The second plinth, and there is more standing here: two courses of the arch still curving off eastward before they stop. It is enough to sit under out of the wind, and somebody has, at some length. There is a fire-scar on the stone and a great many fish bones.
+!safe
+> west the-plank-span
+> east the-gap
+> down the-starling
+
+## the-gap | The Gap
+The place where the bridge is most emphatically not a bridge. The third pier stands seventy feet off with nothing whatever between here and it except air and, a long way down, the deep channel going through at speed. There is an iron beam laid across it. One beam.
+> west the-second-pier
+> east the-beam-walk
+
+## the-beam-walk | The Beam Walk
+You are on the beam. It is eight inches of rusted iron and it is perfectly rigid, which is a mercy, and there is nothing to hold and nothing on either side, which is not. The wind up here has an opinion. Do not look at the water, which is doing something complicated a long way beneath you.
+> west the-gap
+> east the-third-pier
+
+## the-third-pier | The Third Pier
+Solid ground, of a sort: the third plinth, wider than the others, with the stump of a tower on it that once carried a gate. There are iron pins in the stone and a windlass drum lying on its side, and the whole arrangement says that people were once stopped here and made to pay.
+> west the-beam-walk
+> east the-broken-arch
+> down the-pier-foot
+> south the-tollhouse-shell
+
+## the-pier-foot | The Pier Foot
+Steps cut down the inside of the third pier to a ledge just above the water, wet, green, and out of the wind. The channel goes past at your feet with real force. There is an iron ring here and a good deal of rope, and the rope goes down, and it is under tension.
+> up the-third-pier
+
+## the-broken-arch | The Broken Arch
+The arch resumes — half of it, springing east and simply stopping in mid-air with the stones still keyed. You walk out along the top of what is left, which narrows the whole way, until it is one course wide and ends. There is a rope bridge from the end of it to the fourth pier, and it is somebody's honest work.
+> west the-third-pier
+> east the-rope-bridge
+
+## the-rope-bridge | The Rope Bridge
+Three ropes: one to walk, two to hold, with slats lashed to the walking rope at intervals of somebody's stride and not yours. It swings. It swings more the further out you get and then less again, and the far end is fast to a ring somebody set in the fourth pier with a great deal of trouble.
+> west the-broken-arch
+> east the-fourth-pier
+
+## the-fourth-pier | The Fourth Pier
+The last plinth, and the far arch springs off it whole and lands on the far bank — from here the bridge is a bridge again for its final forty feet, and it is almost insulting how solid it is. Everything hard about this crossing is behind you and it took four piers to learn it.
+> west the-rope-bridge
+> east the-far-arch
+> down the-drowned-span
+
+## the-far-arch | The Far Arch
+Proper masonry, a proper parapet, a proper roadway, running level onto the far bank. There is a bench in a recess in the parapet, facing back the way you came, so that whoever built this expected people to sit down at this exact point and look at what they had just crossed.
+!safe
+> west the-fourth-pier
+> east the-bridge-strand
+
+## the-tollhouse-shell | The Tollhouse Shell
+On the third pier's landward side, the shell of a small building corbelled out over the water on four brackets — one room, one window, one door, and a slot in the floor. Whoever sat in here collected from everyone who crossed, and had nowhere at all to go if it went wrong.
+> north the-third-pier
+
+## the-starling | The Starling
+Down at the second pier's foot, the boat-shaped stone apron built to break the current before it reaches the pier itself. It is doing its job. Standing on it, the water piles up against the point and goes round both sides, and the noise is enormous, and there is a great deal caught in the angle.
+> up the-second-pier
+
+## the-scaffold-stub | The Scaffold Stub
+Putlog holes in a row across the first pier's face, square, deliberate, and one of them still has the butt of a timber in it, sound. Somebody was rebuilding this. They got the scaffold up and they went no further, and the rest of the timbers are presumably at the bottom.
+> north the-first-pier
+
+## the-drowned-span | The Drowned Span
+Reachable at low water down a stair on the fourth pier: the fallen middle of the bridge, lying in the shallows in enormous keyed blocks, exactly in the order it fell, with the arch's curve still legible in the way they lie. Weed on all of it. You can walk the length of a span that is on its side.
+> up the-fourth-pier

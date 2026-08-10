@@ -679,6 +679,31 @@ function matches(aliases: string, arg: string): boolean {
 // say when you look at it — direction first, in the order a fingerpost's arms
 // would actually be read going round it.
 export const SIGNPOSTS: Record<string, { post: string; reads: string[] }> = {
+  // ---- THE CROSSING (mig 190). Two five-armed posts, one on each bank, and
+  // they are the same post facing opposite ways. Everything the region asks of
+  // a player is written on these: five ways, what each one costs, and the fact
+  // that the cost is not the same at every hour. Nothing else in the world
+  // tells you this much. The institution knew exactly what it had built here.
+  "the-parting": {
+    post: "The fingerpost has five arms and they are cut deeper than any lettering on the east road, because these had to be read wet, at distance, by somebody deciding.",
+    reads: [
+      "EAST — THE CAUSEWAY. Two carts wide, sound, and one mile. Read the post at the head before you set foot on it.",
+      "NORTH — THE BRIDGE. Four piers and two arches. The span is out. High water makes no difference to it.",
+      "NORTH — THE FORD. Nine channels over a mile of gravel. Low water only. Allow the day.",
+      "NORTH — THE FERRY. Deep channel, one rope, one boat. If she is on this side.",
+      "SOUTH — THE EYOTS. Never drowned. Never quick. Keep the withies on your right hand going over.",
+    ],
+  },
+  "the-far-parting": {
+    post: "The eastern twin, and the arms turn on a spindle so that a man could set them to the day. They have not been turned in a long time and they are set to a day that is over.",
+    reads: [
+      "WEST — THE CAUSEWAY. One mile of made road. UNDER AT HALF FLOOD. There is one refuge and it is at the middle.",
+      "WEST — THE BRIDGE. Cross on the piers or not at all.",
+      "NORTH-WEST — THE FORD. Gravel, and it moves. The withies are replaced. Trust the new ones.",
+      "WEST — THE FERRY. Ring at the stage. Somebody will come.",
+      "SOUTH — THE EYOTS. For those who know them. Others take the causeway and wait for the water.",
+    ],
+  },
   // ---- THE FOUR DOORS OUT OF THE FORTRESS ----
   "the-old-road": {
     post: "A fingerpost stands at the verge with two arms still on it, and the cut on both is deep enough to have outlived the paint.",
@@ -962,7 +987,83 @@ for (const quarter in EAST_QUARTER_ROOMS) for (const id of EAST_QUARTER_ROOMS[qu
 
 /** Every caption-only quarter in the world, the wood's and the road's together.
  *  One table, one lookup — the map asks this and nothing else. */
-export const MAP_QUARTERS: Record<string, string> = { ...WOOD_QUARTERS, ...EAST_QUARTERS };
+/** THE CROSSING (mig 190). Five quarters, and unlike the wood's and the road's
+ *  these are not flavour: each one is a WAY OVER, and the caption on the map is
+ *  the single most useful piece of information in the region, because knowing
+ *  which of the five you are standing on is the entire skill of the place. */
+export const CROSSING_QUARTER_ROOMS: Record<string, string[]> = {
+  nearshore: [
+    "the-shore-descent", "the-strand-head", "the-wrack-line", "the-net-poles",
+    "the-shore-road", "the-hard", "the-capstan-stone", "the-ferry-house",
+    "the-rope-walk", "the-parting", "the-bridge-approach", "the-ford-road",
+    "the-eyot-track", "the-tide-mark", "the-boat-noust", "the-shellfish-scars",
+    "the-quay-stub", "the-toll-post", "the-reed-gate", "the-gravel-flats",
+    "the-mussel-scaup",
+  ],
+  causeway: [
+    "the-causeway-head", "the-first-crossing-stone", "the-weeded-milestone",
+    "the-causeway-bend", "the-half-tide-post", "the-second-crossing-stone",
+    "the-sunken-stretch", "the-drain-arch", "the-mid-causeway", "the-refuge",
+    "the-far-milestone", "the-mussel-bank", "the-cutting-water", "the-weed-flat",
+    "the-causeway-rise", "the-landing-arch", "the-lantern-stump", "the-oyster-scars",
+    "the-wreck-ribs", "the-perch", "the-crab-pools", "the-sluice-stone",
+    "the-bell-buoy", "the-half-drowned-cart", "the-causeway-cross",
+  ],
+  bridge: [
+    "the-near-arch", "the-first-pier", "the-plank-span", "the-second-pier",
+    "the-gap", "the-beam-walk", "the-third-pier", "the-pier-foot", "the-broken-arch",
+    "the-rope-bridge", "the-fourth-pier", "the-far-arch", "the-tollhouse-shell",
+    "the-starling", "the-scaffold-stub", "the-drowned-span",
+  ],
+  ford: [
+    "the-ford-head", "the-first-shoal", "the-first-channel", "the-second-shoal",
+    "the-tern-scrape", "the-second-channel", "the-long-bank", "the-stranded-hull",
+    "the-third-channel", "the-mid-ford", "the-fourth-channel", "the-shell-bank",
+    "the-midden", "the-fifth-channel", "the-withy-bank", "the-last-shoal",
+    "the-ford-landing", "the-drowned-withies", "the-gull-stand", "the-eel-grass",
+    "the-quicksand-flat", "the-net-stakes", "the-cockle-beds", "the-tide-race",
+  ],
+  ferry: [
+    "the-ferry-steps", "the-rope-stage", "the-channel-brink", "the-rope-run",
+    "the-green-water", "the-ferry-boat", "the-mid-channel", "the-under-rope",
+    "the-far-rope-stage", "the-far-ferry-steps", "the-far-hard", "the-drowned-mooring",
+    "the-eel-lines", "the-cold-spring", "the-boat-house", "the-signal-mast",
+    "the-weed-raft", "the-ferryman-stone", "the-deep-mark", "the-slack",
+    "the-far-noust", "the-warping-post", "the-oar-store",
+  ],
+  eyots: [
+    "the-first-eyot", "the-otter-run", "the-brushwood-causey", "the-hurdle-eyot",
+    "the-hurdle-store", "the-sunken-hurdles", "the-mud-causey", "the-chapel-eyot",
+    "the-graves", "the-landing-stage", "the-chapel-channel", "the-long-causey",
+    "the-causey-end", "the-plank-run", "the-reed-maze", "the-cut-reed",
+    "the-reed-fork", "the-dead-end", "the-cutters-eyot", "the-hook-hut",
+    "the-stake-line", "the-black-eyot", "the-sunken-forest", "the-tern-causey",
+    "the-shell-eyot", "the-shell-scar", "the-salt-causey", "the-salt-marsh",
+    "the-samphire-flat", "the-creek-crossing", "the-marsh-hard", "the-fowlers-hide",
+    "the-decoy-pipe", "the-quaking-turf", "the-old-boat", "the-eel-hut",
+    "the-heron-tree", "the-cockle-strand", "the-mud-shore", "the-gutway",
+    "the-salting-edge", "the-creek-mouth", "the-marsh-strand", "the-hard-approach",
+    "the-strand-track", "the-bothy-of-the-crossing", "the-eel-staithe",
+    "the-wildfowler", "the-fowlers-track", "the-decoy-wood", "the-cockle-scars",
+    "the-gull-flats", "the-saltings-gate", "the-samphire-turn", "the-marsh-road",
+  ],
+  farstrand: [
+    "the-far-strand", "the-far-parting", "the-bridge-landing", "the-toll-cottage",
+    "the-crossing-house", "the-well-yard", "the-strand-road", "the-boat-noust-east",
+    "the-salt-pans", "the-pan-house", "the-salt-store", "the-shingle-rise",
+    "the-thrift-bank", "the-fisher-huts", "the-net-loft", "the-shingle-stair",
+    "the-drying-frames", "the-smoke-house", "the-limpet-rocks", "the-far-tide-mark",
+    "the-keepers-garden", "the-cart-shed", "the-anchor-stone", "the-storm-line",
+    "the-ford-corner", "the-cart-ruts", "the-drove-road", "the-shepherds-stone",
+    "the-hard-standing", "the-wrack-bank", "the-shingle-spit", "the-bridge-strand",
+    "the-ferry-strand", "the-ferry-lane", "the-passengers-rest", "the-toll-board",
+    "the-capstan-round", "the-tar-shed", "the-boat-graves",
+  ],
+};
+export const CROSSING_QUARTERS: Record<string, string> = {};
+for (const q in CROSSING_QUARTER_ROOMS) for (const id of CROSSING_QUARTER_ROOMS[q]) CROSSING_QUARTERS[id] = q;
+
+export const MAP_QUARTERS: Record<string, string> = { ...WOOD_QUARTERS, ...EAST_QUARTERS, ...CROSSING_QUARTERS };
 
 // UNDER COVER (rome, 2026-08-08). The wood is outdoors end to end — all 171
 // rooms — which is what lets rain, cold and the night dark reach it, and also
@@ -992,6 +1093,78 @@ export function underCover(roomId: string): boolean {
 // after this file is most of them — so this is what the wood mostly sounds like,
 // and it is written to be somewhere rather than to be atmospheric.
 export const QUARTER_AMBIENCE: Record<string, string[]> = {
+  // ---- THE CROSSING'S SEVEN (mig 190). This is the region the quarter layer
+  // was really for. The five middle quarters are not moods, they are five
+  // genuinely different PLACES — made road, stone piers, open gravel, deep
+  // channel, reed — and a player who cannot tell which one they are standing in
+  // has lost the only skill the region asks for. So each quarter sounds like
+  // its own physics: the causeway is a road with the sea under it, the bridge
+  // is height and wind, the ford is width and birds, the ferry is depth and
+  // very little else, and the eyots are close green walls and no horizon.
+  nearshore: [
+    "Shingle shifts under your own weight and goes on shifting for a second after you stop.",
+    "The tide mark's cut lines catch the light on the way past and you read them without meaning to.",
+    "Somebody's boot-print in the wet shingle fills from underneath and loses its shape.",
+    "Up on the road the wind has a different sound than it does down on the stones — drier, and further off.",
+    "A gull goes over the shore road at head height, sees you are not carrying anything, and keeps going.",
+    "The five ways are all visible from somewhere along here, and each of them looks like the reasonable one from the right angle.",
+    "Weed dries on the stones above the line, and lifts, and skitters a little way, and stops.",
+  ],
+  causeway: [
+    "The made road runs on ahead of you, dead straight and dead level, and the sea is on both sides of it at the same height as your boots.",
+    "Weed lies along the causeway all combed one way, flat, and it is the way you are going.",
+    "Water is standing in the wheel-ruts. It was not standing in them behind you.",
+    "The stone under you is sound and dressed and pinned, and that is the trouble: it is a perfectly good road, and it is a perfectly good road at the bottom of the water twice a day.",
+    "A hundred yards out to the side, something breaks and rolls and goes under, unhurried.",
+    "The milestones keep coming, at their proper interval, counting a distance that has no business being counted out here.",
+    "You can see both banks. Neither of them is close. That is the whole information the causeway gives you.",
+  ],
+  bridge: [
+    "Wind comes up the channel and through the piers and makes a note out of the gap between them.",
+    "A long way down, the water goes past the pier foot in a slow twist that does not look like it is going as fast as it is.",
+    "The stonework beside your hand is dressed, jointed, and better made than anything you have touched in weeks.",
+    "Gulls are arguing on the next pier along, at length, about the same thing they were arguing about a minute ago.",
+    "Something falls off the arch behind you and takes an unreasonably long time to arrive at the water.",
+    "The parapet ends. That is a fact you keep re-learning about this bridge.",
+    "Out here the wind has nothing to be broken by, and it pushes at your shoulder steadily, all from one side.",
+  ],
+  ford: [
+    "The water goes over the gravel with a sound like a crowd a long way off, from every direction at once.",
+    "Something small and quick goes over the shoal ahead of you, stops, and pretends it did not.",
+    "The gravel under your boot rolls, resettles, and takes your weight after a moment's argument about it.",
+    "A withy stands out of the water off to one side, leaning, and there is another beyond it, and another, and they go on further than you can see.",
+    "Birds lift off the flats a long way ahead, in a sheet, and put themselves down again a hundred yards on.",
+    "The far bank has not got noticeably closer, which is a thing the ford does for most of its length.",
+    "Water gets into the top of the boot at exactly the depth it always does, and there is nothing to be done about it.",
+  ],
+  ferry: [
+    "The rope goes out over the water, dips to touch it in the middle, and comes up again on the far side.",
+    "The water here does not show a bottom at any angle you try.",
+    "Something under the surface goes past, pale and long, at a depth you would rather not have established.",
+    "The green of the channel stops being green about four feet down and there is no word for what it does after that.",
+    "The rope creaks, once, taking a load somewhere out in the middle where nothing is standing.",
+    "Deep water makes almost no sound at all, which is not what you would expect from it, and is worse.",
+    "A cold comes up off the channel that is different from the wind's cold and gets in under it.",
+  ],
+  eyots: [
+    "The reed closes the sound of open water off entirely, and the quiet that replaces it is a different quiet.",
+    "Something moves in the next cut over, at your pace, and stops when you stop.",
+    "The light down here is green and comes from directly above and nowhere else.",
+    "The brushwood underfoot gives, and holds, and you find you have been treading more carefully than you decided to.",
+    "A stem bends against the run of the others, straightens, and is a stem again.",
+    "Water shows through the reed on both sides at once, which means the path is exactly as wide as it looks.",
+    "Somewhere out in the bed, a bird makes a noise like somebody blowing across the top of a very large bottle.",
+    "You cannot see forty feet in any direction and you have not been able to for some time.",
+  ],
+  farstrand: [
+    "Smoke smell off the old racks, faint, two hundred years cold and still in the stone.",
+    "The shingle bank keeps the wind off entirely, and the sudden absence of it is loud.",
+    "Nets on their pegs move together in a draught you cannot feel, and go still.",
+    "Something has been at the garden again. The prints are the ones with hands.",
+    "Salt has crusted white along the pan edges and it catches the light like frost that will not go.",
+    "Up over the storm beach the mountain is doing whatever the mountain is doing today, and it is a great deal closer than it was.",
+    "A door somewhere in the huts moves against its stone, and settles back against it.",
+  ],
   heath: [
     "The wind comes across the open with nothing to break it and goes through everything you are wearing.",
     "Sand shifts under your boot and takes the print cleanly, and the print is the only one.",
@@ -1158,6 +1331,89 @@ export const EAST_ROOM_AMBIENCE: Record<string, string[]> = {
   "the-watershed": ["Two threads of water leave the same puddle and go opposite ways.", "There is nothing above you here but weather, and it is coming."],
   "the-first-sight": ["The water down there changes colour all at once as cloud crosses it.", "Whatever stands up out of the middle of the water does not move, and keeps not moving."],
   "the-far-shore-stone": ["The dressed face of the pillar is clear of lichen. Something keeps it that way.", "The bench is cold and the water is enormous and there is nothing to do but sit and look at it."],
+};
+
+// THE CROSSING'S SIGNATURE ROOMS (mig 190). Same rule as the east road's: a
+// room earns its own pool by being a THING rather than a stretch, and the rest
+// speak as their quarter. Roughly a third of the region, weighted toward the
+// places a player has to make a decision in — the two fingerposts, the tide
+// marks, the refuge, the rope stage, the reed maze, the quicksand — because
+// those are the rooms somebody stands still in, and a room you stand still in
+// is a room that gets a second line out of you.
+export const CROSSING_ROOM_AMBIENCE: Record<string, string[]> = {
+  // ---- the near shore
+  "the-shore-descent": ["The water gets bigger every time the track turns, which is not how distance is supposed to work.", "Down at the bottom of the zigzags something catches the light off the water and is a roof, or a stone."],
+  "the-parting": ["The five arms of the post move very slightly in the wind, all together, and settle.", "Somebody has stood in this spot long enough to wear the ground down in a ring around the post's foot.", "Whichever arm you look at last is the one that seems most reasonable."],
+  "the-tide-mark": ["The cut lines run up the post past your head, and the highest one is well past it.", "Weed is dried onto the scale in a band, and the band is not where you would like it to be.", "The lantern bracket at the top is empty and has been swinging for two hundred years."],
+  "the-ferry-house": ["The lamp over the hatch gutters and steadies, and nobody has been near it.", "The rope-drum turns a quarter turn on its own, takes up, and stops.", "Through the window the deep channel runs straight out to the far bank, and the far bank is a long way over."],
+  "the-causeway-head": ["Weed hangs off the marked post in a band at the height of your chest, dried hard.", "The road runs out onto the bank and keeps going until distance takes it, and the going is good the whole way.", "The last dry stone is the last dry stone, and it is marked, and somebody marked it because they had to."],
+  "the-rope-walk": ["The strip runs perfectly straight and perfectly level for further than anything here needs to be.", "Wind comes down the length of the walk in one unbroken pull, the way rope came down it."],
+  "the-hard": ["Green below the line, white above it, and the line is the most legible thing on this shore.", "Keel-grooves run down the stone into the water and do not stop at the edge."],
+  "the-boat-noust": ["The hollow is exactly the shape of what is missing from it.", "Stones line the sides, laid flat, still holding the shape somebody dug two centuries ago."],
+  "the-quay-stub": ["The new rope on the ring bolt goes down into the water and does not slacken.", "Down through the green you can see the courses of the rest of the quay, square-cut, going out."],
+  "the-net-poles": ["The last shreds of net move on the nearest stakes, all one way, and then all the other.", "Twenty poles stand in a curve out into the shallows and they have caught nothing for a very long time."],
+  // ---- the causeway
+  "the-half-tide-post": ["The post is weeded to a line and dry above it, and the line is not far below the top.", "Water is doing something at the foot of the post that it was not doing when you arrived."],
+  "the-refuge": ["The stone box holds the sound of your own breathing and gives it back a beat late.", "It is dry in here. It is dry in here twice a day.", "Somebody has cut marks into the inside wall at the level of a sitting man's hand, and there are a great many of them."],
+  "the-weeded-milestone": ["The number above the weed is cut by the same hand as every milestone on the east road.", "Weed dries on the stone to the waist and no higher, which tells you exactly one thing."],
+  "the-drain-arch": ["Water goes through the arch under the road one way, unhurried, and it did not do that an hour ago.", "The arch was built to let the sea through the causeway rather than fight it, and it is still doing its job perfectly."],
+  "the-bell-buoy": ["The bell goes once, out on the water, on nobody's schedule.", "It rings again, and the note is wet, and it comes from further off than it did."],
+  "the-causeway-rise": ["The bank lifts out of the weed and becomes a road again, drained and cambered, and the relief of it is out of all proportion.", "Behind you the whole crossing lies flat and grey and looks like nothing at all."],
+  "the-half-drowned-cart": ["The tyres and hoop-irons stand up out of the weed in the shape a cart used to be.", "Whatever was in it is two centuries into being somewhere else."],
+  // ---- the bridge
+  "the-near-arch": ["The arch is good work and it ends in mid-air forty feet out, in a clean broken edge.", "Under the arch the water is suddenly a very long way down."],
+  "the-gap": ["There is nothing here. That is the entire content of this room and it goes on for a while.", "Wind comes up through the space where the span was and lifts the hair off your neck."],
+  "the-pier-foot": ["Water works in and out of a hole in the stonework at a rate that is not the sea's.", "The pier goes up out of sight above you and down out of sight below, and both directions are stone."],
+  "the-broken-arch": ["The stone here is dressed square at the exact point the bridge stops, and it is finished work.", "Somebody made the end of this neat. There was no reason to make the end of this neat."],
+  "the-rope-bridge": ["The rope takes your weight and gives some of it back, and keeps giving it back for a while.", "A long way down, the channel goes past in a slow twist."],
+  "the-far-arch": ["The bench in the parapet recess faces back the way you came, which is somebody's opinion about this crossing.", "From the seat the whole span of what is missing lies out in front of you at eye level."],
+  "the-drowned-span": ["The fallen span lies under the water in one piece, still arched, still holding.", "Green light comes up off the stonework down there and moves."],
+  // ---- the ford
+  "the-ford-head": ["The withies go out into the water in a line and the line bends, twice, before it disappears.", "A mile of grey water over grey gravel, and the far side is a smudge, and there is no road."],
+  "the-mid-ford": ["The rest-post stands with its crosspiece at chest height and the water goes past it both ways.", "Both shores are equally far away from this exact spot, which is a thing you can feel."],
+  "the-third-channel": ["The rope across the channel sags between its posts and lifts as the water works at it.", "This is where the crossing's water actually goes, and it is going."],
+  "the-quicksand-flat": ["The flat looks exactly like the flat does everywhere else on this bank.", "A patch of it a few yards off shivers, settles, and is ground again."],
+  "the-tern-scrape": ["Two eggs the colour of the stones lie in a hollow lined with nothing at all.", "The birds are up and screaming and they do not stop and they are not going to."],
+  "the-stranded-hull": ["The boat sits upright and whole on the gravel with its oars shipped, as neatly as if somebody had put it there.", "It could not have got up here at any height of water you would have survived."],
+  "the-midden": ["Shell, ash, shell, ash, a bone, shell — the water has cut into the mound and you can read straight down it.", "Somebody ate here for generations and left nothing else anywhere."],
+  "the-drowned-withies": ["The withies out past the safe line are bent right over by the current and streaming.", "Somebody planted those in good faith. The channel moved and they did not."],
+  // ---- the ferry
+  "the-ferry-steps": ["The rope through the iron ring is taut, and stays taut, and something is holding the other end.", "The steps go down the bank into the water and keep going after the water starts."],
+  "the-rope-stage": ["Out here the channel shows its colour: not grey like the shallows. Green, and then not green.", "The block on the stage turns a little, takes up, and stops."],
+  "the-channel-brink": ["The timber stops and the deep starts and there is no bottom at any angle you try.", "The rope goes out, dips to touch the surface halfway, and comes up again on the far side."],
+  "the-mid-channel": ["The rope creaks under a load, out here, where nothing is standing.", "Both stages are the same distance away and both of them are a long way."],
+  "the-under-rope": ["Everything is green and then not green and the surface is a ceiling.", "The rope runs away above you into water that stops being water-coloured."],
+  "the-ferry-boat": ["The boat is over there. You can see it perfectly. It is on the wrong side.", "Water slaps the far stage's timbers, and the boat moves against them, and does not come."],
+  "the-far-ferry-steps": ["Cut steps come up out of the water on this side, worn in the middle exactly like the ones opposite.", "The rope comes ashore here through a ring, and the ring has two centuries of wear in one direction."],
+  "the-boat-house": ["The half-mended boat sits on its trestles with the tools laid out along the keel in order.", "Water moves in the slipway under the doors, in and out, in and out."],
+  "the-signal-mast": ["The shapes are still in the locker at the foot of the mast: a black ball, a black cone, a red diamond gone pink.", "The halyard has rotted through and the blocks turn anyway when the wind gets into them."],
+  "the-weed-raft": ["The mat of weed lies on the water thick enough to walk on in some places.", "There is no way to tell which places from up here, and there never was."],
+  // ---- the eyots
+  "the-reed-gate": ["The reed closes over the track and the sound of open water stops as if a door had shut.", "Green light, and stems twice a man's height on both sides, and the path gives underfoot."],
+  "the-reed-maze": ["Every cut looks like the cut you came down.", "Something moves one wall over, at your pace, and the reed does not show where.", "Sound in here does not come from where the thing is, and you have started noticing that."],
+  "the-cut-reed": ["Withy stands cut and stacked and drying, and the cut ends are white and clean.", "Somebody works this. Somebody worked this recently enough that the ends have not greyed."],
+  "the-plank-run": ["The trestles go out into the reed and the planks stop, forty yards short of anywhere.", "It was somebody's amateur answer to the causey stopping, and it did not arrive either."],
+  "the-quaking-turf": ["The whole floor of the marsh moves under your weight, in a slow wave, out to a considerable distance.", "It settles. Then something at the far edge of the wave keeps moving for a moment longer."],
+  "the-chapel-eyot": ["Whatever this was, somebody carried the stone for it a long way over water.", "The graves are oriented the proper way, which out here took a decision and a compass."],
+  "the-decoy-pipe": ["The rotted hoops of the decoy curve away under the willows, still the right shape for what they did.", "Ducks came down this on purpose, once, and something walked behind them to keep them going."],
+  "the-marsh-hard": ["Laid stone under your boot for the first time in a very long while.", "Whatever you learned crossing the eyots, this is where you stop needing it."],
+  "the-old-boat": ["The boat lies over on its side in the samphire with its bottom gone, a long way from any water that would float it.", "Somebody's own idea of the way through is still in it, on something that was paper."],
+  // ---- the far strand
+  "the-far-parting": ["The five arms turn on their spindle, a little, and are set to a day that is over.", "Somebody used to stand here and turn them every tide. The spindle is still greased.", "From here every one of the five ways is a thing you have now done, or a thing you have not."],
+  "the-crossing-house": ["The lamp over the hatch burns steadily and there is no wind in this yard to trouble it.", "Stabling for beasts that have not been here in two hundred years, swept, and dry.", "The keeper shifts behind the hatch, and is still again."],
+  "the-far-tide-mark": ["The lantern is still in its bracket: glass gone, frame whole, a stub of candle run down one side and set again.", "The scale up the post is the twin of the one on the other bank, cut to the same measure by the same hand."],
+  "the-well-yard": ["The bucket comes up clean, which after a mile of salt is a thing worth standing still for.", "The windlass turns easily. Something has been keeping it turning easily."],
+  "the-keepers-garden": ["The bean-frame is still standing and there is nothing on it.", "Something has been at the beds — the good rows, the reachable ones — and left the tops where it stood."],
+  "the-pan-house": ["The iron pan sits on its cold flue, six feet across, warped through in one corner.", "Cut peat is stacked by the door, dry, ready, for a fire that is not going to be lit."],
+  "the-smoke-house": ["The smell is still in the stone hard enough to taste.", "Tiers of rods run wall to wall, black with two centuries of it, and the ash on the floor has not been walked in."],
+  "the-fisher-huts": ["Three doors stand open. The fourth has a stone against it on the outside.", "Upturned hulls for roofs, and the rain finds the same three places on each of them."],
+  "the-shingle-stair": ["The mountain fills the sky from one side to the other and the track goes up into it and out of sight.", "There is a stone seat here facing it, and somebody put it here for exactly this, and you sit down.", "The road stops being the institution's at the top of these steps, and you can see where."],
+  "the-storm-line": ["A whole tree lies bleached white along the crest of the bank, as neatly as if it had been placed.", "This is how high the water has been. It is a great deal higher than anything you crossed today."],
+  "the-anchor-stone": ["The hole through the granite is worn smooth on the inside, all the way round, by rope.", "There is no granite in this country. It came by water, as ballast, and stayed."],
+  "the-passengers-rest": ["The bench is worn into hollows in four places, and the four places are not evenly spaced.", "Through the slot window you can see the whole width of the channel and whether anything is on it."],
+  "the-toll-board": ["The paint has gone except where it was thickest, which was the numbers.", "Somebody scratched a fifth line under the last one, freehand, and doubled it."],
+  "the-boat-graves": ["Seven of them along the tideline, ribs up, in various stages of going back into the ground.", "The oldest is a stain in the shingle in the shape of a hull and nothing else at all."],
+  "the-bothy-of-the-crossing": ["The hearth draws. Somebody laid this fire and did not light it, and left it laid.", "LEAVE IT DRY, LEAVE IT FUELLED, cut into the lintel by somebody who meant it."],
 };
 
 export const WOOD_ROOM_AMBIENCE: Record<string, string[]> = {
@@ -1397,6 +1653,33 @@ export const WOOD_DARK: Record<string, string> = {
 // It NEVER states a number the stat block already gives. Numbers are the stat
 // block's job and a page that says a thing twice is a page nobody reads twice.
 export const MOB_LORE: Record<string, string> = {
+  // ---- THE CROSSING (mig 191). The east road's dead were doing a JOB that had
+  // outlasted its reason. These are doing a job that outlasted the WATER'S
+  // permission — every one of them died at work, in a place that is only a
+  // place for part of the day, and none of them was told when the part ended.
+  "the-drowned-ferryman": "Look at the hands and nothing else. They are the only part of him above the water and they are the part that still works: white, swollen to twice a hand's proper size, and absolutely steady on wet hemp, which is a thing a living hand cannot do for long. He is not coming for you. He is coming along the rope, because coming along the rope is the entire content of him, and you are standing at the end that he arrives at. Everybody who ever used this ferry stood exactly where you are and waited for exactly this.",
+  "the-pilot": "He is reading. That is the thing to understand: the brass plate in his hand is a diagram of one safe line across one mile of water, and he is checking the water against it, and the water stopped matching two hundred years ago and he has not stopped checking. A pilot's whole worth was knowing a channel better than the channel knew itself. He still does. The channel simply is not the channel any more, and nobody has been able to tell him.",
+  "the-tide-warden": "The stick is a tally and both edges are cut: height on one, hour on the other, and the last dozen notches are crowded together and driven deep. That is a man cutting faster than he wants to. Read down the stick and you can watch him work out, over about two hours, that the water was coming up quicker than the road allowed for. He got to the end of the record. He did not get to the end of the causeway.",
+  "the-refuge-man": "The hands are flat on the stone at shoulder height, and that is not a defensive posture and it is not a dying one — it is the way a man braces in a doorway when something is going past outside and he is waiting it out. He got to the refuge. Getting to the refuge was the correct decision and it was made in time. The refuge is a stone box with an opening at one end, and it is dry now, and it is dry twice a day, and that is the whole of what went wrong.",
+  "the-bridge-mason": "He is dressing the joint at the broken edge — squaring off the exact stone where the bridge stops. It is good work. It is the best work anywhere in this country and it is being done on a face that leads nowhere, because a mason finishes an edge whether or not anything is going to be built onto it, and finishing the edge is where he was when the span went. He does not look up for you. He looks up for the mallet, and the mallet is what he comes at you with, and he has never in two centuries let go of it.",
+  "the-scaffold-hand": "He is upside down at the hip in a rope harness, working the underside of the arch with both arms free, and that is not a body that fell — that is the correct working position for the job, held. The rope has been rotten past use for longer than anyone can say. It has not given. Look at it long enough and the question stops being how he is still up there and becomes what is actually taking the weight.",
+  "the-drover": "There is nothing in front of him. He is driving nothing, at the pace of something, across a mile of water, and every so often he says something over his shoulder to a beast that is not there and has not been there since the fall. This is the gentlest thing in the region and it is the worst one to watch, because everything about him is competent and unhurried and correct, and he will keep the stock off the deep channel all the way over, and there is no stock.",
+  "the-eel-cutter": "He works the line in order and he does not skip one: lift, empty, re-bait, set, pole on. The grigs are mended. The bait is fresh. Somewhere in this marsh there is fresh bait coming from somewhere, and that is a more unsettling fact than anything about the man himself. He has not looked up since before you were born. He will look up now, and the thing to know is that he will finish setting the trap in his hands first.",
+  "the-fowler": "You did not see him and you were not going to. That is not a boast about him; it is what the hood is for. A man in sacking and reed on his front in wet turf is not a man-shaped thing to a bird, and birds are considerably better at this than you are. He was there when you came onto the turf, he was there while you crossed it, and the difference between those minutes and this one is that you have now ruined a morning's work and he is going to charge you for it.",
+  "the-reed-walker": "It is one cut over, on your side, at your pace. Not following — ALONGSIDE, which is worse, because following can be outrun and alongside cannot. The reed is too thick to see through and sound in a reed bed does not come from where the thing is. It has been in the maze long enough to be the only thing in here that is not lost, and it has learned the one trick the maze rewards, which is to always be at the far end of the cut you are about to take.",
+  "the-salt-widow": "The pan is cold. There is no fire in the flue and there has not been one since the fall, and she is feeding it, in a coat crusted white to the elbow, at the steady unhurried rate of somebody who knows exactly how long a boil takes. Salt was the only reason anybody lived on this shore. It took a fire going day and night and somebody to keep it going, and keeping it going is the whole of what is left of her.",
+  "strand-thief": "He saw you before you saw him and he has already worked out how this goes. Everything he owns came off this beach — the coat, the knife, the boots that do not match. He does not consider it stealing and he will tell you why if you give him the room: the sea does not own things, the sea only puts them down, and a thing put down on a beach belongs to whoever is standing on that part of the beach. You are standing on part of the beach.",
+  "the-quicksand": "There is no animal here. There is a patch of the flat that looks exactly like the rest of the flat and behaves like water that has not been told. It does not come to you, it has no shape and there is nothing in it to hit, and every one of those is a reason it is worse rather than better: the whole of the fight is that you are already in it to the knee before the ground finished being ground, and everything you do to get out is what a thing like this feeds on.",
+  "conger": "It is an arm, and the arm goes back into the pier, and what you can see of it is the last third — the part that moves. It will not chase you anywhere. It does not have anywhere to chase you TO. Everything about the animal assumes that sooner or later the food comes past the hole, which over the life of a stone pier in a tidal channel is an entirely reasonable assumption, and the teeth all rake inward so that the assumption only has to pay off once.",
+  "grey-seal": "On the gravel it is a joke: enormous, boneless, asleep, and shaped like something dropped. Every part of that is true and none of it survives the waterline. In the channel it has a dog's head, a dog's teeth and a dog's entire opinion about what is worth chasing, and it is faster than you are in the only medium available. The joke is not that it looks silly on land. The joke is that you will form your opinion of it on land.",
+  "great-gull": "It is not frightened of you. Work outward from that, because everything else about the bird follows: the bill is a tool for opening things that do not want opening, the eye has no give in it whatever, and it has taken a rat off this parapet without landing to do it. There is no version of this where it becomes frightened of you, and there is no distance at which it stops considering you, and it is only waiting to find out which of those two facts is going to be relevant.",
+  "oystercatcher": "The bird is not the threat and was never going to be. It is the ANNOUNCEMENT. Black and white and built out of two straight lines, running ahead of you along the tideline, stopping, running again — and at some distance it privately settles on, it goes up screaming and does not stop, and everything on a mile of open gravel is told where you are and which way you are facing. The ford is the safe crossing. This is the price of the safe crossing.",
+  "bittern": "It is within ten feet of you. It has been within ten feet of you for a while. It is pointing straight up, striped precisely like the reed it is standing in, and swaying — and this is the part that undoes people — at the reed's rate, not its own. You will not find it by looking, because looking is the thing it is built to defeat. You will find it when it decides the distance is wrong, and it comes out of the stems at the height of your face.",
+  "fen-viper": "It does not want this. Read the animal honestly and that is the only conclusion available: it is coiled on the one dry plank in a hundred yards of water, it has nowhere to go that is not water, and you are standing on the plank. Everything that happens next happens because two things that would both rather be elsewhere are on the only piece of dry wood in the marsh. What it leaves in you outlasts the encounter by a considerable margin.",
+  "marsh-hound": "Watch the pattern, not the dog. It is quartering — working the ground in overlapping arcs, nose down, ears up, covering everything and covering it once. That is taught. Somebody taught it, with a whistle and a great deal of patience, and then that somebody stopped existing, and the dog kept the method and lost the point of it. It is still searching the marsh very thoroughly. It no longer has anything it is searching for, which means what it finds will do.",
+  "wrack-crab": "There is never one. That is the entire natural history of the animal and it is the only part worth knowing. Move the weed and you find out how many there were, and the number is not the one you had in mind, and each of them is two hands across with a claw that shuts on a tendon and goes on shutting after the crab has stopped caring.",
+  "ford-eel": "A yard of it in four inches of water, going upstream over gravel, and entirely untroubled by the shallowness — because it is not swimming, it is CROSSING, and it can cross wet grass if it has to. The ford is a mile of ankle-deep water that you are picking your way over with great care. It is a road, and it is being used as one, by something that does not need it to be deep.",
+
   // ---- THE EAST ROAD (mig 188). Every one of these is the same sentence said
   // ten ways: the work outlasted the reason for it. The clerk collects, the
   // warden walks, the dogs herd, the miller keeps grinding at nothing — and the

@@ -1,0 +1,216 @@
+# THE CROSSING, 4 of 5 — THE EYOTS. 37 rooms.
+#
+# The fifth way, and the only one that is never shut. South of the channel the
+# crossing silts into a delta of reed and mud and small islands, and a person
+# can get across it at any state of the water, at any hour, in any weather.
+#
+# The price is that it is a MAZE. Not the wood's kind — the wood is a maze of
+# rides that all look alike, and this is a maze of ground that is only sometimes
+# ground. The eyots are real islands with real names and the ways between them
+# are causeys of brushwood and laid stone, and half of the causeys are under mud
+# and the mud looks exactly like the causey.
+#
+# Design rule for this file, and the reason it reads differently from the wood:
+# EVERY EYOT IS DISTINCT AND EVERY CAUSEY IS NOT. The islands are landmarks you
+# can learn and navigate by — the Hurdle Eyot, the Chapel Eyot, the Black Eyot —
+# and the ways between them are deliberately samey, so you fix on the islands
+# and count. That is how people actually cross ground like this, and it makes
+# the region learnable without ever making it safe.
+#
+# It runs from the Reed Gate on the near shore to the Salt Marsh on the far one,
+# and it is roughly twice as long as the causeway for the same distance made
+# good, which is the whole bargain: the way that is always open is always long.
+
+!region crossing
+
+## the-first-eyot | The First Eyot
+An island of solid ground the size of a barn, standing a foot above the reed, with three willows on it and a fire-ring under them that has been used a great many times by a great many different people. This is where everybody stops before going in, and everybody has left something.
+!safe
+> north the-reed-gate
+> south the-brushwood-causey
+> east the-otter-run
+
+## the-otter-run | The Otter Run
+A slide in the mud from the water up over the eyot's flank and down the other side, polished, used, and not by people. There are fish scales trodden into the top of it and a smell like a wet dog and old pennies.
+> west the-first-eyot
+
+## the-brushwood-causey | The Brushwood Causey
+Bundles of cut willow laid crosswise and pinned with stakes, sunk a hand under the mud so that you walk on a path you cannot see and find by feel and by the two lines of stakes on either side. Most of the stakes are there.
+> north the-first-eyot
+> south the-hurdle-eyot
+
+## the-hurdle-eyot | The Hurdle Eyot
+An island fenced all round with woven hurdles gone silver with weather, and inside the fence, nothing at all — no house, no hearth, no pen. Somebody enclosed an acre of marsh island and then never used it, and the fence is in better repair than anything else out here.
+> north the-brushwood-causey
+> south the-mud-causey
+> east the-hurdle-store
+> west the-sunken-hurdles
+
+## the-hurdle-store | The Hurdle Store
+A stack of spare hurdles under a lean-to on the eyot's east side, forty or fifty of them, cut and woven and stacked and never put up. The willow is still springy. Whoever made these expected to need them, and the expecting is the only thing left of them.
+> west the-hurdle-eyot
+
+## the-sunken-hurdles | The Drowned Hurdles
+The fence goes on off the island's west end and out into the water, three panels of it standing in mud with the tops just clear, going nowhere. Either the island was bigger or the fence was more ambitious. Both are possible and neither is comforting.
+> east the-hurdle-eyot
+
+## the-mud-causey | The Mud Causey
+The stakes stop and the causey does not, and for thirty yards the only way to know you are on it is that you have not yet gone in past the knee. There is a way to walk this and it involves keeping your weight back and testing forward, and everybody works it out in the first ten yards or the first fall.
+> north the-hurdle-eyot
+> south the-chapel-eyot
+> east the-quaking-turf
+
+## the-chapel-eyot | The Chapel Eyot
+The biggest of the islands and the only one with a building on it: a chapel of one room, stone, roofless, with the altar slab still in place and a stone bench round three walls. It faces east across the marsh at the mountain. People stopped here on the way over, every time, for a very long time.
+!safe
+> north the-mud-causey
+> south the-long-causey
+> east the-graves
+> west the-landing-stage
+
+## the-graves | The Graves
+Behind the chapel, forty low humps in the turf in rough rows, unmarked but for a stone at the head of each one no bigger than a fist. Nobody carried a body out here. These are people who did not get across, laid where the marsh gave them back.
+> west the-chapel-eyot
+
+## the-landing-stage | The Landing Stage
+A stone jetty on the chapel eyot's west side, running out into a channel deep enough to float a boat, with a ring and a step. Whoever kept the chapel was supplied by water, not by the causeys, which says something about how much they trusted them.
+> east the-chapel-eyot
+> north the-chapel-channel
+
+## the-chapel-channel | The Chapel Channel
+Open water between the eyots, still and brown and deeper than it looks, with the reed standing in it on both sides. There is no way across here and no bridge and nothing to hold. It is here to be gone round, and the going round is most of what the eyots cost you.
+> south the-landing-stage
+> east the-decoy-pipe
+
+## the-long-causey | The Long Causey
+The best-built thing in the marsh: a proper stone causey, two feet proud, with a drainage gap every twenty yards and cut kerbs on both sides. It runs dead straight for a quarter of a mile and it is a pleasure to walk, and it stops, without warning or apology, in the middle of the reed.
+> north the-chapel-eyot
+> south the-causey-end
+> west the-old-boat
+
+## the-causey-end | The Causey End
+Where the good stone stops. The last kerb is cut square and finished, and beyond it is mud with reed growing out of it, and there is no rubble and no fallen work — this was not destroyed, it was ABANDONED, mid-course, by people who meant to come back with more stone.
+> north the-long-causey
+> east the-plank-run
+> south the-reed-maze
+
+## the-plank-run | The Plank Run
+Somebody's answer to the causey stopping: planks, on trestles, running east through the reed, laid by eye and repaired in a dozen hands. It bounces. Where the trestles have gone the plank is held up by the mud alone, and you can tell which ones those are by the give. It ends in standing reed, at a trestle with no plank on it, forty yards short of anywhere.
+> west the-causey-end
+
+## the-reed-maze | The Reed Maze
+Reed over your head in every direction and a path that forks and forks again with no way to tell which fork is the way and which is where somebody once went to cut. There is no view. There is no sky worth the name. There is the sound of open water, from a direction that keeps changing.
+> north the-causey-end
+> south the-cut-reed
+> east the-reed-fork
+
+## the-cut-reed | The Cut Reed
+A stand that has been harvested, the stubble sharp as a hedge of nails underfoot and the standing crop making a wall on three sides. The cutting is old but the pattern is legible: they worked in strips, and the strips run east, and following them is the first sensible piece of navigation the marsh has offered.
+> north the-reed-maze
+> east the-cutters-eyot
+
+## the-reed-fork | The Reed Fork
+The path splits around a stand of reed too thick to push through, and both ways look identical, and both ways are used. One goes to the cutters' island. The other goes to open water and stops, and nobody has ever marked which is which.
+> west the-reed-maze
+> south the-cutters-eyot
+> east the-dead-end
+
+## the-dead-end | The Dead End
+The path opens onto brown water and finishes. There is a stake here with a rag on it, tied by somebody who came this way, worked out their mistake, and wanted the next person to know sooner than they had. The rag is one of very few kindnesses in this world.
+> west the-reed-fork
+
+## the-cutters-eyot | The Cutters' Eyot
+An island of trodden ground and reed-stacks, with a low turf hut, a whetstone on a post, and a great many reed-hooks pushed into the turf blade-down in a row. This is a working place. The stacks are graded by year and the oldest is grey and the newest is gold.
+!safe
+> west the-cut-reed
+> north the-reed-fork
+> south the-hook-hut
+> east the-stake-line
+
+## the-hook-hut | The Hook Hut
+Turf walls, a roof of reed on rafters of reed, one door and no window, and inside it is dry and dark and smells of cut sedge. There is a bed of reed against the wall and a stone for a hearth and, hung on a nail, a coat that would still keep the rain off.
+!safe
+> north the-cutters-eyot
+
+## the-stake-line | The Stake Line
+A line of stakes going east through open reed, driven at a stride's spacing by somebody who counted their strides, and it is the single most useful object in the eyots. Follow the stakes and you get across. Lose them and you are in the marsh, which is a different problem entirely.
+> west the-cutters-eyot
+> east the-black-eyot
+> south the-eel-hut
+
+## the-black-eyot | The Black Eyot
+Peat, not silt: an island of black ground standing higher than the rest, dry, hard, and carrying a stand of alder that has been there long enough to have fallen over twice and gone on growing. From the top of it you can see the mountain, the channel, the chapel roofless behind you, and how far there is left.
+> west the-stake-line
+> south the-sunken-forest
+> east the-tern-causey
+
+## the-sunken-forest | The Sunken Forest
+Off the black eyot's south shore, in the shallow water: stumps. Hundreds of them, black and hard, cut level by the water rather than by any axe, in rows and clusters that are obviously a wood. This was dry land with trees on it. The water is what happened next.
+> north the-black-eyot
+
+## the-tern-causey | The Tern Causey
+Brushwood again, and this stretch is colonised — terns nest on the causey itself, in the gaps between the bundles, and they go up the moment you set foot on it and stay up, and dive at your head, and do not stop until you are off their ground.
+> west the-black-eyot
+> east the-shell-eyot
+> north the-fowlers-hide
+
+## the-shell-eyot | The Shell Eyot
+An island made of shell — the same midden material as the ford's, but here it is the whole island, a mound of it thirty yards across standing three feet proud of the marsh and white as bone. Nothing grows on it. Nothing has ever grown on it.
+> west the-tern-causey
+> east the-salt-causey
+> north the-shell-scar
+
+## the-shell-scar | The Shell Scar
+Where the water has cut into the shell mound and laid its layers open: shell, shell, a band of ash and burnt bone, shell, and at the very bottom, dark earth with flints in it. You can put your hand on the bottom of it and be touching the ground somebody stood on before any of this was water.
+> south the-shell-eyot
+
+## the-salt-causey | The Salt Causey
+The last of the made ways: stone again, poorly, laid by somebody without the long causey's skill or budget, running east over ground that is more salt than mud. Samphire grows in the gaps between the stones. Everything from here on tastes of the sea rather than the marsh.
+> west the-shell-eyot
+> east the-salt-marsh
+> north the-heron-tree
+
+## the-salt-marsh | The Salt Marsh
+The reed gives out and the ground opens into a flat of salt marsh, cut all over by creeks with vertical mud banks — no cover, no reed, no path, and a horizon in every direction. The creeks are the problem: they are deeper than they look and they run where they like.
+> west the-salt-causey
+> east the-creek-crossing
+> north the-samphire-flat
+
+## the-samphire-flat | The Samphire Flat
+Acres of it, green and jointed and growing in the bare mud where nothing else will, so thick in places you cannot see the ground. It is food. It is good food, and it is the only thing in the eyots that is straightforwardly a gift, and it comes back every time you cut it.
+> south the-salt-marsh
+
+## the-creek-crossing | The Creek Crossing
+The biggest of the creeks, twenty feet across, with mud banks going down sheer and the water at the bottom moving fast. There is a plank. It is one plank, on the mud, laid across, and it is longer than it needs to be, which means somebody measured this creek at a worse moment than the one you are looking at.
+> west the-salt-marsh
+> east the-marsh-hard
+
+## the-marsh-hard | The Marsh Hard
+Laid stone at last, a real hard going up out of the marsh onto the far bank, with a bollard and cart-ruts and the marks of a lot of traffic. The eyots let you go without ceremony. Behind you the whole marsh lies flat and green and looks like a field.
+> west the-creek-crossing
+> north the-hard-approach
+
+## the-fowlers-hide | The Fowler's Hide
+A pit dug into the black eyot's edge and roofed with cut reed, with a slot to see through at water level and a shelf inside worn smooth by elbows. A man lay in here for hours at a time, waiting for birds. The view through the slot is of open water and nothing else, and it is a very good place to see without being seen.
+> south the-tern-causey
+
+## the-decoy-pipe | The Decoy Pipe
+A curving ditch off the chapel channel, netted over on hoops, narrowing to a trap at the far end — a decoy, for taking duck in numbers. The hoops still stand. Most of the netting has gone, and what is left moves when the wind gets under it and looks, from the corner of the eye, like something walking under the net.
+> east the-chapel-channel
+
+## the-quaking-turf | The Quaking Ground
+Turf that floats. It holds you, and it moves under you as it does, and if you stand still and shift your weight you can watch a wave go out across it for twenty yards. There is water under everything here and the only thing between you and it is a mat of root a hand thick.
+> west the-mud-causey
+
+## the-old-boat | The Old Boat
+A punt sunk in the reed off the long causey, flat-bottomed and open, with a quant pole still shipped along the inside of the gunwale. It is full of water and silt and there is a bird nesting in the bow, and it would float again with a day's work and a way to get a day's work out here.
+> east the-long-causey
+
+## the-eel-hut | The Eel Hut
+On stilts over the water off the cutters' eyot: a plank shack the size of a bed, with a hatch in the floor and a rack of eel-traps on the wall, and a stove made from a broken pot. The hatch opens onto black water. This is a place somebody worked at night, on purpose, alone.
+!safe
+> north the-stake-line
+
+## the-heron-tree | The Heron Stand
+A dead alder in open water off the shell eyot with six herons in it, standing at different heights, none of them moving. They do not go up as you pass. They turn their heads, all of them, in the same unhurried way, and go on standing there.
+> south the-salt-causey

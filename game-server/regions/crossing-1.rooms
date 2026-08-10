@@ -1,0 +1,200 @@
+# THE CROSSING, 1 of 5 — THE NEAR SHORE. 29 rooms.
+#
+# THE REGION'S WHOLE IDEA, written here because every other file in this set
+# depends on it: the Crossing gates the mountain by being a PLACE, not a lock.
+# There is no key, no flag, no closed door. There is a great deal of water, and
+# five ways over it, and none of the five is available all of the time.
+#
+#   THE CAUSEWAY — a built road on a bank. Fast, obvious, and drowned at high
+#                  water, which is most of the reason anybody learns the others.
+#   THE BRIDGE   — the span is out in the middle. High and dry forever, and you
+#                  cross it on the piers, which is its own decision.
+#   THE FORD     — north, wide gravel shallows. Low water only, and a long way.
+#   THE EYOTS    — south, an island chain in bog. Never drowned, never quick,
+#                  and easy to be lost in.
+#   THE FERRY    — the deep channel, and a rope. If the boat is on this side.
+#
+# That is five independent routes end to end, which is what this much ground
+# behind one seam requires (build-rooms' throat check wants six ways in for 218
+# rooms; the five crossings plus the two gates INSIDE the region clear it) — the
+# rule and the fiction arriving at the same answer, for once. Note what the two
+# gates do to that check: a gate inside the ground cannot be cut off from a
+# gate, so the throat passes trivially. The five routes still have to be real,
+# and they are, but the check is not what is proving it here.
+#
+# THE MAP IS PART OF THE DESIGN, not an afterthought. Five ways east across the
+# water means five LANES, three squares apart, because every route grows rooms
+# off its north and south sides and two-apart lanes grow into each other. Both
+# shore roads therefore run NORTH TO SOUTH with each crossing branching east at
+# its own latitude, and the far bank repeats the near bank exactly. The first
+# cut of this region ignored that and the pipeline had to shove 35 rooms onto
+# squares their own doors disagreed with. It now draws with zero.
+#
+# THE NEAR SHORE carries the WESTERN GATE — the ferry house, which is the twin
+# of the Crossing House on the far bank, same arrangement, same unexplaining
+# keeper. Two gates, one at each end of the water. You can bank what the near
+# shore and the middle gave you without committing to the whole mile, and you
+# can come back the other way and bank that too.
+#
+# THE NEAR SHORE is where you stand and choose. Everything on it exists to make
+# that choice legible: the ferry-house, the causeway head with its tide-marks,
+# the bridge approach, the road north to the ford, and the track south into the
+# eyots. A fingerpost stands where the five ways part, because this is the most
+# important junction in the world and the institution knew it.
+#
+# It attaches EAST off the Far Shore Stone — the east road's last room, built as
+# a view of this and nothing else: a bench, a dressed pillar, and no east exit.
+
+!region crossing
+
+## the-far-shore-stone | attachment: the road goes down to the water
+!existing
+> east the-shore-descent
+
+## the-shore-descent | The Shore Descent
+The track leaves the bench and goes down off the moor in long shallow zigzags, losing the height it spent all morning gaining. The water gets bigger the whole way down, which is not how distance is supposed to work, and by the bottom of it you cannot see the far side without turning your head.
+> west the-far-shore-stone
+> east the-strand-head
+
+## the-strand-head | The Strand Head
+The moor ends and the shore begins in one step: peat, then shingle, then water, with nothing in between to soften it. The stones are round and grey and go down to the tideline in a bank you sink into to the ankle. Everything smells of cold water and weed.
+> west the-shore-descent
+> east the-shore-road
+> south the-wrack-line
+
+## the-wrack-line | The Wrack Line
+A long ragged windrow of everything the water has finished with: weed in ropes, a shoe, bird bone, a stave, a fishing float gone brittle. It runs the whole length of the shore and it is different every time the water comes up. People walk this line for a living. You can see where they have turned things over.
+> north the-strand-head
+> east the-net-poles
+> west the-boat-noust
+
+## the-net-poles | The Net Poles
+Twenty stakes driven in a curve out into the shallows, black with age and still standing, with the last shreds of a net on the nearest three. A fixed engine: the tide brought the fish in and the net kept them when it went out. It caught nothing this morning. It has caught nothing for a long time.
+> west the-wrack-line
+> north the-shore-road
+> south the-shellfish-scars
+
+## the-shore-road | The Shore Road
+A made road running north to south along the top of the shingle, above the highest tide-mark and below the moor — the road that serves the crossings rather than making one. Everything on this bank is on it. It is in better repair than it has any right to be.
+> west the-strand-head
+> south the-net-poles
+> east the-parting
+
+## the-hard | The Hard
+A ramp of laid stone going down into the water at a shallow angle, wide enough for a cart, grooved by keels. This is where boats were taken out and put in. The stone below the waterline is furred green and the stone above it is worn white, and the line between them is the most legible thing on this shore.
+> north the-ferry-house
+> south the-capstan-stone
+> east the-ferry-steps
+
+## the-capstan-stone | The Capstan Stone
+A block of dressed stone set flush in the road with a square socket cut through the middle of it, and the socket is worn round. A capstan stood here and boats were hauled up past it, and the road runs on over it now as if it were paving, because that is what it has become.
+> north the-hard
+> south the-tide-mark
+
+## the-ferry-house | The Ferry House
+A stone house with a wide door facing the water and a stove-in boat under the lean-to, and a window that looks straight down the deep channel to the far bank. Somebody lived here to take people over, and their whole working life was one distance, repeated. The rope-drum is still bolted to the floor — and there is a lamp burning over a hatch in the road-facing wall, and the same arrangement holds here as holds on the other side, and the keeper behind the hatch does not explain it either.
+!entry
+!safe
+> north the-rope-walk
+> south the-hard
+
+## the-rope-walk | The Rope Walk
+A long level strip beside the road, fenced on both sides, running perfectly straight for further than anything here needs to be. Rope was laid out and twisted down its length, and the ferry rope was made on it, and it is the only piece of ground on this shore that was flattened on purpose.
+> north the-bridge-approach
+> south the-ferry-house
+
+## the-parting | The Parting of the Ways
+The shore road widens where the five ways separate, and there is a fingerpost in the middle of it with five arms, and it is the single most important object in this country. Four of the arms point north up the shore road, at different heights, for the four different distances; the fifth points east, straight down the causeway, and is the shortest arm on the post.
+> west the-shore-road
+> east the-causeway-head
+> north the-tide-mark
+> south the-eyot-track
+
+## the-causeway-head | The Causeway Head
+The made road runs out onto a bank of piled stone and simply keeps going, out into the water, dead straight, until distance takes it. On the last dry stone there is a marked post: a scale of cut lines up its length, the top one well above your head, and every line has a hand's-breadth of weed dried onto it.
+> west the-parting
+> east the-first-crossing-stone
+
+## the-bridge-approach | The Bridge Approach
+The road climbs onto an embankment and aims itself at the bridge, and from up here you can see the whole shape of the problem: four piers standing in the water, an arch on this end, an arch on the far end, and a very great deal of nothing in between them.
+> south the-rope-walk
+> east the-near-arch
+> north the-toll-post
+
+## the-ford-road | The Ford Road
+The road north along the shore, above the water, running toward where the crossing widens and shallows. It is the least travelled of the five and the surface says so: grass down the middle, and the verges closing in on both sides.
+> south the-quay-stub
+> north the-gravel-flats
+
+## the-eyot-track | The Eyot Track
+A path leaving the shore road southward and going down into the reeds, made of whatever came to hand — brushwood, a laid stone, a plank on two stones — and repaired by different people at different times with different ideas about how much effort this was worth.
+> north the-parting
+> south the-reed-gate
+
+## the-ferry-steps | The Ferry Steps
+Cut steps going down the bank into the water, with an iron ring at the top of them and the ferry rope through the ring, and the rope going out level across the channel and disappearing into its own reflection. The rope is taut. Something is holding the other end.
+> west the-hard
+> east the-rope-stage
+
+## the-rope-stage | The Rope Stage
+A timber stage out over the deep water where the ferry came alongside, with a bollard, a fend-off post, and the rope running through a block that still turns. From out here the channel shows its colour: not grey like the shallows. Green, and then not green.
+> west the-ferry-steps
+> east the-channel-brink
+
+## the-gravel-flats | The Gravel Flats
+North of the crossings the water spreads and thins and loses its authority, running over banks of grey gravel that stand clear at low water and go under at high. The channels between them shift with every tide. You can see the ford from here, or where it usually is.
+> south the-ford-road
+> east the-ford-head
+> north the-mussel-scaup
+
+## the-mussel-scaup | The Mussel Scaup
+A bed of them on the gravel, acres of it, blue-black and packed edge to edge and every shell shut. It goes out further than you would want to walk and it is under water half the time. Somebody has raked a path through the middle of it, and the path is old, and the mussels have not closed it up.
+> south the-gravel-flats
+
+## the-reed-gate | The Reed Gate
+The reeds close over the track and the light goes green and the sound of open water stops as if a door had shut. This is the way into the eyots and the reeds are twice a man's height on both sides, and the path underfoot is somebody's brushwood, and it gives.
+> north the-eyot-track
+> south the-first-eyot
+
+## the-near-arch | The Near Arch
+The one span still standing on this side. You walk up onto the bridge under a proper arch on proper piers, over water that is suddenly a long way down, and it is the best piece of building in this country. It ends forty feet out, in a clean broken edge, above the channel.
+> west the-bridge-approach
+> east the-first-pier
+
+## the-first-crossing-stone | The First Crossing Stone
+The causeway proper: a road two carts wide on a bank of piled and pinned stone, running east into the water. The surface is sound. The weed on it is combed all one way, flat, and it is wet, and there is no rain.
+> west the-causeway-head
+> east the-weeded-milestone
+
+## the-channel-brink | The Channel Brink
+The end of the stage, where the timber stops and the deep starts. The water here does not show a bottom at any angle you try. The ferry rope goes out over it, dipping to touch the surface halfway across and coming up again on the far side, and whatever the rope is fast to over there is not visible.
+> west the-rope-stage
+> east the-rope-run
+
+## the-tide-mark | The Tide Mark
+A post set in the shingle above the strand, taller than a man, with a scale cut up it and a bracket at the top for a lantern that is not there. This is how the shore reads the water: one glance, and you know which of the five ways is a way today. Somebody has kept the cut lines clear of weed.
+> north the-capstan-stone
+> south the-parting
+
+## the-boat-noust | The Boat Noust
+A boat-shaped hollow dug into the bank above the tide and lined with stone, where a small boat was pulled up out of the weather for the winter. It is empty. It is exactly the right shape to tell you what is missing from it, which is a boat.
+> east the-wrack-line
+
+## the-weeded-milestone | The Drowned Milestone
+A milestone on the causeway, standing in its socket like all the others, weeded to the waist and legible above that: a number, and a direction, cut by the same hand as every milestone on the east road. Whoever built this considered it a road. It is a road. It is simply also, for part of every day, the bottom of the water.
+> west the-first-crossing-stone
+> east the-causeway-bend
+
+## the-shellfish-scars | The Shellfish Scars
+Flat rock running out into the shallows, gouged all over with old rectangular cuts where stone was quarried off the shore itself. The pits hold water and the water holds things. Limpets, weed, and one crab going about its business with no interest in yours.
+> north the-net-poles
+
+## the-quay-stub | The Quay Stub
+Twelve feet of proper dressed quay, and then nothing — the rest of it went into the water at some point and was never rebuilt, and you can see the courses of it down there, square-cut and green. A ring bolt at the end still stands proud, and there is a new rope on it, and the rope goes down into the water.
+> north the-ford-road
+> south the-toll-post
+
+## the-toll-post | The Toll Post
+A stone post at the side of the road with a table of charges cut into it, weathered down to the columns: a man, a man and a beast, a cart, a cart laden. The figures are gone. What survives is the shape of an argument about how much crossing this water was worth, and to whom.
+> north the-quay-stub
+> south the-bridge-approach

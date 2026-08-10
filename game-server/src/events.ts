@@ -35,6 +35,8 @@ import {
   FOG_TELEGRAPH_MS, FOG_ACTIVE_MIN_MS, FOG_ACTIVE_MAX_MS, FOG_AFTERMATH_MS, FOG_WAKE_MULT,
   COLD_TELEGRAPH_MS, COLD_ACTIVE_MIN_MS, COLD_ACTIVE_MAX_MS, COLD_AFTERMATH_MS, COLD_TORCH_MULT,
   BREACH_PAIRS, BREACH_TELEGRAPH_MS, BREACH_ACTIVE_MS, BREACH_AFTERMATH_MS,
+  SEA_ROOMS, SEA_INSTRUMENTS, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_SPRING_ODDS, SEA_HEARD_BANDS,
+  SEA_LOW_MS, SEA_STEP_MS, SEA_HIGH_MS, SEA_BITE, SEA_STATES,
   TIDEWAYS_ROOMS, TIDE_LEVELS, TIDE_HIGH_ODDS,
   TIDE_EVERY_MIN_MS, TIDE_EVERY_MAX_MS, TIDE_FIRST_MIN_MS, TIDE_FIRST_MAX_MS, TIDE_GRACE_MS,
   TIDE_TELEGRAPH_MS, TIDE_STEP_MS, TIDE_CREST_MS, TIDE_AFTERMATH_MS, TIDE_SILT_ODDS,
@@ -384,6 +386,23 @@ export function skyClause(z: ZoneDO, roomId: string): string {
     const t = z.world!.itemTemplates.get(z.events.get("want")?.data ?? "");
     if (t) return ` Chalked on the keeper's hatch: wanted tonight — ${t.name}, double in trade.`;
   }
+  // THE SEA. Three tiers of information, and which one you get is a fact about
+  // where you are standing rather than a difficulty setting:
+  //   IN THE WATER      — you are in it, and the room says so first.
+  //   AT AN INSTRUMENT  — the tide marks, the marked post, the half-tide post,
+  //                       the two Partings. These give the EXACT reading, which
+  //                       is the entire reason the institution put them there.
+  //   ANYWHERE ELSE     — you can see the water and no more than that.
+  if (SEA_ROOMS.has(roomId) || SEA_INSTRUMENTS.has(roomId)) {
+    if (seaUnder(z, roomId)) {
+      return " The sea is over this. The road is somewhere under your feet and you are taking it on trust.";
+    }
+    if (SEA_INSTRUMENTS.has(roomId)) {
+      const covered = seaWillCover(z, roomId) ? " Before this tide turns, the water will be over where you are standing." : "";
+      return ` The mark reads ${seaReading(z)}${covered}`;
+    }
+    if (seaWillCover(z, roomId)) return " Dry, for now. The weed on the stones here is not old weed.";
+  }
   if (TIDEWAYS_ROOMS.has(roomId)) {
     switch (phaseOf(z, "tide")) {
       case "telegraph": return " The drips have quickened to a patter, and the water below sounds hungry.";
@@ -638,6 +657,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickGloam(z, now);
   await tickBreach(z, now);
   await tickTide(z, now);
+  await tickSea(z, now);
   await tickRut(z, now);
   await tickWalk(z, now);
   await tickQuiet(z, now);
@@ -829,7 +849,7 @@ async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
     case "idle": {
       st.phase = "telegraph";
       st.until = now + CARRIER_TELEGRAPH_MS;
-      z.roomFeedBands(SURFACE_BANDS, "Word runs the length of the roads before the man does: there is a carrier on the east paving tonight, and the bag is full.", "evt");
+      z.roomFeedBands(SEA_HEARD_BANDS, "Word runs the length of the roads before the man does: there is a carrier on the east paving tonight, and the bag is full.", "evt");
       break;
     }
     case "telegraph": {
@@ -851,7 +871,7 @@ async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
       }
       st.data = ids.join(",");
       feedWhere(z, (roomId) => roomId === CARRIER_FROM, "A carrier comes through the thorn gap at a walking pace, satchel buckled, both hands free, and does not stop to talk.");
-      z.roomFeedBands(SURFACE_BANDS, "He is on the road. So, by now, is everybody who heard.", "evt");
+      z.roomFeedBands(SEA_HEARD_BANDS, "He is on the road. So, by now, is everybody who heard.", "evt");
       break;
     }
     case "active": {
@@ -863,7 +883,7 @@ async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
       // is not here to clear, and the world keeps that.
       recall(z, ids);
       st.data = undefined;
-      z.roomFeedBands(SURFACE_BANDS, carrier
+      z.roomFeedBands(SEA_HEARD_BANDS, carrier
         ? "The carrier got through. Whatever was in the bag went east with him, and the road is a road again."
         : "Word comes back down the east road: the carrier did not get through, and somebody is better off tonight.", "evt");
       break;
@@ -944,7 +964,7 @@ async function tickSpate(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + SPATE_TELEGRAPH_MS;
       feedWhere(z, (roomId) => SPATE_ROOMS.has(roomId), "The beck goes brown between one look and the next, and the noise of it climbs. Somewhere up the gill it has already rained.");
-      z.roomFeedBands(SURFACE_BANDS, "Word comes off the east road: the beck is up and rising, and the low way will not be a way for much longer.", "evt");
+      z.roomFeedBands(SEA_HEARD_BANDS, "Word comes off the east road: the beck is up and rising, and the low way will not be a way for much longer.", "evt");
       // Everything living on the water knows before you do, and starts climbing.
       for (const c of z.creatures.values()) {
         if (SPATE_ROOMS.has(c.roomId) && !DROWNERS.has(c.templateId)) {
@@ -957,7 +977,7 @@ async function tickSpate(z: ZoneDO, now: number): Promise<void> {
       st.phase = "active";
       st.until = now + randInt(SPATE_ACTIVE_MIN_MS, SPATE_ACTIVE_MAX_MS);
       feedWhere(z, (roomId) => SPATE_ROOMS.has(roomId), "The beck comes up over the bank all at once, and the low way stops being ground.");
-      z.roomFeedBands(SURFACE_BANDS, "The beck is over its banks the whole length of the east road. Whatever is down there is in it now.", "evt");
+      z.roomFeedBands(SEA_HEARD_BANDS, "The beck is over its banks the whole length of the east road. Whatever is down there is in it now.", "evt");
       break;
     }
     case "active": {
@@ -986,7 +1006,7 @@ async function tickSpate(z: ZoneDO, now: number): Promise<void> {
         z.addTrace(roomId, { kind: "scraps", at: now }); // silt, and what came down in it
       }
       feedWhere(z, (roomId) => SPATE_ROOMS.has(roomId), "The water drops as fast as it came up, and leaves the whole course under silt, printed all over with what it brought down.");
-      z.roomFeedBands(SURFACE_BANDS, "The beck drops back into its bed along the east road. Whatever it took, it has put down somewhere lower.", "evt");
+      z.roomFeedBands(SEA_HEARD_BANDS, "The beck drops back into its bed along the east road. Whatever it took, it has put down somewhere lower.", "evt");
       break;
     }
     case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
@@ -2230,6 +2250,167 @@ async function floodLevel(z: ZoneDO, rank: number, now: number): Promise<void> {
       if (s.roomId === roomId) tideSoaksTorch(z, s);
     }
     z.refreshRoomCtx(roomId);
+  }
+}
+
+// ---- THE SEA ---------------------------------------------------------------
+//
+// A CLOCK, not an event (see SEA_ROOMS in zone-data). It is always at one of
+// four states and it never stops, so unlike every other arc in the world there
+// is no "idle" that means nothing is happening — idle here means SLACK LOW,
+// which is a state you plan a crossing around.
+//
+// The EventState phases carry it: idle = slack low, telegraph = the flood
+// rising, active = high water holding, aftermath = the ebb falling. Level and
+// crest live in `data` as "level:crest" so a deploy mid-tide comes back to the
+// same water rather than dropping the sea on somebody's head.
+function seaState(z: ZoneDO): { level: number; crest: number } {
+  const st = z.events.get("sea");
+  if (!st?.data) return { level: 0, crest: SEA_CREST_NORMAL };
+  const [l, c] = st.data.split(":");
+  return { level: Number(l) || 0, crest: Number(c) || SEA_CREST_NORMAL };
+}
+
+/** How high the water is right now, 0 (slack low) to 3 (a spring high). */
+export function seaLevel(z: ZoneDO): number {
+  return seaState(z).level;
+}
+
+/** Is this room under water at the moment? */
+export function seaUnder(z: ZoneDO, roomId: string): boolean {
+  const rank = SEA_ROOMS.get(roomId);
+  return rank !== undefined && seaLevel(z) >= rank;
+}
+
+/** Will it be, before this tide turns? The tide marks read this. */
+export function seaWillCover(z: ZoneDO, roomId: string): boolean {
+  const rank = SEA_ROOMS.get(roomId);
+  const { crest } = seaState(z);
+  return rank !== undefined && crest >= rank;
+}
+
+/** What the posts say. The region's only instrument, and it never lies. */
+export function seaReading(z: ZoneDO): string {
+  const st = z.events.get("sea");
+  const { level, crest } = seaState(z);
+  const name = SEA_STATES[level] ?? "slack low";
+  const going = st?.phase === "telegraph" ? " and making"
+    : st?.phase === "aftermath" ? " and taking off"
+    : st?.phase === "active" ? " and standing"
+    : "";
+  const spring = crest >= SEA_CREST_SPRING && st?.phase !== "idle" ? " It is a spring tide." : "";
+  return `${name}${going}.${spring}`;
+}
+
+/** Everything alive that cannot breathe water leaves a room the sea is taking. */
+function seaDrives(z: ZoneDO, now: number, roomId: string): void {
+  for (const c of z.creatures.values()) {
+    if (c.roomId !== roomId || DROWNERS.has(c.templateId)) continue;
+    if (BROODERS.has(c.templateId) || SENTINELS.has(c.templateId)) continue;
+    if (z.world!.mobTemplates.get(c.templateId)?.is_boss) continue;
+    c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(1000, 8000));
+  }
+}
+
+async function tickSea(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("sea");
+  if (!st) {
+    // A world that has never had a tide starts at slack low, which is the only
+    // honest place to start: the causeway open, and the first flood earned.
+    st = { phase: "idle", until: now + SEA_LOW_MS, data: `0:${SEA_CREST_NORMAL}` };
+    z.events.set("sea", st);
+  }
+  // No Crossing in this world build, no sea. (The region ships in mig 190.)
+  if (!z.world!.rooms.has("the-refuge")) { st.until = now + SEA_LOW_MS; return; }
+
+  const { level, crest } = seaState(z);
+
+  // THE WATER WORKS EVERY BEAT IT IS UP, exactly as the spate does. Cold and
+  // depth rather than current — the sea does not sweep you anywhere, it simply
+  // takes the road away and keeps taking it. Every flooded room keeps all its
+  // exits, so this can never pen anybody in: wade on, wade back, or make the
+  // refuge, and all three are always available.
+  if (level > 0) {
+    for (const s of [...z.sessions.values()]) {
+      if (z.outOfWorld(s) || s.hp <= 0 || !seaUnder(z, s.roomId)) continue;
+      s.hp -= SEA_BITE;
+      if (s.hp <= 0) {
+        z.send(s, "The water closes over the road and then over you, and it is very cold, and there is a great deal of it.", "death big");
+        await z.onPlayerDeath(s, null);
+        continue;
+      }
+      tideSoaksTorch(z, s);
+      z.send(s, pick([
+        `The water is over the road here and pushing, steady and cold, and you cannot see your own feet. [${s.hp}/${s.maxHp} hp]`,
+        `Sea to the thigh, and moving, and the stone under it is exactly as wide as it was and no help at all. [${s.hp}/${s.maxHp} hp]`,
+        `Cold gets in under everything and stays there. The road is somewhere below this. [${s.hp}/${s.maxHp} hp]`,
+      ]), "dmgin");
+      z.sendStatus(s);
+    }
+  }
+
+  if (now < st.until) return;
+
+  const setLevel = async (next: number, phase: EventState["phase"], until: number) => {
+    // Re-read the crest rather than closing over it: the idle case picks a new
+    // one immediately before calling this, and capturing the old value here
+    // would have made every tide crest at whatever the previous tide did.
+    const c = seaState(z).crest;
+    st!.data = `${next}:${c}`;
+    st!.phase = phase;
+    st!.until = until;
+    for (const [roomId, rank] of SEA_ROOMS) {
+      if (!z.world!.rooms.has(roomId)) continue;
+      const wasUnder = level >= rank, nowUnder = next >= rank;
+      if (wasUnder === nowUnder) continue;
+      if (nowUnder) {
+        z.roomFeed(roomId, "The water comes over — not fast, not a wave, just the road going away under it.", undefined, false, "evt");
+        z.roomSound(roomId, "Water goes over stone {dir}, and keeps going.");
+        seaDrives(z, now, roomId);
+        for (const s of z.sessions.values()) if (s.roomId === roomId) tideSoaksTorch(z, s);
+      } else {
+        z.roomFeed(roomId, "The water goes off the stone and leaves it running and black and walkable again.", undefined, false, "evt");
+      }
+      z.refreshRoomCtx(roomId);
+    }
+  };
+
+  switch (st.phase) {
+    case "idle": {  // slack low -> the flood begins
+      const springs = chance(SEA_SPRING_ODDS);
+      st.data = `0:${springs ? SEA_CREST_SPRING : SEA_CREST_NORMAL}`;
+      await setLevel(1, "telegraph", now + SEA_STEP_MS);
+      z.roomFeedBands(SEA_HEARD_BANDS, "Out on the crossing the water turns and starts to make. The low ground is going first.", "evt");
+      break;
+    }
+    case "telegraph": {  // the flood, one level per step, until the crest
+      const { crest: c } = seaState(z);
+      if (level < c) {
+        await setLevel(level + 1, "telegraph", now + SEA_STEP_MS);
+        z.roomFeedBands(SEA_HEARD_BANDS, level + 1 >= SEA_CREST_SPRING
+          ? "The crossing is at high water and it is a spring — the half-tide post is under, and so is the weed flat."
+          : "Half flood on the crossing. The causeway is under from the middle out, and the ford is gone.", "evt");
+      } else {
+        st.phase = "active";
+        st.until = now + SEA_HIGH_MS;
+      }
+      break;
+    }
+    case "active": {  // high water, holding — now it turns
+      await setLevel(Math.max(0, level - 1), "aftermath", now + SEA_STEP_MS);
+      z.roomFeedBands(SEA_HEARD_BANDS, "The crossing turns. The water stops standing and starts to go.", "evt");
+      break;
+    }
+    case "aftermath": {  // the ebb, one level per step, down to slack low
+      if (level > 0) {
+        await setLevel(level - 1, "aftermath", now + SEA_STEP_MS);
+      } else {
+        st.phase = "idle";
+        st.until = now + SEA_LOW_MS;
+        z.roomFeedBands(SEA_HEARD_BANDS, "Slack low on the crossing. Every one of the five ways is open, and none of them will be for long.", "evt");
+      }
+      break;
+    }
   }
 }
 

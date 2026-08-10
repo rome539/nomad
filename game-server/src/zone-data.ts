@@ -8,7 +8,7 @@ import { type ItemTemplate, type Region, trait } from "./world";
 // two files is a lookup that will drift — but 170 rooms of new prose would push
 // this file past 3,700 lines, and rome's standing rule is that the spine stays
 // lean. So the tables live here and the wood's contribution lives there.
-import { WOOD_ROOM_AMBIENCE, WOOD_DARK, EAST_ROOM_AMBIENCE } from "./detail";
+import { WOOD_ROOM_AMBIENCE, WOOD_DARK, EAST_ROOM_AMBIENCE, CROSSING_ROOM_AMBIENCE } from "./detail";
 
 
 export const TICK_MS = 2000;
@@ -425,6 +425,16 @@ export const FISHING_SURFACE = new Set(["the-black-fen", "the-drowned-orchard", 
 // a wheel in it. So the beck's three are their own water, with their own fish
 // and their own way of refusing you.
 export const FISHING_BECK = new Set(["the-millpond", "the-hatchpool", "the-trap-line"]);
+// THE CROSSING (mig 190) is the only ground in the game that was somebody's
+// FISHERY rather than somebody's road, and it fishes like one: open salt water
+// on the surface rates, and the eel cutter's set traps on the trap rates,
+// because a baited grig is not a cast line and never was.
+export const FISHING_CROSSING = new Set(["the-net-poles", "the-quay-stub", "the-rope-stage",
+  "the-channel-brink", "the-green-water", "the-deep-mark", "the-mussel-scaup",
+  "the-gravel-flats", "the-crab-pools", "the-eel-grass", "the-limpet-rocks",
+  "the-boat-graves", "the-creek-mouth", "the-gutway", "the-landing-stage"]);
+export const CROSSING_TRAPS = new Set(["the-eel-hut", "the-stake-line", "the-hook-hut",
+  "the-eel-staithe", "the-cut-reed"]);
 // THE EEL TRAPS ARE ALREADY FISHING. That room is a weir of stakes with woven
 // traps set mouth-upstream, exactly as somebody left them — so what you are
 // doing there is not casting, it is CHECKING A LINE, and what a line of eel
@@ -434,7 +444,9 @@ export const BECK_EEL_ODDS = 0.06;   // the open beck: an eel now and then, same
 export const TRAP_EEL_ODDS = 0.55;   // the traps: more often than not, because that is what they are for
 export const FISHING_DEEP = new Set(["pocket-of-air", "the-weir", "black-canal", "leech-pools", "the-sump", "the-cistern",
   "the-eel-run", "the-breathing-hall"]); // the Tideways' waters (069) — the tide restocks them when it drains
-export const FISHING_ROOMS = new Set([...FISHING_SURFACE, ...FISHING_DEEP]);
+export const FISHING_ROOMS = new Set([...FISHING_SURFACE, ...FISHING_DEEP, ...FISHING_CROSSING, ...CROSSING_TRAPS]);
+export const SEA_EEL_ODDS = 0.15;    // open salt: an eel oftener than the fen gives one, and never a trout
+export const CROSSING_TRAP_EEL = 0.60;  // the cutter's grigs are set FOR eel and they are set well
 export const FISH_ODDS = 0.18;         // a cast catches SOMETHING less than one time in five
 export const RAIN_BITE_MULT = 2;       // under open rain the surface waters wake
 export const PALE_EEL_ODDS = 0.2;      // of DEEP catches, a fifth are the eel...
@@ -835,6 +847,24 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "gill-adder": "Dry grass shifts {dir}, low down, in a line.",
   "feral-goat": "Stone goes over stone {dir}, high up, where nothing should have footing.",
   "scarp-raven": "A wingbeat {dir}, and then a call, and then the wingbeat again further off.",
+  // THE CROSSING (mig 191). Almost everything out here moves in or over water,
+  // and water is the loudest surface in the game — which is the point. On the
+  // causeway you hear things coming a long way off and can do nothing about it.
+  "the-tide-warden": "Boots in standing water {dir}, at a steady walking pace, going the length of something.",
+  "the-drover": "A stick knocking on gravel {dir}, and a slow wading, and a voice saying something to nothing.",
+  "the-eel-cutter": "A pole going into mud {dir} and coming out of it, over and over, working away from you.",
+  "the-reed-walker": "Reed parting {dir}, one cut over, keeping pace with you.",
+  "the-salt-widow": "Something being raked over stone {dir}, slow and even, in a building.",
+  "strand-thief": "Shingle turns over {dir}, twice, and then very deliberately stops.",
+  "the-bridge-mason": "A mallet on stone {dir}, three strikes and a pause, three strikes and a pause.",
+  "great-gull": "A shadow crosses {dir} without a sound, and then the whole colony says something about it.",
+  "oystercatcher": "A shrill piping goes up {dir} and runs away along the water, and other birds take it up.",
+  "grey-seal": "A great wet weight shifts on gravel {dir} and settles again.",
+  "marsh-hound": "Water breaks {dir} at a working trot, low, quartering.",
+  "bittern": "Nothing moves {dir}. Then, from the same place, a note like somebody blowing across a bottle the size of a room.",
+  "fen-viper": "Dry reed shifts {dir}, low down, in one continuous line.",
+  "wrack-crab": "Weed clicks and settles {dir}, in a great many places at once.",
+  "ford-eel": "Something long goes over the gravel {dir} through four inches of water and is not slowed by it.",
   "dire-wolf": "A heavy padding crosses {dir}, and the stride is far too long.",
   "white-roe": "Something light steps {dir} and does not hurry.",
   "old-boar": "Something very heavy goes {dir} through the brush and does not go around anything.",
@@ -880,6 +910,26 @@ export const STILL_SOUNDS: Record<string, string> = {
   "gill-adder": "a dry whisper of scale on stone, so quiet it could be the water",
   "feral-goat": "an unhurried grinding of jaws, from a direction that cannot be right",
   "scarp-raven": "the wind through stiff feathers, holding station",
+  "the-tide-warden": "a knife cutting a notch into wood, once, and then a long wait",
+  "the-refuge-man": "breathing held, in a stone box, by something that has no reason left to hold it",
+  "the-drowned-ferryman": "wet hemp creaking under a weight, and the weight not letting go",
+  "the-pilot": "nothing, and the particular quality of nothing that a man makes when he is counting",
+  "the-scaffold-hand": "rope taking a load, easing, and taking it again",
+  "the-bridge-mason": "a mallet set down on dressed stone, and picked up",
+  "the-eel-cutter": "withy creaking as something in it moves and finds it has nowhere to go",
+  "the-reed-walker": "reed, moving, in air you cannot feel moving",
+  "the-salt-widow": "a fire being fed, and no fire",
+  "strand-thief": "somebody standing extremely still on shingle, which shingle makes almost impossible",
+  "the-drover": "a slow suck of mud round something standing in it, waiting for stock that is not coming",
+  "the-quicksand": "nothing at all, from a piece of ground exactly like every other piece of ground",
+  "conger": "water sucking in and out of a hole in stone at a rate that is not the sea's",
+  "grey-seal": "snoring, enormous, from something you would rather had not noticed you",
+  "great-gull": "a single flat croak from directly above, close enough to be a comment",
+  "oystercatcher": "a bird deciding, at some length, whether this is worth screaming about",
+  "bittern": "reed, and only reed, and one stem of it that is not swaying at the reed's rate",
+  "fen-viper": "a dry whisper of scale on plank, from the plank you are about to stand on",
+  "wrack-crab": "a small hard clicking under the weed, and then a great deal more of it",
+  "marsh-hound": "panting, low and even, and closer than the last time you heard it",
   "dire-wolf": "breathing far too deep and slow for a wolf, and nothing else at all",
   "white-roe": "breathing, unhurried and quite steady — something that has not decided to be afraid of you",
   "old-boar": "a deep, wet snorting, and a tusk knocking on wood, over and over",
@@ -929,7 +979,24 @@ export const MIGRANTS = new Set<string>([
 // The ground they may move BETWEEN. Surface only, and the whole surface: an
 // animal that walks from the wood to the den ground has walked somewhere it
 // could plausibly get to, and the map now says so — they share borders.
-export const MIGRATE_BANDS = new Set<string>(["road", "wood", "den", "out"]);
+export const MIGRATE_BANDS = new Set<string>(["road", "wood", "den", "out", "crossing"]);
+// WHERE A MIGRANT MAY SETTLE INSIDE A BAND (2026-08-10). Absent from this table
+// means anywhere in the band, which is right for a road or a wood — they are
+// walkable end to end and a thing can plausibly be anywhere on them.
+//
+// The Crossing is not. Two thirds of it is water, reed or stonework over a
+// channel, and the migration roll picks a room at random and makes it HOME —
+// so without this a footpad's new address is the middle of the deep channel,
+// and because migrants walk rather than teleport you would then watch him ford
+// a mile of water to take up a post on a bridge pier.
+//
+// He settles where the people were: the two banks. That is also where a footpad
+// genuinely belongs — a shore road with a gate on it is traffic, and traffic is
+// the whole reason his line exists. The five ways over are left to the things
+// that were built for them.
+export const MIGRATE_QUARTERS: Record<string, Set<string>> = {
+  crossing: new Set(["nearshore", "farstrand"]),
+};
 
 // THE DESTINATION HAS TO BE ABLE TO HOLD IT (rome, 2026-08-06: "do we have the
 // right eco system for thse migrants? ... it should be proper with the mob
@@ -1135,7 +1202,10 @@ export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman"
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
-export const THIEVES = new Set(["cutpurse", "cutthroat", "footpad", "wayman"]);
+export const THIEVES = new Set(["cutpurse", "cutthroat", "footpad", "wayman",
+  // The strand thief (mig 191) works the wrack line, and does not think of it
+  // as stealing, because the sea does not own things either.
+  "strand-thief"]);
 
 // ROAMING DENS (rome, 2026-08-02: "do they have dens? i think we should have it
 // as rng where they spawn on a road").
@@ -1224,7 +1294,8 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // can bolt, bolts — so the rarest thing on the surface is the one that stands in
 // the open and looks back at you. Its whole effect is the omission.
 export const RUNNERS = new Set(["fleet-rat", "roe-deer",
-  "otter", "grey-heron"]); // the beck's two: both built to be somewhere else
+  "otter", "grey-heron", // the beck's two: both built to be somewhere else
+  "oystercatcher", "bittern"]); // the crossing's two: one leaves loudly, one leaves late
 // BROODERS are nest-bound: they don't wander, don't flee, and while they live
 // they keep birthing scabby rats into their room. Kill the mother or the room
 // stays an infestation. A living source, not a stat block.
@@ -1500,6 +1571,7 @@ export const NAPPERS = new Set([
   "rat", "fleet-rat", "albino-rat", "cutpurse",  // the fortress's own dozers
   "roe-deer", "white-roe", "wild-boar", "old-boar", // the wood's game, after dark
   "otter", "feral-goat", "gill-adder",      // the east road: an adder in the one patch of sun is the whole animal
+  "grey-seal", "wrack-crab", "oystercatcher", // the crossing: a hauled-out seal is ASLEEP, and that is the only time it is funny
 ]); // hyenas nap via the gorge only
 // OUTDOOR GAME KEEPS DIFFERENT HOURS, and needs its own two rates rather than a
 // multiplier on the indoor one. NAP_ODDS is tuned for a rat in a quiet corner —
@@ -1545,7 +1617,16 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
   // completely differently from one with water in a single place.
   "the-drowned-ford", "the-stepping-stones", "the-scarp-spring", "the-bothy-spring",
   "the-millpond", "the-tail-race", "the-hatchpool", "the-cattle-drink", "the-marl-hole",
-  "the-gill-pot", "the-shepherds-ford", "the-spring-line", "the-beck-head"]);
+  "the-gill-pot", "the-shepherds-ford", "the-spring-line", "the-beck-head",
+  // ---- THE CROSSING (mig 190). TWO ROOMS, out of a region that is more water
+  // than anything else in the game. Everything out there is SALT: a mile of it
+  // either side of you, and not one mouthful of it any use to a living thing.
+  // That inversion is the whole reason these two matter — the east road made
+  // water free and this takes it away again while leaving it visible, which is
+  // a crueller trick than the west road's single ford ever was. Every thirsty
+  // thing on this shore has to come to one of two places, and both of them are
+  // known, and one of them is inside the gate's own yard.
+  "the-cold-spring", "the-well-yard"]);
 // WHO DRINKS. Was the scavengers alone, which left the wood's waters — the
 // Black Pool, the Brown Water, the Drinking Pool, eleven wet rooms of fen —
 // as ambush ground with nothing to ambush. Prey drinks too, and now the two
@@ -1589,8 +1670,14 @@ export const DINNER_LAUGH_ODDS = 0.35;
 export const ALARM_CALLERS = new Set(["roe-deer", "white-roe",
   // The heron (mig 188): the loudest departure of any animal in the game, and
   // the beck's early-warning system for everything living on it.
-  "grey-heron"]);
-export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "otter", "feral-goat"]); // the game takes the warning
+  "grey-heron",
+  // THE OYSTERCATCHER (mig 191) is the ford's whole defence and the reason the
+  // safe crossing is not the free one. The ford is a mile of open gravel that
+  // takes a day to walk; six of these are spread across it, and the moment one
+  // of them decides you are close, every living thing on the flats is told.
+  "oystercatcher"]);
+export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "otter", "feral-goat",
+  "grey-seal", "marsh-hound", "ford-eel"]); // the game takes the warning
 export const ALARM_AVOID_MS = 20 * 60_000;  // warned game keeps off that ground twenty minutes
 export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters next door come to look
 
@@ -1609,7 +1696,11 @@ export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters nex
 export const PACK_CALLERS = new Set(["grey-wolf", "dire-wolf", "masterless-dog", "lead-dog",
   // The drove dogs (mig 188). A herding dog's whole training is to work spread
   // out and answer another dog, and nobody has told them the stock is gone.
-  "drove-dog", "the-drove-master"]);
+  "drove-dog", "the-drove-master",
+  // The marsh hounds (mig 191): the same training, gone the same way, in worse
+  // country. In the reed a called-in second dog is not a second dog — it is a
+  // dog you cannot see arriving.
+  "marsh-hound"]);
 // WOLVES CUT THE LINES OF RETREAT (rome, 2026-08-08: "the more you fight
 // together, they start closing room exits — 2 wolves equals 1 exit closed, 3 is
 // 2 exits closed").
@@ -1744,6 +1835,16 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // your torchlight (starvingHunts).
   ["pale-crawler", new Set(["rat", "fleet-rat", "brood-rat"])],
   ["pale-stalker", new Set(["rat", "fleet-rat", "brood-rat"])],
+  // THE CROSSING (mig 191). A shore's food web is short and it all points at
+  // the eel: the seal takes it in deep water, the conger takes it in the pier
+  // holes, the bittern takes it in the reed, and the gull takes whatever any of
+  // them leaves. This is the first ecology in the game with a genuine scavenger
+  // ABOVE the hunters rather than behind them — a gull does not wait its turn.
+  ["grey-seal", new Set(["ford-eel", "wrack-crab"])],
+  ["conger", new Set(["ford-eel", "wrack-crab"])],
+  ["bittern", new Set(["ford-eel"])],
+  ["great-gull", new Set(["wrack-crab", "ford-eel", "oystercatcher"])],       // it has taken a rat off the parapet, and it did not need to land
+  ["marsh-hound", new Set(["oystercatcher", "bittern", "wrack-crab"])],
 ]);
 // THE PACK (rome, 2026-08-02: "multiple grey wolves beats old boar"). PREYS_ON
 // is a stats table — every edge in it holds because the predator genuinely
@@ -1818,7 +1919,8 @@ export const BREAK_LINES = [
 // for them starvation has nowhere to go but your torchlight. (three-hound is a
 // SENTINEL and takes the room on its own terms — it stays out.)
 export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf",
-  "drove-dog", "the-drove-master"]);
+  "drove-dog", "the-drove-master",
+  "marsh-hound", "grey-seal", "great-gull"]);   // the crossing's three, and the gull is the one that comes to YOU
 // The deep eats its own: strayed rats (and worse) die in the dark and rot where
 // they fall, and the pale hunters scavenge the carrion. A dice mint (same law as
 // the stone/torch — cadence × odds, no clock to farm) drops one fresh carcass into
@@ -1862,6 +1964,7 @@ export const THIEF_LIFT_ODDS = new Map<string, number>([
   ["cutthroat", 0.35], // a knifeman who also robs
   ["footpad", 0.35],
   ["wayman", 0.30],    // the best coat and the worst hands
+  ["strand-thief", 0.40], // he is not robbing you, he is beachcombing, and you are on the beach
 ]);
 export const THIEF_LIFT_DEFAULT = 0.35; // a future THIEF is never silently a 100% grab again
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
@@ -1887,7 +1990,18 @@ export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "
   // here on purpose: the Crossing is the great water, and the seize-and-hold
   // that makes deep water frightening should be a law this country already has
   // by the time you reach it, not a mechanic that arrives with a new region.
-  "the-miller"]);
+  "the-miller",
+  // THE CROSSING (mig 191), which is what the miller was rehearsing for. Six of
+  // them, and they are the whole reason the water on this region is a decision
+  // rather than scenery: none of the six will ever come to you. Every one of
+  // them is somewhere you have to choose to be standing.
+  "the-drowned-ferryman",  // the middle of the rope, furthest point from either bank
+  "the-pilot",             // the far stage, reading a line that is not there
+  "the-refuge-man",        // the causeway's one dry hole, and he is in it
+  "the-scaffold-hand",     // hanging under the arch, over the channel
+  "the-quicksand",         // not a creature so much as a place with an opinion
+  "conger",                // a mouth on the end of an arm, and the arm is in the pier
+]);
 export const SEIZE_ODDS = 0.2;        // soft: a blow only sometimes takes hold
 export const SEIZE_BREAK_ODDS = 0.5;  // soft: about half the time you wrench loose each beat
 export const SEIZE_DMG_MULT = 1.25;   // it hits a little harder while it has you
@@ -1971,6 +2085,19 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "the-toll-clerk": { out: "walks {dir} with its hand still out.", in_: "arrives, stops, and puts its hand out." },
   "the-long-warden": { out: "goes {dir} at its own pace, which is the only pace it has.", in_: "walks in on the beat and does not break stride." },
   "otter": { out: "pours off the bank {dir} and is water.", in_: "comes up out of the water and onto the stone." },
+  "oystercatcher": { out: "goes up {dir} screaming and takes the whole flat with it.", in_: "drops onto the gravel, runs four steps, and stops dead." },
+  "great-gull": { out: "tips off the stone {dir} and is gone downwind in one beat.", in_: "lands heavily on the parapet and looks at you with no give in it at all." },
+  "bittern": { out: "goes {dir} low over the reed with its legs trailing and drops back in.", in_: "steps out of the stems and is suddenly, enormously, a bird." },
+  "grey-seal": { out: "goes off the gravel {dir} in one movement and the water takes it.", in_: "comes up out of the channel and hauls itself onto the stones." },
+  "marsh-hound": { out: "breaks off {dir} through the reed, still watching you.", in_: "comes round {dir} at a trot, wet to the shoulder, and takes up a position." },
+  "fen-viper": { out: "pours off the plank {dir} into the water without a sound.", in_: "comes up over the plank edge and lies along it." },
+  "wrack-crab": { out: "goes sideways {dir} under the weed and the weed closes.", in_: "comes up out of the wrack sideways, one claw high." },
+  "ford-eel": { out: "goes {dir} over the gravel and the shallow water does not slow it.", in_: "comes over the gravel out of nowhere and is suddenly a yard long." },
+  "the-eel-cutter": { out: "poles away {dir} down the cut without breaking rhythm.", in_: "poles in {dir}, ships the pole, and looks up." },
+  "the-reed-walker": { out: "goes {dir} into the reed and the reed does not close behind it.", in_: "comes out of the reed {dir}, at your pace, on your side." },
+  "the-drover": { out: "goes {dir} across the shoal at a working pace, driving nothing.", in_: "comes wading in {dir} with the stick over his shoulder and does not break step." },
+  "strand-thief": { out: "goes {dir} along the wrack at an unhurried walk, not looking back.", in_: "comes along the tideline {dir}, turning things over with a foot." },
+  "the-tide-warden": { out: "walks {dir} down the causeway at the pace it has always held.", in_: "comes up the causeway {dir}, stops at the milestone, and cuts the stick." },
   "grey-heron": { out: "goes up {dir}, slowly, hugely, complaining.", in_: "drops in on stiff wings and folds itself away." },
   "feral-goat": { out: "goes {dir} up ground that has no business holding it.", in_: "picks its way in and resumes chewing." },
   "scarp-raven": { out: "tips off the face {dir} and is carried away without a beat.", in_: "lands, hops twice, and looks at you sideways." },
@@ -2378,6 +2505,10 @@ export const BITERS = new Set([
   "three-hound", // three sets of teeth at the throat of the deep
   "two-hound",   // two sets, same throat
   "drove-dog", "the-drove-master", "otter", "gill-adder", // the east road's teeth
+  // THE CROSSING (mig 191). A shore is mostly teeth: everything here that is
+  // not a bird is built round a mouth, and the two birds bite as well.
+  "conger", "grey-seal", "ford-eel", "marsh-hound", "fen-viper", "wrack-crab",
+  "great-gull", "bittern",
 ]);
 
 // SENTINELS hold their post. A guardian chained to one room: it never wanders
@@ -2396,7 +2527,11 @@ export const SENTINELS = new Set(["three-hound", "two-hound"]);
 // the one room in the honest band you cannot cross casually. The keeper holds
 // the hall floor of the holding for the same structural reason the watchman
 // holds his turret: it is his.
-export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding", "the-miller"]);
+export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding", "the-miller",
+  // THE CROSSING (mig 191): three that hold a workplace rather than a post. The
+  // mason and the widow are AT WORK and you are in it; the gull simply has a
+  // pier, and has never in its life conceded anything to anybody.
+  "the-bridge-mason", "the-salt-widow", "great-gull"]);
 
 // TREASURY DOORS: a room that is some boss's hoard, keyed by the keeper who
 // bars it. The way IN stays shut while that keeper lives in the room before it
@@ -2472,6 +2607,7 @@ export const HOUND_WAKE_MS = 900_000; // 15 minutes
 export const FEARS_FIRE = new Set([
   "albino-rat",
   "feral-goat", "otter", "grey-heron", "scarp-raven", // the east road's wild things
+  "oystercatcher", "great-gull", "bittern", "grey-seal", "wrack-crab", "fen-viper", "marsh-hound", // the crossing's
   "roe-deer", "white-roe",       // the wood's food, and it survives by leaving
   "grey-wolf", "dire-wolf",      // the oldest reason there are campfires
   "wild-boar", "old-boar",
@@ -2557,7 +2693,7 @@ export const WARRENS_ROOMS = new Set([
 // everyone, an orchard still dropping windfalls. It is the most food-per-room
 // on the surface and it holds almost nothing that eats — which is the shape of
 // a place people left.
-export const FORAGE_REGIONS = new Set<string>(["road", "wood", "den"]);
+export const FORAGE_REGIONS = new Set<string>(["road", "wood", "den", "crossing"]); // a shore feeds things — weed, shellfish, whatever the water puts down
 export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS]);
 // WHO EATS THE GROUND. Was the bare union VERMIN + THIEVES, written inline at
 // two call sites — which quietly left the boar out, and a boar is a rooting
@@ -2638,7 +2774,7 @@ export const DEN_RUST_FLOOR = 8;
 export const DEN_BAR_IRON = 2;
 export const DEN_BAR_SCRAP = 3;
 
-export const OUTDOOR_REGIONS = new Set<string>(["road", "wood", "mountain", "den"]);
+export const OUTDOOR_REGIONS = new Set<string>(["road", "wood", "mountain", "den", "crossing"]);
 // ...AND THE ROOMS INSIDE THEM THAT ARE NOT. A band declares itself outdoors as
 // a whole, which was true enough while the outdoor bands were a road and a wood.
 // The dens are the first band that is mostly weather and partly ROOF — a smithy,
@@ -3102,6 +3238,23 @@ export const BLEED_ODDS = new Map<string, number>([
   ["drove-dog", 0.15],
   ["the-drove-master", 0.20],
   ["otter", 0.12],
+  // THE CROSSING (mig 191). The viper is the ford's answer to the gill adder and
+  // sits just under it: same animal, same trick, one rank up in a place you have
+  // to walk past it rather than round it. The conger is the outlier at the top —
+  // teeth that all rake inward, on a thing that does not let go.
+  ["fen-viper", 0.50],
+  ["conger", 0.35],
+  ["grey-seal", 0.25],
+  ["marsh-hound", 0.18],
+  ["great-gull", 0.15],
+  ["ford-eel", 0.15],
+  ["the-eel-cutter", 0.15],
+  ["the-fowler", 0.15],
+  ["the-reed-walker", 0.15],
+  ["strand-thief", 0.12],
+  ["wrack-crab", 0.10],
+  ["bittern", 0.10],
+  ["the-scaffold-hand", 0.10],
   ["grave-hyena", 0.15],
   ["dire-hyena", 0.175],
   ["albino-rat", 0.15],
@@ -3352,6 +3505,137 @@ export const TIDE_CREST_MS = 8 * 60_000; // and holds at the crest
 export const TIDE_AFTERMATH_MS = 5 * 60_000; // silt, and everything dripping
 export const TIDE_SILT_ODDS = 0.5; // per item: washes one level down when the water drains
 
+// ---- THE SEA (the Crossing's own clock, 2026-08-10) -------------------------
+//
+// The deep's tide is an EVENT: it comes rarely, it drowns a wing, it goes. The
+// sea is not an event. It is a CLOCK, it is always at some state, and reading
+// it is the entire skill the Crossing asks for. That difference is the whole
+// design — you do not survive the sea by reacting to a warning, you survive it
+// by knowing what the water is doing before you commit to a mile of it.
+//
+// THE CYCLE: slack low -> flood -> high -> ebb -> slack low, forever. A normal
+// tide crests at 2. A spring tide (SEA_SPRING_ODDS) goes to 3 and takes the
+// half-tide post, the weed flat and the rope stages with it — the rooms you
+// learned were safe, exactly until they weren't. Same trick as the breathing
+// hall in the Tideways, on ground you cross far more often.
+//
+// WHAT THIS DOES TO THE FIVE WAYS, which is the point of the region:
+//   THE CAUSEWAY  drowns from the MIDDLE OUT. Both ends climb, so the way back
+//                 shuts behind you at the same time the way on does.
+//   THE FORD      shuts hard: every channel is rank 1. Low water only, as the
+//                 fingerpost has said all along.
+//   THE BRIDGE    never floods. The piers' FEET do — the span is dry forever,
+//                 and that is exactly what it was built to be.
+//   THE EYOTS     never flood. The rooms promise "never drowned" and a room's
+//                 description is a contract.
+//   THE FERRY     the stages go under at springs. The channel is deep at every
+//                 hour; that is what makes it the ferry.
+//
+// THE REFUGE IS THE WHOLE MECHANIC IN ONE ROOM. It sits at the middle of the
+// causeway — the furthest point from either shore — and it NEVER floods, at any
+// tide. Caught out with the road going under both ways, you do not die: you run
+// for the stone box and you wait, and the refuge man is already standing in it.
+export const SEA_ROOMS = new Map<string, number>([
+  // ---- THE CAUSEWAY, near shore to far. Rank = the level that takes it.
+  ["the-first-crossing-stone", 3], ["the-weeded-milestone", 2],
+  ["the-causeway-bend", 2],        ["the-half-tide-post", 2],
+  ["the-second-crossing-stone", 1],["the-sunken-stretch", 1],
+  ["the-drain-arch", 1],           ["the-mid-causeway", 1],
+  // the-refuge: NEVER, at any tide, and it is at the middle on purpose.
+  ["the-far-milestone", 1],        ["the-mussel-bank", 2],
+  ["the-cutting-water", 2],        ["the-weed-flat", 3],
+  // the-causeway-head and the-causeway-rise are the last dry stones at each end.
+  // The causeway's own low ground, hanging off the road below the level of it.
+  ["the-crab-pools", 1], ["the-sluice-stone", 1], ["the-lantern-stump", 1],
+  ["the-oyster-scars", 1], ["the-wreck-ribs", 1], ["the-bell-buoy", 1],
+  ["the-half-drowned-cart", 1], ["the-perch", 2], ["the-causeway-cross", 2],
+  // ---- THE FORD. Every channel goes at the first level: the fingerpost says
+  // low water only and it is not being cautious.
+  ["the-first-channel", 1], ["the-second-channel", 1], ["the-third-channel", 1],
+  ["the-fourth-channel", 1], ["the-fifth-channel", 1],
+  ["the-tide-race", 1], ["the-drowned-withies", 1], ["the-eel-grass", 1],
+  ["the-gull-stand", 1], ["the-net-stakes", 1],
+  ["the-first-shoal", 2], ["the-second-shoal", 2], ["the-mid-ford", 2],
+  ["the-shell-bank", 2], ["the-withy-bank", 2], ["the-last-shoal", 2],
+  ["the-long-bank", 3],  // the biggest of them, dry down its whole length until it isn't
+  ["the-gravel-flats", 2], ["the-mussel-scaup", 2],  // "stand clear at low water and go under at high" — their own words
+  ["the-cockle-beds", 3], ["the-midden", 3], ["the-quicksand-flat", 3], ["the-tern-scrape", 3],
+  // ---- THE BRIDGE. The span never. The feet of the piers, every tide.
+  // Everything here is a room you climb DOWN to off the walking span. The span
+  // and its landward approach road never flood at any tide, because "high and
+  // dry forever" is the bridge's entire reason to exist and a description is a
+  // contract. What the tide gets is everything under it.
+  ["the-starling", 1], ["the-pier-foot", 1], ["the-drowned-span", 1],
+  ["the-scaffold-stub", 2],
+  // ---- THE FERRY. Deep at every hour; the timber over it is what the tide takes.
+  ["the-ferry-steps", 2], ["the-far-ferry-steps", 2],
+  ["the-rope-stage", 3], ["the-far-rope-stage", 3], ["the-channel-brink", 3],
+  ["the-drowned-mooring", 1], ["the-deep-mark", 1], ["the-weed-raft", 1],
+  ["the-eel-lines", 2], ["the-slack", 2],
+  // ---- THE TWO SHORES. The working ground below the tide line, both banks.
+  ["the-limpet-rocks", 1],   // "exposed at low water", and that is all it is
+  ["the-shellfish-scars", 1],
+  ["the-wrack-line", 2], ["the-net-poles", 2],
+  // the-hard and the-boat-graves are NOT ranked, and for a third reason again:
+  // the-hard, the-boat-graves and the-quay-stub are NOT ranked, and for a third
+  // reason again. THE RULE, since three rooms broke it one at a time:
+  //
+  //     NO ROOM ON EITHER SHORE-ROAD COLUMN MAY EVER FLOOD.
+  //
+  // Both roads say it in their own text — they run "above the highest tide-mark
+  // and below the moor" — and both are a single north-south chain, so ONE wet
+  // room cuts the bank in half and takes a gate with it. A tide that can put
+  // your bank out of reach while you are carrying is not a tide, it is a
+  // confiscation. The columns, for anyone adding ranks later:
+  //   near: ford-road, quay-stub, toll-post, bridge-approach, rope-walk,
+  //         ferry-house, hard, capstan-stone, tide-mark, parting, eyot-track
+  //   far:  ford-corner, drove-road, shepherds-stone, far-tide-mark,
+  //         bridge-landing, toll-cottage, cart-shed, ferry-strand, boat-graves,
+  //         far-parting, landing-arch, far-strand
+  // NOT RANKED, and each for the same load-bearing reason: they sit on the only
+  // path of a route the region PROMISES is always open, and a promise in a room
+  // description outranks a nice piece of tidal flavour.
+  //   the-shingle-spit ... the bridge's landward approach road. Embanked, like
+  //                        every approach to every bridge the institution built.
+  //   the-mud-shore, the-gutway, the-creek-mouth, the-cockle-scars,
+  //   the-gull-flats ..... the marsh track. Its own text already says it: "the
+  //                        track keeps to the top of it where the samphire
+  //                        starts". The mud floods. The track is above the mud.
+  //
+  // Measured before this was written: with these ranked, HALF FLOOD left NO dry
+  // way across the water anywhere in the region — a player mid-crossing at the
+  // turn had nowhere at all to be. The eyots are the slow way that is always
+  // there; that is the whole of their job in a five-way design, and the bridge
+  // is the fast way that is always there. Take either away and the Crossing
+  // stops being a choice and becomes a wait.
+]);
+// Only the Crossing hears its own water. The wood is a hundred rooms away and
+// has weather of its own; a band line that carried further would be noise.
+// THE INSTRUMENTS. Six rooms that give the water's exact state, and they are
+// not conveniences — they are the reason the region is fair. Two tide marks
+// (one per bank), the marked post at the causeway head, the half-tide post out
+// in the middle of it, and both Partings, because the fingerpost is where the
+// decision is actually made. Everywhere else you can see the sea and guess.
+export const SEA_INSTRUMENTS = new Set<string>([
+  "the-tide-mark", "the-far-tide-mark",   // the twin posts, one on each shore road
+  "the-causeway-head",                    // the last dry stone, and the scale up it
+  "the-half-tide-post",                   // out on the causeway: the one that tells you to turn back
+  "the-parting", "the-far-parting",       // the fingerposts, where you choose
+  "the-bell-buoy",                        // it rings the state, if you know the ringing
+]);
+export const SEA_HEARD_BANDS = new Set<string>(["crossing"]);
+export const SEA_CREST_NORMAL = 2;
+export const SEA_CREST_SPRING = 3;
+export const SEA_SPRING_ODDS = 0.25;   // one tide in four is a spring, and it takes the rooms you trusted
+export const SEA_LOW_MS = 10 * 60_000; // slack low: everything open, and this is the window you plan around
+export const SEA_STEP_MS = 3 * 60_000; // the water takes one level per step, rising and falling alike
+export const SEA_HIGH_MS = 8 * 60_000; // and holds at the crest
+export const SEA_BITE = 1;             // per beat standing in it: cold and depth, not teeth (matches SPATE_BITE)
+// The names the water has, low to high. These are what the tide marks read and
+// what the band is told, and they are the ONLY numbers the region ever gives
+// you — there is no clock, there is a post with lines cut up it.
+export const SEA_STATES = ["slack low", "the flood", "half flood", "high water"];
+
 // The corpse-key. The black door into the deep opens to a still-cold heart cut
 // from a deep-dweller the sim surfaced — not a key on a shelf. While the door is
 // SEALED, the deep coughs one of its mobile own up into the shallows on a slow
@@ -3439,6 +3723,21 @@ export const SURFACERS = new Set([                    // the mobile deep-kin tha
 export const SURFACE_ROOMS = ["well", "oubliette", "catacomb"]; // dark inner holes it climbs out of — never the entry gates
 // Partial on purpose: a band with no pool yet is silent rather than borrowed.
 export const AMBIENCE: Partial<Record<Region, string[]>> = {
+  // THE CROSSING (mig 190). The band's own voice, under the seven quarters —
+  // what is true of every square of this region and nowhere else in the world:
+  // there is a mile of moving water somewhere near you at all times, and it is
+  // going up or it is going down, and it is never doing nothing.
+  crossing: [
+    "The water finds a new note somewhere out in the grey and holds it a while.",
+    "Wind comes off the open water with nothing in the way of it, and goes through everything you are wearing as though it were a formality.",
+    "Somewhere a long way out, a bird says one thing, once.",
+    "The light changes over the whole mile at once — cloud, moving — and every part of the crossing goes a different grey together.",
+    "Salt has got onto your lips again. It does that here about as fast as you can wipe it off.",
+    "Something out in the channel breaks the surface, and by the time you have found the place the rings are already going.",
+    "The smell comes up off the weed at the tideline, iodine and rot and cold, and it is not unpleasant, and it is not pleasant either.",
+    "The far bank does the thing it does in this light, which is to look considerably further away than it did an hour ago.",
+    "Water is moving. It is always moving. What changes is which way, and how much you would like to know.",
+  ],
   gate: [
     "Cold air wells up out of the dark below, smelling of wet stone.",
     "Above, the wind finds a gap in the ruined tower and moans through it.",
@@ -3542,6 +3841,7 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
   ...WOOD_ROOM_AMBIENCE,
   // ...and the east road's, spread the same way and for the same reason.
   ...EAST_ROOM_AMBIENCE,
+  ...CROSSING_ROOM_AMBIENCE,
   // ---- the grounds: the first OUTDOOR rooms — wind and sky, not drips (058) ----
   "the-causeway": ["The wind comes down the old road with nothing left to slow it.", "Somewhere high on the walls, loose stone ticks in the wind."],
   "the-old-road": ["The thorn wall creaks against itself, keeping whatever is east of it.", "For a moment the wind carries a smell that is not the fortress. Then it is gone.", "The gibbet chain creaks on the hill behind, slow as breathing."],
@@ -3844,7 +4144,7 @@ export const GATEHOUSE_AMBIENT_ODDS = 0.03;           // per 2s tick, once off c
 // is what puts a gatehouse sitter with the ground they came in from.
 export const FORTRESS_BANDS = new Set<string>(["gate", "upper", "deep"]);
 // And the surface's own news, for the things that happen out here.
-export const SURFACE_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den"]);
+export const SURFACE_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den", "crossing"]);
 
 // WHO ELSE HEARS IT (rome, 2026-08-10, reading the feed: the fortress was
 // nearly MUTE). Thirteen of the world's nineteen arcs spoke only to whoever was
@@ -3855,13 +4155,13 @@ export const SURFACE_BANDS = new Set<string>(["gate", "road", "wood", "mountain"
 // close-up prose: locals get what it is doing to them, everyone else gets what
 // the stone told them about it. Two different lines, never the same line twice.
 export const DEEP_HEARD_BANDS = new Set<string>(["gate", "upper", "warrens"]);   // the deep's own arcs: the exhale, the marrow-song, the tide
-export const KEEP_HEARD_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den", "deep", "warrens"]); // the BELL — a fortress bell is heard from the road, and through the floor
-export const FEN_HEARD_BANDS = new Set<string>(["gate", "wood", "mountain", "den"]); // the fen's lights, to the rest of the surface
-export const WANT_HEARD_BANDS = new Set<string>(["road", "wood", "mountain", "den"]); // the keeper's chalk, out to where the hunters are
+export const KEEP_HEARD_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den", "crossing", "deep", "warrens"]); // the BELL — a fortress bell is heard from the road, and through the floor
+export const FEN_HEARD_BANDS = new Set<string>(["gate", "wood", "mountain", "den", "crossing"]); // the fen's lights, to the rest of the surface
+export const WANT_HEARD_BANDS = new Set<string>(["road", "wood", "mountain", "den", "crossing"]); // the keeper's chalk, out to where the hunters are
 export const GLOAM_HEARD_BANDS = new Set<string>(["gate", "upper", "deep", "warrens"]); // the walking dark: the whole fortress notices a room go out
 
 export const MAP_BAND_OF: Record<string, number> = {
-  sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, den: 1, upper: 2, warrens: 3, deep: 4,
+  sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, den: 1, crossing: 1, upper: 2, warrens: 3, deep: 4,
 };
 
 // ---- WHAT THE KEEPER TELLS YOU: each region's story, across the hatch ------

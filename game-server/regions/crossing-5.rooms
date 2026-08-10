@@ -1,0 +1,344 @@
+# THE CROSSING, 5 of 5 — THE FAR STRAND. 57 rooms.
+#
+# Where all five ways land, and the region ends.
+#
+# THE FAR STRAND is the eastern bank: a shore road exactly like the western one
+# and deliberately so, because the institution built both ends of this crossing
+# to the same drawing. Everything that arrives — causeway, bridge, ford, ferry,
+# eyots — arrives onto this one road, and it is the second most important
+# junction in the world after the Parting, and it has its own fingerpost saying
+# so from the other side.
+#
+# It ends at THE SHINGLE STAIR, which looks east and up at the mountain and has
+# no east exit. Same peg, same reason, as the Far Shore Stone did for this
+# region: you should be able to stand somewhere and see what you cannot reach
+# yet. The mountain hangs off that room when it is built.
+#
+# THE CROSSING HOUSE is the eastern gate, and the region has TWO — one on each
+# bank, at opposite ends of the water (rome, 2026-08-10). That is not a mercy,
+# it is the correct shape: a crossing that could only be banked from the far
+# side would make every one of the five ways a one-way trip, and the whole
+# design is that you CHOOSE a way over and can choose a different way back.
+# Two hatches, a mile apart, and the mile between them is the region.
+#
+# The far one is the one that matters on arrival: five ways over, a mile of
+# water behind you, the mountain in front, and one lit hatch where you can put
+# down what you carried across. Everybody who ever worked this crossing wanted
+# a reason to stop on this side. So do you.
+
+!region crossing
+
+## the-far-strand | The Far Strand
+Shingle and weed and the whole crossing lying behind you, and the sudden and specific relief of ground that is not going to be water later. The shore road runs north from here past every one of the landings in turn, and south it gives up being a road at all and goes down the coast toward the marsh.
+> north the-landing-arch
+> south the-marsh-road
+
+## the-far-parting | The Far Parting of the Ways
+The eastern twin of the Parting, and it has the same five-armed fingerpost, facing the other way. It says where each of the five comes ashore and it says which of them you can trust today, which it does by the oldest method available: a man used to stand here and turn the arms.
+> north the-boat-graves
+> south the-landing-arch
+> east the-crossing-house
+
+## the-bridge-landing | The Bridge Landing
+Where the far arch comes down: proper road, proper kerbs, and a stone bollard at the end of the parapet worn shiny on top by however many hands took hold of it on the way off the bridge. Everybody touches it. You will touch it.
+> west the-hard-standing
+> south the-toll-cottage
+> north the-far-tide-mark
+
+## the-toll-cottage | The Toll Cottage
+A one-room house at the bridge's landward end with a hatch in the wall and a bench outside it, and a chimney that has not smoked in a long while. The bridge was tolled from both ends, which tells you it was worth tolling, which tells you what the crossing used to be.
+> north the-bridge-landing
+> south the-cart-shed
+
+## the-crossing-house | The Crossing House
+A long low building of good stone facing the water, with a lamp burning over a hatch in the road-facing wall, a yard, a well, and stabling for beasts that have not been here in two hundred years. Whatever the arrangement is, it has not lapsed here either, and the keeper behind the hatch does not explain it.
+!entry
+> west the-far-parting
+> east the-strand-road
+> south the-well-yard
+
+## the-well-yard | The Well Yard
+A cobbled yard behind the crossing house with a well-head in the middle of it, roofed, with a windlass and a chain and a bucket that comes up full of water clean enough to be worth the walk. This is the only sweet water within a mile of anywhere and everything on this shore knows it.
+> north the-crossing-house
+> south the-keepers-garden
+
+## the-strand-road | The Strand Road
+The made road running north to south along the eastern shore, the twin of the one on the western bank, in the same repair and to the same drawing. It serves the crossings. It is the last piece of the institution's work you will walk on.
+> west the-crossing-house
+> north the-boat-noust-east
+> south the-salt-pans
+> east the-shingle-rise
+
+## the-boat-noust-east | The Eastern Noust
+Another boat-shaped hollow above the tideline, lined with stone, and this one is occupied: a boat, upside down, tarred, whole, with stones on the bilge to hold her. Two nousts on two shores and one boat between them, and everything about the crossing is in that arithmetic.
+> south the-strand-road
+> north the-drying-frames
+
+## the-salt-pans | The Salt Pans
+Shallow rectangular pans cut into the clay above the tideline, fed by a channel with a wooden gate, where the water was let in and left to go. The pans are dry and crusted white at the edges. Salt is why anybody was ever out here doing anything, and this is where it was made.
+> north the-strand-road
+> south the-pan-house
+> east the-salt-store
+
+## the-pan-house | The Pan House
+A shed over the biggest pan with the iron pan itself still in it, six feet across, sitting on a brick flue, warped and rusted through in one corner. Boiling was the last stage and the fuel was the expensive part. There is a stack of cut peat by the door, still dry.
+!safe
+> north the-salt-pans
+
+## the-salt-store | The Salt Store
+A stone building with no windows and a raised wooden floor, built to keep salt dry, which on this coast is the hardest thing anybody ever tried to do. The floor is sound. There is a drift of grey salt in one corner, hard as rock, and a wooden scoop lying on it.
+> west the-salt-pans
+> south the-anchor-stone
+
+## the-shingle-rise | The Shingle Rise
+The road leaves the shore and climbs the storm beach — a great bank of shingle thrown up by weather over centuries, twenty feet high, with the road cut through it in a notch. From the top of the notch you see the mountain properly for the first time, and it is a great deal closer than it was.
+> west the-strand-road
+> east the-thrift-bank
+
+## the-thrift-bank | The Thrift Bank
+The landward slope of the storm beach, covered in sea-pink growing out of bare stone in cushions, pink and grey and going on for as far as the beach does. It is the first pretty thing since the wood, and it is growing on a bank made entirely of what the sea has thrown away.
+> west the-shingle-rise
+> east the-shingle-stair
+> north the-fisher-huts
+> south the-storm-line
+
+## the-fisher-huts | The Fisher Huts
+Four huts in a row in the lee of the storm beach, built of upturned boats on stone footings — hulls for roofs, doors cut in the transoms. Three are empty and open. The fourth has its door shut, and there is a stone against it on the outside, which is how you leave a place you mean to come back to.
+!safe
+> south the-thrift-bank
+> east the-net-loft
+
+## the-net-loft | The Net Loft
+A shed on staddle stones with a plank floor, hung wall to wall with nets on pegs — herring nets, seine, a trammel with three walls of mesh — every one of them mended and rolled and hung properly. Whoever kept this gear was good at their work and expected to use it again.
+> west the-fisher-huts
+
+## the-shingle-stair | The Shingle Stair
+A stair of laid stone going up the last of the beach onto the headland, and at the top of it the road stops being the institution's and becomes a track. Ahead and above: the mountain, filling the sky from one side to the other, with the track going up into it and out of sight. There is a stone seat here, facing it.
+!safe
+> west the-thrift-bank
+
+## the-strand-track | The Strand Track
+South from the parting, along the shore below the marsh, a track of trodden shingle and no more. It serves the eyots and the salt marsh and the people who worked them, and it has been walked by more feet than the road has, and made by none of them.
+> south the-cockle-strand
+> east the-eel-staithe
+> west the-bothy-of-the-crossing
+
+## the-drying-frames | The Drying Frames
+Rows of wooden frames on the shingle above the tide, tarred and standing, where fish and nets were hung to dry in the wind. Perhaps two hundred of them. They creak all together when the wind comes off the water, which it always is.
+> south the-boat-noust-east
+> east the-limpet-rocks
+> north the-smoke-house
+
+## the-smoke-house | The Smoke House
+A low stone building with no chimney and a door that fits badly on purpose, and inside, tiers of rods running wall to wall, black with two centuries of smoke, and the smell still in the stone hard enough to taste. There is a bed of old ash on the floor, and a scatter of oak chips.
+!safe
+> south the-drying-frames
+
+## the-limpet-rocks | The Limpet Rocks
+A reef running out from the far strand, exposed at low water, with limpets on it so thick the rock is grey with them. Everything that eats shellfish comes here and the shell-scatter above the tideline says so: broken, opened, and dropped by things with hands and things without.
+> west the-drying-frames
+
+## the-far-tide-mark | The Far Tide Mark
+The eastern twin of the marker post: a scale cut up a post, taller than a man, with a bracket at the top. This one has its lantern — glass gone, frame intact, and a stub of candle in it that has been rained on and has run down the side and set again.
+> south the-bridge-landing
+> north the-shepherds-stone
+
+## the-keepers-garden | The Keeper's Garden
+Behind the well yard, a walled plot the size of two rooms, dug in beds, with a bean-frame still standing and a fruit tree trained flat against the south wall. Somebody grew food out here on ground they had to make themselves, and something has been at the beans recently.
+> north the-well-yard
+
+## the-cart-shed | The Cart Shed
+Open-fronted, three bays, with the wreck of one cart in the first bay and nothing at all in the other two. There are wheel-ruts running into all three, so this was full once, and the ruts leading out of the empty bays are deeper than the ones leading in.
+> north the-toll-cottage
+> south the-ferry-strand
+
+## the-anchor-stone | The Anchor Stone
+A block of granite on the strand with a hole bored clean through it, big enough to put your arm in, and a rope's-worth of wear on the inside of the hole. It is far too heavy to have been brought here and there is no granite in this country, so it came by water, as ballast, and stayed.
+> north the-salt-store
+
+## the-bothy-of-the-crossing | The Crossing Bothy
+Off the strand track: a stone bothy with a slate roof, a door that shuts, a hearth that draws, and a bed-shelf for four. It belongs to nobody and it is for anybody, and there is a rule about it written on the lintel in a hand that meant it: LEAVE IT DRY, LEAVE IT FUELLED.
+!safe
+> east the-strand-track
+
+## the-storm-line | The Storm Line
+The top of the shingle bank, where the biggest weather leaves its mark: a ridge of weed and timber and one whole tree, bleached white, lying along the crest as neatly as if it had been placed. This is how high the water has been. It is a great deal higher than anything you crossed today.
+> north the-thrift-bank
+
+# ============================ THE SHORE ROAD ================================
+#
+# THE SHAPE OF THE FAR BANK, and why it is this and not something prettier.
+#
+# The five ways over do not land in the same place and cannot be made to: a
+# ferry crosses where the water is narrow, a causeway where it is wide, a bridge
+# where there is rock to stand piers on, and the eyots come ashore a long way
+# south because a delta is south of a channel. Measured, the five landings fall
+# seven squares apart east to west and twenty-one north to south.
+#
+# So the far bank is built the way the near bank is: ONE ROAD RUNNING NORTH TO
+# SOUTH, well back from the water, with each crossing joining it by its own
+# approach at its own latitude. That is not a convenience. It is what a road
+# serving five crossings has to be, and the institution drew both banks the
+# same because there was only ever one right answer.
+#
+# North to south the road passes: the ford's corner, the bridge's landing, the
+# ferry's strand, the far Parting, the causeway's arch, and then it stops being
+# a road and goes down the coast to the marsh as a track.
+
+## the-ford-corner | The Ford Corner
+The northern end of the shore road, where it turns out of itself and goes west down the cart-ruts to the flats. There is nothing here but the turn, a heap of road-stone gone to grass, and the particular emptiness of the least-used end of a road.
+> south the-drove-road
+> west the-cart-ruts
+
+## the-cart-ruts | The Cart Ruts
+The track down off the gravel flats, worn into two parallel troughs so deep that a cart could not have left them if it wanted to. Water stands in the bottom of both. Between them the crown of the track is untouched grass, which is the shape every old road ends up as.
+> east the-ford-corner
+> west the-ford-landing
+
+## the-drove-road | The Drove Road
+A wide stretch of the shore road with a verge on both sides broad enough to graze a herd on overnight, which is exactly what it is for: beasts came over the ford, and beasts have to stop somewhere before they are worth anything. The grass on the verges is a different grass from the grass anywhere else.
+> north the-ford-corner
+> south the-shepherds-stone
+
+## the-shepherds-stone | The Shepherd's Stone
+A flat-topped boulder at the roadside with a hollow worn in the top of it, and a smaller stone beside it worn to a seat. Somebody sat here for a great many hours watching something graze. There are initials cut into the seat stone, three sets, one of them very much older than the others.
+> north the-drove-road
+> south the-far-tide-mark
+
+## the-hard-standing | The Hard Standing
+Between the bridge's landing and the water: a levelled place where loads were shifted off carts before the bridge took them, floored with rammed chalk and edged with kerbs. There are wheel-ruts in it a hand deep, and they all point the same two ways.
+> east the-bridge-landing
+> west the-wrack-bank
+
+## the-wrack-bank | The Wrack Bank
+A bank of weed thrown up and rotting under the bridge's landward end, deep enough to walk on and warm enough inside to steam on a cold morning. Everything that eats flies lives here. It is the least pleasant hundred yards on either bank and the road runs straight through the middle of it.
+> east the-hard-standing
+> west the-shingle-spit
+
+## the-shingle-spit | The Shingle Spit
+A tongue of shingle running out into the water, thrown up where the bridge's piers slow the current, growing a little every year. There is a line of stakes down the middle of it that used to be a fence on dry land and is now a fence in the sea.
+> east the-wrack-bank
+> west the-bridge-strand
+
+## the-bridge-strand | The Bridge Strand
+Directly under the bridge's landward end, in the shadow of the far arch, with the piers marching away west over the water. From down here you can see the whole span of what is missing, and the underside of the stonework, and how much of the arch is holding on by being an arch.
+> east the-shingle-spit
+> west the-far-arch
+
+## the-ferry-strand | The Ferry Strand
+Where the ferry's road meets the shore road. The water is narrowest here, which is the entire reason a rope was ever stretched across it, and the reason the ferry lands further west than anything else and has the longest walk inland of the five.
+> north the-cart-shed
+> south the-boat-graves
+> west the-ferry-lane
+
+## the-ferry-lane | The Ferry Lane
+A sunken lane running west toward the water between banks higher than your head, cut down into the ground by nothing but use. It is the road every passenger the ferry ever carried walked up, and it is worn a full four feet below the field on either side of it.
+> east the-ferry-strand
+> west the-passengers-rest
+
+## the-passengers-rest | The Passengers' Rest
+A stone shelter at the roadside, open on the road side, roofed, with a bench along the back wall and a slot window facing the water so that you could see the boat coming without getting wet waiting for it. The bench is worn into hollows in four places.
+!safe
+> east the-ferry-lane
+> west the-toll-board
+
+## the-toll-board | The Toll Board
+A board on two posts beside the lane, boarded and battened and painted, and the paint has gone except where it was thickest, which was the numbers. What survives is a column of figures with nothing to say what they were for. Somebody has scratched a fifth line under the last one, freehand, and doubled it.
+> east the-passengers-rest
+> west the-capstan-round
+
+## the-capstan-round | The Capstan Round
+A circle of hard-trodden ground with a capstan at the centre of it, timber, waist high, with six bar-holes and a groove worn round the base by the feet of the people who walked it. Boats were hauled up out of the water here by six men going round and round.
+> east the-toll-board
+> west the-tar-shed
+
+## the-tar-shed | The Tar Shed
+An open shed of blackened board with a copper set in a brick surround and a stack of split wood beside it, for boiling the tar that everything on this coast is soaked in. The copper is empty and clean. The smell has got into the ground for ten feet in every direction.
+> east the-capstan-round
+> west the-far-hard
+> north the-far-noust
+
+## the-boat-graves | The Boat Graves
+Where the coast puts its dead boats: seven of them along the tideline below the road, in various stages of going back to the ground, ribs up, planks gone, the oldest of them only a stain in the shingle in the shape of a hull. Nobody broke these up for firewood, which on a coast this short of wood means something.
+> north the-ferry-strand
+> south the-far-parting
+
+## the-marsh-road | The Marsh Road
+South of the strand the road stops being the institution's: no kerbs, no camber, no metalling, just a way people have gone. It runs south and then west along the top of the salting, toward the marsh and the eyots and nothing else at all.
+> north the-far-strand
+> south the-samphire-turn
+
+## the-samphire-turn | The Samphire Turn
+The track turns west here, off the shingle and onto the salting, because south of this point there is no ground worth the name for two miles. Samphire grows in the wheel-ruts, which tells you how often a wheel comes.
+> north the-marsh-road
+> west the-saltings-gate
+
+## the-gull-flats | The Gull Flats
+Open mud and open sky and a great many gulls standing on it all facing the same way into the wind, which is how you find out which way the wind is out here. They lift when you come and settle again behind you and the whole flock has forgotten you inside a minute.
+> east the-saltings-gate
+> west the-cockle-scars
+
+## the-saltings-gate | The Saltings Gate
+A field gate on the track with no fence on either side of it any more, hung on one hinge and standing open, and worn smooth on the top rail where hands and elbows have rested on it. It stops nothing. People still go through it rather than round, which is most of what a gate is.
+> east the-samphire-turn
+> west the-gull-flats
+
+## the-cockle-scars | The Cockle Scars
+Raked ground going on for acres — cockle beds worked over so many times the mud is corrugated with it, and shell heaps above the tideline the size of cottages, white and grey and going back centuries. This fed people. It fed a lot of people for a very long time.
+> east the-gull-flats
+> west the-fowlers-track
+
+## the-fowlers-track | The Fowler's Track
+A causeway of faggots and mud a foot above the salting, laid to get a man and a gun out to the water without wading. It is springy underfoot and it complains, and the complaint carries a long way over flat ground, which is a poor quality in a fowler's road.
+> east the-cockle-scars
+> west the-wildfowler
+> south the-decoy-wood
+
+## the-wildfowler | The Wildfowler's Stand
+A hut of driftwood and turf on the marsh's edge with a punt-gun stand at the front of it — a rest for a gun too big for a man to hold, aimed low over the water at where the birds sit. The gun is gone. The rest is here, and the arc it swings through is worn into the wood.
+> east the-fowlers-track
+> west the-eel-staithe
+
+## the-decoy-wood | The Decoy Wood
+A dozen wind-bent willows in a clump on the only rise for a mile, planted on purpose to shelter a duck decoy, and the pipes of the decoy still curve away under the trees in rotted hoops. It is the only shade on this shore and everything that wants shade is in it.
+> north the-fowlers-track
+
+## the-eel-staithe | The Eel Staithe
+A landing of tarred planks on posts where the creek comes closest to the track, with eel-grigs stacked under it out of the light, a dozen of them, wicker, mended. Somebody keeps this gear the way somebody kept the net loft: properly, and recently.
+> east the-wildfowler
+> west the-strand-track
+
+## the-cockle-strand | The Cockle Strand
+The track along the tideline going south toward the marsh proper. Cockle shell underfoot instead of shingle, and the going is soft, and the water is a long way out and coming back.
+> north the-strand-track
+> south the-mud-shore
+
+## the-mud-shore | The Mud Shore
+Shingle ends and mud begins, grey and slick and printed all over with birds. The track keeps to the top of it where the samphire starts, because the mud below will take a boot and keep it.
+> north the-cockle-strand
+> south the-gutway
+
+## the-gutway | The Gutway
+A creek runs out of the marsh across the track here and there is a bridge of one slab over it, worn hollow in the middle. The water in the gut runs out fast and comes in faster and is never the same width twice.
+> north the-mud-shore
+> south the-salting-edge
+
+## the-salting-edge | The Salting Edge
+Where the salt marsh proper begins: turf cut into by creeks, grazed short by something, standing a foot above the mud on a bank of its own making. The track runs along the top of the bank because there is nowhere else it could go.
+> north the-gutway
+> south the-creek-mouth
+
+## the-creek-mouth | The Creek Mouth
+The biggest of the marsh creeks opening into the crossing, forty feet wide at the mouth and empty at low water — a canyon of mud with a stream in the bottom. There are staithe posts along the far side, so boats came up here, which means it is deeper than it looks when it is full.
+> north the-salting-edge
+> south the-marsh-strand
+
+## the-marsh-strand | The Marsh Strand
+Track, marsh, water, and no other feature of any kind for as far as this goes. The reed is a green wall to the east and the crossing is a grey plain to the west and the sky is doing most of the work.
+> north the-creek-mouth
+> south the-hard-approach
+
+## the-hard-approach | The Hard Approach
+The last of the shore track before the marsh's own hard, running between the creek and the reed with barely room for both. The eyots come out here. Whatever you learned crossing them, this is where you stop needing it.
+> north the-marsh-strand
+> south the-marsh-hard

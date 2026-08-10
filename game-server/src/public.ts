@@ -3740,6 +3740,7 @@ var MAP_REGION_LABELS = {
   wood: "THE WOOD",
   den: "THE DENS",
   mountain: "THE MOUNTAIN",
+  crossing: "THE CROSSING",
   // THE WOOD'S SEVEN QUARTERS. It is 170 rooms — 42% of the world — and it
   // carried one caption while the fortress's 110 carried five, so the biggest
   // region on the paper was the one that told you least about where you were.
@@ -3760,6 +3761,17 @@ var MAP_REGION_LABELS = {
   drove: "THE DROVE",
   beck: "THE BECK",
   rise: "THE RISE",
+  // THE CROSSING'S SEVEN (mig 190). These are the only caption-only quarters in
+  // the world that are load-bearing rather than flavour: the five middle ones
+  // are the five WAYS OVER, and knowing which of them your dot is standing on
+  // is the entire skill of the region. The map is the region's tutorial.
+  nearshore: "THE NEAR SHORE",
+  causeway: "THE CAUSEWAY",
+  bridge: "THE BRIDGE",
+  ford: "THE FORD",
+  ferry: "THE FERRY",
+  eyots: "THE EYOTS",
+  farstrand: "THE FAR STRAND",
 };
 function buildMapGraph(f) {
   var nodes = {}, order = [];

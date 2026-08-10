@@ -22,7 +22,7 @@ import * as den from "./den";
 import * as detail from "./detail";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS,
-  PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
+  PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
@@ -1646,8 +1646,13 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   }
   const surface = FISHING_SURFACE.has(session.roomId);
   const beck = FISHING_BECK.has(session.roomId);
-  const traps = session.roomId === "the-trap-line";
-  const biting = surface && events.raining(z, session.roomId);
+  // THE CROSSING (mig 190) fishes as two different things, because it WAS two
+  // different things: open salt water you cast into, and the eel cutter's set
+  // grigs, which you do not cast into at all — you lift them.
+  const sea = FISHING_CROSSING.has(session.roomId);
+  const grigs = CROSSING_TRAPS.has(session.roomId);
+  const traps = session.roomId === "the-trap-line" || grigs;
+  const biting = (surface || sea) && events.raining(z, session.roomId);
   if (!chance(Math.min(0.9, FISH_ODDS * (biting ? RAIN_BITE_MULT : 1)))) {
     // The bottom keeps old iron; sometimes the hook finds that instead.
     if (chance(JUNK_SNAG_ODDS) && (await z.grantItem(session, "scrap-iron"))) {
@@ -1686,7 +1691,11 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   // Depth writes the table, and so does the WATER: the lamprey never rises to
   // surface water, the cave fish never comes out of a river, and a line of eel
   // traps catches what eel traps are for.
-  const fishId = traps
+  const fishId = grigs
+    ? (chance(CROSSING_TRAP_EEL) ? "pale-eel" : "salt-fish")
+    : sea
+    ? (chance(SEA_EEL_ODDS) ? "pale-eel" : "salt-fish")   // salt water gives no trout and never will
+    : traps
     ? (chance(TRAP_EEL_ODDS) ? "pale-eel" : "river-trout")
     : beck
     ? (chance(BECK_EEL_ODDS) ? "pale-eel" : "river-trout")

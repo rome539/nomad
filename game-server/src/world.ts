@@ -26,8 +26,8 @@ export interface Room {
 // map; a room whose region isn't listed here is treated as blank rather than
 // trusted, so a typo in a .rooms file can't quietly invent a band the rest of
 // the engine has never heard of.
-export type Region = "gate" | "deep" | "upper" | "road" | "wood" | "mountain" | "den";
-export const REGIONS = new Set<string>(["gate", "deep", "upper", "road", "wood", "mountain", "den"]);
+export type Region = "gate" | "deep" | "upper" | "road" | "wood" | "mountain" | "den" | "crossing";
+export const REGIONS = new Set<string>(["gate", "deep", "upper", "road", "wood", "mountain", "den", "crossing"]);
 
 export interface Exit {
   room_id: string;
