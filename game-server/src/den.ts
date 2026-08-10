@@ -446,6 +446,27 @@ async function drop(z: ZoneDO, den: Den): Promise<void> {
 }
 
 // Called on every arrival. Standing in your own doorway IS the upkeep.
+/**
+ * WALKING BACK ONTO GROUND WHERE YOU LEFT THINGS. Told once per arrival, and
+ * only where no door of yours stands — because if one does, the shelf is inside
+ * it and the room already says so.
+ *
+ * The case this exists for (rome, 2026-08-10): he settled the North House,
+ * moved to the Reeve's, and three of his things stayed on the North House's
+ * shelf. The row is keyed to his pubkey and the ROOM, so they were never in any
+ * danger — but he stood in the room and it said nothing, and the one verb he
+ * tried sent him off to 'settle' a house he did not want. Gear you believe is
+ * gone is as bad as gear that is gone.
+ */
+export async function shelfCall(z: ZoneDO, session: Session): Promise<void> {
+  if (!isHolding(z, session.roomId)) return;         // den ground only
+  if (myDenAt(z, session.roomId, session.pubkey)) return;  // your own door: the room says it
+  if (insideOf(z, session.pubkey)) return;           // you are indoors; this is the street's line
+  const held = await loadContainer(z.env.DB, session.pubkey, container(session.roomId));
+  if (!held.length) return;
+  z.send(session, `${held.length} thing${held.length === 1 ? "" : "s"} of yours ${held.length === 1 ? "is" : "are"} still on a shelf here, from when this was yours. ('fetch')`, "gain");
+}
+
 export function tend(z: ZoneDO, session: Session): void {
   const den = z.dens.get(session.pubkey);
   if (!den || den.roomId !== session.roomId) return;
@@ -595,7 +616,7 @@ export async function cmdStow(z: ZoneDO, session: Session, arg: string): Promise
   if (!den) {
     return z.send(session, throughTheDoorNote(z, session)
       ?? (isHolding(z, session.roomId)
-        ? "There is no door of yours on this ground. Raise one ('settle'), or get somebody to give you a bunk under theirs."
+        ? await noDoorNote(z, session)
         : "There is no shelf here, and nothing here to keep anything."));
   }
   const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)));
@@ -817,8 +838,14 @@ export async function cmdDen(z: ZoneDO, session: Session): Promise<void> {
     if (room === here?.roomId) continue;
     const mine = myDen(z, session.pubkey)?.roomId === room;
     const where = z.world!.rooms.get(room)?.name ?? room;
-    const shut = "";
-    lines.push(`${n} thing${n === 1 ? "" : "s"} of yours ${mine ? "on your shelf in" : "still in"} ${where}${shut}.`);
+    // AND SAY HOW TO GET IT BACK. This line has always been an accurate
+    // inventory and a useless one (rome, 2026-08-10): it told him three things
+    // of his were in a house he no longer held, and named no way to reach them.
+    // A shelf in a house that is not yours is reached by standing on that ground
+    // and saying 'fetch' — no door required, which is the whole reason the
+    // ground-level reach exists — and nothing in the game said so.
+    const how = mine ? "" : " — stand there and 'fetch' to take them back";
+    lines.push(`${n} thing${n === 1 ? "" : "s"} of yours ${mine ? "on your shelf in" : "still in"} ${where}${how}.`);
   }
   if (lines.length === 0) {
     lines.push("You live nowhere. Six roofs on the den ground will take a holder, and every one of them is a room you have to walk to and stand in.");
@@ -944,6 +971,27 @@ export function doorHere(z: ZoneDO, session: Session): Den | undefined {
 }
 
 // What to say to somebody reaching for their things from the street.
+/**
+ * NO DOOR OF YOURS HERE — AND WHAT THAT LEAVES OUT. The refusal used to send you
+ * off to 'settle' or to beg a bunk, which is the right advice for somebody
+ * standing on empty ground and the wrong advice for somebody standing over
+ * their own belongings (rome, 2026-08-10: he moved from the North House to the
+ * Reeve's, and the three things he had left behind read as gone — his own
+ * summary told him they were there, and every verb he tried refused).
+ *
+ * A shelf outlives the hold: the row is keyed to your pubkey and the ROOM, so
+ * nothing that happens to the house touches it, and the ground-level reach
+ * exists precisely so a room where no door opens to you still gives your things
+ * back. That was true the whole time. Nothing said it.
+ */
+async function noDoorNote(z: ZoneDO, session: Session): Promise<string> {
+  const held = await loadContainer(z.env.DB, session.pubkey, container(session.roomId));
+  if (held.length) {
+    return `There is no door of yours on this ground — but ${held.length} thing${held.length === 1 ? " of yours is" : "s of yours are"} still on the shelf here, and a shelf is yours whoever holds the roof. ('fetch' takes ${held.length === 1 ? "it" : "them"} back.)`;
+  }
+  return "There is no door of yours on this ground. Raise one ('settle'), or get somebody to give you a bunk under theirs.";
+}
+
 export function throughTheDoorNote(z: ZoneDO, session: Session): string | undefined {
   const d = doorHere(z, session);
   if (!d) return undefined;

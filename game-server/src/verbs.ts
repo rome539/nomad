@@ -892,6 +892,10 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // Standing in your own doorway IS the upkeep (mig 162). No rent, no chore —
   // walking home is the whole of it, and it writes at most once an hour.
   den.tend(z, session);
+  // ...and if you left things on this ground under a roof you no longer hold,
+  // the ground says so. Once, on arrival, and only where no door of yours
+  // stands (den.shelfCall).
+  void den.shelfCall(z, session);
   // A carried surveyor's map sets down every hall its carrier walks (the ink
   // lives with the copy — lore.inkRooms). One cheap INSERT the first time a
   // copy meets a room; pure cache after.

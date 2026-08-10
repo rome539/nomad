@@ -44,6 +44,19 @@ for (let i = 0; i < raw.length; i++) {
   }
 }
 
+// A BACKTICK INSIDE THE PAGE ENDS THE PAGE. public.ts holds the whole client in
+// one template literal, so a stray backtick — most often somebody quoting a CSS
+// property or a verb in a comment — closes it early and the file collapses into
+// a pile of syntax errors a long way from the actual mistake. tsc does catch it,
+// but it reports "',' expected" at a line that looks fine. Name it here instead.
+const stray = raw.match(/`/g);
+if (stray) {
+  const line = raw.slice(0, raw.indexOf("`")).split("\n").length;
+  console.error(`check-served: a stray backtick inside the PAGE template (around line ${line + 1} of public.ts).`);
+  console.error("Use ' or \" in comments and strings inside the page — a backtick ends it.");
+  process.exit(1);
+}
+
 const open = page.indexOf('<script type="module">');
 const shut = page.lastIndexOf("</script>");
 if (open < 0 || shut < 0) { console.error("check-served: no module script in the page"); process.exit(2); }
