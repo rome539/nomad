@@ -185,6 +185,32 @@ export function tickWorks(z: ZoneDO, now: number): void {
   const world = z.world;
   if (!world || !z.worksPlan) return;
 
+  // ── NOBODY IS EVER SHUT IN ──────────────────────────────────────────────────
+  //
+  // The eviction below (closeTheDoor) walks everyone out at the MOMENT a gate
+  // boards up, and until now that was the only time anyone checked. That made
+  // "nobody is inside a boarded gatehouse" a thing that was true once rather
+  // than an invariant — and a player found the gap (Lunapilot, 2026-08-09): she
+  // ended up behind a boarded door reading the gate room's own description, with
+  // every dungeon verb answering "not from in here" and the door insisting she
+  // was already inside. Inside and outside at the same time, and stuck.
+  //
+  // There are several ways back in past a one-shot eviction — a reconnect
+  // trusting the persisted `inGatehouse` (which is DURABLE by design and was
+  // written before the eviction landed), a step-out path whose worksBar guard
+  // does not fire because worksBar deliberately stands down for anyone already
+  // out of the world, an eviction that raced a frame. Rather than hunt each one,
+  // this makes it a standing law: every beat, anyone behind a boarded door is
+  // walked out. Idempotent, costs a Map lookup per player, and it heals the
+  // paths I found and the ones I did not.
+  if (z.works.size) {
+    for (const s of z.sessions.values()) {
+      if (!shutForWorks(z, s.roomId) || !z.outOfWorld(s)) continue;
+      z.send(s, "The boards are up and the fire is out — there is nothing behind this door but trestles and dust. You step back into the open.", "evt");
+      void z.leaveGatehouse(s);
+    }
+  }
+
   // ── the works finish ──
   for (const [gate, until] of [...z.works.entries()]) {
     if (until > now) continue;
@@ -250,6 +276,11 @@ function closeTheDoor(z: ZoneDO, gate: string): void {
     );
     void z.leaveGatehouse(s); // the same door you'd have walked out of — nothing is confiscated, nothing is moved
   }
+  // AND THE EVICTION HAS TO SURVIVE A RESTART. leaveGatehouse clears `away` and
+  // drops the pubkey from inGatehouse in memory, but inGatehouse is persisted
+  // and is what a reconnect trusts — so a DO that slept between the eviction and
+  // the next flush would wake with the boarded gatehouse still holding people.
+  if (inside.length) void z.persist();
   z.roomFeedBands(
     SURFACE_BANDS,
     `Word comes down the road: ${name} is shutting up for works. The door will be boarded until it is done.`,

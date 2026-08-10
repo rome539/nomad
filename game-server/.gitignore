@@ -3,3 +3,5 @@ node_modules/
 .wrangler/
 dist/
 *.log
+# scratch file the served-script parse gate writes and deletes
+.served-check.mjs

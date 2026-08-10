@@ -7,6 +7,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
+    "check:served": "node scripts/check-served.mjs",
     "bundle:vault": "esbuild src/vault-entry.mjs --bundle --format=esm --minify --alias:nostr-tools=./node_modules/nostr-tools --outfile=src/vault-bundle.js",
     "bundle:nostr": "esbuild src/nostr-entry.mjs --bundle --format=esm --minify --outfile=src/nostr-bundle.js",
     "play": "node scripts/play.mjs",
