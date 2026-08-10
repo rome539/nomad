@@ -40,7 +40,7 @@ import {
   TIDE_TELEGRAPH_MS, TIDE_STEP_MS, TIDE_CREST_MS, TIDE_AFTERMATH_MS, TIDE_SILT_ODDS,
   BROODERS, SENTINELS, DROWNERS, DEEP_ROOMS,
   GLOAM_TELEGRAPH_MS, GLOAM_STEP_MS, GLOAM_ACTIVE_MS, GLOAM_AFTERMATH_MS,
-  FORTRESS_BANDS,
+  FORTRESS_BANDS, DEEP_HEARD_BANDS, KEEP_HEARD_BANDS, FEN_HEARD_BANDS, WANT_HEARD_BANDS, GLOAM_HEARD_BANDS,
   RUT_TELEGRAPH_MS, RUT_ACTIVE_MIN_MS, RUT_ACTIVE_MAX_MS, RUT_AFTERMATH_MS,
   RUT_DEER, RUT_WOLVES, RUT_WOLF_DELAY_MS, RUT_ROAR_EVERY_MS, RUT_ROAR_ODDS,
   WALK_TELEGRAPH_MS, WALK_ACTIVE_MIN_MS, WALK_ACTIVE_MAX_MS, WALK_AFTERMATH_MS,
@@ -572,7 +572,17 @@ export function crowsMark(z: ZoneDO, session: Session): void {
 // ---- the arcs ----
 
 function feedOutdoors(z: ZoneDO, line: string): void {
-  feedWhere(z, (roomId) => OUTDOOR_ROOMS.has(roomId), line);
+  feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId), line);
+}
+
+// THE SKY SPEAKS TO THE WATCHERS TOO. Weather can't be a band — "outdoors" cuts
+// across every region there is — so it goes out per-room like any local news,
+// and then once more to the feed, because a spectator is watching the world
+// rather than standing in a room of it. Use this for the sky's arcs and nothing
+// else: a line that is only true of one corridor has no business in the feed.
+function feedSky(z: ZoneDO, inRoom: (roomId: string) => boolean, line: string): void {
+  feedWhere(z, inRoom, line);
+  z.feedWatchers(line);
 }
 
 // A line to everyone standing in rooms the event can reach. Every line through
@@ -1103,6 +1113,10 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       // Standing at the source gets its own line — "somewhere above" is a lie
       // if you're the one under the bell (rome, 2026-07-24).
       feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote", "Somewhere above, a single bell-note rolls through the halls — then silence.");
+      // A fortress bell is heard from the road, and through the floor. It is the
+      // one SCHEDULED thing in this world — a player can learn its hours — and
+      // until now you could only know that by standing inside the keep for it.
+      z.roomFeedBands(KEEP_HEARD_BANDS, "One bell-note comes off the fortress and rolls out over everything, and then nothing.", "evt");
       z.roomFeed("the-bell-cote", "The bell shudders under your hand before it even sounds — one note, so close it isn't sound anymore, just impact.", undefined, false, "evt");
       break;
     }
@@ -1110,6 +1124,7 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       st.phase = "active";
       st.until = now + BELL_ACTIVE_MS;
       feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote", "The bell begins to RING — over and over, iron on iron, and the keep is waking around you.");
+      z.roomFeedBands(KEEP_HEARD_BANDS, "The fortress bell is RINGING — on and on, iron on iron, and whatever is inside those walls is waking to it.", "evt");
       z.roomFeed("the-bell-cote", "The bell is RINGING inches from you — iron on iron, filling your skull, drowning every other sense you have.", undefined, false, "evt");
       // Everything under the keep's roof stirs at once; the rats are already
       // running for the earth (see bellDrivesRats).
@@ -1124,6 +1139,7 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + BELL_AFTERMATH_MS;
       feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote", "The bell stops. The silence after is worse — the halls are still listening.");
+      z.roomFeedBands(KEEP_HEARD_BANDS, "The bell stops. The fortress goes back to being quiet, which is worse.", "evt");
       z.roomFeed("the-bell-cote", "The bell goes still under your palm — the ringing's out of the air, but not out of your bones yet.", undefined, false, "evt");
       break;
     }
@@ -1158,6 +1174,7 @@ async function tickBoil(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + BOIL_AFTERMATH_MS;
       feedWhere(z, inWarrens, "The squeaking fades, down into the earth. The warrens breathe again.");
+      z.roomFeedBands(FORTRESS_BANDS, "The scratching under the floors thins out and goes back down. The warrens have taken their own back.", "evt");
       return;
     }
     const entering = boilPath[boilIdx];
@@ -1198,6 +1215,8 @@ async function tickBoil(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + BOIL_TELEGRAPH_MS;
       feedWhere(z, inWarrens, "A thin squeaking swells somewhere in the warrens — hundreds of small voices, coming closer.");
+      // ...and the rest of the fortress hears it come up through the floors.
+      z.roomFeedBands(FORTRESS_BANDS, "Under the floors of the keep something is moving in numbers — a thin scratching that comes up through the stone and does not stop.", "evt");
       break;
     }
     case "telegraph": {
@@ -1231,6 +1250,7 @@ async function tickBoil(z: ZoneDO, now: number): Promise<void> {
       st.phase = "active";
       st.until = now + BOIL_STEP_MS * (path.length + 2); // a hard ceiling; the tide usually spends itself first
       z.roomFeed(start, "The den mouths open at once and the rats POUR OUT — a tide of them, taking the corridor.", undefined, false, "evt");
+      z.roomFeedBands(FORTRESS_BANDS, "The warrens are emptying themselves. Whatever is down there is coming up in a body, and the whole keep can hear it run.", "evt");
       z.addTrace(start, { kind: "scraps", at: now });
       break;
     }
@@ -1240,6 +1260,7 @@ async function tickBoil(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + BOIL_AFTERMATH_MS;
       feedWhere(z, inWarrens, "The squeaking fades, down into the earth. The warrens breathe again.");
+      z.roomFeedBands(FORTRESS_BANDS, "The scratching under the floors thins out and goes back down. The warrens have taken their own back.", "evt");
       break;
     }
     case "aftermath": {
@@ -1270,6 +1291,7 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + WAKE_TELEGRAPH_MS;
       feedWhere(z, inWarrens, "Every hollow thing in the warrens stops at once — heads cocked, listening to something under the floor.");
+      z.roomFeedBands(FORTRESS_BANDS, "The floor of the warrens is being opened from underneath, and what is coming up through it was buried a long time before anything else here died.", "evt");
       // The stillness IS the telegraph: the hollow hold where they stand.
       for (const c of z.creatures.values()) {
         if (WARRENS_ROOMS.has(c.roomId) && HOLLOW.has(c.templateId)) {
@@ -1320,11 +1342,13 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
         st.phase = "idle";
         st.until = NEVER;
         feedWhere(z, inWarrens, "Whatever was listening under the floor loses interest. The hollow ones move again.");
+      z.roomFeedBands(FORTRESS_BANDS, "Whatever was under the warrens loses interest, and the keep's dead go back to their own business.", "evt");
         break;
       }
       st.phase = "active";
       st.until = now + WAKE_ACTIVE_MS;
       feedWhere(z, inWarrens, "The dead are not staying down tonight.");
+      z.roomFeedBands(FORTRESS_BANDS, "Something under the warrens has the attention of the dead. Every hollow thing in the keep has stopped where it stands and is listening down.", "evt");
       break;
     }
     case "active": {
@@ -1343,6 +1367,7 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + WAKE_AFTERMATH_MS;
       feedWhere(z, inWarrens, "The warrens settle. The dead lie still again — those that still can.");
+      z.roomFeedBands(FORTRESS_BANDS, "Whatever was under the warrens loses interest, and the keep's dead go back to their own business.", "evt");
       break;
     }
     case "aftermath": {
@@ -1379,12 +1404,15 @@ async function tickWant(z: ZoneDO, now: number): Promise<void> {
       st.until = now + WANT_ACTIVE_MS;
       const t = z.world!.itemTemplates.get(st.data ?? "");
       feedWhere(z, inGate, `Chalk scrapes on wood: the keeper marks his want on the hatch — ${t?.name ?? "something"}, double in trade, while the chalk lasts.`);
+      // ...and word travels OUT, to the ground where the thing is actually found.
+      z.roomFeedBands(WANT_HEARD_BANDS, `Word comes up from the gate: the keeper is asking after ${t?.name ?? "something"} tonight, double in trade, and paying like he means it.`, "evt");
       break;
     }
     case "active": {
       st.phase = "aftermath";
       st.until = now + WANT_AFTERMATH_MS;
       feedWhere(z, inGate, "The keeper wipes the chalk from his hatch. Whatever he wanted it for, the moment has passed.");
+      z.roomFeedBands(WANT_HEARD_BANDS, "Word comes up from the gate: the keeper has wiped his chalk. Whatever he wanted it for, he has stopped wanting it.", "evt");
       break;
     }
     case "aftermath": {
@@ -1539,6 +1567,7 @@ async function tickLights(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + LIGHTS_TELEGRAPH_MS;
       feedWhere(z, inFen, "The air over the water goes greasy and still, and the dark out there gets... attentive.");
+      z.roomFeedBands(FEN_HEARD_BANDS, "The air over the fen has gone greasy and still. Anybody who works that water knows what usually comes next.", "evt");
       break;
     }
     case "telegraph": {
@@ -1546,12 +1575,14 @@ async function tickLights(z: ZoneDO, now: number): Promise<void> {
       st.until = now + LIGHTS_ACTIVE_MS;
       nextFalseStepAt = now + randInt(LIGHTS_STEP_MIN_MS, LIGHTS_STEP_MAX_MS);
       feedWhere(z, inFen, "A light shows out over the water — steady, like a carried torch. It doesn't move like a man's.");
+      z.roomFeedBands(FEN_HEARD_BANDS, "There are lights out over the fen tonight — steady, carried, and moving like nothing that has legs.", "evt");
       break;
     }
     case "active": {
       st.phase = "aftermath";
       st.until = now + LIGHTS_AFTERMATH_MS;
       feedWhere(z, inFen, "The lights go out — all at once, like a breath blown out over a candle.");
+      z.roomFeedBands(FEN_HEARD_BANDS, "The fen's lights go out together, and the water out there is only water again.", "evt");
       break;
     }
     case "aftermath": {
@@ -1621,7 +1652,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
     case "idle": {
       st.phase = "telegraph";
       st.until = now + COLD_TELEGRAPH_MS;
-      feedWhere(z, inCold, "The air goes glass-clear and bitter, sharpening by the breath.");
+      feedSky(z, inCold, "The air goes glass-clear and bitter, sharpening by the breath.");
       // The living feel it first and head for cover (coldDrives in ai.ts);
       // the hollow don't so much as pause.
       for (const c of z.creatures.values()) {
@@ -1634,7 +1665,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
     case "telegraph": {
       st.phase = "active";
       st.until = now + randInt(COLD_ACTIVE_MIN_MS, COLD_ACTIVE_MAX_MS);
-      feedWhere(z, inCold, "The cold settles in hard. Flames pinch small, and everything living goes to ground.");
+      feedSky(z, inCold, "The cold settles in hard. Flames pinch small, and everything living goes to ground.");
       // The first bite eats the flame: a burning torch out in it loses half
       // of whatever it had left. (The lantern's oil doesn't care.)
       for (const s of z.sessions.values()) {
@@ -1647,7 +1678,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
     case "active": {
       st.phase = "aftermath";
       st.until = now + COLD_AFTERMATH_MS;
-      feedWhere(z, inCold, "The bitter edge goes out of the air, slowly, like something unclenching.");
+      feedSky(z, inCold, "The bitter edge goes out of the air, slowly, like something unclenching.");
       break;
     }
     case "aftermath": {
@@ -1743,6 +1774,7 @@ async function tickGloam(z: ZoneDO, now: number): Promise<void> {
     st.data = entering;
     gloamStepAt = now + GLOAM_STEP_MS;
     z.roomFeed(leaving, "The dark lifts off this room like a held breath let go — the light comes back thin and grey.", undefined, false, "evt");
+      z.roomFeedBands(GLOAM_HEARD_BANDS, "The dark that was sitting in the halls lets go. Somewhere a room has its light back, thin and grey.", "evt");
     z.refreshRoomCtx(leaving);
     gloamTakes(z, entering, now, false);
   }
@@ -1756,6 +1788,7 @@ async function tickGloam(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + GLOAM_TELEGRAPH_MS;
       z.roomFeed(st.data, "The light in this room is going wrong — thin and brown, like water with something in it.", undefined, false, "evt");
+      z.roomFeedBands(GLOAM_HEARD_BANDS, "Somewhere in the halls the light has gone out of a room — not snuffed, taken — and it has not come back on.", "evt");
       z.roomSound(st.data, "From {dir}, small quick feet — everything little is leaving a room at once.");
       break;
     }
@@ -1872,12 +1905,14 @@ async function tickExhale(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + EXHALE_TELEGRAPH_MS;
       feedWhere(z, inDeep, "The drips stop, all at once. A cold breath is rising from somewhere below, and every flame leans away from it.");
+      z.roomFeedBands(DEEP_HEARD_BANDS, "Far below, the drip of the deep stops all at once. Something down there is drawing breath.", "evt");
       break;
     }
     case "telegraph": {
       st.phase = "active";
       st.until = now + EXHALE_ACTIVE_MS;
       feedWhere(z, inDeep, "The deep breathes OUT — a cold current takes the room, and the dark comes with it.");
+      z.roomFeedBands(DEEP_HEARD_BANDS, "A cold current comes up out of the deep and moves through the whole fortress, and every flame in it leans away.", "evt");
       for (const s of z.sessions.values()) exhaleSnuffsTorch(z, s);
       break;
     }
@@ -1885,6 +1920,7 @@ async function tickExhale(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + EXHALE_AFTERMATH_MS;
       feedWhere(z, inDeep, "The current dies away. Somewhere, one drip falls — then another. The deep has finished its breath.");
+      z.roomFeedBands(DEEP_HEARD_BANDS, "The current dies. Far down, the water starts falling again — the deep has finished its breath.", "evt");
       break;
     }
     case "aftermath": {
@@ -1914,12 +1950,14 @@ async function tickSong(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + SONG_TELEGRAPH_MS;
       feedWhere(z, inDeep, "Somewhere below, a bone-voice starts to hum — one note, held long past any breath.");
+      z.roomFeedBands(DEEP_HEARD_BANDS, "A note comes up through the floor from somewhere very deep — one voice, held far past any breath a living thing has.", "evt");
       break;
     }
     case "telegraph": {
       st.phase = "active";
       st.until = now + SONG_ACTIVE_MS;
       feedWhere(z, inDeep, "The song opens into the dark, and every hollow thing goes still at once — entranced, swaying where it stands.");
+      z.roomFeedBands(DEEP_HEARD_BANDS, "The song is in the stone now. Everything hollow that can hear it has stopped moving and is swaying where it stands.", "evt");
       for (const c of z.creatures.values()) {
         if (!deepRoom(z, c.roomId)) continue;
         if (HOLLOW.has(c.templateId)) {
@@ -1934,6 +1972,7 @@ async function tickSong(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + SONG_AFTERMATH_MS;
       feedWhere(z, inDeep, "The song thins, and dies. The bones remember themselves — and they remember badly.");
+      z.roomFeedBands(DEEP_HEARD_BANDS, "The song thins out and stops, and the deep's dead remember themselves — badly.", "evt");
       break;
     }
     case "aftermath": {
@@ -2010,6 +2049,10 @@ async function tickTide(z: ZoneDO, now: number): Promise<void> {
       st.until = now + TIDE_TELEGRAPH_MS;
       st.data = String(chance(TIDE_HIGH_ODDS) ? TIDE_LEVELS.length - 1 : Math.max(0, TIDE_LEVELS.length - 2));
       tideWingFeed(z, "The drips quicken, everywhere at once — a patter, then a drumming. Below, something vast is inhaling.");
+      // The wing gets the water; the rest of the fortress gets the news of it.
+      // An arc that drowns a whole region and is inaudible one floor up was the
+      // starkest hole in the world's voice (rome, 2026-08-10).
+      z.roomFeedBands(DEEP_HEARD_BANDS, "Far below the keep the dripping quickens into a drumming. Something vast down there is drawing water in.", "evt");
       // Everything living starts climbing (tideDrives biases their walk up).
       for (const c of z.creatures.values()) {
         if (TIDEWAYS_ROOMS.has(c.roomId) && !DROWNERS.has(c.templateId)) {
@@ -2025,6 +2068,7 @@ async function tickTide(z: ZoneDO, now: number): Promise<void> {
       tideStepAt = now + TIDE_STEP_MS;
       st.until = now + TIDE_STEP_MS * (crestRank + 1) + TIDE_CREST_MS;
       tideWingFeed(z, "The tide comes in. Below you, stone starts to drown.");
+      z.roomFeedBands(DEEP_HEARD_BANDS, "The tide is in. A whole wing of the deep is going under, and the water is still climbing.", "evt");
       await floodLevel(z, 0, now);
       // The drowners' hour: everything of theirs in the deep ranges wide.
       for (const c of z.creatures.values()) {
@@ -2063,6 +2107,7 @@ async function tickTide(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + TIDE_AFTERMATH_MS;
       tideWingFeed(z, "The water lets go all at once, sucking down through the stone. What it carried, it leaves — low.");
+      z.roomFeedBands(DEEP_HEARD_BANDS, "The water lets go, all at once, and drains back down out of the deep.", "evt");
       break;
     }
     case "aftermath": {

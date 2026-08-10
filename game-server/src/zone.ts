@@ -6084,6 +6084,21 @@ export class ZoneDO implements DurableObject {
     this.relayFeed("mudzone-" + (this.world?.zone ?? "door"), text);
   }
 
+  /**
+   * A line for the WATCHERS only — no socket sends, just the relay copy.
+   *
+   * The sky's arcs (rain, fog, cold, crows) reach everyone standing outdoors,
+   * which is a condition no band can express: "outdoors" cuts across every
+   * region there is. So they went out per-room and stopped there, and a
+   * spectator never once saw it rain. That was already inconsistent with
+   * itself — the moon's nightfall lines DO reach the feed — and a watcher is
+   * watching the world rather than standing in a room of it, so the weather is
+   * exactly the kind of thing they should have (rome, 2026-08-10).
+   */
+  public feedWatchers(text: string): void {
+    this.relayFeed("mudzone-" + (this.world?.zone ?? "door"), text);
+  }
+
   public roomFeedAll(text: string, cls?: string): void {
     const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: "*", text, cls } : { v: 0, kind: 24913, room: "*", text });
     for (const s of this.sessions.values()) {

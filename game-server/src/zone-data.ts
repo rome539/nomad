@@ -3634,6 +3634,20 @@ export const FORTRESS_BANDS = new Set<string>(["gate", "upper", "deep"]);
 // And the surface's own news, for the things that happen out here.
 export const SURFACE_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den"]);
 
+// WHO ELSE HEARS IT (rome, 2026-08-10, reading the feed: the fortress was
+// nearly MUTE). Thirteen of the world's nineteen arcs spoke only to whoever was
+// standing in the affected rooms — the wood and the den ground got band-wide
+// voices the afternoon they were built, and the fortress, which is the whole
+// reason this place exists, had exactly one. So each of these is the ground the
+// news CARRIES to, deliberately excluding the ground that already has the
+// close-up prose: locals get what it is doing to them, everyone else gets what
+// the stone told them about it. Two different lines, never the same line twice.
+export const DEEP_HEARD_BANDS = new Set<string>(["gate", "upper", "warrens"]);   // the deep's own arcs: the exhale, the marrow-song, the tide
+export const KEEP_HEARD_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den", "deep", "warrens"]); // the BELL — a fortress bell is heard from the road, and through the floor
+export const FEN_HEARD_BANDS = new Set<string>(["gate", "wood", "mountain", "den"]); // the fen's lights, to the rest of the surface
+export const WANT_HEARD_BANDS = new Set<string>(["road", "wood", "mountain", "den"]); // the keeper's chalk, out to where the hunters are
+export const GLOAM_HEARD_BANDS = new Set<string>(["gate", "upper", "deep", "warrens"]); // the walking dark: the whole fortress notices a room go out
+
 export const MAP_BAND_OF: Record<string, number> = {
   sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, den: 1, upper: 2, warrens: 3, deep: 4,
 };
