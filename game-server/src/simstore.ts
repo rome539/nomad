@@ -59,9 +59,59 @@ const CHURN_META = new Set(["savedAt", "arrivals"]);
 
 // The blob keys. Everything else found in sim_kv is a stale row from an
 // older shape, swept on the first save.
-const B_CREATURES = "b:creatures";
+// b:creatures was ONE row holding every creature in the world, which meant one
+// wolf changing rooms in the wood rewrote the fortress, the deep and the
+// warrens along with it. That was correct while the world was 110 rooms and it
+// stopped being correct at 512: measured, a creature carrying a grudge, a home
+// and a thirst clock serialises to ~330 bytes, so the 64KB warn below lands
+// near 270 creatures and the world already stands at ~224 — with the Crossing
+// (~100 mobs) and the mountain (~300) still to come.
+//
+// THE SPLIT, which this file has been promising in its own header since the
+// rows ship: one blob PER SHARD, keyed b:creatures:<shard>. The caller decides
+// what a shard is (zone.ts hands over its band) — this file still knows nothing
+// about rooms or regions, which is the shape discipline it has always kept.
+//
+// What it actually buys, stated honestly: the bytes WRITTEN drop to the churn
+// rather than the world, and each blob stays small. The stable form of every
+// shard is still computed each save to judge dirt, so that half of the cost
+// stays linear in population — but the second serialisation (the real blob)
+// and the disk write now scale with what MOVED. At steady state that is one
+// region, not eight.
+const B_CREATURES = "b:creatures";           // the pre-split single blob: read once at the crossover, then swept
+const B_CREATURES_PREFIX = "b:creatures:";   // ...and this is what replaces it
 const B_GROUND = "b:ground";
 const B_META = "b:meta";
+const isCreatureShard = (k: string) => k.startsWith(B_CREATURES_PREFIX);
+// A row this store owns and must never sweep as a stray.
+const isOurs = (k: string) => k === B_GROUND || k === B_META || isCreatureShard(k)
+  || (ROLLBACK_SHADOW && k === B_CREATURES); // the shadow is ours while it stands, and must never be swept
+// Where a creature with no shard goes. Only reachable if a caller passes no
+// sharder at all (tests, or a future caller that does not care) — the world
+// then behaves exactly as it did before the split, in one blob.
+const SHARD_FALLBACK = "world";
+// THE ROLLBACK SHADOW, and why this is not optional.
+//
+// Tested, not assumed: deploy the split, let it convert, then redeploy the
+// PREVIOUS build against the converted storage and the old code finds b:ground
+// and b:meta, decides the world is fine, reads b:creatures — which the
+// crossover deleted — and hydrates ZERO creatures. Worse, `placedSpawns` in
+// meta still lists every seeded mob, so the seeder will not put them back, and
+// worse again, the old code's first save sweeps the shards as strays. One
+// rollback and the world is permanently empty short of a reseed, which is the
+// one thing that must never be needed while people are playing.
+//
+// So the split keeps the OLD key alive as a shadow, refreshed on the full
+// flush only. That costs one extra write every FULL_FLUSH_MS — the flush was
+// already rewriting every shard at that moment anyway, so it is the same bytes
+// one more time, and nothing at all in steady state. A rollback then comes back
+// to a world at most one flush stale (positions and wounds), which is a blip
+// instead of an extinction.
+//
+// REMOVE THIS in a later ship, once the split has run long enough that rolling
+// back past it is not a thing anyone would do. Until then it is the difference
+// between a reversible deploy and a one-way door.
+const ROLLBACK_SHADOW = true;
 
 // Every field of SimState that isn't creatures or per-room floor state must
 // be listed here — the meta blob holds exactly these. COMPLETENESS IS
@@ -127,6 +177,20 @@ function creaturesBlob(creatures: Creature[]): string {
 
 function stableCreatures(creatures: Creature[]): string {
   return JSON.stringify([...creatures].sort(byId).map(stableCreatureCopy));
+}
+
+/** Bucket the population by shard. Deterministic: the same world always
+ *  produces the same buckets, and each bucket serialises in id order, so the
+ *  dirt judgement stays a plain string compare per shard. */
+function shardCreatures(creatures: Creature[], shardOf?: (c: Creature) => string): Map<string, Creature[]> {
+  const out = new Map<string, Creature[]>();
+  for (const c of creatures) {
+    const key = (shardOf ? shardOf(c) : SHARD_FALLBACK) || SHARD_FALLBACK;
+    let list = out.get(key);
+    if (!list) { list = []; out.set(key, list); }
+    list.push(c);
+  }
+  return out;
 }
 
 // One room's floor, bundled: items, instanced journals, wear/lore/heart-age
@@ -244,8 +308,23 @@ function expandBundle(state: Record<string, unknown>, roomId: string, b: RoomBun
 
 function unshardBlobs(rows: Map<string, string>): SimState {
   const state = emptyState();
-  const c = rows.get(B_CREATURES);
-  if (c) state.creatures = JSON.parse(c) as Creature[];
+  // Every shard, plus the pre-split single blob if this world has not crossed
+  // over yet. Reading both is what makes the crossover a non-event: a world
+  // mid-migration (which cannot exist — one transaction — but be thorough)
+  // still hydrates whole.
+  // SHARDS WIN. The pre-split b:creatures survives as a rollback shadow, so
+  // both shapes are on disk at once and reading both would hydrate every
+  // creature TWICE. The shards are the live copy; the single blob is only ever
+  // read by a world that has not crossed over yet.
+  const creatures = state.creatures as Creature[];
+  let sharded = false;
+  for (const [k, v] of rows) {
+    if (!isCreatureShard(k)) continue;
+    creatures.push(...(JSON.parse(v) as Creature[]));
+    sharded = true;
+  }
+  const single = rows.get(B_CREATURES);
+  if (!sharded && single) creatures.push(...(JSON.parse(single) as Creature[]));
   const g = rows.get(B_GROUND);
   if (g) {
     for (const [roomId, b] of Object.entries(JSON.parse(g) as Record<string, RoomBundle>)) {
@@ -293,14 +372,23 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
   if (rows.size === 0) return null;
   cache.vals.clear();
   const now = Date.now();
-  const hasBlobs = rows.has(B_CREATURES) || rows.has(B_GROUND) || rows.has(B_META);
+  const hasBlobs = rows.has(B_CREATURES) || rows.has(B_GROUND) || rows.has(B_META)
+    || [...rows.keys()].some(isCreatureShard);
   let state: SimState;
   if (hasBlobs) {
     state = unshardBlobs(rows);
     // Seed the blob keys with the STABLE forms recomputed from the loaded
     // state (zone.ts hydrates these same objects by reference, so the next
     // save's serialization matches unless something really moved).
-    cache.vals.set(B_CREATURES, stableCreatures(state.creatures));
+    // Seed each shard from its OWN row, which is exact and needs no knowledge
+    // of what a shard means: the save recomputes the same buckets from the same
+    // world and compares the same strings. The pre-split b:creatures is
+    // deliberately NOT seeded — it is left to the stray sweep below, so the
+    // first save after the crossover writes the shards and deletes it in one
+    // transaction, and a crash before that leaves the old blob still loadable.
+    for (const [k, v] of rows) {
+      if (isCreatureShard(k)) cache.vals.set(k, stableCreatures(JSON.parse(v) as Creature[]));
+    }
     cache.vals.set(B_GROUND, groundBlob(state));
     cache.vals.set(B_META, stableMeta(state));
     cache.metaWroteAt = now;
@@ -308,7 +396,7 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
     // half-migration can't exist — same transaction — but be thorough):
     // hold it for the delete sweep.
     for (const k of rows.keys()) {
-      if (k !== B_CREATURES && k !== B_GROUND && k !== B_META) cache.vals.set(k, "");
+      if (!isOurs(k)) cache.vals.set(k, "");
     }
   } else {
     // LEGACY per-row world. Hydrate from it; seed the cache with ONLY the
@@ -326,7 +414,7 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
 
 // Write the sim: the dirty blobs, and any pending stale-key sweep, in one
 // transaction — a crash mid-save never leaves half a world.
-export function saveSim(storage: DurableObjectStorage, state: SimState, cache: SimCache): void {
+export function saveSim(storage: DurableObjectStorage, state: SimState, cache: SimCache, shardOf?: (c: Creature) => string): void {
   const now = Date.now();
   const fullFlush = now - cache.lastFullFlushAt >= FULL_FLUSH_MS;
   if (fullFlush) cache.lastFullFlushAt = now;
@@ -337,10 +425,23 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
   // The dirt judgement, per blob. NOTE the cache is not touched here: if the
   // transaction below throws, the cache must keep believing the OLD blobs
   // are on disk (they are), so the next save retries the same dirt.
-  const cStable = stableCreatures(state.creatures);
-  if (fullFlush || cache.vals.get(B_CREATURES) !== cStable) {
-    puts.push([B_CREATURES, creaturesBlob(state.creatures)]);
-    cacheAs.push([B_CREATURES, cStable]);
+  // CREATURES, PER SHARD. Only the shards whose population actually changed
+  // are serialised for real and written; the rest are judged and dropped. A
+  // creature crossing a border correctly dirties BOTH shards, because both
+  // buckets come out different.
+  const shards = shardCreatures(state.creatures, shardOf);
+  // The shadow: the whole population under the old key, on full-flush beats
+  // only. Never cached for dirt (it is not a source of truth and must not
+  // suppress anything) — it is written when the flush says so and otherwise
+  // costs nothing.
+  if (ROLLBACK_SHADOW && fullFlush) puts.push([B_CREATURES, creaturesBlob(state.creatures)]);
+  for (const [shard, list] of shards) {
+    const key = B_CREATURES_PREFIX + shard;
+    const stable = stableCreatures(list);
+    if (fullFlush || cache.vals.get(key) !== stable) {
+      puts.push([key, creaturesBlob(list)]);
+      cacheAs.push([key, stable]);
+    }
   }
   const g = groundBlob(state);
   if (fullFlush || cache.vals.get(B_GROUND) !== g) {
@@ -362,9 +463,15 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
   // Anything cached that isn't one of the three blobs is a stale row from an
   // older shape (the per-row keys after a legacy load) — sweep it with the
   // write, same transaction.
+  // Strays: the per-row keys after a legacy load, the pre-split b:creatures
+  // after a crossover, and any shard that has EMPTIED. That last one matters —
+  // a region whose creatures all died or walked out would otherwise leave its
+  // last population on disk forever, and the next load would hydrate ghosts.
   const dels: string[] = [];
+  const live = new Set([...shards.keys()].map((s) => B_CREATURES_PREFIX + s));
   for (const k of cache.vals.keys()) {
-    if (k !== B_CREATURES && k !== B_GROUND && k !== B_META) dels.push(k);
+    if (!isOurs(k)) dels.push(k);
+    else if (isCreatureShard(k) && !live.has(k)) dels.push(k);
   }
 
   if (!puts.length && !dels.length) return;
@@ -386,7 +493,11 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
   // by zone now" — the designed escape, and it aligns with the multi-zone
   // shard direction anyway.
   for (const [k, v] of puts) {
-    if (v.length > 64 * 1024) console.warn(`simstore: ${k} at ${Math.round(v.length / 1024)}KB — plan the zone split before this crowds a ceiling`);
+    // Post-split this fires per SHARD, so it now says "this one region has
+    // grown too big to be one blob" — which is a real and much later problem
+    // than the one it used to warn about, and the answer to it is a finer
+    // shard (a wood by quarter, a mountain by tier), not a new mechanism.
+    if (v.length > 64 * 1024) console.warn(`simstore: ${k} at ${Math.round(v.length / 1024)}KB — shard this one finer`);
   }
 }
 

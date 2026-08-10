@@ -777,7 +777,14 @@ export class ZoneDO implements DurableObject {
     };
     // Rows, not the blob (simstore.ts): only what changed since the last save
     // is written, in one transaction. The 128KiB one-value ceiling is gone.
-    simstore.saveSim(this.state.storage, state, this.sim);
+    //
+    // ...and creatures are written PER BAND. simstore owns the storage shape
+    // and knows nothing about rooms, so the band lookup is handed to it from
+    // here — the same bandOf the feed uses, so a creature is filed under the
+    // ground a player standing next to it would say they were on. A wolf
+    // crossing out of the wood dirties the wood and the road, and leaves the
+    // deep, the warrens and the fortress untouched on disk.
+    simstore.saveSim(this.state.storage, state, this.sim, (c) => this.bandOf(c.roomId));
   }
 
   // Blow away the whole world sim and rebuild it from first light. Drops the
