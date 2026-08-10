@@ -798,6 +798,59 @@ const QUARTER_ROOMS: Record<string, string[]> = {
 };
 for (const quarter in QUARTER_ROOMS) for (const id of QUARTER_ROOMS[quarter]) WOOD_QUARTERS[id] = quarter;
 
+// THE EAST ROAD IS CAPTIONED THE SAME WAY, AND HAD TO BE (mig 187). Its 102
+// rooms are region 'road' — deliberately, because one road through the fortress
+// is one band, and every rule keyed on it (weather, forage, migration, the
+// keeper's chalk) then reaches both halves for free. The cost is the map: the
+// label for 'road' reads THE WEST ROAD, and without this the east would be
+// captioned as the west, seventy squares away from it.
+//
+// So: caption-only quarters, exactly as the wood does it. mapRegionOf still
+// says "road", the colour is the road's colour, and nothing in the sim can tell
+// the difference. Four names, because the east road is four things.
+const EAST_QUARTER_ROOMS: Record<string, string[]> = {
+  eastroad: [
+    "the-thorn-gap", "the-east-paving", "the-toll-stone", "the-hollow-way", "the-road-kiln",
+    "the-fifth-milestone", "the-carters-rest", "the-broken-culvert", "the-elm-avenue",
+    "the-fallen-avenue", "the-relay-house", "the-weighbridge", "the-cut-bank",
+    "the-sixth-milestone", "the-drowned-ford", "the-fallen-elm", "the-verge-shrine",
+    "the-long-rise", "the-chalk-cut", "the-seventh-milestone", "the-tollkeepers-ruin",
+    "the-hawthorn-narrows", "the-drove-pound", "the-cattle-grid", "the-open-stretch",
+    "the-saddle-gap", "the-eighth-milestone", "the-scarp-foot", "the-scarp-spring",
+    "the-quarry-turn", "the-paving-end",
+  ],
+  drove: [
+    "the-grave-verge", "the-sheep-creep", "the-first-fold", "the-drove-green",
+    "the-hollow-oak", "the-oak-hollow", "the-drovers-cairn", "the-wether-slope",
+    "the-broken-fold", "the-shepherds-bothy", "the-bothy-spring", "the-high-gorse",
+    "the-thorn-drop", "the-burnt-brake", "the-marker-stone", "the-high-common",
+    "the-lapwing-flat", "the-common-boundary", "the-wind-scoured-ridge", "the-hanging-fold",
+    "the-hare-ground", "the-fallen-dyke", "the-drove-head", "the-grid-lane", "the-grid-drop",
+  ],
+  beck: [
+    "the-postern-ditch", "the-drain-mouth", "the-postern-carr", "the-stepping-stones",
+    "the-withy-beds", "the-beck-mouth", "the-trap-line", "the-mill-leat", "the-drowned-mill",
+    "the-mill-loft", "the-millpond", "the-dam-walk", "the-tail-race", "the-osier-island",
+    "the-flood-mead", "the-cattle-drink", "the-marl-hole", "the-hatchpool",
+    "the-plank-crossing", "the-hanging-wood", "the-force", "the-fall-shelter",
+    "the-scree-run", "the-otter-holt", "the-gill-foot", "the-gill-pot", "the-rowan-gill",
+    "the-sunken-alders", "the-gill-narrows", "the-shepherds-ford", "the-spring-line",
+    "the-beck-head", "the-beck-stair",
+  ],
+  rise: [
+    "the-first-hairpin", "the-second-hairpin", "the-cutting-ledge", "the-third-hairpin",
+    "the-rope-post", "the-shelter-stone", "the-scarp-top", "the-high-shelf",
+    "the-peat-cuttings", "the-boundary-cairn", "the-watershed", "the-first-sight",
+    "the-far-shore-stone",
+  ],
+};
+export const EAST_QUARTERS: Record<string, string> = {};
+for (const quarter in EAST_QUARTER_ROOMS) for (const id of EAST_QUARTER_ROOMS[quarter]) EAST_QUARTERS[id] = quarter;
+
+/** Every caption-only quarter in the world, the wood's and the road's together.
+ *  One table, one lookup — the map asks this and nothing else. */
+export const MAP_QUARTERS: Record<string, string> = { ...WOOD_QUARTERS, ...EAST_QUARTERS };
+
 // UNDER COVER (rome, 2026-08-08). The wood is outdoors end to end — all 171
 // rooms — which is what lets rain, cold and the night dark reach it, and also
 // meant that when it rained it rained EVERYWHERE equally. There was nowhere in
@@ -949,6 +1002,51 @@ export const QUARTER_DARK: Record<string, string> = {
 // one specific thing happening, where the quarter's pool would be a downgrade —
 // they go into ROOM_AMBIENCE proper (zone-data spreads them in), so they take
 // priority over the quarter exactly the way a fortress signature room does.
+// THE EAST ROAD'S SIGNATURE ROOMS (mig 187). Spread into ROOM_AMBIENCE beside
+// the wood's. Room ambience is RARE and rich — one line every so often that
+// could only belong to this square — so only the rooms with something worth
+// saying twice get an entry, and the rest live on the road band's own table.
+export const EAST_ROOM_AMBIENCE: Record<string, string[]> = {
+  // ---- the paving
+  "the-thorn-gap": ["The thorn closes a little further behind you, or seems to.", "Something has been through this gap recently enough to leave hair on the cut ends."],
+  "the-toll-stone": ["Wind goes over the slot in the top of the stone and the stone hums one flat note.", "The schedule of charges is legible in this light, which somehow makes it worse."],
+  "the-road-kiln": ["The old burn smell comes up out of the throat of the kiln, faint and sweetish.", "Something small goes over the lime plug and its feet make no sound at all."],
+  "the-carters-rest": ["The hearth gives up one thread of cold ash to the draft.", "Rain that is not falling anywhere else drips off the slab roof, three beats, then stops."],
+  "the-elm-avenue": ["The light comes through the canopy in coins and moves them around.", "Somewhere down the avenue a dead limb lets go and does not hit the ground for a while."],
+  "the-relay-house": ["The lamp over the hatch gutters and steadies, and nobody has been near it.", "In the empty stalls, straw shifts as if something had just got up."],
+  "the-weighbridge": ["The iron plate ticks as the sun leaves it, and the sound carries the length of the road.", "Water moves in the pit under the plate, unhurried."],
+  "the-drowned-ford": ["The sheet of water over the paving takes the sky and puts it under your boots.", "Watercress stirs against the current, all one way, and then all the other."],
+  "the-verge-shrine": ["The scatter on the shelf shifts, though the niche is out of the wind.", "Somebody's coin catches what light there is and lets it go again."],
+  "the-wind-gap": ["The wind takes the saddle in one long unbroken pull and does not let it go.", "Grass on the shoulder lies flat, gets up, and lies flat again."],
+  "the-eighth-milestone": ["The recut face reads clearly and means nothing, which is the whole of it.", "Wind works at the newer letters, patiently, the way it worked at the old ones."],
+  "the-quarry-turn": ["Chippings shift somewhere back in the quarry, and settle.", "The dressed blocks on the skids have not weathered. They look put down this morning."],
+  // ---- the drove
+  "the-hollow-oak": ["The tree makes a sound in the wind that a tree that size should not be able to make.", "Old cut-marks on the rim of the split have healed into knuckles you could hang a hat on."],
+  "the-drovers-cairn": ["A stone shifts somewhere in the heap and reseats itself.", "The wind comes across the cairn and takes a note out of the gaps in it."],
+  "the-marker-stone": ["The lichen on the stone is the same age as the stone, near enough.", "The small cut cross at the base has been kept clear of growth by somebody, recently."],
+  "the-lapwing-flat": ["Birds go up off the wet ground in a body, tumble, call, and settle.", "Standing water shivers between the rushes with no wind on it."],
+  "the-wind-scoured-ridge": ["The turf here is cropped to a mat and the exposed stone is polished by weather alone.", "From up here the paved road is a dead straight scratch through a country that has no straight lines."],
+  "the-hare-ground": ["A form in the grass is warm. Whatever was in it is not in it now.", "The stones underfoot are all one size, which is not how stones happen."],
+  // ---- the beck
+  "the-drain-mouth": ["The arch breathes out air that is warmer than the day and smells of the fortress.", "Something in the dark of the drain lets go of the stone and drops into water."],
+  "the-withy-beds": ["Twenty-foot rods knock together overhead in a wind you cannot feel down here.", "A stool that went over years ago is still throwing new growth, straight up, out of its side."],
+  "the-drowned-mill": ["The wheel takes a little of the water and gives it back and does not turn.", "Under the flooded floor the dressing on the millstones is perfectly legible."],
+  "the-millpond": ["A fish rises somewhere out in the middle and the ring reaches the bank a long time later.", "The whole pond goes glassy at once, as though something below had stopped moving."],
+  "the-dam-walk": ["The sluice is seized open and the noise of it fills everything, so nothing else can be heard.", "The turf on the dam crest is springy and hollow-sounding, the way ground over stone is."],
+  "the-force": ["The fall drums on the pool and the sound comes back off both walls at once.", "Spray drifts through and settles on you without ever quite becoming rain."],
+  "the-gill-pot": ["Something turns over slowly in the pot and does not come up.", "The ledge is dry and worn smooth, and the water below it takes the light and keeps it."],
+  "the-gill-narrows": ["The flood-jam wedged overhead shifts a little and holds.", "The beck goes through the gap under pressure and comes out the far side white."],
+  "the-spring-line": ["Water comes out of the hillside in a dozen places at once, all along the same line, all at the same rate.", "The moss on the wet rock is the deepest green anything on this road has been."],
+  // ---- the rise
+  "the-rope-post": ["The worn ring in the top of the post turns in the wind, slowly, with nothing on it.", "Wind comes up the face and over the lip and takes your breath as it passes."],
+  "the-shelter-stone": ["Old bracken under the slab rustles and settles — somebody carried this up here.", "Out past the overhang the weather goes by sideways and none of it comes in."],
+  "the-peat-cuttings": ["Black water in the trench takes the sky and gives back none of it.", "A stack of turfs shifts and reseats itself, still in its herringbone, still dry inside."],
+  "the-boundary-cairn": ["Something has been left in the hollow of the top stone. It was not there a moment ago.", "The wind at this height has a note in it that the wind lower down does not."],
+  "the-watershed": ["Two threads of water leave the same puddle and go opposite ways.", "There is nothing above you here but weather, and it is coming."],
+  "the-first-sight": ["The water down there changes colour all at once as cloud crosses it.", "Whatever stands up out of the middle of the water does not move, and keeps not moving."],
+  "the-far-shore-stone": ["The dressed face of the pillar is clear of lichen. Something keeps it that way.", "The bench is cold and the water is enormous and there is nothing to do but sit and look at it."],
+};
+
 export const WOOD_ROOM_AMBIENCE: Record<string, string[]> = {
   // The one building on his ground. It is not haunted; it is IN USE, which is
   // worse — everything here is the sound of somebody keeping up with the work.
@@ -1186,6 +1284,21 @@ export const WOOD_DARK: Record<string, string> = {
 // It NEVER states a number the stat block already gives. Numbers are the stat
 // block's job and a page that says a thing twice is a page nobody reads twice.
 export const MOB_LORE: Record<string, string> = {
+  // ---- THE EAST ROAD (mig 188). Every one of these is the same sentence said
+  // ten ways: the work outlasted the reason for it. The clerk collects, the
+  // warden walks, the dogs herd, the miller keeps grinding at nothing — and the
+  // animals out there are the only things on the road with a current reason to
+  // be doing what they are doing.
+  "the-toll-clerk": "The satchel is the thing to look at. It has weight in it, it is worn on the same shoulder every day of a long career, and the strap has gone through the coat and into what is under the coat. He is not asking for a toll because he is owed one. He is asking because asking is the shape his day has, and the day has not ended, and you are standing in the part of it where somebody pays.",
+  "the-long-warden": "Watch which way it is facing when it turns. It goes out along the road and it comes back down the road and it does not deviate by one room in either direction, which means the beat was set by somebody, in writing, and the somebody is two centuries dead and the writing is dust and the beat is still being walked. There is no gate at either end of it. There never was. It patrols the distance between two places, and the distance is the post.",
+  "drove-dog": "It is not hunting and it is not guarding, and if you read it as either you will stand in the wrong place. It is HERDING. The wide arc, the turned shoulder, the head down, the refusal to close — that is an animal moving you somewhere, and it is very good at it, and it is doing it with the others whether or not you have noticed the others. The stock they were bred to move has been gone two hundred years. The training does not care.",
+  "the-drove-master": "The grey one does not work the line. It sits above the line and reads it, and it comes down only when the shape of the thing is wrong. Everything the others do out there is a proposal; this is what accepts them. Its collar is the same as theirs and it is worn through in the same place, which tells you it was somebody's dog too, and better trained than any of them.",
+  "otter": "Look at what it is not doing: it is not leaving. It has seen you, it has decided the distance is sufficient, and it has gone back to the fish. There is a slide worn into the bank at every holt along this water and every one of them ends at a flat stone with fish-heads on it. It has been eating well here for a long time, in a country where nothing else has.",
+  "grey-heron": "It is a hinge with a spear on the end. Everything about it is arranged around one movement made once, at the correct moment, and the hours of stillness are not patience — they are the mechanism cocked. When it goes up it makes more noise than anything else on this water, which is why everything else on this water watches it and not you.",
+  "the-miller": "He is facing his own millstones and he is still working at them, under the water, with both hands. The pond backed up into his floor because the tail-race silted and nobody dug it out, and the reason nobody dug it out is standing in it. Whatever the water did to him it did slowly enough that he has never had to admit anything happened. He will not leave the mill. He does not need to: the mill is where people come.",
+  "gill-adder": "It has no interest in you at all and that is exactly the danger. It will not chase, it will not follow, it will not defend anything — it will simply be lying in the one warm place in the cleft, which is also the one place your hand goes when the ledge runs out. Killing it is easy and largely beside the point. What it puts in you does the work afterwards.",
+  "feral-goat": "The horns have been used against something and the something is not down here. Nothing on this scarp browses but this, nothing hunts it but the drove, and it has solved the problem by living on ground the drove cannot follow it onto. It is watching you with the flat pupil of an animal that has already worked out you cannot climb, and it is not wrong.",
+  "scarp-raven": "It comes back three times from three distances, and that is not curiosity — it is measurement. A raven that has learned what a thing on the ground turns into will wait for it to turn into that. There is a cairn further up with a hollow cut in the top stone, and there is always something in the hollow, and nobody up here has put it there.",
   // ---- the small things, and the reason there are so many -----------------
   rat: "There are more of them every year and there is a reason: the fortress was provisioned for a siege that never came, and the stores went to ruin with everything in them. These have been eating a garrison's winter for generations. They are not hungry. They are bored, and confident, and there is a difference in how a bored animal comes at you.",
   "fleet-rat": "The nervous strain. Everything that made the others bold went the other way in these — they have been caught too often and lived, and they run before they have finished deciding to. Follow one for long enough and it leads you to the nest it is running back to, which is not a reason to follow one.",

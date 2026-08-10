@@ -10,7 +10,7 @@ import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId, 
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import { uuid } from "./rng";
 import * as den from "./den";
-import { WOOD_QUARTERS, MOB_LORE } from "./detail";
+import { WOOD_QUARTERS, MAP_QUARTERS, MOB_LORE } from "./detail";
 import {
   MAP_ITEMS, DETAILED_MAP, FULL_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
@@ -235,7 +235,7 @@ export function worldGrid(z: ZoneDO): WorldGrid {
     // the gate telling, the spawn tables and every rule keyed on region are
     // untouched. Nothing here moves a square either; a room's place is baked in
     // its row and this only decides what gets written above it.
-    const quarter = WOOD_QUARTERS[id];
+    const quarter = MAP_QUARTERS[id];
     if (quarter) region = quarter;
     (pts.get(region) ?? pts.set(region, []).get(region)!).push(p);
     owner.set(`${p.x},${p.y}`, region);
@@ -401,7 +401,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       // a quarter's caption back until you have walked some of it — same law the
       // region captions already keep: a name floating over ground your copy has
       // never charted would be telling you a place exists.
-      q: WOOD_QUARTERS[id],
+      q: MAP_QUARTERS[id],
       x: at?.x, y: at?.y,
     });
   }

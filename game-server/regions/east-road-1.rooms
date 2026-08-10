@@ -1,0 +1,188 @@
+# THE EAST ROAD, 1 of 3 — THE PAVED ROAD. 30 rooms, the spine.
+#
+# The west road degrades into trees. This one does the opposite: it stays a
+# ROAD — dressed, drained, milestoned, tolled — because it is the road the
+# fortress's masters came in ON, and it was maintained to the end. What
+# happens to it is not decay. It is ALTITUDE. The country under it tilts, and
+# somewhere out past the eighth milestone the road stops pretending it can
+# stay level and starts climbing, and that is where the mountain begins.
+#
+# Attaches EAST off the Waystation, whose own description has promised this
+# road since the world had 110 rooms: "the road away runs east into a wall of
+# thorn grown higher than a man, and whatever is beyond it does not answer."
+# It answers now.
+#
+# ONE GATE at the Relay House — a posting station the dungeon's writ still
+# runs in, twelve rooms out. Deliberately NOT a spawn (same ruling as the
+# Roadwarden's Post: a gate is a service, not a doorway).
+#
+# The milestones count UP going east — fifth, sixth, seventh, eighth — because
+# the west road's count and this one's are the same road, measured from the
+# same stone, and a player who notices that has read the country right.
+
+!region road
+
+## the-old-road | attachment: the thorn wall opens
+!existing
+> east the-thorn-gap
+
+## the-thorn-gap | The Thorn Gap
+Someone has been at the thorn with a billhook, and not recently — the cut ends have healed over into knuckles of scar-wood, and the gap they left is narrower every year. Beyond it the paving picks up again, dressed and cambered and utterly unlike the country it crosses. The wall of thorn closes behind you like a held breath.
+> west the-old-road
+> east the-east-paving
+
+## the-east-paving | The East Paving
+The stones here were laid better than the ones going west, and laid later. Each one is squared, bedded on a raft of rammed flint, and drained by a channel cut down the verge that still carries water when it rains. Two hundred years and it is barely dished. Whoever kept this end of the road, kept it well, and stopped all at once.
+> west the-thorn-gap
+> east the-toll-stone
+
+## the-toll-stone | The Toll Stone
+A block of grey stone stands square in the verge with a slot cut in the top of it and a schedule of charges cut into the face — cart, beast, man on foot, man with a load. The slot goes down into a chamber nobody has opened. The rates are legible. There is nobody to pay.
+> west the-east-paving
+> east the-hollow-way
+
+## the-hollow-way | The Hollow Way
+The road runs between low banks, and the banks are not worn — they are BUILT, revetted with dry stone that has kept its courses. The stonework has the same hand as the fortress walls, which tells you who paid for this and how far their arm reached. Ivy has got into the joints and is patiently taking them apart.
+> west the-toll-stone
+> east the-fifth-milestone
+> north the-road-kiln
+
+## the-road-kiln | The Lime Kiln
+A stone bottle sunk into the bank, taller than a man inside, its mouth black and its throat white with old burn. Lime for the road's mortar came out of here by the cartload. The last charge was never drawn: it sits in the belly of the kiln, fired and gone hard, a plug of stone that used to be stone.
+> south the-hollow-way
+
+## the-fifth-milestone | The Fifth Milestone
+The same squat grey pillar as the one out west, the same weathered flat face — and this one is legible. FIVE, cut deep, and below it a distance in a measure nobody uses. The numbers run the other way from here. West of the fortress they count out; east of it, they count up.
+> west the-hollow-way
+> east the-carters-rest
+
+## the-carters-rest | The Carter's Rest
+A stone shelter set back off the verge, three walls and a roof of slabs, built for waiting out weather with an animal. The hearth in the corner has been used since the fortress fell — not often, and not lately, but the ash is layered and somebody swept it once. Wide enough for two carts. Empty.
+!safe
+> west the-fifth-milestone
+> east the-broken-culvert
+
+## the-broken-culvert | The Broken Culvert
+The road crosses a buried stream on a barrel arch, and the arch has dropped a stone. Water comes up through the paving on the low side and lies there. The subsidence is a foot deep and getting deeper, and the road, which has no one to mend it, has begun to go into the hole a wheel-rut at a time.
+> west the-carters-rest
+> east the-elm-avenue
+
+## the-elm-avenue | The Elm Avenue
+Elms were planted down both verges in a straight line, at even spacing, by somebody who expected to be dead long before they came to anything. They came to something. Half are standing and half are down, and the standing ones close overhead so the road runs through a green tunnel with the light coming through it in coins.
+> west the-broken-culvert
+> east the-relay-house
+> south the-fallen-avenue
+
+## the-fallen-avenue | The Fallen Avenue
+Three elms came down together in the same weather and nobody has cleared them. They lie across what used to be the drainage, and the water has spread out behind them into a long shallow pool that reflects the whole avenue upside down. The trunks are soft enough now to take a boot-print.
+> north the-elm-avenue
+
+## the-relay-house | The Relay House
+A posting station: stable, yard, and a long low house with a hatch in the road-facing wall and a lamp above it that is lit. Fresh beasts were kept here for anyone carrying the fortress's business east. The stalls are empty and swept. The hatch opens. Whatever the arrangement is, it has not lapsed, and nobody here will explain it.
+!entry
+> west the-elm-avenue
+> east the-weighbridge
+
+## the-weighbridge | The Weighbridge
+A plate of iron let into the paving, big enough for a cart and axle, with a slot at the side where the beam ran down into a pit. The mechanism is still in the pit, under water. The plate rings under your boots — one clean note, carrying much further than it should, announcing you to the whole length of the road.
+> west the-relay-house
+> east the-cut-bank
+
+## the-cut-bank | The Cut Bank
+The road goes through a shoulder of hill instead of over it, in a cut with faces of raw chalk on both sides and rooks in the ledges. The chalk sweats. Flint comes out of the faces in courses like dark stitching, and there is a spoil-heap at the east end that has been there so long it has its own turf.
+> west the-weighbridge
+> east the-sixth-milestone
+> north the-thorn-drop
+
+## the-sixth-milestone | The Sixth Milestone
+SIX. Somebody has been keeping a tally on the back of this one, well away from the road-facing side: scratches in fives, hundreds of them, gone right round the pillar and started again. Whatever was being counted, it was counted patiently, over a long time, by somebody who came back.
+> west the-cut-bank
+> east the-drowned-ford
+
+## the-drowned-ford | The Drowned Ford
+The stream the culvert was built to carry gets its own way here. It comes down off the north and crosses the road in a wide, stony, ankle-deep sheet, and the paving continues underneath it, visible and green. There are stepping stones for anyone too proud to wet their boots. Watercress grows thick on the downstream side.
+> west the-sixth-milestone
+> east the-fallen-elm
+> south the-beck-mouth
+
+## the-fallen-elm | The Fallen Elm
+The biggest of the avenue elms came down here, across the road, and was cut through rather than cleared — a slice the width of a cart taken out of the middle of it and the two halves left where they lie. The heartwood is a ruin of beetle-work. The rings, if you count them, run out well before the fortress did.
+> west the-drowned-ford
+> east the-verge-shrine
+
+## the-verge-shrine | The Verge Shrine
+A niche the size of a bread-oven built into a roadside wall, with a stone shelf in it worn to a dip. Travellers left something here going out and something coming back. The shelf has a scatter on it now — a button, a tooth, a coin so worn it is just a disc — left by people who did not know the form and did it anyway.
+> west the-fallen-elm
+> east the-long-rise
+
+## the-long-rise | The Long Rise
+The road stops being level. It is not a hill yet, only a tilt you notice in your legs before your eyes, and it goes on far enough that the tilt stops being a thing that ends. Looking back, the fortress is lower than you are. Looking forward, the country ahead of you is nothing but sky.
+> west the-verge-shrine
+> east the-chalk-cut
+
+## the-chalk-cut | The Chalk Cut
+The engineers took the rise in a straight line, which meant cutting, and the cut is deep here — white walls twice a man's height, the road a pale ribbon at the bottom of it. Sound behaves oddly. Anything that comes down the cut arrives before it should, and you hear yourself arriving too.
+> west the-long-rise
+> east the-seventh-milestone
+
+## the-seventh-milestone | The Seventh Milestone
+SEVEN, and the pillar is leaning. The ground has crept under it — the whole hillside is moving downhill at the speed of stone, a hand's breadth a century, and it has taken the milestone with it. It still points at the road. It is no longer beside the road it points at.
+> west the-chalk-cut
+> east the-tollkeepers-ruin
+
+## the-tollkeepers-ruin | The Tollkeeper's Ruin
+A second toll-house, out here where nobody would stop to be charged, gone to three courses of wall and a hearth full of nettles. The gate-post is still standing with the iron in it. Whatever this end of the writ was collecting, it was worth building for, and the building did not outlast the collecting by long.
+> west the-seventh-milestone
+> east the-hawthorn-narrows
+
+## the-hawthorn-narrows | The Hawthorn Narrows
+Hawthorn has come in off both verges and met in the middle, and the road here is a tunnel a man wide with the paving still sound underfoot. The thorn is old, black-barked and thick as an arm. There is one way through and it is the way you are already going, and you would hear anything coming.
+> west the-tollkeepers-ruin
+> east the-drove-pound
+
+## the-drove-pound | The Drove Pound
+A walled square off the verge, big enough to hold a herd for a night, with a water trough along one side fed by a lead pipe from the hill. This is where stock coming down off the drove was held before it went onto the paving, and where anything the road caught straying was put until somebody paid for it. The gate is off. The trough still runs.
+> west the-hawthorn-narrows
+> east the-cattle-grid
+
+## the-cattle-grid | The Cattle Grid
+A pit floored with iron bars laid across the road, to stop stock coming down off the high ground and onto the paving. The drove comes in from the north here — a green lane, wide and hoof-cut, joining the road at a gate that has rotted off its hinges. The bars are still sound. Nothing has stopped anything in a long time.
+> west the-drove-pound
+> east the-open-stretch
+> north the-grid-drop
+
+## the-open-stretch | The Open Stretch
+The cuttings and the hedges give out and the road runs across the top of the world on an embankment, with the whole eastern country laid out beyond it: grey folds of hill, one on the next, going up. There is nothing to stand behind out here for a quarter of a mile in any direction.
+> west the-cattle-grid
+> east the-saddle-gap
+
+## the-saddle-gap | The Wind Gap
+The road takes a saddle between two shoulders of hill, and the wind takes the saddle. It comes through hard enough to lean on and it does not stop. The grass here grows one way. Anything you say goes east whether you meant it to or not, and anything said east of you never arrives.
+> west the-open-stretch
+> east the-eighth-milestone
+
+## the-eighth-milestone | The Eighth Milestone
+EIGHT — and this one has been dressed since. The old face is cut away and a new legend cut in its place, in a different hand, smaller and quicker: not a distance. A warning, or an instruction, in a language that used the same letters and not the same words. Nobody who could read it is left to ask.
+> west the-saddle-gap
+> east the-scarp-foot
+
+## the-scarp-foot | The Scarp Foot
+The tilt ends the way a tilt ends: in a wall. Ahead of the road the ground stands up in a grey scarp, and the road, which has gone straight through everything else in its way, does not go through this. It turns. You can see the line it takes, a pale scratch cut diagonally up the face of the thing, and it is a long way up.
+> west the-eighth-milestone
+> east the-quarry-turn
+> north the-scarp-spring
+> south the-beck-stair
+
+## the-scarp-spring | The Scarp Spring
+Water comes straight out of the foot of the scarp here, from a bed of gravel, at a rate that does not vary and a temperature that does not either. It is the cleanest thing for twenty rooms. Somebody has set a stone trough under it, and the trough is older than the road, and it is still full.
+> south the-scarp-foot
+
+## the-quarry-turn | The Quarry Turn
+The road doglegs to take the grade, and in the elbow of it is the quarry the road was built out of — a bite taken from the scarp, floored with chippings, walled in fresh grey stone that has never weathered because it never had the chance. The last blocks are still on the skids, dressed, squared, and waiting for a cart that is not coming.
+> west the-scarp-foot
+> east the-paving-end
+
+## the-paving-end | The Last Paving
+The dressed stone ends. Not raggedly, not fallen away — it simply STOPS, in a clean straight edge across the road with the last course laid true, and beyond it the way ahead is a track cut into the hillside with a pick. This is the mark where the money ran out, or the men did, or the writ did.
+> west the-quarry-turn
+> east the-first-hairpin

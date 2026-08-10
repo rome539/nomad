@@ -8,7 +8,7 @@ import { type ItemTemplate, type Region, trait } from "./world";
 // two files is a lookup that will drift — but 170 rooms of new prose would push
 // this file past 3,700 lines, and rome's standing rule is that the spine stays
 // lean. So the tables live here and the wood's contribution lives there.
-import { WOOD_ROOM_AMBIENCE, WOOD_DARK } from "./detail";
+import { WOOD_ROOM_AMBIENCE, WOOD_DARK, EAST_ROOM_AMBIENCE } from "./detail";
 
 
 export const TICK_MS = 2000;
@@ -412,7 +412,12 @@ export const JOURNAL_ITEM = "hunters-journal";
 // The flooded quarry only — deep still water with a working face going down out
 // of sight. The ford is shin-deep over gravel: you can drink it and wade it, but
 // there is nothing in it to catch.
-export const FISHING_SURFACE = new Set(["the-black-fen", "the-drowned-orchard", "the-flooded-quarry"]);
+export const FISHING_SURFACE = new Set(["the-black-fen", "the-drowned-orchard", "the-flooded-quarry",
+  // The beck (mig 187): the millpond holds fish because a dam holds fish, the
+  // hatchpool because the beck keeps its fish where the water turns slowly and
+  // goes down further than the light does, and the eel traps because they are
+  // ALREADY FISHING — the withies have gone soft and the arrangement is intact.
+  "the-millpond", "the-hatchpool", "the-trap-line"]);
 export const FISHING_DEEP = new Set(["pocket-of-air", "the-weir", "black-canal", "leech-pools", "the-sump", "the-cistern",
   "the-eel-run", "the-breathing-hall"]); // the Tideways' waters (069) — the tide restocks them when it drains
 export const FISHING_ROOMS = new Set([...FISHING_SURFACE, ...FISHING_DEEP]);
@@ -805,6 +810,17 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "warden-surface": "Armor moves {dir}, grinding, out under the open sky.",
   "lead-dog": "Something four-legged goes {dir} at a walk, in no hurry at all.",
   "wayman": "A single step {dir}, placed deliberately, by somebody who could have been quieter.",
+  // ---- THE EAST ROAD (mig 188) ----
+  "the-toll-clerk": "Boots on dressed stone {dir}, unhurried, and the chink of a satchel that has coin in it.",
+  "the-long-warden": "Plate moving at a walking pace {dir}, keeping time with itself, going somewhere.",
+  "drove-dog": "Something crosses the grass {dir} at a working trot, wide, not coming closer.",
+  "the-drove-master": "A heavy tread {dir} through the grass, taking its time, and everything else out there goes quiet for it.",
+  "otter": "A small heavy splash {dir}, and then nothing at all.",
+  "grey-heron": "Enormous slow wings beat {dir}, three times, and a cry goes with them like cloth tearing.",
+  "the-miller": "Water moves {dir} the way water moves when something large is walking in it.",
+  "gill-adder": "Dry grass shifts {dir}, low down, in a line.",
+  "feral-goat": "Stone goes over stone {dir}, high up, where nothing should have footing.",
+  "scarp-raven": "A wingbeat {dir}, and then a call, and then the wingbeat again further off.",
   "dire-wolf": "A heavy padding crosses {dir}, and the stride is far too long.",
   "white-roe": "Something light steps {dir} and does not hurry.",
   "old-boar": "Something very heavy goes {dir} through the brush and does not go around anything.",
@@ -840,6 +856,16 @@ export const STILL_SOUNDS: Record<string, string> = {
   "grey-wolf": "nothing at all, and then the small sound of a jaw closing",
   "lead-dog": "slow breathing through a bad nose, and a collar-chain that has not been on anything for a long time",
   "wayman": "cloth shifting, and a man breathing through his mouth to keep it quiet",
+  "the-toll-clerk": "the creak of a loaded strap taking a weight that has not been put down in two hundred years",
+  "the-long-warden": "plate settling, once, the way a man shifts his feet when he has been standing too long",
+  "drove-dog": "panting, low and even, from more than one place",
+  "the-drove-master": "nothing at all, from somewhere above and to the side of you",
+  "otter": "water moving against the run of the beck",
+  "grey-heron": "no sound whatsoever, which out here is its own kind of sound",
+  "the-miller": "a slow deliberate slop of water, and something being worked at under it",
+  "gill-adder": "a dry whisper of scale on stone, so quiet it could be the water",
+  "feral-goat": "an unhurried grinding of jaws, from a direction that cannot be right",
+  "scarp-raven": "the wind through stiff feathers, holding station",
   "dire-wolf": "breathing far too deep and slow for a wolf, and nothing else at all",
   "white-roe": "breathing, unhurried and quite steady — something that has not decided to be afraid of you",
   "old-boar": "a deep, wet snorting, and a tusk knocking on wood, over and over",
@@ -883,6 +909,7 @@ export const MIGRANTS = new Set<string>([
   "grey-wolf", "dire-wolf", "grave-hyena", "dire-hyena",     // what follows the game
   "masterless-dog", "lead-dog", "two-hound", "three-hound",  // the pack
   "footpad", "cutthroat", "wayman",                          // what follows the people
+  "drove-dog", "the-drove-master", "feral-goat",           // the east road's walkers (the beck's own stay on their water)
   "fleet-rat",
 ]);
 // The ground they may move BETWEEN. Surface only, and the whole surface: an
@@ -990,6 +1017,20 @@ export const MOUTHS = [
 // threshold rule bars that) and never resting on any one wanderer's path in.
 // Each step is to an adjacent room, so the rounds actually close.
 export const PATROLS: Record<string, string[]> = {
+  // THE LONG WARDEN (mig 188) is the first patrol that is not a circuit. The
+  // watchman walks a ring round the walls; this one walks a LINE — out along
+  // the paving and back down it, every leg adjacent, so the route never leaves
+  // the road it is the warden of. Eleven rooms out, eleven back: long enough
+  // that you can be somewhere it is not, which is the only reason a patrol on
+  // a road is interesting rather than a wall you cannot pass.
+  "the-long-warden": [
+    "the-hollow-way", "the-fifth-milestone", "the-carters-rest", "the-broken-culvert",
+    "the-elm-avenue", "the-relay-house", "the-weighbridge", "the-cut-bank",
+    "the-sixth-milestone", "the-drowned-ford", "the-fallen-elm", "the-verge-shrine",
+    "the-long-rise", "the-verge-shrine", "the-fallen-elm", "the-drowned-ford",
+    "the-sixth-milestone", "the-cut-bank", "the-weighbridge", "the-relay-house",
+    "the-elm-avenue", "the-broken-culvert", "the-carters-rest", "the-fifth-milestone",
+  ],
   warden: ["barracks", "cells", "cistern", "ossuary", "catacomb", "kennels", "armory", "gallery"],
   "warden-captain": ["barracks", "cells", "cistern", "ossuary", "catacomb", "kennels", "armory", "gallery"],
   // The last watchman (076) walks the high circuit out-and-back — every leg
@@ -1067,7 +1108,11 @@ export const PATROLS: Record<string, string[]> = {
 // do not hunger, and no smell of food moves them. The rat is the only thing
 // down here that's honestly alive.
 export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-surface", "warden-captain", "forgotten-king", "drowned-god", "marrow-king", "marrow-cantor",
-  "twice-dead", "thrice-dead", "last-watchman"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
+  "twice-dead", "thrice-dead", "last-watchman",
+  // The east road's institution, still working (mig 188). A clerk with his hand
+  // out and a warden walking a distance — the same joke as the drill, told out
+  // of doors: the office outlived the office.
+  "the-toll-clerk", "the-long-warden"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
 // GRAVE_FLESH: hollow, but a BODY — dried corpse, not bare bone or old iron
 // (rome, 2026-07-11: "sounds like a zombie"). A wight has a skull to split, a
 // spine to sever, ribs over what used to matter — so the vitals lottery stays
@@ -1164,7 +1209,8 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // The WHITE ROE is deliberately NOT here (mig 141). Everything in the wood that
 // can bolt, bolts — so the rarest thing on the surface is the one that stands in
 // the open and looks back at you. Its whole effect is the omission.
-export const RUNNERS = new Set(["fleet-rat", "roe-deer"]);
+export const RUNNERS = new Set(["fleet-rat", "roe-deer",
+  "otter", "grey-heron"]); // the beck's two: both built to be somewhere else
 // BROODERS are nest-bound: they don't wander, don't flee, and while they live
 // they keep birthing scabby rats into their room. Kill the mother or the room
 // stays an infestation. A living source, not a stat block.
@@ -1439,6 +1485,7 @@ export const FEVER_MEND_MULT = 0.35;  // what rest, food and a bandage are all w
 export const NAPPERS = new Set([
   "rat", "fleet-rat", "albino-rat", "cutpurse",  // the fortress's own dozers
   "roe-deer", "white-roe", "wild-boar", "old-boar", // the wood's game, after dark
+  "otter", "feral-goat", "gill-adder",      // the east road: an adder in the one patch of sun is the whole animal
 ]); // hyenas nap via the gorge only
 // OUTDOOR GAME KEEPS DIFFERENT HOURS, and needs its own two rates rather than a
 // multiplier on the indoor one. NAP_ODDS is tuned for a rat in a quiet corner —
@@ -1476,7 +1523,15 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
   // it. Every thirsty thing west of the fortress can now drink somewhere that
   // isn't the road's one ford — which was the only drinkable thing for a dozen
   // rooms and therefore the road's natural ambush.
-  "the-open-water", "the-tussock-ford", "the-fen-gut", "the-quaking-flat"]);
+  "the-open-water", "the-tussock-ford", "the-fen-gut", "the-quaking-flat",
+  // ---- THE EAST ROAD (mig 187). The beck is a whole river system and the east
+  // has more drinkable water in it than the entire rest of the surface put
+  // together, which is deliberate: thirst has driven every animal west to one
+  // ford for a hundred rooms, and a country with water everywhere behaves
+  // completely differently from one with water in a single place.
+  "the-drowned-ford", "the-stepping-stones", "the-scarp-spring", "the-bothy-spring",
+  "the-millpond", "the-tail-race", "the-hatchpool", "the-cattle-drink", "the-marl-hole",
+  "the-gill-pot", "the-shepherds-ford", "the-spring-line", "the-beck-head"]);
 // WHO DRINKS. Was the scavengers alone, which left the wood's waters — the
 // Black Pool, the Brown Water, the Drinking Pool, eleven wet rooms of fen —
 // as ambush ground with nothing to ambush. Prey drinks too, and now the two
@@ -1517,8 +1572,11 @@ export const DINNER_LAUGH_ODDS = 0.35;
 // Obeys the hard law like every other call: a summoned creature never re-calls
 // (calledTo), the bark rides its own channel and never creatureNoise, so there
 // are no cascades.
-export const ALARM_CALLERS = new Set(["roe-deer", "white-roe"]);
-export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-boar"]); // the game takes the warning
+export const ALARM_CALLERS = new Set(["roe-deer", "white-roe",
+  // The heron (mig 188): the loudest departure of any animal in the game, and
+  // the beck's early-warning system for everything living on it.
+  "grey-heron"]);
+export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "otter", "feral-goat"]); // the game takes the warning
 export const ALARM_AVOID_MS = 20 * 60_000;  // warned game keeps off that ground twenty minutes
 export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters next door come to look
 
@@ -1534,7 +1592,10 @@ export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters nex
 // Same hard law as the dinner-laugh — one packmate, adjacent only, never one
 // that was itself summoned, and the call rides its own channel so nothing
 // cascades.
-export const PACK_CALLERS = new Set(["grey-wolf", "dire-wolf", "masterless-dog", "lead-dog"]);
+export const PACK_CALLERS = new Set(["grey-wolf", "dire-wolf", "masterless-dog", "lead-dog",
+  // The drove dogs (mig 188). A herding dog's whole training is to work spread
+  // out and answer another dog, and nobody has told them the stock is gone.
+  "drove-dog", "the-drove-master"]);
 // WOLVES CUT THE LINES OF RETREAT (rome, 2026-08-08: "the more you fight
 // together, they start closing room exits — 2 wolves equals 1 exit closed, 3 is
 // 2 exits closed").
@@ -1638,6 +1699,15 @@ export const LURKER_DRIFT_MS = 3 * 3_600_000;
 // Effect: predators thin the herds the brood-mothers swell, and a player can
 // throw bait to start a scrap and slip past. Read/applied in ai.ts (predation).
 export const PREYS_ON = new Map<string, Set<string>>([
+  // THE EAST ROAD HAS A FOOD WEB ON PURPOSE (mig 188). The migration gate
+  // refuses any animal a destination that cannot feed it, which is the census
+  // check that caught the wood being the only working web — so a new band that
+  // arrives as a monoculture is a band nothing can ever walk into. The drove
+  // eats the goat; the otter takes the beck's own; and that is enough of a
+  // chain that the ground holds its own animals instead of borrowing them.
+  ["drove-dog", new Set(["feral-goat", "roe-deer"])],
+  ["the-drove-master", new Set(["feral-goat", "roe-deer", "drove-dog"])], // it puts the line where it wants it, including through one of its own
+  ["otter", new Set(["rat", "fleet-rat"])],                              // it eats fish, and a rat that comes to water is a fish with legs
   ["three-hound", new Set(["rat", "fleet-rat", "grave-hyena", "dire-hyena"])], // apex at the threshold — bullies all comers
   // A HYENA EATS MORE THAN RATS (rome, 2026-08-06: "we can just make heyans eat
   // another thing like a dear or fight with a wolf"). It used to eat vermin and
@@ -1733,7 +1803,8 @@ export const BREAK_LINES = [
 // hunters have NO prey down there — near-equals, everything else bloodless — so
 // for them starvation has nowhere to go but your torchlight. (three-hound is a
 // SENTINEL and takes the room on its own terms — it stays out.)
-export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf"]);
+export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf",
+  "drove-dog", "the-drove-master"]);
 // The deep eats its own: strayed rats (and worse) die in the dark and rot where
 // they fall, and the pale hunters scavenge the carrion. A dice mint (same law as
 // the stone/torch — cadence × odds, no clock to farm) drops one fresh carcass into
@@ -1797,7 +1868,12 @@ export const BOLD_DMG_MULT = 1.35; // a gorged scavenger swings harder
 // Silted Pond, Wet Hollow, Tussock Ford, Dead Alders, Quaking Flat), so this
 // costs nothing to place and gives the WOOD what the deep already had: water
 // you decide to enter, and dry ground that is honestly safer.
-export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "the-mire-walker"]);
+export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "the-mire-walker",
+  // THE MILLER (mig 188) is the first drowned thing on the SURFACE, and he is
+  // here on purpose: the Crossing is the great water, and the seize-and-hold
+  // that makes deep water frightening should be a law this country already has
+  // by the time you reach it, not a mechanic that arrives with a new region.
+  "the-miller"]);
 export const SEIZE_ODDS = 0.2;        // soft: a blow only sometimes takes hold
 export const SEIZE_BREAK_ODDS = 0.5;  // soft: about half the time you wrench loose each beat
 export const SEIZE_DMG_MULT = 1.25;   // it hits a little harder while it has you
@@ -1876,6 +1952,15 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   // the world moved like one animal. A thing's retreat should tell you what it
   // is as loudly as its attack does.
   "masterless-dog": { out: "bolts {dir}, tail down, keeping low to the ground.", in_: "comes in fast and low, head down." },
+  "drove-dog": { out: "breaks off {dir} at a trot, still watching you over its shoulder.", in_: "comes round {dir} at a working trot and takes up a position." },
+  "the-drove-master": { out: "gives ground {dir} without hurrying, and without turning its back.", in_: "walks in slowly, and the others make room." },
+  "the-toll-clerk": { out: "walks {dir} with its hand still out.", in_: "arrives, stops, and puts its hand out." },
+  "the-long-warden": { out: "goes {dir} at its own pace, which is the only pace it has.", in_: "walks in on the beat and does not break stride." },
+  "otter": { out: "pours off the bank {dir} and is water.", in_: "comes up out of the water and onto the stone." },
+  "grey-heron": { out: "goes up {dir}, slowly, hugely, complaining.", in_: "drops in on stiff wings and folds itself away." },
+  "feral-goat": { out: "goes {dir} up ground that has no business holding it.", in_: "picks its way in and resumes chewing." },
+  "scarp-raven": { out: "tips off the face {dir} and is carried away without a beat.", in_: "lands, hops twice, and looks at you sideways." },
+  "gill-adder": { out: "pours away {dir} between the stones.", in_: "flows in and settles into a coil." },
   "lead-dog": { out: "gives ground {dir} still facing you, and only turns at the last.", in_: "walks in and stops, square on, waiting." },
   footpad: { out: "is over the verge and gone {dir} before you can close.", in_: "steps in off the verge with the blade already out." },
   wayman: { out: "goes {dir} at a walk, without hurrying, which is somehow worse.", in_: "comes in unhurried, blade held low and easy." },
@@ -2278,6 +2363,7 @@ export const BITERS = new Set([
   "rat", "fleet-rat", "brood-rat", "albino-rat", "grave-hyena", "dire-hyena", "pale-crawler", "pale-stalker",
   "three-hound", // three sets of teeth at the throat of the deep
   "two-hound",   // two sets, same throat
+  "drove-dog", "the-drove-master", "otter", "gill-adder", // the east road's teeth
 ]);
 
 // SENTINELS hold their post. A guardian chained to one room: it never wanders
@@ -2296,7 +2382,7 @@ export const SENTINELS = new Set(["three-hound", "two-hound"]);
 // the one room in the honest band you cannot cross casually. The keeper holds
 // the hall floor of the holding for the same structural reason the watchman
 // holds his turret: it is his.
-export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding"]);
+export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding", "the-miller"]);
 
 // TREASURY DOORS: a room that is some boss's hoard, keyed by the keeper who
 // bars it. The way IN stays shut while that keeper lives in the room before it
@@ -2371,6 +2457,7 @@ export const HOUND_WAKE_MS = 900_000; // 15 minutes
 // haunches and tusks now come to whoever walks in by lantern-light, or by none.
 export const FEARS_FIRE = new Set([
   "albino-rat",
+  "feral-goat", "otter", "grey-heron", "scarp-raven", // the east road's wild things
   "roe-deer", "white-roe",       // the wood's food, and it survives by leaving
   "grey-wolf", "dire-wolf",      // the oldest reason there are campfires
   "wild-boar", "old-boar",
@@ -2404,6 +2491,11 @@ export const DARK_ROOMS = new Set([
   // dead alders stand thick enough to shut out noon, and the grave drain is a
   // stone channel you walk bent double.
   "the-dead-alders", "the-grave-drain",
+  // ---- THE EAST ROAD (mig 187): the three places out there that are born dark.
+  // Everything else on that ground is open sky and takes its dark from the hour.
+  "the-road-kiln",     // inside a stone bottle with one mouth
+  "the-oak-hollow",    // inside a tree
+  "the-fall-shelter",  // behind a waterfall, and the water is the door
 ]);
 // The 058 blocks, named for the MAP's display regions only — game logic (chest
 // tiers, ambience fallback) still reads them as "upper" via regionOf. The map
@@ -2458,6 +2550,7 @@ export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS]);
 // animal before it is anything else. Named here so the next grazer is one line
 // and not a hunt through ai.ts.
 export const GRAZERS = new Set<string>([
+  "feral-goat",                                             // it eats what the scarp has, which is nothing much
   "rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",   // VERMIN
   "cutpurse", "cutthroat", "footpad", "wayman",               // THIEVES — they scavenge, not graze, but same floor
   "wild-boar", "old-boar",                                    // rooting, which is what a boar is FOR
@@ -2548,6 +2641,13 @@ export const INDOOR_ROOMS = new Set<string>([
   "the-smithy", "the-reeves-house", "the-reeves-loft", "the-north-house", // the Field End
   "the-bare-chapel", "the-mill", "the-wheel-pit",
   "the-black-hut", "the-warreners-lodge", "the-lodge-loft",             // the Waste
+  // ---- THE EAST ROAD (mig 187): everything out there with something over it.
+  // The folds are walls with no roof and stay outdoors, which is the difference
+  // between a fold and a bothy and the reason only one of them is worth running to.
+  "the-carters-rest", "the-relay-house", "the-road-kiln",               // the paving
+  "the-oak-hollow", "the-shepherds-bothy",                              // the drove
+  "the-drowned-mill", "the-mill-loft",                                  // the beck
+  "the-fall-shelter", "the-shelter-stone",                              // the gill and the climb
 ]);
 // A day/night world-clock (rome, 2026-07-22): every OUTDOOR room only, deep/
 // warrens/keep are always their own dark regardless. Deliberately faster than
@@ -2585,6 +2685,63 @@ export const MOON_NIGHTS = [
 // bell's bellWakeMult — never a new mechanic, just the existing roll made
 // more likely. OUTDOOR rooms + night only (nightHuntMult, zone-util.ts);
 // day/night has no opinion indoors at all, so this doesn't either.
+// ---- THE SPATE (the east road's own arc, 2026-08-10) --------------------------
+// THE BECK RISES. The east road was built as three independent routes because a
+// corridor is a corridor — and redundancy that never gets tested is just extra
+// rooms. This is the test: every so often the low way goes under, and the two
+// high ways are why you are not stuck.
+//
+// The beck's own prose has been advertising it since the day it was written:
+// there is a jam of driftwood at HEAD HEIGHT in the gill narrows, which tells
+// you how high this gets and how fast. It gets that high. It is that fast.
+//
+// What it does, in order of how much it matters:
+//   1. The channel floods. Standing in it costs blood every beat.
+//   2. The water TAKES you — one room downstream, toward the fortress, and it
+//      keeps taking you until you get out sideways or upward. It never traps:
+//      a thing that hurts is fair, a thing that pens you in is not.
+//   3. It carries the FLOOR downstream with it. Anything dropped up the gill
+//      ends up in the millpond, which makes the beck a conveyor and the flats
+//      below it the one place in the world where other people's losses collect.
+//   4. It leaves silt, and the silt is worth walking.
+//
+// THE COURSE, mouth first — index 0 is the lowest water. Downstream is a LOWER
+// index, which is what the sweep and the carry both read. Left out on purpose:
+// the mill loft (upstairs), the dam crest and the beck stair (both above the
+// water by design), the beck mouth (a gulley above the join) and the postern
+// ditch (at the foot of the wall, and dry). The fall shelter is IN, and is the
+// worst place on the road to be caught: it is a dry shelf behind a waterfall,
+// and the door out of it is the waterfall.
+export const SPATE_COURSE = [
+  "the-drain-mouth", "the-postern-carr", "the-stepping-stones", "the-withy-beds",
+  "the-trap-line", "the-mill-leat", "the-drowned-mill", "the-millpond",
+  "the-tail-race", "the-osier-island", "the-flood-mead", "the-cattle-drink",
+  "the-marl-hole", "the-hatchpool", "the-plank-crossing", "the-hanging-wood",
+  // The force sits BELOW the shelf behind it: the shelter is a pocket off the
+  // pool, and its only door is the waterfall. Ordered the other way round the
+  // shelter has no downstream step at all, and the one room in the world you
+  // would least like to be sitting in when the beck comes up becomes the one
+  // room the water will not carry you out of.
+  "the-force", "the-fall-shelter", "the-scree-run", "the-otter-holt",
+  "the-gill-foot", "the-gill-pot", "the-rowan-gill", "the-sunken-alders",
+  "the-gill-narrows", "the-shepherds-ford", "the-spring-line", "the-beck-head",
+];
+export const SPATE_ROOMS = new Set<string>(SPATE_COURSE);
+export const SPATE_INDEX = new Map<string, number>(SPATE_COURSE.map((id, i) => [id, i]));
+export const SPATE_TELEGRAPH_MS = 2 * 60_000;   // the water goes brown and loud BEFORE it comes up — long enough to climb out
+export const SPATE_ACTIVE_MIN_MS = 8 * 60_000;
+export const SPATE_ACTIVE_MAX_MS = 15 * 60_000;
+export const SPATE_AFTERMATH_MS = 12 * 60_000;  // and it drains slowly, and the silt is worth walking
+// The rat-tide's rate (BOIL_BITE), and for the same reason: this is weather, and
+// weather that kills a healthy walker in forty seconds is a trap with a sky over
+// it. What a spate actually costs you is DISTANCE — it puts you back down the
+// valley, and the climb back up the gill is the punishment.
+export const SPATE_BITE = 1;                    // per beat in the water: cold and force, not teeth
+export const SPATE_SWEEP_ODDS = 0.55;           // in a room with a way out, better than half the time it takes you anyway
+export const SPATE_SWEEP_MIN = 2;               // ...and when it does it moves you THIS many rooms, because it is fast
+export const SPATE_SWEEP_MAX = 4;
+export const SPATE_CARRY_ODDS = 0.5;            // each item on a flooded floor, per drain: how often it goes downstream
+
 export const NIGHT_HUNT_MULT = 1.6;
 // WHAT THE FULL MOON ACTUALLY DOES (rome, 2026-08-10). Until now the moon was
 // a six-night modulo asked as a yes/no question, and the one night it said yes
@@ -2892,6 +3049,13 @@ export const WARDHIDE_WOUND_ODDS = 0.5;
 // silently declawed — but every current bleeder is listed.
 export const BLEED_ODDS = new Map<string, number>([
   ["rat", 0.10],           // scabby rat — filthy teeth, a wound now and then
+  // The east road (mig 188). The adder is the outlier in the whole table and is
+  // meant to be: a 14hp animal that will not chase you and cannot take a hit,
+  // whose entire threat is what it leaves in you. Kill it easily, bleed anyway.
+  ["gill-adder", 0.55],
+  ["drove-dog", 0.15],
+  ["the-drove-master", 0.20],
+  ["otter", 0.12],
   ["grave-hyena", 0.15],
   ["dire-hyena", 0.175],
   ["albino-rat", 0.15],
@@ -3330,6 +3494,8 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
   // here would still win — nothing overlaps today (the wood had none of these
   // before 2026-08-06) and this keeps it that way if one ever does.
   ...WOOD_ROOM_AMBIENCE,
+  // ...and the east road's, spread the same way and for the same reason.
+  ...EAST_ROOM_AMBIENCE,
   // ---- the grounds: the first OUTDOOR rooms — wind and sky, not drips (058) ----
   "the-causeway": ["The wind comes down the old road with nothing left to slow it.", "Somewhere high on the walls, loose stone ticks in the wind."],
   "the-old-road": ["The thorn wall creaks against itself, keeping whatever is east of it.", "For a moment the wind carries a smell that is not the fortress. Then it is gone.", "The gibbet chain creaks on the hill behind, slow as breathing."],

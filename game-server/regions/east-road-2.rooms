@@ -1,0 +1,155 @@
+# THE EAST ROAD, 2 of 3 — THE DROVE. 24 rooms, the high line.
+#
+# The paved road is the institution's road: engineered, tolled, and expensive.
+# This is the one that was already there. A drove runs stock over the shoulder
+# of the hills, on grass, avoiding every toll stone and every weighbridge on
+# the paving below — which is exactly why it exists and exactly why nobody
+# maintained it. It is older than the road it dodges and it will outlast it.
+#
+# Attaches EAST off the Mass-Grave: the burial ground is on the high side of
+# the fortress, and the stock lane starts where the graves stop. It runs east
+# along the shoulder and comes down to the paving at the Cattle Grid, which is
+# what a cattle grid is FOR.
+#
+# This is the second of the ground's three independent routes. Somebody who
+# owns the Waystation does not own the east.
+#
+# No gate here on purpose. The drove has no toll, no lamp and no hatch — it is
+# the road you take when you do not want to be counted, and the price of that
+# is that there is nowhere out here to put anything down.
+
+!region road
+
+## the-mass-grave | attachment: the stock lane leaves the burial ground
+!existing
+> east the-grave-verge
+
+## the-grave-verge | The Grave Verge
+The pits stop at a line you can see from here — a change in the grass, greener and ranker on the fortress side, thin and grey beyond it. Past the line the ground has never been broken. A track leaves eastward along the edge of it, hoof-cut, going up, made by animals that were driven and men who were paid by the head.
+> west the-mass-grave
+> east the-sheep-creep
+
+## the-sheep-creep | The Sheep Creep
+The lane narrows to a gap between two banks where the flock had to file through one at a time — a counting point, worn down to bedrock by however many hundred thousand feet. The stone is polished like a step. Nothing has been counted through here in a long while and the bedrock has not begun to forget.
+> west the-grave-verge
+> east the-first-fold
+
+## the-first-fold | The First Fold
+A stone fold off the north side of the lane, four walls and one gap, built to hold a flock overnight against whatever came off the hill. The walls are chest-high and dry-laid and still true. There is no roof and there never was. Wool is still caught in the joints on the windward side.
+!safe
+> west the-sheep-creep
+> east the-drove-green
+
+## the-drove-green | The Green Lane
+A hundred feet of grass running between two hedge-banks, wide enough to move a herd along without losing any of it into the crops that used to be either side. There are no crops now. The lane is the only thing on this hillside that still remembers what it was for, and it remembers it in its shape.
+> west the-first-fold
+> east the-hollow-oak
+
+## the-hollow-oak | The Hollow Oak
+An oak stands alone at a bend in the lane, so old it has gone hollow and so hollow that the inside of it is a room. There is a scatter of dry leaves in there and a bed's worth of flat floor. Generations of drovers have cut their marks into the rim of the opening and every one of them is healed over into scar.
+> west the-drove-green
+> east the-drovers-cairn
+> north the-oak-hollow
+
+## the-oak-hollow | The Inside of the Oak
+Wood all round, close, dry, and warmer than outdoors by a real margin. The light comes in through the split and nothing else does. It smells of tannin and old animal. Somebody stacked kindling against the far curve and left it, and it is still stacked, and it is still dry.
+!safe
+> south the-hollow-oak
+
+## the-drovers-cairn | The Drover's Cairn
+A heap of stones at the highest point on this stretch, waist-high and growing: everyone who came past put one on. It has been growing so long the ones at the bottom have gone into the ground. There is no name on it and it is not a grave. It is a record of how many people have been this way, and it is very large.
+> west the-hollow-oak
+> east the-wether-slope
+
+## the-wether-slope | The Wether Slope
+The hillside opens out into rough pasture, hard grazing, gorse in the hollows and a wind that never entirely stops. The old lynchets run across it in steps — plough terraces, from when this was worth ploughing. You can see the paved road far below on the right, running its dead straight line through everything.
+> west the-drovers-cairn
+> east the-broken-fold
+
+## the-broken-fold | The Broken Fold
+The second fold, and this one has lost its west wall — pushed out from the inside, the stones lying in a fan across the grass where something big went through them rather than round. The other three walls are perfect. The gap has not been mended, and by the state of the grass in it, nobody has tried.
+> west the-wether-slope
+> east the-shepherds-bothy
+
+## the-shepherds-bothy | The Shepherd's Bothy
+A hut of turf on a stone footing, dug into the slope with its back to the weather, low enough that you go in bent. A plank bed, a hearth-slab, a shelf. The roof is holding. It was a summer place for one man and a dog, and it is still exactly that, minus the man and the dog.
+!safe
+> west the-broken-fold
+> east the-bothy-spring
+
+## the-bothy-spring | The Spring Head
+Water rises here in a basin of clean gravel and runs off downhill in a thread you could step over. This is why the bothy is where it is, and the fold, and the lane. Everything on this hillside is arranged around a hole in the ground the width of a hat.
+> west the-shepherds-bothy
+> east the-high-gorse
+
+## the-high-gorse | The Gorse Brake
+Gorse has taken this whole shoulder — old gorse, ten feet of it, black-stemmed underneath and hard yellow on top, growing so thick that the lane through it is a corridor with walls. It is in flower. It is always in flower. The smell of it in the sun is coconut and the reality of it is a wall of needles.
+> west the-bothy-spring
+> east the-burnt-brake
+> south the-thorn-drop
+
+## the-burnt-brake | The Burnt Brake
+Somebody fired the gorse here, to bring the grazing back, and it worked: black stems and green shoots and the ground underneath still sooty. The burn is recent enough to smell. Whoever did it stopped when the wind turned, which you can see from the ragged edge where the fire went out on its own.
+> west the-high-gorse
+> east the-marker-stone
+
+## the-marker-stone | The Marker Stone
+A standing stone at the parting of two ways — grey, lichened, twice a man's height, and older than every other made thing in sight by a margin that is hard to think about. The drove goes round it. The drove has always gone round it. Somebody has cut a small neat cross into the base of it, recently, as a precaution.
+> west the-burnt-brake
+> east the-high-common
+
+## the-thorn-drop | The Thorn Drop
+The hillside falls away south of the marker in a scramble of thorn and loose stone, and there is a path of sorts down it — a sheep-track, not a road, taking the drop in switchbacks a man can just about use with his hands free. The paving is a long way down and clearly visible. It would be a bad descent in the wet.
+> north the-high-gorse
+> south the-cut-bank
+
+## the-high-common | The High Common
+Unfenced grazing that runs to the horizon in every direction that is not down. Nothing grows above ankle height. There are no walls, no trees and no shelter of any kind, and the wind has an unbroken run at you from the east, off ground you have not seen yet and can already feel is higher.
+> west the-marker-stone
+> east the-lapwing-flat
+
+## the-lapwing-flat | The Lapwing Flat
+A shallow saucer of wet ground on the common, rush-grown, with standing water in the middle of it that never quite dries. Birds nest on the open ground here and go up in a body if anything crosses it, tumbling and calling. They will tell everything on this hillside exactly where you are.
+> west the-high-common
+> east the-common-boundary
+
+## the-common-boundary | The Old Boundary
+A bank and ditch runs north to south across the common, straight, with a gap in it where the drove goes through. It is not a defence — too low, too long. It divided somebody's land from somebody else's, and both of them are gone, and the line they argued about is the most permanent thing up here.
+> west the-lapwing-flat
+> east the-wind-scoured-ridge
+
+## the-wind-scoured-ridge | The Wind-Scoured Ridge
+The lane runs the spine of the ridge and the wind runs it too, hard, from the east. The turf is cropped to a mat and the exposed stone is polished. From here you can see the drove behind you, the paved road below you, and ahead of you the country beginning to stand up in earnest.
+> west the-common-boundary
+> east the-hanging-fold
+
+## the-hanging-fold | The Hanging Fold
+The last of the folds, built on a shelf with a drop off the south side of it, so that a man could hold a flock against the hill and the hill did the rest of the work. The wall along the drop is the highest and the best-built. Somebody understood exactly how much they had to do and did precisely that much.
+!safe
+> west the-wind-scoured-ridge
+> east the-hare-ground
+
+## the-hare-ground | The Hare Ground
+Open, stony, and cropped short, and it is full of forms — hollows in the grass the size and shape of a crouched animal, dozens of them, most of them cold. Whatever uses this ground uses it in numbers and would rather run than hide. The stones underfoot are all one size, as though the ground had been sieved.
+> west the-hanging-fold
+> east the-fallen-dyke
+
+## the-fallen-dyke | The Fallen Wall
+A dry-stone wall crosses the drove and has come down for thirty feet, the stones lying where they rolled. It has been down long enough to have grass in it. Rebuilding it would be two days' work for one man and nobody has spent them, and past a certain point a wall down is just a wall of stones on the ground.
+> west the-hare-ground
+> east the-drove-head
+
+## the-drove-head | The Drove Head
+The lane widens into a funnel — the shape of ground that was used to hold and sort a herd before putting it down onto the road. There are the ghosts of hurdles in the turf, and a mounting block, and a slot in the bank where a gate hung. Below and ahead of you, the paving comes back into sight.
+> west the-fallen-dyke
+> east the-grid-lane
+
+## the-grid-lane | The Grid Lane
+The last of the green way, dropping steeply between banks toward the iron and the paving. Hoof-cut so deep that the banks are over your head at the bottom of it, and wet at the foot where everything that comes down here brings water with it. The drove ends the way it started: as a gap between two banks that things were driven through.
+> west the-drove-head
+> south the-grid-drop
+
+## the-grid-drop | The Grid Drop
+The last of the green way tips off the shoulder and drops toward the paving in one steep pitch, banks over your head on both sides, the ground underfoot churned to a stair by everything that has ever been driven down it. You can hear the road before you can see it. Nothing coming down here can stop before the bottom.
+> north the-grid-lane
+> south the-cattle-grid

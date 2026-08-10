@@ -1,0 +1,264 @@
+# THE EAST ROAD, 3 of 3 — THE BECK, and THE RISE. 36 rooms.
+#
+# TWO pieces in one file because they are one argument: the low way and the
+# end of all three ways.
+#
+# THE BECK (22) is the third independent route, and the wettest thing on the
+# surface. It leaves by the Collapsed Sally Port — a postern is a door for
+# getting out unseen, which is the whole personality of this line — and
+# follows the ditch east as it becomes a beck, a carr, a millstream and
+# finally a weir. It comes up to the paving at the foot of the scarp.
+#
+# It is here to do a job past redundancy: the Crossing is the great water, and
+# water on the surface is currently three rooms of fen. The beck puts running
+# water, willow, a mill and a fish weir into the east BEFORE the Crossing, so
+# the water machinery is a thing this country already had rather than a system
+# that arrives all at once with a new region.
+#
+# THE RISE (14) is where the three routes have already become one and the road
+# stops being a road. Hairpins up the scarp face, then the shelf above it, and
+# it ends at THE FAR SHORE STONE, looking east over the water. That room has
+# no east exit. It is the peg the Crossing hangs off, and it is deliberately a
+# VIEW of the thing rather than a door to it: you should be able to stand
+# somewhere and see where you cannot go yet.
+
+!region road
+
+## sally-port | attachment: the postern's ditch runs east
+!existing
+> east the-postern-ditch
+
+## the-postern-ditch | The Postern Ditch
+The ditch that took the sally port's water runs east along the foot of the wall, revetted at first and then not. It is a stride across and knee-deep in leaf-rot, and it goes where the wall goes and then keeps going after the wall stops. Anybody leaving the fortress in this ditch would not be seen doing it.
+> west sally-port
+> south the-drain-mouth
+
+## the-drain-mouth | The Drain Mouth
+The revetting ends in a stone arch the height of a crouching man, and everything the fortress ever put down a drain has come out of it. The water leaving is clearer than the water arriving, which is the one good thing you can say about the ground between. Past the arch the ditch has cut its own channel and become a stream.
+> north the-postern-ditch
+> east the-postern-carr
+
+## the-postern-carr | The Alder Carr
+Alder grows in standing water and this is where it does it: a wet wood of thin grey stems out of black ground, none of them thick enough to sit on, all of them exactly as far apart as each other. The footing is a guess. There is a way through and it is marked by the fact that somebody's boots have been this way and the mud remembers.
+> west the-drain-mouth
+> east the-stepping-stones
+
+## the-stepping-stones | The Stepping Stones
+Eight flat slabs set in the beck at a stride's spacing, laid by somebody who knew the stride of a loaded man. Two have shifted. The water goes over them in a smooth lip and drops a hand's breadth on the far side, and the noise it makes is enough to cover a conversation held quietly on the bank.
+> west the-postern-carr
+> east the-withy-beds
+
+## the-withy-beds | The Withy Beds
+Willow grown in stools and cut on a rotation, for baskets and hurdles and eel traps — and the rotation stopped, so the stools have thrown rods twenty feet high and gone over under their own weight. The beds are a thicket now. The stools underneath are still alive and would still cut, if anybody wanted a basket.
+> west the-stepping-stones
+> east the-trap-line
+
+## the-beck-mouth | The Beck Mouth
+The beck comes down out of the north here to join its own valley, running out of a stony gulley too steep to be worth following far. The paving crosses it a little way up at a ford you can hear from here. This is where the low way and the road are nearest to each other, and neither of them acknowledges it.
+> south the-hatchpool
+> north the-drowned-ford
+
+## the-trap-line | The Eel Traps
+A line of woven traps set into a weir of stakes across the beck, mouth upstream, exactly as they were set. The withies have gone soft and the frames have gone green but the arrangement is intact and it is still, technically, fishing. Something has been at the far end of the line and made a mess of two of them.
+> west the-withy-beds
+> east the-mill-leat
+
+## the-mill-leat | The Mill Leat
+The beck is taken off into a cut channel here — dead straight, stone-sided, running level along the hillside while the natural stream drops away below it. It is a piece of engineering as good as anything on the paved road and it was built for one purpose, which is to arrive at the top of a wheel.
+> west the-trap-line
+> east the-drowned-mill
+
+## the-drowned-mill | The Drowned Mill
+The leat arrives, the wheel is still on its axle, and the wheel is half under water because the tail-race silted up and the pond backed into the building. The ground floor is a pool. The millstones are in it, one flat and one on edge against the wall, and the water is clear enough to read the dressing on them.
+> west the-mill-leat
+> east the-millpond
+> up the-mill-loft
+
+## the-mill-loft | The Mill Loft
+Above the water: a plank floor, a hoist beam through the gable, and a slot in the boards where the sacks went down. Dry, out of the wind, and reachable only by a ladder that is still sound. Somebody has slept up here — there is a nest of sacking in the corner and it has been shaken out, not just dropped.
+!safe
+> down the-drowned-mill
+
+## the-millpond | The Millpond
+A held sheet of water behind a dam of earth and stone, wide, still, and much deeper than it looks. The dam is sound. Fish rise on it in the evening and rings go out across the whole of it and meet. Nothing on this water moves quickly and nothing on the bank does either.
+> west the-drowned-mill
+> east the-dam-walk
+
+## the-dam-walk | The Dam Walk
+The top of the dam, a path of turf over stone with the pond on one hand at your knee and the drop to the tail-race on the other. It is wide enough for a cart and there are wheel-marks. In the middle there is a sluice with a rack and pinion on it, seized in the open position, and the noise of the water going through it fills everything.
+> west the-millpond
+> east the-tail-race
+
+## the-tail-race | The Tail-Race
+Below the dam the water comes out fast and cold in a stone channel and then loses its manners and goes back to being a beck. The channel is slick and the sides are sheer for thirty feet. What comes down here arrives quickly. There is a footbridge of two planks, and one of them is new.
+> west the-dam-walk
+> east the-osier-island
+
+## the-osier-island | The Osier Island
+The beck splits round a long low island of gravel and willow, joins itself again, and carries on. The island is a few strides across at the widest and it is the driest ground for some way. Somebody has had a fire on it. The stones of the ring are still stacked and the ash under them is old and dry.
+!safe
+> west the-tail-race
+> east the-flood-mead
+
+## the-flood-mead | The Flood Meadow
+Level ground either side of the water, grazed short, with the old flood-channels still legible as green scars running down it. It floods on purpose — floods, drops its silt, and grows the best grass in the country. It has not been mown in a long while and the grass is up past the knee and full of seed.
+> west the-osier-island
+> east the-cattle-drink
+
+## the-cattle-drink | The Cattle Drink
+A shelving place in the bank, hard-bottomed and churned, where stock came down off the meadow to water. The mud holds prints and holds them a long time. Most of what is written here is hoof. Some of it is not, and the some-of-it-is-not goes down to the water and comes back up the same way.
+> west the-flood-mead
+> east the-marl-hole
+
+## the-marl-hole | The Marl Hole
+A pit dug into the meadow's edge for the lime-rich clay under it, spread on fields to sweeten them. Nobody filled it in. It has taken water and gone a colour that is not quite green, with steep sides of grey clay that would be very difficult to climb out of in a hurry.
+> west the-cattle-drink
+> east the-hatchpool
+
+## the-hatchpool | The Hatchpool
+A deep still pool below an old hatch in the bank, where the water turns slowly and goes down further than the light does. This is where the beck keeps its fish and everything that eats fish knows it. The stonework round the hatch is dressed and squared and belongs to the same century as the road.
+> west the-marl-hole
+> east the-plank-crossing
+> north the-beck-mouth
+
+## the-plank-crossing | The Plank Crossing
+Two elm planks, bolted, on stone abutments, spanning the beck where the valley starts to narrow. It carries one person at a time and lets them know about it. The abutments are far better than the planks and have clearly held three or four sets of them, each in its turn, going back a long way.
+> west the-hatchpool
+> east the-hanging-wood
+
+## the-hanging-wood | The Hanging Wood
+The valley sides steepen and close in and grow ash and yew out of near-vertical ground, so the wood is above you as much as beside you. Very little light gets down. The beck runs loud in the bottom over stone, and the noise fills the whole cleft and makes anything else in it impossible to hear.
+> west the-plank-crossing
+> east the-force
+
+## the-force | The Force
+The beck comes off a lip of hard rock in a single fall twice a man's height into a black pool, and the sound of it inside the cleft is enormous. The rock behind the fall is undercut and there is dry ground back there, and the spray keeps a green fur of moss on everything within reach of it.
+> west the-hanging-wood
+> east the-scree-run
+> down the-fall-shelter
+
+## the-fall-shelter | Behind the Fall
+A shelf of dry rock behind the falling water, wide enough to sit on, cold, and loud past the point of usefulness. Nothing outside can hear anything in here and nothing in here can hear anything outside, which cuts both ways and always has. The wall at the back is scratched all over with tallies.
+!safe
+> up the-force
+
+## the-scree-run | The Scree Run
+Above the force the valley gives up being a valley. Loose stone comes down off the north side in a fan that the beck cuts through, and the way on is up the edge of it on ground that moves under you a little with every step. The paving is visible again above and to the north, cut across the face of the scarp.
+> west the-force
+> east the-otter-holt
+
+## the-otter-holt | The Otter Holt
+The bank on the north side is undercut and there is a way into it under the roots of an alder — a worn slide of mud going down to the water and back up, used often and used recently. Whatever keeps this holt eats fish here and leaves the heads. The valley is narrowing, the sides are steepening, and there is nowhere to go but on.
+> west the-scree-run
+> east the-gill-foot
+
+## the-gill-foot | The Gill Foot
+The beck's valley closes to a gill — a cleft in the hillside with water in the bottom of it and no floor to speak of on either side. You walk in the stream because there is nowhere else to walk. The stones are round, the water is over the ankle, and the noise of it comes back off both walls at once.
+> west the-otter-holt
+> east the-gill-pot
+
+## the-gill-pot | The Black Pool
+A pot the water has drilled into solid rock over an unhurried number of centuries, wider at the bottom than at the top and dark all the way down. The way past is a ledge on the north wall, dry, a stride wide, worn smooth. Anything that goes in here is not coming out.
+> west the-gill-foot
+> east the-rowan-gill
+
+## the-rowan-gill | The Rowan Gill
+Rowans grow out of the gill walls at angles no tree should manage, roots down into the cracks, berries hanging over the water in bunches the colour of a wound. Nothing browses up here, so the low branches are as full as the high ones. In the wet the whole cleft smells of bruised leaf.
+> west the-gill-pot
+> east the-sunken-alders
+
+## the-sunken-alders | The Sunken Alders
+The gill opens into a flat of black peaty ground with alders standing in water to the knee, drowned by something the beck did further up and never undone. Half of them are dead and still standing. The way through is a line of stumps cut flat on purpose, and they are just far enough apart to be a decision each time.
+> west the-rowan-gill
+> east the-gill-narrows
+
+## the-gill-narrows | The Gill Narrows
+The walls close until a man with a pack goes through sideways, and the beck goes through the same gap under pressure and comes out the far side white. Four strides of squeeze and then it opens again. There is a jam of wood wedged at head height where a flood put it, which tells you how high this gets, and how fast.
+> west the-sunken-alders
+> east the-shepherds-ford
+
+## the-shepherds-ford | The Shepherd's Ford
+Gravel, shallow water, and a crossing wide enough to take a flock — the one place in the gill where the sides lie back and the water spreads out thin. Stone flags were laid in the bed here and most are still where they were put. The drove is somewhere above and north of you, and this is where it came down to drink.
+> west the-gill-narrows
+> east the-spring-line
+
+## the-spring-line | The Spring Line
+Water comes out of the hillside all along this stretch in a dozen separate threads, at the exact height where the rock changes, and the whole slope is wet and hung with moss because of it. The beck below you is made here, out of nothing, in front of you. The ground gives underfoot everywhere the stone does not show.
+> west the-shepherds-ford
+> east the-beck-head
+
+## the-beck-head | The Beck Head
+The last and highest of the springs, in a hollow of clean gravel, with a stone trough set under the flow by somebody who came this way often enough to want one. Above it the scarp stands up grey, and the paved road is a pale scratch across the face of it. The low way ends at the beginning of the water it has been following all day.
+> west the-spring-line
+> north the-beck-stair
+
+## the-beck-stair | The Beck Stair
+Steps cut into the bank between the spring and the road above — not engineering, just somebody's mattock, one tread at a time, and then a hundred years of boots making them theirs. Two dozen of them, steep, and slick on the fourth from the top where the spring runs across it.
+> south the-beck-head
+> north the-scarp-foot
+
+## the-first-hairpin | The First Hairpin
+The track leaves the paving's last dressed course and begins to climb the scarp face in a hairpin cut into the rock, wide enough for one cart and revetted on the outside with dry stone that somebody trusted. The drop on the open side is not sheer and would not need to be. The gradient is instantly hard work.
+> west the-paving-end
+> east the-second-hairpin
+
+## the-second-hairpin | The Second Hairpin
+The track doubles back on itself, and from the elbow you can see the whole of the first hairpin below you and the whole of the road beyond it running west until it goes into haze. The fortress is a grey mark on the flat. From up here the country you came through looks small and entirely walked-over.
+> west the-first-hairpin
+> east the-cutting-ledge
+
+## the-cutting-ledge | The Cutting Ledge
+A shelf blasted and picked out of the face, running level for a while, with the rock overhanging on one side and nothing at all on the other. Drill marks in the stone, hand-sunk, at even spacing. Somebody stood on rope to make this and was paid to and did the work properly.
+> west the-second-hairpin
+> east the-third-hairpin
+
+## the-third-hairpin | The Third Hairpin
+Higher, colder, and the wind has found you again. The dry-stone revetting on the outside of this bend has gone — pushed out and down, taking a bite of the track with it — and what is left is two-thirds of a width and a long view of where the rest of it went.
+> west the-cutting-ledge
+> east the-rope-post
+
+## the-rope-post | The Rope Post
+An iron post let into the rock at the outside of the worst of the traverse, with a ring in the top of it worn shiny and thin. A rope ran from here to another post further on so that people could go along the bad stretch with one hand on something. The rope is not there. The posts are.
+> west the-third-hairpin
+> east the-shelter-stone
+
+## the-shelter-stone | The Shelter Stone
+A slab the size of a cottage has come off the face at some point and landed leaning, and the space under it is dry, out of the wind, and floored with old bracken somebody carried up here. This is the halfway house of the climb and everybody who has ever done the climb has known about it.
+!safe
+> west the-rope-post
+> east the-scarp-top
+
+## the-scarp-top | The Scarp Top
+The track comes over the lip and the gradient lets go all at once. Behind and below is everything: the road, the drove on its shoulder, the beck's valley cut into the green, and the fortress right at the end of it. Ahead is a shelf of high moor, and beyond that, standing up out of it, the real thing.
+> west the-shelter-stone
+> east the-high-shelf
+
+## the-high-shelf | The High Shelf
+Peat, cotton-grass and standing water, running level for a long way at a height where nothing much grows and everything that does grows flat. The track is a line of laid stones across it, sunk and half-swallowed, and the only reason it is still findable is that somebody put it a foot deeper than it needed to be.
+> west the-scarp-top
+> east the-peat-cuttings
+
+## the-peat-cuttings | The Peat Cuttings
+The moor has been cut in long trenches, black-walled and water-floored, with the turfs stacked in herringbone to dry beside them. The stacks are still standing. The peat in them is still good. Whoever cut it meant to come back for it before winter and the winter in question was a very long time ago.
+> west the-high-shelf
+> east the-boundary-cairn
+
+## the-boundary-cairn | The Boundary Cairn
+A cairn on the flat, man-high, carefully built rather than heaped, with a flat stone on top and a hollow in the flat stone. It marks the edge of something. On the far side of it the track stops being maintained in any sense at all and is only the place where feet have gone.
+> west the-peat-cuttings
+> east the-watershed
+
+## the-watershed | The Watershed
+The high point, and you can tell because the water tells you: the runnels on the near side go back the way you came and the runnels on the far side go on. Everything you have drunk since the fortress came off this ground. Everything ahead drains somewhere else entirely.
+> west the-boundary-cairn
+> east the-first-sight
+
+## the-first-sight | The First Sight
+The moor drops away and the whole east opens up at once, and it is water. A sheet of it filling the valley floor from one wall of hill to the other, grey and enormous and going on further than the eye is willing to accept. The track goes down toward it. Somewhere out in the middle of all that, something stands up out of the water.
+> west the-watershed
+> east the-far-shore-stone
+
+## the-far-shore-stone | The Far Shore Stone
+A single dressed pillar at the head of the descent, the last piece of the fortress's work in this direction and the finest of it, cut with a face that has been kept clear of lichen by somebody. It looks east over the water. There is a stone bench beside it, set at exactly the height for sitting and looking, and whoever put it here knew that people arriving would need to sit down.
+!safe
+> west the-first-sight

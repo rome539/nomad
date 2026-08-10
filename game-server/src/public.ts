@@ -3753,6 +3753,13 @@ var MAP_REGION_LABELS = {
   enclosure: "THE OLD ENCLOSURE",
   deepwood: "THE DEEP WOOD",
   heart: "THE HEART",
+  // THE EAST ROAD'S FOUR (mig 187), same caption-only trick. Note that 'road'
+  // above says THE WEST ROAD and still does: both halves are one band for every
+  // rule in the sim, and only the paper distinguishes them.
+  eastroad: "THE EAST ROAD",
+  drove: "THE DROVE",
+  beck: "THE BECK",
+  rise: "THE RISE",
 };
 function buildMapGraph(f) {
   var nodes = {}, order = [];
