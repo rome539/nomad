@@ -1760,6 +1760,25 @@ export const LURKER_HUNT_DRIFT_MS = 40 * 60_000;   // ~40 min between hunting mo
 export const STARVE_HUNTS_ODDS = 0.2; // chance/tick a STARVING predator with no easier prey begins its wind-up on a player sharing the room (low: the threshold + no-prey gate already make it rare)
 export const WOUNDED_PREY_ODDS = 0.15; // chance/tick an eligible predator begins its wind-up on a BADLY HURT player (< WOUNDED_FRACTION hp), independent of the predator's own hunger — slightly rarer than the starving-hunt since it can fire on ANY eligible predator, not just a genuinely starved one
 export const THIEF_ROB_ODDS = 0.35; // chance/combat-round a HUNGRY thief sharing a player's room begins its wind-up to rob them (higher than the starving-hunt: it's a non-lethal grab-and-bolt, and the whole point of a hungry thief)
+// THE LIFT IS NOT A CERTAINTY (rome, 2026-08-10). A thief's first landed blow
+// used to take something, every time, with no roll on it at all — which made
+// the whole family a tax rather than a fight: the instant one connected, the
+// best unsealed thing in your pack was gone and it was already running. Now the
+// hand has to find the buckle. A failed lift is LOUD (you feel it go over your
+// pack and come away empty), so the fight gets a beat in it where you know
+// exactly what is happening and can back out a door, hit first, or eat the risk
+// of one more round. The odds are per LANDED hit and the thief keeps trying, so
+// a long fight still costs you — it is a delay and a warning, not a reprieve.
+//
+// Split by what each one actually is: the cutpurse is a specialist who fights
+// only to grab, and is much better at it than the men who fight to hurt you.
+export const THIEF_LIFT_ODDS = new Map<string, number>([
+  ["cutpurse", 0.50],  // it is the whole of what he does
+  ["cutthroat", 0.35], // a knifeman who also robs
+  ["footpad", 0.35],
+  ["wayman", 0.30],    // the best coat and the worst hands
+]);
+export const THIEF_LIFT_DEFAULT = 0.35; // a future THIEF is never silently a 100% grab again
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
 export const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
 export const SCAVENGER_CARRY_CAP = 3; // jaws only hold so much — gear it can drag off before it stops scooping

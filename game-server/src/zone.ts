@@ -92,7 +92,7 @@ import {
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
@@ -3492,7 +3492,15 @@ export class ZoneDO implements DurableObject {
               ? takeable.filter((c) => world.itemTemplates.get(c.itemId)?.edible).sort(byRarity)[0]
               : undefined;
             const loot = foodFirst ?? [...takeable].sort(byRarity)[0];
-            if (loot) {
+            // ...and the hand still has to find the buckle. A landed blow used to
+            // be a guaranteed lift, which made a thief a tax instead of a fight.
+            // The miss is loud on purpose: you get a round to decide whether to
+            // back out, and it keeps trying every hit, so standing there still
+            // costs you (zone-data THIEF_LIFT_ODDS).
+            if (loot && !chance(THIEF_LIFT_ODDS.get(creature.templateId) ?? THIEF_LIFT_DEFAULT)) {
+              this.send(victim, `${cap(tmpl.name)}'s hand goes over your pack and comes away with nothing. It will try again.`);
+              this.roomFeed(victim.roomId, `${cap(tmpl.name)} makes a grab at ${victim.name}'s pack and misses it.`, victim.pubkey, false);
+            } else if (loot) {
               const it = world.itemTemplates.get(loot.itemId)!;
               victim.items.splice(victim.items.indexOf(loot), 1);
               await removeItemRow(this.env.DB, loot.rowId);
