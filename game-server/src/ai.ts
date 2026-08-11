@@ -477,6 +477,59 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
     }
   }
 
+// A THRESHOLD IS CROSSED, NOT OCCUPIED (2026-08-11).
+//
+// A hideaway and a gate are both rooms nothing will step into: creatureMoves
+// drops them from the exit list unless there is no other way to turn. That is
+// right for what it was written for — nothing follows you into a bolthole, and
+// nothing camps a doorway — and it had a consequence nobody measured. A room
+// nothing will step into is a WALL, and a wall on a through-line cuts the
+// world in half.
+//
+// Measured against the live map, treating safe+gate rooms as walls: the world
+// is not one place but TEN islands. The largest holds the fortress, the wood,
+// the west road, the dens and the open ground; a second holds the Crossing;
+// a third holds the east road. Nothing could ever migrate between them.
+// The single worst cut was not even a gate — the Shelter Stone, the halfway
+// house on the scarp climb, severed 210 rooms on its own, because the climb is
+// the only way east. The Crossing House sealed the whole far strand (17), the
+// Gate Arch the Lost Holding (8).
+//
+// THE FIX IS NOT TO LET THINGS IN. It is to let them ACROSS. A creature walking
+// home that finds its way blocked steps THROUGH the threshold room and out the
+// far side in the same beat: it is never resident there, so it cannot take a
+// target there, cannot camp the doorway, and cannot follow anybody into a
+// bolthole. It crosses, the way a doorway is meant to be crossed, and the room
+// sees it pass.
+//
+// Deliberately narrow. Only a creature OUTSIDE its territory and walking home
+// with no ordinary way to close the distance may do it — an idle thing inside
+// its own range never transits, so gates and hideaways stay as empty as they
+// have always been. A sentinel's post is never crossed.
+function thresholdStep(
+  z: ZoneDO,
+  creature: Creature,
+  here: string,
+  home: string,
+  open: { dir: string; to_room: string; key_item?: string | null }[],
+): { dir: string; to_room: string; through: string } | null {
+  const world = z.world!;
+  const blocked = (r: string) => world.safeRooms.has(r) || world.entryRooms.has(r);
+  const far = z.roomDist(here, home);
+  if (!isFinite(far)) return null;
+  for (const leg of open) {
+    const mid = leg.to_room;
+    if (!blocked(mid) || SENTINEL_ROOMS.has(mid)) continue;
+    for (const out of world.exits.get(mid) ?? []) {
+      if (out.key_item && !z.openDoors.has(`${mid}:${out.dir}`)) continue;
+      const to = out.to_room;
+      if (to === here || blocked(to) || SENTINEL_ROOMS.has(to)) continue;
+      if (z.roomDist(to, home) < far) return { dir: leg.dir, to_room: to, through: mid };
+    }
+  }
+  return null;
+}
+
   // Move one room: wandering or fleeing. Creatures can't open locked doors,
   // but walk through any door the players have left open. Wandering picks,
   // in order: a noise worth investigating, a room that smells of food, the
@@ -487,6 +540,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     let exits = (world.exits.get(creature.roomId) ?? []).filter(
       (e) => !e.key_item || z.openDoors.has(`${creature.roomId}:${e.dir}`),
     );
+    // Every unlocked way out of this room, kept before the filters narrow it —
+    // the threshold step needs to see the doors the walk is not allowed to use.
+    const allWays = exits;
+    // Set when the homeward walk is walled in and crosses a threshold room in
+    // one beat (thresholdStep): the room it passes through, for the feed.
+    let through: string | null = null;
     // Hideaways — a crack in the wall — let nothing in, not even the King. A
     // fled foe who folds into one is out of reach until they step back out.
     // A DEN WITH ITS BAR UP IS A HIDEAWAY SOMEBODY MADE (mig 162). Same rule,
@@ -549,9 +608,19 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         const far = z.roomDist(creature.roomId, creature.home);
         const closer = exits.filter((e) => z.roomDist(e.to_room, creature.home!) < far);
         if (closer.length) exits = closer;
+        // Walled in: every way that closes on home goes through a hideaway or a
+        // gate. Cross it in one step rather than turn round forever.
+        else {
+          const t = thresholdStep(z, creature, creature.roomId, creature.home!, allWays);
+          if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
+        }
       } else if (d > TERRITORY_RADIUS) {
         const closer = exits.filter((e) => (near.get(e.to_room) ?? Infinity) < d);
         if (closer.length) exits = closer;
+        else {
+          const t = thresholdStep(z, creature, creature.roomId, creature.home!, allWays);
+          if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
+        }
       } else {
         const within = exits.filter((e) => (near.get(e.to_room) ?? Infinity) <= TERRITORY_RADIUS);
         if (within.length) exits = within;
@@ -820,6 +889,16 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       );
       z.refreshRoomCtx(from);
       z.refreshRoomCtx(creature.roomId);
+      // IT CROSSED A THRESHOLD, and whoever is standing in that threshold sees
+      // it go by and nothing more. This is the only thing that ever happens
+      // inside a hideaway or a gate: it does not stop, it does not look at you,
+      // and it is gone the same beat it arrived. (Anyone sheltering there keeps
+      // every promise the room ever made — nothing can take a target in a room
+      // it is never resident in.)
+      if (through) {
+        z.roomFeed(through, `${cap(tmpl.name)} comes through without stopping, crosses, and is gone.`, undefined, false);
+        z.refreshRoomCtx(through);
+      }
       // The loosed Gaunt empties every room it enters: what can run, runs —
       // and those emptying rooms ARE its telegraph, spreading a step ahead of
       // it. (The posted and the brood stand; they are nobody's prey.)
@@ -843,9 +922,11 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
             && remembers(z, creature, s.pubkey, now)) {
           creature.target = s.pubkey;
           z.send(s, `${cap(tmpl.name)} remembers you — and comes for you.`);
-          // It gets the jump only if the player isn't already fully dogpiled this
-          // tick; otherwise it just marks them and swings in on the next round.
-          if (mode !== "flee" && z.canLandBlow(s.pubkey)) await z.creatureFirstStrike(creature, tmpl, s);
+          // It gets the jump only if there is room to reach the player at all —
+          // creatureFirstStrike owns that gate now (bodies engaged AND the
+          // tick's blow budget), so this no longer spends a blow slot of its
+          // own before the strike decides whether it lands.
+          if (mode !== "flee") await z.creatureFirstStrike(creature, tmpl, s);
           break;
         }
       }

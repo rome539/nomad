@@ -1620,7 +1620,7 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
     const marks = [...z.wallMarks].filter((r) => z.world!.rooms.has(r)).length;
     return marks === 0
       ? "A stretch of the wall by the door, plastered smooth and scored with an empty frame — corners, a scale, and nothing inside them. Somebody meant this to be filled. ('carve' what you've walked)"
-      : `Plaster gone grey with handling, and inside the scratched frame ${marks} of the shallow halls, cut by a dozen different hands over a long time — some scored deep and square, some barely there. Nobody signed any of it. ('study' it to read it; 'carve' to add what you've walked)`;
+      : `Plaster gone grey with handling, and inside the scratched frame ${marks} halls, cut by a dozen different hands over a long time — some scored deep and square, some barely there. Nobody signed any of it. ('study' it to read it; 'carve' to add what you've walked)`;
   }
   if (is("hatch", "keeper", "shutter", "keepers hatch", "keeper's hatch", "counter")) {
     return "A shutter of banded oak set into the far wall at chest height, closed. There is a worn place on the sill where hands have rested, and a deeper one where things have been slid across. Whoever is behind it does not open it to be looked at. ('barter' opens it)";
@@ -1659,7 +1659,7 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
   const marks = [...z.wallMarks].filter((r) => z.world!.rooms.has(r)).length;
   lines.push(marks === 0
     ? "By the door, a stretch of wall has been plastered smooth and scratched with an empty frame — a chart waiting for a first hand."
-    : `By the door, a wall chart scratched by many hands maps ${marks} of the shallow halls. ('study' it; 'carve' to add what you've walked)`);
+    : `By the door, a wall chart scratched by many hands maps ${marks} halls. ('study' it; 'carve' to add what you've walked)`);
   // The board, beside the hatch. Only spoken of when it has something on it: an
   // empty board is furniture, and the room already has enough of that.
   const notices = boardLive(z).length;
@@ -1853,39 +1853,39 @@ export function cmdTell(z: ZoneDO, session: Session, arg: string): void {
 }
 
 // ---- THE WALL CHART: the players' own map ----
-// The wall starts as bare plaster. Every wanderer who walks the shallow halls
-// and makes it back can 'carve' what they walked into it, and anyone can
+// The wall starts as bare plaster. Every wanderer who walks out and makes it
+// back can 'carve' what they walked into it, and anyone can
 // 'study' it and take the marks onto their own map. The dungeon gets charted,
 // over weeks, by the people who died learning it — somebody's last run becomes
 // the next arrival's first advantage.
 //
-// Two laws keep it honest and keep it from eating the map trade:
+// ONE law keeps it honest:
 //   TESTIMONY, NOT INK — you can only set down rooms the server saw you stand
 //   in this walk (session.visited). There is no freehand; the wall cannot lie.
-//   THE SHALLOW RING ONLY — the gates and the halls just behind them. The deep
-//   never goes on the wall, whatever anyone walked. That is the surveyor's
-//   territory, forever; the keeper still eats.
-
-// The gates and everything within two doors of them, minus the deep.
-export function shallowRing(z: ZoneDO): Set<string> {
-  const world = z.world!;
-  const ring = new Set<string>(world.entryRooms);
-  let frontier = [...world.entryRooms];
-  for (let depth = 0; depth < 2; depth++) {
-    const next: string[] = [];
-    for (const r of frontier) {
-      for (const e of world.exits.get(r) ?? []) {
-        if (!ring.has(e.to_room)) { ring.add(e.to_room); next.push(e.to_room); }
-      }
-    }
-    frontier = next;
-  }
-  for (const id of DEEP_ROOMS) ring.delete(id);
-  return ring;
+//
+// THE SECOND LAW IS GONE (rome, 2026-08-11: the wall should be fully markable,
+// not just the gates). It used to read THE SHALLOW RING ONLY — the gates and
+// the two doors behind them — on the reasoning that the deep was the
+// surveyor's territory forever and the keeper had to keep eating.
+//
+// That was written when the world was the fortress and a ring two doors deep
+// was a real fraction of it. It is now 744 rooms across six bands, and the
+// ring covers a few dozen of them: the wall had stopped being a chart and
+// become a doormat, and no amount of carving could ever change that. A
+// communal map that cannot record the road, the wood, the Crossing or the
+// deep is not a map anybody would walk to a gatehouse to read.
+//
+// What protects the keeper's trade is not a fence around the wall — it is what
+// the wall COSTS. Every mark on it is somebody's walk, made in person, and
+// survived: nobody carves the deep who has not come back out of the deep. A
+// surveyor's map is bought in one transaction; this one is paid for in weeks,
+// by everyone, and it is only ever as good as the people still walking.
+export function wallGround(z: ZoneDO): Set<string> {
+  return new Set(z.world!.rooms.keys());
 }
 
 export async function wallCarve(z: ZoneDO, session: Session): Promise<void> {
-  const ring = shallowRing(z);
+  const ring = wallGround(z);
   // Only what YOU walked THIS session — the wall takes testimony, not hearsay.
   // (A returning player re-walks before they can carve: what you set down is
   // what you remember from this walk, not a rumor of an old one.)
@@ -1893,7 +1893,7 @@ export async function wallCarve(z: ZoneDO, session: Session): Promise<void> {
   if (!fresh.length) {
     return z.send(session, z.wallMarks.size
       ? "You read your memory against the wall. Every hall you walked this time is already scratched there."
-      : "Bare plaster, and nothing walked yet worth setting down. Walk the shallow halls, come back, and carve.");
+      : "Bare plaster, and nothing walked yet worth setting down. Walk, come back alive, and carve what you found.");
   }
   for (const r of fresh) z.wallMarks.add(r);
   z.send(session, `You take up a nail and set down what you walked — ${fresh.length} hall${fresh.length === 1 ? "" : "s"} the wall didn't have. Whoever comes in from the cold can read them now.`);
@@ -1903,13 +1903,13 @@ export async function wallCarve(z: ZoneDO, session: Session): Promise<void> {
 
 export function wallStudy(z: ZoneDO, session: Session): void {
   const world = z.world!;
-  const ring = shallowRing(z);
+  const ring = wallGround(z);
   // Filter against BOTH the ring and the live world: a migration that re-hangs
   // a corridor may pull an old mark out of the ring, and it just quietly ages
   // off the chart rather than lying.
   const marked = [...z.wallMarks].filter((r) => ring.has(r) && world.rooms.has(r));
   if (!marked.length) {
-    return z.send(session, "The wall chart is bare plaster — a frame scratched around nothing, waiting. Walk the shallow halls and 'carve' what you find.");
+    return z.send(session, "The wall chart is bare plaster — a frame scratched around nothing, waiting. Walk out, come back, and 'carve' what you found.");
   }
   // The same frame a real map sends, built the same way — truth, no lies —
   // but holding only what's been carved. Exits are drawn only between marked
@@ -1921,11 +1921,11 @@ export function wallStudy(z: ZoneDO, session: Session): void {
   // This table was the fortress's six keys and — unlike the surveyor's map,
   // which has always had a `?? regions.upper` fallback — an unguarded index, so
   // an unknown band threw and `study` came back "the dungeon stumbles."
-  // shallowRing seeds from world.entryRooms, which is all EIGHT gates now, and
-  // walks two steps out: road and wood rooms have been carveable since the
-  // doors spread, and one of them on the chart was enough to break the whole
-  // wall. Both halves are fixed here — the missing bands, and the guard that
-  // means a band nobody has written yet can never throw again.
+  // Road and wood rooms have been carveable since the doors spread, and one of
+  // them on the chart was enough to break the whole wall. Both halves are fixed
+  // here — the missing bands, and the guard that means a band nobody has
+  // written yet can never throw again. That guard matters more than ever now
+  // that the wall takes the whole world (wallGround): every band can reach it.
   const regions: Record<string, { key: string; label: string; rooms: any[] }> = {
     gate: { key: "gate", label: "The Gates", rooms: [] },
     out: { key: "out", label: "The Open Ground", rooms: [] },

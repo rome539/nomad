@@ -199,7 +199,8 @@ export class ZoneDO implements DurableObject {
   // a time. Server-verified testimony, never freehand — a room goes on the wall
   // only when someone who actually stood in it sets it down (see gate.wallCarve),
   // so the wall cannot lie. It also cannot reach the deep: that stays the paid
-  // map's territory, forever (gate.shallowRing).
+  // map's territory, forever. That fence is gone (2026-08-11): the wall takes
+  // any room somebody walked and came back from — gate.wallGround.
   public wallMarks = new Set<string>();
   // The gatehouse board, oldest first. The only place a player's words outlive
   // the session they were said in (zone-data BOARD_*).
@@ -2720,6 +2721,27 @@ export class ZoneDO implements DurableObject {
     return true;
   }
 
+  // HOW MANY ALREADY HAVE THEIR TEETH IN YOU. The blow budget above counts
+  // BLOWS IN A TICK, which is not the same question as HOW MANY ARE ON YOU —
+  // and the difference is a hole you can be killed through (rome, 2026-08-11).
+  // The budget is cleared every tick (2s) while a combat round is 4s, so on the
+  // in-between tick it is empty; three things can be locked on you, none of
+  // them having swung yet this tick, and a fourth walks in and opens with a
+  // free ambush blow at AMBUSH_MULT weight. Then a fifth. Every arrival buys
+  // its own opening hit no matter how thick the press already is.
+  //
+  // So the press is counted by BODIES as well: a creature arriving on a player
+  // who already has DOGPILE_CAP things engaged marks them and takes its place,
+  // and swings when a slot opens — the same queue the regular round uses.
+  public engagedOn(pubkey: string, roomId: string, except?: string): number {
+    let n = 0;
+    for (const c of this.creatures.values()) {
+      if (c.roomId !== roomId || c.id === except) continue;
+      if (c.target === pubkey) n++;
+    }
+    return n;
+  }
+
   // Nothing is ever published unless the player asks (NIP.md: certificates,
   // not broadcasts). The dungeon signs; the wanderer decides who sees.
   private async cmdPublish(session: Session, arg: string): Promise<void> {
@@ -4748,6 +4770,23 @@ export class ZoneDO implements DurableObject {
   // no crit; the surprise IS the punch. Armor and stance still turn what they
   // can, and a wounded attacker still hits softer.
   public async creatureFirstStrike(creature: Creature, tmpl: MobTemplate, victim: Session, quiet = false): Promise<void> {
+    // THE PRESS IS FULL. One gate for every path that lands an opening blow —
+    // a grudge-holder storming in, a lurker dropping out of the dark, a
+    // listener's reflex, the loosed Gaunt — because the free ambush hit was
+    // the one blow in the game that never asked whether there was room to
+    // throw it (see engagedOn). Bodies first, then the tick's blow budget;
+    // the || short-circuits so a refusal never spends a slot.
+    //
+    // It keeps its target. It is in the fight, it is at your shoulder, and it
+    // swings the moment one of the three in front of it goes down or misses
+    // its own beat. What it does not get is a free opener through a crowd it
+    // cannot physically reach you through.
+    if (this.engagedOn(victim.pubkey, victim.roomId, creature.id) >= DOGPILE_CAP || !this.canLandBlow(victim.pubkey)) {
+      if (!quiet) {
+        this.send(victim, `${cap(tmpl.name)} shoulders in — and cannot get at you through the press. It waits at your shoulder.`, "dmgin");
+      }
+      return;
+    }
     const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
     let dmg = randInt(tmpl.dmg_min, tmpl.dmg_max) + (tmpl.is_boss ? (creature.phase ?? 0) * 3 : 0);
     if (ai.scavengerBold(this, creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);

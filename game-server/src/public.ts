@@ -4135,7 +4135,7 @@ function renderMap(f) {
   mapEl.classList.toggle("crude", !detailed);
   document.getElementById("maptitle").textContent = wall ? "The Wall Chart" : detailed ? "Surveyor's Map" : "Crude Map";
   document.getElementById("mapsub").textContent = wall
-    ? "The shallow halls, scratched into the plaster by everyone who walked them and made it back."
+    ? "Scratched into the plaster by everyone who walked it and made it back."
     : detailed
       ? "Set down true, hall by hall \\u2014 as far as this copy's carriers have walked."
       : "Copied from half a memory. Some of it is right. Trust it at your peril.";
