@@ -1063,7 +1063,27 @@ export const CROSSING_QUARTER_ROOMS: Record<string, string[]> = {
 export const CROSSING_QUARTERS: Record<string, string> = {};
 for (const q in CROSSING_QUARTER_ROOMS) for (const id of CROSSING_QUARTER_ROOMS[q]) CROSSING_QUARTERS[id] = q;
 
-export const MAP_QUARTERS: Record<string, string> = { ...WOOD_QUARTERS, ...EAST_QUARTERS, ...CROSSING_QUARTERS };
+/** THE OPEN GROUND'S FOUR (mig 193). The nine-room ring keeps the region's own
+ *  caption — it IS the open ground — and the four spurs off it are each a place
+ *  with a name, so the map tells you whether you are in the siege lines or the
+ *  village rather than lumping the lot as one ring. */
+export const OUT_QUARTER_ROOMS: Record<string, string[]> = {
+  siegelines: [
+    "the-siege-bank", "the-spoil-heap", "the-battery", "the-shot-pile", "the-forge-pit",
+    "the-camp-ground", "the-suttlers-row", "the-horse-lines", "the-marshals-lodging",
+    "the-sap-head", "the-mine-mouth", "the-mine-gallery", "the-camouflet",
+  ],
+  village: [
+    "the-village-street", "the-pound", "the-tithe-barn", "the-well-head",
+    "the-church-shell", "the-churchyard", "the-bell-pit", "the-green", "the-village-smithy",
+  ],
+  orchard: ["the-fish-stew", "the-orchard-rows", "the-cider-house", "the-culver-house"],
+  gallows: ["the-gibbet-field", "the-crossroads-grave", "the-charnel"],
+};
+export const OUT_QUARTERS: Record<string, string> = {};
+for (const q in OUT_QUARTER_ROOMS) for (const id of OUT_QUARTER_ROOMS[q]) OUT_QUARTERS[id] = q;
+
+export const MAP_QUARTERS: Record<string, string> = { ...WOOD_QUARTERS, ...EAST_QUARTERS, ...CROSSING_QUARTERS, ...OUT_QUARTERS };
 
 // UNDER COVER (rome, 2026-08-08). The wood is outdoors end to end — all 171
 // rooms — which is what lets rain, cold and the night dark reach it, and also
@@ -1093,6 +1113,36 @@ export function underCover(roomId: string): boolean {
 // after this file is most of them — so this is what the wood mostly sounds like,
 // and it is written to be somewhere rather than to be atmospheric.
 export const QUARTER_AMBIENCE: Record<string, string[]> = {
+  // ---- THE OPEN GROUND'S FOUR (mig 193).
+  siegelines: [
+    "The earthworks run away in long grassed lines, and from down in them you cannot see out, which was the point.",
+    "The turf gives under your boot with the particular softness of ground that was dug and put back.",
+    "Larks are up over the camp streets, several of them, going at it as though nothing had ever happened here.",
+    "Something metal turns up under your heel — a buckle, a strap end, a nail. There is a great deal of this in the ground.",
+    "From this side the fortress is all wall and no gate, which is how the men who dug this saw it every day for a season.",
+    "Chalk shows white through the grass wherever anything has scuffed it, and it has not weathered in two hundred years.",
+  ],
+  village: [
+    "Elder and nettle have the plots, which is what grows where people used to live and no longer do.",
+    "A gable end stands up out of the grass with a fireplace in it, twelve feet off the ground, opening onto nothing.",
+    "The black line of the burning is visible in the soil wherever the ground has been broken.",
+    "Something has been living in the church shell and it is not birds.",
+    "Underfoot the street is still a street — cobbles, and a worn dip down the middle of them.",
+    "The yews in the churchyard move all together, once, and go still.",
+  ],
+  orchard: [
+    "The stew ponds lie flat and green and something works at the surface of the far one.",
+    "Windfalls lie under the old trees, small and hard and going over on their own schedule, for nobody.",
+    "Mistletoe hangs in the tops of the orchard in great dark balls, and there is far too much of it.",
+    "The smell of old fruit comes up warm out of the grass, which after this long should not still be happening.",
+    "Wings go over inside the culver house — many of them, briefly, and then nothing.",
+  ],
+  gallows: [
+    "The iron arm on the gibbet post turns a little in the wind and does not squeak, which is worse than if it did.",
+    "Grass grows to the foot of the post and stops in a circle, and nothing has grown inside that circle for a long time.",
+    "The roads cross here and go four ways and there is nobody on any of them.",
+    "Something in the charnel shifts its weight, settles, and is a stack of bones again.",
+  ],
   // ---- THE CROSSING'S SEVEN (mig 190). This is the region the quarter layer
   // was really for. The five middle quarters are not moods, they are five
   // genuinely different PLACES — made road, stone piers, open gravel, deep
@@ -1340,6 +1390,21 @@ export const EAST_ROOM_AMBIENCE: Record<string, string[]> = {
 // marks, the refuge, the rope stage, the reed maze, the quicksand — because
 // those are the rooms somebody stands still in, and a room you stand still in
 // is a room that gets a second line out of you.
+// THE OPEN GROUND'S SIGNATURE ROOMS (mig 193). Nine, out of forty-two — the
+// ring speaks as the band and the four spurs speak as their quarter, and these
+// are the rooms that are a THING.
+export const OUT_ROOM_AMBIENCE: Record<string, string[]> = {
+  "the-mine-mouth": ["Cold comes up out of the timbered hole, steadily, and it smells of chalk and nothing else.", "The props are two hundred years old and they are not moving at all."],
+  "the-mine-gallery": ["The charred props hold. They have held since the night they were fired, which is the one thing about this place nobody planned.", "Somewhere ahead a pick goes into chalk, twice, and stops.", "Your light finds the end of the gallery and the end of the gallery is not where it was."],
+  "the-camouflet": ["The grooves in the chalk at chest height are the width of a pick and there are a great many of them.", "The fall at the east end shifts, settles, and lets a little chalk dust down.", "It is very quiet in here in a way that suggests the quiet is recent."],
+  "the-marshals-lodging": ["From the hearth you can see the gate, the lines, and every hut hollow between, which is exactly what this room was for.", "Wind comes over the chimney stub and makes one low note out of it."],
+  "the-camp-ground": ["The hut hollows run away in ranks with streets between them and the streets are still walkable.", "Larks over the camp, several, and nothing else moving on the whole hillside."],
+  "the-church-shell": ["The east window is a shape with nothing in it and the sky comes through it in the shape of a window.", "A slate lets go somewhere up in the tower and takes a long time to arrive.", "The font lies on its side in the grass, full of rainwater, and something has been drinking from it."],
+  "the-bell-pit": ["Grey metal set hard in the bottom of the pit, and it has not weathered, and it will not.", "The runner channel still shows the direction it flowed, which was out and down and into the ground."],
+  "the-gibbet-field": ["The iron arm turns a few degrees in the wind and comes back.", "The circle of bare ground at the foot of the post has not closed in two hundred years."],
+  "the-culver-house": ["Five hundred nest holes, in perfect spirals, all the way up into the dome.", "Something moves in the top of the tower — the wrong weight for a pigeon, and it settles."],
+};
+
 export const CROSSING_ROOM_AMBIENCE: Record<string, string[]> = {
   // ---- the near shore
   "the-shore-descent": ["The water gets bigger every time the track turns, which is not how distance is supposed to work.", "Down at the bottom of the zigzags something catches the light off the water and is a roof, or a stone."],
@@ -1653,6 +1718,11 @@ export const WOOD_DARK: Record<string, string> = {
 // It NEVER states a number the stat block already gives. Numbers are the stat
 // block's job and a page that says a thing twice is a page nobody reads twice.
 export const MOB_LORE: Record<string, string> = {
+  // ---- THE OPEN GROUND (mig 194). The first place a player meets the idea the
+  // whole world runs on, so it is said plainly here and elaborated later.
+  "the-sapper": "He is going EAST. That is the thing to hold onto, because everything else about him is ordinary: a man on his knees in four feet of headroom, working chalk out in front of him with a short pick, at a rhythm he could keep up all day and did. East is the wall. The wall came down two hundred years ago — he brought it down, that was the job, the job succeeded — and he is still driving the gallery toward it. Nobody came back to tell him it had worked.",
+  "the-bellfounder": "The melt is cold. It has been cold since before anybody now alive was born, it is a lump of grey metal set hard in a clay hole, and he is watching the surface of it the way you watch metal that is nearly ready. He got that bell out of the tower, into the pit, and most of the way to being money, and the last step never happened. He is still on the step before it. He will not be hurried and he will not be interrupted, and you have done the second one.",
+  "gibbet-crow": "There is nothing on the post. There has been nothing on the post for longer than anything alive remembers, and it is sitting on the post anyway, with its head turned to put one eye on you. Crows live thirty years and teach their young where the food was. Work out how many generations of that it takes to get from a body on a gibbet to a bird that still checks, and then consider that it is still checking.",
   // ---- THE CROSSING (mig 191). The east road's dead were doing a JOB that had
   // outlasted its reason. These are doing a job that outlasted the WATER'S
   // permission — every one of them died at work, in a place that is only a

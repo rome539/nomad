@@ -3765,6 +3765,11 @@ var MAP_REGION_LABELS = {
   // the world that are load-bearing rather than flavour: the five middle ones
   // are the five WAYS OVER, and knowing which of them your dot is standing on
   // is the entire skill of the region. The map is the region's tutorial.
+  // THE OPEN GROUND'S FOUR (mig 193). The ring keeps "THE OPEN GROUND".
+  siegelines: "THE SIEGE LINES",
+  village: "THE BURNED VILLAGE",
+  orchard: "THE HOLDING",
+  gallows: "THE GALLOWS GROUND",
   nearshore: "THE NEAR SHORE",
   causeway: "THE CAUSEWAY",
   bridge: "THE BRIDGE",

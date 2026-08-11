@@ -26,8 +26,8 @@ export interface Room {
 // map; a room whose region isn't listed here is treated as blank rather than
 // trusted, so a typo in a .rooms file can't quietly invent a band the rest of
 // the engine has never heard of.
-export type Region = "gate" | "deep" | "upper" | "road" | "wood" | "mountain" | "den" | "crossing";
-export const REGIONS = new Set<string>(["gate", "deep", "upper", "road", "wood", "mountain", "den", "crossing"]);
+export type Region = "gate" | "out" | "deep" | "upper" | "road" | "wood" | "mountain" | "den" | "crossing";
+export const REGIONS = new Set<string>(["gate", "out", "deep", "upper", "road", "wood", "mountain", "den", "crossing"]);
 
 export interface Exit {
   room_id: string;
@@ -185,7 +185,24 @@ export async function loadWorld(db: D1Database, zone: string): Promise<World> {
   const roomIds = new Set(rooms.map((r) => r.id));
 
   const allExits = (await db.prepare("SELECT * FROM exits").all<Exit>()).results ?? [];
-  const allSpawns = (await db.prepare("SELECT * FROM mob_spawns").all<MobSpawn>()).results ?? [];
+  // ORDER BY, and then a synthesised id for any row that has none (mig 195).
+  //
+  // mob_spawns.id is a TEXT PRIMARY KEY, and SQLite lets one of those be NULL —
+  // as many as you like. The zone keys its LIVE CREATURE MAP by this id, so a
+  // batch of nameless rows collapses into a single map entry and the seeder's
+  // seededDens set swallows the rest forever. That is exactly what happened to
+  // 115 rows across four migrations: the entire Crossing, most of the east
+  // road, and the wolf earth, all present and correct in D1 and all alive as
+  // one creature between them. Nothing errored, because nothing was wrong with
+  // the DATA — every one of those rows points at a real room and a real
+  // template, which is all any integrity check thought to ask.
+  //
+  // So the loader refuses to hand out a nameless spawn. The synthesised id has
+  // to be STABLE across loads (seededDens persists by id, and an id that
+  // changed shape between deploys would re-seed every den in the world every
+  // time), which is why the query is ordered and the index is the tiebreak.
+  const allSpawns = (await db.prepare("SELECT * FROM mob_spawns ORDER BY template_id, room_id, id").all<MobSpawn>()).results ?? [];
+  allSpawns.forEach((s, i) => { if (!s.id) s.id = `spawn-${s.template_id}@${s.room_id}#${i}`; });
   const allGround = (await db.prepare("SELECT * FROM ground_spawns").all<GroundSpawn>()).results ?? [];
   const templates = (await db.prepare("SELECT * FROM mob_templates").all<MobTemplate>()).results ?? [];
   const items = (await db.prepare("SELECT * FROM item_templates").all<ItemTemplate>()).results ?? [];

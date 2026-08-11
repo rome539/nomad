@@ -1,0 +1,49 @@
+-- 195 the spawns with no names (rome, 2026-08-10: "i dont think the crossing is
+-- even populated"). He was right, and it is worse than the Crossing.
+--
+-- THE BUG. mob_spawns.id is TEXT PRIMARY KEY and SQLite permits NULL in one,
+-- and permits MANY nulls. Four migrations inserted rows as
+--
+--     INSERT INTO mob_spawns (template_id, room_id) VALUES (...)
+--
+-- leaving the id NULL. The seeder keys the live creature map by that id:
+--
+--     this.creatures.set(spawn.id, {...})        // key null
+--     seededDens.add(s.id)                       // adds null, once
+--     freshDens = spawns.filter(s => !seededDens.has(s.id) && ...)
+--
+-- So every NULL-id row in the world collapses into ONE map entry, and the
+-- moment `null` lands in seededDens every other one is filtered out forever.
+-- 115 spawn rows in prod, alive as a single creature between them:
+--
+--     the Crossing   76   (mig 191) — the entire region, one creature
+--     the east road  28   (mig 188) — broken since the day it shipped
+--     the wolf earth  3   (mig 180)
+--     the fortress    8   (mig 180)
+--
+-- Nothing errored. Nothing logged. The rows are all present and correct in D1,
+-- which is why every integrity check I wrote passed: they check that a spawn
+-- points at a real room and a real template, and all 115 do.
+--
+-- THE FIX, here: give every nameless row a stable, deterministic id. Stable
+-- matters — seededDens persists across loads by id, so an id that changed shape
+-- between deploys would re-seed the world's dens every time.
+--
+-- AND the loader is now belt-and-braces (world.ts): a row that arrives without
+-- an id gets one synthesised the same way, so a future migration that forgets
+-- costs nothing instead of silently emptying a region.
+--
+-- These rows have never been seeded, so they are not in any live world's
+-- seededDens. On the next load the "new dens get filled once" path finds all
+-- 115 and places them at full health, at home — which is exactly what that path
+-- is for and why no reseed is needed.
+
+-- The suffix is the rowid and it is not optional: three grey wolves stand in
+-- the-wolf-earth (mig 180), so template+room alone is NOT unique, and a naive
+-- two-pass UPDATE would abort the whole statement on the PK collision rather
+-- than fall through to a second pass. One statement, always suffixed, no
+-- collision possible. Checked against prod before writing it: exactly one such
+-- group exists, and it would have taken the fix down with it.
+UPDATE mob_spawns
+   SET id = 'spawn-' || template_id || '@' || room_id || '#' || rowid
+ WHERE id IS NULL OR id = '';

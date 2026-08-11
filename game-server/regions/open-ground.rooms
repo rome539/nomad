@@ -1,0 +1,228 @@
+# THE OPEN GROUND, expanded (rome, 2026-08-10). 29 new rooms onto the 13.
+#
+# THE ONE RULE THIS FILE OBEYS, and it governs every exit in it:
+#
+#     THE RING DOES NOT GET LONGER.
+#
+# The open ground is not a destination, it is the JUNCTION — the ring under the
+# walls carries three fortress gates, the east road, the west road, the drove,
+# the sewer and the fen, and every player crossing between any two of those
+# walks it. It was thirteen rooms and it is the busiest ground in the world.
+# Lengthening the circuit would tax every journey in the game.
+#
+# So the circuit is untouched, to the room: causeway -> gatefall -> dry moat ->
+# wall breach -> thorn court -> briar field -> black fen -> drowned orchard ->
+# burned village -> causeway, nine rooms round, exactly as it was. Everything
+# below hangs OFF it as a spur. You cross the ground as fast as you always did,
+# and the depth is there when you want it.
+#
+# WHAT WAS MISSING, which is the same question in four places: the ring is all
+# CONSEQUENCE and no cause. There is a wall breach with nothing that breached
+# it, a burned village that is one room, a mass grave with no battle near it,
+# and a hanging hill with no gallows ground. Every one of those is a story the
+# existing rooms already tell and the ground never showed.
+#
+#   THE SIEGE LINES (13) — north, facing the walls, where the army that took
+#                          this place sat. And a MINE, driven under the curtain,
+#                          which is the answer to the wall breach: it did not
+#                          fall, it was brought down, from below, on purpose.
+#   THE VILLAGE (9)      — west. A burned village should be more than one room;
+#                          this is the rest of it, and the church is the shell
+#                          they cast the bell in when the bell was worth more
+#                          as metal.
+#   THE ORCHARD (4)      — south-west, off the sally ditch. Somebody's holding:
+#                          fish stews, a cider house, a dovecote. The drowned
+#                          orchard is the flooded end of a farm.
+#   THE GALLOWS (3)      — south-east, off the hanging hill, which has been
+#                          called that for as long as the world has had a name
+#                          for it and has never had a gibbet on it.
+
+!region out
+
+# ============================ THE SIEGE LINES ================================
+#
+# They did not storm the gate. They sat down in front of it, dug, and went
+# UNDER — and the Wall-Breach is where the curtain came down into their gallery.
+# Two centuries on the earthworks are grassed over and still perfectly legible,
+# because earth holds a shape far longer than stone holds a wall.
+
+## the-gatefall | attachment: the besiegers' ground lies north
+!existing
+> north the-siege-bank
+
+## the-siege-bank | The Siege Bank
+A long bank of thrown-up earth running parallel to the wall, grassed over and slumped but unmistakably deliberate — it has a ditch on the fortress side and a flat walk behind it, and it is still exactly high enough to stand behind. Everything about it says somebody expected to be shot at from that direction for a long time.
+> south the-gatefall
+> north the-battery
+> east the-sap-head
+> west the-spoil-heap
+
+## the-spoil-heap | The Spoil Heap
+A ridge of raw chalk gone grey, dumped in a line and never spread, with grass failing to take on it after two hundred years. This came out of the ground somewhere. The quantity of it tells you the hole was not a trench.
+> east the-siege-bank
+
+## the-battery | The Battery
+Three level platforms of rammed chalk set back behind the bank, each one big enough for something very heavy, each one with a hard track running up to it from the rear. The ground in front of the platforms is scorched in a way that grass has still not forgiven.
+> south the-siege-bank
+> north the-camp-ground
+> west the-shot-pile
+> east the-forge-pit
+
+## the-shot-pile | The Shot Pile
+Stone shot, hundreds of them, sorted into heaps by size and left in their heaps: the big ones you could not lift, the middling ones, and a pile of small ones the size of a fist. They were dressed round by hand, every one. Nobody came back for them because by the end nobody needed them.
+> east the-battery
+
+## the-forge-pit | The Forge Pit
+A dug hollow with a stone hearth in the bottom, a bellows-block still bedded in the clay, and a scatter of hammerscale trodden into the floor so thick it glitters. An army carries its smith. This is where everything that broke got made to work again.
+> west the-battery
+
+## the-camp-ground | The Camp Ground
+Rows of shallow rectangular hollows in the turf, each the size of a hut, in ranks with streets between them, going on further than you would like to count. Nothing above ground survives. The shape of a town that stood here for a season is cut into the grass and will be there for a thousand years.
+> south the-battery
+> north the-marshals-lodging
+> west the-suttlers-row
+> east the-horse-lines
+
+## the-suttlers-row | The Sutlers' Row
+Off the end of the camp streets, a wider hollow with a great deal of broken pottery in it and the remains of a hard standing. Where the army was sold to: drink, bread, and whatever else. It is the only part of the lines that is not laid out in a straight line, because this part was not the army's idea.
+> east the-camp-ground
+
+## the-horse-lines | The Horse Lines
+Two long parallel scars in the turf with the ground between them worn down a foot lower than either side, and the soil in that strip is black and rich and grows nettles like nowhere else on this hill. Horses stood here in their hundreds for long enough to change what the ground is made of.
+> west the-camp-ground
+
+## the-marshals-lodging | The Marshal's Lodging
+The one building. Stone footings, a hearth, a flagged floor and the stub of a chimney, set on the highest point of the lines with the whole siege laid out below it and the fortress gate dead ahead. Whoever ran this had a roof and a fire and a view of the work, and everybody in the camp below could see that they did.
+!safe
+> south the-camp-ground
+
+## the-sap-head | The Sap Head
+A trench comes up out of the ground here and stops — a proper sap, zigzagged so nothing could shoot down the length of it, driven from the lines toward the wall a spade at a time under wicker screens. The last stretch of it is roofed with rotted hurdles and earth. It does not stop because they gave up.
+> west the-siege-bank
+> east the-mine-mouth
+
+## the-mine-mouth | The Mine Mouth
+Where the sap goes underground: a timbered opening in the chalk, propped, still standing, angled down and east — which is to say, straight at the foundations of the curtain wall. Twenty yards that way and forty feet up, there is a hole in the fortress the size of a house, and this is the reason for it.
+> west the-sap-head
+> down the-mine-gallery
+
+## the-mine-gallery | The Mine Gallery
+A timbered gallery in the chalk, four feet wide and just tall enough, running east under the weight of everything. The props are oak and they are sound and they are holding. At the far end it opens into a chamber where the props are CHARRED — packed with brushwood and fired, so that when the timbers burned the roof came down, and the wall on top of it came with it.
+> up the-mine-mouth
+> east the-camouflet
+
+## the-camouflet | The Camouflet
+The defenders heard the digging and dug back, and the two galleries met here, and what happened in this chamber happened in the dark, underground, with picks, between men who could not stand upright. The chalk on both sides is scored at chest height in long parallel grooves. The countermine goes on east and is choked with fall.
+> west the-mine-gallery
+
+# ============================== THE VILLAGE ==================================
+#
+# The Burned Village has been one room for a place that had a church, a green,
+# a pound and a tithe barn. This is the rest of it. It burned in the siege and
+# it burned thoroughly, and the parts that survive are the parts that were made
+# of stone because nobody could afford stone for anything that was not.
+
+## the-burned-village | attachment: the street runs on west
+!existing
+> west the-village-street
+
+## the-village-street | The Village Street
+The one street, running west, with the burned plots on both sides showing as low rectangles of rubble and a black line in the soil at the level of the old floors. Between two of them a cobbled entry still runs, going nowhere now, worn into a dip down the middle by two centuries of people who no longer come this way.
+> east the-burned-village
+> west the-well-head
+> north the-pound
+
+## the-pound | The Pound
+Four stone walls, chest high, with no roof and one gap for a gate, in the corner of what was somebody's ground. Stray beasts were shut in here until their owner paid to have them back. The walls are the soundest thing in the village because a pound has to be, and there is nothing in it.
+> south the-village-street
+> west the-tithe-barn
+
+## the-tithe-barn | The Tithe Barn
+A long stone building with its roof gone and its gable ends standing, and it is much too big for this village — it took the tenth of everything grown for miles and it needed the room. Swallows have the wall tops. The threshing floor is still there under the grass, hard as a road.
+> east the-pound
+> north the-green
+
+## the-well-head | The Well Head
+A round stone kerb at the crossing of the street and the way down to the green, with a windlass frame over it, timber, grey, and still standing. There is no bucket and no rope. Drop a stone and the answer comes back after long enough to make you reconsider the depth of this place.
+> east the-village-street
+> west the-church-shell
+
+## the-church-shell | The Church Shell
+Walls, no roof, and the tower still up to the belfry stage with the louvres burned out of it. The east window is a great empty shape with the tracery gone. Inside, grass, and a font lying on its side, and the whole floor deep in the fallen slates that took two centuries to come down one at a time.
+> east the-well-head
+> north the-churchyard
+
+## the-churchyard | The Churchyard
+Stones leaning at every angle in grass that nobody cuts, most of them illegible, a few of them not. The yews are enormous and were old when the church was new. The ground here is visibly higher than the ground outside the wall, by about a foot, which is what a thousand years of burials does to a field.
+> south the-church-shell
+> west the-bell-pit
+
+## the-bell-pit | The Bell Pit
+A shallow round pit lined with fired clay, with a runner channel cut off one side and a splash of grey metal set hard in the bottom of it. The bell came down out of that tower and was melted here, on the spot, by whoever held this ground and needed the bronze more than they needed the hour.
+> east the-churchyard
+
+## the-green | The Green
+Open ground between the church and the last of the houses, cropped short by something that still comes here to crop it, with a stone at the middle that is not a marker and not a mounting block and has a smooth dished top from a very great deal of sitting. This was the middle of somebody's world.
+> south the-tithe-barn
+> west the-village-smithy
+
+## the-village-smithy | The Village Smithy
+Open-fronted, stone-backed, roofed in slate that has mostly held, with the hearth still in the back wall and the stone trough beside it full of black water. There is an anvil bed and no anvil. An anvil is worth carrying away and everything else here was not.
+!safe
+> east the-green
+
+# ============================== THE ORCHARD ==================================
+#
+# The Drowned Orchard is the flooded low end of somebody's holding. This is the
+# rest of it, on the ground that stayed dry — and it is the only place in the
+# ring under the walls where the work was growing things rather than killing.
+
+## the-sally-ditch | attachment: the holding lies south
+!existing
+> south the-fish-stew
+
+## the-fish-stew | The Fish Stews
+Three rectangular ponds in a row, stone-kerbed, connected by sluices, and still holding water because whoever cut them cut them properly. They bred fish in these for the fast days. Two are green to the surface with weed. The third is clear, and deeper than the other two, and there is something in it.
+> north the-sally-ditch
+> west the-orchard-rows
+> south the-culver-house
+
+## the-orchard-rows | The Orchard Rows
+The part of the orchard the water never reached: old trees in ranks, gone to moss and mistletoe and standing at every angle, still fruiting badly out of the tops. The grass between the rows is short. Something keeps it short, and it is not the water.
+> east the-fish-stew
+> south the-cider-house
+
+## the-cider-house | The Cider House
+A stone building with a great circular stone trough set into the floor and the runner-stone lying in the bottom of it, cracked across. A horse walked round and round in here and the fruit came out as liquid. The smell has not entirely gone, and after two hundred years that says something about how much of it there was.
+!safe
+> north the-orchard-rows
+
+## the-culver-house | The Culver House
+A round stone tower with a domed roof and one low door, and inside, from the floor to the top of the dome, five hundred nest-holes cut into the wall in perfect spirals. It is the most carefully made building on this side of the fortress and it was built to breed pigeons to eat. Something is up in the top of it and it is not pigeons.
+> north the-fish-stew
+
+# ============================== THE GALLOWS ==================================
+#
+# The Hanging Hill has been called that since before the world had a map, and it
+# has never had a gibbet on it. This is where the name comes from: the ground
+# below the hill, out of the parish, on the road — because a gibbet was not put
+# where it was convenient, it was put where TRAVELLERS WOULD SEE IT, and the
+# Waystation crossroads is the most-walked corner of this country.
+
+## the-old-road | attachment: the gallows ground lies south of the crossroads
+!existing
+> south the-gibbet-field
+
+## the-gibbet-field | The Gibbet Field
+A bare field below the hanging hill, out of the parish and off anybody's good land, with a single post standing in the middle of it — square, oak, iron-strapped, with a long iron arm out of the top and a hook on the end of the arm. It stands where the road can see it, which was the entire point of putting it here. Nothing hangs from it. The grass grows to the foot of the post and stops in a circle.
+> north the-old-road
+> east the-crossroads-grave
+
+## the-crossroads-grave | The Crossroads Grave
+Where two tracks cross outside consecrated ground: a low mound with a stone laid flat on it rather than standing, and the stone has no name on it and never had. This is where the ones the churchyard would not take were put, at a crossing, so that if they got up they would not know which way to go.
+> west the-gibbet-field
+> east the-charnel
+
+## the-charnel | The Charnel
+A stone shed with a low door and a slate roof, where the bones came when the churchyard needed the room again — stacked, sorted, long bones one side and skulls the other, in courses, by somebody who took the work seriously. It is dry inside. The stacks are still standing and they are still in order.
+> west the-crossroads-grave

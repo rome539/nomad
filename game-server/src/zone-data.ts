@@ -8,7 +8,7 @@ import { type ItemTemplate, type Region, trait } from "./world";
 // two files is a lookup that will drift — but 170 rooms of new prose would push
 // this file past 3,700 lines, and rome's standing rule is that the spine stays
 // lean. So the tables live here and the wood's contribution lives there.
-import { WOOD_ROOM_AMBIENCE, WOOD_DARK, EAST_ROOM_AMBIENCE, CROSSING_ROOM_AMBIENCE } from "./detail";
+import { WOOD_ROOM_AMBIENCE, WOOD_DARK, EAST_ROOM_AMBIENCE, CROSSING_ROOM_AMBIENCE, OUT_ROOM_AMBIENCE } from "./detail";
 
 
 export const TICK_MS = 2000;
@@ -858,6 +858,10 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "strand-thief": "Shingle turns over {dir}, twice, and then very deliberately stops.",
   "the-bridge-mason": "A mallet on stone {dir}, three strikes and a pause, three strikes and a pause.",
   "great-gull": "A shadow crosses {dir} without a sound, and then the whole colony says something about it.",
+  // ---- THE OPEN GROUND (mig 194)
+  "the-sapper": "A pick goes into chalk {dir}, under you, at a working rhythm that does not vary.",
+  "the-bellfounder": "An iron rake drags over fired clay {dir}, slow, and then again.",
+  "gibbet-crow": "A crow goes {dir} in three unhurried beats and says one thing on the way.",
   "oystercatcher": "A shrill piping goes up {dir} and runs away along the water, and other birds take it up.",
   "grey-seal": "A great wet weight shifts on gravel {dir} and settles again.",
   "marsh-hound": "Water breaks {dir} at a working trot, low, quartering.",
@@ -910,6 +914,9 @@ export const STILL_SOUNDS: Record<string, string> = {
   "gill-adder": "a dry whisper of scale on stone, so quiet it could be the water",
   "feral-goat": "an unhurried grinding of jaws, from a direction that cannot be right",
   "scarp-raven": "the wind through stiff feathers, holding station",
+  "the-sapper": "chalk being worked, from under the ground, at the pace of a man who has all century",
+  "the-bellfounder": "metal ticking as it cools, which it finished doing two hundred years ago",
+  "gibbet-crow": "a crow shifting its feet on iron, twice, and settling",
   "the-tide-warden": "a knife cutting a notch into wood, once, and then a long wait",
   "the-refuge-man": "breathing held, in a stone box, by something that has no reason left to hold it",
   "the-drowned-ferryman": "wet hemp creaking under a weight, and the weight not letting go",
@@ -1295,7 +1302,8 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // the open and looks back at you. Its whole effect is the omission.
 export const RUNNERS = new Set(["fleet-rat", "roe-deer",
   "otter", "grey-heron", // the beck's two: both built to be somewhere else
-  "oystercatcher", "bittern"]); // the crossing's two: one leaves loudly, one leaves late
+  "oystercatcher", "bittern", // the crossing's two: one leaves loudly, one leaves late
+  "gibbet-crow"]);            // and it does not go far, and it comes back
 // BROODERS are nest-bound: they don't wander, don't flee, and while they live
 // they keep birthing scabby rats into their room. Kill the mother or the room
 // stays an infestation. A living source, not a stat block.
@@ -1823,7 +1831,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // hunters; that is what the animal IS. So it eats what it can catch, and the
   // big cousin bullies wolves the way the old boar does.
   ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena", "roe-deer", "white-roe", "grey-wolf"])], // drives off the plain hyena AND the plain wolf: 45hp/armor against 26hp
-  ["grave-hyena", new Set(["rat", "fleet-rat", "roe-deer", "white-roe"])],      // vermin when there is nothing better, deer when there is
+  ["grave-hyena", new Set(["rat", "fleet-rat", "roe-deer", "white-roe", "gibbet-crow"])], // vermin when there is nothing better, deer when there is — and on the grave ground, what came for the carrion
   ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
   ["grey-wolf", new Set(["roe-deer", "white-roe", "grave-hyena"])],           // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
   ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar"])],             // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148)
@@ -2085,6 +2093,8 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "the-toll-clerk": { out: "walks {dir} with its hand still out.", in_: "arrives, stops, and puts its hand out." },
   "the-long-warden": { out: "goes {dir} at its own pace, which is the only pace it has.", in_: "walks in on the beat and does not break stride." },
   "otter": { out: "pours off the bank {dir} and is water.", in_: "comes up out of the water and onto the stone." },
+  "gibbet-crow": { out: "drops off the arm {dir} and rows away without hurrying.", in_: "comes down onto the iron {dir}, folds up, and watches." },
+  "the-sapper": { out: "crawls away {dir} down the gallery, still working.", in_: "comes backward out of the dark {dir}, dragging the spoil with him." },
   "oystercatcher": { out: "goes up {dir} screaming and takes the whole flat with it.", in_: "drops onto the gravel, runs four steps, and stops dead." },
   "great-gull": { out: "tips off the stone {dir} and is gone downwind in one beat.", in_: "lands heavily on the parapet and looks at you with no give in it at all." },
   "bittern": { out: "goes {dir} low over the reed with its legs trailing and drops back in.", in_: "steps out of the stems and is suddenly, enormously, a bird." },
@@ -2509,6 +2519,7 @@ export const BITERS = new Set([
   // not a bird is built round a mouth, and the two birds bite as well.
   "conger", "grey-seal", "ford-eel", "marsh-hound", "fen-viper", "wrack-crab",
   "great-gull", "bittern",
+  "gibbet-crow",   // the open ground's one set of teeth that is really a beak
 ]);
 
 // SENTINELS hold their post. A guardian chained to one room: it never wanders
@@ -2608,6 +2619,7 @@ export const FEARS_FIRE = new Set([
   "albino-rat",
   "feral-goat", "otter", "grey-heron", "scarp-raven", // the east road's wild things
   "oystercatcher", "great-gull", "bittern", "grey-seal", "wrack-crab", "fen-viper", "marsh-hound", // the crossing's
+  "gibbet-crow",                 // the open ground's
   "roe-deer", "white-roe",       // the wood's food, and it survives by leaving
   "grey-wolf", "dire-wolf",      // the oldest reason there are campfires
   "wild-boar", "old-boar",
@@ -2774,7 +2786,7 @@ export const DEN_RUST_FLOOR = 8;
 export const DEN_BAR_IRON = 2;
 export const DEN_BAR_SCRAP = 3;
 
-export const OUTDOOR_REGIONS = new Set<string>(["road", "wood", "mountain", "den", "crossing"]);
+export const OUTDOOR_REGIONS = new Set<string>(["out", "road", "wood", "mountain", "den", "crossing"]);
 // ...AND THE ROOMS INSIDE THEM THAT ARE NOT. A band declares itself outdoors as
 // a whole, which was true enough while the outdoor bands were a road and a wood.
 // The dens are the first band that is mostly weather and partly ROOF — a smithy,
@@ -2798,6 +2810,10 @@ export const INDOOR_ROOMS = new Set<string>([
   "the-oak-hollow", "the-shepherds-bothy",                              // the drove
   "the-drowned-mill", "the-mill-loft",                                  // the beck
   "the-fall-shelter", "the-shelter-stone",                              // the gill and the climb
+  // ---- THE OPEN GROUND (mig 193): the roofs on the ring, and the mine. The
+  // earthworks, the camp hollows and the churchyard are weather; these are not.
+  "the-marshals-lodging", "the-village-smithy", "the-cider-house", "the-culver-house",
+  "the-charnel", "the-mine-mouth", "the-mine-gallery", "the-camouflet",
 ]);
 // A day/night world-clock (rome, 2026-07-22): every OUTDOOR room only, deep/
 // warrens/keep are always their own dark regardless. Deliberately faster than
@@ -3253,6 +3269,8 @@ export const BLEED_ODDS = new Map<string, number>([
   ["the-reed-walker", 0.15],
   ["strand-thief", 0.12],
   ["wrack-crab", 0.10],
+  ["gibbet-crow", 0.10],
+  ["the-sapper", 0.10],
   ["bittern", 0.10],
   ["the-scaffold-hand", 0.10],
   ["grave-hyena", 0.15],
@@ -3723,6 +3741,23 @@ export const SURFACERS = new Set([                    // the mobile deep-kin tha
 export const SURFACE_ROOMS = ["well", "oubliette", "catacomb"]; // dark inner holes it climbs out of — never the entry gates
 // Partial on purpose: a band with no pool yet is silent rather than borrowed.
 export const AMBIENCE: Partial<Record<Region, string[]>> = {
+  // THE OPEN GROUND. This pool was named in the map's label table from the start
+  // and never existed (mig 192) — the ring under the walls fell through to
+  // AMBIENCE.upper and has been telling everyone who walked out of the gate that
+  // dust was sifting out of the vaulting. It is a hillside. It has weather, and
+  // birds, and a great deal of buried metal, and it is the first outdoor place
+  // anybody sees.
+  out: [
+    "Wind comes round the shoulder of the wall and drops whatever it was carrying.",
+    "Rooks go up off the ruin all at once, say what they think, and settle back into it.",
+    "Grass has taken everything here except the shapes, and the shapes are still perfectly clear.",
+    "Something small goes through the nettles at the wall foot and does not come out the other side.",
+    "The fortress stands over all of it, roofless and enormous, and does not get any smaller as you cross.",
+    "There is iron in this ground. You can smell it when the rain has been on it.",
+    "A gull comes inland over the walls, decides against it, and goes back the way it came.",
+    "Thistledown crosses the open ground at walking pace, a great deal of it, all going the same way.",
+    "Somewhere in the ruin a stone lets go and finishes its fall, and the rooks go up again.",
+  ],
   // THE CROSSING (mig 190). The band's own voice, under the seven quarters —
   // what is true of every square of this region and nowhere else in the world:
   // there is a mile of moving water somewhere near you at all times, and it is
@@ -3842,6 +3877,7 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
   // ...and the east road's, spread the same way and for the same reason.
   ...EAST_ROOM_AMBIENCE,
   ...CROSSING_ROOM_AMBIENCE,
+  ...OUT_ROOM_AMBIENCE,
   // ---- the grounds: the first OUTDOOR rooms — wind and sky, not drips (058) ----
   "the-causeway": ["The wind comes down the old road with nothing left to slow it.", "Somewhere high on the walls, loose stone ticks in the wind."],
   "the-old-road": ["The thorn wall creaks against itself, keeping whatever is east of it.", "For a moment the wind carries a smell that is not the fortress. Then it is gone.", "The gibbet chain creaks on the hill behind, slow as breathing."],
@@ -4144,7 +4180,7 @@ export const GATEHOUSE_AMBIENT_ODDS = 0.03;           // per 2s tick, once off c
 // is what puts a gatehouse sitter with the ground they came in from.
 export const FORTRESS_BANDS = new Set<string>(["gate", "upper", "deep"]);
 // And the surface's own news, for the things that happen out here.
-export const SURFACE_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den", "crossing"]);
+export const SURFACE_BANDS = new Set<string>(["gate", "out", "road", "wood", "mountain", "den", "crossing"]);
 
 // WHO ELSE HEARS IT (rome, 2026-08-10, reading the feed: the fortress was
 // nearly MUTE). Thirteen of the world's nineteen arcs spoke only to whoever was
