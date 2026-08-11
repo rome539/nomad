@@ -153,7 +153,6 @@ Two planks, side by side, lashed at both ends, spanning the gap between the firs
 
 ## the-second-pier | The Second Pier
 The second plinth, and there is more standing here: two courses of the arch still curving off eastward before they stop. It is enough to sit under out of the wind, and somebody has, at some length. There is a fire-scar on the stone and a great many fish bones.
-!safe
 > west the-plank-span
 > east the-gap
 > down the-starling
@@ -197,7 +196,6 @@ The last plinth, and the far arch springs off it whole and lands on the far bank
 
 ## the-far-arch | The Far Arch
 Proper masonry, a proper parapet, a proper roadway, running level onto the far bank. There is a bench in a recess in the parapet, facing back the way you came, so that whoever built this expected people to sit down at this exact point and look at what they had just crossed.
-!safe
 > west the-fourth-pier
 > east the-bridge-strand
 

@@ -3531,11 +3531,13 @@ export const TIDE_SILT_ODDS = 0.5; // per item: washes one level down when the w
 // design — you do not survive the sea by reacting to a warning, you survive it
 // by knowing what the water is doing before you commit to a mile of it.
 //
-// THE CYCLE: slack low -> flood -> high -> ebb -> slack low, forever. A normal
-// tide crests at 2. A spring tide (SEA_SPRING_ODDS) goes to 3 and takes the
-// half-tide post, the weed flat and the rope stages with it — the rooms you
-// learned were safe, exactly until they weren't. Same trick as the breathing
-// hall in the Tideways, on ground you cross far more often.
+// THE CYCLE: slack low -> flood -> high -> ebb -> slack low. It is the DEEP'S
+// TIDE — the same event, read from the same state, because the Tideways hang
+// below the water country and flood because the sea outside does. One tide
+// every five to seven hours, not a metronome; the deep's three-minute
+// telegraph is the warning; and TIDE_HIGH_ODDS rolls the spring for both
+// regions at once, so the night the Breathing Hall goes under is the same
+// night the half-tide post does. See seaLevel() in events.ts.
 //
 // WHAT THIS DOES TO THE FIVE WAYS, which is the point of the region:
 //   THE CAUSEWAY  drowns from the MIDDLE OUT. Both ends climb, so the way back
@@ -3642,13 +3644,30 @@ export const SEA_INSTRUMENTS = new Set<string>([
   "the-bell-buoy",                        // it rings the state, if you know the ringing
 ]);
 export const SEA_HEARD_BANDS = new Set<string>(["crossing"]);
-export const SEA_CREST_NORMAL = 2;
-export const SEA_CREST_SPRING = 3;
-export const SEA_SPRING_ODDS = 0.25;   // one tide in four is a spring, and it takes the rooms you trusted
-export const SEA_LOW_MS = 10 * 60_000; // slack low: everything open, and this is the window you plan around
-export const SEA_STEP_MS = 3 * 60_000; // the water takes one level per step, rising and falling alike
-export const SEA_HIGH_MS = 8 * 60_000; // and holds at the crest
+export const SEA_CREST_NORMAL = 2;   // an ordinary tide tops out at half flood...
+export const SEA_CREST_SPRING = 3;   // ...and a spring takes the half-tide post and the weed flat
+// THE SEA HAS NO CLOCK OF ITS OWN (rome, 2026-08-11: it "changes too fast").
+// It reads the deep's TIDE event and nothing else, because the Tideways and the
+// Crossing are the same water — see seaLevel() in events.ts. That deletes four
+// constants that used to live here (a low hold, a step, a high hold, and a
+// spring roll) and every one of them was a second opinion about a thing the
+// world had already decided. TIDE_EVERY_MIN/MAX_MS set the cadence now: one
+// tide every five to seven hours, with the deep's own three-minute telegraph
+// as the warning, and TIDE_HIGH_ODDS decides the spring for both regions at
+// once with a single roll.
 export const SEA_BITE = 1;             // per beat standing in it: cold and depth, not teeth (matches SPATE_BITE)
+// THE SEA IS AN ARC, LIKE EVERY OTHER REGION'S WEATHER (rome, 2026-08-11).
+// The wood has the rut and the quiet, the road has the spate and the carrier,
+// the dens have the pack and the fever — each one a POOL entry on its own band
+// with its own durations, all of them scheduled by the ONE roll. Durations were
+// never the problem with the first cut: the problem was that the sea ran its
+// own scheduler, which nothing else in this world does. It is in the POOL now,
+// on the crossing band, and it keeps its hours the way the rut keeps its hours.
+export const SEA_TELEGRAPH_MS = 3 * 60_000;   // the water turns, and everything on the flats knows before you do
+export const SEA_MAKE_MS = 2 * 60_000;        // per level, coming up
+export const SEA_STAND_MIN_MS = 14 * 60_000;  // and it STANDS, which is the part a cave tide never gave us
+export const SEA_STAND_MAX_MS = 26 * 60_000;
+export const SEA_EBB_MS = 8 * 60_000;         // and takes off slower than it came
 // The names the water has, low to high. These are what the tide marks read and
 // what the band is told, and they are the ONLY numbers the region ever gives
 // you — there is no clock, there is a post with lines cut up it.

@@ -131,7 +131,6 @@ Rows of wooden frames on the shingle above the tide, tarred and standing, where 
 
 ## the-smoke-house | The Smoke House
 A low stone building with no chimney and a door that fits badly on purpose, and inside, tiers of rods running wall to wall, black with two centuries of smoke, and the smell still in the stone hard enough to taste. There is a bed of old ash on the floor, and a scatter of oak chips.
-!safe
 > south the-drying-frames
 
 ## the-limpet-rocks | The Limpet Rocks
@@ -238,7 +237,6 @@ A sunken lane running west toward the water between banks higher than your head,
 
 ## the-passengers-rest | The Passengers' Rest
 A stone shelter at the roadside, open on the road side, roofed, with a bench along the back wall and a slot window facing the water so that you could see the boat coming without getting wet waiting for it. The bench is worn into hollows in four places.
-!safe
 > east the-ferry-lane
 > west the-toll-board
 

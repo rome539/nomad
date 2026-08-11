@@ -35,8 +35,8 @@ import {
   FOG_TELEGRAPH_MS, FOG_ACTIVE_MIN_MS, FOG_ACTIVE_MAX_MS, FOG_AFTERMATH_MS, FOG_WAKE_MULT,
   COLD_TELEGRAPH_MS, COLD_ACTIVE_MIN_MS, COLD_ACTIVE_MAX_MS, COLD_AFTERMATH_MS, COLD_TORCH_MULT,
   BREACH_PAIRS, BREACH_TELEGRAPH_MS, BREACH_ACTIVE_MS, BREACH_AFTERMATH_MS,
-  SEA_ROOMS, SEA_INSTRUMENTS, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_SPRING_ODDS, SEA_HEARD_BANDS,
-  SEA_LOW_MS, SEA_STEP_MS, SEA_HIGH_MS, SEA_BITE, SEA_STATES,
+  SEA_ROOMS, SEA_INSTRUMENTS, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_HEARD_BANDS, SEA_BITE, SEA_STATES,
+  SEA_TELEGRAPH_MS, SEA_MAKE_MS, SEA_STAND_MIN_MS, SEA_STAND_MAX_MS, SEA_EBB_MS,
   TIDEWAYS_ROOMS, TIDE_LEVELS, TIDE_HIGH_ODDS,
   TIDE_EVERY_MIN_MS, TIDE_EVERY_MAX_MS, TIDE_FIRST_MIN_MS, TIDE_FIRST_MAX_MS, TIDE_GRACE_MS,
   TIDE_TELEGRAPH_MS, TIDE_STEP_MS, TIDE_CREST_MS, TIDE_AFTERMATH_MS, TIDE_SILT_ODDS,
@@ -86,6 +86,8 @@ const POOL: [string, number, string][] = [
   ["exhale", 2, "deep"], ["song", 2, "deep"],
   ["gloam", 2, "upper"], ["want", 2, "gate"],
   ["lights", 2, "road"], ["escape", 1, "deep"], ["spate", 2, "road"], ["carrier", 2, "road"],
+  // THE CROSSING — 203 rooms whose whole design is a water that moves.
+  ["sea", 3, "crossing"],
   // THE WOOD (mig-less, 2026-08-06) — 170 rooms that had no weather of their own
   ["rut", 2, "wood"], ["walk", 1, "wood"], ["quiet", 2, "wood"],
   // THE DEN GROUND — 60 rooms, likewise
@@ -2264,16 +2266,108 @@ async function floodLevel(z: ZoneDO, rank: number, now: number): Promise<void> {
 // rising, active = high water holding, aftermath = the ebb falling. Level and
 // crest live in `data` as "level:crest" so a deploy mid-tide comes back to the
 // same water rather than dropping the sea on somebody's head.
-function seaState(z: ZoneDO): { level: number; crest: number } {
-  const st = z.events.get("sea");
-  if (!st?.data) return { level: 0, crest: SEA_CREST_NORMAL };
-  const [l, c] = st.data.split(":");
-  return { level: Number(l) || 0, crest: Number(c) || SEA_CREST_NORMAL };
+// THE SEA IS THE SAME WATER AS THE TIDEWAYS (rome, 2026-08-11: the first cut
+// "changes too fast" — and it did, because I gave it a clock of its own when
+// the world already had exactly the right one).
+//
+// The deep's tide and the Crossing's sea are ONE TIDE, and they always were:
+// the Tideways is a wing hanging below the water country and it floods because
+// the sea outside floods. So there is no second clock. The sea reads the tide
+// event and nothing else, which buys three things at once:
+//
+//   CADENCE   — one tide every 5-7 hours instead of a 30-minute metronome. The
+//               causeway is a road you cross, and twice a day it stops being
+//               one. That is what a causeway IS; the old cycle made it a
+//               traffic light.
+//   WARNING   — the deep's 3-minute telegraph is now the sea's. The water turns
+//               and makes before it covers anything.
+//   THE SPRING— TIDE_HIGH_ODDS is 0.25 and my invented SEA_SPRING_ODDS was
+//               0.25. They were the same number describing the same night. A
+//               high tide that takes the Breathing Hall below is now, on the
+//               surface, the spring that takes the half-tide post and the weed
+//               flat. One roll, two regions, and a player who learns the deep's
+//               water has learned the Crossing's for free.
+//
+// A TIDE IS TWO THINGS, AND I ONLY BUILT ONE (rome, 2026-08-11: "what about
+// every other event like RAIN"). The moon sets the hour and the WEATHER sets
+// the height, and anybody who has stood on a coast knows the second one is the
+// half that actually gets people killed. The first cut read the tide event and
+// stopped there, which is how the causeway ended up open 95% of the time: an
+// astronomical tide alone is a small, regular, forgettable thing.
+//
+// So the sea reads BOTH arcs the world already runs, and neither of them is
+// new:
+//   THE ASTRONOMICAL PART — the tide event (below). Sets the hour: one every
+//                           5-7 hours, with its own 3-minute telegraph.
+//   THE SURGE             — SETTLED RAIN. Not a shower; the 1-in-4 sky that
+//                           "goes one flat colour, edge to edge" and stands for
+//                           twenty to forty minutes. That weather pushes the
+//                           water up a whole level, and it is the reason a
+//                           crossing is dangerous on a bad afternoon at an hour
+//                           that would be perfectly safe on a good one.
+//
+// The surge is also the DURATION the tide alone could not give. Settled rain
+// runs 20-40 minutes against the tide's 15, from an existing arc with an
+// existing telegraph, instead of another constant of mine arguing with the
+// world's clock.
+//
+// And it stacks: rain on a spring tide is the worst water this country has.
+// Rain at slack low is still a level, which is enough to shut the ford and the
+// causeway's low ground — so "it has been raining all afternoon" becomes a
+// reason to take the bridge, with no tide involved at all.
+function seaSurge(z: ZoneDO): number {
+  const r = z.events.get("rain");
+  // The kind is cleared when the rain breaks (tickRain drops st.data going into
+  // aftermath), so the surge is the standing-rain window and nothing after it.
+  return r?.phase === "active" && r.data === "settled" ? 1 : 0;
 }
 
-/** How high the water is right now, 0 (slack low) to 3 (a spring high). */
+// Sea level maps off the deep's rank: the surface stands one level higher than
+// the wing below it, so a normal tide crests at half flood and the deep's high
+// tide is the surface's spring — plus whatever the sky is adding.
+function seaAstro(z: ZoneDO): number {
+  const st = z.events.get("tide");
+  if (!st) return 0;
+  const deepCrest = st.data !== undefined ? Number(st.data) : 1;
+  const crest = Math.min(SEA_CREST_SPRING, deepCrest + 1);
+  switch (st.phase) {
+    case "telegraph": return 1;                                   // it turns, and makes
+    case "active": return Math.max(1, Math.min(crest, tideRank + 1));
+    case "aftermath": return 1;                                   // and takes off again
+    default: return 0;                                            // slack low
+  }
+}
+
+// THE WATER IS THREE THINGS ADDED TOGETHER, and every one of them is an arc
+// this world already runs:
+//   THE SEA ARC   — the Crossing's own weather, a POOL entry on its own band
+//                   exactly like the wood's rut. Rises to half flood and STANDS
+//                   there for fourteen to twenty-six minutes, which is what a
+//                   sea does and what a flooding cave never could.
+//   THE TIDE      — the deep's, +1 while it is in. One water: the night the
+//                   Tideways drown is a bad night to be on the causeway.
+//   SETTLED RAIN  — the sky's, +1 while it stands. Not a shower.
+// Alone, each is survivable and legible. Two together is the spring, and three
+// is the worst water in the country — and all three arrive on clocks a player
+// can already read from anywhere in the world.
 export function seaLevel(z: ZoneDO): number {
-  return seaState(z).level;
+  const st = z.events.get("sea");
+  const arc = st?.phase === "active"
+    ? (st.data === "S" ? SEA_CREST_NORMAL : Math.min(SEA_CREST_NORMAL, Number(st.data ?? "1") || 1))
+    : st?.phase === "aftermath" ? 1
+    : 0;
+  const tide = seaAstro(z) > 0 ? 1 : 0;
+  return Math.min(SEA_CREST_SPRING, arc + tide + seaSurge(z));
+}
+
+/** The height this water is making for, so a mark can warn about ground that is
+ *  dry now and will not be. The sea arc always makes for half flood; whatever
+ *  else is running on top of it is already in the sum. */
+function seaCrest(z: ZoneDO): number {
+  const st = z.events.get("sea");
+  const arc = st && st.phase !== "idle" ? SEA_CREST_NORMAL : 0;
+  const tide = seaAstro(z) > 0 ? 1 : 0;
+  return Math.min(SEA_CREST_SPRING, Math.max(arc + tide + seaSurge(z), seaLevel(z)));
 }
 
 /** Is this room under water at the moment? */
@@ -2285,21 +2379,23 @@ export function seaUnder(z: ZoneDO, roomId: string): boolean {
 /** Will it be, before this tide turns? The tide marks read this. */
 export function seaWillCover(z: ZoneDO, roomId: string): boolean {
   const rank = SEA_ROOMS.get(roomId);
-  const { crest } = seaState(z);
-  return rank !== undefined && crest >= rank;
+  return rank !== undefined && seaCrest(z) >= rank;
 }
 
 /** What the posts say. The region's only instrument, and it never lies. */
 export function seaReading(z: ZoneDO): string {
-  const st = z.events.get("sea");
-  const { level, crest } = seaState(z);
-  const name = SEA_STATES[level] ?? "slack low";
+  const st = z.events.get("tide");
+  const name = SEA_STATES[seaLevel(z)] ?? "slack low";
   const going = st?.phase === "telegraph" ? " and making"
     : st?.phase === "aftermath" ? " and taking off"
     : st?.phase === "active" ? " and standing"
     : "";
-  const spring = crest >= SEA_CREST_SPRING && st?.phase !== "idle" ? " It is a spring tide." : "";
-  return `${name}${going}.${spring}`;
+  const spring = seaCrest(z) >= SEA_CREST_SPRING && st?.phase !== "idle" ? " It is a spring tide." : "";
+  // The post cannot read the sky, but a person standing at it can, and the
+  // water being a level higher than the hour accounts for is the single most
+  // useful thing this region ever tells anybody.
+  const surge = seaSurge(z) ? " The rain is standing on it and it is higher than the hour says." : "";
+  return `${name}${going}.${spring}${surge}`;
 }
 
 /** Everything alive that cannot breathe water leaves a room the sea is taking. */
@@ -2312,18 +2408,56 @@ function seaDrives(z: ZoneDO, now: number, roomId: string): void {
   }
 }
 
-async function tickSea(z: ZoneDO, now: number): Promise<void> {
-  let st = z.events.get("sea");
-  if (!st) {
-    // A world that has never had a tide starts at slack low, which is the only
-    // honest place to start: the causeway open, and the first flood earned.
-    st = { phase: "idle", until: now + SEA_LOW_MS, data: `0:${SEA_CREST_NORMAL}` };
-    z.events.set("sea", st);
-  }
-  // No Crossing in this world build, no sea. (The region ships in mig 190.)
-  if (!z.world!.rooms.has("the-refuge")) { st.until = now + SEA_LOW_MS; return; }
+// The last level the surface was SHOWN at, so the room feeds fire once on each
+// change rather than every beat. Module-local like tideRank, and rebuilt from
+// the tide's own state after a deploy — the water is wherever the tide says.
+let seaShown = -1;
 
-  const { level, crest } = seaState(z);
+async function tickSea(z: ZoneDO, now: number): Promise<void> {
+  // No Crossing in this world build, no sea. (The region ships in mig 190.)
+  if (!z.world!.rooms.has("the-refuge")) return;
+  let st = z.events.get("sea");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("sea", st); }  // NEVER: the roll owns the sky
+
+  if (now >= st.until) {
+    switch (st.phase) {
+      case "idle":
+        st.phase = "telegraph";
+        st.until = now + SEA_TELEGRAPH_MS;
+        st.data = "0";
+        z.roomFeedBands(SEA_HEARD_BANDS, "Out on the crossing the water turns. It stops going out, stands a moment, and starts to make.", "evt");
+        break;
+      case "telegraph":
+        st.phase = "active";
+        st.data = "1";
+        st.until = now + SEA_MAKE_MS;
+        break;
+      case "active": {
+        // `data` carries the rise: "1", "2", then "S" for the stand at the top.
+        // EventState has four phases and a sea needs five states, so the stand
+        // lives inside `active` rather than borrowing a phase that means
+        // something else everywhere in this file.
+        const at = st.data ?? "1";
+        if (at === "S") { st.phase = "aftermath"; st.until = now + SEA_EBB_MS; break; }
+        const rank = Number(at) || 1;
+        if (rank < SEA_CREST_NORMAL) {
+          st.data = String(rank + 1);
+          st.until = now + SEA_MAKE_MS;
+        } else {
+          st.data = "S";
+          st.until = now + randInt(SEA_STAND_MIN_MS, SEA_STAND_MAX_MS);
+        }
+        break;
+      }
+      case "aftermath":
+        st.phase = "idle";
+        st.until = NEVER;
+        st.data = undefined;
+        z.roomFeedBands(SEA_HEARD_BANDS, "Slack low on the crossing. The causeway is a road again.", "evt");
+        break;
+    }
+  }
+  const level = seaLevel(z);
 
   // THE WATER WORKS EVERY BEAT IT IS UP, exactly as the spate does. Cold and
   // depth rather than current — the sea does not sweep you anywhere, it simply
@@ -2349,68 +2483,36 @@ async function tickSea(z: ZoneDO, now: number): Promise<void> {
     }
   }
 
-  if (now < st.until) return;
+  if (level === seaShown) return;
+  const was = seaShown;
+  seaShown = level;
+  if (was < 0) return;  // first tick after a load: adopt the water, announce nothing
 
-  const setLevel = async (next: number, phase: EventState["phase"], until: number) => {
-    // Re-read the crest rather than closing over it: the idle case picks a new
-    // one immediately before calling this, and capturing the old value here
-    // would have made every tide crest at whatever the previous tide did.
-    const c = seaState(z).crest;
-    st!.data = `${next}:${c}`;
-    st!.phase = phase;
-    st!.until = until;
-    for (const [roomId, rank] of SEA_ROOMS) {
-      if (!z.world!.rooms.has(roomId)) continue;
-      const wasUnder = level >= rank, nowUnder = next >= rank;
-      if (wasUnder === nowUnder) continue;
-      if (nowUnder) {
-        z.roomFeed(roomId, "The water comes over — not fast, not a wave, just the road going away under it.", undefined, false, "evt");
-        z.roomSound(roomId, "Water goes over stone {dir}, and keeps going.");
-        seaDrives(z, now, roomId);
-        for (const s of z.sessions.values()) if (s.roomId === roomId) tideSoaksTorch(z, s);
-      } else {
-        z.roomFeed(roomId, "The water goes off the stone and leaves it running and black and walkable again.", undefined, false, "evt");
-      }
-      z.refreshRoomCtx(roomId);
+  for (const [roomId, rank] of SEA_ROOMS) {
+    if (!z.world!.rooms.has(roomId)) continue;
+    const wasUnder = was >= rank, nowUnder = level >= rank;
+    if (wasUnder === nowUnder) continue;
+    if (nowUnder) {
+      z.roomFeed(roomId, "The water comes over — not fast, not a wave, just the road going away under it.", undefined, false, "evt");
+      z.roomSound(roomId, "Water goes over stone {dir}, and keeps going.");
+      seaDrives(z, now, roomId);
+      for (const s of z.sessions.values()) if (s.roomId === roomId) tideSoaksTorch(z, s);
+    } else {
+      z.roomFeed(roomId, "The water goes off the stone and leaves it running and black and walkable again.", undefined, false, "evt");
     }
-  };
+    z.refreshRoomCtx(roomId);
+  }
 
-  switch (st.phase) {
-    case "idle": {  // slack low -> the flood begins
-      const springs = chance(SEA_SPRING_ODDS);
-      st.data = `0:${springs ? SEA_CREST_SPRING : SEA_CREST_NORMAL}`;
-      await setLevel(1, "telegraph", now + SEA_STEP_MS);
-      z.roomFeedBands(SEA_HEARD_BANDS, "Out on the crossing the water turns and starts to make. The low ground is going first.", "evt");
-      break;
-    }
-    case "telegraph": {  // the flood, one level per step, until the crest
-      const { crest: c } = seaState(z);
-      if (level < c) {
-        await setLevel(level + 1, "telegraph", now + SEA_STEP_MS);
-        z.roomFeedBands(SEA_HEARD_BANDS, level + 1 >= SEA_CREST_SPRING
-          ? "The crossing is at high water and it is a spring — the half-tide post is under, and so is the weed flat."
-          : "Half flood on the crossing. The causeway is under from the middle out, and the ford is gone.", "evt");
-      } else {
-        st.phase = "active";
-        st.until = now + SEA_HIGH_MS;
-      }
-      break;
-    }
-    case "active": {  // high water, holding — now it turns
-      await setLevel(Math.max(0, level - 1), "aftermath", now + SEA_STEP_MS);
-      z.roomFeedBands(SEA_HEARD_BANDS, "The crossing turns. The water stops standing and starts to go.", "evt");
-      break;
-    }
-    case "aftermath": {  // the ebb, one level per step, down to slack low
-      if (level > 0) {
-        await setLevel(level - 1, "aftermath", now + SEA_STEP_MS);
-      } else {
-        st.phase = "idle";
-        st.until = now + SEA_LOW_MS;
-        z.roomFeedBands(SEA_HEARD_BANDS, "Slack low on the crossing. Every one of the five ways is open, and none of them will be for long.", "evt");
-      }
-      break;
-    }
+  if (level > was) {
+    z.roomFeedBands(SEA_HEARD_BANDS, level === 1
+      ? "Out on the crossing the water turns and starts to make. The low ground is going first."
+      : level >= SEA_CREST_SPRING
+      ? "The crossing is at high water and it is a spring — the half-tide post is under, and so is the weed flat."
+      : "Half flood on the crossing. The causeway is under from the middle out, and the ford is gone.", "evt");
+  } else if (level === 0) {
+    z.roomFeedBands(SEA_HEARD_BANDS, "Slack low on the crossing. The causeway is a road again.", "evt");
+  } else {
+    z.roomFeedBands(SEA_HEARD_BANDS, "The crossing turns. The water stops standing and starts to go.", "evt");
   }
 }
 

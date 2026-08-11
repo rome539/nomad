@@ -35,6 +35,19 @@ export const PAGE = `<!doctype html>
     --heal: #8faa6b;
     --omen: #b195c9;
     --voice: #e79ab6;
+    /* THE FIRST BLUE IN THIS PALETTE (rome, 2026-08-11: the Crossing "is
+       colored yellow, thats the same fucking color for the warrens"). It was:
+       'crossing' had no case in mapRegionColor at all and fell through to the
+       default, which is gold — the HALLS' colour — and gold sits at hue 40deg
+       against the warrens' dim at 43deg, so the newest region on the map drew
+       as the oldest one and as a second dungeon besides.
+       Measured against every colour in use: 216deg, and its nearest neighbour
+       is steel (the gates) 32deg away — and steel is a pale desaturated grey
+       (18% sat, 70% light) against this at 45%/61%, so the two gates standing
+       inside the Crossing still read as gates. Nothing else is within 90deg.
+       There was no blue in this palette. There is a mile of water in the world
+       now, and water is drawn blue on every map anybody has ever read. */
+    --tide: #6f93c9;
     --name-s: 55%; /* key-coloured names: saturation/lightness, reset per theme from its ground (applyThemeColors) */
     --name-l: 70%;
     --border: #3a3020;
@@ -3652,6 +3665,7 @@ function mapRegionColor(region, isGate) {
   if (region === "out") return mapCssVar("--heal");   // the open ground: green and alive
   if (region === "sky") return mapCssVar("--cream");  // the overworks: pale, up in the wind
   if (region === "warrens") return mapCssVar("--dim"); // the warrens: packed earth
+  if (region === "crossing") return mapCssVar("--tide"); // the crossing: a mile of water, and the only blue on the chart
   // THE SURFACE BANDS NEED THEIR OWN COLOURS (rome, 2026-08-02: "the road is
   // the same exact colour as the halls"). road/wood/mountain fell through to
   // the default and drew gold — the buried keep's colour — so the open road

@@ -25,7 +25,6 @@
 
 ## the-first-eyot | The First Eyot
 An island of solid ground the size of a barn, standing a foot above the reed, with three willows on it and a fire-ring under them that has been used a great many times by a great many different people. This is where everybody stops before going in, and everybody has left something.
-!safe
 > north the-reed-gate
 > south the-brushwood-causey
 > east the-otter-run
@@ -62,7 +61,6 @@ The stakes stop and the causey does not, and for thirty yards the only way to kn
 
 ## the-chapel-eyot | The Chapel Eyot
 The biggest of the islands and the only one with a building on it: a chapel of one room, stone, roofless, with the altar slab still in place and a stone bench round three walls. It faces east across the marsh at the mountain. People stopped here on the way over, every time, for a very long time.
-!safe
 > north the-mud-causey
 > south the-long-causey
 > east the-graves
@@ -121,7 +119,6 @@ The path opens onto brown water and finishes. There is a stake here with a rag o
 
 ## the-cutters-eyot | The Cutters' Eyot
 An island of trodden ground and reed-stacks, with a low turf hut, a whetstone on a post, and a great many reed-hooks pushed into the turf blade-down in a row. This is a working place. The stacks are graded by year and the oldest is grey and the newest is gold.
-!safe
 > west the-cut-reed
 > north the-reed-fork
 > south the-hook-hut
@@ -129,7 +126,6 @@ An island of trodden ground and reed-stacks, with a low turf hut, a whetstone on
 
 ## the-hook-hut | The Hook Hut
 Turf walls, a roof of reed on rafters of reed, one door and no window, and inside it is dry and dark and smells of cut sedge. There is a bed of reed against the wall and a stone for a hearth and, hung on a nail, a coat that would still keep the rain off.
-!safe
 > north the-cutters-eyot
 
 ## the-stake-line | The Stake Line
@@ -208,7 +204,6 @@ A punt sunk in the reed off the long causey, flat-bottomed and open, with a quan
 
 ## the-eel-hut | The Eel Hut
 On stilts over the water off the cutters' eyot: a plank shack the size of a bed, with a hatch in the floor and a rack of eel-traps on the wall, and a stove made from a broken pot. The hatch opens onto black water. This is a place somebody worked at night, on purpose, alone.
-!safe
 > north the-stake-line
 
 ## the-heron-tree | The Heron Stand
