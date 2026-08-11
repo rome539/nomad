@@ -349,6 +349,15 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     wood: { key: "wood", label: "The Wood", rooms: [] },
     den: { key: "den", label: "The Dens", rooms: [] },
     mountain: { key: "mountain", label: "The Mountain", rooms: [] },
+    // THIS TABLE IS THE MAP'S REAL REGION LIST and a new band is not on the map
+    // until it is in here (rome, 2026-08-11: the Crossing still drew gold). The
+    // `?? regions.upper` below is a guard against a room with no band, and it
+    // silently swallowed a whole region: mapRegionOf returned "crossing", no key
+    // matched, and all 203 rooms were filed under the Halls — so they carried
+    // the halls' key to the client, drew the halls' gold, and captioned THE
+    // HALLS. The colour, the label and the palette entry were all correct at the
+    // far end and never saw a crossing room. Whoever adds the mountain: here.
+    crossing: { key: "crossing", label: "The Crossing", rooms: [] },
   };
   for (const id of shown) {
     const room = world.rooms.get(id)!;

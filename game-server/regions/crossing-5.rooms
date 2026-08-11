@@ -25,6 +25,20 @@
 # water behind you, the mountain in front, and one lit hatch where you can put
 # down what you carried across. Everybody who ever worked this crossing wanted
 # a reason to stop on this side. So do you.
+#
+# AND THE FAR STRAND HAS NO HIDEAWAY, ON PURPOSE. It had three — the pan house,
+# the fisher huts, the shingle stair — at three, four and four moves from that
+# hatch, two of them one room apart (mig 198). The second half of the rule that
+# mig 196 only wrote the first half of:
+#
+#     A HIDEAWAY IS SOMEWHERE YOU GO OFF THE ROUTE TO REACH,
+#     AND NOWHERE NEAR A GATE.
+#
+# A gate is better than a bolthole in every way — it is safe AND it is the bank
+# AND it is the keeper — so a bolthole within a few moves of one is never the
+# thing you run for, and all it does is make the ground around the hatch soft.
+# The far strand's safety IS the Crossing House. That is the whole point of
+# putting the second hatch here.
 
 !region crossing
 
@@ -82,7 +96,6 @@ Shallow rectangular pans cut into the clay above the tideline, fed by a channel 
 
 ## the-pan-house | The Pan House
 A shed over the biggest pan with the iron pan itself still in it, six feet across, sitting on a brick flue, warped and rusted through in one corner. Boiling was the last stage and the fuel was the expensive part. There is a stack of cut peat by the door, still dry.
-!safe
 > north the-salt-pans
 
 ## the-salt-store | The Salt Store
@@ -104,7 +117,6 @@ The landward slope of the storm beach, covered in sea-pink growing out of bare s
 
 ## the-fisher-huts | The Fisher Huts
 Four huts in a row in the lee of the storm beach, built of upturned boats on stone footings — hulls for roofs, doors cut in the transoms. Three are empty and open. The fourth has its door shut, and there is a stone against it on the outside, which is how you leave a place you mean to come back to.
-!safe
 > south the-thrift-bank
 > east the-net-loft
 
@@ -114,7 +126,6 @@ A shed on staddle stones with a plank floor, hung wall to wall with nets on pegs
 
 ## the-shingle-stair | The Shingle Stair
 A stair of laid stone going up the last of the beach onto the headland, and at the top of it the road stops being the institution's and becomes a track. Ahead and above: the mountain, filling the sky from one side to the other, with the track going up into it and out of sight. There is a stone seat here, facing it.
-!safe
 > west the-thrift-bank
 
 ## the-strand-track | The Strand Track

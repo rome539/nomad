@@ -1,0 +1,64 @@
+-- 198 nothing hides beside a hatch (rome, 2026-08-11, looking at the far strand
+-- on his own map: three hideaways in sight of each other and of the gatehouse).
+--
+-- He is reading the picture correctly. MEASURED, in moves, from the Crossing
+-- House -- the Crossing's eastern gate:
+--
+--     the-pan-house      3
+--     the-fisher-huts    4
+--     the-shingle-stair  4      (and 2 from the fisher huts)
+--
+-- Three of the region's six, all on the same small bank, all within four steps
+-- of a lit hatch. Nothing else in the world sits like that.
+--
+-- THE SECOND HALF OF THE RULE. Mig 196 wrote:
+--
+--     A HIDEAWAY IS SOMEWHERE YOU GO OFF THE ROUTE TO REACH.
+--
+-- and I obeyed it to the letter here -- every one of these three is a genuine
+-- dead-end spur off the strand road, which is why they survived that pass. The
+-- rule was incomplete. It says nothing about what else is nearby, and the thing
+-- nearby is the strongest square in the game:
+--
+--     A HIDEAWAY IS SOMEWHERE YOU GO OFF THE ROUTE TO REACH,
+--     AND NOWHERE NEAR A GATE.
+--
+-- A gate beats a bolthole on every axis at once. It is safe, it is the BANK, it
+-- is the keeper, it is where the hatch takes what you carried so death cannot.
+-- Given four moves to a gate and three to a bolthole, nobody has ever chosen the
+-- bolthole and nobody ever will -- so these three are not shelter, they are just
+-- a soft apron of no-follow squares around the one arrival point in the region
+-- that ought to be earned. You come off a mile of water carrying whatever you
+-- carried; the run up the strand road to the hatch is the last thing the
+-- crossing asks you for, and it was being answered before it was asked.
+--
+-- What the far strand gets instead is the CROSSING HOUSE, which is the entire
+-- reason the second hatch was put on this bank (rome, 2026-08-10: "have 2 in the
+-- crossing, opposite ends"). It does not need a bolthole. It has a door.
+--
+-- The Crossing keeps three, and each is somewhere a gate cannot reach:
+--   the-refuge                 THE MECHANIC. 8 moves out, on the causeway, the
+--                              one square that never floods. Nothing else can do
+--                              its job and no hatch is within reach of it.
+--   the-bothy-of-the-crossing  13 moves out, a dead-end spur off the marsh
+--                              track, which is the far side of the eyots -- the
+--                              one quarter of the region with no gate in it.
+--   the-ferry-house            a gate, and safe by being one.
+--
+-- 3 in 203, thinnest in the world by a wide margin, and correct: this is the
+-- region built around being out in the open over water. It also now has the
+-- world's LARGEST safe structures -- two hatches -- which is the trade. Cover
+-- here is a door you have to reach, not a hole you fall into.
+--
+-- NOTE FOR THE NEXT PASS, not acted on because it was not asked for: the same
+-- measurement on the roads finds the-carters-rest at 3 moves from the Relay
+-- House and the-wayside-shelter at 4 from the Roadwarden's Post. Both are
+-- single, not a cluster, and both are rest-houses the institution built along
+-- its own highway, which is an argument mig 197 already accepted. But they are
+-- the same distance from a hatch as these three were.
+
+UPDATE rooms SET is_safe = 0 WHERE id IN (
+  'the-pan-house',      -- 3 moves from the Crossing House
+  'the-fisher-huts',    -- 4 moves, and 2 from the shingle stair
+  'the-shingle-stair'   -- 4 moves
+);

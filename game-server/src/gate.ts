@@ -21,7 +21,7 @@ import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOO
 import * as den from "./den";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
-import { WOOD_QUARTERS } from "./detail";
+import { MAP_QUARTERS } from "./detail";
 import { dropCarried, describePlayer, lookKeepingItem, selfExamine } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -1937,6 +1937,10 @@ export function wallStudy(z: ZoneDO, session: Session): void {
     wood: { key: "wood", label: "The Wood", rooms: [] },
     den: { key: "den", label: "The Dens", rooms: [] },
     mountain: { key: "mountain", label: "The Mountain", rooms: [] },
+    // The wall chart needs the Crossing for the same reason the surveyor's map
+    // does — and here it matters twice over, because the ferry house IS a gate,
+    // so the shallow ring around it is nothing BUT crossing rooms.
+    crossing: { key: "crossing", label: "The Crossing", rooms: [] },
   };
   for (const id of shown) {
     const room = world.rooms.get(id)!;
@@ -1952,7 +1956,9 @@ export function wallStudy(z: ZoneDO, session: Session): void {
       gate: world.entryRooms.has(id) ? 1 : 0, // a door draws as a door on the wall too
       safe: world.safeRooms.has(id) && !world.entryRooms.has(id) ? 1 : 0, // ...and a bolthole as a bolthole
       band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
-      q: WOOD_QUARTERS[id], // the wood's quarter — see the same field in lore.sendMap
+      q: MAP_QUARTERS[id], // the room's quarter — see the same field in lore.sendMap
+      // (was WOOD_QUARTERS, which is a subset: the wall never captioned the east
+      // road's four, the Crossing's seven or the open ground's four.)
       x: at?.x, y: at?.y,
     });
   }
