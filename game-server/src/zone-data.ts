@@ -3740,6 +3740,60 @@ export const CURE_RECIPES: Record<string, string> = {
   // about the top of the ladder moves.
   "deer-haunch":  "smoked-haunch",
 };
+// ---- the fire: a catch cooked where you caught it -------------------------
+//
+// rome, 2026-08-11: the new fish drops should be cookable.
+// The Crossing and the east road put six raw catches in the world and
+// the only thing you could do with any of them was swallow it cold, or walk it
+// to a smokehouse that lies deep under the fortress, a world away from the
+// water it came out of.
+//
+// COOKING IS THE RACKS' OPPOSITE, deliberately, on both axes:
+//
+//                  the racks (cure)          the fire (cook)
+//   where          one room, or a gate       anywhere a flame burns
+//   how long       3 min / 10 min, waiting   at once
+//   what you get   KEEPING, modest heal      HEAL, and it still spoils
+//   the risk       it hangs where it can     the flame is an open fire in
+//                  be lifted                 a dark world, and it is seen
+//
+// So the smokehouse law stands untouched: what you buy at the racks is KEEPING,
+// not power. What you buy at a fire is power, not keeping. Neither table can be
+// walked to the other's answer — nothing cooked is in FOOD_KEEPS, and nothing
+// cured can be cooked (it is already cooked; that is what curing IS).
+//
+// FLAT +5, NOT A MULTIPLIER, and this is the whole balance argument. A fire
+// helps a poor catch most: the crab claw goes 2 -> 7 and becomes food instead
+// of a joke, while the marrow-lamprey — already the best thing you can eat —
+// goes 20 -> 25 and gains a quarter. Multiply instead and the delicacy runs
+// away from everything else and the shore-crab stays worthless. The bottom of
+// the ladder is what needed the fire.
+//
+// It also costs you the BARTER value: every cooked form is worth 0 at the
+// hatch, where the raw catch was worth 1-4. A crab's claw is a curiosity a
+// keeper will buy; a crab's claw you have eaten half the shell off is dinner.
+// That is the choice the verb is for — sell it or eat it, not both.
+export const COOK_HEAL_BONUS = 5;
+export const COOK_RECIPES: Record<string, string> = {
+  // THE CROSSING'S TWO (mig 191), which is where this came from. Both are all
+  // but inedible raw and both are ancient cooking — the oldest use anybody ever
+  // found for a fire on a shore is a crab on it and an egg in the ashes.
+  "crab-claw":      "roast-crab",     //  2 -> 7
+  "gull-egg":       "roast-egg",      //  6 -> 11
+  // THE EAST ROAD'S (mig 189).
+  "river-trout":    "grilled-trout",  // 14 -> 19
+  // AND THE OLD WATERS, because a verb that cooked the new catch and refused
+  // the fortress's own would be a verb with a date in it. Nothing about these
+  // three changes — no stat moves, no table is touched; they simply gain the
+  // fire, like everything else that ever came out of water.
+  "cave-fish":      "grilled-cave-fish", // 11 -> 16
+  "pale-eel":       "grilled-eel",       // 16 -> 21
+  "marrow-lamprey": "roast-lamprey",     // 20 -> 25
+  // NOT HERE, on purpose: salt-fish, smoked-haunch, dried-meat, hardtack — all
+  // FOOD_KEEPS, all already through a fire or a barrel. And no raw MEAT: the
+  // haunches are the racks' business and always have been. This is the fire on
+  // the shore, and what you put on it is what you pulled out of the water.
+};
 // A plain torch turns up in the smokehouse now and then — the garrison kept
 // their kindling by the fire. It rides the floor-renewal law (DICE, not a
 // schedule; capped at one lying unfound), so it is NOT a refill spot: a delver

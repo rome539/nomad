@@ -364,8 +364,8 @@ if (worldKnown) {
 
 // THE THROAT CHECK — how many rooms would somebody have to stand in to seal
 // this ground off from every gate in the world? (rome, 2026-08-03, after the
-// dens: "AND IS THIS EVEN SCALABLE FOR WHEN MORE FUCKING PLAYERS FUCKING
-// ARRIVE?" and then, on the fix: "1 and how will we make this scaleble?")
+// dens: is this even scalable for when more players arrive? and then, on the
+// fix: how will we make this scalable?)
 //
 // This is the check that makes the answer scalable instead of a one-off repair.
 // The den ground turned out to be sealable by FOUR rooms — and so was the whole

@@ -62,7 +62,11 @@ Halfway, and there is nothing here but road and water and the fact that you are 
 
 ## the-refuge | The Refuge
 A stone platform built out from the causeway's side, six feet up on its own little pier, with three steps and a rail-socket and room for four people to stand. It is here because the builders knew people would misjudge it. Somebody has cut a tally into the top step, and it is a long tally.
-!safe
+# NOT !safe, and this is the correction of a real mistake (mig 200). The refuge
+# is DRY, which is a different promise from SAFE, and the dry is not is_safe at
+# all — it is the room's absence from SEA_ROOMS, so it stands out of the water
+# at every tide no matter what this flag says. Marking it safe on top of that
+# put a hideaway and a level-five drowner in the same six feet of stone.
 > west the-mid-causeway
 > east the-far-milestone
 > south the-causeway-cross

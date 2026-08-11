@@ -14,7 +14,7 @@ import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
   FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
-  SMOKEHOUSE_ROOM, CURE_RECIPES, MILESTONES,
+  SMOKEHOUSE_ROOM, CURE_RECIPES, COOK_RECIPES, MILESTONES,
 } from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
@@ -47,6 +47,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // curing, bare 'cure' takes down what's done.
     if (session.gateCureName) inside.push(`cure ${session.gateCureName}`);
     else if (z.rot.some((r) => r.kind === "gatecure" && r.roomId === session.pubkey)) inside.push("cure");
+    // And the brazier, which is always burning in here: a raw catch anywhere in
+    // your keeping gets a named chip that cooks it on click.
+    if (session.gateCookName) inside.push(`cook ${session.gateCookName}`);
     // The wall chart: read it when it has anything on it; offer the nail when
     // you walked shallow halls it doesn't have yet.
     if (z.wallMarks.size) inside.push("study");
@@ -173,6 +176,17 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (raw && (fireLit || session.items.some((c) => c.itemId === TORCH_ITEM && c.serial === null))) {
       suggest.push(`cure ${shortName(world.itemTemplates.get(raw.itemId)!.name)}`);
     }
+  }
+  // A raw catch and a way to make fire: the same teaching chip as the racks,
+  // for the station that has no room of its own. Only offered when the verb
+  // would actually work — a fire already on the stone, the flame in your hand,
+  // or a torch in the pack to spend on one.
+  if (!fighting) {
+    const raw = session.items.find((c) => COOK_RECIPES[c.itemId] && c.serial === null);
+    const fire = Date.now() < (z.groundTorch.get(session.roomId) ?? 0)
+      || session.litSource === "torch"
+      || session.items.some((c) => c.itemId === TORCH_ITEM && c.serial === null);
+    if (raw && fire) suggest.push(`cook ${shortName(world.itemTemplates.get(raw.itemId)!.name)}`);
   }
   const gearless = session.items.find((c) => {
     if (c.equipped) return false;

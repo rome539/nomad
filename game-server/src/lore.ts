@@ -178,8 +178,7 @@ export function worldGrid(z: ZoneDO): WorldGrid {
   if (z.mapGrid) return z.mapGrid;
   const world = z.world!;
   // THE MAP IS LAID OUT FLAT, AND THIS JUST READS IT (rome, 2026-08-03: "HAVE
-  // THE FUCKING MAP LAID OUT FUCKING FLAT AND THEN JUST FILL IN THE FUCKING
-  // ROOMS WHEN YOU FUCKING EXPLORE IT").
+  // the map laid out flat, with the rooms filled in as they are explored).
   //
   // What used to be here: two hundred lines that walked the whole graph at load,
   // dropped every room onto a shared plane, and resolved the collisions — by

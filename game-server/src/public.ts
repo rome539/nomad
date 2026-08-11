@@ -36,7 +36,7 @@ export const PAGE = `<!doctype html>
     --omen: #b195c9;
     --voice: #e79ab6;
     /* THE FIRST BLUE IN THIS PALETTE (rome, 2026-08-11: the Crossing "is
-       colored yellow, thats the same fucking color for the warrens"). It was:
+       drew yellow, the same colour as the warrens). It was:
        'crossing' had no case in mapRegionColor at all and fell through to the
        default, which is gold — the HALLS' colour — and gold sits at hue 40deg
        against the warrens' dim at 43deg, so the newest region on the map drew
@@ -2763,7 +2763,7 @@ var prevChipCmds = [];
 // / TRADE_CHIP in zone.ts.
 var BENCH_CHIP = "inventory";
 // THE SHELF CHIP OPENS THE MODAL (rome, 2026-08-04: "keep the command you write
-// text, but the chip opens a fucking model like the gatehouse"). Same bargain as
+// text, but the chip opens a panel like the gatehouse does). Same bargain as
 // 'inventory': the chip is a door to the box, the typed 'stow <item>' still
 // moves one thing by name. Must match DEN_CHIP in chips.ts.
 var DEN_CHIP = "stow";
@@ -3871,8 +3871,8 @@ function buildMapGraph(f) {
   // THE SHEET IS ALREADY DRAWN. YOU ARE ONLY UNCOVERING IT.
   //
   // rome has said this every single time and I kept only half-doing it: "HAVE
-  // THE FUCKING MAP LAID OUT FUCKING FLAT AND THEN JUST FILL IN THE FUCKING
-  // ROOMS WHEN YOU FUCKING EXPLORE IT", "LET THE FUCKING ROOMS MAP THE FUCKING
+  // the map laid out flat, with the rooms filled in as they are explored; let
+  // the rooms map the
   // WORLD". I baked the coordinates into the rooms (mig 166/167) and then left
   // ALL OF THIS still here — a walker, a packer, a per-band row-filler and a
   // centring pass — so the moment anything was missing the client threw the

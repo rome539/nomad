@@ -102,7 +102,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, playerBleedOdds,
-  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -1478,6 +1478,7 @@ export class ZoneDO implements DurableObject {
       case "fetch": return den.cmdFetch(this, session, cmd.arg);
       case "smoke": return verbs.cmdSmoke(this, session, cmd.arg);
       case "cure": return verbs.cmdCure(this, session, cmd.arg);
+      case "cook": return verbs.cmdCook(this, session, cmd.arg);
       case "squink": return verbs.cmdSquink(this, session);
       case "xyzzy": return verbs.cmdXyzzy(this, session);
     }
@@ -2073,7 +2074,7 @@ export class ZoneDO implements DurableObject {
   // and since nothing but the player's own hand touches their keeping, the cache
   // stays true between those seams.
   public async refreshGateStock(session: Session): Promise<void> {
-    if (!this.outOfWorld(session)) { session.gateSmeltable = false; session.gateCureName = undefined; return; }
+    if (!this.outOfWorld(session)) { session.gateSmeltable = false; session.gateCureName = undefined; session.gateCookName = undefined; return; }
     const pools = await this.gatePools(session);
     session.gateSmeltable = this.countLooseIn(pools, SCRAP_ID) >= SMELT_SCRAP_PER_IRON;
     // Name a curable raw (from ANY pool — the cure verb hangs it from pack,
@@ -2082,6 +2083,9 @@ export class ZoneDO implements DurableObject {
     // to hang.
     const raw = pools.flat().find((c) => CURE_RECIPES[c.itemId] && c.serial === null);
     session.gateCureName = raw ? shortName(this.world!.itemTemplates.get(raw.itemId)!.name) : undefined;
+    // ...and the same for the brazier, which cooks a catch instead of keeping it.
+    const catch_ = pools.flat().find((c) => COOK_RECIPES[c.itemId] && c.serial === null);
+    session.gateCookName = catch_ ? shortName(this.world!.itemTemplates.get(catch_.itemId)!.name) : undefined;
   }
 
   // Refresh the gate-stock cache, then push chips — the one call a gate flow makes
@@ -6038,8 +6042,8 @@ export class ZoneDO implements DurableObject {
       // wanderer blinking in, a bench being closed — doesn't carry through it.
       // (Their own room has its own feed; see gate.gatehouseFeed.)
       if (this.outOfWorld(s)) continue;
-      // AND THE SAME IS TRUE OF A BARRED HOUSE DOOR (rome, 2026-08-10: "theres a
-      // fucking deer in my den"). He was sitting behind his own bar, which the
+      // AND THE SAME IS TRUE OF A BARRED HOUSE DOOR (rome, 2026-08-10, reporting
+      // a deer in his den). He was sitting behind his own bar, which the
       // room had just told him nothing outside could reach through, and the
       // street's roe deer walked across his feed as though it were in the room
       // with him. The gatehouse has skipped its own door's noise since the day

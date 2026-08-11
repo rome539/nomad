@@ -1,0 +1,57 @@
+-- 200 dry is not safe (rome, 2026-08-11, standing in the Refuge fighting the
+-- refuge man: why is there a mob in the safe zone).
+--
+-- Because I gave one room two different promises and only checked one of them.
+--
+-- THE TWO PROMISES, which are not the same promise and are not even the same
+-- system:
+--
+--   DRY  -- the room's ABSENCE from SEA_ROOMS. The refuge is the one stone on
+--          the causeway that stands out of the water at every tide, including
+--          a spring. That is the tide mechanic: caught out with the road going
+--          under both ways, you run for the box and you wait.
+--   SAFE -- is_safe, world.safeRooms, "hideaways no creature will follow you
+--          into". A pocket off the route that nothing pursues you through.
+--
+-- The refuge needs the FIRST and was given BOTH. And the first does not depend
+-- on the second in any way — drop is_safe and the room is exactly as dry as it
+-- was, because the tide reads SEA_ROOMS and has never read this column. Mig
+-- 196 kept the refuge safe on the argument that "take this away and the sea is
+-- just a wall." That argument was about the water, and the water was never what
+-- this flag controlled. The mechanic is untouched by this migration.
+--
+-- WHAT is_safe ACTUALLY DOES, which is the other half of why this reads so
+-- badly in play: it filters the exits creatures will WALK through (ai.ts) and
+-- it removes the room from every event and migration pool. It does not stop a
+-- fight, and it has nothing whatever to say about a creature that is ALREADY
+-- STANDING THERE because a spawn row put it there. So the refuge was a
+-- hideaway that kept out everything in the world except the level-five drowner
+-- that lives in it — the worst possible version of a safe room, one that
+-- promises cover and then hands you a 58 hp fight at 6-11 damage a swing.
+--
+-- AND THE LORE SAID SO ALREADY. zone-data, three lines above the SEA_ROOMS
+-- table, in my own hand:
+--
+--     "...you run for the stone box and you wait, and the refuge man is
+--      already standing in it."
+--
+-- I wrote the collision down as flavour and then flagged the room safe anyway.
+--
+-- THE FIX IS THE FLAG, NOT THE MAN. He is called the refuge man; the refuge is
+-- his whole story (he got there in time, and in time was not the problem —
+-- "the refuge is dry now, and it is dry twice a day, and that is the whole of
+-- what went wrong"). Move him and there is nothing left of him. So the room
+-- gives up the promise it should never have made:
+--
+--     THE REFUGE IS DRY. IT WAS NEVER SAFE. Somebody is standing in it.
+--
+-- Which is a better room than the one I shipped. The causeway's premise is that
+-- the water makes you choose, and now the dry stone at the middle of it has to
+-- be TAKEN as well as reached. Nothing about running for it at high water
+-- changes; you simply have to deal with what is in there when you arrive, and
+-- what is in there has been waiting for two hundred years for exactly that.
+--
+-- The Crossing keeps two hideaways: the Ferry House (a gate) and the Bothy
+-- (a dead-end spur, no gate near it). 2 in 203.
+
+UPDATE rooms SET is_safe = 0 WHERE id = 'the-refuge';

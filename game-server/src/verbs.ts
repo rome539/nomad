@@ -29,7 +29,7 @@ import {
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR,
   DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP, FEN_ROOMS, FEN_CARRY_CAP,
   JOURNAL_ITEM,
-  SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS,
+  SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS, COOK_RECIPES,
   MILESTONES,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor, worksBar } from "./gate";
@@ -215,6 +215,174 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
   await z.ensureAlarm();
 }
 
+// ---- cook: a catch, a fire, and no waiting -------------------------------
+//
+// The racks' opposite (COOK_RECIPES holds the argument in full). Curing is a
+// place you walk to and a wait you gamble; cooking is wherever the fire is and
+// it is done by the time you have finished crouching down. What you get is
+// HEAL and no keeping — the reverse of the smokehouse's trade.
+//
+// THE FIRE IS THE COST, and it is the same open flame the world already knows:
+// groundTorch, a torch burning on the stone. It lights the room for EVERYONE in
+// it, fire-fearing things break off from it, and lurkers cannot spring in it —
+// which cuts both ways, because a fire in a dark region is the most visible
+// thing a wanderer can do. There is no cooking in the dark, and no cooking
+// without spending your light or setting it down.
+export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const world = z.world!;
+  if (z.outOfWorld(session)) return cookAtGate(z, session, arg);
+  // Not with something trying to kill you — the same line the angler gets, for
+  // the same reason: this is a crouch, not a gulp. (`eat` stays allowed mid-
+  // fight; bolting cold food is desperation and it costs you your guard.)
+  if (z.inCombat(session)) return z.send(session, "Not with something trying to kill you. Bolt it cold if you have to ('eat').");
+
+  const cookable = session.items.filter((c) => COOK_RECIPES[c.itemId] && c.serial === null);
+  const held = light.carriesLight(session) && session.litSource === "torch";
+  const lit = Date.now() < (z.groundTorch.get(session.roomId) ?? 0);
+  const spare = session.items.find((c) => c.itemId === TORCH_ITEM && c.serial === null);
+
+  if (!arg) {
+    const what = cookable.length
+      ? `You carry ${cookable.map((c) => world.itemTemplates.get(c.itemId)!.name).join(", ")}.`
+      : "You carry nothing a fire would improve.";
+    return z.send(session, (lit
+      ? `A fire burns on the stone here, low and steady. Anything raw out of water goes on it — 'cook trout', 'cook crab' — and comes off in a moment, worth more to a starving man and worth nothing to a keeper. ${what}`
+      : held
+      ? `You have the flame in your hand. Set it down and it becomes a fire — 'cook <catch>' will do it for you, since this wants both hands. ${what}`
+      : spare
+      ? `There is no fire here. You have a torch: 'cook <catch>' spends it, and the flame stays on the stone and burns for anyone. ${what}`
+      : `There is no fire here and nothing to make one with. A catch wants a flame on the stone. ${what}`), "evt");
+  }
+
+  // Prefer a COOKABLE match, the same resolution the racks use: "cook fish"
+  // should find the trout that can go on the fire, not the salt-fish strip that
+  // has already been through one.
+  const match = cookable.find((c) => nameMatches(world.itemTemplates.get(c.itemId)!.name, arg));
+  const carried = match ?? z.findCarried(session, arg);
+  if (!carried) return z.send(session, "You carry nothing like that.");
+  const outId = COOK_RECIPES[carried.itemId];
+  const rawT = world.itemTemplates.get(carried.itemId)!;
+  if (!outId) {
+    return z.send(session, FOOD_KEEPS.has(carried.itemId)
+      // Cured food refusing the fire is not an arbitrary rule and the line says
+      // why: it has already been through one. That IS what curing is.
+      ? `${cap(rawT.name)} has been through a fire already, or a barrel. Cooking it twice takes it the wrong way.`
+      : `${cap(rawT.name)} is not for the fire. This is for what comes out of water — a fish, an eel, a crab, an egg. Raw meat is the smoke-racks' business.`);
+  }
+  if (carried.serial !== null) return z.send(session, "That one's sealed for extraction. Break the seal before you'd put it on a fire.");
+  // ROT CANNOT BE COOKED BACK OUT. Everything short of spoiled can — a catch on
+  // the turn goes on the fire and comes off with a fresh clock, which is a real
+  // and deliberate use for the verb: the fire is how you save a fish you have
+  // carried too far. But a fire cannot un-rot anything, and if it could, food
+  // would never spoil again — you would simply cook the spoilage away.
+  const age = await itemAcquiredAt(z.env.DB, carried.rowId);
+  if (foodState(age ?? undefined) === "spoiled") {
+    return z.send(session, `${cap(rawT.name)} has gone. The fire will not take the rot back out of it — it would only make it hot and rotten.`);
+  }
+
+  // THE FLAME, in the three ways you can have one. A fire already on the stone
+  // is free and keeps burning for whoever else is here; a torch in your hand
+  // goes down onto the stone (this wants both hands, and a set-down torch is
+  // the same shared fire); with neither, one out of the pack is spent to make
+  // one, exactly as the smoke-racks spend theirs.
+  let how: "fire" | "setdown" | "spent";
+  if (lit) {
+    how = "fire";
+  } else if (held) {
+    z.groundTorch.set(session.roomId, Math.max(z.groundTorch.get(session.roomId) ?? 0, session.litUntil!));
+    session.litUntil = undefined; session.litSource = undefined; session.torchWarned = false;
+    how = "setdown";
+  } else if (spare) {
+    session.items.splice(session.items.indexOf(spare), 1);
+    await removeItemRow(z.env.DB, spare.rowId);
+    z.groundTorch.set(session.roomId, Date.now() + TORCH_BURN_MS);
+    how = "spent";
+  } else {
+    return z.send(session, `You turn ${rawT.name} over in your hands with nowhere to put it. Raw is raw without a fire, and there is no fire here.`);
+  }
+
+  session.items.splice(session.items.indexOf(carried), 1);
+  await removeItemRow(z.env.DB, carried.rowId);
+  const got = await z.grantItem(session, outId);
+  const outT = world.itemTemplates.get(outId)!;
+  if (!got) {
+    // This CAN happen even though a row just left the pack: two raw trout are
+    // one slot, so cooking one of them frees nothing and the cooked form wants a
+    // slot of its own. Never eat the catch to punish a full pack — set it on the
+    // stone, where it is still yours to pick up and still something a hungry
+    // thing can smell.
+    z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), outId]);
+    z.stampFresh(session.roomId, outId);
+    z.armStrayDecay(session.roomId); // it lies where anything can take it, and it rots on the floor's clock like anything dropped
+    z.send(session, `You cook ${rawT.name} through and set it on the stone — your pack will not take it — and ${outT.name} lies there in the firelight, smelling of itself.`, "gain");
+    z.refreshRoomCtx(session.roomId);
+    await z.persist();
+    return;
+  }
+  z.send(session, (how === "spent"
+    ? `You strike a torch down onto the stone and crouch over it. `
+    : how === "setdown"
+    ? `You set your torch on the stone — this wants both hands — and crouch over the flame. `
+    : `You crouch over the fire. `)
+    + `${cap(rawT.name)} goes on, and it does not take long. ${pick([
+      "The smell of it goes further than you would like.",
+      "Fat runs and catches and the light jumps with it.",
+      "The skin blisters and lifts, and it comes off the flame whole.",
+      "It spits once, twice, and it is done.",
+      "You turn it with a stick and it comes away clean.",
+    ])} You have ${outT.name}. (It will not keep — the racks are for keeping. Eat it tonight.)`, "gain");
+  z.roomFeed(session.roomId, `${session.name} cooks ${rawT.name} over the fire, and the smell of it fills the room.`, session.pubkey, false);
+  z.sendStatus(session);
+  z.sendCtx(session);
+  z.refreshRoomCtx(session.roomId);
+  await z.persist();
+  await z.ensureAlarm();
+}
+
+// Behind the door: the gatehouse brazier, which is always lit and costs no
+// torch. The safe, dull version of the fire, and the same shape the racks have
+// (cure/cureAtGate) — a gate can do anything the world can do, slower or duller,
+// and never better. Here it is instant and free, and it is worth nothing at all
+// out in the dark: cooked food does not keep, so a meal cooked at the hatch is
+// a meal for THIS delve. Cure for the week; cook for tonight.
+async function cookAtGate(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const world = z.world!;
+  const pools = await z.gatePools(session);
+  const flat = pools.flat();
+  const cookable = flat.filter((c) => COOK_RECIPES[c.itemId] && c.serial === null);
+  if (!arg) {
+    return z.send(session, cookable.length
+      ? `The brazier is burning at your elbow. ${cookable.map((c) => cap(world.itemTemplates.get(c.itemId)!.name)).join(", ")} — any of it would be better off it than on it. ('cook <catch>'; it heals more and it will not keep, so eat it this side of the door or soon after.)`
+      : "The brazier is burning at your elbow, and you have nothing raw out of water to put over it. ('cook <catch>' — a fish, an eel, a crab, an egg.)", "evt");
+  }
+  const named = (c: CarriedItem) => nameMatches(world.itemTemplates.get(c.itemId)!.name, arg);
+  const carried = cookable.find(named) ?? flat.find(named);
+  if (!carried) return z.send(session, "You carry nothing like that.");
+  const outId = COOK_RECIPES[carried.itemId];
+  const rawT = world.itemTemplates.get(carried.itemId)!;
+  if (!outId) {
+    return z.send(session, FOOD_KEEPS.has(carried.itemId)
+      ? `${cap(rawT.name)} has been through a fire already, or a barrel. Cooking it twice takes it the wrong way.`
+      : `${cap(rawT.name)} is not for the brazier. This is for what comes out of water — a fish, an eel, a crab, an egg.`);
+  }
+  if (carried.serial !== null) return z.send(session, "That one's sealed for extraction. Break the seal before you'd put it on the coals.");
+  const age = await itemAcquiredAt(z.env.DB, carried.rowId);
+  if (foodState(age ?? undefined) === "spoiled") {
+    return z.send(session, `${cap(rawT.name)} has gone, and the keeper watches you consider the brazier with it. The fire will not take the rot back out.`);
+  }
+  if (!z.packRoom(session, outId)) return z.send(session, `Your pack is full, and ${world.itemTemplates.get(outId)!.name} would have nowhere to go. Stow something first.`);
+  const packIdx = session.items.indexOf(carried);
+  if (packIdx !== -1) session.items.splice(packIdx, 1);
+  await removeItemRow(z.env.DB, carried.rowId);
+  const rowId = uuid();
+  await insertLoot(z.env.DB, rowId, session.pubkey, outId, null);
+  session.items.push({ rowId, itemId: outId, serial: null, equipped: false, condition: 100 });
+  z.send(session, `You lay ${rawT.name} on the brazier's iron and the keeper moves the kettle along without being asked. It comes off in a minute or two: ${world.itemTemplates.get(outId)!.name}. (It will not keep. That is what the racks are for.)`, "gain");
+  gatehouseFeed(z, `${session.name} cooks a catch on the brazier.`, session.pubkey);
+  z.sendStatus(session);
+  z.sendCtx(session);
+  await z.persist();
+}
 // Nobody knows what this does. That includes the dungeon.
 export function cmdSquink(z: ZoneDO, session: Session): void {
   z.send(session, "You squink. Somewhere below, something squinks back.");

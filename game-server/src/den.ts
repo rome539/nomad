@@ -1,5 +1,5 @@
-// THE DENS — the places nomads live (rome, 2026-08-03: "ITS SUPPOSED TO BE A
-// FUCKING PLACE WHERE NOMADS FUCKING LIVE").
+// THE DENS — the places nomads live (rome, 2026-08-03: a den is supposed to be
+// a place nomads LIVE in).
 //
 // Its own module rather than more of zone.ts, per the standing rule: the spine
 // is tick/combat + transport, and this is neither. Free functions taking the
@@ -328,8 +328,8 @@ export async function cmdSettle(z: ZoneDO, session: Session, arg: string): Promi
   if (spilledOnThisGround(z, roomId, session.pubkey)) {
     return z.send(session, "You spilled blood on this ground. Whatever has come and gone since, it is not going to be your home.");
   }
-  // A MAN LIVES IN ONE PLACE (rome, 2026-08-04: "why the fuck can i settle
-  // multiple dens???").
+  // A MAN LIVES IN ONE PLACE (rome, 2026-08-04, asking why he could settle
+  // multiple dens at once).
   //
   // Nothing stopped you taking all six, and that is not a small hole — it is the
   // whole scarcity of the feature. Six doors on this ground is the entire supply,
@@ -659,8 +659,8 @@ export async function cmdStow(z: ZoneDO, session: Session, arg: string): Promise
 }
 
 export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promise<void> {
-  // YOUR THINGS NEVER BECOME UNREACHABLE (rome, 2026-08-03: "make sure when im
-  // storing gear in the den, it wont fucking disappear on me").
+  // YOUR THINGS NEVER BECOME UNREACHABLE (rome, 2026-08-03: gear stored in the
+  // den must never disappear on him).
   //
   // The row is keyed to YOUR pubkey and to the ROOM, never to the hold, so
   // nothing anybody does to the hold can touch it: a den that lapses, is
@@ -704,9 +704,9 @@ export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promis
 }
 
 // ---------------------------------------------------------------------------
-// THE SHELF AS A MODAL (rome, 2026-08-04: "why the fuck did you make the
-// fucking stow command chip not a fucking modal (keep the command you write
-// text, but the chip opens a fucking model like the gatehouse)").
+// THE SHELF AS A MODAL (rome, 2026-08-04: the stow chip should open a modal like
+// the gatehouse does — keep the typed command as text, but the chip opens a
+// panel).
 //
 // He is right and the inconsistency was mine: every other keeping-place in the
 // game — pack, lockbox, vault — is a column in ONE modal you tap open, and the

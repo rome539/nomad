@@ -52,6 +52,7 @@ export type Verb =
   | "wash"
   | "smoke"
   | "cure"
+  | "cook"
   | "squink"
   | "enter"
   | "exit"
@@ -166,6 +167,10 @@ const VERB_ALIASES: Record<string, Verb> = {
   deal: "deal", swap: "deal",
   smoke: "smoke", puff: "smoke", // light one from the tin. undocumented.
   cure: "cure", preserve: "cure", // hang raw meat in the smokehouse racks to keep it
+  // The racks' opposite: a catch on a fire, wherever the fire is. NOT 'smoke'
+  // (that word is the cigarette's, and the racks' when you stand in them) and
+  // NOT 'burn' (which is destroying a thing, and means it elsewhere).
+  cook: "cook", roast: "cook", grill: "cook", fry: "cook",
 
   squink: "squink", // means anything. not documented. never will be.
   xyzzy: "xyzzy", plugh: "xyzzy", frotz: "xyzzy", plover: "xyzzy", // the old words.
@@ -451,6 +456,12 @@ export const HELP_TEXT = [
   "  cure <meat>       turn a raw joint into food that keeps. Behind any gate the",
   "                    racks are safe; the old smokehouse deep below the larder",
   "                    works too, if you bring a torch and can hold the room.",
+  "  cook <catch>      (roast, grill) — a fish, an eel, a crab, an egg, over a",
+  "                    fire on the stone. It heals a good deal more and it will",
+  "                    NOT keep, which is the racks' job and not the fire's. Any",
+  "                    gate's brazier does it free; out in the world it takes a",
+  "                    torch set burning on the ground, and everything there can",
+  "                    see the flame and smell the cooking.",
   "  smoke             light a cigarette. It steadies you for a breath. Out in the",
   "                    world the room sees the ember and so does the dark — inside",
   "                    a gatehouse it is only company.",
