@@ -106,7 +106,9 @@ import {
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
-  FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT
+  FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT,
+  MARKERS, MARK_MS, MARK_HEED_MULT, MARK_CALL_ODDS, SWEEPERS,
+  FERRY_DRAG_ROOM, FERRY_DRAG_ODDS, FERRY_DRAG_MAX, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, RAVEN_NEST_ROOMS, RAVEN_SCOOPERS,
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
@@ -219,6 +221,7 @@ export class ZoneDO implements DurableObject {
   private nextSurfaceAt = 0; // ms epoch the deep next coughs a dweller up (only while the deep door is sealed)
   public events = new Map<string, EventState>(); // room events mid-arc (events.ts owns the arcs; the spine just keeps the clock)
   public fishStock = new Map<string, { left: number; at: number }>(); // per-water catch budget (verbs.cmdFish spends it; rain refreshes the surface)
+  public nests = new Map<string, string[]>(); // corvid nests: nest roomId -> gear the raven carried home (ABSTRACT, off the floor — the only way in is feeding the bird)
   private savedAt = 0;
   private lastFlushAt = 0; // last time live sessions' hp/room were flushed to D1 (restart-durability)
 
@@ -502,6 +505,7 @@ export class ZoneDO implements DurableObject {
       this.nextSurfaceAt = saved.nextSurfaceAt ?? 0;
       this.events = new Map(Object.entries(saved.events ?? {}));
       this.fishStock = new Map(Object.entries(saved.fishStock ?? {}));
+      this.nests = new Map(Object.entries(saved.nests ?? {}));
       this.savedAt = saved.savedAt;
       // Territory backfill: pre-territory saves carry no den. Tie each creature
       // to its bloodline's NEAREST den — which repatriates any deep-dweller
@@ -775,6 +779,7 @@ export class ZoneDO implements DurableObject {
       nextSurfaceAt: this.nextSurfaceAt,
       events: Object.fromEntries(this.events),
       fishStock: Object.fromEntries(this.fishStock),
+      nests: Object.fromEntries(this.nests),
     };
     // Rows, not the blob (simstore.ts): only what changed since the last save
     // is written, in one transaction. The 128KiB one-value ceiling is gone.
@@ -1431,6 +1436,7 @@ export class ZoneDO implements DurableObject {
       case "name": return verbs.cmdName(this, session, cmd.arg);
       case "rest": return verbs.cmdRest(this, session);
       case "eat": return verbs.cmdEat(this, session, cmd.arg);
+      case "feed": return verbs.cmdFeed(this, session, cmd.arg);
       case "bandage": return verbs.cmdBandage(this, session, cmd.arg);
       case "light": return light.cmdLight(this, session, cmd.arg);
       case "sheet": return verbs.cmdSheet(this, session);
@@ -1592,6 +1598,37 @@ export class ZoneDO implements DurableObject {
     }
   }
 
+  // THE MURDER. Strike a crow and the sky takes a side: every idle corvid
+  // within CROW_ROUSE_RADIUS rooms hears it and turns on the same face, closing
+  // one step at a time on the normal curious-walk. Same room = immediate (they
+  // turn like the hyena pack); next room = the call draws them in (they come
+  // looking). The struck bird's kin all hate the same hand, so a murder is one
+  // thing with many wings — kill fast, or answer the whole sky.
+  private rouseCrows(session: Session, struck: Creature): void {
+    if (!CROWS.has(struck.templateId)) return;
+    let roused = 0;
+    for (const other of this.creatures.values()) {
+      if (other.id === struck.id || !CROWS.has(other.templateId)) continue;
+      if (other.target || other.asleep) continue;
+      const d = this.roomDist(other.roomId, session.roomId);
+      if (d === Number.POSITIVE_INFINITY || d > CROW_ROUSE_RADIUS) continue;
+      // Same room: it turns on you at once. Nearby: the call draws it — odds
+      // gated so a lone crow is dealable and a murder is not.
+      if (d === 0 || chance(CROW_CALL_ODDS)) {
+        other.target = session.pubkey;
+        other.asleep = false;
+        other.sleepUntil = undefined;
+        ai.addGrudge(this, other, session.pubkey);
+        roused++;
+      }
+    }
+    if (roused > 0) {
+      this.send(session, "A murder of crows turns on you as one — every wing in earshot is coming.", "dmgin");
+      this.roomFeed(session.roomId, `${session.name} strikes a crow — and the whole murder takes it up.`, session.pubkey, false);
+      this.roomSound(session.roomId, "Caws, from every direction, closing {dir}.");
+    }
+  }
+
   private async cmdAttack(session: Session, arg: string): Promise<void> {
     if (!arg) return this.send(session, "Attack what?");
     const barred = this.behindTheDoor(session);
@@ -1634,6 +1671,7 @@ export class ZoneDO implements DurableObject {
     creature.hidden = false; // a lurker you've struck is unseen no longer — reveal it (room, chip, study)
     if (SENTINELS.has(creature.templateId)) creature.wakeUntil = Date.now() + HOUND_WAKE_MS; // a blow rouses a sleeping guardian
     this.rousePack(session, creature); // hyenas: strike one and the pack turns on you
+    this.rouseCrows(session, creature); // crows: strike one and the murder rises
     if (unaware) {
       const weapon = this.equippedItem(session, "weapon");
       let dmg = Math.round(
@@ -1752,6 +1790,7 @@ export class ZoneDO implements DurableObject {
     creature.hidden = false; // hurling at a lurker outs it too — reveal it (room, chip, study)
     if (SENTINELS.has(creature.templateId)) creature.wakeUntil = Date.now() + HOUND_WAKE_MS; // a thrown stone rouses a sleeping guardian too
     this.rousePack(session, creature); // hyenas: a thrown blow turns the pack too
+    this.rouseCrows(session, creature); // crows: a thrown stone rouses the murder too
     // Every attack is a gamble — thrown ones too. A wild throw still leaves
     // your hand (and still wakes what it nearly hit).
     if (chance(FUMBLE_CHANCE + (session.hp < session.maxHp * WOUNDED_FRACTION ? WOUNDED_FUMBLE_BONUS : 0))) {
@@ -2583,9 +2622,66 @@ export class ZoneDO implements DurableObject {
     }
     victim.hobbled = true;
     victim.limpingSince = undefined; // a fresh wound — the drag-clear clock starts on your next flee
+    // The quicksand holds by WEIGHT, not by tooth: the ground has your leg to
+    // the knee and does not mean to let it go. Same affliction, its own tell.
+    if (tmpl.id === "the-quicksand") {
+      this.send(victim, `The ground has your leg — it grips you to the knee and you have to haul clear of it. (rest to dry off, or run for it)`, "dmgin");
+      this.sendStatus(victim); // light the 'hobbled' HUD pill the instant the leg goes — same fix as stun/rest
+      this.actorFeed(victim, victim.roomId, this.feedProc(FEED_HOBBLE, tmpl.name, victim.name), "hobble");
+      return;
+    }
     this.send(victim, `${cap(tmpl.name)} rakes your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
     this.sendStatus(victim); // light the 'hobbled' HUD pill the instant the leg goes — same fix as stun/rest
     this.actorFeed(victim, victim.roomId, this.feedProc(FEED_HOBBLE, tmpl.name, victim.name), "hobble");
+  }
+
+  // THE TOLL CLERK BRANDS YOU. The road remembers your face for MARK_MS: while
+  // the mark holds, creatureNoise heeds you twice as hard (MARK_HEED_MULT on
+  // the per-ear heed-roll) and a hungry ear may come straight to look
+  // (MARK_CALL_ODDS, the same curious-draw a noise pulls). Renewed on each
+  // landed blow, so the longer you fight the institution, the more the country
+  // knows you. Scrubbed by resting at a gate (the threshold is the one place
+  // the road forgets).
+  public markBrand(victim: Session, tmpl: MobTemplate): void {
+    const now = Date.now();
+    const fresh = !(victim.markedUntil && victim.markedUntil > now);
+    victim.markedUntil = now + MARK_MS;
+    if (!fresh) return; // already branded — a renewal is silent, like a fresh wound
+    this.send(victim, `${cap(tmpl.name)} strikes you — and where its hand touched, you feel the weight of being looked at. The road knows your face now. (it fades, but the gate will scrub it)`, "dmgin");
+    this.sendStatus(victim);
+  }
+
+  // THE SWEEPER'S SECOND ARC. A mallet swinging for the stone at the end of a
+  // bridge does not stop at the first body it finds: a landed primary blow also
+  // drags through every OTHER wanderer standing in the room, at half weight and
+  // with no afflictions beyond the raw hit (no new stun/bleed/hobble/mark —
+  // the arc is a side-effect, not a fresh attack). Rolled per extra body so a
+  // crowded bridge is where you bleed. A body already at 0 hp is skipped; the
+  // arc can never be the killing blow (it folds into the normal death path
+  // below the same as any hit).
+  public sweepArc(roomId: string, attacker: Creature, tmpl: MobTemplate, exceptPubkey?: string): void {
+    if (!SWEEPERS.has(tmpl.id)) return;
+    for (const other of this.sessions.values()) {
+      if (other.hp <= 0 || other.roomId !== roomId || this.outOfWorld(other)) continue;
+      if (other.pubkey === exceptPubkey) continue; // the primary already took the full blow — the arc is the BACK half, for everyone else
+      // THE ARC OBEYS THE PRESS. One swing reaching several bodies is still
+      // blows landing on people, and the dogpile budget is what stops a crowd
+      // being an execution (canLandBlow — the same gate the ordinary round and
+      // every opening blow go through). Without this the mason lands its
+      // primary AND an uncapped hit on everyone else, every round, which is the
+      // exact hole creatureFirstStrike was closed against this morning. Held
+      // back, the arc simply misses that body this beat.
+      if (!this.canLandBlow(other.pubkey)) continue;
+      const arc = Math.max(1, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) / 2));
+      const arcWorn = Math.max(1, Math.round(arc * ARMOR_K / (this.equippedArmor(other) + ARMOR_K)));
+      const arcDef = Math.max(1, Math.round(arcWorn * STANCE[other.stance].def));
+      other.hp -= arcDef;
+      this.send(other, `${cap(tmpl.name)} swings on through — the arc of the blow catches you for ${arcDef}. [${Math.max(0, other.hp)}/${other.maxHp} hp]`, "dmgin");
+      this.sendStatus(other);
+      if (other.hp <= 0) {
+        void this.onPlayerDeath(other, tmpl);
+      }
+    }
   }
 
   // The vitals lottery — the Tarkov headshot. A rare, RANDOM killing hit that
@@ -3003,6 +3099,8 @@ export class ZoneDO implements DurableObject {
             dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - Math.max(pierceVal, bluntVal, edgeVal)));
             creature.hp -= dmg;
             this.markHurt(creature, tmpl, session.pubkey);
+            // A landed blow on a crow is a stone in the pond: the murder rises.
+            this.rouseCrows(session, creature);
             // The vitals lottery, PLAYER side — a lucky killing blow on a landed
             // hit. Bosses are the designed wall (never). The three-hound falls this
             // way ONLY to a piercing weapon, and rarely (VITALS_HOUND). Everything
@@ -3105,10 +3203,62 @@ export class ZoneDO implements DurableObject {
     if (combatRound) for (const s of this.sessions.values()) {
       if (!s.seizedBy) continue;
       const grip = this.creatures.get(s.seizedBy);
-      if (!grip || grip.roomId !== s.roomId) { s.seizedBy = undefined; continue; }
+      // The ferryman's grip rides the ROPE, not the room: he hauls you toward
+      // the mid-channel and holds you on the line across the rooms between —
+      // the grip only dies when he does, or you wrench free.
+      const onRope = !!grip && grip.templateId === "the-drowned-ferryman";
+      if (!grip || (!onRope && grip.roomId !== s.roomId)) { s.seizedBy = undefined; s.draggedRooms = 0; continue; }
       // SLICK hide slips a grip easier, too (the eel was never held).
       const breakOdds = SEIZE_BREAK_ODDS + (this.wearsTrait(s, "slick") ? SLICK_BREAK_BONUS : 0);
-      if (chance(breakOdds)) { s.seizedBy = undefined; this.send(s, "You tear loose of its grip."); }
+      if (chance(breakOdds)) {
+        s.seizedBy = undefined;
+        s.draggedRooms = 0;
+        this.send(s, "You tear loose of its grip.");
+        continue;
+      }
+      // THE FERRYMAN TAKES YOU ACROSS. He holds the grip — and this beat he
+      // wins it — so he hauls you one room down the rope toward the mid-channel
+      // (his home), up to FERRY_DRAG_MAX rooms per grip. Relocation, not
+      // damage: the fight moves, and the deep channel is where he is strongest.
+      // He himself never leaves the mid-channel — he is the rope, not a thing
+      // that walks — so the grip persists across rooms (you are both ON the
+      // rope) and the boss keeps his post. Never strands: he only ever moves
+      // you ALONG the rope toward home, so the way back is the way you came.
+      if (grip.templateId === "the-drowned-ferryman"
+          && (s.draggedRooms ?? 0) < FERRY_DRAG_MAX && chance(FERRY_DRAG_ODDS)) {
+        const home = grip.home ?? FERRY_DRAG_ROOM;
+        const exits = (this.world!.exits.get(s.roomId) ?? [])
+          .filter((e) => !e.key_item || this.openDoors.has(`${s.roomId}:${e.dir}`));
+        // Only ALONG the rope toward home, and never onto a gate — the drag is
+        // a fair fight, not a way to strand you at a threshold.
+        const closer = exits.filter((e) =>
+          !this.world!.entryRooms.has(e.to_room)
+          && this.roomDist(e.to_room, home) < this.roomDist(s.roomId, home),
+        );
+        if (closer.length) {
+          const dest = closer[randInt(0, closer.length - 1)].to_room;
+          const gtmpl = this.world!.mobTemplates.get(grip.templateId)!;
+          s.draggedRooms = (s.draggedRooms ?? 0) + 1;
+          this.roomFeed(s.roomId, `${cap(gtmpl.name)} hauls on the rope — ${s.name} is dragged out of the room.`, s.pubkey, false);
+          this.send(s, `${cap(gtmpl.name)} hauls on the rope with both white hands — you are dragged ${(s.draggedRooms ?? 0) >= FERRY_DRAG_MAX ? "one more room" : "closer to the deep channel"}. (break free, or it keeps taking you across)`, "seize");
+          this.sendStatus(s);
+          s.roomId = dest;
+          this.actorFeed(s, s.roomId, `${s.name} arrives, dragged.`, "who", false);
+          // A DRAGGED MAN STILL HAS EYES. enterDescribe is the arrival print AND
+          // the only thing that writes session.visited — skip it and you are
+          // hauled into the dark with no room name, no exits and no idea where
+          // the fight now is, and the room never counts as walked (so it can
+          // never go on the wall chart or a surveyor's copy, though you were
+          // physically in it). Being moved against your will is not the same as
+          // being blindfolded.
+          this.sendStatus(s);
+          this.send(s, this.enterDescribe(s));
+          this.combatNoise(s.roomId);
+          // The grip stays with him (the rope connects you); he does not.
+          this.refreshRoomCtx(s.roomId);
+          this.refreshRoomCtx(grip.roomId);
+        }
+      }
     }
 
     // Creatures act: flee if badly hurt, otherwise fight back. Only so many can
@@ -3289,7 +3439,12 @@ export class ZoneDO implements DurableObject {
       }
       if (creature.target) {
         const victim = this.sessions.get(creature.target);
-        if (!victim || this.outOfWorld(victim) || victim.roomId !== creature.roomId) {
+        // The ferryman holds his prey ON THE ROPE across rooms — the drag's
+        // whole point is that the fight follows the line, so his target doesn't
+        // lapse when the haul moves them apart.
+        const onRope = creature.templateId === "the-drowned-ferryman"
+          && !!victim && victim.seizedBy === creature.id;
+        if (!victim || this.outOfWorld(victim) || (victim.roomId !== creature.roomId && !onRope)) {
           creature.target = null;
           creature.rouseAt = undefined; // lost its prey — a dire-hyena winds up fresh next time
           continue;
@@ -3476,6 +3631,9 @@ export class ZoneDO implements DurableObject {
           if (drowned) this.send(victim, `${cap(tmpl.name)} drags you under — black water fills your lungs for ${drowned}. (break free, or drown)`, "dmgin big");
           this.sendStatus(victim);
           this.combatNoise(victim.roomId);
+          // The mallet's arc doesn't stop at the first body: everyone else in the
+          // room catches the sweep's back-half at half weight (see sweepArc).
+          this.sweepArc(victim.roomId, creature, tmpl, victim.pubkey);
           // A drowned thing that lands a blow can take hold — you're seized,
           // can't flee, and it drags harder until you wrench free or kill it.
           // SLICK hide (eel-skin) gives cold arms half as much to hold; worn MASS
@@ -3490,6 +3648,10 @@ export class ZoneDO implements DurableObject {
           this.openWound(victim, tmpl);
           // The leg-goers go low — a hit can hamstring you.
           this.maybeHobble(victim, tmpl);
+          // The toll clerk brands you. A landed blow is the road's tax: while the
+          // mark holds, earshot heeds you twice as hard and hungry ears come to
+          // look — the institution remembering your face costs you the quiet.
+          if (MARKERS.has(creature.templateId)) this.markBrand(victim, tmpl);
           // A heavy dead blow can ring YOUR skull — you lose your next swing.
           // One hit, one lost beat; you can't be stun-chained deeper. PADDING
           // (cushion) takes the ring out of a share; worn MASS (poise) shrugs the
@@ -3919,7 +4081,18 @@ export class ZoneDO implements DurableObject {
         // their ambush and onto your torchlight. A LONG-quiet corridor (no death
         // near) is what starves one desperate enough to come anyway. (Feed only:
         // no gear-scooping, no going bold — they're hunters, not looters.)
+        // STAYS IN THE CHAIN. The `else` is the guard: nothing may take two
+        // feeds in one tick, and today nothing is in two of these sets — but
+        // the exclusivity is enforced HERE, not by the sets remembering to stay
+        // apart. Break the chain and the day a lurker joins VERMIN it silently
+        // heals twice a beat.
         else if (LURKERS.has(creature.templateId) && creature.hunger >= HUNGRY_AT) ai.scavengerFeeds(this, creature, false);
+        // A corvid works the sack on TOP of whatever it just ate — carrying is
+        // not feeding, so this is deliberately its own statement and not part
+        // of the chain above. Gated at the call site like its neighbours (the
+        // function self-guards too, but it was the one call in this loop that
+        // ran for every creature in the world, every tick).
+        if (RAVEN_SCOOPERS.has(creature.templateId)) ai.ravenScoops(this, creature);
         // (The drowned used to feed here too, added 2026-07-26 — removed
         // 2026-07-31 when they came off the hunger clock entirely: sessile, no
         // prey map, and a carrion supply ~200x too slow to ever satisfy them.
@@ -4738,7 +4911,9 @@ export class ZoneDO implements DurableObject {
     // What it visibly bore — its gear, or something it scavenged off the dead —
     // spills to the floor where it fell. No random roll: if you could see it on
     // the thing, killing it drops it. Pick it up (ground gear lands fresh, no
-    // seal; the gate does the sealing).
+    // seal; the gate does the sealing). (A corvid never carries — its takings
+    // go straight into the nest pool, so a killed raven is worth nothing but
+    // its own worn gear, which spills like any other's below.)
     if (creature.carries?.length) {
       const floor = this.ground.get(creature.roomId) ?? [];
       for (const id of creature.carries) {
@@ -5233,6 +5408,24 @@ export class ZoneDO implements DurableObject {
         for (const l of loose) lines.push(l);
       } else if (loose.length) {
         lines.push(`Loot lies scattered across the stones — ${loose.length} things in all. ('look' to pick them out.)`);
+      }
+      // A CORVID NEST, and what is in it. Only the THREE fixed pools (RAVEN_NEST_ROOMS)
+      // can hold a nest — every corvid in the world carries to the nearest of
+      // them, so the high road, the grave ground and the far rise each have
+      // their own shared pile. The hoard lives here — hidden, off the floor,
+      // unreachable by hand (it is a nest, not a spill). The room only says a
+      // nest IS here, and that it is kept or bare: the way in is feeding the
+      // raven that works this pool, which parts with a piece sometimes and
+      // never a certainty. The tell is the whole discovery mechanic — you learn
+      // a raven is worth feeding by standing where its nest is.
+      // A BARE NEST IS STILL A NEST, and it has to say so — learning that a
+      // raven is worth feeding is the whole discovery, and a pool that goes
+      // silent whenever it happens to be empty teaches nobody anything. Kept
+      // or bare, the room names it; only the second half changes.
+      if (RAVEN_NEST_ROOMS.includes(room.id)) {
+        lines.push(this.nests.get(room.id)?.length
+          ? "High above, wedged where the light hardly reaches, a raven's nest is tucked in — and something in it glints. (feed the raven here, and it may fetch you a piece)"
+          : "High above, wedged where the light hardly reaches, a raven's nest is tucked in — sticks and wire and nothing else in it today. (the birds keep what they find here)");
       }
       for (const cache of world.caches) {
         if (this.cacheRoomId(cache) !== room.id) continue;
@@ -6046,7 +6239,15 @@ export class ZoneDO implements DurableObject {
       if (RUNNERS.has(c.templateId)) continue;
       // Not every ear pricks up. A good majority come to look; the rest keep
       // to their own business — so a fight draws a crowd, not the whole zone.
-      if (!chance(NOISE_HEED_ODDS)) continue;
+      // A MARKED wanderer (the toll clerk's brand) is the exception: the road
+      // knows that face, so every ear in earshot heeds twice as hard, and each
+      // rolls its own chance to be pulled straight over (MARK_CALL_ODDS) — the
+      // brand working like a noise it can smell rather than hear.
+      const marked = [...this.sessions.values()].some(
+        (s) => s.roomId === sourceRoomId && (s.markedUntil ?? 0) > now,
+      );
+      const heed = marked ? Math.min(1, NOISE_HEED_ODDS * MARK_HEED_MULT) : NOISE_HEED_ODDS;
+      if (!chance(heed) && !(marked && chance(MARK_CALL_ODDS))) continue;
       const exits = world.exits.get(c.roomId) ?? [];
       const toward = exits.find(
         (e) => e.to_room === sourceRoomId && (!e.key_item || this.openDoors.has(`${c.roomId}:${e.dir}`)),

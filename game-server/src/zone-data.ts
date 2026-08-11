@@ -1387,7 +1387,11 @@ export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer", "whi
   // dead to survive — that is what VERMIN is, and it is the one honest route for
   // a thing that will not come to a player or a graze. Without this they banked
   // hunger to the cap and advertised it (the 2026-08-08 bug, told again).
-  "wrack-crab", "scarp-raven"]);
+  "wrack-crab", "scarp-raven",
+  // The gibbet crow (mig 194) sits on the iron above the mass-grave and the
+  // crossroads-grave — it is a carrion bird in carrion country, and VERMIN is
+  // what a carrion bird is.
+  "gibbet-crow"]);
 // THE NOSE (rome, 2026-07-17): a scavenger with nothing better to do drifts
 // toward fresh blood next door — a drip trail (a wounded thing that walked
 // through) or a kill's pool. Odds-gated so it's a drift, not a magnet; the
@@ -1747,6 +1751,35 @@ export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-b
 export const ALARM_AVOID_MS = 20 * 60_000;  // warned game keeps off that ground twenty minutes
 export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters next door come to look
 
+// THE MURDER (2026-08-11). A crow is never alone for long. The gibbet crow and
+// the scarp raven are the two corvids in the world, and the whole point of a
+// murder is that it is not a flock of individuals — strike one and the rest
+// come for you. Unlike the hyena's same-room pack (rousePack), a crow under
+// attack CALLS: every idle corvid within CROW_ROUSE_RADIUS rooms turns on the
+// same face and starts closing (the pack-call draw, gated by CROW_CALL_ODDS so
+// a lone crow can be dealt with fast and a murder can't). A murder has one
+// brain the way a flock does: it all hates the same hand.
+export const CROWS = new Set(["gibbet-crow", "scarp-raven"]);
+export const CROW_ROUSE_RADIUS = 3;   // rooms a murder hears the strike across
+export const CROW_CALL_ODDS = 0.5;    // per idle corvid, per strike — most of them come
+
+// THE RAVEN'S NEST. A raven is a thing that takes what a body leaves — gear
+// dropped where someone fell on the road — and carries it to a NEST, where the
+// pile grows. There are THREE fixed nests (the pools): one on the high road,
+// one on the grave ground, one on the far rise — and every corvid in the world
+// carries to whichever is nearest ITS ground, so the nests are shared places,
+// not per-bird pockets. The loot lives in the nest, NOT on the bird: killing a
+// raven gets you nothing (its beak is only ever in flight; the piece belongs
+// to the pool already). You get a piece by feeding the raven that works a
+// given nest — it MAY fetch one out (RAVEN_BARTER_ODDS per feed, so a fed
+// raven usually just eats and goes — a bargain, not a shop). A pool with
+// nothing in it only ever takes the meal.
+export const RAVEN_SCOOPERS = new Set(["gibbet-crow", "scarp-raven"]);
+export const RAVEN_NEST_ROOMS = ["the-boundary-cairn", "the-gibbet-field", "the-watershed"]; // the three pools
+export const RAVEN_BARTER_ODDS = 0.4; // per feed: it parts with a piece from its nest ~2 in 5
+export const RAVEN_BARTER_WAIT_MS = 60_000; // after a feed it won't be fed again for a minute (a fed bird is a full bird)
+export const RAVEN_NEST_CAP = 4;      // a pool holds about four before the ravens stop carrying to it (a modest tell, not a hoard)
+
 // THE PACK CALL (2026-08-08). A wolf that has hold of somebody calls one
 // packmate in from next door. Wolves had pack machinery — PACK_PREY thresholds
 // deciding who yields a carcass to whom — but in a FIGHT they were individuals
@@ -2076,6 +2109,18 @@ export const SEIZE_DMG_MULT = 1.25;   // it hits a little harder while it has yo
 // drown you outright. The counter is escape: break the grip before it lands.
 export const SEIZE_DROWN_ODDS = 0.10;     // rare per beat while seized
 export const SEIZE_DROWN_FRACTION = 0.15; // unmitigated, as a share of max hp
+// THE FERRYMAN TAKES YOU ACROSS (mig 191, the boss's signature). "He worked
+// this rope for a lifetime... He will take you across. That is the whole of
+// the problem." Every other drowner holds you in place; he MOVES you — each
+// beat he keeps his grip and wins it, he drags you one room along the rope
+// toward the mid-channel (his home), so the fight is not where you started.
+// Telegraphed like every seize (a visible grab-window to break out of before
+// the drag completes), and he only ever drags ALONG the rope — toward home,
+// never off into some room you could not have walked to. The counter is the
+// same as the rest: break the grip, or put him down.
+export const FERRY_DRAG_ROOM = "the-mid-channel";  // his home — the rope's midpoint
+export const FERRY_DRAG_ODDS = 0.5;   // per beat he holds you, he hauls you one room closer
+export const FERRY_DRAG_MAX = 3;      // and never more than three rooms — a fair window, not a one-way ticket
 // LURKERS wait UNSEEN — not in the room description at all — until they drop on
 // you. Blind, they wake to noise and to the careless walking in (they ride the
 // same wake odds as LISTENERS, WAKE_ENTER/WAKE_NOISE); stay quiet and still and
@@ -2601,6 +2646,40 @@ export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "th
   // mason and the widow are AT WORK and you are in it; the gull simply has a
   // pier, and has never in its life conceded anything to anybody.
   "the-bridge-mason", "the-salt-widow", "great-gull"]);
+
+// SWEEPERS swing for the whole room. A mallet dressing the stone at the point
+// where the bridge stops does not consult you about its arc — a landed blow on
+// one target drags through everyone else standing in the room (a reduced,
+// no-frills strike, rolled per extra body so a full bridge is a bad place to be
+// and a crowded one is suicide). The player-side `sweep` weapon trait is the
+// same idea aimed the other way; this is its mob half, and like the player half
+// it punishes grouping — the narrow span is the whole fiction of a bridge.
+export const SWEEPERS = new Set(["the-bridge-mason"]);
+
+// MARKERS brand you. The toll clerk (mig 188) has had his hand out for two
+// centuries, and when he lands a blow the road knows your face: while the mark
+// holds, the surface's ears perk up for you specifically — creatures in earshot
+// roll their heed-roll twice (MARK_HEED_MULT) and anything hungry comes to
+// look. It is the institution taxing you for existing: pay in noise. Fades on
+// its own (MARK_MS); resting at a gate scrubs it (the keeper's threshold is
+// the one place the road forgets).
+export const MARKERS = new Set(["the-toll-clerk"]);
+export const MARK_MS = 10 * 60_000;      // the road remembers you ten minutes
+export const MARK_HEED_MULT = 2;         // earshot rolls heed twice as eagerly for a marked wanderer
+export const MARK_CALL_ODDS = 0.25;      // per marked beat: hungry ears come to look, not just prick up
+
+// SHADOWS keep pace. The reed walker (mig 191) is "a shape going through the
+// maze one cut over from yours, at your pace, on your side, staying with you" —
+// so on a wander beat, an idle shadow that has a wanderer within reach closes
+// one step of that distance instead of drifting blind. It never ENGAGES (it is
+// not in AGGRESSIVE/DROWNERS — it only answers steel), it never blocks an exit,
+// and it always keeps one step of clearance when it can: the fear is that it is
+// there, not that it is on you. SHADOW_PACE_ODDS gates it so it's a presence,
+// not a tail you cannot shake.
+export const SHADOWS = new Set(["the-reed-walker"]);
+export const SHADOW_PACE_ODDS = 0.6;    // per wander beat, when a wanderer is a step or two away
+export const SHADOW_REACH = 2;          // rooms of clearance it will close on
+export const SHADOW_KEEP = 1;           // rooms of clearance it will not cross (the personal space)
 
 // TREASURY DOORS: a room that is some boss's hoard, keyed by the keeper who
 // bars it. The way IN stays shut while that keeper lives in the room before it
@@ -3378,6 +3457,12 @@ export const HOBBLE_ODDS = new Map<string, number>([
   ["pale-crawler", 0.08],
   ["three-hound", 0.10], // the sentinel drags you down by the leg
   ["two-hound", 0.08],   // the runt goes low too, with less weight behind it
+  // THE QUICKSAND (mig 191). It already seizes like a drowned thing; the hobble
+  // is the SECOND half of "it has hold of you to the knee" — the ground has
+  // your leg even after you wrench free of its pull, so you limp clear exposed
+  // (HOBBLE_FLEE_MS), then you're out. The standing law's model affliction:
+  // a flee timer, never a dice-block.
+  ["the-quicksand", 0.35],
 ]);
 export const HOBBLE_FLEE_MS = 4000; // ~1 combat round of limping before you break away
 // The VITALS LOTTERY — the Tarkov headshot (ROADMAP: lethality keystone). A rare,

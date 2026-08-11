@@ -35,6 +35,7 @@ export interface Session {
   gateCureName?: string;   // cached: chip-name of a curable raw meat somewhere across pack+lockbox+vault, so the 'cure' chip can be 'cure <meat>' (hangs on click); undefined = nothing raw to hang
   gateCookName?: string;   // ...and the same for the brazier: chip-name of a raw catch that would cook (COOK_RECIPES)
   seizedBy?: string; // DROWNER creature id that has hold of you — can't flee till you break free
+  draggedRooms?: number; // FERRYMAN: how many rooms he has already hauled you along the rope this grip — a hard cap on the drag (a fair window, not a one-way ticket)
   litUntil?: number; // ms epoch a kindled light burns until; while now < this you carry light (sees dark rooms; a torch also wakes fire-fear). Reset on wake — a rekindle is cheap.
   litSource?: "torch" | "lantern"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack)
   torchWarned?: boolean; // fired the one-time "burning low" warning for the current light
@@ -42,6 +43,7 @@ export interface Session {
   linkdeadUntil?: number; // ms epoch a mid-fight disconnect holds the body in the world until; unset = normally connected (or normally gone)
   hobbled?: boolean; // a leg wound: you can still flee, but only after limping clear (a set delay), cured by rest
   limpingSince?: number; // ms epoch you started dragging your bad leg toward the exit; flee lands once HOBBLE_FLEE_MS passes
+  markedUntil?: number; // MARKERS (the toll clerk): the road knows your face — earshot heeds you harder while this holds; scrubbed at a gate
   buying?: { wants: { itemId: string; cost: number }[]; paid: number; escrow: { row: string; from: string }[] }; // open cart at the keeper's hatch: wants = every thing named (duplicates allowed), paid against their summed cost; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square, then it all changes hands at once
   dealId?: string; // pending player-to-player trade (trade.ts) — points into ZoneDO's `deals` map. Ephemeral: a DO wake never restores it (same as `buying`), and either side leaving, dying, or drawing steel cancels it for both
   born: number; // created_at, unix seconds — wanderer age on the sheet
@@ -89,6 +91,7 @@ export interface Creature {
   carries?: string[]; // gear it visibly bears (worn/wielded at spawn, or scavenged) — spills on death
   stoleJournal?: string; // the snatched thing's instance identity: when `stole` is a journal, its journalId rides here so the pages survive the theft (spills instanced; bare `stole` was eating books — rome, 2026-07-18)
   fed?: number; // grave-hyena: corpses eaten; enough and it turns bold
+  fedAt?: number; // corvid: last time a wanderer fed it — a full bird won't be fed again for a while (RAVEN_BARTER_WAIT_MS)
   rouseAt?: number; // dire-hyena guarding a meal: ms it commits to attacking — a wind-up you can flee or hit first
   wakeUntil?: number; // SENTINEL (the deep's hound): asleep until roused; awake (and barring the descent) while now < this
   surfaced?: boolean; // a deep-dweller the sim coughed up into the shallows; killing it drops the corpse-key (deep-heart)
@@ -219,4 +222,5 @@ export interface SimState {
   nextChainmanAt?: number; // ms the world next rolls whether the chainman turns up somewhere
   works?: Record<string, number>; // gate roomId -> ms epoch its door reopens (the gatehouse shut for works; the gate ROOM is untouched)
   nextWorksAt?: number; // ms epoch the world next considers shutting a gatehouse
+  nests?: Record<string, string[]>; // corvid nests: nest roomId -> gear the raven carried home (ABSTRACT — off the floor, visible only through feeding/raiding the nest itself)
 }

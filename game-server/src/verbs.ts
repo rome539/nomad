@@ -3,7 +3,7 @@
 // lands here (attack/throw stay with the spine — they're where fights begin).
 // Same shape as gate.ts: free functions taking the ZoneDO.
 import type { ZoneDO } from "./zone";
-import type { Session, Stance, GroundInstance } from "./zone-types";
+import type { Session, Stance, GroundInstance, Creature } from "./zone-types";
 import type { CarriedItem, ItemTemplate } from "./world";
 import {
   setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
@@ -27,6 +27,7 @@ import {
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
+  RAVEN_SCOOPERS, RAVEN_BARTER_ODDS, RAVEN_BARTER_WAIT_MS,
   DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP, FEN_ROOMS, FEN_CARRY_CAP,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS, COOK_RECIPES,
@@ -833,10 +834,15 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // sometimes you tear loose and go, sometimes it drags you back.
   if (session.seizedBy) {
     const grip = z.creatures.get(session.seizedBy);
-    if (!grip || grip.roomId !== session.roomId) {
+    // The ferryman's grip rides the ROPE, not the room: he holds you on the
+    // line even across the rooms he has hauled you along, so stepping out of
+    // his room is not the same as stepping off his rope.
+    const onRope = !!grip && grip.templateId === "the-drowned-ferryman";
+    if (!grip || (!onRope && grip.roomId !== session.roomId)) {
       session.seizedBy = undefined;
     } else if (chance(SEIZE_BREAK_ODDS + (z.wearsTrait(session, "slick") ? SLICK_BREAK_BONUS : 0))) {
       session.seizedBy = undefined;
+      session.draggedRooms = 0;
       z.send(session, "You wrench free of its grip.");
     } else {
       return z.send(session, `${cap(world.mobTemplates.get(grip.templateId)!.name)} drags you back — you can't break away yet.`);
@@ -1749,6 +1755,14 @@ export function cmdRest(z: ZoneDO, session: Session): void {
   }
   session.resting = true;
   z.addTrace(session.roomId, { kind: "rest", at: Date.now() });
+  // THE GATE FORGETS THE MARKED. The toll clerk's brand fades on its own; the
+  // gate's threshold is the one place the road's memory is scrubbed outright —
+  // the keeper's ground is not the road's. Same quiet law as hobble (rest at a
+  // gate mends the leg): a safe threshold is where being seen stops being true.
+  if (z.world!.entryRooms.has(session.roomId) && session.markedUntil) {
+    session.markedUntil = undefined;
+    z.send(session, "The threshold's stillness takes it — the road's eye on you, whatever it was, lets go. You are unremarked again.", "amb");
+  }
   // Whole men sit down too (rome, 2026-07-13): rest is a posture, not a
   // medicine. Unhurt it heals nothing, but it still unbinds a limp, still
   // leaves a camp trace, still makes you warm furniture for a rat — and it
@@ -2219,6 +2233,92 @@ export async function cmdEat(z: ZoneDO, session: Session, arg: string): Promise<
   );
   z.roomFeed(session.roomId, `${session.name} eats ${tmpl.name}.`, session.pubkey, false);
   z.sendStatus(session);
+  z.sendCtx(session);
+  await savePlayer(z.env.DB, session.pubkey, session.roomId, session.hp);
+}
+
+// FEED A CORVID. "feed raven hardtack" — you hold out food to a raven or a
+// crow in the room and it takes it. A raven that has been working the road
+// (ravenScoops — it picks up gear dropped where someone fell and carries it
+// HOME to its nest) MAY bring you a piece of that pile for the meal:
+// RAVEN_BARTER_ODDS, so it is a gamble that pays sometimes, never a shop
+// counter. An empty nest, or a failed roll, and the bird just eats your
+// offering and goes. The loot lives in the NEST, not on the bird — killing a
+// raven gets you nothing; feeding it is the honest way to a piece. Sealed
+// rations are never spent (the same law as eat); a bird does not break your
+// title. A fed raven won't be fed again for a minute (RAVEN_BARTER_WAIT_MS) —
+// a full bird is a full bird.
+export async function cmdFeed(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const world = z.world!;
+  if (!arg) return z.send(session, "Feed what, and to whom? (feed <creature> <food>)");
+  const words = arg.split(/\s+/).filter(Boolean);
+  if (words.length < 2) return z.send(session, "Feed what to whom? (feed <creature> <food>)");
+
+  // TWO NAMES, ONE LINE, AND NEITHER IS ONE WORD. "feed gibbet crow hardtack"
+  // has to split into "gibbet crow" + "hardtack", and taking words[0] as the
+  // creature left the food resolver hunting for "crow hardtack". So try the
+  // LONGEST creature name first and walk down: the first split where both
+  // halves resolve is the one the player meant. One-word names still hit on
+  // the last pass, so "feed crow hardtack" is unchanged.
+  let creature: Creature | null = null;
+  let carried: CarriedItem | null = null;
+  for (let cut = words.length - 1; cut >= 1; cut--) {
+    const c = z.findCreatureIn(session.roomId, words.slice(0, cut).join(" "));
+    if (!c) continue;
+    const f = z.findCarried(session, words.slice(cut).join(" "));
+    if (!f) { creature ??= c; continue; } // remember the bird; the food is the part that's wrong
+    creature = c; carried = f; break;
+  }
+  if (!creature || !RAVEN_SCOOPERS.has(creature.templateId)) {
+    return z.send(session, "You could feed that to something here, but nothing here is a raven.");
+  }
+  if (!carried) return z.send(session, "You carry nothing like that to offer.");
+  const ftmpl = world.itemTemplates.get(carried.itemId)!;
+  if (!ftmpl.edible) return z.send(session, `You hold out ${ftmpl.name}. The raven turns its head and declines. It is not food.`);
+  if (carried.serial !== null) return z.send(session, "Sealed rations stay sealed — the raven cannot have your title.");
+
+  const ctmpl = world.mobTemplates.get(creature.templateId)!;
+  const now = Date.now();
+  if ((creature.fedAt ?? 0) + RAVEN_BARTER_WAIT_MS > now) {
+    return z.send(session, `The raven eyes the food, but it has eaten recently and does not move. (give it a moment)`);
+  }
+  creature.fedAt = now;
+
+  session.items.splice(session.items.indexOf(carried), 1);
+  await removeItemRow(z.env.DB, carried.rowId);
+  creature.hunger = 0;
+  creature.hp = Math.min(ctmpl.max_hp, creature.hp + Math.max(ftmpl.heal, 3));
+  z.roomFeed(session.roomId, `The raven takes ${ftmpl.name} from ${session.name}'s hand and eats it.`, session.pubkey, false);
+
+  // The barter: the piece comes from the raven's NEST (its hidden home-store,
+  // off the floor — you cannot walk in and take it, and killing the bird gets
+  // you nothing). If the pool holds something and the roll lands, it fetches
+  // one over to you — a roll, never a certainty.
+  const nest = ai.ravenNestFor(z, creature);
+  const nestHeld = z.nests.get(nest);
+  if (nestHeld?.length && chance(RAVEN_BARTER_ODDS)) {
+    const id = nestHeld.shift()!;
+    if (!nestHeld.length) z.nests.delete(nest); else z.nests.set(nest, nestHeld);
+    const floor = z.ground.get(session.roomId) ?? [];
+    floor.push(id);
+    z.ground.set(session.roomId, floor);
+    z.stampFresh(session.roomId, id);
+    if (world.itemTemplates.get(id)?.slot !== "") {
+      z.groundCond.set(`${id}@${session.roomId}`, rollGearCondition("weapon", false)); // a nest piece is a carried piece — scavenged
+    }
+    const rolled = z.rollTraits(world.itemTemplates.get(id)!);
+    if (rolled) z.groundRolled.set(`${id}@${session.roomId}`, rolled);
+    const shown = cap(z.floorName(id, session.roomId));
+    z.send(session, `The raven cocks its head, considers the meal — and fetches ${shown} from its nest, laying it at your feet.`, "gain");
+    z.roomFeed(session.roomId, `The raven lays ${shown} at ${session.name}'s feet.`, session.pubkey, false);
+    z.refreshRoomCtx(session.roomId);
+  } else if (nestHeld?.length) {
+    z.send(session, "The raven takes the food and keeps its nest — today is not the day it parts with anything.");
+    z.roomFeed(session.roomId, `The raven eats, and keeps its nest to itself.`, session.pubkey, false);
+  } else {
+    z.send(session, "The raven takes the food, watches you a moment, and goes. Its nest holds nothing worth trading.");
+    z.roomFeed(session.roomId, `The raven eats from ${session.name}'s hand and flies off.`, session.pubkey, false);
+  }
   z.sendCtx(session);
   await savePlayer(z.env.DB, session.pubkey, session.roomId, session.hp);
 }

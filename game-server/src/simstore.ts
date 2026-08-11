@@ -126,6 +126,7 @@ const META_FIELDS = [
   "savedAt", "regrow", "roamRocks", "arrivals", "openDoors", "doorCloseAt", "fenceOut",
   "bloodOn", "nextStoneAt", "nextBrandAt", "nextSmokeTorchAt", "nextCarrionAt", "rot", "placedSpawns", "seededDens", "inGatehouse", "inDen", "wallMarks", "board", "stoneNames",
   "cacheSpent", "cacheRoom", "nextSurfaceAt", "events", "fishStock", "works", "nextWorksAt", "nextChainmanAt",
+  "nests",
 ] as const satisfies readonly MetaField[];
 // Errors when a MetaField is missing from META_FIELDS (the type collapses to
 // the missing names instead of `true`, and `true` no longer assigns).

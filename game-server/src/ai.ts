@@ -27,6 +27,8 @@ import {
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
+  RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, FORAGE_REGIONS,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
@@ -775,6 +777,27 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         (z.ground.get(e.to_room) ?? []).some((id) => world.itemTemplates.get(id)?.lure),
       );
       if (smells) exit = smells;
+      creature.curious = null;
+    } else if (SHADOWS.has(tmpl.id) && !creature.target) {
+      // THE SHADOW KEEPS PACE (mig 191). The reed walker's whole description is
+      // staying with you — "one cut over from yours, at your pace, on your
+      // side". On an idle beat, an unengaged shadow that knows where a wanderer
+      // is within SHADOW_REACH closes one step of that distance (odds-gated, so
+      // it's a presence, not an inescapable tail) — but it stops at SHADOW_KEEP
+      // rooms' clearance: it never crowds into the room with you, so it can
+      // never block an exit or turn a corner into an ambush. It is the dread of
+      // being followed, which is worse than being fought.
+      const prey = [...z.sessions.values()].find(
+        (s) => s.roomId !== creature.roomId && !z.outOfWorld(s)
+          && z.roomDist(creature.roomId, s.roomId) <= SHADOW_REACH,
+      );
+      if (prey) {
+        const d = z.roomDist(creature.roomId, prey.roomId);
+        if (d > SHADOW_KEEP && chance(SHADOW_PACE_ODDS)) {
+          const closer = exits.filter((e) => z.roomDist(e.to_room, prey.roomId) < d);
+          if (closer.length) exit = closer[randInt(0, closer.length - 1)];
+        }
+      }
       creature.curious = null;
     } else {
       creature.curious = null;
@@ -2082,6 +2105,67 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     z.roomSound(creature.roomId, hoarder
       ? "Something is added to a great deal of something else {dir}, and the whole load resettles."
       : "Metal scrapes over stone {dir}, dragged away.");
+    z.refreshRoomCtx(creature.roomId);
+  }
+
+  // THE RAVEN'S NEST. An idle corvid alone in a room with unguarded spoils
+  // (gear dropped where somebody fell, and not the free rock or the room's own
+  // regrowing stock) takes ONE piece and bears it to its nest — one of the
+  // THREE fixed pools (RAVEN_NEST_ROOMS), chosen as the nearest to its own
+  // ground. The piece lands in the pool the moment it is taken (the flight is
+  // flavour; the pool is where it ends up), hidden off the floor, never on the
+  // bird and never takeable by walking in. It never scoops while a player is
+  // watching (a raven is a thief, not a mugger) and it never takes food off
+  // the floor — that is what the dead are for. A pool holds up to
+  // RAVEN_NEST_CAP pieces before the birds stop carrying to it. The only way
+  // to get a piece out is to feed it (verbs.cmdFeed), which it does not always
+  // honour — a raven does not let you root through its nest.
+  // Which pool a corvid works: the nearest of the three to its own ground, so
+  // the high-road ravens share one nest, the grave crows another, and nobody
+  // flies across the whole world for a perch.
+  export function ravenNestFor(z: ZoneDO, creature: Creature): string {
+    let best = RAVEN_NEST_ROOMS[0], bestD = Number.POSITIVE_INFINITY;
+    for (const r of RAVEN_NEST_ROOMS) {
+      const d = z.roomDist(creature.home ?? creature.roomId, r);
+      if (d < bestD) { bestD = d; best = r; }
+    }
+    return best;
+  }
+
+  export function ravenScoops(z: ZoneDO, creature: Creature): void {
+    if (!RAVEN_SCOOPERS.has(creature.templateId)) return;
+    const nest = ravenNestFor(z, creature);
+    // AT A FULL NEST: no room to put anything, so it stops fetching.
+    if ((z.nests.get(nest)?.length ?? 0) >= RAVEN_NEST_CAP) return;
+    if (playerPresent(z, creature.roomId)) return; // a watched raven leaves the floor alone
+    const floor = z.ground.get(creature.roomId);
+    if (!floor?.length) return;
+    const now = Date.now();
+    const idx = floor.findIndex((id) => {
+      const t = z.world!.itemTemplates.get(id);
+      if (!t || t.id === "loose-rock") return false;
+      if (t.slot === "" || t.edible) return false; // trophies and meals stay — the raven takes useful things
+      if (z.world!.groundSpawns.some((g) => g.room_id === creature.roomId && g.item_id === id)) return false; // not the room's own stock
+      const fell = z.groundFreshAt.get(`${id}@${creature.roomId}`);
+      if (fell !== undefined) {
+        if (now - fell < SCOOP_GRACE_MS) return false; // the kill site is hot
+        z.groundFreshAt.delete(`${id}@${creature.roomId}`);
+      }
+      return true;
+    });
+    if (idx === -1) return;
+    const targetId = floor[idx];
+    floor.splice(idx, 1);
+    z.ground.set(creature.roomId, floor);
+    z.groundLore.delete(`${targetId}@${creature.roomId}`); // a taken engraving goes silent, like the hyena's
+    // Straight into the pool: the piece is home the moment it is taken.
+    const pool = z.nests.get(nest) ?? [];
+    pool.push(targetId);
+    z.nests.set(nest, pool);
+    const g = z.world!.itemTemplates.get(targetId);
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} alights, snatches up ${g.name}, and bears it away toward its nest.`, undefined, false);
+    z.roomSound(creature.roomId, "A wingbeat, {dir}, and something small being carried.");
     z.refreshRoomCtx(creature.roomId);
   }
 

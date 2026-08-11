@@ -32,6 +32,7 @@ export type Verb =
   | "name"
   | "rest"
   | "eat"
+  | "feed"
   | "bandage"
   | "light"
   | "carve"
@@ -119,6 +120,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   name: "name", rename: "name", callme: "name",
   rest: "rest", sleep: "rest", sit: "rest", camp: "rest",
   eat: "eat", consume: "eat", chew: "eat", devour: "eat",
+  feed: "feed", // feed <thing> <food> — a raven for a barter
   bandage: "bandage", bind: "bandage", dress: "bandage", bandages: "bandage",
   light: "light", kindle: "light", ignite: "light", torch: "light", lantern: "light",
   carve: "carve", scratch: "carve", etch: "carve", inscribe: "carve", write: "carve",
@@ -485,6 +487,10 @@ export const HELP_TEXT = [
   "                    sees you do it.",
   "  rest              sit and let wounds close. Any effort ends it.",
   "  eat <food>        wounds also close from the inside",
+  "  feed <bird> <food> hold out food to a raven or crow. One that has been",
+  "                    working the road may drop what it picked up for the meal",
+  "                    — sometimes. Never a certainty, and never from a bird",
+  "                    carrying nothing.",
   "  light             (kindle) — set a carried torch burning. It shows the",
   "                    lightless deep and burns a while before it gutters out;",
   "                    an open flame sends some things fleeing. 'light lantern'",
