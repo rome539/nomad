@@ -83,7 +83,7 @@ import {
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
-  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, STRAY_DECAY,
+  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, DICE_REGROW, STRAY_DECAY,
   MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FEVER_MEND_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
@@ -4408,7 +4408,7 @@ export class ZoneDO implements DurableObject {
       // check came up — roll whether the world coughs one back. A miss leaves
       // the spot bare and re-arms the next roll; only consumables and the
       // starter rock restore on the clock.
-      const gear = !!t && t.slot !== "" && !RELIABLE_GEAR.has(g.itemId);
+      const gear = !!t && (t.slot !== "" || DICE_REGROW.has(g.itemId)) && !RELIABLE_GEAR.has(g.itemId);
       if (gear && !chance(GEAR_REGROW_ODDS)) {
         g.at = now + randInt(GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS);
         return true;

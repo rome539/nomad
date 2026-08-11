@@ -624,6 +624,14 @@ export const GEAR_ROLL_MIN_MS = 30 * 60_000; // a bare spot re-checks itself eve
 export const GEAR_ROLL_MAX_MS = 60 * 60_000;
 export const GEAR_REGROW_ODDS = 0.2;         // ~1 roll in 5 hangs the piece back up
 export const RELIABLE_GEAR = new Set(["loose-rock"]); // the starter tool: exempt, always comes back
+// TROPHIES THAT RIDE THE DICE CLOCK. The floor-renewal law keys the gear roll
+// off slot != "" — which is right for GEAR and wrong for a regrowing TROPHY:
+// wolf-pelt (7b), toll-token (8b), raven-feather (5b) are slot "" and were
+// falling through to the deterministic 5-25 min clock, so the cairn and the
+// wolf-earth were take-wait-take faucets — exactly what the law was written to
+// kill (mig 180's own comment claimed the pelt rode the dice; the code never
+// gave it to it). These three are "sometimes there" now, like the gear.
+export const DICE_REGROW = new Set(["wolf-pelt", "toll-token", "raven-feather"]);
 // ...but "always comes back" at the GATE has no drain out in the world: a rock
 // carried off and left where you die (or dropped in a room that doesn't grow
 // them) is net-new — the gate refills behind it, and a rock isn't edible, so
@@ -1083,6 +1091,20 @@ export const MOUTHS = [
   "the-hollow-beeches", "the-grey-thicket", "the-rush-bed",      // the cores
   "the-earth-fall", "the-under-roots",                           // the sunken wood, and below it
   "the-wolf-pits", "the-icehouse",                               // the far side
+  // THE EAST ROAD AND THE CROSSING GET THEIR OWN EDGES (2026-08-11). The
+  // surface expansion of migs 187-191 shipped with NO mouth east of the
+  // fortress — every one of the 24 was in the fortress ring, the deep, the wood
+  // or the WEST road. So every refill of an east-road or crossing den surfaced
+  // at the-briar-field (46-67 rooms west) and marched the whole road home,
+  // which read as "all the mobs are in 3 rooms" around the relay-house gate,
+  // and the far-strand dead (the salt widow's pan house) could never complete
+  // the walk at all. Same law as the wood's edges: a thing can come out of
+  // unseen — a kiln, a marl-hole, a gill-pot, a quarry, a peat-cutting, a
+  // ferry-slip, a net-stake, a sluice, a creek-mouth, a gut, a drowned forest,
+  // a reed-hole, a salt-store, a shingle-spit — never open ground.
+  "the-road-kiln", "the-marl-hole", "the-gill-pot", "the-quarry-turn", "the-peat-cuttings", // the east road
+  "the-ferry-steps", "the-net-stakes", "the-tide-mark", "the-sluice-stone", "the-creek-mouth", "the-gutway",
+  "the-sunken-forest", "the-cut-reed", "the-salt-store", "the-shingle-spit",  // the crossing
   // TWO MORE DEEP MOUTHS (rome, 2026-07-27: "the mobs in the deep are just all
   // in the central corridor"). applyArrivals walks a migrant in from the
   // nearest mouth on ITS side of the descent — and only the-weir and root-vault
@@ -1200,12 +1222,43 @@ export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-surf
   // The east road's institution, still working (mig 188). A clerk with his hand
   // out and a warden walking a distance — the same joke as the drill, told out
   // of doors: the office outlived the office.
-  "the-toll-clerk", "the-long-warden"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
+  "the-toll-clerk", "the-long-warden",
+  // The crossing's dead at work (mig 191) — the SAME joke, told wet. "The dead
+  // out here are still AT WORK": the tide warden keeps the record, the mason
+  // dresses the stone past the edge, the drover still drives nothing, the eel
+  // cutter works his line, the fowler lies in his hide, the reed walker stays
+  // with you, the salt widow boils a cold pan. They are dead; nothing inside to
+  // feed. They were never added here (mig 191 shipped them alive and hungry —
+  // they banked hunger to the cap and advertised it, the wood's 2026-08-08
+  // bug). They are GRAVE_FLESH below: wet bodies, so every weapon keeps its
+  // killing spot on them.
+  "the-tide-warden", "the-bridge-mason", "the-drover", "the-eel-cutter",
+  "the-fowler", "the-reed-walker", "the-salt-widow",
+  // AND THE FIVE THAT HOLD WATER, which the first pass missed because they sit
+  // in DROWNERS instead of walking. Being sessile is not being alive: the
+  // ferryman comes hand over hand with all of him under it, the pilot reads a
+  // line that stopped existing two centuries ago, the scaffold hand hangs
+  // upside down in a rotted harness dressing stone, the refuge man waits out
+  // something that already passed, and the miller stands waist-deep in his own
+  // ground floor. Every one is a drowned MAN. Left out they kept banking hunger
+  // to the cap with no mouth to spend it — the same bug, four rooms over.
+  // (the-quicksand and the conger stay out on purpose: one is a place, the
+  // other is a living eel that eats.)
+  "the-drowned-ferryman", "the-pilot", "the-scaffold-hand", "the-refuge-man", "the-miller"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
 // GRAVE_FLESH: hollow, but a BODY — dried corpse, not bare bone or old iron
 // (rome, 2026-07-11: "sounds like a zombie"). A wight has a skull to split, a
 // spine to sever, ribs over what used to matter — so the vitals lottery stays
 // open to EVERY weapon on these two, not the bone-set's blunt-only gate.
-export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman"]); // the watchman is a dried MAN in kit, not bare bone — every weapon finds him
+export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman",
+  // the crossing's dead at work are wet bodies, not dry bone (the eel cutter
+  // bleeds — work with a blade — the fowler's knife draws) — HOLLOW without
+  // this would shut every weapon off their vitals (zone.ts:2994, blunt-only for
+  // bare bone) and quietly make each of them a worse fight
+  "the-tide-warden", "the-bridge-mason", "the-drover", "the-eel-cutter",
+  "the-fowler", "the-reed-walker", "the-salt-widow",
+  // the five that hold water, same argument: a drowned man is the wettest body
+  // there is, so every weapon keeps its killing spot on them
+  "the-drowned-ferryman", "the-pilot", "the-scaffold-hand", "the-refuge-man", "the-miller"]); // the watchman is a dried MAN in kit, not bare bone — every weapon finds him
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
@@ -1329,7 +1382,12 @@ export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf", "di
 // room to sate and heal a little — but it does NOT haul off loot, mourn its kin,
 // or gorge itself bold into a threat (all of that stays gated on SCAVENGERS).
 // The bone rooms clean their own dead; the rat just doesn't starve in them.
-export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe"]);
+export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",
+  // THE CARRION EATERS OF THE SURFACE (mig 188/191). A crab and a raven eat the
+  // dead to survive — that is what VERMIN is, and it is the one honest route for
+  // a thing that will not come to a player or a graze. Without this they banked
+  // hunger to the cap and advertised it (the 2026-08-08 bug, told again).
+  "wrack-crab", "scarp-raven"]);
 // THE NOSE (rome, 2026-07-17): a scavenger with nothing better to do drifts
 // toward fresh blood next door — a drip trail (a wounded thing that walked
 // through) or a kill's pool. Odds-gated so it's a drift, not a magnet; the
@@ -2716,6 +2774,13 @@ export const GRAZERS = new Set<string>([
   "rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",   // VERMIN
   "cutpurse", "cutthroat", "footpad", "wayman",               // THIEVES — they scavenge, not graze, but same floor
   "wild-boar", "old-boar",                                    // rooting, which is what a boar is FOR
+  // THE SHORE AND THE BECK (mig 188/191). The crossing and the east road are
+  // FORAGE_REGIONS — "a shore feeds things — weed, shellfish, whatever the
+  // water puts down" — and these animals had no mouth at all. The strand thief
+  // is the one the ledger itself missed: THIEVES all graze (see the line above)
+  // and it was simply never added. The oystercatcher, eel, adder, heron and
+  // viper eat what the shore or the gravel puts down — the floor is their food.
+  "strand-thief", "oystercatcher", "ford-eel", "gill-adder", "grey-heron", "fen-viper",
 ]);
 export const FORAGE_HEAL = 3; // a scavenged nibble — less than a corpse (SCAVENGER_HEAL 6) or a dropped meal
 // The open sky: every room where weather can reach you (the grounds ring +
