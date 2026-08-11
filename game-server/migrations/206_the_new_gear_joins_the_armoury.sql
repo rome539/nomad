@@ -1,0 +1,81 @@
+-- 206 the new gear joins the armoury (rome, 2026-08-11: the new gear is
+-- stronger than anything else in the game). Same audit as mig 205, run on the
+-- kit instead of the roster, and it found two different failures.
+--
+-- ============================================================================
+-- ONE: THREE WEAPONS ARE EPIC-STATTED AND SOLD AS UNCOMMON
+-- ============================================================================
+--
+-- The whole weapon ladder, by damage. dmg 6 is the EPIC line and nothing below
+-- epic has ever reached it:
+--
+--   dmg 6   headsman-sword, abyssal-harpoon, hookbill-cleaver, poleaxe  EPIC
+--   dmg 6   sappers-pick, masons-mallet                            UNCOMMON  <--
+--   dmg 5   notched-greatsword, war-pike (rare); the-attainder, houndsbane,
+--           the-hedge-bill (legendary); kings-guard-blade, flanged-mace (epic)
+--   dmg 5   oyster-knife                                           UNCOMMON  <--
+--   dmg 4   the whole uncommon top: forged-warspike, forged-warmaul,
+--           smiths-cleaver, graveblade -- AND the epic widow-maker
+--
+-- THE SAPPER'S PICK ties four epics on damage and beats every one of them on
+-- stun (0.20 against the poleaxe's 0.12), off a LEVEL 3 mob at a 40% drop.
+-- THE MASON'S MALLET does the same and carries stun 0.25 -- the highest stun on
+-- any weapon in the game, epic and legendary included (marrow-scepter 0.20).
+-- THE OYSTER KNIFE at dmg 5 / speed 2 / bleed 2 beats the RARE fleshing-knife
+-- (3 / 2 / 2) on every axis at a rarity below it, off a level 3 thief.
+--
+-- Each comes down to the uncommon ceiling of 4, and the two stuns come under
+-- the game's existing high-water mark instead of over it. They keep what makes
+-- them themselves: the pick and the mallet stay heavy stunners, the knife stays
+-- the fastest thing on the shore.
+--
+-- ============================================================================
+-- TWO: TWO PIECES OF ARMOUR ARE IN SLOTS THAT DO NOT EXIST
+-- ============================================================================
+--
+-- This one is not a balance error, it is a typo with teeth. The client's paper
+-- doll maps SLOT KEYS to display LABELS (public.ts DOLL_SLOTS):
+--
+--     helm  -> "head"      armor -> "body"
+--
+-- and when I wrote these two I put the LABEL in the slot column:
+--
+--     fowlers-hood    slot 'head'   should be 'helm'
+--     cutters-jerkin  slot 'body'   should be 'armor'
+--
+-- They are the only two items in the game with those slots. Nothing validates a
+-- slot on equip, so they go on -- into a phantom slot that conflicts with
+-- nothing, so you can wear one AND a real helm, or one AND a real cuirass.
+--
+-- And then they do nothing at all, because ARMOR_SLOTS is ("armor", "helm",
+-- "feet", "cloak") and neither phantom is in it. The cutter's jerkin claims
+-- armor 4 -- which would tie the best body armour in the game, at uncommon --
+-- and delivers ZERO. What it does deliver is 3 WEIGHT, which is real: under the
+-- load law that is dodge, noise, parting and poise, all paid for nothing. The
+-- fowler's hood is the same at 2 armour and 1 weight. Two players are carrying
+-- one of these right now.
+--
+-- So they get their real slots, and then they get the uncommon line, because at
+-- armor 4 the jerkin would go from useless to the joint-best torso in the game
+-- the instant the slot was fixed. Uncommon body armour is armor 2 / weight 1
+-- (scavenger-coat, mail-hauberk, thick-hide-jack, moss-packed-jerkin) and that
+-- is where it lands. The hood at armor 2 / weight 1 already matches its tier
+-- (the watchman's kettle helm) and needs only the slot.
+--
+-- THE REST OF THE NEW KIT IS IN LINE and is not touched: hobnailed-boots and
+-- watchman's-boots sit exactly on the uncommon feet line, the moss-packed cap
+-- on the uncommon helm line, the padded jerkin on the common line, the gaff
+-- hook on the uncommon dmg-2 line.
+
+-- ---- the weapons, to their rarity ------------------------------------------
+UPDATE item_templates SET dmg = 4, stun = 0.18 WHERE id = 'sappers-pick';   -- 6/0.20 -- tied four epics, out-stunned all of them
+UPDATE item_templates SET dmg = 4, stun = 0.20 WHERE id = 'masons-mallet';  -- 6/0.25 -- the game's highest stun, on an uncommon
+UPDATE item_templates SET dmg = 3, bleed = 1 WHERE id = 'oyster-knife';     -- 5/b2 -- beat the rare fleshing-knife on every axis; keeps speed 2
+
+-- ---- the phantom slots -----------------------------------------------------
+-- A hood is a helm. Stats already match the uncommon helm line, so only the
+-- slot moves -- and moving it is a straight buff, from 0 armour to 2.
+UPDATE item_templates SET slot = 'helm' WHERE id = 'fowlers-hood';
+-- A jerkin is body armour. The slot is the fix; the 4 is what the 4 was only
+-- ever allowed to be because nothing was reading it.
+UPDATE item_templates SET slot = 'armor', armor = 2, weight = 1 WHERE id = 'cutters-jerkin';
