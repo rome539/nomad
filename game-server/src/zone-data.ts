@@ -998,7 +998,11 @@ export const HUNT_RECHECK_MS = 60_000;
 export const MIGRANTS = new Set<string>([
   "roe-deer", "white-roe", "wild-boar", "old-boar",          // the game
   "grey-wolf", "dire-wolf", "grave-hyena", "dire-hyena",     // what follows the game
-  "masterless-dog", "lead-dog", "two-hound", "three-hound",  // the pack
+  "masterless-dog", "lead-dog",                              // the pack
+  // (the two- and three-hound were listed here and never could be. A SENTINEL
+  // holds its post: it is excluded from wandering in six places, and the drift
+  // is a walk, so a sentinel that "migrates" is a line the code can never read.
+  // The undercroft's hound stays at the undercroft's door. 2026-08-12.)
   "footpad", "cutthroat", "wayman",                          // what follows the people
   "drove-dog", "the-drove-master", "feral-goat",           // the east road's walkers (the beck's own stay on their water)
   "fleet-rat",
@@ -2026,8 +2030,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // arrives as a monoculture is a band nothing can ever walk into. The drove
   // eats the goat; the otter takes the beck's own; and that is enough of a
   // chain that the ground holds its own animals instead of borrowing them.
-  ["drove-dog", new Set(["feral-goat", "roe-deer"])],
-  ["the-drove-master", new Set(["feral-goat", "roe-deer", "drove-dog"])], // it puts the line where it wants it, including through one of its own
+  ["drove-dog", new Set(["feral-goat", "roe-deer", "wrack-crab", "oystercatcher", "otter"])],           // a drove road ends at a market and a market ends at water; the shore's small stuff is well within it (30hp/3-7)
+  ["the-drove-master", new Set(["feral-goat", "roe-deer", "drove-dog", "wrack-crab", "oystercatcher", "otter", "great-gull"])], // it puts the line where it wants it, including through one of its own — and at 46hp/5-9 the gull is not an argument it loses
   ["otter", new Set(["rat", "fleet-rat"])],                              // it eats fish, and a rat that comes to water is a fish with legs
   ["three-hound", new Set(["rat", "fleet-rat", "grave-hyena", "dire-hyena"])], // apex at the threshold — bullies all comers
   // A HYENA EATS MORE THAN RATS (rome, 2026-08-06: "we can just make heyans eat
@@ -2038,11 +2042,48 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // than the gate being wrong. A hyena runs down deer and takes kills off other
   // hunters; that is what the animal IS. So it eats what it can catch, and the
   // big cousin bullies wolves the way the old boar does.
-  ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena", "roe-deer", "white-roe", "grey-wolf"])], // drives off the plain hyena AND the plain wolf: 45hp/armor against 26hp
-  ["grave-hyena", new Set(["rat", "fleet-rat", "roe-deer", "white-roe", "gibbet-crow"])], // vermin when there is nothing better, deer when there is — and on the grave ground, what came for the carrion
+  // ...AND THE SAME QUESTION ASKED OF EVERY OTHER HUNTER THAT MIGRATES (rome,
+  // 2026-08-12). The wolf's shore list (above) fixed the wolf and left the rest
+  // of the roster with the identical hole: measured across the whole map, NOT
+  // ONE migrating hunter besides the wolf could settle on a single room of the
+  // Crossing — the whole coast was closed to the hyenas and to all four kinds
+  // of dog, because between them they had nothing on their lists that lives on
+  // a shore. A band that no migrant can enter is not a place the world can
+  // reach; it is scenery with its own weather.
+  //
+  // The three small ones are what a coast actually feeds an inland hunter, and
+  // every line below outstats them alone (crab 14hp, oystercatcher 12hp, otter
+  // 18hp — against 24hp for the smallest dog here). The gull, at 28hp/3-6, is
+  // the one that fights back: solo only for the big cousins, the pack for the
+  // rest. Nothing was given a shore animal it could not honestly take, and the
+  // eel, the bittern and the raven stay OFF every list — the eel and the
+  // bittern already carry the crossing's own web, and a raven does not get
+  // caught by a dog.
+  ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena", "roe-deer", "white-roe", "grey-wolf", "wrack-crab", "oystercatcher", "otter", "great-gull"])], // drives off the plain hyena AND the plain wolf: 45hp/armor against 26hp — and at that size the gull is no argument either
+  ["grave-hyena", new Set(["rat", "fleet-rat", "roe-deer", "white-roe", "gibbet-crow", "wrack-crab", "oystercatcher", "otter"])], // vermin when there is nothing better, deer when there is — and on the grave ground, what came for the carrion. A hyena on a strand is the least surprising animal in the world
   ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
-  ["grey-wolf", new Set(["roe-deer", "white-roe", "grave-hyena"])],           // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
-  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar"])],             // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148)
+  // THE WOLF WORKS THE TIDELINE TOO (rome, 2026-08-12). Its list was three
+  // animals, all of them wood animals, which is why the map has exactly one
+  // country a wolf can live in. Walk the whole coast and there is not one thing
+  // on it a wolf may touch — so a wolf that ever reached the Crossing would
+  // stand on the strand and starve, and the shore can never hold one.
+  //
+  // A coastal wolf is not an invention. It works the wrack line: what the tide
+  // leaves, the small birds off the mussel scaups, crabs out of the weed. The
+  // statlines carry every edge below on the same law the table has always used
+  // — the predator genuinely outstats the prey ALONE, or it needs the pack:
+  //
+  //     oystercatcher  12hp 1-3   solo  (the wolf is 26hp 2-5)
+  //     wrack crab     14hp 1-3   solo
+  //     otter          18hp 1-3   solo
+  //     feral goat     26hp 2-5   PACK — dead even with a wolf, so two
+  //     great gull     28hp 3-6   PACK — it is BIGGER than a wolf, and it knows
+  //
+  // The goat and the otter are the ones that matter for the country between:
+  // the beck and the scarp hold goats, otters, herons and adders and nothing
+  // else, so until now that whole corridor was ground no wolf could stop on.
+  ["grey-wolf", new Set(["roe-deer", "white-roe", "grave-hyena", "otter", "wrack-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
+  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar", "otter", "wrack-crab", "oystercatcher", "feral-goat", "great-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
   // THE STRAYS EAT SOMETHING NOW (2026-08-12). The west road's seven masterless
   // dogs had NO feeding route in the world at all — not grazers, not scavengers,
@@ -2056,8 +2097,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // a stray is 24hp/3-5 against the roe's 16hp/1-2, which is a clean solo take;
   // it is UNDER the goat's 26hp, so the goat needs the pack (PACK_PREY). The
   // lead dog is 36hp/4-7 and needs nobody's help for either.
-  ["masterless-dog", new Set(["roe-deer", "white-roe"])],
-  ["lead-dog", new Set(["masterless-dog", "roe-deer", "white-roe", "feral-goat"])], // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and it is big enough to take the goat the pack needs numbers for
+  ["masterless-dog", new Set(["roe-deer", "white-roe", "wrack-crab", "oystercatcher", "otter"])],
+  ["lead-dog", new Set(["masterless-dog", "roe-deer", "white-roe", "feral-goat", "wrack-crab", "oystercatcher", "otter", "great-gull"])], // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and it is big enough to take the goat and the gull the pack needs numbers for
   // The pale hunters are the DEEP's rat-catchers: hungry, they leave their lurk
   // and range toward the rat-runs (lurkerDrifts), run one down (predation), and
   // go quiet again. A stretch of dark with no rats left is what starves one onto
@@ -2099,11 +2140,11 @@ export const PREYS_ON = new Map<string, Set<string>>([
 // boar's OWN prey list. Walk in on one wolf and a boar and you know how that
 // ends. Walk in on four wolves and a boar and you do not.
 export const PACK_PREY = new Map<string, Map<string, number>>([
-  ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3], ["grave-hyena", 2]])], // one wolf yields a carcass to a hyena; two do not
+  ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3], ["grave-hyena", 2], ["feral-goat", 2], ["great-gull", 2]])], // one wolf yields a carcass to a hyena; two do not — and the goat and the gull are both a fair match for one wolf, which is what the pack is FOR
   ["dire-wolf", new Map([["old-boar", 2]])],
-  ["grave-hyena", new Map([["roe-deer", 2]])],  // a lone hyena harries a roe; a pair brings it down
+  ["grave-hyena", new Map([["roe-deer", 2], ["great-gull", 2]])],  // a lone hyena harries a roe; a pair brings it down — and the gull is the one shore animal it cannot bully alone
   ["dire-hyena", new Map([["grey-wolf", 2]])],  // ...and it takes two of them to push a wolf off a kill
-  ["masterless-dog", new Map([["feral-goat", 2]])], // one stray circles a goat; two bring it down
+  ["masterless-dog", new Map([["feral-goat", 2], ["great-gull", 2]])], // one stray circles a goat; two bring it down — and the gull is bigger than either of them
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // A LANDED BITE HOLDS (rome, 2026-08-08: "the landed bite lets go sometimes —
