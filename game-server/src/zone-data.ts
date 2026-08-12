@@ -967,6 +967,15 @@ export const STILL_SOUNDS: Record<string, string> = {
 // out of rooms three corridors from their nest. Patrollers (PATROLS) are
 // exempt: their route is their territory. The boss goes where it pleases.
 export const TERRITORY_RADIUS = 3;
+// THE HUNGRY RANGE (see ai.huntGround). How far out a hunter with an empty
+// range will walk toward food before it simply goes hungry where it stands —
+// four times its own territory, which is far enough to cross the gap between
+// two neighbouring bands and not so far that every animal in the world is
+// permanently commuting. The recheck is the rate limit on the search itself:
+// the answer is held this long before it is worth asking again, and a beast
+// that eats on the way drops the errand at the next beat regardless.
+export const HUNT_RANGE = 12;
+export const HUNT_RECHECK_MS = 60_000;
 
 // ---------------------------------------------------------------------------
 // MIGRATION (rome, 2026-08-06: "can we make it so that some mobs can migrate to
@@ -1015,6 +1024,22 @@ export const MIGRATE_BANDS = new Set<string>(["road", "wood", "den", "out", "cro
 export const MIGRATE_QUARTERS: Record<string, Set<string>> = {
   crossing: new Set(["nearshore", "farstrand"]),
 };
+// THE DRIFT (rome, 2026-08-12). Migration is a walk with no destination — see
+// the long note at ai.beginDrift. These two numbers are the whole shape of it.
+//
+// SETTLE_MIN is what stops a "migration" from ending on the animal's own
+// doorstep. The wood is full of deer, so a wolf that could settle the moment it
+// found one would take three steps and stop, and nothing would ever leave the
+// wood. Eight rooms is past the far edge of its own territory (radius 3) and
+// most of the way out of the neighbours' — far enough that stopping is a
+// genuine change of address rather than a stroll.
+//
+// GIVES_UP is the leash. Forty rooms is a long walk on this map — comfortably
+// enough to cross from the wood to the far end of either road, or from the road
+// over the scarp to the Crossing — so anything that fails to settle inside it
+// has genuinely found nothing, and goes home rather than wandering forever.
+export const DRIFT_SETTLE_MIN = 8;
+export const DRIFT_GIVES_UP = 40;
 
 // THE DESTINATION HAS TO BE ABLE TO HOLD IT (rome, 2026-08-06: "do we have the
 // right eco system for thse migrants? ... it should be proper with the mob
@@ -1420,7 +1445,13 @@ export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer", "whi
   // The gibbet crow (mig 194) sits on the iron above the mass-grave and the
   // crossroads-grave — it is a carrion bird in carrion country, and VERMIN is
   // what a carrion bird is.
-  "gibbet-crow"]);
+  "gibbet-crow",
+  // THE ROAD'S STRAYS (2026-08-12). A dog that has been masterless long enough
+  // to run in a pack eats what it finds dead before it eats anything it had to
+  // catch, and the road puts plenty down. This is the floor under their new
+  // prey map (PREYS_ON): the hunt is what they do on a good day, the carcass in
+  // the ditch is what carries them through a bad one.
+  "masterless-dog", "lead-dog"]);
 // THE NOSE (rome, 2026-07-17): a scavenger with nothing better to do drifts
 // toward fresh blood next door — a drip trail (a wounded thing that walked
 // through) or a kill's pool. Odds-gated so it's a drift, not a magnet; the
@@ -2013,7 +2044,20 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["grey-wolf", new Set(["roe-deer", "white-roe", "grave-hyena"])],           // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
   ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar"])],             // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148)
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
-  ["lead-dog", new Set(["masterless-dog"])],                                  // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and the only food web the road has
+  // THE STRAYS EAT SOMETHING NOW (2026-08-12). The west road's seven masterless
+  // dogs had NO feeding route in the world at all — not grazers, not scavengers,
+  // no prey map, nothing but the STARVE_HUNTERS line that brings them for a
+  // player. So they sat at the cap of the hunger clock advertising it, which is
+  // the same bug the wood had in August and the crossing had before that: a
+  // creature the sim gives no way to eat. A feral pack is not a thing with no
+  // diet — it is the most opportunistic diet on the road. It runs the small
+  // game, it takes a goat when there are enough of it to try, and it eats what
+  // it finds dead (VERMIN, below). The statlines carry both edges honestly:
+  // a stray is 24hp/3-5 against the roe's 16hp/1-2, which is a clean solo take;
+  // it is UNDER the goat's 26hp, so the goat needs the pack (PACK_PREY). The
+  // lead dog is 36hp/4-7 and needs nobody's help for either.
+  ["masterless-dog", new Set(["roe-deer", "white-roe"])],
+  ["lead-dog", new Set(["masterless-dog", "roe-deer", "white-roe", "feral-goat"])], // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and it is big enough to take the goat the pack needs numbers for
   // The pale hunters are the DEEP's rat-catchers: hungry, they leave their lurk
   // and range toward the rat-runs (lurkerDrifts), run one down (predation), and
   // go quiet again. A stretch of dark with no rats left is what starves one onto
@@ -2059,6 +2103,7 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   ["dire-wolf", new Map([["old-boar", 2]])],
   ["grave-hyena", new Map([["roe-deer", 2]])],  // a lone hyena harries a roe; a pair brings it down
   ["dire-hyena", new Map([["grey-wolf", 2]])],  // ...and it takes two of them to push a wolf off a kill
+  ["masterless-dog", new Map([["feral-goat", 2]])], // one stray circles a goat; two bring it down
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // A LANDED BITE HOLDS (rome, 2026-08-08: "the landed bite lets go sometimes —
@@ -2261,7 +2306,21 @@ export const FIREKEEPERS = new Set(["charcoal-burner"]);
 // walks a patrol of ground he has kept his whole life, and the keeper holds a
 // hall with a kitchen range in it. They have provisions. The simulation does
 // not need to model a packed lunch.
-export const PROVISIONED = new Set(["charcoal-burner", "the-woodward", "the-keeper-of-the-holding"]);
+//
+// THREE MORE OF THEM (2026-08-12), found by walking the whole roster against
+// its feeding routes rather than waiting to read another permanent tell in a
+// room. The carrier walks a road with a buckled satchel and both hands free;
+// the sapper is on his knees at a face that came down two centuries ago; the
+// bellfounder is watching a melt that set hard before the fires went out. Not
+// one of them grazes, scavenges or hunts, so all three banked to the cap.
+//
+// The last two are plainly PAST eating and HOLLOW would say so — but HOLLOW is
+// a combat law as much as a hunger one (grave flesh, doubled weapon wear, no
+// bleed), and moving a live statline into it is a fight change nobody asked
+// for. This fixes the tell and leaves what they are alone; promoting either to
+// HOLLOW outright stays a separate call.
+export const PROVISIONED = new Set(["charcoal-burner", "the-woodward", "the-keeper-of-the-holding",
+  "road-carrier", "the-sapper", "the-bellfounder"]);
 // REVENANTS don't stay down: put one to 0 and it RISES ONCE, at part health, and
 // comes again. The second death is the real one. A longer fight, not a lost one.
 export const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);

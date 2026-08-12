@@ -123,6 +123,10 @@ export interface Creature {
   fled?: number;        // rooms run in the CURRENT rout — reset when it gets clean away
   windAt?: number;      // how many it had in it this time (FLEE_WIND_MIN..MAX, rolled when the rout starts)
   windedUntil?: number; // ms until it has its breath back; until then it will not run, whatever it is
+  huntFor?: string;     // the room it is walking to because its own ground has nothing left to eat (ai.huntGround)
+  huntAt?: number;      // ms until that errand is worth recomputing (HUNT_RECHECK_MS)
+  drift?: number;       // rooms walked on a WALKABOUT — set = unmoored, no territory (ai.beginDrift)
+  driftFrom?: string;   // the ground it set out from: what it walks away from, and what it returns to if it finds nothing
   holding?: string;  // creature id this predator has by the throat (a kill in progress, one room, no pursuit)
   heldBy?: string;   // ...and the other end of that grip
   covets?: string;      // rag-and-bone: pubkey of the wanderer whose kit he has fixed on

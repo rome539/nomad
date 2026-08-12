@@ -30,9 +30,10 @@ import {
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
-  QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, FORAGE_REGIONS,
+  QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, FORAGE_REGIONS, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
+  HUNT_RANGE, HUNT_RECHECK_MS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -513,16 +514,26 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
 // with no ordinary way to close the distance may do it — an idle thing inside
 // its own range never transits, so gates and hideaways stay as empty as they
 // have always been. A sentinel's post is never crossed.
+//
+// AND A DRIFT IS THE OTHER DIRECTION THROUGH THE SAME DOOR (2026-08-12). A
+// walkabout that could not cross a threshold could never leave the island it
+// started on — and the islands ARE the hideaways, so an animal would have been
+// free to "migrate" only as far as the nearest crack in the wall. The rule is
+// unchanged in every way that matters (never resident, never a target there,
+// never a sentinel's post); only the test the far side has to pass is inverted:
+// homeward wants a room CLOSER to the den, a drift wants one FURTHER from the
+// ground it left. Hence `want`, and the two callers that supply it.
 function thresholdStep(
   z: ZoneDO,
   creature: Creature,
   here: string,
-  home: string,
+  mark: string,
   open: { dir: string; to_room: string; key_item?: string | null }[],
+  want: "closer" | "further" = "closer",
 ): { dir: string; to_room: string; through: string } | null {
   const world = z.world!;
   const blocked = (r: string) => world.safeRooms.has(r) || world.entryRooms.has(r);
-  const far = z.roomDist(here, home);
+  const far = z.roomDist(here, mark);
   if (!isFinite(far)) return null;
   for (const leg of open) {
     const mid = leg.to_room;
@@ -531,10 +542,76 @@ function thresholdStep(
       if (out.key_item && !z.openDoors.has(`${mid}:${out.dir}`)) continue;
       const to = out.to_room;
       if (to === here || blocked(to) || SENTINEL_ROOMS.has(to)) continue;
-      if (z.roomDist(to, home) < far) return { dir: leg.dir, to_room: to, through: mid };
+      const d = z.roomDist(to, mark);
+      if (want === "closer" ? d < far : d > far) return { dir: leg.dir, to_room: to, through: mid };
     }
   }
   return null;
+}
+
+// ---- THE HUNGRY RANGE: a hunter with an empty larder goes looking ----------
+//
+// A predator's territory is TERRITORY_RADIUS rooms of ground around its den,
+// and until now that was an absolute: a wolf whose range held no deer stayed in
+// that range and starved in it forever. Measured across the live map, that is
+// not a hypothetical — it is most of the surface's broken webs. Three otters on
+// the beck with no rat inside twenty rooms. Five bitterns in a reed maze whose
+// eels are all out in the channels. Three wolves and one deer sealed in a
+// two-room pocket behind a hideaway. Every one of them was doing exactly what
+// the territory rule said and slowly reaching the end of the hunger clock.
+//
+// Migration used to make this worse rather than better — it named an address in
+// another band and the animal took up residence there whether or not the ground
+// could feed it. That is gone (the drift, at beginDrift below, settles an animal
+// only where it can eat), so this rule now catches the OTHER case: ground that
+// could feed it once and cannot any more, because the prey was hunted out, or
+// wandered off, or a player cleared the room.
+//
+// So: HUNGER MOVES THE ANCHOR, not the rules. A hunter that is genuinely hungry
+// and has nothing it eats inside its own range re-aims the ordinary territory
+// walk at the nearest room that does hold its prey, and walks there one room a
+// beat, by the same steps, past the same walls, crossing a threshold where it
+// must. Nothing teleports and nothing is exempted; it is the walk it would take
+// anyway, aimed somewhere else. The moment it eats (hunger resets on any kill,
+// corpse or graze) the anchor snaps back to the den, so this is what an animal
+// does at the end of a lean week — not a new permanent behaviour.
+//
+// HUNT_RANGE is the honest limit of "an animal knows where the food is." Past
+// it, it does not: a creature with nothing inside that radius keeps its ground
+// and goes hungry, which is the state the ecology is supposed to be able to
+// reach. The recheck cadence keeps this off the hot path — the search is one
+// capped BFS, at most once a minute, only for a hungry hunter, and the answer
+// is held until it goes stale.
+function huntGround(z: ZoneDO, creature: Creature, now: number): string | undefined {
+  const prey = PREYS_ON.get(creature.templateId);
+  if (!prey?.size || (creature.hunger ?? 0) < HUNGRY_AT) {
+    creature.huntFor = undefined;
+    return undefined;
+  }
+  // The cadence caches BOTH answers — the errand and the decision to stay home.
+  // Caching only the errand would leave a hungry hunter standing next to its
+  // dinner running the whole search every single beat.
+  if ((creature.huntAt ?? 0) > now) return creature.huntFor;
+  creature.huntAt = now + HUNT_RECHECK_MS;
+  // Anything it eats already standing on its own ground: stay home and hunt it.
+  const range = z.nearby(creature.home ?? creature.roomId, TERRITORY_RADIUS);
+  for (const c of z.creatures.values()) {
+    if (prey.has(c.templateId) && range.has(c.roomId)) {
+      creature.huntFor = undefined;
+      return undefined;
+    }
+  }
+  // Nothing at home. The nearest room that holds a meal, out to the limit of
+  // what an animal can be said to know about.
+  const out = z.nearby(creature.roomId, HUNT_RANGE);
+  let best: string | undefined, bestD = Infinity;
+  for (const c of z.creatures.values()) {
+    if (!prey.has(c.templateId)) continue;
+    const d = out.get(c.roomId);
+    if (d !== undefined && d < bestD) { bestD = d; best = c.roomId; }
+  }
+  creature.huntFor = best;
+  return best;
 }
 
   // Move one room: wandering or fleeing. Creatures can't open locked doors,
@@ -595,8 +672,36 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // surface, so nobody ever watches it happen, and the thing you notice is
     // that there are wolves on the road this month and there were not before.
     if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id]
-        && MIGRANTS.has(tmpl.id) && chance(MIGRATE_ODDS)) {
-      migrate(z, creature, tmpl.id);
+        && MIGRANTS.has(tmpl.id) && creature.drift === undefined && chance(MIGRATE_ODDS)) {
+      beginDrift(z, creature, tmpl.id);
+    }
+    // WALKABOUT. An unmoored animal has no territory to be pulled back into: it
+    // walks away from where it set out and keeps walking until it finds ground
+    // that can keep it (driftArrives, after the step). Two rails only — it stays
+    // on the surface bands, and it prefers a step that puts distance behind it,
+    // so a drift travels instead of milling about in the same four rooms. Both
+    // "never strand" like every other filter here.
+    if (mode === "wander" && creature.drift !== undefined) {
+      const onward = exits.filter((e) => MIGRATE_BANDS.has(z.regionOf(e.to_room)) && !DEEP_ROOMS.has(e.to_room));
+      if (onward.length) exits = onward;
+      else { // walked itself into a corner of the map it may not settle on: turn back
+        creature.home = creature.driftFrom ?? creature.home;
+        creature.drift = undefined;
+        creature.driftFrom = undefined;
+      }
+    }
+    if (mode === "wander" && creature.drift !== undefined && creature.driftFrom) {
+      const behind = z.roomDist(creature.roomId, creature.driftFrom);
+      const away = exits.filter((e) => z.roomDist(e.to_room, creature.driftFrom!) > behind);
+      if (away.length) exits = away;
+      else {
+        // Every ordinary way on is a way back. The country ahead is behind a
+        // threshold — the Shepherd's Bothy, the Shelter Stone, a gate — and
+        // this is the one crossing that opens the rest of the map to a walking
+        // animal. Without it a drift can never leave the island it began on.
+        const t = thresholdStep(z, creature, creature.roomId, creature.driftFrom, allWays, "further");
+        if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
+      }
     }
     // Territory: idle wandering keeps to the ground around the den. Beyond the
     // edge (fled, or freshly walked in from a dark mouth), every idle step is
@@ -604,33 +709,38 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // carries a migrant from the mouth to its range. Fleeing ignores the edge
     // (survival first; the next calm step starts the walk back). Patrollers
     // are exempt — their route is their territory. Never strands.
-    if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id]) {
+    if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id] && creature.drift === undefined) {
+      // A HUNGRY THING LEAVES. Where the territory pull is anchored: normally
+      // the den, but a hunter whose own ground has nothing left to eat walks to
+      // where the food is instead (huntGround). Everything below is unchanged —
+      // it just closes on a different room for as long as the hunger lasts.
+      const anchor = huntGround(z, creature, now) ?? creature.home;
       // ONE capped walk out from the den answers both halves — am I inside my
       // range, and which of these exits are. This is the hottest distance query
       // in the game (every wandering creature, every beat); routing it through
       // full-map distances meant a distance map per den per beat, and with
       // hundreds of dens no cache can hold them. Radius+1 so the "which exit is
       // closer" comparison can still see one step past the edge.
-      const near = z.nearby(creature.home, TERRITORY_RADIUS + 1);
+      const near = z.nearby(anchor, TERRITORY_RADIUS + 1);
       const d = near.get(creature.roomId);
       if (d === undefined) {
         // Genuinely off the map's edge of its range — the long walk in from a
         // dark mouth, or back from a rout. Rare enough to pay for true
         // distances, and the only case that actually needs them.
-        const far = z.roomDist(creature.roomId, creature.home);
-        const closer = exits.filter((e) => z.roomDist(e.to_room, creature.home!) < far);
+        const far = z.roomDist(creature.roomId, anchor);
+        const closer = exits.filter((e) => z.roomDist(e.to_room, anchor) < far);
         if (closer.length) exits = closer;
         // Walled in: every way that closes on home goes through a hideaway or a
         // gate. Cross it in one step rather than turn round forever.
         else {
-          const t = thresholdStep(z, creature, creature.roomId, creature.home!, allWays);
+          const t = thresholdStep(z, creature, creature.roomId, anchor, allWays);
           if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
         }
       } else if (d > TERRITORY_RADIUS) {
         const closer = exits.filter((e) => (near.get(e.to_room) ?? Infinity) < d);
         if (closer.length) exits = closer;
         else {
-          const t = thresholdStep(z, creature, creature.roomId, creature.home!, allWays);
+          const t = thresholdStep(z, creature, creature.roomId, anchor, allWays);
           if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
         }
       } else {
@@ -836,6 +946,9 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       z.addTrace(from, { kind: "drip", at: now, label: tmpl.name });
       z.addTrace(creature.roomId, { kind: "drip", at: now, label: tmpl.name });
     }
+    // A drifter counts the room it just walked into, and asks whether this is
+    // the place. This is the only thing that ever ends a walkabout.
+    if (mode === "wander") driftArrives(z, creature, now);
     creature.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
     // THE QUIET (2026-08-06): nothing in the wood moves. Not frozen — a step it
     // would have taken in a minute it now takes in six, so the wood goes still
@@ -1292,28 +1405,40 @@ export function bolts(z: ZoneDO, templateId: string, roomId: string): boolean {
   return true;
 }
 
-// ---- migration: where a thing may go, and whether it may leave ----
+// ---- MIGRATION IS A WALK (rome, 2026-08-12: build the drift) ---------------
 //
-// The whole rule is that the DESTINATION has to be able to hold the animal and
-// the SOURCE has to survive losing it. Both are read off the live world at the
-// moment of the roll, never off the spawn table — which is what makes it
-// self-correcting: nothing can follow prey that is not there, and the moment
-// prey does drift somewhere, its hunters become able to follow.
-function canLiveIn(z: ZoneDO, templateId: string, band: string): boolean {
-  // A grazer needs ground that grows something. The fortress ring does not.
-  if (GRAZERS.has(templateId) && !THIEVES.has(templateId)) return FORAGE_REGIONS.has(band);
-  // A hunter needs something it hunts, standing there NOW.
-  const prey = PREYS_ON.get(templateId);
-  if (prey && prey.size) {
-    for (const c of z.creatures.values()) {
-      if (prey.has(c.templateId) && z.regionOf(c.roomId) === band) return true;
-    }
-    return false;
-  }
-  // People follow people. A footpad goes where the traffic is, and traffic is
-  // the road, the ground people live on, and the ring under the walls.
-  return true;
-}
+// It used to be an ADDRESS. A rare die picked a band the animal could live on,
+// then a room inside it, and that room became home; the creature then walked
+// there over the following hours. The walk was always real — nothing ever
+// teleported — but the destination was chosen by fiat, out of a menu, before a
+// single step was taken. Everything that was wrong with migration was wrong in
+// that one line, and it showed up as a grey wolf standing on the east road:
+//
+//   * A BAND IS ONE LABEL OVER SEVERAL WORLDS. Measured on the live map,
+//     "road" is four disconnected pieces (80 + 71 + 7 + 3 rooms) and "wood" is
+//     five, because a hideaway on a through-line is a wall to anything that
+//     walks. "There is prey on the road" can be true about the west road while
+//     the die drops the animal on the east one.
+//   * ONE STRAY GRAZER OPENED THE GATE FOR EVERY HUNTER. Nothing a wolf eats is
+//     seeded on the road at all — but a roe deer may graze any foraging band,
+//     and the moment one wandered out there, every wolf in the wood was cleared
+//     to "live on the road", all 161 rooms of it.
+//
+// So there is no menu now, and no address. A migrating animal simply UNMOORS:
+// it drops the territory pull, walks — one room a beat, away from where it set
+// out, through the ordinary exits, past the ordinary walls — and SETTLES ON THE
+// FIRST GROUND THAT CAN FEED IT. Where it ends up is not chosen anywhere; it is
+// wherever the walking took it. The ecology enforces itself, because a room
+// that cannot feed the animal is a room it does not stop in, and no table has
+// to be kept in step with where the prey actually stands.
+//
+// It costs something honest: a drifter is loose for a while and can be met
+// anywhere it can walk. That is the point — it is a real animal crossing real
+// country, and you can kill it on the way. The leash is what keeps it from
+// being nonsense: surface bands only (nothing drifts into the deep or the
+// keep), the Crossing's own quarter rule still applies, and an animal that has
+// walked DRIFT_GIVES_UP rooms without finding anything turns round and goes
+// back to the ground it came from.
 
 // How many of this line are living on a given band right now.
 function countOn(z: ZoneDO, templateId: string, band: string): number {
@@ -1324,27 +1449,69 @@ function countOn(z: ZoneDO, templateId: string, band: string): number {
   return n;
 }
 
-export function migrate(z: ZoneDO, creature: Creature, templateId: string): void {
+/** May this animal STOP here — is this ground it could actually live on? */
+function settlesHere(z: ZoneDO, templateId: string, roomId: string): boolean {
+  const band = z.regionOf(roomId);
+  if (!MIGRATE_BANDS.has(band)) return false;
+  // The Crossing keeps settlers off the water and the reed (MIGRATE_QUARTERS) —
+  // the same rule the address roll had, asked of one room instead of a pool.
+  const allow = MIGRATE_QUARTERS[band];
+  if (allow && !allow.has(MAP_QUARTERS[roomId] ?? "")) return false;
+  if (z.world!.safeRooms.has(roomId) || z.world!.entryRooms.has(roomId)) return false;
+  // A grazer needs ground that grows something.
+  if (GRAZERS.has(templateId) && !THIEVES.has(templateId)) return FORAGE_REGIONS.has(band);
+  // A hunter needs something it hunts standing within its OWN range of here —
+  // not "somewhere in the band", which is the lie the old gate told. This is
+  // the same radius its territory will have the moment it settles, so the test
+  // and the life it is about to live are the same measurement.
+  const prey = PREYS_ON.get(templateId);
+  if (prey?.size) {
+    const range = z.nearby(roomId, TERRITORY_RADIUS);
+    for (const c of z.creatures.values()) if (prey.has(c.templateId) && range.has(c.roomId)) return true;
+    return false;
+  }
+  // People follow people, and any ground out here has a road on it somewhere.
+  return true;
+}
+
+/** Cut the tether: this one is going walkabout. */
+export function beginDrift(z: ZoneDO, creature: Creature, templateId: string): void {
   const here = z.regionOf(creature.home ?? creature.roomId);
   // Never strip a band bare. The wood can lose wolves; it cannot be emptied of
   // them, and no amount of dice may do what a migration file would not.
   if (countOn(z, templateId, here) <= MIGRATE_KEEP) return;
-  const bands = [...MIGRATE_BANDS].filter((b) => b !== here && canLiveIn(z, templateId, b));
-  if (!bands.length) return; // nowhere out there could keep it: it stays home
-  const band = bands[randInt(0, bands.length - 1)];
-  // A band may restrict which of its ground a migrant will actually settle on
-  // (MIGRATE_QUARTERS) — the Crossing keeps them off the water and the reed.
-  const allow = MIGRATE_QUARTERS[band];
-  const pool = [...z.world!.rooms.keys()].filter(
-    (r) => z.regionOf(r) === band && !z.world!.safeRooms.has(r) && !z.world!.entryRooms.has(r)
-      && (!allow || allow.has(MAP_QUARTERS[r] ?? "")),
-  );
-  if (!pool.length) return;
-  // It does not TELEPORT. It gets a new idea of home and starts walking; the
-  // territory pull does the rest, one room at a time, for as long as it takes —
-  // and it can be met, fought and killed the whole way there.
-  creature.home = pool[randInt(0, pool.length - 1)];
+  creature.drift = 0;
+  creature.driftFrom = creature.home ?? creature.roomId;
 }
+
+/**
+ * One room of a drift, resolved AFTER the step is taken: count it, and decide
+ * whether this is the place. Settling is what ends a drift — the animal takes
+ * the room it is standing in as home and its ordinary territory closes around
+ * it. DRIFT_SETTLE_MIN stops it "migrating" three rooms and stopping on its own
+ * doorstep, which every wolf in the wood would otherwise do instantly, since
+ * the wood is full of deer.
+ */
+function driftArrives(z: ZoneDO, creature: Creature, now: number): void {
+  if (creature.drift === undefined) return;
+  creature.drift++;
+  if (creature.drift >= DRIFT_SETTLE_MIN && settlesHere(z, creature.templateId, creature.roomId)) {
+    creature.home = creature.roomId;
+    creature.drift = undefined;
+    creature.driftFrom = undefined;
+    creature.huntAt = undefined; // the larder question is worth asking again from here
+    return;
+  }
+  if (creature.drift >= DRIFT_GIVES_UP) {
+    // It walked a long way and found nothing it could keep. Animals do this and
+    // then they go home; the territory pull below does the walking back.
+    creature.home = creature.driftFrom ?? creature.home;
+    creature.drift = undefined;
+    creature.driftFrom = undefined;
+  }
+  void now;
+}
+
 
 export function playerPresent(z: ZoneDO, roomId: string): boolean {
     // Somebody behind a barred den door is IN the room and out of reach of
