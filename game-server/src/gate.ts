@@ -1617,10 +1617,10 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
   // names those two words, so they are what a player types when they mean the
   // wall — and being told to say them out loud instead is a small insult.
   if (is("wall", "chart", "wall chart", "plaster", "frame", "carve", "study", "marks", "scratches")) {
-    const marks = [...z.wallMarks].filter((r) => z.world!.rooms.has(r)).length;
+    const marks = [...z.wallOf(session.pubkey)].filter((r) => z.world!.rooms.has(r)).length;
     return marks === 0
-      ? "A stretch of the wall by the door, plastered smooth and scored with an empty frame — corners, a scale, and nothing inside them. Somebody meant this to be filled. ('carve' what you've walked)"
-      : `Plaster gone grey with handling, and inside the scratched frame ${marks} halls, cut by a dozen different hands over a long time — some scored deep and square, some barely there. Nobody signed any of it. ('study' it to read it; 'carve' to add what you've walked)`;
+      ? "A stretch of the wall by the door, plastered smooth and scored with an empty frame — corners, a scale, and nothing inside them. Other hands have been at it: chalk over chalk, none of it yours, none of it legible to you. Your own corner is bare. ('carve' what you've walked)"
+      : `Plaster gone grey with handling, layered over with other people's chalk — and inside it, in your own hand, ${marks} halls. You can read yours and only yours; the rest is somebody else's walking, and it may as well be weather. ('study' to read your chart; 'carve' to add what you've walked)`;
   }
   if (is("hatch", "keeper", "shutter", "keepers hatch", "keeper's hatch", "counter")) {
     return "A shutter of banded oak set into the far wall at chest height, closed. There is a worn place on the sill where hands have rested, and a deeper one where things have been slid across. Whoever is behind it does not open it to be looked at. ('barter' opens it)";
@@ -1656,10 +1656,10 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
   ];
   // The wall chart, plastered by the door: the players' own map, in whatever
   // state they've left it. The line grows with the wall.
-  const marks = [...z.wallMarks].filter((r) => z.world!.rooms.has(r)).length;
+  const marks = [...z.wallOf(session.pubkey)].filter((r) => z.world!.rooms.has(r)).length;
   lines.push(marks === 0
-    ? "By the door, a stretch of wall has been plastered smooth and scratched with an empty frame — a chart waiting for a first hand."
-    : `By the door, a wall chart scratched by many hands maps ${marks} halls. ('study' it; 'carve' to add what you've walked)`);
+    ? "By the door, a stretch of wall plastered smooth and scratched over with other people's chalk — none of it in a hand you can read. Your own corner is bare. ('carve' what you've walked)"
+    : `By the door, the wall chart — and ${marks} halls of it are yours. ('study' it; 'carve' to add what you've walked)`);
   // The board, beside the hatch. Only spoken of when it has something on it: an
   // empty board is furniture, and the room already has enough of that.
   const notices = boardLive(z).length;
@@ -1889,15 +1889,16 @@ export async function wallCarve(z: ZoneDO, session: Session): Promise<void> {
   // Only what YOU walked THIS session — the wall takes testimony, not hearsay.
   // (A returning player re-walks before they can carve: what you set down is
   // what you remember from this walk, not a rumor of an old one.)
-  const fresh = [...session.visited].filter((r) => ring.has(r) && !z.wallMarks.has(r));
+  const mine = z.wallOf(session.pubkey);
+  const fresh = [...session.visited].filter((r) => ring.has(r) && !mine.has(r));
   if (!fresh.length) {
-    return z.send(session, z.wallMarks.size
-      ? "You read your memory against the wall. Every hall you walked this time is already scratched there."
+    return z.send(session, mine.size
+      ? "You read your memory against your own corner of the wall. Every hall you walked this time is already scratched there, in your hand."
       : "Bare plaster, and nothing walked yet worth setting down. Walk, come back alive, and carve what you found.");
   }
-  for (const r of fresh) z.wallMarks.add(r);
-  z.send(session, `You take up a nail and set down what you walked — ${fresh.length} hall${fresh.length === 1 ? "" : "s"} the wall didn't have. Whoever comes in from the cold can read them now.`);
-  gatehouseFeed(z, `${session.name} scratches new halls into the wall chart.`, session.pubkey);
+  for (const r of fresh) mine.add(r);
+  z.send(session, `You take up a nail and set down what you walked — ${fresh.length} hall${fresh.length === 1 ? "" : "s"} your chart did not have. It is yours: nobody else reads this hand, and you will not read theirs.`);
+  gatehouseFeed(z, `${session.name} scratches at the wall chart, adding to their own hand.`, session.pubkey);
   await z.persist();
 }
 
@@ -1907,9 +1908,9 @@ export function wallStudy(z: ZoneDO, session: Session): void {
   // Filter against BOTH the ring and the live world: a migration that re-hangs
   // a corridor may pull an old mark out of the ring, and it just quietly ages
   // off the chart rather than lying.
-  const marked = [...z.wallMarks].filter((r) => ring.has(r) && world.rooms.has(r));
+  const marked = [...z.wallOf(session.pubkey)].filter((r) => ring.has(r) && world.rooms.has(r));
   if (!marked.length) {
-    return z.send(session, "The wall chart is bare plaster — a frame scratched around nothing, waiting. Walk out, come back, and 'carve' what you found.");
+    return z.send(session, "You find your own corner of the plaster, and it is bare — a frame scratched around nothing, waiting on you. Walk out, come back, and 'carve' what you found.");
   }
   // The same frame a real map sends, built the same way — truth, no lies —
   // but holding only what's been carved. Exits are drawn only between marked

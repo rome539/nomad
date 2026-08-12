@@ -53,8 +53,11 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // The wall chart: read it when it has anything on it; offer the nail when
     // you walked ANY room it doesn't have yet — the wall takes the whole world
     // now, not the ring around the doors.
-    if (z.wallMarks.size) inside.push("study");
-    if ([...session.visited].some((r) => !z.wallMarks.has(r) && z.world!.rooms.has(r))) inside.push("carve");
+    // YOUR chalk, not the wall's: the chips read your own chart, so 'study'
+    // only offers when you have something of your own to read.
+    const myWall = z.wallOf(session.pubkey);
+    if (myWall.size) inside.push("study");
+    if ([...session.visited].some((r) => !myWall.has(r) && z.world!.rooms.has(r))) inside.push("carve");
     // The board, offered only when somebody has actually pinned something —
     // a chip for an empty board teaches nothing and costs a row.
     if (gate.boardCount(z)) inside.push("board");

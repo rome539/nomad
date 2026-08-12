@@ -211,7 +211,7 @@ export interface SimState {
   groundHeart?: Record<string, number>; // "itemId@roomId" -> a dropped heart's acquired_at, so the floor can't wash its rot off
   inGatehouse?: string[]; // pubkeys standing INSIDE — a dropped socket must not throw you out the door
   inDen?: [string, string][]; // pubkey -> the holder whose den they stepped into (mig 172); a dropped socket must not put you out on the street
-  wallMarks?: string[]; // roomIds carved onto the gatehouse wall chart — the players' own map of the shallow ring
+  wallMarks?: Record<string, string[]>; // gatehouse wall chart, PER PUBKEY: your own chalk, your own chart. (Was a shared string[]; a legacy array is dropped on load — it has no author recorded, so it cannot be attributed to anyone.)
   board?: { name: string; words: string; at: number }[]; // the gatehouse board, oldest first — the one thing said here that outlives the saying
   stoneNames?: Record<string, { name: string; at: number }[]>; // milestone roomId -> the register cut into it, oldest first (the road's record of who walked it)
   cacheSpent?: Record<string, number>; // cacheId -> ms epoch it re-locks/refills

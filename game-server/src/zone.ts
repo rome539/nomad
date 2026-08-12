@@ -203,7 +203,11 @@ export class ZoneDO implements DurableObject {
   // so the wall cannot lie. It also cannot reach the deep: that stays the paid
   // map's territory, forever. That fence is gone (2026-08-11): the wall takes
   // any room somebody walked and came back from — gate.wallGround.
-  public wallMarks = new Set<string>();
+  // ONE WALL, MANY HANDS, AND NOBODY READS ANOTHER'S (rome, 2026-08-11: tie it
+  // to the npub so everyone draws their own instead of getting it free).
+  // Keyed by pubkey: your chalk, your chart. The plaster is communal furniture;
+  // what is written on it is not.
+  public wallMarks = new Map<string, Set<string>>();
   // The gatehouse board, oldest first. The only place a player's words outlive
   // the session they were said in (zone-data BOARD_*).
   public board: { name: string; words: string; at: number }[] = [];
@@ -497,7 +501,17 @@ export class ZoneDO implements DurableObject {
       this.groundHeart = new Map(Object.entries(saved.groundHeart ?? {}));
       this.inGatehouse = new Set(saved.inGatehouse ?? []);
       this.inDen = new Map(saved.inDen ?? []);
-      this.wallMarks = new Set(saved.wallMarks ?? []);
+      // Two shapes: the old communal ARRAY, and the per-pubkey record that
+      // replaced it. A legacy array has no author recorded anywhere — there is
+      // no way to say whose walking it was — and handing it to everybody is
+      // exactly the free ride this change ends, so it is dropped. The rooms are
+      // still out there; they get re-walked in a day.
+      const savedWall = saved.wallMarks as unknown;
+      this.wallMarks = new Map(
+        savedWall && !Array.isArray(savedWall)
+          ? Object.entries(savedWall as Record<string, string[]>).map(([pk, rooms]) => [pk, new Set(rooms)] as const)
+          : [],
+      );
       this.board = saved.board ?? [];
       this.stoneNames = new Map(Object.entries(saved.stoneNames ?? {}));
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
@@ -771,7 +785,12 @@ export class ZoneDO implements DurableObject {
       groundHeart: Object.fromEntries(this.groundHeart),
       inGatehouse: [...this.inGatehouse],
       inDen: [...this.inDen],
-      wallMarks: [...this.wallMarks],
+      // Empty hands are not saved. wallOf() creates a set the moment anyone so
+      // much as LOOKS at the plaster, and persisting those would put a row in
+      // the world's state for every passer-by who never picked up a nail.
+      wallMarks: Object.fromEntries(
+        [...this.wallMarks].filter(([, rooms]) => rooms.size).map(([pk, rooms]) => [pk, [...rooms]]),
+      ),
       board: this.board,
       stoneNames: Object.fromEntries(this.stoneNames),
       cacheSpent: Object.fromEntries(this.cacheSpent),
@@ -829,6 +848,8 @@ export class ZoneDO implements DurableObject {
     this.groundRolled.clear();
     this.groundHeart.clear();
     this.wallMarks.clear(); // a fresh world has fresh plaster — old room ids mean nothing here
+
+
     this.board = [];         // a bare board: nobody has pinned anything to it yet
     this.stoneNames.clear(); // and fresh stone: the road has nobody's name on it yet
     this.cacheSpent.clear();
@@ -5222,6 +5243,14 @@ export class ZoneDO implements DurableObject {
   // brief on every re-entry after — just the name, the ways out, and whatever
   // is actually THERE now. Marks the room known. The whole reason you don't
   // re-read the same paragraph every time you cross a room you've crossed all day.
+  // A wanderer's own chalk on the wall. Created on first carve; empty for
+  // anyone who has never picked up a nail.
+  public wallOf(pubkey: string): Set<string> {
+    let mine = this.wallMarks.get(pubkey);
+    if (!mine) { mine = new Set(); this.wallMarks.set(pubkey, mine); }
+    return mine;
+  }
+
   public enterDescribe(session: Session): string {
     const full = !session.visited.has(session.roomId);
     session.visited.add(session.roomId);
