@@ -1803,8 +1803,8 @@ export class ZoneDO implements DurableObject {
       if (!creature.target) creature.target = session.pubkey;
       ai.addGrudge(this, creature, session.pubkey);
       session.target = creature.id;
-      this.send(session, `Your throw sails wide — ${itmpl.name} cracks against the stone. ${cap(tmpl.name)} turns on you.`);
-      this.actorFeed(session, session.roomId, `${session.name} hurls ${itmpl.name} — and misses.`);
+      this.send(session, `Your throw sails wide — ${this.gearName(itmpl.id)} cracks against the stone. ${cap(tmpl.name)} turns on you.`);
+      this.actorFeed(session, session.roomId, `${session.name} hurls ${this.gearName(itmpl.id)} — and misses.`);
       this.combatNoise(session.roomId);
       this.refreshRoomCtx(session.roomId);
       await this.persist();
@@ -1848,7 +1848,7 @@ export class ZoneDO implements DurableObject {
     this.markHurt(creature, tmpl, session.pubkey);
     ai.addGrudge(this, creature, session.pubkey);
     session.target = creature.id;
-    this.actorFeed(session, session.roomId, `${session.name} hurls ${itmpl.name} at ${tmpl.name}!`);
+    this.actorFeed(session, session.roomId, `${session.name} hurls ${this.gearName(itmpl.id)} at ${tmpl.name}!`);
     this.combatNoise(session.roomId);
     const landing = shattered ? " It shatters on impact." : " It lands on the stones.";
     if (creature.hp > 0) {
@@ -1863,7 +1863,7 @@ export class ZoneDO implements DurableObject {
       }
       if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
     } else {
-      this.send(session, `You hurl ${itmpl.name} — it strikes ${tmpl.name} for ${dmg}${flourish}${landing}`);
+      this.send(session, `You hurl ${this.gearName(itmpl.id)} — it strikes ${tmpl.name} for ${dmg}${flourish}${landing}`);
       await this.onCreatureDeath(session, creature, tmpl);
     }
     this.refreshRoomCtx(session.roomId);
@@ -1895,8 +1895,8 @@ export class ZoneDO implements DurableObject {
     // The noise-throw's landing obeys the stray law too — a lure you retrieve
     // in minutes never notices; only the abandoned copy spoils.
     this.armStrayDecay(session.roomId);
-    this.send(session, `You hurl ${itmpl.name} into the dark. It cracks and clatters off the stone — the sound carries.`);
-    this.roomFeed(session.roomId, `${session.name} sends ${itmpl.name} clattering across the room.`, session.pubkey, false);
+    this.send(session, `You hurl ${this.gearName(itmpl.id)} into the dark. It cracks and clatters off the stone — the sound carries.`);
+    this.roomFeed(session.roomId, `${session.name} sends ${this.gearName(itmpl.id)} clattering across the room.`, session.pubkey, false);
     // The clatter: players next door hear it (WS-only, no relay flood), the idle
     // curious drift in to look, and any lurker here may drop on the noise.
     this.roomSound(session.roomId, "Something clatters {dir}.");
@@ -4628,7 +4628,7 @@ export class ZoneDO implements DurableObject {
         this.roomFeed(home, rock
           ? "The rubble shifts — a loose rock lies within reach again."
           : gear
-            ? `${cap(t?.name ?? "something")} turns up among the litter, where there was nothing before.`
+            ? `${cap(this.rarityName(g.itemId, t?.rarity ?? "common"))} turns up among the litter, where there was nothing before.`
             : edible
               ? `${cap(t?.name ?? "something")} lies here — the stores are not empty yet.`
               : onAltar
@@ -4882,7 +4882,7 @@ export class ZoneDO implements DurableObject {
           this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), item.id]);
           this.stampFresh(creature.roomId, item.id);
           if (rolled) this.groundRolled.set(`${item.id}@${creature.roomId}`, rolled);
-          this.send(killer, `${cap(this.floorName(item.id, creature.roomId))} falls from ${tmpl.name} — your pack is full, so it lies here. [${item.rarity}]`);
+          this.send(killer, `${cap(this.floorLootName(item.id, creature.roomId))} falls from ${tmpl.name} — your pack is full, so it lies here. [${item.rarity}]`);
         }
         // Same rule as a pickup off the floor: junk stays in the room. Only a
         // rare+ find is worth the wire — nobody outside needs to hear that
@@ -4928,7 +4928,7 @@ export class ZoneDO implements DurableObject {
           // (099). Set it before the message so the name reads what it rolled.
           const rolled = this.rollTraits(g);
           if (rolled) this.groundRolled.set(`${id}@${creature.roomId}`, rolled);
-          const shown = cap(this.floorName(id, creature.roomId));
+          const shown = cap(this.floorLootName(id, creature.roomId));
           this.send(killer, `${shown} clatters free of the fallen — it lies here. [${g.rarity}]`);
           this.roomFeed(creature.roomId, `${shown} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, killer.pubkey, false); // local: loot on the ground is a shopping-list beacon
         }
@@ -5389,7 +5389,7 @@ export class ZoneDO implements DurableObject {
         // The first N copies (N = curing timers) hang in the racks; the rest are loose.
         // A lottery piece reads its rolled adjective on the stone (099) — the
         // find is visible before you stoop, which is the whole thrill.
-        const shown = cap(this.floorName(itemId, room.id));
+        const shown = cap(this.floorLootName(itemId, room.id));
         if (shownCure[itemId] <= (curing[itemId] ?? 0)) lines.push(`${shown} hangs in the smoke-racks, curing.`);
         else loose.push(`${shown} lies here.`);
       }
@@ -5935,6 +5935,50 @@ export class ZoneDO implements DurableObject {
     return `${article}${adj} ${rest}`;
   }
 
+  // A RARITY-COLOURED NAME for the wire. Plain text can't carry colour, so the
+  // server wraps the item name in a tiny marker the client parses: 
+  //   \u0001epic\u0001A black sword\u0002   -> the name is coloured epic.
+  // The client strips it before it ever reaches textContent, so it is as safe
+  // as the rest of the prose (no markup ever becomes HTML). The marker is
+  // dropped wherever the client doesn't know it (a foreign renderer just sees
+  // the bare name — the first char is a control char it will ignore or the
+  // name is still readable between the controls). Gear and weapons carry their
+  // rarity; food, keys, trophies and the free rock read plain.
+  public rarityName(itemId: string, rarity: string): string {
+    const t = this.world!.itemTemplates.get(itemId);
+    if (!t || t.slot === "" || t.id === "loose-rock") return t?.name ?? itemId;
+    return `\u0001${rarity || "common"}\u0001${cap(t.name)}\u0002`;
+  }
+
+  // THE ONE WAY TO NAME A PIECE OF GEAR IN PROSE. Wrap any already-built name
+  // string in its rarity marker — for the many lines that have a name in hand
+  // (a displayName with its rolled adjective, a template name, a floor read)
+  // and want it coloured wherever it happens to sit in the sentence. The
+  // client's painter scans, so the name does NOT have to lead the line.
+  // Non-gear passes straight through: food, keys, trophies, journals, maps and
+  // the free rock are never coloured, which is the whole signal — a colour on
+  // the floor means a piece worth stooping for.
+  public gearName(itemId: string, shown?: string): string {
+    const t = this.world!.itemTemplates.get(itemId);
+    const base = shown ?? t?.name ?? itemId;
+    if (!t || t.slot === "" || t.id === "loose-rock") return base;
+    return `\u0001${t.rarity || "common"}\u0001${base}\u0002`;
+  }
+
+  // The floor read: "A rusted sword lies here." with the item's name rarity-
+  // coloured. Rolled adjectives fold in first (099), so a lottery piece reads
+  // its rolled adjective AND its rarity in the same breath. The name inside
+  // the marker is already capped (the marker's control char is cap-stable, so
+  // a caller may safely cap the whole string and the name keeps its case).
+  public floorLootName(itemId: string, roomId: string): string {
+    const t = this.world!.itemTemplates.get(itemId);
+    const base = t?.name ?? itemId;
+    const rolled = this.groundRolled.get(`${itemId}@${roomId}`);
+    const shown = rolled ? this.rolledName(base, parseTraits(rolled)) : base;
+    if (!t || t.slot === "" || t.id === "loose-rock") return shown;
+    return `\u0001${t.rarity || "common"}\u0001${cap(shown)}\u0002`;
+  }
+
   // The wanderer, taken in at a glance: everything the combat math derives from
   // what you wear and hold, served as one structure for the bench modal's
   // paperdoll (rome's Achaea-style visualizer). Numbers here mirror the real
@@ -5946,6 +5990,9 @@ export class ZoneDO implements DurableObject {
       return {
         slot,
         name: g?.tmpl.name ?? null,
+        // Every slot on the figure is gear by definition, so the doll can
+        // colour every name it shows — it just needs the tier to do it with.
+        rarity: g?.tmpl.rarity ?? "",
         cond: g ? (this.conditionWord(g.carried.condition) || "sound") : "",
       };
     });

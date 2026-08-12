@@ -41,7 +41,7 @@ export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promis
       const t = world.itemTemplates.get(r.itemId);
       if (!t) continue;
       const mat = r.material ? ` + ${r.materialQty} ${shortName(world.itemTemplates.get(r.material)?.name ?? r.material)}` : "";
-      lines.push(`  ${t.name}${z.itemStat(t)} [${t.rarity}] — ${r.scrap} iron${mat}`);
+      lines.push(`  ${z.gearName(t.id)}${z.itemStat(t)} [${t.rarity}] — ${r.scrap} iron${mat}`);
     }
     const pools = await z.gatePools(session);
     const iron = z.countLooseIn(pools, IRON_ID);
@@ -95,7 +95,7 @@ export async function forgeCore(
   gatehouseFeed(z, `${session.name} works the bench, hammer ringing off the gatehouse walls.`, session.pubkey); // gatehouse work stays in the gatehouse — the world outside the door doesn't hear the hammer
   return {
     ok: true,
-    note: `Iron, the brazier's heat, and patience. ${cap(t.name)} comes off the bench, raw but true.${z.itemStat(t)} [${t.rarity}] (unclaimed — the gate can seal it)`,
+    note: `Iron, the brazier's heat, and patience. ${z.gearName(t.id, cap(t.name))} comes off the bench, raw but true.${z.itemStat(t)} [${t.rarity}] (unclaimed — the gate can seal it)`,
   };
 }
 
@@ -286,7 +286,7 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
     // What he isn't carrying is still named, without a price — you can't buy it,
     // but you can know it exists and come back for it.
     if (!inStock(z, s.itemId)) { absent.push(t.name); continue; }
-    lines.push(`  ${t.name}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade`);
+    lines.push(`  ${z.gearName(t.id)}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade`);
   }
   if (absent.length) {
     lines.push(`Not carrying today: ${absent.join(", ")}. "They come and go," he says. "Check back."`);
@@ -480,18 +480,18 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
       // rides the book to the floor, or it comes back up a blank no hand can open.
       if (jid) z.dropInstance(session.roomId, bought.id, jid);
       else z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), bought.id]);
-      slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}] (pack full — at your feet, unsealed)`);
+      slid.push(`${z.gearName(bought.id)}${z.itemStat(bought)} [${bought.rarity}] (pack full — at your feet, unsealed)`);
       continue;
     }
     // Gear comes sealed (you bought it, the world can't peel it off your corpse)
     // — but a fungible carries no title to seal (scrap iron, trophies, cigs). A
     // sealed scrap can't be spent at the forge or the vice, so leave it loose.
     if (z.stackable(got.itemId, got.serial, got.journalId)) {
-      slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}]`);
+      slid.push(`${z.gearName(bought.id)}${z.itemStat(bought)} [${bought.rarity}]`);
       continue;
     }
     const serial = await sealOne(z, session, got);
-    slid.push(`${bought.name}${z.itemStat(bought)} [${bought.rarity}] (sealed #${serial})`);
+    slid.push(`${z.gearName(bought.id)}${z.itemStat(bought)} [${bought.rarity}] (sealed #${serial})`);
   }
   const change = trade.paid > cost ? " He gives no change." : "";
   const seals = cracked ? " He cracks the gate's seals without ceremony." : "";
@@ -670,7 +670,7 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
     .map((s) => {
       const t = world.itemTemplates.get(s.itemId);
       return t ? {
-        id: s.itemId, name: t.name, rarity: t.rarity, cost: s.cost, kind: kindOf(t),
+        id: s.itemId, name: t.name, rarity: t.rarity, slot: t.slot, cost: s.cost, kind: kindOf(t),
         stat: z.itemStat(t).replace(/^ \(|\)$/g, ""),
       } : null;
     })
@@ -685,7 +685,7 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
     .sort((a, b) => a.cost - b.cost)
     .map((s) => {
       const t = world.itemTemplates.get(s.itemId);
-      return t ? { id: s.itemId, name: t.name, rarity: t.rarity, kind: kindOf(t) } : null;
+      return t ? { id: s.itemId, name: t.name, rarity: t.rarity, slot: t.slot, kind: kindOf(t) } : null;
     })
     .filter((s) => s !== null);
   // Your side of the counter, one tab per keeping: pack, lockbox, vault.
@@ -697,13 +697,13 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
     // then count only the copies not yet on the counter. Escrowed copies still
     // register the kind's position, so laying one on the counter never reshuffles
     // the list — the row just decrements, and vanishes when its last copy is offered.
-    const goods = new Map<string, { id: string; name: string; rarity: string; kind: string; n: number }>();
+    const goods = new Map<string, { id: string; name: string; rarity: string; slot: string; kind: string; n: number }>();
     for (const c of pool) {
       const t = world.itemTemplates.get(c.itemId);
       if (!t || (t.barter ?? 0) <= 0) continue;
       if (c.equipped) continue; // what you're wearing isn't stock (rome, 2026-07-30) — take it off first, same law as 'drop'
       let g = goods.get(t.id);
-      if (!g) { g = { id: t.id, name: t.name, rarity: t.rarity, kind: kindOf(t), n: 0 }; goods.set(t.id, g); }
+      if (!g) { g = { id: t.id, name: t.name, rarity: t.rarity, slot: t.slot, kind: kindOf(t), n: 0 }; goods.set(t.id, g); }
       if (!session.buying?.escrow.some((e) => e.row === c.rowId)) g.n += 1;
     }
     return [...goods.values()].filter((g) => g.n > 0);
@@ -885,7 +885,7 @@ export async function cmdClaim(z: ZoneDO, session: Session, arg: string): Promis
     for (const carried of toSeal) {
       const tmpl = world.itemTemplates.get(carried.itemId)!;
       const serial = await sealOne(z, session, carried);
-      lines.push(`The gate's cold iron takes the measure of ${tmpl.name} — sealed. (mint #${serial})`);
+      lines.push(`The gate's cold iron takes the measure of ${z.gearName(tmpl.id)} — sealed. (mint #${serial})`);
     }
     lines.push("Sealed is TITLE, not armor: carried, it dies with you. Only the gate\u2019s lockbox and vault keep what death cannot.");
     z.send(session, lines.join("\n"));

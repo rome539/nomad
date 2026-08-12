@@ -1324,7 +1324,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   const nowLoud = !wasBurdened && z.burdened(session)
     ? " The pack takes it with a clank — too much loose iron now to slip a blow, and it won't ride quiet."
     : "";
-  z.send(session, `You take ${tmpl.name}.` + readied + stooped + nowLoud);
+  z.send(session, `You take ${z.gearName(tmpl.id)}.` + readied + stooped + nowLoud);
   z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)
   z.refreshRoomCtx(session.roomId);
   await z.persist();
@@ -1396,13 +1396,13 @@ export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedI
   // Shedding under the burden line is the valve working: say so, so the
   // mid-chase drop reads as the escape it is.
   const quietAgain = wasBurdened && !z.burdened(session) ? " The pack rides light and quiet again." : "";
-  z.roomFeed(session.roomId, `${session.name} drops ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL (see takes)
+  z.roomFeed(session.roomId, `${session.name} drops ${z.gearName(tmpl.id)}.`, session.pubkey, false); // loot stays LOCAL (see takes)
   z.refreshRoomCtx(session.roomId);
   // persist/alarm are the caller's — cmdDrop flushes after its "one more" line,
   // the bench-drop flushes after re-sending the modal.
   return (carried.serial !== null
     ? `You set ${tmpl.name} down. The seal cracks as it leaves your hands — the claim is no longer yours.`
-    : `You drop ${tmpl.name}.`) + quietAgain;
+    : `You drop ${z.gearName(tmpl.id)}.`) + quietAgain;
 }
 
 // Typed 'burn <item>' — the same destructive act as the bench's burn button
@@ -1516,7 +1516,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
       ? ` It is a wall, and you will fight around it — your blows lose ${drag}% of their weight while it's up.`
       : ` You'll fight a little around it — your blows lose ${drag}% of their weight while it's up.`;
   z.send(session, (tmpl.slot === "weapon"
-    ? `You take ${tmpl.name} in hand${current ? `, setting aside ${current.tmpl.name}` : ""}.`
+    ? `You take ${z.gearName(tmpl.id)} in hand${current ? `, setting aside ${z.gearName(current.tmpl.id)}` : ""}.`
     : `You pull on ${tmpl.name}${current ? `, shrugging off ${current.tmpl.name}` : ""}.`)
     + wallNote
     + (fighting ? " Your eyes leave the fight for a heartbeat — an opening." : ""));
@@ -1538,14 +1538,14 @@ export async function cmdRemove(z: ZoneDO, session: Session, arg: string): Promi
   carried.equipped = false;
   await setEquipped(z.env.DB, carried.rowId, false);
   if (fighting) session.staggered = true;
-  z.send(session, (tmpl.slot === "weapon" ? `You lower ${tmpl.name}.` : `You take off ${tmpl.name}.`)
+  z.send(session, (tmpl.slot === "weapon" ? `You lower ${z.gearName(tmpl.id)}.` : `You take off ${z.gearName(tmpl.id)}.`)
     + (fighting ? " An opening." : ""));
   z.sendCtx(session); // loadout changed — refresh the chips
 }
 
 export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session): string {
   const t = z.world!.itemTemplates.get(c.itemId);
-  let s = `  ${z.displayName(c)} [${t?.rarity ?? "?"}]${z.itemStat(t)}`;
+  let s = `  ${z.gearName(c.itemId, z.displayName(c))} [${t?.rarity ?? "?"}]${z.itemStat(t)}`;
   const tags: string[] = [];
   if (c.equipped) tags.push(t?.slot === "weapon" ? "wielded" : "worn");
   // A shield keeps saying "worn" while a flame burns, because it IS still on
@@ -2308,7 +2308,7 @@ export async function cmdFeed(z: ZoneDO, session: Session, arg: string): Promise
     }
     const rolled = z.rollTraits(world.itemTemplates.get(id)!);
     if (rolled) z.groundRolled.set(`${id}@${session.roomId}`, rolled);
-    const shown = cap(z.floorName(id, session.roomId));
+    const shown = cap(z.floorLootName(id, session.roomId));
     z.send(session, `The raven cocks its head, considers the meal — and fetches ${shown} from its nest, laying it at your feet.`, "gain");
     z.roomFeed(session.roomId, `The raven lays ${shown} at ${session.name}'s feet.`, session.pubkey, false);
     z.refreshRoomCtx(session.roomId);

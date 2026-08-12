@@ -795,6 +795,33 @@ export const PAGE = `<!doctype html>
   /* A locked chest in the room is loot-in-waiting — it must not read as white
      scenery you walk past. Gold and bold so it catches the eye on the way in. */
   #log .loot   { color: var(--gold); font-weight: 700; }
+  /* RARITY COLOURS. The five tiers ride the SAME adaptive brightness system as
+     names (--name-s / --name-l: saturation/lightness reset per theme from its
+     own ground in applyThemeColors), so the hues survive any ground — dark
+     Door, light Bone, or a worn Nostr theme. Each tier is a fixed hue nothing
+     else in the palette wears, so a legendary reads as itself on any screen.
+     Hue choices, stated: common = the floor's own grey (bone); uncommon = the
+     mending-green's hue but a tier up the ladder; rare = the tide's blue;
+     epic = the omen's violet; legendary = the gold. Never pure white or the
+     theme's cream — an item name must never masquerade as a headline. */
+  #log .r-common    { color: var(--dim); }
+  #log .r-uncommon  { color: hsl(95, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  #log .r-rare      { color: hsl(214, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  #log .r-epic      { color: hsl(275, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  #log .r-legendary { color: hsl(42, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  /* ...and by the paperdoll's slots and the forge's recipe list, which are
+     nothing but gear from top to bottom. */
+  #bdoll .dslot .it.r-common    { color: var(--dim); }
+  #bdoll .dslot .it.r-uncommon  { color: hsl(95, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  #bdoll .dslot .it.r-rare      { color: hsl(214, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  #bdoll .dslot .it.r-epic      { color: hsl(275, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  #bdoll .dslot .it.r-legendary { color: hsl(42, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  /* The same five, worn by inventory rows and bench/shelf entries. */
+  .bitem .r-common    { color: var(--dim); }
+  .bitem .r-uncommon  { color: hsl(95, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  .bitem .r-rare      { color: hsl(214, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  .bitem .r-epic      { color: hsl(275, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  .bitem .r-legendary { color: hsl(42, var(--rar-s, 58%), var(--rar-l, 68%)); }
   /* The world's own voice — event beats (the bell, the tide of rats, the dark
      going wrong). A hue nothing else wears, so an omen never reads as scenery. */
   #log .evt    { color: var(--omen); font-style: italic; }
@@ -1632,7 +1659,43 @@ function nameColor(pk) {
 // Paint a speech line into el: if it opens with the speaker's name, that name
 // wears their colour and the rest stays neutral. All textContent — never
 // innerHTML — so a crafted name or message can never inject markup.
+// Drop every rarity marker from a line, leaving the bare prose — for anything
+// that READS a line rather than paints it (classify, the sound picker, a
+// clipboard copy). Painting is the only place the marker means anything.
+function stripRarity(s) {
+  return String(s).replace(/\u0001[a-z]+\u0001([^\u0002]*)\u0002/g, "$1");
+}
+// The rarity marker maps a tier string to its CSS class.
+function rarityClass(r) {
+  return r === "uncommon" ? "r-uncommon" : r === "rare" ? "r-rare"
+    : r === "epic" ? "r-epic" : r === "legendary" ? "r-legendary" : "r-common";
+}
+// Paint a line that carries one or more rarity markers, ANYWHERE in it. The
+// server wraps a gear name as \u0001<rarity>\u0001<name>\u0002; everything
+// between markers is ordinary prose. Scanning rather than anchoring is the
+// whole point: "The raven fetches A RUSTED SWORD from its nest" puts the name
+// mid-sentence, and an anchored parser left the raw control characters sitting
+// in the text. Nobody writing the next line should have to remember to lead
+// with the item. Returns false when the line holds no marker at all, so the
+// speech painter below can have it.
+function paintRarity(el, text) {
+  var s = String(text);
+  if (s.indexOf("\u0001") === -1) return false;
+  var re = /\u0001([a-z]+)\u0001([^\u0002]*)\u0002/g;
+  var at = 0, m;
+  while ((m = re.exec(s)) !== null) {
+    if (m.index > at) el.appendChild(document.createTextNode(s.slice(at, m.index)));
+    var rn = document.createElement("span");
+    rn.textContent = m[2];
+    rn.className = rarityClass(m[1]);
+    el.appendChild(rn);
+    at = m.index + m[0].length;
+  }
+  if (at < s.length) el.appendChild(document.createTextNode(s.slice(at)));
+  return true;
+}
 function paintVoice(el, text, cls, who, pk) {
+  if (paintRarity(el, text)) return;
   if ((cls === "say" || cls === "tell") && who && pk && text.indexOf(who) === 0) {
     var nm = document.createElement("span");
     nm.textContent = who;
@@ -1665,14 +1728,18 @@ function print(text, cls, who, pk) {
   var sounds = [];
   for (var i = 0; i < lines.length; i++) {
     var div = document.createElement("div");
-    var c = cls || classify(lines[i]);
+    // classify and the sound picker read the PLAIN line: a rarity marker is
+    // painting, not content, and a control character in the middle of a phrase
+    // must never change which class or which sound a line gets.
+    var plain = lines[i].indexOf("\u0001") === -1 ? lines[i] : stripRarity(lines[i]);
+    var c = cls || classify(plain);
     if (c) div.className = c;
     paintVoice(div, lines[i], c, who, pk);
     log.appendChild(div);
     // A person spoke or moved while you're in a modal: float it over the top.
     if (c === "say" || c === "tell" || c === "who") modalChatPush(lines[i], c, who, pk);
     if (soundOn && actx && cls !== "sys" && cls !== "echo") {
-      var s = sndFor(lines[i], c || "");
+      var s = sndFor(plain, c || "");
       if (s) sounds.push(s);
     }
   }
@@ -2931,7 +2998,16 @@ function benchItemNode(it, place) {
   wrap.className = "bitem";
   var nm = document.createElement("div");
   nm.className = "nm";
-  nm.textContent = it.name;
+  // The item's name wears its rarity colour (gear only — food, keys, trophies
+  // and the free rock stay plain, same law as the floor lines).
+  var nmsp = document.createElement("span");
+  nmsp.textContent = it.name;
+  // Gear only, and the test is a TRUTHY slot: a row that ships without the
+  // field at all (an older frame) must read as "not gear" rather than colour
+  // every ration on the shelf, which a not-equal-empty-string test would have
+  // done for undefined.
+  if (it.rarity && it.slot && it.name.indexOf("loose rock") === -1) nmsp.className = rarityClass(it.rarity);
+  nm.appendChild(nmsp);
   if (it.n > 1) { var mu = document.createElement("span"); mu.className = "mult"; mu.textContent = " \\u00d7" + it.n; nm.appendChild(mu); }
   // Stats wear the chip colours, same language as the keeper's shelves.
   if (it.stat) {
@@ -3135,6 +3211,8 @@ function renderDoll(sheet) {
     var l = document.createElement("span"); l.className = "lb"; l.textContent = DOLL_SLOTS[s.slot] || s.slot; d.appendChild(l);
     var v = document.createElement("span"); v.className = "it" + (s.name ? "" : " none");
     v.textContent = s.name ? s.name : "\\u2014";
+    // Everything on the figure is gear by definition — colour it all.
+    if (s.name && s.rarity) v.classList.add(rarityClass(s.rarity));
     d.appendChild(v);
     if (s.name && s.cond && s.cond !== "sound") {
       var c = document.createElement("span"); c.className = "cd"; c.textContent = " (" + s.cond + ")"; d.appendChild(c);
@@ -3578,7 +3656,11 @@ function forgeItemNode(it) {
   wrap.className = "bitem";
   var nm = document.createElement("div");
   nm.className = "nm";
-  nm.textContent = it.name;
+  // The bench only ever makes gear, so every recipe name wears its tier.
+  var fnm = document.createElement("span");
+  fnm.textContent = it.name;
+  if (it.rarity) fnm.className = rarityClass(it.rarity);
+  nm.appendChild(fnm);
   if (it.stat) { var st = document.createElement("span"); st.className = "stat"; st.textContent = " (" + it.stat + ")"; nm.appendChild(st); }
   var rr = document.createElement("span"); rr.className = "rar"; rr.textContent = " [" + it.rarity + "]"; nm.appendChild(rr);
   wrap.appendChild(nm);
@@ -4717,6 +4799,13 @@ function applyThemeColors(c) {
   var lightGround = hexLum(c && c.bg) > 0.5;
   document.documentElement.style.setProperty("--name-s", lightGround ? "62%" : "55%");
   document.documentElement.style.setProperty("--name-l", lightGround ? "36%" : "70%");
+  // Rarity rides the same adaptive lightness as names, but a touch deeper on
+  // light grounds — the mid-hues (uncommon, legendary) wash out at 36% against
+  // a pale page, where the name hues don't (they're darker to start). This is
+  // the one place rarity differs from names: it wants legibility on the floor
+  // more than it wants to pop, so it dips a little lower in the light.
+  document.documentElement.style.setProperty("--rar-s", lightGround ? "66%" : "58%");
+  document.documentElement.style.setProperty("--rar-l", lightGround ? "30%" : "68%");
   applyThemeFont(c && c._font);
 }
 // A worn theme may bring its own face. We honor the family and, if Ditto gave
