@@ -236,6 +236,23 @@ export default {
         return await stub.fetch(new Request(req.url, { method: "POST", headers }));
       }
 
+      // Keeper-only, READ-ONLY: how many wall-chart marks and walked rooms the
+      // live DO is actually holding, per pubkey (truncated) — see the probe in
+      // zone.ts. Reads nothing out of D1 and writes nothing anywhere.
+      if (m === "GET" && pathname === "/admin/wall") {
+        const token = env.ADMIN_TOKEN?.trim();
+        if (!token || !timingSafeEqual(req.headers.get("x-admin-token") ?? "", token)) {
+          return json({ error: "unauthorized" }, 401);
+        }
+        const zone = url.searchParams.get("zone") ?? "door";
+        if (!ZONES.has(zone)) return json({ error: "no_such_zone" }, 404);
+        const headers = new Headers();
+        headers.set("x-admin", "wall");
+        headers.set("x-zone", zone);
+        const stub = env.ZONE.get(env.ZONE.idFromName(zone));
+        return await stub.fetch(new Request(req.url, { headers }));
+      }
+
       // The blinded mint counter (NIP.md): supply is public — serial,
       // time, rarity. Ownership is nobody's business.
       if (m === "GET" && pathname === "/mints") {

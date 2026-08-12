@@ -907,6 +907,19 @@ export class ZoneDO implements DurableObject {
     // re-seed fresh from the spawn tables. Does NOT touch D1 — every player's
     // character, inventory, vault and sealed loot survive. Gated by ADMIN_TOKEN
     // in index.ts. For clearing a piled-up or wedged world without nuking anyone.
+    // READ-ONLY PROBE (2026-08-12). rome carved 100+ halls and the wall came
+    // back holding 2, and no path in the code deletes a mark short of a reseed
+    // that was never run. The DO's SQLite is not reachable from `wrangler d1`,
+    // so the state has to answer for itself. Counts only — never the room ids,
+    // never a name — and it changes nothing it looks at.
+    if (req.headers.get("x-admin") === "wall") {
+      const marks = [...this.wallMarks].map(([pk, rooms]) => ({ pk: pk.slice(0, 12), marks: rooms.size }));
+      const walked = [...this.walked].map(([pk, rooms]) => ({ pk: pk.slice(0, 12), walked: rooms.size }));
+      return new Response(JSON.stringify({
+        savedAt: this.savedAt, worldRooms: this.world?.rooms.size ?? 0,
+        pubkeysWithMarks: marks.length, marks, walked,
+      }), { headers: { "content-type": "application/json" } });
+    }
     if (req.headers.get("x-admin") === "reseed") {
       const n = await this.reseed(req.headers.get("x-zone") ?? "door");
       return new Response(JSON.stringify({ reseeded: true, creatures: n }), { headers: { "content-type": "application/json" } });
