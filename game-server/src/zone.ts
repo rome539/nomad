@@ -990,6 +990,7 @@ export class ZoneDO implements DurableObject {
     // unsent). The client doesn't know that: force its swap UI shut so a
     // reweave never leaves "wave it off" stuck talking to nothing.
     trade.forceCloseSwapUI(session);
+    gate.forceCloseGateUI(session); // and the four gatehouse panels, for the same reason
 
     // A dropped connection that comes back within the grace window is a
     // re-weave, not an arrival: no fanfare, no re-reading the intro, and the
@@ -1263,6 +1264,7 @@ export class ZoneDO implements DurableObject {
       // buttons. Force it closed so a reweave never strands someone unable
       // to wave off a trade that no longer exists server-side.
       trade.forceCloseSwapUI(rebuilt);
+      gate.forceCloseGateUI(rebuilt); // ...and the bench, the hatch, the forge and the board with it
     }
   }
 

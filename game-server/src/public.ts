@@ -866,6 +866,14 @@ export const PAGE = `<!doctype html>
   .bitem .r-rare      { color: hsl(214, var(--rar-s, 58%), var(--rar-l, 68%)); }
   .bitem .r-epic      { color: hsl(275, var(--rar-s, 58%), var(--rar-l, 68%)); }
   .bitem .r-legendary { color: hsl(42, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  /* And the same five again on a counter row (.trow) — the keeper's shelves and
+     both sides of a deal. The colours were only ever scoped to .bitem, so a
+     shop row could carry the class and still draw grey. */
+  .trow .r-common    { color: var(--dim); }
+  .trow .r-uncommon  { color: hsl(95, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  .trow .r-rare      { color: hsl(214, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  .trow .r-epic      { color: hsl(275, var(--rar-s, 58%), var(--rar-l, 68%)); }
+  .trow .r-legendary { color: hsl(42, var(--rar-s, 58%), var(--rar-l, 68%)); }
   /* The world's own voice — event beats (the bell, the tide of rats, the dark
      going wrong). A hue nothing else wears, so an omen never reads as scenery. */
   #log .evt    { color: var(--omen); font-style: italic; }
@@ -2519,7 +2527,12 @@ async function connect() {
   // 1006 = the wire dropped without a goodbye (network blip, or the server's
   // whole DO aborted); 1001 = the far side went away cleanly.
   ws.onclose = function (e) {
-    clearInterval(hbTimer); closeBench(); closeTrade(); closeMap(); closeJournal();
+    // EVERY panel goes with the wire, not just the four that were listed here
+    // when the forge, the deal and the board didn't exist yet. A modal left
+    // standing over a dead socket is a trap: its buttons send into nothing, and
+    // there is no way out of it but a reload.
+    clearInterval(hbTimer);
+    closeBench(); closeTrade(); closeMap(); closeJournal(); closeForge(); closeBounty(); closeSwap();
     // You opened this wanderer in another tab or on another device: the server
     // hands the body over and closes THIS socket on purpose (1000 "reconnected").
     // Don't fight it — reconnecting here would yank the body back and forth.
@@ -3066,6 +3079,9 @@ function benchSend(action, row) {
   // no per-row fan racing at the server's DB awaits (the "weird amount" bug).
   var rows = Array.isArray(row) ? row : (row == null || row === "" ? [] : [row]);
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "bench", action: action, rows: rows }));
+  // If the wire is gone the frame goes nowhere \u2014 so a CLOSE still closes,
+  // locally. Nothing traps a wanderer behind a panel that cannot answer.
+  else if (action === "close") closeBench();
 }
 function closeBench() { benchEl.classList.remove("open"); hideModalChat(); }
 
@@ -3075,8 +3091,15 @@ function benchItemNode(it, place) {
   var nm = document.createElement("div");
   nm.className = "nm";
   // The item's name wears its rarity colour (gear only — food, keys, trophies
-  // and the free rock stay plain, same law as the floor lines: gearNameSpan).
-  nm.appendChild(gearNameSpan(it.name, it.rarity, it.slot));
+  // and the free rock stay plain, same law as the floor lines).
+  var nmsp = document.createElement("span");
+  nmsp.textContent = it.name;
+  // Gear only, and the test is a TRUTHY slot: a row that ships without the
+  // field at all (an older frame) must read as "not gear" rather than colour
+  // every ration on the shelf, which a not-equal-empty-string test would have
+  // done for undefined.
+  if (it.rarity && it.slot && it.name.indexOf("loose rock") === -1) nmsp.className = rarityClass(it.rarity);
+  nm.appendChild(nmsp);
   if (it.n > 1) { var mu = document.createElement("span"); mu.className = "mult"; mu.textContent = " \\u00d7" + it.n; nm.appendChild(mu); }
   // Stats wear the chip colours, same language as the keeper's shelves.
   if (it.stat) {
@@ -3366,6 +3389,9 @@ document.getElementById("tclose").addEventListener("click", function () { tradeS
 
 function tradeSend(action, row, src) {
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "trade", action: action, row: row || "", src: src || "" }));
+  // If the wire is gone the frame goes nowhere \u2014 so a CLOSE still closes,
+  // locally. Nothing traps a wanderer behind a panel that cannot answer.
+  else if (action === "close") closeTrade();
 }
 function closeTrade() { tradeEl.classList.remove("open"); tradeState = null; hideModalChat(); }
 
@@ -3379,6 +3405,9 @@ document.getElementById("byclose").addEventListener("click", function () { bount
 
 function bountySend(action, row) {
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "bounty", action: action, row: row || "" }));
+  // If the wire is gone the frame goes nowhere \u2014 so a CLOSE still closes,
+  // locally. Nothing traps a wanderer behind a panel that cannot answer.
+  else if (action === "close") closeBounty();
 }
 function closeBounty() { bountyEl.classList.remove("open"); hideModalChat(); }
 function renderBounty(state) {
@@ -3393,10 +3422,9 @@ function renderBounty(state) {
   state.board.forEach(function (b) {
     var row = document.createElement("div");
     row.className = "byrow";
-    // A trophy is not gear and wears no tier — the board names a thing you cut
-    // off a body, and colouring it would read as equipment.
     var t = document.createElement("span");
     t.textContent = b.name;
+    if (b.rarity) t.className = rarityClass(b.rarity);
     row.appendChild(t);
     var arrow = document.createElement("span");
     arrow.className = "byarrow";
@@ -3525,9 +3553,7 @@ function fillTradeCol(el, title, items, place, gone) {
     row.className = "trow tgone";
     var nm = document.createElement("span");
     nm.className = "nm";
-    // Off the shelf, but still itself: an absent legendary reads as a legendary
-    // you can't have today, which is the whole point of naming it here.
-    nm.appendChild(gearNameSpan(it.name, it.rarity, it.slot));
+    nm.textContent = it.name;
     row.appendChild(nm);
     var dash = document.createElement("span");
     dash.className = "tcost";
@@ -3584,15 +3610,14 @@ function renderTrade(state) {
     var order = [];
     var seen = {};
     tradeWant.items.forEach(function (w, i) {
-      if (seen[w.name] == null) { seen[w.name] = order.length; order.push({ name: w.name, rarity: w.rarity, slot: w.slot, n: 1, idx: i }); }
+      if (seen[w.name] == null) { seen[w.name] = order.length; order.push({ name: w.name, n: 1, idx: i }); }
       else { order[seen[w.name]].n += 1; }
     });
     order.forEach(function (w) {
       var row = document.createElement("span");
       row.className = "wrow";
       var nm = document.createElement("span");
-      nm.appendChild(gearNameSpan(w.name, w.rarity, w.slot));
-      if (w.n > 1) nm.appendChild(document.createTextNode(" (x" + w.n + ")"));
+      nm.textContent = w.name + (w.n > 1 ? " (x" + w.n + ")" : "");
       row.appendChild(nm);
       var rm = document.createElement("button");
       rm.type = "button";
@@ -3636,6 +3661,9 @@ document.getElementById("swclose").addEventListener("click", function () { swapS
 
 function swapSend(action, row, pool) {
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "swap", action: action, row: row || "", pool: pool || "" }));
+  // If the wire is gone the frame goes nowhere \u2014 so a CLOSE still closes,
+  // locally. Nothing traps a wanderer behind a panel that cannot answer.
+  else if (action === "cancel" || action === "decline") closeSwap();
 }
 function closeSwap() { swapEl.classList.remove("open"); dealreqEl.classList.remove("open"); hideModalChat(); }
 
@@ -3783,6 +3811,9 @@ document.getElementById("fclose").addEventListener("click", function () { forgeS
 
 function forgeSend(action, row) {
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "forge", action: action, row: row || "" }));
+  // If the wire is gone the frame goes nowhere \u2014 so a CLOSE still closes,
+  // locally. Nothing traps a wanderer behind a panel that cannot answer.
+  else if (action === "close") closeForge();
 }
 function closeForge() { forgeEl.classList.remove("open"); hideModalChat(); }
 

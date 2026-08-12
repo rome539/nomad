@@ -190,6 +190,24 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
   try { session.ws.send(JSON.stringify(payload)); } catch {}
 }
 
+// A rebuilt session has NO modal state. buildSession never carries trading,
+// forging, bountying or a bench step across — so after a cold wake (the tab sat
+// in the background, the DO was evicted, the parked socket woke to a new
+// ZoneDO) the server has forgotten a modal the browser is still showing, and
+// every button in it is dead: handleTrade, handleForge and handleBounty all
+// open with a guard that silently drops the frame when the flag is false, close
+// included. The wanderer is looking at a panel nothing can shut.
+//
+// So the rebuild tells the client what it now believes: all of them closed.
+// trade.forceCloseSwapUI does exactly this for the wanderer-to-wanderer deal
+// and has since the deal shipped; this is the same courtesy for the four
+// gatehouse panels. Cheap, idempotent, and harmless when nothing is open.
+export function forceCloseGateUI(session: Session): void {
+  for (const t of ["bench", "trade", "forge", "bounty"]) {
+    try { session.ws.send(JSON.stringify({ v: 0, t, open: false })); } catch {}
+  }
+}
+
 // ---- the keeper's bounty board ----
 // A different kind of dealing. Barter is a value ledger — anything with barter
 // for anything he stocks. A bounty is the keeper pointing at ONE trophy and
@@ -917,9 +935,6 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
     items: buying.wants.map((w) => ({
       name: world.itemTemplates.get(w.itemId)?.name ?? w.itemId,
       rarity: world.itemTemplates.get(w.itemId)?.rarity ?? "common",
-      // The slot rides along so the counter can paint a tier the same way the
-      // shelves do — rarity alone would colour the rations too.
-      slot: world.itemTemplates.get(w.itemId)?.slot ?? "",
       cost: w.cost,
     })),
     cost: cartCost(buying),
