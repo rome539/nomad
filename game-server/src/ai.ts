@@ -20,7 +20,7 @@ import {
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
   DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
-  NAPPERS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
+  NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
@@ -278,6 +278,10 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
           ? "asleep in the heap, so tangled together you cannot tell where one stops"
           : "asleep back-to-back with the other, breathing in the same slow time";
       }
+      // Its own way of lying up, where the animal has one — a crab does not
+      // curl nose-to-tail and a bittern does not lie down at all.
+      const own = REST_LINES[creature.templateId];
+      if (own && !SCAVENGERS.has(creature.templateId)) return own;
       return SCAVENGERS.has(creature.templateId)
         ? "stretched out asleep beside the stripped bones of its meal, flank rising slow"
         : creature.templateId === "cutpurse"
@@ -288,6 +292,7 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     // The key-bearer reads first: a deep-thing in the shallows is an OPPORTUNITY,
     // not an unfair spawn — its heart opens the descent while it's fresh.
     if (creature.surfaced) return "still streaked with the deep's black water — its cold heart is a key, while it beats";
+    if (winded(creature, Date.now())) return "blown, sides going like a bellows, out of running";
     if (creature.stunned) return "reeling and dazed";
     if (creature.bleedTicks && creature.bleedTicks > 0) return "bleeding freely, dark spatter on the stone";
     if (creature.rouseAt && Date.now() < creature.rouseAt) return "winding up to spring, hackles high";
@@ -536,6 +541,11 @@ function thresholdStep(
   // but walk through any door the players have left open. Wandering picks,
   // in order: a noise worth investigating, a room that smells of food, the
   // next stop on a patrol route, or wherever.
+/** Blown: it has run its legs out and will not run again until it recovers. */
+export function winded(creature: Creature, now: number): boolean {
+  return (creature.windedUntil ?? 0) > now;
+}
+
 export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, mode: "wander" | "flee", silent: boolean): Promise<void> {
     const world = z.world!;
     const tmpl = world.mobTemplates.get(creature.templateId)!;
@@ -845,6 +855,24 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       }
       // The den remembers: a rout that ends among kin spreads the grudge.
       shareGrudges(z, creature, now);
+      // AND THE RUNNING COSTS IT. The length of this rout was decided when it
+      // started and is never announced — the chase is a bet on how much it has
+      // left. Spend it and the animal is blown where it stands.
+      creature.windAt ??= randInt(FLEE_WIND_MIN, FLEE_WIND_MAX);
+      creature.fled = (creature.fled ?? 0) + 1;
+      if (creature.fled >= creature.windAt) {
+        creature.windedUntil = now + FLEE_WIND_MS;
+        creature.fled = 0;
+        creature.windAt = undefined;
+        z.roomFeed(creature.roomId, `${cap(tmpl.name)} pulls up short, sides going, and turns to face the way it came. It has nothing left to run on.`, undefined, false);
+        z.roomSound(creature.roomId, "Something stops running, somewhere {dir}.");
+      }
+    } else {
+      // It walked instead of bolting, so the rout is over and it got clean
+      // away — the next one starts from nothing. (The blown clock runs on by
+      // itself; getting away does not give the breath back any sooner.)
+      creature.fled = 0;
+      creature.windAt = undefined;
     }
     // A summoned hyena that walks OFF the dinner floor may laugh again someday;
     // while it stood there, it never re-called (a call must not trigger a call).
@@ -1582,9 +1610,16 @@ export function naps(z: ZoneDO, creature: Creature, now: number): void {
     // so the game stays up and out in the open instead of bedding down — which
     // is the other half of the wolves' full moon: they hunt harder AND there is
     // something out there to hunt.
+    // ...and a NOCTURNAL animal reads the same two rates the other way round: the
+    // day column after dark, the night column in the daylight. One xor, no third
+    // number to drift out of step with the other two.
+    // The moon is untouched by this. A lit night keeps the game up and out, and
+    // it keeps the night shift out too — a hunting otter has no reason to go to
+    // bed because the moon came up.
+    const nocturnal = NOCTURNAL.has(creature.templateId);
     const odds = OUTDOOR_ROOMS.has(creature.roomId)
       ? (moonlit(z, creature.roomId, now) ? NAP_ODDS_MOON_OUT
-        : isNight(now) ? NAP_ODDS_NIGHT_OUT : NAP_ODDS_DAY_OUT)
+        : isNight(now) !== nocturnal ? NAP_ODDS_NIGHT_OUT : NAP_ODDS_DAY_OUT)
       : NAP_ODDS;
     if (!chance(odds)) return;
     fallAsleep(z, creature, now);

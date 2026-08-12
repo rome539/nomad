@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS } from "./zone-data";
+import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -30,8 +30,25 @@ export function moonPhase(now = Date.now()): number {
 }
 // Predators hunt harder after dark, outdoors only — day/night has no opinion
 // on indoor rooms, so neither does this. 1 = no change, the common case.
-export function nightHuntMult(roomId: string, now = Date.now()): number {
-  return OUTDOOR_ROOMS.has(roomId) && isNight(now) ? NIGHT_HUNT_MULT : 1;
+// AN ANIMAL HUNTS HARDEST IN ITS OWN HOURS (rome, 2026-08-12, asking whether
+// the hour should change how they behave and not just when they sleep).
+//
+// The night surge was the sky's, not the animal's: 1.6x on every outdoor
+// creature after dark, whatever it was. That was fine while the only things
+// keeping hours were the wood's game and their hunters, and it stopped being
+// fine the moment a shore full of birds got a clock — a gull roosting on one leg
+// does not become a more dangerous animal at three in the morning, and under the
+// old rule the few night hours it spent awake were its most aggressive.
+//
+// So the surge belongs to the NIGHT SHIFT: an animal with a clock gets it only
+// if the clock says night is when it works. An animal with no clock at all — the
+// wolves, the dogs, the working dead, the people — is untouched and behaves
+// exactly as it did, which keeps the wood's "night is the hours the predators
+// own" intact, because none of its predators were ever nappers.
+export function nightHuntMult(templateId: string, roomId: string, now = Date.now()): number {
+  if (!OUTDOOR_ROOMS.has(roomId) || !isNight(now)) return 1;
+  if (NAPPERS.has(templateId)) return NOCTURNAL.has(templateId) ? NIGHT_HUNT_MULT : 1;
+  return NIGHT_HUNT_MULT;
 }
 
 // The deep-heart is the one thing you carry that DIES in your hands. It opens

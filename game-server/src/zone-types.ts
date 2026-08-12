@@ -120,6 +120,9 @@ export interface Creature {
   avoids?: { roomId: string; until: number }[]; // place-fear: rooms this one steers around (a rat's bad memory, a thief's warning)
   calledTo?: string; // call-bus guard: it was SUMMONED here — it never calls from this room (a call must never trigger a call)
   leavesAt?: number; // TRANSIENT creatures have somewhere else to be: the ms they walk off the map for good (the chainman)
+  fled?: number;        // rooms run in the CURRENT rout — reset when it gets clean away
+  windAt?: number;      // how many it had in it this time (FLEE_WIND_MIN..MAX, rolled when the rout starts)
+  windedUntil?: number; // ms until it has its breath back; until then it will not run, whatever it is
   holding?: string;  // creature id this predator has by the throat (a kill in progress, one room, no pursuit)
   heldBy?: string;   // ...and the other end of that grip
   covets?: string;      // rag-and-bone: pubkey of the wanderer whose kit he has fixed on

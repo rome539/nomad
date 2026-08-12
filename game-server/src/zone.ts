@@ -97,7 +97,7 @@ import {
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
-  REGION_LABELS,
+  REGION_LABELS, NIGHT_LIT,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS, KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
@@ -1569,7 +1569,19 @@ export class ZoneDO implements DurableObject {
   // the born-dark rooms (DARK_ROOMS) plus wherever the gloam is standing —
   // so the dark that walks obeys every law the dark that stays already has.
   public isDark(roomId: string): boolean {
-    return DARK_ROOMS.has(roomId) || events.gloamed(this, roomId) || (OUTDOOR_ROOMS.has(roomId) && isNight() && !isFullMoon());
+    // ...and a handful of places out there are still burning after dark
+    // (NIGHT_LIT — three lamps the world keeps lit and the light around every
+    // gatehouse door). A gloamed sky still puts them out: the gloam is a thing
+    // that takes the light, and a lamp is exactly what it comes for.
+    if (DARK_ROOMS.has(roomId) || events.gloamed(this, roomId)) return true;
+    if (!OUTDOOR_ROOMS.has(roomId) || !isNight() || isFullMoon()) return false;
+    if (NIGHT_LIT.has(roomId)) return false;
+    // A HOUSE WITH SOMEBODY IN IT HAS A FIRE IN IT. The only hearths still lit on
+    // this ground are the ones wanderers moved into, so the settlement lights up
+    // as it fills and goes dark again when the last holder lapses — the one
+    // light on the surface that answers to the players rather than to the world.
+    for (const d of this.dens.values()) if (d.roomId === roomId) return false;
+    return true;
   }
 
   // A torch burning on the FLOOR (dropped by a hand, or fallen from a dead one):
@@ -3397,7 +3409,7 @@ export class ZoneDO implements DurableObject {
         if (!prey) {
           creature.rouseAt = undefined; // no one to hunt — the hunger settles back
         } else if (creature.rouseAt === undefined) {
-          if (chance(STARVE_HUNTS_ODDS * nightHuntMult(creature.roomId, now) * ai.moonHuntMult(this, creature, now))) {
+          if (chance(STARVE_HUNTS_ODDS * nightHuntMult(creature.templateId, creature.roomId, now) * ai.moonHuntMult(this, creature, now))) {
             creature.rouseAt = now + DIRE_ROUSE_MS;
             // A LURKER should have been foiled by your light — a lit room or a
             // torch in hand spoils its ambush (ai.wakeListeners). Naming that the
@@ -3429,7 +3441,7 @@ export class ZoneDO implements DurableObject {
         if (!prey) {
           creature.rouseAt = undefined; // healed up, left, or died — the interest settles
         } else if (creature.rouseAt === undefined) {
-          if (chance(WOUNDED_PREY_ODDS * nightHuntMult(creature.roomId, now) * ai.moonHuntMult(this, creature, now))) {
+          if (chance(WOUNDED_PREY_ODDS * nightHuntMult(creature.templateId, creature.roomId, now) * ai.moonHuntMult(this, creature, now))) {
             creature.rouseAt = now + DIRE_ROUSE_MS;
             const lurker = LURKERS.has(creature.templateId);
             if (lurker) creature.hidden = false;
@@ -3552,7 +3564,11 @@ export class ZoneDO implements DurableObject {
         const wantsFlee = ai.dreadsFire(this, creature, victim)
           || RUNNERS.has(tmpl.id)
           || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !HOARDERS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
-        if (wantsFlee && !tmpl.is_boss && !ai.scavengerBold(this, creature)) {
+        // A BLOWN ANIMAL CANNOT RUN, whatever it wants. It has spent the rout
+        // it had in it (ai.creatureMoves), so the roll it just won is worth
+        // nothing and it fights where it stands — which is the whole point of
+        // chasing one down rather than following it forever.
+        if (wantsFlee && !tmpl.is_boss && !ai.scavengerBold(this, creature) && !ai.winded(creature, now)) {
           // MANCATCHER: the barbed collar in your shield hand holds what tries to
           // run — the bolt it just rolled becomes a wrench against the pole, and
           // the fight goes on. (PvP rule when that day comes: against PLAYERS the

@@ -1363,6 +1363,32 @@ export const RUNNERS = new Set(["fleet-rat", "roe-deer",
 // BROODERS are nest-bound: they don't wander, don't flee, and while they live
 // they keep birthing scabby rats into their room. Kill the mother or the room
 // stays an infestation. A living source, not a stat block.
+// ---- WIND: A RUNNER ONLY HAS SO MUCH OF IT (rome, 2026-08-12) -------------
+//
+// A bolt used to be free and infinite. Every beat a frightened thing rolled to
+// run it ran, and the only thing that ever ended a chase was the player giving
+// up — so a wounded deer, an otter, a fleet rat could be followed across half a
+// band and never once be caught, and the flee roll was less an escape than a
+// treadmill with prose on it.
+//
+// Now the running COSTS something. A rout has a length in it — three to six
+// rooms, rolled when the rout starts, so you never know which — and at the end
+// of that the animal is blown: it stops, it turns, and it will not run again
+// until it has its breath back. Kill it then or let it go.
+//
+// What this is really for is making the chase a DECISION with an end in sight.
+// Three rooms is one corner and a straight; six is a long way to commit to with
+// a torch burning down and your own back to whatever else is out here. And the
+// number being hidden is the whole tension — you are always one room from
+// either catching it or having wasted the walk.
+//
+// It cuts both ways, deliberately: the same counter runs when a deer breaks a
+// wolf's grip, so a predator's dinner also runs out of legs and the wood gets
+// kills it never used to finish.
+export const FLEE_WIND_MIN = 3;      // the shortest rout an animal has in it...
+export const FLEE_WIND_MAX = 6;      // ...and the longest, rolled fresh each time
+export const FLEE_WIND_MS = 45_000;  // blown this long: no running, at bay, and it shows
+
 export const BROODERS = new Set(["brood-rat"]);
 export const BROOD_CAP = 6; // most LIVING pups a mother sustains at once (total, by nest — counts dispersed pups too, so it can't runaway-infest); she breeds a replacement whenever one dies or is culled
 export const BROOD_INTERVAL_MS = 90_000; // ~90s between births
@@ -1645,7 +1671,64 @@ export const NAPPERS = new Set([
   "roe-deer", "white-roe", "wild-boar", "old-boar", // the wood's game, after dark
   "otter", "feral-goat", "gill-adder",      // the east road: an adder in the one patch of sun is the whole animal
   "grey-seal", "wrack-crab", "oystercatcher", // the crossing: a hauled-out seal is ASLEEP, and that is the only time it is funny
+  // ...AND THE REST OF THE TWO NEW BANDS THAT KEEP HOURS AT ALL (rome,
+  // 2026-08-12, asking for day and night to mean something out there — and only
+  // where it MEANS something). Everything below is an animal with a documented
+  // clock; nothing else was touched.
+  "conger", "bittern", "ford-eel",          // the shore's night shift (see NOCTURNAL)
+  "great-gull", "grey-heron", "scarp-raven", // birds roost. A corvid especially: nothing with feathers works the dark
+  "fen-viper",                              // the adder's cousin, and the same animal: a snake is a thing that lies in the sun
 ]); // hyenas nap via the gorge only
+// THE NIGHT SHIFT. Everything above sleeps by the SAME clock — the two rates
+// below are a diurnal schedule, awake to graze by day and bedded down after
+// dark. That is right for a deer and exactly backwards for an otter, which is
+// the animal most people could name as nocturnal without thinking about it, and
+// which has been keeping a deer's hours since it shipped.
+//
+// So: the same two rates, swapped. Nothing new is tuned and no third number
+// exists to drift — a nocturnal animal simply reads the day column at night.
+//
+// Membership is the whole design, and each of these is here for a reason that
+// is true of the real animal:
+//   otter       hunts the beck at dusk and after; lies up in the holt all day
+//   conger      holes up in the pier stones by day and comes out at dark, which
+//               is exactly how the pier reads: nothing there at noon, and then
+//               there is
+//   ford-eel    eels move at night. It is prey, so this cuts both ways on
+//               purpose — the gull and the seal find it asleep in the daylight,
+//               the conger meets it awake in the dark
+//   wrack-crab  forages the wrack at night, under a stone by day
+//   bittern     booms at dusk and hunts through the dark; by day it is a reed
+//               that does not move, which is the only thing anybody knows about
+//               a bittern
+// The grey seal is NOT here: it hauls out to sleep in the daylight, which is
+// the joke the original line was written for, and it forages on the tide rather
+// than the hour. The birds are not here for the obvious reason.
+export const NOCTURNAL = new Set(["otter", "conger", "ford-eel", "wrack-crab", "bittern"]);
+// HOW EACH OF THEM LIES UP. The generic line is "curled nose-to-tail, fast
+// asleep", which is a mammal on a floor and is the right picture for a rat, a
+// deer or an otter — and nonsense for a crab, an eel or a bird. A shore where
+// everything sleeps like a dog is a shore nobody believes.
+//
+// These are also the only tell a player gets that the hour is doing anything at
+// all, so each one says what the animal actually does rather than that it is
+// unconscious: the bittern's is the whole bird, and it is the reason the reeds
+// out there should never be trusted.
+export const REST_LINES: Record<string, string> = {
+  otter: "curled in the holt with its back to the water, dry for once",
+  conger: "backed into a hole in the pier stones with only its head showing, jaw working slowly",
+  "ford-eel": "lying up under the weed, moving just enough to hold its place",
+  "wrack-crab": "wedged under a stone with the wrack pulled over it, waiting out the light",
+  bittern: "standing in the reeds with its bill straight up, striped like the reeds, and it is not a reed",
+  "great-gull": "roosting on one leg with its head turned into its back",
+  "grey-heron": "hunched on the shingle with its neck folded away, looking like a dropped coat",
+  "scarp-raven": "roosting high with its feathers puffed out against the cold",
+  "grey-seal": "hauled out on the shingle, fat and boneless, breathing like a bellows",
+  "fen-viper": "coiled tight in the last of the sun, and it will be gone before you are close",
+  "gill-adder": "coiled tight in the last of the sun, and it will be gone before you are close",
+  oystercatcher: "roosting on one leg among a dozen others, all of them facing the wind",
+  "feral-goat": "lying up in the lee of a rock, chewing at nothing",
+};
 // OUTDOOR GAME KEEPS DIFFERENT HOURS, and needs its own two rates rather than a
 // multiplier on the indoor one. NAP_ODDS is tuned for a rat in a quiet corner —
 // a "now and then" that works out to dozing about half the time, which is right
@@ -2933,6 +3016,104 @@ export const DEN_RUST_FLOOR = 8;
 export const DEN_BAR_IRON = 2;
 export const DEN_BAR_SCRAP = 3;
 
+// ---- WHAT IS STILL ALIGHT OUT THERE AFTER DARK (rome, 2026-08-12) ----------
+//
+// The surface goes black at night (isDark: outdoor + night, unless the moon is
+// full), and rome asked for some of it to stay lit — sparingly, and only where
+// it makes sense. So I went looking for what the world says burns, and the
+// answer is: almost nothing, on purpose. Every candidate reads as DEAD in its
+// own description, and reads that way deliberately —
+//
+//   the Lantern Stump   "A light stood here to say where the road was after
+//                        dark. Nothing says where the road is after dark now."
+//   the Perch           "Nothing has burned in it in living memory."
+//   the Tar Shed        "The copper is empty and clean."
+//   the Tinker's Camp   black rings of old fires, "none recent"
+//   the Lime Kiln       the last charge fired and gone hard, never drawn
+//
+// That is the whole surface telling you the same thing, and lighting those
+// rooms would be arguing with it. So this set is only what is genuinely burning:
+//
+// THE THREE LAMPS THE TEXT ITSELF KEEPS LIT. All three are the same institution
+// — the dungeon's writ running out of doors — and each one says so:
+//   the Waystation      "a lamp that stays lit"
+//   the Relay House     "a lamp above it that is lit"
+//   the Crossing House  "a lamp burning over a hatch"
+//
+// AND THE DOORS. Every gate has a gatehouse behind it with a brazier that keeps
+// its coals and a man awake at a hatch; light gets out around a door. That is
+// the one lit pocket in each band — the road, the wood, the crossing and the
+// grounds all get theirs — and it is the light you steer for when your torch
+// burns out, which is exactly what a gate is for.
+//
+// Twelve rooms out of five hundred-odd on the surface. Everything else stays
+// black, which is the point: this is meant to be a handful of embers in a very
+// large dark, not lighting.
+// AND WHAT THE WORLD LIGHTS FOR ITSELF. The lamps above are the only fires
+// anybody still tends out there — every other hearth, forge, kiln and camp on
+// the surface is written as cold, and most of them say so outright ("a chimney
+// that has not smoked in a long while", "no anvil", "none recent"). Lighting
+// those would be arguing with the writing.
+//
+// So the rest of the dark is lit by things that need nobody: ROT AND GAS. Both
+// are real, both are cold, and neither one contradicts a single description —
+// they are what a wet wood and a drowned marsh actually do at night when there
+// is no one left to put a lamp up.
+//
+//   FOXFIRE, in the wood: rotten timber glows. It wants standing water and dead
+//   wood and time, and the wood has all three. The Tree Fall and the Last Light
+//   sit next to each other, so that corner of the wood is two squares of it.
+//
+//   MARSH LIGHT, on the crossing and over any standing water: gas off drowned
+//   ground burns pale and low. The three reed rooms are one continuous bed and
+//   light together, which is the biggest lit patch on the surface and still only
+//   three squares.
+//
+//   CORPSE CANDLES, over ground with burials in it. Same gas, older story, and
+//   the reason the churchyard and the graves have always been named that.
+//
+// Twenty-four rooms out of six hundred and forty-seven. The surface is still
+// overwhelmingly black; it just is not blank any more.
+export const NIGHT_LIT = new Set<string>([
+  // --- foxfire, the wood ---
+  "the-tree-fall", "the-last-light",   // adjacent: one rotten corner, two squares of it
+  "the-wet-hollow", "the-close-dark",
+  // --- marsh light, the crossing ---
+  "the-reed-maze", "the-cut-reed", "the-reed-fork", // one reed bed, three squares
+  // --- corpse candles, over burials ---
+  "the-graves", "the-boat-graves",     // the crossing's drowned
+  "the-churchyard", "the-grave-verge", // the grounds, and the roadside dead
+  // --- gas off standing water, the road ---
+  "the-millpond", "the-black-fen",
+  // --- THE HOUSES AND THE CAMPS (rome, 2026-08-12) ---
+  // A roof and a fire-scrape is a place somebody sleeps, and somebody sleeping
+  // has a fire lit. rome's ruling, and it overrides my objection that the
+  // descriptions read cold: a hearth that has not smoked in a hundred years is
+  // one night's work to relight, and the wanderers are not the only things left
+  // out here that want to be warm. What you see from outside is a light in a
+  // doorway — whose light is never said, and is not always worth walking up to.
+  //
+  // THE DEN GROUND LIGHTS AS A STREET. Every yard here sits against a holding
+  // whose own hearth burns when somebody lives in it, so the smithy and its
+  // yard, the reeve's house and its yard, the warrener's lodge with its yard and
+  // the four hearth-stones beyond it read as one settlement with the lamps on
+  // rather than four unrelated squares.
+  "the-smithy-yard", "the-reeves-yard", "the-lodge-yard", "the-hearth-stones",
+  // the shore's working huts — one of the fisher huts has its door shut and a
+  // stone against it on the outside, which was always somebody's business
+  "the-fisher-huts", "the-eel-hut", "the-pan-house", "the-toll-cottage",
+  // the grounds under the fortress wall
+  "the-cider-house", "the-village-smithy", "the-camp-ground",
+  // the road's stopping places, which is what all three of them were for
+  "the-tinkers-camp", "the-shepherds-bothy", "the-mill-loft",
+  // and the wood's two, both of them a roof somebody built to sit out a night in
+  "the-charcoal-hut", "the-poachers-camp",
+  // --- and the fires people still keep ---
+  "the-old-road", "the-relay-house", "the-crossing-house",
+  "gate", "weeper-arch", "sally-port",
+  "the-first-milestone", "the-timber-stack", "the-withy-hut", "the-gate-arch",
+  "the-ferry-house",
+]);
 export const OUTDOOR_REGIONS = new Set<string>(["out", "road", "wood", "mountain", "den", "crossing"]);
 // ...AND THE ROOMS INSIDE THEM THAT ARE NOT. A band declares itself outdoors as
 // a whole, which was true enough while the outdoor bands were a road and a wood.
