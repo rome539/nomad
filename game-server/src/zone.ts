@@ -1033,32 +1033,30 @@ export class ZoneDO implements DurableObject {
     // the one room whose whole job is that nothing can do that to you. The door
     // holds across a reconnect: only walking out puts you outside.
     if (this.inGatehouse.has(pubkey) && this.world!.entryRooms.has(session.roomId)) {
-      // ...UNLESS THE DOOR WAS BOARDED WHILE YOU WERE GONE. inGatehouse is the
-      // durable truth precisely so a frayed socket cannot fling you out of the
-      // one safe room — but a gatehouse that shut for works in the meantime has
-      // nothing behind it to hold you, and restoring you into it is how a player
-      // ends up inside and outside at the same time (Lunapilot, 2026-08-09).
-      // Fall through to the ordinary reconnect: you come back standing in the
-      // gate room, which is where the works would have put you anyway.
+      // A DOOR BOARDED WHILE YOU WERE GONE DOES NOT PUT YOU OUT. inGatehouse is
+      // the durable truth precisely so a frayed socket cannot fling you out of
+      // the one safe room, and the works are a one-way door, not an eviction
+      // (works.tickWorks) — so you come back exactly where you were, and the
+      // boards are only news about the way out. Barring the reweave here would
+      // do by accident the very thing rome ruled out on purpose: turn a dropped
+      // connection into the works throwing you into the open.
       if (works.shutForWorks(this, session.roomId)) {
-        this.inGatehouse.delete(pubkey);
-        this.send(session, "You come back to boards across the gatehouse door and the fire long out. Whatever you were doing in there, the works ended it.", "evt");
-      } else {
-        session.away = true;
-        session.stepText = true;
-        session.visited.add(session.roomId);
-        // The rebuilt session has no open stance (sorting/trading/forging default
-        // false), but the client may still be showing a modal it had open when the
-        // socket dropped. Dismiss it so the view matches the restored state — else
-        // a stale bench frame lingers over the gatehouse until the next click.
-        try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
-        this.sendStatus(session);
-        if (!seamless) this.send(session, gate.describeGatehouse(this, session));
-        this.sendCtx(session);
-        await this.persist();
-        await this.ensureAlarm();
-        return new Response(null, { status: 101, webSocket: client });
+        this.send(session, "You come back to the sound of sawing, and boards going up over the door from the outside. Nobody has moved you — but that door is shut for good now, until the works are done.", "evt");
       }
+      session.away = true;
+      session.stepText = true;
+      session.visited.add(session.roomId);
+      // The rebuilt session has no open stance (sorting/trading/forging default
+      // false), but the client may still be showing a modal it had open when the
+      // socket dropped. Dismiss it so the view matches the restored state — else
+      // a stale bench frame lingers over the gatehouse until the next click.
+      try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
+      this.sendStatus(session);
+      if (!seamless) this.send(session, gate.describeGatehouse(this, session));
+      this.sendCtx(session);
+      await this.persist();
+      await this.ensureAlarm();
+      return new Response(null, { status: 101, webSocket: client });
     }
     // Either way, mark the wake room known and show it: full on a real arrival,
     // brief on a re-weave (you never left). Status goes first so the client

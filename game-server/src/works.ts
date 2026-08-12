@@ -8,6 +8,11 @@
 // safe step out of the world. You walked here carrying everything and there is
 // nowhere to put it and nowhere to stand.
 //
+// It is a ONE-WAY DOOR, not an eviction. Whoever is already inside when the
+// boards go up stays inside, keeps everything behind the door, and leaves when
+// they feel like leaving — the closure only ever refuses the way IN. See
+// tickWorks for why (rome, 2026-08-12).
+//
 // That is the walk-home pressure — the load-bearing wall of the whole design —
 // applied on a dial. It never adds a rule. It removes a convenience, in one
 // place, for a while.
@@ -39,7 +44,6 @@
 // last one open. Both are computed against the graph as it is, not as it was.
 import type { ZoneDO } from "./zone";
 import type { World } from "./world";
-import type { Session } from "./zone-types";
 import {
   WORKS_GAP_MIN_MS, WORKS_GAP_MAX_MS, WORKS_LEN_MIN_MS, WORKS_LEN_MAX_MS,
   WORKS_MAX_SHUT, WORKS_SECOND_ODDS, WORKS_MIN_WEIGHT, SURFACE_BANDS,
@@ -185,31 +189,28 @@ export function tickWorks(z: ZoneDO, now: number): void {
   const world = z.world;
   if (!world || !z.worksPlan) return;
 
-  // ── NOBODY IS EVER SHUT IN ──────────────────────────────────────────────────
+  // ── THE DOOR IS ONE-WAY, AND NOBODY IS PUT OUT OF IT ────────────────────────
   //
-  // The eviction below (closeTheDoor) walks everyone out at the MOMENT a gate
-  // boards up, and until now that was the only time anyone checked. That made
-  // "nobody is inside a boarded gatehouse" a thing that was true once rather
-  // than an invariant — and a player found the gap (Lunapilot, 2026-08-09): she
-  // ended up behind a boarded door reading the gate room's own description, with
-  // every dungeon verb answering "not from in here" and the door insisting she
-  // was already inside. Inside and outside at the same time, and stuck.
+  // Earlier cuts of this design evicted: the moment a gate boarded up, everyone
+  // behind the door was walked into the gate room, and then a standing sweep
+  // walked out anyone who somehow got back in. rome ruled that out (2026-08-12).
+  // The closure is now a ONE-WAY DOOR and nothing more:
   //
-  // There are several ways back in past a one-shot eviction — a reconnect
-  // trusting the persisted `inGatehouse` (which is DURABLE by design and was
-  // written before the eviction landed), a step-out path whose worksBar guard
-  // does not fire because worksBar deliberately stands down for anyone already
-  // out of the world, an eviction that raced a frame. Rather than hunt each one,
-  // this makes it a standing law: every beat, anyone behind a boarded door is
-  // walked out. Idempotent, costs a Map lookup per player, and it heals the
-  // paths I found and the ones I did not.
-  if (z.works.size) {
-    for (const s of z.sessions.values()) {
-      if (!shutForWorks(z, s.roomId) || !z.outOfWorld(s)) continue;
-      z.send(s, "The boards are up and the fire is out — there is nothing behind this door but trestles and dust. You step back into the open.", "evt");
-      void z.leaveGatehouse(s);
-    }
-  }
+  //   • standing inside when the boards go up costs you nothing. You stay, with
+  //     the counter, the bench, the box and the fire, for as long as you care to
+  //     stay — worksBar stands down for anyone already out of the world, so
+  //     everything behind the door keeps working for whoever is behind it.
+  //   • 'out' is never barred. Leaving is leaving.
+  //   • and once you are out, that is that: `in` refuses, the chip is gone, and
+  //     the hatch/forge/vault cannot be conjured from the gate room. Everyone
+  //     else is looking at planks.
+  //
+  // So the pressure lands exactly where it should — on the walk home to a door
+  // that will not open — and never on the wanderer who was already warming their
+  // hands when the carpenters arrived. Being inside a boarded gatehouse is a
+  // legal, stable state, which is also what closes the desync a player hit under
+  // the old rule (Lunapilot, 2026-08-09): she was inside and outside at once
+  // because an eviction raced the door. There is no eviction left to race.
 
   // ── the works finish ──
   for (const [gate, until] of [...z.works.entries()]) {
@@ -255,32 +256,25 @@ export function tickWorks(z: ZoneDO, now: number): void {
 }
 
 /**
- * Shut it, and put out anyone standing inside. NOBODY IS EVER SHUT IN: if you
- * are behind the door when the works start you are walked out to the gate room
- * you came in by, holding everything you were holding. The closure takes the
- * gatehouse away; it never takes your footing.
+ * Shut it. Anyone already behind the door STAYS behind it — the boards go up
+ * around them, not against them, and they keep the counter and the fire until
+ * they choose to walk out. What the closure takes is the way back IN.
  */
 function closeTheDoor(z: ZoneDO, gate: string): void {
   const world = z.world!;
   const name = world.rooms.get(gate)?.name ?? "the gatehouse";
-  const inside: Session[] = [];
   for (const s of z.sessions.values()) {
-    if (s.roomId === gate && z.outOfWorld(s)) inside.push(s);
-  }
-  for (const s of inside) {
+    if (s.roomId !== gate || !z.outOfWorld(s)) continue;
+    // Told plainly, because it changes what leaving MEANS for them: the step out
+    // is now a step they don't take back.
     z.send(
       s,
-      "The keeper straightens up and starts putting things away, and does not stop when you speak to him. " +
-      "Men come in through the back with trestles and a bundle of planks. You are outside before you have quite agreed to be.",
+      "Men come in through the back with trestles and a bundle of planks, and set to work around you. " +
+      "The keeper carries on as if none of it were happening. Nobody asks you to leave — but the boards are going up over the door, " +
+      "and when you step out of it you will not be stepping back in.",
       "evt",
     );
-    void z.leaveGatehouse(s); // the same door you'd have walked out of — nothing is confiscated, nothing is moved
   }
-  // AND THE EVICTION HAS TO SURVIVE A RESTART. leaveGatehouse clears `away` and
-  // drops the pubkey from inGatehouse in memory, but inGatehouse is persisted
-  // and is what a reconnect trusts — so a DO that slept between the eviction and
-  // the next flush would wake with the boarded gatehouse still holding people.
-  if (inside.length) void z.persist();
   z.roomFeedBands(
     SURFACE_BANDS,
     `Word comes down the road: ${name} is shutting up for works. The door will be boarded until it is done.`,
