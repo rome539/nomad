@@ -15,7 +15,7 @@ import * as works from "./works";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
-  BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS,
+  BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
@@ -1928,12 +1928,20 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
     // it, and a game of dice is something you notice a barman keeps, not a button
     // the world hands you. So he carries it, and the bowl's own state does the
     // teaching — an empty bowl says plainly that he has nothing to put up.
+    // AND HE TELLS YOU HOW IT IS PLAYED. Naming the game without the rules is
+    // what the chip's removal left behind: you learned a game existed and then
+    // had to guess at it, or type 'dice' and be dealt into a hand you did not
+    // understand. He is the only place a first-timer will look, so the rules
+    // live here, read from the one table that also feeds the bowl and the
+    // opening cast (DICE_RULES).
     const bowl = z.keeperBowl.length
-      ? `Under his elbow there is a shallow bowl with five old bones in it, and ${z.keeperBowl.length === 1 ? "a trophy" : `${z.keeperBowl.length} trophies`} underneath them that he did not walk out and kill. He will roll you for them if you ask. ('dice' to take them up)`
-      : "Under his elbow there is a shallow bowl with five old bones in it and nothing else, which he will roll you for if you ask, though he has nothing to put up against a stake just now. ('dice' to take them up)";
+      ? `Under his elbow there is a shallow bowl with five old bones in it, and ${z.keeperBowl.length === 1 ? "a trophy" : `${z.keeperBowl.length} trophies`} underneath them that he did not walk out and kill. He will roll you for them if you ask.`
+      : "Under his elbow there is a shallow bowl with five old bones in it and nothing else. He will roll you for nothing if you ask, though he has nothing to put up against a stake just now.";
     return "You cannot see much of him and you never have: the hatch is at chest height and shut, and what shows is a pair of forearms, a rag going round the inside of a cup, and the top of a head bent over work that does not need doing. "
       + "He knows the sound of the door. He has never once asked your name, and he has never once got your order wrong.\n"
-      + bowl;
+      + bowl + "\n"
+      + DICE_RULES.map((l) => "  " + l).join("\n") + "\n"
+      + "  'dice' takes them up against him for nothing; 'dice <trophy>' stakes one against his bowl.";
   }
   if (is("hatch", "shutter", "keepers hatch", "keeper's hatch", "counter")) {
     return "A shutter of banded oak set into the far wall at chest height, closed. There is a worn place on the sill where hands have rested, and a deeper one where things have been slid across. Whoever is behind it does not open it to be looked at. ('barter' opens it)";

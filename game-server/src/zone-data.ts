@@ -3279,6 +3279,15 @@ export const BOUNTY_TABLE: [string, string, number?][] = [
 // is exactly where a wager should sit. And the keeper standing at 18 leaves a
 // real band (18-21) where a good hand beats him and a great one can still be
 // caught, instead of a number you either clear or don't.
+// HOW THE GAME IS PLAYED, in one place. The keeper tells you when you look at
+// him, the table tells you when you read it, and the opening cast reminds you —
+// three surfaces, one telling, because a rules text that exists in three copies
+// is a rules text that will disagree with itself by the next tuning pass.
+export const DICE_RULES = [
+  "Two bones to open, then one at a time. Over 21 and you are out where you stand.",
+  "'roll' takes another, 'stand' holds what you have. The answering hand has to BEAT you \u2014 a tie pushes and the stakes go back.",
+  "Whoever calls the game rolls first, and busting first loses before the other hand is touched.",
+];
 export const DICE_OPEN_BONES = 2;   // the opening cast
 export const DICE_BUST = 21;        // over this and the hand is dead where it stands
 export const DICE_STAND = 18;       // the keeper's own rule, followed in the open

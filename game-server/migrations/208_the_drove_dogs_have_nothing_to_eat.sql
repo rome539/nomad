@@ -1,0 +1,101 @@
+-- 208 the drove dogs have nothing to eat (rome, 2026-08-12: two dogs on the
+-- Green Lane, both reading "gaunt and ravenous, its eyes fixed on you" — the
+-- starving line, which is the last thing a predator does before it comes for a
+-- wanderer instead of its dinner).
+--
+-- THEY ARE NOT BROKEN. THEY ARE STRANDED. The food web is correct on paper —
+-- PREYS_ON has ["drove-dog", {feral-goat, roe-deer}] and mig 188 wrote it
+-- deliberately so the road would not be the monoculture the migration gate
+-- refuses. What was never checked is WHERE the two ends of that edge stand.
+--
+-- Predation is a SAME-ROOM event: preyHere() looks at the predator's own room
+-- and nowhere else. So an edge in the table is worth exactly nothing unless the
+-- two animals can plausibly end up on the same square. Measured against the
+-- live graph, every dog and every goat:
+--
+--     dog                        walk to the nearest goat
+--     the-drove-green (Green Lane)      29 rooms
+--     the-wether-slope                  26
+--     the-high-common                   19
+--     the-hare-ground                   14
+--     the-drove-head                    12
+--
+-- Four goats, all of them up on the crags — the Cutting Ledge, the Scarp Top,
+-- the Third Hairpin, the Peat Cuttings — and five dogs down in the drove
+-- country, a dozen to thirty rooms away. They have never eaten. They cannot.
+-- The hunger clock ran them to STARVING_AT and parked them there, and the
+-- description rome read is the system working perfectly on top of a web that
+-- only exists in a table.
+--
+-- THE MEASURE THAT MATTERS IS THE WALK, NOT THE COUNT. Every food web in this
+-- game that demonstrably works sits within a few rooms of its own dinner:
+--
+--     web                     hunters : prey   median walk   worst
+--     grey wolf -> roe          19 : 31 (1:1.6)      2         5
+--     grave hyena -> roe        12 : 61 (1:5.1)      2         5
+--     conger -> eel              8 : 17 (1:2.1)      3         7
+--     marsh hound -> shore       5 : 23 (1:4.6)      3         6
+--     drove dog -> goat          5 : 35 (1:7.0)     14        19   <- and 1:7 looks fine
+--
+-- The ratio column is why nobody caught this: on paper the dogs have SEVEN
+-- times their own number in prey. Thirty of those are roe deer standing in the
+-- wood, which is a different band entirely. Count animals and the road looks
+-- well fed; measure the walk and the dogs are starving in a field.
+--
+-- SO: GOATS ON THE GRAZING GROUND. Not moved — added. The crag goats stay where
+-- they are, because a scarp is goat country and nothing is wrong with them. What
+-- the drove country never had was stock of its own, which is absurd on ground
+-- whose every room is named for keeping animals on it: folds are pens, a creep
+-- is the gap stock squeeze through a wall, a pound is where strays were held,
+-- and gorse is what a goat actually eats when there is nothing better.
+--
+-- Placement was fitted to the wood's own profile rather than picked by eye —
+-- five rooms, checked against the graph:
+--
+--     dog                 before   after
+--     the-drove-green      NEVER      2
+--     the-drove-head        12        4
+--     the-hare-ground       14        2
+--     the-high-common       19        3
+--     the-wether-slope     NEVER      1
+--     median                19        2     (the wood: 2)
+--     worst               NEVER       4     (the wood: 5)
+--     ratio               1:0.8     1:1.8   (the wood: 1:1.6)
+--
+-- The two NEVERs are worse than a long walk and were not visible in the first
+-- measurement, which used the raw exit graph. Creatures cannot cross a hideaway
+-- or a gate (creatureMoves filters both out of a creature's exits), and once
+-- those are counted as the walls they are, the Green Lane and the Wether Slope
+-- have NO reachable goat at all — the crag goats are on the far side of the
+-- Shelter Stone, which is a hideaway sitting across a one-wide path. Three of
+-- the five rooms below are likewise on the other side of a wall from the Green
+-- Lane; they are still 1-4 rooms from the dogs they were placed for, which is
+-- what the table above is measuring. (The severed road is its own problem and
+-- is not fixed here — see the note at the end.)
+--
+-- Deliberately NOT tighter. A first pass at eight rooms put food a single room
+-- from every dog (median 1, worst 3) and that is the wrong fix: a dog that is
+-- always fed never reaches STARVING_AT, and starvingHunts — the thing that
+-- turns a hungry animal onto a wanderer — stops happening at all. The hunger
+-- clock is supposed to bite sometimes. This gives them a living, not a trough.
+--
+-- Only the drove dog is touched, because only the drove dog was named. TWO
+-- THINGS MEASURED IN PASSING AND LEFT ALONE, both real:
+--
+--   * the otter is in the same trouble as the dogs were: 3 of them, median 13
+--     rooms from the nearest rat, worst 22.
+--   * five HIDEAWAYS sit across one-wide paths and wall the map into islands
+--     for anything that walks — the Carter's Rest, the Shepherd's Bothy and the
+--     Shelter Stone on the road, the Fern Pit and the Holly Hedge in the wood.
+--     Counting only hideaways as walls, the world is five islands instead of
+--     two. A crack in the wall you duck into should be a DEAD END; where it is
+--     the only way through, it is a road with a lie on it. Dens are innocent
+--     here: mig 172 made a den a door off an ordinary room and every den site
+--     is is_safe=0, so nothing about a holding blocks an animal.
+
+INSERT INTO mob_spawns (id, template_id, room_id) VALUES
+  ('spawn-feral-goat@the-broken-fold',        'feral-goat', 'the-broken-fold'),        -- 1 room off the Wether Slope
+  ('spawn-feral-goat@the-sheep-creep',        'feral-goat', 'the-sheep-creep'),        -- the gap in the wall the stock used
+  ('spawn-feral-goat@the-wind-scoured-ridge', 'feral-goat', 'the-wind-scoured-ridge'),
+  ('spawn-feral-goat@the-high-gorse',         'feral-goat', 'the-high-gorse'),         -- the Gorse Brake: goat food, literally
+  ('spawn-feral-goat@the-drove-pound',        'feral-goat', 'the-drove-pound');        -- where strays were held, and one still is

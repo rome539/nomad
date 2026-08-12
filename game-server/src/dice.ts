@@ -44,7 +44,7 @@ import { randInt } from "./rng";
 import { nameMatches } from "./zone-util";
 import { removeItemRow } from "./world";
 import { gatehouseFeed, gatehouseFolk } from "./gate";
-import { DICE_BUST, DICE_STAND, DICE_OPEN_BONES, DICE_BOWL_CAP } from "./zone-data";
+import { DICE_BUST, DICE_STAND, DICE_OPEN_BONES, DICE_BOWL_CAP, DICE_RULES } from "./zone-data";
 
 // A game in flight. Ephemeral ON PURPOSE: it lives in the DO's memory and dies
 // with it, and nothing leaves anybody's pack until the last bone is down. A
@@ -127,9 +127,7 @@ export function diceTable(z: ZoneDO, session: Session): string {
   const world = z.world!;
   const lines = [
     "A shallow wooden bowl and five old bones, worn smooth, on the end of the bench.",
-    `THE BONES: two bones to open, then one at a time. Over ${DICE_BUST} and you're out where you stand.`,
-    `'stand' holds your number. The answering hand has to BEAT it — a tie pushes and the stakes go back.`,
-    "Whoever calls the game rolls first, and busting first loses before the other hand is touched.",
+    ...DICE_RULES,
   ];
   if (z.keeperBowl.length) {
     const counts = new Map<string, number>();
@@ -314,7 +312,7 @@ async function openingCast(z: ZoneDO, session: Session, game: DiceGame): Promise
   const sum = cast.reduce((n, d) => n + d, 0);
   game.total.set(session.pubkey, sum);
   game.rolls.set(session.pubkey, cast);
-  z.send(session, `You cast: ${cast.join(", ")} — ${sum}. ('roll' for another, 'stand' to hold it.)`, "evt");
+  z.send(session, `You cast: ${cast.join(", ")} — ${sum}. ('roll' for another, 'stand' to hold it. Over ${DICE_BUST} and you are out.)`, "evt");
   gatehouseFeed(z, `${session.name} opens on ${sum}.`, session.pubkey, "amb");
 }
 
