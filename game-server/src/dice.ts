@@ -144,8 +144,8 @@ export function diceTable(z: ZoneDO, session: Session): string {
   }
   const folk = gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey);
   lines.push(folk.length
-    ? `'dice' rolls the keeper for nothing; 'dice <trophy>' stakes one against his bowl; 'dice <name>' calls out anyone by the fire (add a trophy to make it worth something).`
-    : `'dice' rolls the keeper for nothing; 'dice <trophy>' stakes one against his bowl.`);
+    ? `'dice' takes them up against the keeper for nothing; 'dice <trophy>' stakes one against his bowl; 'dice <name>' calls out anyone by the fire (add a trophy to make it worth something).`
+    : `'dice' takes them up against the keeper for nothing; 'dice <trophy>' stakes one against his bowl.`);
   return lines.join("\n");
 }
 
@@ -158,7 +158,17 @@ export async function cmdDice(z: ZoneDO, session: Session, arg: string): Promise
   const live = gameOf(z, session.pubkey);
   if (live) return z.send(session, gameLine(z, live, session));
   const want = arg.trim();
-  if (!want) return z.send(session, diceTable(z, session));
+  // BARE 'dice' TAKES THE BONES UP. It read the table instead when this shipped,
+  // which every line of copy in the game contradicted — the help, the table's own
+  // last line and the chip all said bare 'dice' rolls the keeper — and the result
+  // was a game with no findable way in (rome, 2026-08-12: he sat at the bench
+  // typing and never got a hand). The verb starts the game; the TABLE is what
+  // you look at, which is what 'look bones' has always been for.
+  if (!want) return keeperGame(z, session, "");
+
+  // ...and the reading is still a word away, for anyone who wants the rules
+  // and the bowl without committing to a hand.
+  if (/^(table|bowl|bones|rules|read)$/i.test(want)) return z.send(session, diceTable(z, session));
 
   // 'dice accept' / 'dice decline' answer a call that's already been made.
   if (/^(accept|yes|aye|deal|on)$/i.test(want)) return acceptCall(z, session);
@@ -404,13 +414,19 @@ async function settle(z: ZoneDO, game: DiceGame): Promise<void> {
   const bSess = game.b ? z.sessions.get(game.b) : null;
   const winner = aScore === bScore ? null : (aScore > bScore ? aKey : bKey);
 
-  const tell = (text: string, cls?: string) => {
-    if (aSess) z.send(aSess, text, cls);
-    if (bSess) z.send(bSess, text, cls);
-    gatehouseFeed(z, text, undefined, "evt");
-  };
+  // ONE line, to the room. Both hands are sitting in the gatehouse by
+  // definition — you cannot play from anywhere else — so gatehouseFeed already
+  // reaches the players along with everyone watching. Telling them directly as
+  // well printed every result twice.
+  const tell = (text: string) => gatehouseFeed(z, text, undefined, "evt");
   const nameA = aSess?.name ?? "someone", nameB = bSess?.name ?? "the keeper";
-  const shownA = aScore < 0 ? "bust" : String(aScore), shownB = bScore < 0 ? "bust" : String(bScore);
+  // A hand that never got picked up has no number, and printing "0" for it read
+  // as though the keeper had thrown and scored nothing — when in fact busting
+  // first means he never touches the bones at all. That is the whole house edge;
+  // it should say so.
+  const untouched = !game.total.has(bKey);
+  const shownA = aScore < 0 ? "bust" : String(aScore);
+  const shownB = untouched ? "never picks them up" : bScore < 0 ? "bust" : String(bScore);
 
   // NOTHING ON THE TABLE: the line is the whole prize.
   if (!game.stake.size) {

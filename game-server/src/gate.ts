@@ -1918,7 +1918,14 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
       ? "A stretch of the wall by the door, plastered smooth and scored with an empty frame — corners, a scale, and nothing inside them. Other hands have been at it: chalk over chalk, none of it yours, none of it legible to you. Your own corner is bare. ('carve' what you've walked)"
       : `Plaster gone grey with handling, layered over with other people's chalk — and inside it, in your own hand, ${marks} halls. You can read yours and only yours; the rest is somebody else's walking, and it may as well be weather. ('study' to read your chart; 'carve' to add what you've walked)`;
   }
-  if (is("hatch", "keeper", "shutter", "keepers hatch", "keeper's hatch", "counter")) {
+  // THE MAN, not his shutter. `look keeper` answered with the hatch's own
+  // description — a slab of banded oak — which is not what anybody means when
+  // they look at the person they have been trading with for weeks.
+  if (is("keeper", "barman", "him", "man", "landlord")) {
+    return "You cannot see much of him and you never have: the hatch is at chest height and shut, and what shows is a pair of forearms, a rag going round the inside of a cup, and the top of a head bent over work that does not need doing. "
+      + "He knows the sound of the door. He has never once asked your name, and he has never once got your order wrong.";
+  }
+  if (is("hatch", "shutter", "keepers hatch", "keeper's hatch", "counter")) {
     return "A shutter of banded oak set into the far wall at chest height, closed. There is a worn place on the sill where hands have rested, and a deeper one where things have been slid across. Whoever is behind it does not open it to be looked at. ('barter' opens it)";
   }
   if (is("board", "notices", "notice", "cork", "notice board", "posts")) {
@@ -2048,6 +2055,17 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     if (/^(self|me|myself)$/i.test(target)) return z.send(session, selfExamine(z, session), "study");
     const who = gatehouseFolk(z).find((s) => s.pubkey !== session.pubkey && nameMatches(s.name, target));
     if (who) return z.send(session, describePlayer(z, session, who), "study");
+    // A PERSON BEATS A THING IN YOUR POCKET. Your own kit is read before the
+    // room's fixtures on purpose (a bar of forge iron in the vault should answer
+    // `look forge` before the brazier does) — but that rule put an item called a
+    // keeper's wrap in front of the keeper himself, and no wanderer typing
+    // `look keeper` in a room with a man in it means their laundry.
+    // Nobody keeps a person in their lockbox, so the man is looked up first;
+    // every other fixture keeps the old order.
+    if (/^(the\s+)?(keeper|barman|landlord)$/i.test(target.trim())) {
+      const man = gatehouseFixture(z, session, target);
+      if (man) return z.send(session, man, "study");
+    }
     // Then your own things: at a gate the pack, lockbox and vault are all at your
     // elbow, so 'look flanged mace' reads it wherever you keep it.
     const item = await lookKeepingItem(z, session, target);
