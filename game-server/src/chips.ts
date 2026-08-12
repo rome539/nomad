@@ -13,7 +13,7 @@ import * as ai from "./ai";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
-  FISHING_ROOMS, TRADE_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
+  FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOM, CURE_RECIPES, COOK_RECIPES, MILESTONES,
 } from "./zone-data";
 
@@ -37,6 +37,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // isn't the room.
     const inside = ["out"];
     if (world.fenceStock.length) inside.push(TRADE_CHIP);
+    // The bounty board: shown when the keeper has actually posted a trophy he's
+    // paying for — a chip for an empty board teaches nothing.
+    if (z.bounties.length) inside.push(BOUNTY_CHIP);
     // The forge is always here; SMELT only when you actually hold scrap enough to
     // melt a bar — counted across pack + lockbox + vault, cached by refreshGateStock
     // (the verb spends across all three, so the chip must see all three).

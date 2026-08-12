@@ -354,6 +354,9 @@ export const DEN_RAISE_SCRAP = 20;
 // Same trick for the keeper's hatch: the client opens the trade modal instead
 // of sending it as text. (Typed 'barter'/'buy'/'offer' still work bare.)
 export const TRADE_CHIP = "barter with the keeper";
+// The bounty board, same trick: the chip opens the board modal. (Typed
+// 'bounty'/'claim' still work bare.)
+export const BOUNTY_CHIP = "bounty";
 // And the forge: the 'forge' chip opens the forge modal (reads your pack, shows
 // what the bench can make and what you can afford). Typed 'forge' still reads
 // the slate / works one recipe by name.
@@ -3205,6 +3208,68 @@ export const WANT_MULT = 2;
 export const WANT_TELEGRAPH_MS = 2 * 60_000;
 export const WANT_ACTIVE_MS = 50 * 60_000; // long enough to hunt for
 export const WANT_AFTERMATH_MS = 5 * 60_000;
+
+// ---- the keeper's bounty board (2026-08-11) ----
+// The hatch's OTHER business. Where barter is a value ledger (anything with
+// barter for anything he stocks), a bounty is a NAMED trophy the keeper wants,
+// paid in a meal. Each bounty is [trophyId, foodId, count?] (count defaults 1).
+//
+// WHAT THE BOARD IS ACTUALLY FOR. It is not a better price than the hatch —
+// measured against the shelves it can't be, because the keeper's food is
+// CHEAP for what it mends: hardtack 4 heal for 2 barter, smoked-haunch 12 for
+// 5, salt-fish 14 for 6, and the bloodroot poultice 15 for 4. That is 2.0 to
+// 3.75 heal per barter, and no bounty beats it. What the board gives instead
+// is the two things barter cannot reach:
+//   - FOOD HE DOESN'T STOCK. Gull eggs, raw haunch, dried meat and the grilled
+//     fish are never on the shelves at any price. The board is the only counter
+//     that hands them over.
+//   - A COUNTER THAT ISN'T EMPTY. The shelves sell out (fenceOut) and stay out
+//     for hours. The board runs on its own clock, so when the hatch is bare the
+//     bounty still pays.
+// So it is a SIDE DOOR, not a discount, and every line of prose about it should
+// say so. Anything that promises "double the fence" is lying to the player.
+//
+// THE RATE. Rewards are held at a flat ~2.0 heal per point of trophy barter,
+// which is the shelf's own floor rate — the board never undercuts the hatch by
+// more than the poultice does, and never inverts (the old table paid the
+// wolf-skull 1.36 while paying the hyena-fang 2.0, so the best trophy on the
+// board was the worst deal on it). Above 10 barter no single meal is big
+// enough — grilled trout tops out at 19 — so the top two rungs pay a PAIR, and
+// pay it in keeping food, which is also the answer to the top end otherwise
+// paying entirely in meals that rot.
+//
+// The board ROTATES like the fence: a few trophies are on offer at once, and
+// they cycle over the hour. Claim one by trading the trophy in at the hatch —
+// the keeper keeps the trophy, you keep the meal. A claim is PER WANDERER: the
+// posting stays up for everyone else until it churns, so the first delver to
+// the gate can't strip the board bare for the rest of the world.
+export const BOUNTY_TABLE: [string, string, number?][] = [
+  // the road and the shallow country — common trophies, hardtack-and-meat pay
+  ["hyena-fang", "hardtack"],          // 2b  -> heal 4
+  ["fistful-teeth", "hardtack"],       // 2b  -> heal 4
+  ["war-medal", "gull-egg"],           // 3b  -> heal 6
+  ["dogs-collar", "gull-egg"],         // 3b  -> heal 6
+  ["knucklebone-rosary", "gull-egg"],  // 3b  -> heal 6
+  ["otter-pelt", "dried-meat"],        // 4b  -> heal 8
+  ["heron-plume", "dried-meat"],       // 4b  -> heal 8
+  ["adder-skin", "hyena-haunch"],      // 5b  -> heal 9
+  ["raven-feather", "hyena-haunch"],   // 5b  -> heal 9
+  ["bitterns-feather", "hyena-haunch"],// 5b  -> heal 9
+  ["goat-horn", "hyena-haunch"],       // 5b  -> heal 9
+  ["boar-tusk", "hyena-haunch"],       // 5b  -> heal 9
+  ["viper-fang", "smoked-haunch"],     // 6b  -> heal 12
+  ["wolf-pelt", "salt-fish"],          // 7b  -> heal 14
+  ["hound-fang", "grilled-cave-fish"], // 8b  -> heal 16
+  ["toll-token", "grilled-cave-fish"], // 8b  -> heal 16
+  ["conger-jaw", "grilled-trout"],     // 9b  -> heal 19
+  ["tide-tally", "grilled-trout"],     // 9b  -> heal 19
+  ["seal-pelt", "grilled-trout"],      // 10b -> heal 19
+  ["pale-pelt", "smoked-haunch", 2],   // 12b -> heal 24, and it keeps (the rare-pelt bounty; near the top of the board)
+  ["wolf-skull", "salt-fish", 2],      // 14b -> heal 28, and it keeps (the board's top end)
+];
+export const BOUNTY_BOARD_SIZE = 4;        // how many trophies the keeper posts at once
+export const BOUNTY_CHURN_MIN_MS = 45 * 60_000; // the board churns every ~45-90 min
+export const BOUNTY_CHURN_MAX_MS = 90 * 60_000;
 // The escaped thing: the Gaunt gets loose from under the keep and walks the
 // world for the window — announced by a cry the whole zone hears, telegraphed
 // room to room by everything else fleeing ahead of it. Kill it for its pelt

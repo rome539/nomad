@@ -545,6 +545,50 @@ export const PAGE = `<!doctype html>
     #trade .bitem button { padding: 8px 14px; font-size: 13px; }
     #trade .trow button { padding: 8px 14px; font-size: 13px; }
   }
+  /* The keeper's bounty board: same shell as the hatch, one column — the
+     trophies he's paying for, each offering a named meal. */
+  #bounty {
+    display: none; position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0, 0, 0, 0.82);
+    align-items: center; justify-content: center; padding: 16px 12px;
+  }
+  #bounty.open { display: flex; }
+  #bounty .bbox {
+    background: var(--panel); border: 1px solid var(--border2); border-radius: 10px;
+    padding: 14px 14px 0; width: min(560px, 96vw); min-width: 0; max-height: 90vh;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  #bounty .bhead { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  #bytitle { color: var(--gold); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; }
+  #bysub { color: var(--dim); font-size: 12px; margin-top: 3px; max-width: 52ch; }
+  #byclose {
+    background: transparent; border: 1px solid var(--border2); border-radius: 5px;
+    color: var(--cream); font: inherit; font-size: 13px; padding: 7px 14px; cursor: pointer;
+    flex: 0 0 auto; white-space: nowrap;
+  }
+  #byclose:hover { color: var(--gold); border-color: var(--gold); }
+  #bynote { flex: 0 0 auto; color: var(--blood); font-size: 12.5px; }
+  #bynote:empty { display: none; }
+  #byboard { overflow-y: auto; flex: 1 1 auto; min-height: 0; padding-bottom: 12px; }
+  #bounty .byrow {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+    padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  #bounty .byrow:last-child { border-bottom: none; }
+  #bounty .byrow .byarrow { color: var(--dim); }
+  #bounty .byrow .byfood { color: var(--heal); font-weight: 600; }
+  #bounty .byrow .byheal { color: var(--dim); font-size: 11.5px; }
+  #bounty .byrow .byhave { color: var(--bone); font-size: 11.5px; flex: 1 1 auto; text-align: right; }
+  #bounty .byrow button {
+    background: transparent; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--bone); font: inherit; font-size: 11.5px; padding: 4px 12px; cursor: pointer;
+  }
+  #bounty .byrow button:hover { color: var(--gold); border-color: var(--gold); }
+  #bounty .byrow button:disabled { color: var(--dim); border-color: var(--line); cursor: default; }
+  @media (max-width: 680px) {
+    #bounty .bbox { max-height: 92vh; }
+    #bounty .byrow button { padding: 8px 16px; font-size: 13px; }
+  }
   /* The wanderer-to-wanderer deal: same shell and item-row look as the hatch,
      but three columns (your pack to draw from, what's on your side, what's on
      theirs) since there's no keeper here — just the two of you. Works
@@ -1192,6 +1236,19 @@ export const PAGE = `<!doctype html>
       </div>
     </div>
   </div>
+  <div id="bounty">
+    <div class="bbox">
+      <div class="bhead">
+        <div>
+          <div id="bytitle">The keeper's bounty board</div>
+          <div id="bysub">Trophies in, meals out &#8212; food the keeper never puts on the shelves, from a counter that doesn't sell out. The board turns over every hour or so.</div>
+        </div>
+        <button id="byclose">step back out</button>
+      </div>
+      <div id="bynote"></div>
+      <div id="byboard"></div>
+    </div>
+  </div>
   <div id="forge">
     <div class="bbox">
       <div class="bhead">
@@ -1635,6 +1692,7 @@ function anyModalOpen() {
   return (benchEl && benchEl.classList.contains("open"))
     || (tradeEl && tradeEl.classList.contains("open"))
     || (forgeEl && forgeEl.classList.contains("open"))
+    || (bountyEl && bountyEl.classList.contains("open"))
     || (mapEl && mapEl.classList.contains("open"))
     || (jrnlEl && jrnlEl.classList.contains("open"));
 }
@@ -1669,6 +1727,17 @@ function stripRarity(s) {
 function rarityClass(r) {
   return r === "uncommon" ? "r-uncommon" : r === "rare" ? "r-rare"
     : r === "epic" ? "r-epic" : r === "legendary" ? "r-legendary" : "r-common";
+}
+// ONE law for a name drawn inside a modal, wherever it is drawn: gear wears its
+// tier, nothing else does. The test is a TRUTHY slot, because a row that ships
+// without the field at all (an older frame) must read as "not gear" rather than
+// colour every ration on the shelf, which a not-equal-empty-string test would
+// have done for undefined. The loose rock is slotted and is not gear.
+function gearNameSpan(name, rarity, slot) {
+  var s = document.createElement("span");
+  s.textContent = name;
+  if (rarity && slot && String(name).indexOf("loose rock") === -1) s.className = rarityClass(rarity);
+  return s;
 }
 // Paint a line that carries one or more rarity markers, ANYWHERE in it. The
 // server wraps a gear name as \u0001<rarity>\u0001<name>\u0002; everything
@@ -2424,6 +2493,8 @@ async function connect() {
       if (f.open) renderTrade(f); else closeTrade();
     } else if (f.t === "forge") {
       if (f.open) renderForge(f); else closeForge();
+    } else if (f.t === "bounty") {
+      if (f.open) renderBounty(f); else closeBounty();
     } else if (f.t === "swap") {
       if (!f.open) closeSwap();
       else if (f.pending) renderDealReq(f);
@@ -2838,6 +2909,9 @@ var TRADE_CHIP = "barter with the keeper";
 // The 'forge' chip opens the forge modal (reads your pack, shows what the bench
 // can make); typing 'forge' still reads the slate. Must match FORGE_CHIP in zone.ts.
 var FORGE_CHIP = "forge";
+// And the bounty board: the chip opens the board modal; typing 'bounty' still
+// reads it as text. Must match BOUNTY_CHIP in zone-data.ts.
+var BOUNTY_CHIP = "bounty";
 // The chip's face is shorter than the command it fires. The two self-evident
 // groups — the compass and the stances — shed their verb: a fixed row of
 // north·south·east·west reads as movement without "go" on each, and a cluster
@@ -2870,7 +2944,7 @@ function chipLabel(s) {
 function chipKind(s) {
   if (/^(attack|throw|kill|strike) /.test(s) || s === "stance reckless") return "c-atk";
   if (/^(eat|bandage) /.test(s) || s === "bandage" || s === "rest") return "c-heal";
-  if (/^(get|unlock|equip|offer) /.test(s) || s === "offer nothing" || s === TRADE_CHIP || s === FORGE_CHIP) return "c-gain";
+  if (/^(get|unlock|equip|offer) /.test(s) || s === "offer nothing" || s === TRADE_CHIP || s === FORGE_CHIP || s === BOUNTY_CHIP) return "c-gain";
   if (s === "stance guarded") return "c-def";
   // The door wears the VOICE colour, and it is the only chip that does. That is
   // the whole visual argument: rose means people. Speech is rose; the door to the
@@ -2914,6 +2988,8 @@ function chipButton(s, fresh) {
       tradeSend("open");
     } else if (s === FORGE_CHIP) {
       forgeSend("open");
+    } else if (s === BOUNTY_CHIP) {
+      bountySend("open");
     } else if (s.slice(-1) === "\\u2026") {
       cmd.value = s.slice(0, -1).trim() + " ";
       cmd.focus();
@@ -2999,15 +3075,8 @@ function benchItemNode(it, place) {
   var nm = document.createElement("div");
   nm.className = "nm";
   // The item's name wears its rarity colour (gear only — food, keys, trophies
-  // and the free rock stay plain, same law as the floor lines).
-  var nmsp = document.createElement("span");
-  nmsp.textContent = it.name;
-  // Gear only, and the test is a TRUTHY slot: a row that ships without the
-  // field at all (an older frame) must read as "not gear" rather than colour
-  // every ration on the shelf, which a not-equal-empty-string test would have
-  // done for undefined.
-  if (it.rarity && it.slot && it.name.indexOf("loose rock") === -1) nmsp.className = rarityClass(it.rarity);
-  nm.appendChild(nmsp);
+  // and the free rock stay plain, same law as the floor lines: gearNameSpan).
+  nm.appendChild(gearNameSpan(it.name, it.rarity, it.slot));
   if (it.n > 1) { var mu = document.createElement("span"); mu.className = "mult"; mu.textContent = " \\u00d7" + it.n; nm.appendChild(mu); }
   // Stats wear the chip colours, same language as the keeper's shelves.
   if (it.stat) {
@@ -3300,6 +3369,64 @@ function tradeSend(action, row, src) {
 }
 function closeTrade() { tradeEl.classList.remove("open"); tradeState = null; hideModalChat(); }
 
+// ---- the keeper's bounty board ----
+// The hatch's other business: named trophies, paid in food at ~2x their trade
+// value. One column, a row per bounty — claim trades the trophy in for the meal.
+var bountyEl = document.getElementById("bounty");
+var byboard = document.getElementById("byboard");
+var bynote = document.getElementById("bynote");
+document.getElementById("byclose").addEventListener("click", function () { bountySend("close"); });
+
+function bountySend(action, row) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "bounty", action: action, row: row || "" }));
+}
+function closeBounty() { bountyEl.classList.remove("open"); hideModalChat(); }
+function renderBounty(state) {
+  bynote.textContent = state.note || "";
+  byboard.textContent = "";
+  if (!state.board || !state.board.length) {
+    var e = document.createElement("div");
+    e.className = "bempty";
+    e.textContent = "\u2014 the board is bare \u2014";
+    byboard.appendChild(e);
+  }
+  state.board.forEach(function (b) {
+    var row = document.createElement("div");
+    row.className = "byrow";
+    // A trophy is not gear and wears no tier — the board names a thing you cut
+    // off a body, and colouring it would read as equipment.
+    var t = document.createElement("span");
+    t.textContent = b.name;
+    row.appendChild(t);
+    var arrow = document.createElement("span");
+    arrow.className = "byarrow";
+    arrow.textContent = "\u2192";
+    row.appendChild(arrow);
+    var f = document.createElement("span");
+    f.className = "byfood";
+    f.textContent = b.meals > 1 ? b.food + " \\u00d7" + b.meals : b.food;
+    row.appendChild(f);
+    var heal = document.createElement("span");
+    heal.className = "byheal";
+    heal.textContent = "(mends " + b.heal + ")";
+    row.appendChild(heal);
+    var have = document.createElement("span");
+    have.className = "byhave";
+    // A posting you've already collected on stays up — it's still live for
+    // everyone else — so it reads as settled rather than disappearing.
+    have.textContent = b.took ? "paid" : b.have ? "you have it" : "";
+    row.appendChild(have);
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = b.took ? "paid" : "claim";
+    btn.disabled = !b.have || !!b.took;
+    btn.addEventListener("click", function () { bountySend("claim", b.id); });
+    row.appendChild(btn);
+    byboard.appendChild(row);
+  });
+  bountyEl.classList.add("open");
+}
+
 // A stat token wears the chip colours: red bites, steel guards, gold gains,
 // dim weighs. The shop teaches kit-building the same way the chips taught verbs.
 function statTokenClass(tok) {
@@ -3313,7 +3440,8 @@ function tradeItemNode(it, place) {
   wrap.className = "trow";
   var nm = document.createElement("span");
   nm.className = "nm";
-  nm.textContent = it.name + (it.n > 1 ? " (x" + it.n + ")" : "");
+  nm.appendChild(gearNameSpan(it.name, it.rarity, it.slot));
+  if (it.n > 1) nm.appendChild(document.createTextNode(" (x" + it.n + ")"));
   wrap.appendChild(nm);
   if (it.stat) {
     var tags = document.createElement("span");
@@ -3397,7 +3525,9 @@ function fillTradeCol(el, title, items, place, gone) {
     row.className = "trow tgone";
     var nm = document.createElement("span");
     nm.className = "nm";
-    nm.textContent = it.name;
+    // Off the shelf, but still itself: an absent legendary reads as a legendary
+    // you can't have today, which is the whole point of naming it here.
+    nm.appendChild(gearNameSpan(it.name, it.rarity, it.slot));
     row.appendChild(nm);
     var dash = document.createElement("span");
     dash.className = "tcost";
@@ -3454,14 +3584,15 @@ function renderTrade(state) {
     var order = [];
     var seen = {};
     tradeWant.items.forEach(function (w, i) {
-      if (seen[w.name] == null) { seen[w.name] = order.length; order.push({ name: w.name, n: 1, idx: i }); }
+      if (seen[w.name] == null) { seen[w.name] = order.length; order.push({ name: w.name, rarity: w.rarity, slot: w.slot, n: 1, idx: i }); }
       else { order[seen[w.name]].n += 1; }
     });
     order.forEach(function (w) {
       var row = document.createElement("span");
       row.className = "wrow";
       var nm = document.createElement("span");
-      nm.textContent = w.name + (w.n > 1 ? " (x" + w.n + ")" : "");
+      nm.appendChild(gearNameSpan(w.name, w.rarity, w.slot));
+      if (w.n > 1) nm.appendChild(document.createTextNode(" (x" + w.n + ")"));
       row.appendChild(nm);
       var rm = document.createElement("button");
       rm.type = "button";
@@ -3537,18 +3668,22 @@ function renderDealReq(f) {
   dealreqEl.classList.add("open");
 }
 
-function swapRow(name, itemId, action, pool) {
+// A row on either side of a deal. Takes the item itself so the name can wear
+// its tier — the same law as the keeper's shelves, since both sides of a deal
+// are looking at gear and judging it.
+function swapRow(it, action, pool) {
   var wrap = document.createElement("div");
   wrap.className = "trow";
   var nm = document.createElement("span");
   nm.className = "nm";
-  nm.textContent = name;
+  nm.appendChild(gearNameSpan(it.name, it.rarity, it.slot));
+  if (it.n > 1) nm.appendChild(document.createTextNode(" (x" + it.n + ")"));
   wrap.appendChild(nm);
   if (action) {
     var b = document.createElement("button");
     b.type = "button";
     b.textContent = action === "offer" ? "offer" : "take back";
-    b.addEventListener("click", function () { swapSend(action, itemId, pool); });
+    b.addEventListener("click", function () { swapSend(action, it.itemId, pool); });
     wrap.appendChild(b);
   }
   return wrap;
@@ -3598,7 +3733,7 @@ function fillSwapGoods(el, title, items) {
     sh.textContent = SWAP_POOL_LABEL[pool];
     el.appendChild(sh);
     list.forEach(function (it) {
-      el.appendChild(swapRow(it.name + (it.n > 1 ? " (x" + it.n + ")" : ""), it.itemId, "offer", pool));
+      el.appendChild(swapRow(it, "offer", pool));
     });
   });
 }
@@ -3622,10 +3757,10 @@ function renderSwap(state) {
   var partner = state.partner || "your partner";
   fillSwapGoods(swpack, "Your goods", state.pack || []);
   fillSwapCol(swmine, "Your offer", (state.yourOffer || []).map(function (it) {
-    return swapRow(it.name, it.itemId, "unoffer");
+    return swapRow(it, "unoffer");
   }));
   fillSwapCol(swtheirs, partner + "'s offer", (state.theirOffer || []).map(function (it) {
-    return swapRow(it.name, it.itemId, null);
+    return swapRow(it, null);
   }));
   swconfirm.textContent = "";
   swconfirm.appendChild(swapSideNode("You", state.yourConfirm));

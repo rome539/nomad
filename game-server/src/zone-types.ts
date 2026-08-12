@@ -27,6 +27,7 @@ export interface Session {
   away: boolean; // out of the world, untouchable (bench modal, or the keeper's hatch)
   trading?: boolean; // which away it is: true = the keeper's hatch (modal or typed)
   forging?: boolean; // which away it is: true = the gatehouse forge (modal or typed)
+  bountying?: boolean; // which away it is: true = the keeper's bounty board (modal or typed)
   sorting?: boolean; // which away it is: true = a typed 'inventory' keeping-sort
   stepText?: boolean; // stepped out via a TYPED barter/forge/inventory (text, no modal)
   loudSelfAt?: number; // last time we told the mover their own load made noise (throttle; ephemeral, not persisted)
@@ -223,4 +224,7 @@ export interface SimState {
   works?: Record<string, number>; // gate roomId -> ms epoch its door reopens (the gatehouse shut for works; the gate ROOM is untouched)
   nextWorksAt?: number; // ms epoch the world next considers shutting a gatehouse
   nests?: Record<string, string[]>; // corvid nests: nest roomId -> gear the raven carried home (ABSTRACT — off the floor, visible only through feeding/raiding the nest itself)
+  bounties?: [string, string, number?][]; // the keeper's bounty board: [trophyId, foodId, count?] currently posted (rotates like the fence)
+  nextBountyChurnAt?: number; // ms the board next rolls a fresh set of trophies
+  bountyTaken?: Record<string, string[]>; // pubkey -> trophyIds that wanderer has already claimed off the CURRENT board (cleared on churn; a posting is one meal per person, not one meal in the world)
 }

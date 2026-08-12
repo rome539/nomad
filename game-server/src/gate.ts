@@ -7,7 +7,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { provokeGrudges } from "./ai";
-import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner, hasTrait } from "./world";
+import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner, hasTrait, mapInkLoad, journalLoad } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
@@ -15,6 +15,8 @@ import * as works from "./works";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
+  BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS,
+  MAP_ITEMS, FULL_MAP, DETAILED_MAP,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
   KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS } from "./zone-data";
@@ -188,6 +190,124 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
   try { session.ws.send(JSON.stringify(payload)); } catch {}
 }
 
+// ---- the keeper's bounty board ----
+// A different kind of dealing. Barter is a value ledger — anything with barter
+// for anything he stocks. A bounty is the keeper pointing at ONE trophy and
+// offering a meal for it: not a better price than the shelves (see BOUNTY_TABLE
+// on why it can't be), but food he doesn't stock, from a counter that never
+// sells out. The board rotates like the fence; claim by trading the trophy in.
+
+// What this wanderer has already collected off the CURRENT board. Created on
+// demand, wiped whole at every churn — a posting is one meal per person, and
+// the board a delver strips is only stripped for them.
+export function bountyTookOf(z: ZoneDO, pubkey: string): Set<string> {
+  let took = z.bountyTaken.get(pubkey);
+  if (!took) { took = new Set(); z.bountyTaken.set(pubkey, took); }
+  return took;
+}
+
+export function bountyGuard(z: ZoneDO, session: Session): string | null {
+  if (!z.world!.entryRooms.has(session.roomId)) return "The keeper keeps his bounties at the gates.";
+  if (z.inCombat(session)) return "Not while something is trying to kill you.";
+  if (!z.bounties.length) return "The board is bare. The keeper hasn't posted anything just now.";
+  return null;
+}
+
+// Take the trophy, pay the meal (a pair of meals on the top two rungs — no one
+// food is big enough for a wolf-skull). Shared by the modal and the typed path
+// so the two can't drift on what a bounty costs or pays. Returns the prose.
+async function payBounty(z: ZoneDO, session: Session, bounty: [string, string, number?], carried: CarriedItem): Promise<string> {
+  const world = z.world!;
+  const [trophyId, foodId, count] = bounty;
+  const meals = count ?? 1;
+  const trophy = world.itemTemplates.get(trophyId);
+  const food = world.itemTemplates.get(foodId);
+  session.items.splice(session.items.indexOf(carried), 1);
+  await removeItemRow(z.env.DB, carried.rowId);
+  bountyTookOf(z, session.pubkey).add(trophyId); // paid to YOU; it stays on the board for everyone else
+  let spilled = 0;
+  for (let i = 0; i < meals; i++) {
+    if (await z.grantItem(session, foodId)) continue;
+    // Pack full (or the food's count-cap hit): the meal goes on the stones at
+    // your feet rather than vanishing — the bounty is still paid, you just have
+    // to stoop for it. Same spill law as the hatch's buy when the pack's full.
+    const floor = z.ground.get(session.roomId) ?? [];
+    floor.push(foodId);
+    z.ground.set(session.roomId, floor);
+    z.stampFresh(session.roomId, foodId);
+    spilled++;
+  }
+  if (spilled) z.refreshRoomCtx(session.roomId);
+  const paid = meals > 1 ? `${food?.name ?? "a meal"} — two of them` : (food?.name ?? "a meal");
+  if (!spilled) return `The keeper takes ${trophy?.name ?? "it"} with both hands and lays ${paid} on the counter. Bounty paid.`;
+  if (spilled === meals) return `The keeper takes ${trophy?.name ?? "it"} — but your pack is full, and ${paid} falls at your feet. Bounty paid.`;
+  return `The keeper takes ${trophy?.name ?? "it"} and lays ${paid} out — more than your pack will hold, and the rest of it goes on the stones at your feet. Bounty paid.`;
+}
+
+export async function handleBounty(z: ZoneDO, session: Session, frame: any): Promise<void> {
+  const action = frame?.action;
+  if (action === "open") {
+    const lateral = z.outOfWorld(session); // the board is a fixture of the gatehouse
+    if (session.away && !lateral) return; // one step-out at a time
+    const bar = bountyGuard(z, session);
+    if (bar) return z.send(session, bar);
+    const shut = worksBar(z, session);
+    if (shut) return z.send(session, shut, "evt");
+    throughTheDoor(z, session);
+    z.enterStep(session, "bountying");
+    return sendBounty(z, session);
+  }
+  if (!session.bountying) return;
+  if (action === "close") return leaveBounty(z, session);
+  if (action === "claim") {
+    const trophyId = String(frame.row ?? "");
+    const bounty = z.bounties.find(([t]) => t === trophyId);
+    if (!bounty) return sendBounty(z, session, "The keeper shakes his head. That bounty has been pulled from the board.");
+    const trophy = z.world!.itemTemplates.get(bounty[0]);
+    if (bountyTookOf(z, session.pubkey).has(bounty[0])) {
+      return sendBounty(z, session, `He's already paid you for that one. The posting stands for whoever brings him the next ${trophy?.name ?? "one"}.`);
+    }
+    const carried = session.items.find((c) => c.itemId === bounty[0] && c.serial === null);
+    if (!carried) return sendBounty(z, session, `You've nothing like that to trade — the keeper wants ${trophy?.name ?? "it"}, and it isn't on you.`);
+    return sendBounty(z, session, await payBounty(z, session, bounty, carried));
+  }
+  return sendBounty(z, session);
+}
+
+export async function leaveBounty(z: ZoneDO, session: Session): Promise<void> {
+  session.bountying = false;
+  try { session.ws.send(JSON.stringify({ v: 0, t: "bounty", open: false })); } catch {}
+  if (z.world!.entryRooms.has(session.roomId)) {
+    session.stepText = true;
+    z.send(session, "You turn from the bounty board and step back to the hatch.");
+    await z.sendGateCtx(session);
+    return;
+  }
+  session.away = false;
+  z.roomFeed(session.roomId, `${session.name} turns from the bounty board and steps back.`, session.pubkey, false);
+  z.send(session, z.enterDescribe(session));
+  z.sendCtx(session);
+  z.refreshRoomCtx(session.roomId);
+}
+
+export async function sendBounty(z: ZoneDO, session: Session, note?: string): Promise<void> {
+  const world = z.world!;
+  const took = bountyTookOf(z, session.pubkey);
+  const board = z.bounties.map(([trophyId, foodId, count]) => {
+    const t = world.itemTemplates.get(trophyId);
+    const f = world.itemTemplates.get(foodId);
+    if (!t || !f) return null;
+    // Whether the wanderer actually carries the trophy (the claim needs it in
+    // the pack — sealed title never crosses the counter), and whether the
+    // keeper has already settled this posting with them.
+    const have = session.items.some((c) => c.itemId === trophyId && c.serial === null);
+    const meals = count ?? 1;
+    return { id: trophyId, name: t.name, rarity: t.rarity, food: f.name, heal: f.heal * meals, meals, have, took: took.has(trophyId) };
+  }).filter((b) => b !== null);
+  const payload = { v: 0, t: "bounty", open: true, note: note ?? "", board };
+  try { session.ws.send(JSON.stringify(payload)); } catch {}
+}
+
 // ---- the keeper at the gate: stock, trade, and his particular tastes ----
 // He deals in kind: 'buy' names the want, 'offer' lays goods on the counter
 // until the trade value is met. No change given, nothing bought outright,
@@ -237,6 +357,37 @@ export function tickFence(z: ZoneDO, now: number): void {
   for (let i = 0; i < need && available.length; i++) {
     const [gone] = available.splice(randInt(0, available.length - 1), 1);
     z.fenceOut.set(gone.itemId, now + randInt(FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS)); // gone "for some time", then back
+  }
+}
+
+// THE BOUNTY BOARD ROTATES like the fence: BOUNTY_BOARD_SIZE trophies are on
+// offer at once, drawn fresh from the table each churn, paid in food at ~2x the
+// trophy's barter. Unlike the fence, the board is PERSISTED (bounties +
+// nextBountyChurnAt ride the sim state), so a restart shows the same bounties
+// — a hunter who saw a wolf-skull up last night can chase it after a deploy.
+export function tickBounty(z: ZoneDO, now: number): void {
+  // A board with nothing on it teaches nothing, so the FIRST tick of a fresh
+  // world posts immediately rather than scheduling and walking away — otherwise
+  // the gate opens bare and stays bare for up to an hour and a half.
+  if (now < z.nextBountyChurnAt) return;
+  z.nextBountyChurnAt = now + randInt(BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS);
+  const pool = [...BOUNTY_TABLE];
+  const board: [string, string, number?][] = [];
+  for (let i = 0; i < BOUNTY_BOARD_SIZE && pool.length; i++) {
+    board.push(pool.splice(randInt(0, pool.length - 1), 1)[0]);
+  }
+  // Fresh postings, fresh slate: what everyone collected off the old board dies
+  // with it, so the same trophy can pay again next time it comes up.
+  z.bountyTaken.clear();
+  // The board is shared across every gate — one keeper, one set of bounties.
+  // If it actually changed, the gatehouse hears the board go up.
+  const changed = JSON.stringify(board) !== JSON.stringify(z.bounties);
+  z.bounties = board;
+  if (changed) {
+    for (const [trophyId, foodId] of board) {
+      const t = z.world!.itemTemplates.get(trophyId);
+      if (t) gatehouseFeed(z, `The keeper pins a new bounty to the board: ${t.name} — paid in a good meal.`, undefined, "evt");
+    }
   }
 }
 
@@ -371,6 +522,52 @@ export async function offerFistful(
   }
   if (laid <= 1) return line;
   return `You count out ${laid} onto the counter, a fistful of ${t?.name ?? "them"}. ${line}`;
+}
+
+// The bounty board, typed: 'bounty' alone reads the board; 'bounty claim <trophy>'
+// trades the trophy in for the meal (or 'claim <trophy>' while standing at it).
+export async function cmdBounty(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const bar = bountyGuard(z, session);
+  if (bar) return z.send(session, bar);
+  const shut = worksBar(z, session);
+  if (shut) return z.send(session, shut, "evt");
+  const walkedIn = !z.outOfWorld(session);
+  throughTheDoor(z, session); // the board is inside — the door comes first
+  z.enterStep(session, "bountying");
+  if (walkedIn) z.send(session, "You push in out of the cold and step up to the keeper's bounty board.");
+  const world = z.world!;
+  const claim = /^(claim|give|trade|pay)\s+(.+)/i.exec(arg.trim());
+  if (claim) {
+    const bounty = z.bounties.find(([t]) => {
+      const tt = world.itemTemplates.get(t);
+      return tt ? nameMatches(tt.name, claim[2]) : false;
+    });
+    if (!bounty) return z.send(session, "That isn't on the board. 'bounty' shows what the keeper is paying for.");
+    const trophy = world.itemTemplates.get(bounty[0])!;
+    if (bountyTookOf(z, session.pubkey).has(bounty[0])) {
+      return z.send(session, `He's already paid you for that one. The posting stands for whoever brings him the next ${trophy.name}.`);
+    }
+    const carried = session.items.find((c) => c.itemId === bounty[0] && c.serial === null);
+    if (!carried) return z.send(session, `The keeper wants ${trophy.name} — you haven't got one loose in your pack.`);
+    // Typed stays typed: the text path prints its line and leaves you standing
+    // at the board in text. Pushing sendBounty here would fling the modal open
+    // over a wanderer who never asked for it.
+    return z.send(session, await payBounty(z, session, bounty, carried));
+  }
+  if (!z.bounties.length) return z.send(session, "The board is bare. The keeper hasn't posted anything just now.");
+  const took = bountyTookOf(z, session.pubkey);
+  const lines = ["The keeper's bounty board:", ...z.bounties.map(([trophyId, foodId, count]) => {
+    const t = world.itemTemplates.get(trophyId);
+    const f = world.itemTemplates.get(foodId);
+    if (!t || !f) return "";
+    const meals = count ?? 1;
+    const pay = meals > 1 ? `${f.name} ×${meals}` : f.name;
+    const note = took.has(trophyId)
+      ? " — paid"
+      : session.items.some((c) => c.itemId === trophyId && c.serial === null) ? " — you have one" : "";
+    return `  ${t.name} \u2192 ${pay} (mends ${f.heal * meals})${note}`;
+  }), "Bring the trophy to the hatch and it's yours to eat. 'bounty claim <trophy>' pays it in. ('out' steps you back into the world.)"];
+  return z.send(session, lines.join("\n"));
 }
 
 export async function offerCore(z: ZoneDO, session: Session, carried: CarriedItem, from: string): Promise<string> {
@@ -720,6 +917,9 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
     items: buying.wants.map((w) => ({
       name: world.itemTemplates.get(w.itemId)?.name ?? w.itemId,
       rarity: world.itemTemplates.get(w.itemId)?.rarity ?? "common",
+      // The slot rides along so the counter can paint a tier the same way the
+      // shelves do — rarity alone would colour the rations too.
+      slot: world.itemTemplates.get(w.itemId)?.slot ?? "",
       cost: w.cost,
     })),
     cost: cartCost(buying),
@@ -1431,6 +1631,87 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
     else z.roomFeed(session.roomId, `${session.name} ${cfg.feed}`, session.pubkey, false);
     z.sendCtx(session);
   }
+
+// ---- the dying hand ----
+// Death drops everything carried, sealed included; that law does not move. What
+// moves is ONE reflex before the dark: a wanderer going down shoves their chart
+// and their book into the lockbox, and the box keeps what the stones would have
+// taken.
+//
+// WHY THESE TWO AND NOTHING ELSE. Gear is replaceable, and losing it is the
+// whole wager of a run — a sword costs a sword. A surveyor's map and a hunter's
+// journal aren't loot, they're a RECORD, written a room and a kill at a time
+// across many delves, and there is no counter anywhere that sells the hours
+// back. Losing a half-inked chart costs you every descent that inked it.
+//
+// It is not free and it is not a promise:
+//   - the lockbox must have a free slot. A full box saves nothing, and that is
+//     the wanderer's own housekeeping, not the dungeon going soft.
+//   - ONE chart and ONE book, the fullest of each. The reflex is for the record
+//     you have been keeping, not a mule-load of spare copies ferried through
+//     death.
+//   - the room WATCHES it happen, so a killer standing over the body knows why
+//     the chart isn't in the spill. The mercy is visible, not a silent theft
+//     from whoever won the fight.
+//
+// "Fullest" is measured in the work that went into it, not in trade value.
+async function chartWork(z: ZoneDO, victim: Session, c: CarriedItem): Promise<number> {
+  // A finished chart holds no ink at all — it is complete by definition (mig
+  // 182), so it outranks any partial copy.
+  if (c.itemId === FULL_MAP) return Number.MAX_SAFE_INTEGER;
+  if (!c.journalId) return 0; // a blank copy nobody has walked with yet
+  const cached = victim.mapInk?.get(c.journalId);
+  const inked = cached ? cached.size : (await mapInkLoad(z.env.DB, c.journalId)).length;
+  // Ink is the measure; the surveyor's hand only breaks a tie against a crude
+  // copy, which draws the same rooms and lies about some of them.
+  return inked * 10 + (c.itemId === DETAILED_MAP ? 1 : 0);
+}
+
+async function bookWork(z: ZoneDO, c: CarriedItem): Promise<number> {
+  if (!c.journalId) return 0;
+  const rows = await journalLoad(z.env.DB, c.journalId);
+  // Species recorded is the real measure of a book; kills logged breaks ties
+  // between two books that have met the same number of things.
+  return rows.length * 1000 + rows.reduce((n, r) => n + r.kills, 0);
+}
+
+export async function deathStash(z: ZoneDO, victim: Session): Promise<string[]> {
+  const world = z.world!;
+  const charts = victim.items.filter((c) => MAP_ITEMS.has(c.itemId));
+  // The book rail is the journalId minus the maps that share it (097) — same
+  // test the kill-logger uses, so a new kind of book is covered the day it exists.
+  const books = victim.items.filter((c) => c.journalId && !MAP_ITEMS.has(c.itemId));
+  if (!charts.length && !books.length) return [];
+
+  let chart: CarriedItem | null = null, chartBest = -1;
+  for (const c of charts) {
+    const w = await chartWork(z, victim, c);
+    if (w > chartBest) { chartBest = w; chart = c; }
+  }
+  let book: CarriedItem | null = null, bookBest = -1;
+  for (const c of books) {
+    const w = await bookWork(z, c);
+    if (w > bookBest) { bookBest = w; book = c; }
+  }
+
+  const held = await loadContainer(z.env.DB, victim.pubkey, "lockbox");
+  const saved: string[] = [];
+  // The chart goes in first when only one slot is left. A book fills wherever
+  // you fight; a chart only fills where you WALK, and walking somewhere new is
+  // the slower half of this world to redo.
+  for (const c of [chart, book]) {
+    if (!c) continue;
+    // Both are loose, single-slot things — if the first won't fit, neither will
+    // the second, and the stones get them the way they always did.
+    if (!z.hasRoom(held, c.itemId, LOCKBOX_CAP, "lockbox")) break;
+    victim.items.splice(victim.items.indexOf(c), 1);
+    c.equipped = false;
+    await setContainer(z.env.DB, c.rowId, "lockbox"); // container != '' — the death sweep no longer deletes the row
+    held.push(c);
+    saved.push(world.itemTemplates.get(c.itemId)?.name ?? c.itemId);
+  }
+  return saved;
+}
 
 export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key: "lockbox" | "vault"): Promise<void> {
     const world = z.world!;

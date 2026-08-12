@@ -168,6 +168,14 @@ export class ZoneDO implements DurableObject {
   // itemId -> ms the keeper restocks it. A bare shelf is a bare shelf for
   // everyone (gate.ts owns the churn); survives hibernation.
   public fenceOut = new Map<string, number>();
+  // The keeper's bounty board: [trophyId, foodId, count?] currently posted.
+  // Rotates like the fence; survives hibernation (gate.ts owns the churn).
+  public bounties: [string, string, number?][] = [];
+  public nextBountyChurnAt = 0;
+  // Who has already collected on which posting. A bounty is one meal PER
+  // WANDERER, not one meal in the world — the posting stays up for everybody
+  // else until the board churns, and the churn wipes this clean.
+  public bountyTaken = new Map<string, Set<string>>();
   public bloodOn = new Map<string, number[]>(); // pubkey -> pvp-kill times; the evidence walks around on the murderer (pvp.ts)
   // ms the world next mints a hammerstone into a random haunt (corpse-key
   // pattern — no farmable spot). 0 = schedule on first tick.
@@ -479,6 +487,9 @@ export class ZoneDO implements DurableObject {
       this.openDoors = new Set(saved.openDoors);
       this.doorCloseAt = new Map(Object.entries(saved.doorCloseAt ?? {}));
       this.fenceOut = new Map(Object.entries(saved.fenceOut ?? {}));
+      this.bounties = saved.bounties ?? [];
+      this.nextBountyChurnAt = saved.nextBountyChurnAt ?? 0;
+      this.bountyTaken = new Map(Object.entries(saved.bountyTaken ?? {}).map(([k, v]) => [k, new Set(v)]));
       this.bloodOn = new Map(Object.entries(saved.bloodOn ?? {}));
       this.nextStoneAt = saved.nextStoneAt ?? 0;
       this.nextBrandAt = saved.nextBrandAt ?? 0;
@@ -766,6 +777,11 @@ export class ZoneDO implements DurableObject {
       openDoors: [...this.openDoors],
       doorCloseAt: Object.fromEntries(this.doorCloseAt),
       fenceOut: Object.fromEntries(this.fenceOut),
+      bounties: this.bounties,
+      nextBountyChurnAt: this.nextBountyChurnAt,
+      bountyTaken: Object.fromEntries(
+        [...this.bountyTaken].filter(([, took]) => took.size).map(([pk, took]) => [pk, [...took]]),
+      ),
       bloodOn: Object.fromEntries(this.bloodOn),
       nextStoneAt: this.nextStoneAt,
       nextBrandAt: this.nextBrandAt,
@@ -830,6 +846,9 @@ export class ZoneDO implements DurableObject {
     this.openDoors.clear();
     this.doorCloseAt.clear();
     this.fenceOut.clear();
+    this.bounties = [];
+    this.nextBountyChurnAt = 0;
+    this.bountyTaken.clear();
     this.bloodOn.clear();
     this.nextStoneAt = 0;
     this.nextBrandAt = 0;
@@ -1309,8 +1328,9 @@ export class ZoneDO implements DurableObject {
     const isBench = frame?.t === "bench";
     const isTrade = frame?.t === "trade";
     const isForge = frame?.t === "forge";
+    const isBounty = frame?.t === "bounty";
     const isSwap = frame?.t === "swap";
-    if (!isBench && !isTrade && !isForge && !isSwap && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
+    if (!isBench && !isTrade && !isForge && !isBounty && !isSwap && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
 
     // Token bucket per pubkey — castr's daily-cast pattern, compressed.
     const now = Date.now();
@@ -1335,6 +1355,7 @@ export class ZoneDO implements DurableObject {
     if (isBench) return gate.handleBench(this, session, frame);
     if (isTrade) return gate.handleTrade(this, session, frame);
     if (isForge) return gate.handleForge(this, session, frame);
+    if (isBounty) return gate.handleBounty(this, session, frame);
     // The wanderer-to-wanderer deal (trade.ts): unlike the three above, this
     // one never sets `away` — it works whether you're in the gatehouse or
     // standing in the dark, so it's routed here rather than behind the
@@ -1375,7 +1396,9 @@ export class ZoneDO implements DurableObject {
         ? (v === "barter" || v === "buy" || v === "offer" || v === "say")
         : session.forging
           ? (v === "forge" || v === "say")
-          : (v === "inventory" || v === "stash" || v === "unstash" || v === "vault" || v === "unvault" || v === "say");
+          : session.bountying
+            ? (v === "bounty" || v === "say")
+            : (v === "inventory" || v === "stash" || v === "unstash" || v === "vault" || v === "unvault" || v === "say");
       if (!stay) await this.leaveStep(session); // anything else rejoins the world first
       await this.dispatch(session, stepCmd);
       this.syncCombatCtx();
@@ -1389,9 +1412,11 @@ export class ZoneDO implements DurableObject {
         ? "You're at the keeper's hatch. Close the trade to step back into the world."
         : session.forging
           ? "You're at the forge. Close it to step back into the world."
-          : this.world!.entryRooms.has(session.roomId)
-            ? "You're sorting your kit at the gatehouse. Close the bench to step back into the world."
-            : "You're crouched over your lockbox. Close it to get your head up and act.");
+          : session.bountying
+            ? "You're at the bounty board. Close it to step back into the world."
+            : this.world!.entryRooms.has(session.roomId)
+              ? "You're sorting your kit at the gatehouse. Close the bench to step back into the world."
+              : "You're crouched over your lockbox. Close it to get your head up and act.");
     }
 
     const text: string = frame.text;
@@ -1449,6 +1474,7 @@ export class ZoneDO implements DurableObject {
       case "smelt": return gate.cmdSmelt(this, session, cmd.arg);
       case "repair": return gate.cmdRepair(this, session, cmd.arg);
       case "barter": return gate.cmdBarter(this, session);
+      case "bounty": return gate.cmdBounty(this, session, cmd.arg);
       case "buy": return gate.cmdBuy(this, session, cmd.arg);
       case "offer": return gate.cmdOffer(this, session, cmd.arg);
       case "inventory": return verbs.cmdInventory(this, session);
@@ -2167,7 +2193,7 @@ export class ZoneDO implements DurableObject {
   // Typed barter/forge steps you out of the world just like opening the modal —
   // untouchable at the counter/brazier — but keeps you in text. Idempotent, so
   // a run of typed sub-commands (buy, offer, forge) doesn't re-announce it.
-  public enterStep(session: Session, mode: "trading" | "forging" | "sorting" | "gatehouse"): void {
+  public enterStep(session: Session, mode: "trading" | "forging" | "bountying" | "sorting" | "gatehouse"): void {
     const atGate = this.world!.entryRooms.has(session.roomId);
     if (session.away) {
       // Already out of the world. At a gate that means STANDING IN THE GATEHOUSE
@@ -2180,6 +2206,7 @@ export class ZoneDO implements DurableObject {
       session.buying = mode === "trading" ? session.buying : undefined; // an unfinished trade sweeps back unless you stay at the counter
       session.trading = mode === "trading";
       session.forging = mode === "forging";
+      session.bountying = mode === "bountying";
       session.sorting = mode === "sorting";
       session.stepText = true;
       return;
@@ -2188,6 +2215,7 @@ export class ZoneDO implements DurableObject {
     session.stepText = true;
     session.trading = mode === "trading";
     session.forging = mode === "forging";
+    session.bountying = mode === "bountying";
     session.sorting = mode === "sorting";
     // Rest survives a typed step-out (inventory/barter/forge) — healing pauses
     // while away, resumes when you 'look' back into the world.
@@ -2209,9 +2237,11 @@ export class ZoneDO implements DurableObject {
       ? `${session.name} steps up to the keeper's hatch.`
       : mode === "forging"
         ? `${session.name} steps to the bench and stirs the brazier to life.`
-        : mode === "gatehouse"
-          ? `${session.name} pulls the gatehouse door shut behind them.`
-          : atGate
+        : mode === "bountying"
+          ? `${session.name} steps up to the bounty board and studies what the keeper is paying for.`
+          : mode === "gatehouse"
+            ? `${session.name} pulls the gatehouse door shut behind them.`
+            : atGate
             ? `${session.name} steps into the gatehouse to sort their kit.`
             : `${session.name} crouches to dig through a lockbox.`;
     this.roomFeed(session.roomId, msg, session.pubkey, false);
@@ -2253,13 +2283,14 @@ export class ZoneDO implements DurableObject {
     // Not at a counter, not at a brazier, not over a box — then you were simply
     // INSIDE, and what the gate sees is a door opening.
     const fromGatehouse = this.outOfWorld(session)
-      && !session.trading && !session.forging && !session.sorting;
-    const frame = session.trading ? "trade" : session.forging ? "forge" : "bench";
+      && !session.trading && !session.forging && !session.sorting && !session.bountying;
+    const frame = session.trading ? "trade" : session.forging ? "forge" : session.bountying ? "bounty" : "bench";
     session.away = false;
     this.inGatehouse.delete(session.pubkey); // out through the door — the only way out
     session.keeperDueAt = 0; // whatever he had left to say keeps until you're back
     session.trading = false;
     session.forging = false;
+    session.bountying = false;
     session.sorting = false;
     session.stepText = false;
     session.buying = undefined;
@@ -3893,6 +3924,9 @@ export class ZoneDO implements DurableObject {
     // The keeper's shelves breathe: restocks come in, and every few hours an
     // off-screen customer buys him out of some one thing.
     gate.tickFence(this, now);
+    // The bounty board churns on the same clock — trophies off the board, a
+    // fresh set pinned up.
+    gate.tickBounty(this, now);
 
     // A gatehouse shuts for works now and then, and opens again when they're
     // done. The gate ROOM is never touched — only what's behind the door.
@@ -5073,6 +5107,19 @@ export class ZoneDO implements DurableObject {
       this.groundTorch.set(fell, Math.max(this.groundTorch.get(fell) ?? 0, fallenFlame));
       this.roomFeed(fell, "A torch falls from a dead hand and burns on where it lands, throwing long shadows.", victim.pubkey, false);
     }
+    // THE DYING HAND (gate.deathStash): the chart and the book go into the
+    // lockbox on the way down, if the box has a slot for them. Runs BEFORE the
+    // spill is taken, so what it saves is never in `scattered` — everything
+    // else still falls exactly as it did.
+    const kept = await gate.deathStash(this, victim);
+    if (kept.length) {
+      this.roomFeed(
+        fell,
+        `${victim.name} gets a hand to their lockbox on the way down, and shoves something into it.`,
+        victim.pubkey,
+        false,
+      );
+    }
     const scattered = victim.items;
     const hadSealed = scattered.some((c) => c.serial !== null);
     if (scattered.length > 0) {
@@ -5141,7 +5188,12 @@ export class ZoneDO implements DurableObject {
         ? hadSealed
           ? "Everything you carried lies where you fell — the gate's seals cracked as they left your hands. Only the lockbox and vault keep."
           : "Everything you carried lies where you fell."
-        : "You carried nothing worth scattering.";
+        : kept.length ? "Nothing else was left to scatter." : "You carried nothing worth scattering.";
+    // What the dying hand got into the box, named — so it is never a thing the
+    // player has to go and check for.
+    const keptClause = kept.length
+      ? `\nYour hand found the lockbox before the dark did: ${kept.length > 1 ? `${kept[0]} and ${kept[1]}` : kept[0]} — still yours.`
+      : "";
     // Woken at home, the gate is never mentioned — you didn't come through one.
     // The killing clause is kept; only where you surface changes, and the bar
     // (or the empty sockets) is the first thing you'd know about the room.
@@ -5168,7 +5220,7 @@ export class ZoneDO implements DurableObject {
       `You fold, the wound still weeping.\nThe dark takes you — and gives you back at the gate.`,
       `The stones go red beneath you, then grey.\nThen cold air, and the gate, and breath again.`,
     ]);
-    this.send(victim, `${end} ${fate}`, "death big");
+    this.send(victim, `${end} ${fate}${keptClause}`, "death big");
     // Nobody watches you arrive when you wake behind your own door — the street
     // outside sees a shut door, the same as it did a moment ago.
     if (!home) this.roomFeed(victim.roomId, `${victim.name} staggers back through the gate, pale.`, victim.pubkey, false);

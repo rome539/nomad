@@ -24,6 +24,7 @@ export type Verb =
   | "smelt"
   | "repair"
   | "barter"
+  | "bounty"
   | "buy"
   | "offer"
   | "inventory"
@@ -112,6 +113,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   smelt: "smelt", melt: "smelt",
   repair: "repair", mend: "repair", fix: "repair",
   barter: "barter", trade: "barter", shop: "barter", browse: "barter", fence: "barter",
+  bounty: "bounty", bounties: "bounty", // the keeper's trophy board: trophies in, meals out
   buy: "buy", purchase: "buy",
   offer: "offer", pay: "offer", sell: "offer", give: "offer",
   inventory: "inventory", inv: "inventory", i: "inventory", bag: "inventory", items: "inventory",
@@ -471,6 +473,12 @@ export const HELP_TEXT = [
   "                    kind. 'buy <thing>' names your want, then 'offer <thing>'",
   "                    lays goods on the counter until he's square. He gives no",
   "                    change, buys nothing outright, and touches nothing sealed.",
+  "  bounty            the keeper's OTHER board: named trophies, paid in a meal.",
+  "                    Not a better price than his shelves — what it pays is food",
+  "                    he never stocks, and it pays when the shelves are bare.",
+  "                    'bounty' reads it; 'bounty claim <trophy>' hands the trophy",
+  "                    over. Each posting pays you once; the board turns over every",
+  "                    hour or so, and everyone reads the same four.",
   "  fish              (cast) — at any standing water: the black fen, the drowned",
   "                    orchard, the flooded quarry, and the Tideways' pools far",
   "                    below. The catch is rare, but a fish is good food, and the",

@@ -195,13 +195,20 @@ export async function sendDeal(z: ZoneDO, session: Session, deal: Deal, note?: s
   const theirOffer = mine ? deal.offerB : deal.offerA;
   const other = z.sessions.get(otherOf(deal, session.pubkey));
   const nameOf = (o: DealItem) => world.itemTemplates.get(o.itemId)?.name ?? o.itemId;
-  const goods = new Map<string, { itemId: string; name: string; rarity: string; pool: "" | "lockbox" | "vault"; n: number }>();
+  // Rarity and slot ride every row on both sides of the deal: the client paints
+  // a gear name by its tier wherever it draws one, and a slot is how it knows a
+  // row IS gear (a ration has a rarity too, and must never wear a colour).
+  const tierOf = (o: DealItem) => {
+    const t = world.itemTemplates.get(o.itemId);
+    return { rarity: t?.rarity ?? "common", slot: t?.slot ?? "" };
+  };
+  const goods = new Map<string, { itemId: string; name: string; rarity: string; slot: string; pool: "" | "lockbox" | "vault"; n: number }>();
   for (const { item: c, pool } of await tradePools(z, session, deal.gatehouse)) {
     if (yourOffer.some((o) => o.rowId === c.rowId)) continue;
     const t = world.itemTemplates.get(c.itemId);
     if (!t) continue;
     const key = pool + ":" + t.id;
-    const g = goods.get(key) ?? { itemId: t.id, name: t.name, rarity: t.rarity, pool, n: 0 };
+    const g = goods.get(key) ?? { itemId: t.id, name: t.name, rarity: t.rarity, slot: t.slot, pool, n: 0 };
     g.n += 1;
     goods.set(key, g);
   }
@@ -209,8 +216,8 @@ export async function sendDeal(z: ZoneDO, session: Session, deal: Deal, note?: s
     session.ws.send(JSON.stringify({
       v: 0, t: "swap", open: true, pending: false,
       partner: other?.name ?? "someone who just stepped away",
-      yourOffer: yourOffer.map((o) => ({ itemId: o.itemId, name: nameOf(o) })),
-      theirOffer: theirOffer.map((o) => ({ itemId: o.itemId, name: nameOf(o) })),
+      yourOffer: yourOffer.map((o) => ({ itemId: o.itemId, name: nameOf(o), ...tierOf(o) })),
+      theirOffer: theirOffer.map((o) => ({ itemId: o.itemId, name: nameOf(o), ...tierOf(o) })),
       yourConfirm: mine ? deal.confirmA : deal.confirmB,
       theirConfirm: mine ? deal.confirmB : deal.confirmA,
       pack: [...goods.values()],
