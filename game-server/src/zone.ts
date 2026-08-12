@@ -223,6 +223,7 @@ export class ZoneDO implements DurableObject {
   // Keyed by pubkey: your chalk, your chart. The plaster is communal furniture;
   // what is written on it is not.
   public wallMarks = new Map<string, Set<string>>();
+  public walked = new Map<string, Set<string>>();   // rooms each player has crossed since their last death — the wall's evidence (walkedOf)
   // The gatehouse board, oldest first. The only place a player's words outlive
   // the session they were said in (zone-data BOARD_*).
   public board: { name: string; words: string; at: number }[] = [];
@@ -531,6 +532,9 @@ export class ZoneDO implements DurableObject {
           ? Object.entries(savedWall as Record<string, string[]>).map(([pk, rooms]) => [pk, new Set(rooms)] as const)
           : [],
       );
+      this.walked = new Map(
+        Object.entries(saved.walked ?? {}).map(([pk, rooms]) => [pk, new Set(rooms)] as const),
+      );
       this.board = saved.board ?? [];
       this.stoneNames = new Map(Object.entries(saved.stoneNames ?? {}));
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
@@ -816,6 +820,10 @@ export class ZoneDO implements DurableObject {
       wallMarks: Object.fromEntries(
         [...this.wallMarks].filter(([, rooms]) => rooms.size).map(([pk, rooms]) => [pk, [...rooms]]),
       ),
+      // Same law as the chalk above: an empty walk is not worth a row.
+      walked: Object.fromEntries(
+        [...this.walked].filter(([, rooms]) => rooms.size).map(([pk, rooms]) => [pk, [...rooms]]),
+      ),
       board: this.board,
       stoneNames: Object.fromEntries(this.stoneNames),
       cacheSpent: Object.fromEntries(this.cacheSpent),
@@ -878,6 +886,7 @@ export class ZoneDO implements DurableObject {
     this.groundRolled.clear();
     this.groundHeart.clear();
     this.wallMarks.clear(); // a fresh world has fresh plaster — old room ids mean nothing here
+    this.walked.clear();    // ...and nobody has walked a room that no longer exists
 
 
     this.board = [];         // a bare board: nobody has pinned anything to it yet
@@ -1056,7 +1065,7 @@ export class ZoneDO implements DurableObject {
       }
       session.away = true;
       session.stepText = true;
-      session.visited.add(session.roomId);
+      this.markWalked(session);
       // The rebuilt session has no open stance (sorting/trading/forging default
       // false), but the client may still be showing a modal it had open when the
       // socket dropped. Dismiss it so the view matches the restored state — else
@@ -1072,7 +1081,7 @@ export class ZoneDO implements DurableObject {
     // Either way, mark the wake room known and show it: full on a real arrival,
     // brief on a re-weave (you never left). Status goes first so the client
     // knows the room's name in time to paint it gold.
-    session.visited.add(session.roomId);
+    this.markWalked(session);
     this.sendStatus(session);
     if (!seamless) this.send(session, this.describeRoom(session, !reconnecting));
     this.sendCtx(session);
@@ -5336,9 +5345,48 @@ export class ZoneDO implements DurableObject {
     return mine;
   }
 
+  // WHAT YOU HAVE WALKED, AND STILL REMEMBER (rome, 2026-08-12: hundreds of
+  // halls walked, and the wall would take TWO).
+  //
+  // `carve` sets down what the server saw you stand in — testimony, not
+  // hearsay, and that law is right. It read session.visited, which is built
+  // fresh in buildSession... and buildSession runs on every reconnect AND on
+  // every DO rebuild. A Durable Object hibernating is not an event a player
+  // can see, consent to, or avoid; it happens because nobody has spoken for a
+  // few minutes. So a walk of three hundred rooms was silently cut back to
+  // whatever you had crossed since the last time the server happened to go to
+  // sleep, and you carried two halls to the wall having earned three hundred.
+  //
+  // The walk is a fact about the PLAYER, so it is kept where the other facts
+  // about a player are kept — beside their chalk, in the world's own state,
+  // riding the same save. session.visited stays exactly as it was and still
+  // governs the prose (full scene once, brief after), because that one really
+  // is per-connection: a reconnect earning you the long description of the
+  // room you woke in is not a bug.
+  //
+  // NOTHING CLEARS IT. A first pass had death spend the record — and that was
+  // an invention: the old session.visited survived dying perfectly well (the
+  // session is not rebuilt by a death), so "you lose your walk when you fall"
+  // would have been a NEW penalty smuggled in under a bug fix, and a worse
+  // version of the very complaint this fixes. The record is every room the
+  // server has seen you stand in, and it keeps until the world itself is
+  // reseeded. Carving is idempotent — rooms already on your wall are filtered
+  // out — so it can only ever be re-read, never double-spent.
+  public walkedOf(pubkey: string): Set<string> {
+    let mine = this.walked.get(pubkey);
+    if (!mine) { mine = new Set(); this.walked.set(pubkey, mine); }
+    return mine;
+  }
+
+  /** One room, marked known: the session's prose memory AND the walk record. */
+  public markWalked(session: Session): void {
+    session.visited.add(session.roomId);
+    this.walkedOf(session.pubkey).add(session.roomId);
+  }
+
   public enterDescribe(session: Session): string {
     const full = !session.visited.has(session.roomId);
-    session.visited.add(session.roomId);
+    this.markWalked(session);
     return this.describeRoom(session, full);
   }
 

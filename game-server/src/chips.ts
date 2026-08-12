@@ -72,7 +72,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // only offers when you have something of your own to read.
     const myWall = z.wallOf(session.pubkey);
     if (myWall.size) inside.push("study");
-    if ([...session.visited].some((r) => !myWall.has(r) && z.world!.rooms.has(r))) inside.push("carve");
+    if ([...z.walkedOf(session.pubkey)].some((r) => !myWall.has(r) && z.world!.rooms.has(r))) inside.push("carve");
     // The board, offered only when somebody has actually pinned something —
     // a chip for an empty board teaches nothing and costs a row.
     if (gate.boardCount(z)) inside.push("board");

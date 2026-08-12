@@ -539,7 +539,7 @@ function agedProse(itemId: string, edible: boolean, at: number | undefined): str
 export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise<void> {
   // A deliberate look always gives the full scene — and marks the room known,
   // so from here you get the brief view unless you ask again.
-  if (!arg) { session.visited.add(session.roomId); return z.send(session, z.describeRoom(session, true, true)); }
+  if (!arg) { z.markWalked(session); return z.send(session, z.describeRoom(session, true, true)); }
   const world = z.world!;
 
   if (arg === "self" || arg === "me" || arg === "myself") return z.send(session, selfExamine(z, session));

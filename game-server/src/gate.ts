@@ -2232,7 +2232,7 @@ export async function wallCarve(z: ZoneDO, session: Session): Promise<void> {
   // (A returning player re-walks before they can carve: what you set down is
   // what you remember from this walk, not a rumor of an old one.)
   const mine = z.wallOf(session.pubkey);
-  const fresh = [...session.visited].filter((r) => ring.has(r) && !mine.has(r));
+  const fresh = [...z.walkedOf(session.pubkey)].filter((r) => ring.has(r) && !mine.has(r));
   if (!fresh.length) {
     return z.send(session, mine.size
       ? "You read your memory against your own corner of the wall. Every hall you walked this time is already scratched there, in your hand."
