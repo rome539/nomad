@@ -3903,7 +3903,15 @@ function renderForge(state) {
 var mapEl = document.getElementById("mapm");
 var mapBody = document.getElementById("mapbody");
 document.getElementById("mapclose").addEventListener("click", closeMap);
-function closeMap() { mapEl.classList.remove("open"); hideModalChat(); }
+// Closing DROPS the camera. It is kept only for as long as the sheet is open,
+// so a redraw while you are reading it does not throw away your panning — but
+// the NEXT map you open is a new sheet and gets centred on you like the first
+// one did. Without this the flag was set once per page load and never cleared,
+// so every chart after your first opened with the view still parked over
+// wherever you had last looked: carve at one gatehouse, walk to another, study,
+// and the canvas showed empty plaster with all your halls off-screen. Nothing
+// was ever lost from the wall — you were looking at the wrong part of it.
+function closeMap() { mapEl.classList.remove("open"); mapCamKept = false; hideModalChat(); }
 // The map is drawn live from the room graph the Worker sends (rooms + exits +
 // which one you stand in) — not a fixed poster. Rooms have no coordinates, only
 // directional exits, so we walk the graph onto a grid (north = up a cell, east =
@@ -4375,6 +4383,24 @@ function drawMap() {
 function mapZoom(f) { mapCam.scale = Math.max(0.4, Math.min(2.6, mapCam.scale * f)); drawMap(); }
 function mapCenterHere() {
   if (mapGraph && mapGraph.placed[mapGraph.here]) { var p = mapGraph.placed[mapGraph.here]; mapCam.cx = p.x; mapCam.cy = p.y; }
+  else if (mapGraph) {
+    // YOU ARE NOT ON THIS SHEET. The wall chart holds only what you carved, so
+    // standing in a gatehouse whose gate you have not set down leaves 'here'
+    // off the drawing entirely — and this used to do nothing at all, which
+    // meant the one button that recovers a lost view was dead in exactly the
+    // case you need it. Fall back to the middle of what IS drawn.
+    var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity, any = false;
+    for (var k in mapGraph.placed) {
+      var q = mapGraph.placed[k];
+      if (!q || !isFinite(q.x) || !isFinite(q.y)) continue;
+      any = true;
+      if (q.x < minx) minx = q.x;
+      if (q.x > maxx) maxx = q.x;
+      if (q.y < miny) miny = q.y;
+      if (q.y > maxy) maxy = q.y;
+    }
+    if (any) { mapCam.cx = (minx + maxx) / 2; mapCam.cy = (miny + maxy) / 2; }
+  }
   drawMap();
 }
 function wireMap() {

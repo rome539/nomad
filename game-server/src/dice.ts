@@ -153,9 +153,29 @@ export async function cmdDice(z: ZoneDO, session: Session, arg: string): Promise
   if (!z.outOfWorld(session)) {
     return z.send(session, "The bones live on the gatehouse bench, and that is the only place anybody is fool enough to play.");
   }
+  const want = arg.trim();
+  // THE ANSWER TO A CALL COMES FIRST, BEFORE ANY STATUS LINE (rome, 2026-08-12:
+  // called out at the bench and could not accept or decline).
+  //
+  // callOut registers the pending game under BOTH players, so the instant
+  // somebody calls you out you HAVE a live game — and the "here is where your
+  // game stands" guard used to sit at the top of this function and return on
+  // it. Every 'dice accept' the called player typed hit that line and came
+  // back with the same reminder to type 'dice accept'. acceptCall and
+  // declineCall were unreachable code for the one person who needed them, and
+  // the game could only ever end by somebody walking away from the bench.
+  //
+  // This is the SAME mistake as the entry bug two ships ago — a guard in front
+  // of the routing, answering a word before reading it. The words that ANSWER
+  // are matched first now; the status line is what you get for anything else.
+  if (/^(accept|yes|aye|deal|on)$/i.test(want)) return acceptCall(z, session);
+  if (/^(decline|no|nah|refuse)$/i.test(want)) return declineCall(z, session);
+  // ...and the reading stays available mid-hand: a player who has forgotten
+  // whether 21 is bust should not have to lose to find out.
+  if (/^(table|bowl|bones|rules|read)$/i.test(want)) return z.send(session, diceTable(z, session));
+
   const live = gameOf(z, session.pubkey);
   if (live) return z.send(session, gameLine(z, live, session));
-  const want = arg.trim();
   // BARE 'dice' TAKES THE BONES UP. It read the table instead when this shipped,
   // which every line of copy in the game contradicted — the help, the table's own
   // last line and the chip all said bare 'dice' rolls the keeper — and the result
@@ -164,13 +184,8 @@ export async function cmdDice(z: ZoneDO, session: Session, arg: string): Promise
   // you look at, which is what 'look bones' has always been for.
   if (!want) return keeperGame(z, session, "");
 
-  // ...and the reading is still a word away, for anyone who wants the rules
-  // and the bowl without committing to a hand.
-  if (/^(table|bowl|bones|rules|read)$/i.test(want)) return z.send(session, diceTable(z, session));
-
-  // 'dice accept' / 'dice decline' answer a call that's already been made.
-  if (/^(accept|yes|aye|deal|on)$/i.test(want)) return acceptCall(z, session);
-  if (/^(decline|no|nah|refuse)$/i.test(want)) return declineCall(z, session);
+  // (the table read and the two answers are matched at the top now — they must
+  // run whether or not a game is already on the bench.)
 
   // A NAME BY THE FIRE BEATS A THING IN THE PACK. "dice rustpilgrim wolf pelt"
   // is a call with a stake; "dice wolf pelt" is the keeper's game.
