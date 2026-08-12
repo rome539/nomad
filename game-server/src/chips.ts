@@ -37,15 +37,16 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // the brazier — and your own kit last, because it's the one thing here that
     // isn't the room.
     const inside = ["out"];
-    // THE BONES first when they're in your hand: a game in flight owns the room
-    // until it's settled, and its two chips ARE the game. Bare 'dice' otherwise,
-    // which reads the table and the keeper's bowl and teaches the rest.
+    // THE BONES, only once they're in your hand. There is no chip that STARTS a
+    // game (rome, 2026-08-12): the bones are something you find by looking at
+    // the man who keeps them, the way everything else in this room is found —
+    // the tray should not be handing out an invitation to gamble. But a game in
+    // flight owns the room until it's settled, and these chips ARE the game, so
+    // they stand while it lasts.
     const game = dice.gameOf(z, session.pubkey);
     if (game) {
       if (game.pending && game.b === session.pubkey) inside.push("dice accept", "dice decline");
       else if (!game.pending && game.turn === session.pubkey) inside.push("roll", "stand");
-    } else {
-      inside.push("dice");
     }
     if (world.fenceStock.length) inside.push(TRADE_CHIP);
     // The bounty board: shown when the keeper has actually posted a trophy he's

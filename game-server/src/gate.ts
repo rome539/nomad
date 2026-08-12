@@ -1922,8 +1922,18 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
   // description — a slab of banded oak — which is not what anybody means when
   // they look at the person they have been trading with for weeks.
   if (is("keeper", "barman", "him", "man", "landlord")) {
+    // AND THE MAN IS HOW YOU FIND THE GAME (rome, 2026-08-12). The bones used to
+    // announce themselves with a chip in the tray, which is the wrong way round
+    // for this room: everything else in the gatehouse is discovered by looking at
+    // it, and a game of dice is something you notice a barman keeps, not a button
+    // the world hands you. So he carries it, and the bowl's own state does the
+    // teaching — an empty bowl says plainly that he has nothing to put up.
+    const bowl = z.keeperBowl.length
+      ? `Under his elbow there is a shallow bowl with five old bones in it, and ${z.keeperBowl.length === 1 ? "a trophy" : `${z.keeperBowl.length} trophies`} underneath them that he did not walk out and kill. He will roll you for them if you ask. ('dice' to take them up)`
+      : "Under his elbow there is a shallow bowl with five old bones in it and nothing else, which he will roll you for if you ask, though he has nothing to put up against a stake just now. ('dice' to take them up)";
     return "You cannot see much of him and you never have: the hatch is at chest height and shut, and what shows is a pair of forearms, a rag going round the inside of a cup, and the top of a head bent over work that does not need doing. "
-      + "He knows the sound of the door. He has never once asked your name, and he has never once got your order wrong.";
+      + "He knows the sound of the door. He has never once asked your name, and he has never once got your order wrong.\n"
+      + bowl;
   }
   if (is("hatch", "shutter", "keepers hatch", "keeper's hatch", "counter")) {
     return "A shutter of banded oak set into the far wall at chest height, closed. There is a worn place on the sill where hands have rested, and a deeper one where things have been slid across. Whoever is behind it does not open it to be looked at. ('barter' opens it)";
