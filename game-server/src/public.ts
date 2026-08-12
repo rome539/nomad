@@ -167,7 +167,12 @@ export const PAGE = `<!doctype html>
      (keys). The room label is the one that gives — it shrinks and ellipsizes
      first (the log already says where you are); a marathon name ellipsizes
      last. Without these, a phone clips one end of the bar or the other. */
-  #room { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+  #room { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; white-space: nowrap; }
+  /* The bar names the room, then the country it stands in \u2014 dimmer and
+     second, so a glance still lands on the room first. On a narrow screen the
+     region is the half that goes: the room name is the one you need. */
+  #room .rrg { color: var(--dim); }
+  @media (max-width: 520px) { #room .rrg { display: none; } }
   #idbtn { cursor: pointer; user-select: none; min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #idbtn .caret { color: var(--gold); }
   #brand .caret { color: var(--gold); letter-spacing: 0; margin-left: 0.15em; font-size: 0.85em; }
@@ -1329,6 +1334,7 @@ var GOOGLE_PICKER_KEY = "__GOOGLE_PICKER_KEY__";
 var log = document.getElementById("log");
 var cmd = document.getElementById("cmd");
 var roomEl = document.getElementById("room");
+var lastRoomName = ""; // the room the bar last named, for the chip-fold test
 var hpEl = document.getElementById("hp");
 var fxEl = document.getElementById("fx");
 var chipsEl = document.getElementById("chips");
@@ -2477,8 +2483,21 @@ async function connect() {
       // (rome, 2026-07-26): keyed on the suggest LIST before, so a mob simply
       // walking into your room — adding one chip — changed the key and
       // collapsed an expanded "+more" right when a fight might be starting.
-      if (f.room && f.room !== roomEl.textContent) chipsExpanded = false;
-      roomEl.textContent = f.room || "";
+      // Keyed on the room NAME, not on what the element reads \u2014 the bar now
+      // carries the region too, and folding the chips every time that changed
+      // would collapse a "+more" for a step that never left the room.
+      if (f.room && f.room !== lastRoomName) chipsExpanded = false;
+      lastRoomName = f.room || "";
+      roomEl.textContent = "";
+      if (f.room) {
+        roomEl.appendChild(document.createTextNode(f.room));
+        if (f.region) {
+          var rg = document.createElement("span");
+          rg.className = "rrg";
+          rg.textContent = " \u00b7 " + f.region;
+          roomEl.appendChild(rg);
+        }
+      }
       if (f.room) knownRooms[f.room] = 1;
       hpEl.textContent = f.hp + "/" + f.max_hp + " hp \\u00b7 " + f.name;
       // Remember the name for the threshold's greeting next visit.

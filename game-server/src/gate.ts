@@ -1930,6 +1930,16 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
   if (is("bench", "seat")) {
     return "A long bench under the hatch, worn to a shine down the middle and gouged all along the front edge — a hundred people's boots, and a hundred people's knives, waiting for the same shutter to open.";
   }
+  // The bones. 'dice' answers here for the same reason 'carve' does: the bowl is
+  // named in the room, so it has to answer to being looked at.
+  if (is("bones", "dice", "bowl", "gaming bowl", "wooden bowl")) {
+    const bowl = z.keeperBowl.length;
+    return "A shallow wooden bowl on the end of the bench with five old bones in it, yellowed and worn round at the corners, each one pipped by hand and none of them quite matching. "
+      + (bowl === 0
+        ? "There is nothing else in the bowl. Whatever the keeper had, somebody has already won it off him."
+        : `Underneath them, ${bowl === 1 ? "one trophy" : `${bowl} trophies`}, cut off things that are dead and lost by people who sat where you are sitting.`)
+      + " ('dice' to take them up)";
+  }
   if (is("brazier", "coals", "fire", "flame", "embers", "hearth")) {
     return "An iron basket on three legs, standing in a dish of its own ash. The coals are low and orange and somebody keeps them that way — there is a scuttle beside it that never seems to empty. It is the only heat on this side of the door.";
   }

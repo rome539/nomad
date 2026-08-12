@@ -10,6 +10,7 @@ import * as gate from "./gate";
 import * as den from "./den";
 import * as works from "./works";
 import * as ai from "./ai";
+import * as dice from "./dice";
 import { chipName, nameMatches, shortName } from "./zone-util";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
@@ -36,6 +37,16 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // the brazier — and your own kit last, because it's the one thing here that
     // isn't the room.
     const inside = ["out"];
+    // THE BONES first when they're in your hand: a game in flight owns the room
+    // until it's settled, and its two chips ARE the game. Bare 'dice' otherwise,
+    // which reads the table and the keeper's bowl and teaches the rest.
+    const game = dice.gameOf(z, session.pubkey);
+    if (game) {
+      if (game.pending && game.b === session.pubkey) inside.push("dice accept", "dice decline");
+      else if (!game.pending && game.turn === session.pubkey) inside.push("roll", "stand");
+    } else {
+      inside.push("dice");
+    }
     if (world.fenceStock.length) inside.push(TRADE_CHIP);
     // The bounty board: shown when the keeper has actually posted a trophy he's
     // paying for — a chip for an empty board teaches nothing.

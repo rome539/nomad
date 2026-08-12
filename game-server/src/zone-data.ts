@@ -3267,6 +3267,23 @@ export const BOUNTY_TABLE: [string, string, number?][] = [
   ["pale-pelt", "smoked-haunch", 2],   // 12b -> heal 24, and it keeps (the rare-pelt bounty; near the top of the board)
   ["wolf-skull", "salt-fish", 2],      // 14b -> heal 28, and it keeps (the board's top end)
 ];
+// ---- the bones: the gatehouse dice game (2026-08-12) ----
+// Push your luck. Two bones to open, one at a time after, and the whole game is
+// the question of when to stop. See dice.ts for the design; these are the only
+// numbers in it.
+//
+// The spread is chosen so that neither end of it is a free ride. An opening
+// cast averages 7, so the first decision is nearly always "yes" — the game
+// starts by giving you something easy and then makes you keep choosing. Bust at
+// 22+ means a hand of 15 has a coin's chance of surviving one more bone, which
+// is exactly where a wager should sit. And the keeper standing at 18 leaves a
+// real band (18-21) where a good hand beats him and a great one can still be
+// caught, instead of a number you either clear or don't.
+export const DICE_OPEN_BONES = 2;   // the opening cast
+export const DICE_BUST = 21;        // over this and the hand is dead where it stands
+export const DICE_STAND = 18;       // the keeper's own rule, followed in the open
+export const DICE_BOWL_CAP = 12;    // his winnings; past this the cheapest one moves on
+
 export const BOUNTY_BOARD_SIZE = 4;        // how many trophies the keeper posts at once
 export const BOUNTY_CHURN_MIN_MS = 45 * 60_000; // the board churns every ~45-90 min
 export const BOUNTY_CHURN_MAX_MS = 90 * 60_000;
@@ -4441,6 +4458,10 @@ export const GATEHOUSE_BARRED = new Set([
 export const GATEHOUSE_NOARG = new Set([
   "who", "inventory", "rest", "enter", "exit", "barter",
   "map", "study", "carve", "journal", "sheet", "help", "smoke",
+  // The bones. `roll` and `stand` are bare-only, so "stand up" and "roll with
+  // it" stay things a person says at a fire. `dice` is NOT here — it carries a
+  // stake or a name ("dice rustpilgrim wolf pelt") and has to command.
+  "roll", "stand",
   // `board` reads the notices and takes nothing — so "board up that door" is a
   // sentence spoken at the fire, not a read. `post` and `tear` are NOT here:
   // they carry their words, and an explicit command must run.
@@ -4483,6 +4504,25 @@ export const KEEP_HEARD_BANDS = new Set<string>(["gate", "road", "wood", "mounta
 export const FEN_HEARD_BANDS = new Set<string>(["gate", "wood", "mountain", "den", "crossing"]); // the fen's lights, to the rest of the surface
 export const WANT_HEARD_BANDS = new Set<string>(["road", "wood", "mountain", "den", "crossing"]); // the keeper's chalk, out to where the hunters are
 export const GLOAM_HEARD_BANDS = new Set<string>(["gate", "upper", "deep", "warrens"]); // the walking dark: the whole fortress notices a room go out
+
+// WHAT A REGION IS CALLED, in one place. The map frame and the wall chart each
+// build their own {key,label,rooms} dictionary and have done since before there
+// were regions worth naming — and a band missing from one of those tables is
+// how the Crossing spent a week drawing itself gold in the Halls. The HUD reads
+// THIS instead of growing a third hand-written copy of the same names.
+export const REGION_LABELS: Record<string, string> = {
+  gate: "The Gates",
+  out: "The Open Ground",
+  sky: "The Overworks",
+  upper: "The Halls",
+  warrens: "The Warrens",
+  deep: "The Deep",
+  road: "The Roads",
+  wood: "The Wood",
+  den: "The Dens",
+  mountain: "The Mountain",
+  crossing: "The Crossing",
+};
 
 export const MAP_BAND_OF: Record<string, number> = {
   sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, den: 1, crossing: 1, upper: 2, warrens: 3, deep: 4,

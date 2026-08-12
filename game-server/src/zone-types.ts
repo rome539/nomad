@@ -226,5 +226,6 @@ export interface SimState {
   nests?: Record<string, string[]>; // corvid nests: nest roomId -> gear the raven carried home (ABSTRACT — off the floor, visible only through feeding/raiding the nest itself)
   bounties?: [string, string, number?][]; // the keeper's bounty board: [trophyId, foodId, count?] currently posted (rotates like the fence)
   nextBountyChurnAt?: number; // ms the board next rolls a fresh set of trophies
+  keeperBowl?: string[]; // the bones: trophies the keeper has won off people at the gatehouse bench, and what he can put up against a stake (dice.ts)
   bountyTaken?: Record<string, string[]>; // pubkey -> trophyIds that wanderer has already claimed off the CURRENT board (cleared on churn; a posting is one meal per person, not one meal in the world)
 }

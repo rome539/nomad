@@ -68,6 +68,7 @@ import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
+import * as dice from "./dice";
 import * as works from "./works";
 import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS } from "./detail";
@@ -96,6 +97,7 @@ import {
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
+  REGION_LABELS,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS, KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
@@ -172,6 +174,11 @@ export class ZoneDO implements DurableObject {
   // Rotates like the fence; survives hibernation (gate.ts owns the churn).
   public bounties: [string, string, number?][] = [];
   public nextBountyChurnAt = 0;
+  // THE BONES (dice.ts). Games in flight are EPHEMERAL — nothing leaves a pack
+  // until the last bone is down, so a wake mid-game costs nobody a trophy. The
+  // keeper's bowl is not: it is the house's winnings and it belongs to the world.
+  public diceGames = new Map<string, dice.DiceGame>();
+  public keeperBowl: string[] = [];
   // Who has already collected on which posting. A bounty is one meal PER
   // WANDERER, not one meal in the world — the posting stays up for everybody
   // else until the board churns, and the churn wipes this clean.
@@ -489,6 +496,7 @@ export class ZoneDO implements DurableObject {
       this.fenceOut = new Map(Object.entries(saved.fenceOut ?? {}));
       this.bounties = saved.bounties ?? [];
       this.nextBountyChurnAt = saved.nextBountyChurnAt ?? 0;
+      this.keeperBowl = saved.keeperBowl ?? [];
       this.bountyTaken = new Map(Object.entries(saved.bountyTaken ?? {}).map(([k, v]) => [k, new Set(v)]));
       this.bloodOn = new Map(Object.entries(saved.bloodOn ?? {}));
       this.nextStoneAt = saved.nextStoneAt ?? 0;
@@ -779,6 +787,7 @@ export class ZoneDO implements DurableObject {
       fenceOut: Object.fromEntries(this.fenceOut),
       bounties: this.bounties,
       nextBountyChurnAt: this.nextBountyChurnAt,
+      keeperBowl: this.keeperBowl,
       bountyTaken: Object.fromEntries(
         [...this.bountyTaken].filter(([, took]) => took.size).map(([pk, took]) => [pk, [...took]]),
       ),
@@ -849,6 +858,8 @@ export class ZoneDO implements DurableObject {
     this.bounties = [];
     this.nextBountyChurnAt = 0;
     this.bountyTaken.clear();
+    this.keeperBowl = [];
+    this.diceGames.clear();
     this.bloodOn.clear();
     this.nextStoneAt = 0;
     this.nextBrandAt = 0;
@@ -1128,6 +1139,7 @@ export class ZoneDO implements DurableObject {
     // — a deal they had open can't wait for them (the counterparty needs to
     // know now, not whenever they might reconnect).
     trade.cancelDealForSession(this, session);
+    dice.endGamesFor(this, session.pubkey); // and any bones in the air (dice.ts)
     // The world stays real when your eyes close (rome, 2026-07-10): a LIVE
     // fight holds the body here for LINKDEAD_MS — standing, auto-fighting,
     // killable — so pulling the plug is never an escape. With nothing hunting
@@ -1475,6 +1487,9 @@ export class ZoneDO implements DurableObject {
       case "repair": return gate.cmdRepair(this, session, cmd.arg);
       case "barter": return gate.cmdBarter(this, session);
       case "bounty": return gate.cmdBounty(this, session, cmd.arg);
+      case "dice": return dice.cmdDice(this, session, cmd.arg);
+      case "roll": return dice.cmdRoll(this, session);
+      case "stand": return dice.cmdStand(this, session);
       case "buy": return gate.cmdBuy(this, session, cmd.arg);
       case "offer": return gate.cmdOffer(this, session, cmd.arg);
       case "inventory": return verbs.cmdInventory(this, session);
@@ -2262,6 +2277,7 @@ export class ZoneDO implements DurableObject {
     const wasOutOfWorld = this.outOfWorld(session);
     if (!wasOutOfWorld && !session.away) return this.send(session, "You're already out in the world.");
     session.resting = false; // the door wakes you — nobody sleepwalks into the dungeon
+    dice.endGamesFor(this, session.pubkey); // you cannot walk out of the room and keep playing in it
     // The door-shutting line is the GATEHOUSE'S own — a lockbox crouch mid-dungeon
     // never went through any door, and leaveStep already sends the right local
     // "steps back from the bench" line for that case.
@@ -5092,6 +5108,7 @@ export class ZoneDO implements DurableObject {
     victim.litUntil = undefined; victim.litSource = undefined; victim.torchWarned = undefined;
     victim.buying = undefined; // death ends any open trade; the counter clears
     trade.cancelDealForSession(this, victim); // and any open deal with another wanderer
+    dice.endGamesFor(this, victim.pubkey); // a dead hand plays no bones — nothing staked changes hands
     victim.deaths += 1;
     await recordDeath(this.env.DB, victim.pubkey);
 
@@ -6240,6 +6257,13 @@ export class ZoneDO implements DurableObject {
           // you are behind its door, and the bar saying otherwise was the visible
           // face of a deeper lie: the world still had you standing in the gate room.
           room: this.outOfWorld(session) ? "The Gatehouse" : den.roomTitle(this, session, room?.name ?? session.roomId),
+          // AND WHAT COUNTRY THAT ROOM IS IN (rome, 2026-08-12). The bar named
+          // the room and nothing else, so "The Weeper's Arch" told you where you
+          // were standing and never which of the world's bands you were standing
+          // in. Behind a door it still answers: the gatehouse belongs to the gate
+          // it is built into, so the bar reads the ground outside rather than
+          // going blank the moment you step in out of the cold.
+          region: REGION_LABELS[lore.mapRegionOf(this, session.roomId)] ?? "",
           fx,
         }),
       );

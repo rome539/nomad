@@ -25,6 +25,9 @@ export type Verb =
   | "repair"
   | "barter"
   | "bounty"
+  | "dice"
+  | "roll"
+  | "stand"
   | "buy"
   | "offer"
   | "inventory"
@@ -114,6 +117,11 @@ const VERB_ALIASES: Record<string, Verb> = {
   repair: "repair", mend: "repair", fix: "repair",
   barter: "barter", trade: "barter", shop: "barter", browse: "barter", fence: "barter",
   bounty: "bounty", bounties: "bounty", // the keeper's trophy board: trophies in, meals out
+  // THE BONES (gatehouse only). 'hold' is already equip's, so the game's word
+  // for holding is 'stand' \u2014 which is what you'd say at the table anyway.
+  dice: "dice", bones: "dice", gamble: "dice", wager: "dice", bet: "dice",
+  roll: "roll",
+  stand: "stand", stay: "stand",
   buy: "buy", purchase: "buy",
   offer: "offer", pay: "offer", sell: "offer", give: "offer",
   inventory: "inventory", inv: "inventory", i: "inventory", bag: "inventory", items: "inventory",
@@ -473,6 +481,15 @@ export const HELP_TEXT = [
   "                    kind. 'buy <thing>' names your want, then 'offer <thing>'",
   "                    lays goods on the counter until he's square. He gives no",
   "                    change, buys nothing outright, and touches nothing sealed.",
+  "  dice              (bones) — the gatehouse bench only. Push your luck: two",
+  "                    bones to open, then one at a time, and over 21 you're out",
+  "                    where you stand. 'roll' takes another, 'stand' holds it.",
+  "                    The answering hand has to BEAT you; a tie pushes. Whoever",
+  "                    calls the game rolls first, and busting first loses before",
+  "                    the other hand is touched. 'dice' rolls the keeper for",
+  "                    nothing; 'dice <trophy>' stakes one against his bowl;",
+  "                    'dice <name> [trophy]' calls out anyone by the fire.",
+  "                    Trophies or nothing — never gear, never food.",
   "  bounty            the keeper's OTHER board: named trophies, paid in a meal.",
   "                    Not a better price than his shelves — what it pays is food",
   "                    he never stocks, and it pays when the shelves are bare.",
