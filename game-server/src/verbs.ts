@@ -28,7 +28,7 @@ import {
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
   RAVEN_SCOOPERS, RAVEN_BARTER_ODDS, RAVEN_BARTER_WAIT_MS,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP, FEN_ROOMS, FEN_CARRY_CAP,
+  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, NATURAL_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP, FEN_ROOMS, FEN_CARRY_CAP,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS, COOK_RECIPES,
   MILESTONES,
@@ -264,7 +264,11 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
   const outId = COOK_RECIPES[carried.itemId];
   const rawT = world.itemTemplates.get(carried.itemId)!;
   if (!outId) {
-    return z.send(session, FOOD_KEEPS.has(carried.itemId)
+    return z.send(session, NATURAL_KEEPS.has(carried.itemId)
+      // The naturally-keeping food refuses for its own reason: nobody preserved
+      // it, so there is nothing a fire could add. It came sealed.
+      ? `${cap(rawT.name)} will keep as it is, and a fire would only take that away from it. Some things arrive already put by.`
+      : FOOD_KEEPS.has(carried.itemId)
       // Cured food refusing the fire is not an arbitrary rule and the line says
       // why: it has already been through one. That IS what curing is.
       ? `${cap(rawT.name)} has been through a fire already, or a barrel. Cooking it twice takes it the wrong way.`
@@ -277,7 +281,7 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
   // carried too far. But a fire cannot un-rot anything, and if it could, food
   // would never spoil again — you would simply cook the spoilage away.
   const age = await itemAcquiredAt(z.env.DB, carried.rowId);
-  if (foodState(age ?? undefined) === "spoiled") {
+  if (foodState(age ?? undefined, carried.itemId) === "spoiled") {
     return z.send(session, `${cap(rawT.name)} has gone. The fire will not take the rot back out of it — it would only make it hot and rotten.`);
   }
 
@@ -368,7 +372,7 @@ async function cookAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
   }
   if (carried.serial !== null) return z.send(session, "That one's sealed for extraction. Break the seal before you'd put it on the coals.");
   const age = await itemAcquiredAt(z.env.DB, carried.rowId);
-  if (foodState(age ?? undefined) === "spoiled") {
+  if (foodState(age ?? undefined, carried.itemId) === "spoiled") {
     return z.send(session, `${cap(rawT.name)} has gone, and the keeper watches you consider the brazier with it. The fire will not take the rot back out.`);
   }
   if (!z.packRoom(session, outId)) return z.send(session, `Your pack is full, and ${world.itemTemplates.get(outId)!.name} would have nowhere to go. Stow something first.`);
@@ -532,7 +536,7 @@ function reflection(): string {
 // with a space so it appends cleanly, "" when there's nothing to add.
 function agedProse(itemId: string, edible: boolean, at: number | undefined): string {
   if (itemId === DEEP_HEART) return " " + heartProse(at);
-  if (edible && !FOOD_KEEPS.has(itemId)) return " " + foodProse(at);
+  if (edible && !FOOD_KEEPS.has(itemId)) return " " + foodProse(at, itemId);
   return "";
 }
 
@@ -1564,7 +1568,7 @@ export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session): string {
   // flags itself once it's past fresh (foodWord returns "" while fresh), so the
   // list isn't cluttered with "— fresh" on every ration.
   if (c.itemId === DEEP_HEART) tags.push(heartWord(c.acquiredAt));
-  else if (t?.edible && !FOOD_KEEPS.has(c.itemId)) { const w = foodWord(c.acquiredAt); if (w) tags.push(w); }
+  else if (t?.edible && !FOOD_KEEPS.has(c.itemId)) { const w = foodWord(c.acquiredAt, c.itemId); if (w) tags.push(w); }
   if (tags.length) s += ` — ${tags.join(", ")}`;
   return s;
 }
@@ -2153,7 +2157,7 @@ export async function consumeFood(z: ZoneDO,
   // Spoiled food is HONEST now: a turned ration gives back less (never nothing —
   // min 1, so it's still desperation food). Cured/keeping food never spoils, so
   // it's exempt (same FOOD_KEEPS gate as the freshness prose).
-  const spoiled = !FOOD_KEEPS.has(carried.itemId) && foodState(carried.acquiredAt) === "spoiled";
+  const spoiled = !FOOD_KEEPS.has(carried.itemId) && foodState(carried.acquiredAt, carried.itemId) === "spoiled";
   let heal = spoiled ? Math.max(1, Math.round(tmpl.heal * FOOD_SPOIL_HEAL_MULT)) : tmpl.heal;
   // THE FEVER (2026-08-06): on that ground nothing mends, and food is not an
   // exception to it — the same fraction rest pays and a dressing pays.

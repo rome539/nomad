@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL } from "./zone-data";
+import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -85,22 +85,26 @@ export function heartProse(at: number | undefined, now?: number): string {
 // WHICH food ages (edible and not in FOOD_KEEPS); these just turn an age into
 // words. `at` is acquired_at (unix seconds).
 export type FoodState = "fresh" | "turning" | "spoiled";
-export function foodState(at: number | undefined, now = Math.floor(Date.now() / 1000)): FoodState {
+// itemId is optional and only ever LENGTHENS the clock: a cooked form runs on
+// COOKED_SPOIL_MULT times the raw windows. Omitting it reads the raw clock,
+// which is the right default for anything that isn't off a fire.
+export function foodState(at: number | undefined, itemId?: string, now = Math.floor(Date.now() / 1000)): FoodState {
   if (at === undefined) return "fresh";
   const age = now - at;
-  if (age >= FOOD_SPOIL_SEC) return "spoiled";
-  if (age >= FOOD_FRESH_SEC) return "turning";
+  const m = itemId !== undefined && COOKED_FOODS.has(itemId) ? COOKED_SPOIL_MULT : 1;
+  if (age >= FOOD_SPOIL_SEC * m) return "spoiled";
+  if (age >= FOOD_FRESH_SEC * m) return "turning";
   return "fresh";
 }
 // The shelf-word: fresh food shows NOTHING (no "— fresh" noise on every ration);
 // only aging food flags itself, so the tag reads as a warning, not decoration.
-export function foodWord(at: number | undefined, now?: number): string {
-  const s = foodState(at, now);
+export function foodWord(at: number | undefined, itemId?: string, now?: number): string {
+  const s = foodState(at, itemId, now);
   return s === "spoiled" ? "spoiled" : s === "turning" ? "on the turn" : "";
 }
 // The long look: what the ration is like now.
-export function foodProse(at: number | undefined, now?: number): string {
-  const s = foodState(at, now);
+export function foodProse(at: number | undefined, itemId?: string, now?: number): string {
+  const s = foodState(at, itemId, now);
   return s === "spoiled"
     ? "It has gone off — slick and grey, a sour reek to it. It will still fill you, if your stomach will have it."
     : s === "turning"

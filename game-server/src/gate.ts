@@ -1479,7 +1479,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
         // cold storage for steel, not for meat. A banked heart reads as the
         // slime it is, instead of pretending to still be a key (rome, 2026-07-13).
         heart: c.itemId === DEEP_HEART ? heartWord(c.acquiredAt) : "",
-        fresh: (t?.edible && !FOOD_KEEPS.has(c.itemId)) ? foodWord(c.acquiredAt) : "", // perishable food's age, "" while fresh (flavor)
+        fresh: (t?.edible && !FOOD_KEEPS.has(c.itemId)) ? foodWord(c.acquiredAt, c.itemId) : "", // perishable food's age, "" while fresh (flavor)
         stat: z.itemStat(t).replace(/^ \(|\)$/g, ""),
       };
     };

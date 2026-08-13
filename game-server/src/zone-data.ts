@@ -4314,7 +4314,16 @@ export const FOOD_SPOIL_HEAL_MULT = 0.5;              // spoiled food is HONEST:
 // rat meat (see CURE_RECIPES): the humble keeping ration below the smoked-haunch.
 // Makes garrison-foraged dried-meat non-spoiling as well — a minor buff, and a
 // fix (dried meat had no business rotting).
-export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "well-water", "dried-meat"]);
+// NATURE'S OWN BARREL (rome, 2026-08-13: what about the eggs). Everything above
+// keeps because somebody preserved it. These two keep because they arrived
+// preserved: an egg is a sealed vessel and the shell is the seal — unwashed, it
+// sits on a shelf for weeks — and nuts in the husk are the original keeping
+// ration, which is the whole reason a squirrel bothers. Neither had any business
+// going soft and grey in a pack in two and a half hours. They are separated out
+// only so the fire can refuse them in words that are true of them (a mast has
+// not "been through a barrel"); everywhere else they are simply FOOD_KEEPS.
+export const NATURAL_KEEPS = new Set(["gull-egg", "beech-mast"]);
+export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "well-water", "dried-meat", ...NATURAL_KEEPS]);
 // ---- the smokehouse: raw meat hung in the racks, cured to keeping ----
 // The smoked-haunch's OWN description already claims these racks ("a haunch cured
 // black and hard in the smokehouse racks"); nothing ever lit them. Now a delver
@@ -4406,6 +4415,22 @@ export const COOK_RECIPES: Record<string, string> = {
   // haunches are the racks' business and always have been. This is the fire on
   // the shore, and what you put on it is what you pulled out of the water.
 };
+// COOKED FOOD KEEPS LONGER THAN RAW — but it still goes (rome, 2026-08-13: the
+// new food is spoiling too fast). When the fire shipped, every cooked form
+// inherited the raw clock untouched: 1h fresh, spoiled at 2.5h, the same numbers
+// a raw crab claw gets. Those constants were set three weeks before the verb
+// existed. So cooking cost you a torch, an open flame in a dark world that gets
+// you seen, the catch's whole barter value and a pack slot — and bought no time
+// at all. A roast lamprey is the best thing anyone can eat and it was at half
+// strength before the delve was over.
+//
+// Doubling the clock, NOT moving these into FOOD_KEEPS: cooking is partial
+// preservation and always has been, but it is not curing, and the racks' only
+// edge over the fire is that what comes off them never spoils. That law holds.
+// Cooked reads fresh for 2h and spoiled at 5h — long enough to outlast any delve,
+// short enough that a cured strip is still the thing you carry for tomorrow.
+export const COOKED_SPOIL_MULT = 2;
+export const COOKED_FOODS = new Set(Object.values(COOK_RECIPES));
 // A plain torch turns up in the smokehouse now and then — the garrison kept
 // their kindling by the fire. It rides the floor-renewal law (DICE, not a
 // schedule; capped at one lying unfound), so it is NOT a refill spot: a delver
