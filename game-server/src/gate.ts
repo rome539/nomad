@@ -1481,6 +1481,10 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
         heart: c.itemId === DEEP_HEART ? heartWord(c.acquiredAt) : "",
         fresh: (t?.edible && !FOOD_KEEPS.has(c.itemId)) ? foodWord(c.acquiredAt, c.itemId) : "", // perishable food's age, "" while fresh (flavor)
         stat: z.itemStat(t).replace(/^ \(|\)$/g, ""),
+        // What this COPY rolled (099). The name folds only the FIRST tag in, as
+        // an adjective — which asks a player to notice a word that was not there
+        // before, and hides a second tag entirely. The modal names them plainly.
+        traits: [...(c.rolledMap?.keys() ?? [])],
       };
     };
     // Fungibles collapse to one entry with a count and the full list of rows —

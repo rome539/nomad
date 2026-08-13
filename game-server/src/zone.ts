@@ -95,6 +95,7 @@ import {
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
+  BAD_TRAIT_POOL, BAD_TRAIT_SHARE, SECOND_TRAIT_ODDS, TEMPERED_WEAR_MULT, BRITTLE_WEAR_MULT, GREASED_RUST_MULT, PITTED_RUST_MULT, FLEECED_COLD_MULT, SODDEN_COLD_MULT,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, MOB_HIT, MOB_VITALS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   REGION_LABELS, NIGHT_LIT,
@@ -576,7 +577,14 @@ export class ZoneDO implements DurableObject {
         const floor = this.ground.get(g.room_id) ?? [];
         if (!floor.includes(g.item_id)) {
           this.ground.set(g.room_id, [...floor, g.item_id]);
-          if (world.itemTemplates.get(g.item_id)?.edible && !FOOD_KEEPS.has(g.item_id)) {
+          const newT = world.itemTemplates.get(g.item_id);
+          // ...and gear arriving from a migration rolls on its way down, so a
+          // shipment of new floor gear is not a shipment of plain gear.
+          if (newT && newT.slot !== "") {
+            const rolled = this.rollTraits(newT);
+            if (rolled) this.groundRolled.set(`${g.item_id}@${g.room_id}`, rolled);
+          }
+          if (newT?.edible && !FOOD_KEEPS.has(g.item_id)) {
             this.rot.push({ itemId: g.item_id, roomId: g.room_id, at: Date.now() + ROT_MS });
           }
         }
@@ -651,6 +659,13 @@ export class ZoneDO implements DurableObject {
       for (const g of world.groundSpawns) {
         this.ground.set(g.room_id, [...(this.ground.get(g.room_id) ?? []), g.item_id]);
         this.placedSpawns.add(`${g.item_id}@${g.room_id}`);
+        // Floor gear rolls its lottery at first light, same as a renewal does
+        // (see applyRegrow): the world's own gear is world-loot too.
+        const seedT = world.itemTemplates.get(g.item_id);
+        if (seedT && seedT.slot !== "") {
+          const rolled = this.rollTraits(seedT);
+          if (rolled) this.groundRolled.set(`${g.item_id}@${g.room_id}`, rolled);
+        }
         // The larder starts its clock at first light.
         if (world.itemTemplates.get(g.item_id)?.edible && !FOOD_KEEPS.has(g.item_id)) {
           this.rot.push({ itemId: g.item_id, roomId: g.room_id, at: now + ROT_MS });
@@ -4273,7 +4288,11 @@ export class ZoneDO implements DurableObject {
         if (c.serial !== null) continue; // sealed: frozen whole
         const t = world.itemTemplates.get(c.itemId);
         if (!t || (t.slot !== "weapon" && t.slot !== "armor")) continue;
-        await this.wear(session, c, t, RUST_PER_TICK * beatMul); // wall-clock rust, not per-beat — a slow idle beat mustn't spare steel
+        // Oiled kit barely notices the damp; pitted kit is where the next rust
+        // starts. Neither is immunity — greased steel still goes, slowly.
+        const damp = c.rolledMap?.has("greased") ? GREASED_RUST_MULT
+          : c.rolledMap?.has("pitted") ? PITTED_RUST_MULT : 1;
+        await this.wear(session, c, t, RUST_PER_TICK * beatMul * damp); // wall-clock rust, not per-beat — a slow idle beat mustn't spare steel
       }
     }
 
@@ -4309,7 +4328,11 @@ export class ZoneDO implements DurableObject {
         // warm, safe, deliberate. Standing shelter and the dungeon's cold-stone
         // rest both keep the slow rate. (And the cold never reaches the fire.)
         const byFire = session.resting && this.outOfWorld(session);
-        if (!byFire && !warmed && events.coldBites(this, session.roomId) && chance(COLD_REST_SKIP)) continue;
+        // A fleeced lining keeps the cold off your rest; a sodden one holds it
+        // against you. Best worn piece decides — the traits never stack.
+        const coldMult = this.wearsTrait(session, "fleeced") ? FLEECED_COLD_MULT
+          : this.wearsTrait(session, "sodden") ? SODDEN_COLD_MULT : 1;
+        if (!byFire && !warmed && events.coldBites(this, session.roomId) && chance(COLD_REST_SKIP * coldMult)) continue;
         // THE FEVER (2026-08-06). On bad ground sleep will not take: an hour
         // off your feet is worth a fraction of an hour. It is not a cure you
         // can buy or a fight you can win — the answer is to leave, which is the
@@ -4729,6 +4752,18 @@ export class ZoneDO implements DurableObject {
         return true;
       }
       this.ground.set(home, [...floor, g.itemId]);
+      // THE FLOOR ROLLS TOO (rome, 2026-08-13, saying he had never seen a rolled
+      // trait — he had not, and this is most of why). The lottery only ever ran
+      // on chest loot, a mob's gear drop and the raven's nest. Ninety-eight
+      // pieces of gear live in ground_spawns and NONE of them had ever rolled
+      // anything, at seed or at renewal — which is the gear a player actually
+      // walks past, and every piece the world puts out to arm new wanderers.
+      // A renewed piece is a fresh piece, so it gets a fresh roll.
+      if (t && t.slot !== "") {
+        const rolled = this.rollTraits(t);
+        const key = `${g.itemId}@${home}`;
+        if (rolled) this.groundRolled.set(key, rolled); else this.groundRolled.delete(key);
+      }
       // It has a new address. Remembered so the stray-decay sweep knows this one
       // is the world's own (it has no spawn row where it now lies, and without
       // this it would crumble away as litter), and so the next pickup there can
@@ -6002,7 +6037,11 @@ export class ZoneDO implements DurableObject {
     // A balanced weapon shaves a point off its own weight — the load law only,
     // damage untouched (099-weapon).
     for (const g of this.equippedAll(session)) {
-      total += Math.max(0, g.tmpl.weight - (this.itemRolled(g, "balanced") ? 1 : 0));
+      // A balanced piece shaves a point off its own weight; an ill-hung one adds
+      // one. This single line is the whole load law, so both reach dodge, the
+      // movement-noise roll, the parting cut and entry stealth at once.
+      const swing = (this.itemRolled(g, "balanced") ? 1 : 0) - (this.itemRolled(g, "cumbersome") ? 1 : 0);
+      total += Math.max(0, g.tmpl.weight - swing);
     }
     return total;
   }
@@ -6126,7 +6165,28 @@ export class ZoneDO implements DurableObject {
     // draw for a weapon of their own class — no wasted rolls on a mace that
     // can never use needling.
     const options = pool.filter((t) => !hasTrait(tmpl, t) && (WEAPON_CLASS_TRAIT[t]?.(tmpl) ?? true));
-    return options.length ? pick(options) : "";
+    if (!options.length) return "";
+    // THE DRAW IS OPEN (rome, 2026-08-13). Virtue is not the default and a flaw
+    // is not a rider on one: every trait a piece rolls is drawn independently
+    // from the good pool or the bad one, so all five shapes are reachable — one
+    // good, one bad, two good, two bad, or one of each. A piece can simply be
+    // badly made, the way things in the world are, and that is what makes
+    // finding a good one worth anything.
+    const bad = (BAD_TRAIT_POOL[tmpl.slot] ?? []).filter((t) => !hasTrait(tmpl, t));
+    const goodLeft = [...options];
+    const badLeft = [...bad];
+    const out: string[] = [];
+    const rolls = chance(SECOND_TRAIT_ODDS) ? 2 : 1;
+    for (let i = 0; i < rolls; i++) {
+      // Weighted, not a coin-flip: BAD_TRAIT_SHARE of draws come off the flaw
+      // pool. Either pool falling empty hands the draw to the other rather than
+      // wasting it, so a slot with no flaws defined still rolls normally.
+      const useBad = badLeft.length > 0 && (goodLeft.length === 0 || chance(BAD_TRAIT_SHARE));
+      const from = useBad ? badLeft : goodLeft;
+      if (!from.length) break;
+      out.push(from.splice(randInt(0, from.length - 1), 1)[0]);
+    }
+    return out.join(",");
   }
 
   // An item's name as it reads on the shelf and the floor, with its rolled trait
@@ -6329,6 +6389,12 @@ export class ZoneDO implements DurableObject {
   // at the bench like anything else. At 0 a piece is gone — worn through, mid-life.
   public async wear(session: Session, carried: CarriedItem, tmpl: ItemTemplate, amount: number): Promise<void> {
     if (carried.serial !== null) amount *= SEALED_WEAR_MULT; // sealed: protected, not immortal — the mark slows the wear
+    // Tempered steel takes punishment; a brittle piece is already going. Every
+    // wear path in the game funnels through here — strikes landed, blows turned,
+    // the idle damp, the corroder's touch, a latch smashed with a stone — so the
+    // pair needs no other site.
+    if (carried.rolledMap?.has("tempered")) amount *= TEMPERED_WEAR_MULT;
+    else if (carried.rolledMap?.has("brittle")) amount *= BRITTLE_WEAR_MULT;
     const before = carried.condition;
     carried.condition -= amount;
     if (carried.condition > 0) {

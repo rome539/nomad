@@ -3136,6 +3136,9 @@ function benchItemNode(it, place) {
   // Gear shows its wear whether sealed or not (sealed just wears slower) — comma after the seal, em-dash on its own.
   if (it.condWord) { var cw = document.createElement("span"); cw.className = "cond"; cw.textContent = (it.sealed ? ", " : " \\u2014 ") + it.condWord; nm.appendChild(cw); }
   // The heart rots on the shelf too — a banked one must never read as a key.
+  // What the piece rolled, NAMED rather than merely implied: the adjective in
+  // the name is easy to miss and only ever carries the first tag.
+  if (it.traits && it.traits.length) { var tw = document.createElement("span"); tw.className = "cond"; tw.textContent = " \\u2014 " + it.traits.join(", "); nm.appendChild(tw); }
   if (it.heart) { var hw = document.createElement("span"); hw.className = "cond"; hw.textContent = " \\u2014 " + it.heart; nm.appendChild(hw); }
   // Perishable food shows its age once it's past fresh (flavor — it still feeds you).
   if (it.fresh) { var fw = document.createElement("span"); fw.className = "cond"; fw.textContent = " \\u2014 " + it.fresh; nm.appendChild(fw); }

@@ -606,6 +606,7 @@ export const ECO_SLOWEST = 4;      // hardest case: an empty den takes 4x as lon
 // bone-things keep the flat clock they always had.
 export const ECO_LINES = new Set([
   "roe-deer", "white-roe", "wild-boar", "old-boar",              // the wood's game
+  "the-baited-bear", "the-chain-breaker",                        // and the thing that eats the wood's game AND the wood
   "grey-wolf", "dire-wolf",                                      // and what eats it
   "grave-hyena", "dire-hyena",                                   // the fortress's own web
   "masterless-dog", "lead-dog",                                  // the road's strays
@@ -923,6 +924,11 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "dire-wolf": "A heavy padding crosses {dir}, and the stride is far too long.",
   "white-roe": "Something light steps {dir} and does not hurry.",
   "old-boar": "Something very heavy goes {dir} through the brush and does not go around anything.",
+  // The chain is the tell, and it is the whole reason the bear is survivable:
+  // you get a room's warning if you are listening. The chain-breaker took that
+  // warning away with it, and four links do not make a sound.
+  "the-baited-bear": "A chain drags {dir} over stone, slow, with something very heavy walking at the end of it.",
+  "the-chain-breaker": "Something enormous moves {dir} without hurrying, and the brush closes behind it.",
   "something-ahead": "A step {dir} that matches yours — and it is in front of you.",
   footpad: "A step scuffs the verge {dir}, and takes care to be the last one you hear.",
   "roe-deer": "Something light and quick breaks {dir} through the undergrowth, all at once.",
@@ -999,6 +1005,8 @@ export const STILL_SOUNDS: Record<string, string> = {
   "dire-wolf": "breathing far too deep and slow for a wolf, and nothing else at all",
   "white-roe": "breathing, unhurried and quite steady — something that has not decided to be afraid of you",
   "old-boar": "a deep, wet snorting, and a tusk knocking on wood, over and over",
+  "the-baited-bear": "a slow shift of weight, and a chain paying out a link at a time",
+  "the-chain-breaker": "a low sound down in the chest of something, felt more than heard",
   "something-ahead": "your own breathing, and ahead of it, a fraction EARLY, something doing the same",
   "the-follower": "your own breathing, and under it, a fraction late, something doing the same",
   "charcoal-burner": "wood being laid on wood, one piece at a time, patiently, by somebody who is not hurrying",
@@ -1054,6 +1062,12 @@ export const MIGRANTS = new Set<string>([
   "footpad", "cutthroat", "wayman",                          // what follows the people
   "drove-dog", "the-drove-master", "feral-goat", "old-billy",           // the east road's walkers (the beck's own stay on their water)
   "fleet-rat",
+  // THE BEAR (mig 215), and this is the whole point of it. Everything else at
+  // its weight stands still — the three-hound holds one door, the bosses wait to
+  // be visited. This walks, on the same drift the deer and the wolves use, so
+  // the road it is on this week is not the road it was on last week and there is
+  // no map anybody can draw of where it is safe to be.
+  "the-baited-bear", "the-chain-breaker",
 ]);
 // The ground they may move BETWEEN. Surface only, and the whole surface: an
 // animal that walks from the wood to the den ground has walked somewhere it
@@ -1757,6 +1771,7 @@ export const FEVER_MEND_MULT = 0.35;  // what rest, food and a bandage are all w
 export const NAPPERS = new Set([
   "rat", "fleet-rat", "albino-rat", "cutpurse",  // the fortress's own dozers
   "roe-deer", "white-roe", "wild-boar", "old-boar", // the wood's game, after dark
+  "the-baited-bear", "the-chain-breaker", // it lies up where it stops; finding one asleep is the only good news about it
   "otter", "dog-otter", "feral-goat", "old-billy", "gill-adder",      // the east road: an adder in the one patch of sun is the whole animal
   "grey-seal", "bull-seal", "wrack-crab", "devil-crab", "oystercatcher", // the crossing: a hauled-out seal is ASLEEP, and that is the only time it is funny
   // ...AND THE REST OF THE TWO NEW BANDS THAT KEEP HOURS AT ALL (rome,
@@ -1803,6 +1818,8 @@ export const NOCTURNAL = new Set(["otter", "dog-otter", "conger", "old-conger", 
 // unconscious: the bittern's is the whole bird, and it is the reason the reeds
 // out there should never be trusted.
 export const REST_LINES: Record<string, string> = {
+  "the-baited-bear": "lying on its side in the road like a fallen wall, the chain pooled beside it, breathing slowly",
+  "the-chain-breaker": "asleep sitting up against a tree with its back to the trunk, which is very nearly a man's way of doing it",
   "dog-otter": "stretched out on the flat stone above the beck, scarred head on his paws, entirely unbothered",
   otter: "curled in the holt with its back to the water, dry for once",
   "old-conger": "gone still in the hole, and the water over it has stopped moving the way water does",
@@ -1888,6 +1905,7 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
 export const DRINKERS = new Set([
   "grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf",        // what already drank
   "roe-deer", "white-roe", "wild-boar", "old-boar",             // the wood's game
+  "the-baited-bear", "the-chain-breaker",                       // the beck is the one place on the east road you can count on meeting it
   "masterless-dog", "lead-dog",                                 // the road's strays
 ]);
 export const THIRST_MIN_MS = 2 * 3_600_000;
@@ -2094,6 +2112,18 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["the-drove-master", new Set(["feral-goat", "old-billy", "roe-deer", "drove-dog", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // it puts the line where it wants it, including through one of its own — and at 46hp/5-9 the gull is not an argument it loses
   ["otter", new Set(["rat", "fleet-rat"])],                              // it eats fish, and a rat that comes to water is a fish with legs
   ["three-hound", new Set(["rat", "fleet-rat", "grave-hyena", "dire-hyena"])], // apex at the threshold — bullies all comers
+  // THE BEAR (mig 215) is the apex that WALKS, so its list is the widest in the
+  // game and deliberately so: it will take anything on the road or in the wood
+  // it can get a paw on, and it bullies the other hunters off their kills the
+  // way the old boar and the dire hyena do. Note both halves of the animal —
+  // this list is only what it CATCHES, and it is a GRAZER as well, so a bear
+  // that finds nothing to run down still eats and never starves out of a band.
+  ["the-baited-bear", new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "feral-goat", "old-billy",
+    "drove-dog", "the-drove-master", "masterless-dog", "lead-dog", "grey-wolf", "grave-hyena",
+    "rat", "fleet-rat", "otter", "dog-otter"])],
+  ["the-chain-breaker", new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "feral-goat", "old-billy",
+    "drove-dog", "the-drove-master", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf", "grave-hyena", "dire-hyena",
+    "rat", "fleet-rat", "otter", "dog-otter"])], // at 88hp the dire bloods stop being an argument it loses
   // A HYENA EATS MORE THAN RATS (rome, 2026-08-06: "we can just make heyans eat
   // another thing like a dear or fight with a wolf"). It used to eat vermin and
   // nothing else, and since rats live only under the keep that made the whole
@@ -2261,7 +2291,14 @@ export const BREAK_LINES = [
 // SENTINEL and takes the room on its own terms — it stays out.)
 export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf",
   "drove-dog", "the-drove-master",
-  "marsh-hound", "a-lymer", "grey-seal", "bull-seal", "great-gull", "black-backed-gull"]);   // the crossing's three, and the gull is the one that comes to YOU
+  "marsh-hound", "a-lymer", "grey-seal", "bull-seal", "great-gull", "black-backed-gull",
+  // THE BEAR DOES NOT HUNT YOU — UNTIL IT IS HUNGRY (mig 215). It is not in
+  // AGGRESSIVE, so a fed bear will let you walk past it, which is true of the
+  // animal and makes the encounter a decision instead of an ambush. This is the
+  // other half: a starving one comes, and it holds a grudge, and it walks the
+  // whole band. The bear that ignored you last week is the argument for leaving
+  // before it stops being fed.
+  "the-baited-bear", "the-chain-breaker"]);   // the crossing's three, and the gull is the one that comes to YOU
 // The deep eats its own: strayed rats (and worse) die in the dark and rot where
 // they fall, and the pale hunters scavenge the carrion. A dice mint (same law as
 // the stone/torch — cadence × odds, no clock to farm) drops one fresh carcass into
@@ -2492,6 +2529,8 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "dire-wolf": { out: "falls back {dir} at a walk, untroubled by the idea.", in_: "comes in, and the room is smaller for it." },
   "wild-boar": { out: "wheels and crashes off {dir} through the brush.", in_: "comes through the brush without slowing." },
   "old-boar": { out: "backs {dir} a few steps with its tusks up, daring you.", in_: "comes in straight and does not stop." },
+  "the-baited-bear": { out: "turns and goes {dir} at a heavy rolling walk, the chain snaking after it.", in_: "comes in at a walk, and the chain comes in behind it." },
+  "the-chain-breaker": { out: "withdraws {dir} without hurrying, which is somehow worse.", in_: "arrives, and the room is smaller for it." },
   "the-follower": { out: "goes {dir} — the step you had been hearing, leaving.", in_: "arrives a fraction after the sound of it does." },
   "something-ahead": { out: "goes {dir}, and is somehow ahead of you again.", in_: "is here before the sound of it is." },
   "charcoal-burner": { out: "walks {dir}, soot falling off him as he goes.", in_: "comes in with the billhook trailing at his side." },
@@ -2765,6 +2804,9 @@ export const WEAPON_VERBS: Record<string, string[]> = {
   "oyster-knife": ["work the oyster knife into {n}", "shuck the short blade into {n}", "twist the knife into {n}"],
   "sappers-pick": ["drive the pick into {n}", "swing the sapper's pick into {n}", "punch the worn steel into {n}"],
   "lopped-stave": ["crack the stave across {n}", "swing the ash into {n}", "jab the end of the stave into {n}"],
+  // The bearward's chain (mig 215): six feet of links and a swivel, and the
+  // only way to use it is the way he used it.
+  "bearwards-chain": ["whip the chain around {n}", "swing the length of it into {n}", "put the swivel end through {n}"],
 };
 // The trait-tell: a short clause the swing appends when a MECHANIC actually
 // fires this beat, so the prose reads out the system — a point through plate, a
@@ -3109,6 +3151,10 @@ export const BITERS = new Set([
   // pure voice — it picks CREATURE_HIT and CREATURE_VITALS and nothing else —
   // so nothing about the fight changes except what the fight says.
   "grey-wolf", "dire-wolf", "masterless-dog", "lead-dog",
+  // The bear (mig 215) takes the jaws register and the claw lines in it are
+  // finally literally true of something: it is the only body in the game that
+  // both bites and rakes.
+  "the-baited-bear", "the-chain-breaker",
   // The boar is the wood's other mouth, and a tusk is not a fist.
   "wild-boar", "old-boar",
   // ...and two birds that were sorted twice, two different ways: the bittern
@@ -3253,6 +3299,13 @@ export const FEARS_FIRE = new Set([
   "grey-wolf", "dire-wolf",      // the oldest reason there are campfires
   "wild-boar", "old-boar",
   "root-thing",                  // dry wood on the move: fire is what ends it
+  // NOT THE BEAR, AND THAT IS THE POINT (mig 215). Every other large animal in
+  // this Set breaks on a lit torch — the wolves, the boars, the deer — which
+  // makes a flame the wood's general answer. A bear that was baited in a ring
+  // has stood in torchlight with a crowd screaming and dogs on it, and a bear
+  // that broke its chain has done worse. Fire is not an argument either of them
+  // has ever lost. They are the one thing out there a torch will not turn, which
+  // is what a mini-boss on the open road should be.
 ]);
 // Items that count as an open flame in hand ON THEIR OWN (always burning). Still
 // empty — the torch isn't here: a torch is fire only while LIT, which is session
@@ -3335,7 +3388,44 @@ export const WARRENS_ROOMS = new Set([
 // on the surface and it holds almost nothing that eats — which is the shape of
 // a place people left.
 export const FORAGE_REGIONS = new Set<string>(["road", "wood", "den", "crossing"]); // a shore feeds things — weed, shellfish, whatever the water puts down
-export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS]);
+// THE SURFACE HAD NOWHERE TO EAT (rome, 2026-08-13: the crabs are all starving).
+// FORAGE_REGIONS above already names road, wood, den and crossing as ground that
+// grows something — settlesHere reads it, and lets a grazer settle out there on
+// exactly that promise. But FORAGE_ROOMS, the table that says WHERE the eating
+// actually happens, was the union of the warrens and the carrion rooms: fifteen
+// rooms, every one of them in the fortress and the deep. So the two tables
+// disagreed. A goat was allowed onto the Crossing because the band feeds things,
+// arrived, and found there was nowhere in two hundred rooms to put its head
+// down — and then sat at the hunger cap advertising it, forever, which is the
+// same noise the 0.5 retune was meant to end.
+//
+// This is the hammerstone's bug in a different table: written when the dungeon
+// was the whole world, never grown when the map did. Forty-four rooms, weighted
+// to what each band actually is, none of them a hideaway. They are kept in their
+// own Set because WARRENS_ROOMS and CARRION_ROOMS are load-bearing elsewhere
+// (rat migration, the events, the lore's quarter names) and must not be widened.
+export const SURFACE_FORAGE = new Set([
+  // THE CROSSING. A shore feeds constantly and feeds everything: weed on every
+  // tide, shellfish beds, and the saltings behind them.
+  "the-weed-flat", "the-weed-raft", "the-wrack-bank", "the-wrack-line",
+  "the-mussel-bank", "the-mussel-scaup", "the-oyster-scars", "the-shellfish-scars",
+  "the-shell-bank", "the-salt-marsh", "the-thrift-bank", "the-salting-edge",
+  // THE ROADS. Verges, commons and the folds stock was driven between — a drove
+  // road is a linear pasture and was built to be one.
+  "the-ash-verge", "the-high-verge", "the-green-lane", "the-drove-green",
+  "the-high-common", "the-open-heath", "the-first-fold", "the-sheep-fold",
+  "the-broken-fold", "the-hanging-fold", "the-cut-bank", "the-common-boundary",
+  // THE WOOD. Glades and coppice where light reaches the floor, the flood
+  // meadow, and the mast under the beeches and the oaks.
+  "the-first-clearing", "the-long-glade", "the-nettle-glade", "the-flood-meadow",
+  "the-old-coppice", "the-orchard-gone-wild", "the-moss-floor", "the-heath-edge",
+  "the-dry-heath", "the-hollow-beeches", "the-last-oaks", "the-boundary-oak",
+  // THE DENS. Fields gone back to grass and an orchard still dropping windfalls
+  // — the most food per room on the surface, in the place people left.
+  "the-common-field", "the-cow-pasture", "the-drying-green", "the-chapel-green",
+  "the-well-green", "the-gorse-common", "the-dead-orchard", "the-warren-bank",
+]);
+export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS, ...SURFACE_FORAGE]);
 // WHO EATS THE GROUND. Was the bare union VERMIN + THIEVES, written inline at
 // two call sites — which quietly left the boar out, and a boar is a rooting
 // animal before it is anything else. Named here so the next grazer is one line
@@ -3352,6 +3442,26 @@ export const GRAZERS = new Set<string>([
   // and it was simply never added. The oystercatcher, eel, adder, heron and
   // viper eat what the shore or the gravel puts down — the floor is their food.
   "strand-thief", "the-wrecker", "oystercatcher", "ford-eel", "silver-eel", "gill-adder", "grey-heron", "fen-viper",
+  // AND THE CRABS, which that same pass missed (rome, 2026-08-13: they are all
+  // going hungry). They were left on VERMIN alone, which is a real mouth but a
+  // narrow one — it eats a corpse lying in the room it happens to be standing
+  // in, and nothing else. On a weed flat where nothing dies, that is no mouth at
+  // all, and a wrack crab spent its whole life at the hunger cap standing on the
+  // wrack it is named after. A crab is a bottom-feeder before it is a carrion
+  // eater: the floor IS its food, which is the exact sentence this Set is for.
+  // They keep VERMIN too — a crab on a body is the truest thing on the shore.
+  // Safe by inspection: neither crab is a MIGRANT, so the grazer clause in
+  // settlesHere never runs for them. This buys foraging and walking toward food
+  // when hungry, and changes nothing else.
+  "wrack-crab", "devil-crab",
+  // THE BEAR IS THE FIRST TRUE OMNIVORE (mig 215). Until now exactly one body in
+  // the roster was both a grazer and a hunter — the old boar — and it was an
+  // accident of rooting rather than a design. A bear is the animal that argument
+  // was invented for: it takes deer and boar when it can catch them and it eats
+  // the ground the rest of the year, and BOTH mouths are listed (see PREYS_ON).
+  // It is the one creature that lives off the whole food web instead of a strand
+  // of it, which is also why it can hold a range this big without starving.
+  "the-baited-bear", "the-chain-breaker",
 ]);
 export const FORAGE_HEAL = 3; // a scavenged nibble — less than a corpse (SCAVENGER_HEAL 6) or a dropped meal
 // The open sky: every room where weather can reach you (the grounds ring +
@@ -4125,6 +4235,8 @@ export const BLEED_ODDS = new Map<string, number>([
   ["dire-wolf", 0.22],           // the same jaws, half again the size
   ["wild-boar", 0.20],           // tusks go in and come up
   ["old-boar", 0.25],            // tusks grown past any use for rooting
+  ["the-baited-bear", 0.3],      // claws nobody ever trimmed, and a mouth that was muzzled rather than mended
+  ["the-chain-breaker", 0.32],
   ["the-follower", 0.20],        // level with the deep's pale kin, which is what it is
   ["something-ahead", 0.25],
   ["the-mire-walker", 0.20],
@@ -4216,14 +4328,19 @@ export const SLICK_BREAK_BONUS = 0.25; // added to SEIZE_BREAK_ODDS
 // riposte, thorns) are never in the pool. Only traits with a live system hook
 // and a slot-honest fiction sit here; a new ability becomes rollable the day it
 // joins its slot's list. Read via rolledMap ∪ the template (wearsTrait, 099).
-export const TRAIT_ROLL_ODDS = 0.18; // odds a fresh gear drop carries a rolled trait at all
+export const TRAIT_ROLL_ODDS = 0.22; // odds a fresh gear drop carries a rolled trait at all
+// 0.18 -> 0.22 (rome, 2026-08-13). The old rate was set when the lottery ran
+// on chest loot and a mob's gear drop only; the floor — ninety-eight pieces,
+// and the gear a player actually walks past — was plain by construction and
+// never counted against it. With the floor rolling now, the whole world is
+// inside this number for the first time.
 export const TRAIT_POOL: Record<string, string[]> = {
-  feet:  ["quiet", "slick"],            // felt-lined tread, eel-greased sole
+  feet:  ["quiet", "slick", "balanced", "tempered"],   // felt-lined tread, eel-greased sole, close-cut, well-made
   // staunched and hooded joined the pool the day the wood learned to make them
   // (2026-08-03) — a moss-packed lining, a hood deep enough to light under.
-  cloak: ["quiet", "slick", "strapped", "staunched", "hooded"],
-  armor: ["padded", "wardhide", "strapped", "staunched"], // quilted, boiled, buckled, packed
-  helm:  ["padded"],                    // an arming cap sewn in
+  cloak: ["quiet", "slick", "strapped", "staunched", "hooded", "balanced", "fleeced"],
+  armor: ["padded", "wardhide", "strapped", "staunched", "balanced", "tempered", "greased", "fleeced"], // quilted, boiled, buckled, packed, close-cut, well-forged, oiled, lined
+  helm:  ["padded", "balanced", "tempered", "fleeced"], // an arming cap sewn in, a light shell, good steel, a lining
   // Weapons (2026-07-21): six item-instance properties, none of them the
   // structural traits (reach/pierce/two-handed/mancatcher/riposte) that DEFINE
   // what a weapon is — those stay hand-authored, never in the pool. Four
@@ -4238,7 +4355,13 @@ export const TRAIT_POOL: Record<string, string[]> = {
   //   balanced — OPEN, any weapon: a point lighter in the hand (load law
   //              only, dmg untouched).
   //   honed    — OPEN, any weapon: a flat +1 to the blow that lands.
-  weapon: ["keen", "balanced", "honed", "weighted", "needling", "cleaving"],
+  weapon: ["keen", "balanced", "honed", "weighted", "needling", "cleaving", "tempered", "greased"],
+  // Shields could never roll ANYTHING before this — TRAIT_POOL simply had no
+  // shield key, so every shield in the game was its bare template. Their
+  // structural traits (wall/thorns/riposte/mancatcher) stay hand-authored, as
+  // the weapon's do; these three are the ones that make sense on a thing you
+  // hold up and let people hit: good stock, close-cut, kept oiled.
+  shield: ["tempered", "balanced", "greased"],
 };
 // Which class a class-locked weapon trait may land on — absence here means
 // "any weapon" (keen/balanced/honed). Checked in rollTraits so the roll never
@@ -4277,10 +4400,66 @@ export function playerBleedOdds(dmg: number, bleed: number): number {
 // The adjective a rolled trait wears in an item's name ("a muffled cloak"). One
 // per tag — the piece advertises WHAT it rolled; the paperdoll spells the effect
 // out once it's worn (wearsTrait feeds the sheet).
+// ---- THE FLAWS, AND WHAT ANSWERS THEM (rome, 2026-08-13: can we have BAD
+// traits too) ----------------------------------------------------------------
+// Four MIRRORED PAIRS, each hung on a system that was already running with no
+// trait on it at all. Every one is a single existing chokepoint, which is the
+// only reason this is data and not a new subsystem:
+//
+//   wear   tempered / brittle    -> wear(), the one function every wear path
+//                                   funnels through (strikes, blows turned,
+//                                   rust, the corroder, smashing a latch)
+//   load   balanced / cumbersome -> wornWeight(), which dodge, movement noise,
+//                                   the parting cut and entry stealth all read
+//   rust   greased  / pitted     -> the idle damp that gnaws carried steel
+//   cold   fleeced  / sodden     -> COLD_REST_SKIP, cold ground eating rest ticks
+//
+// NOTHING IS IMMUNITY, the same law armor obeys: greased still rusts, fleeced
+// still loses a tick now and then. A flaw is a tax, not a death sentence.
+//
+// BALANCED IS NOT NEW — it is promoted. It has always shaved a point off a
+// piece's weight for the load law and wornWeight has always applied it to EVERY
+// equipped slot; only the roll pool held it to weapons. Now armour can carry it
+// too, and cumbersome is the mirror it never had.
+export const TEMPERED_WEAR_MULT = 0.5;  // takes half the wear
+export const BRITTLE_WEAR_MULT  = 2;    // ...and twice
+export const GREASED_RUST_MULT  = 0.25; // the damp barely finds it
+export const PITTED_RUST_MULT   = 2.5;  // ...and eats the pitted one
+export const FLEECED_COLD_MULT  = 0.25; // cold rarely steals a rest tick
+export const SODDEN_COLD_MULT   = 1.75; // ...and often steals a sodden one's
+// The flaw pool, per slot. Cloth does not rust and a cloak cannot be brittle, so
+// each slot only offers the faults that could honestly happen to it.
+export const BAD_TRAITS = new Set(["brittle", "cumbersome", "pitted", "sodden"]);
+export const BAD_TRAIT_POOL: Record<string, string[]> = {
+  weapon: ["brittle", "cumbersome"],
+  armor:  ["brittle", "cumbersome", "pitted", "sodden"],
+  helm:   ["brittle", "cumbersome", "sodden"],
+  cloak:  ["cumbersome", "sodden"],   // cloth does not rust
+  feet:   ["cumbersome", "sodden"],
+  shield: ["brittle", "cumbersome", "pitted"],
+};
+// THE DRAW IS OPEN (rome, 2026-08-13). A trait roll is not "a bonus, sometimes
+// with a catch" — it is a roll on what this particular piece turned out to be.
+// Each trait is drawn independently from the good pool or the flaw pool, so
+// every shape is reachable: one good, one bad, two good, two bad, one of each.
+// Some gear in the world is simply badly made, and that is precisely what makes
+// finding a well-made piece mean anything.
+//
+// The share is weighted, not even — a flaw is a real outcome, not a coin-flip on
+// every drop. And this rides the SAME TRAIT_ROLL_ODDS gate as before: the number
+// of pieces carrying any trait at all does not change, only what they can say.
+export const BAD_TRAIT_SHARE = 0.35;   // of individual draws, this many come off the flaw pool
+export const SECOND_TRAIT_ODDS = 0.2;  // ...and this often a piece draws twice instead of once
 export const TRAIT_ADJ: Record<string, string> = {
   quiet: "muffled", slick: "oiled", padded: "quilted", wardhide: "boiled", strapped: "buckled",
   keen: "keen", balanced: "balanced", honed: "honed",
   weighted: "weighted", needling: "needling", cleaving: "wide-arced",
+  tempered: "tempered", brittle: "brittle", cumbersome: "ill-hung", greased: "greased",
+  pitted: "pitted", fleeced: "fleeced", sodden: "sodden",
+  // staunched and hooded joined the cloak pool on 2026-08-03 and were never
+  // given either of these, so a rolled one has been arriving nameless and
+  // silent ever since — no adjective in its name, no line when you look at it.
+  staunched: "packed", hooded: "deep-hooded",
 };
 // What `look` says about a rolled trait — the reason the piece is worth more than
 // its plain twin, in the game's voice, with the mechanic named in parens to
@@ -4297,6 +4476,15 @@ export const ROLLED_TELL: Record<string, string> = {
   weighted: "Head-heavy, deliberately so — it caves plate a shade deeper (extra armor-ignore).",
   needling: "Ground down to a needle's point — it finds the seam plate can't close (extra armor-ignore).",
   cleaving: "Wide in the arc — it catches one more than its plain twin (extra sweep).",
+  tempered: "Tempered right through — it takes punishment its plain twin would not (wears slowly).",
+  greased: "Kept oiled, and kept oiled a long time — the damp has barely touched it (resists rust).",
+  fleeced: "Lined thick against the weather — the cold does not reach you through it (rest in the cold).",
+  brittle: "There is a hardness to it that is not strength — it has been worked once too often, and it is going (wears fast).",
+  cumbersome: "It hangs wrong however you set it, and every step reminds you (extra load).",
+  pitted: "Pitted deep along every edge, and the pits are where the next rust starts (rusts fast).",
+  sodden: "It has been wet so long it has forgotten how to be dry, and it holds the cold against you (worse rest in the cold).",
+  staunched: "Packed through with moss and clean linen — a wound closes faster under it (staunches bleeding).",
+  hooded: "Cut with a hood deep enough to light under — a flame catches in it, even in the rain (hooded).",
 };
 
 // ---- the verdigris-thing: the extraction monster (047) ----

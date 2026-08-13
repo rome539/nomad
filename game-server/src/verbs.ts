@@ -1569,6 +1569,14 @@ export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session): string {
   // list isn't cluttered with "— fresh" on every ration.
   if (c.itemId === DEEP_HEART) tags.push(heartWord(c.acquiredAt));
   else if (t?.edible && !FOOD_KEEPS.has(c.itemId)) { const w = foodWord(c.acquiredAt, c.itemId); if (w) tags.push(w); }
+  // WHAT IT ROLLED, SAID OUT LOUD (rome, 2026-08-13: he had never knowingly seen
+  // a rolled trait). The roll has only ever surfaced as an ADJECTIVE folded into
+  // the name — "a muffled scavenger's coat" — which asks a player to know the
+  // plain name well enough to spot a word that was not there before, and which
+  // shows the FIRST tag only, so a second one was invisible outside `look`.
+  // Naming them here costs one tag and makes the whole lottery legible: the
+  // flaws especially, which a player has every right to see before they carry it.
+  for (const tag of c.rolledMap?.keys() ?? []) tags.push(tag);
   if (tags.length) s += ` — ${tags.join(", ")}`;
   return s;
 }

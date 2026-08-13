@@ -361,6 +361,37 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **THE SCAR — gear that carries its own history** *(pinned 2026-08-13 — rome:
+  "pin the scar for later")*. Wear is currently a recurring bill and nothing
+  else: repair sets condition flat back to 100 (gate.ts, REPAIR_COST by rarity),
+  so a piece of gear is immortal as long as you keep paying. The scar gives that
+  system a memory. The FIRST time a piece falls past GEAR_FAILING_AT (12), it
+  permanently gains a bad trait — brittle, pitted — and wears it in its own name
+  from then on: "a brittle rusted sword". Condition still repairs to 100; the
+  numbers are fine; the character changed.
+
+  CHEAP BY CONSTRUCTION: per-instance traits already exist and already persist.
+  rolledTraits is written on the item row and read via rolledMap — the same
+  field that makes one cloak "muffled" and the next one plain. Writing a trait
+  at a condition threshold needs no schema change and no new system.
+
+  THE OPEN QUESTION, and the reason it is parked: rome's objection was that a
+  permanent mark is too permanent. Two answers were offered and neither chosen —
+  (a) the FORGE grinds it out, dearer than a plain repair, so the scar is a bill
+  rather than a brand and becomes an economy sink; (b) it FADES on its own once
+  the piece has been kept in healthy condition for a while, so neglect marks it
+  and care unmarks it and nothing is ever lost. Pick one before building.
+
+  ONE TUNING NOTE ALREADY SETTLED: it must fire on FAILING (12), never on WORN
+  (35). At 35 everything anybody owns is scarred inside a week and the mark
+  stops meaning anything.
+
+  NOT THE SAME AS GEAR MORTALITY, which rome raised in the same conversation and
+  which is a much larger change: a falling repair CEILING (100, then 85, then
+  70) makes every item in the game consumable and touches the fence, the vault,
+  the seal and the whole scarcity model at once. That is its own conversation,
+  deliberately, not a rider on this.
+
 - **CREATURES THAT HARDEN ON UNHUNTED GROUND** *(pinned 2026-08-08 — rome: "no I
   don't like this, pin this for now")*. Two versions were explored and BOTH are
   parked; the idea keeps coming back, so here is the whole thing including why
