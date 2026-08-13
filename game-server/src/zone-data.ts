@@ -684,12 +684,43 @@ export const THROW_TOUGH = new Set(["hammerstone"]);
 // stone country: graves, scree, rubble, mine-throats, and the tide's midden.
 // Cadence × odds keeps rome's original tune (~twice a day), but any given
 // roll can hit — there is no clock to farm. Capped so misses don't pile up.
+//
+// THE STONE COUNTRY GOT BIGGER (rome, 2026-08-12: the hammerstone was written
+// when the fortress was the whole world, and there are many more rocks now).
+// He is exactly right, and the list said so — all eleven haunts sit in the
+// keep (6) and the open ground (5), which was the entire map when 070 shipped.
+// The road, the wood, the Crossing and the dens are 583 of the world's 744
+// rooms and could never produce one, though between them they hold a flooded
+// quarry, two lime kilns, a scree run, a chalk cut, two marl workings, a flint
+// scatter and a shore of gravel and shell scars. Stone country, all of it, and
+// none of it counted.
+//
+// The rule is unchanged — no fixed spot, dice on the STONE_ROLL cadence, and
+// nowhere to farm. There is simply more ground it can happen on, weighted to
+// how much of the world each band actually is.
 export const HAMMERSTONE_HAUNTS = [
+  // the fortress and its ring — where it has always come from
   "the-mass-grave", "the-dry-moat", "the-gatefall", "the-wall-breach",
   "the-burned-village", "the-undermine", "the-earth-throat", "the-bone-midden",
   "blackreach", "the-sump", "the-still-cradle",
+  // the roads: quarries, cuttings, marl workings and a cairn somebody built
+  "the-flooded-quarry", "the-quarry-turn", "the-spoil-banks", "the-scree-run",
+  "the-chalk-cut", "the-marl-hole", "the-drovers-cairn",
+  // the wood: the flint country, and the kiln that burned the stone
+  "the-stone-pile", "the-flint-floor", "the-flint-scatter", "the-lime-kiln",
+  // the Crossing: gravel, shell scar and dressed stone the water works on
+  "the-gravel-flats", "the-shellfish-scars", "the-mussel-bank", "the-oyster-scars",
+  "the-hard", "the-capstan-stone",
+  // the dens: a marl pit and a hearth somebody left standing
+  "the-marl-pit", "the-hearth-stones",
 ];
-export const STONE_GROUND_CAP = 2; // at most this many lying loose in the haunts at once
+// At most this many lying loose in the haunts at once. Was 2 across eleven
+// haunts in a ~250-room world; the world is 744 rooms and thirty-two haunts
+// now, so 2 would be the same trickle spread over three times the ground —
+// findable in the fortress, effectively mythical everywhere else. 4 keeps a
+// stone roughly as easy to come across as it has always been, and the mint
+// cadence and odds are untouched: the world still rolls one about twice a day.
+export const STONE_GROUND_CAP = 4;
 // A rock against a latch (rome, 2026-07-11): strongbox latches give to stone,
 // sometimes. The plain rock is spent by the trying, opened or not; the
 // hammerstone survives and near-always wins. Either way the hammering is a
@@ -853,10 +884,12 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "drove-dog": "Something crosses the grass {dir} at a working trot, wide, not coming closer.",
   "the-drove-master": "A heavy tread {dir} through the grass, taking its time, and everything else out there goes quiet for it.",
   "otter": "A small heavy splash {dir}, and then nothing at all.",
+  "dog-otter": "A heavy splash {dir}, and this one does not bother to be quiet about it.",
   "grey-heron": "Enormous slow wings beat {dir}, three times, and a cry goes with them like cloth tearing.",
   "the-miller": "Water moves {dir} the way water moves when something large is walking in it.",
   "gill-adder": "Dry grass shifts {dir}, low down, in a line.",
   "feral-goat": "Stone goes over stone {dir}, high up, where nothing should have footing.",
+  "old-billy": "Stone goes over stone {dir}, high up, slowly, with weight behind it.",
   "scarp-raven": "A wingbeat {dir}, and then a call, and then the wingbeat again further off.",
   // THE CROSSING (mig 191). Almost everything out here moves in or over water,
   // and water is the loudest surface in the game — which is the point. On the
@@ -864,22 +897,29 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "the-tide-warden": "Boots in standing water {dir}, at a steady walking pace, going the length of something.",
   "the-drover": "A stick knocking on gravel {dir}, and a slow wading, and a voice saying something to nothing.",
   "the-eel-cutter": "A pole going into mud {dir} and coming out of it, over and over, working away from you.",
+  "the-pilot": "A pole goes into the channel {dir} once, finds the depth it wanted, and stops.",
   "the-reed-walker": "Reed parting {dir}, one cut over, keeping pace with you.",
   "the-salt-widow": "Something being raked over stone {dir}, slow and even, in a building.",
   "strand-thief": "Shingle turns over {dir}, twice, and then very deliberately stops.",
+  "the-wrecker": "Shingle turns {dir} under a boot that is in no hurry and not hiding.",
   "the-bridge-mason": "A mallet on stone {dir}, three strikes and a pause, three strikes and a pause.",
   "great-gull": "A shadow crosses {dir} without a sound, and then the whole colony says something about it.",
+  "black-backed-gull": "A shadow crosses {dir} and the whole colony goes silent instead of loud.",
   // ---- THE OPEN GROUND (mig 194)
   "the-sapper": "A pick goes into chalk {dir}, under you, at a working rhythm that does not vary.",
   "the-bellfounder": "An iron rake drags over fired clay {dir}, slow, and then again.",
   "gibbet-crow": "A crow goes {dir} in three unhurried beats and says one thing on the way.",
   "oystercatcher": "A shrill piping goes up {dir} and runs away along the water, and other birds take it up.",
   "grey-seal": "A great wet weight shifts on gravel {dir} and settles again.",
+  "bull-seal": "A great wet weight comes up the gravel {dir} far faster than it should.",
   "marsh-hound": "Water breaks {dir} at a working trot, low, quartering.",
+  "a-lymer": "Water breaks {dir} once, in a straight line, and does not break again.",
   "bittern": "Nothing moves {dir}. Then, from the same place, a note like somebody blowing across a bottle the size of a room.",
   "fen-viper": "Dry reed shifts {dir}, low down, in one continuous line.",
   "wrack-crab": "Weed clicks and settles {dir}, in a great many places at once.",
+  "devil-crab": "Weed clicks {dir} — once, hard, and from one place only.",
   "ford-eel": "Something long goes over the gravel {dir} through four inches of water and is not slowed by it.",
+  "silver-eel": "Something long goes down the channel {dir} at speed, and it is going somewhere.",
   "dire-wolf": "A heavy padding crosses {dir}, and the stride is far too long.",
   "white-roe": "Something light steps {dir} and does not hurry.",
   "old-boar": "Something very heavy goes {dir} through the brush and does not go around anything.",
@@ -920,10 +960,12 @@ export const STILL_SOUNDS: Record<string, string> = {
   "drove-dog": "panting, low and even, from more than one place",
   "the-drove-master": "nothing at all, from somewhere above and to the side of you",
   "otter": "water moving against the run of the beck",
+  "dog-otter": "water moving against the beck, and a slow wet breathing over it",
   "grey-heron": "no sound whatsoever, which out here is its own kind of sound",
   "the-miller": "a slow deliberate slop of water, and something being worked at under it",
   "gill-adder": "a dry whisper of scale on stone, so quiet it could be the water",
   "feral-goat": "an unhurried grinding of jaws, from a direction that cannot be right",
+  "old-billy": "jaws working somewhere above you, and a smell like a shut room",
   "scarp-raven": "the wind through stiff feathers, holding station",
   "the-sapper": "chalk being worked, from under the ground, at the pace of a man who has all century",
   "the-bellfounder": "metal ticking as it cools, which it finished doing two hundred years ago",
@@ -938,16 +980,22 @@ export const STILL_SOUNDS: Record<string, string> = {
   "the-reed-walker": "reed, moving, in air you cannot feel moving",
   "the-salt-widow": "a fire being fed, and no fire",
   "strand-thief": "somebody standing extremely still on shingle, which shingle makes almost impossible",
+  "the-wrecker": "the creak of a lantern handle, from somebody standing perfectly still",
   "the-drover": "a slow suck of mud round something standing in it, waiting for stock that is not coming",
   "the-quicksand": "nothing at all, from a piece of ground exactly like every other piece of ground",
   "conger": "water sucking in and out of a hole in stone at a rate that is not the sea's",
+  "old-conger": "water going in and out of a hole in the stone, slowly, and far too much of it",
   "grey-seal": "snoring, enormous, from something you would rather had not noticed you",
+  "bull-seal": "a wet bellow off the shingle, and then the sound of it moving",
   "great-gull": "a single flat croak from directly above, close enough to be a comment",
+  "black-backed-gull": "a single deep bark from above, and no other bird answering it",
   "oystercatcher": "a bird deciding, at some length, whether this is worth screaming about",
   "bittern": "reed, and only reed, and one stem of it that is not swaying at the reed's rate",
   "fen-viper": "a dry whisper of scale on plank, from the plank you are about to stand on",
   "wrack-crab": "a small hard clicking under the weed, and then a great deal more of it",
+  "devil-crab": "one hard click under the weed, repeated, at the pace of something waiting",
   "marsh-hound": "panting, low and even, and closer than the last time you heard it",
+  "a-lymer": "breathing, steady and unhurried, from a thing that has already stopped searching",
   "dire-wolf": "breathing far too deep and slow for a wolf, and nothing else at all",
   "white-roe": "breathing, unhurried and quite steady — something that has not decided to be afraid of you",
   "old-boar": "a deep, wet snorting, and a tusk knocking on wood, over and over",
@@ -1004,7 +1052,7 @@ export const MIGRANTS = new Set<string>([
   // is a walk, so a sentinel that "migrates" is a line the code can never read.
   // The undercroft's hound stays at the undercroft's door. 2026-08-12.)
   "footpad", "cutthroat", "wayman",                          // what follows the people
-  "drove-dog", "the-drove-master", "feral-goat",           // the east road's walkers (the beck's own stay on their water)
+  "drove-dog", "the-drove-master", "feral-goat", "old-billy",           // the east road's walkers (the beck's own stay on their water)
   "fleet-rat",
 ]);
 // The ground they may move BETWEEN. Surface only, and the whole surface: an
@@ -1297,7 +1345,7 @@ export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman"
 export const THIEVES = new Set(["cutpurse", "cutthroat", "footpad", "wayman",
   // The strand thief (mig 191) works the wrack line, and does not think of it
   // as stealing, because the sea does not own things either.
-  "strand-thief"]);
+  "strand-thief", "the-wrecker"]);
 
 // ROAMING DENS (rome, 2026-08-02: "do they have dens? i think we should have it
 // as rng where they spawn on a road").
@@ -1386,7 +1434,12 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // can bolt, bolts — so the rarest thing on the surface is the one that stands in
 // the open and looks back at you. Its whole effect is the omission.
 export const RUNNERS = new Set(["fleet-rat", "roe-deer",
-  "otter", "grey-heron", // the beck's two: both built to be somewhere else
+  // THE WHITE ROE RUNS TOO (2026-08-12). It was left out when it was written,
+  // so the rarest deer in the wood was the one that STOOD — a variant quietly
+  // behaving like a different animal than its own line, which is the one thing
+  // a variant must never do. bolts() reads this set and nothing else.
+  "white-roe",
+  "otter", "dog-otter", "grey-heron", // the beck's two: both built to be somewhere else
   "oystercatcher", "bittern", // the crossing's two: one leaves loudly, one leaves late
   "gibbet-crow"]);            // and it does not go far, and it comes back
 // BROODERS are nest-bound: they don't wander, don't flee, and while they live
@@ -1445,7 +1498,7 @@ export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer", "whi
   // dead to survive — that is what VERMIN is, and it is the one honest route for
   // a thing that will not come to a player or a graze. Without this they banked
   // hunger to the cap and advertised it (the 2026-08-08 bug, told again).
-  "wrack-crab", "scarp-raven",
+  "wrack-crab", "devil-crab", "scarp-raven",
   // The gibbet crow (mig 194) sits on the iron above the mass-grave and the
   // crossroads-grave — it is a carrion bird in carrion country, and VERMIN is
   // what a carrion bird is.
@@ -1704,14 +1757,14 @@ export const FEVER_MEND_MULT = 0.35;  // what rest, food and a bandage are all w
 export const NAPPERS = new Set([
   "rat", "fleet-rat", "albino-rat", "cutpurse",  // the fortress's own dozers
   "roe-deer", "white-roe", "wild-boar", "old-boar", // the wood's game, after dark
-  "otter", "feral-goat", "gill-adder",      // the east road: an adder in the one patch of sun is the whole animal
-  "grey-seal", "wrack-crab", "oystercatcher", // the crossing: a hauled-out seal is ASLEEP, and that is the only time it is funny
+  "otter", "dog-otter", "feral-goat", "old-billy", "gill-adder",      // the east road: an adder in the one patch of sun is the whole animal
+  "grey-seal", "bull-seal", "wrack-crab", "devil-crab", "oystercatcher", // the crossing: a hauled-out seal is ASLEEP, and that is the only time it is funny
   // ...AND THE REST OF THE TWO NEW BANDS THAT KEEP HOURS AT ALL (rome,
   // 2026-08-12, asking for day and night to mean something out there — and only
   // where it MEANS something). Everything below is an animal with a documented
   // clock; nothing else was touched.
-  "conger", "bittern", "ford-eel",          // the shore's night shift (see NOCTURNAL)
-  "great-gull", "grey-heron", "scarp-raven", // birds roost. A corvid especially: nothing with feathers works the dark
+  "conger", "old-conger", "bittern", "ford-eel", "silver-eel",          // the shore's night shift (see NOCTURNAL)
+  "great-gull", "black-backed-gull", "grey-heron", "scarp-raven", // birds roost. A corvid especially: nothing with feathers works the dark
   "fen-viper",                              // the adder's cousin, and the same animal: a snake is a thing that lies in the sun
 ]); // hyenas nap via the gorge only
 // THE NIGHT SHIFT. Everything above sleeps by the SAME clock — the two rates
@@ -1739,7 +1792,7 @@ export const NAPPERS = new Set([
 // The grey seal is NOT here: it hauls out to sleep in the daylight, which is
 // the joke the original line was written for, and it forages on the tide rather
 // than the hour. The birds are not here for the obvious reason.
-export const NOCTURNAL = new Set(["otter", "conger", "ford-eel", "wrack-crab", "bittern"]);
+export const NOCTURNAL = new Set(["otter", "dog-otter", "conger", "old-conger", "ford-eel", "silver-eel", "wrack-crab", "devil-crab", "bittern"]);
 // HOW EACH OF THEM LIES UP. The generic line is "curled nose-to-tail, fast
 // asleep", which is a mammal on a floor and is the right picture for a rat, a
 // deer or an otter — and nonsense for a crab, an eel or a bird. A shore where
@@ -1750,19 +1803,26 @@ export const NOCTURNAL = new Set(["otter", "conger", "ford-eel", "wrack-crab", "
 // unconscious: the bittern's is the whole bird, and it is the reason the reeds
 // out there should never be trusted.
 export const REST_LINES: Record<string, string> = {
+  "dog-otter": "stretched out on the flat stone above the beck, scarred head on his paws, entirely unbothered",
   otter: "curled in the holt with its back to the water, dry for once",
+  "old-conger": "gone still in the hole, and the water over it has stopped moving the way water does",
   conger: "backed into a hole in the pier stones with only its head showing, jaw working slowly",
   "ford-eel": "lying up under the weed, moving just enough to hold its place",
+  "silver-eel": "lying along the gravel in the shallows, bright as something dropped, and not moving at all",
   "wrack-crab": "wedged under a stone with the wrack pulled over it, waiting out the light",
+  "devil-crab": "wedged back under the weed with both claws drawn in, and even asleep it is taking up too much room",
   bittern: "standing in the reeds with its bill straight up, striped like the reeds, and it is not a reed",
   "great-gull": "roosting on one leg with its head turned into its back",
+  "black-backed-gull": "hunched on the parapet with its head back in its shoulders, taking up the whole of it",
   "grey-heron": "hunched on the shingle with its neck folded away, looking like a dropped coat",
   "scarp-raven": "roosting high with its feathers puffed out against the cold",
   "grey-seal": "hauled out on the shingle, fat and boneless, breathing like a bellows",
+  "bull-seal": "hauled out and snoring like a wall coming down, and nothing on this shore will go near him",
   "fen-viper": "coiled tight in the last of the sun, and it will be gone before you are close",
   "gill-adder": "coiled tight in the last of the sun, and it will be gone before you are close",
   oystercatcher: "roosting on one leg among a dozen others, all of them facing the wind",
   "feral-goat": "lying up in the lee of a rock, chewing at nothing",
+  "old-billy": "lying up in the rocks with his beard in the dirt and one eye not quite shut",
 };
 // OUTDOOR GAME KEEPS DIFFERENT HOURS, and needs its own two rates rather than a
 // multiplier on the indoor one. NAP_ODDS is tuned for a rat in a quiet corner —
@@ -1867,8 +1927,8 @@ export const ALARM_CALLERS = new Set(["roe-deer", "white-roe",
   // takes a day to walk; six of these are spread across it, and the moment one
   // of them decides you are close, every living thing on the flats is told.
   "oystercatcher"]);
-export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "otter", "feral-goat",
-  "grey-seal", "marsh-hound", "ford-eel"]); // the game takes the warning
+export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "otter", "dog-otter", "feral-goat", "old-billy",
+  "grey-seal", "bull-seal", "marsh-hound", "a-lymer", "ford-eel", "silver-eel"]); // the game takes the warning
 export const ALARM_AVOID_MS = 20 * 60_000;  // warned game keeps off that ground twenty minutes
 export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters next door come to look
 
@@ -1920,7 +1980,7 @@ export const PACK_CALLERS = new Set(["grey-wolf", "dire-wolf", "masterless-dog",
   // The marsh hounds (mig 191): the same training, gone the same way, in worse
   // country. In the reed a called-in second dog is not a second dog — it is a
   // dog you cannot see arriving.
-  "marsh-hound"]);
+  "marsh-hound", "a-lymer"]);
 // WOLVES CUT THE LINES OF RETREAT (rome, 2026-08-08: "the more you fight
 // together, they start closing room exits — 2 wolves equals 1 exit closed, 3 is
 // 2 exits closed").
@@ -2030,8 +2090,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // arrives as a monoculture is a band nothing can ever walk into. The drove
   // eats the goat; the otter takes the beck's own; and that is enough of a
   // chain that the ground holds its own animals instead of borrowing them.
-  ["drove-dog", new Set(["feral-goat", "roe-deer", "wrack-crab", "oystercatcher", "otter"])],           // a drove road ends at a market and a market ends at water; the shore's small stuff is well within it (30hp/3-7)
-  ["the-drove-master", new Set(["feral-goat", "roe-deer", "drove-dog", "wrack-crab", "oystercatcher", "otter", "great-gull"])], // it puts the line where it wants it, including through one of its own — and at 46hp/5-9 the gull is not an argument it loses
+  ["drove-dog", new Set(["feral-goat", "old-billy", "roe-deer", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter"])],           // a drove road ends at a market and a market ends at water; the shore's small stuff is well within it (30hp/3-7)
+  ["the-drove-master", new Set(["feral-goat", "old-billy", "roe-deer", "drove-dog", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // it puts the line where it wants it, including through one of its own — and at 46hp/5-9 the gull is not an argument it loses
   ["otter", new Set(["rat", "fleet-rat"])],                              // it eats fish, and a rat that comes to water is a fish with legs
   ["three-hound", new Set(["rat", "fleet-rat", "grave-hyena", "dire-hyena"])], // apex at the threshold — bullies all comers
   // A HYENA EATS MORE THAN RATS (rome, 2026-08-06: "we can just make heyans eat
@@ -2059,8 +2119,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // eel, the bittern and the raven stay OFF every list — the eel and the
   // bittern already carry the crossing's own web, and a raven does not get
   // caught by a dog.
-  ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena", "roe-deer", "white-roe", "grey-wolf", "wrack-crab", "oystercatcher", "otter", "great-gull"])], // drives off the plain hyena AND the plain wolf: 45hp/armor against 26hp — and at that size the gull is no argument either
-  ["grave-hyena", new Set(["rat", "fleet-rat", "roe-deer", "white-roe", "gibbet-crow", "wrack-crab", "oystercatcher", "otter"])], // vermin when there is nothing better, deer when there is — and on the grave ground, what came for the carrion. A hyena on a strand is the least surprising animal in the world
+  ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena", "roe-deer", "white-roe", "grey-wolf", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // drives off the plain hyena AND the plain wolf: 45hp/armor against 26hp — and at that size the gull is no argument either
+  ["grave-hyena", new Set(["rat", "fleet-rat", "roe-deer", "white-roe", "gibbet-crow", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter"])], // vermin when there is nothing better, deer when there is — and on the grave ground, what came for the carrion. A hyena on a strand is the least surprising animal in the world
   ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
   // THE WOLF WORKS THE TIDELINE TOO (rome, 2026-08-12). Its list was three
   // animals, all of them wood animals, which is why the map has exactly one
@@ -2082,8 +2142,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // The goat and the otter are the ones that matter for the country between:
   // the beck and the scarp hold goats, otters, herons and adders and nothing
   // else, so until now that whole corridor was ground no wolf could stop on.
-  ["grey-wolf", new Set(["roe-deer", "white-roe", "grave-hyena", "otter", "wrack-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
-  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar", "otter", "wrack-crab", "oystercatcher", "feral-goat", "great-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
+  ["grey-wolf", new Set(["roe-deer", "white-roe", "grave-hyena", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
+  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher", "feral-goat", "old-billy", "great-gull", "black-backed-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
   // THE STRAYS EAT SOMETHING NOW (2026-08-12). The west road's seven masterless
   // dogs had NO feeding route in the world at all — not grazers, not scavengers,
@@ -2097,8 +2157,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // a stray is 24hp/3-5 against the roe's 16hp/1-2, which is a clean solo take;
   // it is UNDER the goat's 26hp, so the goat needs the pack (PACK_PREY). The
   // lead dog is 36hp/4-7 and needs nobody's help for either.
-  ["masterless-dog", new Set(["roe-deer", "white-roe", "wrack-crab", "oystercatcher", "otter"])],
-  ["lead-dog", new Set(["masterless-dog", "roe-deer", "white-roe", "feral-goat", "wrack-crab", "oystercatcher", "otter", "great-gull"])], // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and it is big enough to take the goat and the gull the pack needs numbers for
+  ["masterless-dog", new Set(["roe-deer", "white-roe", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter"])],
+  ["lead-dog", new Set(["masterless-dog", "roe-deer", "white-roe", "feral-goat", "old-billy", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and it is big enough to take the goat and the gull the pack needs numbers for
   // The pale hunters are the DEEP's rat-catchers: hungry, they leave their lurk
   // and range toward the rat-runs (lurkerDrifts), run one down (predation), and
   // go quiet again. A stretch of dark with no rats left is what starves one onto
@@ -2110,11 +2170,21 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // holes, the bittern takes it in the reed, and the gull takes whatever any of
   // them leaves. This is the first ecology in the game with a genuine scavenger
   // ABOVE the hunters rather than behind them — a gull does not wait its turn.
-  ["grey-seal", new Set(["ford-eel", "wrack-crab"])],
-  ["conger", new Set(["ford-eel", "wrack-crab"])],
-  ["bittern", new Set(["ford-eel"])],
-  ["great-gull", new Set(["wrack-crab", "ford-eel", "oystercatcher"])],       // it has taken a rat off the parapet, and it did not need to land
-  ["marsh-hound", new Set(["oystercatcher", "bittern", "wrack-crab"])],
+  ["grey-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
+  ["conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
+  ["bittern", new Set(["ford-eel", "silver-eel"])],
+  ["great-gull", new Set(["wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher"])],       // it has taken a rat off the parapet, and it did not need to land
+  ["marsh-hound", new Set(["oystercatcher", "bittern", "wrack-crab", "devil-crab"])],
+  // THE RARE BLOOD HUNTS WHAT ITS OWN LINE HUNTS (mig 212). Listed out rather
+  // than resolved through variantBase, because that is how this table has
+  // always worked — the roe and the white roe, the rat and the fleet rat are
+  // both written down, and a reader should be able to see the whole web here
+  // without holding the variant map in their head.
+  ["dog-otter", new Set(["rat", "fleet-rat"])],
+  ["black-backed-gull", new Set(["wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher"])],
+  ["a-lymer", new Set(["oystercatcher", "bittern", "wrack-crab", "devil-crab"])],
+  ["bull-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
+  ["old-conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
 ]);
 // THE PACK (rome, 2026-08-02: "multiple grey wolves beats old boar"). PREYS_ON
 // is a stats table — every edge in it holds because the predator genuinely
@@ -2191,7 +2261,7 @@ export const BREAK_LINES = [
 // SENTINEL and takes the room on its own terms — it stays out.)
 export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf",
   "drove-dog", "the-drove-master",
-  "marsh-hound", "grey-seal", "great-gull"]);   // the crossing's three, and the gull is the one that comes to YOU
+  "marsh-hound", "a-lymer", "grey-seal", "bull-seal", "great-gull", "black-backed-gull"]);   // the crossing's three, and the gull is the one that comes to YOU
 // The deep eats its own: strayed rats (and worse) die in the dark and rot where
 // they fall, and the pale hunters scavenge the carrion. A dice mint (same law as
 // the stone/torch — cadence × odds, no clock to farm) drops one fresh carcass into
@@ -2236,6 +2306,7 @@ export const THIEF_LIFT_ODDS = new Map<string, number>([
   ["footpad", 0.35],
   ["wayman", 0.30],    // the best coat and the worst hands
   ["strand-thief", 0.40], // he is not robbing you, he is beachcombing, and you are on the beach
+  ["the-wrecker", 0.55],   // he did this for a living, and better than a beachcomber
 ]);
 export const THIEF_LIFT_DEFAULT = 0.35; // a future THIEF is never silently a 100% grab again
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
@@ -2271,7 +2342,7 @@ export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "
   "the-refuge-man",        // the causeway's one dry hole, and he is in it
   "the-scaffold-hand",     // hanging under the arch, over the channel
   "the-quicksand",         // not a creature so much as a place with an opinion
-  "conger",                // a mouth on the end of an arm, and the arm is in the pier
+  "conger", "old-conger",                // a mouth on the end of an arm, and the arm is in the pier
 ]);
 export const SEIZE_ODDS = 0.2;        // soft: a blow only sometimes takes hold
 export const SEIZE_BREAK_ODDS = 0.5;  // soft: about half the time you wrench loose each beat
@@ -2382,23 +2453,33 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "the-toll-clerk": { out: "walks {dir} with its hand still out.", in_: "arrives, stops, and puts its hand out." },
   "the-long-warden": { out: "goes {dir} at its own pace, which is the only pace it has.", in_: "walks in on the beat and does not break stride." },
   "otter": { out: "pours off the bank {dir} and is water.", in_: "comes up out of the water and onto the stone." },
+  "dog-otter": { out: "goes off the bank {dir} and the beck closes over it.", in_: "hauls out onto the stone {dir}, broad-headed, and shakes once." },
   "gibbet-crow": { out: "drops off the arm {dir} and rows away without hurrying.", in_: "comes down onto the iron {dir}, folds up, and watches." },
   "the-sapper": { out: "crawls away {dir} down the gallery, still working.", in_: "comes backward out of the dark {dir}, dragging the spoil with him." },
   "oystercatcher": { out: "goes up {dir} screaming and takes the whole flat with it.", in_: "drops onto the gravel, runs four steps, and stops dead." },
   "great-gull": { out: "tips off the stone {dir} and is gone downwind in one beat.", in_: "lands heavily on the parapet and looks at you with no give in it at all." },
+  "black-backed-gull": { out: "drops off the stone {dir} and the wind has it in one beat.", in_: "lands on the parapet {dir} heavily enough to be heard, and stays." },
   "bittern": { out: "goes {dir} low over the reed with its legs trailing and drops back in.", in_: "steps out of the stems and is suddenly, enormously, a bird." },
   "grey-seal": { out: "goes off the gravel {dir} in one movement and the water takes it.", in_: "comes up out of the channel and hauls itself onto the stones." },
+  "bull-seal": { out: "goes down the gravel {dir} in three heaves and the channel takes him.", in_: "comes up out of the water {dir} and keeps coming up." },
   "marsh-hound": { out: "breaks off {dir} through the reed, still watching you.", in_: "comes round {dir} at a trot, wet to the shoulder, and takes up a position." },
+  "old-conger": { out: "draws back into the pier {dir}, and keeps drawing back, and there is more of it.", in_: "comes out of the stonework {dir} and does not stop coming out." },
+  "a-lymer": { out: "breaks off {dir} at a straight run, and does not look back because it does not need to.", in_: "comes in {dir} at a walk, wet to the chest, and stops in front of you." },
   "fen-viper": { out: "pours off the plank {dir} into the water without a sound.", in_: "comes up over the plank edge and lies along it." },
   "wrack-crab": { out: "goes sideways {dir} under the weed and the weed closes.", in_: "comes up out of the wrack sideways, one claw high." },
+  "devil-crab": { out: "backs into the weed {dir} still facing you, both claws up.", in_: "comes out of the wrack head-on, which they do not do." },
   "ford-eel": { out: "goes {dir} over the gravel and the shallow water does not slow it.", in_: "comes over the gravel out of nowhere and is suddenly a yard long." },
+  "silver-eel": { out: "goes {dir} down the channel like something spilled.", in_: "arrives out of deeper water and is longer than the last one." },
   "the-eel-cutter": { out: "poles away {dir} down the cut without breaking rhythm.", in_: "poles in {dir}, ships the pole, and looks up." },
+  "the-pilot": { out: "poles away {dir} into the channel on a line he has not had to think about in two centuries.", in_: "comes in {dir} off the deep water, ships the pole, and reads you the way he reads a bar." },
   "the-reed-walker": { out: "goes {dir} into the reed and the reed does not close behind it.", in_: "comes out of the reed {dir}, at your pace, on your side." },
   "the-drover": { out: "goes {dir} across the shoal at a working pace, driving nothing.", in_: "comes wading in {dir} with the stick over his shoulder and does not break step." },
   "strand-thief": { out: "goes {dir} along the wrack at an unhurried walk, not looking back.", in_: "comes along the tideline {dir}, turning things over with a foot." },
+  "the-wrecker": { out: "walks off {dir} along the tideline without hurrying, which is worse.", in_: "comes down the shingle {dir}, looking at what you are carrying." },
   "the-tide-warden": { out: "walks {dir} down the causeway at the pace it has always held.", in_: "comes up the causeway {dir}, stops at the milestone, and cuts the stick." },
   "grey-heron": { out: "goes up {dir}, slowly, hugely, complaining.", in_: "drops in on stiff wings and folds itself away." },
   "feral-goat": { out: "goes {dir} up ground that has no business holding it.", in_: "picks its way in and resumes chewing." },
+  "old-billy": { out: "goes {dir} up the rock at a walk, unhurried, and turns at the top.", in_: "picks its way in, stops square on, and lowers its head." },
   "scarp-raven": { out: "tips off the face {dir} and is carried away without a beat.", in_: "lands, hops twice, and looks at you sideways." },
   "gill-adder": { out: "pours away {dir} between the stones.", in_: "flows in and settles into a coil." },
   "lead-dog": { out: "gives ground {dir} still facing you, and only turns at the last.", in_: "walks in and stops, square on, waiting." },
@@ -2803,11 +2884,11 @@ export const BITERS = new Set([
   "rat", "fleet-rat", "brood-rat", "albino-rat", "grave-hyena", "dire-hyena", "pale-crawler", "pale-stalker",
   "three-hound", // three sets of teeth at the throat of the deep
   "two-hound",   // two sets, same throat
-  "drove-dog", "the-drove-master", "otter", "gill-adder", // the east road's teeth
+  "drove-dog", "the-drove-master", "otter", "dog-otter", "gill-adder", // the east road's teeth
   // THE CROSSING (mig 191). A shore is mostly teeth: everything here that is
   // not a bird is built round a mouth, and the two birds bite as well.
-  "conger", "grey-seal", "ford-eel", "marsh-hound", "fen-viper", "wrack-crab",
-  "great-gull", "bittern",
+  "conger", "old-conger", "grey-seal", "bull-seal", "ford-eel", "silver-eel", "marsh-hound", "a-lymer", "fen-viper", "wrack-crab", "devil-crab",
+  "great-gull", "black-backed-gull", "bittern",
   "gibbet-crow",   // the open ground's one set of teeth that is really a beak
 ]);
 
@@ -2831,7 +2912,7 @@ export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "th
   // THE CROSSING (mig 191): three that hold a workplace rather than a post. The
   // mason and the widow are AT WORK and you are in it; the gull simply has a
   // pier, and has never in its life conceded anything to anybody.
-  "the-bridge-mason", "the-salt-widow", "great-gull"]);
+  "the-bridge-mason", "the-salt-widow", "great-gull", "black-backed-gull"]);
 
 // SWEEPERS swing for the whole room. A mallet dressing the stone at the point
 // where the bridge stops does not consult you about its arc — a landed blow on
@@ -2940,8 +3021,8 @@ export const HOUND_WAKE_MS = 900_000; // 15 minutes
 // haunches and tusks now come to whoever walks in by lantern-light, or by none.
 export const FEARS_FIRE = new Set([
   "albino-rat",
-  "feral-goat", "otter", "grey-heron", "scarp-raven", // the east road's wild things
-  "oystercatcher", "great-gull", "bittern", "grey-seal", "wrack-crab", "fen-viper", "marsh-hound", // the crossing's
+  "feral-goat", "old-billy", "otter", "dog-otter", "grey-heron", "scarp-raven", // the east road's wild things
+  "oystercatcher", "great-gull", "black-backed-gull", "bittern", "grey-seal", "bull-seal", "wrack-crab", "devil-crab", "fen-viper", "marsh-hound", "a-lymer", // the crossing's
   "gibbet-crow",                 // the open ground's
   "roe-deer", "white-roe",       // the wood's food, and it survives by leaving
   "grey-wolf", "dire-wolf",      // the oldest reason there are campfires
@@ -3035,7 +3116,7 @@ export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS]);
 // animal before it is anything else. Named here so the next grazer is one line
 // and not a hunt through ai.ts.
 export const GRAZERS = new Set<string>([
-  "feral-goat",                                             // it eats what the scarp has, which is nothing much
+  "feral-goat", "old-billy",                                             // it eats what the scarp has, which is nothing much
   "rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",   // VERMIN
   "cutpurse", "cutthroat", "footpad", "wayman",               // THIEVES — they scavenge, not graze, but same floor
   "wild-boar", "old-boar",                                    // rooting, which is what a boar is FOR
@@ -3045,7 +3126,7 @@ export const GRAZERS = new Set<string>([
   // is the one the ledger itself missed: THIEVES all graze (see the line above)
   // and it was simply never added. The oystercatcher, eel, adder, heron and
   // viper eat what the shore or the gravel puts down — the floor is their food.
-  "strand-thief", "oystercatcher", "ford-eel", "gill-adder", "grey-heron", "fen-viper",
+  "strand-thief", "the-wrecker", "oystercatcher", "ford-eel", "silver-eel", "gill-adder", "grey-heron", "fen-viper",
 ]);
 export const FORAGE_HEAL = 3; // a scavenged nibble — less than a corpse (SCAVENGER_HEAL 6) or a dropped meal
 // The open sky: every room where weather can reach you (the grounds ring +
@@ -3770,21 +3851,30 @@ export const BLEED_ODDS = new Map<string, number>([
   ["drove-dog", 0.15],
   ["the-drove-master", 0.20],
   ["otter", 0.12],
+  ["dog-otter", 0.14],
   // THE CROSSING (mig 191). The viper is the ford's answer to the gill adder and
   // sits just under it: same animal, same trick, one rank up in a place you have
   // to walk past it rather than round it. The conger is the outlier at the top —
   // teeth that all rake inward, on a thing that does not let go.
   ["fen-viper", 0.50],
   ["conger", 0.35],
+  ["old-conger", 0.35],
   ["grey-seal", 0.25],
+  ["bull-seal", 0.28],
   ["marsh-hound", 0.18],
+  ["a-lymer", 0.20],
   ["great-gull", 0.15],
+  ["black-backed-gull", 0.18],
   ["ford-eel", 0.15],
+  ["silver-eel", 0.18],
   ["the-eel-cutter", 0.15],
+  ["the-pilot", 0.18],   // the same hands, and better ones
   ["the-fowler", 0.15],
   ["the-reed-walker", 0.15],
   ["strand-thief", 0.12],
+  ["the-wrecker", 0.14],
   ["wrack-crab", 0.10],
+  ["devil-crab", 0.12],
   ["gibbet-crow", 0.10],
   ["the-sapper", 0.10],
   ["bittern", 0.10],
