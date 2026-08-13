@@ -1,0 +1,41 @@
+-- 216 the crossing hits softer (rome, 2026-08-13: reduce the damage of the hard
+-- hitting Crossing mobs — he is well geared and they are killing him first).
+--
+-- THE TOP RUNG ONLY, and it is six bodies. Every mob standing on the Crossing at
+-- dmg_max 9 or more, with what happens to it:
+--
+--     the-drowned-ferryman  84hp  8-14   BOSS — untouched, it is the wall
+--     the-bridge-mason      62hp  6-11 -> 5-9
+--     the-refuge-man        58hp  6-11 -> 5-9
+--     the-pilot             56hp  6-11 -> 5-9
+--     the-reed-walker       54hp  6-11 -> 5-9
+--     the-salt-widow        52hp  6-11 -> 5-9
+--     the-fowler            44hp  6-10 -> 5-9
+--     ---- below this line, untouched ----
+--     the-scaffold-hand     44hp  5-10
+--     the-quicksand         40hp  5-10
+--     the-eel-cutter        48hp  5-10
+--     the-tide-warden       46hp  5-9
+--     the-drover            50hp  5-9
+--     conger                42hp  5-9   (already stepped back in 212)
+--
+-- WHY THE LINE IS THERE. The 6-11 band was five of the game's six hardest-
+-- hitting non-bosses, all in one band, all within a few rooms of each other —
+-- which is the same mistake 205 had to clean up, told again in a different
+-- place. The tier below it (5-10) is a real step down already and is not what
+-- was killing anybody; cutting it too would flatten the whole band into one
+-- note, which is exactly what the 097 armour pass got wrong.
+--
+-- WHAT IT ACTUALLY BUYS. Average swing goes 8.5 to 7.0 — a fifth off every blow
+-- that lands. Against a well-armoured body (44% mitigation, which is roughly
+-- what a full kit at honest wear gives) that is 4.3 damage a round down to 3.6,
+-- so sixty hit points last about fourteen rounds where they lasted eleven. The
+-- fights are still the hardest on the surface. They are no longer a race the
+-- Crossing wins by default against a player who did everything right.
+--
+-- HP IS DELIBERATELY UNTOUCHED. These are meant to be long fights — the mistake
+-- was in how hard they hit, not in how long they stand up, and cutting both at
+-- once would take the band's whole character out in one migration.
+UPDATE mob_templates SET dmg_min = 5, dmg_max = 9
+  WHERE id IN ('the-bridge-mason', 'the-refuge-man', 'the-pilot',
+               'the-reed-walker', 'the-salt-widow', 'the-fowler');

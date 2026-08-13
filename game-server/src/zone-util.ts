@@ -217,3 +217,26 @@ export function rollShopCondition(slot: string): number {
   if (slot === "") return 100;
   return chance(0.65) ? 100 : randInt(70, 95); // most perfect; the rest "worn" at worst
 }
+
+// ---- THE MARKINGS (rome, 2026-08-13: a crab could say a different colour or
+// pattern) -------------------------------------------------------------------
+// One line of individual description per creature, so two wrack crabs in the
+// same weed are not the same crab twice. Only animals that genuinely vary get a
+// list — never the hollow (old bone is old bone), never a boss (a boss looks
+// exactly like itself), and never a creature whose colour IS its name: the
+// albino rat, the white roe and the silver eel are already the answer to this
+// question and a second one would argue with them.
+//
+// DERIVED, NOT STORED, and that is the whole trick. Hashing the creature's own
+// instance id into the list means the marking is stable for that animal's whole
+// life — the same crab you looked at an hour ago, across restarts and across a
+// DO rebuild — while costing b:creatures exactly zero extra bytes. The blob is
+// the scaling ceiling in this game; a per-creature field would have been the
+// wrong way to buy this.
+export function morphOf(creatureId: string, templateId: string, table: Record<string, string[]>): string {
+  const list = table[templateId];
+  if (!list || !list.length) return "";
+  let h = 2166136261;
+  for (let i = 0; i < creatureId.length; i++) { h ^= creatureId.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return list[Math.abs(h) % list.length];
+}

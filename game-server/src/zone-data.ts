@@ -5576,3 +5576,183 @@ export const FEED_REST_CAUGHT: string[] = [
   "{a} catches {t} mending, guard down — and strikes.",
 ];
 
+
+// ---- THE MARKINGS ----------------------------------------------------------
+// A line of individual description appended to a creature's `look`, so two wrack
+// crabs in the same weed are not the same crab twice (rome, 2026-08-13: could a
+// crab say a different colour, or some kind of pattern). Chosen by hashing the
+// creature's own instance id (morphOf, zone-util) — stable for that animal's
+// whole life, across restarts and DO rebuilds, and stored NOWHERE, so the sim
+// blob does not grow by a byte.
+//
+// WHO IS NOT IN HERE, on purpose. The hollow: old bone is old bone, and a
+// warden's plate is the warden's plate. The bosses: a boss should look exactly
+// like itself, every time, or it stops being a landmark. And every creature
+// whose colour IS its name — the albino rat, the white roe, the silver eel are
+// each already the answer to this question, and a second answer would argue
+// with the first. Variants that earn their own look (the devil crab's filed
+// pale edge, the bull seal's scarred neck) still vary within it.
+export const MORPHS: Record<string, string[]> = {
+  // THE SHORE. A crab is the most variable animal out here — no two shells the
+  // same, and half of them wearing something that is not shell at all.
+  "wrack-crab": [
+    "This one is a dull brick red under the weed, with a chip out of the left claw that healed badly.",
+    "This one has gone almost black, and there is a crust of small white barnacles growing along its back.",
+    "This one is mottled olive and cream in a pattern like lichen, and one claw is half the size of the other — a new one, growing back.",
+    "This one is pale sand-coloured, near enough invisible against the shell grit, and it knows it.",
+    "This one carries a ragged skirt of green weed grown right onto the shell, so it looks like a piece of the ground that decided to move.",
+  ],
+  "devil-crab": [
+    "The pale filed line along the shell edge is the colour of bone on this one, and the shell behind it is nearly purple.",
+    "This one is scarred white across the back in three parallel grooves, and something with a beak made them.",
+    "This one is so dark it reads black until it moves into the light, and then it is the deep red of old brick.",
+  ],
+  "great-gull": [
+    "This one has a red smear on the lower bill that it keeps opening and closing.",
+    "This one is still in its brown speckled second year, mottled all over, and it does not yet know it is not dangerous.",
+    "This one is missing most of one foot — an old line of net, by the look of it — and it stands on the other without seeming to mind.",
+    "This one is white to the point of glare, and the wing tips are dipped black as if held in ink.",
+  ],
+  "black-backed-gull": [
+    "The slate of the back on this one is so dark it is nearly black, and the size of it is genuinely wrong.",
+    "This one has a heavy scar through the webbing of one foot and a bill worn blunt at the tip from opening things.",
+    "This one is enormous even for what it is, and it has a habit of turning its head fully sideways to look at you with one eye.",
+  ],
+  "oystercatcher": [
+    "This one has a bill worn to a chisel — a hammerer, not a prier, and the shells it leaves are all smashed rather than opened.",
+    "This one has a white collar across the throat, which means it is not breeding, which means it has nowhere in particular to be.",
+    "This one is missing a toe and stands a little crooked because of it.",
+  ],
+  "grey-seal": [
+    "This one is a pale silver-grey blotched with dark, like weathered granite.",
+    "This one is nearly black and wet-shining, with a pattern of old ring scars down one flank.",
+    "This one is a young one, still cream-coloured in patches where the first coat has not finished going.",
+    "This one has a healed gash from eye to jaw that has left the eye milky and useless.",
+  ],
+  "bull-seal": [
+    "The scarring on this one runs right up over the crown of the skull — the half-moon shapes of other bulls' teeth, hundreds of them.",
+    "This one is so dark and so heavy through the neck that at rest it reads as a boulder somebody left on the shingle.",
+    "This one has a torn nostril that whistles faintly when it breathes, and the breathing is the loudest thing on the beach.",
+  ],
+  "conger": [
+    "This one is grey going green, and the skin along its jaw has been rubbed pale by the stone it lives in.",
+    "This one is nearly black with a dirty yellow underside, and the eye is clouded on the side you can see.",
+    "This one is the colour of wet slate and there is a old hook, long rusted, still set in the corner of its mouth.",
+  ],
+  "old-conger": [
+    "This one has gone almost white along the belly with age, and the head is scarred to leather.",
+    "There is a broken length of chain-thin wire trace grown into the lip of this one, and the flesh has closed over it.",
+    "This one is so thick through the body that the hole it lives in has been worn wider to take it.",
+  ],
+  "ford-eel": [
+    "This one is bronze-backed with a yellow belly — a yellow eel, years off the sea yet.",
+    "This one is dark olive and thin, and it has been in this beck a long time without getting much out of it.",
+    "This one has a pale scar ringing it a third of the way down, as if something once had it and did not keep it.",
+  ],
+  // THE WOOD AND THE ROAD.
+  "roe-deer": [
+    "This one is in the red summer coat, clean and foxy, with the white rump patch showing at every step.",
+    "This one is still half in the grey winter coat, coming out of it in ragged patches along the flanks.",
+    "This one has a torn ear, healed to a notch, which will be how you know it if you meet it again.",
+    "This one is small and dark, and it holds one hind leg a little off the ground when it stands still.",
+  ],
+  "wild-boar": [
+    "This one is the usual grizzled brown-black, with the bristles along the spine standing in a hard ridge.",
+    "This one is rust-red through the shoulders, which means it has been wallowing in the marl and has not been in water since.",
+    "This one is young enough to still show the faint ghost of the striping it was born with, along the flanks.",
+  ],
+  "old-boar": [
+    "This one has gone grey right across the face and shoulders, and the shield of gristle over the shoulder is thick enough to see.",
+    "This one is caked to the eyes in dried grey mud, and it has not come off in a long time and will not.",
+    "This one is missing an eye on the left side and turns its whole head to make up for it, which is the only warning you get.",
+  ],
+  "feral-goat": [
+    "This one is piebald brown and white, in a coat matted into cords that hang off it.",
+    "This one is entirely black except for a white blaze down the face, and the horns sweep back almost flat.",
+    "This one is a dirty cream all over, with one horn broken off short and the stump worn smooth.",
+    "This one is grey-brown and shaggy to the knees, and it is dragging half a hedge along in its fleece.",
+  ],
+  "old-billy": [
+    "This one is yellow-white and rank, and the beard has felted into a single stiff wedge.",
+    "This one is nearly black with a grey muzzle, and both horns are scarred along their length from use.",
+    "This one has a great swathe of coat rubbed away along one flank, down to grey skin, from an object it clearly leans on daily.",
+  ],
+  "grey-wolf": [
+    "This one is the ordinary grizzled grey, dark down the spine, pale at the throat and belly.",
+    "This one is nearly black, which happens, and it is bigger than the black makes it look.",
+    "This one is pale — a washed-out fawn going white at the ruff — and it is thinner than the others.",
+    "This one has a foreleg that healed crooked, and it carries the weight off it and still keeps up.",
+  ],
+  "masterless-dog": [
+    "This one is a rough brindle, deep-chested, with a collar-mark worn into the fur that has not grown back.",
+    "This one is white with liver patches and one blue eye, and something in it was a farm dog once.",
+    "This one is a coarse yellow mongrel with its ears cropped short — that was done by a person, on purpose, a long time ago.",
+    "This one is black and tan and would be handsome if it were not so thin, and it watches your hands rather than your face.",
+  ],
+  "lead-dog": [
+    "This one is the biggest of them and a solid dirty white, with old bite-scars laid over each other across the muzzle.",
+    "This one is black-brindled and heavy through the head, and it still wears the rotted remains of a broad collar.",
+    "This one is grey-muzzled with age and holds itself very still, and the others watch it rather than you.",
+  ],
+  "drove-dog": [
+    "This one is the classic drover's colouring — black and white, rough-coated, with a ring of white round one eye.",
+    "This one is blue merle, mottled grey and black, and it will not stop circling.",
+    "This one is a plain shaggy brown, low to the ground, and it has the crouching stare of a thing bred to move cattle.",
+  ],
+  "marsh-hound": [
+    "This one is liver-and-white with a coat curled tight against the wet.",
+    "This one is a flat dark brown all over, long in the ear, and the ears are dragging in the water.",
+    "This one is the colour of old straw with a black mask across the eyes.",
+  ],
+  "a-lymer": [
+    "This one is a heavy tan hound gone grey at the muzzle, with a fold of loose skin over the eyes that gives it a mournful look it has not earned.",
+    "This one is black-and-tan, deep through the chest, and drags a rotted length of leash still knotted to its collar.",
+    "This one is nearly white and very tall, and it does not bay — it simply arrives.",
+  ],
+  "grave-hyena": [
+    "This one is sandy with the spotting gone faint and blurred at the edges with age.",
+    "This one is dark and heavily spotted, with a mane that stands up along the whole spine.",
+    "This one has a jaw that healed out of true, so its face is very slightly wrong and it is hard to say how.",
+  ],
+  "otter": [
+    "This one is a rich dark brown, cream at the throat, and dry it looks twice the size it does wet.",
+    "This one is greyish and old, and the whiskers on one side are broken off short.",
+    "This one is small and quick and has a pale patch on the chest shaped like nothing in particular.",
+  ],
+  "rat": [
+    "This one is the usual brown-grey, with a tail longer than its body and a chunk gone from one ear.",
+    "This one is nearly black and slick with something, and you would rather not know what.",
+    "This one is patchy and half-bald along the back, and the skin under it is grey.",
+    "This one is fat, which out here means it has found something, which means there is something to find.",
+  ],
+  "fleet-rat": [
+    "This one is lean and dark and does not stop moving even while it watches you.",
+    "This one is a pale sandy colour with a white belly, and it is faster than the dark ones.",
+    "This one has a stump where the tail was taken off, and it corners badly because of it — but only badly for a rat.",
+  ],
+  "brood-rat": [
+    "This one is swollen-bellied and moves in short bursts, and it is grey to the point of colourless.",
+    "This one is a mottled brown with a torn flank that has healed into a hairless seam.",
+    "This one is enormous for a rat, and there is a nest smell coming off it that fills the room.",
+  ],
+  "fen-viper": [
+    "This one carries the dark zigzag right down the spine, crisp and unbroken, on a ground of pale grey.",
+    "This one is a deep coppery red, and the pattern on it is nearly lost in the colour.",
+    "This one is almost entirely black — the pattern is there but you have to be far too close to see it.",
+  ],
+  "gill-adder": [
+    "This one is olive-brown with the cross-bars gone smudged and irregular along its length.",
+    "This one is bright with a fresh skin, the pattern sharp as new ink, and the old skin is lying in the grass a foot away.",
+    "This one is dull and clouded-eyed, which means it is about to shed, which means it cannot see you well and will strike at anything.",
+  ],
+  "scarp-raven": [
+    "This one has a wing feather grown in white — a single pale bar across the black when it opens up.",
+    "This one is oil-bright and enormous, and the throat hackles stand out like a beard when it calls.",
+    "This one is ragged in the wing and flies badly, and it has clearly been doing so for years.",
+  ],
+  "gibbet-crow": [
+    "This one has a grey-hooded look to it, the body paler than the head and wings.",
+    "This one is missing several tail feathers and steers with a distinct list.",
+    "This one is glossy and fat and very unhurried, which on this ground tells you what it has been eating.",
+  ],
+};
