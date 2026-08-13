@@ -98,17 +98,27 @@ export function foodState(at: number | undefined, itemId?: string, now = Math.fl
 }
 // The shelf-word: fresh food shows NOTHING (no "— fresh" noise on every ration);
 // only aging food flags itself, so the tag reads as a warning, not decoration.
+//
+// AND IT SAYS WHAT IT MEANS (rome, 2026-08-13: the eel reads spoiled and he can
+// still eat it). The mechanic was never in doubt — spoiled food heals half and
+// never nothing, deliberately, because starving with a rank ration in the pack
+// should be a choice and not a rule. But the one word in the pack list said
+// "spoiled", which every player reads as RUINED, and the sentence explaining
+// otherwise only appears if you stop and look at the thing. So the tag carries
+// its own consequence now: rotten, and still food, which is the whole mechanic
+// in four words. "on the turn" stays as it was — that tier costs nothing yet,
+// and it is the warning that you are about to lose half.
 export function foodWord(at: number | undefined, itemId?: string, now?: number): string {
   const s = foodState(at, itemId, now);
-  return s === "spoiled" ? "spoiled" : s === "turning" ? "on the turn" : "";
+  return s === "spoiled" ? "rotten, still food" : s === "turning" ? "on the turn" : "";
 }
 // The long look: what the ration is like now.
 export function foodProse(at: number | undefined, itemId?: string, now?: number): string {
   const s = foodState(at, itemId, now);
   return s === "spoiled"
-    ? "It has gone off — slick and grey, a sour reek to it. It will still fill you, if your stomach will have it."
+    ? "It has gone off — slick and grey, a sour reek to it. It is still food and it will still fill you, but only about half as far as it would have. Your stomach will have to agree."
     : s === "turning"
-      ? "It is past its best: soft now, an edge of rot creeping into the smell. Eat it soon."
+      ? "It is past its best: soft now, an edge of rot creeping into the smell. It is still worth its full keep, but not for much longer — eat it soon."
       : "It is fresh, near enough.";
 }
 

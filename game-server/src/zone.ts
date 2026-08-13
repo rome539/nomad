@@ -95,7 +95,7 @@ import {
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
-  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS,
+  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, MOB_HIT, MOB_VITALS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   REGION_LABELS, NIGHT_LIT,
   DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
@@ -2008,7 +2008,23 @@ export class ZoneDO implements DurableObject {
     const world = this.world!;
     const here = world.caches.filter((c) => this.cacheRoomId(c) === session.roomId);
     if (!here.length) return this.send(session, "There's nothing here to unlock.");
-    const cache = (arg ? here.find((c) => nameMatches(c.name, arg)) : null) ?? here[0];
+    // TWO CHESTS CAN SHARE A ROOM (rome, 2026-08-13: he found a strongbox and a
+    // meal-chest in the same hollow). That is the roaming law working — each
+    // chest picks its refill room independently, so now and then two land
+    // together — but this line took whichever sat first in the table, locked or
+    // not, keyed or not. Standing over a sprung strongbox and a locked
+    // meal-chest, a bare 'unlock' answered "hangs open and empty" and the second
+    // chest could not be reached at all. So the verb picks the one it can
+    // actually do something with: a chest you hold the key to first, then any
+    // still-locked chest, then whatever is left to give the honest refusal
+    // about. The same ranking runs inside a name match, so 'unlock strongbox'
+    // with a spent one and a full one beside it reaches for the full one.
+    const rank = (c: Cache) =>
+      (this.cacheLocked(c) ? 2 : 0) + (session.items.some((i) => i.itemId === c.keyItem) ? 1 : 0);
+    const best = (pool: Cache[]) =>
+      pool.reduce((a, b) => (rank(b) > rank(a) ? b : a), pool[0]);
+    const named = arg ? here.filter((c) => nameMatches(c.name, arg)) : [];
+    const cache = named.length ? best(named) : best(here);
     const keyT = world.itemTemplates.get(cache.keyItem);
     if (!this.cacheLocked(cache)) {
       return this.send(session, `${cap(cache.name)} hangs open and empty. Give it time to be worth forcing again.`);
@@ -5719,10 +5735,25 @@ export class ZoneDO implements DurableObject {
   // "A scabby rat sinks its teeth into you" — the register follows the kind of
   // thing swinging: teeth for the living beasts, cold weight for the drowned,
   // a thin knife for the cutpurses, dead bone for the hollow, a plain blow else.
+  // A named boss outranks every register — the six of them are hand-written.
+  // Inside BITERS the pool splits by anatomy: a beak stabs, a coiled thing
+  // fastens and rolls, small vermin nip, and everything left keeps its jaws.
   private creatureHit(templateId: string): string {
-    const pool = DROWNERS.has(templateId) ? CREATURE_HIT.water
+    const boss = MOB_HIT[templateId];
+    if (boss) return pick(boss);
+    // COILS before DROWNERS, and only here: the congers sit in DROWNERS for the
+    // seize-and-drown MECHANIC, but every other member of that Set is a drowned
+    // dead man and the water voice was written for them. A conger is a live
+    // animal with its teeth raked backward — it should speak in its own register
+    // and still drown you by the same rule.
+    const pool = COILS.has(templateId) ? CREATURE_HIT.coils
+      : DROWNERS.has(templateId) ? CREATURE_HIT.water
       : THIEVES.has(templateId) ? CREATURE_HIT.knife
-      : BITERS.has(templateId) ? CREATURE_HIT.teeth
+      : BITERS.has(templateId)
+        ? (BEAKS.has(templateId) ? CREATURE_HIT.beak
+          : COILS.has(templateId) ? CREATURE_HIT.coils
+          : SMALL_BITE.has(templateId) ? CREATURE_HIT.vermin
+          : CREATURE_HIT.teeth)
       : HOLLOW.has(templateId) ? CREATURE_HIT.bone
       : CREATURE_HIT.plain;
     return pick(pool);
@@ -5732,9 +5763,16 @@ export class ZoneDO implements DurableObject {
   // headshot reads like the thing that landed it (jaws to the throat, iron to the
   // heart), not one generic line.
   private creatureVitals(templateId: string): string {
-    const pool = DROWNERS.has(templateId) ? CREATURE_VITALS.water
+    const boss = MOB_VITALS[templateId];
+    if (boss) return pick(boss);
+    const pool = COILS.has(templateId) ? CREATURE_VITALS.coils // see creatureHit
+      : DROWNERS.has(templateId) ? CREATURE_VITALS.water
       : THIEVES.has(templateId) ? CREATURE_VITALS.knife
-      : BITERS.has(templateId) ? CREATURE_VITALS.teeth
+      : BITERS.has(templateId)
+        ? (BEAKS.has(templateId) ? CREATURE_VITALS.beak
+          : COILS.has(templateId) ? CREATURE_VITALS.coils
+          : SMALL_BITE.has(templateId) ? CREATURE_VITALS.vermin
+          : CREATURE_VITALS.teeth)
       : HOLLOW.has(templateId) ? CREATURE_VITALS.bone
       : CREATURE_VITALS.plain;
     return pick(pool);

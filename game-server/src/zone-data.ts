@@ -2732,6 +2732,39 @@ export const WEAPON_VERBS: Record<string, string[]> = {
   "warden-maul": ["bring the warden-maul down on {n}", "hammer {n}", "crush {n} under the maul"],
   "flanged-mace": ["crush {n} with the flanged mace", "bring the mace down on {n}", "stave {n} in"],
   "marrow-scepter": ["crack the scepter across {n}", "hammer {n} with the scepter", "shatter the scepter into {n}"],
+  // ---- EVERY WEAPON HAS ITS OWN VOICE NOW (rome, 2026-08-13) ----------------
+  // The audit that found this started at the top and the top was the worst of
+  // it: all three LEGENDARIES fell through to the generic family register, so
+  // the Attainder swung in the same words as a rusted sword, while the loose
+  // rock and the splintered cudgel had hand-written verbs of their own. Twenty
+  // weapons in all were falling through — three legendary, four epic, three
+  // rare, nine uncommon, one common. A weapon with a description this specific
+  // and no verb of its own is a thing the prose forgets it is holding.
+  //
+  // — the three legendaries —
+  "the-attainder": ["set the Attainder in the seam of {n}", "draw the bright edge through {n}", "put the Attainder through the gap in {n}"],
+  "houndsbane": ["put Houndsbane into {n} at the length of the haft", "set the boar-spear in {n} and lean on it", "keep {n} off you and drive the needle home"],
+  "the-hedge-bill": ["hook the bill into {n} and pull", "draw the inner curve through {n}", "lay into {n} with the hedge bill"],
+  // — the epics that were missing —
+  "smiths-ruin": ["open {n} on the draw", "bring the smith's ruin back across {n}", "ring the weighted pommel off {n}"],
+  "poleaxe": ["reach in and set the poleaxe in {n}", "bring the head round into {n}", "punch the poleaxe through {n}"],
+  "halberd": ["sweep the halberd through {n}", "hold {n} off the haft and cleave", "bring the halberd down across {n}"],
+  "hookbill-cleaver": ["cleave the hookbill into {n}", "hook the spur into {n} and tear it back", "drag the hookbill out of {n}"],
+  // — the rares —
+  "two-headed-maul": ["swing both heads through {n}", "bring the maul round in a flat arc into {n}", "catch {n} with the far head"],
+  "woodwards-axe": ["fell into {n}", "bury the woodward's axe in {n}", "swing the long haft through {n}"],
+  "skull-headed-maul": ["cave the skull into {n}", "bring the wolf's head down on {n}", "club {n} with the leaded jaw"],
+  // — the working steel: tools, mostly, doing what tools do when pressed —
+  "smiths-cleaver": ["chop the cleaver into {n}", "open {n} with the butcher's edge", "beat the heavy blade through {n}"],
+  "forged-warmaul": ["cave the war-maul into {n}", "bring the cast iron down on {n}", "swing the maul through {n}"],
+  "forged-warspike": ["punch the spike through {n}", "drive the war-spike into {n}", "set the four-sided point in {n}"],
+  "burners-billhook": ["hook the billhook into {n}", "chop the burner's hook into {n}", "drag the hook back through {n}"],
+  "burners-hatchet": ["chop the hatchet into {n}", "hack at {n} with the hatchet", "bury the blued head in {n}"],
+  "tusk-goad": ["goad the tusk into {n}", "jab the tusk-goad into {n}", "put the tusk into {n} and shove"],
+  "masons-mallet": ["knock the mallet into {n}", "bring the lignum down on {n}", "club {n} with the mason's mallet"],
+  "oyster-knife": ["work the oyster knife into {n}", "shuck the short blade into {n}", "twist the knife into {n}"],
+  "sappers-pick": ["drive the pick into {n}", "swing the sapper's pick into {n}", "punch the worn steel into {n}"],
+  "lopped-stave": ["crack the stave across {n}", "swing the ash into {n}", "jab the end of the stave into {n}"],
 };
 // The trait-tell: a short clause the swing appends when a MECHANIC actually
 // fires this beat, so the prose reads out the system — a point through plate, a
@@ -2739,21 +2772,49 @@ export const WEAPON_VERBS: Record<string, string[]> = {
 // Plate language belongs ONLY to the hollow — they're the ones in old steel.
 // A living thing's armor is hide and muscle, so every tell splits by target:
 // no rock ever "caves the plate" of a hyena (rome's audit, 2026-07-10).
+//
+// FIFTEEN EACH, NOT FIVE (rome, 2026-08-13, after a fight where one line landed
+// four times in six swings). These pools were sized as if the tell were rare,
+// and it is not: `crushed` and `pierced` mean only "my weapon has stun/pierce
+// and this thing wears armor", so against anything armored the clause appends
+// EVERY hit for the whole fight. Seven swings drawing from five lines shows
+// about four distinct ones — three of your seven are repeats, which is what a
+// stuck record sounds like. Fifteen puts that under one. The firing rule is
+// deliberately untouched: a tell you can rely on is information about your
+// weapon, and a tell that came and went at random would only be decoration.
 export const PIERCE_TELL = [
   "the point finds the gap in its plate", "the narrow point punches through",
   "it slips past the armor", "plate can't turn a point like that", "the point bites past the guard",
+  "it goes in through a rivet hole and keeps going", "the point turns a mail ring inside out",
+  "steel parts along an old seam", "it finds the strap-gap under the arm",
+  "the plate dimples, and then it opens", "the point walks in between two lames",
+  "there is a thin shriek of metal and then nothing in its way",
+  "the point catches a buckle and tears through what it was holding",
+  "it punches a clean hole, and the hole stays", "old steel has old holes, and the point knows them",
 ];
 export const PIERCE_TELL_FLESH = [
   "the point slips between the ribs", "it sinks deep where the hide runs thin",
   "no hide turns a point like that", "the point finds the soft beneath the shoulder",
-  "it goes in far too easily",
+  "it goes in far too easily", "the point parts hide and keeps going",
+  "it slides in along a rib and past it", "the hide gives with a small wet sound",
+  "it finds the hollow behind the foreleg", "muscle closes around the point and cannot hold it",
+  "the point goes in deep and comes back dark", "sinew parts with a sound like a cut rope",
+  "it opens something under there that should have stayed shut",
+  "the point finds the gap where the neck meets the shoulder",
+  "it goes in to the width of your hand",
 ];
 // A blunt weapon against a living thing: weight against meat and bone.
 // (Its bone cousin below keeps the dry voice for the hollow.)
 export const BLUNT_TELL = [
   "something cracks deep under the weight of it", "ribs flex and give beneath the blow",
   "tough hide is no answer to a blow like that", "it lands with a wet, heavy crunch",
-  "the whole flank shudders under it",
+  "the whole flank shudders under it", "bone gives somewhere deep, and stays given",
+  "the blow lands, and something inside it lets go", "hide spreads the weight and the weight does not care",
+  "it folds around the blow", "the impact travels through it and out the other side",
+  "a rib goes with a sound you feel in your teeth", "the whole animal shudders down to its feet",
+  "meat and bone move together where they should not",
+  "it lands heavy, and the breath goes out of it in a rush",
+  "something under the hide crunches wet and shifts",
 ];
 // The same crushing blow against the HOLLOW: there's no flesh under that plate,
 // only old bone — the crush speaks bone, never meat (rome's audit, 2026-07-10).
@@ -2761,6 +2822,13 @@ export const BLUNT_TELL_BONE = [
   "the blow caves the plate", "old bone cracks beneath the steel",
   "something snaps dry under the weight of it", "the frame beneath the armor gives with a crunch",
   "steel buckles, and the bone under it goes with it",
+  "the plate rings hollow and stays dented", "dry bone goes to splinters under the iron",
+  "there is nothing in there to soften it", "a rib snaps like kindling and does not bleed",
+  "the blow goes through plate and bone and finds only air",
+  "old iron folds, and the dry thing inside folds with it", "something powders under the plate",
+  "the sound is wrong — dry, and far too light for the weight behind it",
+  "the shoulder caves and hangs there by its straps",
+  "bone with two hundred years of drying in it does not bend",
 ];
 // How a beaten thing runs tells you what beat it: an edge leaves a trail, a
 // weight leaves a broken gait, a point leaves it stuck and leaking. Per-mob
@@ -2832,9 +2900,37 @@ export const CRIT_FLOURISH = [
 // How each kind of thing lands a blow ON you. Keyed by behaviour family, so a
 // new creature inherits its kin's register the moment it joins a Set.
 export const CREATURE_HIT = {
+  // TEETH IS JAWS NOW, AND ONLY JAWS (rome, 2026-08-13). This one pool was
+  // carrying thirty-six creatures and four different anatomies, and the seams
+  // showed: "rakes you with its claws" was being said by fourteen clawless
+  // animals — both congers, both eels, the viper, the adder, three gulls, the
+  // bittern, the heron, two crows and both seals. An eel does not have claws.
+  // Split four ways below by what the thing actually attacks with, which costs
+  // three small Sets and fixes every one of those at once.
   teeth: [
     "sinks its teeth into you", "snaps at you and tears", "bites deep", "savages you",
     "rakes you with its claws", "worries at you", "sets its jaws in you",
+    "takes hold and shakes", "drives you back on its shoulders and bites",
+  ],
+  // Birds. A beak is a tool for stabbing and levering, not for holding on.
+  beak: [
+    "drives its beak into you", "stabs at you and twists", "opens you with one clean stroke of the bill",
+    "hammers the beak down on you", "tears a strip away and swallows it",
+    "jabs for your eyes and very nearly has them",
+  ],
+  // Eels, congers, vipers, adders: no limbs at all — everything is the mouth
+  // and the muscle behind it, and it never simply lets go.
+  coils: [
+    "strikes and does not let go", "sets its teeth backward in you and pulls",
+    "lashes out of the dark and fastens on you", "wrenches its whole length against the hold",
+    "takes you and rolls, and something tears", "whips around and bites deep",
+  ],
+  // The small and the quick: rats, crabs. Nothing here can kill you in one go
+  // and all of it is filthy.
+  vermin: [
+    "nips at you and is gone", "scurries in and bites", "nicks you with something filthy",
+    "sinks small teeth into your ankle", "worries at your boot and finds the skin above it",
+    "pinches hold of you and will not be shaken off",
   ],
   bone: [
     "rakes bony fingers across you", "strikes with a rusted edge", "batters you",
@@ -2862,6 +2958,24 @@ export const CREATURE_VITALS = {
     "closes its jaws on your throat", "tears your throat out", "finds the great vein of your neck",
     "sets its teeth in your throat and does not let go",
   ],
+  beak: [
+    "drives its beak through your eye and into what is behind it",
+    "opens your throat with one downward stroke",
+    "punches the bill in under your jaw and levers",
+    "takes the side of your neck away in one piece",
+  ],
+  coils: [
+    "fastens on your throat and rolls",
+    "sets its teeth in your neck and wrenches its whole length",
+    "takes your throat and drags you down with it",
+    "closes backward teeth on you and does not stop pulling",
+  ],
+  vermin: [
+    "finds the vein at your ankle and opens it",
+    "takes a bite that will not stop bleeding",
+    "worries at a wound already open until something gives",
+    "gets in past your guard, and it is the small one that finishes you",
+  ],
   bone: [
     "drives rusted iron up under your ribs", "punches a dead blade through your heart",
     "finds the gap in you with cold edge", "buries its old iron in your chest",
@@ -2879,7 +2993,102 @@ export const CREATURE_VITALS = {
     "strikes true, and deep", "finds the one place that ends it",
   ],
 } as const;
+// THE SIX BOSSES SPEAK FOR THEMSELVES (rome, 2026-08-13). A register is the
+// right answer for the ninety ordinary things in the world and the wrong one for
+// these: two of them — the woodward at 175hp and the keeper at 130 — were
+// falling all the way through to PLAIN, so the two largest bodies in the game
+// were saying "hits you" and "catches you a blow". A boss fight is the one a
+// player tells somebody else about afterwards, and the vitals line is the last
+// thing they read before the run ends. Both get written by hand here, keyed by
+// id, checked before every register. Everything else keeps its family voice.
+export const MOB_HIT: Record<string, string[]> = {
+  "the-woodward": [
+    "swings the felling axe through you as if you were standing timber",
+    "takes you off your feet with the flat of the haft",
+    "brings the axe down on you without hurrying at all",
+    "steps in past your guard the way a man steps over a root",
+    "buries the head in you and puts a boot on you to free it",
+  ],
+  "the-keeper-of-the-holding": [
+    "strikes you once, precisely, the way it would put down a dropped plate",
+    "takes you by the collar and puts you into the wall",
+    "backhands you with a hand that has not softened in three hundred years",
+    "corrects you, and the correction breaks something",
+    "sets its weight on you with the patience of somebody finishing a chore",
+  ],
+  "forgotten-king": [
+    "lifts one hand, and the weight of the crown arrives with it",
+    "strikes without rising, and the room strikes with it",
+    "reaches for you the way a thing reaches that has waited long enough",
+    "closes cold fingers on you and the years come through them",
+    "brings down a stroke that was already old when the walls went up",
+  ],
+  "marrow-king": [
+    "swings a scepter wound with other people's bones",
+    "reaches through you with a hand of knitted marrow",
+    "strikes, and the bones of everyone who tried before you strike with him",
+    "takes hold of you with fingers that are somebody else's",
+    "comes apart around the blow and lands it anyway",
+  ],
+  "drowned-god": [
+    "closes its hand on you, and the whole flooded dark leans in",
+    "brings the black water down on you with it",
+    "lifts you clear of the floor and holds you under nothing at all",
+    "sets its weight on your chest and waits",
+    "reaches out of the throne water and folds you into it",
+  ],
+  "the-drowned-ferryman": [
+    "takes you in two white swollen hands that do not slip",
+    "hauls you off your feet the way he hauls the rope",
+    "puts you under with the unhurried strength of a man doing his shift",
+    "closes a grip on you that a lifetime on wet hemp made",
+    "draws you toward the water hand over hand, and you go",
+  ],
+};
+export const MOB_VITALS: Record<string, string[]> = {
+  "the-woodward": [
+    "fells you in one stroke, the way he has felled everything else on this ground",
+    "buries the axe in you to the haft and leans on it",
+  ],
+  "the-keeper-of-the-holding": [
+    "breaks your neck with the mild efficiency of a man tidying up",
+    "puts you down on the hall floor because that is where you were in the way",
+  ],
+  "forgotten-king": [
+    "closes its hand and the waiting is over — yours, not its",
+    "sets the weight of a crown on you and you do not come back up",
+  ],
+  "marrow-king": [
+    "adds you to himself, and you feel the joining",
+    "winds a hand of old bone through your ribs and takes what it finds",
+  ],
+  "drowned-god": [
+    "folds the black water over you and does not let it go",
+    "closes its hand, and the deep finishes the sentence",
+  ],
+  "the-drowned-ferryman": [
+    "takes you across, which is the whole of the problem",
+    "draws you under the rope with him, hand over hand, and the shift goes on",
+  ],
+};
+
 // Which register a creature swings in. Order matters — first match wins.
+// BEAKS, COILS and SMALL_BITE carve the old teeth pool into what things
+// actually attack with; anything in BITERS and none of these three keeps jaws.
+// (SMALL_BITE, not VERMIN — VERMIN already means "eats the dead to survive",
+// a different question entirely, and the two memberships do not line up.)
+// (No oystercatcher: it is prey, it stays PLAIN, and these three Sets only ever
+// refine what is already in BITERS — they never promote a thing into biting.)
+export const BEAKS = new Set([
+  "great-gull", "black-backed-gull", "bittern", "grey-heron",
+  "gibbet-crow", "scarp-raven",
+]);
+export const COILS = new Set([
+  "conger", "old-conger", "ford-eel", "silver-eel", "fen-viper", "gill-adder",
+]);
+export const SMALL_BITE = new Set([
+  "rat", "fleet-rat", "brood-rat", "albino-rat", "wrack-crab", "devil-crab",
+]);
 export const BITERS = new Set([
   "rat", "fleet-rat", "brood-rat", "albino-rat", "grave-hyena", "dire-hyena", "pale-crawler", "pale-stalker",
   "three-hound", // three sets of teeth at the throat of the deep
@@ -2890,6 +3099,22 @@ export const BITERS = new Set([
   "conger", "old-conger", "grey-seal", "bull-seal", "ford-eel", "silver-eel", "marsh-hound", "a-lymer", "fen-viper", "wrack-crab", "devil-crab",
   "great-gull", "black-backed-gull", "bittern",
   "gibbet-crow",   // the open ground's one set of teeth that is really a beak
+  // THE WOLVES, WHICH DID NOT BITE (rome, 2026-08-13: check the new mobs are
+  // flavoured right — and the check found this instead). The whole canine
+  // bloodline was missing from this Set and swinging in the PLAIN register, so
+  // a wolf "hit you" and "caught you a blow", and a wolf that killed you
+  // "landed a blow that found something vital" — the flattest line in the game
+  // on the most memorable beat in it, from the one animal whose entire design is
+  // teeth at your throat in a pack. The dogs kept the same silence. This Set is
+  // pure voice — it picks CREATURE_HIT and CREATURE_VITALS and nothing else —
+  // so nothing about the fight changes except what the fight says.
+  "grey-wolf", "dire-wolf", "masterless-dog", "lead-dog",
+  // The boar is the wood's other mouth, and a tusk is not a fist.
+  "wild-boar", "old-boar",
+  // ...and two birds that were sorted twice, two different ways: the bittern
+  // bites and the heron did not, the gibbet-crow bites and the scarp-raven did
+  // not. Same beak, same business, so the same register.
+  "grey-heron", "scarp-raven",
 ]);
 
 // SENTINELS hold their post. A guardian chained to one room: it never wanders
