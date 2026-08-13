@@ -1,0 +1,28 @@
+-- 211 the index that bought nothing (rome, 2026-08-12, asking what the wall
+-- was going to cost him in storage — which is the right question to ask of a
+-- table that grows one row per hall per player, forever).
+--
+-- Mig 210 shipped this alongside the table:
+--
+--     CREATE INDEX idx_wall_marks_pubkey ON wall_marks (pubkey);
+--
+-- It is redundant, and it was redundant the moment it was written. The primary
+-- key is (pubkey, room_id), and SQLite backs that with an automatic unique
+-- index whose LEADING COLUMN is pubkey — so the only query this table ever
+-- runs, `SELECT room_id FROM wall_marks WHERE pubkey = ?`, was already served
+-- by a prefix scan of the PK index. The extra index is a second full copy of
+-- the pubkey column (64 characters a row) and a rowid beside it, kept in step
+-- on every insert, answering a question that was already answered.
+--
+-- Measured on the live table when this was caught: 86 rows, ~87 bytes of real
+-- payload each, ~250 with both indexes counted. Dropping this one takes roughly
+-- a quarter to a third of the table's footprint off, and takes nothing else:
+-- there is no query in the codebase whose plan changes, because there is no
+-- query on this table that does not lead with pubkey.
+--
+-- The scale it saves at is small either way — a player who carved all 744 rooms
+-- was looking at ~186 KB and is now looking at nearer 130 KB, against a 10 GB
+-- database. But a table designed to grow forever should not carry a duplicate
+-- of its widest column for no reason, and the write cost is per-insert, which
+-- is the one the carve pays.
+DROP INDEX IF EXISTS idx_wall_marks_pubkey;
