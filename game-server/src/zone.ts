@@ -223,7 +223,8 @@ export class ZoneDO implements DurableObject {
   // Keyed by pubkey: your chalk, your chart. The plaster is communal furniture;
   // what is written on it is not.
   public wallMarks = new Map<string, Set<string>>();
-  public walked = new Map<string, Set<string>>();   // rooms each player has crossed since their last death — the wall's evidence (walkedOf)
+  public walked = new Map<string, Set<string>>();   // rooms each player has crossed — the wall's evidence (walkedOf)
+  private wallLoaded = new Set<string>();          // pubkeys whose marks have been read up out of D1 this wake
   // The gatehouse board, oldest first. The only place a player's words outlive
   // the session they were said in (zone-data BOARD_*).
   public board: { name: string; words: string; at: number }[] = [];
@@ -885,8 +886,11 @@ export class ZoneDO implements DurableObject {
     this.groundLore.clear();
     this.groundRolled.clear();
     this.groundHeart.clear();
-    this.wallMarks.clear(); // a fresh world has fresh plaster — old room ids mean nothing here
-    this.walked.clear();    // ...and nobody has walked a room that no longer exists
+    // THE WALL IS NOT THE WORLD'S (2026-08-12). Both of these were cleared
+    // here, so a reseed — a thing meant to touch mobs and floor litter and
+    // nothing a player owns — took every chart in the game with it. A player's
+    // walking is theirs. Dead room ids filter out on read, so a re-cut world
+    // needs no help from a bulldozer.
 
 
     this.board = [];         // a bare board: nobody has pinned anything to it yet
@@ -907,19 +911,6 @@ export class ZoneDO implements DurableObject {
     // re-seed fresh from the spawn tables. Does NOT touch D1 — every player's
     // character, inventory, vault and sealed loot survive. Gated by ADMIN_TOKEN
     // in index.ts. For clearing a piled-up or wedged world without nuking anyone.
-    // READ-ONLY PROBE (2026-08-12). rome carved 100+ halls and the wall came
-    // back holding 2, and no path in the code deletes a mark short of a reseed
-    // that was never run. The DO's SQLite is not reachable from `wrangler d1`,
-    // so the state has to answer for itself. Counts only — never the room ids,
-    // never a name — and it changes nothing it looks at.
-    if (req.headers.get("x-admin") === "wall") {
-      const marks = [...this.wallMarks].map(([pk, rooms]) => ({ pk: pk.slice(0, 12), marks: rooms.size }));
-      const walked = [...this.walked].map(([pk, rooms]) => ({ pk: pk.slice(0, 12), walked: rooms.size }));
-      return new Response(JSON.stringify({
-        savedAt: this.savedAt, worldRooms: this.world?.rooms.size ?? 0,
-        pubkeysWithMarks: marks.length, marks, walked,
-      }), { headers: { "content-type": "application/json" } });
-    }
     if (req.headers.get("x-admin") === "reseed") {
       const n = await this.reseed(req.headers.get("x-zone") ?? "door");
       return new Response(JSON.stringify({ reseeded: true, creatures: n }), { headers: { "content-type": "application/json" } });
@@ -996,6 +987,9 @@ export class ZoneDO implements DurableObject {
     this.state.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
 
     const session = this.buildSession(server, row, items);
+    // Read this wanderer's chart up out of D1 before anything can ask for it
+    // (mig 210). Cached for the wake, so a rebuild costs nothing.
+    await this.loadWall(session.pubkey);
     // Step back into the still-standing body: everything the fight did to it
     // while the eyes were empty carries over. buildSession's D1 read would
     // otherwise revert hp/wounds to the last flush — a free heal for loggers.
@@ -1283,6 +1277,7 @@ export class ZoneDO implements DurableObject {
       const { row } = await getOrCreatePlayer(this.env.DB, pubkey, this.randomGate());
       const items = await loadInventory(this.env.DB, pubkey);
       const rebuilt = this.buildSession(ws, row, items);
+      await this.loadWall(rebuilt.pubkey); // a hibernation rebuild must not read an empty wall
       // buildSession stamps lastActiveAt = now, which would read a long-parked
       // socket as JUST arrived and dodge the idle sweep across every eviction —
       // the true stamp rides the socket.
@@ -5356,6 +5351,33 @@ export class ZoneDO implements DurableObject {
     let mine = this.wallMarks.get(pubkey);
     if (!mine) { mine = new Set(); this.wallMarks.set(pubkey, mine); }
     return mine;
+  }
+
+  // THE WALL LIVES IN D1 NOW (mig 210). The map above is a read cache so every
+  // sync caller is unchanged; this fills it from the truth, once per session.
+  // Marks are APPEND-ONLY down there — one row per hall, nothing deletes one —
+  // so the worst a failed write can do is cost a re-carve, where a bad blob
+  // used to cost the whole chart.
+  public async loadWall(pubkey: string): Promise<void> {
+    if (this.wallLoaded.has(pubkey)) return;
+    this.wallLoaded.add(pubkey);
+    try {
+      const rows = await this.env.DB.prepare("SELECT room_id FROM wall_marks WHERE pubkey = ?")
+        .bind(pubkey).all<{ room_id: string }>();
+      const mine = this.wallOf(pubkey);
+      for (const r of rows.results ?? []) mine.add(r.room_id);
+      // Anything that was still only in the sim blob is carried across on the
+      // first read after this ships, so nobody loses what they already hold.
+      if (mine.size) await this.saveWall(pubkey, [...mine]);
+    } catch { this.wallLoaded.delete(pubkey); } // a failed read must not cache "empty"
+  }
+
+  /** Write marks down. INSERT OR IGNORE: carving the same hall twice is free. */
+  public async saveWall(pubkey: string, rooms: string[]): Promise<void> {
+    if (!rooms.length) return;
+    const now = Date.now();
+    const stmt = this.env.DB.prepare("INSERT OR IGNORE INTO wall_marks (pubkey, room_id, at) VALUES (?, ?, ?)");
+    await this.env.DB.batch(rooms.map((r) => stmt.bind(pubkey, r, now)));
   }
 
   // WHAT YOU HAVE WALKED, AND STILL REMEMBER (rome, 2026-08-12: hundreds of

@@ -2239,6 +2239,11 @@ export async function wallCarve(z: ZoneDO, session: Session): Promise<void> {
       : "Bare plaster, and nothing walked yet worth setting down. Walk, come back alive, and carve what you found.");
   }
   for (const r of fresh) mine.add(r);
+  // STRAIGHT TO D1, BEFORE ANYTHING ELSE CAN GO WRONG (mig 210). The marks used
+  // to live only in the world's sim blob, which is why they have been lost
+  // twice. One row per hall, append-only, in the database that holds the rest
+  // of what a player owns — and a reseed does not touch it.
+  await z.saveWall(session.pubkey, fresh);
   z.send(session, `You take up a nail and set down what you walked — ${fresh.length} hall${fresh.length === 1 ? "" : "s"} your chart did not have. It is yours: nobody else reads this hand, and you will not read theirs.`);
   gatehouseFeed(z, `${session.name} scratches at the wall chart, adding to their own hand.`, session.pubkey);
   await z.persist();
