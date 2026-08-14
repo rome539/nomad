@@ -231,9 +231,13 @@ export function bountyGuard(z: ZoneDO, session: Session): string | null {
   return null;
 }
 
-// Take the trophy, pay the meal (a pair of meals on the top two rungs — no one
-// food is big enough for a wolf-skull). Shared by the modal and the typed path
-// so the two can't drift on what a bounty costs or pays. Returns the prose.
+// Take the trophy, pay the meals. Counts run to EIGHT at the top of the board
+// (2026-08-14) — no single food is big enough for a bear's skull, and eight is
+// PACK_FOOD_CAP, so the biggest bounties pay exactly one full stack. Shared by
+// the modal and the typed path so the two can't drift on what a bounty pays.
+const MEAL_COUNT_WORDS: Record<number, string> = {
+  2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight",
+};
 async function payBounty(z: ZoneDO, session: Session, bounty: [string, string, number?], carried: CarriedItem): Promise<string> {
   const world = z.world!;
   const [trophyId, foodId, count] = bounty;
@@ -256,7 +260,12 @@ async function payBounty(z: ZoneDO, session: Session, bounty: [string, string, n
     spilled++;
   }
   if (spilled) z.refreshRoomCtx(session.roomId);
-  const paid = meals > 1 ? `${food?.name ?? "a meal"} — two of them` : (food?.name ?? "a meal");
+  // The count is spoken, not assumed: this line said "two of them" for ANY
+  // count above one, which was true while the top rung paid a pair and became a
+  // lie the moment the board started paying eight.
+  const paid = meals > 1
+    ? `${food?.name ?? "a meal"} — ${MEAL_COUNT_WORDS[meals] ?? String(meals)} of them`
+    : (food?.name ?? "a meal");
   if (!spilled) return `The keeper takes ${trophy?.name ?? "it"} with both hands and lays ${paid} on the counter. Bounty paid.`;
   if (spilled === meals) return `The keeper takes ${trophy?.name ?? "it"} — but your pack is full, and ${paid} falls at your feet. Bounty paid.`;
   return `The keeper takes ${trophy?.name ?? "it"} and lays ${paid} out — more than your pack will hold, and the rest of it goes on the stones at your feet. Bounty paid.`;

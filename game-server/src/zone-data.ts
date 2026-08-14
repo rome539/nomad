@@ -3909,63 +3909,77 @@ export const WANT_TELEGRAPH_MS = 2 * 60_000;
 export const WANT_ACTIVE_MS = 50 * 60_000; // long enough to hunt for
 export const WANT_AFTERMATH_MS = 5 * 60_000;
 
-// ---- the keeper's bounty board (2026-08-11) ----
+// ---- the keeper's bounty board (2026-08-11, retuned 2026-08-14) ----
 // The hatch's OTHER business. Where barter is a value ledger (anything with
 // barter for anything he stocks), a bounty is a NAMED trophy the keeper wants,
-// paid in a meal. Each bounty is [trophyId, foodId, count?] (count defaults 1).
+// paid in meals. Each bounty is [trophyId, foodId, count?] (count defaults 1).
 //
-// WHAT THE BOARD IS ACTUALLY FOR. It is not a better price than the hatch —
-// measured against the shelves it can't be, because the keeper's food is
-// CHEAP for what it mends: hardtack 4 heal for 2 barter, smoked-haunch 12 for
-// 5, salt-fish 14 for 6, and the bloodroot poultice 15 for 4. That is 2.0 to
-// 3.75 heal per barter, and no bounty beats it. What the board gives instead
-// is the two things barter cannot reach:
-//   - FOOD HE DOESN'T STOCK. Gull eggs, raw haunch, dried meat and the grilled
-//     fish are never on the shelves at any price. The board is the only counter
-//     that hands them over.
-//   - A COUNTER THAT ISN'T EMPTY. The shelves sell out (fenceOut) and stay out
-//     for hours. The board runs on its own clock, so when the hatch is bare the
-//     bounty still pays.
-// So it is a SIDE DOOR, not a discount, and every line of prose about it should
-// say so. Anything that promises "double the fence" is lying to the player.
+// THE BOARD BEATS THE HATCH NOW, AND THAT IS THE RULING (rome, 2026-08-14: a
+// trophy should get you more here than it does in the shop, and right now a
+// pricey one pays a single piece of food). The old board was deliberately held
+// BELOW the shelves — a flat 2.0 heal per point of trophy barter, on the
+// reasoning that its value was access rather than price. Two things were wrong
+// with that in practice:
 //
-// THE RATE. Rewards are held at a flat ~2.0 heal per point of trophy barter,
-// which is the shelf's own floor rate — the board never undercuts the hatch by
-// more than the poultice does, and never inverts (the old table paid the
-// wolf-skull 1.36 while paying the hyena-fang 2.0, so the best trophy on the
-// board was the worst deal on it). Above 10 barter no single meal is big
-// enough — grilled trout tops out at 19 — so the top two rungs pay a PAIR, and
-// pay it in keeping food, which is also the answer to the top end otherwise
-// paying entirely in meals that rot.
+//   - 2.0 is not "slightly under the shelves", it is the WORST rate in the
+//     game. It is hardtack exactly, and the bloodroot poultice pays 3.75. So
+//     selling the trophy at the hatch and buying food with the barter beat the
+//     board every single time, for every trophy on it. A side door nobody has a
+//     reason to walk through is a wall.
+//   - The board's top rung was the wolf-skull at 14 barter, and the trophy
+//     ladder now runs to 26. Every genuinely valuable thing a wanderer could
+//     bring in — the bear's skull and pelt, the white hide, the gaunt's pelt,
+//     the ferryman's fare — was not on the board at all, so "a pricey trophy
+//     pays one meal" was literally the best it could do.
+//
+// The rate is now ~4.5 heal per point of trophy barter, which clears the
+// poultice by about a fifth. The board is the best thing you can do with a
+// trophy, full stop, and the hatch keeps the business that actually matters:
+// barter is how you buy GEAR, and the board pays no barter at all. So the
+// choice a trophy poses is real in both directions — eat, or arm yourself.
+//
+// COUNTS RUN TO EIGHT, which is not arbitrary: PACK_FOOD_CAP is 8, so the top
+// bounties pay exactly one full food stack. Anything paid more than once is
+// paid in KEEPING food (FOOD_KEEPS), because a stack of six perishable meals
+// would rot in the pack before it could be eaten and the reward would be a lie.
 //
 // The board ROTATES like the fence: a few trophies are on offer at once, and
 // they cycle over the hour. Claim one by trading the trophy in at the hatch —
-// the keeper keeps the trophy, you keep the meal. A claim is PER WANDERER: the
+// the keeper keeps the trophy, you keep the meals. A claim is PER WANDERER: the
 // posting stays up for everyone else until it churns, so the first delver to
 // the gate can't strip the board bare for the rest of the world.
 export const BOUNTY_TABLE: [string, string, number?][] = [
-  // the road and the shallow country — common trophies, hardtack-and-meat pay
-  ["hyena-fang", "hardtack"],          // 2b  -> heal 4
-  ["fistful-teeth", "hardtack"],       // 2b  -> heal 4
-  ["war-medal", "gull-egg"],           // 3b  -> heal 6
-  ["dogs-collar", "gull-egg"],         // 3b  -> heal 6
-  ["knucklebone-rosary", "gull-egg"],  // 3b  -> heal 6
-  ["otter-pelt", "dried-meat"],        // 4b  -> heal 8
-  ["heron-plume", "dried-meat"],       // 4b  -> heal 8
-  ["adder-skin", "hyena-haunch"],      // 5b  -> heal 9
-  ["raven-feather", "hyena-haunch"],   // 5b  -> heal 9
-  ["bitterns-feather", "hyena-haunch"],// 5b  -> heal 9
-  ["goat-horn", "hyena-haunch"],       // 5b  -> heal 9
-  ["boar-tusk", "hyena-haunch"],       // 5b  -> heal 9
-  ["viper-fang", "smoked-haunch"],     // 6b  -> heal 12
-  ["wolf-pelt", "salt-fish"],          // 7b  -> heal 14
-  ["hound-fang", "grilled-cave-fish"], // 8b  -> heal 16
-  ["toll-token", "grilled-cave-fish"], // 8b  -> heal 16
-  ["conger-jaw", "grilled-trout"],     // 9b  -> heal 19
-  ["tide-tally", "grilled-trout"],     // 9b  -> heal 19
-  ["seal-pelt", "grilled-trout"],      // 10b -> heal 19
-  ["pale-pelt", "smoked-haunch", 2],   // 12b -> heal 24, and it keeps (the rare-pelt bounty; near the top of the board)
-  ["wolf-skull", "salt-fish", 2],      // 14b -> heal 28, and it keeps (the board's top end)
+  // the road and the shallow country
+  ["hyena-fang", "hardtack", 2],          //  2b -> heal 8    4.00
+  ["fistful-teeth", "hardtack", 2],       //  2b -> heal 8    4.00
+  ["war-medal", "gull-egg", 2],           //  3b -> heal 12   4.00
+  ["dogs-collar", "gull-egg", 2],         //  3b -> heal 12   4.00
+  ["knucklebone-rosary", "gull-egg", 2],  //  3b -> heal 12   4.00
+  ["otter-pelt", "dried-meat", 2],        //  4b -> heal 16   4.00
+  ["heron-plume", "dried-meat", 2],       //  4b -> heal 16   4.00
+  ["adder-skin", "smoked-haunch", 2],     //  5b -> heal 24   4.80
+  ["raven-feather", "smoked-haunch", 2],  //  5b -> heal 24   4.80
+  ["bitterns-feather", "smoked-haunch", 2],// 5b -> heal 24   4.80
+  ["goat-horn", "smoked-haunch", 2],      //  5b -> heal 24   4.80
+  ["boar-tusk", "smoked-haunch", 2],      //  5b -> heal 24   4.80
+  ["viper-fang", "salt-fish", 2],         //  6b -> heal 28   4.67
+  ["wolf-pelt", "dried-meat", 4],         //  7b -> heal 32   4.57
+  ["hound-fang", "smoked-haunch", 3],     //  8b -> heal 36   4.50
+  ["toll-token", "smoked-haunch", 3],     //  8b -> heal 36   4.50
+  ["conger-jaw", "salt-fish", 3],         //  9b -> heal 42   4.67
+  ["tide-tally", "salt-fish", 3],         //  9b -> heal 42   4.67
+  ["seal-pelt", "smoked-haunch", 4],      // 10b -> heal 48   4.80
+  ["pale-pelt", "salt-fish", 4],          // 12b -> heal 56   4.67
+  // the top of the board — everything here was missing from it entirely, and
+  // between them they are most of what a wanderer risks anything to carry home
+  ["wolf-skull", "smoked-haunch", 5],     // 14b -> heal 60   4.29
+  ["pilots-mark", "salt-fish", 4],        // 14b -> heal 56   4.00
+  ["bell-metal", "salt-fish", 5],         // 16b -> heal 70   4.38
+  ["ferrymans-fare", "salt-fish", 6],     // 18b -> heal 84   4.67
+  ["gaunt-pelt", "smoked-haunch", 7],     // 20b -> heal 84   4.20
+  ["bear-pelt", "salt-fish", 7],          // 22b -> heal 98   4.45
+  ["white-hide", "salt-fish", 8],         // 24b -> heal 112  4.67
+  ["bear-skull", "salt-fish", 8],         // 26b -> heal 112  4.31
 ];
 // ---- the bones: the gatehouse dice game (2026-08-12) ----
 // Push your luck. Two bones to open, one at a time after, and the whole game is
