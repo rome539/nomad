@@ -410,11 +410,22 @@ export function tickBounty(z: ZoneDO, now: number): void {
   // The board is shared across every gate — one keeper, one set of bounties.
   // If it actually changed, the gatehouse hears the board go up.
   const changed = JSON.stringify(board) !== JSON.stringify(z.bounties);
+  const wasBare = z.bounties.length === 0; // nothing to clear on the first posting
   z.bounties = board;
   if (changed) {
-    for (const [trophyId, foodId] of board) {
-      const t = z.world!.itemTemplates.get(trophyId);
-      if (t) gatehouseFeed(z, `The keeper pins a new bounty to the board: ${t.name} — paid in a good meal.`, undefined, "evt");
+    // ONE LINE FOR ONE ACT (rome, 2026-08-14). This posted a line PER BOUNTY —
+    // four identical stems in a row, which is not four events, it is one man
+    // re-doing his board. And every one of them ended "paid in a good meal",
+    // which stopped being true when the board started paying up to eight: the
+    // announcement flattened a bear's skull and a goat's horn to the same
+    // promise. So the payout is not quoted here at all — the modal already
+    // prints the real food and the real count, and it cannot go stale.
+    const names = board
+      .map(([trophyId]) => z.world!.itemTemplates.get(trophyId)?.name)
+      .filter((n): n is string => !!n);
+    if (names.length) {
+      const act = wasBare ? "The keeper pins up a board" : "The keeper clears the board and pins a fresh set";
+      gatehouseFeed(z, `${act}: ${names.join(", ")}. ('bounty' to see what he's paying)`, undefined, "evt");
     }
   }
 }
