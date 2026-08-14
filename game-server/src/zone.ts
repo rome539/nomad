@@ -1959,7 +1959,7 @@ export class ZoneDO implements DurableObject {
     const landing = shattered ? " It shatters on impact." : " It lands on the stones.";
     if (creature.hp > 0) {
       if (!creature.target) creature.target = session.pubkey;
-      this.send(session, `You hurl ${itmpl.name} — it strikes ${tmpl.name} for ${dmg}${flourish} (${this.condition(creature)})${landing}`);
+      this.send(session, `You hurl ${this.gearName(itmpl.id)} — it strikes ${tmpl.name} for ${dmg}${flourish} (${this.condition(creature)})${landing}`);
       // A blunt throw — a rock off the skull — can ring it senseless for a beat.
       // Same rule as a melee stun: not the boss, and no chaining a reeling thing.
       if (itmpl.stun > 0 && !tmpl.is_boss && !creature.stunned && chance(itmpl.stun)) {
@@ -1983,7 +1983,7 @@ export class ZoneDO implements DurableObject {
   // rouse a lurker lying in wait right here, so it's a lure that can bite back.
   private async throwForNoise(session: Session, carried: CarriedItem, itmpl: ItemTemplate): Promise<void> {
     if (itmpl.edible) {
-      return this.send(session, `${cap(itmpl.name)} would land with a soft, wet thud — too quiet to draw anything. Throw something hard.`);
+      return this.send(session, `${this.gearName(itmpl.id, cap(itmpl.name))} would land with a soft, wet thud — too quiet to draw anything. Throw something hard.`);
     }
     const nowMs = Date.now();
     if (nowMs < session.nextThrowAt) {
@@ -2139,13 +2139,13 @@ export class ZoneDO implements DurableObject {
       // stored and preserved, so it comes out better than corpse-stripped gear.
       const rolled = this.rollTraits(item); // one roll, used whichever way it lands (099)
       if (await this.grantItem(session, item.id, { kept: true, rolledTraits: rolled })) {
-        this.send(session, `Inside: ${item.name}.${this.itemStat(item)} [${item.rarity}] ${this.lootSuffix(item)}`);
+        this.send(session, `Inside: ${this.gearName(item.id)}.${this.itemStat(item)} [${item.rarity}] ${this.lootSuffix(item)}`);
       } else {
         this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), item.id]);
         this.stampFresh(session.roomId, item.id);
         if (item.slot !== "") this.groundCond.set(`${item.id}@${session.roomId}`, rollGearCondition(item.slot, true));
         if (rolled) this.groundRolled.set(`${item.id}@${session.roomId}`, rolled);
-        this.send(session, `Inside: ${item.name}.${this.itemStat(item)} [${item.rarity}] — but your pack is full, so it falls at your feet.`);
+        this.send(session, `Inside: ${this.gearName(item.id)}.${this.itemStat(item)} [${item.rarity}] — but your pack is full, so it falls at your feet.`);
       }
     }
     this.refreshRoomCtx(session.roomId);
@@ -4290,8 +4290,10 @@ export class ZoneDO implements DurableObject {
         if (!t || (t.slot !== "weapon" && t.slot !== "armor")) continue;
         // Oiled kit barely notices the damp; pitted kit is where the next rust
         // starts. Neither is immunity — greased steel still goes, slowly.
-        const damp = c.rolledMap?.has("greased") ? GREASED_RUST_MULT
-          : c.rolledMap?.has("pitted") ? PITTED_RUST_MULT : 1;
+        // Same fold-in as wear(): the template counts too, not only the roll.
+        const oiled = (tag: string) => hasTrait(t, tag) || (c.rolledMap?.get(tag) ?? 0) > 0;
+        const damp = oiled("greased") ? GREASED_RUST_MULT
+          : oiled("pitted") ? PITTED_RUST_MULT : 1;
         await this.wear(session, c, t, RUST_PER_TICK * beatMul * damp); // wall-clock rust, not per-beat — a slow idle beat mustn't spare steel
       }
     }
@@ -5032,7 +5034,11 @@ export class ZoneDO implements DurableObject {
       if (item) {
         const rolled = this.rollTraits(item); // one roll, whichever way it lands (099)
         if (await this.grantItem(killer, item.id, { rolledTraits: rolled })) {
-          this.send(killer, `${cap(item.name)} falls into your hands. [${item.rarity}] ${this.lootSuffix(item)}`);
+          // The name wears its rarity colour, like every other place gear is
+          // named (rome, 2026-08-14: the hood dropped and was not coloured).
+          // These four loot lines were the last ones still printing a raw name:
+          // the kill drop, the room feed beside it, and both chest lines.
+          this.send(killer, `${this.gearName(item.id, cap(item.name))} falls into your hands. [${item.rarity}] ${this.lootSuffix(item)}`);
         } else {
           this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), item.id]);
           this.stampFresh(creature.roomId, item.id);
@@ -5042,7 +5048,7 @@ export class ZoneDO implements DurableObject {
         // Same rule as a pickup off the floor: junk stays in the room. Only a
         // rare+ find is worth the wire — nobody outside needs to hear that
         // someone pocketed a finger-bone.
-        this.roomFeed(creature.roomId, `${killer.name} claims ${item.name}.`, killer.pubkey, false); // loot stays LOCAL: even a legendary claim is nobody's business (see verbs takes)
+        this.roomFeed(creature.roomId, `${killer.name} claims ${this.gearName(item.id)}.`, killer.pubkey, false); // loot stays LOCAL: even a legendary claim is nobody's business (see verbs takes)
         this.sendCtx(killer);
       }
     }
@@ -6393,8 +6399,14 @@ export class ZoneDO implements DurableObject {
     // wear path in the game funnels through here — strikes landed, blows turned,
     // the idle damp, the corroder's touch, a latch smashed with a stone — so the
     // pair needs no other site.
-    if (carried.rolledMap?.has("tempered")) amount *= TEMPERED_WEAR_MULT;
-    else if (carried.rolledMap?.has("brittle")) amount *= BRITTLE_WEAR_MULT;
+    // Template OR rolled, never just rolled: hasTrait reads what the smith made
+    // it, rolledMap reads what THIS copy turned out to be, and the trait ledger
+    // says the two layers are one. (Caught 2026-08-14 while authoring a
+    // legendary that is tempered on its template — as written, it would have
+    // worn like anything else.)
+    const temper = (tag: string) => hasTrait(tmpl, tag) || (carried.rolledMap?.get(tag) ?? 0) > 0;
+    if (temper("tempered")) amount *= TEMPERED_WEAR_MULT;
+    else if (temper("brittle")) amount *= BRITTLE_WEAR_MULT;
     const before = carried.condition;
     carried.condition -= amount;
     if (carried.condition > 0) {
