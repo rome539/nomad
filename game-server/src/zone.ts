@@ -5422,10 +5422,29 @@ export class ZoneDO implements DurableObject {
       const rows = await this.env.DB.prepare("SELECT room_id FROM wall_marks WHERE pubkey = ?")
         .bind(pubkey).all<{ room_id: string }>();
       const mine = this.wallOf(pubkey);
-      for (const r of rows.results ?? []) mine.add(r.room_id);
-      // Anything that was still only in the sim blob is carried across on the
-      // first read after this ships, so nobody loses what they already hold.
-      if (mine.size) await this.saveWall(pubkey, [...mine]);
+      // What D1 already holds, kept apart from what the cache holds, because the
+      // difference between those two sets is the only thing worth writing.
+      const known = new Set<string>();
+      for (const r of rows.results ?? []) { known.add(r.room_id); mine.add(r.room_id); }
+      // THE CARRY-ACROSS IS A DIFFERENCE, NOT A REWRITE (2026-08-14). Marks that
+      // were still only in the sim blob have to be moved down here on the first
+      // read after mig 210 — but this wrote back the WHOLE set, including the
+      // rows it had just read out of D1, and it did it on every load forever.
+      //
+      // The cost was not the SQL. INSERT OR IGNORE made all of it a silent
+      // no-op, 0.03ms apiece, which is exactly why it hid: nothing was slow and
+      // nothing was wrong in the data. The cost was that loadWall sits on the
+      // CONNECT PATH and on the hibernation rebuild, the ZoneDO is
+      // single-threaded, and each call parked it on a batch of one statement per
+      // hall a player had ever walked — a 246-statement transaction, awaited,
+      // with the tick and every other player's commands queued behind it. It
+      // fired about once a minute across a day: 251,109 writes, ninety per cent
+      // of every query the game made, all of them changing nothing.
+      //
+      // In steady state this now writes nothing at all, because a wall loaded
+      // out of D1 has nothing D1 has not seen.
+      const carry = [...mine].filter((r) => !known.has(r));
+      if (carry.length) await this.saveWall(pubkey, carry);
     } catch { this.wallLoaded.delete(pubkey); } // a failed read must not cache "empty"
   }
 
