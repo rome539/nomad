@@ -5485,21 +5485,85 @@ export const KEEPER_DELAY_MAX_MS = 45_000;
 // at the door now — so this pool is the room's entire voice, and it carries all
 // of the atmosphere on its own. It is warm, domestic, and slightly sad: the
 // sound of a place that has watched a great many people go out and not come back.
+//
+// AND IT MUST NOT LIE ABOUT THE SKY (rome, 2026-08-14: stood in here on a dry
+// day and was told rain was coming through the roof). This was the ONE ambience
+// pool in the game with no state behind it. Every other pool is honest by one of
+// two methods: eventAmbient reads the live arc before it speaks, and the room
+// pools in ROOM_AMBIENCE are deliberately written free of sky-state so they can
+// never contradict one (the note above them says so in as many words). The
+// gatehouse had neither — it just held a rain line, a dripping-kit line and two
+// lines that called the world outside dark, and rolled them at any hour in any
+// weather. A room whose whole job is to be the one place that tells you the
+// truth cannot be the room that makes weather up.
+//
+// So the pool splits. This one is what is true in here whatever the sky is
+// doing: the fire, the door, the bench, the keeper. Everything that depends on
+// the world outside now lives in a pool that is only reachable when that thing
+// is actually happening — gate.gatehouseAmbient assembles them.
 export const GATEHOUSE_AMBIENCE = [
   "The keeper turns a page behind his hatch, and says nothing.",
-  "The fire settles. Somebody's kit drips quietly onto the flags.",
+  "The fire settles, and puts its light somewhere else on the wall.",
   "The door holds. It has held a long time.",
-  "Wind leans on the shutters, finds no way in, and gives up.",
   "The kettle ticks as it cools.",
-  "Far off, on the other side of the door, something calls across the dark. In here it is only a sound.",
   "A coal cracks. The shadows lean, and settle.",
   "The bench is worn to a shine at one end, where men sit to work up their nerve.",
   "Someone has scratched a tally into the wall by the door. It stops.",
   "The hatch rattles once in its frame, as if the keeper thought better of something.",
   "Warmth gets into your hands, and they remember they were cold.",
   "The room smells of pitch, wet wool, and old iron.",
+  "Somebody's boots have left a shape on the flags by the fire, and it is drying out from the edges.",
+  "There are more hooks on the wall than there are men to hang anything on them.",
+];
+
+// ---- and what the sky is doing, when it is actually doing it ----------------
+// One pool per arc that a man behind a shut door could honestly notice. THE
+// DOOR LAW STILL HOLDS: the dungeon does not reach in here, so there is nothing
+// for the bell, the tide, the song or the deep — those are the other side of
+// the door and they stay there. Only the WEATHER gets in, because weather does
+// not care about doors: it comes through the roof, the seams and whoever opens
+// the latch. All of it stays the room's own register — warm, domestic, never
+// frightening. The rain is heard, not suffered.
+export const GATEHOUSE_RAIN = [
   "Rain finds the roof somewhere and gives it up drop by drop into a bucket already full.",
+  "It is coming down hard enough out there to hear through the stone, steady as a held breath.",
+  "Somebody's kit drips quietly onto the flags, and steams where it lies too near the fire.",
+  "The rain gets louder for a moment as the latch lifts somewhere, and settles again as it drops.",
+  "Wet wool and hot coals: the smell of a room doing the one thing it is for.",
+];
+export const GATEHOUSE_AFTER_RAIN = [
+  "The roof has stopped and the gutter hasn't. It empties itself into the yard in its own time.",
+  "The eaves let go of one more drop, and then think about it, and let go of another.",
+  "The flags by the door are dark to the middle of the room, and drying inward.",
+];
+export const GATEHOUSE_FOG = [
+  "A thread of the fog has got in under the door and lies along the flags, going nowhere.",
+  "The lamp by the hatch has grown a soft ring around it that was not there an hour ago.",
+  "Whoever last came in brought the white with them, and it took a while to give the room back.",
+];
+export const GATEHOUSE_COLD = [
+  "The fire is earning its keep tonight. The wall three feet behind you is not.",
+  "Frost has got in on the INSIDE of the shutter, in a fern-pattern, very beautiful and very bad news.",
+  "The cold comes off the door in a slow sheet, and stops about where the bench is.",
+  "Nobody here is in a hurry to be the next one through that door.",
+];
+export const GATEHOUSE_CROWS = [
+  "Feet on the slates overhead — several sets, shifting, settling, not leaving.",
+  "Something up on the roof calls once, and a dozen answer it, and then nothing.",
+];
+// The hour is its own kind of weather in a room with no windows worth the name.
+// Half the old pool spoke of the dark outside on a world-clock that is night for
+// two hours in four (zone-util isNight), so it was wrong as often as right.
+export const GATEHOUSE_NIGHT = [
+  "Far off, on the other side of the door, something calls across the dark. In here it is only a sound.",
   "Out there the dark goes on doing whatever it does. It can wait.",
+  "The gap under the door is as black as the door.",
+  "This is the hour the bench fills up, and nobody says much.",
+];
+export const GATEHOUSE_DAY = [
+  "A grey blade of daylight lies under the door, and the fire pretends not to notice it.",
+  "Light comes through the shutter-slit in a bar, full of turning dust, and moves while you watch it.",
+  "Someone goes past outside at a walk, unhurried, on their own business. The daylight makes that possible.",
 ];
 // The world stays real when your eyes close: a disconnect during a LIVE fight
 // (you hold a target, or something holds you) leaves the body standing this

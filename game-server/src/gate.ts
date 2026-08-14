@@ -12,12 +12,13 @@ import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
-import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord } from "./zone-util";
+import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
+  GATEHOUSE_RAIN, GATEHOUSE_AFTER_RAIN, GATEHOUSE_FOG, GATEHOUSE_COLD, GATEHOUSE_CROWS, GATEHOUSE_NIGHT, GATEHOUSE_DAY,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
   KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS } from "./zone-data";
 import * as den from "./den";
@@ -1957,7 +1958,10 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
       + "  'dice' takes them up against him for nothing; 'dice <trophy>' stakes one against his bowl.";
   }
   if (is("hatch", "shutter", "keepers hatch", "keeper's hatch", "counter")) {
-    return "A shutter of banded oak set into the far wall at chest height, closed. There is a worn place on the sill where hands have rested, and a deeper one where things have been slid across. Whoever is behind it does not open it to be looked at. ('barter' opens it)";
+    const want = wantedItem(z);
+    return "A shutter of banded oak set into the far wall at chest height, closed. There is a worn place on the sill where hands have rested, and a deeper one where things have been slid across. Whoever is behind it does not open it to be looked at."
+      + (want ? ` Chalked across the boards, in a hand that presses hard: WANTED TONIGHT — ${want.name}, double in trade.` : "")
+      + " ('barter' opens it)";
   }
   if (is("board", "notices", "notice", "cork", "notice board", "posts")) {
     const live = boardLive(z);
@@ -2011,6 +2015,13 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
     lines.push(notices === 1
       ? "One notice hangs on the board beside the hatch, pinned at a corner. ('board' to read it)"
       : `The board beside the hatch carries ${notices} notices, pinned over one another. ('board' to read them)`);
+  }
+  // The chalk, while it lasts. Same shape as the notices line — conditional, on
+  // look, and the same words the entry rooms carry, because it is the same
+  // chalk read from the inside of the same wall.
+  const want = wantedItem(z);
+  if (want) {
+    lines.push(`Chalked across the shut hatch: wanted tonight — ${want.name}, double in trade.`);
   }
   if (others.length === 0) {
     lines.push("You have it to yourself. The fire ticks.");
@@ -2168,10 +2179,50 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
 // running) — it just never says anything frightening. This is the ONLY thing you
 // hear in here now: the dungeon's noise stops at the door, so the room's own
 // quiet is all the atmosphere there is, and it has to carry the weight.
-export function gatehouseAmbient(avoid?: string): string {
-  const fresh = GATEHOUSE_AMBIENCE.filter((l) => l !== avoid);
-  const pool = fresh.length ? fresh : GATEHOUSE_AMBIENCE;
-  return pool[Math.floor(Math.random() * pool.length)];
+//
+// THE POOL IS ASSEMBLED, NOT FIXED (rome, 2026-08-14). What is always true in
+// here, plus the hour, plus whichever sky arc is actually running — so the roof
+// only leaks while it is raining and the dark outside the door is only dark at
+// night. The sky's share is small on purpose: four or five lines against fifteen
+// or sixteen, which is about a quarter of what you hear while the weather is on.
+// You are in here to be out of it, and the room should mostly still be the room.
+//
+// Read straight off phaseOf rather than events.raining(): those queries all gate
+// on OUTDOOR_ROOMS, and the gatehouse is not a room at all — it is out of the
+// world entirely. The arc itself is global (the sky pool claims every band at
+// once), so the phase is the honest read for a roof standing under it.
+export function gatehouseAmbient(z: ZoneDO, avoid?: string): string {
+  const pool = [...GATEHOUSE_AMBIENCE, ...(isNight() ? GATEHOUSE_NIGHT : GATEHOUSE_DAY)];
+  const rain = events.phaseOf(z, "rain");
+  if (rain === "active") pool.push(...GATEHOUSE_RAIN);
+  else if (rain === "aftermath") pool.push(...GATEHOUSE_AFTER_RAIN);
+  if (events.phaseOf(z, "fog") === "active") pool.push(...GATEHOUSE_FOG);
+  if (events.phaseOf(z, "cold") === "active") pool.push(...GATEHOUSE_COLD);
+  if (events.phaseOf(z, "crows") === "active") pool.push(...GATEHOUSE_CROWS);
+  // THE CHALK, from the side of the hatch it is chalked ON. See wantedItem: the
+  // one arc whose entire subject is this room's own furniture was the one arc
+  // this room could not see.
+  const want = wantedItem(z);
+  if (want) {
+    pool.push(
+      `The keeper leans out of his hatch, adds a word to the chalk, and reads it back to himself. It still says ${want.name}.`,
+      `Somebody at the bench nods at the chalked hatch. "${cap(want.name)}," they say, to nobody. "Of course it is."`,
+    );
+  }
+  const fresh = pool.filter((l) => l !== avoid);
+  return pick(fresh.length ? fresh : pool);
+}
+
+// WHAT THE CHALK ASKS FOR RIGHT NOW, or null. The want arc doubles an item's
+// barter at the hatch (offerCore reads wantMult), and it announces itself as a
+// clause on the room description at the ENTRY ROOMS — "chalked on the keeper's
+// hatch: wanted tonight". But the gatehouse is out of the world, so it never
+// gets a room description from skyClause, and the result was that standing at
+// the chalked hatch was the one place in the game you could not read the chalk.
+// You could sell into the double all night and never learn why he was keen.
+export function wantedItem(z: ZoneDO): { name: string } | null {
+  if (events.phaseOf(z, "want") !== "active") return null;
+  return z.world!.itemTemplates.get(z.events.get("want")?.data ?? "") ?? null;
 }
 
 // A quiet word, one to one — leaning in at the bar. Only they hear it; the room

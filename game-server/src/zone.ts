@@ -4402,7 +4402,7 @@ export class ZoneDO implements DurableObject {
       if (now - session.lastAmbientAt < cool) continue;
       if (!chance(odds)) continue;
       const line = inGatehouse
-        ? gate.gatehouseAmbient(session.lastAmbientLine)
+        ? gate.gatehouseAmbient(this, session.lastAmbientLine)
         : this.ambientLine(session.roomId, session.lastAmbientLine, this.carriesLight(session));
       if (!line) continue;
       session.lastAmbientAt = now;
