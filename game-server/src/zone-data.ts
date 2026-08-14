@@ -2784,6 +2784,9 @@ export const WEAPON_VERBS: Record<string, string[]> = {
   "the-attainder": ["set the Attainder in the seam of {n}", "draw the bright edge through {n}", "put the Attainder through the gap in {n}"],
   "houndsbane": ["put Houndsbane into {n} at the length of the haft", "set the boar-spear in {n} and lean on it", "keep {n} off you and drive the needle home"],
   "the-hedge-bill": ["hook the bill into {n} and pull", "draw the inner curve through {n}", "lay into {n} with the hedge bill"],
+  // The ferryman's quant (mig 217) — sixteen feet of ash, and the only way to
+  // use it is the way he used it: at length, with both hands, from the bank.
+  "the-long-crossing": ["drive the quant into {n} at the full length of it", "bring sixteen feet of ash down on {n}", "put the iron shoe through {n}"],
   // — the epics that were missing —
   "smiths-ruin": ["open {n} on the draw", "bring the smith's ruin back across {n}", "ring the weighted pommel off {n}"],
   "poleaxe": ["reach in and set the poleaxe in {n}", "bring the head round into {n}", "punch the poleaxe through {n}"],
