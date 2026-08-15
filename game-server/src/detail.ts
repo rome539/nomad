@@ -977,9 +977,22 @@ const EAST_QUARTER_ROOMS: Record<string, string[]> = {
   ],
   rise: [
     "the-first-hairpin", "the-second-hairpin", "the-cutting-ledge", "the-third-hairpin",
-    "the-rope-post", "the-shelter-stone", "the-scarp-top", "the-high-shelf",
+    "the-rope-post", "the-crag-foot", "the-shelter-stone", "the-scarp-top", "the-high-shelf",
     "the-peat-cuttings", "the-boundary-cairn", "the-watershed", "the-first-sight",
     "the-far-shore-stone",
+  ],
+  // THE HOLDINGS (mig 221). The sixteen rooms of the east's own den country sat
+  // in no quarter at all, so the map captioned them as more east road — which is
+  // what the sim calls them and is exactly the wrong thing to tell a player, who
+  // is looking at that map to find somewhere to LIVE. Same caption-only trick as
+  // every quarter above it: mapRegionOf still says road, the arcs and the weather
+  // and the ecology are all still the road's, and only the paper says otherwise.
+  holdings: [
+    "the-turf-road", "the-turf-stacks", "the-peat-house",
+    "the-sheep-trod", "the-wether-fold", "the-herds-hut", "the-hut-yard",
+    "the-deep-lane", "the-well-house", "the-moss-path",
+    "the-sledge-track", "the-winding-house", "the-beck-lane",
+    "the-spring-bank", "the-hill-gate", "the-top-wall",
   ],
 };
 export const EAST_QUARTERS: Record<string, string> = {};

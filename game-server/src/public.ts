@@ -4088,6 +4088,7 @@ var MAP_REGION_LABELS = {
   drove: "THE DROVE",
   beck: "THE BECK",
   rise: "THE RISE",
+  holdings: "THE HOLDINGS",
   // THE CROSSING'S SEVEN (mig 190). These are the only caption-only quarters in
   // the world that are load-bearing rather than flavour: the five middle ones
   // are the five WAYS OVER, and knowing which of them your dot is standing on
