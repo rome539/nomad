@@ -1,0 +1,22 @@
+-- 224 the rest is only a rest (rome, 2026-08-15: the Carter's Rest is a
+-- hiding spot sitting on the road, take it off).
+--
+-- Same fault, same fix, and it should have gone out in 223. It sits ON the
+-- paving with a door at each end:
+--
+--     the-carters-rest  west -> the-fifth-milestone
+--     the-carters-rest  east -> the-broken-culvert
+--
+-- I left it out of 223 because the instruction that time named the bothy, and
+-- that was the wrong call: the fault was named in the same breath and the shape
+-- is identical. Splitting it cost a round trip for nothing.
+--
+-- It keeps its roof and its fire, like the bothy — NIGHT_LIT and INDOOR_ROOMS
+-- are separate from the sanctuary flag, and a carter's rest should absolutely
+-- still be somewhere you get out of the rain. It stops being somewhere the
+-- world cannot follow you.
+--
+-- That leaves the east road with no untouchable room on its through-routes at
+-- all, which is the state the rest of the world is already in: every remaining
+-- hideaway on the road is a one-door pocket you step aside into.
+UPDATE rooms SET is_safe = 0 WHERE id = 'the-carters-rest';
