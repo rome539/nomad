@@ -2178,7 +2178,15 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // The goat and the otter are the ones that matter for the country between:
   // the beck and the scarp hold goats, otters, herons and adders and nothing
   // else, so until now that whole corridor was ground no wolf could stop on.
-  ["grey-wolf", new Set(["roe-deer", "white-roe", "grave-hyena", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
+  // GOAT AND BILLY BELONG ON THIS LIST (rome, 2026-08-15). The plain grey wolf
+  // was the only wolf in the game that would not take a goat: its own promoted
+  // variant, the dire wolf, has had both since it was written. One rank apart,
+  // same animal, and the lesser of the two walked past a goat it would plainly
+  // have killed. The band-aware basket makes this cost nothing where they never
+  // meet — the goats are the road's and the wolves are the wood's, so a goat
+  // only feeds a wolf that has actually drifted onto the road, or a goat that
+  // has drifted into the wood. Both are MIGRANTS, so both do happen.
+  ["grey-wolf", new Set(["roe-deer", "white-roe", "feral-goat", "old-billy", "grave-hyena", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
   ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher", "feral-goat", "old-billy", "great-gull", "black-backed-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
   // THE STRAYS EAT SOMETHING NOW (2026-08-12). The west road's seven masterless
