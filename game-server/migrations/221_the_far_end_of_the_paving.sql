@@ -39,9 +39,9 @@
 -- Four spurs, ten rooms, four doors, all four at exactly 21: eight steps further
 -- out than anything the world has now, and a real walk home carrying anything.
 --
---     off The Spring Line   south   peat road    -> The Peat House      21
+--     off The Spring Line   south   turf road    -> The Peat House      21
 --     off The Scarp Spring  north   sheep trod   -> The Herd's Hut      21
---     off The Beck Head     south   sunken lane  -> The Well House      21
+--     off The Beck Head     south   deep lane    -> The Well House      21
 --     off The Last Paving   south   sledge track -> The Winding House   21
 --
 -- They do not touch each other and none is visible from another: the spurs leave
@@ -61,18 +61,18 @@
 
 -- ---- SPUR ONE: south off The Spring Line, onto the peat ---------------------
 INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, is_holding, map_x, map_y) VALUES
-  ('the-peat-road', 'door', 'The Peat Road',
+  ('the-turf-road', 'door', 'The Turf Road',
    'A causeway of brushwood and old sleepers laid straight out across ground that will not carry a cart otherwise, sunk to its edges and springing underfoot with every step. Water stands on both sides of it in long black cuts. It was built to get out to the peat and back before dark, and it has been sinking gently ever since somebody last troubled to lay a new course on it.',
    0, 0, 'road', 0, 0, 27, 13);
-INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-peat-road', 'north', 'the-spring-line', NULL);
-INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-spring-line', 'south', 'the-peat-road', NULL);
+INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-turf-road', 'north', 'the-spring-line', NULL);
+INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-spring-line', 'south', 'the-turf-road', NULL);
 
 INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, is_holding, map_x, map_y) VALUES
   ('the-turf-stacks', 'door', 'The Turf Stacks',
    'Cut peat stood up in herringbone stacks to dry, rows of them, most collapsed into black heaps and a few still standing exactly as they were built. The cuttings themselves step away in terraces with water lying in the bottom of each one. Somebody worked a whole season out here and never came back for the last of it, and the last of it is still stacked and waiting.',
    0, 0, 'road', 0, 0, 27, 14);
-INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-turf-stacks', 'north', 'the-peat-road', NULL);
-INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-peat-road', 'south', 'the-turf-stacks', NULL);
+INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-turf-stacks', 'north', 'the-turf-road', NULL);
+INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-turf-road', 'south', 'the-turf-stacks', NULL);
 
 INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, is_holding, map_x, map_y) VALUES
   ('the-peat-house', 'door', 'The Peat House',
@@ -103,20 +103,20 @@ INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_sp
 INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-herds-hut', 'south', 'the-wether-fold', NULL);
 INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-wether-fold', 'north', 'the-herds-hut', NULL);
 
--- ---- SPUR THREE: south off The Beck Head, down the sunken lane --------------
+-- ---- SPUR THREE: south off The Beck Head, down the deep lane ----------------
 INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, is_holding, map_x, map_y) VALUES
-  ('the-sunken-lane', 'door', 'The Sunken Lane',
+  ('the-deep-lane', 'door', 'The Deep Lane',
    'A lane worn so far below the fields that the hedges meet overhead and you walk in green half-light with the roots of the thorn standing out of the banks at shoulder height. Nothing dug this. It is simply the depth that feet and hooves and rainwater get to in eight hundred years of everyone going the same way.',
    0, 0, 'road', 0, 0, 28, 13);
-INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-sunken-lane', 'north', 'the-beck-head', NULL);
-INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-beck-head', 'south', 'the-sunken-lane', NULL);
+INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-deep-lane', 'north', 'the-beck-head', NULL);
+INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-beck-head', 'south', 'the-deep-lane', NULL);
 
 INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, is_holding, map_x, map_y) VALUES
   ('the-well-house', 'door', 'The Well House',
    'A stone hood built straight over the springhead at the lane''s end, barrel-vaulted, with a flagged floor and a channel cut through it so the water crosses the room and leaves by the far wall without ever touching your feet. It is cold in here in a way that has nothing to do with the season, and it is the one building on this road that will never run dry. Somebody has cut a cross into the keystone, and somebody later has scratched a tally beside it.',
    0, 0, 'road', 0, 1, 28, 14);
-INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-well-house', 'north', 'the-sunken-lane', NULL);
-INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-sunken-lane', 'south', 'the-well-house', NULL);
+INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-well-house', 'north', 'the-deep-lane', NULL);
+INSERT INTO exits (room_id, dir, to_room, key_item) VALUES ('the-deep-lane', 'south', 'the-well-house', NULL);
 
 -- ---- SPUR FOUR: south off The Last Paving, down the incline -----------------
 INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, is_holding, map_x, map_y) VALUES
