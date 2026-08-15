@@ -898,7 +898,13 @@ export function denRoomLine(z: ZoneDO, roomId: string, session: Session): string
   // you never learned the sites existed. A hamlet is not a maze — you stand in
   // the yard and you can see which buildings have ground worth building on.
   if (!isHolding(z, roomId)) {
-    if (z.regionOf(roomId) !== "den") return "";
+    // ...ON WHATEVER GROUND IT IS (2026-08-15). This was gated to the den band,
+    // which was right while every holding in the game stood in it. Migration 221
+    // put four out where the paving ends, and a site nobody can see is a site
+    // nobody settles — the argument the comment above makes for a hamlet is the
+    // same one the road makes. The check is now simply: is there buildable
+    // ground next door, wherever you happen to be standing.
+    if (!(z.world!.exits.get(roomId) ?? []).some((e) => isHolding(z, e.to_room))) return "";
     const near: string[] = [];
     for (const e of z.world!.exits.get(roomId) ?? []) {
       if (!isHolding(z, e.to_room)) continue;
