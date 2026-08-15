@@ -1039,14 +1039,23 @@ export async function cmdSmelt(z: ZoneDO, session: Session, arg: string): Promis
     const want = arg.trim().toLowerCase() === "all" ? maxBars : parseInt(arg, 10);
     if (Number.isFinite(want) && want >= 1) bars = Math.min(want, maxBars);
   }
-  await z.takeLooseAcross(session, SCRAP_ID, bars * SMELT_SCRAP_PER_IRON);
+  // WHERE THE SCRAP CAME FROM, SAID OUT LOUD (rome, 2026-08-15: had four scrap
+  // and the brazier cast a bar anyway). It was right to — the brazier reaches
+  // the keeping as well as the pack, and the count across both was five — but
+  // only the REFUSAL ever said "between pack and keeping". On success the line
+  // just reported the scrap spent, so a man watching four handfuls in his pack
+  // turn into a bar was told nothing about the fifth leaving his vault.
+  const fromPack = session.items.filter((c) => c.itemId === SCRAP_ID).length;
+  const spend = bars * SMELT_SCRAP_PER_IRON;
+  const reached = Math.max(0, spend - fromPack);
+  await z.takeLooseAcross(session, SCRAP_ID, spend);
   for (let i = 0; i < bars; i++) {
     const id = uuid();
     await insertLoot(z.env.DB, id, session.pubkey, IRON_ID, null);
     session.items.push({ rowId: id, itemId: IRON_ID, serial: null, equipped: false, condition: 100 });
   }
   gatehouseFeed(z, `${session.name} works the bellows, smelting scrap down to iron.`, session.pubkey);
-  z.send(session, `You rake the scrap into the brazier and work the bellows white-hot. ${bars === 1 ? "A bar" : bars + " bars"} of iron, cast and cooling — ${bars * SMELT_SCRAP_PER_IRON} scrap spent.`, "forge");
+  z.send(session, `You rake the scrap into the brazier and work the bellows white-hot. ${bars === 1 ? "A bar" : bars + " bars"} of iron, cast and cooling — ${spend} scrap spent${reached ? `, ${reached} of it out of your keeping` : ""}.`, "forge");
   z.sendCtx(session);
 }
 
