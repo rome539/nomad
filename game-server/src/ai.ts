@@ -2488,6 +2488,17 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
     // A variant counts against its bloodline's cap: a den holding a dire
     // hyena is a hyena den held, not a hyena short (or the world would refill
     // around every promotion and swell past its caps).
+    // ...and the same counts kept BY BAND, which is what the food web actually
+    // runs on: a wolf in the wood is not fed by a crab on the shore. Both are
+    // built here, once, off data already in hand — no extra reads.
+    const capsBand = new Map<string, Map<string, number>>();
+    for (const spawn of world.mobSpawns) {
+      const band = z.regionOf(spawn.room_id);
+      let m = capsBand.get(spawn.template_id);
+      if (!m) { m = new Map(); capsBand.set(spawn.template_id, m); }
+      m.set(band, (m.get(band) ?? 0) + 1);
+    }
+    const aliveBand = new Map<string, Map<string, number>>();
     const alive = new Map<string, number>();
     for (const c of z.creatures.values()) {
       // A variant with its own den rows (the seeded brood-mother, the grounds'
@@ -2496,6 +2507,10 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
       // to her own cap — the warren minted mothers forever.
       const line = caps.has(c.templateId) ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
       alive.set(line, (alive.get(line) ?? 0) + 1);
+      const band = z.regionOf(c.roomId);
+      let m = aliveBand.get(line);
+      if (!m) { m = new Map(); aliveBand.set(line, m); }
+      m.set(band, (m.get(band) ?? 0) + 1);
     }
     for (const [templateId, cap_] of caps) {
       const short = cap_ - (alive.get(templateId) ?? 0) - (z.arrivals.has(templateId) ? 1 : 0);
@@ -2507,7 +2522,7 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
           : Math.max(MIGRATION_MIN_FACTOR, MIGRATION_FACTOR / Math.max(1, z.sessions.size));
         // ...and then the food web has its say: how long this den stays empty
         // depends on what is left to breed, or what is left to eat.
-        z.arrivals.set(templateId, now + tmpl.respawn_secs * 1000 * factor * ecologyDrag(z, templateId, caps, alive));
+        z.arrivals.set(templateId, now + tmpl.respawn_secs * 1000 * factor * ecologyDrag(z, templateId, caps, alive, capsBand, aliveBand));
       }
     }
   }
@@ -2521,6 +2536,7 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
  */
 function ecologyDrag(
   z: ZoneDO, templateId: string, caps: Map<string, number>, alive: Map<string, number>,
+  capsBand: Map<string, Map<string, number>>, aliveBand: Map<string, Map<string, number>>,
 ): number {
   if (!ECO_LINES.has(templateId) || HOLLOW.has(templateId)) return 1;
   const share = (line: string): number => {
@@ -2530,16 +2546,51 @@ function ecologyDrag(
   // A PREDATOR refills on what there is to eat: the standing stock of
   // everything it hunts, as a share of what this world can hold. No prey, no
   // wolves — they come back behind the game, not ahead of it.
+  //
+  // ON THE GROUND IT IS ACTUALLY STANDING ON (rome, 2026-08-15: the world was
+  // down to one deer and the wolves would not let up). The rule was right and
+  // the arithmetic was global, which quietly cancelled it. A grey wolf hunts
+  // roe-deer, otter, hyena, and — because MIGRANTS lets it drift to the shore
+  // and the migration gate will not send an animal where nothing can feed it —
+  // wrack-crab, devil-crab and oystercatcher. Legitimate food, every one.
+  //
+  // But all nineteen wolves live in the WOOD, and migration fires under once an
+  // hour across the entire world, so in practice not one of them is ever on the
+  // beach. The old sum credited every wolf everywhere with all 22 head of shore
+  // animals regardless: with the deer wiped to one, the wood's wolves still read
+  // 38 of 73 head standing and refilled at drag 2.44 — barely half the penalty
+  // they had earned — while the deer sat at 3.92 and got taken faster than they
+  // could breed. The crabs were feeding the wolves on paper and the wood paid
+  // for it.
+  //
+  // So the basket is now drawn from the bands the LIVING predators occupy. A
+  // wolf that really does drift to the Crossing counts crabs, correctly, from
+  // the moment it stands there; the ones in the wood count deer, and when the
+  // deer are gone they stop coming back. Migration is untouched.
   const prey = PREYS_ON.get(templateId);
   if (prey?.size) {
+    // Where this line actually is. With none alive, fall back to the ground it
+    // is seeded on — a wiped-out predator is judged on its home range, not on
+    // an empty set (which would read as "nowhere", and feed it nothing).
+    const here = new Set<string>(aliveBand.get(templateId)?.keys() ?? []);
+    if (!here.size) for (const b of capsBand.get(templateId)?.keys() ?? []) here.add(b);
     let held = 0, room = 0;
     for (const line of prey) {
-      const cap = caps.get(line) ?? 0;
-      if (!cap) continue;
-      room += cap;
-      held += Math.min(cap, alive.get(line) ?? 0);
+      const lineCaps = capsBand.get(line);
+      if (!lineCaps) continue;
+      const lineAlive = aliveBand.get(line);
+      for (const band of here) {
+        const cap = lineCaps.get(band) ?? 0;
+        if (!cap) continue;
+        room += cap;
+        held += Math.min(cap, lineAlive?.get(band) ?? 0);
+      }
     }
     if (room > 0) return 1 + (1 - held / room) * (ECO_SLOWEST - 1);
+    // Its own ground holds nothing it eats: the slowest refill there is. Capped,
+    // never stopped — the line still trickles back, which is the standing rail
+    // that keeps the offline sim from emptying a band for good.
+    if (here.size) return ECO_SLOWEST;
   }
   // PREY breeds from what survived. A line cut to the bone is slow to come
   // back; one barely touched refills at its own pace. This is what gives
