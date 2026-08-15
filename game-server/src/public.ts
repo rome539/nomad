@@ -4117,7 +4117,7 @@ function buildMapGraph(f) {
       // The band is the SERVER's now (zone-data.MAP_BAND_OF) — it ships on the
       // frame, so there is one copy of the strata and not two to drift apart.
       var band = (rm.band !== undefined && rm.band !== null) ? rm.band : 1;
-      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate, home: rm.home || 0, safe: !!rm.safe,
+      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate, home: rm.home || 0, safe: !!rm.safe, hold: !!rm.hold,
                        q: rm.q || "", gx: rm.x, gy: rm.y };
       order.push(rm.id);
     }
@@ -4375,12 +4375,18 @@ function drawMap() {
     // another kind of place, it is a gap in the place you are already in. A gate
     // is solid, heavy and lit; a hideaway is the same ground with a way into it.
     var hide = nd.safe && !mine && !bunked;
-    ctx.globalAlpha = nd.here ? 0.30 : (nd.gate || mine ? 0.42 : hide ? 0.24 : bunked ? 0.26 : 0.15);
+    // GROUND WITH ROOM FOR A DOOR. Same doctrine as the bolthole above: not a
+    // new colour (rose means PEOPLE here, gold means YOURS), but a treatment.
+    // An empty site is drawn a shade heavier than open ground and carries an
+    // OUTLINE roof, so the paper says "somebody could live here" without
+    // saying "somebody does" — which stays the room prose's business.
+    var site = nd.hold && !mine && !bunked;
+    ctx.globalAlpha = nd.here ? 0.30 : (nd.gate || mine ? 0.42 : hide ? 0.24 : bunked ? 0.26 : site ? 0.22 : 0.15);
     ctx.fillStyle = mine || bunked ? gold : col; ctx.fill(); ctx.globalAlpha = 1;
     if (nd.here) { ctx.shadowColor = heal; ctx.shadowBlur = 16 * s; }
     else if (mine) { ctx.shadowColor = gold; ctx.shadowBlur = 12 * s; }
     else if (nd.gate) { ctx.shadowColor = col; ctx.shadowBlur = 10 * s; }
-    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : (nd.gate || mine) ? Math.max(2, 2.0 * s) : (hide || bunked) ? Math.max(1, 1.6 * s) : Math.max(1, 1.1 * s);
+    ctx.lineWidth = nd.here ? Math.max(2, 2.2 * s) : (nd.gate || mine) ? Math.max(2, 2.0 * s) : (hide || bunked || site) ? Math.max(1, 1.6 * s) : Math.max(1, 1.1 * s);
     ctx.strokeStyle = nd.here ? heal : (mine || bunked) ? gold : col;
     // The broken line. Set on the stroke only, and cleared straight after, so
     // nothing else drawn this frame inherits it.
@@ -4396,9 +4402,9 @@ function drawMap() {
     }
     // The roof, top-LEFT, where nothing else sits — the stair badges own the
     // right corner. Full weight for your own door, half for a bunk.
-    if (mine || bunked || hide) {
-      ctx.globalAlpha = mine ? 1 : bunked ? 0.55 : 0.9;
-      ctx.fillStyle = hide ? col : gold; ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
+    if (mine || bunked || hide || site) {
+      ctx.globalAlpha = mine ? 1 : bunked ? 0.55 : site ? 0.7 : 0.9;
+      ctx.fillStyle = (hide || site) ? col : gold; ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       // A roof for a door of your own; an arch \\u2014 a burrow mouth \\u2014 for a hole
       // the world left lying about.

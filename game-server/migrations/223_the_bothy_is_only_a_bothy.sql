@@ -1,0 +1,34 @@
+-- 223 the bothy is only a bothy (rome, 2026-08-15: remove the Shepherd's Bothy
+-- as a safe spot).
+--
+-- A SANCTUARY YOU WALK THROUGH IS NOT A SANCTUARY. The Shepherd's Bothy sits ON
+-- the drove line with a door at each end:
+--
+--     the-shepherds-bothy  west -> the-broken-fold
+--     the-shepherds-bothy  east -> the-bothy-spring
+--
+-- Which makes it the same fault 222 took off the Shelter Stone, one band along:
+-- a room nothing can reach into, standing in the middle of a route people have
+-- to use. It is milder than the Shelter Stone was — that one held two hundred
+-- and ten rooms hostage, this one holds none, because the drove has ways round
+-- it. But "you cannot be touched here" belongs to a place you step ASIDE into,
+-- and every other hideaway in the world is exactly that: one door, a pocket off
+-- the ground you are already on.
+--
+-- I measured the wrong thing when this was first raised and reported the bothy
+-- as clean. The test asked whether blocking a sanctuary SEALS the map, which is
+-- the Shelter Stone's specific crime; it never asked the simpler question of
+-- whether the sanctuary is a through-room at all. Two exits is the whole tell.
+--
+-- The room keeps everything else. It is still the Shepherd's Bothy, still on
+-- the drove, still shelter in the plain sense of a roof — it simply stops being
+-- a place the world cannot follow you into. Nothing else in the sim keys off
+-- this flag for this room: it holds no den, it is not an entry, and creatures
+-- will now wander it like any other stretch of the drove, which is the point.
+--
+-- THE CARTER'S REST IS LEFT ALONE, deliberately, and it has the same shape
+-- (west -> the-fifth-milestone, east -> the-broken-culvert). It was named in
+-- the same breath but the instruction was the bothy, and a sanctuary is not the
+-- sort of thing to strip from the east road twice in one migration on an
+-- assumption. It is a one-line change whenever you want it.
+UPDATE rooms SET is_safe = 0 WHERE id = 'the-shepherds-bothy';

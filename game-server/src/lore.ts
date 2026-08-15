@@ -404,6 +404,13 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       // Somebody ELSE's house is never marked: the map would become the
       // directory of who sleeps where that the room prose refuses to be.
       home: den.homeMark(z, id, session.pubkey),
+      // GROUND YOU COULD BUILD ON, which the paper has never once said (rome,
+      // 2026-08-15: the new den country reads as more road). Somebody else's
+      // house stays unmarked and always will — the map is not the directory of
+      // who sleeps where. But the SITE is not a secret: it is a standing ruin
+      // with room for a door, and the whole point of the holdings is choosing
+      // between them, which you cannot do from a map that draws them as verge.
+      hold: den.isHolding(z, id) ? 1 : 0,
       band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
       // Which quarter of the wood this square belongs to, so the client can hold
       // a quarter's caption back until you have walked some of it — same law the
