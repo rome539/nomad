@@ -2422,10 +2422,27 @@ var frayTimer = null;    // holds that line back until an outage actually lasts
 var failedOpens = 0;     // reweaves that never opened; enough of them and the
                          // cached token is suspect, so we force a fresh login
 var FRAY_QUIET_MS = 3000;// a reweave that recovers faster than this stays unseen
+var connectingSince = 0; // when the in-flight handshake started, so a wedged
+                         // one can be told from a slow one (see connect)
+var CONNECT_STALL_MS = 10000;
 var freshLoad = true;    // this page just loaded with an EMPTY scroll — the first connect must ask the server to repaint the room (fresh=1), or a fast refresh lands on a blank pane. A websocket reweave keeps its scroll and never sets this.
 
 async function connect() {
-  if (ws && ws.readyState === 0) return; // a connect is already in flight
+  // A HANDSHAKE CAN HANG, AND THE OLD GUARD LET IT KILL THE LOOP. This used to
+  // return flat when a connect was in flight, and scheduleRetry is only ever
+  // called from onclose — so a socket stuck in CONNECTING (what a laptop that
+  // slept with a half-open wire wakes up holding) meant onclose never fired,
+  // every scheduled retry hit this line and scheduled nothing, and the reweave
+  // chain was dead for good. The scroll then answered every command with 'not
+  // connected' forever, with no way back but a reload.
+  if (ws && ws.readyState === 0) {
+    // Still plausibly opening: come back to it, but ALWAYS keep the chain alive.
+    if (Date.now() - connectingSince < CONNECT_STALL_MS) { scheduleRetry(); return; }
+    // Long past plausible: abandon it. Handlers are cleared first so this
+    // corpse cannot fire onclose later and race a live socket.
+    try { ws.onopen = null; ws.onclose = null; ws.onmessage = null; ws.onerror = null; ws.close(); } catch (e) {}
+    ws = null;
+  }
   profileTried = false;
   if (method === "ext" && !window.nostr) {
     print("— your key extension is not answering; entering with the pocket keys —", "sys");
@@ -2459,6 +2476,7 @@ async function connect() {
 
   var proto = location.protocol === "https:" ? "wss://" : "ws://";
   var opened = false;
+  connectingSince = Date.now();
   ws = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : ""));
 
   ws.onopen = function () {
@@ -2584,6 +2602,23 @@ function scheduleRetry() {
   setTimeout(connect, retryMs);
   retryMs = Math.min(retryMs * 2, 15000);
 }
+
+// THE SECOND WAY BACK. The retry chain is one path to recovery and it is now
+// unkillable, but a machine waking from sleep should not have to wait out a
+// 15-second backoff to notice the world is reachable again. The browser tells
+// us: coming back online, the tab being looked at again, the window taking
+// focus. Any of those, with no live socket, tries immediately and resets the
+// backoff — so a lid opening reconnects in the time it takes to draw the page.
+function wakeReconnect() {
+  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+  retryMs = 300;
+  connect();
+}
+window.addEventListener("online", wakeReconnect);
+window.addEventListener("focus", wakeReconnect);
+document.addEventListener("visibilitychange", function () {
+  if (!document.hidden) wakeReconnect();
+});
 
 var history = [];
 var histAt = -1;

@@ -23,6 +23,12 @@ export const TICK_MS = 2000;
 // up to this much AMBIENT world state (player inventory/vault live in D1, safe;
 // volatile creature fields re-sim from savedAt on restart). (2026-07-18)
 export const TICK_SIM_FLUSH_MS = 6000;
+// A beat that takes longer than this prints a phase breakdown (zone.tick's
+// stopwatch). Set above the slowest HEALTHY beat ever measured — production
+// p50 is ~19ms and the worst clean hour peaked at 57ms — so a normal world is
+// silent and only a real stall speaks. 1500ms sits under the 2s beat itself:
+// anything slower than its own heartbeat is already a stutter a player feels.
+export const TICK_SLOW_LOG_MS = 1500;
 // The tick's two speeds (2026-07-18). Every setAlarm is itself a billed row
 // written, so the alarm chain — not the sim — is the write floor: a 2s beat
 // costs ~43,200 rows/day for as long as ANY socket stays connected. But the

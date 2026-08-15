@@ -73,7 +73,7 @@ import * as works from "./works";
 import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS } from "./detail";
 import {
-  TICK_MS, TICK_SIM_FLUSH_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
+  TICK_MS, TICK_SIM_FLUSH_MS, TICK_SLOW_LOG_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON,
@@ -3087,12 +3087,29 @@ export class ZoneDO implements DurableObject {
   }
 
   private async tick(): Promise<void> {
+    // THE BEAT TIMES ITSELF (2026-08-15). A freeze that shows up only in
+    // production, only sometimes, and never in CPU is not a thing reasoning
+    // from the outside has been able to name: the object sat 22-36 seconds on
+    // a beat while spending 3-75ms of processor, which says "waiting" and not
+    // waiting on WHAT. Three theories died against that gap. So the beat
+    // carries a stopwatch and, when it runs long, prints where the time went.
+    // A Date.now() per phase on a beat that already does far more, and it
+    // prints NOTHING on a healthy world — only past TICK_SLOW_LOG_MS.
+    const t0 = Date.now();
+    const marks: string[] = [];
+    let lastMark = t0;
+    const mark = (name: string) => {
+      const at = Date.now();
+      marks.push(name + "=" + (at - lastMark));
+      lastMark = at;
+    };
     // A cold start with a pending alarm rebuilds the world first.
-    if (!this.world) await this.init("door");
+    if (!this.world) { await this.init("door"); mark("init"); }
     // The alarm can wake a hibernated DO whose sessions are gone but whose
     // sockets live on — rebuild them so the tick sees the connected players
     // (and doesn't mistake a full world for an empty one).
     await this.hydrateSessions();
+    mark("hydrate");
     const world = this.world!;
     const now = Date.now();
 
@@ -3938,10 +3955,12 @@ export class ZoneDO implements DurableObject {
     // Lights burn down (light.ts): low-flame warnings, burnout, the dark
     // closing back over, and a lantern's last burn spending the lantern.
     await light.tickLights(this, now);
+    mark("lights");
 
     // The sky turns (events.ts): rain telegraphs, falls, and leaves mud —
     // and its kin to come. The spine just winds the clock.
     await events.tickEvents(this, now);
+    mark("events");
 
     // The day/night world-clock flips: tell whoever's standing outside to
     // see it (same courtesy the weather events already extend on their own
@@ -4381,6 +4400,7 @@ export class ZoneDO implements DurableObject {
     // Every beat, not just every flush: a lost save must not survive long
     // enough for a hibernation wake to rebuild the player from the stale row.
     await this.drainDirtySaves();
+    mark("saves");
 
     // The dungeon breathes: an idle wanderer catches a line of atmosphere now
     // and then, drawn from where they stand. Never in a fight, never at the
@@ -4446,6 +4466,7 @@ export class ZoneDO implements DurableObject {
     if (now - this.lastTickFlushAt >= TICK_SIM_FLUSH_MS) {
       this.lastTickFlushAt = now;
       await this.persist();
+      mark("persist");
     }
     // Put parked souls to sleep: a socket silent past IDLE_TIMEOUT_MS isn't a
     // player, it's a meter running — its connection alone keeps the alarm
@@ -4459,6 +4480,9 @@ export class ZoneDO implements DurableObject {
       try { session.ws.close(1000, "idle"); } catch {}
     }
     await this.ensureAlarm();
+    mark("alarm");
+    const spent = Date.now() - t0;
+    if (spent >= TICK_SLOW_LOG_MS) console.log("SLOWTICK " + spent + "ms " + marks.join(" "));
   }
 
   // One atmosphere line for where you stand: a signature room's own pool if it
