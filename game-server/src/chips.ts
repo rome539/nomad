@@ -321,8 +321,19 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // was telling a man standing in his own home to go to the tavern. A gate wins
   // the tie if a site ever sits on one.
   const door = den.isHolding(z, session.roomId) && !world.entryRooms.has(session.roomId) ? "den" : "";
+  // WHICH WAY THE DOOR IS (rome, 2026-08-15). Sent always, shown by the client
+  // only during the FIRST WALK — friendliness belongs in the interface and the
+  // interface is where it can be taken away again. A wanderer who has finished
+  // the guide reads the waystones like everybody else; the first hour is the one
+  // that loses people, and it is the only one this props up.
+  //
+  // Cheap enough to send unconditionally: it is a lookup in a map built once at
+  // world load, and the server has no business knowing whether a client has
+  // dismissed its tutorial.
+  const w = z.wayHome.get(session.roomId);
+  const home = world.entryRooms.has(session.roomId) ? "here" : (w ? w.dir : "");
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door }));
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home }));
   } catch {}
 }
 

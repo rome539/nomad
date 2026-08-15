@@ -609,6 +609,39 @@ Directions rome likes and wants held. Design only; no code until he says go.
   survives restarts. Build the framework here; individual events are content.
 - More rooms/creatures for the Door — but content sprawl stays the enemy;
   systems first.
+- **NOMAD as a webxdc app** *(pinned 2026-08-15 — rome: low-tier thought)*.
+  A `.xdc` runs offline in a Delta Chat group: no network of any kind, no
+  server, no relays, state shared only through an append-only broadcast log
+  (`sendUpdate` / `setUpdateListener`). So the Durable Object cannot come along,
+  and with it goes the referee that owns the tick, resolves the blow and decides
+  what dropped.
+  **It can still be real multiplayer, via deterministic lockstep**: every peer
+  runs the identical sim, only INPUTS are broadcast ("go east", "attack the
+  wolf"), each peer orders them by (tick, sender) and simulates. Cheat
+  resistance then comes from REPLICATION rather than authority — a liar's client
+  can submit inputs but every other peer validates them against its own copy of
+  the rules, so a claimed legendary simply isn't one.
+  **Why the codebase is closer than it looks:** all randomness funnels through
+  one 27-line file (`rng.ts` — rand/randInt/chance/pick/uuid), so seeding it is a
+  ONE-FILE change; the clock is already a threaded parameter (`tick(now)`,
+  `creatureMoves(…, now, …)`); `simstore.ts` already isolates state from host;
+  `ai.ts`/`events.ts` are already free functions over `z`; the client is already
+  self-contained and textContent-only, which is exactly what a `.xdc` wants; and
+  the offline catch-up sim already re-simulates from `savedAt`, which in lockstep
+  stops being a special case and becomes the normal mode.
+  **The two real costs.** (1) HIDDEN INFO LEAKS — every peer holds the whole
+  world to simulate it, so chest contents, lurker positions and other players'
+  packs sit in every client's memory; commit-reveal fixes the worst and is real
+  work, and the mitigating fact is that a webxdc app lives in a group chat among
+  people you know, not an open server. (2) You can only act while CAUGHT UP —
+  inputs past a lag horizon are rejected, so a returning player watches the world
+  replay first.
+  Also: drop or hard-trim `assets.ts` (3.4MB of base64). Scale for reference —
+  761 rooms, 1,754 exits, 256 items, 94 mob templates, ~250KB of prose; size is
+  not the blocker.
+  **A sibling, not a port**, sharing the engine with nomadmud.com. Weeks of work,
+  and the first step is making the engine not care whether its host is a Durable
+  Object or a browser tab.
 ## Easter eggs (parked; an egg in a help file stops being an egg)
 
 - **Zap-triggered whispers** — zap a shrine 21 / 2100 / 21000 sats and

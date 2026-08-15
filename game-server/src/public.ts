@@ -2516,6 +2516,7 @@ async function connect() {
           roomEl.appendChild(rg);
         }
       }
+      paintWayHome();
       if (f.room) knownRooms[f.room] = 1;
       hpEl.textContent = f.hp + "/" + f.max_hp + " hp \\u00b7 " + f.name;
       // Remember the name for the threshold's greeting next visit.
@@ -2531,6 +2532,12 @@ async function connect() {
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
+      // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
+      // server sends it every time; the client is what decides it is training
+      // wheels, and takes them off the moment the guide is done. A wanderer past
+      // the lessons reads the waystones like everybody else.
+      wayHome = f.home || "";
+      paintWayHome();
       renderChips(f.suggest, f.combat);
     } else if (f.t === "bench") {
       if (f.open) renderBench(f); else closeBench();
@@ -5854,6 +5861,21 @@ var GUIDE_LESSONS = [
 ];
 var guideAt = -1; // index of the lesson whose action we are waiting on
 function guideActive() { return guideAt >= 1 && guideAt < GUIDE_LESSONS.length; }
+// THE FIRST WALK KNOWS WHERE THE DOOR IS. Hung on the room bar, in the same
+// muted style the region caption uses, and only while the guide is running:
+// seven hundred rooms and no map is the thing that loses somebody in their
+// first hour. It disappears for good when the lessons do, and from then on the
+// waystones are the answer.
+var wayHome = "";
+function paintWayHome() {
+  var old = document.getElementById("wayhome");
+  if (old) old.remove();
+  if (!guideActive() || !wayHome) return;
+  var el = document.createElement("span");
+  el.className = "rrg"; el.id = "wayhome";
+  el.textContent = wayHome === "here" ? " \u00b7 the door is here" : " \u00b7 the way out lies " + wayHome;
+  roomEl.appendChild(el);
+}
 function guidePrint(i) { print(GUIDE_LESSONS[i].text.join("\\n"), "sys"); }
 function guideStart() {
   guideAt = 1;

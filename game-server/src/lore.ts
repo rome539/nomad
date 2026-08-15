@@ -3,7 +3,7 @@
 // plumbing (journals dropping/lifting rides the get/drop/death paths); this
 // file owns what the knowledge SAYS and how it reaches the client.
 import type { ZoneDO } from "./zone";
-import type { Region } from "./world";
+import type { Region, World, Exit } from "./world";
 import type { Session } from "./zone-types";
 import type { CarriedItem, JournalRow } from "./world";
 import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
@@ -275,6 +275,55 @@ export function worldGrid(z: ZoneDO): WorldGrid {
 // Display grouping only — the sim's regionOf (chest tiers etc.) still reads
 // these blocks as "upper". The map just names where you're standing honestly.
 // (Shared with the gatehouse wall chart, which draws the same frame.)
+// THE WAY BACK (rome, 2026-08-15: a new player must not end up endlessly lost,
+// and must be able to find a gate).
+//
+// One multi-source breadth-first walk outward from EVERY entry room at world
+// load. It answers, for any room in the world, two things: which single step
+// takes you closer to the nearest way out, and how many steps that way out is.
+//
+// Multi-source is the whole trick — seeding the queue with all ten doors at
+// once means each room settles on its OWN nearest gate rather than a fixed one,
+// so a waystone on the far shore points east to the Crossing House and one on
+// the drove points west, and neither has to know the other exists.
+//
+// It is recomputed whenever the world is (buildWorldMaps), so a migration that
+// adds sixteen rooms or moves a door can never leave a stale arm pointing at
+// nothing — which hand-written sign text could, and did nearly get away with.
+export type WayHome = { dir: string; dist: number };
+export function buildWayHome(world: World): Map<string, WayHome> {
+  const dist = new Map<string, number>();
+  const queue: string[] = [];
+  for (const id of world.entryRooms) { dist.set(id, 0); queue.push(id); }
+  for (let i = 0; i < queue.length; i++) {
+    const here = queue[i];
+    const d = dist.get(here)!;
+    // Walk the graph BACKWARDS: an exit runs from -> to, and we want everything
+    // that can REACH a gate, so we follow arrivals rather than departures. In a
+    // world of two-way doors these agree; where they ever stop agreeing, this is
+    // the one that is still telling the truth.
+    for (const [from, exits] of world.exits) {
+      if (dist.has(from)) continue;
+      if (exits.some((e) => e.to_room === here)) { dist.set(from, d + 1); queue.push(from); }
+    }
+  }
+  // ...and now the step itself: from each room, the neighbour standing closest
+  // to a door, and the direction you would walk to reach it.
+  const way = new Map<string, WayHome>();
+  for (const [id, exits] of world.exits) {
+    const mine = dist.get(id);
+    if (mine === undefined || mine === 0) continue; // unreachable, or already a door
+    let best: WayHome | null = null;
+    for (const e of exits as Exit[]) {
+      const d = dist.get(e.to_room);
+      if (d === undefined || d >= mine) continue;
+      if (!best || d + 1 < best.dist) best = { dir: e.dir, dist: d + 1 };
+    }
+    if (best) way.set(id, best);
+  }
+  return way;
+}
+
 export function mapRegionOf(z: ZoneDO, id: string): string {
   // A GATE IS DRAWN ON THE GROUND IT STANDS ON, and coloured as a gate by the
   // `gate` flag the frame carries (rome, 2026-08-02: "the gates are broken and

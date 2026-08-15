@@ -794,6 +794,66 @@ for (const roomId in SIGNPOSTS) {
   table[SIGN_WORDS] = `${sign.post}\n${sign.reads.map((r) => `  ${r}`).join("\n")}`;
 }
 
+// ---------------------------------------------------------------------------
+// THE WAYSTONES (rome, 2026-08-15: a new player has to be able to get back to a
+// gate)
+// ---------------------------------------------------------------------------
+//
+// The fingerposts above say where the ROADS go. They were the right answer to
+// the question they were asked and they do not answer this one: a person who is
+// turned around in seven hundred rooms does not need to know where the causeway
+// ends, they need to know which way the door is.
+//
+// Same institution, same logic that put arms on the junctions. Whoever cut the
+// milestones and set the toll stones marked the way back to their own gates,
+// because a road nobody can navigate collects nothing. So the stones already
+// standing in the world start doing the job they were cut for.
+//
+// WHAT IS AND IS NOT A WAYSTONE. Only markers — a stone or a post set up to be
+// READ. Stepping stones, hearth stones, the capstan and the anchor stone are
+// objects that happen to have "stone" in the name and stay mute.
+//
+// AND THE WOOD GETS NONE, deliberately. Its whole character is that it stops
+// telling you the truth about which way you are facing, and a wood that signs
+// its own exits is not that wood any more. The road and the water are made
+// country, marked by people who wanted to be found. The trees are not.
+export const WAYSTONES = new Set<string>([
+  // the road: the numbered stones and the markers between them
+  "the-first-milestone", "the-drowned-milestone", "the-second-milestone",
+  "the-third-milestone", "the-fifth-milestone", "the-sixth-milestone",
+  "the-seventh-milestone", "the-eighth-milestone",
+  "the-toll-stone", "the-marker-stone", "the-drovers-cairn", "the-boundary-cairn",
+  "the-broken-cross", "the-roadwarden-post",
+  // the crossing: the stones the water people set, on both banks
+  "the-weeded-milestone", "the-far-milestone", "the-first-crossing-stone",
+  "the-second-crossing-stone", "the-toll-post", "the-causeway-cross",
+  "the-shepherds-stone",
+  // and the one cross in the middle of the houses
+  "the-street-cross",
+]);
+
+// What the stone IS, before it says which way. Kept short — the room has
+// already described itself and this is the sentence that turns a piece of
+// scenery into a thing you can steer by.
+export function waystoneLine(roomId: string): string {
+  if (roomId.includes("milestone")) return "The road-facing flat of the stone carries the old cut, and it is still legible.";
+  if (roomId.includes("cairn")) return "The cairn has one long stone laid into it deliberately, level, not fallen that way.";
+  if (roomId.includes("cross")) return "The cross has lost its head, and what is left is the shaft and one weathered arm.";
+  if (roomId.includes("post")) return "The post is iron-shod against the weather and has outlasted everything wooden near it.";
+  return "The stone is dressed on one face, and dressed by somebody who meant it to be read.";
+}
+
+// How far, in the language a stone would use. Never a room count: a milestone
+// does not say "eleven squares", and a number that precise turns the country
+// into a grid you solve instead of a place you learn.
+export function wayFar(steps: number): string {
+  if (steps <= 2) return "the door is close, and you would see it from the next turn";
+  if (steps <= 5) return "a short walk";
+  if (steps <= 10) return "the better part of an hour on foot";
+  if (steps <= 16) return "a long walk, and not one to start at dusk";
+  return "a day's walk, near enough, and nothing between here and there that is anybody's business but yours";
+}
+
 export function lookFeature(roomId: string, region: string, arg: string): string | null {
   const tables: (FeatureTable | undefined)[] = [
     ROOM_FEATURES[roomId],

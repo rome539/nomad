@@ -71,7 +71,7 @@ import * as den from "./den";
 import * as dice from "./dice";
 import * as works from "./works";
 import type { WorksPlan } from "./works";
-import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS } from "./detail";
+import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, TICK_SLOW_LOG_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
@@ -309,7 +309,12 @@ export class ZoneDO implements DurableObject {
   private static readonly DIST_CACHE_MAX = 64; // × N entries; 64 × 1,110 ≈ 3.5 MB
   private exitsSymmetric = true;
 
+  /** From any room: one step toward the nearest door, and how far that door is.
+   *  Rebuilt with the world, so a migration can never strand a stale arm. */
+  public wayHome: Map<string, lore.WayHome> = new Map();
+
   private buildWorldMaps(world: World): void {
+    this.wayHome = lore.buildWayHome(world);
     this.roomDists.clear();
     // The reverse-lookup trick below (answering roomDist(a,b) from a cached map
     // built at b) is only valid while every exit has a matching return exit.
@@ -5607,6 +5612,20 @@ export class ZoneDO implements DurableObject {
     // signpost in the black, and the dark is the one thing that beats it.
     const sign = full ? SIGNPOSTS[room.id] : undefined;
     if (sign) lines.push(`${sign.post} (look at the sign)`);
+    // THE WAYSTONES (rome, 2026-08-15). The fingerpost above says where the
+    // ROADS go; this says where the DOOR is, which is the thing a person who is
+    // lost actually needs and the one question the world could never answer.
+    // Same doctrine, same institution: whoever cut the milestones and set the
+    // toll stones marked the way to their own gates, because a road nobody can
+    // navigate collects nothing.
+    //
+    // The direction is COMPUTED (lore.buildWayHome), never written down, so it
+    // cannot rot when the world grows — and it names the nearest door from THIS
+    // stone, which is not always the one you came in by.
+    if (full && WAYSTONES.has(room.id)) {
+      const w = this.wayHome.get(room.id);
+      if (w) lines.push(`${waystoneLine(room.id)} The arm cut into it points ${w.dir}: ${wayFar(w.dist)}.`);
+    }
     // The sky's phase, spoken where the sky can reach you: coming rain, rain,
     // or the mud it left. Legibility rule — you always know what weather
     // you're standing in.
