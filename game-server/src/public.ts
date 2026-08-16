@@ -2422,12 +2422,20 @@ var frayTimer = null;    // holds that line back until an outage actually lasts
 var failedOpens = 0;     // reweaves that never opened; enough of them and the
                          // cached token is suspect, so we force a fresh login
 var FRAY_QUIET_MS = 3000;// a reweave that recovers faster than this stays unseen
+// A tab the server handed the body AWAY from. It is not "disconnected" and
+// it must not behave like it: no retry chain, and no waking on focus. Only a
+// reload takes the thread back, the same deliberate act it always was.
+var stilled = false;
 var connectingSince = 0; // when the in-flight handshake started, so a wedged
                          // one can be told from a slow one (see connect)
 var CONNECT_STALL_MS = 10000;
 var freshLoad = true;    // this page just loaded with an EMPTY scroll — the first connect must ask the server to repaint the room (fresh=1), or a fast refresh lands on a blank pane. A websocket reweave keeps its scroll and never sets this.
 
 async function connect() {
+  // The stilled tab never dials, whoever asks. wakeReconnect checks this too,
+  // but the guard belongs on the door as well as on the one caller that walks
+  // through it today: the whole bug was a second caller appearing later.
+  if (stilled) return;
   // A HANDSHAKE CAN HANG, AND THE OLD GUARD LET IT KILL THE LOOP. This used to
   // return flat when a connect was in flight, and scheduleRetry is only ever
   // called from onclose — so a socket stuck in CONNECTING (what a laptop that
@@ -2583,6 +2591,16 @@ async function connect() {
     if (e && e.code === 1000 && e.reason === "reconnected") {
       print("— your spirit is called to another window; this one goes still —", "sys");
       ws = null;
+      // AND IT STAYS STILL. Setting ws = null used to be enough, because the
+      // only way back was the retry chain and this branch skips it. Then
+      // wakeReconnect arrived (615b116, this morning) and reconnects on focus,
+      // visibilitychange or online whenever there is no live socket, which is
+      // EXACTLY the state a stilled tab sits in. So merely LOOKING at the old
+      // tab yanked the body back, which stilled the new tab, whose own focus
+      // event yanked it back again: two windows trading the body several times
+      // a second, "goes still" and "take up the thread" alternating down the
+      // scroll. This flag is the one thing that outranks a wake.
+      stilled = true;
       return;
     }
     if (!opened) failedOpens++;
@@ -2617,6 +2635,8 @@ function scheduleRetry() {
 // focus. Any of those, with no live socket, tries immediately and resets the
 // backoff — so a lid opening reconnects in the time it takes to draw the page.
 function wakeReconnect() {
+  // The body is in another window; looking at this one must not steal it back.
+  if (stilled) return;
   if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
   retryMs = 300;
   connect();
