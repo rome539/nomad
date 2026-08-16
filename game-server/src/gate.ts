@@ -236,16 +236,52 @@ export function bountyGuard(z: ZoneDO, session: Session): string | null {
 // (2026-08-14) — no single food is big enough for a bear's skull, and eight is
 // PACK_FOOD_CAP, so the biggest bounties pay exactly one full stack. Shared by
 // the modal and the typed path so the two can't drift on what a bounty pays.
+// Where a claimable trophy is sitting. "" is the pack; the other two are the
+// keeping. One finder for both the modal's button state and the claim itself,
+// so the board can never offer a trade it then refuses.
+type BountyFrom = "" | "lockbox" | "vault";
+async function findBountyTrophy(
+  z: ZoneDO, session: Session, trophyId: string,
+): Promise<{ item: CarriedItem; from: BountyFrom } | null> {
+  // SEAL OR NO SEAL (rome, 2026-08-15: trophies do not seal). The old pack-only
+  // check filtered on serial === null and I carried that forward into the
+  // keeping, which was wrong twice over. The gate REFUSES to seal a trophy —
+  // cmdClaim says so in as many words, because a trophy is stackable and
+  // stackables carry no title — so the filter guards a state that cannot be
+  // reached honestly. What it CAN do is exactly the bug countLooseIn was written
+  // against: "a stray seal on a fungible (an old barter bug) must not hide it
+  // from the forge or the vice." A trophy that picked one up in some old trade
+  // would have gone invisible to the board and been unclaimable forever.
+  //
+  // So the board takes any copy it finds, and voids a stray mint on the way out
+  // rather than pretending the row is not there.
+  const mine = session.items.find((c) => c.itemId === trophyId);
+  if (mine) return { item: mine, from: "" };
+  for (const key of ["lockbox", "vault"] as const) {
+    const held = await loadContainer(z.env.DB, session.pubkey, key);
+    const hit = held.find((c) => c.itemId === trophyId);
+    if (hit) return { item: hit, from: key };
+  }
+  return null;
+}
+
 const MEAL_COUNT_WORDS: Record<number, string> = {
   2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight",
 };
-async function payBounty(z: ZoneDO, session: Session, bounty: [string, string, number?], carried: CarriedItem): Promise<string> {
+async function payBounty(z: ZoneDO, session: Session, bounty: [string, string, number?], carried: CarriedItem, from: BountyFrom): Promise<string> {
   const world = z.world!;
   const [trophyId, foodId, count] = bounty;
   const meals = count ?? 1;
   const trophy = world.itemTemplates.get(trophyId);
   const food = world.itemTemplates.get(foodId);
-  session.items.splice(session.items.indexOf(carried), 1);
+  // THE BOARD REACHES THE KEEPING (rome, 2026-08-15). The trophy comes off
+  // whichever shelf it was actually on: only a pack item lives in session.items,
+  // so the splice is conditional, but the row goes either way. Same reach the
+  // brazier and the hatch have always had — the board was the one counter at the
+  // gate that made you fetch the thing first, which is a walk to a box six feet
+  // away and back, and no decision at all.
+  if (from === "") session.items.splice(session.items.indexOf(carried), 1);
+  if (carried.serial !== null) await voidMint(z.env.DB, carried.serial); // a stray seal, cracked with the row
   await removeItemRow(z.env.DB, carried.rowId);
   bountyTookOf(z, session.pubkey).add(trophyId); // paid to YOU; it stays on the board for everyone else
   let spilled = 0;
@@ -295,9 +331,9 @@ export async function handleBounty(z: ZoneDO, session: Session, frame: any): Pro
     if (bountyTookOf(z, session.pubkey).has(bounty[0])) {
       return sendBounty(z, session, `He's already paid you for that one. The posting stands for whoever brings him the next ${trophy?.name ?? "one"}.`);
     }
-    const carried = session.items.find((c) => c.itemId === bounty[0] && c.serial === null);
-    if (!carried) return sendBounty(z, session, `You've nothing like that to trade — the keeper wants ${trophy?.name ?? "it"}, and it isn't on you.`);
-    return sendBounty(z, session, await payBounty(z, session, bounty, carried));
+    const found = await findBountyTrophy(z, session, bounty[0]);
+    if (!found) return sendBounty(z, session, `You've nothing like that to trade — the keeper wants ${trophy?.name ?? "it"}, and it isn't on you or in your keeping.`);
+    return sendBounty(z, session, await payBounty(z, session, bounty, found.item, found.from));
   }
   return sendBounty(z, session);
 }
@@ -321,6 +357,11 @@ export async function leaveBounty(z: ZoneDO, session: Session): Promise<void> {
 export async function sendBounty(z: ZoneDO, session: Session, note?: string): Promise<void> {
   const world = z.world!;
   const took = bountyTookOf(z, session.pubkey);
+  // The keeping, read ONCE for the whole board rather than per posting — four
+  // bounties against two containers would otherwise be eight loads of the same
+  // two shelves, on a modal that repaints after every claim.
+  const keeping: CarriedItem[] = [];
+  for (const key of ["lockbox", "vault"] as const) keeping.push(...await loadContainer(z.env.DB, session.pubkey, key));
   const board = z.bounties.map(([trophyId, foodId, count]) => {
     const t = world.itemTemplates.get(trophyId);
     const f = world.itemTemplates.get(foodId);
@@ -328,7 +369,10 @@ export async function sendBounty(z: ZoneDO, session: Session, note?: string): Pr
     // Whether the wanderer actually carries the trophy (the claim needs it in
     // the pack — sealed title never crosses the counter), and whether the
     // keeper has already settled this posting with them.
-    const have = session.items.some((c) => c.itemId === trophyId && c.serial === null);
+    // Claimable from anywhere the board can reach, so the button and
+    // findBountyTrophy can never disagree about what is on offer.
+    const have = session.items.some((c) => c.itemId === trophyId)
+      || keeping.some((c) => c.itemId === trophyId);
     const meals = count ?? 1;
     return { id: trophyId, name: t.name, rarity: t.rarity, food: f.name, heal: f.heal * meals, meals, have, took: took.has(trophyId) };
   }).filter((b) => b !== null);
@@ -586,15 +630,18 @@ export async function cmdBounty(z: ZoneDO, session: Session, arg: string): Promi
     if (bountyTookOf(z, session.pubkey).has(bounty[0])) {
       return z.send(session, `He's already paid you for that one. The posting stands for whoever brings him the next ${trophy.name}.`);
     }
-    const carried = session.items.find((c) => c.itemId === bounty[0] && c.serial === null);
-    if (!carried) return z.send(session, `The keeper wants ${trophy.name} — you haven't got one loose in your pack.`);
+    const found = await findBountyTrophy(z, session, bounty[0]);
+    if (!found) return z.send(session, `The keeper wants ${trophy.name} — you haven't got one loose, in your pack or in your keeping.`);
     // Typed stays typed: the text path prints its line and leaves you standing
     // at the board in text. Pushing sendBounty here would fling the modal open
     // over a wanderer who never asked for it.
-    return z.send(session, await payBounty(z, session, bounty, carried));
+    return z.send(session, await payBounty(z, session, bounty, found.item, found.from));
   }
   if (!z.bounties.length) return z.send(session, "The board is bare. The keeper hasn't posted anything just now.");
   const took = bountyTookOf(z, session.pubkey);
+  // Same reach as the modal, and read once for the whole listing.
+  const keeping: CarriedItem[] = [];
+  for (const key of ["lockbox", "vault"] as const) keeping.push(...await loadContainer(z.env.DB, session.pubkey, key));
   const lines = ["The keeper's bounty board:", ...z.bounties.map(([trophyId, foodId, count]) => {
     const t = world.itemTemplates.get(trophyId);
     const f = world.itemTemplates.get(foodId);
@@ -603,9 +650,10 @@ export async function cmdBounty(z: ZoneDO, session: Session, arg: string): Promi
     const pay = meals > 1 ? `${f.name} ×${meals}` : f.name;
     const note = took.has(trophyId)
       ? " — paid"
-      : session.items.some((c) => c.itemId === trophyId && c.serial === null) ? " — you have one" : "";
+      : session.items.some((c) => c.itemId === trophyId) ? " — you have one"
+      : keeping.some((c) => c.itemId === trophyId) ? " — one in your keeping" : "";
     return `  ${t.name} \u2192 ${pay} (mends ${f.heal * meals})${note}`;
-  }), "Bring the trophy to the hatch and it's yours to eat. 'bounty claim <trophy>' pays it in. ('out' steps you back into the world.)"];
+  }), "The board reaches your keeping as well as your pack. 'bounty claim <trophy>' pays it in. ('out' steps you back into the world.)"];
   return z.send(session, lines.join("\n"));
 }
 
