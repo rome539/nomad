@@ -4018,6 +4018,15 @@ export const DICE_RULES = [
 ];
 export const DICE_OPEN_BONES = 2;   // the opening cast
 export const DICE_BUST = 21;        // over this and the hand is dead where it stands
+// HOW OFTEN THE REST OF THE ROOM LOOKS UP (rome, 2026-08-16). Every throw used
+// to go to the whole gatehouse, so one player at the bones filled everybody
+// else's scroll with somebody else's arithmetic \u2014 a hand is a dozen lines and
+// the room might hold six people. The players still get every throw; the room
+// catches the odd one, the way you notice a game two tables over without
+// following it. Only the THROWS are thinned: taking up the bones, calling
+// somebody out, and who won still reach everyone, because those are the beats
+// that make the bench feel occupied rather than noisy.
+export const BENCH_OVERHEARD = 0.12;
 export const DICE_STAND = 18;       // the keeper's own rule, followed in the open
 export const DICE_BOWL_CAP = 12;    // his winnings; past this the cheapest one moves on
 

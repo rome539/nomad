@@ -40,11 +40,11 @@
 // nothing is destroyed — every trophy in there was carried in by somebody.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
-import { randInt } from "./rng";
+import { randInt, chance } from "./rng";
 import { nameMatches } from "./zone-util";
 import { removeItemRow } from "./world";
 import { gatehouseFeed, gatehouseFolk } from "./gate";
-import { DICE_BUST, DICE_STAND, DICE_OPEN_BONES, DICE_BOWL_CAP, DICE_RULES } from "./zone-data";
+import { DICE_BUST, DICE_STAND, DICE_OPEN_BONES, DICE_BOWL_CAP, DICE_RULES, BENCH_OVERHEARD } from "./zone-data";
 
 // A game in flight. Ephemeral ON PURPOSE: it lives in the DO's memory and dies
 // with it, and nothing leaves anybody's pack until the last bone is down. A
@@ -321,6 +321,20 @@ function gameLine(z: ZoneDO, game: DiceGame, session: Session): string {
   return `You're at ${mine}. 'roll' for another, 'stand' to hold it.`;
 }
 
+// A THROW IS FOR THE PEOPLE IN THE HAND, and only sometimes for the room.
+//
+// THE OPPONENT MUST ALWAYS HEAR IT. In a called-out game the other player has
+// no other window on the hand at all \u2014 gatehouseFeed IS how they read your
+// throws \u2014 so thinning that feed naively would have left them watching a
+// game they could not see. They are excluded from the die roll by name.
+function benchFeed(z: ZoneDO, game: DiceGame, actor: Session, text: string, cls: string): void {
+  const other = game.a === actor.pubkey ? game.b : game.a;
+  for (const s of gatehouseFolk(z)) {
+    if (s.pubkey === actor.pubkey) continue;              // he read his own throw first-person
+    if (s.pubkey === other || chance(BENCH_OVERHEARD)) z.send(s, text, cls);
+  }
+}
+
 async function openingCast(z: ZoneDO, session: Session, game: DiceGame): Promise<void> {
   const cast: number[] = [];
   for (let i = 0; i < DICE_OPEN_BONES; i++) cast.push(bone());
@@ -328,7 +342,7 @@ async function openingCast(z: ZoneDO, session: Session, game: DiceGame): Promise
   game.total.set(session.pubkey, sum);
   game.rolls.set(session.pubkey, cast);
   z.send(session, `You cast: ${cast.join(", ")} — ${sum}. ('roll' for another, 'stand' to hold it. Over ${DICE_BUST} and you are out.)`, "evt");
-  gatehouseFeed(z, `${session.name} opens on ${sum}.`, session.pubkey, "amb");
+  benchFeed(z, game, session, `${session.name} opens on ${sum}.`, "amb");
 }
 
 export async function cmdRoll(z: ZoneDO, session: Session): Promise<void> {
@@ -344,11 +358,11 @@ export async function cmdRoll(z: ZoneDO, session: Session): Promise<void> {
     game.bust.add(session.pubkey);
     game.done.add(session.pubkey);
     z.send(session, `You throw a ${d}. ${total} — over the line. You're out.`, "dmgin big");
-    gatehouseFeed(z, `${session.name} throws a ${d} and busts at ${total}.`, session.pubkey, "evt");
+    benchFeed(z, game, session, `${session.name} throws a ${d} and busts at ${total}.`, "evt");
     return advance(z, game);
   }
   z.send(session, `You throw a ${d}. ${total}.`, "evt");
-  gatehouseFeed(z, `${session.name} throws a ${d}: ${total}.`, session.pubkey, "amb");
+  benchFeed(z, game, session, `${session.name} throws a ${d}: ${total}.`, "amb");
 }
 
 export async function cmdStand(z: ZoneDO, session: Session): Promise<void> {
@@ -360,7 +374,7 @@ export async function cmdStand(z: ZoneDO, session: Session): Promise<void> {
   if (!total) return z.send(session, "You haven't thrown yet.");
   game.done.add(session.pubkey);
   z.send(session, `You set the bones down at ${total}.`, "evt");
-  gatehouseFeed(z, `${session.name} stands at ${total}.`, session.pubkey, "evt");
+  benchFeed(z, game, session, `${session.name} stands at ${total}.`, "evt");
   return advance(z, game);
 }
 
