@@ -7,13 +7,13 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { provokeGrudges } from "./ai";
-import { type ForgeRecipe, type CarriedItem, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner, hasTrait, mapInkLoad, journalLoad } from "./world";
+import { type ForgeRecipe, type CarriedItem, parseTraits, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner, hasTrait, mapInkLoad, journalLoad } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight } from "./zone-util";
-import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
+import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP,
@@ -159,6 +159,68 @@ export async function leaveForge(z: ZoneDO, session: Session): Promise<void> {
   z.refreshRoomCtx(session.roomId);
 }
 
+// ---- WHAT A PIECE TELLS YOU AT THE BENCH (rome, 2026-08-15) ---------------
+//
+// The forge could only ever tell you about gear it had not made yet. Everything
+// the game knows about a piece you are already holding — what it is made of,
+// what class of weapon it is, what its rolled traits actually do — was either
+// scattered across `look` or never surfaced at all. The material law made that
+// worse: decay now turns on a property of the item that nothing anywhere named.
+//
+// FACTS, IN PLAIN WORDS, NO ODDS (rome's call) — and NOT in a smith's, because
+// there is no smith: the gate's keeper works the hatch, and the brazier is one
+// you stir yourself. This is your own eye on the thing, in good light at last.
+// It states what a piece is and what will become of it; it quotes no hours and
+// no chances. Everything
+// here is derived at read time from the same tables the sim uses, so the sheet
+// cannot drift from the rules — there is no second copy of any of it.
+function benchSheet(z: ZoneDO, c: CarriedItem, where: string): Record<string, unknown> | null {
+  const t = z.world!.itemTemplates.get(c.itemId);
+  if (!t || !z.isGear(c.itemId)) return null;
+  // ONE FACT LINE, then at most three short ones. The first cut of this stacked
+  // a paragraph per piece and it was unreadable at any length of keeping: the
+  // substance, the class and the numbers are all TAGS, and they belong on the
+  // same line as each other rather than in three sentences that repeat verbatim
+  // down the whole column.
+  const tags: string[] = [materialOf(t.id)];
+  if (t.slot === "weapon") {
+    for (const k of Object.keys(WEAPON_CLASS_READ)) {
+      if (WEAPON_CLASS_TRAIT[k]?.(t)) tags.push(WEAPON_CLASS_READ[k]);
+    }
+  }
+  // ITS OWN TRAITS, EACH WITH WHAT IT DOES. The template's (what the smith made
+  // it: reach, wall, riposte, mailward) and the roll's, in one list, because
+  // from the reading side there is no difference between them. A count rides
+  // along where the trait carries one, so pierce:2 reads as 2 rather than as a
+  // bare word. This is the half that was missing: itemStat put "reach" among
+  // the numbers as a bare tag, which names a trait without telling you a thing.
+  const own: { name: string; does: string }[] = [];
+  const seen = new Set<string>();
+  const add = (tag: string, n: number) => {
+    if (seen.has(tag)) return;
+    const does = TRAIT_DOES[tag];
+    if (!does) return; // structural oddities with no line of their own stay in the stat text
+    seen.add(tag);
+    const shown = c.rolledMap?.has(tag) ? traitAdj(tag, t.id) : tag;
+    own.push({ name: TRAIT_COUNTED.has(tag) || n > 1 ? `${shown} ${n}` : shown, does });
+  };
+  for (const [tag, n] of parseTraits(t.traits)) add(tag, n);
+  for (const [tag, n] of (c.rolledMap ?? new Map<string, number>())) add(tag, n);
+  const word = c.condition >= 100 ? "sound" : (z.conditionWord(c.condition) || "little worn");
+  return {
+    id: c.rowId, name: z.displayName(c), rarity: t.rarity, where,
+    cond: word, sealed: c.serial !== null,
+    tags, stat: z.itemNumbers(t), own,
+    damp: MATERIAL_READ[materialOf(t.id)] ?? "",
+    // ...spoken as the player would ever see them. These are internal tag
+    // names — padded, wardhide, staunched — and the game has always shown the
+    // ADJECTIVE instead (quilted, boiled, packed), material-aware since the
+    // prose fix. Printing the tags would be leaking the schema into the panel.
+    tell: z.rolledTell(c.itemId, c.rolledMap).trim(),
+    mend: c.condition >= 100 ? "" : `${REPAIR_COST[t.rarity] ?? 1} scrap`,
+  };
+}
+
 export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?: string): Promise<void> {
   const world = z.world!;
   // Affordability counts the pack AND the gate's keeping, so what the modal
@@ -187,7 +249,15 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
       };
     })
     .filter((r) => r !== null);
-  const payload = { v: 0, t: "forge", open: true, note: note ?? "", sfx: sfx ?? "", scrap, scrapRaw, recipes };
+  // ...and the reading half, off the SAME pools the bench spends from, so a
+  // piece the vice can reach is a piece the sheet can read. Ordered pack first:
+  // what is on you is what you are about to have to rely on.
+  const read = [
+    ...pools[0].map((c) => benchSheet(z, c, "pack")),
+    ...pools[1].map((c) => benchSheet(z, c, "lockbox")),
+    ...pools[2].map((c) => benchSheet(z, c, "vault")),
+  ].filter((s) => s !== null);
+  const payload = { v: 0, t: "forge", open: true, note: note ?? "", sfx: sfx ?? "", scrap, scrapRaw, recipes, read };
   try { session.ws.send(JSON.stringify(payload)); } catch {}
 }
 

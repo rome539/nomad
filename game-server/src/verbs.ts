@@ -641,7 +641,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     const floorHeart = groundItem === DEEP_HEART
       ? " " + heartProse(z.groundHeart.get(`${groundItem}@${session.roomId}`))
       : "";
-    const floorRoll = z.rolledTell(parseTraits(z.groundRolled.get(`${groundItem}@${session.roomId}`)));
+    const floorRoll = z.rolledTell(groundItem, parseTraits(z.groundRolled.get(`${groundItem}@${session.roomId}`)));
     // Say WHERE it is, so a floor piece never reads the same as the twin on your
     // body — 'look' checks the floor first, so this is the one at your feet.
     return z.send(session, t.description + z.itemStat(t) + floorRoll + wearClause(z, cond) + " It lies here on the stones." + floorLedger + floorHeart);
@@ -656,7 +656,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
       : " It's in your pack.";
     return z.send(
       session,
-      t.description + z.itemStat(t) + z.rolledTell(carried.rolledMap) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined) + where
+      t.description + z.itemStat(t) + z.rolledTell(carried.itemId, carried.rolledMap) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined) + where
         + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
         + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : "")
         + agedProse(carried.itemId, !!t.edible, carried.acquiredAt),

@@ -692,7 +692,7 @@ export const PAGE = `<!doctype html>
   #forge.open { display: flex; }
   #forge .bbox {
     background: var(--panel); border: 1px solid var(--border2); border-radius: 10px;
-    padding: 14px 14px 0; width: min(560px, 96vw); min-width: 0; max-height: 90vh;
+    padding: 14px 14px 0; width: min(920px, 96vw); min-width: 0; max-height: 90vh;
     display: flex; flex-direction: column; gap: 10px;
   }
   #forge .bhead { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -713,7 +713,7 @@ export const PAGE = `<!doctype html>
   #fhave .scrap { color: var(--gold); }
   #forge .bcols {
     flex: 1 1 auto; min-height: 0; padding-bottom: 14px;
-    display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
   }
   #forge .bcol {
     border: 1px solid var(--line); border-radius: 8px; padding: 0 10px 8px;
@@ -731,7 +731,16 @@ export const PAGE = `<!doctype html>
   #forge .bitem .nm { color: var(--cream); font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
   #forge .bitem .nm .stat { color: var(--bone); }
   #forge .bitem .nm .rar { color: var(--dim); }
-  #forge .bitem .cost { font-size: 12px; }
+  #forge .bitem .cost { font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+  #forge .bitem .tags {
+    color: var(--bone); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  #forge .bitem .quiet { color: var(--dim); font-size: 12px; line-height: 1.4; }
+  #forge .bitem .tags .statv { text-transform: none; letter-spacing: 0; font-size: 12px; }
+  #forge .bitem .takes { display: grid; grid-template-columns: max-content 1fr; gap: 1px 12px; font-size: 12px; }
+  #forge .bitem .takes > div { display: contents; }
+  #forge .bitem .takes .tadj { color: var(--bone); }
+  #forge .bitem .takes .tdoes { color: var(--dim); }
   #forge .bitem .cost.ok { color: var(--gold); }
   #forge .bitem .cost.no { color: var(--blood); }
   #forge .bitem .acts { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
@@ -743,7 +752,10 @@ export const PAGE = `<!doctype html>
   #forge .bitem button:disabled { color: var(--dim); border-color: var(--line); cursor: default; }
   @media (max-width: 680px) {
     #forge .bbox { max-height: 92vh; }
-    #forge .bcols { overflow-y: auto; }
+    #forge .bcols {
+      grid-template-columns: minmax(0, 1fr); overflow-y: auto;
+      grid-auto-rows: max-content; align-content: start;
+    }
     #forge .bcol { overflow-y: visible; min-height: 0; }
   }
   /* ---- the map & journal modals: knowledge you carry ---- */
@@ -1275,6 +1287,7 @@ export const PAGE = `<!doctype html>
       <div id="fhave"></div>
       <div class="bcols">
         <div class="bcol" id="frecipes"></div>
+        <div class="bcol" id="fread"></div>
       </div>
     </div>
   </div>
@@ -2036,11 +2049,17 @@ async function publishFeed(room, text, fx) {
     // A combat deed carries how it landed (vital / bleed / stun / hobble / kill)
     // so a spectator client can size and colour it without guessing from prose.
     if (fx && fx !== "who") tags.push(["fx", String(fx)]);
+    // PLAIN, AND NOW ACTUALLY PLAIN. The note above has always promised the
+    // arena a readable content field, and the rarity marker was riding out
+    // inside it anyway: the Colosseum drew three empty boxes through the middle
+    // of every gear name, because U+0001 and U+0002 are tofu in a browser font
+    // and not, as the marker's own comment assumed, quietly ignored. Stripped
+    // at the boundary, so no caller upstream has to remember.
     var evt = {
       kind: FEED_KIND,
       created_at: Math.floor(Date.now() / 1000),
       tags: tags,
-      content: String(text),
+      content: stripRarity(String(text)),
     };
     var ev;
     if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
@@ -2485,9 +2504,17 @@ async function connect() {
   var proto = location.protocol === "https:" ? "wss://" : "ws://";
   var opened = false;
   connectingSince = Date.now();
-  ws = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : ""));
+  // THIS socket, held locally, so its handlers can tell whether they are still
+  // the live one. A close event can arrive LATE \u2014 a backgrounded tab on a
+  // phone delivers it on resume, after wakeReconnect has already dialled again
+  // \u2014 and every handler below mutates page-wide state. Without this, a dead
+  // socket's late event speaks for the living one.
+  var sock = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : ""));
+  ws = sock;
+  var mine = function () { return ws === sock; };
 
   ws.onopen = function () {
+    if (!mine()) return;
     opened = true;
     freshLoad = false; // the scroll is (being) painted now — any later reweave is a true seamless one
     failedOpens = 0;
@@ -2498,6 +2525,7 @@ async function connect() {
     hbTimer = setInterval(function () { if (ws && ws.readyState === 1) ws.send("ping"); }, 25000);
   };
   ws.onmessage = function (m) {
+    if (!mine()) return;
     var f; try { f = JSON.parse(m.data); } catch (e) { return; }
     // During the first walk the world holds its tongue: the feed (others'
     // deeds, sounds through walls) and the ambient weather stay out of the
@@ -2579,6 +2607,16 @@ async function connect() {
   // 1006 = the wire dropped without a goodbye (network blip, or the server's
   // whole DO aborted); 1001 = the far side went away cleanly.
   ws.onclose = function (e) {
+    // A LATE EVENT FROM A SOCKET WE HAVE ALREADY REPLACED SPEAKS FOR NOBODY.
+    // This is the bug the stilled flag shipped with (d7caa5b): a tab wakes,
+    // wakeReconnect opens a new socket, the server closes the OLD one with
+    // 1000 "reconnected" because a new connection arrived for that wanderer,
+    // and the old socket's close then lands in this same page and sets stilled
+    // \u2014 while the new socket is live and well. The tab looks fine until the
+    // next drop, at which point connect() refuses and it is dead until reload.
+    // Every branch below (stilled, the retry chain, the fray line, closing the
+    // panels) belongs to the CURRENT wire only.
+    if (!mine()) return;
     // EVERY panel goes with the wire, not just the four that were listed here
     // when the forge, the deal and the board didn't exist yet. A modal left
     // standing over a dead socket is a trap: its buttons send into nothing, and
@@ -3932,6 +3970,114 @@ function forgeItemNode(it) {
   return wrap;
 }
 
+// ---- WHAT A PIECE TELLS YOU AT THE BENCH ----
+// One row per piece of gear the vice can reach; click it and the reading
+// unfolds underneath. Nobody is speaking — there is no smith at the gate, only
+// the keeper at his hatch. This is the piece under a good light. The whole sheet ships inside the forge payload, so
+// opening one costs no round trip and nothing can desync from the panel — and
+// the open row survives a re-render (a craft, a repair) by rowId, because
+// losing your place every time you touch a button is its own small hell.
+var freadEl = document.getElementById("fread");
+var fopen = "";
+function forgeSheetNode(it) {
+  var wrap = document.createElement("div");
+  wrap.className = "bitem";
+  var nm = document.createElement("div");
+  nm.className = "nm";
+  var a = document.createElement("span");
+  a.textContent = it.name;
+  if (it.rarity) a.className = rarityClass(it.rarity);
+  nm.appendChild(a);
+  var tags = document.createElement("span");
+  tags.className = "rar";
+  var bits = [it.where];
+  if (it.cond && it.cond !== "sound") bits.push(it.cond);
+  if (it.sealed) bits.push("sealed");
+  tags.textContent = " [" + bits.join(" \\u00b7 ") + "]";
+  nm.appendChild(tags);
+  wrap.appendChild(nm);
+  var open = fopen === String(it.id);
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = open ? "close" : "read";
+  btn.addEventListener("click", function () {
+    fopen = open ? "" : String(it.id);
+    paintRead(lastRead);
+  });
+  var acts = document.createElement("div");
+  acts.className = "acts";
+  acts.appendChild(btn);
+  if (!open) { wrap.appendChild(acts); return wrap; }
+  // WHAT IT IS, on one line: substance, class, numbers. This replaced a stack
+  // of paragraphs that repeated themselves all the way down the column.
+  var tg = document.createElement("div");
+  tg.className = "tags";
+  var tagTxt = (it.tags || []).join("  \u00b7  ");
+  if (tagTxt) tg.appendChild(document.createTextNode(tagTxt));
+  // The numbers keep their own case. Small-caps suits STEEL and EDGED; it just
+  // shouts at "3 armor, heavy", which is a reading and not a label.
+  if (it.stat) {
+    var sv = document.createElement("span");
+    sv.className = "statv";
+    sv.textContent = (tagTxt ? "  \u00b7  " : "") + it.stat;
+    tg.appendChild(sv);
+  }
+  if (tagTxt || it.stat) wrap.appendChild(tg);
+  // ITS TRAITS, each with what it does. Two columns so the eye can run down the
+  // effects; this is the piece in your hand, never a catalogue of what it isn't.
+  if (it.own && it.own.length) {
+    var tbl = document.createElement("div");
+    tbl.className = "takes";
+    it.own.forEach(function (tr) {
+      var row = document.createElement("div");
+      var a = document.createElement("span");
+      a.className = "tadj";
+      a.textContent = tr.name;
+      var d = document.createElement("span");
+      d.className = "tdoes";
+      d.textContent = tr.does;
+      row.appendChild(a); row.appendChild(d);
+      tbl.appendChild(row);
+    });
+    wrap.appendChild(tbl);
+  }
+  if (it.damp) {
+    var dp = document.createElement("div");
+    dp.className = "quiet";
+    dp.textContent = it.damp;
+    wrap.appendChild(dp);
+  }
+  if (it.tell) {
+    var tl = document.createElement("div");
+    tl.className = "cost ok";
+    tl.textContent = it.tell;
+    wrap.appendChild(tl);
+  }
+  var mend = document.createElement("div");
+  mend.className = "cost " + (it.mend ? "no" : "ok");
+  mend.textContent = it.mend ? "The mend wants " + it.mend + " at the vice." : "Sound.";
+  wrap.appendChild(mend);
+  wrap.appendChild(acts);
+  return wrap;
+}
+var lastRead = [];
+function paintRead(read) {
+  lastRead = read || [];
+  freadEl.textContent = "";
+  var h = document.createElement("div");
+  h.className = "bcolh";
+  h.textContent = "In the bench light";
+  freadEl.appendChild(h);
+  if (!lastRead.length) {
+    var e = document.createElement("div");
+    e.className = "bempty";
+    e.textContent = "\\u2014 nothing on you the vice could hold \\u2014";
+    freadEl.appendChild(e);
+    return;
+  }
+  lastRead.forEach(function (it) { freadEl.appendChild(forgeSheetNode(it)); });
+}
+
 function renderForge(state) {
   fnote.textContent = state.note || "";
   fhave.textContent = "";
@@ -3960,6 +4106,11 @@ function renderForge(state) {
   } else {
     recipes.forEach(function (it) { frecipes.appendChild(forgeItemNode(it)); });
   }
+  // A piece that has left your hands since the last paint takes its open sheet
+  // with it \\u2014 otherwise a salvaged item stays expanded over nothing.
+  var still = (state.read || []).some(function (r) { return String(r.id) === fopen; });
+  if (!still) fopen = "";
+  paintRead(state.read);
   if (state.sfx) sndOne(state.sfx);
   forgeEl.classList.add("open");
 }

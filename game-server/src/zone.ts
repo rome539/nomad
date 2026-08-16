@@ -74,7 +74,7 @@ import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, TICK_SLOW_LOG_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
-  WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
+  WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, materialDamp, MATERIAL_STONE, MATERIAL_BONE, MATERIAL_WOOD, MATERIAL_HIDE, MATERIAL_CLOTH, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON,
   STANCE, RECKLESS_MISS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, PADDED_STUN_MULT, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
@@ -104,7 +104,7 @@ import {
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
-  TRAIT_POOL, TRAIT_ADJ, TRAIT_ROLL_ODDS, ROLLED_TELL, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, playerBleedOdds,
+  TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
@@ -471,6 +471,17 @@ export class ZoneDO implements DurableObject {
       // (FORAGE_REGIONS) feeds the things that graze it. Without this the wood
       // was two hundred rooms of trees that a deer could starve in.
       if (FORAGE_REGIONS.has(room.region)) FORAGE_ROOMS.add(room.id);
+    }
+    // THE MATERIAL AUDIT. Gear decays by what it is made of now, and an id that
+    // is misspelt in one of the MATERIAL_* sets fails silently in the worst
+    // direction: the piece is simply absent from every set and defaults to
+    // steel, so a bone crown quietly starts rusting like plate and nothing
+    // anywhere says why. One pass at load, naming the ghosts.
+    for (const set of [MATERIAL_STONE, MATERIAL_BONE, MATERIAL_WOOD, MATERIAL_HIDE, MATERIAL_CLOTH]) {
+      for (const id of set) {
+        const t = world.itemTemplates.get(id);
+        if (!t || t.slot === "") console.log("MATERIAL: '" + id + "' is listed but is not a piece of gear");
+      }
     }
 
     // The sim sleeps in rows now (simstore.ts — out of the one-blob 128KiB
@@ -2384,6 +2395,31 @@ export class ZoneDO implements DurableObject {
 
   // Gear stat tag for the inventory line, e.g. " (+4 dmg)", " (+1 dmg, x2 swings)",
   // " (+2 dmg, sweeps 3)", " (2 armor, heavy)".
+  // JUST THE READINGS, for the bench's sheet. itemStat mixes numbers and bare
+  // trait tags into one parenthetical ("+2 dmg, bleeds 1, reach"), which is
+  // right for a one-line floor glance and wrong for a sheet that lists the
+  // traits properly underneath with what each of them does. Same numbers, same
+  // order, no tags: the sheet would otherwise say "reach" twice and explain it
+  // once. itemStat is untouched; every other caller reads exactly as before.
+  public itemNumbers(t: ItemTemplate | undefined): string {
+    if (!t) return "";
+    const bits: string[] = [];
+    if (t.dmg > 0) bits.push(`+${t.dmg} dmg`);
+    if (t.speed > 1) bits.push(`x${t.speed} swings`);
+    if (t.sweep > 1) bits.push(`sweeps ${t.sweep}`);
+    if (t.bleed > 0) bits.push(`bleeds ${t.bleed}`);
+    if (t.stun > 0) bits.push(`${Math.round(t.stun * 100)}% stun`);
+    if (t.block > 0) bits.push(`${Math.round(t.block * 100)}% block`);
+    if (t.armor > 0) bits.push(`${t.armor} armor`);
+    if (t.weight > 0) bits.push("heavy");
+    // The shield's drag is a NUMBER, not a tag, so it belongs here — and it is
+    // the cost half of the block figure directly above it.
+    if (t.slot === "shield" && t.block > SHIELD_DRAG_FREE) {
+      bits.push(`\u2212${Math.round((t.block - SHIELD_DRAG_FREE) * SHIELD_DRAG_PER_BLOCK * 100)}% to your swing`);
+    }
+    return bits.join(", ");
+  }
+
   public itemStat(t: ItemTemplate | undefined): string {
     if (!t) return "";
     const bits: string[] = [];
@@ -4311,14 +4347,21 @@ export class ZoneDO implements DurableObject {
       for (const c of [...session.items]) {
         if (c.serial !== null) continue; // sealed: frozen whole
         const t = world.itemTemplates.get(c.itemId);
-        if (!t || (t.slot !== "weapon" && t.slot !== "armor")) continue;
+        if (!t || t.slot === "") continue; // food, keys, trophies and cigarettes keep their own clocks
+        // WHAT IT IS MADE OF, not what slot it goes in (see MATERIAL_* in
+        // zone-data). Stone comes out at zero and leaves the loop entirely —
+        // a headstone shield is the one thing in the world the damp cannot
+        // touch, and multiplying zero every tick forever is just a slower way
+        // of saying so.
+        const stuff = materialDamp(t.id);
+        if (stuff === 0) continue;
         // Oiled kit barely notices the damp; pitted kit is where the next rust
         // starts. Neither is immunity — greased steel still goes, slowly.
         // Same fold-in as wear(): the template counts too, not only the roll.
         const oiled = (tag: string) => hasTrait(t, tag) || (c.rolledMap?.get(tag) ?? 0) > 0;
         const damp = oiled("greased") ? GREASED_RUST_MULT
           : oiled("pitted") ? PITTED_RUST_MULT : 1;
-        await this.wear(session, c, t, RUST_PER_TICK * beatMul * damp); // wall-clock rust, not per-beat — a slow idle beat mustn't spare steel
+        await this.wear(session, c, t, RUST_PER_TICK * beatMul * damp * stuff); // wall-clock rust, not per-beat — a slow idle beat mustn't spare steel
       }
     }
 
@@ -6232,7 +6275,14 @@ export class ZoneDO implements DurableObject {
     // Class-locked weapon traits (weighted/needling/cleaving) only enter the
     // draw for a weapon of their own class — no wasted rolls on a mace that
     // can never use needling.
-    const options = pool.filter((t) => !hasTrait(tmpl, t) && (WEAPON_CLASS_TRAIT[t]?.(tmpl) ?? true));
+    // ...and the same guard on the OTHER axis a trait can be wasted on: what
+    // the piece is made of. A river cobble cannot be oiled against rust and a
+    // headstone cannot pit, so neither draw is offered there (TRAIT_MATERIAL).
+    const stuff = materialOf(tmpl.id);
+    const fits = (t: string) => !hasTrait(tmpl, t)
+      && (WEAPON_CLASS_TRAIT[t]?.(tmpl) ?? true)
+      && (TRAIT_MATERIAL[t]?.(stuff) ?? true);
+    const options = pool.filter(fits);
     if (!options.length) return "";
     // THE DRAW IS OPEN (rome, 2026-08-13). Virtue is not the default and a flaw
     // is not a rider on one: every trait a piece rolls is drawn independently
@@ -6262,16 +6312,18 @@ export class ZoneDO implements DurableObject {
   // trait DOES once the piece is worn; the name just advertises that it's there.
   public displayName(c: CarriedItem): string {
     const base = this.world!.itemTemplates.get(c.itemId)?.name ?? c.itemId;
-    return this.rolledName(base, c.rolledMap);
+    return this.rolledName(c.itemId, base, c.rolledMap);
   }
 
   // What `look` appends for a rolled piece — the flavor + mechanic of whatever it
   // rolled (099). itemStat reads the TEMPLATE, so it never sees an instance roll;
   // this fills that in. Empty for plain gear. Leading space, sentence per trait.
-  public rolledTell(rolled?: Map<string, number>): string {
+  // The itemId is not decoration: the same trait says a different true thing
+  // depending on what the piece is made of, and traitTell picks (zone-data).
+  public rolledTell(itemId: string, rolled?: Map<string, number>): string {
     if (!rolled?.size) return "";
     const tells: string[] = [];
-    for (const tag of rolled.keys()) { const s = ROLLED_TELL[tag]; if (s) tells.push(s); }
+    for (const tag of rolled.keys()) { const s = traitTell(tag, itemId); if (s) tells.push(s); }
     return tells.length ? " " + tells.join(" ") : "";
   }
 
@@ -6279,17 +6331,28 @@ export class ZoneDO implements DurableObject {
   public floorName(itemId: string, roomId: string): string {
     const base = this.world!.itemTemplates.get(itemId)?.name ?? itemId;
     const rolled = this.groundRolled.get(`${itemId}@${roomId}`);
-    return rolled ? this.rolledName(base, parseTraits(rolled)) : base;
+    return rolled ? this.rolledName(itemId, base, parseTraits(rolled)) : base;
   }
 
   // Fold the first rolled tag's adjective into a name, after the article:
   // "a scavenger's coat" + quiet -> "a muffled scavenger's coat". The a/an
   // article re-agrees with the adjective now leading ("an oiled wrap", "a
   // quilted cap"); "the" and article-less names ("boots") are left alone.
-  private rolledName(base: string, rolled?: Map<string, number>): string {
+  private rolledName(itemId: string, base: string, rolled?: Map<string, number>): string {
     if (!rolled?.size) return base;
+    // ...UNLESS THE NAME ALREADY SAYS IT. A smith who names a thing the pitted
+    // spear and then rolls it pitted gets "a pitted pitted spear", and there
+    // were six of these reachable — four of them (boiled boiled-leather,
+    // packed moss-packed, quilted quilted coif, pitted pitted spear) sitting in
+    // the game long before the damp went material-aware. A piece that draws
+    // twice falls through to its other adjective; a piece with nothing else to
+    // say wears its plain name, which is the honest outcome — the roll still
+    // happened and `look` still tells you about it.
     let adj = "";
-    for (const tag of rolled.keys()) { adj = TRAIT_ADJ[tag] ?? ""; if (adj) break; }
+    for (const tag of rolled.keys()) {
+      const a = traitAdj(tag, itemId);
+      if (a && !new RegExp("\\b" + a + "\\b", "i").test(base)) { adj = a; break; }
+    }
     if (!adj) return base;
     const m = base.match(/^(an? |the )/i);
     if (!m) return `${adj} ${base}`;
@@ -6311,6 +6374,22 @@ export class ZoneDO implements DurableObject {
     const t = this.world!.itemTemplates.get(itemId);
     if (!t || t.slot === "" || t.id === "loose-rock") return t?.name ?? itemId;
     return `\u0001${rarity || "common"}\u0001${cap(t.name)}\u0002`;
+  }
+
+  // ...AND THE MARKER'S ERASER, which lives here beside the two writers on
+  // purpose: whoever changes the marker's shape has to walk past the one thing
+  // that undoes it.
+  //
+  // The claim in the note above — that a foreign renderer "just sees the bare
+  // name" — is FALSE and was found false in the arena (rome, 2026-08-15): the
+  // Colosseum drew three .notdef boxes through the middle of every gear name,
+  // because a browser renders U+0001 and U+0002 as tofu rather than skipping
+  // them. Anything crossing out of this server to a reader we do not control
+  // gets stripped, and both publish paths now do it at the boundary rather than
+  // trusting every caller upstream to remember.
+  private static plain(s: string): string {
+    return s.indexOf("\u0001") === -1 ? s
+      : s.replace(/\u0001[a-z]+\u0001([^\u0002]*)\u0002/g, "$1");
   }
 
   // THE ONE WAY TO NAME A PIECE OF GEAR IN PROSE. Wrap any already-built name
@@ -6337,7 +6416,7 @@ export class ZoneDO implements DurableObject {
     const t = this.world!.itemTemplates.get(itemId);
     const base = t?.name ?? itemId;
     const rolled = this.groundRolled.get(`${itemId}@${roomId}`);
-    const shown = rolled ? this.rolledName(base, parseTraits(rolled)) : base;
+    const shown = rolled ? this.rolledName(itemId, base, parseTraits(rolled)) : base;
     if (!t || t.slot === "" || t.id === "loose-rock") return shown;
     return `\u0001${t.rarity || "common"}\u0001${cap(shown)}\u0002`;
   }
@@ -6857,7 +6936,10 @@ export class ZoneDO implements DurableObject {
   private relayFeed(roomTag: string, text: string): void {
     if (!this.world || !isGameKeyConfigured(this.env) || relayList(this.env).length === 0) return;
     try {
-      const ev = signFeedEvent(this.env, roomTag, this.world.zone, text);
+      // PLAIN TEXT LEAVES THIS BUILDING. The rarity marker is an agreement
+      // between this server and its own client and NOTHING else; a relay copy
+      // is read by renderers that never made that agreement (see plainNames).
+      const ev = signFeedEvent(this.env, roomTag, this.world.zone, ZoneDO.plain(text));
       this.state.waitUntil(publishEvent(this.env, ev));
     } catch {}
   }

@@ -4366,12 +4366,12 @@ export const TRAIT_ROLL_ODDS = 0.22; // odds a fresh gear drop carries a rolled 
 // never counted against it. With the floor rolling now, the whole world is
 // inside this number for the first time.
 export const TRAIT_POOL: Record<string, string[]> = {
-  feet:  ["quiet", "slick", "balanced", "tempered"],   // felt-lined tread, eel-greased sole, close-cut, well-made
+  feet:  ["quiet", "slick", "balanced", "tempered", "greased"],   // felt-lined tread, eel-greased sole, close-cut, well-made, kept oiled
   // staunched and hooded joined the pool the day the wood learned to make them
   // (2026-08-03) — a moss-packed lining, a hood deep enough to light under.
-  cloak: ["quiet", "slick", "strapped", "staunched", "hooded", "balanced", "fleeced"],
+  cloak: ["quiet", "slick", "strapped", "staunched", "hooded", "balanced", "fleeced", "greased"],
   armor: ["padded", "wardhide", "strapped", "staunched", "balanced", "tempered", "greased", "fleeced"], // quilted, boiled, buckled, packed, close-cut, well-forged, oiled, lined
-  helm:  ["padded", "balanced", "tempered", "fleeced"], // an arming cap sewn in, a light shell, good steel, a lining
+  helm:  ["padded", "balanced", "tempered", "fleeced", "greased"], // an arming cap sewn in, a light shell, good steel, a lining, kept oiled
   // Weapons (2026-07-21): six item-instance properties, none of them the
   // structural traits (reach/pierce/two-handed/mancatcher/riposte) that DEFINE
   // what a weapon is — those stay hand-authored, never in the pool. Four
@@ -4442,7 +4442,8 @@ export function playerBleedOdds(dmg: number, bleed: number): number {
 //                                   rust, the corroder, smashing a latch)
 //   load   balanced / cumbersome -> wornWeight(), which dodge, movement noise,
 //                                   the parting cut and entry stealth all read
-//   rust   greased  / pitted     -> the idle damp that gnaws carried steel
+//   rust   greased  / pitted     -> the idle damp, which gnaws whatever the
+//                                   material lets it (MATERIAL_DAMP)
 //   cold   fleeced  / sodden     -> COLD_REST_SKIP, cold ground eating rest ticks
 //
 // NOTHING IS IMMUNITY, the same law armor obeys: greased still rusts, fleeced
@@ -4458,16 +4459,135 @@ export const GREASED_RUST_MULT  = 0.25; // the damp barely finds it
 export const PITTED_RUST_MULT   = 2.5;  // ...and eats the pitted one
 export const FLEECED_COLD_MULT  = 0.25; // cold rarely steals a rest tick
 export const SODDEN_COLD_MULT   = 1.75; // ...and often steals a sodden one's
+// ---- WHAT A THING IS MADE OF (rome, 2026-08-15) ---------------------------
+//
+// THE DAMP DOES NOT CARE WHAT SLOT A THING GOES IN, it cares what it is made
+// of. Before this the idle decay ran on `slot === "weapon" || slot === "armor"`
+// and nothing else, which produced two plainly wrong worlds side by side: a
+// linen gambeson and a rag vest rotted at exactly the rate of riveted plate,
+// while an iron kettle-helm, iron sabatons and every shield in the game — plate
+// ones included — sat in the wet for a week and came out perfect. It also left
+// `greased` dead on shields, which is how this was found: a rust-resist trait
+// on a slot the rust never reached.
+//
+// So the material decides, and the slot decides nothing.
+//
+// THE RULE FOR CLASSIFYING A MIXED PIECE — and nearly everything here is mixed —
+// is THE PART THAT DOES THE WORK. A poleaxe is a steel head on an ash haft and
+// it is steel, because when the head goes the weapon is done. A kite of oak
+// bound in iron strapping is WOOD, because the board is what stops the blow and
+// the strapping can rust to lace without the shield failing. Armour goes by its
+// plates, a helm by its shell, a boot by its upper. Written down because the
+// next person to add a piece of gear has to make the same call.
+export const MATERIAL_STONE = new Set([
+  "hammerstone", "throwing-shard", "loose-rock", "gravestone-shield",
+]);
+export const MATERIAL_BONE = new Set([
+  // bone, tusk, antler, horn, shell, coral, chitin — the damp has almost no
+  // purchase on any of it, which is most of what makes deep gear worth carrying
+  "bone-shiv", "sharpened-rib", "crawlers-hooks", "marrow-scepter", "tusk-goad",
+  "skull-headed-maul",
+  "chitin-harness", "abyssal-scale-coat", "tusk-sewn-brigandine",
+  "bone-barred-visor", "marrow-crown", "wolf-skull-helm", "antler-braced-cap",
+  "coral-crown", "limpet-scaled-cap",
+  "knights-kite-shield",
+]);
+export const MATERIAL_WOOD = new Set([
+  "lopped-stave", "quarterstaff", "masons-mallet", "splintered-cudgel",
+  "studded-maul", "the-long-crossing",
+  "battered-buckler", "coppice-hurdle", "lashed-plank-shield",
+  "tail-board-targe", "bog-pearl-targe", "iron-bound-shield",
+]);
+export const MATERIAL_HIDE = new Set([
+  "boiled-cuirass", "cutters-jerkin", "thick-hide-jack", "white-hide-coat",
+  "woodwards-coat",
+  "leather-cap", "bounds-hood", "pale-hide-hood", "wolfskin-hood", "the-last-bear",
+  "cracked-leather-shoes", "worn-boots", "white-hide-boots", "shadow-step-boots",
+  "eel-hide-treads", "hide-wound-boots", "pale-tread", "coppice-treads",
+  "sappers-treads",
+  // A hobnailed boot is a LEATHER BOOT WITH NAILS IN IT, by the rule above:
+  // the upper is what fails and the nails are consumable. Distinct from real
+  // foot armour — ironshod, plated greaves, sabatons — which is metal and is.
+  "hobnailed-boots", "watchmans-boots", "the-carriers-mile",
+  "eel-skin-cloak", "hide-cloak", "hyena-mantle", "sentinels-mantle",
+  "white-hide-mantle", "wolfskin-cloak", "harness-leathers", "long-hunger-shroud",
+  "wardens-watch-mantle", "strapped-baldric",
+  "tusk-studded-targe",
+]);
+export const MATERIAL_CLOTH = new Set([
+  // wet wool and linen go faster than tanned hide, which is why cloth sits
+  // ABOVE leather below and not beneath it
+  "padded-jerkin", "rag-vest", "moss-packed-jerkin", "cork-lined-jack",
+  "drovers-frock", "scavenger-coat",
+  "quilted-coif", "moss-packed-cap", "shroud-hood", "fowlers-hood",
+  "felt-soled-boots", "moss-lined-boots",
+  "drowned-divers-shroud", "grave-shroud", "keepers-wrap", "moth-eaten-mantle",
+  "oilskin-cape", "reed-thatch-cape", "still-water-shroud", "tattered-cloak",
+]);
+// ...and everything not named above is steel or iron, which is the great
+// majority of the armoury and the honest default for a fortress. A piece that
+// falls through by mistake therefore rusts, which is the SAFE way to be wrong:
+// it decays like the plate it is sitting next to instead of quietly becoming
+// the one permanent item in the game. The load-time audit in zone.ts names
+// anything unclassified so a new piece cannot rot in the wrong direction
+// unnoticed.
+export const MATERIAL_DAMP: Record<string, number> = {
+  steel: 1,     // the baseline the old law applied to everything it touched
+  cloth: 0.6,   // wet wool and linen rot, and quicker than leather does
+  wood:  0.5,   // swells, splits, goes soft at the lashings
+  hide:  0.4,   // stiffens and rots, but slowly, and oiling it is a real trade
+  bone:  0.15,  // horn, shell and tusk barely notice a wet century
+  stone: 0,     // a headstone is a headstone
+};
+// The one lookup, so no caller ever hand-rolls the chain and gets the order
+// wrong. Stone first because it is the only answer that means "stop".
+export function materialOf(itemId: string): string {
+  return MATERIAL_STONE.has(itemId) ? "stone"
+    : MATERIAL_BONE.has(itemId) ? "bone"
+    : MATERIAL_WOOD.has(itemId) ? "wood"
+    : MATERIAL_HIDE.has(itemId) ? "hide"
+    : MATERIAL_CLOTH.has(itemId) ? "cloth"
+    : "steel";
+}
+export function materialDamp(itemId: string): number {
+  return MATERIAL_DAMP[materialOf(itemId)] ?? 1;
+}
 // The flaw pool, per slot. Cloth does not rust and a cloak cannot be brittle, so
 // each slot only offers the faults that could honestly happen to it.
+// THE DAMP TRAITS FOLLOW THE DAMP (rome, 2026-08-15). greased and pitted are
+// offered by every slot the decay now reaches — which, since the decay went
+// material-aware, is all of them — and TRAIT_MATERIAL below takes them straight
+// back off the pieces that cannot rot. Listing them per slot and filtering by
+// material is what keeps the two halves honest: the slot says "this kind of
+// thing can be oiled", the material says "this particular one can".
+//
+// A cloak was the clearest miss. Its flaw list carried the note "cloth does not
+// rust", which was true of cloth and false of the cloak slot: the chain-lined
+// mantle is oiled wool over riveted rings and rusts like the mail it is. Iron
+// sabatons, plated greaves, a riveted coif and a kettle-helm of honest iron
+// were all in the same position.
 export const BAD_TRAITS = new Set(["brittle", "cumbersome", "pitted", "sodden"]);
 export const BAD_TRAIT_POOL: Record<string, string[]> = {
-  weapon: ["brittle", "cumbersome"],
+  weapon: ["brittle", "cumbersome", "pitted"],
   armor:  ["brittle", "cumbersome", "pitted", "sodden"],
-  helm:   ["brittle", "cumbersome", "sodden"],
-  cloak:  ["cumbersome", "sodden"],   // cloth does not rust
-  feet:   ["cumbersome", "sodden"],
+  helm:   ["brittle", "cumbersome", "pitted", "sodden"],
+  cloak:  ["cumbersome", "pitted", "sodden"],
+  feet:   ["cumbersome", "pitted", "sodden"],
   shield: ["brittle", "cumbersome", "pitted"],
+};
+// Which materials a trait may honestly land on. Absent from this map = any
+// material at all, which is the case for everything except the two that key
+// off the damp. Checked in rollTraits beside WEAPON_CLASS_TRAIT, which has
+// done exactly this job for class-locked weapon traits since 099 — this is
+// that same guard, for the axis the traits actually live on.
+//
+// Stone is the whole point: a gravestone shield and a river cobble cannot rust
+// and cannot be oiled against rust, so offering them either trait was a roll
+// the piece could never use. That was the last of the greased-on-a-slot-the-
+// rust-never-reached bug.
+export const TRAIT_MATERIAL: Record<string, (material: string) => boolean> = {
+  greased: (m) => (MATERIAL_DAMP[m] ?? 1) > 0,
+  pitted:  (m) => (MATERIAL_DAMP[m] ?? 1) > 0,
 };
 // THE DRAW IS OPEN (rome, 2026-08-13). A trait roll is not "a bonus, sometimes
 // with a catch" — it is a roll on what this particular piece turned out to be.
@@ -4492,6 +4612,160 @@ export const TRAIT_ADJ: Record<string, string> = {
   // silent ever since — no adjective in its name, no line when you look at it.
   staunched: "packed", hooded: "deep-hooded",
 };
+// ---- THE SAME TRAIT, IN THE RIGHT SUBSTANCE'S WORDS (rome, 2026-08-15) -----
+//
+// TRAIT_ADJ goes into the item's NAME, so a word that belongs to another
+// material is not a footnote, it is what the thing is called on the floor. The
+// audit that found greased sitting dead on shields found these printing today:
+//
+//     tempered a gravestone shield        brittle a battered buckler
+//     tempered a cork-lined jack          boiled a deadplate harness
+//
+// You cannot temper a cork jack or boil a scavenged harness. TEMPER AND BRITTLE
+// ARE FORGING WORDS and land on 67 and 53 non-metal pieces respectively; BOILED
+// is a tanner's word and lands on 11 pieces of plate. The damp pair have the
+// same problem the other way once they reach cloth and wood, which they now do.
+//
+// THE MECHANIC IS NOT TOUCHED. Nothing here gates a trait away from a material
+// — a wooden shield SHOULD be able to be well-made and a cloth jack SHOULD be
+// able to be badly made, and wear() has always been material-blind on purpose.
+// This changes only what the piece is called when it is. Anything absent falls
+// through to TRAIT_ADJ, which stays the steel-and-default reading; the soft
+// words left alone (quilted, packed, fleeced, deep-hooded) are alone because
+// plate genuinely is quilted, packed and fleece-lined, and a mantle has a hood.
+export const TRAIT_ADJ_MATERIAL: Record<string, Record<string, string>> = {
+  tempered: { wood: "seasoned", hide: "hard-cured", cloth: "close-woven", bone: "dense-grained", stone: "unflawed" },
+  brittle:  { wood: "split",    hide: "perished",   cloth: "rotten",      bone: "crazed",        stone: "cracked" },
+  wardhide: { steel: "case-hardened", bone: "plated" },
+  greased:  { wood: "waxed",    hide: "oiled",      cloth: "waxed",       bone: "oiled" },
+  pitted:   { wood: "worm-eaten", hide: "cracked",  cloth: "moth-eaten",  bone: "flaking" },
+};
+// ...and the same for the sentence `look` prints. Same rule, same omissions.
+export const ROLLED_TELL_MATERIAL: Record<string, Record<string, string>> = {
+  tempered: {
+    wood:  "Seasoned slowly and worked late — it takes punishment its green twin would not (wears slowly).",
+    hide:  "Cured hard and cured properly — it takes punishment its plain twin would not (wears slowly).",
+    cloth: "Woven close and doubled at every seam — it takes punishment its plain twin would not (wears slowly).",
+    bone:  "Dense right through the grain, with no hollow in it — it takes punishment its plain twin would not (wears slowly).",
+    stone: "Not a flaw in it anywhere, and nothing in the world is going to put one there (wears slowly).",
+  },
+  brittle: {
+    wood:  "Split along the grain and opening further every time it is used (wears fast).",
+    hide:  "Perished and gone papery — it has been wet and dry too many times (wears fast).",
+    cloth: "The weave has rotted through in places, and the places are spreading (wears fast).",
+    bone:  "Crazed all over with fine cracks, the way old bone goes (wears fast).",
+    stone: "There is a crack through it you can lay a fingernail in (wears fast).",
+  },
+  wardhide: {
+    steel: "Case-hardened at the surface — it turns a cut that would open you (wards wounds).",
+    bone:  "Plated over in hard scale — it turns a cut that would open you (wards wounds).",
+  },
+  greased: {
+    wood:  "Waxed, and waxed for years — the wet has never got into it (resists rot).",
+    hide:  "Oiled, and kept oiled a long time — the wet has barely touched it (resists rot).",
+    cloth: "Waxed through until it stands stiff — the wet runs off it (resists rot).",
+    bone:  "Oiled and kept dry, and it was slow to go in the first place (resists rot).",
+  },
+  pitted: {
+    wood:  "Worm has been in it, and every hole is a place the next crack starts (rots fast).",
+    hide:  "Cracked all along the folds, and cracked hide only ever gets worse (rots fast).",
+    cloth: "Moth has been through it, and the holes are where it will go next (rots fast).",
+    bone:  "Flaking away in thin layers wherever it has been wet (rots fast).",
+  },
+};
+// ---- WHAT THE BENCH SHOWS YOU (rome, 2026-08-15) --------------------------
+//
+// THERE IS NO SMITH AT THE GATE and this prose must not invent one. The
+// gatehouse has a keeper — he works the hatch, the barter and the bounties —
+// and the forge is unmanned: you push in out of the cold and stir the brazier
+// yourself, and the recipe book is chalked on a slate. So none of this is a
+// person talking. It is what a piece of gear tells YOU once you are somewhere
+// with light enough, a vice to hold it, and the time to look properly. That is
+// the whole reason the reading is gate-only and not a thing you do in the dark.
+//
+// FACTS, IN PLAIN WORDS, AND NO ODDS — rome's call. The line is drawn at
+// numbers a player would have to be told rather than learn: no hours-to-rust,
+// no roll chances. Relative truths are still truths, so "faster than leather
+// does" is fair game and "93h" is not. Accurate to MATERIAL_DAMP throughout.
+//
+// ONE LINE EACH, and this was got wrong first time round: the first cut ran to
+// a four-line paragraph per material, which reads fine once and is punishing by
+// the third piece, because the paragraph is a fact about STEEL and not about
+// the thing in your hand — a keeping with twenty steel pieces in it printed the
+// identical block twenty times. This is a panel you scan. Say the one thing
+// that separates this substance from the others and stop.
+export const MATERIAL_READ: Record<string, string> = {
+  steel: "Rusts, and faster than anything else here. Oil holds it off.",
+  cloth: "Rots, and quicker than leather does.",
+  wood:  "Swells and splits before it does anything else. Slower than cloth.",
+  hide:  "Stiffens and perishes, but it takes its time. Oil buys longer.",
+  bone:  "A wet century barely marks it.",
+  stone: "Nothing the weather does will ever touch it.",
+};
+// The weapon classes, named to the player for the first time. They are not new
+// — WEAPON_CLASS_TRAIT has gated the exclusive traits on them since 099 — but
+// nothing in the game ever said out loud that a weapon HAS a class, so the one
+// rule a player could actually plan around was invisible. Derived, never
+// stored, so it cannot drift from the gate that enforces it.
+export const WEAPON_CLASS_READ: Record<string, string> = {
+  keen: "edged", weighted: "blunt", needling: "piercing", cleaving: "cleaving",
+};
+// WHAT A TRAIT DOES, in a handful of words, for the bench's reading.
+//
+// The stat line used to carry these as bare tags jammed among the numbers:
+// "+2 dmg, bleeds 1, reach". A number explains itself and a tag does not, so
+// "reach" sat there meaning nothing to anyone who had not read the source.
+// Structural traits (the hand-authored ones that DEFINE a weapon or shield) and
+// lottery traits are both here, because from the reading side there is no
+// difference: they are all things this piece does that a plain one does not.
+//
+// Wording checked against the mechanics, not guessed: reach cancels the ambush
+// multiplier rather than adding range (zone.ts, atLength), a wall drags your
+// swing in proportion to its guard, needling adds pierce rather than damage.
+//
+// NOTE: the paperdoll keeps its own parallel list (buildDoll) phrased for the
+// WEARER — "reach (blunts the rush)". Same facts, different voice, and worth
+// converging the day either one is edited.
+export const TRAIT_DOES: Record<string, string> = {
+  // structural — what the smith made it
+  reach: "blunts a rush; the ambush loses its weight",
+  // pierce carries a COUNT and always shows it (TRAIT_COUNTED). `piercing` is
+  // deliberately absent: it is the flag that marks the pierce CLASS, which the
+  // tag line already prints as PIERCING, and a spear carrying both tags was
+  // listing the same fact three times over.
+  pierce: "ignores that much armour",
+  "two-handed": "both hands, so no shield with it",
+  wall: "a wall to stand behind, and it drags your swing",
+  riposte: "a blow you catch answers back, bleeding",
+  mancatcher: "what it holds cannot run",
+  thorns: "spikes bite whatever leans on it",
+  mailward: "wards bleeds; edges skate off the rings",
+  // the soft ones, which a template or the lottery may give
+  padded: "wards stun", wardhide: "wards wounds",
+  staunched: "wounds clot sooner", hooded: "a flame lives in the rain",
+  fleeced: "you can rest in the cold", quiet: "you move silently",
+  slick: "hands slide off you", strapped: "no cutpurse takes it",
+  // the lottery's own
+  keen: "cuts deeper", honed: "+1 damage", balanced: "lighter to carry",
+  weighted: "beats through armour", needling: "finds the seam in armour",
+  cleaving: "catches one more foe",
+  tempered: "wears slowly", greased: "the damp barely touches it",
+  brittle: "wears fast", cumbersome: "heavier to carry",
+  pitted: "the damp eats it", sodden: "cold ruins your rest",
+};
+// Traits whose number is the point: show it even when it is 1, because "pierce"
+// beside "ignores that much armour" names no amount at all. Every other trait
+// carries 1 as a plain flag and reads as a word.
+export const TRAIT_COUNTED = new Set(["pierce", "thorns", "riposte"]);
+// The one lookup for both, so no caller reaches into the tables directly and
+// gets the fallback order wrong: the material's own word if it has one, the
+// default otherwise.
+export function traitAdj(trait: string, itemId: string): string {
+  return TRAIT_ADJ_MATERIAL[trait]?.[materialOf(itemId)] ?? TRAIT_ADJ[trait] ?? "";
+}
+export function traitTell(trait: string, itemId: string): string {
+  return ROLLED_TELL_MATERIAL[trait]?.[materialOf(itemId)] ?? ROLLED_TELL[trait] ?? "";
+}
 // What `look` says about a rolled trait — the reason the piece is worth more than
 // its plain twin, in the game's voice, with the mechanic named in parens to
 // match itemStat's tells. Only the lottery pool needs entries (099).

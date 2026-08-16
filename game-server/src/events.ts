@@ -433,6 +433,59 @@ export function skyClause(z: ZoneDO, roomId: string): string {
       default: return "";
     }
   }
+  // THE WOOD AND THE DEN GROUND. Both bands are outdoor, so without this they
+  // fall clean through the sky chain below and come out with nothing — which
+  // left five arcs (the rut, the walk, the quiet, the pack, the fever) legible
+  // only to whoever was standing there when the line went out. Their ambient
+  // pools cover the ACTIVE phase and land at the pool's own leisure; nothing at
+  // all covered the telegraph. The den ground makes that worst: the roll rarely
+  // fires with anybody standing in it, so the warning usually lands on nobody.
+  //
+  // NO PRECEDENCE PROBLEM WITH THE SKY, which is why these sit above it rather
+  // than below: an ANY arc locks every band and every band locks ANY (see
+  // bandsBusy), so the rain and the rut can never both be running, and two arcs
+  // of one band never overlap either. Every switch here therefore BREAKS when
+  // idle rather than returning — a wood with no wood arc on it still has to be
+  // told it is raining, and closing early here would silently take the weather
+  // off two hundred and thirty rooms.
+  //
+  // Aftermath is deliberately absent from all five. Unlike the rain's mud, none
+  // of them leave anything the world reads: their hooks at the top of this file
+  // key on "active" alone and aftermath is only the cooldown before the arc can
+  // roll again, so a clause there would describe a state that is not.
+  const region = z.world!.rooms.get(roomId)?.region;
+  if (region === "wood") {
+    switch (phaseOf(z, "rut")) {
+      case "telegraph": return " Somewhere off through the trees a stag is roaring, and being answered.";
+      case "active": return " The wood is full of deer, and the stags are giving no ground.";
+      default: break;
+    }
+    switch (phaseOf(z, "walk")) {
+      case "telegraph": return " Birds are up off every ride at once, and something big is moving out from the middle of the wood.";
+      case "active": return " Whatever the maze keeps in the middle of it is not in the middle of it. It is walking.";
+      default: break;
+    }
+    switch (phaseOf(z, "quiet")) {
+      case "telegraph": return " The birds have stopped — all of them, together — and the silence has an edge on it.";
+      case "active": return " Nothing moves in the whole wood. Your own gear sounds louder than you would like.";
+      default: break;
+    }
+  }
+  if (region === "den") {
+    switch (phaseOf(z, "pack")) {
+      case "telegraph": return " Dogs out on the Waste, a long way off and getting closer, and a lot of them.";
+      case "active": return " There are dogs in among the houses, working the ground in a body.";
+      default: break;
+    }
+    // The one of the five with teeth in it: rest, food and dressings are all
+    // cut to FEVER_MEND_MULT on this ground and every one of them says nothing
+    // about why. Without this line a bad bandage reads as a bug.
+    switch (phaseOf(z, "fever")) {
+      case "telegraph": return " The wind is off the graves, warm and wrong, and this ground smells faintly of the pit.";
+      case "active": return " The fever sits over the whole ground. Sleep will not take here, and nothing you eat or bind does you any good.";
+      default: break;
+    }
+  }
   if (!OUTDOOR_ROOMS.has(roomId)) return "";
   switch (phaseOf(z, "rain")) {
     case "telegraph": return " The light has gone iron-grey, and the air smells of coming rain.";
