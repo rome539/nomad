@@ -132,6 +132,23 @@ export async function handleForge(z: ZoneDO, session: Session, frame: any): Prom
   }
   if (!session.forging) return;
   if (action === "close") return leaveForge(z, session);
+  // THE VICE, FROM THE SHEET. benchRepair exists already but looks only in the
+  // pack, and this panel reads pack, lockbox and vault — so a mend button on a
+  // vault row would have refused every time. Same lookup as the reading, so
+  // anything the bench can show you it can also mend. repairCore is addressed
+  // by rowId and spends across the keeping, so a piece in the vault mends in
+  // place without being fetched first.
+  if (action === "mend") {
+    const pools = await z.gatePools(session);
+    let carried: CarriedItem | undefined;
+    for (const pool of pools) {
+      carried = pool.find((c) => c.rowId === frame.row);
+      if (carried) break;
+    }
+    if (!carried) return sendForge(z, session, "There's nothing like that to mend.");
+    const note = await repairCore(z, session, carried);
+    return sendForge(z, session, note, "forge");
+  }
   if (action === "craft") {
     const recipe = world.forgeRecipes.find((r) => r.itemId === frame.row);
     if (!recipe) return sendForge(z, session, "The bench doesn't know how to make that.");
@@ -174,7 +191,7 @@ export async function leaveForge(z: ZoneDO, session: Session): Promise<void> {
 // no chances. Everything
 // here is derived at read time from the same tables the sim uses, so the sheet
 // cannot drift from the rules — there is no second copy of any of it.
-function benchSheet(z: ZoneDO, c: CarriedItem, where: string): Record<string, unknown> | null {
+function benchSheet(z: ZoneDO, c: CarriedItem, where: string, scrap: number): Record<string, unknown> | null {
   const t = z.world!.itemTemplates.get(c.itemId);
   if (!t || !z.isGear(c.itemId)) return null;
   // ONE FACT LINE, then at most three short ones. The first cut of this stacked
@@ -182,7 +199,12 @@ function benchSheet(z: ZoneDO, c: CarriedItem, where: string): Record<string, un
   // substance, the class and the numbers are all TAGS, and they belong on the
   // same line as each other rather than in three sentences that repeat verbatim
   // down the whole column.
-  const tags: string[] = [materialOf(t.id)];
+  // THE LANTERN IS GEAR THAT IS NOT WORN. isGear lets it through (its condition
+  // is real and meters the burns left in it), but it holds no slot, so the damp
+  // loop skips it and its wear is spent oil rather than rust. Claiming a
+  // material and a rot for it would be two lies in the first two lines.
+  const burns = t.slot === "";
+  const tags: string[] = burns ? [] : [materialOf(t.id)];
   if (t.slot === "weapon") {
     for (const k of Object.keys(WEAPON_CLASS_READ)) {
       if (WEAPON_CLASS_TRAIT[k]?.(t)) tags.push(WEAPON_CLASS_READ[k]);
@@ -211,13 +233,22 @@ function benchSheet(z: ZoneDO, c: CarriedItem, where: string): Record<string, un
     id: c.rowId, name: z.displayName(c), rarity: t.rarity, where,
     cond: word, sealed: c.serial !== null,
     tags, stat: z.itemNumbers(t), own,
-    damp: MATERIAL_READ[materialOf(t.id)] ?? "",
+    damp: burns
+      ? "What it has left is oil and wick, not condition. The bench refills it."
+      : MATERIAL_READ[materialOf(t.id)] ?? "",
     // ...spoken as the player would ever see them. These are internal tag
     // names — padded, wardhide, staunched — and the game has always shown the
     // ADJECTIVE instead (quilted, boiled, packed), material-aware since the
     // prose fix. Printing the tags would be leaking the schema into the panel.
     tell: z.rolledTell(c.itemId, c.rolledMap).trim(),
-    mend: c.condition >= 100 ? "" : `${REPAIR_COST[t.rarity] ?? 1} scrap`,
+    // NOTHING MENDS STONE (rome, 2026-07-11): what a hammerstone spends on a
+    // latch is spent for good, and repairCore refuses it. Offering the mend
+    // here and having the vice turn it down is a button that lies.
+    mend: c.condition >= 100 || THROW_TOUGH.has(c.itemId) ? "" : `${REPAIR_COST[t.rarity] ?? 1} scrap`,
+    // ...and whether you can pay it, so the button is honest before it is
+    // pressed rather than refusing afterwards. Counted the way cmdRepair
+    // spends: across pack and keeping both.
+    canMend: c.condition < 100 && !THROW_TOUGH.has(c.itemId) && scrap >= (REPAIR_COST[t.rarity] ?? 1),
   };
 }
 
@@ -253,9 +284,9 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
   // piece the vice can reach is a piece the sheet can read. Ordered pack first:
   // what is on you is what you are about to have to rely on.
   const read = [
-    ...pools[0].map((c) => benchSheet(z, c, "pack")),
-    ...pools[1].map((c) => benchSheet(z, c, "lockbox")),
-    ...pools[2].map((c) => benchSheet(z, c, "vault")),
+    ...pools[0].map((c) => benchSheet(z, c, "pack", scrapRaw)),
+    ...pools[1].map((c) => benchSheet(z, c, "lockbox", scrapRaw)),
+    ...pools[2].map((c) => benchSheet(z, c, "vault", scrapRaw)),
   ].filter((s) => s !== null);
   const payload = { v: 0, t: "forge", open: true, note: note ?? "", sfx: sfx ?? "", scrap, scrapRaw, recipes, read };
   try { session.ws.send(JSON.stringify(payload)); } catch {}

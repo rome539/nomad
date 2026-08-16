@@ -4057,6 +4057,19 @@ function forgeSheetNode(it) {
   mend.className = "cost " + (it.mend ? "no" : "ok");
   mend.textContent = it.mend ? "The mend wants " + it.mend + " at the vice." : "Sound.";
   wrap.appendChild(mend);
+  // The vice is right there. A piece the bench can read is a piece it can mend,
+  // including one sitting in the lockbox or the vault \u2014 the server looks in
+  // the same three places this list came from. Disabled rather than hidden when
+  // the scrap is short, so the cost above still explains the refusal.
+  if (it.mend) {
+    var mb = document.createElement("button");
+    mb.type = "button";
+    mb.textContent = "mend";
+    mb.disabled = !it.canMend;
+    mb.addEventListener("click", function () { forgeSend("mend", String(it.id)); });
+    acts.insertBefore(mb, acts.firstChild); // the doing comes before the closing
+
+  }
   wrap.appendChild(acts);
   return wrap;
 }
