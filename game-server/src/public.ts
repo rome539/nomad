@@ -2100,7 +2100,7 @@ async function publishFeed(room, text, fx) {
 // the canvas never tucks tainted pixels and toBlob works.
 // The card set is its OWN art (2026-08-07) — creature plates painted for this,
 // not the door's wide backdrops, which keep their middle empty for a title.
-var CARD_SCENES = ["whiteroe", "gaunt", "wolves", "nomad"];
+var CARD_SCENES = ["whiteroe", "gaunt", "wolves", "nomad", "bear", "hyena", "crows", "broodrat", "king"];
 var CARD_PX = 1080;
 
 function cardScene() {
@@ -2144,7 +2144,7 @@ function cardNum(n) {
 async function drawCardTo(ctx, card, W) {
   ctx.fillStyle = "#16120c";
   ctx.fillRect(0, 0, W, W);
-  try { drawCover(ctx, await loadImg("/card-bg/" + cardScene() + ".jpg"), W, W); } catch (e) {}
+  try { drawCover(ctx, await loadImg("/card-bg/" + cardScene() + ".jpg?v=" + ART_V), W, W); } catch (e) {}
 
   // THE PAINTINGS DECIDE THE LAYOUT, not the other way round. Every one of the
   // card scenes is composed the same way — a dark top third, the subject low
@@ -5662,7 +5662,18 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var THR_SCENES = { torch: "center 65%", warrens: "35% 60%", hound: "center 55%", rain: "center 45%", arch: "center 40%", door: "center 50%", tide: "center 55%" };
+var ART_V = "2";
+// HOW HARD THE SCRIM PRESSES, per painting. The gradient below is weakest at
+// 45% height \u2014 which is exactly where the title and the line sit \u2014 and one
+// setting cannot serve eight pictures that range from a torchlit corridor to
+// an open dusk sky. Measured mean luma of the band the copy lands in: torch 4,
+// hound 9, rain 11, warrens 13, wood 20, gatehouse 21, bellcote 30, and the
+// holdings ONE HUNDRED AND TEN. On the dark ones a heavier scrim would be
+// invisible; on that one, .15 left the line unreadable. Anything absent takes
+// the default. Darkening the painting itself was the wrong lever \u2014 it took
+// the village down to silhouette to fix the sky.
+var THR_DIM = { holdings: ".55", bellcote: ".28" };
+var THR_SCENES = { torch: "center 65%", warrens: "40% 60%", hound: "center 55%", rain: "center 45%", bellcote: "35% 45%", gatehouse: "center 62%", wood: "center 45%", holdings: "20% 60%" };
 var thrPick = new URLSearchParams(location.search).get("scene");
 if (!THR_SCENES[thrPick]) {
   var thrNames = Object.keys(THR_SCENES);
@@ -5670,10 +5681,17 @@ if (!THR_SCENES[thrPick]) {
 }
 var thrImg = new Image();
 thrImg.onload = function () {
-  threshold.style.backgroundImage = "linear-gradient(rgba(22,18,12,.5), rgba(22,18,12,.15) 45%, rgba(22,18,12,.6)), url(" + thrImg.src + ")";
+  var mid = THR_DIM[thrPick] || ".15";
+  threshold.style.backgroundImage = "linear-gradient(rgba(22,18,12,.5), rgba(22,18,12," + mid + ") 45%, rgba(22,18,12,.6)), url(" + thrImg.src + ")";
   threshold.style.backgroundPosition = "center, " + THR_SCENES[thrPick];
 };
-thrImg.src = "/door-bg/" + thrPick + ".jpg";
+// ART_V BUSTS THE CACHE, and it is not optional. Both image routes answer with
+// "immutable", which promises the browser the bytes at that URL will never
+// change \u2014 so a browser that has seen a scene once keeps it for a YEAR and
+// will not revalidate, hard reload included. Repaint a scene in place and only
+// brand-new visitors ever see it. Bump ART_V whenever any scene or card plate
+// is replaced (the manifest icons have done this with ?v= since they shipped).
+thrImg.src = "/door-bg/" + thrPick + ".jpg?v=" + ART_V;
 if (thrKnown && stored) thrEnter.textContent = "enter as " + thrKnown;
 
 // THE DOOR'S MUSIC — grim and hollow, played live by oscillators (no file,
