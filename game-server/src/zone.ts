@@ -1071,14 +1071,42 @@ export class ZoneDO implements DurableObject {
         this.send(
           session,
           [
-            "You wake at a broken gate with keys in your pocket and no memory of the road.",
+            // WHEREVER THEY LANDED. This used to open "you wake at a broken
+            // gate", which randomGate makes false two times in five: the
+            // Waystation is a spawn and not a gate, and the road slot resolves
+            // to a random road room that is never a gate on purpose (rome,
+            // 2026-08-02 — the road hatches you out ON the road). The keys are
+            // the part that is true wherever you woke, so the line keeps those.
+            "You wake with keys in your pocket and no memory of the road.",
             "This dungeon is shared and it is alive: the other names are real people,",
             "and the creatures keep living whether or not anyone is watching.",
             "Wounds do not close on their own — rest, or eat.",
+            "",
+            // THE GATES, SAID AT THE START. The first walk did not name one
+            // until its fifth lesson, and even then only as somewhere to claim
+            // and stash — never as a door you step THROUGH, never that nothing
+            // follows you in. Written so it holds for a wanderer who woke a
+            // day's walk from the nearest one.
+            "Ten gates stand in the world, and they are doors: 'in' steps through one.",
+            "Behind every gate is the same warm room — nothing in the dungeon follows",
+            "you in, you mend there, and the keeper's hatch, the bench and the brazier",
+            "are all in it. Your goods answer to your key, not to the door: bank at",
+            "one, collect at any.",
+            "If no gate is in sight, the way to the nearest is on the room bar while",
+            "this walk lasts, and the milestones carry it after that.",
+            "",
+            "Leaving is free: log off anywhere and come back exactly as you left.",
+            "DYING is what costs you — everything you carry drops where you fall.",
+            "What is still yours tomorrow is what you left in the lockbox or the vault.",
+            "",
             "The suggestions under the input line are real commands — tap one, or type it.",
             `Pick what the dungeon calls you with: name <yourname>`,
             "And mind your keys ('keys' shows them): save the secret somewhere safe —",
             "it is the only way back to this wanderer from another door or device.",
+            // ...and the one place the rest of it is written down. Only the
+            // RETURNING branch below said this, so the player who most needed
+            // to know 'help' exists was the only one never told.
+            "'help' has the rest of it.",
           ].join("\n"),
         );
       } else {

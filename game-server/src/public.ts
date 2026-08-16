@@ -2451,10 +2451,11 @@ var CONNECT_STALL_MS = 10000;
 var freshLoad = true;    // this page just loaded with an EMPTY scroll — the first connect must ask the server to repaint the room (fresh=1), or a fast refresh lands on a blank pane. A websocket reweave keeps its scroll and never sets this.
 
 async function connect() {
-  // The stilled tab never dials, whoever asks. wakeReconnect checks this too,
-  // but the guard belongs on the door as well as on the one caller that walks
-  // through it today: the whole bug was a second caller appearing later.
-  if (stilled) return;
+  // The stilled tab never dials, whoever asks, and neither does a page whose
+  // player has not crossed the threshold. Both guards sit on the door as well
+  // as on wakeReconnect: the whole shape of this bug, twice now, has been a
+  // second caller appearing later and not knowing the rules.
+  if (stilled || !crossed) return;
   // A HANDSHAKE CAN HANG, AND THE OLD GUARD LET IT KILL THE LOOP. This used to
   // return flat when a connect was in flight, and scheduleRetry is only ever
   // called from onclose — so a socket stuck in CONNECTING (what a laptop that
@@ -2673,6 +2674,13 @@ function scheduleRetry() {
 // focus. Any of those, with no live socket, tries immediately and resets the
 // backoff — so a lid opening reconnects in the time it takes to draw the page.
 function wakeReconnect() {
+  // NOBODY IS HERE YET. These listeners are bound at script load, and focus,
+  // visibilitychange and online all fire perfectly well while the threshold
+  // screen is still up \u2014 so clicking the window before you had come in
+  // dialled the socket, built a session, and told the arena you had blinked
+  // into being while you were still looking at the login art. crossThreshold
+  // sets crossed before it calls connect, so its own call still gets through.
+  if (!crossed) return;
   // The body is in another window; looking at this one must not steal it back.
   if (stilled) return;
   if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;

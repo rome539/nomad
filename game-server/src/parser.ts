@@ -580,12 +580,26 @@ export const HELP_TEXT = [
   // believes there are four doors, all of them fortress-and-road, never learns
   // the wood has a story at all. The sewer line went too — the Sewer Mouth is
   // not a gate, and every one of its ways is two-way.
-  "Seven gates: three on the walls, one out on the old road at the first",
-  "milestone, and three in the wood — the timber stack, the withy hut, and",
-  "the gate arch of the old holding. You drop in, extract, and bank at any of",
-  "them, and death wakes you at one of them. Which door you bank at decides",
-  "what the keeper tells you, so a wanderer who only ever runs for the keep",
-  "never hears a word about the wood.",
+  // TEN, AND THE DOORS MOVED AGAIN (2026-08-16). Seven was right until the
+  // Crossing shipped with two of its own and the road gained the relay house.
+  // Verified against the is_entry rows, and it matters for the same reason it
+  // did in August: a wanderer who believes there are seven doors, all fortress
+  // and road and wood, never learns the crossing has gates at all.
+  "Ten gates: three on the walls, two out on the road — the first milestone",
+  "and the relay house — three in the wood, being the timber stack, the withy",
+  "hut and the gate arch of the old holding, and two on the crossing, the",
+  "ferry house and the crossing house. You drop in, extract, and bank at any",
+  "of them. Which door you bank at decides what the keeper tells you, so a",
+  "wanderer who only ever runs for the keep never hears a word about the wood.",
+  "",
+  // AND DYING DOES NOT PUT YOU AT ONE, which this used to say outright. Spawns
+  // stopped being gates in mig 126 and randomGate (which serves both a fresh
+  // wanderer and a dead one) draws the Waystation and the open road alongside
+  // the three fortress thresholds.
+  "Waking is not the same as banking. Death puts you at a SPAWN — one of the",
+  "fortress thresholds, the old waystation, or somewhere out on the open road",
+  "— or at your own door, if you have raised a den. Only three of the five",
+  "ways you can wake are a gate, so do not count on standing at one.",
   "",
   // This list is WHAT TO TYPE. How any of it actually works — armour, weight,
   // bleeding, the dens, why the world keeps going while you are away — is the
