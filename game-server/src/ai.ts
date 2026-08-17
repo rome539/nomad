@@ -2543,18 +2543,33 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
         // wolves were doing exactly what they were built to do; the recovery side
         // was a trickle with a bottleneck in it.
         //
-        // Each empty den is an independent clock, so the wait for the FIRST of
-        // them to fill is the shared wait over how many are empty. One pending
-        // arrival at a time still holds — that is a correct walk of `short`
-        // parallel clocks, one fire at a time, re-measured after each.
+        // Each empty den pulls the wait DOWN, because they are filling at the
+        // same time rather than in a queue. One pending arrival at a time still
+        // holds: the queue is walked one fire at a time and re-measured after
+        // each, so the shape of the recovery is in this divisor.
         //
-        // It is self-limiting, which is why it needs no cap: `short` is only
-        // large when the drag is also large, and the two move against each other.
-        // Deer, cap 36: 1 alive -> 5.6 min a head; 18 alive -> 7 min; 35 alive ->
-        // 54 min for the last one. Fast off the floor, slow at the ceiling, and a
-        // hunted-out band recovers in an afternoon instead of a fortnight.
-        // Single-den lines and every boss are untouched — `short` is 1 for them,
-        // and the divisor is 1.
+        // THE DIVISOR IS THE ROOT OF THE SHORTFALL, NOT THE SHORTFALL (rome,
+        // 2026-08-17, two hours after the first version went out and the wood was
+        // already full of deer). Dividing by `short` outright treats thirty-five
+        // empty dens as thirty-five independent clocks, which is arithmetically
+        // the honest reading of "each den has its own timer" and is a faucet in
+        // practice: a head every 5.6 minutes off the floor, the whole herd back
+        // inside six hours. Nothing in a wood breeds like that, and worse, the two
+        // sides of the web stopped being able to oscillate — deer filled in 6h and
+        // the wolves needed 8.6h AFTER the deer were standing, so the system
+        // slammed to prey-max and parked instead of swinging.
+        //
+        // The root keeps the principle — a gutted line still comes back faster
+        // than a nearly-full one, which is the whole fix — and gives overhunting
+        // the long tail the ecology has always claimed to have:
+        //
+        //     deer, cap 36:   first head 33 min · half back in 9h · full in 18h
+        //     wolves, cap 19: first head 91 min · full in 24h
+        //
+        // A hunted-out wood is now most of a day of consequence rather than an
+        // afternoon, and the wolves are close enough behind the deer that the loop
+        // can actually turn over. Single-den lines and every boss are untouched:
+        // `short` is 1 for them and so is its root.
         //
         // A PENDING TIMER IS RE-MEASURED, NEVER JUST LEFT (rome, 2026-08-17, an
         // hour after the change above went live and the wood still held one deer).
@@ -2573,7 +2588,7 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
         // offline stretch, a den emptied since the clock was set — and it can
         // only ever err toward the world refilling, never toward it stalling.
         const drag = ecologyDrag(z, templateId, caps, alive, capsBand, aliveBand);
-        const wait = (tmpl.respawn_secs * 1000 * factor * drag) / short;
+        const wait = (tmpl.respawn_secs * 1000 * factor * drag) / Math.sqrt(short);
         const pending = z.arrivals.get(templateId);
         if (pending === undefined || pending > now + wait) z.arrivals.set(templateId, now + wait);
       }

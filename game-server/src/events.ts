@@ -2037,10 +2037,15 @@ function gloamTakes(z: ZoneDO, room: string, now: number, first: boolean): void 
   z.refreshRoomCtx(room);
 }
 
+// Every way the walk can end comes through here — the dead end, the ceiling, and
+// the healed case — so this is the one place the world gets told, and it gets
+// told once. The band-wide line was the step's until 2026-08-17; see the note in
+// tickGloam for why it belongs to the ending and not to the middle.
 function endGloam(z: ZoneDO, st: EventState, now: number, room: string | null): void {
   st.phase = "aftermath";
   st.until = now + GLOAM_AFTERMATH_MS;
   st.data = undefined;
+  z.roomFeedBands(GLOAM_HEARD_BANDS, "The dark that was sitting in the halls lets go. Somewhere a room has its light back, thin and grey.", "evt");
   if (room) {
     z.roomFeed(room, "The dark thins, pales, and is only shadow again. The room does not feel finished with.", undefined, false, "evt");
     z.refreshRoomCtx(room);
@@ -2068,8 +2073,19 @@ async function tickGloam(z: ZoneDO, now: number): Promise<void> {
     const entering = steps[randInt(0, steps.length - 1)].to_room;
     st.data = entering;
     gloamStepAt = now + GLOAM_STEP_MS;
+    // A STEP IS LOCAL NEWS ONLY (rome, 2026-08-17, watching the arena feed carry
+    // the same sentence seventeen times in forty minutes). The band-wide line
+    // used to fire from here — once every GLOAM_STEP_MS, so up to eighteen times
+    // in one gloam, since the walk's ceiling is GLOAM_ACTIVE_MS. It was not a
+    // loop; it was one line on a 2.5-minute metronome, which is worse, because it
+    // taught anyone reading the feed that the sentence means nothing.
+    //
+    // It also read backwards. "The dark that was sitting in the halls lets go" is
+    // how a thing ENDS, and it was wired to the middle of the walk. It lives in
+    // endGloam now, where all three endings pass through it exactly once. What a
+    // step is, to somebody standing elsewhere, is nothing — the dark is still in
+    // the halls, it is simply in a different room, and no one outside can tell.
     z.roomFeed(leaving, "The dark lifts off this room like a held breath let go — the light comes back thin and grey.", undefined, false, "evt");
-      z.roomFeedBands(GLOAM_HEARD_BANDS, "The dark that was sitting in the halls lets go. Somewhere a room has its light back, thin and grey.", "evt");
     z.refreshRoomCtx(leaving);
     gloamTakes(z, entering, now, false);
   }
