@@ -30,7 +30,7 @@ import {
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
-  QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, FORAGE_REGIONS, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
+  QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
   HUNT_RANGE, HUNT_RECHECK_MS,
@@ -1458,8 +1458,15 @@ function settlesHere(z: ZoneDO, templateId: string, roomId: string): boolean {
   const allow = MIGRATE_QUARTERS[band];
   if (allow && !allow.has(MAP_QUARTERS[roomId] ?? "")) return false;
   if (z.world!.safeRooms.has(roomId) || z.world!.entryRooms.has(roomId)) return false;
-  // A grazer needs ground that grows something.
-  if (GRAZERS.has(templateId) && !THIEVES.has(templateId)) return FORAGE_REGIONS.has(band);
+  // A grazer needs ground that grows something — THIS ROOM, not this band. The
+  // band test was the same shortcut the migration rewrite above spent four
+  // paragraphs killing everywhere else: "there is food on the road" asked of a
+  // label instead of the floor the animal is standing on. It read identically
+  // for road/wood/den/crossing (init folds every room of a forage band into
+  // FORAGE_ROOMS, so band membership and room membership are the same fact
+  // there), and it was wrong for the outworks, where only part of the ground
+  // grows anything — a blanket band would have settled a goat on the Battery.
+  if (GRAZERS.has(templateId) && !THIEVES.has(templateId)) return FORAGE_ROOMS.has(roomId);
   // A hunter needs something it hunts standing within its OWN range of here —
   // not "somewhere in the band", which is the lie the old gate told. This is
   // the same radius its territory will have the moment it settles, so the test
@@ -2522,7 +2529,31 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
           : Math.max(MIGRATION_MIN_FACTOR, MIGRATION_FACTOR / Math.max(1, z.sessions.size));
         // ...and then the food web has its say: how long this den stays empty
         // depends on what is left to breed, or what is left to eat.
-        z.arrivals.set(templateId, now + tmpl.respawn_secs * 1000 * factor * ecologyDrag(z, templateId, caps, alive, capsBand, aliveBand));
+        //
+        // EVERY EMPTY DEN RUNS ITS OWN CLOCK (rome, 2026-08-17: three days with
+        // no deer in the wood). This map keeps ONE pending arrival per line, and
+        // the wait was the wait for a SINGLE den — so thirty-five empty deer dens
+        // refilled no faster than one did. A line cut to the bone was therefore
+        // slowest to come back in the arithmetic AND queued single-file on top of
+        // it: 300s * factor 10 * drag 3.92 is one deer every three hours and a
+        // quarter, against a fed pack that takes each arrival as it walks in. The
+        // wolves were doing exactly what they were built to do; the recovery side
+        // was a trickle with a bottleneck in it.
+        //
+        // Each empty den is an independent clock, so the wait for the FIRST of
+        // them to fill is the shared wait over how many are empty. One pending
+        // arrival at a time still holds — that is a correct walk of `short`
+        // parallel clocks, one fire at a time, re-measured after each.
+        //
+        // It is self-limiting, which is why it needs no cap: `short` is only
+        // large when the drag is also large, and the two move against each other.
+        // Deer, cap 36: 1 alive -> 5.6 min a head; 18 alive -> 7 min; 35 alive ->
+        // 54 min for the last one. Fast off the floor, slow at the ceiling, and a
+        // hunted-out band recovers in an afternoon instead of a fortnight.
+        // Single-den lines and every boss are untouched — `short` is 1 for them,
+        // and the divisor is 1.
+        const drag = ecologyDrag(z, templateId, caps, alive, capsBand, aliveBand);
+        z.arrivals.set(templateId, now + (tmpl.respawn_secs * 1000 * factor * drag) / short);
       }
     }
   }

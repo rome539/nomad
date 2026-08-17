@@ -3441,6 +3441,34 @@ export const SURFACE_FORAGE = new Set([
   // — the most food per room on the surface, in the place people left.
   "the-common-field", "the-cow-pasture", "the-drying-green", "the-chapel-green",
   "the-well-green", "the-gorse-common", "the-dead-orchard", "the-warren-bank",
+  // THE OUTWORKS (rome, 2026-08-17, and he was right to be angry). The band got
+  // forty-two rooms and a roster and NOT ONE MOUTHFUL: `out` is the only surface
+  // band absent from FORAGE_REGIONS, and the fortress's own larder is the warrens
+  // and the carrion rooms, so every id here missed all three tables. Fifteen
+  // rats and three cutpurses stood on it at the hunger cap forever, which is the
+  // crabs-on-the-wrack bug for the third time — the map grows, the food tables
+  // don't. Curated rather than a blanket band-add, because a blanket add feeds
+  // the Battery and the mine galleries: bare siege earth grows nothing and is
+  // meant to.
+  //
+  // The village's own living — orchards still dropping, a barn, a dovecote, and
+  // fish ponds that went on stocking themselves after the last person left.
+  // The Cider House is deliberately absent: it is a HIDEAWAY, and no forage room
+  // in this table is one (a sanctuary is a wall to anything that walks, so it
+  // would be dead ground even if it grew apples, which it does not — it presses
+  // them).
+  "the-green", "the-orchard-rows", "the-drowned-orchard",
+  "the-briar-field", "the-tithe-barn", "the-culver-house", "the-fish-stew",
+  "the-well-head",
+  // The siege camp. A sutlers' row is where an army's food was sold and the
+  // horse lines are where it was spilled; both are middens now.
+  "the-camp-ground", "the-suttlers-row", "the-horse-lines",
+  // The grave ground. This is the ground the grave-hyena is NAMED for, and it
+  // was the one thing on the whole band that could not feed it.
+  "the-churchyard", "the-charnel", "the-mass-grave", "the-gibbet-field",
+  "the-crossroads-grave", "the-hanging-hill",
+  // And the fen, which is the only wet ground up here.
+  "the-black-fen",
 ]);
 export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS, ...SURFACE_FORAGE]);
 // WHO EATS THE GROUND. Was the bare union VERMIN + THIEVES, written inline at
