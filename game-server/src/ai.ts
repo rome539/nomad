@@ -2668,11 +2668,48 @@ function ecologyDrag(
 
 export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
     const world = z.world!;
+    // The ceiling, and what is standing under it — see the guard in the loop.
+    // Built once and only when something is actually due, so a tick with no
+    // arrival pays nothing for this.
+    let capOf: Map<string, number> | null = null;
+    let standing: Map<string, number> | null = null;
+    const tallies = (): void => {
+      if (capOf) return;
+      capOf = new Map();
+      for (const s of world.mobSpawns) capOf.set(s.template_id, (capOf.get(s.template_id) ?? 0) + 1);
+      standing = new Map();
+      for (const c of z.creatures.values()) {
+        const line = capOf.has(c.templateId) ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
+        standing.set(line, (standing.get(line) ?? 0) + 1);
+      }
+    };
     for (const [templateId, at] of z.arrivals) {
       if (at > now) continue;
       z.arrivals.delete(templateId);
       const baseTmpl = world.mobTemplates.get(templateId);
       if (!baseTmpl) continue;
+      // THE CEILING IS CHECKED WHERE THE BODY IS MADE (rome, 2026-08-17, eleven
+      // "something heavy settles back onto ground it has always kept" in a row).
+      // This is the only place in the game that mints a creature, and it trusted
+      // the timer absolutely: due means spawn, whatever is already standing.
+      // scheduleArrivals guards the SCHEDULING side and nothing guarded this one,
+      // so any path that ever put a second timer on a line — a double schedule, a
+      // stale timer persisted through a deploy, a re-entrant tick — minted a real
+      // extra body, and for a cap-of-one boss that is a second Woodward and a
+      // second announcement to the whole surface.
+      //
+      // Counted the same way scheduleArrivals counts, which is the point: a
+      // variant with its own spawn rows is its own line, and a rolled promotion
+      // folds into the base. Anything else would let a promoted body slip the cap
+      // it was promoted out of. The load-time cull (creatureCull) has always
+      // repaired an over-cap world on the next wake; this stops it happening.
+      //
+      // The two tallies are built ONCE per call, above the loop, and not per
+      // arrival — this is the DO's tick thread, and a nested walk of every
+      // creature against every spawn row is exactly the shape of thing that
+      // stalls a single-threaded world.
+      tallies();
+      if ((standing!.get(templateId) ?? 0) >= (capOf!.get(templateId) ?? 0)) continue;
       // Migrants respect the threshold too: nothing ordinary arrives AT a
       // gate (same rule as wandering), or a rat could materialize on top
       // of a respawn. Boss homes are wherever they are.
@@ -2733,6 +2770,7 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         home,
       };
       z.creatures.set(creature.id, creature);
+      standing!.set(templateId, (standing!.get(templateId) ?? 0) + 1); // this call's own tally stays true
       if (tmpl.is_boss) {
         // What lives behind the black door has reformed — and the door knows.
         for (const [rid, exits] of world.exits) {
