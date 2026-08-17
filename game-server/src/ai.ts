@@ -2520,8 +2520,11 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
       m.set(band, (m.get(band) ?? 0) + 1);
     }
     for (const [templateId, cap_] of caps) {
-      const short = cap_ - (alive.get(templateId) ?? 0) - (z.arrivals.has(templateId) ? 1 : 0);
-      if (short > 0 && !z.arrivals.has(templateId)) {
+      // How many dens of this line are standing empty. A pending arrival has not
+      // landed yet, so its den is still one of them — it is the one with a clock
+      // on it, and the others are what that clock is racing.
+      const short = cap_ - (alive.get(templateId) ?? 0);
+      if (short > 0) {
         const tmpl = world.mobTemplates.get(templateId)!;
         // Fodder refills faster the busier the zone; the boss keeps its clock.
         const factor = tmpl.is_boss
@@ -2552,8 +2555,27 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
         // hunted-out band recovers in an afternoon instead of a fortnight.
         // Single-den lines and every boss are untouched — `short` is 1 for them,
         // and the divisor is 1.
+        //
+        // A PENDING TIMER IS RE-MEASURED, NEVER JUST LEFT (rome, 2026-08-17, an
+        // hour after the change above went live and the wood still held one deer).
+        // This map is PERSISTED, and the old guard skipped any line that already
+        // had a timer — so a wait banked under the previous arithmetic survived
+        // the deploy and the new arithmetic did not apply until it expired, which
+        // for the deer was up to another three and a quarter hours. A shipped
+        // change to the refill law that takes effect at some unknowable later
+        // hour is not a shipped change.
+        //
+        // So the wait is recomputed against the world as it stands, and a timer
+        // is pulled IN when the current reading is shorter. Only ever inward:
+        // recomputing in both directions every beat would push the deadline
+        // away as fast as it approached and nothing would ever arrive. That
+        // makes this self-healing for the cases that matter — a retune, a long
+        // offline stretch, a den emptied since the clock was set — and it can
+        // only ever err toward the world refilling, never toward it stalling.
         const drag = ecologyDrag(z, templateId, caps, alive, capsBand, aliveBand);
-        z.arrivals.set(templateId, now + (tmpl.respawn_secs * 1000 * factor * drag) / short);
+        const wait = (tmpl.respawn_secs * 1000 * factor * drag) / short;
+        const pending = z.arrivals.get(templateId);
+        if (pending === undefined || pending > now + wait) z.arrivals.set(templateId, now + wait);
       }
     }
   }

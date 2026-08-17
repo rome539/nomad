@@ -1834,6 +1834,12 @@ export class ZoneDO implements DurableObject {
       // A point slips plate, a blunt weapon caves it: both ignore that much armor.
       dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - this.armorIgnore(weapon)));
       creature.hp -= dmg;
+      // ...and the opener can find the throat like any other landed blow. The
+      // vitals line REPLACES the "one heavy blow" report rather than following
+      // it: "it never wakes" and "you open its throat" are two accounts of the
+      // same second, and only one of them is what happened.
+      const avitals = this.playerVitals(creature, tmpl, weapon);
+      if (avitals) creature.hp = 0;
       this.markHurt(creature, tmpl, session.pubkey);
       ai.addGrudge(this, creature, session.pubkey);
       this.actorFeed(session, session.roomId, wasAsleep
@@ -1842,10 +1848,11 @@ export class ZoneDO implements DurableObject {
       this.combatNoise(session.roomId);
       if (weapon) await this.wear(session, weapon.carried, weapon.tmpl, HOLLOW.has(tmpl.id) ? WEAPON_WEAR_HOLLOW : WEAPON_WEAR);
       if (creature.hp <= 0) {
-        this.send(session, wasAsleep
+        if (!avitals) this.send(session, wasAsleep
           ? `You fall on ${tmpl.name} in its sleep — one heavy blow, for ${dmg}. It never wakes.`
           : `You fall on ${tmpl.name} before it marks you — one heavy blow, for ${dmg}.`, "dmgout big");
-        await this.onCreatureDeath(session, creature, tmpl);
+        await this.onCreatureDeath(session, creature, tmpl,
+          avitals ? this.playerVitalsVerb(weapon, tmpl.name) : undefined, avitals);
         await this.ensureAlarm();
         return;
       }
@@ -1995,6 +2002,10 @@ export class ZoneDO implements DurableObject {
     }
 
     creature.hp -= dmg;
+    // A thrown point can find the heart too. Gated on the THROWN item, not on
+    // whatever is still in your hand — see playerVitals.
+    const tvitals = this.playerVitals(creature, tmpl, { tmpl: itmpl });
+    if (tvitals) creature.hp = 0;
     this.markHurt(creature, tmpl, session.pubkey);
     ai.addGrudge(this, creature, session.pubkey);
     session.target = creature.id;
@@ -2013,8 +2024,13 @@ export class ZoneDO implements DurableObject {
       }
       if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
     } else {
-      this.send(session, `You hurl ${this.gearName(itmpl.id)} — it strikes ${tmpl.name} for ${dmg}${flourish}${landing}`);
-      await this.onCreatureDeath(session, creature, tmpl);
+      // Where the thing you threw ended up is still news, so the landing is
+      // reported either way — but on a vitals hit the killing line comes from
+      // the throw, not from the damage roll.
+      if (tvitals) this.send(session, `You hurl ${this.gearName(itmpl.id)} at ${tmpl.name}.${landing}`);
+      else this.send(session, `You hurl ${this.gearName(itmpl.id)} — it strikes ${tmpl.name} for ${dmg}${flourish}${landing}`);
+      await this.onCreatureDeath(session, creature, tmpl,
+        tvitals ? this.playerVitalsVerb({ tmpl: itmpl }, tmpl.name) : undefined, tvitals);
     }
     this.refreshRoomCtx(session.roomId);
     await this.persist();
@@ -2892,6 +2908,34 @@ export class ZoneDO implements DurableObject {
     return chance(base * mult);
   }
 
+  // THE PLAYER SIDE OF THE LOTTERY, asked once for every way a player lands a
+  // blow (rome, 2026-08-17). This used to be written out inline in the combat
+  // round and NOWHERE else, so two of the three attacks in the game could not
+  // find a throat: the ambush opener and the thrown weapon rolled nothing.
+  // Both read backwards — falling on a sleeping animal is the one moment you
+  // would expect to cut a throat, and a point through the heart is what a
+  // thrown spear IS — and neither was a decision: the opener's comment rules
+  // out the CRIT ("the surprise is the crit") and never mentions vitals at all.
+  //
+  // The three exclusions below are the real ones and they are unchanged. A
+  // boss is the designed wall. The three-hound falls only to a point driven
+  // through its throat, and rarely. A HOLLOW thing has no throat to open and
+  // no heart to pierce, so only a blunt weapon that shatters the skull ends it
+  // outright — except the wights, whose dry flesh is still a BODY (GRAVE_FLESH).
+  //
+  // `weapon` is whatever did the hitting: the equipped weapon in melee, and the
+  // THROWN item on a throw — which is the honest read, and gives the rule teeth
+  // in both directions. A hurled rock is blunt and can shatter a skeleton's
+  // skull; a hurled knife is not and cannot.
+  public playerVitals(creature: Creature, tmpl: MobTemplate, weapon: { tmpl: ItemTemplate } | null | undefined): boolean {
+    if (creature.hp <= 0 || tmpl.is_boss) return false;
+    if (creature.templateId === "three-hound") return hasTrait(weapon?.tmpl, "piercing") && chance(VITALS_HOUND);
+    if (HOLLOW.has(creature.templateId) && !GRAVE_FLESH.has(creature.templateId)) {
+      return (weapon?.tmpl.stun ?? 0) > 0 && this.vitalsLottery(tmpl.armor, VITALS_PVE);
+    }
+    return this.vitalsLottery(tmpl.armor, VITALS_PVE);
+  }
+
 
 
 
@@ -3315,25 +3359,11 @@ export class ZoneDO implements DurableObject {
             this.markHurt(creature, tmpl, session.pubkey);
             // A landed blow on a crow is a stone in the pond: the murder rises.
             this.rouseCrows(session, creature);
-            // The vitals lottery, PLAYER side — a lucky killing blow on a landed
-            // hit. Bosses are the designed wall (never). The three-hound falls this
-            // way ONLY to a piercing weapon, and rarely (VITALS_HOUND). Everything
-            // else: the base rate, the mob's own armor buying it down. Drops to 0 so
-            // the kill runs the normal death path, with a weapon-aware killing line.
-            let pvitals = false;
-            if (creature.hp > 0 && !tmpl.is_boss) {
-              pvitals = creature.templateId === "three-hound"
-                // the sentinel only falls to a point driven through the throat
-                ? hasTrait(weapon?.tmpl, "piercing") && chance(VITALS_HOUND)
-                : HOLLOW.has(creature.templateId) && !GRAVE_FLESH.has(creature.templateId)
-                // no throat to open, no heart to pierce — only a blunt blow that
-                // shatters the skull ends a hollow thing outright. The wights are
-                // the exception: dry flesh doesn't bleed, but it's still a BODY —
-                // any weapon can find the killing spot on a corpse (GRAVE_FLESH).
-                ? (weapon?.tmpl.stun ?? 0) > 0 && this.vitalsLottery(tmpl.armor, VITALS_PVE)
-                : this.vitalsLottery(tmpl.armor, VITALS_PVE);
-              if (pvitals) creature.hp = 0;
-            }
+            // The vitals lottery, PLAYER side (playerVitals holds the rules, and
+            // the opener and the throw ask it too). Drops to 0 so the kill runs
+            // the normal death path with a weapon-aware killing line.
+            const pvitals = this.playerVitals(creature, tmpl, weapon);
+            if (pvitals) creature.hp = 0;
             if (creature.hp > 0) {
               // The telling reports what fired THIS beat: a crit shout trumps,
               // else the point through the plate, else a fresh wound that won't
