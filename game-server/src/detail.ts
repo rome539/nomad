@@ -1156,7 +1156,171 @@ export const OUT_QUARTER_ROOMS: Record<string, string[]> = {
 export const OUT_QUARTERS: Record<string, string> = {};
 for (const q in OUT_QUARTER_ROOMS) for (const id of OUT_QUARTER_ROOMS[q]) OUT_QUARTERS[id] = q;
 
-export const MAP_QUARTERS: Record<string, string> = { ...WOOD_QUARTERS, ...EAST_QUARTERS, ...CROSSING_QUARTERS, ...OUT_QUARTERS };
+/** THE MOUNTAIN'S TIERS. Empty until the ground exists — the table is stood up
+ *  now because the tier is not decoration here the way a wood quarter is. Three
+ *  separate systems will read it the moment the first rooms land:
+ *
+ *    - the map caption, same as every other band;
+ *    - the ambience and dark-touch pools, so a room with nothing of its own
+ *      still sounds like the height it is standing at;
+ *    - and the CREATURE SHARD. Every other band is one blob; the mountain is
+ *      planned at ~300 bodies against a 64KB-per-shard warn that lands near
+ *      200, so it shards by TIER instead (see zone.ts's shardOf). simstore has
+ *      named that answer in its own header since the rows shipped: "a finer
+ *      shard — a wood by quarter, a mountain by tier."
+ *
+ *  Which means a mountain room with no tier is not a missing caption, it is a
+ *  body in the wrong blob. Every room added gets a tier, in the same ship. */
+export const MOUNTAIN_QUARTER_ROOMS: Record<string, string[]> = {
+  // THE SUMMIT (mig 236). One room, its own shard, because the thing standing in
+  // it is the only creature in the world with per-beat state of its own and it
+  // has no business sharing a blob with 96 vultures.
+  summit: ["the-summit"],
+  // TIER FIVE — THE TERRITORY (mig 234). The ground the summit owns: warm rock
+  // with adders on it, the terraces where kills carried up from four tiers below
+  // are opened, an eyrie built to a scale nothing on the roster fits, and past
+  // all of it nine rooms of swept ground with nothing standing in any of them.
+  territory: [
+    "the-ramp-head", "the-glazed-slab", "the-warm-flags", "the-black-glass",
+    "the-run-stone", "the-heat-shimmer", "the-scald", "the-basking-flags",
+    "the-crack-line", "the-adder-shelf", "the-sun-trap", "the-warm-scree",
+    "the-thin-crack", "the-vent", "the-under-warmth", "the-dry-heat",
+    "the-first-terrace", "the-second-terrace", "the-third-terrace",
+    "the-last-terrace", "the-drag-mark", "the-scatter", "the-gorge-ground",
+    "the-picked-ground", "the-tallow-stone", "the-grease-flat", "the-crack-heap",
+    "the-white-heap", "the-eyrie-foot", "the-eyrie-ledge", "the-nest-shelf",
+    "the-eyrie-head", "the-guano-face", "the-white-wall", "the-updraught",
+    "the-lookout", "the-high-perch", "the-wind-post", "the-first-step",
+    "the-shoulder-stone", "the-tower-foot", "the-black-tower", "the-tower-gap",
+    "the-north-lip", "the-cold-side", "the-shadow-step", "the-high-notch",
+    "the-crown-edge", "the-last-crest", "the-scorched-step", "the-swept-terrace",
+    "the-ash-ground", "the-hot-flags", "the-quiet-ground", "the-bare-place",
+    "the-threshold", "the-last-shelter", "the-summit-gate", "the-red-tail",
+    "the-low-traverse", "the-south-shelf", "the-warm-gutter", "the-lower-flags",
+    "the-south-step", "the-step-up", "the-south-gully", "the-terrace-foot",
+    "the-under-terrace", "the-north-step", "the-cold-shoulder",
+    "the-shoulder-end", "the-lee-side", "the-north-crest", "the-crest-walk",
+    "the-crest-gap", "the-under-step", "the-shelf-walk", "the-warm-under",
+    "the-heat-under", "the-lower-warm",
+  ],
+  // TIER FOUR — THE HIGH GROUND (mig 232). Above the cloud, where the mountain
+  // stops producing anything and everything that lives is living on what is
+  // DELIVERED: the snowfield, the fan the whole face empties onto, the glacier
+  // that hands back what it swallowed, the red bowl with iron in it, and the
+  // swept ground above all four where nothing lives at all.
+  high: [
+    "the-upper-brim", "the-frost-face", "the-snow-brim", "the-high-neve",
+    "the-drift-foot", "the-white-slope", "the-wind-slab", "the-sun-cup",
+    "the-snow-dome", "the-broken-crust", "the-runnel", "the-hard-pack",
+    "the-blue-shadow", "the-snow-hollow", "the-snow-tongue", "the-tongue-foot",
+    "the-shelf-tail", "the-fall-fan", "the-bone-ground", "the-catch-slope",
+    "the-boulder-nose", "the-splinter-field", "the-lower-fan", "the-grey-run",
+    "the-rib-cage", "the-scoured-flat", "the-dry-bones", "the-last-fan",
+    "the-red-edge", "the-oxide-flat", "the-burnt-ground", "the-high-red",
+    "the-red-scree", "the-iron-band", "the-ochre-shelf", "the-scree-head",
+    "the-rust-slope", "the-stained-run", "the-red-gully", "the-gully-top",
+    "the-crest-step", "the-first-notch", "the-knife", "the-north-drop",
+    "the-second-notch", "the-gendarme", "the-ridge-walk", "the-wind-tooth",
+    "the-third-notch", "the-lean", "the-ridge-end", "the-last-tooth",
+    "the-ridge-drop", "the-serac-field", "the-ice-blocks", "the-crevasse-lip",
+    "the-glacier-bend", "the-white-tower", "the-blue-ice", "the-slot",
+    "the-melt-lip", "the-ice-plain", "the-drift-hollow", "the-glacier-head",
+    "the-moulin", "the-melt-run", "the-glacier-toe", "the-stone-desert",
+    "the-swept-ground", "the-pavement", "the-cold-terrace", "the-cold-plain",
+    "the-wind-cut", "the-approach", "the-shelf-under", "the-last-ground",
+    "the-summit-foot", "the-under-shelf", "the-way-up",
+    // ...and the fifth way up off the cloud line, added with tier five.
+    "the-fan-head",
+  ],
+  // TIER ONE — THE FOOT (mig 226). Sea level to the first crag: the last
+  // grazing anybody bothered with, the burn that comes down through it, the
+  // moraine the ice left, and the scree where walking stops being walking.
+  // One tier, one shard.
+  // TIER TWO — THE MIDDLE (mig 228). The corrie and its lochan, the wind-scoured
+  // north shoulder and the plateau on top of it, the snow that never goes, the
+  // sun flank where the deer are, and the burn that runs between them and spends
+  // half its length underground.
+  // TIER THREE — THE CLOUD LINE (mig 230). The height at which the mountain
+  // makes its own weather and stops letting you look at it: the ribs and the
+  // arete, a valley hanging above another valley, the permanent ice, the bare
+  // north spur, and the sun shelves that carry the last grass on the hill.
+  cloud: [
+    "the-rake-top", "the-first-buttress", "the-rib-foot", "the-rib-gap",
+    "the-second-rib", "the-scoop", "the-hanging-scree", "the-under-rib",
+    "the-fall-line", "the-arete-foot", "the-first-tower", "the-notch-of-air",
+    "the-second-tower", "the-arete-walk", "the-bad-step", "the-horns",
+    "the-arete-end", "the-drop-either-side", "the-blade", "the-valley-mouth",
+    "the-hanging-floor", "the-upper-lochan", "the-far-shore-high", "the-valley-head",
+    "the-moraine-loop", "the-outwash", "the-braided-flats", "the-till",
+    "the-step-in-the-floor", "the-valley-shoulder", "the-north-bank", "the-south-bank",
+    "the-cloud-base", "the-white-out", "the-grey-nothing", "the-inversion",
+    "the-brocken", "the-standing-cloud", "the-clear-window", "the-cloud-shelf",
+    "the-cloud-foot", "the-rising-ground", "the-neve", "the-ice-fall",
+    "the-crevasse-field", "the-blue-wall", "the-bergschrund", "the-ice-shelf",
+    "the-rime", "the-cornice", "the-cold-crest", "the-crown-step",
+    "the-north-rib", "the-spur-walk", "the-spur-head", "the-wind-scoop",
+    "the-cold-plateau", "the-frost-pavement", "the-stripe-field", "the-high-tarn",
+    "the-tarn-edge", "the-spur-end", "the-lee-drift", "the-shelf-head",
+    "the-long-shelf", "the-shelf-break", "the-upper-heather", "the-last-green",
+    "the-stone-run", "the-sun-buttress", "the-warm-gully", "the-shelf-end",
+    "the-scoop-of-grass", "the-high-spring", "the-dry-shelf", "the-south-rib",
+    "the-sun-notch", "the-terrace-end", "the-last-shelf", "the-shelf-drop",
+    "the-cold-ramp", "the-hot-ledge", "the-sun-traverse", "the-dry-ledge",
+    "the-heather-step",
+  ],
+  middle: [
+    "the-brink",
+    "the-gully-head", "the-corrie-mouth", "the-lochan", "the-lochan-shore",
+    "the-back-wall", "the-corrie-floor", "the-drift-edge", "the-old-snow",
+    "the-black-scree", "the-fallen-block", "the-corrie-lip", "the-water-lip",
+    "the-hanging-step", "the-corrie-rim", "the-upper-drift", "the-pass-head",
+    "the-shoulder-walk", "the-wind-scour", "the-stone-stripes", "the-frost-shatter",
+    "the-high-cairn", "the-shoulder-drop", "the-north-corrie", "the-snow-gully",
+    "the-cold-face", "the-plateau-edge", "the-flat-top", "the-bare-plateau",
+    "the-blown-ground", "the-wind-lane", "the-lower-band", "the-terrace",
+    "the-ledge-walk", "the-second-band", "the-broken-terrace", "the-chimney-foot",
+    "the-chimney", "the-third-band", "the-slab-nose", "the-airy-step",
+    "the-band-end", "the-rake", "the-snow-bed", "the-firn",
+    "the-melt-runnel", "the-grey-ice", "the-moat", "the-cold-shadow",
+    "the-old-drift", "the-snow-edge", "the-shattered-crown", "the-white-hollow",
+    "the-late-field", "the-sun-shoulder", "the-heather-shelf", "the-dry-corrie",
+    "the-warm-slabs", "the-basking-stone", "the-deer-lawn-high", "the-wallow",
+    "the-thin-turf", "the-rowan", "the-gravel-shelf", "the-broken-ground-high",
+    "the-sun-gully", "the-hot-scree", "the-hidden-burn", "the-cut",
+    "the-pothole", "the-sink", "the-dry-gorge", "the-resurgence",
+    "the-upper-force", "the-boulder-gate", "the-water-notch", "the-mid-shelf",
+    // The two ways up added with tier four (mig 228, rebuilt): a ramp under the
+    // pass wall and a block wedged in the foot's fissure. Both are MIDDLE — they
+    // are ways INTO this tier, and a room with no tier is a body in the wrong
+    // shard.
+    "the-slant", "the-wedge",
+  ],
+  foot: [
+    "the-track-head", "the-boulder-beach", "the-burn-mouth", "the-cobble-bank",
+    "the-first-rise", "the-wind-flat", "the-thorn-scrub", "the-lower-beck",
+    "the-alder-thicket", "the-turf-wall", "the-shieling", "the-milking-fold",
+    "the-nettle-ground", "the-hearth-stone", "the-last-pasture", "the-rush-hollow",
+    "the-stell", "the-bracken-slope", "the-cotton-grass", "the-peat-hags",
+    "the-peat-pool", "the-drowned-fence", "the-clapper", "the-beck-narrows",
+    "the-plunge-pool", "the-water-slide", "the-gravel-race", "the-fallen-birch",
+    "the-beck-fork", "the-dry-course", "the-spring-eye", "the-flood-gravel",
+    "the-lower-force", "the-force-pool", "the-boulder-field", "the-erratic",
+    "the-hollow-under", "the-moraine-bank", "the-stone-river", "the-sorted-ground",
+    "the-lichen-boulders", "the-glacier-mouth", "the-cold-hollow", "the-scree-toe",
+    "the-loose-slope", "the-fan", "the-shifting-ground", "the-rock-glacier",
+    "the-boulder-choke", "the-first-crag", "the-crag-shadow", "the-notch",
+    "the-shattered-rib", "the-gully-foot", "the-goat-track", "the-hanging-turf",
+    "the-wether-ledge", "the-high-fold", "the-shelter-crag", "the-north-scree",
+    "the-raven-stone", "the-cairn-line", "the-wind-notch", "the-bealach",
+    "the-sphagnum-flat", "the-quaking-moss", "the-sunk-boulders", "the-mire-foot",
+    "the-black-runnel", "the-slabs", "the-wet-slabs", "the-south-shoulder",
+    "the-cleft",
+  ],
+};
+export const MOUNTAIN_QUARTERS: Record<string, string> = {};
+for (const q in MOUNTAIN_QUARTER_ROOMS) for (const id of MOUNTAIN_QUARTER_ROOMS[q]) MOUNTAIN_QUARTERS[id] = q;
+
+export const MAP_QUARTERS: Record<string, string> = { ...WOOD_QUARTERS, ...EAST_QUARTERS, ...CROSSING_QUARTERS, ...OUT_QUARTERS, ...MOUNTAIN_QUARTERS };
 
 // UNDER COVER (rome, 2026-08-08). The wood is outdoors end to end — all 171
 // rooms — which is what lets rain, cold and the night dark reach it, and also

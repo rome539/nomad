@@ -65,6 +65,7 @@ export interface Session {
   lastFishAt?: number; // ms of the last fishing cast (a short patience between casts)
   lastActiveAt: number; // ms of the last real frame (or connect) — the tick's idle sweep sleeps sockets silent past IDLE_TIMEOUT_MS. Rides the socket attachment as `la` so a hibernation rebuild doesn't read a parked socket as fresh.
   wolvesHeld?: number; // how many exits the pack had taken last beat — so the CLOSING is announced, not just discovered
+  toldAirborne?: boolean; // THE SUMMIT: you have already been told it is off the ground — said once, not every beat
   rainPhaseSeen?: string; // last rain phase this session was shown the violet line for — describeRoom plays catch-up on a phase it hasn't announced to THIS player yet (walked in after it started), never repeats one already shown
 }
 
@@ -134,6 +135,10 @@ export interface Creature {
   singUntil?: number; // ms the marrow-cantor's note runs to; the hollow in earshot hold until it stops
   heldUntil?: number; // ms a hollow thing stands frozen to that note (cleared early only by the singer dying — then it just... stays)
   repositionAt?: number; // lurkers: next time it re-reads the traffic and shifts its ambush
+  breathAt?: number;      // THE SUMMIT: ms the drawn breath lands. Set = the room has been told and the clock is running (ai.drakeBeat)
+  nextBreathAt?: number;  // ...and the soonest it may draw another
+  airborneUntil?: number; // THE SUMMIT: ms it is off the ground. Nothing swung can reach it while this holds; a thrown weapon still can
+  nextAirAt?: number;     // ...and the soonest it may go up again
   hurtBy?: string[]; // BOSSES only: every pubkey whose blow drew blood — when the boss falls, all of them share the horror on their sheet (assist credit; the kill itself stays the killer's)
 }
 

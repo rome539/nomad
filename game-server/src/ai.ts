@@ -24,7 +24,9 @@ import {
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
-  PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST,
+  PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS,
+  SUMMIT_BOSS, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
+  DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
@@ -1149,12 +1151,29 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     // call site is the rate limit: it grazes the beat it crosses hungry, resets,
     // and won't be back for it until the appetite returns.
     const grazer = GRAZERS.has(creature.templateId);
-    if (grazer && (FORAGE_ROOMS.has(creature.roomId) || world.entryRooms.has(creature.roomId))) {
+    // ...AND A SCAVENGER ON CARRION GROUND (mig 232/233). Same floor, one set
+    // wider, and only on the three-and-now-more rooms that ARE carrion —
+    // never a warren, never a gate threshold, never open ground.
+    //
+    // WHY IT HAD TO EXIST BEFORE THE MOUNTAIN'S FOURTH TIER COULD SHIP: above
+    // the cloud line nothing grows, so the tier's whole thesis is that food is
+    // DELIVERED — the fan under the face collects everything that comes off the
+    // mountain, and what lives up there lives on it. Without this line that is
+    // only a description. A scavenger's sole feeding route is a corpse lying in
+    // its room, so thirty-odd of them on a tier with thirty prey would bank
+    // hunger to the cap and sit there advertising it, which is the same bug this
+    // world has now shipped three times (the crabs on the wrack, the west road's
+    // strays, the outworks' rats). The bone ground is the answer the fiction was
+    // already giving; this makes the code agree with it.
+    const carrionEater = SCAVENGERS.has(creature.templateId) && CARRION_ROOMS.has(creature.roomId);
+    if ((grazer && (FORAGE_ROOMS.has(creature.roomId) || world.entryRooms.has(creature.roomId))) || carrionEater) {
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       creature.hunger = 0;
       creature.hp = Math.min(tmpl.max_hp, creature.hp + FORAGE_HEAL);
       if (!silent) {
-        z.roomFeed(creature.roomId, THIEVES.has(creature.templateId)
+        z.roomFeed(creature.roomId, carrionEater && !grazer
+          ? `${cap(tmpl.name)} works over something old among the stones, and finds enough.`
+          : THIEVES.has(creature.templateId)
           ? `${cap(tmpl.name)} crouches in a corner, gnawing at something it has scavenged.`
           : `${cap(tmpl.name)} noses through the muck, gnawing at fungus and scraps.`, undefined, false);
         z.refreshRoomCtx(creature.roomId);
@@ -2837,12 +2856,136 @@ export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
     return true;
   }
 
+  // ---------------------------------------------------------------------------
+  // THE SUMMIT (mig 236/237). The three things the drake does that no row in a
+  // table could express. Called once per creature beat from the tick, BEFORE the
+  // ordinary round, and it returns true when it has spent the beat — a drawn
+  // breath and a body in the air are both things that happen INSTEAD of a swing,
+  // not as well as one.
+  //
+  // Everything here is arranged so the player is never hit by something they
+  // were not told about first: the breath is announced a full beat and a half
+  // ahead, in the room and to every person in it, and the room has one exit.
+export function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now: number): boolean {
+    if (creature.templateId !== SUMMIT_BOSS) return false;
+
+    // ---- the breath lands ----
+    if (creature.breathAt !== undefined && now >= creature.breathAt) {
+      creature.breathAt = undefined;
+      creature.nextBreathAt = now + DRAKE_BREATH_EVERY_MS;
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} lets it go, and the whole bowl of the summit goes white.`);
+      z.roomSound(creature.roomId, "A sound like a sail taking wind, very large, {dir}.");
+      for (const s of [...z.sessions.values()]) {
+        if (s.roomId !== creature.roomId || s.hp <= 0 || z.outOfWorld(s)) continue;
+        // ARMOR THINS IT AND NOTHING STOPS IT. Heat, not a curse — so the same
+        // mitigation every blow gets, and then it is on you. Deliberately NOT
+        // gated on canLandBlow: the dogpile cap exists so a crowd cannot be
+        // executed by a press of bodies, and this is one event from one animal
+        // that does not care how many of you there are. The telegraph is the
+        // fairness, not the cap.
+        const raw = randInt(DRAKE_BREATH_MIN, DRAKE_BREATH_MAX);
+        const dmg = Math.max(1, Math.round(raw * ARMOR_K / (z.equippedArmor(s) + ARMOR_K)));
+        s.hp -= dmg;
+        z.send(s, `The heat comes over you for ${dmg}. There was nowhere in this room to be. [${Math.max(0, s.hp)}/${s.maxHp} hp]`, "dmgin big");
+        z.sendStatus(s);
+        if (s.hp <= 0) void z.onPlayerDeath(s, tmpl);
+      }
+      z.refreshRoomCtx(creature.roomId);
+      return true;
+    }
+
+    // ---- it is holding one ----
+    // A drawn breath COSTS IT THE BEAT. That is the trade the wind-up is: for
+    // one and a half beats it is not swinging at anybody, which is the window
+    // you either spend running for the west door or spend hitting it for free.
+    // Sits above the air deliberately — without it the fall-through would let
+    // the animal launch mid-draw, and (worse) take an ordinary swing while the
+    // room had been told it was busy drawing.
+    if (creature.breathAt !== undefined) return true;
+
+    // ---- the air ----
+    // ORDER MATTERS HERE, and it is the one thing in this function that was
+    // wrong first time: the breath used to be tested before the air, so a drawn
+    // breath could start while the animal was already up, the hold-branch would
+    // eat the beats, and the airborne window would expire unnoticed — three
+    // beats off the ground delivering ONE dive instead of three. Traced on the
+    // state machine before it ever ran live. The air is the more exclusive
+    // state, so the air is asked first, and it does not breathe from up there.
+    if (creature.airborneUntil !== undefined && now < creature.airborneUntil) {
+      // It is up. It takes somebody on the way through and there is nothing to
+      // swing at — see the melee refusal in zone.ts, and the throw that still
+      // reaches it, which is the whole answer to this window.
+      const here = [...z.sessions.values()].filter((s) => s.roomId === creature.roomId && s.hp > 0 && !z.outOfWorld(s));
+      if (!here.length) return true; // everyone left or died under it — it is circling an empty bowl
+      const mark = here[randInt(0, here.length - 1)];
+      const raw = randInt(DRAKE_DIVE_MIN, DRAKE_DIVE_MAX);
+      const dmg = Math.max(1, Math.round(raw * ARMOR_K / (z.equippedArmor(mark) + ARMOR_K)));
+      mark.hp -= dmg;
+      z.send(mark, `It comes through low and you are on the ground before you hear it, for ${dmg}. [${Math.max(0, mark.hp)}/${mark.maxHp} hp]`, "dmgin big");
+      z.sendStatus(mark);
+      if (mark.hp <= 0) void z.onPlayerDeath(mark, tmpl);
+      return true;
+    }
+    if (creature.airborneUntil !== undefined) {
+      creature.airborneUntil = undefined;
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} comes down on the rock hard enough to feel through your boots, and turns round.`);
+      z.refreshRoomCtx(creature.roomId);
+      return true;
+    }
+    if (creature.hp <= tmpl.max_hp * DRAKE_AIR_AT && now >= (creature.nextAirAt ?? 0) && creature.target) {
+      creature.airborneUntil = now + DRAKE_AIR_MS;
+      creature.nextAirAt = now + DRAKE_AIR_EVERY_MS;
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} opens out and goes up, and takes the light with it. Nothing you are holding reaches it now.`);
+      z.creatureNoise(creature.roomId);
+      return true;
+    }
+
+    // ---- it draws ----
+    if (creature.breathAt === undefined && (creature.phase ?? 0) >= 1
+        && now >= (creature.nextBreathAt ?? 0) && creature.target) {
+      creature.breathAt = now + DRAKE_WINDUP_MS;
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} plants its feet, and draws a breath that goes on far too long. (the way out is west)`);
+      z.creatureNoise(creature.roomId);
+      return true;
+    }
+    return false;
+  }
+
+  /** Is the summit's animal off the ground right now? Nothing swung reaches it. */
+export function airborne(creature: Creature, now = Date.now()): boolean {
+    return creature.airborneUntil !== undefined && now < creature.airborneUntil;
+  }
+
   // The King does not mind that you came — until you make him stand.
 export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe: Session): void {
     const ratio = creature.hp / tmpl.max_hp;
     const newPhase = ratio <= 1 / 3 ? 2 : ratio <= 2 / 3 ? 1 : 0;
     if (newPhase <= (creature.phase ?? 0)) return;
     creature.phase = newPhase;
+    // THE THEATRE BELOW IS THE KING'S, AND ONLY THE KING'S (found 2026-08-19,
+    // building the summit). This function is called for EVERY is_boss — so the
+    // woodward, out in his wood, has been announcing that he "rises from the
+    // throne" and then calling a RAT out of "the dark beneath the throne", and
+    // so have the keeper, the ferryman and the marrow king. The phase itself is
+    // general and correct (it is what makes a boss hit harder as it goes down,
+    // dmg + phase*3 in the round); the words and the summon were written for one
+    // room in the fortress and never gated.
+    //
+    // Gated now. Anything without its own script climbs the phase silently,
+    // which is the right default — a thing getting worse is already legible in
+    // the damage — and the two that DO have a script say their own.
+    if (creature.templateId === SUMMIT_BOSS) {
+      if (newPhase === 1) {
+        z.roomFeed(creature.roomId, `${cap(tmpl.name)} gets its feet under it properly for the first time, and the size of it changes.`);
+        z.creatureNoise(creature.roomId);
+      } else {
+        z.roomFeed(creature.roomId, `${cap(tmpl.name)} is bleeding onto its own doorstep, and it has stopped being careful.`);
+        z.roomSound(creature.roomId, "Something very large is being hurt {dir}, and is angry about it.");
+        z.creatureNoise(creature.roomId);
+      }
+      return;
+    }
+    if (creature.templateId !== "forgotten-king") return; // phase climbs; the words stay in the throne room
     if (newPhase === 1) {
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} rises from the throne. The dark rises with him.`);
       z.send(foe, `${cap(tmpl.name)} rises from the throne. The dark rises with him.`);

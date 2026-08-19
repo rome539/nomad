@@ -611,6 +611,24 @@ export const ECO_SLOWEST = 4;      // hardest case: an empty den takes 4x as lon
 // Only the living eat. The hollow do not hunger and are not food, so the deep's
 // bone-things keep the flat clock they always had.
 export const ECO_LINES = new Set([
+  // THE MOUNTAIN, TIER FIVE (mig 235). The adder eats what crosses the warm rock
+  // and the two birds eat off the terraces; all three breathe with the tiers
+  // below them, because it is one band and one web from the shore up.
+  "stone-adder", "brooding-vulture", "eyrie-holder",
+  // THE MOUNTAIN, TIER FOUR (mig 233). The carrion tier: three of these four eat
+  // nothing they killed, and the fan is what refills them (CARRION_ROOMS).
+  "snow-fox", "carrion-vulture", "great-vulture", "mountain-chough",
+  // THE MOUNTAIN, TIER THREE (mig 231). The cloud line breathes with the two
+  // tiers under it — one band, one web, and the pack refills against the same
+  // prey stock the lynx and the eagle are already drawing down.
+  "hill-wolf", "lead-wolf", "glutton", "bone-breaker",
+  // THE MOUNTAIN, TIER TWO (mig 229). The middle breathes with the foot — same
+  // band, one web, the hunters simply get bigger the higher it goes.
+  "ermine", "eagle-owl", "snow-hare", "lynx",
+  // THE MOUNTAIN, TIER ONE (mig 227). The foot is a closed web — nothing walks up
+  // from the road, so every line here breathes against the ones beside it.
+  "ptarmigan", "mountain-hare", "red-hind", "red-stag",
+  "hill-fox", "wildcat", "hill-eagle",
   "roe-deer", "white-roe", "wild-boar", "old-boar",              // the wood's game
   "the-baited-bear", "the-chain-breaker",                        // and the thing that eats the wood's game AND the wood
   "grey-wolf", "dire-wolf",                                      // and what eats it
@@ -767,7 +785,30 @@ export const FENCE_OUT_MAX_MS = 180 * 60_000; // ...to this — "for some time",
 export const FENCE_LAST_ONE_ODDS = 0.2; // per item bought: that was his last (staples never sell out)
 export const FENCE_CHURN_MIN_MS = 20 * 60_000; // how often the shelf tops itself back up to the rotation target
 export const FENCE_CHURN_MAX_MS = 45 * 60_000;
-export const CARRION_ROOMS = new Set(["the-mass-grave", "the-bone-midden", "carrion-gallery"]);
+export const CARRION_ROOMS = new Set(["the-mass-grave", "the-bone-midden", "carrion-gallery",
+  // THE BONE GROUND (mig 232). The fan under the whole face of the mountain,
+  // where everything that comes off it arrives and is sorted by weight the way a
+  // river sorts gravel — the heavy end of it is bones, and it is the only place
+  // above the cloud line where anything eats without killing first. Seven rooms,
+  // and they are the mechanism the fourth tier's whole roster stands on: a
+  // scavenger gnaws carrion ground the way a grazer gnaws forage (ai.ts,
+  // creatureEatsHere). Not the whole fan — the fall fan and the lower fan are
+  // grit and chips, and the scoured flat is swept clean daily by its own wind.
+  // NOT the rib cage, which is a SANCTUARY. CARRION_ROOMS feeds into
+  // FORAGE_ROOMS, and FORAGE_ROOMS is what settlesHere asks — so carrion ground
+  // inside a sanctuary would make things live in the one room nothing is
+  // supposed to be able to follow you into.
+  "the-bone-ground", "the-catch-slope", "the-splinter-field", "the-grey-run",
+  "the-dry-bones", "the-under-shelf",
+  // THE KILL TERRACES (mig 234). The same mechanism one tier higher and at the
+  // SOURCE: this is not where the mountain's leavings collect, it is where they
+  // are made — kills carried up from four tiers below and opened on the same
+  // shelves year after year. Eleven rooms, which is what lets the tier stand 51
+  // scavengers up without one of them starving at the cap. NOT the eyrie ledges
+  // (a nest is not a larder) and NOT the three sanctuaries.
+  "the-first-terrace", "the-second-terrace", "the-third-terrace", "the-last-terrace",
+  "the-scatter", "the-gorge-ground", "the-picked-ground", "the-tallow-stone",
+  "the-grease-flat", "the-crack-heap", "the-white-heap"]);
 export const STOCK_REGROW_MIN_MS = 2 * 3_600_000;
 export const STOCK_REGROW_MAX_MS = 4 * 3_600_000;
 export const GRUDGE_MAX = 5;
@@ -1190,6 +1231,34 @@ export const MOUTHS = [
   "the-holly-brake", "the-fox-earths", "the-badger-ground", "the-alder-carr", // the wood, honest band
   "the-hollow-beeches", "the-grey-thicket", "the-rush-bed",      // the cores
   "the-earth-fall", "the-under-roots",                           // the sunken wood, and below it
+  // THE MOUNTAIN'S FOOT (mig 227). A refill surfaces at the mouth NEAREST its
+  // den and walks in, so a band with no mouth of its own has every one of its
+  // animals born somewhere else and marched across the world to get home — mig
+  // 187 shipped exactly that and the wood was silent twenty minutes later.
+  // Four, spread so that no corner of the tier is far from one, and every one
+  // of them a place something could plausibly come out of unseen: the hole the
+  // burn comes out of, the fissure with the dragged track at its lip, the gully
+  // that delivers, and the overhang everything on the hill has stood under.
+  // NOT the shelter crag, which is a GATE (mig 226). A mouth is where a refill
+  // SURFACES, and applyArrivals filters entry rooms out of a line's HOMES but
+  // never out of the mouths — so a gate on this list mints bodies on its own
+  // doorstep, every refill, forever. Same shape as the two sanctuary mouths
+  // already standing in the wood (the fox earths, the under-roots), which are a
+  // real bug and not a precedent. The crag shadow does the job instead: a strip
+  // under the wall where things arrive from above all day anyway.
+  "the-glacier-mouth", "the-cleft", "the-gully-foot", "the-crag-shadow",
+  // TIER TWO (mig 229). Same rule, one tier up: the cleft that splits the wall
+  // top to bottom, the trench between the snowfield and the rock, the hole the
+  // burn goes into, and the black scree, which is loose enough to come out of.
+  // None of them is safe ground — a mouth inside a sanctuary would mint bodies
+  // in the one room nothing is allowed to walk into.
+  "the-chimney-foot", "the-moat", "the-sink", "the-black-scree",
+  // TIER THREE (mig 231). Same rule, one tier higher, and the ice makes it
+  // easier: the gap between the glacier and the rock, the hole the meltwater
+  // comes out of under the moraine, a slope of stone loose enough to come out
+  // of, and the gap between two ribs. None of them a sanctuary — a mouth inside
+  // one mints bodies in the single room nothing may walk into.
+  "the-bergschrund", "the-outwash", "the-stone-run", "the-rib-gap",
   "the-wolf-pits", "the-icehouse",                               // the far side
   // THE EAST ROAD AND THE CROSSING GET THEIR OWN EDGES (2026-08-11). The
   // surface expansion of migs 187-191 shipped with NO mouth east of the
@@ -1454,6 +1523,14 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // can bolt, bolts — so the rarest thing on the surface is the one that stands in
 // the open and looks back at you. Its whole effect is the omission.
 export const RUNNERS = new Set(["fleet-rat", "roe-deer",
+  // THE MOUNTAIN, TIER FOUR (mig 233). It shouts and it goes; it does not fight
+  // and it never joins one.
+  "mountain-chough",
+  // THE MOUNTAIN, TIER TWO (mig 229).
+  "snow-hare",
+  // THE MOUNTAIN, TIER ONE (mig 227). The stag is the exception and the point of him:
+  // everything else on that hill has a plan for you and he simply does not.
+  "ptarmigan", "mountain-hare", "red-hind",
   // THE WHITE ROE RUNS TOO (2026-08-12). It was left out when it was written,
   // so the rarest deer in the wood was the one that STOOD — a variant quietly
   // behaving like a different animal than its own line, which is the one thing
@@ -1505,7 +1582,24 @@ export const WAKE_NOISE = 0.8;  // a fight in the room is almost unmissable
 export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
 // SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing
 // and — past BOLD — losing their nerve entirely: they stop fleeing and hit harder.
-export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf"]);
+export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf",
+  // THE MOUNTAIN, TIER THREE (mig 231). The glutton takes carrion off whatever
+  // made it, which is most of how it eats. The bone-breaker is the one line in
+  // the game that scavenges and hunts NOTHING — it has no PREYS_ON row at all,
+  // so this set is its only feeding route and losing it starves the bird.
+  "glutton", "bone-breaker",
+  // ...and the pack, which finishes what it did not start as readily as a hyena.
+  "hill-wolf", "lead-wolf",
+  // THE MOUNTAIN, TIER FIVE (mig 235). Both eyrie birds work the terraces like
+  // everything else up there — a holder is not a hunter that happens to nest, it
+  // is a scavenger that happens to be enormous.
+  "brooding-vulture", "eyrie-holder",
+  // THE MOUNTAIN, TIER FOUR (mig 233). The whole point of the tier. None of
+  // these three hunts for a living: the fox follows bigger things and takes what
+  // is left, and both vultures have no PREYS_ON row at all, exactly like the
+  // bone-breaker. On this tier SCAVENGERS is not a supplementary route, it is
+  // the economy — and it only works because the bone ground is CARRION_ROOMS.
+  "snow-fox", "carrion-vulture", "great-vulture"]);
 // VERMIN eat the dead too — but only to SURVIVE, none of the hyena's package.
 // Rats had no food at all (not predators, not scavengers), so they sat pinned at
 // max hunger, forever "restless with hunger" (rome, 2026-07-17: "what are rats
@@ -1514,6 +1608,17 @@ export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf", "di
 // or gorge itself bold into a threat (all of that stays gated on SCAVENGERS).
 // The bone rooms clean their own dead; the rat just doesn't starve in them.
 export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",
+  // THE MOUNTAIN, TIER FOUR (mig 233). A chough is a crow: it eats what it finds
+  // dead as readily as what it finds alive, and above the cloud line "what it
+  // finds dead" is the entire menu. Not SCAVENGERS — it gets none of that
+  // package (no hauling, no gorging bold, no mourning); it just does not starve.
+  "mountain-chough",
+  // THE MOUNTAIN, TIER TWO (mig 229). A stoat eats what it finds as readily as what
+  // it kills, and on a snowfield that is most of it.
+  "ermine",
+  // THE MOUNTAIN, TIER ONE (mig 227). A fox eats what it finds dead, and up here that
+  // is most of what there is to find.
+  "hill-fox",
   // THE CARRION EATERS OF THE SURFACE (mig 188/191). A crab and a raven eat the
   // dead to survive — that is what VERMIN is, and it is the one honest route for
   // a thing that will not come to a player or a graze. Without this they banked
@@ -1813,7 +1918,15 @@ export const NAPPERS = new Set([
 // The grey seal is NOT here: it hauls out to sleep in the daylight, which is
 // the joke the original line was written for, and it forages on the tide rather
 // than the hour. The birds are not here for the obvious reason.
-export const NOCTURNAL = new Set(["otter", "dog-otter", "conger", "old-conger", "ford-eel", "silver-eel", "wrack-crab", "devil-crab", "bittern"]);
+export const NOCTURNAL = new Set(["otter", "dog-otter", "conger", "old-conger", "ford-eel", "silver-eel", "wrack-crab", "devil-crab", "bittern",
+  // THE MOUNTAIN, TIER ONE (mig 227). Both of the foot's small hunters work the dark.
+  "hill-fox", "wildcat",
+  // THE MOUNTAIN, TIER TWO (mig 229). An owl and a cat, which is the whole night shift.
+  "eagle-owl", "lynx",
+  // THE MOUNTAIN, TIER THREE (mig 231). The pack works the edges of the day, and
+  // the glutton keeps no hours at all — it is on this list because the dark is
+  // when it goes round the kills.
+  "hill-wolf", "lead-wolf", "glutton"]);
 // HOW EACH OF THEM LIES UP. The generic line is "curled nose-to-tail, fast
 // asleep", which is a mammal on a floor and is the right picture for a rat, a
 // deer or an otter — and nonsense for a crab, an eel or a bird. A shore where
@@ -1900,7 +2013,19 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
   // a crueller trick than the west road's single ford ever was. Every thirsty
   // thing on this shore has to come to one of two places, and both of them are
   // known, and one of them is inside the gate's own yard.
-  "the-cold-spring", "the-well-yard"]);
+  "the-cold-spring", "the-well-yard",
+  // ---- THE MOUNTAIN (migs 229, 231). Water at altitude is not scarce, it is
+  // FIXED: the lochans and the tarn cannot move and cannot be crossed, so every
+  // thirsty thing on the hill keeps the same appointment at the same three
+  // places, and anything that wants to meet them knows where to stand.
+  "the-upper-lochan", "the-high-tarn", "the-high-spring",
+  // TIER FOUR (mig 233). One channel, dry by dark, and everything on the high
+  // ground knows the hour.
+  "the-melt-run",
+  // TIER FIVE (mig 235). A hollow in the top of one boulder that holds rain, and
+  // it is the last drinkable water on the mountain. Every mouth on the territory
+  // comes to this one stone.
+  "the-shoulder-stone"]);
 // WHO DRINKS. Was the scavengers alone, which left the wood's waters — the
 // Black Pool, the Brown Water, the Drinking Pool, eleven wet rooms of fen —
 // as ambush ground with nothing to ambush. Prey drinks too, and now the two
@@ -1909,6 +2034,20 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
 // The boar is on the list because a boar in water is a boar WALLOWING, which
 // is the other thing a boar is for.
 export const DRINKERS = new Set([
+  // THE MOUNTAIN, TIER FOUR (mig 233). The melt run is the only water above the
+  // cloud line and it runs for about an hour a day, which makes it the most
+  // reliable appointment on the mountain.
+  "snow-fox", "carrion-vulture", "great-vulture",
+  // TIER FIVE (mig 235). The holder drinks at the shoulder stone like everything
+  // else. The brooder does not: it is on the nest and it stays on the nest.
+  "eyrie-holder",
+  // THE MOUNTAIN, TIER THREE (mig 231). The pack drinks, and drinking is where a
+  // pack is most visible — every wolf on the tier at one of three fixed waters.
+  "hill-wolf", "lead-wolf", "glutton",
+  // THE MOUNTAIN, TIER TWO (mig 229). The lochan and the burn.
+  "lynx", "snow-hare",
+  // THE MOUNTAIN, TIER ONE (mig 227). The burn is the only water on the hill.
+  "red-hind", "red-stag", "mountain-hare",
   "grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf",        // what already drank
   "roe-deer", "white-roe", "wild-boar", "old-boar",             // the wood's game
   "the-baited-bear", "the-chain-breaker",                       // the beck is the one place on the east road you can count on meeting it
@@ -1943,6 +2082,15 @@ export const DINNER_LAUGH_ODDS = 0.35;
 // (calledTo), the bark rides its own channel and never creatureNoise, so there
 // are no cascades.
 export const ALARM_CALLERS = new Set(["roe-deer", "white-roe",
+  // THE MOUNTAIN, TIER ONE (mig 227). A ptarmigan does not call — it LEAVES, loudly,
+  // and that is the same service rendered by a bird with no voice for it.
+  "ptarmigan",
+  // THE CHOUGH (mig 233). The only line in the game whose ENTIRE purpose is
+  // this set. It is 12hp of nothing, it cannot hurt you, and it follows you
+  // across the high ground screaming — so on the tier where every mouth is
+  // looking for something already dead, the chough is what tells them where you
+  // are before you have finished arriving.
+  "mountain-chough",
   // The heron (mig 188): the loudest departure of any animal in the game, and
   // the beck's early-warning system for everything living on it.
   "grey-heron",
@@ -1952,6 +2100,9 @@ export const ALARM_CALLERS = new Set(["roe-deer", "white-roe",
   // of them decides you are close, every living thing on the flats is told.
   "oystercatcher"]);
 export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "otter", "dog-otter", "feral-goat", "old-billy",
+  // THE MOUNTAIN (migs 227-233). The game up here takes a warning the same as
+  // the game anywhere else, and on open snow with no cover it is worth more.
+  "mountain-hare", "snow-hare", "red-hind", "red-stag",
   "grey-seal", "bull-seal", "marsh-hound", "a-lymer", "ford-eel", "silver-eel"]); // the game takes the warning
 export const ALARM_AVOID_MS = 20 * 60_000;  // warned game keeps off that ground twenty minutes
 export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters next door come to look
@@ -2004,7 +2155,18 @@ export const PACK_CALLERS = new Set(["grey-wolf", "dire-wolf", "masterless-dog",
   // The marsh hounds (mig 191): the same training, gone the same way, in worse
   // country. In the reed a called-in second dog is not a second dog — it is a
   // dog you cannot see arriving.
-  "marsh-hound", "a-lymer"]);
+  "marsh-hound", "a-lymer",
+  // THE MOUNTAIN, TIER THREE (mig 231). The tier is built round this line. Cloud
+  // sits on this ground all day, so a called-in second wolf is not a second wolf
+  // — it is a wolf you never watched arrive.
+  "hill-wolf", "lead-wolf",
+  // THE MOUNTAIN, TIER FOUR (mig 233). A wake is never one bird and the calling
+  // is how it stops being one. Note what this also buys, in ai.ts: PACK_CALLERS
+  // is the exception that lets a SCAVENGER join a fight already happening in its
+  // room — so the vultures standing round a carcass you have walked into come in
+  // rather than watching, which is the correct behaviour for the only animal on
+  // this tier that has numbers.
+  "carrion-vulture", "great-vulture"]);
 // WOLVES CUT THE LINES OF RETREAT (rome, 2026-08-08: "the more you fight
 // together, they start closing room exits — 2 wolves equals 1 exit closed, 3 is
 // 2 exits closed").
@@ -2108,6 +2270,67 @@ export const LURKER_DRIFT_MS = 3 * 3_600_000;
 // Effect: predators thin the herds the brood-mothers swell, and a player can
 // throw bait to start a scrap and slip past. Read/applied in ai.ts (predation).
 export const PREYS_ON = new Map<string, Set<string>>([
+  // THE MOUNTAIN'S FOOT (mig 227). The band is not in MIGRATE_BANDS, so nothing
+  // walks up here to feed anything: this web has to close on its own ground or
+  // the whole tier sits at the hunger cap. Statlines, by the law this table has
+  // always kept — the predator outstats the prey ALONE, or it needs the pack:
+  //
+  //     ptarmigan 10hp 1-2 · hare 12hp 1-2 · goat 26hp 2-5
+  //     fox 22hp 2-4 · wildcat 28hp 4-7 · eagle 34hp 4-7
+  //
+  // The eagle is the only one given the goat, and 34/4-7 against 26/2-5 is a
+  // real edge rather than a generous one. A bird that size taking a goat off a
+  // ledge is the least surprising thing on any mountain there has ever been.
+  // NOTHING IS GIVEN THE HIND OR THE STAG. At 30 and 48hp they are out of reach
+  // of everything on this tier, which is true of a grown red deer and is also
+  // the tier telling you what it is: the animals that can take one live higher.
+  ["hill-fox", new Set(["mountain-hare", "ptarmigan"])],
+  ["wildcat", new Set(["mountain-hare", "ptarmigan"])],
+  ["hill-eagle", new Set(["mountain-hare", "ptarmigan", "feral-goat"])],
+  // TIER TWO (mig 229). The first predator on this mountain big enough for a
+  // deer — and still not big enough for the stag, which at 48hp/4-8 outweighs a
+  // lynx in every sense that matters. A lynx takes hinds and calves. The animal
+  // that can have HIM lives higher than this, and that is the tier telling you
+  // where you are rather than a gap in the table.
+  ["lynx", new Set(["red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan"])],
+  // The owl takes the stoat, which is the one honest way to put a predator on
+  // top of another predator at this size: 40hp/5-8 against 18hp/3-5, at night,
+  // silently, is not a fight the stoat is in.
+  ["eagle-owl", new Set(["mountain-hare", "snow-hare", "ptarmigan", "ermine"])],
+  ["ermine", new Set(["mountain-hare", "snow-hare", "ptarmigan"])],
+  // TIER THREE (mig 231). THE STAG STOPS BEING UNTOUCHABLE, and the two notes
+  // above have been promising exactly this since the foot shipped. One hill wolf
+  // is a smaller animal than a lynx and takes what a fox takes; what changes is
+  // that there are seven of them and they call. The hind, the goat and the stag
+  // are all in PACK_PREY instead, behind a strength requirement.
+  ["hill-wolf", new Set(["mountain-hare", "snow-hare", "ptarmigan"])],
+  // The lead wolf is the one animal on this mountain that has the stag alone.
+  // 54hp/6-9 against 48hp/4-8 is a thin edge and that is the correct width of
+  // it: he wins, and not easily, and he is rare blood off a refill rather than a
+  // population.
+  ["lead-wolf", new Set(["red-stag", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan"])],
+  // The glutton kills small and EATS big — SCAVENGERS is where it actually
+  // feeds, off whatever the wolves left. The stoat is on the list for the same
+  // reason the owl has it: 50hp/6-9 against 18hp/3-5 is not a fight.
+  ["glutton", new Set(["ermine", "mountain-hare", "snow-hare", "ptarmigan"])],
+  // TIER FOUR (mig 233). One row, because one of the tier's four new lines
+  // hunts at all. 26hp/3-5 against a chough at 12/1-2 and a hare at 12/1-2 is
+  // clean, and it is still not how the fox mostly eats — SCAVENGERS is.
+  ["snow-fox", new Set(["mountain-chough", "mountain-hare", "snow-hare", "ptarmigan"])],
+  // TIER FIVE (mig 235). One row again. The adder takes what crosses its rock
+  // and nothing else — 22hp/4-7 against a 12hp bird is not a contest, and it is
+  // the only way a thing that never moves gets to eat something that does.
+  ["stone-adder", new Set(["mountain-chough", "ptarmigan", "ermine"])],
+  // NEITHER EYRIE BIRD HAS A ROW. They are SCAVENGERS and AGGRESSIVE, which is a
+  // different thing from a hunter: they will have YOU for standing on the ledge
+  // and they will not chase a hare across open ground for a living.
+  // NEITHER VULTURE HAS A ROW, deliberately, and for the same reason the
+  // bone-breaker does not: an animal that has never killed anything should not
+  // be given a prey map because the table has a column for one.
+  // THE BONE-BREAKER HAS NO ROW HERE, deliberately. It is the only line in the
+  // game that scavenges and hunts nothing at all, and SCAVENGERS is its whole
+  // feeding route (mig 231). If a later tier gives it prey, the animal stops
+  // being the idea it was written to be.
   // THE EAST ROAD HAS A FOOD WEB ON PURPOSE (mig 188). The migration gate
   // refuses any animal a destination that cannot feed it, which is the census
   // check that caught the wood being the only working web — so a new band that
@@ -2259,6 +2482,12 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   ["grave-hyena", new Map([["roe-deer", 2], ["great-gull", 2]])],  // a lone hyena harries a roe; a pair brings it down — and the gull is the one shore animal it cannot bully alone
   ["dire-hyena", new Map([["grey-wolf", 2]])],  // ...and it takes two of them to push a wolf off a kill
   ["masterless-dog", new Map([["feral-goat", 2], ["great-gull", 2]])], // one stray circles a goat; two bring it down — and the gull is bigger than either of them
+  // THE MOUNTAIN, TIER THREE (mig 231). The whole point of putting a pack on
+  // this mountain: one hill wolf takes hares, two take the goat and the hind,
+  // and THREE take the stag that nothing below could touch. Read down the
+  // numbers and the tier's difficulty curve is written in them — it is not that
+  // the wolves are strong, it is that there are enough of them.
+  ["hill-wolf", new Map([["feral-goat", 2], ["red-hind", 2], ["red-stag", 3]])],
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // A LANDED BITE HOLDS (rome, 2026-08-08: "the landed bite lets go sometimes —
@@ -2304,6 +2533,18 @@ export const BREAK_LINES = [
 // for them starvation has nowhere to go but your torchlight. (three-hound is a
 // SENTINEL and takes the room on its own terms — it stays out.)
 export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf",
+  // THE MOUNTAIN, TIER THREE (mig 231). The pack past the end of its clock, and
+  // the glutton, which was never especially interested in whether you were
+  // hungry-adjacent or not. The bone-breaker is NOT here and never will be: it
+  // eats bone, and you are not bone yet.
+  "hill-wolf", "lead-wolf", "glutton",
+  // THE MOUNTAIN, TIER TWO (mig 229). The lynx does not gather itself first — see
+  // LURKERS. The owl you will not hear at all.
+  "lynx", "eagle-owl",
+  // THE MOUNTAIN, TIER ONE (mig 227). Neither of these wants you. Past the end of the
+  // clock the eagle is chest-high and the cat is already flattened against the
+  // rock you are walking past.
+  "hill-eagle", "wildcat",
   "drove-dog", "the-drove-master",
   "marsh-hound", "a-lymer", "grey-seal", "bull-seal", "great-gull", "black-backed-gull",
   // THE BEAR DOES NOT HUNT YOU — UNTIL IT IS HUNGRY (mig 215). It is not in
@@ -2437,7 +2678,13 @@ export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", 
 // anywhere, because it is terrain that turns out to be alive. Both halves have
 // answers you already carry — a lurker wakes on entry and noise odds, so a
 // quiet pack walks past one, and it fears a torch.
-export const ROOTED = new Set(["root-thing"]);
+export const ROOTED = new Set(["root-thing",
+  // THE MOUNTAIN, TIER FIVE (mig 235). Two things that are PART OF THE GROUND in
+  // the plainest sense of this set: an adder lying on warm rock is not going to
+  // be anywhere else today, and a bird that has been sitting a nest for six
+  // weeks is not going to start wandering now. Neither is drawn by noise,
+  // neither joins a scrum, and neither ever leaves the room it belongs to.
+  "stone-adder", "brooding-vulture"]);
 
 // FIREKEEPERS tend a fire, and the fire is REAL — the room they are standing in
 // is lit for everyone in it, and an open flame will catch there even in rain.
@@ -3139,16 +3386,42 @@ export const MOB_VITALS: Record<string, string[]> = {
 // (No oystercatcher: it is prey, it stays PLAIN, and these three Sets only ever
 // refine what is already in BITERS — they never promote a thing into biting.)
 export const BEAKS = new Set([
+  // THE MOUNTAIN, TIER FIVE (mig 235).
+  "brooding-vulture", "eyrie-holder",
+  // THE MOUNTAIN, TIER FOUR (mig 233). Two bills built for opening a carcass and
+  // one built for shouting.
+  "carrion-vulture", "great-vulture", "mountain-chough",
+  // THE MOUNTAIN, TIER THREE (mig 231). A bill built to open a carcass rather
+  // than to kill anything with.
+  "bone-breaker",
+  // THE MOUNTAIN, TIER TWO (mig 229). The night shift, where the eagle is the day one.
+  "eagle-owl",
+  // THE MOUNTAIN, TIER ONE (mig 227). The bird that carries things off, and the
+  // bird that gives you away by leaving.
+  "hill-eagle", "ptarmigan",
   "great-gull", "black-backed-gull", "bittern", "grey-heron",
   "gibbet-crow", "scarp-raven",
 ]);
 export const COILS = new Set([
   "conger", "old-conger", "ford-eel", "silver-eel", "fen-viper", "gill-adder",
+  // THE MOUNTAIN, TIER FIVE (mig 235). The only cold-blooded thing in this world
+  // above the snow line, and it is up there because the rock is warm.
+  "stone-adder",
 ]);
 export const SMALL_BITE = new Set([
   "rat", "fleet-rat", "brood-rat", "albino-rat", "wrack-crab", "devil-crab",
 ]);
 export const BITERS = new Set([
+  // THE MOUNTAIN, TIER FOUR (mig 233).
+  "snow-fox",
+  // THE MOUNTAIN, TIER THREE (mig 231). The pack, and the thing that takes the
+  // pack's kill off it.
+  "hill-wolf", "lead-wolf", "glutton",
+  // THE MOUNTAIN, TIER TWO (mig 229). The cat that takes deer, and the stoat that
+  // takes things it has no business taking.
+  "lynx", "ermine",
+  // THE MOUNTAIN, TIER ONE (mig 227).
+  "hill-fox", "wildcat",
   "rat", "fleet-rat", "brood-rat", "albino-rat", "grave-hyena", "dire-hyena", "pale-crawler", "pale-stalker",
   "three-hound", // three sets of teeth at the throat of the deep
   "two-hound",   // two sets, same throat
@@ -3196,7 +3469,19 @@ export const SENTINELS = new Set(["three-hound", "two-hound"]);
 // the one room in the honest band you cannot cross casually. The keeper holds
 // the hall floor of the holding for the same structural reason the watchman
 // holds his turret: it is his.
+// The summit's animal, named here because three sets below reference it.
+export const SUMMIT_BOSS = "the-drake";
 export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding", "the-miller",
+  // THE SUMMIT (mig 237). Once it is a fight it holds its ground like everything
+  // else on this list, and is_boss already stops it wandering off its mountain.
+  SUMMIT_BOSS,
+  // THE MOUNTAIN, TIER FIVE (mig 235). The first two animals on this mountain
+  // that come at you for no reason except that you are standing there — and both
+  // for the same structural reason the watchman holds his turret: the ledge is
+  // the only thing either of them has. The brooder is ROOTED with it, so it
+  // commits without ever leaving the nest; the holder owns the whole face and
+  // will not be lured off it by noise elsewhere.
+  "brooding-vulture", "eyrie-holder",
   // THE CROSSING (mig 191): three that hold a workplace rather than a post. The
   // mason and the widow are AT WORK and you are in it; the gull simply has a
   // pier, and has never in its life conceded anything to anybody.
@@ -3209,7 +3494,53 @@ export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "th
 // and a crowded one is suicide). The player-side `sweep` weapon trait is the
 // same idea aimed the other way; this is its mob half, and like the player half
 // it punishes grouping — the narrow span is the whole fiction of a bridge.
-export const SWEEPERS = new Set(["the-bridge-mason"]);
+export const SWEEPERS = new Set(["the-bridge-mason",
+  // THE SUMMIT (mig 237). A thing that size does not aim at one of you. Same
+  // rule as the mason's mallet and the same reason: it punishes standing
+  // together, and the summit is one open bowl with nothing to stand behind.
+  SUMMIT_BOSS]);
+
+// ---------------------------------------------------------------------------
+// THE SUMMIT (mig 236/237). One room, one animal, and the only creature in this
+// world that needed code rather than a row in a table.
+//
+// IT IS AN ANIMAL. That is the standing ruling and every number below serves it:
+// it has a territory it will not leave, a nest it sweeps, prey it carries home
+// from four tiers down, and no hoard, no speech and nothing to bargain with.
+// What makes it the hardest fight in the game is not its statline — at 150hp it
+// is 25 above the fortress's king and it hits for 8-13, which is inside the
+// table the whole world is measured against. It is the THREE THINGS IT DOES.
+//
+//   THE BREATH. Telegraphed a full round ahead (DRAKE_WINDUP_MS ~ one and a
+//   half combat beats), then it lands on EVERYONE in the room at once and
+//   ignores the dogpile cap, because a breath is one event and not a press of
+//   bodies. Armor still thins it — it is heat and not a curse — but there is no
+//   blocking it and no dodging it. The counterplay is the telegraph: you get
+//   told, and the room has one exit, and you can be through it.
+//
+//   THE ARC. It is a SWEEPER, so every landed blow drags through everyone else
+//   standing there. Two people on the summit is a worse idea than one.
+//
+//   THE AIR. Past the last third it goes up, and while it is up nothing you
+//   swing can reach it — the fight stops being a fight and becomes a count. It
+//   comes down on somebody at the end of it. A THROWN weapon still reaches it,
+//   which is the one answer, and it is the only place in this game where the
+//   throw is not a luxury.
+//
+// WHY THE AIRBORNE WINDOW IS SHORT. It reads as "you cannot fight back" and
+// that is exactly what it is, so it is 3 beats, once per DRAKE_AIR_EVERY_MS,
+// and only in the last third of its health. Long enough to be a bad thing that
+// is happening; not long enough to be a wall you stand at.
+// (SUMMIT_BOSS itself is declared a few lines up, because SWEEPERS names it.)
+export const DRAKE_WINDUP_MS = 6_000;        // the breath is announced this long before it lands (~1.5 combat beats)
+export const DRAKE_BREATH_EVERY_MS = 42_000; // and no oftener than this, so it is an event and not a rhythm
+export const DRAKE_BREATH_MIN = 9;
+export const DRAKE_BREATH_MAX = 16;
+export const DRAKE_AIR_MS = 12_000;          // 3 combat beats off the ground
+export const DRAKE_AIR_EVERY_MS = 75_000;
+export const DRAKE_AIR_AT = 1 / 3;           // ...and never before the last third of its health
+export const DRAKE_DIVE_MIN = 7;
+export const DRAKE_DIVE_MAX = 12;
 
 // MARKERS brand you. The toll clerk (mig 188) has had his hand out for two
 // centuries, and when he lands a blow the road knows your face: while the mark
@@ -3308,6 +3639,22 @@ export const HOUND_WAKE_MS = 900_000; // 15 minutes
 // exactly as dangerous as it was. And you can't hunt what runs from you: pelts,
 // haunches and tusks now come to whoever walks in by lantern-light, or by none.
 export const FEARS_FIRE = new Set([
+  // THE SUMMIT (mig 237) is NOT here and never will be. A torch is not an
+  // argument with the thing that glazed the rock it is lying on.
+  // THE MOUNTAIN, TIER FIVE (mig 235). The adder is NOT here: it does not flee
+  // anything, it is not going anywhere, and a torch on the warm flags changes
+  // nothing at all about the ground you have to cross.
+  "brooding-vulture", "eyrie-holder",
+  // THE MOUNTAIN, TIER FOUR (mig 233).
+  "snow-fox", "carrion-vulture", "great-vulture", "mountain-chough",
+  // THE MOUNTAIN, TIER THREE (mig 231). Every animal up here gives fire the same
+  // room, including the pack — a wolf that has never seen a person has certainly
+  // never seen a flame.
+  "hill-wolf", "lead-wolf", "glutton", "bone-breaker",
+  // THE MOUNTAIN, TIER TWO (mig 229).
+  "ermine", "eagle-owl", "snow-hare", "lynx",
+  // THE MOUNTAIN, TIER ONE (mig 227). Wild animals, every one.
+  "ptarmigan", "mountain-hare", "red-hind", "red-stag", "hill-fox", "wildcat", "hill-eagle",
   "albino-rat",
   "feral-goat", "old-billy", "otter", "dog-otter", "grey-heron", "scarp-raven", // the east road's wild things
   "oystercatcher", "great-gull", "black-backed-gull", "bittern", "grey-seal", "bull-seal", "wrack-crab", "devil-crab", "fen-viper", "marsh-hound", "a-lymer", // the crossing's
@@ -3469,6 +3816,38 @@ export const SURFACE_FORAGE = new Set([
   "the-crossroads-grave", "the-hanging-hill",
   // And the fen, which is the only wet ground up here.
   "the-black-fen",
+  // THE MOUNTAIN'S FOOT (mig 227). Curated hard, and the band is deliberately
+  // kept OUT of FORAGE_REGIONS, because that table folds in every room of a band
+  // (see init) and most of a mountain is bare rock, scree and standing water. A
+  // blanket add would have a hind grazing a boulder choke.
+  //
+  // These fourteen are the ones that genuinely grow something: the last good
+  // grass, the wet flushes, the heather and bracken, the ledge everything on the
+  // hill comes to, and the moss beds on the south flank. It is enough to carry
+  // four grazing lines at density 0.4 and not a room more than that.
+  "the-wind-flat", "the-last-pasture", "the-rush-hollow", "the-bracken-slope",
+  "the-cotton-grass", "the-peat-hags", "the-thorn-scrub", "the-goat-track",
+  "the-hanging-turf", "the-wether-ledge", "the-high-fold",
+  "the-sphagnum-flat", "the-quaking-moss", "the-mire-foot",
+  // TIER TWO — THE MIDDLE (mig 229). Thinner than the foot's, because the ground
+  // is: a corrie floor, the ledges that carry the only grass on that face, the
+  // deer lawn and the wallow and the heather on the warm side, and the cushion
+  // plants on the plateau, which are barely food but are what a ptarmigan lives
+  // on. Everything else up here is rock, snow or standing water.
+  "the-corrie-floor", "the-terrace", "the-second-band", "the-third-band",
+  "the-heather-shelf", "the-dry-corrie", "the-deer-lawn-high", "the-wallow",
+  "the-thin-turf", "the-bare-plateau", "the-blown-ground", "the-flat-top",
+  // TIER THREE — THE CLOUD LINE (mig 231). Thinner again, and split between the
+  // two places on this tier that grow anything: the sun shelves on the south
+  // side, and the floor of the hanging valley where the meltwater spreads out.
+  // Everything else at this height is rock, ice or cloud. The spur's three are
+  // lichen and cushion plants rather than grass — barely food, and exactly what
+  // a ptarmigan lives on, which is why the ptarmigan are up there and the deer
+  // are not.
+  "the-upper-heather", "the-last-green", "the-scoop-of-grass", "the-high-spring",
+  "the-warm-gully", "the-long-shelf",
+  "the-hanging-floor", "the-braided-flats", "the-till", "the-moraine-loop",
+  "the-cold-plateau", "the-stripe-field", "the-frost-pavement",
 ]);
 export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS, ...SURFACE_FORAGE]);
 // WHO EATS THE GROUND. Was the bare union VERMIN + THIEVES, written inline at
@@ -3476,6 +3855,12 @@ export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS, ...SURF
 // animal before it is anything else. Named here so the next grazer is one line
 // and not a hunt through ai.ts.
 export const GRAZERS = new Set<string>([
+  // THE MOUNTAIN, TIER TWO (mig 229).
+  "snow-hare",
+  // THE MOUNTAIN, TIER ONE (mig 227). The mountain feeds its own, and only where
+  // the ground actually grows something (SURFACE_FORAGE below) — the band is
+  // deliberately NOT a FORAGE_REGION, because most of it is bare rock.
+  "ptarmigan", "mountain-hare", "red-hind", "red-stag",
   "feral-goat", "old-billy",                                             // it eats what the scarp has, which is nothing much
   "rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",   // VERMIN
   "cutpurse", "cutthroat", "footpad", "wayman",               // THIEVES — they scavenge, not graze, but same floor
@@ -4356,6 +4741,13 @@ export const VITALS_ARMOR_FULL = 11;  // total armor that counts as 'fully cover
 export const VITALS_THREATS = new Set<string>([
   "three-hound", "two-hound", "pale-stalker", "pale-crawler", "the-drowned", "drowned-hulk",
   "marrow-cantor", "warden-captain", "forgotten-king", "marrow-king", "drowned-god",
+  // THE SUMMIT (rome, 2026-08-19). I built it OFF this list and argued the
+  // distance: five tiers from a gate with everything you own on your back, an
+  // instant kill on beat forty reads as a slot machine rather than a fight. He
+  // ruled the other way and the ruling stands — every other boss in this world
+  // can find the gap, and the biggest animal in it does not get an exemption
+  // because the walk home is long. The walk home being long is the region.
+  SUMMIT_BOSS,
 ]);
 // The PLAYER side of the vitals lottery. Bosses are the designed wall — never.
 // Every other mob can fall to a lucky killing blow (its own armor buys the odds
@@ -5724,8 +6116,30 @@ export const MAP_BAND_OF: Record<string, number> = {
 // (players.keeper_told), so it resumes across sessions and devices, and past
 // the last line he starts the story again from the top.
 //
-// The mountain gets its telling when the mountain gets its gate.
+// THE MOUNTAIN HAS ITS GATE NOW (mig 226/227), so it has its telling — and the
+// telling had to answer the region's ruling rather than decorate it. Every other
+// keeper in this game explains an INSTITUTION: a garrison, a road authority, a
+// crossing's five trades, a manor and its pale. There is no institution on the
+// mountain and there never was, so the man in the shieling has nothing to
+// explain and knows it. What he has instead is the only thing anybody who went
+// up ever brought back down: the shape of what is not yours.
 export const GATE_TELLINGS: Partial<Record<Region, string[]>> = {
+  // THE MOUNTAIN. He is the last person on the hill and the story he tells is
+  // about being the last person on the hill. Note what he never does: name a
+  // builder, a warden, a company, an owner. There is nobody to name.
+  mountain: [
+    "The keeper is banking the fire and does not look round. \"You'll have come up the track. Everybody does the first time.\" He sets a turf on edge. \"It's a good track. Goes about as far as I do.\"",
+    "\"This was a summer place. You brought the beasts up in May when the low grass was wanted for hay, and you sat out the warm months, and you took them down again before the weather turned.\" He wipes his hands. \"Nobody wintered here. There'd be no point and there'd be no you by spring.\"",
+    "\"There's a wall down past the fold. Turf, chest high once.\" He nods at the door. \"Somebody stood exactly where that wall stops and decided the grass above it wasn't worth the walling. That's the whole of what anybody ever decided about this mountain.\"",
+    "\"Above the wall it's not anybody's. Not held, not lost, not run down — never had a keeper in the first place, so there's nothing up there gone to ruin.\" He almost smiles. \"You'll find that harder than ruins, in my experience.\"",
+    "\"The stag on the shoulder there. He'll stand and let you walk to twenty paces.\" He puts another turf on. \"Not tame. He's had a good long look at what you are and gone back to his grass, which is a thing you should think about before you go higher.\"",
+    "\"Eagle works this face most days. Comes along it, not over it — you'll hear the air before you see the bird.\" He shrugs. \"Takes hares. Takes a kid off the ledge when the goats are careless. It has never once taken an interest in me and I have been here a while.\"",
+    "\"Everything on this hill is going down it. The stones, the water, the scree, the turf off the edge up there — all of it, all the time, slower than you can watch.\" He straightens up. \"The only things going up are you and me, and I stopped.\"",
+    "\"There's cairns along the shoulder, small ones, four courses. They only make sense walking toward the pass.\" He looks at the fire. \"So somebody had a reason to be going that way in bad weather, often enough to build for it. I've never found out what it was and I've had the time.\"",
+    "\"Weather comes off the water and hits this face and goes up. What that means for you is that it's fine here and it is not fine four hundred feet above your head, and you cannot see that from here.\" He shrugs. \"You'll learn it the one way it gets learned.\"",
+    "\"People ask what's at the top.\" He turns a cup over on the shelf. \"I'll tell you what I know: nothing's ever come down and said. That's not a story, that's just the arithmetic of who goes up.\"",
+    "\"Fire's lit and the door's open and there's dry ground under this roof, which is more than the mountain does anywhere else.\" He sits back. \"I'd not make a habit of thinking that's the same as it wanting you here.\"",
+  ],
   // THE FORTRESS. Two collapses in one telling, because they were one event:
   // the garrison thinned out, and the water came up, and the second is why the
   // first stopped mattering. He tells it as a man who has read the papers left

@@ -874,7 +874,22 @@ export class ZoneDO implements DurableObject {
     // ground a player standing next to it would say they were on. A wolf
     // crossing out of the wood dirties the wood and the road, and leaves the
     // deep, the warrens and the fortress untouched on disk.
-    simstore.saveSim(this.state.storage, state, this.sim, (c) => this.bandOf(c.roomId));
+    // ...EXCEPT THE MOUNTAIN, WHICH SHARDS BY TIER. A band is the right grain
+    // for every ground built so far — the biggest is the Crossing at 97 bodies,
+    // comfortably inside the 64KB-per-shard warn simstore prints, which at
+    // ~330 bytes a creature lands near 200. The mountain is planned at ~300 in
+    // one band, so it would arrive already over the line, and the answer is the
+    // one simstore has named in its own header since the rows shipped: a finer
+    // shard, not a new mechanism. Five tiers puts it back around 60 a blob.
+    //
+    // Done NOW, before the ground exists, because the alternative is doing it
+    // to a live world that is already too big — and it costs nothing until the
+    // first mountain room lands: no other band has a mountain tier, so every
+    // existing shard key is byte-for-byte what it was.
+    simstore.saveSim(this.state.storage, state, this.sim, (c) => {
+      const band = this.bandOf(c.roomId);
+      return band === "mountain" ? band + ":" + (MAP_QUARTERS[c.roomId] ?? "0") : band;
+    });
   }
 
   // Blow away the whole world sim and rebuild it from first light. Drops the
@@ -1794,6 +1809,13 @@ export class ZoneDO implements DurableObject {
       return this.send(session, "Nothing by that name is here to fight.");
     }
     const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
+    // ...and it must refuse HERE too. The round's guard (tickCombat) only covers
+    // the automatic beat; without this, typing `attack` at the summit's animal
+    // while it is in the air swings anyway, and the ambush-opener path would
+    // even pay the heavy first blow for it. Same hole the stun rule had.
+    if (ai.airborne(creature)) {
+      return this.send(session, `${cap(tmpl.name)} is somewhere above you. There is nothing there to hit.`, "dmgin");
+    }
     // Rung senseless: the swing is gone, whether the tick asked for it or YOU
     // did. The combat round (tickCombat) and the steel exchange (tickPvp) both
     // pay this debt, and the two VERBS never did — so a stunned player could
@@ -3280,6 +3302,20 @@ export class ZoneDO implements DurableObject {
         this.send(session, "You put it all into that opening blow; the heavy head is slow to rise again.", "dmgout");
         continue;
       }
+      // NOTHING SWUNG REACHES SOMETHING THAT IS NOT ON THE GROUND (mig 237).
+      // The summit's animal goes up in its last third and the fight stops being
+      // a fight for three beats. The out is the THROW, which still reaches it
+      // (cmdThrow), and it is the one place in this game where carrying
+      // something to throw is not a luxury.
+      const airborneFoes = foes.filter((c) => ai.airborne(c, now));
+      if (airborneFoes.length && foes.every((c) => ai.airborne(c, now))) {
+        if (!session.toldAirborne) {
+          session.toldAirborne = true;
+          this.send(session, "It is somewhere above you and you are swinging at air. Throw something, or get out.", "dmgin");
+        }
+        continue;
+      }
+      session.toldAirborne = false;
       const atkMult = STANCE[session.stance].atk * this.wallDrag(session);
       const alive = (c: Creature) => this.creatures.has(c.id);
       let primary = foes.find((c) => c.id === session.target && alive(c)) ?? foes.find(alive);
@@ -3703,6 +3739,11 @@ export class ZoneDO implements DurableObject {
         // in the fight, which is what makes a slow kill expensive: the pack is
         // the price of taking too long (ai.packCall).
         ai.packCall(this, creature, now);
+        // THE SUMMIT'S ANIMAL acts before it swings, and sometimes instead of
+        // swinging: a drawn breath, a body in the air, and the landing are each
+        // a whole beat (ai.drakeBeat). Everything else in this loop is the
+        // ordinary round and it does not apply while one of those is running.
+        if (ai.drakeBeat(this, creature, tmpl, now)) continue;
         // ...unless the cantor has it. A held thing does not swing: the song
         // outranks the fight, which is exactly what makes the cantor a lever.
         if (ai.heldBySong(creature, now)) continue;

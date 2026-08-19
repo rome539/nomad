@@ -1,0 +1,40 @@
+# THE MOUNTAIN, 6 of 6 — THE SUMMIT. One room.
+#
+# Five files of ground and five tiers of animals were all written so that this
+# room could be one room with one thing in it, and so that everything a player
+# knows walking in here was learned from leavings rather than told.
+#
+# WHAT THE FIVE TIERS ALREADY SAID, none of it explained anywhere:
+#   the rock is warm four tiers above the snow         (mig 234)
+#   the rock has RUN, and set again in ropes           (mig 234)
+#   kills are carried up, and the drag marks go off the edge  (mig 234)
+#   an eyrie built to a size nothing on the roster fits (mig 234)
+#   a nesting shelf whose nests have been empty for years (mig 232)
+#   a floor swept against a wind that only blows one way  (mig 232, 234)
+#   and nine rooms of good ground that every animal on the
+#   mountain has independently decided not to stand on   (mig 234)
+#
+# IT IS AN ANIMAL. That is the standing ruling and this room obeys it: no hoard,
+# no speech, no riddle, no curse, nothing owed and nothing offered. It has a
+# territory, it has a nest, it hunts a long way from home because everything
+# near home has already been eaten, and it carries what it kills back to a place
+# it likes. Every one of those is a thing an eagle does. The only difference is
+# the size, and the size is why the rock has run.
+#
+# ONE ROOM, and it is not a lair with corridors. You come up the ramp, through
+# the gate in the wall, and you are in it.
+#
+# NO GATE, NO SANCTUARY, AND NO WAY ON. Five tiers from a bank, and the only
+# exit is the way you came in. Whatever you are carrying when you walk in here
+# you are carrying back down past everything on five tiers that has had all day
+# to notice you going up.
+
+!region mountain
+
+## the-summit-gate | attachment: the gap in the wall
+!existing
+> east   the-summit
+
+## the-summit | The Summit
+The wall opens and the top of the mountain is a bowl of bare rock perhaps two hundred paces across, and there is nothing in it: no snow, no ice, no lichen, no bone. The floor is swept and it is warm. Off the middle of it the rock has run and set in ropes and lobes with the front edges curled over, in a rough ring, and inside the ring the stone is glazed and black and worn smooth in the way a doorstep is worn. The whole sky is here. There is no higher ground anywhere you can see in any direction, and nothing between you and any of it. Whatever made this ring is not small and does not need to be anywhere else, and the wind that has been on you for five tiers has stopped, because there is nothing up here for it to come round.
+> west   the-summit-gate

@@ -1,0 +1,596 @@
+# THE MOUNTAIN, 2 of 5 — THE MIDDLE. 76 rooms.
+#
+# The ruling stands (see mountain-1): THE MOUNTAIN IS NOT FOR PEOPLE. Tier one
+# was about where the people stop — a turf wall, a summer hut, a hearth with no
+# house left round it, and then nothing. This tier is what is on the other side
+# of that, and its whole job is to stop being a negative. The foot is defined by
+# the absence of us. The middle is not defined by us at all: it is a corrie, a
+# shoulder, a snowfield and a burn, and each of them is busy with something that
+# has nothing to do with anybody.
+#
+# So there is exactly one made thing in these 76 rooms — a cairn on the high
+# shoulder, four courses, the last of the line that started down at the foot —
+# and it stops here. Somebody walked up this far, more than once, in weather bad
+# enough to want a marker. Nothing above it is marked. That is the only human
+# sentence on this tier and it is a sentence about giving up.
+#
+# THREE WAYS IN, taken from the three ways tier one left standing:
+#
+#   THE NOTCH          — the break in the crag line, and the way everything with
+#                        four legs uses. It lets you into the corrie.
+#   THE BEALACH        — the pass, onto the high north shoulder. Cold, open, and
+#                        you can be seen crossing it from a very long way off.
+#   THE SOUTH SHOULDER — round onto the sun flank, which is the warm side and
+#                        therefore the side with the grazing and the deer on it.
+#
+# They arrive in three different countries and the countries do not join until
+# well inside the tier, which is the throat rule and the mountain agreeing again.
+#
+# THE FOUR GROUNDS, and they are meant to feel like four different places at the
+# same altitude rather than one hillside with four names:
+#
+#   THE CORRIE     a bowl the ice cut, with a black lochan in the bottom of it
+#                  and a wall at the back you are not getting up.
+#   THE SHOULDER   the north side: wind-scoured, frost-shattered, nothing taller
+#                  than your ankle, and a plateau on top of it like a table.
+#   THE SNOW BEDS  what never goes. Old snow with a moat round it, grey ice,
+#                  meltwater, and the cold that comes off all of it.
+#   THE SUN FLANK  the south side: dry heather, warm slabs, a rowan in a place
+#                  nothing else grows, and the deer.
+#
+# ...and between the last two, THE UPPER BURN, which goes underground halfway
+# along and comes out again somewhere it has no business coming out.
+#
+# THERE IS NO GATE ON THIS TIER, and that is a standing ruling rather than an
+# omission (rome, 2026-08-19). The mountain's doors are all FOUR of them at the
+# bottom, on the summer ground — the shieling, the stell, the hollow under, the
+# shelter crag — and there is nothing above them. A gate is a bank — you bank
+# what you are carrying and walk away from the risk — so a gate halfway up a
+# mountain means nothing you
+# take from the high ground ever has to be carried down past what lives on it,
+# and the extraction the whole game rests on quietly stops applying to the one
+# region built to test it. The same reasoning mig 221 used to put the dens far
+# from a door, aimed one tier higher.
+#
+# What this tier has instead is SANCTUARY: three rooms you cannot be followed
+# into (the fallen block, the white hollow, the boulder gate). Somewhere to
+# stand is not somewhere to bank, and the difference is the whole climb.
+#
+# THE MAP. Grid only, orthogonal exits only, no up/down — same discipline as
+# tier one and for the same reason: every band is one stratum and the bake draws
+# a stair as a diagonal. The tier occupies x78..88, y3..13.
+#
+# DENSITY 0.6, against the foot's 0.4. Altitude is the difficulty curve.
+
+!region mountain
+
+# ---- the three ways in, already standing -----------------------------------
+
+## the-notch | attachment: the break in the crag line
+!existing
+> east   the-gully-head
+
+## the-bealach | attachment: the pass, onto the high shoulder
+!existing
+> east   the-pass-head
+
+## the-south-shoulder | attachment: round onto the sun flank
+!existing
+> east   the-sun-shoulder
+
+## the-first-crag | attachment: up the crag itself, the fourth way
+!existing
+> east   the-brink
+
+# ---- THE FOURTH WAY: straight up the crag ---------------------------------
+# Added when the gates came off the upper tiers (rome, 2026-08-19) and the
+# throat check stopped passing for free. With a gate standing inside the ground
+# a region cannot be cut off from a gate and the check is trivial; with every
+# door three tiers below, it becomes the real question — how many people does it
+# take to own this mountain — and the honest answer for three routes and 125
+# rooms was "three, and it wants four". This is the fourth, and it is the one
+# route that goes at the rock rather than round it.
+
+## the-brink | The Brink
+A ledge on the face of the first crag, reached by the one line of holds that goes anywhere, with the whole foot of the mountain laid out underneath and nothing between you and it. It is not a way anything with four legs can come. That is the entire reason it is worth knowing about: everything else on this hill uses the notch or the pass, and nothing at all uses this.
+> east   the-corrie-lip
+> west   the-first-crag
+
+# ---- THE CORRIE: the bowl the ice cut --------------------------------------
+
+## the-gully-head | The Gully Head
+You come out of the notch and the ground opens without warning into a bowl a half-mile across, walled on three sides, with the floor of it well below you and a black lochan sitting in the middle. It is the first thing on this mountain that has a shape. Everything below was slope; this was made, by something, on purpose, and then abandoned.
+> north  the-corrie-lip
+> south  the-fallen-block
+> east   the-corrie-mouth
+> west   the-notch
+
+## the-corrie-mouth | The Corrie Mouth
+The lip of the bowl, where the ground stops falling away and starts falling in. Grass runs right to the edge and then there is nothing under it. From here you can see the whole floor at once, and how much of it is water, and how little of it is anywhere you could stand.
+> north  the-black-scree
+> south  the-corrie-floor
+> east   the-lochan
+> west   the-gully-head
+
+## the-lochan | The Lochan
+Black water, perfectly still, and so dark that the reflection of the back wall in it is better lit than the wall itself. It has no inflow you can find and one thin outflow at the far end. Nothing rises in it. Nothing rises in water this cold and this deep and this poor.
+> north  the-drift-edge
+> south  the-lochan-shore
+> east   the-back-wall
+> west   the-corrie-mouth
+
+## the-lochan-shore | The Lochan Shore
+A strand of grey grit round the water's edge, wide in places and nothing at all in others, with the wall going straight up out of it further round. There are tracks in the grit — deer, and something with pads, and the pads are following the deer.
+> north  the-lochan
+> east   the-water-lip
+> west   the-corrie-floor
+
+## the-back-wall | The Back Wall
+The head wall of the corrie, seven hundred feet of wet black rock leaning very slightly over you, streaked white where water comes down it and green-black where it does not. Looking up it for any length of time is unpleasant in a way that has nothing to do with the height. There is no way up this.
+> north  the-old-snow
+> south  the-water-lip
+> east   the-hanging-step
+> west   the-lochan
+
+## the-corrie-floor | The Corrie Floor
+Flat ground, or nearly, floored with everything the walls have shed and gone over with moss between the blocks. It is out of the wind entirely — the first still air since the shore — and the quiet in here is total and takes some getting used to.
+> north  the-corrie-mouth
+> east   the-lochan-shore
+> west   the-fallen-block
+
+## the-drift-edge | The Drift Edge
+The old snow ends here in a wall waist high, undercut and blue in the shadow of its own overhang, with a foot of bare stony ground between it and the grass. That gap is where the drift used to be a month ago. It has been the same gap for longer than a month.
+> south  the-lochan
+> east   the-old-snow
+> west   the-black-scree
+
+## the-old-snow | The Old Snow
+Snow that has been here through at least one summer, packed to something between ice and stone, grey on top with a season's grit and dead insects. It rings under a boot heel. Whatever fell into this is still in it, at whatever depth the year it fell put it.
+> south  the-back-wall
+> east   the-upper-drift
+> west   the-drift-edge
+
+## the-black-scree | The Black Scree
+Scree the colour of coal, small and sharp and endlessly loose, running from the corrie rim down to the floor in one unbroken sheet. Nothing has ever grown on it and nothing will; there is no ground in it, only pieces. It moves under you and keeps moving after you stop.
+> south  the-corrie-mouth
+> east   the-drift-edge
+> west   the-corrie-lip
+
+## the-fallen-block | The Fallen Block
+A slab the size of a barn came off the wall at some point and landed on its edge, and it has stood that way ever since with a wedge of dry ground under its lean. You can get right in under it. It is out of the wind, out of the wet, out of the sight of anything above, and it is the only such place in this bowl.
+!safe
+> north  the-gully-head
+> east   the-corrie-floor
+
+## the-corrie-lip | The Corrie Lip
+The rim, on the north side, where the ground rolls over and goes. Standing on it you have the bowl on one hand and the whole open shoulder on the other, and the wind that has been absent down in the corrie is suddenly back and hard. Everything crossing between the two goes over this line.
+> north  the-corrie-rim
+> south  the-gully-head
+> east   the-black-scree
+> west   the-brink
+
+## the-water-lip | The Water Lip
+The one place the lochan lets anything out: a notch in the rock a yard wide with the water going over it flat and silent and then falling out of sight. There is no noise from it at all until you look over, and then there is, a long way down.
+> north  the-back-wall
+> west   the-lochan-shore
+
+## the-hanging-step | The Hanging Step
+A shelf running out from the corner of the back wall, wide enough to walk and narrowing as it goes, carrying you out onto the face above the drop. It is the way out of the bowl that is not the way you came in. It does not feel like one for the first hundred yards.
+> south  the-lower-band
+> west   the-back-wall
+
+## the-corrie-rim | The Corrie Rim
+The very edge of the bowl, a knife of turf and stone with the corrie on one side and the shoulder falling away on the other, and about two strides of level ground to do it on. Both drops are serious. The wind cannot decide which way it is going through here.
+> north  the-north-corrie
+> south  the-corrie-lip
+
+## the-upper-drift | The Upper Drift
+Where the snowfield thins to a tongue and gives up, in a run of wet grit and old grey ice with stones sitting proud of it, each one in its own little melted cup. Everything on the surface here arrived from above and is waiting for the ice to let it down.
+> north  the-melt-runnel
+> west   the-old-snow
+
+# ---- THE HIGH SHOULDER: the north side, and the top of it ------------------
+
+## the-pass-head | The Pass Head
+Out of the bealach and onto the shoulder proper, and the whole north side of the mountain arrives at once: a long bare rise going up to a level skyline, with nothing on it. No rock big enough to shelter behind, no dip, no cover of any kind. Anything up here can see you and you can see it.
+> east   the-shoulder-walk
+> west   the-bealach
+
+## the-shoulder-walk | The Shoulder Walk
+The easy line along the shoulder, on ground cropped to nothing and firm as a road, which is the one gift this side of the mountain gives. It is also completely exposed for its entire length. Both of those are the same fact.
+> south  the-shoulder-drop
+> east   the-wind-scour
+> west   the-pass-head
+
+## the-wind-scour | The Wind Scour
+The turf has been stripped off in a long patch, the way skin comes off, leaving bare gravel with the roots of what used to grow here still showing at the torn edges. The wind did this. It is still doing it, and the edge of the scour is a little further out every year.
+> north  the-wind-lane
+> south  the-north-corrie
+> east   the-stone-stripes
+> west   the-shoulder-walk
+
+## the-stone-stripes | The Stone Stripes
+The ground here has sorted itself into long parallel lines of stone running straight down the slope, with fine gravel between them, as regular as ploughing and going on for hundreds of yards. Frost did it, over a very long time, and it will keep doing it. There is no ploughman.
+> north  the-blown-ground
+> south  the-snow-gully
+> east   the-frost-shatter
+> west   the-wind-scour
+
+## the-frost-shatter | The Frost Shatter
+Rock broken into angular plates by nothing but water getting in and freezing, over and over, until the whole surface is a rubble of fragments still lying where they cracked apart. You can fit pieces back together with your hands. Nothing has moved them; they simply came to bits in place.
+> north  the-bare-plateau
+> south  the-cold-face
+> east   the-high-cairn
+> west   the-stone-stripes
+
+## the-high-cairn | The High Cairn
+The last cairn. Four courses of flat stone, the same as the ones down on the shoulder at the foot, set in the same careful way — and beyond it, in every direction, there is not another. Whoever built this line built it to here and then either turned back or did not need it any more. The stones are seated. It has not fallen in a very long time.
+> north  the-flat-top
+> south  the-plateau-edge
+> west   the-frost-shatter
+
+## the-shoulder-drop | The Shoulder Drop
+The shoulder's south edge, where the level ground ends and the whole side falls away into the corrie in one sweep of grass and scree. You can sit here with your legs over and see the lochan directly below, small and black and completely still. A ramp comes up onto the edge from the west, tilted and narrow, and it is not a thing you would notice from above.
+> north  the-shoulder-walk
+> east   the-north-corrie
+> west   the-slant
+
+## the-north-corrie | The North Corrie
+A second, smaller bowl bitten out of the shoulder's flank, holding nothing but shadow and a floor of wet stone. The sun reaches it for perhaps an hour in high summer. It is a cold place to walk through and a colder one to be in when the light goes off it.
+> north  the-wind-scour
+> south  the-corrie-rim
+> east   the-snow-gully
+> west   the-shoulder-drop
+
+## the-snow-gully | The Snow Gully
+A steep groove holding a tongue of hard old snow that runs a good way up the slope, blue-white and grooved down its length where meltwater has cut it. It is the fast way up if you have something to cut steps with and the fast way down if you do not.
+> north  the-stone-stripes
+> east   the-cold-face
+> west   the-north-corrie
+
+## the-cold-face | The Cold Face
+North-facing rock, wet at all hours, with a black film on it that never dries and a fringe of ice at the top of every ledge for most of the year. Nothing grows on it but a rusty lichen that comes off on your palms. It is markedly colder here than fifty yards either side.
+> north  the-frost-shatter
+> east   the-plateau-edge
+> west   the-snow-gully
+
+## the-plateau-edge | The Plateau Edge
+Where the shoulder's top flattens out and stops being a slope at all, at a rim you can walk right up to without noticing you have arrived. Behind you the ground is level. In front of it there is a great deal of air and then the corrie floor.
+> north  the-high-cairn
+> east   the-cold-shadow
+> west   the-cold-face
+
+## the-flat-top | The Flat Top
+Level ground, genuinely level, a plain of frost-shattered stone lying to the horizon with the sky sitting on it. There is no reference for distance up here and nothing to judge scale against, and something a hundred yards off and something a mile off look exactly alike.
+> south  the-high-cairn
+> west   the-bare-plateau
+
+## the-bare-plateau | The Bare Plateau
+Stone pavement with a skin of gravel over it and about one plant to the square yard, each one flattened to a cushion and hard to the touch. This is what the top of the world is: not dramatic, just extremely poor. Everything here is small on purpose.
+> south  the-frost-shatter
+> east   the-flat-top
+> west   the-blown-ground
+
+## the-blown-ground | The Blown Ground
+The gravel here has been sorted by wind rather than frost, into a rippled surface like the bottom of a stream, with the fine stuff gone entirely and only the pieces too heavy to lift left behind. There is no shelter within sight in any direction, and you can feel exactly how much that matters.
+> south  the-stone-stripes
+> east   the-bare-plateau
+> west   the-wind-lane
+
+## the-wind-lane | The Wind Lane
+A shallow trough across the plateau that the wind uses and has widened by using, so that the air in it moves visibly faster than the air on either side. Grit travels along it at ankle height in a continuous low stream. Standing across it is like standing in a river.
+> south  the-wind-scour
+> east   the-blown-ground
+
+# ---- THE CRAG BANDS: the terraces, and the ways between them ---------------
+
+## the-lower-band | The Lower Band
+The face is built in horizontal bands — a wall of rock, a ledge of grass, a wall, a ledge — and this is the bottom one, a shelf a few strides wide running away east under an overhang. The ledges are the only walking there is on this side, and they do not connect where you want them to.
+> north  the-hanging-step
+> east   the-terrace
+
+## the-terrace | The Terrace
+A wide grass ledge with the wall above and the wall below, level and green and improbably pleasant, going for two hundred yards and then simply stopping at a corner. Everything up here that eats grass comes to these, and everything that eats those knows it.
+> north  the-ledge-walk
+> east   the-broken-terrace
+> west   the-lower-band
+
+## the-ledge-walk | The Ledge Walk
+The ledge narrows to a foot's width round a rib of rock, with a good hold at chest height for the six paces that matter and nothing at all below. It is not difficult. It is only difficult if you think about it, which is a distinction the mountain does not make and you will.
+> north  the-chimney-foot
+> south  the-terrace
+> east   the-second-band
+
+## the-second-band | The Second Band
+The next shelf up, drier and stonier than the one below it, with the wall behind it undercut enough to sit in out of the rain. There are droppings along the back of it in a line, all along, from something that walks this ledge regularly and rests in the same places every time.
+> north  the-chimney
+> south  the-broken-terrace
+> east   the-third-band
+> west   the-ledge-walk
+
+## the-broken-terrace | The Broken Terrace
+This shelf has come away in sections, so that what is left is a series of grass islands with gaps of steep bare rock between them, each gap a stride or a scramble. It was one continuous ledge once. You can see where it went, in a fan of turf and rubble on the ground far below.
+> north  the-second-band
+> east   the-slab-nose
+> west   the-terrace
+
+## the-chimney-foot | The Chimney Foot
+The bottom of a vertical cleft splitting the wall from the ledge to the skyline, wide enough at the base to walk into and narrowing to a slot above. It is dark inside and there is a permanent trickle down the back of it. This is the way up through the bands and there is no other.
+> north  the-snow-bed
+> south  the-ledge-walk
+> east   the-chimney
+
+## the-chimney | The Chimney
+Inside the cleft: two walls a body's width apart, wet, and holds enough to get up if you brace your back on one and your boots on the other. Somebody's hands have polished the two obvious holds smooth. Somebody, at some point, more than once.
+> south  the-second-band
+> east   the-airy-step
+> west   the-chimney-foot
+
+## the-third-band | The Third Band
+The highest of the shelves and the narrowest, with a great deal of nothing below it and the summit crags starting directly above. The grass on it is finer and shorter than the ledges below and there is very little of it. Everything up here is running out of everything.
+> north  the-airy-step
+> south  the-slab-nose
+> east   the-band-end
+> west   the-second-band
+
+## the-slab-nose | The Slab Nose
+A prow of clean rock pushing out from the face where the bands run into it and stop, with the ledge dying away to nothing on either side. Round the front of it there is a step across a gap onto ground you cannot see until you are committed to it.
+> north  the-third-band
+> west   the-broken-terrace
+
+## the-airy-step | The Airy Step
+Two strides on a ledge the width of a boot, with the wall pushing your shoulder out and six hundred feet under your heels, and good holds the whole way. It is genuinely safe and it does not feel remotely safe. Ravens use the ledge above and drop things off it, occasionally, on purpose.
+> north  the-late-field
+> south  the-third-band
+> east   the-rake
+> west   the-chimney
+
+## the-band-end | The Band End
+The bands run out here against a buttress that cuts across them all, and the shelves simply end at it, one above another, like shelves in a broken cupboard. There is no way round at this level. Everything that comes along these ledges turns here, or goes up.
+> north  the-rake
+> west   the-third-band
+
+## the-rake | The Rake
+A long ramp of broken ground running diagonally up the face from the end of the bands, loose in places and grassy in others and always steeper than it looks from below. It is the mountain's one concession on this side. It goes somewhere, which is more than the rest of this face does.
+> south  the-band-end
+> west   the-airy-step
+
+# ---- THE SNOW BEDS: what never goes ----------------------------------------
+
+## the-snow-bed | The Snow Bed
+A field of old snow lying in a hollow that faces away from every hour of sun there is, dirty on top, dense as packed sand underneath, and cold enough to feel from ten feet off. It has been getting a little smaller for a hundred years and it has not gone.
+> north  the-moat
+> south  the-chimney-foot
+> east   the-firn
+> west   the-melt-runnel
+
+## the-firn | The Firn
+Snow gone halfway to ice: grainy, granular, so hard that it takes a heel to mark it, and blue where a crack goes down into it. Somewhere below this it stops being anything you could call snow. Nobody has ever needed to find out how far down that is.
+> north  the-grey-ice
+> east   the-late-field
+> west   the-snow-bed
+
+## the-melt-runnel | The Melt Runnel
+A channel cut into the snow itself by its own melting, waist deep and smooth-sided and running with clear water all day and nothing at all by first light. Follow it and it goes under the field and you cannot. The noise of water underneath carries for a good way.
+> north  the-cold-shadow
+> south  the-upper-drift
+> east   the-snow-bed
+
+## the-grey-ice | The Grey Ice
+Not snow any more: a lens of grey bubbled ice standing proud of the slope, with grit frozen into it in layers you can count. Each dark line is a summer. There are more of them than seems reasonable and they get thinner toward the bottom.
+> north  the-shattered-crown
+> south  the-firn
+> east   the-white-hollow
+> west   the-moat
+
+## the-moat | The Moat
+The gap between the snowfield and the rock behind it, where the warmth coming off the stone has melted a trench you could lose a horse in — vertical snow on one side, wet rock on the other, and no telling how deep the bottom is under the fallen stuff bridging it. You go round. Everything goes round.
+> north  the-snow-edge
+> south  the-snow-bed
+> east   the-grey-ice
+> west   the-cold-shadow
+
+## the-cold-shadow | The Cold Shadow
+Ground that has not had direct sun on it within living memory, walled to the south and floored with damp grey rubble and a moss that is nearly black. The temperature drops as you cross into it, sharply, in one step, and your breath shows.
+> north  the-old-drift
+> south  the-melt-runnel
+> east   the-moat
+> west   the-plateau-edge
+
+## the-old-drift | The Old Drift
+A drift that formed in the lee of the crest and has been renewed every winter for so long that it has become a permanent feature of the mountain, with its own shape and its own edges and a hard scoured hollow in front of it. The wind builds it in the same place, the same way, every year.
+> south  the-cold-shadow
+> east   the-snow-edge
+
+## the-snow-edge | The Snow Edge
+The lip where the drift breaks off, overhanging its own undercut face in a curl you could walk out onto without knowing it was there. It has broken before: there are blocks the size of carts lying below it, rounded and grey and slowly going.
+> south  the-moat
+> east   the-shattered-crown
+> west   the-old-drift
+
+## the-shattered-crown | The Shattered Crown
+The crest above the snow, a comb of rock split into standing plates by frost, leaning apart with gaps between them you can see the sky through. It looks deliberate from below, like something built and then ruined. It is neither.
+> south  the-grey-ice
+> west   the-snow-edge
+
+## the-white-hollow | The White Hollow
+A scoop of rock behind the ice with dry gravel in the bottom of it, sheltered from three sides and floored with a drift of small bones and old feathers a foot deep in places. Nothing here died today. Something has been carrying its dinner in here for a very, very long time.
+!safe
+> south  the-late-field
+> west   the-grey-ice
+
+## the-late-field | The Late Field
+The last of the snow, in a thin sheet holding on in the shade of the crest, going soft at the edges and undercut to a lace of white over black stone. In another month it will be gone. It will be back before it is properly gone.
+> north  the-white-hollow
+> south  the-airy-step
+> west   the-firn
+
+# ---- THE SUN FLANK: the warm side, and what lives on it -------------------
+
+## the-sun-shoulder | The Sun Shoulder
+Round the corner and everything changes: the wind drops, the rock is warm to the hand, and the ground goes from grey to brown and red. It is the same mountain and it is not the same mountain. All the living on this hill that can choose is on this side of it.
+> east   the-heather-shelf
+> west   the-south-shoulder
+
+## the-heather-shelf | The Heather Shelf
+Old heather, woody at the base and deep enough to hide anything lying down in it, growing on a broad terrace that runs along the flank at a comfortable angle for the first time since the shore. It smells of resin in the sun. Walking through it is loud and there is no way to make it not.
+> north  the-rowan
+> east   the-dry-corrie
+> west   the-sun-shoulder
+
+## the-dry-corrie | The Dry Corrie
+A bowl the same shape as the one on the cold side and nothing at all like it: no water, no snow, a floor of dry grass and gravel, and the whole thing holding the afternoon heat like a wall. Things come here to lie up. You can see where, and the grass is still flat.
+> north  the-deer-lawn-high
+> south  the-hidden-burn
+> east   the-warm-slabs
+> west   the-heather-shelf
+
+## the-warm-slabs | The Warm Slabs
+Tilted sheets of bare rock that take the sun all day and hold it well past dark, with the heat coming up off them in the evening and everything cold-blooded on this mountain arranged on them accordingly. Step carefully. Some of what is on the rock is exactly the colour of the rock.
+> north  the-wallow
+> south  the-cut
+> east   the-basking-stone
+> west   the-dry-corrie
+
+## the-basking-stone | The Basking Stone
+One flat boulder standing clear of the slope, worn shiny across the top of it, and warmer than the air by a noticeable margin from the moment the sun gets round to it. Something big lies on this. The wear on it is not weather.
+> north  the-thin-turf
+> south  the-pothole
+> east   the-broken-ground-high
+> west   the-warm-slabs
+
+## the-deer-lawn-high | The Deer Lawn
+A patch of short bright green grass in the middle of the heather, kept that way by being eaten to the root every day for centuries. It is the best few hundred yards of grazing above the treeline and it is entirely surrounded by ground you cannot see through. Everything comes here. Everything knows everything comes here.
+> south  the-dry-corrie
+> east   the-wallow
+> west   the-rowan
+
+## the-wallow | The Wallow
+A hollow of black peaty mud churned to soup and stinking, with the heather round it broken down and the mud thrown up the stems for a yard in every direction. Deer roll in this in the summer to get the flies off. It has been used this morning.
+> south  the-warm-slabs
+> east   the-thin-turf
+> west   the-deer-lawn-high
+
+## the-thin-turf | The Thin Turf
+Grass hanging on over rock with barely a finger of soil under it, so that whole sheets of it lift at the edges where feet have caught them and the rock shows through in patches like a worn coat. It is drying out. It has been drying out for a long time and it is nearly done.
+> south  the-basking-stone
+> east   the-gravel-shelf
+> west   the-wallow
+
+## the-rowan | The Rowan
+One rowan tree growing out of a cleft in the rock, the only tree above the shore and by some distance the most improbable living thing on this mountain, with its roots gone down the crack and its head bent permanently downhill by the wind. Nothing planted it. A bird ate a berry somewhere lower and sat here, once, and that is the entire history of the only tree on this mountain.
+> south  the-heather-shelf
+> east   the-deer-lawn-high
+> west   the-wedge
+
+## the-gravel-shelf | The Gravel Shelf
+A wide terrace of loose sun-bleached gravel with almost nothing growing in it, hot underfoot by noon and completely bare of cover. Crossing it you are visible from the whole of the flank above, and there is no faster way across than walking.
+> south  the-broken-ground-high
+> east   the-hot-scree
+> west   the-thin-turf
+
+## the-broken-ground-high | The Broken Ground
+Blocks and hollows and small cliffs three feet high, all through each other with no pattern, so that you are constantly stepping up or down and can never see more than twenty yards. It is exhausting and it is the best cover on this side of the hill, and those two facts are why things use it.
+> north  the-gravel-shelf
+> east   the-sun-gully
+> west   the-basking-stone
+
+## the-sun-gully | The Sun Gully
+A dry gully running down the flank, floored with baked gravel and walled with warm rock, holding the heat like an oven and utterly still. Nothing moves in here in the middle of the day. Everything moves in here at dusk.
+> north  the-hot-scree
+> east   the-resurgence
+> west   the-broken-ground-high
+
+## the-hot-scree | The Hot Scree
+Scree on the sun side, pale and dry and shifting, with the heat coming off it in a shimmer that makes the ground above look like it is moving. It is hard to judge anything through that. Things standing still in it are very hard to see at all.
+> south  the-sun-gully
+> west   the-gravel-shelf
+
+# ---- THE UPPER BURN: the water between the flanks -------------------------
+
+## the-hidden-burn | The Hidden Burn
+Water running under the heather rather than through it, audible the whole length of this hollow and visible almost nowhere, so that you walk along the sound of a stream you cannot find. Where it does show it is a hand's width across and a foot deep and very fast.
+> north  the-dry-corrie
+> east   the-cut
+
+## the-cut | The Cut
+The burn has sawn itself a slot four feet deep and two wide in the solid rock, straight-sided, with the water at the bottom of it out of reach. You can stand astride it. Something has fallen in it further along — there is wool caught on the lip and a dark shape wedged below.
+> north  the-warm-slabs
+> east   the-pothole
+> west   the-hidden-burn
+
+## the-pothole | The Pothole
+A shaft in the bed of the cut, round and smooth and drilled straight down by a single stone turning in it for however long that takes, with the whole burn going into it and no sound of it landing. The stone that did the drilling is presumably still down there, still turning.
+> north  the-basking-stone
+> east   the-sink
+> west   the-cut
+
+## the-sink | The Sink
+The burn goes underground here, entirely, into a gap under a jammed boulder, and the streambed below it is dry gravel with dry weed lying combed along it. The change happens in one stride: water, then no water, and the noise going down and away under your feet.
+> east   the-dry-gorge
+> west   the-pothole
+
+## the-dry-gorge | The Dry Gorge
+A gorge with no river in it: forty feet deep, walls scoured smooth and undercut, potholes drilled in the floor and dry to the bottom of them, and old flood-wrack jammed in the crevices well above your head. It is doing nothing at all today. It has done a great deal.
+> east   the-upper-force
+> west   the-sink
+
+## the-resurgence | The Resurgence
+The water comes back out of the hill through a low arch, at pressure, cold enough to take your breath, having gone in half a mile back and a hundred feet higher. Nothing that goes into the sink has ever been seen to come out here. That is worth knowing before you decide the two are connected.
+> south  the-upper-force
+> east   the-boulder-gate
+> west   the-sun-gully
+
+## the-upper-force | The Upper Force
+The reborn burn goes over a lip in a single fall into a bowl of its own making, and the noise fills the whole gorge and comes back off both walls. There is a permanent rainbow in the spray on a good afternoon and there is nothing up here to see it.
+> north  the-resurgence
+> east   the-water-notch
+> west   the-dry-gorge
+
+## the-boulder-gate | The Boulder Gate
+Two blocks the size of houses came down at some point and landed leaning against each other, and the gap under them is a doorway with a dry floor and a roof that has held for a very long time. Something has been sleeping in the back of it. There is no smell of anything recent.
+!safe
+> south  the-water-notch
+> east   the-mid-shelf
+> west   the-resurgence
+
+## the-water-notch | The Water Notch
+A slot the burn goes through where the gorge narrows to a stride, with the rock polished to a shine on both sides at chest height and everything below that scoured white. When it runs high this notch is the whole river and nobody is standing in it.
+> north  the-boulder-gate
+> west   the-upper-force
+
+## the-mid-shelf | The Mid Shelf
+A broad shelf where the ground eases at last, with the gorge behind you and the ground above rearing back up into crags and snowfields you have not been near yet. It is a natural place to stop and it feels like one. Everything above this line is steeper than everything below it.
+> west   the-boulder-gate
+
+## the-wind-notch | attachment: the foot's gap, and the ramp under the wall
+!existing
+> east   the-slant
+
+## the-cleft | attachment: the foot's fissure, and what is wedged in it
+!existing
+> east   the-wedge
+
+# ---- TWO MORE WAYS UP OFF THE FOOT -----------------------------------------
+# Added with tier four (rome, 2026-08-19), and not for the fiction's sake — the
+# throat check failed. With the whole upper mountain hanging off three rooms,
+# three people standing in them own 182 rooms of ground, and that is exactly the
+# failure the check exists to catch. Both of these are single rooms that join
+# ground already standing, and both are the kind of way an animal makes: a ramp
+# under a wall, and a slab wedged in a fissure.
+#
+# NOTE THE EXITS THEY DO NOT HAVE. The slant is under the pass head and does not
+# join it; the wedge is above the sun shoulder and does not join that. If they
+# did, the new route would share a room with the old one and the check would go
+# straight back to counting three.
+
+## the-slant | The Slant
+A ramp of turf and broken rock slanting up under the wall of the pass, wide enough to walk and too tilted to stand still on, with the whole weight of the crag leaning over it. Nothing made this and nothing maintains it. It is simply the one line across this face that does not require hands, and everything with four legs on this hill has known that for longer than there have been people to not know it.
+> east   the-shoulder-drop
+> west   the-wind-notch
+
+## the-wedge | The Wedge
+A block the size of a cart jammed in the fissure at head height, and above it the crack goes on and lets you out on the shelf. Getting past the block is a squeeze with your back on one wall and your boots on the other, and there is nothing to hold on the way through. Something with a wide skull has been through here often enough to polish both sides.
+> east   the-rowan
+> west   the-cleft
+
