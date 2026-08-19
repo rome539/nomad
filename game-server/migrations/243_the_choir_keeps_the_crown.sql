@@ -1,0 +1,41 @@
+-- 243 the choir keeps the crown (rome, 2026-08-19). One row, deleted.
+--
+-- A player reported it as a bug: killed the Marrow-King and got a FRAGMENT of
+-- his crown, killed an ordinary cantor and got the WHOLE crown. It reads
+-- backwards, and the reflex was to fix it by moving the crown onto the King.
+--
+-- THE DATA SAYS OTHERWISE. Every legendary in the world, and who carries it:
+--
+--     last-watchman   lv3  0.06      forgotten-king  lv5 boss  EPIC 0.15
+--     road-carrier    lv3  0.06      marrow-king     lv6 boss  EPIC 0.25
+--     the-bellfounder lv3  0.06      drowned-god     lv6 boss  EPIC 0.25
+--     drowned-hulk    lv4  0.05      the-ferryman    lv6 boss       0.22
+--     marrow-cantor   lv4  0.06
+--     warden-captain  lv5  0.06
+--     the-gaunt       lv6  0.15  (once a day)
+--
+-- Bosses hand you an EPIC reliably; legendaries come off named elites, rarely.
+-- The cantor at lv4/38hp/0.06 is the dead centre of that band, not an outlier.
+-- And the other two kings do not drop their own legendaries AT ALL — the Still-
+-- Water Shroud is in the tide box and the Attainder is in the reliquary, both
+-- placed there by mig 218. The Marrow-King's 0.05 was the only king in the world
+-- holding the legendary named after him, and having TWO sources with neither of
+-- them the answer is exactly what made this read as broken.
+--
+-- The fiction was already correct and was simply not being listened to. The item
+-- says "What the shards were broken from": you break the King up for pieces, and
+-- the pieces are the 0.50 shard — which is also the sole input to the smith's
+-- ruin, so his body stays load-bearing as the forge's faucet. The intact crown
+-- was never on the head you took. Regalia lives with the church between
+-- crownings, not on the man, and his choir is what is left of the church.
+--
+-- The hunt is better for it, too. The King is ONE body on a ten-minute respawn —
+-- campable. The cantors are FOUR bodies scattered down the bone rooms on twenty,
+-- LISTENERS that wake to a footfall and HOLLOW that grinds an edge eight times a
+-- blow. Going for the crown is a deep crawl that costs you your weapon and then
+-- asks you to carry it back out. That is the game the world is actually about.
+--
+-- So the stray comes off and the cantor keeps it. Nothing else moves: his shard
+-- stays 0.50, his scepter stays 0.25, the cantor's crown stays 0.06.
+
+DELETE FROM mob_keys WHERE template_id = 'marrow-king' AND key_item = 'marrow-crown';

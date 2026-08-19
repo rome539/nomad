@@ -944,6 +944,15 @@ export const MOVE_SOUNDS: Record<string, string> = {
   // causeway you hear things coming a long way off and can do nothing about it.
   "the-tide-warden": "Boots in standing water {dir}, at a steady walking pace, going the length of something.",
   "the-drover": "A stick knocking on gravel {dir}, and a slow wading, and a voice saying something to nothing.",
+  // THE MOUNTAIN, THE FOOT (mig 244). Hill sound: it carries a very long way up
+  // there and it arrives with nothing attached to it, so you hear the work being
+  // done from three rooms off and cannot tell yet that there is no flock in it.
+  // The lion makes NO approach sound of its own — that is the point of it, and
+  // a lurker with a footstep is not a lurker. What carries is what leaves.
+  "cave-lion": "Every bird on the face {dir} goes up at once, and nothing follows them, and they do not come back down.",
+  "the-herd": "A stick on stone {dir}, three strikes, spaced out, and then a long nothing.",
+  "the-milker": "A pail set down on rock {dir}, and shifted, and set down again.",
+  "a-fold-dog": "Something running the slope {dir}, fast and low and turning, and no voice calling it.",
   "the-eel-cutter": "A pole going into mud {dir} and coming out of it, over and over, working away from you.",
   "the-pilot": "A pole goes into the channel {dir} once, finds the depth it wanted, and stops.",
   "the-reed-walker": "Reed parting {dir}, one cut over, keeping pace with you.",
@@ -1035,6 +1044,10 @@ export const STILL_SOUNDS: Record<string, string> = {
   "strand-thief": "somebody standing extremely still on shingle, which shingle makes almost impossible",
   "the-wrecker": "the creak of a lantern handle, from somebody standing perfectly still",
   "the-drover": "a slow suck of mud round something standing in it, waiting for stock that is not coming",
+  "cave-lion": "breathing, very slow and very low down, from something that has not decided anything yet",
+  "the-herd": "a man breathing through his nose, unhurried, from the place a man stands to watch a hillside",
+  "the-milker": "two hands working at something, wet once and then not wet again",
+  "a-fold-dog": "panting, close to the ground, and the small sound of a tail going",
   "the-quicksand": "nothing at all, from a piece of ground exactly like every other piece of ground",
   "conger": "water sucking in and out of a hole in stone at a rate that is not the sea's",
   "old-conger": "water going in and out of a hole in the stone, slowly, and far too much of it",
@@ -2689,7 +2702,13 @@ export const FERRY_DRAG_MAX = 3;      // and never more than three rooms — a f
 // room until it drops on you, which is the only honest way to write a thing
 // you never catch sight of. It lives in the lying cores, so it finds you at
 // exactly the moment you have stopped knowing the way back.
-export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", "something-ahead", "root-thing"]);
+export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", "something-ahead", "root-thing",
+  // THE HIGH GROUND (mig 245). The first LARGE animal in the world to wait
+  // unseen — every other lurker is a thin thing in the dark, and the whole
+  // shock of this one is that ninety-six hit points were in the room with you
+  // the entire time. zone.ts stamps `hidden` on creatures that joined this set
+  // after they spawned, so the live world does not need a reseed to hide it.
+  "cave-lion"]);
 // ROOTED things never move. Not a sentinel — a sentinel guards a door, sleeps
 // until the deep is opened, and carries a pile of deep-specific machinery a
 // wood creature has no business inheriting. This is the plainer fact: it is
@@ -2755,7 +2774,15 @@ export const FIREKEEPERS = new Set(["charcoal-burner"]);
 // for. This fixes the tell and leaves what they are alone; promoting either to
 // HOLLOW outright stays a separate call.
 export const PROVISIONED = new Set(["charcoal-burner", "the-woodward", "the-keeper-of-the-holding",
-  "road-carrier", "the-sapper", "the-bellfounder"]);
+  "road-carrier", "the-sapper", "the-bellfounder",
+  // THE SUMMER PEOPLE (mig 244). The mountain's first people, and the first
+  // bodies on it that are not a mouth: the herd and the milker keep a flock that
+  // is not there, so neither of them grazes, hunts or scavenges and neither has
+  // a feeding route to bank to. The DOG is here for the sadder reason — it is a
+  // predator with nothing to predate and nobody to feed it, and its own
+  // description says how that is going. Provisioning it is the only way it does
+  // not quietly starve out of the world at the cap.
+  "the-herd", "the-milker", "a-fold-dog"]);
 // REVENANTS don't stay down: put one to 0 and it RISES ONCE, at part health, and
 // comes again. The second death is the real one. A longer fight, not a lost one.
 export const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);
@@ -2797,6 +2824,10 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "the-pilot": { out: "poles away {dir} into the channel on a line he has not had to think about in two centuries.", in_: "comes in {dir} off the deep water, ships the pole, and reads you the way he reads a bar." },
   "the-reed-walker": { out: "goes {dir} into the reed and the reed does not close behind it.", in_: "comes out of the reed {dir}, at your pace, on your side." },
   "the-drover": { out: "goes {dir} across the shoal at a working pace, driving nothing.", in_: "comes wading in {dir} with the stick over his shoulder and does not break step." },
+  "cave-lion": { out: "goes {dir} at a walk, without hurrying, and is the colour of everything it walks past.", in_: "is not there and then is there {dir}, low, already at the distance it wanted." },
+  "the-herd": { out: "moves off {dir} along the contour, three steps, and stands again to hold the line.", in_: "comes along the slope {dir} with the stick held across him, and takes up a position, and watches the grazing." },
+  "the-milker": { out: "picks up the pail and goes {dir} to the next fold, at the hour she has always gone.", in_: "comes {dir} with the dry pail on her hip and looks for somewhere to set it down." },
+  "a-fold-dog": { out: "breaks off {dir} at a flat run, wide, going out to the top of the gather.", in_: "comes in {dir} at a low run, brings nothing to heel, and waits to be told." },
   "strand-thief": { out: "goes {dir} along the wrack at an unhurried walk, not looking back.", in_: "comes along the tideline {dir}, turning things over with a foot." },
   "the-wrecker": { out: "walks off {dir} along the tideline without hurrying, which is worse.", in_: "comes down the shingle {dir}, looking at what you are carrying." },
   "the-tide-warden": { out: "walks {dir} down the causeway at the pace it has always held.", in_: "comes up the causeway {dir}, stops at the milestone, and cuts the stick." },
@@ -3507,6 +3538,10 @@ export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "th
   // commits without ever leaving the nest; the holder owns the whole face and
   // will not be lured off it by noise elsewhere.
   "brooding-vulture", "eyrie-holder",
+  // THE HIGH GROUND (mig 245). It is not holding a post or a nest — it is
+  // standing in its own larder and you walked into it. A lurker that did not
+  // commit would simply be a jump-scare with a health bar.
+  "cave-lion",
   // THE CROSSING (mig 191): three that hold a workplace rather than a post. The
   // mason and the widow are AT WORK and you are in it; the gull simply has a
   // pier, and has never in its life conceded anything to anybody.
@@ -4799,6 +4834,12 @@ export const VITALS_THREATS = new Set<string>([
   // can find the gap, and the biggest animal in it does not get an exemption
   // because the walk home is long. The walk home being long is the region.
   SUMMIT_BOSS,
+  // THE HIGH GROUND (mig 245). The summit was ruled onto this list over my
+  // objection, and that ruling settles this one too: an animal whose entire
+  // killing method is closing a jaw on a windpipe cannot be gentler than the one
+  // that kills by dropping its weight on you. Pull this line if the high ground
+  // reads as a coin toss — it is one word, and nothing else about it changes.
+  "cave-lion",
 ]);
 // The PLAYER side of the vitals lottery. Bosses are the designed wall — never.
 // Every other mob can fall to a lucky killing blow (its own armor buys the odds
