@@ -554,9 +554,31 @@ function legendExpr(bossPts: number, pvpPts: number): string {
 // matter how many people are on the board. `trophyIds` comes from the world
 // (mob loot that is neither food nor gear); an empty list means the caller has
 // no world loaded, and the board simply reads zero rather than throwing.
+// THE HUNDRED-PARAMETER CEILING (found 2026-08-19, the boards stopped answering).
+// This list used to go in as bound `?` marks, and the expression is used TWICE
+// per query (select list and filter), so the trophy board bound 2N+1 parameters.
+// D1 REFUSES A QUERY OVER 100 BOUND PARAMETERS, so the statement threw, the
+// command threw, and every `leaderboard` came back "the dungeon stumbles."
+//
+// It had been running one parameter under the wire for a long time: 49 trophies
+// in the world before the mountain = 99. The mountain's roster added 21 more and
+// took it to 141, and the board has been dead since the morning it shipped.
+//
+// Fixed by INLINING the ids instead of binding them, which costs zero
+// parameters and cannot be outgrown. These are our own template ids out of our
+// own tables and never player text — but this builds SQL, so it is not taken on
+// trust: anything that is not [a-z0-9_-] is dropped on the floor rather than
+// escaped, because a trophy id has never looked like anything else and a
+// surprise here should lose a row, not open a hole.
+const SAFE_ID = /^[a-z0-9_-]+$/i;
+function idList(ids: string[]): string {
+  const safe = ids.filter((id) => SAFE_ID.test(id));
+  return safe.length ? safe.map((id) => `'${id}'`).join(",") : "''";
+}
+
 function trophySumSelect(trophyIds: string[]): string {
   if (!trophyIds.length) return "0";
-  const marks = trophyIds.map(() => "?").join(",");
+  const marks = idList(trophyIds);
   // ROUNDED, because barter values are fractional and a board is not the place
   // to show somebody 617.1. Matches the Math.round the publish path has always
   // applied.
@@ -579,14 +601,14 @@ export async function loadLeaderboard(
   opts: { bossPts: number; pvpPts: number; trophyIds: string[] },
 ): Promise<LbEntry[]> {
   const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts);
-  // The expression appears TWICE (select list and filter), so a trophy board
-  // binds its id list twice before the limit. Legend binds nothing but the limit.
-  const ids = board === "trophies" ? opts.trophyIds : [];
+  // The expression appears TWICE (select list and filter). It used to bind its
+  // id list on both, which is what broke the board — the ids are inlined now
+  // (trophySumSelect), so this binds exactly one parameter, always.
   const res = await db
     .prepare(`SELECT p.pubkey, p.name, ${expr} AS score FROM players p
                WHERE p.lb_published_at IS NOT NULL AND ${expr} > 0
                ORDER BY score DESC, p.lb_published_at ASC LIMIT ?`)
-    .bind(...ids, ...ids, limit)
+    .bind(limit)
     .all<LbEntry>();
   return res.results ?? [];
 }
@@ -599,16 +621,15 @@ export async function leaderboardRank(
   opts: { bossPts: number; pvpPts: number; trophyIds: string[] },
 ): Promise<{ rank: number; score: number } | null> {
   const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts);
-  const meBinds = board === "trophies" ? [...opts.trophyIds, pubkey] : [pubkey];
+  // Same fix as the board above: the ids are inlined, so each of these binds one.
   const me = await db
     .prepare(`SELECT ${expr} AS score, p.lb_published_at AS pub FROM players p WHERE p.pubkey = ?`)
-    .bind(...meBinds)
+    .bind(pubkey)
     .first<{ score: number; pub: number | null }>();
   if (!me || me.pub === null || me.score <= 0) return null;
-  const aheadBinds = board === "trophies" ? [...opts.trophyIds, me.score] : [me.score];
   const ahead = await db
     .prepare(`SELECT COUNT(*) AS n FROM players p WHERE p.lb_published_at IS NOT NULL AND ${expr} > ?`)
-    .bind(...aheadBinds)
+    .bind(me.score)
     .first<{ n: number }>();
   return { rank: (ahead?.n ?? 0) + 1, score: me.score };
 }
