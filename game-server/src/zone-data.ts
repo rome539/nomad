@@ -1490,7 +1490,32 @@ export const ROAMING_DENS = new Set(["masterless-dog", "footpad", "roe-deer", "g
 // gates with its thirty rooms. Hideaways are excluded (nobody wakes inside a
 // bolthole) and so are gates, since regionOf calls a gate "gate" — you never
 // wake on the Roadwarden's doorstep, you wake somewhere out on the road.
-export const SPAWN_REGIONS = new Set<string>(["road"]);
+export const SPAWN_REGIONS = new Set<string>(["road", "wood", "crossing", "mountain"]);
+// ...AND THE QUARTERS INSIDE THEM A FRESH WANDERER MAY WAKE IN (rome,
+// 2026-08-19: why can you not spawn in the wood and the crossing). The answer
+// was that nothing had revisited it since mig 126 handed the wake points to the
+// fortress and left every later band's doors as banks. Now every band wakes
+// people and each is ONE slot, so no region can swamp the pool by having more
+// doors than another — which is exactly what the mountain did by arriving with
+// four of them.
+//
+// Two bands cannot be opened whole, and this is the same shape MIGRATE_QUARTERS
+// already uses to keep settlers off the water:
+//
+//   THE CROSSING is a mile of tidal water with a causeway, a ford and a bridge
+//   in it. Waking on the causeway at half flood is drowning a wanderer who has
+//   not typed a command yet. The two SHORES only — the same two the migrants
+//   are held to.
+//
+//   THE MOUNTAIN is 398 rooms and five tiers, and the top of it is a bone fan
+//   with a wake of vultures on it and a drake above that. THE FOOT only: the
+//   summer ground where the doors are, density 0.4, the shallow end of the whole
+//   region. Waking anybody higher is not difficulty, it is a coin flip on
+//   whether they get a turn.
+export const SPAWN_QUARTERS: Record<string, Set<string>> = {
+  crossing: new Set(["nearshore", "farstrand"]),
+  mountain: new Set(["foot"]),
+};
 
 // THE MILESTONES (2026-08-01). Two stones on the West Road, twelve rooms apart,
 // that keep a PERMANENT register of names — distinct from `carve <words>`, which
@@ -4063,7 +4088,7 @@ export const NIGHT_LIT = new Set<string>([
   // the world: somebody is in there and the fire is lit, so the doorway shows
   // from outside. INDOOR_ROOMS already keeps the sky off them; this is what the
   // room next door sees.
-  "the-shieling", "the-stell", "the-hollow-under", "the-shelter-crag",
+  "the-shieling", "the-stell", "the-slabs", "the-shelter-crag",
 ]);
 export const OUTDOOR_REGIONS = new Set<string>(["out", "road", "wood", "mountain", "den", "crossing"]);
 // ...AND THE ROOMS INSIDE THEM THAT ARE NOT. A band declares itself outdoors as
@@ -4106,7 +4131,8 @@ export const INDOOR_ROOMS = new Set<string>([
   // and it is why the lee side, the tarn edge, the white hollow and the clear
   // window are NOT on this list, sanctuaries though they are. What is here has
   // rock, turf, hide or drift over your head.
-  "the-shieling", "the-stell", "the-hollow-under", "the-shelter-crag",   // the four doors
+  "the-shieling", "the-stell", "the-slabs", "the-shelter-crag",           // the four doors
+  "the-hollow-under",   // ...and the erratic keeps its roof after losing its door: a dry floor under a boulder is roofed whether anybody is living on it or not
   "the-fallen-block", "the-boulder-gate",                                // the middle's two roofed boltholes
   "the-under-rib",                                                       // the cloud line's dry cave
   "the-snow-hollow", "the-drift-hollow", "the-rib-cage",                 // the high ground

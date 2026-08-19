@@ -1,0 +1,32 @@
+-- 240 every band wakes you (rome, 2026-08-19).
+--
+-- He read the spawn table and asked why the wood and the crossing cannot wake
+-- anybody. The honest answer was that nothing had revisited it since mig 126
+-- split "gate" from "spawn" and handed the wake points to the fortress: every
+-- band built after that got doors to BANK at and no way to arrive, and the road
+-- was given a region-wide slot later while the wood and the crossing were simply
+-- never gone back to.
+--
+-- Then the mountain arrived with FOUR marked spawn rooms — because he asked for
+-- them and I wired them literally — and took 44% of every wake in the world,
+-- putting nearly half of all fresh wanderers and all deaths at the far east end
+-- of the map. That is the same swamping the road's region-slot was invented to
+-- prevent, and it made the case for doing this properly.
+--
+-- SO: ONE SLOT PER BAND. The code side is SPAWN_REGIONS, now road + wood +
+-- crossing + mountain, each counting as one slot however many rooms or doors it
+-- has. This migration is the data half: the mountain's four doors stop being
+-- wake points and go back to being what every other outlying region's doors are
+-- — somewhere to bank. Nobody wakes on a doorstep; you wake out IN the band,
+-- which is what the road has always done.
+--
+-- The three fortress thresholds keep their marks, as mig 126 wrote them: an arch
+-- and a port are places you are meant to arrive AT. The Waystation keeps its own
+-- for the same reason.
+--
+-- Where the pool lands: fortress 3, waystation 1, and one apiece for the road,
+-- the wood, the crossing and the mountain. Eight slots, and a new region can
+-- never again swamp it by turning up with more doors than the last one.
+
+UPDATE rooms SET is_spawn = 0
+ WHERE id IN ('the-shieling', 'the-stell', 'the-hollow-under', 'the-shelter-crag', 'the-slabs');

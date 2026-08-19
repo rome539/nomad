@@ -24,7 +24,7 @@
 #
 #   THE SHIELING      the summer hut, on the summer pasture
 #   THE STELL         the beasts' ring, half-roofed since by somebody
-#   THE HOLLOW UNDER  the dry sand under the erratic, swept
+#   THE SLABS         the roofed joint in the tilted rock, where the water goes past
 #   THE SHELTER CRAG  the overhang, walled at the windward end
 #
 # Four shelters on one seasonal ground — people came up with the animals for the
@@ -309,9 +309,7 @@ One boulder standing by itself on open ground, the size of a small house, of a s
 > west   the-boulder-field
 
 ## the-hollow-under | The Hollow Under
-The erratic sits on three points and the fourth corner is off the ground, and under it there is a dry floor of sand the size of a small room, out of the wind and out of the rain and out of the sight of everything. Somebody is in here. There is a ring of stones for a fire, and the sand is swept, and she has been doing both long enough that the swept edge has a lip on it.
-!entry
-!spawn
+The erratic sits on three points and the fourth corner is off the ground, and under it there is a dry floor of sand the size of a small room, out of the wind and out of the rain and out of the sight of everything. Somebody lived in here. There is a ring of stones for a fire with nothing in it but old ash, and the sand was swept once, long enough ago that the swept edge has gone soft and the wind has put a drift across the doorway.
 > north  the-erratic
 > south  the-beck-fork
 > east   the-stone-river
@@ -505,7 +503,9 @@ A narrow deep channel of peat-black water cut down through the bog, four feet de
 > west   the-mire-foot
 
 ## the-slabs | The Slabs
-Bare rock in great tilted sheets, swept clean of everything by the water that comes over them when the hill is full, with the joints between them opened into cracks you could put an arm down. Dry, they are the fastest walking on the mountain. They are not often dry.
+Bare rock in great tilted sheets, swept clean by the water that comes over them when the hill is full, with the joints between them opened into cracks you could put an arm down. Dry, they are the fastest walking on the mountain, and they are not often dry. The widest joint has been roofed: a slab levered flat across it and packed at the ends, with a hole for smoke and smoke coming out of it. Whoever did that picked the one place on this hillside the water goes past instead of over.
+!entry
+!spawn
 > south  the-wet-slabs
 > east   the-south-shoulder
 

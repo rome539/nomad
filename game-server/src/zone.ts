@@ -105,7 +105,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
-  DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  SPAWN_QUARTERS, DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -271,7 +271,14 @@ export class ZoneDO implements DurableObject {
     const band = pick.slice(1);
     // Never in a hideaway, and never at a gate (regionOf calls a gate "gate", so
     // gates fall out of the band automatically).
-    const pool = [...world.rooms.keys()].filter((r) => this.regionOf(r) === band && !world.safeRooms.has(r));
+    // ...and inside a band, only the quarters a fresh wanderer can survive
+    // waking in (SPAWN_QUARTERS): the crossing's two shores rather than its
+    // tideway, the mountain's foot rather than its bone fan. Bands with no
+    // entry there open whole, which is what the road has always done.
+    const allow = SPAWN_QUARTERS[band];
+    const pool = [...world.rooms.keys()].filter((r) => this.regionOf(r) === band
+      && !world.safeRooms.has(r)
+      && (!allow || allow.has(MAP_QUARTERS[r] ?? "")));
     return pool[randInt(0, pool.length - 1)] ?? world.entryRoom;
   }
 
