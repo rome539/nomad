@@ -25,7 +25,7 @@ import {
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS,
-  SUMMIT_BOSS, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
+  SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
@@ -2879,7 +2879,10 @@ export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
   // were not told about first: the breath is announced a full beat and a half
   // ahead, in the room and to every person in it, and the room has one exit.
 export function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now: number): boolean {
-    if (creature.templateId !== SUMMIT_BOSS) return false;
+    // SUMMIT_BOSSES, not SUMMIT_BOSS: the pale drake (mig 247) is a second
+    // individual on the same summit and it gets the arc, the breath and the air
+    // or it is not a drake at all.
+    if (!SUMMIT_BOSSES.has(creature.templateId)) return false;
 
     // ---- the breath lands ----
     if (creature.breathAt !== undefined && now >= creature.breathAt) {
@@ -2986,7 +2989,7 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
     // Gated now. Anything without its own script climbs the phase silently,
     // which is the right default — a thing getting worse is already legible in
     // the damage — and the two that DO have a script say their own.
-    if (creature.templateId === SUMMIT_BOSS) {
+    if (SUMMIT_BOSSES.has(creature.templateId)) {
       if (newPhase === 1) {
         z.roomFeed(creature.roomId, `${cap(tmpl.name)} gets its feet under it properly for the first time, and the size of it changes.`);
         z.creatureNoise(creature.roomId);

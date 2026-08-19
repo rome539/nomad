@@ -611,6 +611,9 @@ export const ECO_SLOWEST = 4;      // hardest case: an empty den takes 4x as lon
 // Only the living eat. The hollow do not hunger and are not food, so the deep's
 // bone-things keep the flat clock they always had.
 export const ECO_LINES = new Set([
+  // mig 247, the mountain's rare blood: the-raiding-fox, the-dancer, the-gravid-adder, the-blue-fox, the-tom, the-bone-dropper, the-old-glutton
+  "the-raiding-fox", "the-dancer", "the-gravid-adder", "the-blue-fox", "the-tom", "the-bone-dropper", "the-old-glutton",
+
   // THE MOUNTAIN, TIER FIVE (mig 235). The adder eats what crosses the warm rock
   // and the two birds eat off the terraces; all three breathe with the tiers
   // below them, because it is one band and one web from the shore up.
@@ -1444,7 +1447,10 @@ export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman"
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
-export const THIEVES = new Set(["cutpurse", "cutthroat", "footpad", "wayman",
+export const THIEVES = new Set([
+  // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-bone-dropper
+  "the-old-raven", "the-raiding-fox", "the-bone-dropper",
+"cutpurse", "cutthroat", "footpad", "wayman",
   // The strand thief (mig 191) works the wrack line, and does not think of it
   // as stealing, because the sea does not own things either.
   "strand-thief", "the-wrecker"]);
@@ -1613,14 +1619,20 @@ export const BROOD_INTERVAL_MS = 90_000; // ~90s between births
 // they HEAR. A still, quiet wanderer they walk right past; move (in or out) or
 // make a din and they may lurch awake and swing. (A grudge still wakes them
 // outright; this is only for the ones that don't yet know you.)
-export const LISTENERS = new Set(["skeleton", "bone-knight", "marrow-cantor"]); // the cantor brings ears (and the bone-tax) to the King's Demesne
+export const LISTENERS = new Set([
+  // mig 247, the mountain's rare blood: the-butter-wife
+  "the-butter-wife",
+"skeleton", "bone-knight", "marrow-cantor"]); // the cantor brings ears (and the bone-tax) to the King's Demesne
 export const WAKE_ENTER = 0.3;  // sometimes it catches the sound of you coming in
 export const WAKE_EXIT = 0.45;  // your move for the door is still the loudest thing you do — but it SCALES with your load now (rome, 2026-07-30). At a flat 0.65 leaving a room with a sleeper in it was punished two times in three, with no way to creep out: entry took ENTRY_STEALTH_MIN scaling ("the plate ninja is dead"), the exit took none, so light gear helped you arrive and did nothing for you leaving. Same roll both ways now, and the door stays the louder of the two.
 export const WAKE_NOISE = 0.8;  // a fight in the room is almost unmissable
 export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
 // SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing
 // and — past BOLD — losing their nerve entirely: they stop fleeing and hit harder.
-export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf",
+export const SCAVENGERS = new Set([
+  // mig 247, the mountain's rare blood: the-blue-fox, the-bone-dropper, the-old-glutton
+  "the-blue-fox", "the-bone-dropper", "the-old-glutton",
+"grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf",
   // THE MOUNTAIN, TIER THREE (mig 231). The glutton takes carrion off whatever
   // made it, which is most of how it eats. The bone-breaker is the one line in
   // the game that scavenges and hunts NOTHING — it has no PREYS_ON row at all,
@@ -1645,7 +1657,10 @@ export const SCAVENGERS = new Set(["grave-hyena", "dire-hyena", "grey-wolf", "di
 // room to sate and heal a little — but it does NOT haul off loot, mourn its kin,
 // or gorge itself bold into a threat (all of that stays gated on SCAVENGERS).
 // The bone rooms clean their own dead; the rat just doesn't starve in them.
-export const VERMIN = new Set(["rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",
+export const VERMIN = new Set([
+  // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer
+  "the-old-raven", "the-raiding-fox", "the-dancer",
+"rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",
   // THE MOUNTAIN, TIER FOUR (mig 233). A chough is a crow: it eats what it finds
   // dead as readily as what it finds alive, and above the cloud line "what it
   // finds dead" is the entire menu. Not SCAVENGERS — it gets none of that
@@ -1707,7 +1722,10 @@ export const SCOOP_NOSE_MS = 8_000;
 // first. Adding it to STARVE_HUNTERS would break that SILENTLY: woundedPreyHunts
 // is gated on membership alone and never reads hunger, so the hunger exemption
 // below would not save it. It is a 115 hp wall you choose to fight.
-export const HOARDERS = new Set(["rag-and-bone"]);
+export const HOARDERS = new Set([
+  // mig 247, the mountain's rare blood: the-old-raven
+  "the-old-raven",
+"rag-and-bone"]);
 export const HOARD_CARRY_CAP = 8;   // the deep pocket (a hyena's jaws hold 3)
 // The den is a TELL, not the prize (rome: "carries it, den is a bonus"). Above
 // the keep line it sheds the odd piece where it sleeps, so the room slowly
@@ -1918,6 +1936,9 @@ export const FEVER_MEND_MULT = 0.35;  // what rest, food and a bandage are all w
 // not (the aggro loop skips sleepers), so the same room at night is a thing
 // you can creep past, or open on. Same creature, opposite problem, by the hour.
 export const NAPPERS = new Set([
+  // mig 247, the mountain's rare blood: the-old-raven
+  "the-old-raven",
+
   "rat", "fleet-rat", "albino-rat", "cutpurse",  // the fortress's own dozers
   "roe-deer", "white-roe", "wild-boar", "old-boar", // the wood's game, after dark
   "the-baited-bear", "the-chain-breaker", // it lies up where it stops; finding one asleep is the only good news about it
@@ -1956,7 +1977,10 @@ export const NAPPERS = new Set([
 // The grey seal is NOT here: it hauls out to sleep in the daylight, which is
 // the joke the original line was written for, and it forages on the tide rather
 // than the hour. The birds are not here for the obvious reason.
-export const NOCTURNAL = new Set(["otter", "dog-otter", "conger", "old-conger", "ford-eel", "silver-eel", "wrack-crab", "devil-crab", "bittern",
+export const NOCTURNAL = new Set([
+  // mig 247, the mountain's rare blood: the-raiding-fox, the-tom, the-old-glutton
+  "the-raiding-fox", "the-tom", "the-old-glutton",
+"otter", "dog-otter", "conger", "old-conger", "ford-eel", "silver-eel", "wrack-crab", "devil-crab", "bittern",
   // THE MOUNTAIN, TIER ONE (mig 227). Both of the foot's small hunters work the dark.
   "hill-fox", "wildcat",
   // THE MOUNTAIN, TIER TWO (mig 229). An owl and a cat, which is the whole night shift.
@@ -2072,6 +2096,9 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
 // The boar is on the list because a boar in water is a boar WALLOWING, which
 // is the other thing a boar is for.
 export const DRINKERS = new Set([
+  // mig 247, the mountain's rare blood: the-blue-fox, the-old-glutton
+  "the-blue-fox", "the-old-glutton",
+
   // THE MOUNTAIN, TIER FOUR (mig 233). The melt run is the only water above the
   // cloud line and it runs for about an hour a day, which makes it the most
   // reliable appointment on the mountain.
@@ -2153,7 +2180,10 @@ export const ALARM_DRAW_ODDS = 0.5;         // ...and about half the hunters nex
 // same face and starts closing (the pack-call draw, gated by CROW_CALL_ODDS so
 // a lone crow can be dealt with fast and a murder can't). A murder has one
 // brain the way a flock does: it all hates the same hand.
-export const CROWS = new Set(["gibbet-crow", "scarp-raven"]);
+export const CROWS = new Set([
+  // mig 247, the mountain's rare blood: the-old-raven
+  "the-old-raven",
+"gibbet-crow", "scarp-raven"]);
 export const CROW_ROUSE_RADIUS = 3;   // rooms a murder hears the strike across
 export const CROW_CALL_ODDS = 0.5;    // per idle corvid, per strike — most of them come
 
@@ -2168,7 +2198,10 @@ export const CROW_CALL_ODDS = 0.5;    // per idle corvid, per strike — most of
 // given nest — it MAY fetch one out (RAVEN_BARTER_ODDS per feed, so a fed
 // raven usually just eats and goes — a bargain, not a shop). A pool with
 // nothing in it only ever takes the meal.
-export const RAVEN_SCOOPERS = new Set(["gibbet-crow", "scarp-raven"]);
+export const RAVEN_SCOOPERS = new Set([
+  // mig 247, the mountain's rare blood: the-old-raven
+  "the-old-raven",
+"gibbet-crow", "scarp-raven"]);
 export const RAVEN_NEST_ROOMS = ["the-boundary-cairn", "the-gibbet-field", "the-watershed"]; // the three pools
 export const RAVEN_BARTER_ODDS = 0.4; // per feed: it parts with a piece from its nest ~2 in 5
 export const RAVEN_BARTER_WAIT_MS = 60_000; // after a feed it won't be fed again for a minute (a fed bird is a full bird)
@@ -2186,7 +2219,10 @@ export const RAVEN_NEST_CAP = 4;      // a pool holds about four before the rave
 // Same hard law as the dinner-laugh — one packmate, adjacent only, never one
 // that was itself summoned, and the call rides its own channel so nothing
 // cascades.
-export const PACK_CALLERS = new Set(["grey-wolf", "dire-wolf", "masterless-dog", "lead-dog",
+export const PACK_CALLERS = new Set([
+  // mig 247, the mountain's rare blood: the-last-dog
+  "the-last-dog",
+"grey-wolf", "dire-wolf", "masterless-dog", "lead-dog",
   // The drove dogs (mig 188). A herding dog's whole training is to work spread
   // out and answer another dog, and nobody has told them the stock is gone.
   "drove-dog", "the-drove-master",
@@ -2570,7 +2606,10 @@ export const BREAK_LINES = [
 // hunters have NO prey down there — near-equals, everything else bloodless — so
 // for them starvation has nowhere to go but your torchlight. (three-hound is a
 // SENTINEL and takes the room on its own terms — it stays out.)
-export const STARVE_HUNTERS = new Set(["dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf",
+export const STARVE_HUNTERS = new Set([
+  // mig 247, the mountain's rare blood: the-blue-fox, the-tom, the-old-glutton
+  "the-blue-fox", "the-tom", "the-old-glutton",
+"dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf",
   // THE MOUNTAIN, TIER THREE (mig 231). The pack past the end of its clock, and
   // the glutton, which was never especially interested in whether you were
   // hungry-adjacent or not. The bone-breaker is NOT here and never will be: it
@@ -2722,7 +2761,10 @@ export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", 
 // anywhere, because it is terrain that turns out to be alive. Both halves have
 // answers you already carry — a lurker wakes on entry and noise odds, so a
 // quiet pack walks past one, and it fears a torch.
-export const ROOTED = new Set(["root-thing",
+export const ROOTED = new Set([
+  // mig 247, the mountain's rare blood: the-gravid-adder
+  "the-gravid-adder",
+"root-thing",
   // THE MOUNTAIN, TIER FIVE (mig 235). Two things that are PART OF THE GROUND in
   // the plainest sense of this set: an adder lying on warm rock is not going to
   // be anywhere else today, and a bird that has been sitting a nest for six
@@ -2773,7 +2815,10 @@ export const FIREKEEPERS = new Set(["charcoal-burner"]);
 // bleed), and moving a live statline into it is a fight change nobody asked
 // for. This fixes the tell and leaves what they are alone; promoting either to
 // HOLLOW outright stays a separate call.
-export const PROVISIONED = new Set(["charcoal-burner", "the-woodward", "the-keeper-of-the-holding",
+export const PROVISIONED = new Set([
+  // mig 247, the mountain's rare blood: the-last-dog, the-one-who-stayed, the-butter-wife
+  "the-last-dog", "the-one-who-stayed", "the-butter-wife",
+"charcoal-burner", "the-woodward", "the-keeper-of-the-holding",
   "road-carrier", "the-sapper", "the-bellfounder",
   // THE SUMMER PEOPLE (mig 244). The mountain's first people, and the first
   // bodies on it that are not a mouth: the herd and the milker keep a flock that
@@ -3442,6 +3487,9 @@ export const MOB_VITALS: Record<string, string[]> = {
 // (No oystercatcher: it is prey, it stays PLAIN, and these three Sets only ever
 // refine what is already in BITERS — they never promote a thing into biting.)
 export const BEAKS = new Set([
+  // mig 247, the mountain's rare blood: the-old-raven, the-bone-dropper
+  "the-old-raven", "the-bone-dropper",
+
   // THE MOUNTAIN, TIER FIVE (mig 235).
   "brooding-vulture", "eyrie-holder",
   // THE MOUNTAIN, TIER FOUR (mig 233). Two bills built for opening a carcass and
@@ -3459,6 +3507,9 @@ export const BEAKS = new Set([
   "gibbet-crow", "scarp-raven",
 ]);
 export const COILS = new Set([
+  // mig 247, the mountain's rare blood: the-gravid-adder
+  "the-gravid-adder",
+
   "conger", "old-conger", "ford-eel", "silver-eel", "fen-viper", "gill-adder",
   // THE MOUNTAIN, TIER FIVE (mig 235). The only cold-blooded thing in this world
   // above the snow line, and it is up there because the rock is warm.
@@ -3468,6 +3519,9 @@ export const SMALL_BITE = new Set([
   "rat", "fleet-rat", "brood-rat", "albino-rat", "wrack-crab", "devil-crab",
 ]);
 export const BITERS = new Set([
+  // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer, the-blue-fox, the-tom, the-old-glutton
+  "the-old-raven", "the-raiding-fox", "the-dancer", "the-blue-fox", "the-tom", "the-old-glutton",
+
   // THE MOUNTAIN, TIER FOUR (mig 233).
   "snow-fox",
   // THE MOUNTAIN, TIER THREE (mig 231). The pack, and the thing that takes the
@@ -3527,7 +3581,19 @@ export const SENTINELS = new Set(["three-hound", "two-hound"]);
 // holds his turret: it is his.
 // The summit's animal, named here because three sets below reference it.
 export const SUMMIT_BOSS = "the-drake";
-export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding", "the-miller",
+// THE PALE DRAKE (mig 247) rolls off the summit the way the drowned god and the
+// marrow king roll off the forgotten king's throne — a DIFFERENT individual in
+// the same room, not a bigger copy. Which means every gate that reads
+// SUMMIT_BOSS by name has to read this instead, or the rare one arrives as a
+// hundred and sixty hit points of brick with no arc, no breath and no air:
+// `drakeBeat` and the phase theatre are both keyed on the id (ai.ts), and the
+// three sets below name it directly. One set, so a third one can never be added
+// without the mechanics coming with it.
+export const SUMMIT_BOSSES = new Set<string>([SUMMIT_BOSS, "the-pale-drake"]);
+export const AGGRESSIVE = new Set([
+  // mig 247, the mountain's rare blood: the-one-who-stayed, the-tom, the-pale-drake
+  "the-one-who-stayed", "the-tom", "the-pale-drake",
+"last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding", "the-miller",
   // THE SUMMIT (mig 237). Once it is a fight it holds its ground like everything
   // else on this list, and is_boss already stops it wandering off its mountain.
   SUMMIT_BOSS,
@@ -3554,7 +3620,10 @@ export const AGGRESSIVE = new Set(["last-watchman", "wild-boar", "old-boar", "th
 // and a crowded one is suicide). The player-side `sweep` weapon trait is the
 // same idea aimed the other way; this is its mob half, and like the player half
 // it punishes grouping — the narrow span is the whole fiction of a bridge.
-export const SWEEPERS = new Set(["the-bridge-mason",
+export const SWEEPERS = new Set([
+  // mig 247, the mountain's rare blood: the-pale-drake
+  "the-pale-drake",
+"the-bridge-mason",
   // THE SUMMIT (mig 237). A thing that size does not aim at one of you. Same
   // rule as the mason's mallet and the same reason: it punishes standing
   // together, and the summit is one open bowl with nothing to stand behind.
@@ -3699,6 +3768,9 @@ export const HOUND_WAKE_MS = 900_000; // 15 minutes
 // exactly as dangerous as it was. And you can't hunt what runs from you: pelts,
 // haunches and tusks now come to whoever walks in by lantern-light, or by none.
 export const FEARS_FIRE = new Set([
+  // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer, the-blue-fox, the-tom, the-bone-dropper, the-old-glutton
+  "the-old-raven", "the-raiding-fox", "the-dancer", "the-blue-fox", "the-tom", "the-bone-dropper", "the-old-glutton",
+
   // THE SUMMIT (mig 237) is NOT here and never will be. A torch is not an
   // argument with the thing that glazed the rock it is lying on.
   // THE MOUNTAIN, TIER FIVE (mig 235). The adder is NOT here: it does not flee
@@ -4825,6 +4897,9 @@ export const BLOOD_DRY_MS = 12 * 3_600_000;   // dried to brown; still not a bea
 export const BLOOD_FADE_MS = 36 * 3_600_000;  // when the skin finally forgets (the ledger of the hands)
 export const VITALS_ARMOR_FULL = 11;  // total armor that counts as 'fully covered' (a max kit)
 export const VITALS_THREATS = new Set<string>([
+  // mig 247, the mountain's rare blood: the-dancer, the-pale-drake
+  "the-dancer", "the-pale-drake",
+
   "three-hound", "two-hound", "pale-stalker", "pale-crawler", "the-drowned", "drowned-hulk",
   "marrow-cantor", "warden-captain", "forgotten-king", "marrow-king", "drowned-god",
   // THE SUMMIT (rome, 2026-08-19). I built it OFF this list and argued the
@@ -5443,6 +5518,31 @@ export const SEA_ROOMS = new Map<string, number>([
   ["the-rope-stage", 3], ["the-far-rope-stage", 3], ["the-channel-brink", 3],
   ["the-drowned-mooring", 1], ["the-deep-mark", 1], ["the-weed-raft", 1],
   ["the-eel-lines", 2], ["the-slack", 2],
+  // ---- THE LOW WAY TO THE MOUNTAIN (rome, 2026-08-19: one of the two ways in
+  // ought to shut, because the crossing floods). There are exactly two, and the
+  // rooms had already decided which:
+  //
+  //   THE SHINGLE STAIR "goes up the last of the beach onto the headland" — it
+  //   CLIMBS, and it stays dry forever. A region with 398 rooms behind it keeps
+  //   one way in that is always open, same principle as the refuge and the
+  //   bridge span.
+  //
+  //   THE BOULDER BEACH says the tideline "goes over and around them without
+  //   ever getting up onto the land properly" — a room the sea reaches as a
+  //   matter of routine. Rank 2: every ordinary tide takes it, so the low way
+  //   shuts on the normal five-to-seven hour cycle.
+  //
+  //   THE STORM LINE is the high-water MARK: "This is how high the water has
+  //   been. It is a great deal higher than anything you crossed today." Rank 3,
+  //   so only a spring proves it — and when one does, the room finally does the
+  //   thing it has been describing since the crossing shipped.
+  //
+  // Safe to cut: the Storm Line is a dead-end spur off the Thrift Bank, neither
+  // room sits on a shore-road column, and nothing is stranded behind them — the
+  // mountain keeps the dry stair and all four of its doors. And "shuts" means
+  // what it means everywhere else on this coast: not a locked door, but water
+  // over the stones that drives you out and bites while you stand in it.
+  ["the-boulder-beach", 2], ["the-storm-line", 3],
   // ---- THE TWO SHORES. The working ground below the tide line, both banks.
   ["the-limpet-rocks", 1],   // "exposed at low water", and that is all it is
   ["the-shellfish-scars", 1],

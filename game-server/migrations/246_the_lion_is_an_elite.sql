@@ -1,0 +1,38 @@
+-- 246 the lion is an elite (rome, 2026-08-19). One column.
+--
+-- He read the cave lion as being the baited bear's kind of thing, and he is
+-- right — that is exactly the band it was built in, and I flagged it is_boss
+-- anyway. That flag is not a label, it is eight behaviours:
+--
+--   does not wander · always simulated (ignores the sim radius) · the phase
+--   ramp (+3 damage per third of health lost) · IMMUNE TO STUN · immune to the
+--   player's vitals lottery · never flees · a world-wide death announcement ·
+--   and it counts as a BOSS KILL on the legend board
+--
+-- The last two are the ones that were plainly wrong. Killing a 96hp cat was
+-- being broadcast to every wanderer in the world and scoring the killer the same
+-- legend as the drake, the woodward and the drowned god.
+--
+-- AND IT WAS THE ONLY ONE. Every other elite in the game runs is_boss = 0 —
+-- the baited bear (76hp), the chain-breaker (88hp), the gaunt (72hp). The lion
+-- at 96 is the biggest of them and was the only one wearing the flag.
+--
+-- WHAT IT KEEPS, because none of it was ever the flag's doing: AGGRESSIVE holds
+-- it on its ground, LURKERS is the ambush, VITALS_THREATS is the throat, and
+-- armor 2 with bleed 3 is the fight. It is still the second hardest thing on
+-- that mountain by a wide margin.
+--
+-- WHAT IT LOSES, deliberately and with eyes open:
+--   THE STUN IMMUNITY. A mace can now stagger it, exactly as the bear and the
+--   chain-breaker can be staggered. That is the elite's bargain and there is no
+--   reason this one is exempt.
+--   THE PHASE RAMP. It no longer hits harder as it dies. What made that read
+--   well was the cornered-cat idea, but a bear does not get it either.
+--   NEVER FLEEING. Below the flee threshold it can now break off — and a
+--   wounded lion loose somewhere on the high ground is a better outcome than a
+--   lion that stands there and lets you finish it.
+--
+-- The drake is the mountain's only boss again, which is what one animal at the
+-- top was always supposed to mean.
+
+UPDATE mob_templates SET is_boss = 0 WHERE id = 'cave-lion';
