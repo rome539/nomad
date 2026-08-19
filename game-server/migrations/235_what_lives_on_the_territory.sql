@@ -63,7 +63,11 @@ INSERT INTO item_templates
   (id, name, description, rarity, edible, heal, lure, dmg, slot, armor, speed,
    sweep, weight, stun, block, bleed, barter, staunch, traits)
 VALUES
-  ('adder-skin', 'a shed skin',
+  -- NOT 'adder-skin': the gill-adder's drop has held that id since the road
+  -- shipped, and prod said so when this migration first tried to land. Local D1
+  -- did not have that row, which is exactly why a pre-ship check has to run
+  -- against PROD and not against the desk.
+  ('stone-adder-skin', 'a shed skin',
    'The whole skin of a snake come off in one piece and inside out, dry as paper, perfect down to the scales over the eyes, and long enough that you would rather not have known. It was left on warm rock at a height where nothing cold-blooded can survive a night, which is a fact about the rock and not about the snake.',
    'rare', 0, 0, 0, 0, '', 0, 1, 1, 0, 0, 0, 0, 6, 0, ''),
 
@@ -89,7 +93,7 @@ VALUES
   -- have put your foot.
   ('stone-adder', 'a stone adder',
    'Thick, short, and the exact grey-brown of the warm flags it is lying on, with the black zigzag down its back reading as a crack in the rock until it moves. It does not rear or hiss or do any of the things that would give you time. It is a piece of the ground with an opinion, and it has already been trodden on once today.',
-   3, 22, 4, 7, 600, 0, 'adder-skin', 0.35, 0, NULL, 0, 3, 0),
+   3, 22, 4, 7, 600, 0, 'stone-adder-skin', 0.35, 0, NULL, 0, 3, 0),
 
   -- ROOTED and AGGRESSIVE. The nest is the whole animal.
   ('brooding-vulture', 'a brooding vulture',
