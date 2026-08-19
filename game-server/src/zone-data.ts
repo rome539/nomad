@@ -4059,6 +4059,11 @@ export const NIGHT_LIT = new Set<string>([
   "gate", "weeper-arch", "sally-port",
   "the-first-milestone", "the-timber-stack", "the-withy-hut", "the-gate-arch",
   "the-ferry-house",
+  // THE MOUNTAIN'S FOUR (migs 226-236). Same rule as every other gatehouse in
+  // the world: somebody is in there and the fire is lit, so the doorway shows
+  // from outside. INDOOR_ROOMS already keeps the sky off them; this is what the
+  // room next door sees.
+  "the-shieling", "the-stell", "the-hollow-under", "the-shelter-crag",
 ]);
 export const OUTDOOR_REGIONS = new Set<string>(["out", "road", "wood", "mountain", "den", "crossing"]);
 // ...AND THE ROOMS INSIDE THEM THAT ARE NOT. A band declares itself outdoors as
@@ -4088,6 +4093,26 @@ export const INDOOR_ROOMS = new Set<string>([
   // earthworks, the camp hollows and the churchyard are weather; these are not.
   "the-marshals-lodging", "the-village-smithy", "the-cider-house", "the-culver-house",
   "the-charnel", "the-mine-mouth", "the-mine-gallery", "the-camouflet",
+  // ---- THE MOUNTAIN (migs 226-236). Shipped with NONE of these declared, which
+  // meant the four doors at the foot — a turf-and-stone hut you duck into, a
+  // stell with half a roof and a fire under it, the swept dry sand under the
+  // erratic, an overhang walled at the windward end — were rained on and went
+  // black with the sky like open hillside. rome walked into the Stell at night
+  // and could not see, standing in a room whose own description says the fire is
+  // lit and a man is keeping it.
+  //
+  // THE TEST IS A ROOF, NOT SHELTER. A hollow out of the wind is still under the
+  // sky and stays outdoors — that is the difference between a fold and a bothy
+  // and it is why the lee side, the tarn edge, the white hollow and the clear
+  // window are NOT on this list, sanctuaries though they are. What is here has
+  // rock, turf, hide or drift over your head.
+  "the-shieling", "the-stell", "the-hollow-under", "the-shelter-crag",   // the four doors
+  "the-fallen-block", "the-boulder-gate",                                // the middle's two roofed boltholes
+  "the-under-rib",                                                       // the cloud line's dry cave
+  "the-snow-hollow", "the-drift-hollow", "the-rib-cage",                 // the high ground
+  "the-lean", "the-vent", "the-last-shelter",                            // the territory's roofed three
+  "the-under-step", "the-shelf-walk", "the-warm-under", "the-heat-under", // ...and the low line, which is
+  "the-lower-warm", "the-lower-flags",                                   // one long overhang end to end
 ]);
 // A day/night world-clock (rome, 2026-07-22): every OUTDOOR room only, deep/
 // warrens/keep are always their own dark regardless. Deliberately faster than
