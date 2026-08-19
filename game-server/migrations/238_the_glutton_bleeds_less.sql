@@ -1,0 +1,25 @@
+-- 238 the glutton bleeds less (rome, 2026-08-19). One number.
+--
+-- He met one and called it what it is: the second most dangerous ordinary
+-- creature in the game, behind the baited bear and nothing else. The measured
+-- reason was three things stacked on one animal — armor 2 (the only mountain
+-- creature with it, and mob armor subtracts flat off every swing, so it eats
+-- fast weapons alive), bleed 3 (the highest on the mountain outside the drake,
+-- and bleed goes straight through worn armor), and no flee rule at all, because
+-- SCAVENGERS do not break off at low health the way the wolves do.
+--
+-- HE PICKED THE BLEED, so the bleed is what moves: 3 -> 1. Not the armor, which
+-- was the other lever I put in front of him and which he did not choose — the
+-- flat-subtraction bite is what makes this animal read as heavy and slow and
+-- worth bringing the right weapon to, and it stays exactly as it was.
+--
+-- What that costs it: the wound it opens now ticks for 1 instead of 3, so a
+-- fight it used to keep charging you for after the exchange ended is a fight
+-- that mostly stops when the swinging stops. It goes from the mountain's worst
+-- bleeder to its mildest — below the lynx, the wolf and the owl, all of which
+-- sit at 2 — while staying the hardest of them to actually put down.
+--
+-- Thirteen bodies across the region are affected: three at the cloud line, four
+-- on the high ground, six on the territory.
+
+UPDATE mob_templates SET bleed = 1 WHERE id = 'glutton';

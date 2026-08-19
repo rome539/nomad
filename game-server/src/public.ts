@@ -48,6 +48,19 @@ export const PAGE = `<!doctype html>
        There was no blue in this palette. There is a mile of water in the world
        now, and water is drawn blue on every map anybody has ever read. */
     --tide: #6f93c9;
+    /* THE FIRST NEUTRAL IN THIS PALETTE (rome, 2026-08-19, picking the
+       mountain's colour). Every other colour on this chart carries saturation
+       18 to 64 - the whole palette is coloured - so a near-grey is not
+       competing for a hue slot at all. It occupies the one axis nothing else
+       uses, which is why it can sit at 6% saturation and still read as its own
+       region rather than as a washed-out version of somebody else's.
+       Measured against what it has to live beside: steel (the gates) is
+       18% sat / 70% light and visibly BLUE next to this; cream (the overworks)
+       is the same lightness but strongly warm at 48% sat. The join that
+       actually matters is with the crossing at the Shingle Stair, and the
+       crossing is a 45% blue - the two could not be confused.
+       It is stone and snow, and it has no colour in it, which is the region. */
+    --stone: #d3d6d8;
     --name-s: 55%; /* key-coloured names: saturation/lightness, reset per theme from its ground (applyThemeColors) */
     --name-l: 70%;
     --border: #3a3020;
@@ -4204,6 +4217,11 @@ function mapRegionColor(region, isGate) {
   // common. Narrower clearance than the road and the wood got, but green against
   // amber is a hue difference the eye names, not just measures.
   if (region === "den") return mapCssVar("--heal");
+  // THE MOUNTAIN. 398 rooms, a third of the world, and until now it drew GOLD -
+  // the default, which is the buried keep's colour - so the biggest region in
+  // the game read as more dungeon. Same bug the road and the crossing each hit
+  // in their turn, and the same fix: give it its own entry.
+  if (region === "mountain") return mapCssVar("--stone");
   // No colour for the mountain until the mountain exists — the cream I first
   // gave it was the overworks exactly.
   return mapCssVar("--gold"); // the halls / default
@@ -5205,7 +5223,7 @@ chipbtn.addEventListener("click", function () {
 
 // ---- themes: the Door in different lights ----
 // Five local presets, one row in settings; the relays add the rest below.
-var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "blood", "bone", "steel", "heal", "omen", "voice", "border", "border2", "line"];
+var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "blood", "bone", "steel", "heal", "omen", "voice", "stone", "border", "border2", "line"];
 var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
 // 'heal' is the mending-green (eat/bandage/rest chips): a distinct hue that must
 // stay legible on each ground, so — like blood/steel — it's tuned per theme
@@ -5221,11 +5239,11 @@ var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
 // lighter, so a voice can never be mistaken for a wound. On the light 'bone'
 // ground it inverts to a deep wine-rose.
 var THEMES = {
-  door:  { bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
-  bone:  { bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", voice: "#a5325f", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
-  moss:  { bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", voice: "#eb9cba", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
-  abyss: { bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", voice: "#e79cbc", border: "#243049", border2: "#2f4160", line: "#171f33" },
-  ember: { bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", omen: "#c9a2c4", voice: "#f2a4c1", border: "#46291a", border2: "#5c3722", line: "#331e12" },
+  door:  { stone: "#d3d6d8", bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
+  bone:  { stone: "#6f7378", bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", voice: "#a5325f", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
+  moss:  { stone: "#d3d6d8", bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", voice: "#eb9cba", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
+  abyss: { stone: "#d3d6d8", bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", voice: "#e79cbc", border: "#243049", border2: "#2f4160", line: "#171f33" },
+  ember: { stone: "#d3d6d8", bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", omen: "#c9a2c4", voice: "#f2a4c1", border: "#46291a", border2: "#5c3722", line: "#331e12" },
 };
 var thbtn = document.getElementById("thbtn");
 var thbrowse = document.getElementById("thbrowse");
