@@ -8,7 +8,7 @@ import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
 import { hasTrait } from "./world";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, isNight } from "./zone-util";
+import { cap, isNight, isFullMoon } from "./zone-util";
 import * as events from "./events";
 import { underCover, MAP_QUARTERS } from "./detail";
 import {
@@ -1392,8 +1392,13 @@ export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
     // grounds — so on that one night in six the dark is not there to be bold in,
     // and the boldness goes with it. Rain and fog are their own weather and are
     // untouched: a storm under a full moon is still hunting weather.
+    // The mountain is the exception the other way (2026-08-19): it is night up
+    // there like everywhere else, and the dark it does not have was never what
+    // made a scavenger bold — the hour is. So the band keeps its nights honest
+    // and this reads the clock for it rather than the blackness it lacks.
     return events.raining(z, creature.roomId) || events.foggy(z, creature.roomId)
-      || (OUTDOOR_ROOMS.has(creature.roomId) && z.isDark(creature.roomId));
+      || (OUTDOOR_ROOMS.has(creature.roomId) && z.isDark(creature.roomId))
+      || (z.regionOf(creature.roomId) === "mountain" && isNight() && !isFullMoon());
   }
 
 // IS THIS ROOM UNDER THE MOON RIGHT NOW — the single gate every full-moon
@@ -1403,7 +1408,14 @@ export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
 // matters because the gloam blots out a sky (events.gloamed feeds isDark), and
 // a room the dark is standing in gets none of this no matter what the moon is.
 export function moonlit(z: ZoneDO, roomId: string, now = Date.now()): boolean {
-  return OUTDOOR_ROOMS.has(roomId) && isNight(now) && !z.isDark(roomId);
+  // ...AND IT HAS TO ASK THE CALENDAR NOW, not just the room (2026-08-19). The
+  // "!isDark" trick was exact while the only lit outdoor night was a full moon.
+  // The mountain broke that: it is exempt from the night dark entirely (a bare
+  // hillside under open sky does not go blind), so every mountain room read as
+  // moonlit EVERY night — which would have handed the hill wolves the full
+  // moon's hunting and calling multipliers permanently. Ask the moon directly
+  // and the room's own dark second; both must agree.
+  return OUTDOOR_ROOMS.has(roomId) && isNight(now) && isFullMoon(now) && !z.isDark(roomId);
 }
 
 // The pack's share of the moon: on top of the night multiplier, never instead

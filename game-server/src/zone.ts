@@ -1665,6 +1665,20 @@ export class ZoneDO implements DurableObject {
     // gatehouse door). A gloamed sky still puts them out: the gloam is a thing
     // that takes the light, and a lamp is exactly what it comes for.
     if (DARK_ROOMS.has(roomId) || events.gloamed(this, roomId)) return true;
+    // THE MOUNTAIN DOES NOT GO BLIND AT NIGHT (rome, 2026-08-19). Every other
+    // outdoor band in this world is under something — a canopy, a valley side,
+    // a wall, weather off the sea — and "dark" there means you genuinely cannot
+    // see your hand. A bare hillside has none of that: it is rock and snow with
+    // the whole sky over it and nothing between, and snow throws back what light
+    // there is. Applying the cave's blackness to open ground four thousand feet
+    // up was the surface rule reaching ground it was never written for.
+    //
+    // The band keeps everything else the clock gives it — nightfall still turns,
+    // the nocturnal lines still wake, the moon still rides its phases and gets
+    // its lines — it simply does not take your eyes. A GLOAM still does (checked
+    // above): that is a thing that comes and takes the light, and it is supposed
+    // to work anywhere it can reach.
+    if (this.regionOf(roomId) === "mountain") return false;
     if (!OUTDOOR_ROOMS.has(roomId) || !isNight() || isFullMoon()) return false;
     if (NIGHT_LIT.has(roomId)) return false;
     // A HOUSE WITH SOMEBODY IN IT HAS A FIRE IN IT. The only hearths still lit on
