@@ -78,6 +78,7 @@ import {
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON,
   STANCE, RECKLESS_MISS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, PADDED_STUN_MULT, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
+  TRIP_ODDS, TRIP_HOLD_MS, POCKETED_BONUS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
   VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
   SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, CORRODERS, CORRODE_WEAR,
@@ -2784,7 +2785,7 @@ export class ZoneDO implements DurableObject {
     // Dressings share food's problem: one slot however deep. Same count ceiling,
     // so a stack of bandages can't make bleeds a non-issue.
     if (this.dressingCapped(session, itemId)) return false;
-    return this.hasRoom(session.items, itemId, PACK_CAP, "pack");
+    return this.hasRoom(session.items, itemId, this.packCap(session), "pack");
   }
 
   // How many rations ride in the pack right now (all edibles; food is never worn).
@@ -3471,7 +3472,8 @@ export class ZoneDO implements DurableObject {
             let dmg = Math.round((body + (weapon ? this.effDmg(weapon) + honed + staggerDmg : 0)) * atkMult);
             if (hurt) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); this.tellWounded(session); }
             let flourish = ".";
-            if (chance(CRIT_CHANCE)) {
+            const crit = chance(CRIT_CHANCE);
+            if (crit) {
               dmg *= 2;
               flourish = pick(CRIT_FLOURISH);
             }
@@ -3517,7 +3519,14 @@ export class ZoneDO implements DurableObject {
                   ? chance(playerBleedOdds(weapon.tmpl.dmg, weapon.tmpl.bleed)) ? weapon.tmpl.bleed + (keen ? 1 : 0) : 0
                 : keen && chance(KEEN_BARE_BLEED_ODDS) ? 1 : 0
                 : 0;
-              const freshBleed = !!(weapon && effBleed > 0 && !hollow && !creature.bleedTicks);
+              // WICKED (2026-08-20): a crit on a wicked edge opens the wound
+              // wide — no roll between the luck and the blood. Folds into the
+              // same wound below, so it never stacks past the blade's own bleed.
+              const wickedWound = !!(weapon && crit && this.itemRolled(weapon, "wicked") && !hollow)
+                ? (weapon!.tmpl.bleed > 0 ? weapon!.tmpl.bleed : 1)
+                : 0;
+              const wound = Math.max(effBleed, wickedWound);
+              const freshBleed = !!(weapon && wound > 0 && !hollow && !creature.bleedTicks);
               const bleedDry = !!(weapon && effBleed > 0 && hollow);
               // The wights (GRAVE_FLESH) split the voices: a point still slips
               // between ribs (a corpse has them), but a blunt blow cracks dry —
@@ -3544,8 +3553,15 @@ export class ZoneDO implements DurableObject {
               // HOLLOW don't bleed (dry bone, old iron): the DoT finds no blood.
               if (weapon && effBleed > 0 && !hollow) {
                 creature.bleedTicks = BLEED_TICKS;
-                creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, effBleed);
+                creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, wound);
                 if (freshBleed) this.actorFeed(session, session.roomId, this.feedProc(FEED_BLEED, session.name, tmpl.name), "bleed");
+              }
+              // TRIPPING (2026-08-20): a chain or lash takes the legs — the
+              // snare rides windedUntil, the chase's own latch, so the thing
+              // cannot flee for TRIP_HOLD_MS whatever roll it wins.
+              if (weapon && (trait(weapon.tmpl, "tripping") ?? 0) > 0 && !creature.windedUntil && chance(TRIP_ODDS)) {
+                creature.windedUntil = Date.now() + TRIP_HOLD_MS;
+                this.send(session, `${cap(tmpl.name)} is caught around the legs — it thrashes, but it is not running anywhere.`, "stun");
               }
               this.combatNoise(session.roomId);
               if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
@@ -4022,6 +4038,18 @@ export class ZoneDO implements DurableObject {
           this.send(victim, `${cap(tmpl.name)} ${this.creatureHit(tmpl.id)} for ${dmg}${flourish} [${victim.hp}/${victim.maxHp} hp]`, flourish === "." ? "dmgin" : "dmgin big");
           if (drowned) this.send(victim, `${cap(tmpl.name)} drags you under — black water fills your lungs for ${drowned}. (break free, or drown)`, "dmgin big");
           this.sendStatus(victim);
+          // THE BODY BITES BACK (2026-08-20): spiked armor (spiked:N) returns a
+          // point of pain to whatever lands a blow on it — the pavise's thorns,
+          // worn all over. Flat, unmitigated, and it can finish the thing.
+          const spikes = this.wornTrait(victim, "spiked");
+          if (spikes > 0 && creature.hp > 0) {
+            creature.hp -= spikes;
+            if (creature.hp <= 0) {
+              await this.onCreatureDeath(victim, creature, tmpl, `${cap(tmpl.name)} drives home on ${victim.name} — and the spikes take it through.`);
+              continue;
+            }
+            this.send(victim, `The spikes of your armor bite back — ${cap(tmpl.name)} takes ${spikes}.`, "dmgout");
+          }
           this.combatNoise(victim.roomId);
           // The mallet's arc doesn't stop at the first body: everyone else in the
           // room catches the sweep's back-half at half weight (see sweepArc).
@@ -6470,6 +6498,26 @@ export class ZoneDO implements DurableObject {
     return false;
   }
 
+  // The COUNTED form of wearsTrait: the highest value of `tag` across equipped
+  // pieces (template + rolled). 0 = absent. For traits whose number is the
+  // point — thorns' cousin spiked:1, spiked:2 (2026-08-20).
+  public wornTrait(session: Session, tag: string): number {
+    let best = 0;
+    for (const c of session.items) {
+      if (!c.equipped) continue;
+      best = Math.max(best, trait(this.world!.itemTemplates.get(c.itemId), tag), c.rolledMap?.get(tag) ?? 0);
+    }
+    return best;
+  }
+
+  // The pack's ceiling for THIS wanderer: PACK_CAP, plus what any worn
+  // POCKETED piece lends (POCKETED_BONUS per tag — pocketed:1). The cap lives
+  // in one place so every check, message and modal reads the same number
+  // (2026-08-20).
+  public packCap(session: Session): number {
+    return PACK_CAP + POCKETED_BONUS * Math.max(0, this.wornTrait(session, "pocketed"));
+  }
+
   // THE TRAIT LOTTERY (099). A fresh piece of world-loot may enter carrying one
   // rolled trait from its slot's pool — most roll nothing, and the roll never
   // duplicates what the template already grants (no double-quiet, no god-roll).
@@ -6719,7 +6767,10 @@ export class ZoneDO implements DurableObject {
     // the shield hand, so the shield gives no block while a light burns (it
     // STAYS on your arm the whole time — never unequipped, never a loose thing
     // to drop; 'equip shield' lowers the flame and brings the guard back).
-    if (s && s.tmpl.block > 0 && !twoHanded && !this.carriesLight(session)) {
+    // A burning BRAND is the exception (2026-08-20): the flame lives in the
+    // WEAPON hand, the shield hand is free, and the guard stands while it burns.
+    const handFlame = this.carriesLight(session) && session.litSource !== "brand";
+    if (s && s.tmpl.block > 0 && !twoHanded && !handFlame) {
       block += s.tmpl.block * Math.max(0, s.carried.condition) / 100;
       // Guarded means fighting BEHIND the shield — it catches a shade more.
       // (Stance only sweetens a shield you actually carry; bare guarded gets nothing.)

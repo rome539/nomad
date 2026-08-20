@@ -14,6 +14,8 @@ import type { ZoneDO } from "./zone";
 import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
+import { foodState } from "./zone-util";
+import { setItemAcquiredAt } from "./world";
 import {
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
   ROLL_EVERY_MIN_MS, ROLL_EVERY_MAX_MS, ROLL_FIRST_MIN_MS, ROLL_FIRST_MAX_MS,
@@ -36,6 +38,7 @@ import {
   COLD_TELEGRAPH_MS, COLD_ACTIVE_MIN_MS, COLD_ACTIVE_MAX_MS, COLD_AFTERMATH_MS, COLD_TORCH_MULT,
   BREACH_PAIRS, BREACH_TELEGRAPH_MS, BREACH_ACTIVE_MS, BREACH_AFTERMATH_MS,
   SEA_ROOMS, SEA_INSTRUMENTS, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_HEARD_BANDS, SEA_BITE, SEA_STATES,
+  FOOD_KEEPS, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT,
   SEA_TELEGRAPH_MS, SEA_MAKE_MS, SEA_STAND_MIN_MS, SEA_STAND_MAX_MS, SEA_EBB_MS,
   TIDEWAYS_ROOMS, TIDE_LEVELS, TIDE_HIGH_ODDS,
   TIDE_EVERY_MIN_MS, TIDE_EVERY_MAX_MS, TIDE_FIRST_MIN_MS, TIDE_FIRST_MAX_MS, TIDE_GRACE_MS,
@@ -327,15 +330,47 @@ export function tideDrives(z: ZoneDO, creature: { roomId: string; templateId: st
 // Wading into the tide with an open flame: the water takes it. Same shape as
 // the rain and the exhale — the lantern survives a wade (shuttered, held high).
 // The sea is the same water (2026-08-20): a crossing under flood douses a
-// carried torch exactly as the tideways do.
+// carried torch exactly as the tideways do, and a burning brand with it.
+// WATERTIGHT gear (2026-08-20) keeps the flame and the pack both dry.
 export function tideSoaksTorch(z: ZoneDO, session: Session): void {
   if (!tideFlooded(z, session.roomId) && !seaUnder(z, session.roomId)) return;
-  if (session.litSource !== "torch" || !z.carriesLight(session)) return;
+  if (!z.carriesLight(session) || session.litSource === "lantern") return;
+  if (z.wearsTrait(session, "watertight")) return;
   session.litUntil = undefined;
   session.litSource = undefined;
   session.torchWarned = false;
   z.send(session, "The black water climbs past your waist and takes the torch with a slap.", "dmgin");
   z.sendStatus(session);
+}
+
+// The flood gets into the pack (2026-08-20): standing in the tide or the sea
+// waterlogs carried food one ration at a time — spoiled on the spot, still
+// food, half as far. WATERTIGHT gear keeps the pack dry and the rations whole.
+// One ration per beat, the first unspoiled one; keeping food (FOOD_KEEPS) is
+// sealed against this the way it is against the damp.
+export async function wetRations(z: ZoneDO, s: Session): Promise<void> {
+  if (z.wearsTrait(s, "watertight")) return;
+  const ration = s.items.find((c) => {
+    const t = z.world!.itemTemplates.get(c.itemId);
+    return !!t?.edible && !FOOD_KEEPS.has(c.itemId) && foodState(c.acquiredAt, c.itemId) !== "spoiled";
+  });
+  if (!ration) return;
+  // COOKED FOOD KEEPS TWICE AS LONG, and the clock has to know it: foodState
+  // measures a cooked ration against FOOD_SPOIL_SEC * COOKED_SPOIL_MULT, so
+  // pushing every ration back by the PLAIN window left cooked food merely "on
+  // the turn" — a tier that costs nothing. The line said waterlogged and the
+  // ration was fine, the same unspoiled ration was picked again every beat,
+  // and an OLD cooked haunch had its clock wound BACKWARD to the plain window:
+  // standing in the sea preserved your dinner. Push to this ration's own
+  // spoiling line, and never make anything younger than it already is.
+  const now = Math.floor(Date.now() / 1000);
+  const mult = COOKED_FOODS.has(ration.itemId) ? COOKED_SPOIL_MULT : 1;
+  const target = now - FOOD_SPOIL_SEC * mult - 1;
+  const at = Math.min(ration.acquiredAt ?? target, target);
+  ration.acquiredAt = at;
+  await setItemAcquiredAt(z.env.DB, ration.rowId, at);
+  const t = z.world!.itemTemplates.get(ration.itemId)!;
+  z.send(s, `The water gets into ${t.name} — waterlogged. It will still fill you, but not as far.`, "dmgin");
 }
 
 // Which wall is (or is about to be) down — null when no breach runs.
@@ -2320,7 +2355,7 @@ async function floodLevel(z: ZoneDO, rank: number, now: number): Promise<void> {
       c.nextWanderAt = now;
     }
     for (const s of z.sessions.values()) {
-      if (s.roomId === roomId) tideSoaksTorch(z, s);
+      if (s.roomId === roomId) { tideSoaksTorch(z, s); await wetRations(z, s); }
     }
     z.refreshRoomCtx(roomId);
   }
@@ -2548,6 +2583,7 @@ async function tickSea(z: ZoneDO, now: number): Promise<void> {
         continue;
       }
       tideSoaksTorch(z, s);
+      await wetRations(z, s); // the flood gets into the pack, one ration a beat — unless the pack is watertight
       z.send(s, pick([
         `The water is over the road here and pushing, steady and cold, and you cannot see your own feet. [${s.hp}/${s.maxHp} hp]`,
         `Sea to the thigh, and moving, and the stone under it is exactly as wide as it was and no help at all. [${s.hp}/${s.maxHp} hp]`,

@@ -1278,8 +1278,17 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   if (z.foodCapped(session, itemId)) return z.send(session, z.foodFullNote());
   if (z.torchCapped(session, itemId)) return z.send(session, z.torchFullNote());
   if (z.dressingCapped(session, itemId)) return z.send(session, z.dressingFullNote());
-  if (!z.packRoom(session, itemId)) {
-    return z.send(session, `Your pack is full (${PACK_CAP} slots). Drop something, or bank it at a gate.`);
+  // POCKETED'S OWN DOOR (2026-08-20): gear for an EMPTY slot can still be
+  // lifted at a full pack — it goes straight ON, never in. The pocketed coat
+  // is the case that matters: you need it most when the pack is bursting,
+  // and it pays for itself the moment it is on. The auto-equip below already
+  // knows this test; the refusal just has to let it through.
+  const crossesHands =
+    (tmpl.slot === "weapon" && hasTrait(tmpl, "two-handed") && z.equippedItem(session, "shield") !== null) ||
+    (tmpl.slot === "shield" && hasTrait(z.equippedItem(session, "weapon")?.tmpl, "two-handed"));
+  const willWear = tmpl.slot !== "" && !z.equippedItem(session, tmpl.slot) && !crossesHands;
+  if (!z.packRoom(session, itemId) && !willWear) {
+    return z.send(session, `Your pack is full (${z.packCap(session)} slots). Drop something, or bank it at a gate.`);
   }
 
   here.splice(here.indexOf(itemId), 1);
@@ -1353,12 +1362,12 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   }
   // Friendly: your FIRST weapon/armor goes on automatically; switching later
   // is a deliberate `equip`. (Never overrides something you've already got on,
-  // and never auto-crosses the two-handed rule — that pairing is deliberate.)
-  const crossesHands =
-    (tmpl.slot === "weapon" && hasTrait(tmpl, "two-handed") && z.equippedItem(session, "shield") !== null) ||
-    (tmpl.slot === "shield" && hasTrait(z.equippedItem(session, "weapon")?.tmpl, "two-handed"));
+  // and never auto-crosses the two-handed rule — that pairing is deliberate.
+  // `crossesHands`/`willWear` are computed above the pack check now, so a
+  // full pack still lets a first piece go straight ON — the pocketed coat's
+  // own door, 2026-08-20.)
   let readied = "";
-  if (tmpl.slot !== "" && !z.equippedItem(session, tmpl.slot) && !crossesHands) {
+  if (willWear) {
     carried.equipped = true;
     await setEquipped(z.env.DB, rowId, true);
     readied = tmpl.slot === "weapon" ? " You take it in hand." : " You pull it on.";
@@ -1585,6 +1594,18 @@ export async function cmdRemove(z: ZoneDO, session: Session, arg: string): Promi
   if (fighting && tmpl.slot !== "weapon") {
     return z.send(session, "You cannot change your gear while something wants your blood.");
   }
+  // POCKETED (2026-08-20): the pockets are the only thing holding the pack at
+  // its size. Taking them off over a bursting pack would leave the load with
+  // nowhere to be — so shed down to PACK_CAP first. Nothing is ever destroyed.
+  const pocketed = z.wornTrait(session, "pocketed") > 0
+    && (trait(tmpl, "pocketed") > 0 || (carried.rolledMap?.get("pocketed") ?? 0) > 0);
+  // >= , not > : a worn piece costs no pack slot (slotsUsed skips equipped), so
+  // taking the coat off puts the coat ITSELF into the pack — the count goes up
+  // by one at the same moment the ceiling drops by two. Tested at exactly
+  // PACK_CAP the loose test passed and landed the wanderer at 11 of 10.
+  if (pocketed && z.slotsUsed(session.items) >= PACK_CAP) {
+    return z.send(session, `Your pack rides over ${PACK_CAP} without ${tmpl.name}'s pockets — and the coat wants a slot of its own once it is off your back. Shed down to ${PACK_CAP - 1} before you take it off.`);
+  }
   carried.equipped = false;
   await setEquipped(z.env.DB, carried.rowId, false);
   if (fighting) session.staggered = true;
@@ -1665,7 +1686,7 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     ? ["The loose iron rides heavy and loud — you won't slip a blow under this load, and moving carries."]
     : [];
   if (z.inCombat(session)) {
-    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`, session), ...loud].join("\n"));
+    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session), ...loud].join("\n"));
   }
   const atGate = world.entryRooms.has(session.roomId);
   // A gate whose gatehouse is shut for works is not a gate for this purpose:
@@ -1681,14 +1702,14 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
     return z.send(session, [
       ...(boarded ? [boarded, ""] : []),
-      ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`, session),
+      ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session),
       ...loud,
       "('burn <item>' to destroy it, 'drop <item>' to shed it, 'equip'/'remove' to swap gear.)",
     ].join("\n"));
   }
   const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
   const out: string[] = [];
-  out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${PACK_CAP}):`, session));
+  out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session));
   out.push(...loud);
   out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox, "lockbox")}/${LOCKBOX_CAP}):`));
   const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
@@ -2452,7 +2473,7 @@ export async function getInstanced(z: ZoneDO, session: Session, inst: GroundInst
   const tmpl = z.world!.itemTemplates.get(inst.itemId)!;
   if (!z.packRoom(session, inst.itemId)) {
     z.dropInstance(session.roomId, inst.itemId, inst.journalId); // put it back down
-    return z.send(session, `Your pack is full (${PACK_CAP} slots) — no room for ${tmpl.name}.`);
+    return z.send(session, `Your pack is full (${z.packCap(session)} slots) — no room for ${tmpl.name}.`);
   }
   const rowId = uuid();
   const carried: CarriedItem = { rowId, itemId: inst.itemId, serial: null, equipped: false, condition: 100, journalId: inst.journalId };

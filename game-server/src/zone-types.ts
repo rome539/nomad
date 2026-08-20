@@ -38,7 +38,7 @@ export interface Session {
   seizedBy?: string; // DROWNER creature id that has hold of you — can't flee till you break free
   draggedRooms?: number; // FERRYMAN: how many rooms he has already hauled you along the rope this grip — a hard cap on the drag (a fair window, not a one-way ticket)
   litUntil?: number; // ms epoch a kindled light burns until; while now < this you carry light (sees dark rooms; a torch also wakes fire-fear). Reset on wake — a rekindle is cheap.
-  litSource?: "torch" | "lantern"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack)
+  litSource?: "torch" | "lantern" | "brand"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack), a brand an open flame in the WEAPON hand (2026-08-20)
   torchWarned?: boolean; // fired the one-time "burning low" warning for the current light
   pvpTarget?: string | null; // pubkey of the wanderer this one has steel out against (transient — a deploy ends the exchange, never the grudge)
   linkdeadUntil?: number; // ms epoch a mid-fight disconnect holds the body in the world until; unset = normally connected (or normally gone)

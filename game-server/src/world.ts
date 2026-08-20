@@ -468,6 +468,14 @@ export async function setItemCondition(db: D1Database, rowId: string, condition:
   await db.prepare("UPDATE player_items SET condition = ? WHERE id = ?").bind(Math.max(0, Math.round(condition)), rowId).run();
 }
 
+// Rewrite a row's acquired_at (unix seconds). One caller today: the flood
+// waterlogging a carried ration (events.wetRations, 2026-08-20) — the food's
+// clock is pushed back past spoiling, and D1 must agree or a reload would
+// hand the water out of it.
+export async function setItemAcquiredAt(db: D1Database, rowId: string, at: number): Promise<void> {
+  await db.prepare("UPDATE player_items SET acquired_at = ? WHERE id = ?").bind(at, rowId).run();
+}
+
 // Put a pack instance on, or take it off. The engine keeps at most one equipped
 // item per slot; this just persists the flag so it survives a reconnect.
 export async function setEquipped(db: D1Database, rowId: string, equipped: boolean): Promise<void> {

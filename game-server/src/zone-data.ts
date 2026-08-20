@@ -4901,6 +4901,16 @@ export const VITALS_PVP = 0.005;      // the day came (2026-07-11): 0.5% armored
 // evidence = blood on the killer (below), weak fresh keys = the sybil wall,
 // and no dice ever punish the aggressor.
 export const MANCATCHER_PVP_HOBBLE = 0.25; // vs players the barbs HOBBLE, never hold — flee stays the victim's out
+// TRIPPING (2026-08-20): a chain or lash that takes the legs. Vs creatures the
+// snare rides windedUntil — the same latch the chase uses — so a tripped thing
+// cannot flee for TRIP_HOLD_MS, whatever roll it wins. Vs players it HOBBLES,
+// the mancatcher's own rule: flee stays the victim's out.
+export const TRIP_ODDS = 0.3;          // per landed hit vs a creature
+export const TRIP_HOLD_MS = 8_000;     // how long the legs remember
+export const TRIP_PVP_HOBBLE = 0.3;    // per landed hit vs a wanderer
+// POCKETED (2026-08-20): deep pockets, worn. The pack is PACK_CAP forever;
+// a pocketed piece rides the body and lends its owner that many more.
+export const POCKETED_BONUS = 2;
 export const BLOOD_FRESH_MS = 2 * 3_600_000;  // man-blood, and it looks fresh
 export const BLOOD_DRY_MS = 12 * 3_600_000;   // dried to brown; still not a beast's
 export const BLOOD_FADE_MS = 36 * 3_600_000;  // when the skin finally forgets (the ledger of the hands)
@@ -4991,7 +5001,9 @@ export const TRAIT_POOL: Record<string, string[]> = {
   //   balanced — OPEN, any weapon: a point lighter in the hand (load law
   //              only, dmg untouched).
   //   honed    — OPEN, any weapon: a flat +1 to the blow that lands.
-  weapon: ["keen", "balanced", "honed", "weighted", "needling", "cleaving", "tempered", "greased"],
+  //   wicked   — EXCLUSIVE, edged (bleed > 0): a crit opens the wound wide,
+  //              no roll between the luck and the blood (2026-08-20).
+  weapon: ["keen", "balanced", "honed", "weighted", "needling", "cleaving", "wicked", "tempered", "greased"],
   // Shields could never roll ANYTHING before this — TRAIT_POOL simply had no
   // shield key, so every shield in the game was its bare template. Their
   // structural traits (wall/thorns/riposte/mancatcher) stay hand-authored, as
@@ -5007,6 +5019,7 @@ export const WEAPON_CLASS_TRAIT: Record<string, (t: ItemTemplate) => boolean> = 
   weighted: (t) => t.stun > 0,
   needling: (t) => trait(t, "pierce") > 0,
   cleaving: (t) => t.sweep > 1,
+  wicked: (t) => t.bleed > 0,
 };
 // keen on a weapon with no bleed stat at all (blunt/pierce) doesn't guarantee a
 // wound every swing — it's a bare chance, rolled once per landed hit, same
@@ -5354,6 +5367,14 @@ export const TRAIT_DOES: Record<string, string> = {
   keen: "cuts deeper", honed: "+1 damage", balanced: "lighter to carry",
   weighted: "beats through armour", needling: "finds the seam in armour",
   cleaving: "catches one more foe",
+  wicked: "a crit opens the wound wide",
+  // the new hand-authored answers (2026-08-20)
+  burning: "a lit flame that fire-fearing things will not face",
+  tripping: "a landed blow takes the legs — creatures cannot flee, wanderers limp",
+  watertight: "the tide and the sea stay out of your pack",
+  pocketed: "two more slots, while it is worn",
+  glinting: "its polish gives lurkers nowhere to hide",
+  spiked: "whatever lands a blow on you pays for it",
   tempered: "wears slowly", greased: "the damp barely touches it",
   brittle: "wears fast", cumbersome: "heavier to carry",
   pitted: "the damp eats it", sodden: "cold ruins your rest",
@@ -5361,7 +5382,7 @@ export const TRAIT_DOES: Record<string, string> = {
 // Traits whose number is the point: show it even when it is 1, because "pierce"
 // beside "ignores that much armour" names no amount at all. Every other trait
 // carries 1 as a plain flag and reads as a word.
-export const TRAIT_COUNTED = new Set(["pierce", "thorns", "riposte"]);
+export const TRAIT_COUNTED = new Set(["pierce", "thorns", "riposte", "spiked"]);
 // The one lookup for both, so no caller reaches into the tables directly and
 // gets the fallback order wrong: the material's own word if it has one, the
 // default otherwise.
@@ -5386,6 +5407,7 @@ export const ROLLED_TELL: Record<string, string> = {
   weighted: "Head-heavy, deliberately so — it caves plate a shade deeper (extra armor-ignore).",
   needling: "Ground down to a needle's point — it finds the seam plate can't close (extra armor-ignore).",
   cleaving: "Wide in the arc — it catches one more than its plain twin (extra sweep).",
+  wicked: "Ground wicked-sharp, with a hook to the point — when the luck is with you, the wound it opens stays open (crits wound).",
   tempered: "Tempered right through — it takes punishment its plain twin would not (wears slowly).",
   greased: "Kept oiled, and kept oiled a long time — the damp has barely touched it (resists rust).",
   fleeced: "Lined thick against the weather — the cold does not reach you through it (rest in the cold).",

@@ -73,7 +73,7 @@ export async function forgeCore(
   const world = z.world!;
   const t = world.itemTemplates.get(recipe.itemId)!;
   if (!z.packRoom(session, recipe.itemId)) {
-    return { ok: false, note: `Your pack is full (${PACK_CAP} slots). Make room before you forge.` };
+    return { ok: false, note: `Your pack is full (${z.packCap(session)} slots). Make room before you forge.` };
   }
   // The bench reaches the pack AND the gate's keeping (lockbox + vault). Recipes
   // are cut in IRON now (recipe.scrap holds the iron cost — the column kept its
@@ -1225,7 +1225,7 @@ export async function cmdSmelt(z: ZoneDO, session: Session, arg: string): Promis
   z.enterStep(session, "forging");
   if (walkedIn) z.send(session, "You push in out of the cold and stir the brazier to life.");
   if (!z.packRoom(session, IRON_ID)) {
-    return z.send(session, `Your pack is full (${PACK_CAP} slots). Make room before you smelt.`);
+    return z.send(session, `Your pack is full (${z.packCap(session)} slots). Make room before you smelt.`);
   }
   const scrap = z.countLooseIn(await z.gatePools(session), SCRAP_ID);
   const maxBars = Math.floor(scrap / SMELT_SCRAP_PER_IRON);
@@ -1652,7 +1652,7 @@ export async function benchTake(z: ZoneDO, session: Session, row: string): Promi
         if (z.foodCapped(session, entry.itemId)) return z.foodFullNote();
         if (z.torchCapped(session, entry.itemId)) return z.torchFullNote();
         if (z.dressingCapped(session, entry.itemId)) return z.dressingFullNote();
-        if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${PACK_CAP} slots).`;
+        if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${z.packCap(session)} slots).`;
         await setContainer(z.env.DB, entry.rowId, "");
         session.items.push(entry);
         return undefined;
@@ -1773,7 +1773,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
       pack: sortKit(group(session.items)),
       lockbox: sortKit(group(lockbox)),
       vault: sortKit(group(vault)),
-      packCap: PACK_CAP, lockboxCap: LOCKBOX_CAP, vaultCap: VAULT_CAP,
+      packCap: z.packCap(session), lockboxCap: LOCKBOX_CAP, vaultCap: VAULT_CAP,
       // Slot accounting is the SERVER's now, for every column: food rides free in
       // the pack, stacks 8-to-a-slot in the lockbox, and rides free in the vault —
       // none of which the client can get by counting rows. It just shows these.
@@ -1998,7 +1998,7 @@ export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key:
     if (z.foodCapped(session, entry.itemId)) return z.send(session, z.foodFullNote());
     if (z.torchCapped(session, entry.itemId)) return z.send(session, z.torchFullNote());
     if (z.dressingCapped(session, entry.itemId)) return z.send(session, z.dressingFullNote());
-    if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${PACK_CAP} slots). Make room first.`);
+    if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${z.packCap(session)} slots). Make room first.`);
     await setContainer(z.env.DB, entry.rowId, "");
     session.items.push(entry);
     z.send(session, cfg.take(tmpl.name));

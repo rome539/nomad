@@ -398,7 +398,9 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       // side finally agreeing with it, instead of a thing you can plainly see
       // dropping on you out of a dark that isn't there. Outdoors only, so the
       // deep's crawlers and stalkers are untouched: they have never seen a sky.
-      if (lurker && (carriesFire(session) || z.roomLit(roomId) || moonlit(z, roomId, now))) continue;
+      // GLINTING (2026-08-20) is the same answer by daylight's other shape:
+      // polished steel gives a waiting lurker nowhere to hide, like the flame.
+      if (lurker && (carriesFire(session) || z.roomLit(roomId) || moonlit(z, roomId, now) || z.wearsTrait(session, "glinting"))) continue;
       // The din of a fight no longer rouses the bone-sleepers — they wake to
       // movement (in or past) and to a grudge, not to noise alone. Blind lurkers
       // still strike at sound; that's the whole of what they are.
@@ -1594,13 +1596,19 @@ export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): bool
     // holds the room the same as one held up.
     const inHand = carriesFire(victim);
     if (!inHand && !z.roomLit(creature.roomId)) return false;
+    // A WIELDED BURNING BRAND is not an argument, it is the end of the
+    // argument (2026-08-20): the fire is IN the hand that is swinging at it,
+    // so the nerve fails outright — no roll, no rounds of holding. Everything
+    // else is still the roll below.
+    const weapon = z.equippedItem(victim, "weapon");
+    const burningBrand = !!weapon && hasTrait(weapon.tmpl, "burning") && carriesFire(victim);
     // Nerve fails on a roll, not on sight. The rounds it holds are silent — a
     // line every four seconds for a thing that is still standing there would be
     // its own kind of noise.
-    if (!chance(FIRE_FLEE_CHANCE)) return false;
+    if (!burningBrand && !chance(FIRE_FLEE_CHANCE)) return false;
     // Name the fire that actually did it — a banked charcoal mound is not a
     // torch on the floor, and the line reads as a bug when it says otherwise.
-    const flame = inHand ? "your flame" : z.roomHasFirekeeper(creature.roomId) ? "the burner's fire" : "the burning torch";
+    const flame = burningBrand ? "the burning brand" : inHand ? "your flame" : z.roomHasFirekeeper(creature.roomId) ? "the burner's fire" : "the burning torch";
     z.send(victim, `${cap(tmpl.name)} shrinks from ${flame} and breaks away.`);
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} shrinks from the flame.`, victim.pubkey, false);
     return true;

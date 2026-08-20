@@ -433,4 +433,109 @@ vault, is the loop the whole system serves.
 
 Balance is modeled in `game-server/scripts/balance-audit.mjs` — an
 expected-value pass over these exact formulas. Re-run it after any tuning; if
-its numbers and these disagree, one of them is a bug.
+its numbers and these disagree, one of them is a bug. **Since 2026-08-20 the
+audit reads D1 live** (`wrangler d1 execute`, default local, `--remote` for
+production) — the hardcoded fallback tables are only a loudly-warned lifeboat.
+
+---
+
+## The unused design space (2026-08-20)
+
+How many more distinct items the current trait set can still express, and the
+way it was counted — so the next gear brainstorm starts from the holes, not the
+same shape twice.
+
+**The counting method.** An item is a cell in a grid of design axes; a cell is
+"taken" if some item already occupies it. Query D1 for the taken cells:
+
+```sql
+-- the weapon archetype grid: class x speed x sweep x reach x two-handed
+SELECT slot, COUNT(*) FROM item_templates WHERE slot != '' GROUP BY slot;
+SELECT SUM(bleed>0), SUM(stun>0), SUM(traits LIKE '%pierce%'),
+       SUM(bleed=0 AND stun=0 AND traits NOT LIKE '%pierce%')
+  FROM item_templates WHERE slot='weapon';
+SELECT speed, sweep, COUNT(*) FROM item_templates WHERE slot='weapon'
+ GROUP BY speed, sweep;
+SELECT SUM(traits LIKE '%reach%'), SUM(traits LIKE '%two-handed%'),
+       SUM(traits LIKE '%wicked%'), SUM(traits LIKE '%tripping%'),
+       SUM(traits LIKE '%burning%') FROM item_templates WHERE slot='weapon';
+-- the armor family's trait coverage, per slot
+SELECT slot, SUM(traits LIKE '%wardhide%'), SUM(traits LIKE '%mailward%'),
+       SUM(traits LIKE '%padded%'), SUM(traits LIKE '%slick%'),
+       SUM(traits LIKE '%quiet%'), SUM(traits LIKE '%hooded%'),
+       SUM(traits LIKE '%strapped%'), SUM(traits LIKE '%staunched%'),
+       SUM(traits LIKE '%fleeced%'), SUM(traits LIKE '%watertight%'),
+       SUM(traits LIKE '%pocketed%'), SUM(traits LIKE '%glinting%'),
+       SUM(traits LIKE '%spiked%')
+  FROM item_templates WHERE slot IN ('armor','helm','cloak','feet')
+ GROUP BY slot;
+```
+
+**What it said** (against the live DB, 161 gear items, migrations 250–252
+applied):
+
+- **Weapons (57) — the multiplicative axis.** The archetype grid is class
+  (edge/blunt/pierce/plain) × speed (1/2/3) × sweep (1/2/3) × reach ×
+  two-handed ≈ **144 cells**; ~30 are filled. The entirely EMPTY archetypes —
+  each a genuinely new weapon, not a stat clone — include: reach+blunt (the
+  polehammer), speed-2 reach (short spear), speed-2 sweep (paired cleavers),
+  wicked+reach, tripping×sweep/two-handed, pierce+sweep, and a **burning
+  brand line** (only the longbrand burns). ≈ **30–40 open archetypes × their
+  rarity ladders ≈ 120–160 more weapons.**
+- **Armor family (armor 26 / helm 21 / cloak 20 / feet 18 = 85) — the trait-
+  cell axis, filtered by per-slot validity.** The naive count — 13 traits × 4
+  slots = 52 cells — is wrong for exactly the reason that matters: traits are
+  gear-specific. Validity per slot is the code's own answer: `TRAIT_POOL`
+  (which traits the lottery will roll onto that slot) ∪ whatever hand-authored
+  content has printed there, with fiction as referee (boots cannot keep the
+  pack dry; a cloak cannot be polished). The 13 structural/soft traits shake
+  out to **34 valid cells**, not 52:
+
+  | trait | armor | helm | cloak | feet | printed today |
+  |---|---|---|---|---|---|
+  | wardhide | ✓ | ✓ | ✓ | — | armor 4 · helm 2 · cloak 3 |
+  | mailward | ✓ | ✓ | ✓ | — | armor 2 · helm 2 · cloak 1 |
+  | padded | ✓ | ✓ | — | — | armor 6 · helm 6 |
+  | slick | ✓ | — | ✓ | ✓ | armor 2 · cloak 4 · feet 2 |
+  | quiet | — | ✓ | ✓ | ✓ | helm 4 · cloak 3 · feet 8 |
+  | hooded | — | ✓ | ✓ | — | helm 1 · cloak 3 |
+  | strapped | ✓ | ✓ | ✓ | — | armor 4 · helm 1 · cloak 2 |
+  | staunched | ✓ | ✓ | ✓ | ✓ | armor 2 · helm 2 · cloak 1 · feet 2 |
+  | fleeced | ✓ | ✓ | ✓ | — | **printed nowhere** |
+  | watertight | ✓ | — | ✓ | — | cloak 1 |
+  | pocketed | ✓ | — | ✓ | — | cloak 1 |
+  | glinting | ✓ | ✓ | — | — | helm 1 |
+  | spiked | ✓ | ✓ | — | — | armor 1 |
+  | **valid cells** | **11** | **10** | **10** | **3** | **27 printed · 7 open** |
+
+  The 7 open cells (fleeced × armor/helm/cloak; watertight/pocketed/glinting
+  × armor; spiked × helm) × the tier dial (body armor spans armor 1–5, the
+  other three slots 3 rungs each) ≈ **~15–20 new pieces** — plus ~5–8 valid
+  trait-pair pieces (watertight+pocketed cargo coat, spiked+wardhide brute
+  suit, fleeced+watertight storm cloak, fleeced+hooded field cloak, glinting+
+  spiked bright crown). **≈ 20–30 armor-family pieces, not 60–90.**
+  Two real content holes this exposes: **fleeced is rollable on three slots
+  but printed on none** (cold-rest exists only through the lottery), and the
+  four newest traits are each a one-piece family. **Feet are trait-complete**
+  (3/3 valid cells, full rarity ladder) — their only dial left is armor value
+  (0–2, vs body's 1–5).
+- **Shields (19) — the specials axis.** The block dial has 9 steps and all 9
+  are printed, so the free cells are specials × steps: wall 8, thorns 6,
+  riposte 4, **mancatcher 1** — plus `spiked`/`glinting` shields (0 today).
+  ≈ **20–25 more** before repeats.
+- **The multiplier on top.** Every template × its slot's rolled-lottery pool
+  (22% roll) × the flaw pool means one printed row is really ~5–9 distinct
+  pieces — so the headline is conservative.
+
+**Headline: ~150–200 more distinct items sit inside the current trait set —
+and that number was never weapons alone.** After the per-slot validity
+filter the split is ~**120–160 weapons** (their grid — class × speed × sweep
+× reach × two-handed — is inherently weapon-shaped, so the filter barely
+touches it) + ~**20–30 armor family** + ~**20–25 shields** ≈ **~160–215
+total**, of which the armor side is only ~25%. Every new trait opens a few
+new valid cells, not six (it only counts where it makes sense), and the
+universal dials (tempered/greased/balanced + the flaw pool) already roll on
+every slot — they are the multiplier, not the grid. The real constraints are
+not traits: they are distribution channels (forge / fence / cache / mob
+`gear_item` / ground spawns), the balance audit, and a description worth
+reading — in that order.

@@ -379,7 +379,7 @@ async function settleDeal(z: ZoneDO, deal: Deal): Promise<void> {
       return n + (t && (t.staunch ?? 0) > 0 && !t.edible ? 1 : 0);
     }, 0);
     for (const c of incoming) {
-      if (!z.hasRoom(scratch, c.itemId, PACK_CAP, "pack")) return false;
+      if (!z.hasRoom(scratch, c.itemId, z.packCap(recipient), "pack")) return false;
       const t = z.world!.itemTemplates.get(c.itemId);
       if (t?.edible && countFood() >= PACK_FOOD_CAP) return false;
       if (c.itemId === TORCH_ITEM && countTorches() >= PACK_TORCH_CAP) return false;

@@ -705,7 +705,7 @@ export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promis
   if (z.foodCapped(session, entry.itemId)) return z.send(session, z.foodFullNote());
   if (z.torchCapped(session, entry.itemId)) return z.send(session, z.torchFullNote());
   if (z.dressingCapped(session, entry.itemId)) return z.send(session, z.dressingFullNote());
-  if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${PACK_CAP} slots). Make room first.`);
+  if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${z.packCap(session)} slots). Make room first.`);
   await setContainer(z.env.DB, entry.rowId, "");
   session.items.push(entry);
   z.send(session, `You take ${tmpl.name} back off the shelf.`);
@@ -771,7 +771,7 @@ export async function benchFetch(z: ZoneDO, session: Session, row: string): Prom
   if (z.foodCapped(session, entry.itemId)) return z.foodFullNote();
   if (z.torchCapped(session, entry.itemId)) return z.torchFullNote();
   if (z.dressingCapped(session, entry.itemId)) return z.dressingFullNote();
-  if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${PACK_CAP} slots). Make room first.`;
+  if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${z.packCap(session)} slots). Make room first.`;
   await setContainer(z.env.DB, entry.rowId, "");
   session.items.push(entry);
   return undefined;

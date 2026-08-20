@@ -4,15 +4,81 @@
 // Weapon bleed: 3 ticks of `bleed`, refreshed per hit -> ~bleed/round sustained.
 // Mob swing: dmg = randInt(min,max); crit 5% x2; x ARMOR_K/(armor+K); x stanceDef; min 1.
 // Miss 5% (+5% weight-0); block = shield.block; mob bleed ~bleed/round sustained (armor-ignoring).
-// Stats re-verified against local D1 2026-07-12 (drift fixed: three-hound a3->a2,
-// warden-captain a4->a3, pale-crawler 6-10/b3 -> 4-8/b2, rat bleeds 1). Blunt
-// armor-ignore (stun>0 -> ignores 2, zone.armorIgnore) now modeled; it was not.
+//
+// DATA (2026-08-20): the weapon and mob tables now READ D1 — item_templates /
+// mob_templates — through `wrangler d1 execute`, because the hardcoded copies
+// drifted (falchion/greatsword/headsman gained bleed in mig 060, the
+// three-hound grew, and the whole crossing/mountain roster was missing, so
+// every "easy / win / LOSES" verdict below was stale). `--remote` reads
+// production; the default is the local dev database. If wrangler can't run or
+// the database is empty, the old hardcoded tables stand in as a fallback and
+// say so loudly — numbers under that banner are WRONG, migrate and re-run.
+//
 // NOT modeled: stun's lost rounds, THORNS/PARRY_RIPOSTE counters, wards
-// (PADDED/WARDHIDE), wear, REACH's ambush-strip, dogpile — margins here are
-// the clean-room floor, live fights are swingier. SHIELD_WALL_DRAG (0.85 on
+// (PADDED/WARDHIDE), wear, REACH's ambush-strip, dogpile, sweep — margins here
+// are the clean-room floor, live fights are swingier. SHIELD_WALL_DRAG (0.85 on
 // swings behind tower/pavise/gravestone) is modeled in the PvP builds via
 // `drag`; tables 1-2 are SHIELDLESS weapon-identity tables — read a wall-
 // bearer's PvE kill times ~15% slower than printed.
+
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import os from "node:os";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const REMOTE = process.argv.includes("--remote");
+const TIER = { common: "c", uncommon: "u", rare: "r", epic: "e", legendary: "l" };
+
+function d1(sql) {
+  const args = ["d1", "execute", "nomad", REMOTE ? "--remote" : "--local", "--json", "--command", sql];
+  const out = execFileSync(path.join(ROOT, "node_modules", ".bin", "wrangler"), args, {
+    cwd: ROOT, maxBuffer: 64 * 1024 * 1024,
+    env: { ...process.env, WRANGLER_LOG_PATH: os.tmpdir() },
+  });
+  const parsed = JSON.parse(out.toString());
+  const chunks = Array.isArray(parsed) ? parsed : [parsed];
+  return chunks.flatMap((c) => c?.results ?? []);
+}
+
+function liveWeapons() {
+  const rows = d1("SELECT id, rarity, dmg, speed, sweep, stun, bleed, traits FROM item_templates WHERE slot = 'weapon' ORDER BY CASE rarity WHEN 'common' THEN 0 WHEN 'uncommon' THEN 1 WHEN 'rare' THEN 2 WHEN 'epic' THEN 3 ELSE 4 END, dmg, id");
+  const out = [{ id: "bare hands", dmg: 0, speed: 1, sweep: 1, bleed: 0, stun: 0, pierce: 0 }];
+  for (const r of rows) {
+    const pierce = Number(/(?:^|,)pierce:(\d+)/.exec(r.traits ?? "")?.[1] ?? 0);
+    out.push({
+      id: `${r.id} (${TIER[r.rarity] ?? "?"})${r.speed > 1 ? ` x${r.speed}` : ""}`,
+      dmg: r.dmg ?? 0, speed: Math.max(1, r.speed ?? 1), sweep: r.sweep ?? 1,
+      bleed: r.bleed ?? 0, stun: r.stun ?? 0, pierce,
+    });
+  }
+  return out;
+}
+
+// The duelers' roll-call: these ids are the TABLE (flee/steal/trivial things
+// stay out — they don't duel). Stats come live from D1 for every id; bosses
+// and anything at 55+ hp are added automatically, so new content cannot hide
+// off the bottom of the ledger.
+const MOB_TABLE_IDS = new Set([
+  "rat", "skeleton", "cutthroat", "brood-rat", "thrice-dead", "twice-dead",
+  "warden", "grave-hyena", "pale-crawler", "the-drowned", "albino-rat",
+  "bone-knight", "verdigris", "verdigris-thing", "marrow-cantor", "pale-stalker", "dire-hyena",
+  "two-hound", "drowned-hulk", "three-hound", "the-gaunt", "warden-captain",
+  "forgotten-king", "marrow-king", "drowned-god",
+]);
+
+function liveMobs() {
+  const rows = d1("SELECT id, name, level, max_hp, dmg_min, dmg_max, armor, bleed, stun, is_boss FROM mob_templates ORDER BY level, max_hp, id");
+  const out = [];
+  for (const r of rows) {
+    if (!MOB_TABLE_IDS.has(r.id) && !r.is_boss && (r.max_hp ?? 0) < 55) continue;
+    out.push({
+      id: r.id, lvl: r.level, hp: r.max_hp, min: r.dmg_min, max: r.dmg_max,
+      armor: r.armor ?? 0, bleed: r.bleed ?? 0, stun: r.stun ?? 0,
+    });
+  }
+  return out;
+}
 
 const CRIT = 0.05, FUMBLE = 0.05, K = 10;
 const DODGE_LIGHT = 0.05, AMBUSH_MULT = 1.5, VITALS_PVP = 0.005, VITALS_ARMOR_FULL = 11;
@@ -62,7 +128,7 @@ function mobDPR(mob, p) {
   return land * e + (mob.bleed ?? 0) * land * (p.woundMult ?? 1);
 }
 
-const weapons = [
+const FALLBACK_WEAPONS = [
   { id: "bare hands",          dmg: 0, speed: 1, bleed: 0 },
   { id: "quarterstaff (c)",    dmg: 1, speed: 1, bleed: 0 },              // reach
   { id: "sharpened-rib (c) x2",dmg: 1, speed: 2, bleed: 1 },
@@ -92,7 +158,7 @@ const weapons = [
 ];
 
 // Fleet-rat and cutpurse are omitted: they flee/steal, they don't duel.
-const mobs = [
+const FALLBACK_MOBS = [
   { id: "rat",            lvl: 1, hp: 11,  min: 2, max: 3,  armor: 0, bleed: 1 },
   { id: "skeleton",       lvl: 2, hp: 20,  min: 2, max: 4,  armor: 0, bleed: 0 },
   { id: "cutthroat",      lvl: 2, hp: 22,  min: 3, max: 5,  armor: 0, bleed: 0 },
@@ -118,6 +184,20 @@ const mobs = [
   { id: "marrow-king",    lvl: 6, hp: 105, min: 5, max: 9,  armor: 2, bleed: 0 },
   { id: "drowned-god",    lvl: 6, hp: 110, min: 6, max: 10, armor: 1, bleed: 0 },
 ];
+
+// Live data first; the stale tables above are the lifeboat only.
+let weapons, mobs;
+try {
+  weapons = liveWeapons();
+  mobs = liveMobs();
+  if (!weapons.length || !mobs.length) throw new Error("database returned no rows");
+  console.log(`// data: ${weapons.length} weapons, ${mobs.length} mobs from ${REMOTE ? "REMOTE" : "local"} D1 (--remote reads production)`);
+} catch (e) {
+  weapons = FALLBACK_WEAPONS;
+  mobs = FALLBACK_MOBS;
+  console.log("// !! D1 read failed (" + (e.message ?? e) + ") — FALLING BACK TO THE STALE HARDCODED TABLES.");
+  console.log("// !! THESE NUMBERS ARE WRONG. Migrate the local database (or pass --remote) and re-run.");
+}
 
 // Shield blocks rescaled by 074 (rome capped the wall at 30%): iron-bound .15,
 // warden-tower .25, gravestone .30 — guarded turtle peaks .40, not .55.

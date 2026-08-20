@@ -18,7 +18,7 @@ import {
   WOUNDED_FRACTION, WOUNDED_DMG_MULT, WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS,
   AMBUSH_MULT, VITALS_PVP, STAGGER_BONUS, BLEED_TICKS, BLEED_STACK_CAP,
   PADDED_STUN_MULT, ARMOR_WEAR, WEAPON_WEAR,
-  MANCATCHER_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE_WOUND_ODDS,
+  MANCATCHER_PVP_HOBBLE, TRIP_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE_WOUND_ODDS,
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
   FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_HIT, FEED_REST_CAUGHT,
   playerBleedOdds,
@@ -214,6 +214,7 @@ async function swingAt(
   let dmg = Math.round((body + (weapon ? z.effDmg(weapon) : 0)) * STANCE[attacker.stance].atk * z.wallDrag(attacker));
   if (hurt) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); z.tellWounded(attacker); }
   let flourish = ".";
+  let crit = false;
   // REACH blunts a PvP ambush the same way it blunts a monster's (zone.ts's
   // creatureFirstStrike): a haft held at length means the attacker arrives on
   // the point first, whoever they are — the fiction doesn't carve out an
@@ -223,6 +224,7 @@ async function swingAt(
   if (opts.ambush && !atLength) {
     dmg = Math.round(dmg * AMBUSH_MULT); // the surprise IS the crit — never both
   } else if (chance(CRIT_CHANCE)) {
+    crit = true;
     dmg *= 2;
     flourish = pick(CRIT_FLOURISH);
   }
@@ -250,6 +252,25 @@ async function swingAt(
   if (defender.hp > 0 && z.vitalsLottery(z.equippedArmor(defender), VITALS_PVP)) {
     defender.hp = 0;
     vkill = z.pickVitals(weapon);
+  }
+  // THE BODY BITES BACK (2026-08-20): spiked armor returns a point of pain to
+  // whoever lands a blow on it — flat, unmitigated, and it can finish the
+  // attacker. The shield's thorns keep their own block-time rule; this is the
+  // armor's, on every landed blow.
+  if (defender.hp > 0) {
+    const spikes = z.wornTrait(defender, "spiked");
+    if (spikes > 0 && attacker.hp > 0) {
+      attacker.hp -= spikes;
+      z.send(defender, `The spikes of your armor bite back — ${attacker.name} takes ${spikes}.`);
+      if (attacker.hp <= 0) {
+        z.send(attacker, `You drive your blow home onto the spikes — it goes in under the ribs, and the strength runs out of you.`, "dmgin big");
+        z.send(defender, `${attacker.name} drives themselves onto the spikes — and doesn't come off them.`, "dmgout big");
+        await pvpKill(z, defender, attacker);
+        return;
+      }
+      z.send(attacker, `The spikes of ${defender.name}'s armor bite into you — ${spikes} back. [${attacker.hp}/${attacker.maxHp} hp]`, "dmgin");
+      z.sendStatus(attacker);
+    }
   }
   if (defender.resting) {
     defender.resting = false;
@@ -314,18 +335,27 @@ async function swingAt(
       ? weapon.tmpl.bleed + (z.itemRolled(weapon, "keen") ? 1 : 0)
       : 0
     : 0;
-  if (effBleed > 0) {
+  // WICKED (2026-08-20): a crit on a wicked edge opens the wound wide — no
+  // roll between the luck and the blood (the ambush never crits, so only the
+  // honest 5% pays it).
+  const wickedWound = crit && weapon && z.itemRolled(weapon, "wicked")
+    ? (weapon.tmpl.bleed > 0 ? weapon.tmpl.bleed : 1)
+    : 0;
+  const wound = Math.max(effBleed, wickedWound);
+  if (wound > 0) {
     if (z.wearsTrait(defender, "wardhide") && !chance(WARDHIDE_WOUND_ODDS)) {
       z.send(defender, `${attacker.name}'s edge drags across the thick hide — it holds.`, "block");
     } else {
       const fresh = !defender.bleedTicks;
       defender.bleedTicks = z.bleedTicksFor(defender); // staunched gear clots it sooner
-      defender.bleedDmg = Math.max(defender.bleedDmg ?? 0, effBleed);
+      defender.bleedDmg = Math.max(defender.bleedDmg ?? 0, wound);
       if (fresh) z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_BLEED, attacker.name, defender.name), "bleed", true, defender.pubkey);
     }
   }
   // The man-catcher's PvP rule, exactly as written the day it was forged:
   // against players the barbs HOBBLE — never hold. Flee stays the out.
+  // A tripping weapon keeps the same law (2026-08-20): the legs go out from
+  // under you, but the way out stays yours.
   const offhand = z.equippedItem(attacker, "shield");
   if (offhand && hasTrait(offhand.tmpl, "mancatcher") && !defender.hobbled && chance(MANCATCHER_PVP_HOBBLE)) {
     defender.hobbled = true;
@@ -333,6 +363,16 @@ async function swingAt(
     z.send(defender, `The barbs of ${offhand.tmpl.name} rake your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
     z.send(attacker, `The barbs catch ${defender.name}'s leg — they won't run clean now.`);
     z.sendStatus(defender); // light the defender's 'hobbled' pill on the set, not just on clear
+    z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_HOBBLE, attacker.name, defender.name), "hobble", true, defender.pubkey);
+  }
+  // TRIPPING (2026-08-20), the weapon-side sister of the barbs: a chain or a
+  // lash takes the legs. Same law — hobbled, never held; flee stays the out.
+  if (weapon && (trait(weapon.tmpl, "tripping") ?? 0) > 0 && !defender.hobbled && chance(TRIP_PVP_HOBBLE)) {
+    defender.hobbled = true;
+    defender.limpingSince = undefined;
+    z.send(defender, `${attacker.name}'s ${weapon.tmpl.name} whips your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
+    z.send(attacker, `You take ${defender.name}'s leg out from under them — they won't run clean now.`);
+    z.sendStatus(defender);
     z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_HOBBLE, attacker.name, defender.name), "hobble", true, defender.pubkey);
   }
   if (worn) await z.wear(defender, worn.carried, worn.tmpl, ARMOR_WEAR);
