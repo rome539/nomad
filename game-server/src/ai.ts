@@ -229,7 +229,7 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
       // to hear. The silence is not safety, it is a better microphone.
       if (!chance(NOISE_HEED_ODDS * (events.quieted(z, creature.roomId) ? QUIET_HEED_MULT : 1))) continue;
       for (const s of z.sessions.values()) {
-        if (s.roomId === roomId && z.inCombat(s) && !z.outOfWorld(s)) {
+        if (s.roomId === roomId && z.inCombat(s) && z.reachable(s)) {
           creature.target = s.pubkey;
           addGrudge(z, creature, s.pubkey);
           z.send(s, `${cap(tmpl.name)} throws itself into the fight!`);
@@ -1992,7 +1992,7 @@ export function hoarderCovets(z: ZoneDO, creature: Creature, now: number): void 
     creature.covetUntil = undefined;
     creature.covets = undefined;
     const here = [...z.sessions.values()].find(
-      (s) => s.roomId === creature.roomId && !z.outOfWorld(s) && s.hp > 0
+      (s) => s.roomId === creature.roomId && z.reachable(s) && s.hp > 0
         && s.items.some((c) => (RARITY_RANK[z.world!.itemTemplates.get(c.itemId)?.rarity ?? "common"] ?? 0) >= HOARD_COVET_RARITY),
     );
     if (!here) return;
@@ -2244,7 +2244,7 @@ export function ratCuddles(z: ZoneDO, creature: Creature, now: number): void {
     }
     if (creature.target) return;
     const rester = [...z.sessions.values()].find(
-      (s) => s.roomId === creature.roomId && s.resting && !z.outOfWorld(s) && s.hp > 0,
+      (s) => s.roomId === creature.roomId && s.resting && z.reachable(s) && s.hp > 0,
     );
     if (!rester) return;
     if (remembers(z, creature, rester.pubkey, now)) return; // a grudge is not a bed
@@ -2507,8 +2507,25 @@ export function spookFromNoise(z: ZoneDO, sourceRoomId: string, now: number): vo
 // across the whole band instead, so the road never has fixed addresses. Falls
 // back to the given room if the band somehow yields nothing.
 export function rollDen(z: ZoneDO, templateId: string, fallback: string): string {
-  if (!ROAMING_DENS.has(templateId)) return fallback;
   const world = z.world!;
+  // THE SANCTUARY LAW, APPLIED AT THE DOOR (2026-08-20). A spawn row whose
+  // home is a hideaway (is_safe) never gets its creature there — the world's
+  // promise is that nothing lives in the boltholes, and the seeder used to
+  // trust the table blindly. That let invisible rooted lurkers be seeded INTO
+  // the fern pit and the under-roots (mig 250 moved the rows; this is the
+  // fence so no future row can slip again). The creature wakes one room out,
+  // on open ground in its own band, preferring a neighbour of the bolthole.
+  if (world.safeRooms.has(fallback)) {
+    const band = z.regionOf(fallback);
+    const ok = (r: string) => world.rooms.has(r) && !world.safeRooms.has(r) && !world.entryRooms.has(r);
+    const neighbours = (world.exits.get(fallback) ?? []).map((e) => e.to_room).filter(ok);
+    const sameBand = neighbours.filter((r) => z.regionOf(r) === band);
+    const pick = (sameBand.length ? sameBand : neighbours);
+    if (pick.length) return pick[randInt(0, pick.length - 1)];
+    const anywhere = [...world.rooms.keys()].filter((r) => ok(r) && z.regionOf(r) === band);
+    if (anywhere.length) return anywhere[randInt(0, anywhere.length - 1)];
+  }
+  if (!ROAMING_DENS.has(templateId)) return fallback;
   const bands = new Set(
     world.mobSpawns.filter((s) => s.template_id === templateId).map((s) => z.regionOf(s.room_id)),
   );
@@ -2891,7 +2908,7 @@ export function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now:
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} lets it go, and the whole bowl of the summit goes white.`);
       z.roomSound(creature.roomId, "A sound like a sail taking wind, very large, {dir}.");
       for (const s of [...z.sessions.values()]) {
-        if (s.roomId !== creature.roomId || s.hp <= 0 || z.outOfWorld(s)) continue;
+        if (s.roomId !== creature.roomId || s.hp <= 0 || !z.reachable(s)) continue;
         // ARMOR THINS IT AND NOTHING STOPS IT. Heat, not a curse — so the same
         // mitigation every blow gets, and then it is on you. Deliberately NOT
         // gated on canLandBlow: the dogpile cap exists so a crowd cannot be
@@ -2930,7 +2947,7 @@ export function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now:
       // It is up. It takes somebody on the way through and there is nothing to
       // swing at — see the melee refusal in zone.ts, and the throw that still
       // reaches it, which is the whole answer to this window.
-      const here = [...z.sessions.values()].filter((s) => s.roomId === creature.roomId && s.hp > 0 && !z.outOfWorld(s));
+      const here = [...z.sessions.values()].filter((s) => s.roomId === creature.roomId && s.hp > 0 && z.reachable(s));
       if (!here.length) return true; // everyone left or died under it — it is circling an empty bowl
       const mark = here[randInt(0, here.length - 1)];
       const raw = randInt(DRAKE_DIVE_MIN, DRAKE_DIVE_MAX);

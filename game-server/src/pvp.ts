@@ -14,13 +14,14 @@ import { chance, randInt, pick } from "./rng";
 import * as den from "./den";
 import { recordPvpKill, deedsBump, trait, hasTrait } from "./world";
 import {
-  STANCE, RECKLESS_MISS, ARMOR_K, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE,
+  STANCE, RECKLESS_MISS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE,
   WOUNDED_FRACTION, WOUNDED_DMG_MULT, WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS,
   AMBUSH_MULT, VITALS_PVP, STAGGER_BONUS, BLEED_TICKS, BLEED_STACK_CAP,
   PADDED_STUN_MULT, ARMOR_WEAR, WEAPON_WEAR,
   MANCATCHER_PVP_HOBBLE, CRIT_FLOURISH, WARDHIDE_WOUND_ODDS,
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
   FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_HIT, FEED_REST_CAUGHT,
+  playerBleedOdds,
 } from "./zone-data";
 
 // How hurt the other one looks — the same buckets as selfExamine, because
@@ -88,7 +89,8 @@ export async function tickPvp(z: ZoneDO): Promise<void> {
     if (!attacker.pvpTarget) continue;
     const prey = z.sessions.get(attacker.pvpTarget);
     if (!prey || prey.hp <= 0 || attacker.hp <= 0
-      || prey.roomId !== attacker.roomId || z.outOfWorld(prey) || z.outOfWorld(attacker)) {
+      || prey.roomId !== attacker.roomId || z.outOfWorld(prey) || z.outOfWorld(attacker)
+      || !z.reachable(prey) || !z.reachable(attacker)) {
       attacker.pvpTarget = null;
       continue;
     }
@@ -121,9 +123,18 @@ async function swingAt(
 ): Promise<void> {
   const hurt = attacker.hp < attacker.maxHp * WOUNDED_FRACTION;
   const weaponAtStart = z.equippedItem(attacker, "weapon");
+  // THE AMBUSH IS A GUARANTEED FIRST STRIKE (2026-08-20). COMBAT.md's ambush
+  // rule — "one immediate strike at ×1.5, before the beat, before it can
+  // answer. Crit applies; fumble does not" — is implemented that way on the
+  // PvE opener (cmdAttack rolls none of these). The PvP opener used to run
+  // the whole defensive chain first, so a "falls on X without warning!" blow
+  // could whiff — or fumble the blade onto the stones. An ambush rolls none
+  // of the four; the defender's REACH still strips the ×1.5 below, but the
+  // blow itself lands.
+  const ambush = !!opts.ambush;
   // Every attack is a gamble — a wild swing can fling your blade to the
   // stones, where your victim is as free to snatch it as anyone.
-  if (chance(FUMBLE_CHANCE + (hurt ? WOUNDED_FUMBLE_BONUS : 0))) {
+  if (!ambush && chance(FUMBLE_CHANCE + (hurt ? WOUNDED_FUMBLE_BONUS : 0))) {
     const dropsIt = hurt && weaponAtStart && chance(WOUNDED_DROP_ODDS);
     await z.playerFumble(attacker, dropsIt ? weaponAtStart : null);
     return;
@@ -131,7 +142,7 @@ async function swingAt(
   // The reckless tax: a wild swing — all shoulder, no aim — carries you wide,
   // and leaves you open (staggered) for the answer. You keep your grip; it's a
   // whiff, not a fumble. The price that keeps the 1.5x stance an honest gamble.
-  if (attacker.stance === "reckless" && chance(RECKLESS_MISS)) {
+  if (!ambush && attacker.stance === "reckless" && chance(RECKLESS_MISS)) {
     attacker.staggered = true;
     z.send(attacker, `You swing to wound — too hard, and it carries you wide. An opening.`, "fumble");
     z.send(defender, `${attacker.name} swings wild and reckless; the blow sails past you.`, "dodge");
@@ -140,14 +151,14 @@ async function swingAt(
   }
   // Quick feet: a light load slips a blow entirely, scaling down as the kit
   // gets heavier (dodgeBonus) — plate slips nothing.
-  if (chance(z.dodgeBonus(defender))) {
+  if (!ambush && chance(z.dodgeBonus(defender))) {
     z.send(attacker, `${defender.name} sways clear of your swing, light on their feet.`);
     z.send(defender, `${attacker.name} swings — you slip aside, nothing weighing you down.`, "dodge");
     z.combatNoise(attacker.roomId);
     return;
   }
   // A shield (or parrying blade) can catch the blow whole — and answer.
-  if (chance(z.equippedBlock(defender))) {
+  if (!ambush && chance(z.equippedBlock(defender))) {
     const shield = z.equippedItem(defender, "shield");
     const parry = z.equippedItem(defender, "weapon");
     const catcher = shield ?? ((parry?.tmpl.block ?? 0) > 0 ? parry : null);
@@ -205,10 +216,14 @@ async function swingAt(
     defender.staggered = false;
     staggerHit = true; // this blow cashed in an opening — say so on the line
   }
-  // Worn armor thins the blow but never closes it; a point or a dead weight
-  // ignores some of it; then the defender's stance takes its share.
+  // A wanderer's blow on a wanderer subtracts armor FLAT, floored at 1 — the
+  // player-swing pipeline (COMBAT.md: "your blows subtract mob armor flat...
+  // their blows are curved"). This ran the creature-hit curve before
+  // (2026-08-20), so the same weapon/armor matchup played materially tankier
+  // in PvP than in PvE (12 dmg vs 11 armor: flat → 1, curve → 6). The stance
+  // share still applies after, exactly as it does to every landed blow.
   const effArmor = Math.max(0, z.equippedArmor(defender) - z.armorIgnore(weapon));
-  dmg = Math.max(1, Math.round(dmg * ARMOR_K / (effArmor + ARMOR_K)));
+  dmg = Math.max(1, dmg - effArmor);
   dmg = Math.max(1, Math.round(dmg * STANCE[defender.stance].def));
   defender.hp -= dmg;
   // The vitals lottery, wanderer against wanderer: VITALS_PVP, armor over
@@ -275,13 +290,21 @@ async function swingAt(
   }
   // A cutting edge opens a wound that keeps weeping — unless hide thick
   // enough to turn it takes the cut (the ward covers the whole wound family).
-  if (weapon && weapon.tmpl.bleed > 0) {
+  // Bleed is a per-hit CHANCE (playerBleedOdds, the same tune the PvE round
+  // rolls): the PvP path was the one path that tune never reached (2026-08-20)
+  // — every landed cut opened a wound here, roughly doubling the DoT.
+  const effBleed = weapon && weapon.tmpl.bleed > 0
+    ? chance(playerBleedOdds(weapon.tmpl.dmg, weapon.tmpl.bleed))
+      ? weapon.tmpl.bleed + (z.itemRolled(weapon, "keen") ? 1 : 0)
+      : 0
+    : 0;
+  if (effBleed > 0) {
     if (z.wearsTrait(defender, "wardhide") && !chance(WARDHIDE_WOUND_ODDS)) {
       z.send(defender, `${attacker.name}'s edge drags across the thick hide — it holds.`, "block");
     } else {
       const fresh = !defender.bleedTicks;
       defender.bleedTicks = z.bleedTicksFor(defender); // staunched gear clots it sooner
-      defender.bleedDmg = Math.max(defender.bleedDmg ?? 0, weapon.tmpl.bleed);
+      defender.bleedDmg = Math.max(defender.bleedDmg ?? 0, effBleed);
       if (fresh) z.actorFeed(attacker, attacker.roomId, z.feedProc(FEED_BLEED, attacker.name, defender.name), "bleed", true, defender.pubkey);
     }
   }

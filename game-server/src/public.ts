@@ -2460,6 +2460,15 @@ var FRAY_QUIET_MS = 3000;// a reweave that recovers faster than this stays unsee
 var stilled = false;
 var connectingSince = 0; // when the in-flight handshake started, so a wedged
                          // one can be told from a slow one (see connect)
+// ONE DIAL AT A TIME (2026-08-20): true from connect()'s first line until a
+// socket opens (onopen) or a retry is scheduled (scheduleRetry). During the
+// login/ticket prologue the 'ws' var is still null, so a focus/online event could
+// re-enter connect() and dial a SECOND socket — and a stall-abandoned zombie
+// whose handshake later completed server-side could displace the healthy wire
+// (the server's one-body-per-soul close lands as 1000 "reconnected" on the
+// LIVE socket, and this tab used to go still forever). The flag closes the
+// prologue; the readyState===1 check closes the live-wire case.
+var connecting = false;
 var CONNECT_STALL_MS = 10000;
 var freshLoad = true;    // this page just loaded with an EMPTY scroll — the first connect must ask the server to repaint the room (fresh=1), or a fast refresh lands on a blank pane. A websocket reweave keeps its scroll and never sets this.
 
@@ -2476,6 +2485,9 @@ async function connect() {
   // every scheduled retry hit this line and scheduled nothing, and the reweave
   // chain was dead for good. The scroll then answered every command with 'not
   // connected' forever, with no way back but a reload.
+  if (connecting) return;                    // one dial at a time (see the flag's note)
+  if (ws && ws.readyState === 1) return;     // a live wire is already up — nothing to dial
+  connecting = true;
   if (ws && ws.readyState === 0) {
     // Still plausibly opening: come back to it, but ALWAYS keep the chain alive.
     if (Date.now() - connectingSince < CONNECT_STALL_MS) { scheduleRetry(); return; }
@@ -2498,7 +2510,24 @@ async function connect() {
   var token = sessionToken;
   if (!token) {
     try { token = await login(); sessionToken = token; }
-    catch (e) { print("— the gate does not answer (" + e.message + "); retrying —", "sys"); return scheduleRetry(); }
+    catch (e) {
+      // AN EXPIRED SIGNER SESSION IS NOT A NETWORK BLIP (2026-08-20). The old
+      // catch retried everything forever: a dead bunker session threw "signer
+      // session expired — use 'connect signer app' again", the retry loop
+      // backed off to 15s and tried the same failing login for good — the
+      // wanderer sat locked out of their own keys with no way in but a manual
+      // pocket-key command. Expiry demotes to the pocket keys once, says so in
+      // the signer's own words, and forgets the dead session.
+      if (method === "bunker" && /signer session expired/i.test(String(e && e.message))) {
+        print("— " + e.message + " —", "sys");
+        try { localStorage.removeItem("nomad_bunker_session"); } catch (err) {}
+        method = "guest";
+        bunkerClient = null;
+        return scheduleRetry();
+      }
+      print("— the gate does not answer (" + e.message + "); retrying —", "sys");
+      return scheduleRetry();
+    }
   }
 
   // THE WEEK-LONG TOKEN NEVER TOUCHES THE URL. A browser socket can't send
@@ -2530,6 +2559,7 @@ async function connect() {
   ws.onopen = function () {
     if (!mine()) return;
     opened = true;
+    connecting = false; // the wire is up — a wake event may dial again freely (the readyState===1 guard also holds)
     freshLoad = false; // the scroll is (being) painted now — any later reweave is a true seamless one
     failedOpens = 0;
     retryMs = 300; // the first reweave after a good run retries near-instantly
@@ -2653,6 +2683,7 @@ async function connect() {
       // a second, "goes still" and "take up the thread" alternating down the
       // scroll. This flag is the one thing that outranks a wake.
       stilled = true;
+      connecting = false; // this attempt is over, and none will follow it
       return;
     }
     if (!opened) failedOpens++;
@@ -2676,6 +2707,7 @@ async function connect() {
 }
 
 function scheduleRetry() {
+  connecting = false; // the attempt that is abandoning its claim releases the dial
   setTimeout(connect, retryMs);
   retryMs = Math.min(retryMs * 2, 15000);
 }
@@ -2799,7 +2831,14 @@ function localCmd(text) {
   // Quit: back out through the door to the threshold. A clean reload — keys
   // stay in the pocket, the world handles the vanishing (linkdead linger).
   // Bare words only: the server owns "leave <thing>" (it's a drop).
-  if (lower === "quit" || lower === "leave" || lower === "exit") {
+  //
+  // INSIDE THE GATEHOUSE, 'exit'/'leave' are NOT quit — they are the server's
+  // own door-out verb (parser: out/exit/outside → leaveGatehouse), and the
+  // help says so ("out (exit) — back through the door, into the world").
+  // Intercepting them here used to hard-reload the page instead, wiping the
+  // scroll and re-triggering signer login (2026-08-20). They only mean quit
+  // while you are actually out in the world.
+  if (lower === "quit" || ((lower === "leave" || lower === "exit") && !inGatehouseNow)) {
     print("— you step back through the door —", "sys");
     setTimeout(function () { location.reload(); }, 400);
     return true;

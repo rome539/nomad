@@ -759,7 +759,17 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
   // Exactly one line per stay behind the door: armed when you come in, spent the
   // moment he uses it. See KEEPER_DELAY_MIN_MS for why this is not a drip.
   if (!session.keeperDueAt || now < session.keeperDueAt) return false;
-  const band = z.regionOf(session.roomId);
+  // WHICH STORY IS WHICH DOOR (2026-08-20). regionOf() reads "gate" for EVERY
+  // entry room — it checks entryRooms before the room's own region column — so
+  // keying the telling on it made every gatehouse in the world (road, wood,
+  // mountain, crossing) tell the FORTRESS story, and GATE_TELLINGS["road" |
+  // "wood" | "mountain"] were unreachable dead content. The telling keys on the
+  // gate ROOM'S OWN region, as the design note in zone-data always said: the
+  // door you ran for decides what you find out. The old fortress gates declare
+  // no region, so they fall back to "gate" exactly as they always did. (The
+  // crossing has no telling written yet — its two doors keep the quiet the
+  // `lines` check below was built for.)
+  const band = (z.world!.rooms.get(session.roomId)?.region as Region | undefined) || "gate";
   const lines = GATE_TELLINGS[band as Region];
   if (!lines?.length) return false; // a band with no telling written yet keeps its own quiet
   const heard = session.keeperTold.get(band) ?? 0;

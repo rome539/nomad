@@ -187,18 +187,32 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
 
   // No live fire? Spend one torch to wake the racks — that lights the room too, and
   // buys the whole TORCH_BURN_MS window to hang the rest of your kills for free.
+  // (Checked but NOT spent here — the meat leaves the pack first, so a torchless
+  // refusal never costs the haunch, and a racing second frame can't cure the
+  // same meat twice. See the splice guard below.)
+  let torch: CarriedItem | undefined;
   if (!lit) {
-    const torch = session.items.find((c) => c.itemId === TORCH_ITEM && c.serial === null);
+    torch = session.items.find((c) => c.itemId === TORCH_ITEM && c.serial === null);
     if (!torch) return z.send(session, "The racks are dead cold, and cold racks cure nothing. You'd need a torch to wake the old grease-fire.");
-    session.items.splice(session.items.indexOf(torch), 1);
-    await removeItemRow(z.env.DB, torch.rowId);
-    z.groundTorch.set(SMOKEHOUSE_ROOM, Date.now() + TORCH_BURN_MS);
   }
 
   // The raw meat leaves the pack onto the floor with its own cure-timer (rot kind
   // "cure"); the rot sweep swaps each for its keeping form as it comes through.
+  // THE GUARD (2026-08-20): the splice used to come AFTER the torch-spend's D1
+  // await — two fast 'cure' frames both resolved the same meat, the second
+  // frame's indexOf came back -1, splice(-1,1) ate an unrelated pack item, and
+  // the meat was hung twice. The meat goes FIRST now, so any racing frame
+  // resolves nothing and refuses before touching anything.
   const rawName = world.itemTemplates.get(carried.itemId)!.name;
-  session.items.splice(session.items.indexOf(carried), 1);
+  const carriedIdx = session.items.indexOf(carried);
+  if (carriedIdx === -1) return z.send(session, "That's already left your pack.");
+  session.items.splice(carriedIdx, 1);
+  if (torch) {
+    const torchIdx = session.items.indexOf(torch);
+    if (torchIdx !== -1) session.items.splice(torchIdx, 1);
+    await removeItemRow(z.env.DB, torch.rowId);
+    z.groundTorch.set(SMOKEHOUSE_ROOM, Date.now() + TORCH_BURN_MS);
+  }
   await removeItemRow(z.env.DB, carried.rowId);
   z.ground.set(SMOKEHOUSE_ROOM, [...(z.ground.get(SMOKEHOUSE_ROOM) ?? []), carried.itemId]);
   z.stampFresh(SMOKEHOUSE_ROOM, carried.itemId);
@@ -290,24 +304,40 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
   // is free and keeps burning for whoever else is here; a torch in your hand
   // goes down onto the stone (this wants both hands, and a set-down torch is
   // the same shared fire); with neither, one out of the pack is spent to make
-  // one, exactly as the smoke-racks spend theirs.
+  // one, exactly as the smoke-racks spend theirs. DECIDED first, APPLIED after
+  // the catch leaves the pack below — a refusal here must never cost the catch.
   let how: "fire" | "setdown" | "spent";
   if (lit) {
     how = "fire";
   } else if (held) {
-    z.groundTorch.set(session.roomId, Math.max(z.groundTorch.get(session.roomId) ?? 0, session.litUntil!));
-    session.litUntil = undefined; session.litSource = undefined; session.torchWarned = false;
     how = "setdown";
   } else if (spare) {
-    session.items.splice(session.items.indexOf(spare), 1);
-    await removeItemRow(z.env.DB, spare.rowId);
-    z.groundTorch.set(session.roomId, Date.now() + TORCH_BURN_MS);
     how = "spent";
   } else {
     return z.send(session, `You turn ${rawT.name} over in your hands with nowhere to put it. Raw is raw without a fire, and there is no fire here.`);
   }
 
-  session.items.splice(session.items.indexOf(carried), 1);
+  // THE GUARD (2026-08-20): the catch leaves the pack FIRST, before the flame
+  // work and its D1 awaits. Two fast 'cook' frames used to both resolve the
+  // same catch — the second frame's indexOf came back -1, splice(-1,1) ate an
+  // unrelated pack item, and both frames minted a cooked row (one catch, two
+  // dinners). With the catch out of the pack first, any racing frame resolves
+  // nothing and refuses before touching anything.
+  const carriedIdx = session.items.indexOf(carried);
+  if (carriedIdx === -1) return z.send(session, "That's already left your pack.");
+  session.items.splice(carriedIdx, 1);
+
+  // ...and now the flame, applied for real.
+  if (how === "setdown") {
+    z.groundTorch.set(session.roomId, Math.max(z.groundTorch.get(session.roomId) ?? 0, session.litUntil!));
+    session.litUntil = undefined; session.litSource = undefined; session.torchWarned = false;
+  } else if (how === "spent") {
+    const spareIdx = session.items.indexOf(spare!);
+    if (spareIdx !== -1) session.items.splice(spareIdx, 1);
+    await removeItemRow(z.env.DB, spare!.rowId);
+    z.groundTorch.set(session.roomId, Date.now() + TORCH_BURN_MS);
+  }
+
   await removeItemRow(z.env.DB, carried.rowId);
   const got = await z.grantItem(session, outId);
   const outT = world.itemTemplates.get(outId)!;
@@ -881,15 +911,24 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   if (exit.key_item === DEEP_HEART && !z.openDoors.has(doorKey)) {
     // The corpse-key door: it takes a heart, and only a fresh one. No hoarded
     // key works here — you had to face the deep for this, and be quick with it.
-    const heart = session.items.find((c) => c.itemId === DEEP_HEART);
-    if (!heart) {
+    const hearts = session.items.filter((c) => c.itemId === DEEP_HEART);
+    if (!hearts.length) {
       return z.send(session, `A black iron door bars the way ${dir}, and cold pours up from under it. It has no keyhole. It wants something of the deep pressed to it — and still cold.`, "dmgin");
     }
-    const at = await itemAcquiredAt(z.env.DB, heart.rowId);
-    const fresh = at !== null && Math.floor(Date.now() / 1000) - at < HEART_FRESH_SEC;
-    // Either way the heart leaves your hands — the door takes the offering, or
-    // the slime is worthless and you're rid of it.
-    session.items.splice(session.items.indexOf(heart), 1);
+    // THE FRESHEST HEART IN HAND (2026-08-20). The door used to take the FIRST
+    // heart row in the pack — a spoiled one in front silently wasted the fresh
+    // one behind it. Pick the most recently cut instead; a heart with no known
+    // hour reads as no hour (the door's old "can't tell → not fresh" rule).
+    const heart = hearts.reduce((best, c) => ((c.acquiredAt ?? -Infinity) > (best.acquiredAt ?? -Infinity) ? c : best), hearts[0]);
+    const cut = heart.acquiredAt;
+    const fresh = cut !== undefined && Math.floor(Date.now() / 1000) - cut < HEART_FRESH_SEC;
+    // The offering leaves the hand FIRST, before the D1 await — the cook/cure
+    // guard (2026-08-20): a racing second frame resolves nothing and refuses
+    // before touching anything, so one heart can never be pressed twice.
+    const heartIdx = session.items.indexOf(heart);
+    if (heartIdx === -1) return z.send(session, "The heart is already gone from your hand.");
+    session.items.splice(heartIdx, 1);
+    if (heart.serial !== null) await voidMint(z.env.DB, heart.serial); // a stray seal cracks with the offering
     await removeItemRow(z.env.DB, heart.rowId);
     if (!fresh) {
       return z.send(session, `You press the heart to the door — but the cold has gone out of it, and it's soft, grey, spoiled. The door does not stir. The slime sloughs from your hand and is gone.`, "dmgin");

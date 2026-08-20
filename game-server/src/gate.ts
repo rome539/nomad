@@ -429,11 +429,22 @@ export async function handleBounty(z: ZoneDO, session: Session, frame: any): Pro
     const bounty = z.bounties.find(([t]) => t === trophyId);
     if (!bounty) return sendBounty(z, session, "The keeper shakes his head. That bounty has been pulled from the board.");
     const trophy = z.world!.itemTemplates.get(bounty[0]);
-    if (bountyTookOf(z, session.pubkey).has(bounty[0])) {
+    const took = bountyTookOf(z, session.pubkey);
+    if (took.has(bounty[0])) {
       return sendBounty(z, session, `He's already paid you for that one. The posting stands for whoever brings him the next ${trophy?.name ?? "one"}.`);
     }
     const found = await findBountyTrophy(z, session, bounty[0]);
     if (!found) return sendBounty(z, session, `You've nothing like that to trade — the keeper wants ${trophy?.name ?? "it"}, and it isn't on you or in your keeping.`);
+    // ONE PAYMENT PER POSTING, PER WANDERER (2026-08-20). The took-mark used to
+    // land only inside payBounty, AFTER its D1 awaits — two fast claim frames
+    // both passed the check above, both found the same trophy row (the keeping
+    // read races the delete), and the meals were paid twice. The mark lands
+    // before payBounty's first await now; the re-check plus the mark are one
+    // synchronous block, so of any racing frames exactly one proceeds.
+    if (took.has(bounty[0])) {
+      return sendBounty(z, session, `He's already paid you for that one. The posting stands for whoever brings him the next ${trophy?.name ?? "one"}.`);
+    }
+    took.add(bounty[0]);
     return sendBounty(z, session, await payBounty(z, session, bounty, found.item, found.from));
   }
   return sendBounty(z, session);
@@ -512,17 +523,22 @@ export function fenceStaple(z: ZoneDO, itemId: string): boolean {
 // absent count back up to the target as items return, so the offering keeps
 // changing. Staples never rotate. (Supersedes the old "one customer buys him
 // out every few hours" — that left him carrying nearly everything, always.)
-let nextChurnAt = 0;
+//
+// The clock lives on the ZoneDO and rides the sim meta (nextFenceChurnAt,
+// 2026-08-20): a module-scope counter reset to 0 in every fresh isolate, so
+// each eviction re-scheduled the shelf's rotation from scratch and a market
+// that hibernated often could go effectively unrotated forever. The bounty
+// board's clock was always persisted; the fence's now keeps it company.
 export function tickFence(z: ZoneDO, now: number): void {
   for (const [itemId, at] of z.fenceOut) {
     if (now >= at) z.fenceOut.delete(itemId); // it cycled back in; on offer again
   }
-  if (!nextChurnAt) {
-    nextChurnAt = now + randInt(FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS);
+  if (!z.nextFenceChurnAt) {
+    z.nextFenceChurnAt = now + randInt(FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS);
     return;
   }
-  if (now < nextChurnAt) return;
-  nextChurnAt = now + randInt(FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS);
+  if (now < z.nextFenceChurnAt) return;
+  z.nextFenceChurnAt = now + randInt(FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS);
   const rotating = z.world!.fenceStock.filter((s) => !fenceStaple(z, s.itemId));
   const target = Math.round(rotating.length * FENCE_ABSENT_FRACTION);
   const available = rotating.filter((s) => inStock(z, s.itemId));
@@ -653,6 +669,12 @@ export function cmdBuy(z: ZoneDO, session: Session, arg: string): void {
   const world = z.world!;
   const bar = fenceGuard(z, session);
   if (bar) return z.send(session, bar);
+  // The works bar and the front door, same as cmdBarter (2026-08-20): `buy`
+  // used to skip both, so a boarded gatehouse still opened its hatch to a
+  // typed word, and enterStep put the player inside — untouchable — with no
+  // door line and no works check.
+  const shut = worksBar(z, session);
+  if (shut) return z.send(session, shut, "evt");
   if (!arg) return z.send(session, "Buy what? 'barter' shows the keeper's stock.");
   const stock = world.fenceStock.find((s) => {
     const t = world.itemTemplates.get(s.itemId);
@@ -662,7 +684,10 @@ export function cmdBuy(z: ZoneDO, session: Session, arg: string): void {
   if (!inStock(z, stock.itemId)) {
     return z.send(session, "The keeper shakes his head. \"Not carrying that just now. Check back — it comes and goes.\"");
   }
+  const walkedIn = !z.outOfWorld(session);
+  throughTheDoor(z, session); // the hatch is inside — the door comes first
   z.enterStep(session, "trading"); // safe at the counter until you step away
+  if (walkedIn) z.send(session, "You push in out of the cold and step up to the keeper's hatch.");
   z.send(session, startBuy(z, session, stock) + " ('offer nothing' walks away.)");
   z.sendCtx(session);
 }
@@ -728,11 +753,19 @@ export async function cmdBounty(z: ZoneDO, session: Session, arg: string): Promi
     });
     if (!bounty) return z.send(session, "That isn't on the board. 'bounty' shows what the keeper is paying for.");
     const trophy = world.itemTemplates.get(bounty[0])!;
-    if (bountyTookOf(z, session.pubkey).has(bounty[0])) {
+    const took = bountyTookOf(z, session.pubkey);
+    if (took.has(bounty[0])) {
       return z.send(session, `He's already paid you for that one. The posting stands for whoever brings him the next ${trophy.name}.`);
     }
     const found = await findBountyTrophy(z, session, bounty[0]);
     if (!found) return z.send(session, `The keeper wants ${trophy.name} — you haven't got one loose, in your pack or in your keeping.`);
+    // Same double-claim guard as the modal (see handleBounty): the mark lands
+    // before payBounty's awaits, and the re-check plus the mark are one
+    // synchronous block, so racing frames pay exactly once.
+    if (took.has(bounty[0])) {
+      return z.send(session, `He's already paid you for that one. The posting stands for whoever brings him the next ${trophy.name}.`);
+    }
+    took.add(bounty[0]);
     // Typed stays typed: the text path prints its line and leaves you standing
     // at the board in text. Pushing sendBounty here would fling the modal open
     // over a wanderer who never asked for it.
@@ -793,6 +826,16 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   if (trade.paid < cost) return `${line} (${trade.paid} of ${cost}.)`;
   // Square. Re-tally the counter honestly (something offered may have been
   // dropped or moved since), then the goods change hands for good.
+  //
+  // ONE SETTLEMENT AT A TIME (2026-08-20). Two rapid offer frames — a modal
+  // click and a typed offer, or a double-click — could both land past the
+  // square check while the first settlement was mid-flight across its D1
+  // awaits, and the second used to re-tally and settle again, minting the
+  // bought goods twice off one counter. The flag is claimed BEFORE the first
+  // await of the settle; the re-tally releases it again if the counter turns
+  // out short, so a later offer can still square it properly.
+  if (trade.settling) return `${line} The keeper is already squaring the counter — a moment.`;
+  trade.settling = true;
   const boxes = new Map<string, CarriedItem[]>([["", session.items]]);
   for (const key of ["lockbox", "vault"] as const) {
     if (trade.escrow.some((e) => e.from === key)) {
@@ -808,6 +851,7 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   trade.paid = roundTender(onCounter.reduce(
     (sum, o) => sum + (world.itemTemplates.get(o.item.itemId)?.barter ?? 0) * events.wantMult(z, o.item.itemId), 0));
   if (trade.paid < cost) {
+    trade.settling = false; // the settle didn't happen — a later offer may square it
     return `${line} The keeper re-counts and shakes his head — the counter's short. (${trade.paid} of ${cost}.)`;
   }
   let cracked = false;
@@ -1132,6 +1176,12 @@ export async function salvageCore(z: ZoneDO, session: Session, carried: CarriedI
   // unsealed piece has). The mint is voided honestly as the steel goes in — the
   // same release as a drop or a trade, just on the way to scrap.
   const wasSealed = carried.serial !== null;
+  // The steel leaves the pack FIRST (the cook/cure guard, 2026-08-20): the old
+  // order awaited the mint/equip writes before the splice, so a double frame
+  // could splice(-1,1) an unrelated pack item and both frames grant scrap.
+  const idx = session.items.indexOf(carried);
+  if (idx === -1) return "That's already gone from your pack.";
+  session.items.splice(idx, 1);
   if (carried.serial !== null) {
     await voidMint(z.env.DB, carried.serial);
     carried.serial = null;
@@ -1141,7 +1191,6 @@ export async function salvageCore(z: ZoneDO, session: Session, carried: CarriedI
     await setEquipped(z.env.DB, carried.rowId, false);
   }
   const yieldN = SALVAGE_YIELD[tmpl.rarity] ?? 1;
-  session.items.splice(session.items.indexOf(carried), 1);
   await removeItemRow(z.env.DB, carried.rowId);
   for (let i = 0; i < yieldN; i++) {
     const id = uuid();
@@ -1462,6 +1511,14 @@ export async function benchRepair(z: ZoneDO, session: Session, row: string): Pro
 export async function benchBurn(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
     const inPack = session.items.find((c) => c.rowId === row);
     let carried = inPack;
+    // A pack row leaves the pack FIRST (the cook/cure guard, 2026-08-20): the
+    // old order awaited the container reads before the splice, so a double
+    // frame could both resolve the same row and the loser's splice(-1,1) ate
+    // an unrelated pack item.
+    if (inPack) {
+      const idx = session.items.indexOf(inPack);
+      if (idx !== -1) session.items.splice(idx, 1);
+    }
     if (!carried) {
       for (const key of ["lockbox", "vault"] as const) {
         const held = await loadContainer(z.env.DB, session.pubkey, key);
@@ -1479,7 +1536,6 @@ export async function benchBurn(z: ZoneDO, session: Session, row: string): Promi
     const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
     await removeItemRow(z.env.DB, carried.rowId);
     if (carried.serial !== null) await voidMint(z.env.DB, carried.serial);
-    if (inPack) session.items.splice(session.items.indexOf(inPack), 1);
     return `You burn ${tmpl.name}. Nothing of it is left.`;
   }
 
@@ -1564,8 +1620,13 @@ export async function benchStore(z: ZoneDO, session: Session, row: string, key: 
     if (!z.hasRoom(held, carried.itemId, cfg.cap, cfg.container as "lockbox" | "vault")) return cfg.full;
     if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
     if (fromContainer === "") { // came off the body
+      // Guarded splice (2026-08-20): the container reads above awaited D1, so
+      // a racing double frame could both resolve the same pack row and the
+      // loser's splice(-1,1) would eat an unrelated pack item.
+      const idx = session.items.indexOf(carried);
+      if (idx === -1) return "You aren't carrying that.";
       carried.equipped = false;
-      session.items.splice(session.items.indexOf(carried), 1);
+      session.items.splice(idx, 1);
     }
     await setContainer(z.env.DB, carried.rowId, cfg.container);
     return undefined;

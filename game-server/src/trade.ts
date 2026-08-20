@@ -10,7 +10,7 @@ import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { type CarriedItem, deedsOwner, loadContainer, transferItems } from "./world";
 import { uuid } from "./rng";
-import { PACK_CAP } from "./zone-data";
+import { PACK_CAP, PACK_FOOD_CAP, PACK_TORCH_CAP, PACK_DRESSING_CAP, TORCH_ITEM } from "./zone-data";
 import { gatehouseFolk, gatehouseFeed } from "./gate";
 import { findPlayerIn } from "./verbs";
 
@@ -351,20 +351,46 @@ async function settleDeal(z: ZoneDO, deal: Deal): Promise<void> {
   };
   const aHits = await resolve(a, deal.offerA);
   const bHits = await resolve(b, deal.offerB);
+  // RE-CHECK THE GUARD AFTER THE AWAITS (2026-08-20). The `settling` check at
+  // the top of this function is checked before any D1 round trip, but the flag
+  // is only armed at the commit below — so two near-simultaneous confirms (both
+  // players shaking hands at once) used to pass the top check together, both
+  // resolve, and BOTH commit: each recipient's pack ended up holding two
+  // in-memory copies of every traded row (same rowIds — a ghost that could be
+  // eaten twice or laundered into a real duplicate by dropping it). Between
+  // this check and `deal.settling = true` there is no await, so of any number
+  // of concurrent settles exactly one proceeds to commit.
+  if (deal.settling) return;
   // Whatever's incoming always lands in the RECIPIENT's pack (you don't get
   // someone else's lockbox or vault) — so the pack has to have room for it.
-  // Simulated against a scratch copy, same slot math packRoom already trusts.
-  const fits = (recipient: Session, incoming: CarriedItem[]): boolean => {
-    const scratch = [...recipient.items];
+  // Simulated against a scratch copy that already LACKS the rows this side is
+  // giving away (2026-08-20: the old scratch kept them, so a pack-exact
+  // 1-for-1 swap was wrongly refused as "no room") — and the same count
+  // ceilings packRoom enforces everywhere else ride on top of the slot math
+  // (food/torches/dressings are capped so a run can't carry bottomless
+  // healing; a deal must not be the way around that).
+  const fits = (recipient: Session, outgoing: DealItem[], incoming: CarriedItem[]): boolean => {
+    const giving = new Set(outgoing.map((o) => o.rowId));
+    const scratch = recipient.items.filter((c) => !giving.has(c.rowId));
+    const countFood = () => scratch.reduce((n, c) => n + (z.world!.itemTemplates.get(c.itemId)?.edible ? 1 : 0), 0);
+    const countTorches = () => scratch.reduce((n, c) => n + (c.itemId === TORCH_ITEM ? 1 : 0), 0);
+    const countDressings = () => scratch.reduce((n, c) => {
+      const t = z.world!.itemTemplates.get(c.itemId);
+      return n + (t && (t.staunch ?? 0) > 0 && !t.edible ? 1 : 0);
+    }, 0);
     for (const c of incoming) {
       if (!z.hasRoom(scratch, c.itemId, PACK_CAP, "pack")) return false;
+      const t = z.world!.itemTemplates.get(c.itemId);
+      if (t?.edible && countFood() >= PACK_FOOD_CAP) return false;
+      if (c.itemId === TORCH_ITEM && countTorches() >= PACK_TORCH_CAP) return false;
+      if (t && (t.staunch ?? 0) > 0 && !t.edible && countDressings() >= PACK_DRESSING_CAP) return false;
       scratch.push(c);
     }
     return true;
   };
   const roomOk = aHits && bHits
-    && fits(b, aHits.map((h) => h.item))
-    && fits(a, bHits.map((h) => h.item));
+    && fits(b, deal.offerB, aHits.map((h) => h.item))
+    && fits(a, deal.offerA, bHits.map((h) => h.item));
   if (!aHits || !bHits || !roomOk) {
     deal.confirmA = false; deal.confirmB = false;
     if (aHits) deal.offerA = aHits.map((h) => ({ rowId: h.item.rowId, itemId: h.item.itemId }));

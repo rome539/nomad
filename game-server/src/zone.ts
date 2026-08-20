@@ -145,6 +145,12 @@ export class ZoneDO implements DurableObject {
   // sweep these out from under the pending UPDATE. Set right before that
   // await, cleared right after, always in trade.ts's settleDeal.
   public tradeLocked = new Set<string>();
+  // cacheId -> ms an unlock on it is mid-flight (cmdUnlock's double-frame
+  // guard, 2026-08-20): two fast `unlock` frames could otherwise both roll
+  // the box's loot — one key AND a rock spent, two payouts from one chest.
+  // Timestamps rather than a bare set so a frame killed mid-flight by a
+  // thrown error can never leave the latch blocked forever.
+  private cacheOpening = new Map<string, number>();
   private leftAt = new Map<string, number>(); // pubkey -> ms it last disconnected (a quick return is a reconnect, not an arrival)
   public creatures = new Map<string, Creature>();
   public ground = new Map<string, string[]>(); // roomId -> item template ids
@@ -175,6 +181,10 @@ export class ZoneDO implements DurableObject {
   // Rotates like the fence; survives hibernation (gate.ts owns the churn).
   public bounties: [string, string, number?][] = [];
   public nextBountyChurnAt = 0;
+  // The hatch's shelf-rotation clock (gate.tickFence). Lived at module scope
+  // until 2026-08-20, which reset it on every isolate/eviction — the shelf
+  // could sit unrotated forever. Persisted with the rest of the sim meta now.
+  public nextFenceChurnAt = 0;
   // THE BONES (dice.ts). Games in flight are EPHEMERAL — nothing leaves a pack
   // until the last bone is down, so a wake mid-game costs nobody a trophy. The
   // keeper's bowl is not: it is the house's winnings and it belongs to the world.
@@ -522,6 +532,7 @@ export class ZoneDO implements DurableObject {
       this.fenceOut = new Map(Object.entries(saved.fenceOut ?? {}));
       this.bounties = saved.bounties ?? [];
       this.nextBountyChurnAt = saved.nextBountyChurnAt ?? 0;
+      this.nextFenceChurnAt = saved.nextFenceChurnAt ?? 0;
       this.keeperBowl = saved.keeperBowl ?? [];
       this.bountyTaken = new Map(Object.entries(saved.bountyTaken ?? {}).map(([k, v]) => [k, new Set(v)]));
       this.bloodOn = new Map(Object.entries(saved.bloodOn ?? {}));
@@ -830,6 +841,7 @@ export class ZoneDO implements DurableObject {
       fenceOut: Object.fromEntries(this.fenceOut),
       bounties: this.bounties,
       nextBountyChurnAt: this.nextBountyChurnAt,
+      nextFenceChurnAt: this.nextFenceChurnAt,
       keeperBowl: this.keeperBowl,
       bountyTaken: Object.fromEntries(
         [...this.bountyTaken].filter(([, took]) => took.size).map(([pk, took]) => [pk, [...took]]),
@@ -919,6 +931,7 @@ export class ZoneDO implements DurableObject {
     this.fenceOut.clear();
     this.bounties = [];
     this.nextBountyChurnAt = 0;
+    this.nextFenceChurnAt = 0;
     this.bountyTaken.clear();
     this.keeperBowl = [];
     this.diceGames.clear();
@@ -1015,10 +1028,21 @@ export class ZoneDO implements DurableObject {
     // this.sessions — close any socket already bearing this key.
     // A linkdead body still standing in a fight: the return steps back INTO it
     // — its chewed-down hp, its room, its foes — not into the stale D1 copy.
-    const linkdead = (() => {
-      const p = this.sessions.get(pubkey);
-      return p && p.linkdeadUntil ? p : null;
-    })();
+    //
+    // THE DISPLACED BODY IS THE SAME BODY (2026-08-20). The old socket's close
+    // event lands AFTER this.sessions already points at the new session, so
+    // onLeave's "displaced, already handled" guard skips it — and its cleanup
+    // used to never run: open deals stayed live for the counterparty, dice
+    // games stayed on the bench, and the new session was built from the stale
+    // D1 row — a free heal and a free escape from any fight, the exact thing
+    // LINKDEAD exists to prevent. So the cleanup runs HERE, and the old body's
+    // live state is carried into the new session below the same way a linkdead
+    // return carries it.
+    const displaced = this.sessions.get(pubkey) ?? null;
+    if (displaced) {
+      trade.cancelDealForSession(this, displaced);
+      dice.endGamesFor(this, displaced.pubkey);
+    }
     for (const other of this.state.getWebSockets()) {
       if (this.wsPubkey(other) !== pubkey) continue;
       const prev = this.sessions.get(pubkey);
@@ -1046,29 +1070,31 @@ export class ZoneDO implements DurableObject {
     // Step back into the still-standing body: everything the fight did to it
     // while the eyes were empty carries over. buildSession's D1 read would
     // otherwise revert hp/wounds to the last flush — a free heal for loggers.
-    if (linkdead) {
-      session.hp = linkdead.hp;
-      session.roomId = linkdead.roomId;
-      session.target = linkdead.target;
-      session.stance = linkdead.stance;
-      session.bleedTicks = linkdead.bleedTicks;
-      session.bleedDmg = linkdead.bleedDmg;
-      session.stunned = linkdead.stunned;
-      session.hobbled = linkdead.hobbled;
-      session.limpingSince = linkdead.limpingSince;
-      session.litUntil = linkdead.litUntil;
-      session.litSource = linkdead.litSource;
-      session.torchWarned = linkdead.torchWarned;
+    // Same for a displaced body (a second tab opened mid-fight): the wanderer
+    // is still standing exactly where the old session left them.
+    if (displaced) {
+      session.hp = displaced.hp;
+      session.roomId = displaced.roomId;
+      session.target = displaced.target;
+      session.stance = displaced.stance;
+      session.bleedTicks = displaced.bleedTicks;
+      session.bleedDmg = displaced.bleedDmg;
+      session.stunned = displaced.stunned;
+      session.hobbled = displaced.hobbled;
+      session.limpingSince = displaced.limpingSince;
+      session.litUntil = displaced.litUntil;
+      session.litSource = displaced.litSource;
+      session.torchWarned = displaced.torchWarned;
       session.linkdeadUntil = undefined;
     }
     this.sessions.set(pubkey, session);
     await lore.refreshStudied(this, session); // the sync chip builder can't read D1; prime the studied-cache so no redundant `study` chip shows before the first journal open
     this.lastCommandAt = Date.now(); // an arrival is activity — the world beats fast for fresh footsteps
     // buildSession never carries a dealId across — any deal this player was
-    // in is already cancelled server-side (onLeave's cancelDealForSession ran
-    // when the old socket dropped, though that closeFrame died with it,
-    // unsent). The client doesn't know that: force its swap UI shut so a
-    // reweave never leaves "wave it off" stuck talking to nothing.
+    // in is already cancelled server-side (the displacement cleanup above ran
+    // cancelDealForSession on the displaced body, though its closeFrame died
+    // with it, unsent). The client doesn't know that: force its swap UI shut
+    // so a reweave never leaves "wave it off" stuck talking to nothing.
     trade.forceCloseSwapUI(session);
     gate.forceCloseGateUI(session); // and the four gatehouse panels, for the same reason
 
@@ -2147,6 +2173,14 @@ export class ZoneDO implements DurableObject {
     if (!this.cacheLocked(cache)) {
       return this.send(session, `${cap(cache.name)} hangs open and empty. Give it time to be worth forcing again.`);
     }
+    // ONE OPENING AT A TIME (2026-08-20). Two fast `unlock` frames could both
+    // roll the same box's loot — a key AND a rock spent, two payouts from one
+    // chest. A mid-flight marker (timestamped, so a frame killed by a throw
+    // can't block the latch forever) turns the second frame away at the door.
+    const working = this.cacheOpening.get(cache.id);
+    if (working !== undefined && Date.now() - working < 30_000) {
+      return this.send(session, "That latch is already being worked — hold on.");
+    }
     const key = session.items.find((c) => c.itemId === cache.keyItem);
     if (!key) {
       // No key — then the old way: a rock against the latch (rome, 2026-07-11).
@@ -2167,6 +2201,11 @@ export class ZoneDO implements DurableObject {
         return this.send(session, `${cap(cache.name)} is locked. You'd need ${keyT?.name ?? "the right key"}${cache.keyItem !== "reliquary-key" ? " — or a rock, and no respect for latches" : ""}.`);
       }
       const hammer = stone.itemId === "hammerstone";
+      // Claim the latch synchronously, before any await — the double-frame
+      // guard above keys on this marker. A failed smash below does not keep
+      // it: the box stays locked and honestly retryable, so the marker just
+      // ages out.
+      this.cacheOpening.set(cache.id, Date.now());
       if (!hammer) {
         session.items.splice(session.items.indexOf(stone), 1);
         await removeItemRow(this.env.DB, stone.rowId);
@@ -2205,10 +2244,13 @@ export class ZoneDO implements DurableObject {
       this.cacheSpent.set(cache.id, Date.now() + cache.refillSecs * 1000);
       this.placeCache(cache); // looted: it will refill somewhere new in its tier (hidden here until then)
     } else {
-      // Spend the key and start the refill clock.
+      // Spend the key and start the refill clock. The clock starts BEFORE the
+      // D1 await (the double-frame guard, 2026-08-20): a racing second frame
+      // reads cacheLocked() on entry and turns away instead of re-opening the
+      // same box.
+      this.cacheSpent.set(cache.id, Date.now() + cache.refillSecs * 1000);
       session.items.splice(session.items.indexOf(key), 1);
       await removeItemRow(this.env.DB, key.rowId);
-      this.cacheSpent.set(cache.id, Date.now() + cache.refillSecs * 1000);
       this.placeCache(cache); // looted: it will refill somewhere new in its tier (hidden here until then)
       this.send(session, `You work ${keyT?.name ?? "the key"} into the lock. It gives with a groan, and ${cache.name} swings open.`, "unlock");
       this.roomFeed(session.roomId, `${session.name} forces ${cache.name} open.`, session.pubkey, false);
@@ -2918,7 +2960,7 @@ export class ZoneDO implements DurableObject {
   public sweepArc(roomId: string, attacker: Creature, tmpl: MobTemplate, exceptPubkey?: string): void {
     if (!SWEEPERS.has(tmpl.id)) return;
     for (const other of this.sessions.values()) {
-      if (other.hp <= 0 || other.roomId !== roomId || this.outOfWorld(other)) continue;
+      if (other.hp <= 0 || other.roomId !== roomId || !this.reachable(other)) continue;
       if (other.pubkey === exceptPubkey) continue; // the primary already took the full blow — the arc is the BACK half, for everyone else
       // THE ARC OBEYS THE PRESS. One swing reaching several bodies is still
       // blows landing on people, and the dogpile budget is what stops a crowd
@@ -3284,6 +3326,15 @@ export class ZoneDO implements DurableObject {
     // all hit back, you answer one at a time. Gear bends the rule: fast steel
     // swings more than once a round, and sweeping steel drags through a crowd.
     if (combatRound) for (const session of this.sessions.values()) {
+      // A wanderer behind a BARRED door swings at nothing (2026-08-20): the bar
+      // is the whole of the den's security, and it works both ways — nothing
+      // reaches in, and nothing reaches out (the same law behindTheDoor
+      // enforces for typed attacks). Any fight ends at the threshold.
+      if (this.shelteredInDen(session.pubkey)) {
+        if (session.target) session.target = null;
+        if (session.pvpTarget) session.pvpTarget = null;
+        continue;
+      }
       const foes: Creature[] = [];
       for (const c of this.creatures.values()) {
         if (c.roomId !== session.roomId) continue;
@@ -3602,7 +3653,7 @@ export class ZoneDO implements DurableObject {
       // commit — a wind-up you can back out of the room to escape, or preempt by
       // striking first (which puts it in a normal fight and cancels the tell).
       if (!creature.target && ai.hyenaGuardsMeal(this, creature)) {
-        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
         if (!prey) {
           creature.rouseAt = undefined; // the room emptied — it drops back to its meal
         } else if (creature.rouseAt === undefined) {
@@ -3626,7 +3677,7 @@ export class ZoneDO implements DurableObject {
       // make it rare); once wound up it commits. Not for meal-guarders — those own
       // the block above. See ai.starvingHunts for the guardrails.
       if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && ai.starvingHunts(this, creature)) {
-        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
         if (!prey) {
           creature.rouseAt = undefined; // no one to hunt — the hunger settles back
         } else if (creature.rouseAt === undefined) {
@@ -3658,7 +3709,7 @@ export class ZoneDO implements DurableObject {
       // starving predator's own hunger is reason enough — this is the
       // separate case of a fed one smelling blood on someone stumbling).
       if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && !ai.starvingHunts(this, creature) && ai.woundedPreyHunts(this, creature)) {
-        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s) && s.hp < s.maxHp * WOUNDED_FRACTION);
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s) && s.hp < s.maxHp * WOUNDED_FRACTION);
         if (!prey) {
           creature.rouseAt = undefined; // healed up, left, or died — the interest settles
         } else if (creature.rouseAt === undefined) {
@@ -3688,7 +3739,7 @@ export class ZoneDO implements DurableObject {
       // whistle-fear (avoids) keeps it from working the same mark over and over.
       if (!creature.target && !creature.stole && !creature.asleep
           && THIEVES.has(creature.templateId) && creature.hunger >= HUNGRY_AT) {
-        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
         if (!prey) {
           creature.rouseAt = undefined; // no mark — the itch settles
         } else if (creature.rouseAt === undefined) {
@@ -3719,7 +3770,7 @@ export class ZoneDO implements DurableObject {
           continue;
         }
         if (!creature.target) {
-          const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
+          const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
           if (prey) {
             creature.target = prey.pubkey;
             if (!prey.target) prey.target = creature.id;
@@ -3730,7 +3781,7 @@ export class ZoneDO implements DurableObject {
       }
       // A drowned thing takes anyone who wades into its water — no grudge needed.
       if (!creature.target && DROWNERS.has(creature.templateId)) {
-        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && !this.outOfWorld(s));
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
         if (prey) {
           creature.target = prey.pubkey;
           if (!prey.target) prey.target = creature.id;
@@ -3745,7 +3796,11 @@ export class ZoneDO implements DurableObject {
         // lapse when the haul moves them apart.
         const onRope = creature.templateId === "the-drowned-ferryman"
           && !!victim && victim.seizedBy === creature.id;
-        if (!victim || this.outOfWorld(victim) || (victim.roomId !== creature.roomId && !onRope)) {
+        // A wanderer behind a BARRED den door is out of reach even from here —
+        // the bar is the whole of the den's security (den.ts) — so the fight
+        // lapses like any other lost prey. The ferryman's rope-hold is the one
+        // reach that outlives a room change, so only it skips the room check.
+        if (!victim || !this.reachable(victim) || (victim.roomId !== creature.roomId && !onRope)) {
           creature.target = null;
           creature.rouseAt = undefined; // lost its prey — a dire-hyena winds up fresh next time
           continue;
@@ -6050,11 +6105,16 @@ export class ZoneDO implements DurableObject {
   // stat registers so a pick reads as a point, not a "plain" blow.
   // How much armor a weapon's blow ignores: a pick's narrow point (per
   // weapon) or a blunt weapon's crushing weight (BLUNT_ARMOR_IGNORE, any stun>0),
-  // whichever is greater. The single source for both damage paths.
-  public armorIgnore(weapon: { tmpl: ItemTemplate } | null | undefined): number {
+  // whichever is greater. The single source for both damage paths. The rolled
+  // needling/weighted traits (099) add their +1 each here too, so the ambush
+  // opener and the PvP round read them the same way the PvE round's inline
+  // math always has.
+  public armorIgnore(weapon: { tmpl: ItemTemplate; carried?: CarriedItem } | null | undefined): number {
     if (!weapon) return 0;
-    const pierce = trait(weapon.tmpl, "pierce") ?? 0;
-    const blunt = weapon.tmpl.stun > 0 ? BLUNT_ARMOR_IGNORE : 0;
+    const pierce = (trait(weapon.tmpl, "pierce") ?? 0) + (weapon.carried && this.itemRolled(weapon as { tmpl: ItemTemplate; carried: CarriedItem }, "needling") ? 1 : 0);
+    const blunt = weapon.tmpl.stun > 0
+      ? BLUNT_ARMOR_IGNORE + (weapon.carried && this.itemRolled(weapon as { tmpl: ItemTemplate; carried: CarriedItem }, "weighted") ? 1 : 0)
+      : 0;
     return Math.max(pierce, blunt);
   }
 

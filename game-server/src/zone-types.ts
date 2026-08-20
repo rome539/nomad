@@ -45,7 +45,7 @@ export interface Session {
   hobbled?: boolean; // a leg wound: you can still flee, but only after limping clear (a set delay), cured by rest
   limpingSince?: number; // ms epoch you started dragging your bad leg toward the exit; flee lands once HOBBLE_FLEE_MS passes
   markedUntil?: number; // MARKERS (the toll clerk): the road knows your face — earshot heeds you harder while this holds; scrubbed at a gate
-  buying?: { wants: { itemId: string; cost: number }[]; paid: number; escrow: { row: string; from: string }[] }; // open cart at the keeper's hatch: wants = every thing named (duplicates allowed), paid against their summed cost; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square, then it all changes hands at once
+  buying?: { wants: { itemId: string; cost: number }[]; paid: number; escrow: { row: string; from: string }[]; settling?: boolean }; // open cart at the keeper's hatch: wants = every thing named (duplicates allowed), paid against their summed cost; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square, then it all changes hands at once. settling = a settlement is mid-flight (the double-settle guard, 2026-08-20)
   dealId?: string; // pending player-to-player trade (trade.ts) — points into ZoneDO's `deals` map. Ephemeral: a DO wake never restores it (same as `buying`), and either side leaving, dying, or drawing steel cancels it for both
   born: number; // created_at, unix seconds — wanderer age on the sheet
   kills: number; // tallies cached from D1; recordKill/recordDeath keep the truth
@@ -239,6 +239,7 @@ export interface SimState {
   nests?: Record<string, string[]>; // corvid nests: nest roomId -> gear the raven carried home (ABSTRACT — off the floor, visible only through feeding/raiding the nest itself)
   bounties?: [string, string, number?][]; // the keeper's bounty board: [trophyId, foodId, count?] currently posted (rotates like the fence)
   nextBountyChurnAt?: number; // ms the board next rolls a fresh set of trophies
+  nextFenceChurnAt?: number; // ms the hatch's shelf next churns (persisted since 2026-08-20 — a module-level clock reset on every eviction, so a busy market's rotation could be deferred forever)
   keeperBowl?: string[]; // the bones: trophies the keeper has won off people at the gatehouse bench, and what he can put up against a stake (dice.ts)
   bountyTaken?: Record<string, string[]>; // pubkey -> trophyIds that wanderer has already claimed off the CURRENT board (cleared on churn; a posting is one meal per person, not one meal in the world)
 }

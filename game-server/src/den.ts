@@ -649,9 +649,14 @@ export async function cmdStow(z: ZoneDO, session: Session, arg: string): Promise
     return z.send(session, `Your shelf here holds ${DEN_CAP} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.`);
   }
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
-  if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
+  // Guarded splice (2026-08-20): the condition write above awaited D1, so a
+  // racing double frame could both resolve the same row and the loser's
+  // splice(-1,1) would eat an unrelated pack item.
+  const idx = session.items.indexOf(carried);
+  if (idx === -1) return z.send(session, "That's already left your pack.");
+  session.items.splice(idx, 1);
   carried.equipped = false;
-  session.items.splice(session.items.indexOf(carried), 1);
+  if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
   await setContainer(z.env.DB, carried.rowId, container(den.roomId));
   z.send(session, `You put ${tmpl.name} down here. It will still be here. It will not be any newer.`);
   z.roomFeed(den.roomId, `${session.name} puts something down and leaves it.`, session.pubkey, false);
@@ -739,9 +744,14 @@ export async function benchStow(z: ZoneDO, session: Session, row: string): Promi
   if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= DEN_CAP) {
     return `Your shelf here holds ${DEN_CAP} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.`;
   }
-  if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
+  // Guarded splice (2026-08-20): the shelf read and the condition write above
+  // awaited D1, so a racing double frame could both resolve the same row and
+  // the loser's splice(-1,1) would eat an unrelated pack item.
+  const idx = session.items.indexOf(carried);
+  if (idx === -1) return "You aren't carrying that.";
+  session.items.splice(idx, 1);
   carried.equipped = false;
-  session.items.splice(session.items.indexOf(carried), 1);
+  if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
   await setContainer(z.env.DB, carried.rowId, container(den.roomId));
   return undefined;
 }
