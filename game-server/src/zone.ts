@@ -5497,7 +5497,7 @@ export class ZoneDO implements DurableObject {
     // back breath, not fire, so the flame stays behind with everything else you
     // were carrying. A lantern's light just goes out (it isn't shared this way).
     const fallenFlame = (victim.litSource === "torch" && victim.litUntil && Date.now() < victim.litUntil) ? victim.litUntil : 0;
-    victim.litUntil = undefined; victim.litSource = undefined; victim.torchWarned = undefined;
+    victim.litUntil = undefined; victim.litSource = undefined; victim.litRow = undefined; victim.torchWarned = undefined;
     victim.buying = undefined; // death ends any open trade; the counter clears
     trade.cancelDealForSession(this, victim); // and any open deal with another wanderer
     dice.endGamesFor(this, victim.pubkey); // a dead hand plays no bones — nothing staked changes hands

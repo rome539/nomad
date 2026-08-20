@@ -1,0 +1,26 @@
+-- THE SPIKE IS A SPIKE (2026-08-20).
+--
+-- The forged warspike carried `pierce:2` and nothing else. `pierce` is the
+-- COUNTED trait — how much armour the point ignores — and that half always
+-- worked: armorIgnore reads `pierce`, so the spike has been punching plate for
+-- exactly as much as it says it does, and the needling roll (which gates on
+-- pierce > 0) was offered to it correctly.
+--
+-- What it never had was `piercing`, the CLASS tag, which is a separate word
+-- doing separate work in four places:
+--
+--   * the three-hound's vitals are a piercing weapon's alone — a point between
+--     the ribs. The warspike could not take one, ever, whatever it rolled.
+--   * the weapon-class read on the gear sheet, which named it nothing.
+--   * the hit-verb pool, which falls through to "edge" when the tag is absent
+--     — so a four-foot iron spike has been described the whole time as though
+--     it were a sword, slashing and laying open what it should be punching
+--     through.
+--
+-- Every other pierce weapon in the world carries both words together
+-- (pitted-spear, horsemans-pick, crow-beak-pick, war-pike, abyssal-harpoon,
+-- rusted-pick, tusk-goad, the-attainder). This one was written without the
+-- second and has read as a sword ever since. ONE ITEM, exactly the one named:
+-- the other pierce weapons are already correct and are not touched.
+
+UPDATE item_templates SET traits = 'pierce:2,piercing' WHERE id = 'forged-warspike';

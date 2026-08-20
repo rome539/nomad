@@ -471,18 +471,20 @@ SELECT slot, SUM(traits LIKE '%wardhide%'), SUM(traits LIKE '%mailward%'),
  GROUP BY slot;
 ```
 
-**What it said** (against the live DB, 161 gear items, migrations 250–252
-applied):
+**What it said** (against the live DB — 161 gear items at 250–252, **170 after
+the first drop of 253–254**):
 
-- **Weapons (57) — the multiplicative axis.** The archetype grid is class
+- **Weapons (63) — the multiplicative axis.** The archetype grid is class
   (edge/blunt/pierce/plain) × speed (1/2/3) × sweep (1/2/3) × reach ×
-  two-handed ≈ **144 cells**; ~30 are filled. The entirely EMPTY archetypes —
-  each a genuinely new weapon, not a stat clone — include: reach+blunt (the
-  polehammer), speed-2 reach (short spear), speed-2 sweep (paired cleavers),
-  wicked+reach, tripping×sweep/two-handed, pierce+sweep, and a **burning
-  brand line** (only the longbrand burns). ≈ **30–40 open archetypes × their
-  rarity ladders ≈ 120–160 more weapons.**
-- **Armor family (armor 26 / helm 21 / cloak 20 / feet 18 = 85) — the trait-
+  two-handed ≈ **144 cells**; ~36 are filled. The first drop (254) closed:
+  speed-2 reach (short spear), speed-2 sweep (paired cleavers), reach+blunt
+  (polehammer), wicked+reach (grave glaive), tripping×two-handed (lash-flail)
+  and the brand line's second rung (pine-brand). Still entirely EMPTY —
+  each a genuinely new weapon, not a stat clone — include: tripping×sweep,
+  pierce+sweep, wicked×sweep/two-handed, the rest of the speed-3 line, and
+  the brand line's third+ rungs. ≈ **24–34 still-open archetypes × their
+  rarity ladders ≈ 90–130 more weapons.**
+- **Armor family (armor 27 / helm 22 / cloak 21 / feet 18 = 88) — the trait-
   cell axis, filtered by per-slot validity.** The naive count — 13 traits × 4
   slots = 52 cells — is wrong for exactly the reason that matters: traits are
   gear-specific. Validity per slot is the code's own answer: `TRAIT_POOL`
@@ -501,24 +503,22 @@ applied):
   | hooded | — | ✓ | ✓ | — | helm 1 · cloak 3 |
   | strapped | ✓ | ✓ | ✓ | — | armor 4 · helm 1 · cloak 2 |
   | staunched | ✓ | ✓ | ✓ | ✓ | armor 2 · helm 2 · cloak 1 · feet 2 |
-  | fleeced | ✓ | ✓ | ✓ | — | **printed nowhere** |
+  | fleeced | ✓ | ✓ | ✓ | — | armor 1 · helm 1 · cloak 1 (253) |
   | watertight | ✓ | — | ✓ | — | cloak 1 |
   | pocketed | ✓ | — | ✓ | — | cloak 1 |
   | glinting | ✓ | ✓ | — | — | helm 1 |
   | spiked | ✓ | ✓ | — | — | armor 1 |
-  | **valid cells** | **11** | **10** | **10** | **3** | **27 printed · 7 open** |
+  | **valid cells** | **11** | **10** | **10** | **3** | **30 printed · 4 open** |
 
-  The 7 open cells (fleeced × armor/helm/cloak; watertight/pocketed/glinting
-  × armor; spiked × helm) × the tier dial (body armor spans armor 1–5, the
-  other three slots 3 rungs each) ≈ **~15–20 new pieces** — plus ~5–8 valid
-  trait-pair pieces (watertight+pocketed cargo coat, spiked+wardhide brute
-  suit, fleeced+watertight storm cloak, fleeced+hooded field cloak, glinting+
-  spiked bright crown). **≈ 20–30 armor-family pieces, not 60–90.**
-  Two real content holes this exposes: **fleeced is rollable on three slots
-  but printed on none** (cold-rest exists only through the lottery), and the
-  four newest traits are each a one-piece family. **Feet are trait-complete**
-  (3/3 valid cells, full rarity ladder) — their only dial left is armor value
-  (0–2, vs body's 1–5).
+  The 4 open cells (watertight/pocketed/glinting × armor; spiked × helm) ×
+  the tier dial (body armor spans armor 1–5, the other three slots 3 rungs
+  each) ≈ **~8–12 new pieces** — plus ~5–8 valid trait-pair pieces
+  (watertight+pocketed cargo coat, spiked+wardhide brute suit, fleeced+
+  watertight storm cloak, glinting+spiked bright crown). **≈ 15–20
+  armor-family pieces left.** The four newest traits are each a one-piece
+  family, now including fleeced (printed by 253 after being lottery-only).
+  **Feet are trait-complete** (3/3 valid cells, full rarity ladder) — their
+  only dial left is armor value (0–2, vs body's 1–5).
 - **Shields (19) — the specials axis.** The block dial has 9 steps and all 9
   are printed, so the free cells are specials × steps: wall 8, thorns 6,
   riposte 4, **mancatcher 1** — plus `spiked`/`glinting` shields (0 today).
@@ -526,16 +526,23 @@ applied):
 - **The multiplier on top.** Every template × its slot's rolled-lottery pool
   (22% roll) × the flaw pool means one printed row is really ~5–9 distinct
   pieces — so the headline is conservative.
+- **No item without a channel.** The same audit found the longbrand — a
+  weapon since 252 — was the one piece of gear in the whole world with NO
+  way to be obtained (no forge, fence, cache, mob, or floor). 253 fixed it
+  (forge + shelf + the burner's kist) and every new piece since ships with
+  ≥2 channels by rule.
 
 **Headline: ~150–200 more distinct items sit inside the current trait set —
 and that number was never weapons alone.** After the per-slot validity
 filter the split is ~**120–160 weapons** (their grid — class × speed × sweep
 × reach × two-handed — is inherently weapon-shaped, so the filter barely
 touches it) + ~**20–30 armor family** + ~**20–25 shields** ≈ **~160–215
-total**, of which the armor side is only ~25%. Every new trait opens a few
-new valid cells, not six (it only counts where it makes sense), and the
-universal dials (tempered/greased/balanced + the flaw pool) already roll on
-every slot — they are the multiplier, not the grid. The real constraints are
-not traits: they are distribution channels (forge / fence / cache / mob
-`gear_item` / ground spawns), the balance audit, and a description worth
-reading — in that order.
+total**, of which the armor side is only ~25% — **~9 of it shipped in
+253–254 (fleeced ×3 + six weapons), leaving ~150–205.** Every new trait
+opens a few new valid cells, not six (it only counts where it makes sense),
+and the universal dials (tempered/greased/balanced + the flaw pool) already
+roll on every slot — they are the multiplier, not the grid. The real
+constraints are not traits: they are distribution channels (forge / fence /
+cache / mob `gear_item` / ground spawns — every piece needs ≥2), the rarity
+ladders per class (each rung must earn its tier), the balance audit, and a
+description worth reading — in that order.

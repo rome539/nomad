@@ -4722,6 +4722,23 @@ export const LANTERN_WEAR = 20;
 // the cap rations the common stick, and the world only ever holds one brand.
 export const BRAND_ITEM = "longbrand";
 export const BRAND_BURN_MS = 25 * 60_000;
+// A BRAND IS ANY WEAPON THAT BURNS (2026-08-20). `burning` is a trait, not an
+// id — the code reads the tag now, so the pitch-pine brand (254) and anything
+// forged after it light, hold the fire in the weapon hand, and break a
+// fire-fearing thing's nerve exactly as the longbrand does. Only the longbrand's
+// own haunt-placement (zone.ts, BRAND_HAUNTS) stays keyed to the id, because
+// that is one item's spawn and not a rule about brands.
+//
+// WHAT SEPARATES THEM IS THE BURN. The longbrand is made to last — bound, sealed
+// and kept for it. Pitch-pine is what the upland has instead: it takes a spark
+// faster and swings faster (dmg 2 x speed 2 against the longbrand's 3 x 1), and
+// it is gone in half the time. The better weapon, or the better light — not both.
+export const BRAND_BURN: Record<string, number> = {
+  "pine-brand": 12 * 60_000,
+};
+export function brandBurnMs(itemId: string): number {
+  return BRAND_BURN[itemId] ?? BRAND_BURN_MS;
+}
 export const BRAND_HAUNTS = [
   "the-cold-hearth", "smokehouse", "guardroom", "warden-post",
   "the-watch-turret", "the-wall-walk", "barracks", "the-buried-chapel",

@@ -332,7 +332,7 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
   // ...and now the flame, applied for real.
   if (how === "setdown") {
     z.groundTorch.set(session.roomId, Math.max(z.groundTorch.get(session.roomId) ?? 0, session.litUntil!));
-    session.litUntil = undefined; session.litSource = undefined; session.torchWarned = false;
+    session.litUntil = undefined; session.litSource = undefined; session.litRow = undefined; session.torchWarned = false;
   } else if (how === "spent") {
     const spareIdx = session.items.indexOf(spare!);
     if (spareIdx !== -1) session.items.splice(spareIdx, 1);
@@ -1399,7 +1399,7 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
   // when it leaves your hand — drop the lantern ITEM as normal.)
   if (light.carriesLight(session) && session.litSource === "torch" && /\b(torch|brand|light|flame|fire)\b/i.test(arg)) {
     z.groundTorch.set(session.roomId, Math.max(z.groundTorch.get(session.roomId) ?? 0, session.litUntil!));
-    session.litUntil = undefined; session.litSource = undefined; session.torchWarned = false;
+    session.litUntil = undefined; session.litSource = undefined; session.litRow = undefined; session.torchWarned = false;
     z.send(session, "You set the burning torch down on the stone; it keeps guttering there, throwing its light across the room.", "gain");
     z.roomFeed(session.roomId, `${session.name} sets a burning torch down on the floor.`, session.pubkey, false);
     z.sendStatus(session);
@@ -1525,7 +1525,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
     if (tmpl.slot === "shield" && z.carriesLight(session)) {
       const wasLantern = session.litSource === "lantern";
       session.litUntil = undefined;
-      session.litSource = undefined;
+      session.litSource = undefined; session.litRow = undefined;
       session.torchWarned = false;
       z.sendStatus(session);
       const dark = !z.outOfWorld(session) && !z.litFor(session) ? ", and the dark closes back in" : "";

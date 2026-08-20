@@ -229,7 +229,7 @@ export function exhaleSnuffsTorch(z: ZoneDO, session: Session): void {
   if (!exhaling(z, session.roomId)) return;
   if (session.litSource !== "torch" || !z.carriesLight(session)) return;
   session.litUntil = undefined;
-  session.litSource = undefined;
+  session.litSource = undefined; session.litRow = undefined;
   session.torchWarned = false;
   z.send(session, "The cold current leans on the flame, and takes it — the torch dies without a sound.", "dmgin");
   z.sendStatus(session);
@@ -337,7 +337,7 @@ export function tideSoaksTorch(z: ZoneDO, session: Session): void {
   if (!z.carriesLight(session) || session.litSource === "lantern") return;
   if (z.wearsTrait(session, "watertight")) return;
   session.litUntil = undefined;
-  session.litSource = undefined;
+  session.litSource = undefined; session.litRow = undefined;
   session.torchWarned = false;
   z.send(session, "The black water climbs past your waist and takes the torch with a slap.", "dmgin");
   z.sendStatus(session);
@@ -678,7 +678,7 @@ export function rainSoaksTorch(z: ZoneDO, session: Session): void {
   if (!raining(z, session.roomId)) return;
   if (session.litSource !== "torch" || !z.carriesLight(session)) return;
   session.litUntil = undefined;
-  session.litSource = undefined;
+  session.litSource = undefined; session.litRow = undefined;
   session.torchWarned = false;
   z.send(session, "The rain finds the flame and takes it — the torch dies with a hiss.", "dmgin");
   z.sendStatus(session);

@@ -13,7 +13,7 @@ import { underCover } from "./detail";
 import { setItemCondition, removeItemRow, hasTrait } from "./world";
 import {
   TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR,
-  BRAND_ITEM, BRAND_BURN_MS,
+  brandBurnMs,
 } from "./zone-data";
 
 // A kindled light throws light until it gutters (litUntil). Read everywhere the
@@ -79,7 +79,20 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
       : "Your torch already burns. Best not waste another until it's spent.");
   }
   const torch = session.items.find((c) => c.itemId === TORCH_ITEM);
-  const brand = session.items.find((c) => c.itemId === BRAND_ITEM);
+  // ANY WEAPON THAT BURNS IS A BRAND (2026-08-20). Keyed on the trait, not on
+  // the longbrand's id — which is why the pitch-pine brand could be forged,
+  // bought and carried but never lit, its one trait switched off. If you carry
+  // two, a word of the name picks between them ("light pine"); otherwise the
+  // first to hand answers.
+  const isBurning = (id: string) => hasTrait(z.world!.itemTemplates.get(id), "burning");
+  const brands = session.items.filter((c) => isBurning(c.itemId));
+  const named = arg
+    ? brands.find((c) => {
+        const n = z.world!.itemTemplates.get(c.itemId)?.name.toLowerCase() ?? "";
+        return arg.toLowerCase().split(/\s+/).some((w) => w.length > 2 && w !== "brand" && n.includes(w));
+      })
+    : undefined;
+  const brand = named ?? brands[0];
   const lantern = session.items.find((c) => c.itemId === LANTERN_ITEM);
   const wantLantern = arg.includes("lantern") ? true
     : (arg.includes("torch") || arg.includes("brand")) ? false
@@ -90,7 +103,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   const light = wantLantern ? lantern : wantBrand ? brand : torch;
   if (!light) {
     if (wantLantern && (torch || brand)) return z.send(session, "You carry no lantern — though you do have a torch.");
-    if (wantBrand && arg.includes("brand") && torch) return z.send(session, "You carry no longbrand — though a plain torch would answer.");
+    if (wantBrand && arg.includes("brand") && torch) return z.send(session, "You carry nothing that burns like that — though a plain torch would answer.");
     return z.send(session, "You have nothing to light.");
   }
   if (wantLantern && light.condition <= 0) {
@@ -142,10 +155,11 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   // THE LONGBRAND IS A WEAPON NOW (2026-08-20): its flame lives in the WEAPON
   // hand, so it costs no shield guard — and it must be WIELDED to catch, not
   // struck inside a pack.
-  const isBrand = light.itemId === BRAND_ITEM;
+  const isBrand = isBurning(light.itemId);
   if (isBrand) {
     if (!light.equipped) {
-      return z.send(session, "You'll want the longbrand in your hand before you put a spark to it — 'equip longbrand', then 'light brand'.");
+      const bn = z.world!.itemTemplates.get(light.itemId)?.name ?? "the brand";
+      return z.send(session, `You'll want ${bn} in your hand before you put a spark to it — 'equip ${light.itemId}', then 'light brand'.`);
     }
   } else {
     const refusal = blockedFromLight(z, session);
@@ -165,11 +179,12 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     // The brand stays in your hand, burning — a weapon that is also a fire.
     // The burnout tick spends the brand itself when the pitch is gone.
     const coldMult = events.coldTorchMult(z, session.roomId);
-    session.litUntil = Date.now() + Math.floor(BRAND_BURN_MS * coldMult);
+    session.litUntil = Date.now() + Math.floor(brandBurnMs(light.itemId) * coldMult);
     session.litSource = "brand";
+    session.litRow = light.rowId; // THIS brand burns, not whichever one is first in the pack
     session.torchWarned = false;
-    z.send(session, `You touch a spark to the seal and the longbrand takes it slow — a fat, even flame that means to stay${coldMult < 1 ? ", though the cold pinches even this one" : ""}. The fire is in your hand, and whatever cannot face it will run.`, "gain");
-    z.roomFeed(session.roomId, `${session.name} kindles a longbrand; its light is steadier than any torch has a right to be.`, session.pubkey, false);
+    z.send(session, `You touch a spark to the seal and ${z.world!.itemTemplates.get(light.itemId)?.name ?? "the brand"} takes it slow — a fat, even flame that means to stay${coldMult < 1 ? ", though the cold pinches even this one" : ""}. The fire is in your hand, and whatever cannot face it will run.`, "gain");
+    z.roomFeed(session.roomId, `${session.name} kindles ${z.world!.itemTemplates.get(light.itemId)?.name ?? "a brand"}; its light is steadier than any torch has a right to be.`, session.pubkey, false);
   } else {
     session.items.splice(session.items.indexOf(light), 1);
     await removeItemRow(z.env.DB, light.rowId); // spent into the burning
@@ -196,7 +211,7 @@ export function snuffForHand(z: ZoneDO, session: Session): void {
   if (session.litSource === "brand") return;
   const wasLantern = session.litSource === "lantern";
   session.litUntil = undefined;
-  session.litSource = undefined;
+  session.litSource = undefined; session.litRow = undefined;
   session.torchWarned = false;
   const dark = !z.outOfWorld(session) && !z.litFor(session) ? ", and the dark closes in" : "";
   z.send(session, wasLantern
@@ -214,10 +229,14 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
     const lantern = session.litSource === "lantern";
     const brand = session.litSource === "brand";
     const held = lantern ? session.items.find((c) => c.itemId === LANTERN_ITEM) : undefined;
-    const heldBrand = brand ? session.items.find((c) => c.itemId === BRAND_ITEM) : undefined;
+    // The row that was actually lit — a pack can hold two brands now, and the
+    // burnout must spend the one in the fire, not the first one it trips over.
+    const heldBrand = brand
+      ? session.items.find((c) => c.rowId === session.litRow)
+      : undefined;
     if (lantern && !held) {
       session.litUntil = undefined;
-      session.litSource = undefined;
+      session.litSource = undefined; session.litRow = undefined;
       session.torchWarned = false;
       z.send(session, `The lantern is out of your hands — its light goes with it.${guardBack(z, session)}`, "dmgin");
       z.sendStatus(session);
@@ -227,16 +246,16 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
     // takes the flame with it — the pitch can't burn in a hand it isn't in.
     if (brand && !heldBrand) {
       session.litUntil = undefined;
-      session.litSource = undefined;
+      session.litSource = undefined; session.litRow = undefined;
       session.torchWarned = false;
-      z.send(session, `The longbrand is out of your hands — its light goes with it.${guardBack(z, session)}`, "dmgin");
+      z.send(session, `The brand is out of your hands — its light goes with it.${guardBack(z, session)}`, "dmgin");
       z.sendStatus(session);
       continue;
     }
     const left = session.litUntil - now;
     if (left <= 0) {
       session.litUntil = undefined;
-      session.litSource = undefined;
+      session.litSource = undefined; session.litRow = undefined;
       session.torchWarned = false;
       const inDark = !z.outOfWorld(session) && !z.litFor(session); // somebody else's flame still counts
       if (lantern) {
@@ -249,11 +268,11 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
           z.send(session, "That was the last of it: the wick is ash, and the cracked tin comes apart in your hands.");
         }
       } else if (brand) {
-        // The longbrand burns down to the fist and is gone — the weapon and
+        // A brand burns down to the fist and is gone — the weapon and
         // the flame were the same thing, and the pitch has had its argument.
         z.send(session, (inDark
-          ? "The longbrand burns down past the guard and into the fist — you drop the last of it, and the dark closes over you completely."
-          : "The longbrand burns down past the guard and into the fist. The last of it goes into the dark.") + guardBack(z, session), "dmgin");
+          ? "The brand burns down past the guard and into the fist — you drop the last of it, and the dark closes over you completely."
+          : "The brand burns down past the guard and into the fist. The last of it goes into the dark.") + guardBack(z, session), "dmgin");
         if (heldBrand) {
           session.items.splice(session.items.indexOf(heldBrand), 1);
           await removeItemRow(z.env.DB, heldBrand.rowId);
@@ -270,7 +289,7 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
       z.send(session, lantern
         ? "The lantern's light thins — the oil of this burn is nearly spent."
         : brand
-        ? "The longbrand's flame is eating down toward the hand — not long now."
+        ? "The brand's flame is eating down toward the hand — not long now."
         : "Your torch burns low, the flame guttering — not long now.", "dmgin");
     }
   }

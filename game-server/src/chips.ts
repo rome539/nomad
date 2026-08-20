@@ -12,8 +12,9 @@ import * as works from "./works";
 import * as ai from "./ai";
 import * as dice from "./dice";
 import { chipName, nameMatches, shortName } from "./zone-util";
+import { hasTrait } from "./world";
 import {
-  LURKERS, DIR_ORDER, TORCH_ITEM, BRAND_ITEM, LANTERN_ITEM,
+  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOM, CURE_RECIPES, COOK_RECIPES, MILESTONES,
 } from "./zone-data";
@@ -227,7 +228,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (session.items.some((c) => c.itemId === TORCH_ITEM)) suggest.push("light torch");
     // The brand chip only when no plain torch — the chip must never be the
     // thing that spends the rare flame while common sticks sit in the pack.
-    else if (session.items.some((c) => c.itemId === BRAND_ITEM)) suggest.push("light brand");
+    // Any burning weapon offers the chip, not just the longbrand (2026-08-20).
+    else if (session.items.some((c) => hasTrait(world.itemTemplates.get(c.itemId), "burning"))) suggest.push("light brand");
     if (session.items.some((c) => c.itemId === LANTERN_ITEM && c.condition > 0)) suggest.push("light lantern");
   }
 
