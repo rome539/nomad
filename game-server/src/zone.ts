@@ -957,16 +957,37 @@ export class ZoneDO implements DurableObject {
     // nothing a player owns — took every chart in the game with it. A player's
     // walking is theirs. Dead room ids filter out on read, so a re-cut world
     // needs no help from a bulldozer.
+    //
+    // THE BOARD AND THE STONES AREN'T EITHER (2026-08-20). The same principle
+    // reaches them: posts are people's words, the milestone registers are
+    // people's names — and a reseed (the one admin lever for a wedged world)
+    // used to take all of both in a single request. A busy board emptied, and
+    // nobody had torn a thing. They survive the reseed now, like the wall.
 
-
-    this.board = [];         // a bare board: nobody has pinned anything to it yet
-    this.stoneNames.clear(); // and fresh stone: the road has nobody's name on it yet
     this.cacheSpent.clear();
     this.cacheRoom.clear();
     this.nextSurfaceAt = 0;
     this.events.clear(); // a fresh world gets a fresh sky
     this.fishStock.clear();
     await this.init(zone); // "sim" is gone now → seeds the world fresh at first light
+    // The world changed under everyone's feet. Each connected wanderer's log
+    // still shows the pre-reseed room (old mobs, old floor litter), and a
+    // reseed must never be the thing that walks somebody out of the gatehouse
+    // or leaves them staring at a room that no longer exists. Re-describe
+    // where they stand and re-assert their chips and inside-ness.
+    // The same test the reconnect uses, and NOT outOfWorld(): that also reads
+    // true for `away` at a gate, which is the lockbox crouch — a thing done
+    // standing in the gate room, never through the door (the crouch's own note
+    // in gate.ts: opening your pack is not a step in). Asking the loose
+    // question would hand the gatehouse's interior to somebody kneeling
+    // outside it.
+    for (const s of this.sessions.values()) {
+      const inside = this.inGatehouse.has(s.pubkey) && this.world!.entryRooms.has(s.roomId);
+      this.sendStatus(s);
+      if (inside) this.send(s, gate.describeGatehouse(this, s));
+      else this.send(s, this.describeRoom(s, false));
+      this.sendCtx(s);
+    }
     return this.creatures.size;
   }
 
@@ -1481,7 +1502,7 @@ export class ZoneDO implements DurableObject {
     );
     session.tokensAt = now;
     if (session.tokens < 1) {
-      if (!isBench && !isTrade && !isForge && !isSwap) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
+      if (!isBench && !isTrade && !isForge && !isBounty && !isSwap) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
       return;
     }
     session.tokens -= 1;
@@ -1653,7 +1674,7 @@ export class ZoneDO implements DurableObject {
       // as it always was. den.cmdEnterDen returns false when no door here opens
       // to you, so the gatehouse keeps every case it ever had.
       case "enter":
-        if (den.cmdEnterDen(this, session, cmd.arg)) return;
+        if (await den.cmdEnterDen(this, session, cmd.arg)) return;
         return gate.enterGatehouse(this, session);
       case "exit":
         if (den.cmdLeaveDen(this, session)) return;
@@ -2957,7 +2978,7 @@ export class ZoneDO implements DurableObject {
   // crowded bridge is where you bleed. A body already at 0 hp is skipped; the
   // arc can never be the killing blow (it folds into the normal death path
   // below the same as any hit).
-  public sweepArc(roomId: string, attacker: Creature, tmpl: MobTemplate, exceptPubkey?: string): void {
+  public async sweepArc(roomId: string, attacker: Creature, tmpl: MobTemplate, exceptPubkey?: string): Promise<void> {
     if (!SWEEPERS.has(tmpl.id)) return;
     for (const other of this.sessions.values()) {
       if (other.hp <= 0 || other.roomId !== roomId || !this.reachable(other)) continue;
@@ -2977,7 +2998,10 @@ export class ZoneDO implements DurableObject {
       this.send(other, `${cap(tmpl.name)} swings on through — the arc of the blow catches you for ${arcDef}. [${Math.max(0, other.hp)}/${other.maxHp} hp]`, "dmgin");
       this.sendStatus(other);
       if (other.hp <= 0) {
-        void this.onPlayerDeath(other, tmpl);
+        // Awaited (2026-08-20), like every other death path: a detached death
+        // could reject unhandled on a D1 hiccup, and the tick used to keep
+        // mutating a mid-death session between the arc and the respawn.
+        await this.onPlayerDeath(other, tmpl);
       }
     }
   }
@@ -3345,7 +3369,10 @@ export class ZoneDO implements DurableObject {
         // The daze wears off outside the fight too — fled or left standing
         // alone, the flag must not stick to the HUD until a refresh.
         if (session.stunned && !session.pvpTarget) { session.stunned = false; this.sendStatus(session); }
-        session.openedHeavy = false; // a heavy-opener that never resolved (fled, or the foe fell to something else) must not eat a swing in the next fight
+        // a heavy-opener that never resolved (fled, or the foe fell to
+        // something else) must not eat a swing in the next fight — but a PvP
+        // exchange is still a fight: tickPvp owns the flag there (2026-08-20).
+        if (!session.pvpTarget) session.openedHeavy = false;
         continue;
       }
       // THE GAP CLOSING IS AN EVENT. Announced the beat it happens rather than
@@ -3819,7 +3846,7 @@ export class ZoneDO implements DurableObject {
         // swinging: a drawn breath, a body in the air, and the landing are each
         // a whole beat (ai.drakeBeat). Everything else in this loop is the
         // ordinary round and it does not apply while one of those is running.
-        if (ai.drakeBeat(this, creature, tmpl, now)) continue;
+        if (await ai.drakeBeat(this, creature, tmpl, now)) continue;
         // ...unless the cantor has it. A held thing does not swing: the song
         // outranks the fight, which is exactly what makes the cantor a lever.
         if (ai.heldBySong(creature, now)) continue;
@@ -3998,7 +4025,7 @@ export class ZoneDO implements DurableObject {
           this.combatNoise(victim.roomId);
           // The mallet's arc doesn't stop at the first body: everyone else in the
           // room catches the sweep's back-half at half weight (see sweepArc).
-          this.sweepArc(victim.roomId, creature, tmpl, victim.pubkey);
+          await this.sweepArc(victim.roomId, creature, tmpl, victim.pubkey);
           // A drowned thing that lands a blow can take hold — you're seized,
           // can't flee, and it drags harder until you wrench free or kill it.
           // SLICK hide (eel-skin) gives cold arms half as much to hold; worn MASS

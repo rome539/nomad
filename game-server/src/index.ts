@@ -237,13 +237,18 @@ export default {
       }
 
       // The blinded mint counter (NIP.md): supply is public — serial,
-      // time, rarity. Ownership is nobody's business.
+      // time, rarity. Ownership is nobody's business. The LIST is capped for
+      // the wire, but the count is a true COUNT (2026-08-20: it used to be
+      // mints.length, which read 5000 forever once the ledger passed it).
       if (m === "GET" && pathname === "/mints") {
         const res = await env.DB.prepare(
           "SELECT serial, item_id, rarity, minted_at FROM mints WHERE voided_at IS NULL ORDER BY serial LIMIT 5000",
         ).all();
         const mints = res.results ?? [];
-        return json({ count: mints.length, mints });
+        const counted = await env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM mints WHERE voided_at IS NULL",
+        ).first<{ n: number }>();
+        return json({ count: counted?.n ?? mints.length, mints });
       }
 
       // The books, on demand. The live arena feed (kind 24913) is a SHOW — a

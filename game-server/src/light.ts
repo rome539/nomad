@@ -121,8 +121,13 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     return z.send(session, "The air itself pulls the flame apart before it can catch. A hooded lantern wouldn't care.");
   }
   // Standing in the tide: the pitch drinks water before it drinks fire.
+  // The sea is the same water (2026-08-20): a torch lit mid-flood would be
+  // taken the next beat, so the refusal says so now instead of spending it.
   if (!wantLantern && events.tideFlooded(z, session.roomId)) {
     return z.send(session, "You are standing in the tide. The pitch would drink water before it ever drank fire. A hooded lantern, held high, wouldn't care.");
+  }
+  if (!wantLantern && events.seaUnder(z, session.roomId)) {
+    return z.send(session, "You are standing in the sea. The pitch would drink water before it ever drank fire. A hooded lantern, held high, wouldn't care.");
   }
   // Both hands full, or a guard you can't drop with something on you: the same
   // gate the floor-torch path goes through (blockedFromLight, above).
@@ -233,9 +238,10 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
   // too. When one dies the room loses its shared light — tell anyone standing
   // there, and if the room is born-dark, the dark closes back over them. The
   // weathers that drown a carried flame drown a grounded one the same: the tide
-  // takes it, the rain takes it, the exhale pulls it apart.
+  // takes it, the rain takes it, the exhale pulls it apart — and the sea is the
+  // same water as the tide (2026-08-20).
   for (const [roomId, until] of z.groundTorch) {
-    const drowned = events.tideFlooded(z, roomId) || events.raining(z, roomId) || events.exhaling(z, roomId);
+    const drowned = events.tideFlooded(z, roomId) || events.seaUnder(z, roomId) || events.raining(z, roomId) || events.exhaling(z, roomId);
     if (now < until && !drowned) continue;
     z.groundTorch.delete(roomId);
     const dark = z.isDark(roomId);

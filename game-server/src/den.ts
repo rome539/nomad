@@ -106,11 +106,15 @@ function bloodKey(roomId: string, holder: string): string { return `${roomId}|${
 // ---- the site: who lives on this ground -----------------------------------
 
 // Every den standing in a room, lapsed ones swept out. This is the street.
+// The lapse DELETE rides the fire-and-forget rail (this stays sync for its
+// many sync callers): the in-memory drop below is immediate, only the D1 rows
+// lag, and a lapsed row re-lapses on reload — but the promise carries a catch
+// so a D1 hiccup can never be an unhandled rejection (2026-08-20).
 export function densAt(z: ZoneDO, roomId: string): Den[] {
   const out: Den[] = [];
   for (const d of z.dens.values()) {
     if (d.roomId !== roomId) continue;
-    if (lapsed(d)) { void lapse(z, d); continue; }
+    if (lapsed(d)) { void lapse(z, d).catch(() => {}); continue; }
     out.push(d);
   }
   return out;
@@ -140,7 +144,7 @@ function lapsed(d: Den): boolean {
 export function myDen(z: ZoneDO, pubkey: string): Den | undefined {
   const d = z.dens.get(pubkey);
   if (!d) return undefined;
-  if (lapsed(d)) { void lapse(z, d); return undefined; }
+  if (lapsed(d)) { void lapse(z, d).catch(() => {}); return undefined; } // same fire-and-forget rail as densAt
   return d;
 }
 
@@ -386,7 +390,7 @@ export async function cmdSettle(z: ZoneDO, session: Session, arg: string): Promi
 // the gatehouse's own shape reused: the street is where the world can reach you,
 // and behind the door is whatever you have made of it.
 
-export function cmdEnterDen(z: ZoneDO, session: Session, arg: string): boolean {
+export async function cmdEnterDen(z: ZoneDO, session: Session, arg: string): Promise<boolean> {
   const open = doorsOpenTo(z, session.roomId, session.pubkey);
   if (!open.length) return false; // not a door of yours: let 'in' mean whatever else it means here
   if (z.inCombat(session)) { z.send(session, "Not with something at your back."); return true; }
@@ -398,7 +402,7 @@ export function cmdEnterDen(z: ZoneDO, session: Session, arg: string): boolean {
     return true;
   }
   z.inDen.set(session.pubkey, den.holder);
-  if (den.holder === session.pubkey) tend(z, session);
+  if (den.holder === session.pubkey) await tend(z, session);
   z.send(session, [
     den.holder === session.pubkey
       ? `You step in and pull the door to behind you.${den.barred ? " The bar drops into its sockets." : " There is no bar in the sockets, and the doorway is a doorway."}`
@@ -477,13 +481,13 @@ export async function shelfCall(z: ZoneDO, session: Session): Promise<void> {
   z.send(session, `${held.length} thing${held.length === 1 ? "" : "s"} of yours ${held.length === 1 ? "is" : "are"} still on a shelf here, from when this was yours. ('fetch')`, "gain");
 }
 
-export function tend(z: ZoneDO, session: Session): void {
+export async function tend(z: ZoneDO, session: Session): Promise<void> {
   const den = z.dens.get(session.pubkey);
   if (!den || den.roomId !== session.roomId) return;
   const now = Date.now();
   if (now - den.tendedAt < 3_600_000) return; // an hour's granularity; no write per step
   den.tendedAt = now;
-  void z.env.DB.prepare("UPDATE dens SET tended_at = ? WHERE room_id = ? AND holder = ?").bind(now, den.roomId, den.holder).run();
+  await z.env.DB.prepare("UPDATE dens SET tended_at = ? WHERE room_id = ? AND holder = ?").bind(now, den.roomId, den.holder).run();
 }
 
 // ---------------------------------------------------------------------------

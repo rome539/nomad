@@ -233,7 +233,10 @@ export async function nwcPayInvoice(invoice: string): Promise<NWCPayResult> {
           catch { decrypted = useNip44 ? await nip04Decrypt(secret, walletPubkey, ev.content) : await nip44Decrypt(secret, walletPubkey, ev.content); }
           const response = JSON.parse(decrypted);
           if (response.error) finish({ error: response.error.message || 'Payment failed' });
-          else finish({ preimage: response.result?.preimage });
+          else if (response.result && typeof response.result.preimage === 'string') finish({ preimage: response.result.preimage });
+          // No result at all is not a success (2026-08-20): the old line
+          // resolved { preimage: undefined }, which callers read as paid.
+          else finish({ error: 'The wallet answered without a payment result' });
         } catch {}
       };
       ws.onerror = () => finish({ error: 'Relay connection failed' });

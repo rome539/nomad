@@ -326,8 +326,10 @@ export function tideDrives(z: ZoneDO, creature: { roomId: string; templateId: st
 
 // Wading into the tide with an open flame: the water takes it. Same shape as
 // the rain and the exhale — the lantern survives a wade (shuttered, held high).
+// The sea is the same water (2026-08-20): a crossing under flood douses a
+// carried torch exactly as the tideways do.
 export function tideSoaksTorch(z: ZoneDO, session: Session): void {
-  if (!tideFlooded(z, session.roomId)) return;
+  if (!tideFlooded(z, session.roomId) && !seaUnder(z, session.roomId)) return;
   if (session.litSource !== "torch" || !z.carriesLight(session)) return;
   session.litUntil = undefined;
   session.litSource = undefined;
@@ -2522,7 +2524,10 @@ async function tickSea(z: ZoneDO, now: number): Promise<void> {
         st.phase = "idle";
         st.until = NEVER;
         st.data = undefined;
-        z.roomFeedBands(SEA_HEARD_BANDS, "Slack low on the crossing. The causeway is a road again.", "evt");
+        // No "Slack low" line here (2026-08-20): the level-change reporter
+        // below owns that announcement — the moment `level` first reads 0 —
+        // and this case fired it AGAIN on the same drain, so every cycle
+        // broadcast the identical line twice.
         break;
     }
   }

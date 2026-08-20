@@ -44,12 +44,14 @@ export function cmdXyzzy(z: ZoneDO, session: Session): void {
 // Light one from the tin. No stat, no cure — a moment's calm that costs you:
 // the smell rides the draft into the next room, and the dark leans in to look.
 // (What the tin is really worth is never said here. That's for the finding.)
-export function cmdSmoke(z: ZoneDO, session: Session, arg = ""): void {
+export async function cmdSmoke(z: ZoneDO, session: Session, arg = ""): Promise<void> {
   // "smoke <meat>" is the natural way to reach for the racks — in the smokehouse,
-  // smoking a raw haunch means CURING it, not lighting a cigarette. Delegate.
+  // smoking a raw haunch means CURING it, not lighting a cigarette. Delegate —
+  // awaited (2026-08-20): the fire-and-forget call escaped the handler's own
+  // error path, so a mid-cure D1 failure surfaced as an unhandled rejection.
   if (arg && session.roomId === SMOKEHOUSE_ROOM) {
     const c = z.findCarried(session, arg);
-    if (c && CURE_RECIPES[c.itemId]) { void cmdCure(z, session, arg); return; }
+    if (c && CURE_RECIPES[c.itemId]) return cmdCure(z, session, arg);
   }
   if (!session.items.some((c) => CIGARETTES.has(c.itemId))) {
     return z.send(session, "You pat yourself down for a smoke and come up with nothing but lint.");

@@ -1501,7 +1501,17 @@ export async function benchSalvage(z: ZoneDO, session: Session, row: string): Pr
   }
 
 export async function benchRepair(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
-    const carried = session.items.find((c) => c.rowId === row);
+    // The mend button sits on every column the bench shows (pack, lockbox,
+    // vault), so the lookup must reach all three — the same pools the forge's
+    // own mend searches (2026-08-20: a boxed row's mend button used to refuse
+    // "You aren't carrying that" every time).
+    let carried: CarriedItem | undefined = session.items.find((c) => c.rowId === row);
+    if (!carried) {
+      for (const pool of await z.gatePools(session)) {
+        carried = pool.find((c) => c.rowId === row);
+        if (carried) break;
+      }
+    }
     if (!carried) return "You aren't carrying that.";
     return repairCore(z, session, carried);
   }

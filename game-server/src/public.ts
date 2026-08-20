@@ -1404,8 +1404,12 @@ function classify(s) {
   if (/falls into your hands|falls from the dead|clatters free of the fallen|sealed\\. \\(mint #|^What is sealed is yours|locked in your box|back from the box|slides .* across the counter/.test(s)) return "gain";
   if (/^Exits: /.test(s)) return "dim";
   // A locked chest pops gold (loot waiting); a sprung, empty one recedes (spent husk).
-  if (/ sits here, locked\./.test(s)) return "loot";
-  if (/ sits here, sprung and empty\./.test(s)) return "dim";
+  // Doubled backslashes (2026-08-20): a lone \\. inside the PAGE template is
+  // consumed by the template parser, so the served regex was /…locked./ and the
+  // dot matched any character ("locked up" classed as loot, "sprung and empty!"
+  // classed as dim).
+  if (/ sits here, locked\\./.test(s)) return "loot";
+  if (/ sits here, sprung and empty\\./.test(s)) return "dim";
   if (/bloodstain darkens|dust is freshly disturbed|swept clear, sat in|Fresh blood pools|Gnawed scraps|scratched into the stone/.test(s)) return "dim";
   return "";
 }
@@ -2754,10 +2758,24 @@ var GATEHOUSE_CMDS = {
   vault: 1, bank: 1, deposit: 1, unvault: 1, withdraw: 1, retrieve: 1,
   barter: 1, trade: 1, shop: 1, browse: 1, fence: 1, buy: 1, purchase: 1,
   offer: 1, pay: 1, sell: 1, give: 1, forge: 1, craft: 1, repair: 1, mend: 1,
-  salvage: 1, scrap: 1, claim: 1, seal: 1, keys: 1, sheet: 1, publish: 1,
+  salvage: 1, scrap: 1, claim: 1, seal: 1, sheet: 1, publish: 1,
   map: 1, study: 1, journal: 1, rest: 1, sleep: 1, sit: 1, camp: 1,
   eat: 1, bandage: 1, bind: 1, equip: 1, wield: 1, wear: 1, remove: 1,
-  unequip: 1, name: 1, rename: 1, smoke: 1, puff: 1, theme: 1, login: 1,
+  unequip: 1, name: 1, rename: 1, smoke: 1, puff: 1,
+  // The bones, and the words that reach them (2026-08-20): these were missing
+  // from this table, so a typed 'roll'/'stand'/'dice' read as speech and got no
+  // echo even though the server ran them as commands. 'keys'/'theme'/'login'
+  // were LISTED here, which made the client echo them AND the server speak
+  // them back — every such line printed twice. They are not server verbs:
+  // 'keys' is handled locally below (localCmd), and the other two are just
+  // words by the fire.
+  // Exactly the three the server answers (dice/roll/stand). A word listed here
+  // that the server does NOT know is worse than one missing: the client echoes
+  // it as a command, the server reads it as speech and says it back, and the
+  // line prints twice — which is the same fault as the keys/theme/login entries
+  // above. 'bones', 'gamble', 'wager' and 'bet' are not verbs, and the last
+  // three are things a person actually says at a fire.
+  dice: 1, roll: 1, stand: 1,
   // The board. post/tear carry words so they must always read as commands;
   // board is bare-only and is listed in the no-arg table below as well.
   board: 1, noticeboard: 1, notices: 1,
@@ -2782,6 +2800,10 @@ var GATEHOUSE_NOARG_CMDS = {
   map: 1, study: 1, carve: 1, journal: 1, sheet: 1,
   rest: 1, sleep: 1, sit: 1, camp: 1, smoke: 1, puff: 1,
   board: 1, noticeboard: 1, notices: 1,
+  // The bones, matching the server's GATEHOUSE_NOARG (2026-08-20): bare they
+  // command, "stand up"/"roll with it" stay sentences at the fire. 'dice' is
+  // deliberately NOT here — it carries a stake or a name.
+  roll: 1, stand: 1,
 };
 var inGatehouseNow = false;
 // Whether the 'in'/'out' the server is offering here is a den door rather than a
@@ -2828,6 +2850,13 @@ function localCmd(text) {
   if (lower === "login signer" || lower === "login bunker") { connectSignerApp(); return true; }
   if (lower.indexOf("login ") === 0) { importKey(t.slice(6).trim()); return true; }
   if (lower === "logout") { logout(); return true; }
+  // 'keys' shows the identity panel; 'keys reveal' shows the secret itself.
+  // Both the server's welcome line and the panel's own help advertise these,
+  // and until 2026-08-20 neither side had a handler — the server answered
+  // "the dungeon doesn't understand" (or spoke the word back in the
+  // gatehouse). The keys never leave this page: showKeys prints from the
+  // in-memory key only.
+  if (lower === "keys" || lower === "keys reveal") { showKeys(lower === "keys reveal"); return true; }
   // Quit: back out through the door to the threshold. A clean reload — keys
   // stay in the pocket, the world handles the vanishing (linkdead linger).
   // Bare words only: the server owns "leave <thing>" (it's a drop).

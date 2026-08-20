@@ -75,6 +75,14 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
   // at all, and a failed murder must not be cheaper than a successful one.
   await den.bloodDrawn(z, session.roomId, session, other);
   await swingAt(z, session, other, { body: true, ambush: unaware });
+  // A heavy blunt opener was the whole beat (2026-08-20): the same cost the
+  // PvE opener pays (zone.ts sets openedHeavy for a stun weapon's ambush) —
+  // tickPvp consumes the flag and skips the next round's swings, so a skull-
+  // headed maul doesn't get the free ×1.5 AND the full round on top.
+  const openerWeapon = z.equippedItem(session, "weapon");
+  if (unaware && other.hp > 0 && openerWeapon && openerWeapon.tmpl.stun > 0) {
+    session.openedHeavy = true;
+  }
   z.refreshRoomCtx(session.roomId);
   await z.persist();
   await z.ensureAlarm();
@@ -100,6 +108,14 @@ export async function tickPvp(z: ZoneDO): Promise<void> {
       attacker.stunned = false;
       z.send(attacker, "Your head still rings — the moment to swing slips past you.", "stun");
       z.sendStatus(attacker);
+      continue;
+    }
+    // A heavy blunt opener was the whole beat (2026-08-20): the same debt the
+    // PvE round pays — the ambush's ×1.5 was the swing, so this round's is
+    // gone while the head is slow to rise.
+    if (attacker.openedHeavy) {
+      attacker.openedHeavy = false;
+      z.send(attacker, "You put it all into that opening blow; the heavy head is slow to rise again.", "dmgout");
       continue;
     }
     const speed = Math.max(1, z.equippedItem(attacker, "weapon")?.tmpl.speed ?? 1);

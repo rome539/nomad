@@ -27,6 +27,7 @@ import {
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
+  STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
@@ -1277,7 +1278,10 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     const vt = world.mobTemplates.get(victim.templateId)!;
     victim.asleep = false; // teeth wake anything
     victim.sleepUntil = undefined;
-    victim.hp -= randInt(tmpl.dmg_min, tmpl.dmg_max);
+    // Same physics as every other blow: the prey's own armor soaks some of the
+    // bite (flat, floored at 1 — the player-swing model). Before 2026-08-20 a
+    // bone-knight being torn at took the raw roll whole.
+    victim.hp -= Math.max(1, randInt(tmpl.dmg_min, tmpl.dmg_max) - vt.armor);
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt);
       creature.hunger = 0;
@@ -1338,7 +1342,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
       await creatureMoves(z, victim, now, "flee", false);
       return true;
     }
-    victim.hp -= Math.max(1, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) * PREY_WORRY_MULT));
+    victim.hp -= Math.max(1, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) * PREY_WORRY_MULT) - vt.armor);
     if (victim.hp > 0) return true;
     releaseHold(z, creature);
     preyFalls(z, victim, vt);
@@ -2895,7 +2899,7 @@ export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
   // Everything here is arranged so the player is never hit by something they
   // were not told about first: the breath is announced a full beat and a half
   // ahead, in the room and to every person in it, and the room has one exit.
-export function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now: number): boolean {
+export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now: number): Promise<boolean> {
     // SUMMIT_BOSSES, not SUMMIT_BOSS: the pale drake (mig 247) is a second
     // individual on the same summit and it gets the arc, the breath and the air
     // or it is not a drake at all.
@@ -2910,17 +2914,21 @@ export function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now:
       for (const s of [...z.sessions.values()]) {
         if (s.roomId !== creature.roomId || s.hp <= 0 || !z.reachable(s)) continue;
         // ARMOR THINS IT AND NOTHING STOPS IT. Heat, not a curse — so the same
-        // mitigation every blow gets, and then it is on you. Deliberately NOT
-        // gated on canLandBlow: the dogpile cap exists so a crowd cannot be
-        // executed by a press of bodies, and this is one event from one animal
-        // that does not care how many of you there are. The telegraph is the
-        // fairness, not the cap.
+        // mitigation every blow gets (armor, the defender's stance, and the
+        // drake's own wounded state — a near-dead animal breathes weak), and
+        // then it is on you. Deliberately NOT gated on canLandBlow: the dogpile
+        // cap exists so a crowd cannot be executed by a press of bodies, and
+        // this is one event from one animal that does not care how many of you
+        // there are. The telegraph is the fairness, not the cap.
         const raw = randInt(DRAKE_BREATH_MIN, DRAKE_BREATH_MAX);
-        const dmg = Math.max(1, Math.round(raw * ARMOR_K / (z.equippedArmor(s) + ARMOR_K)));
+        const hurtDrake = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
+        const dmg = Math.max(1, Math.round(
+          Math.round(raw * ARMOR_K / (z.equippedArmor(s) + ARMOR_K))
+          * STANCE[s.stance].def * (hurtDrake ? WOUNDED_DMG_MULT : 1)));
         s.hp -= dmg;
         z.send(s, `The heat comes over you for ${dmg}. There was nowhere in this room to be. [${Math.max(0, s.hp)}/${s.maxHp} hp]`, "dmgin big");
         z.sendStatus(s);
-        if (s.hp <= 0) void z.onPlayerDeath(s, tmpl);
+        if (s.hp <= 0) await z.onPlayerDeath(s, tmpl);
       }
       z.refreshRoomCtx(creature.roomId);
       return true;
@@ -2951,11 +2959,15 @@ export function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now:
       if (!here.length) return true; // everyone left or died under it — it is circling an empty bowl
       const mark = here[randInt(0, here.length - 1)];
       const raw = randInt(DRAKE_DIVE_MIN, DRAKE_DIVE_MAX);
-      const dmg = Math.max(1, Math.round(raw * ARMOR_K / (z.equippedArmor(mark) + ARMOR_K)));
+      // Same pipeline as the breath: armor, stance, and the wounded drake.
+      const hurtDrake = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
+      const dmg = Math.max(1, Math.round(
+        Math.round(raw * ARMOR_K / (z.equippedArmor(mark) + ARMOR_K))
+        * STANCE[mark.stance].def * (hurtDrake ? WOUNDED_DMG_MULT : 1)));
       mark.hp -= dmg;
       z.send(mark, `It comes through low and you are on the ground before you hear it, for ${dmg}. [${Math.max(0, mark.hp)}/${mark.maxHp} hp]`, "dmgin big");
       z.sendStatus(mark);
-      if (mark.hp <= 0) void z.onPlayerDeath(mark, tmpl);
+      if (mark.hp <= 0) await z.onPlayerDeath(mark, tmpl);
       return true;
     }
     if (creature.airborneUntil !== undefined) {

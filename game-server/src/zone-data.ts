@@ -4344,7 +4344,17 @@ export const CARRIER_SATCHEL = ["dry-cigarettes", "toll-token", "iron", "linen-s
 export const SPATE_COURSE = [
   "the-drain-mouth", "the-postern-carr", "the-stepping-stones", "the-withy-beds",
   "the-trap-line", "the-mill-leat", "the-drowned-mill", "the-millpond",
-  "the-tail-race", "the-osier-island", "the-flood-mead", "the-cattle-drink",
+  // THE DAM WALK JOINS THE COURSE (2026-08-20). The course lists the beck from
+  // its drain up to its head, so a room's downstream neighbour is the one with
+  // the LOWER index — and the sweep walks REAL exits toward lower indices. The
+  // tail-race's only way down the valley is the dam walk, which was never in
+  // the list: its two exits (osier island upstream, dam walk sideways) both
+  // read "no downstream step", so a swept wanderer stood in the race taking
+  // SPATE_BITE instead of being carried out — the one room on the course the
+  // "no way out = carried out" promise did not cover. With the walk in the
+  // course the chain is whole: tail-race → dam walk → millpond, and the walk
+  // takes the flood with the rest of the low way when the beck is up.
+  "the-dam-walk", "the-tail-race", "the-osier-island", "the-flood-mead", "the-cattle-drink",
   "the-marl-hole", "the-hatchpool", "the-plank-crossing", "the-hanging-wood",
   // The force sits BELOW the shelf behind it: the shelter is a pocket off the
   // pool, and its only door is the waterfall. Ordered the other way round the
