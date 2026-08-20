@@ -75,6 +75,15 @@ A long low building of good stone facing the water, with a lamp burning over a h
 A cobbled yard behind the crossing house with a well-head in the middle of it, roofed, with a windlass and a chain and a bucket that comes up full of water clean enough to be worth the walk. This is the only sweet water within a mile of anywhere and everything on this shore knows it.
 > north the-crossing-house
 > south the-keepers-garden
+# THE SERVICE LANE (mig 248). These two exits are load-bearing for the entire
+# eastern half of the world: the crossing house is a GATE, creatures cannot
+# enter a gate room, and it was the ONLY link between the main mass and a
+# 393-room island made of this shore plus the whole mountain. Nothing could
+# walk in or out of either, ever. You go ROUND the back of the house now,
+# through its own yard, which is what a service lane is for and what this
+# room's own line about everything on the shore knowing the well always meant.
+> west the-landing-arch
+> east the-salt-pans
 
 ## the-strand-road | The Strand Road
 The made road running north to south along the eastern shore, the twin of the one on the western bank, in the same repair and to the same drawing. It serves the crossings. It is the last piece of the institution's work you will walk on.

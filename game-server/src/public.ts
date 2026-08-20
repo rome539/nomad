@@ -2113,7 +2113,7 @@ async function publishFeed(room, text, fx) {
 // the canvas never tucks tainted pixels and toBlob works.
 // The card set is its OWN art (2026-08-07) — creature plates painted for this,
 // not the door's wide backdrops, which keep their middle empty for a title.
-var CARD_SCENES = ["whiteroe", "gaunt", "wolves", "nomad", "bear", "hyena", "crows", "broodrat", "king"];
+var CARD_SCENES = ["whiteroe", "gaunt", "wolves", "nomad", "cavelion", "bear", "hyena", "crows", "broodrat", "king"];
 var CARD_PX = 1080;
 
 function cardScene() {
@@ -5680,7 +5680,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "2";
+var ART_V = "3";
 // HOW HARD THE SCRIM PRESSES, per painting. The gradient below is weakest at
 // 45% height \u2014 which is exactly where the title and the line sit \u2014 and one
 // setting cannot serve eight pictures that range from a torchlit corridor to
@@ -5690,8 +5690,8 @@ var ART_V = "2";
 // invisible; on that one, .15 left the line unreadable. Anything absent takes
 // the default. Darkening the painting itself was the wrong lever \u2014 it took
 // the village down to silhouette to fix the sky.
-var THR_DIM = { holdings: ".55", bellcote: ".28" };
-var THR_SCENES = { torch: "center 65%", warrens: "40% 60%", hound: "center 55%", rain: "center 45%", bellcote: "35% 45%", gatehouse: "center 62%", wood: "center 45%", holdings: "20% 60%" };
+var THR_DIM = { holdings: ".55", bellcote: ".28", drake: ".25" };
+var THR_SCENES = { torch: "center 65%", warrens: "40% 60%", hound: "center 55%", rain: "center 45%", bellcote: "35% 45%", wood: "center 45%", holdings: "20% 60%", drake: "35% 65%" };
 var thrPick = new URLSearchParams(location.search).get("scene");
 if (!THR_SCENES[thrPick]) {
   var thrNames = Object.keys(THR_SCENES);

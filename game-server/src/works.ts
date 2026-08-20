@@ -32,12 +32,27 @@
 //   • The world's baseline: the average walk from any room to its nearest gate.
 //   • Per gate, the cost of shutting IT: how much that average rises without it.
 //
-// That cost is the draw weight. A door whose closure nobody would notice is
-// almost never drawn; a door that is the only thing standing between a region
-// and a very long walk is drawn often. This is what the hand-built bank table
-// was trying to approximate, and it does it without knowing a single room name
-// — add a wing to the wood tomorrow and the door that serves it gets heavier by
-// itself, because it genuinely became more important.
+// That cost used to BE the draw weight, and it is not any more.
+//
+// ── EVERY DOOR HAS THE SAME CHANCE (rome, 2026-08-20) ────────────────────────
+//
+// Weighting the draw by cost was defensible on paper and indefensible once the
+// table was printed. Measured on the live map at fourteen gates:
+//
+//     the-ferry-house  25.0%   ...   the-stell  0.8%   the-shieling  0.4%
+//
+// Two doors did a third of all the closing and four of them effectively never
+// shut at all. That is not a rare event, it is a promise — and the reason the
+// Shieling scored 0.4% is that it sits three rooms from the Stell, which is a
+// fact about how the mountain's doors were placed and has nothing to do with
+// whether a crew would turn up there.
+//
+// A works closure is people arriving at a door with timber. They do not read a
+// traffic model. The draw is UNIFORM over every door not vetoed below.
+//
+// The cost is still measured, because it is the only number that says what a
+// door is actually worth and it is worth being able to look at. It simply does
+// not choose any more.
 //
 // The safety rules are measured the same way and cannot rot: a closure is
 // rejected if it would strand any room, and a door is never shut if it is the
@@ -46,7 +61,7 @@ import type { ZoneDO } from "./zone";
 import type { World } from "./world";
 import {
   WORKS_GAP_MIN_MS, WORKS_GAP_MAX_MS, WORKS_LEN_MIN_MS, WORKS_LEN_MAX_MS,
-  WORKS_MAX_SHUT, WORKS_SECOND_ODDS, WORKS_MIN_WEIGHT, SURFACE_BANDS,
+  WORKS_MAX_SHUT, WORKS_SECOND_ODDS, SURFACE_BANDS,
 } from "./zone-data";
 import { randInt, chance } from "./rng";
 
@@ -92,6 +107,7 @@ function walkHome(
 export interface WorksPlan {
   reach: Map<string, Map<string, number>>; // gate -> every room's distance from it
   weight: Map<string, number>;             // gate -> how much shutting it costs the world
+  strands: Set<string>;                    // gates that are the ONLY way home for something
   gates: string[];
 }
 
@@ -106,36 +122,50 @@ export function planWorks(world: World): WorksPlan {
   for (const gate of gates) reach.set(gate, walkFrom(world, gate));
   const base = walkHome(world, gates, reach);
   const weight = new Map<string, number>();
+  const strands = new Set<string>();
   for (const gate of gates) {
     const without = walkHome(world, gates.filter((g) => g !== gate), reach);
-    // Stranding is not a cost, it is a refusal — a door that is the only way
-    // home for anything gets weight 0 here and is vetoed outright below.
+    // STRANDING IS A REFUSAL, NOT A COST, and it is now tracked on its own.
+    // It used to be folded into the weight as a zero, which worked only while
+    // the weight was what chose the door. The draw is uniform now (see
+    // pickWorks) and a zero no longer means anything to it, so the veto needs
+    // its own set or a door that is somebody's only way home would be drawn
+    // like any other.
+    if (without.stranded > base.stranded) strands.add(gate);
+    // The weight is still measured. Nothing picks with it any more, but it is
+    // the only number that says what a door is actually worth, and the gate
+    // audit reads it.
     weight.set(gate, without.stranded > base.stranded ? 0 : Math.max(0, without.avg - base.avg));
   }
-  return { reach, weight, gates };
+  return { reach, weight, strands, gates };
 }
 
 // ── Choosing a door ──────────────────────────────────────────────────────────
 
 /**
- * Pick a gate to shut, weighted by what shutting it actually costs the world.
- * Returns null when nothing may close — every candidate strands somebody, or
- * there is nothing left worth shutting.
+ * Pick a gate to shut. EVERY DOOR HAS THE SAME CHANCE (rome, 2026-08-20).
+ *
+ * It used to draw weighted by what shutting the door cost the world's average
+ * walk home, and that produced a table nobody would defend out loud: the ferry
+ * house drew 25% of all closures and the Shieling drew 0.4%, so two doors in
+ * the game did nearly all the closing and four of them effectively never shut
+ * at all. A works closure is a crew turning up at a door. Crews do not read a
+ * traffic model, and a door that never closes is not a door with a low
+ * probability, it is a door with a promise.
+ *
+ * The measured weight is still computed (planWorks) because it is the only
+ * number that says what a door is worth — it just does not choose any more.
+ *
+ * The ONE thing that still vetoes a door is stranding: if shutting it leaves
+ * some room with no reachable open gate at all, it is not drawn. That is not a
+ * preference, it is the guarantee that you can always bank somewhere.
  */
 export function pickWorks(plan: WorksPlan, shut: string[]): string | null {
   const openNow = plan.gates.filter((g) => !shut.includes(g));
   if (openNow.length <= 1) return null; // never the last door standing
-  const candidates: { gate: string; w: number }[] = [];
-  for (const gate of openNow) {
-    const w = plan.weight.get(gate) ?? 0;
-    if (w <= 0) continue; // a door whose closure strands somebody, or costs nothing at all
-    candidates.push({ gate, w: Math.max(w, WORKS_MIN_WEIGHT) });
-  }
+  const candidates = openNow.filter((g) => !plan.strands.has(g));
   if (!candidates.length) return null;
-  const total = candidates.reduce((sum, c) => sum + c.w, 0);
-  let roll = Math.random() * total;
-  for (const c of candidates) { roll -= c.w; if (roll <= 0) return c.gate; }
-  return candidates[candidates.length - 1].gate;
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 /** Would shutting these leave every room a way home? The veto, measured live. */
