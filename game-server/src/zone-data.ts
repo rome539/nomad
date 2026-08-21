@@ -5691,6 +5691,20 @@ export const SEA_INSTRUMENTS = new Set<string>([
   "the-bell-buoy",                        // it rings the state, if you know the ringing
 ]);
 export const SEA_HEARD_BANDS = new Set<string>(["crossing"]); // the TIDE, on the crossing's own water
+// THE HILL'S OWN NEWS (rome, 2026-08-21). What the drake says when somebody
+// starts on it. The mountain alone, and the reason is geometry rather than
+// taste: the summit sits at x120 and the crossing's last stone at x68, so a
+// roar carrying to the shore would have to cross fifty-two rooms of open air —
+// further than the bell reaches from the cote it hangs in. The mountain's own
+// four doors band as "mountain" (see bandOf), so the whole hill hears it and
+// nothing west of the Shingle Stair does. It is SOUND, so a door still stops
+// it: sit in a keeper's room and the summit is somebody else's business.
+export const MOUNTAIN_HEARD_BANDS = new Set<string>(["mountain"]);
+// ...and how often it says it: a roll on every blow that draws blood, not a
+// single announcement when the fight opens. At one in ten a drake fight of any
+// length is heard from the foot more than once and a short one may never be
+// heard at all, so what carries down the hill is how the fight is GOING.
+export const BOSS_ROUSE_ODDS = 0.1;
 // ROAD COUNTRY'S OWN NEWS (2026-08-21). The carrier walking the paving and the
 // beck coming up over the low way are both ROAD events — every room of the
 // spate's course and both ends of the carrier's route carry region "road" — and

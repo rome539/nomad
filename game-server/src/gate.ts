@@ -2408,6 +2408,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
       "You put your feet to the brazier and drift. In here, sleep costs nothing.",
     ]), "gain");
     gatehouseFeed(z, `${session.name} settles in by the fire to doze.`, session.pubkey);
+    z.sendCtx(session); // the `rest` chip goes: you are already doing it
     return;
   }
   if (GATEHOUSE_BARRED.has(v)) {

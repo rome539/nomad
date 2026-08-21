@@ -1843,6 +1843,13 @@ export function cmdRest(z: ZoneDO, session: Session): void {
     "You hunker down, unhurt, and give your legs the rest your nerves won't take — any effort ends it.",
   ]));
   z.roomFeed(session.roomId, `${session.name} settles down to rest.`, session.pubkey, false); // resting: local only, nobody spectates a nap
+  // And drop the now-redundant `rest` chip (rome, 2026-08-21). The chip builder
+  // has always excluded a resting player; nothing re-pushed chips when the rest
+  // BEGAN, so the button sat there offering a thing you were already doing.
+  // Same one-liner as cmdStudy. Coming out of rest needs none: you leave it by
+  // moving (which re-describes) or by mending full, and a whole man is over the
+  // chip's own hp test anyway.
+  z.sendCtx(session);
 }
 
 // Fishing: only off the Pocket of Air's dry shelf, a line dropped into the

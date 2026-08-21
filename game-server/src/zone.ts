@@ -106,7 +106,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
-  SPAWN_QUARTERS, DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  SPAWN_QUARTERS, DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -2306,13 +2306,13 @@ export class ZoneDO implements DurableObject {
       // stored and preserved, so it comes out better than corpse-stripped gear.
       const rolled = this.rollTraits(item); // one roll, used whichever way it lands (099)
       if (await this.grantItem(session, item.id, { kept: true, rolledTraits: rolled })) {
-        this.send(session, `Inside: ${this.gearName(item.id)}.${this.itemStat(item)} [${item.rarity}] ${this.lootSuffix(item)}`);
+        this.send(session, `Inside: ${this.gearName(item.id)}.${this.itemStat(item)}${this.rarityTag(item)} ${this.lootSuffix(item)}`);
       } else {
         this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), item.id]);
         this.stampFresh(session.roomId, item.id);
         if (item.slot !== "") this.groundCond.set(`${item.id}@${session.roomId}`, rollGearCondition(item.slot, true));
         if (rolled) this.groundRolled.set(`${item.id}@${session.roomId}`, rolled);
-        this.send(session, `Inside: ${this.gearName(item.id)}.${this.itemStat(item)} [${item.rarity}] — but your pack is full, so it falls at your feet.`);
+        this.send(session, `Inside: ${this.gearName(item.id)}.${this.itemStat(item)}${this.rarityTag(item)} — but your pack is full, so it falls at your feet.`);
       }
     }
     this.refreshRoomCtx(session.roomId);
@@ -2627,6 +2627,21 @@ export class ZoneDO implements DurableObject {
   // and maps (own reading) are each their own slot and never stack.
   // The pickup tag must not promise what the gate refuses (cmdClaim turns
   // trophies away — no title on fungibles), so a stackable's tag talks trade.
+  // The rarity bracket on a loot line, and ONLY where the word means what the
+  // player will read into it (rome, 2026-08-21, on an eyrie talon announcing
+  // itself as epic). Every template carries a rarity, but it does two different
+  // jobs: on gear it grades the PIECE, and on a fungible it is the value ladder
+  // the keeper pays against (talon epic/10, summit scale legendary/40, goat horn
+  // common/5). Printing it on a trophy borrows gear's word for a thing you
+  // cannot wear, and hands over the keeper's own price ladder on the floor of a
+  // dungeon — the gate is where a thing's worth is supposed to be learned.
+  //
+  // The keeper's counter keeps its brackets (gate.ts): that IS the institution,
+  // and everything on it is gear.
+  private rarityTag(item: ItemTemplate): string {
+    return this.isGear(item.id) ? ` [${item.rarity}]` : "";
+  }
+
   private lootSuffix(item: ItemTemplate): string {
     if (!this.stackable(item.id, null)) return "(unclaimed — the gate can seal it)";
     return item.edible ? "(unclaimed — good, fresh food)" : "(no title to seal — the keeper trades in these, or the lockbox keeps them)";
@@ -5187,6 +5202,10 @@ export class ZoneDO implements DurableObject {
   // shares the horror on their sheet — see the assist pass in onCreatureDeath.
   public markHurt(creature: Creature, tmpl: MobTemplate, pubkey: string): void {
     if (!tmpl.is_boss) return;
+    // ...and the hill hears the first one land. Every path that wounds a boss
+    // already comes through here — the swing, the opener, the throw — so this is
+    // the one place a fight with one can be said to have STARTED.
+    ai.bossRouse(this, creature, tmpl);
     if (!creature.hurtBy) creature.hurtBy = [];
     if (!creature.hurtBy.includes(pubkey)) creature.hurtBy.push(pubkey);
   }
@@ -5311,8 +5330,16 @@ export class ZoneDO implements DurableObject {
       // The door outside wants to know (worldSnapshot): a boss going down is
       // the best news the threshold ever has to print.
       this.lastBossFall = { name: tmpl.name, at: Date.now() };
-      const surface = SURFACE_BANDS.has(this.regionOf(creature.roomId));
-      if (surface) {
+      // THE MOUNTAIN IS ITS OWN COUNTRY, AND IT IS NOT WOODED (rome, 2026-08-21).
+      // "mountain" is a SURFACE band, so the drake was dying under trees that do
+      // not grow within fifty rooms of it, and the news was going to all fourteen
+      // doors — including three at the bottom of a fortress on the far side of
+      // the world. It falls on the hill that kept it, in the hill's own words,
+      // to the hill (MOUNTAIN_HEARD_BANDS, the same reach as its roar).
+      const band = this.regionOf(creature.roomId);
+      if (band === "mountain") {
+        this.roomFeedBands(MOUNTAIN_HEARD_BANDS, `High up, something stops — a sound the mountain has always made ends, and the quiet that comes after it is a different quiet: ${tmpl.name} has fallen.`);
+      } else if (SURFACE_BANDS.has(band)) {
         this.roomFeedBands(SURFACE_BANDS, `Somewhere out under the trees, a cry goes up and is not answered: ${tmpl.name} has fallen.`);
       } else {
         this.roomFeedBands(FORTRESS_BANDS, `A cry rolls through the stone: ${tmpl.name} has fallen.`);
@@ -5340,12 +5367,12 @@ export class ZoneDO implements DurableObject {
           // named (rome, 2026-08-14: the hood dropped and was not coloured).
           // These four loot lines were the last ones still printing a raw name:
           // the kill drop, the room feed beside it, and both chest lines.
-          this.send(killer, `${this.gearName(item.id, cap(item.name))} falls into your hands. [${item.rarity}] ${this.lootSuffix(item)}`);
+          this.send(killer, `${this.gearName(item.id, cap(item.name))} falls into your hands.${this.rarityTag(item)} ${this.lootSuffix(item)}`);
         } else {
           this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), item.id]);
           this.stampFresh(creature.roomId, item.id);
           if (rolled) this.groundRolled.set(`${item.id}@${creature.roomId}`, rolled);
-          this.send(killer, `${cap(this.floorLootName(item.id, creature.roomId))} falls from ${tmpl.name} — your pack is full, so it lies here. [${item.rarity}]`);
+          this.send(killer, `${cap(this.floorLootName(item.id, creature.roomId))} falls from ${tmpl.name} — your pack is full, so it lies here.${this.rarityTag(item)}`);
         }
         // Same rule as a pickup off the floor: junk stays in the room. Only a
         // rare+ find is worth the wire — nobody outside needs to hear that
@@ -5362,11 +5389,11 @@ export class ZoneDO implements DurableObject {
       const kt = this.world!.itemTemplates.get(mk.keyItem);
       if (!kt) continue;
       if (await this.grantItem(killer, kt.id)) {
-        this.send(killer, `${cap(kt.name)} falls from the dead ${tmpl.name.replace(/^an? /, "")}. [${kt.rarity}] (unclaimed)`);
+        this.send(killer, `${cap(kt.name)} falls from the dead ${tmpl.name.replace(/^an? /, "")}.${this.rarityTag(kt)} (unclaimed)`);
       } else {
         this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), kt.id]);
         this.stampFresh(creature.roomId, kt.id);
-        this.send(killer, `${cap(kt.name)} falls from the dead ${tmpl.name.replace(/^an? /, "")} — pack full, it lies here. [${kt.rarity}]`);
+        this.send(killer, `${cap(kt.name)} falls from the dead ${tmpl.name.replace(/^an? /, "")} — pack full, it lies here.${this.rarityTag(kt)}`);
       }
       this.sendCtx(killer);
     }
@@ -5392,7 +5419,7 @@ export class ZoneDO implements DurableObject {
           const rolled = this.rollTraits(g);
           if (rolled) this.groundRolled.set(`${id}@${creature.roomId}`, rolled);
           const shown = cap(this.floorLootName(id, creature.roomId));
-          this.send(killer, `${shown} clatters free of the fallen — it lies here. [${g.rarity}]`);
+          this.send(killer, `${shown} clatters free of the fallen — it lies here.${this.rarityTag(g)}`);
           this.roomFeed(creature.roomId, `${shown} spills from the dead ${tmpl.name.replace(/^an? /, "")}.`, killer.pubkey, false); // local: loot on the ground is a shopping-list beacon
         }
       }

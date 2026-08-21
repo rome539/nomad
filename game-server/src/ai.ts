@@ -36,7 +36,7 @@ import {
   QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
-  HUNT_RANGE, HUNT_RECHECK_MS, MORPHS,
+  HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -3039,6 +3039,28 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
 export function airborne(creature: Creature, now = Date.now()): boolean {
     return creature.airborneUntil !== undefined && now < creature.airborneUntil;
   }
+
+// THE HILL IS TOLD (rome, 2026-08-21). The King answers a fight out loud — his
+// phase line rolls through the whole fortress on FORTRESS_BANDS — and the drake
+// said nothing past the room it was standing in. A thing that size being set
+// upon is the loudest event the mountain has, and the mountain could not hear it.
+//
+// A ROLL PER BLOW, not a latch at the door (rome, 2026-08-21): BOSS_ROUSE_ODDS
+// on every blow that draws blood, so the hill hears the fight go on rather than
+// hearing it begin and then nothing. A long fight roars several times and a
+// short one may roar not at all, which is the honest version — the mountain
+// learns how badly it is going, not merely that it started.
+//
+// SOUND, not word, so a keeper's door still stops it. And the summit's own room
+// is deliberately left to its existing lines: standing in front of the thing you
+// do not need to be told it noticed.
+export function bossRouse(z: ZoneDO, creature: Creature, tmpl: MobTemplate): void {
+  if (!SUMMIT_BOSSES.has(creature.templateId) || !chance(BOSS_ROUSE_ODDS)) return;
+  z.roomFeed(creature.roomId, `${cap(tmpl.name)} answers — and the sound of it comes off the rock on every side at once.`);
+  z.roomSound(creature.roomId, "Something enormous is roaring {dir}, and it is not a warning.");
+  z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Far up the mountain something roars, long and level, and does not stop when it should — and then the sound of it comes back off the crags a second time. Somebody is fighting the thing at the top.");
+  z.creatureNoise(creature.roomId);
+}
 
   // The King does not mind that you came — until you make him stand.
 export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe: Session): void {
