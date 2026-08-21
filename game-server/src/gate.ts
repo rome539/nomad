@@ -6,6 +6,7 @@
 // there's no runtime import cycle.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
+import type { Region } from "./world";
 import { provokeGrudges } from "./ai";
 import { type ForgeRecipe, type CarriedItem, parseTraits, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner, hasTrait, mapInkLoad, journalLoad } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
@@ -17,7 +18,7 @@ import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOO
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP,
-  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
+  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, GATEHOUSE_ROOM, GATEHOUSE_BAND_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
   GATEHOUSE_RAIN, GATEHOUSE_AFTER_RAIN, GATEHOUSE_FOG, GATEHOUSE_COLD, GATEHOUSE_CROWS, GATEHOUSE_NIGHT, GATEHOUSE_DAY,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
   KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS } from "./zone-data";
@@ -2238,9 +2239,14 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
   const others = gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey);
   // Titled exactly as the status bar names it, so the client's knownRooms map
   // recognises it and paints it gold like any other room. It IS a room.
+  // WHICH KEEPER'S ROOM THIS IS (2026-08-21). The gate ROOM'S own region, the
+  // same question GATE_TELLINGS asks — not regionOf(), which answers "gate" at
+  // every threshold and would hand all fourteen doors the fortress's walls.
+  const band = (z.world!.rooms.get(session.roomId)?.region ?? "") as Region;
   const lines = [
     "The Gatehouse",
-    "A low room behind the gate, warm and close. The keeper's hatch is shut in the far wall; a bench runs under it, and the brazier keeps its coals. The dungeon is on the other side of a very old door, and it stays there.",
+    GATEHOUSE_ROOM[band]
+      ?? "A low room behind the gate, warm and close. The keeper's hatch is shut in the far wall; a bench runs under it, and the brazier keeps its coals. The dungeon is on the other side of a very old door, and it stays there.",
   ];
   // The wall chart, plastered by the door: the players' own map, in whatever
   // state they've left it. The line grows with the wall.
@@ -2431,8 +2437,12 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
 // on OUTDOOR_ROOMS, and the gatehouse is not a room at all — it is out of the
 // world entirely. The arc itself is global (the sky pool claims every band at
 // once), so the phase is the honest read for a roof standing under it.
-export function gatehouseAmbient(z: ZoneDO, avoid?: string): string {
+export function gatehouseAmbient(z: ZoneDO, avoid?: string, roomId?: string): string {
   const pool = [...GATEHOUSE_AMBIENCE, ...(isNight() ? GATEHOUSE_NIGHT : GATEHOUSE_DAY)];
+  // The band's own walls, on top of the shared room (2026-08-21) — the keeper,
+  // the fire and the bench belong to every gatehouse; the turf roof to one.
+    const amBand = (roomId ? z.world!.rooms.get(roomId)?.region ?? "" : "") as Region;
+  pool.push(...(GATEHOUSE_BAND_AMBIENCE[amBand] ?? []));
   const rain = events.phaseOf(z, "rain");
   if (rain === "active") pool.push(...GATEHOUSE_RAIN);
   else if (rain === "aftermath") pool.push(...GATEHOUSE_AFTER_RAIN);

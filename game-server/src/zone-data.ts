@@ -6512,6 +6512,64 @@ export const KEEPER_DELAY_MAX_MS = 45_000;
 // doing: the fire, the door, the bench, the keeper. Everything that depends on
 // the world outside now lives in a pool that is only reachable when that thing
 // is actually happening — gate.gatehouseAmbient assembles them.
+// EVERY KEEPER'S ROOM IS THE SAME ROOM, AND IT IS NOT (2026-08-21). The
+// gatehouse read identically at all fourteen doors — and read as the FORTRESS
+// everywhere, down to "the dungeon is on the other side of a very old door",
+// said inside a shepherd's shieling on a mountain. The keeper himself has been
+// band-aware since GATE_TELLINGS; the room he sits in was not.
+//
+// The furniture is deliberately constant — hatch, bench, fire, and a door with
+// the world on the far side of it — because that IS what a gatehouse is, and a
+// wanderer coming in from any band should know instantly where they are. What
+// changes is what the walls are made of and what is waiting outside them.
+// Absent from this table means the fortress line below, which is right: the
+// three old doors are the ones it was written for.
+export const GATEHOUSE_ROOM: Partial<Record<Region, string>> = {
+  road: "A low room off the paving, warm and close. The keeper's hatch is shut in the far wall; a bench runs under it, and the fire keeps its coals. The road is on the other side of the door, going both ways, and it will still be going both ways whenever you are ready for it.",
+  wood: "A hut of split timber, warm and close, the walls still going sticky where the fire gets at them. The keeper's hatch is shut in the far wall; a bench runs under it, and the fire keeps its coals. The wood stands on the other side of the door, right up against the walls, and it does not come in.",
+  crossing: "A house of tarred board set above the tideline, warm and close and dry, which is the whole of its argument. The keeper's hatch is shut in the far wall; a bench runs under it, and the fire keeps its coals. The water is on the other side of the door, going out or coming in, and the door knows the difference.",
+  mountain: "A turf-roofed room dug back into the hillside, low enough to hold its heat and warmer than it has any right to be. The keeper's hatch is shut in the far wall; a bench runs under it, and the fire keeps its turf. The mountain is on the other side of the door: a long way down, and a longer way up, and neither of them going anywhere.",
+};
+
+// ...and what you notice while you sit in it. Added to the shared pool below,
+// never replacing it — the keeper, the fire and the bench belong to every one
+// of these rooms, and only the walls change.
+export const GATEHOUSE_BAND_AMBIENCE: Partial<Record<Region, string[]>> = {
+  road: [
+    "Somebody has cut a tally of miles into the door frame, and given up partway.",
+    "Boots go past outside, unhurried, in no particular direction, and do not stop.",
+    "The keeper's ledger lies open at a page of names, most of them scored through.",
+    "A spare pair of hobnails sits on the sill, worn through at the heel, waiting on an owner who is not coming.",
+    "Dust off the paving has got in under the door and laid itself in a long grey wedge across the flags.",
+    "A horse blanket hangs by the fire, faintly steaming, and there is no horse anywhere about.",
+  ],
+  wood: [
+    "Sap creeps out of the wall timbers where the fire has got at them, beads, and does not fall.",
+    "Something moves in the leaf litter outside, close against the wall, and thinks better of it.",
+    "A bundle of green withies leans in the corner, tied, going brown at the cut ends.",
+    "The roof is living turf, and small roots have found their way through and hang down, patient about it.",
+    "Woodsmoke has been in these walls so long the walls have stopped smelling of anything else.",
+    "Out there a branch lets go of its rain, all at once, and is quiet again.",
+  ],
+  crossing: [
+    "Salt has dried white into the grain of the table, and nobody scrubs at it any more.",
+    "Every rope in here is stiff with salt and hung in the same loop, which is somebody's habit.",
+    "The window is glazed with horn, and the light coming through it is the colour of weak tea.",
+    "A line of dry weed has been swept into the corner by the door and left there.",
+    "Under the boards the water finds a gap and knocks, twice, and stops.",
+    "The tar in the wall seams goes soft near the fire and smells like the whole coast at once.",
+  ],
+  mountain: [
+    "Peat smoke goes up and finds the hole in the roof, mostly.",
+    "The wind gets at the turf above you and works on it, and the roof holds, and it starts again.",
+    "There is a stone in the wall worn into a hollow, at the height a hand goes to steady you coming in.",
+    "Somebody's crook stands in the corner, the horn of it polished away to nothing down one side.",
+    "The fire is turf and does not crack or spit — it sits there being warm, patiently.",
+    "Cold comes off the stone at your back however long the fire has been going.",
+    "The door has been hung to open inward, on account of the drifts.",
+  ],
+};
+
 export const GATEHOUSE_AMBIENCE = [
   "The keeper turns a page behind his hatch, and says nothing.",
   "The fire settles, and puts its light somewhere else on the wall.",
