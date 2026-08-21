@@ -7107,10 +7107,43 @@ export class ZoneDO implements DurableObject {
     return DEEP_ROOMS.has(roomId) ? "deep" : "upper";
   }
 
-  public roomFeedBands(bands: Set<string>, text: string, cls?: string): void {
+  /**
+   * A line for a whole band or several.
+   *
+   * SOUND STOPS AT THE DOOR; WORD DOES NOT (2026-08-21, on a report of the
+   * fortress bell being heard from inside a gatehouse). roomFeed has skipped
+   * anyone behind a door since the day the gatehouse was built — the gate's own
+   * noise does not carry through it — and this, the arc feed, never checked at
+   * all. So a wanderer sitting in the one room in the world whose entire job is
+   * being shut away from it heard every bell, every tide, every breath out of
+   * the deep, exactly as if the door were open.
+   *
+   * A blanket guard would have been wrong, though, and that is why this took a
+   * flag instead of a fix: the works announcements are the most gatehouse-
+   * relevant lines in the game, and the keeper's chalk is chalked ON that room's
+   * own hatch. The distinction the writing already draws is the one that works —
+   * half these lines open with the literal word "Word". So:
+   *
+   *   carries = false (default)  SOUND, or a thing seen. The bell, the tide, the
+   *                              deep's breath, lights over the fen. A closed
+   *                              door cuts it.
+   *   carries = true             WORD — news that travels because people carry
+   *                              it. It reaches you inside, because somebody in
+   *                              there with you is the one telling you.
+   *
+   * The relay copy is never gated: a watcher is watching the world, not sitting
+   * in a room of it.
+   */
+  public roomFeedBands(bands: Set<string>, text: string, cls?: string, carries = false): void {
     const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: "*", text, cls } : { v: 0, kind: 24913, room: "*", text });
     for (const s of this.sessions.values()) {
       if (!bands.has(this.bandOf(s.roomId))) continue;
+      // BEHIND THE DOOR, not merely stepped-out: outOfWorld() is also true for
+      // the lockbox crouch at a gate (gate.ts sets `away` for it and says so —
+      // opening your pack is not a step inside), and a wanderer kneeling over a
+      // box in the open air should hear the bell like anyone else standing there.
+      const behindTheDoor = this.inGatehouse.has(s.pubkey) && this.world!.entryRooms.has(s.roomId);
+      if (!carries && behindTheDoor) continue; // sound does not reach through it
       try { s.ws.send(frame); } catch {}
     }
     this.relayFeed("mudzone-" + (this.world?.zone ?? "door"), text);

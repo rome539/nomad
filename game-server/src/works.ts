@@ -250,7 +250,7 @@ export function tickWorks(z: ZoneDO, now: number): void {
     z.roomFeedBands(
       SURFACE_BANDS,
       `Word goes round that the works at ${name} are finished — the boards are off the door, and the fire is lit.`,
-      "evt",
+      "evt", true, // WORD: a door reopening is exactly the news a gatehouse wants
     );
   }
 
@@ -308,6 +308,6 @@ function closeTheDoor(z: ZoneDO, gate: string): void {
   z.roomFeedBands(
     SURFACE_BANDS,
     `Word comes down the road: ${name} is shutting up for works. The door will be boarded until it is done.`,
-    "evt",
+    "evt", true, // WORD: and so is a door closing
   );
 }
