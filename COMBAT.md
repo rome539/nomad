@@ -471,20 +471,24 @@ SELECT slot, SUM(traits LIKE '%wardhide%'), SUM(traits LIKE '%mailward%'),
  GROUP BY slot;
 ```
 
-**What it said** (against the live DB — 161 gear items at 250–252, **170 after
-the first drop of 253–254**):
+**What it said** (against the live DB — 161 gear items at 250–252, **190 after
+253–258**):
 
-- **Weapons (63) — the multiplicative axis.** The archetype grid is class
+- **Weapons (69) — the multiplicative axis.** The archetype grid is class
   (edge/blunt/pierce/plain) × speed (1/2/3) × sweep (1/2/3) × reach ×
-  two-handed ≈ **144 cells**; ~36 are filled. The first drop (254) closed:
-  speed-2 reach (short spear), speed-2 sweep (paired cleavers), reach+blunt
-  (polehammer), wicked+reach (grave glaive), tripping×two-handed (lash-flail)
-  and the brand line's second rung (pine-brand). Still entirely EMPTY —
-  each a genuinely new weapon, not a stat clone — include: tripping×sweep,
-  pierce+sweep, wicked×sweep/two-handed, the rest of the speed-3 line, and
-  the brand line's third+ rungs. ≈ **24–34 still-open archetypes × their
-  rarity ladders ≈ 90–130 more weapons.**
-- **Armor family (armor 27 / helm 22 / cloak 21 / feet 18 = 88) — the trait-
+  two-handed ≈ **144 cells**; ~42 are filled. Closed so far: speed-2 reach
+  (short spear), speed-2 sweep (paired cleavers), reach+blunt (polehammer),
+  wicked+reach (grave glaive), tripping×two-handed (lash-flail), the brand
+  line's second and third rungs (pine-brand, tar-brand), pierce+sweep
+  (boar spear), the two-handed edge's first sub-epic rung (greatblade),
+  the speed-3 line's second member (stiletto), a one-handed sweep-2 rare
+  (reaping-blade) and the first fast blunt (riding-mace). Still entirely
+  EMPTY — each a genuinely new weapon, not a stat clone — include:
+  one-handed wicked+sweep, two-handed blunt below epic (poleaxe stands
+  alone at epic), the speed-3 line's further rungs, the brand line's fourth
+  rung, and the plain class's missing legendary. ≈ **18–28 still-open
+  archetypes × their rarity ladders ≈ 70–110 more weapons.**
+- **Armor family (armor 36 / helm 24 / cloak 25 / feet 19 = 104) — the trait-
   cell axis, filtered by per-slot validity.** The naive count — 13 traits × 4
   slots = 52 cells — is wrong for exactly the reason that matters: traits are
   gear-specific. Validity per slot is the code's own answer: `TRAIT_POOL`
@@ -495,34 +499,34 @@ the first drop of 253–254**):
 
   | trait | armor | helm | cloak | feet | printed today |
   |---|---|---|---|---|---|
-  | wardhide | ✓ | ✓ | ✓ | — | armor 4 · helm 2 · cloak 3 |
+  | wardhide | ✓ | ✓ | ✓ | — | armor 5 · helm 2 · cloak 3 |
   | mailward | ✓ | ✓ | ✓ | — | armor 2 · helm 2 · cloak 1 |
   | padded | ✓ | ✓ | — | — | armor 6 · helm 6 |
-  | slick | ✓ | — | ✓ | ✓ | armor 2 · cloak 4 · feet 2 |
-  | quiet | — | ✓ | ✓ | ✓ | helm 4 · cloak 3 · feet 8 |
-  | hooded | — | ✓ | ✓ | — | helm 1 · cloak 3 |
+  | slick | ✓ | — | ✓ | ✓ | armor 2 · cloak 4 · feet 3 |
+  | quiet | — | ✓ | ✓ | ✓ | helm 4 · cloak 4 · feet 9 |
+  | hooded | — | ✓ | ✓ | — | helm 1 · cloak 4 |
   | strapped | ✓ | ✓ | ✓ | — | armor 4 · helm 1 · cloak 2 |
   | staunched | ✓ | ✓ | ✓ | ✓ | armor 2 · helm 2 · cloak 1 · feet 2 |
-  | fleeced | ✓ | ✓ | ✓ | — | armor 1 · helm 1 · cloak 1 (253) |
-  | watertight | ✓ | — | ✓ | — | cloak 1 |
-  | pocketed | ✓ | — | ✓ | — | cloak 1 |
-  | glinting | ✓ | ✓ | — | — | helm 1 |
-  | spiked | ✓ | ✓ | — | — | armor 1 |
-  | **valid cells** | **11** | **10** | **10** | **3** | **30 printed · 4 open** |
+  | fleeced | ✓ | ✓ | ✓ | — | armor 2 · helm 1 · cloak 3 |
+  | watertight | ✓ | — | ✓ | — | cloak 3 · armor 2 |
+  | pocketed | ✓ | — | ✓ | — | cloak 2 · armor 2 |
+  | glinting | ✓ | ✓ | — | — | helm 2 · armor 2 |
+  | spiked | ✓ | ✓ | — | — | armor 3 · helm 2 |
+  | **valid cells** | **11** | **10** | **10** | **3** | **34 printed · 0 open** |
 
-  The 4 open cells (watertight/pocketed/glinting × armor; spiked × helm) ×
-  the tier dial (body armor spans armor 1–5, the other three slots 3 rungs
-  each) ≈ **~8–12 new pieces** — plus ~5–8 valid trait-pair pieces
-  (watertight+pocketed cargo coat, spiked+wardhide brute suit, fleeced+
-  watertight storm cloak, glinting+spiked bright crown). **≈ 15–20
-  armor-family pieces left.** The four newest traits are each a one-piece
-  family, now including fleeced (printed by 253 after being lottery-only).
-  **Feet are trait-complete** (3/3 valid cells, full rarity ladder) — their
-  only dial left is armor value (0–2, vs body's 1–5).
-- **Shields (19) — the specials axis.** The block dial has 9 steps and all 9
+  **The matrix is complete — every valid trait × slot cell is printed
+  (255), the pair tier (257) gave the new traits their second pieces, and
+  the depth drop (259) climbed them past rare** (watertight/fleeced rares,
+  pocketed epic, spiked:2 epic, glinting legendary) and put the rat mantle
+  in as the first quiet cloak below epic. What remains is the long tail:
+  further rarity rungs and pairs. **Feet are trait-complete** (3/3 valid
+  cells, full rarity ladder) — their only dial left is armor value (0–2,
+  vs body's 1–5).
+- **Shields (23) — the specials axis.** The block dial has 9 steps and all 9
   are printed, so the free cells are specials × steps: wall 8, thorns 6,
-  riposte 4, **mancatcher 1** — plus `spiked`/`glinting` shields (0 today).
-  ≈ **20–25 more** before repeats.
+  riposte 5, mancatcher 2, spiked 1 (the targe, 258), glinting 1 (the
+  mirror targe, 255). The sparse cells now: mancatcher and spiked at more
+  steps, riposte on the mid steps. ≈ **15–20 more** before repeats.
 - **The multiplier on top.** Every template × its slot's rolled-lottery pool
   (22% roll) × the flaw pool means one printed row is really ~5–9 distinct
   pieces — so the headline is conservative.
@@ -530,19 +534,29 @@ the first drop of 253–254**):
   weapon since 252 — was the one piece of gear in the whole world with NO
   way to be obtained (no forge, fence, cache, mob, or floor). 253 fixed it
   (forge + shelf + the burner's kist) and every new piece since ships with
-  ≥2 channels by rule.
+  ≥2 channels by rule. **Channels must match the world's own character,
+  not a blanket rule** (262): the forge is the trophy-economy bench, so new
+  recipes carry materials (wolf-pelt, rat-sinew, boar-tusk…) except the
+  bare essentials; the keeper's shelf carries commons through working rares
+  and has NEVER carried an epic; the pair-finds live in boxes, not stock.
+  **And the top of the ladder spreads across the world, not the fortress
+  alone** (260): the road, the bounds, the cart, the coast, the ruin, the
+  toll and the mountain each carry a share of the epics and legendaries at
+  the world's own low odds — the deep boxes keep theirs, but nothing good
+  lives ONLY in the fortress.
 
 **Headline: ~150–200 more distinct items sit inside the current trait set —
 and that number was never weapons alone.** After the per-slot validity
 filter the split is ~**120–160 weapons** (their grid — class × speed × sweep
 × reach × two-handed — is inherently weapon-shaped, so the filter barely
 touches it) + ~**20–30 armor family** + ~**20–25 shields** ≈ **~160–215
-total**, of which the armor side is only ~25% — **~9 of it shipped in
-253–254 (fleeced ×3 + six weapons), leaving ~150–205.** Every new trait
-opens a few new valid cells, not six (it only counts where it makes sense),
-and the universal dials (tempered/greased/balanced + the flaw pool) already
-roll on every slot — they are the multiplier, not the grid. The real
-constraints are not traits: they are distribution channels (forge / fence /
-cache / mob `gear_item` / ground spawns — every piece needs ≥2), the rarity
-ladders per class (each rung must earn its tier), the balance audit, and a
-description worth reading — in that order.
+total**, of which the armor side is only ~25% — **~35 of it shipped in
+253–259 (fleeced ×3, Phase D's five, six pairs, three shields, eleven
+weapons, the rat mantle and five depth-rung armors), leaving ~125–180.** Every new trait opens a few new valid cells,
+not six (it only counts where it makes sense), and the universal dials
+(tempered/greased/balanced + the flaw pool) already roll on every slot —
+they are the multiplier, not the grid. The real constraints are not traits:
+they are distribution channels (forge / fence / cache / mob `gear_item` /
+ground spawns — every piece needs ≥2), the rarity ladders per class (each
+rung must earn its tier), the balance audit, and a description worth
+reading — in that order.
