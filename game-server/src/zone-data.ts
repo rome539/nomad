@@ -5642,7 +5642,17 @@ export const SEA_INSTRUMENTS = new Set<string>([
   "the-parting", "the-far-parting",       // the fingerposts, where you choose
   "the-bell-buoy",                        // it rings the state, if you know the ringing
 ]);
-export const SEA_HEARD_BANDS = new Set<string>(["crossing"]);
+export const SEA_HEARD_BANDS = new Set<string>(["crossing"]); // the TIDE, on the crossing's own water
+// ROAD COUNTRY'S OWN NEWS (2026-08-21). The carrier walking the paving and the
+// beck coming up over the low way are both ROAD events — every room of the
+// spate's course and both ends of the carrier's route carry region "road" — and
+// both were being broadcast on SEA_HEARD_BANDS, which is the crossing alone. So
+// the road never heard that its own beck was rising or that a carrier was on it,
+// and the crossing got word about a road it is not standing on. It is the
+// surface minus the mountain: road news travels the roads, and the tops are
+// above all of it. "gate" is here so the fortress's own three doors hear it —
+// the other eleven gatehouses band as their own region and are already covered.
+export const ROAD_HEARD_BANDS = new Set<string>(["gate", "road", "out", "den", "wood", "crossing"]);
 export const SEA_CREST_NORMAL = 2;   // an ordinary tide tops out at half flood...
 export const SEA_CREST_SPRING = 3;   // ...and a spring takes the half-tide post and the weed flat
 // THE SEA HAS NO CLOCK OF ITS OWN (rome, 2026-08-11: it "changes too fast").
@@ -6292,9 +6302,31 @@ export const SURFACE_BANDS = new Set<string>(["gate", "out", "road", "wood", "mo
 // close-up prose: locals get what it is doing to them, everyone else gets what
 // the stone told them about it. Two different lines, never the same line twice.
 export const DEEP_HEARD_BANDS = new Set<string>(["gate", "upper", "warrens"]);   // the deep's own arcs: the exhale, the marrow-song, the tide
-export const KEEP_HEARD_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den", "crossing", "deep", "warrens"]); // the BELL — a fortress bell is heard from the road, and through the floor
+// The BELL — a fortress bell is heard from the road, and through the floor.
+//
+// SET BY THE MAP, NOT BY THE LIST (2026-08-21). The cote stands at (-1,0), and
+// measuring every band's nearest edge from it settles both halves of this:
+//
+//     out ~3 · road ~6 · wood ~23 · den ~25 · crossing ~45 · mountain ~69
+//
+// THE CAMP COULD NOT HEAR IT. "out" is the siege ground — the Marshal's
+// lodging, the horse lines, the Sutlers' Row, the battery, the sap head — an
+// army sitting three to six rooms from the bell, and the one band in the world
+// that was left off this set. It is nearer the cote than anything else there is.
+//
+// THE MOUNTAIN COULD, AND SHOULD NOT. "mountain" was written in on the day the
+// bell got its voice, nine days before the mountain existed as a place — a word
+// for somewhere unbuilt. What shipped sits ~69 out, three times the wood and
+// half again the crossing, the farthest ground in the world from this bell. A
+// hand-bell in a cote does not reach it, and it read wrong from up there in play.
+export const KEEP_HEARD_BANDS = new Set<string>(["gate", "out", "road", "wood", "den", "crossing", "deep", "warrens"]);
 export const FEN_HEARD_BANDS = new Set<string>(["gate", "wood", "mountain", "den", "crossing"]); // the fen's lights, to the rest of the surface
-export const WANT_HEARD_BANDS = new Set<string>(["road", "wood", "mountain", "den", "crossing"]); // the keeper's chalk, out to where the hunters are
+// The keeper's chalk, out to where the hunters are — AND to the gates, which is
+// where it is written (2026-08-21). The line reads "Word comes up from the gate"
+// and the fortress's own three gatehouses were the only doors in the world that
+// never got it: they band as "gate", which was missing here, while the other
+// eleven band as their own region and had it all along.
+export const WANT_HEARD_BANDS = new Set<string>(["gate", "road", "wood", "mountain", "den", "crossing"]);
 export const GLOAM_HEARD_BANDS = new Set<string>(["gate", "upper", "deep", "warrens"]); // the walking dark: the whole fortress notices a room go out
 
 // WHAT A REGION IS CALLED, in one place. The map frame and the wall chart each
