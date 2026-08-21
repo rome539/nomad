@@ -4245,6 +4245,11 @@ export const INDOOR_ROOMS = new Set<string>([
   "the-lean", "the-vent", "the-last-shelter",                            // the territory's roofed three
   "the-under-step", "the-shelf-walk", "the-warm-under", "the-heat-under", // ...and the low line, which is
   "the-lower-warm", "the-lower-flags",                                   // one long overhang end to end
+  // AND THE ONE THE ROOF TEST ALREADY CAUGHT AND NOBODY LISTED (2026-08-21):
+  // the burn's slot is "roofed in places by boulders that fell in and jammed"
+  // and its own last sentence is that you cannot see the sky from it. It was
+  // being rained on and told the sky over it had gone black.
+  "the-beck-narrows",
 ]);
 // A day/night world-clock (rome, 2026-07-22): every OUTDOOR room only, deep/
 // warrens/keep are always their own dark regardless. Deliberately faster than
@@ -4880,6 +4885,49 @@ export const BLEED_ODDS = new Map<string, number>([
   ["wayman", 0.30],              // a knife, held low and easy — the cutthroat's rate, and the same reason
   ["the-keeper-of-the-holding", 0.25],
   ["the-woodward", 0.30],        // the hardest thing on the surface, level with the hound's jaws
+  // THE MOUNTAIN, LISTED (rome, 2026-08-21, on the drake). The comment above
+  // says every current bleeder is listed, and it stopped being true the day the
+  // mountain shipped: migs 227-247 put TWENTY-FIVE bleeders on that hill and
+  // none of them here, so every one fell through to the every-hit fallback and
+  // opened a guaranteed armor-ignoring wound on every landed blow. The drake is
+  // the worst of it — bleed 3, boss, and it lands often — but the whole tier
+  // ladder above the cloud line was doing it. Exactly the surface's own
+  // 2026-08-02 bug, one region later.
+  //
+  // Tiered against the ladder above, not invented. The adders keep their own
+  // rate, because the adder rule is the one deliberate outlier in this table:
+  // a small animal that cannot take a hit and whose entire threat is what it
+  // leaves in you (gill-adder 0.55, fen-viper 0.50).
+  ["scarp-raven", 0.12],         // a beak, worked at one spot
+  ["hill-fox", 0.12],            // fox teeth: dirty, not deep — the dog's rate
+  ["snow-fox", 0.13],
+  ["ermine", 0.15],              // a mustelid holds on, which is the whole difference
+  ["red-stag", 0.15],            // a tine goes in; it is not a cutting animal
+  ["carrion-vulture", 0.15],
+  ["hill-wolf", 0.18],           // level with the grey wolf: wolves work the same wound over
+  ["bone-breaker", 0.18],
+  ["wildcat", 0.20],             // all four feet, and it uses them
+  ["brooding-vulture", 0.20],    // over a nest, which is what makes it worse than the others
+  ["glutton", 0.20],
+  ["hill-eagle", 0.22],          // talons that close and do not open
+  ["eagle-owl", 0.22],
+  ["great-vulture", 0.22],
+  ["lead-wolf", 0.22],           // the dire wolf's rate: the same jaws, half again the size
+  ["the-dancer", 0.22],
+  ["the-tom", 0.25],
+  ["lynx", 0.25],
+  ["the-gaunt", 0.25],
+  ["the-old-glutton", 0.25],
+  ["eyrie-holder", 0.28],
+  ["cave-lion", 0.30],           // top of the mountain's mammals, level with the woodward
+  ["stone-adder", 0.50],         // the adder rule, one rank up from the gill
+  ["the-gravid-adder", 0.55],
+  // THE SUMMIT. The hardest jaws in the game, and still a roll — the drake's
+  // threat was never meant to be a wound you cannot stop, it is the breath and
+  // the dive. At bleed 3 a guaranteed cut every hit made the fight unwinnable
+  // by anything that had to stand in front of it.
+  ["the-drake", 0.35],
+  ["the-pale-drake", 0.38],
 ]);
 // HOBBLE: leg-goers can hamstring you on a hit — a per-hit chance, tiered by
 // threat (only things that go low: hyenas at the legs, the hound, the deep's

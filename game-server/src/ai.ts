@@ -8,7 +8,7 @@ import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
 import { hasTrait } from "./world";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, isNight, isFullMoon } from "./zone-util";
+import { cap, isNight, isFullMoon, morphOf } from "./zone-util";
 import * as events from "./events";
 import { underCover, MAP_QUARTERS } from "./detail";
 import {
@@ -36,7 +36,7 @@ import {
   QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
-  HUNT_RANGE, HUNT_RECHECK_MS,
+  HUNT_RANGE, HUNT_RECHECK_MS, MORPHS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -240,6 +240,38 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
       }
     }
   }
+
+// THE CLOSE READ of a creature: its prose, its own markings, how it fares, what
+// it is doing, and what it is carrying. This is what `look <creature>` prints
+// — and now what `study` prints under its own line, because setting a thing
+// down in the journal without ever saying what the thing looked like told the
+// player only that they had written something (rome, 2026-08-21).
+//
+// It lives here rather than in verbs.ts so the two callers cannot drift: a
+// creature's live state is read in ONE place, and every clause that ever gets
+// added to a close read reaches the journal too, for free.
+export function creatureRead(z: ZoneDO, creature: Creature, viewer: string): string {
+  const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+  // The fog takes the close read the same way it takes it off a wanderer: you
+  // can see WHAT it is, and nothing of how it fares or what it carries. (It
+  // used to print the full description and exact condition, then finish with
+  // "you cannot read it" — the sentence argued with itself.)
+  if (events.foggy(z, creature.roomId)) {
+    return `${tmpl.description} It is a grey shape in the fog — you can read nothing off it: not its wounds, not what it carries.`;
+  }
+  const tell = creatureTell(z, creature, viewer);
+  const bears = z.bearsClause(creature); // the burdened one shows what it took
+  // The close read is where a hoard becomes a decision: the room line only says
+  // it's laden, but standing in front of it you can count the pile and work out
+  // whether that fight is worth what it will cost you.
+  const hoard = z.hoardManifest(creature);
+  // Its own markings, if it is the kind of animal that has any (MORPHS). Set
+  // before the condition, because this is what the thing IS and the condition
+  // is what has happened to it since.
+  const mark = morphOf(creature.id, creature.templateId, MORPHS);
+  return `${tmpl.description}${mark ? ` ${mark}` : ""} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}`
+    + (hoard || (bears ? ` It is ${bears.slice(2)}.` : ""));
+}
 
   // The legible deep sim (Qud's lesson): a creature's live state reads in the
   // prose, so a wound, a hunt, or a hungry eye on a rival is visible in the

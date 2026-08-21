@@ -5915,9 +5915,15 @@ export class ZoneDO implements DurableObject {
         // lit FOR, and telling a man he can see past "your light" when the
         // flame is in his companion's fist is the same small lie as the rest of
         // this (rome, 2026-08-03).
+        // AND IT SAYS WHICH ROOM THIS IS (rome, 2026-08-21). "Out here" assumed
+        // you knew you were under sky, which on a mountain you do not: a notch
+        // in a crest, a slot, a gully and a walled bowl all read as enclosed,
+        // and the roofed rooms three paces away are enclosed. The line names
+        // the open sky, so the one signal that separates the two kinds of room
+        // is in the sentence that only ever fires in one of them.
         : this.carriesLight(session) || this.roomLit(room.id)
-          ? "Night's fully down out here — past your light, it's black."
-          : "Night's fully down out here — past the light you're standing in, it's black.");
+          ? "Night's fully down and the sky over you is open and black — past your light, so is everything else."
+          : "Night's fully down and the sky over you is open and black — past the light you're standing in, so is everything else.");
     }
 
     const exits = world.exits.get(room.id) ?? [];

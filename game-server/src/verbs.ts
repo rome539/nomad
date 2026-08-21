@@ -11,7 +11,7 @@ import {
   loadLeaderboard, leaderboardRank,
   setItemLoreId, deedsBump, trait, hasTrait, parseTraits,
 } from "./world";
-import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState, morphOf } from "./zone-util";
+import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
 import * as ai from "./ai";
 import * as light from "./light";
@@ -22,7 +22,6 @@ import * as den from "./den";
 import * as detail from "./detail";
 import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS,
-  MORPHS,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
@@ -610,29 +609,9 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // An unseen lurker is not in the room yet — naming it must not find it.
   const creature = spotted && z.lurkerUnseen(spotted, session) ? null : spotted;
   if (creature) {
-    const tmpl = world.mobTemplates.get(creature.templateId)!;
-    // The fog takes the close read the same way it takes it off a wanderer: you
-    // can see WHAT it is, and nothing of how it fares or what it carries. (It
-    // used to print the full description and exact condition, then finish with
-    // "you cannot read it" — the sentence argued with itself.)
-    if (events.foggy(z, session.roomId)) {
-      return z.send(session, `${tmpl.description} It is a grey shape in the fog — you can read nothing off it: not its wounds, not what it carries.`);
-    }
-    // The examine reads its live state in a full sentence (the room glance gets
-    // the same tell as a terser clause) — a wound, a hunt, a hungry eye on a rival.
-    const tell = ai.creatureTell(z, creature, session.pubkey);
-    // The burdened one is identifiable on a close look: what it took, it shows.
-    const bears = z.bearsClause(creature);
-    // The close read is where a hoard becomes a decision: the room line only
-    // says it's laden, but standing in front of it you can count the pile and
-    // work out whether that fight is worth what it will cost you.
-    const hoard = z.hoardManifest(creature);
-    // Its own markings, if it is the kind of animal that has any (MORPHS). Set
-    // before the condition, because this is what the thing IS and the condition
-    // is what has happened to it since.
-    const mark = morphOf(creature.id, creature.templateId, MORPHS);
-    return z.send(session, `${tmpl.description}${mark ? ` ${mark}` : ""} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}`
-      + (hoard || (bears ? ` It is ${bears.slice(2)}.` : "")));
+    // The close read lives in ai.ts, because `study` prints it too and the two
+    // must never drift apart.
+    return z.send(session, ai.creatureRead(z, creature, session.pubkey));
   }
   // A chest is a FIXTURE of the room, and 'look' could never see one (rome,
   // 2026-07-26) — every cache carries real description prose in D1 that nothing

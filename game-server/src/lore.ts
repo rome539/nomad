@@ -10,6 +10,7 @@ import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId, 
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import { uuid } from "./rng";
 import * as den from "./den";
+import * as ai from "./ai"; // the close read a `study` prints under its own line
 import { WOOD_QUARTERS, MAP_QUARTERS, MOB_LORE } from "./detail";
 import {
   MAP_ITEMS, DETAILED_MAP, FULL_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
@@ -619,8 +620,15 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   const row = rows.find((r) => r.templateId === tmpl.id);
   const tier = journalTier(row?.kills ?? 0, true, tmpl.level);
   const want = killsForAccount(tmpl.level) - (row?.kills ?? 0);
+  // AND SAY WHAT YOU SAW (rome, 2026-08-21). Writing a thing down without ever
+  // describing it told the player only that they had written something — you
+  // could study a bone-breaker, be told the account wants five more kills, and
+  // still not know what a bone-breaker is. The close read is the same one
+  // `look` gives, called from the one place both share (ai.creatureRead), so a
+  // clause added to a close look reaches the journal too.
   z.send(session, `You watch ${tmpl.name} a while and set down what you see.` +
-    (tier < 3 ? ` (Its full account wants ${want} more kill${want === 1 ? "" : "s"}.)` : " Its account is complete.") + opening, "study");
+    (tier < 3 ? ` (Its full account wants ${want} more kill${want === 1 ? "" : "s"}.)` : " Its account is complete.") + opening
+    + "\n" + ai.creatureRead(z, creature, session.pubkey), "study");
   z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey, false);
   z.sendCtx(session); // drop the now-redundant `study` chip without waiting for the next refresh
 }
