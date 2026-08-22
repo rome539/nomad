@@ -2130,6 +2130,22 @@ export const DRINKERS = new Set([
   "the-baited-bear", "the-chain-breaker",                       // the beck is the one place on the east road you can count on meeting it
   "masterless-dog", "lead-dog",                                 // the road's strays
 ]);
+// HOW FAR AN ANIMAL WILL WALK FOR A DRINK (rome, 2026-08-22). Its own radius,
+// NOT TERRITORY_RADIUS, which the thirst lookup used to borrow: three rooms is
+// the right leash for idle wandering and far too short for a watering run, and
+// the two wants are not the same want. Measured on the mountain, where every
+// hole sits above x92 and the whole foot has none: at 3 only 34 of 137 drinking
+// bodies could ever reach water — the other 103 rolled thirst, found nothing in
+// range and reset the clock forever, and the eyrie holder never drank at all.
+// At 10 it is 112 of 137. Past that the curve flattens (12 buys four more, 20
+// buys fifteen) and the walk stops being a walk.
+//
+// A run is ~1 room every 3-10s once it sets out, so ten rooms is a minute or
+// two of purposeful movement — and thirst only comes every 2-4 hours, so this
+// is a rare errand, not a migration.
+export const THIRST_RADIUS = 10;
+
+
 export const THIRST_MIN_MS = 2 * 3_600_000;
 export const THIRST_MAX_MS = 4 * 3_600_000;
 // CALLS: one primitive, three meanings — prey calls AWAY (a fleeing rat's
@@ -5844,6 +5860,19 @@ export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "we
 // BETTER instead of foul: kind "cure" in the rot sweep looks the output up here.
 // rome (2026-07-17): "should we have a path to making preserved food?" — this is it.
 export const SMOKEHOUSE_ROOM = "smokehouse";
+// ...AND THE MOUNTAIN'S OWN (rome, 2026-08-22). One rack-room in the world meant
+// every haunch cut five tiers up walked the length of everything to be kept —
+// longer than raw meat lasts (1h fresh, gone at 2.5h). The gate racks were
+// always the safe answer, but they are the SLOW one (GATE_CURE_MS 10min vs
+// CURE_MS 3), so the hill had no fast one at all.
+//
+// The Hollow Under, and it needs nothing written for it: a dry floor under an
+// erratic, out of the wind and the rain and the sight of everything, and its own
+// last line is that somebody lived in there and left a ring of stones for a fire.
+// NOT a sanctuary and NOT a gate, which is the whole point — the deep racks buy
+// their speed with the delve down, and these buy it with a roofless hillside at
+// the door. A safe fast rack would beat both of the ones that already exist.
+export const SMOKEHOUSE_ROOMS = new Set<string>([SMOKEHOUSE_ROOM, "the-hollow-under"]);
 export const CURE_MS = 3 * 60_000; // 3 min — long enough to be a wait you leave and risk, short enough you circle back mid-delve
 export const GATE_CURE_MS = 10 * 60_000; // the SAFE gate smokehouse: slower than the deep racks (their only edge is speed), but it can't be lifted and cures while you're away — you collect it black and keeping next time you're at the gate
 export const CURE_RECIPES: Record<string, string> = {
@@ -5868,6 +5897,12 @@ export const CURE_RECIPES: Record<string, string> = {
   // AND they spoil, and that trade is what makes them delicacies), so nothing
   // about the top of the ladder moves.
   "deer-haunch":  "smoked-haunch",
+  // THE THREE NEW MEATS (267). Raw meat keeps the way raw meat keeps. The two
+  // haunches smoke to the haunch like the venison; the hare is a small lean
+  // animal and dries to the modest ration, the same call rat-meat gets.
+  "goat-haunch":  "smoked-haunch", // 8 → 12, keeping
+  "boar-side":    "smoked-haunch", // 13 → 12: you trade a point of heal for a meal that travels
+  "hare-carcass": "dried-meat",    // 7 → 8, keeping
 };
 // ---- the fire: a catch cooked where you caught it -------------------------
 //

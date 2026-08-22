@@ -16,7 +16,7 @@ import { hasTrait } from "./world";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
-  SMOKEHOUSE_ROOM, CURE_RECIPES, COOK_RECIPES, MILESTONES,
+  SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
 } from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
@@ -194,9 +194,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   if (edible) suggest.push(`eat ${shortName(world.itemTemplates.get(edible.itemId)!.name)}`);
   // Standing in the smokehouse with raw meat and a torch to light the racks: the
   // chip that teaches the one station most players would never think to try.
-  if (session.roomId === SMOKEHOUSE_ROOM) {
+  if (SMOKEHOUSE_ROOMS.has(session.roomId)) {
     const raw = session.items.find((c) => CURE_RECIPES[c.itemId] && c.serial === null);
-    const fireLit = Date.now() < (z.groundTorch.get(SMOKEHOUSE_ROOM) ?? 0);
+    const fireLit = Date.now() < (z.groundTorch.get(session.roomId) ?? 0);
     if (raw && (fireLit || session.items.some((c) => c.itemId === TORCH_ITEM && c.serial === null))) {
       suggest.push(`cure ${shortName(world.itemTemplates.get(raw.itemId)!.name)}`);
     }

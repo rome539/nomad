@@ -30,7 +30,7 @@ import {
   RAVEN_SCOOPERS, RAVEN_BARTER_ODDS, RAVEN_BARTER_WAIT_MS,
   DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, NATURAL_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP, FEN_ROOMS, FEN_CARRY_CAP,
   JOURNAL_ITEM,
-  SMOKEHOUSE_ROOM, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS, COOK_RECIPES,
+  SMOKEHOUSE_ROOM, SMOKEHOUSE_ROOMS, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS, COOK_RECIPES,
   MILESTONES,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor, worksBar } from "./gate";
@@ -48,7 +48,7 @@ export async function cmdSmoke(z: ZoneDO, session: Session, arg = ""): Promise<v
   // smoking a raw haunch means CURING it, not lighting a cigarette. Delegate —
   // awaited (2026-08-20): the fire-and-forget call escaped the handler's own
   // error path, so a mid-cure D1 failure surfaced as an unhandled rejection.
-  if (arg && session.roomId === SMOKEHOUSE_ROOM) {
+  if (arg && SMOKEHOUSE_ROOMS.has(session.roomId)) {
     const c = z.findCarried(session, arg);
     if (c && CURE_RECIPES[c.itemId]) return cmdCure(z, session, arg);
   }
@@ -148,21 +148,24 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
 export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
   if (z.outOfWorld(session)) return cureAtGate(z, session, arg); // behind the gate door: the SAFE racks
-  if (session.roomId !== SMOKEHOUSE_ROOM) {
-    return z.send(session, "There are no smoke-racks here. The old smokehouse lies deep, below the larder — or cure it safe at any gate ('cure' behind the door).");
+  if (!SMOKEHOUSE_ROOMS.has(session.roomId)) {
+    return z.send(session, "There are no smoke-racks here. The old smokehouse lies deep below the larder, and there is a fire-ring under the erratic at the foot of the mountain — or cure it safe at any gate ('cure' behind the door).");
   }
+  // Whichever rack-room you are standing in owns this cure: the fire, the
+  // hanging pieces and the floor are all THIS room's, not the deep one's.
+  const racks = session.roomId;
   // The racks share ONE fire (groundTorch — the same lit-floor flame that lights
   // the whole room). A torch lights it, and while it burns you can load the racks
   // with as many joints as you like, no fresh torch each time. It only guts out
   // after TORCH_BURN_MS.
-  const lit = Date.now() < (z.groundTorch.get(SMOKEHOUSE_ROOM) ?? 0);
+  const lit = Date.now() < (z.groundTorch.get(racks) ?? 0);
   if (!arg) {
     const haveRaw = session.items.some((c) => CURE_RECIPES[c.itemId] && c.serial === null);
     const haveTorch = session.items.some((c) => c.itemId === TORCH_ITEM && c.serial === null);
     // What's already hanging, and how long it has yet — so a hung haunch isn't an
     // act of faith with no clock (rome, 2026-07-17: "it doesnt let someone know
     // it will be done in 3 mins"). Reads the live cure-timers off the rot clock.
-    const curing = z.rot.filter((r) => r.kind === "cure" && r.roomId === SMOKEHOUSE_ROOM);
+    const curing = z.rot.filter((r) => r.kind === "cure" && r.roomId === racks);
     let hanging = "";
     if (curing.length) {
       const left = Math.min(...curing.map((r) => r.at)) - Date.now();
@@ -212,18 +215,18 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
     const torchIdx = session.items.indexOf(torch);
     if (torchIdx !== -1) session.items.splice(torchIdx, 1);
     await removeItemRow(z.env.DB, torch.rowId);
-    z.groundTorch.set(SMOKEHOUSE_ROOM, Date.now() + TORCH_BURN_MS);
+    z.groundTorch.set(racks, Date.now() + TORCH_BURN_MS);
   }
   await removeItemRow(z.env.DB, carried.rowId);
-  z.ground.set(SMOKEHOUSE_ROOM, [...(z.ground.get(SMOKEHOUSE_ROOM) ?? []), carried.itemId]);
-  z.stampFresh(SMOKEHOUSE_ROOM, carried.itemId);
-  z.rot.push({ itemId: carried.itemId, roomId: SMOKEHOUSE_ROOM, at: Date.now() + CURE_MS, kind: "cure" });
+  z.ground.set(racks, [...(z.ground.get(racks) ?? []), carried.itemId]);
+  z.stampFresh(racks, carried.itemId);
+  z.rot.push({ itemId: carried.itemId, roomId: racks, at: Date.now() + CURE_MS, kind: "cure" });
 
   z.send(session, (lit
     ? `You hang ${rawName} among what's already smoking. The racks take it without complaint; the fire has room yet.`
     : `You feed the racks a torch. Old grease catches with a reek, smoke crawls up the black brick, and the whole room glows with it. You hang ${rawName} in the smoke and leave it to the fire.`)
     + " Give it a few minutes and it comes down black and keeping — leave it hanging, for a haunch lifted early is raw still. ('cure' reads the racks.)", "gain");
-  z.roomFeed(SMOKEHOUSE_ROOM, lit
+  z.roomFeed(racks, lit
     ? `${session.name} hangs ${rawName} in the burning smoke-racks.`
     : `${session.name} wakes the smoke-racks with a torch and hangs ${rawName} to cure.`, session.pubkey, false);
   z.sendStatus(session);

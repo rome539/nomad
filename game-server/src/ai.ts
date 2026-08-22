@@ -22,7 +22,7 @@ import {
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
-  WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS,
+  WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
@@ -36,7 +36,7 @@ import {
   QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
-  HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS,
+  HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS, BEAKS, COILS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -348,7 +348,18 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
       if (edible.some((tr) => tr.kind === "remains")) return "hunched low over a corpse, tearing into it";
       if (edible.length) return "lapping the bloodied stone clean";
     }
-    if (creature.wateringTo) return "padding toward water, tongue lolling";
+    // THIRST, IN THE RIGHT BODY (rome, 2026-08-22, on a carrion vulture with a
+    // lolling tongue). This line was written for the deep's hyenas and then
+    // handed to every DRINKER in the world — so the mountain's vultures, ravens,
+    // choughs, eagles and owls all padded and lolled, and the stone adder did
+    // it on no legs at all. The taxonomy to fix it already exists, because the
+    // combat layer has always known a bird has a bill and a snake has neither:
+    // BEAKS and COILS.
+    if (creature.wateringTo) {
+      return BEAKS.has(creature.templateId) ? "making for water on foot, in that awkward walk a big bird has"
+        : COILS.has(creature.templateId) ? "pouring itself downhill toward water"
+        : "padding toward water, tongue lolling";
+    }
     if (creature.curious && creature.curious !== creature.roomId) {
       return SCAVENGERS.has(creature.templateId)
         ? "casting after a scent, nose to the ground"
@@ -751,7 +762,16 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // the den, but a hunter whose own ground has nothing left to eat walks to
       // where the food is instead (huntGround). Everything below is unchanged —
       // it just closes on a different room for as long as the hunger lasts.
-      const anchor = huntGround(z, creature, now) ?? creature.home;
+      // A THIRSTY THING LEAVES TOO, and it outranks the rest: a watering run is
+      // a journey already begun, so the ground it is pulled toward is the hole
+      // (rome, 2026-08-22). Without this the radius below is the whole errand —
+      // the territory filter runs first and keeps only exits that stay near the
+      // den, then the watering filter finds none of those closes on the water
+      // and clears wateringTo ("the habit passes"). So an animal set out, hit
+      // the edge of its range and gave up, every time, for any hole further off
+      // than TERRITORY_RADIUS. Same shape as the hungry re-anchor below it,
+      // which is the precedent this follows.
+      const anchor = creature.wateringTo ?? huntGround(z, creature, now) ?? creature.home;
       // ONE capped walk out from the den answers both halves — am I inside my
       // range, and which of these exits are. This is the hottest distance query
       // in the game (every wandering creature, every beat); routing it through
@@ -1911,9 +1931,13 @@ export function waters(z: ZoneDO, creature: Creature, now: number): void {
       return;
     }
     const home = creature.home ?? creature.roomId;
-    const dest = [...WATER_ROOMS].find(
-      (r) => z.world!.rooms.has(r) && z.withinRadius(home, r, TERRITORY_RADIUS),
-    );
+    // ONE walk out from the den, then ask the holes — not one walk per hole.
+    // withinRadius builds a fresh BFS every call and WATER_ROOMS has 34 entries,
+    // so the old shape did 34 searches per thirst roll. At radius 3 that was
+    // 34 tiny ones; at 10 each covers a few hundred rooms, and this runs on the
+    // single thread the whole zone shares.
+    const near = z.nearby(home, THIRST_RADIUS);
+    const dest = [...WATER_ROOMS].find((r) => z.world!.rooms.has(r) && near.has(r));
     if (!dest) {
       creature.thirstAt = now + randInt(THIRST_MIN_MS, THIRST_MAX_MS);
       return;
