@@ -1721,10 +1721,15 @@ export const SCOOP_NOSE_MS = 8_000;
 // first. Adding it to STARVE_HUNTERS would break that SILENTLY: woundedPreyHunts
 // is gated on membership alone and never reads hunger, so the hunger exemption
 // below would not save it. It is a 115 hp wall you choose to fight.
-export const HOARDERS = new Set([
-  // mig 247, the mountain's rare blood: the-old-raven
-  "the-old-raven",
-"rag-and-bone"]);
+// NOT the old raven (rome, 2026-08-21). Mig 247 put it in both HOARDERS and
+// RAVEN_SCOOPERS, which are two separate pickup calls in the same tick — so a
+// 6% variant of a mid-tier bird carried up to EIGHT pieces on its own body
+// (against a hyena's three) and filled a nest besides, making it the largest
+// gear-mover in the world. The nest already answers the question the second set
+// was for — what it takes goes somewhere — so the pocket comes off and the pool
+// stays. It keeps its theft, its murder-call and its scooping: a raven caches,
+// it does not haul a sack.
+export const HOARDERS = new Set(["rag-and-bone"]);
 export const HOARD_CARRY_CAP = 8;   // the deep pocket (a hyena's jaws hold 3)
 // The den is a TELL, not the prize (rome: "carries it, den is a bonus"). Above
 // the keep line it sheds the odd piece where it sleeps, so the room slowly

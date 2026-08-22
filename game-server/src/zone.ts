@@ -6857,6 +6857,7 @@ export class ZoneDO implements DurableObject {
     if (idx >= 0) session.items.splice(idx, 1);
     await removeItemRow(this.env.DB, carried.rowId);
     this.send(session, `${cap(tmpl.name)} is worn through — it comes apart in your ${tmpl.slot === "weapon" ? "grip" : "hands"} and is gone.`, "wear");
+    this.sendStatus(session); // the failing pill goes with the piece, not on the next beat
     this.refreshRoomCtx(session.roomId);
   }
 
@@ -6891,6 +6892,33 @@ export class ZoneDO implements DurableObject {
     // pack), equippedBlock quietly returns 0, and every surface but the sheet's
     // block figure went on saying you were guarded. Now it says so on the bar.
     if (this.carriesLight(session) && light.guardingShield(this, session)) fx.push("guard-down");
+    // KIT THAT IS ABOUT TO GO (rome, 2026-08-21, after a mace came apart in his
+    // grip with no warning he could recall). Wear had exactly two signals and
+    // both were one-shot lines in combat scroll: a tell as the bar crossed 35,
+    // another as it crossed 12 — and from that second one there are still ~48
+    // landed blows left in a weapon (WEAPON_WEAR 0.25), which is two or three
+    // fights of nothing being said. Worse, corpse-stripped gear rolls in at
+    // 32-78, so a looted piece can START below 35 and never print the first
+    // tell at all: its only warning ever is one line, a very long time before
+    // it dies.
+    //
+    // So the bar carries it, the way it carries a wound. Same argument as
+    // guard-down directly above, and the same shape: the state is visible for
+    // as long as it is true, instead of being announced once and forgotten.
+    // Two pills at most — the worst weapon and the worst piece of armour — so
+    // a full kit going soft does not bury the wound flags above it.
+    let wep = 101, kit = 101;
+    for (const c of session.items) {
+      if (!c.equipped) continue;
+      const t = this.world!.itemTemplates.get(c.itemId);
+      if (!t || t.slot === "") continue;
+      if (t.slot === "weapon") wep = Math.min(wep, c.condition);
+      else kit = Math.min(kit, c.condition);
+    }
+    if (wep <= GEAR_FAILING_AT) fx.push("weapon-failing");
+    else if (wep <= GEAR_WORN_AT) fx.push("weapon-worn");
+    if (kit <= GEAR_FAILING_AT) fx.push("kit-failing");
+    else if (kit <= GEAR_WORN_AT) fx.push("kit-worn");
     try {
       session.ws.send(
         JSON.stringify({

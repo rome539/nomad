@@ -1374,7 +1374,15 @@ var FX_META = {
   hobbled:  { label: "hobbled",  cls: "fx-blood" },
   bleeding: { label: "bleeding", cls: "fx-blood" },
   resting:  { label: "resting",  cls: "fx-heal" },
-  "guard-down": { label: "guard down", cls: "fx-warn" }
+  "guard-down": { label: "guard down", cls: "fx-warn" },
+  // Kit on its way out. The server sends at most one weapon pill and one armour
+  // pill (the worst piece of each), so a whole kit going soft cannot crowd the
+  // wound flags above. Failing is blood, worn is a warning: one of them means
+  // repair it now, the other means plan to.
+  "weapon-worn":    { label: "weapon worn",    cls: "fx-warn" },
+  "weapon-failing": { label: "weapon failing", cls: "fx-blood" },
+  "kit-worn":       { label: "kit worn",       cls: "fx-warn" },
+  "kit-failing":    { label: "kit failing",    cls: "fx-blood" }
 };
 function renderFx(list) {
   fxEl.textContent = "";
