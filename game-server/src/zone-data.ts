@@ -1963,6 +1963,20 @@ export const NAPPERS = new Set([
   "conger", "old-conger", "bittern", "ford-eel", "silver-eel",          // the shore's night shift (see NOCTURNAL)
   "great-gull", "black-backed-gull", "grey-heron", "scarp-raven", // birds roost. A corvid especially: nothing with feathers works the dark
   "fen-viper",                              // the adder's cousin, and the same animal: a snake is a thing that lies in the sun
+  // THE MOUNTAIN'S NIGHT SHIFT, WHICH WAS NEVER ON A CLOCK AT ALL (rome,
+  // 2026-08-22). NOCTURNAL is read in exactly one place — inside naps() — and
+  // naps() returns on its first line for anything that is not in THIS set. Ten
+  // lines were flagged as the night shift and not one of them was a napper, so
+  // the flag was never read: the wolves, the cats and the owl were awake at
+  // noon and awake at midnight, identically, and the hill never went quiet.
+  // Every inert NOCTURNAL line in the game was one of these ten (the shore's
+  // otters, congers, eels and crabs were all listed properly).
+  //
+  // Adding them here is the whole fix — the xor in naps() already reads the two
+  // rates the other way round for a nocturnal animal, so these lie up through
+  // the day at the night rate and are out working at the night rate's opposite.
+  "hill-wolf", "lead-wolf", "lynx", "wildcat", "the-tom",
+  "hill-fox", "the-raiding-fox", "glutton", "the-old-glutton", "eagle-owl",
 ]); // hyenas nap via the gorge only
 // THE NIGHT SHIFT. Everything above sleeps by the SAME clock — the two rates
 // below are a diurnal schedule, awake to graze by day and bedded down after
