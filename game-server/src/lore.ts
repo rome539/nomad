@@ -604,6 +604,15 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
       : "You've nothing to write in. Buy a journal from the keeper first.");
   }
   if (!arg) return z.send(session, "Study what?");
+  // NOT MID-FIGHT (rome, 2026-08-22). This used to be allowed and merely
+  // expensive — it staggered you and handed the thing an opening — which made
+  // it a decision nobody sane took twice and a trap for anyone who took it once.
+  // Watching something closely enough to write it down is a crouch, not a
+  // glance: it is the same crouch `cook`, `fish` and `inventory` all refuse
+  // with steel in the room. Kill it and study the next one.
+  if (z.inCombat(session)) {
+    return z.send(session, "Not with it swinging at you. Watching a thing closely enough to set it down means taking your eyes off it — do that later, or not at all.");
+  }
   const creature = z.findCreatureIn(session.roomId, arg);
   // You can't study what you can't see — a hidden lurker isn't there yet.
   if (!creature || (creature.hidden && LURKERS.has(creature.templateId) && !creature.target)) {
@@ -612,10 +621,6 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
   await journalStudy(z.env.DB, journal.journalId, tmpl.id);
   (session.studied ??= new Set<string>()).add(tmpl.id); // the chip for this one goes quiet from here on
-  // Standing still to watch a thing this close is a risk: if it's a fight, your
-  // eyes leave it for a beat.
-  let opening = "";
-  if (z.inCombat(session)) { session.staggered = true; opening = " Your eyes leave the fight to do it — an opening."; }
   const rows = await journalLoad(z.env.DB, journal.journalId);
   const row = rows.find((r) => r.templateId === tmpl.id);
   const tier = journalTier(row?.kills ?? 0, true, tmpl.level);
@@ -627,7 +632,7 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   // `look` gives, called from the one place both share (ai.creatureRead), so a
   // clause added to a close look reaches the journal too.
   z.send(session, `You watch ${tmpl.name} a while and set down what you see.` +
-    (tier < 3 ? ` (Its full account wants ${want} more kill${want === 1 ? "" : "s"}.)` : " Its account is complete.") + opening
+    (tier < 3 ? ` (Its full account wants ${want} more kill${want === 1 ? "" : "s"}.)` : " Its account is complete.")
     + "\n" + ai.creatureRead(z, creature, session.pubkey), "study");
   z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey, false);
   z.sendCtx(session); // drop the now-redundant `study` chip without waiting for the next refresh

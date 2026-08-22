@@ -1555,6 +1555,61 @@ export const QUARTER_AMBIENCE: Record<string, string[]> = {
     "A count carries from somewhere off in the trees — low, even, unhurried — and stops before you can catch the number.",
     "The light does not change from one of these rooms to the next, which is how you know how far in you are.",
   ],
+
+  // ---- THE MOUNTAIN'S SIX (rome, 2026-08-22). The region declared its quarters
+  // when it shipped and never wrote a voice for any of them, so all 398 rooms
+  // fell through to one ten-line band pool — and four of those ten are only true
+  // above the snow. Standing in the summer pasture at the foot, in grass, beside
+  // a turf wall, the hill would tell you that nothing grows at this height. The
+  // altitude-specific lines have moved out of AMBIENCE.mountain and into the
+  // tiers that own them; what is left up there is true anywhere on the hill.
+  foot: [
+    "The grass here is cropped to the roots and the ground under it is stitched through with old sheep tracks.",
+    "Bracken to the waist, brown and dead and still standing, and it rattles as you come through it.",
+    "A wall of turf sods runs away along the contour and stops, for a reason somebody knew.",
+    "The burn goes under a slab of rock, sounds louder for a moment, and comes out the other side.",
+    "Somewhere below and behind you a hill is between you and the road, and you notice you cannot see it any more.",
+    "A curlew goes up off the grass ahead, complaining, and puts itself down again forty yards on.",
+    "The ground goes soft and black in a runnel where a spring comes out, and there are prints in it.",
+  ],
+  middle: [
+    "The face is built in bands — a wall of rock, a ledge of grass, a wall, a ledge — and you are walking one of the ledges.",
+    "Something comes off the crag above and lands somewhere below, and neither end of it is visible.",
+    "A gully runs down the flank, floored with the same grey chips as every other gully, and it is not the one you want.",
+    "The wind stops entirely for a moment in the lee of the buttress, and the silence is the strange part.",
+    "Water comes off the rock in a thin thread and is blown sideways to nothing before it lands.",
+    "The rock here is dry and warm on its south side and running wet on the other, a stride apart.",
+  ],
+  cloud: [
+    "The cloud comes down over you in one step and the world shrinks to eight feet of grey.",
+    "Everything you are wearing is beaded with water that never fell as rain.",
+    "Sound goes wrong in this: something moves close by and you cannot say which side of you it was on.",
+    "The cloud thins for a second, shows you the drop, and closes again before you have finished looking.",
+    "Your own hands are the furthest thing you can see clearly.",
+    "The line of it moves up and down the mountain through the day and nobody consults you.",
+  ],
+  high: [
+    "The air comes thin and cold off the stone and takes the warmth out of your hands.",
+    "Nothing grows at this height but a grey lichen, clinging where it can.",
+    "The cold up here is dry and clean and entirely without mercy.",
+    "Below you the country lies out flat and small and none of it is any help.",
+    "Old snow lies in every hollow that has not seen the sun this year, and there are hollows that never do.",
+    "The snow is scoured into hard flutes by the wind, and it takes your boot without giving anything back.",
+  ],
+  territory: [
+    "The rock underfoot is warm through your boots, which it has no business being at this height.",
+    "Bone lies about in quantity, none of it arranged, none of it fresh, all of it carried up here from somewhere else.",
+    "A shelf of stone off to the side has been used, and used, and used — the marks on it are all the same marks.",
+    "Nothing calls up here. There are birds, and they do not call.",
+    "Something has come down this slope at speed, once, and gouged it, and the gouge has not weathered.",
+    "The wind carries a smell up off the rock that is not the mountain's.",
+  ],
+  summit: [
+    "The floor of the bowl is swept, and it is not the wind that swept it.",
+    "The rock has run here and set in ropes and lobes, and the front edges of them are curled over.",
+    "It is warm. That is the thing you keep coming back to.",
+    "There is no snow in this bowl and there is snow on every other thing you can see.",
+  ],
 };
 
 // Blind in the wood used to be one line, everywhere, for 170 rooms. Now the

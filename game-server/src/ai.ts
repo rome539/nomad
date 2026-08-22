@@ -2844,6 +2844,37 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         }
         const open = homes.filter((r) => !taken.has(r));
         if (open.length) homes = open;
+      } else {
+        // AND NO ROOM HOLDS MORE THAN IT WAS WRITTEN TO HOLD (rome, 2026-08-22,
+        // standing in front of six birds on a ledge built for three).
+        //
+        // The cap is per LINE across the whole world, and the home above is
+        // picked at RANDOM from that line's rows — so a room holding two of a
+        // line's four rows wins the roll half the time. For anything that walks
+        // that evens out; for a nest-bound bird it never does, because nothing
+        // ever wanders back out. Kill the ledge a few times and the world's
+        // whole supply accumulates in whichever room the dice favoured, standing
+        // there for good. The Nest Shelf is written for two vultures and one
+        // holder and had four and two.
+        //
+        // So a room's OWN row count is its ceiling: prefer homes that are not
+        // already full. Falls back to the whole list if every one of them is —
+        // the body is owed and must land somewhere. (Bodies are counted by the
+        // home they were given, not where they happen to be standing, or a
+        // hunter three rooms out on an errand would read as a free slot.)
+        const rows = new Map<string, number>();
+        for (const s of world.mobSpawns) {
+          if (s.template_id === templateId) rows.set(s.room_id, (rows.get(s.room_id) ?? 0) + 1);
+        }
+        const homed = new Map<string, number>();
+        for (const c of z.creatures.values()) {
+          const line = capOf!.has(c.templateId) ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
+          if (line !== templateId) continue;
+          const at = c.home ?? c.roomId;
+          homed.set(at, (homed.get(at) ?? 0) + 1);
+        }
+        const open = homes.filter((r) => (homed.get(r) ?? 0) < (rows.get(r) ?? 1));
+        if (open.length) homes = open;
       }
       let home = homes[randInt(0, Math.max(0, homes.length - 1))] ?? world.entryRoom;
       // A roaming line ignores its den rows entirely and takes fresh ground.

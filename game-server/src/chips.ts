@@ -176,13 +176,15 @@ export function sendCtx(z: ZoneDO, session: Session): void {
       if (t) suggest.push(`get ${shortName(t.name)}`);
     }
   }
-  // Journal in hand and a foe to watch: study it (mid-fight it's an opening).
+  // Journal in hand and a foe to watch: study it. NOT IN A FIGHT (2026-08-22) —
+  // cmdStudy refuses outright now, so offering it here would be a button that
+  // answers back. It used to be allowed-but-costly, which is what this chip was
+  // written against.
   // A surveyor-map carries a journalId too (its ink rides the journal rail, 097),
   // so "a real journal" is journalId AND not a map — else a map offers `study`.
-  if (creatureHere && session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) {
+  if (creatureHere && !z.inCombat(session) && session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) {
     // Skip anything already written up (rome, 2026-07-26): studying twice adds
-    // NOTHING, and mid-fight the chip actively costs you — cmdStudy staggers you
-    // for the look. session.studied is the cache the sync builder can read;
+    // NOTHING. session.studied is the cache the sync builder can read;
     // unhydrated (undefined) falls through and offers it, as it always did.
     const firstMob = [...z.creatures.values()].find(
       (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target)

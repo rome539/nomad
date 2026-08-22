@@ -1977,6 +1977,18 @@ export const NAPPERS = new Set([
   // the day at the night rate and are out working at the night rate's opposite.
   "hill-wolf", "lead-wolf", "lynx", "wildcat", "the-tom",
   "hill-fox", "the-raiding-fox", "glutton", "the-old-glutton", "eagle-owl",
+  // AND THE THING ON THE SUMMIT (rome, 2026-08-22). An eagle sleeps, and 237's
+  // whole ruling is that this is an animal: a territory, a nest, prey carried
+  // home, and a strong preference for being left alone. It never bedded down
+  // because nothing was in this set, not because anything decided it shouldn't.
+  //
+  // naps() will not let it fall asleep with a player in the room, so you can
+  // never watch it drop off — you arrive and it is either up or it is not. And
+  // a sleeper is unaware by definition, so the climb can now buy you the one
+  // heavy opening blow, which for a 150hp animal with an arc is the difference
+  // between a fight and a mauling. It wakes swinging: the sentinel rouse law
+  // holds here as everywhere, and there is no coup de grace on the summit.
+  "the-drake", "the-pale-drake",
 ]); // hyenas nap via the gorge only
 // THE NIGHT SHIFT. Everything above sleeps by the SAME clock — the two rates
 // below are a diurnal schedule, awake to graze by day and bedded down after
@@ -6111,14 +6123,17 @@ export const AMBIENCE: Partial<Record<Region, string[]>> = {
   // The mountain: scale and cold. Nothing here is interested in you — the
   // threat is the place itself, and the hint, kept rare and never named, that
   // something very large has been up here a long time.
+  // WHAT IS TRUE ANYWHERE ON THE HILL, and only that (2026-08-22). Four lines
+  // lived here that are only true above the snow — thin air, the country laid
+  // out below, the grey lichen, the mercy of the cold — and the band pool is
+  // read in all 398 rooms, so the summer pasture at the foot, in grass, was
+  // being told that nothing grows at this height. They have moved to the `high`
+  // quarter, which owns them (QUARTER_AMBIENCE, detail.ts); the six tiers each
+  // have their own voice now and this is the fallback under all of them.
   mountain: [
-    "The air comes thin and cold off the stone and takes the warmth out of your hands.",
     "Loose scree shifts somewhere above you, runs a little way, and stops.",
     "The wind hunts along the rock face, finds a gap, and howls through it.",
-    "Below you the country lies out flat and small and none of it is any help.",
     "Frost has got into the stone and split it, patiently, over a long time.",
-    "Nothing grows at this height but a grey lichen, clinging where it can.",
-    "The cold up here is dry and clean and entirely without mercy.",
     "A shadow crosses the slope ahead, and there is nothing overhead to have cast it.",
     "The rock is scored in long parallel grooves, too deep and too even for weather.",
     "Somewhere far above, stone grinds on stone, and the mountain resettles its weight.",
