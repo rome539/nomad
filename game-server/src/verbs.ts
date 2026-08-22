@@ -21,7 +21,7 @@ import * as lore from "./lore";
 import * as den from "./den";
 import * as detail from "./detail";
 import {
-  PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS,
+  PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
@@ -1658,14 +1658,41 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, ho
 // the modal read as inconsistent with the gate's plain listing — 'burn' now
 // works by name anywhere via cmdBurn, so the modal was the only reason left
 // to crouch into it). In a fight, your pack only, no flavor line.
+// WHAT YOU ARE WEARING THAT WON'T LAST (rome, 2026-08-22: in the pack, not on
+// the bar). Wear's only signals were two one-shot lines in combat scroll — a
+// tell as the bar crossed 35, another as it crossed 12 — and from that second
+// one a weapon has ~48 landed blows left in it, two or three fights of nothing
+// being said. Corpse-stripped gear rolls in at 32-78 besides, so a looted piece
+// can START below 35 and never print the first tell at all.
+//
+// The per-item lines already carry the word ("notched", "battered") for anyone
+// reading closely; this is the summary that answers the question you actually
+// came to the pack with, which is whether anything you are WEARING is about to
+// leave you. Equipped only — a spare in the pack is not what kills you.
+function kitWarnLines(z: ZoneDO, session: Session): string[] {
+  const failing: string[] = [], worn: string[] = [];
+  for (const c of session.items) {
+    if (!c.equipped) continue;
+    const t = z.world!.itemTemplates.get(c.itemId);
+    if (!t || t.slot === "") continue;
+    if (c.condition <= GEAR_FAILING_AT) failing.push(t.name);
+    else if (c.condition <= GEAR_WORN_AT) worn.push(t.name);
+  }
+  const out: string[] = [];
+  if (failing.length) out.push(`About to go: ${failing.join(", ")} — one more hard fight and you lose it. (repair at a gate)`);
+  if (worn.length) out.push(`Taking hard wear: ${worn.join(", ")}. (repair at a gate to hammer it out)`);
+  return out;
+}
+
 export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   const world = z.world!;
   // The standing read on the burden law — the pack tells you when it's loud.
   const loud = z.burdened(session)
     ? ["The loose iron rides heavy and loud — you won't slip a blow under this load, and moving carries."]
     : [];
+  const kit = kitWarnLines(z, session);
   if (z.inCombat(session)) {
-    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session), ...loud].join("\n"));
+    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session), ...kit, ...loud].join("\n"));
   }
   const atGate = world.entryRooms.has(session.roomId);
   // A gate whose gatehouse is shut for works is not a gate for this purpose:
@@ -1682,6 +1709,7 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     return z.send(session, [
       ...(boarded ? [boarded, ""] : []),
       ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session),
+      ...kit,
       ...loud,
       "('burn <item>' to destroy it, 'drop <item>' to shed it, 'equip'/'remove' to swap gear.)",
     ].join("\n"));
@@ -1689,6 +1717,7 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
   const out: string[] = [];
   out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session));
+  out.push(...kit);
   out.push(...loud);
   out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox, "lockbox")}/${LOCKBOX_CAP}):`));
   const vault = await loadContainer(z.env.DB, session.pubkey, "vault");

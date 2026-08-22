@@ -29,6 +29,12 @@ export const PAGE = `<!doctype html>
     --cream: #ede3cc;
     --dim: #9a8b66;
     --gold: #d8a94e;
+    /* Wear's own amber. NOT --gold: gold is the theme's ACCENT and each theme
+       repaints it (green on moss, blue on abyss), which made a battered piece
+       read as good news. Tuned per theme like --heal and --blood, for the same
+       reason: a severity colour has to stay the same KIND of colour on every
+       ground it is shown against. */
+    --wear: #d8a94e;
     --blood: #c96f5a;
     --bone: #c9bda3;
     --steel: #a4bec0;
@@ -203,6 +209,9 @@ export const PAGE = `<!doctype html>
   .fx-blood { color: var(--blood); }
   .fx-warn { color: var(--gold); }
   .fx-heal { color: var(--heal); }
+  /* The first step of wear: gold, from the theme's own wear amber rather than
+     its accent — see --wear. */
+  .fx-wear { color: var(--wear); }
   #idpanel {
     position: absolute;
     top: 44px;
@@ -360,6 +369,13 @@ export const PAGE = `<!doctype html>
   #bdoll .dslot .it { color: var(--cream); }
   #bdoll .dslot .it.none { color: var(--dim); font-style: italic; }
   #bdoll .dslot .cd { color: var(--dim); }
+  /* ...and louder as the piece goes: gold, then the wound colour. The gold is
+     --wear, NOT --gold — the accent is green on moss and blue on abyss, which
+     made a battered piece read as good news. These need the same ID-led
+     specificity as the rule above, or the dim grey wins the cascade and no
+     colour ever lands. */
+  #bdoll .dslot .cd.wear-mid { color: var(--wear); }
+  #bdoll .dslot .cd.wear-bad { color: var(--blood); }
   #dstats { flex: 1 1 220px; display: flex; flex-direction: column; gap: 5px; min-width: 200px; }
   #bdoll .dline { font-size: 12px; line-height: 1.45; }
   #bdoll .dline .lb { color: var(--gold); letter-spacing: 0.07em; text-transform: uppercase; font-size: 10px; display: block; }
@@ -1375,14 +1391,10 @@ var FX_META = {
   bleeding: { label: "bleeding", cls: "fx-blood" },
   resting:  { label: "resting",  cls: "fx-heal" },
   "guard-down": { label: "guard down", cls: "fx-warn" },
-  // Kit on its way out. The server sends at most one weapon pill and one armour
-  // pill (the worst piece of each), so a whole kit going soft cannot crowd the
-  // wound flags above. Failing is blood, worn is a warning: one of them means
-  // repair it now, the other means plan to.
-  "weapon-worn":    { label: "weapon worn",    cls: "fx-warn" },
-  "weapon-failing": { label: "weapon failing", cls: "fx-blood" },
-  "kit-worn":       { label: "kit worn",       cls: "fx-warn" },
-  "kit-failing":    { label: "kit failing",    cls: "fx-blood" }
+  // Kit going. One pill for the worst piece you have on: gold, then blood.
+  // The bench's figure names which piece; this only says to go and look.
+  "kit-worn":    { label: "kit worn",    cls: "fx-wear" },
+  "kit-failing": { label: "kit failing", cls: "fx-blood" }
 };
 function renderFx(list) {
   fxEl.textContent = "";
@@ -3514,6 +3526,22 @@ function dollLine(label, value) {
   return d;
 }
 
+// THE DURABILITY WORD, COLOURED (rome, 2026-08-22). The figure has always shown
+// the condition beside each piece, in the same dim grey as the slot labels — so
+// "(failing)" and "(worn)" carried the same weight as the word "head", and a
+// mace came apart mid-fight with nothing having stood out to say it was going.
+// The word is the signal; it just needed to look like one.
+//
+// The ladder is conditionWord() on the server: pristine (no tag), worn,
+// battered, failing, nearly broken. Worn stays grey — most gear in this world
+// is worn and a colour that is always on is wallpaper. Battered goes gold and
+// the last two go blood (the gold is --wear, never the theme accent).
+var COND_CLS = {
+  battered:         "wear-mid",
+  failing:          "wear-bad",
+  "nearly broken":  "wear-bad"
+};
+
 function renderDoll(sheet) {
   if (!sheet) { bdoll.classList.remove("on"); return; }
   dslots.textContent = ""; dstats.textContent = "";
@@ -3526,7 +3554,10 @@ function renderDoll(sheet) {
     if (s.name && s.rarity) v.classList.add(rarityClass(s.rarity));
     d.appendChild(v);
     if (s.name && s.cond && s.cond !== "sound") {
-      var c = document.createElement("span"); c.className = "cd"; c.textContent = " (" + s.cond + ")"; d.appendChild(c);
+      var c = document.createElement("span");
+      c.className = "cd" + (COND_CLS[s.cond] ? " " + COND_CLS[s.cond] : "");
+      c.textContent = " (" + s.cond + ")";
+      d.appendChild(c);
     }
     dslots.appendChild(d);
   });
@@ -5299,7 +5330,7 @@ chipbtn.addEventListener("click", function () {
 
 // ---- themes: the Door in different lights ----
 // Five local presets, one row in settings; the relays add the rest below.
-var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "blood", "bone", "steel", "heal", "omen", "voice", "stone", "border", "border2", "line"];
+var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "wear", "blood", "bone", "steel", "heal", "omen", "voice", "stone", "border", "border2", "line"];
 var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
 // 'heal' is the mending-green (eat/bandage/rest chips): a distinct hue that must
 // stay legible on each ground, so — like blood/steel — it's tuned per theme
@@ -5315,11 +5346,11 @@ var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
 // lighter, so a voice can never be mistaken for a wound. On the light 'bone'
 // ground it inverts to a deep wine-rose.
 var THEMES = {
-  door:  { stone: "#d3d6d8", bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
-  bone:  { stone: "#6f7378", bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", voice: "#a5325f", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
-  moss:  { stone: "#d3d6d8", bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", voice: "#eb9cba", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
-  abyss: { stone: "#d3d6d8", bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", voice: "#e79cbc", border: "#243049", border2: "#2f4160", line: "#171f33" },
-  ember: { stone: "#d3d6d8", bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", omen: "#c9a2c4", voice: "#f2a4c1", border: "#46291a", border2: "#5c3722", line: "#331e12" },
+  door:  { stone: "#d3d6d8", bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", wear: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
+  bone:  { stone: "#6f7378", bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", wear: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", voice: "#a5325f", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
+  moss:  { stone: "#d3d6d8", bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", wear: "#d8a94e", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", voice: "#eb9cba", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
+  abyss: { stone: "#d3d6d8", bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", wear: "#d8a94e", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", voice: "#e79cbc", border: "#243049", border2: "#2f4160", line: "#171f33" },
+  ember: { stone: "#d3d6d8", bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", wear: "#e8a24c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", omen: "#c9a2c4", voice: "#f2a4c1", border: "#46291a", border2: "#5c3722", line: "#331e12" },
 };
 var thbtn = document.getElementById("thbtn");
 var thbrowse = document.getElementById("thbrowse");
