@@ -386,16 +386,44 @@ async function payBounty(z: ZoneDO, session: Session, bounty: [string, string, n
   if (carried.serial !== null) await voidMint(z.env.DB, carried.serial); // a stray seal, cracked with the row
   await removeItemRow(z.env.DB, carried.rowId);
   bountyTookOf(z, session.pubkey).add(trophyId); // paid to YOU; it stays on the board for everyone else
-  let spilled = 0;
+  // OVERFLOW GOES IN THE KEEP, NOT ON THE FLOOR (rome, 2026-08-22). It used to
+  // spill at your feet, which was wrong in three ways at once: the spill lands
+  // in the GATE ROOM (inside the gatehouse, session.roomId is still the room
+  // outside the door), so a claim made at the bench put the meals out in the
+  // world where anyone walking the threshold could take them; payBounty never
+  // armed the rot timer, so the pile sat there for good; and no food is on
+  // STRAY_DECAY anyway, so it could never have rotted. A man standing at the
+  // counter with the deep keep open at his elbow does not drop his wages on the
+  // stones. The keeper puts them away.
+  //
+  // PACK_FOOD_CAP is 8 and the top bounties pay exactly 8, so hitting this is
+  // ordinary, not an edge: with three meals already on you the whole payment
+  // banks. Fungibles ride free in the vault, so there is almost always room.
+  let banked = 0, spilled = 0;
+  // Read the keep ONCE, not once a meal: a top bounty pays eight, and eight D1
+  // round-trips inside a loop is the kind of thing that stalls this DO's single
+  // thread for everybody in the zone. The rows we add are counted locally.
+  const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
   for (let i = 0; i < meals; i++) {
     if (await z.grantItem(session, foodId)) continue;
-    // Pack full (or the food's count-cap hit): the meal goes on the stones at
-    // your feet rather than vanishing — the bounty is still paid, you just have
-    // to stoop for it. Same spill law as the hatch's buy when the pack's full.
+    if (z.hasRoom(vault, foodId, VAULT_CAP, "vault")) {
+      const rowId = uuid();
+      await insertLoot(z.env.DB, rowId, session.pubkey, foodId, null, 100);
+      await setContainer(z.env.DB, rowId, "vault");
+      // Count it against the local copy so a non-food bounty could never bank
+      // past VAULT_CAP on a stale read. (Food never can — hasRoom always says
+      // yes for an edible in the keep — but the loop must not depend on that.)
+      vault.push({ rowId, itemId: foodId, serial: null, equipped: false, condition: 100 } as CarriedItem);
+      banked++;
+      continue;
+    }
+    // ...and only if the keep itself will not take it does it reach the stones.
+    // Armed for decay this time, like every other drop in the game.
     const floor = z.ground.get(session.roomId) ?? [];
     floor.push(foodId);
     z.ground.set(session.roomId, floor);
     z.stampFresh(session.roomId, foodId);
+    z.armStrayDecay(session.roomId);
     spilled++;
   }
   if (spilled) z.refreshRoomCtx(session.roomId);
@@ -405,9 +433,17 @@ async function payBounty(z: ZoneDO, session: Session, bounty: [string, string, n
   const paid = meals > 1
     ? `${food?.name ?? "a meal"} — ${MEAL_COUNT_WORDS[meals] ?? String(meals)} of them`
     : (food?.name ?? "a meal");
-  if (!spilled) return `The keeper takes ${trophy?.name ?? "it"} with both hands and lays ${paid} on the counter. Bounty paid.`;
-  if (spilled === meals) return `The keeper takes ${trophy?.name ?? "it"} — but your pack is full, and ${paid} falls at your feet. Bounty paid.`;
-  return `The keeper takes ${trophy?.name ?? "it"} and lays ${paid} out — more than your pack will hold, and the rest of it goes on the stones at your feet. Bounty paid.`;
+  const took = trophy?.name ?? "it";
+  if (!banked && !spilled) return `The keeper takes ${took} with both hands and lays ${paid} on the counter. Bounty paid.`;
+  // The keep took it. Said plainly, and said WHERE, because a payment you never
+  // see land reads exactly like a payment that never came.
+  if (banked && !spilled) {
+    return banked === meals
+      ? `The keeper takes ${took}, looks at what you are already carrying, and puts ${paid} straight into the deep keep instead. It's there when you want it. Bounty paid.`
+      : `The keeper takes ${took} and lays ${paid} out — more than you can carry, so the rest goes into the deep keep. Bounty paid.`;
+  }
+  if (spilled === meals) return `The keeper takes ${took} — your pack is full and the keep will take no more, so ${paid} goes on the stones at your feet. Bounty paid.`;
+  return `The keeper takes ${took} and lays ${paid} out — more than your pack and your keep together will hold, and the last of it goes on the stones at your feet. Bounty paid.`;
 }
 
 export async function handleBounty(z: ZoneDO, session: Session, frame: any): Promise<void> {
