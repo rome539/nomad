@@ -2395,7 +2395,7 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
   // THE RAVEN'S NEST. An idle corvid alone in a room with unguarded spoils
   // (gear dropped where somebody fell, and not the free rock or the room's own
   // regrowing stock) takes ONE piece and bears it to its nest — one of the
-  // THREE fixed pools (RAVEN_NEST_ROOMS), chosen as the nearest to its own
+  // fixed pools (RAVEN_NEST_ROOMS), chosen as the nearest to its own
   // ground. The piece lands in the pool the moment it is taken (the flight is
   // flavour; the pool is where it ends up), hidden off the floor, never on the
   // bird and never takeable by walking in. It never scoops while a player is
@@ -2404,9 +2404,9 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
   // RAVEN_NEST_CAP pieces before the birds stop carrying to it. The only way
   // to get a piece out is to feed it (verbs.cmdFeed), which it does not always
   // honour — a raven does not let you root through its nest.
-  // Which pool a corvid works: the nearest of the three to its own ground, so
-  // the high-road ravens share one nest, the grave crows another, and nobody
-  // flies across the whole world for a perch.
+  // Which pool a corvid works: the nearest to its own ground, so the high-road
+  // ravens share one nest, the grave crows another, the hill's birds keep to the
+  // hill, and nobody flies across the whole world for a perch.
   export function ravenNestFor(z: ZoneDO, creature: Creature): string {
     let best = RAVEN_NEST_ROOMS[0], bestD = Number.POSITIVE_INFINITY;
     for (const r of RAVEN_NEST_ROOMS) {

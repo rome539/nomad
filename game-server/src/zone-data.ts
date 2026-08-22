@@ -2187,9 +2187,9 @@ export const CROW_ROUSE_RADIUS = 3;   // rooms a murder hears the strike across
 export const CROW_CALL_ODDS = 0.5;    // per idle corvid, per strike — most of them come
 
 // THE RAVEN'S NEST. A raven is a thing that takes what a body leaves — gear
-// dropped where someone fell on the road — and carries it to a NEST, where the
-// pile grows. There are THREE fixed nests (the pools): one on the high road,
-// one on the grave ground, one on the far rise — and every corvid in the world
+// dropped where someone fell — and carries it to a NEST, where the pile grows.
+// There are fixed nests (the pools): three down in road country and three on the
+// mountain, listed below — and every corvid in the world
 // carries to whichever is nearest ITS ground, so the nests are shared places,
 // not per-bird pockets. The loot lives in the nest, NOT on the bird: killing a
 // raven gets you nothing (its beak is only ever in flight; the piece belongs
@@ -2201,7 +2201,27 @@ export const RAVEN_SCOOPERS = new Set([
   // mig 247, the mountain's rare blood: the-old-raven
   "the-old-raven",
 "gibbet-crow", "scarp-raven"]);
-export const RAVEN_NEST_ROOMS = ["the-boundary-cairn", "the-gibbet-field", "the-watershed"]; // the three pools
+// THE MOUNTAIN GETS ITS OWN (rome, 2026-08-21). The old raven is a 6% variant
+// of the scarp raven, which lives on the hill — and every pool in the world was
+// road and open ground, fifty rooms west and three thousand feet down. It filled
+// its eight-piece pocket up there and could never reach anywhere to shed, so the
+// mountain had a hoarder with no hoard and its takings left the world.
+//
+// Same doctrine as the road's three: a LANDMARK, one to a stretch of ground, far
+// enough apart that "nearest its own ground" means something (the foot at x76,
+// the kill terraces at x99, the crest at x104, against a hill running 68 to 120).
+// None of them is a door, a sanctuary or an arrivals mouth — a pool is a place
+// you can walk to and rob, so it must not be a place nothing may follow you into,
+// and it must not be where bodies mint.
+//
+//   the-cairn-line   the shoulder's line of walking-cairns — the Boundary Cairn's
+//                    own twin, stone heaps somebody stacked to be followed
+//   the-bone-ground  everything that dies above ends on that fan: the Gibbet
+//                    Field's answer, a grave ground already thick with leavings
+//   the-last-tooth   the final pinnacle on the crest and the only one you can get
+//                    on top of, with the whole tier laid out below it
+export const RAVEN_NEST_ROOMS = ["the-boundary-cairn", "the-gibbet-field", "the-watershed",
+  "the-cairn-line", "the-bone-ground", "the-last-tooth"];
 export const RAVEN_BARTER_ODDS = 0.4; // per feed: it parts with a piece from its nest ~2 in 5
 export const RAVEN_BARTER_WAIT_MS = 60_000; // after a feed it won't be fed again for a minute (a fed bird is a full bird)
 export const RAVEN_NEST_CAP = 4;      // a pool holds about four before the ravens stop carrying to it (a modest tell, not a hoard)
