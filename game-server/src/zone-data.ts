@@ -1648,7 +1648,15 @@ export const SCAVENGERS = new Set([
   // is left, and both vultures have no PREYS_ON row at all, exactly like the
   // bone-breaker. On this tier SCAVENGERS is not a supplementary route, it is
   // the economy — and it only works because the bone ground is CARRION_ROOMS.
-  "snow-fox", "carrion-vulture", "great-vulture"]);
+  "snow-fox", "carrion-vulture", "great-vulture",
+  // THE CAVE LION (mig 245), which shipped with NO feeding route of any kind and
+  // has been sitting at the hunger cap ever since — the wood's 2026-08-08 bug,
+  // one region later. It needs no new mechanism: it stands in the Dry Bones,
+  // that room is CARRION_ROOMS, and the room's own prose is the answer already
+  // ("something has still been chewing on the ends of these, which is the only
+  // reason anything comes to this room"). 245 wrote it as an animal cornered in
+  // its own larder. This is the larder.
+  "cave-lion"]);
 // VERMIN eat the dead too — but only to SURVIVE, none of the hyena's package.
 // Rats had no food at all (not predators, not scavengers), so they sat pinned at
 // max hunger, forever "restless with hunger" (rome, 2026-07-17: "what are rats
@@ -2384,6 +2392,11 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // the tier telling you what it is: the animals that can take one live higher.
   ["hill-fox", new Set(["mountain-hare", "ptarmigan"])],
   ["wildcat", new Set(["mountain-hare", "ptarmigan"])],
+  // THE TOM (mig 247) hunts what the wildcat hunts. Variants do NOT inherit their
+  // base's feeding sets — every one of them has to be listed by hand, and eight
+  // of the mountain's nine were. This one was missed, so an 8% roll produced an
+  // aggressive cat with no way to eat, pinned at the hunger cap for life.
+  ["the-tom", new Set(["mountain-hare", "ptarmigan"])],
   ["hill-eagle", new Set(["mountain-hare", "ptarmigan", "feral-goat"])],
   // TIER TWO (mig 229). The first predator on this mountain big enough for a
   // deer — and still not big enough for the stag, which at 48hp/4-8 outweighs a
@@ -2851,7 +2864,18 @@ export const PROVISIONED = new Set([
   // predator with nothing to predate and nobody to feed it, and its own
   // description says how that is going. Provisioning it is the only way it does
   // not quietly starve out of the world at the cap.
-  "the-herd", "the-milker", "a-fold-dog"]);
+  "the-herd", "the-milker", "a-fold-dog",
+  // THE SUMMIT'S ANIMAL (mig 237), and this is the set its own design note asks
+  // for in as many words: "prey it carries home from four tiers down, because
+  // everything near home was eaten a long time ago." Its larder is off-screen by
+  // authorship. There is nothing alive on the summit to hunt and nothing dead on
+  // it to scavenge — the note is equally explicit that the nest is kept clean and
+  // the room is swept rock — so every route this table has would be a lie about
+  // that room. Without this it banked to the cap and stood up there advertising
+  // "restless with hunger" forever, which is not a hungry animal, it is a broken
+  // one: past STARVING_AT it also sat permanently in the turn-on-you state, so
+  // the hardest fight in the game was in its worst mood by accident.
+  "the-drake", "the-pale-drake"]);
 // REVENANTS don't stay down: put one to 0 and it RISES ONCE, at part health, and
 // comes again. The second death is the real one. A longer fight, not a lost one.
 export const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);
