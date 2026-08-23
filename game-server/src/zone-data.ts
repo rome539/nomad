@@ -5873,7 +5873,9 @@ export const FOOD_SPOIL_HEAL_MULT = 0.5;              // spoiled food is HONEST:
 // only so the fire can refuse them in words that are true of them (a mast has
 // not "been through a barrel"); everywhere else they are simply FOOD_KEEPS.
 export const NATURAL_KEEPS = new Set(["gull-egg", "beech-mast"]);
-export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "well-water", "dried-meat", ...NATURAL_KEEPS]);
+// Water does not go off — melt-water keeps for the same reason well-water does
+// (268). The berries are NOT here: they are picked fruit and they spoil.
+export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "well-water", "melt-water", "dried-meat", ...NATURAL_KEEPS]);
 // ---- the smokehouse: raw meat hung in the racks, cured to keeping ----
 // The smoked-haunch's OWN description already claims these racks ("a haunch cured
 // black and hard in the smokehouse racks"); nothing ever lit them. Now a delver
