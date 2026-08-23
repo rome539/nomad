@@ -1859,6 +1859,9 @@ function print(text, cls, who, pk) {
   // split per line so each event wears its own color.
   var lines = cls ? [text] : String(text).split("\\n");
   var sounds = [];
+  // Scrolling only follows when the reader is already at the bottom — an old
+  // log being read must not yank itself down for every feed line that lands.
+  var stick = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
   for (var i = 0; i < lines.length; i++) {
     var div = document.createElement("div");
     // classify and the sound picker read the PLAIN line: a rarity marker is
@@ -1877,7 +1880,7 @@ function print(text, cls, who, pk) {
     }
   }
   playSounds(sounds);
-  log.scrollTop = log.scrollHeight;
+  if (stick) log.scrollTop = log.scrollHeight;
 }
 
 // Identity: keys in pocket. Guests get keys minted silently; anyone with
@@ -1935,14 +1938,21 @@ async function ensureBunkerClient() {
   return bunkerClient;
 }
 
+async function fetchJson(url, opts, ms) {
+  var res = await Promise.race([
+    fetch(url, opts),
+    new Promise(function (_, rej) { setTimeout(function () { rej(new Error("the gate is slow to answer")); }, ms); }),
+  ]);
+  return await res.json();
+}
 async function login() {
-  var ch = await (await fetch("/auth/challenge", { method: "POST" })).json();
+  var ch = await fetchJson("/auth/challenge", { method: "POST" }, 8000);
   var evt = { kind: 27235, created_at: Math.floor(Date.now()/1000), tags: [], content: ch.challenge };
   var ev;
   if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
   else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
   else ev = finalizeEvent(evt, sk);
-  var r = await (await fetch("/auth/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ event: ev }) })).json();
+  var r = await fetchJson("/auth/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ event: ev }) }, 8000);
   if (!r.token) throw new Error("login failed");
   return r.token;
 }
@@ -2466,6 +2476,9 @@ function maybeAdoptProfileName(f) {
 
 var ws = null;
 var retryMs = 1000;
+var openedAt = 0; // ms the last good socket opened; a wire that lived <5s must not reset the backoff
+var lastPong = Date.now(); // the wire's pulse: the runtime answers "ping" with "pong" (setWebSocketAutoResponse)
+var lastDialAt = 0; // ms of the last dial attempt; wake events must not storm the gate
 var hbTimer = null; // keepalive: a bare "ping" every 25s the server auto-answers
                     // "pong" without waking the Durable Object — stops NAT/proxy
                     // idle-timeouts from reaping a quiet socket.
@@ -2512,6 +2525,7 @@ async function connect() {
   if (connecting) return;                    // one dial at a time (see the flag's note)
   if (ws && ws.readyState === 1) return;     // a live wire is already up — nothing to dial
   connecting = true;
+  lastDialAt = Date.now();
   if (ws && ws.readyState === 0) {
     // Still plausibly opening: come back to it, but ALWAYS keep the chain alive.
     if (Date.now() - connectingSince < CONNECT_STALL_MS) { scheduleRetry(); return; }
@@ -2561,7 +2575,10 @@ async function connect() {
   // rather than refuse to connect: this is hardening, not a gate.
   var wsAuth = "token=" + encodeURIComponent(token);
   try {
-    var tr = await fetch("/auth/ticket", { method: "POST", headers: { authorization: "Bearer " + token } });
+    var tr = await Promise.race([
+      fetch("/auth/ticket", { method: "POST", headers: { authorization: "Bearer " + token } }),
+      new Promise(function (_, rej) { setTimeout(function () { rej(new Error("slow")); }, 8000); }),
+    ]);
     if (tr.ok) {
       var tj = await tr.json();
       if (tj && tj.ticket) wsAuth = "ticket=" + encodeURIComponent(tj.ticket);
@@ -2576,9 +2593,20 @@ async function connect() {
   // phone delivers it on resume, after wakeReconnect has already dialled again
   // \u2014 and every handler below mutates page-wide state. Without this, a dead
   // socket's late event speaks for the living one.
+  var stallWatch = null;
   var sock = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : ""));
   ws = sock;
   var mine = function () { return ws === sock; };
+  // A FIRST dial can hang in CONNECTING with no close event and nothing left
+  // to re-enter connect() — the stall-abandon above only runs when the retry
+  // chain is already armed. This watchdog is the first dial's own chain.
+  stallWatch = setTimeout(function () {
+    if (ws !== sock || sock.readyState !== 0) return;
+    try { sock.onopen = null; sock.onclose = null; sock.onmessage = null; sock.onerror = null; sock.close(); } catch (e) {}
+    ws = null;
+    connecting = false;
+    scheduleRetry();
+  }, CONNECT_STALL_MS);
 
   ws.onopen = function () {
     if (!mine()) return;
@@ -2586,14 +2614,24 @@ async function connect() {
     connecting = false; // the wire is up — a wake event may dial again freely (the readyState===1 guard also holds)
     freshLoad = false; // the scroll is (being) painted now — any later reweave is a true seamless one
     failedOpens = 0;
-    retryMs = 300; // the first reweave after a good run retries near-instantly
+    openedAt = Date.now(); // the backoff reset happens in scheduleRetry, once this wire has PROVED it can hold
+    lastPong = Date.now();
+    if (stallWatch) { clearTimeout(stallWatch); stallWatch = null; }
     if (frayTimer) { clearTimeout(frayTimer); frayTimer = null; }
     if (frayTold) { print("— the thread holds; you are back —", "sys"); frayTold = false; }
     clearInterval(hbTimer);
-    hbTimer = setInterval(function () { if (ws && ws.readyState === 1) ws.send("ping"); }, 25000);
+    hbTimer = setInterval(function () {
+      if (ws && ws.readyState === 1) {
+        // Three pings unanswered = a wire that is dead but still OPEN (half-open
+        // TCP). Nothing else detects it; close() forces the onclose -> retry chain.
+        if (Date.now() - lastPong > 75000) { try { ws.close(); } catch (e) {} return; }
+        ws.send("ping");
+      }
+    }, 25000);
   };
   ws.onmessage = function (m) {
     if (!mine()) return;
+    if (m.data === "pong") { lastPong = Date.now(); return; }
     var f; try { f = JSON.parse(m.data); } catch (e) { return; }
     // During the first walk the world holds its tongue: the feed (others'
     // deeds, sounds through walls) and the ambient weather stay out of the
@@ -2732,8 +2770,16 @@ async function connect() {
 
 function scheduleRetry() {
   connecting = false; // the attempt that is abandoning its claim releases the dial
+  // A wire that stayed up a while earns the fast retry; a socket that opens and
+  // dies in a crash loop must NOT redial every few hundred ms forever.
+  // The lifetime is SPENT here, once. Left standing, a single good wire's
+  // openedAt keeps aging and every later retry reads "lived long, retry fast"
+  // — which pins a real outage at 300ms forever: the exact storm this guards
+  // against, inverted. One wire, one earned fast retry, then honest backoff.
+  var lived = openedAt ? Date.now() - openedAt : 0;
+  openedAt = 0;
+  retryMs = lived > 5000 ? 300 : Math.min(retryMs * 2, 15000);
   setTimeout(connect, retryMs);
-  retryMs = Math.min(retryMs * 2, 15000);
 }
 
 // THE SECOND WAY BACK. The retry chain is one path to recovery and it is now
@@ -2753,6 +2799,7 @@ function wakeReconnect() {
   // The body is in another window; looking at this one must not steal it back.
   if (stilled) return;
   if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+  if (Date.now() - lastDialAt < 5000) return; // a wake must not storm the gate
   retryMs = 300;
   connect();
 }
@@ -3271,10 +3318,18 @@ function renderChips(suggest, combat) {
     ordered = ordered.slice(0, CHIP_FOLD);
   }
   // Fresh = this SLOT now holds a different command than it did a moment ago.
-  // That is the exact condition under which a click lands on the wrong thing,
-  // and the only one worth guarding: a chip that hasn't moved stays live.
+  // That is the exact condition under which a click lands on the wrong thing.
+  // A slot whose command changed is a slot that may have moved under the
+  // cursor, and it arms — INCLUDING the first one, which is exactly where a
+  // new arrival's attack chip gets inserted and shoves everything right.
+  // The one exception is the renumber: "attack rat" becoming "attack rat 2"
+  // is the same chip for the same thing, wearing a count because a second one
+  // walked in. Nothing moved and nothing changed meaning, so it stays live.
+  function chipBase(cmd) { return String(cmd === undefined ? "" : cmd).replace(/\s+\d+$/, ""); }
   ordered.forEach(function (s, i) {
-    chipsEl.appendChild(chipButton(s, prevChipCmds[i] !== undefined && prevChipCmds[i] !== s));
+    var was = prevChipCmds[i];
+    var changed = was !== undefined && was !== s && chipBase(was) !== chipBase(s);
+    chipsEl.appendChild(chipButton(s, changed));
   });
   prevChipCmds = ordered.slice();
   if (folded > 0) {

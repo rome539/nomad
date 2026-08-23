@@ -84,7 +84,7 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
     session.openedHeavy = true;
   }
   z.refreshRoomCtx(session.roomId);
-  await z.persist();
+  z.markSimDirty();
   await z.ensureAlarm();
 }
 

@@ -49,7 +49,7 @@ export async function milestoneCarve(z: ZoneDO, session: Session): Promise<void>
   z.roomFeed(session.roomId, `${session.name} cuts a name into the stone, slowly.`, session.pubkey, false);
   z.roomSound(session.roomId, "Steel worrying at stone, {dir} — slow, patient, going on a while.");
   z.creatureNoise(session.roomId); // it takes a long time and it carries: a road is a bad place to make noise
-  await z.persist();
+  z.markSimDirty();
 }
 
 export function milestoneRead(z: ZoneDO, session: Session): void {

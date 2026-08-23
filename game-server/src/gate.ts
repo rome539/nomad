@@ -1594,7 +1594,7 @@ export async function benchDrop(z: ZoneDO, session: Session, row: string): Promi
     const carried = session.items.find((c) => c.rowId === row && !c.equipped);
     if (!carried) return "That isn't loose in your pack to drop.";
     const msg = await dropCarried(z, session, carried);
-    await z.persist();
+    z.markSimDirty();
     return msg;
   }
 
@@ -2597,7 +2597,7 @@ export async function wallCarve(z: ZoneDO, session: Session): Promise<void> {
   await z.saveWall(session.pubkey, fresh);
   z.send(session, `You take up a nail and set down what you walked — ${fresh.length} hall${fresh.length === 1 ? "" : "s"} your chart did not have. It is yours: nobody else reads this hand, and you will not read theirs.`);
   gatehouseFeed(z, `${session.name} scratches at the wall chart, adding to their own hand.`, session.pubkey);
-  await z.persist();
+  z.markSimDirty(); // D1 is the wall's truth (saveWall); the sim copy can ride the tick flush
 }
 
 export function wallStudy(z: ZoneDO, session: Session): void {

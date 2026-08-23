@@ -806,6 +806,7 @@ function hatch(z: ZoneDO, templateId: string, roomId: string, now: number, strid
     id, templateId, roomId, hp: tmpl.max_hp, hunger: randInt(20, 60),
     grudges: [], nextWanderAt: now + randInt(stride[0], stride[1]), target: null,
   });
+  z.noteCreaturesChanged();
   z.refreshRoomCtx(roomId);
   return id;
 }
@@ -817,6 +818,7 @@ function recall(z: ZoneDO, ids: string[]): void {
     const c = z.creatures.get(id);
     if (!c) continue;
     z.creatures.delete(id);
+    z.noteCreaturesChanged();
     for (const s of z.sessions.values()) {
       if (s.target === id) s.target = null;
       if (s.seizedBy === id) s.seizedBy = undefined;
@@ -1661,6 +1663,7 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
             target: null,
             risen: true,
           });
+          z.noteCreaturesChanged();
           z.roomFeed(roomId, beacon.label
             ? `Where ${beacon.label} fell, the floor gives — and something older pulls itself up through it, dry and wrong.`
             : "The floor gives, and something long-buried pulls itself up through it, dry and wrong.", undefined, false, "evt");
@@ -1688,6 +1691,7 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
       for (const c of [...z.creatures.values()]) {
         if (!c.risen) continue;
         z.creatures.delete(c.id);
+        z.noteCreaturesChanged();
         for (const s of z.sessions.values()) {
           if (s.target === c.id) s.target = null;
           if (s.seizedBy === c.id) s.seizedBy = undefined;
@@ -1841,6 +1845,7 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
         nextWanderAt: now + randInt(ESCAPE_STRIDE_MIN_MS, ESCAPE_STRIDE_MAX_MS),
         target: null,
       });
+      z.noteCreaturesChanged();
       z.roomFeed(start, "Something comes up out of the dark — tall past reason, starved down to cords, moving like it owns every room it enters.", undefined, false, "evt");
       z.refreshRoomCtx(start);
       st.phase = "active";
@@ -1852,6 +1857,7 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
       const gaunt = findGaunt(z);
       if (gaunt) {
         z.creatures.delete(gaunt.id);
+        z.noteCreaturesChanged();
         for (const s of z.sessions.values()) {
           if (s.target === gaunt.id) s.target = null;
           if (s.seizedBy === gaunt.id) s.seizedBy = undefined;
@@ -2032,12 +2038,14 @@ function breachExitOpen(z: ZoneDO, roomId: string, dir: string, toRoom: string):
   if (exits.some((e) => e.dir === dir)) return; // already open (or the world is stranger than we thought)
   exits.push({ room_id: roomId, dir, to_room: toRoom, key_item: null });
   z.world!.exits.set(roomId, exits);
+  z.noteExitsChanged();
 }
 
 function breachExitClose(z: ZoneDO, roomId: string, dir: string, toRoom: string): void {
   const exits = z.world!.exits.get(roomId);
   if (!exits) return;
   z.world!.exits.set(roomId, exits.filter((e) => !(e.dir === dir && e.to_room === toRoom)));
+  z.noteExitsChanged();
 }
 
 // ---- the gloam (the keep) ----

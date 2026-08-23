@@ -109,8 +109,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // findCreatureIn uses, so the chip and the blade always agree — an albino
   // rat counts as a "rat" too, and the plain-rat chips number around it.
   const chipNamesSeen: string[] = [];
-  for (const creature of z.creatures.values()) {
-    if (creature.roomId !== session.roomId) continue;
+  for (const creature of z.creaturesInRoom(session.roomId)) {
     // Torchlight reveals a waiting lurker — so it also gets its attack chip.
     // GLINTING gear does the same by daylight (2026-08-20): the polish leaves
     // it nowhere to hide.
@@ -130,8 +129,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     );
     // Same filter as the attack-chip loop above: the throw chip must never
     // name a lurker still lying in wait (it was the one place that could).
-    const firstMob = [...z.creatures.values()].find((c) => c.roomId === session.roomId
-      && !(LURKERS.has(c.templateId) && c.hidden && !c.target
+    const firstMob = z.creaturesInRoom(session.roomId).find((c) =>
+      !(LURKERS.has(c.templateId) && c.hidden && !c.target
         && !z.carriesLight(session) && !z.wearsTrait(session, "glinting")));
     if (throwable && firstMob) {
       const mobT = world.mobTemplates.get(firstMob.templateId)!;

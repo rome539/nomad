@@ -125,6 +125,7 @@ export function reconcilePopulation(z: ZoneDO, world: World): number {
       }).slice(0, list.length - cap);
       for (const c of doomed) { z.creatures.delete(c.id); culled++; }
     }
+    if (culled) z.noteCreaturesChanged();
     return culled;
   }
 
@@ -993,6 +994,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // What beat it colors how it runs — read before the flee clears the target.
     const fledFrom = mode === "flee" ? creature.target : null;
     creature.roomId = exit.to_room;
+    z.noteCreaturesChanged(); // the room index must not remember where it stood
     // A wounded thing on the move drips where it walks — a fled survivor bleeds
     // a line straight to wherever it holes up, and anyone (or anything) can
     // read the stones and follow. Same law as the player's trail (verbs.cmdGo).
@@ -1253,8 +1255,8 @@ export function starvingHunts(z: ZoneDO, creature: Creature): boolean {
     // The deep's pale hunters have no prey map, so this never spares you: you're it.
     const prey = PREYS_ON.get(creature.templateId);
     if (prey) {
-      for (const c of z.creatures.values()) {
-        if (c.id !== creature.id && c.roomId === creature.roomId && prey.has(c.templateId)) return false;
+      for (const c of z.creaturesInRoom(creature.roomId)) {
+        if (c.id !== creature.id && prey.has(c.templateId)) return false;
       }
     }
     return true;
@@ -1275,8 +1277,8 @@ export function woundedPreyHunts(z: ZoneDO, creature: Creature): boolean {
     if (SENTINELS.has(creature.templateId) || DROWNERS.has(creature.templateId) || AGGRESSIVE.has(creature.templateId)) return false;
     const prey = PREYS_ON.get(creature.templateId);
     if (prey) {
-      for (const c of z.creatures.values()) {
-        if (c.id !== creature.id && c.roomId === creature.roomId && prey.has(c.templateId)) return false;
+      for (const c of z.creaturesInRoom(creature.roomId)) {
+        if (c.id !== creature.id && prey.has(c.templateId)) return false;
       }
     }
     return true;
@@ -1300,8 +1302,7 @@ function preyHere(z: ZoneDO, creature: Creature): Set<string> | null {
   if (!pack) return solo ?? null;
   const line = z.variantBase.get(creature.templateId) ?? creature.templateId;
   let strength = 0;
-  for (const c of z.creatures.values()) {
-    if (c.roomId !== creature.roomId) continue;
+  for (const c of z.creaturesInRoom(creature.roomId)) {
     if ((z.variantBase.get(c.templateId) ?? c.templateId) === line) strength++;
   }
   const set = new Set(solo ?? []);
@@ -1322,8 +1323,8 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     if (!chance(PREDATION_ODDS)) return false;
     // A target in the room; prefer one not already busy with a player (the easy meal).
     let victim: Creature | null = null;
-    for (const c of z.creatures.values()) {
-      if (c.id === creature.id || c.roomId !== creature.roomId || !prey.has(c.templateId)) continue;
+    for (const c of z.creaturesInRoom(creature.roomId)) {
+      if (c.id === creature.id || !prey.has(c.templateId)) continue;
       victim = c;
       if (!c.target) break;
     }
@@ -1431,6 +1432,7 @@ function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate): void {
     }
     z.addTrace(victim.roomId, { kind: HOLLOW.has(victim.templateId) ? "remains" : "blood", at: Date.now(), label: vt.name });
     z.creatures.delete(victim.id);
+    z.noteCreaturesChanged(); // eaten between beats: nothing may still find it in the room
     scheduleArrivals(z, Date.now());
   }
 
@@ -1696,6 +1698,7 @@ export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
       target: null,
       home: mother.roomId, // born to the nest; its ground is its mother's
     });
+    z.noteCreaturesChanged();
     const mtmpl = z.world!.mobTemplates.get(mother.templateId)!;
     z.roomFeed(mother.roomId, `${cap(mtmpl.name)} shudders, and a fresh pup squirms free.`, undefined, false);
     z.roomSound(mother.roomId, "A wet, squealing sound {dir}.");
@@ -2156,8 +2159,8 @@ export function heldExits(z: ZoneDO, session: Session): Map<string, string> {
 // can never disagree.
 function packGaps(z: ZoneDO, session: Session): { holders: Creature[]; exits: string[]; take: number } {
   const holders: Creature[] = [];
-  for (const c of z.creatures.values()) {
-    if (c.roomId !== session.roomId || !PACK_HOLDERS.has(c.templateId)) continue;
+  for (const c of z.creaturesInRoom(session.roomId)) {
+    if (!PACK_HOLDERS.has(c.templateId)) continue;
     if (c.target !== session.pubkey || c.asleep || c.heldBy) continue;
     holders.push(c);
   }
@@ -2199,6 +2202,10 @@ export function packCall(z: ZoneDO, creature: Creature, now: number): void {
     // often, because it can see who is coming and from where.
     if (!chance(Math.min(1, PACK_CALL_ODDS * (moonlit(z, creature.roomId, now) ? MOON_PACK_CALL_MULT : 1)))) return;
     const line = z.variantBase.get(creature.templateId) ?? creature.templateId;
+    // Walked in creature order, not adjacency order, and deliberately: the two
+    // reach the same set of wolves (the exit filter below is the real gate),
+    // but they pick a DIFFERENT one out of it, and which body answers a call is
+    // the world's business, not the index's.
     const mate = [...z.creatures.values()].find(
       (c) => c.id !== creature.id && !c.target && !c.asleep && !c.calledTo
         && (z.variantBase.get(c.templateId) ?? c.templateId) === line
@@ -2279,6 +2286,7 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
     if (!best) return;
     if (playerPresent(z, creature.roomId) || playerPresent(z, best)) return;
     creature.roomId = best; // silent — it IS the dark, moving
+    z.noteCreaturesChanged();
   }
 
   // The soft beat: a rat that finds you resting may decide you are furniture —
@@ -2789,6 +2797,10 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
     // arrival pays nothing for this.
     let capOf: Map<string, number> | null = null;
     let standing: Map<string, number> | null = null;
+    // Per LINE: how many rows each room was written for, and how many bodies are
+    // currently homed to it. Both built once, in the walks above.
+    let rowsBy: Map<string, Map<string, number>> | null = null;
+    const homedBy = new Map<string, Map<string, number>>();
     const tallies = (): void => {
       if (capOf) return;
       capOf = new Map();
@@ -2797,6 +2809,20 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
       for (const c of z.creatures.values()) {
         const line = capOf.has(c.templateId) ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
         standing.set(line, (standing.get(line) ?? 0) + 1);
+        // ...and WHERE that line's bodies are homed, for the per-room ceiling
+        // below. Built in the same walk: this used to be a fresh scan of every
+        // creature AND every spawn row per arrival, and with 692 rows over 90
+        // lines a tick that owed several bodies paid for it in wall time.
+        const at = c.home ?? c.roomId;
+        let m = homedBy!.get(line);
+        if (!m) { m = new Map(); homedBy!.set(line, m); }
+        m.set(at, (m.get(at) ?? 0) + 1);
+      }
+      rowsBy = new Map();
+      for (const sp of world.mobSpawns) {
+        let m = rowsBy.get(sp.template_id);
+        if (!m) { m = new Map(); rowsBy.set(sp.template_id, m); }
+        m.set(sp.room_id, (m.get(sp.room_id) ?? 0) + 1);
       }
     };
     for (const [templateId, at] of z.arrivals) {
@@ -2862,17 +2888,8 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         // the body is owed and must land somewhere. (Bodies are counted by the
         // home they were given, not where they happen to be standing, or a
         // hunter three rooms out on an errand would read as a free slot.)
-        const rows = new Map<string, number>();
-        for (const s of world.mobSpawns) {
-          if (s.template_id === templateId) rows.set(s.room_id, (rows.get(s.room_id) ?? 0) + 1);
-        }
-        const homed = new Map<string, number>();
-        for (const c of z.creatures.values()) {
-          const line = capOf!.has(c.templateId) ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
-          if (line !== templateId) continue;
-          const at = c.home ?? c.roomId;
-          homed.set(at, (homed.get(at) ?? 0) + 1);
-        }
+        const rows = rowsBy!.get(templateId) ?? new Map<string, number>();
+        const homed = homedBy.get(templateId) ?? new Map<string, number>();
         const open = homes.filter((r) => (homed.get(r) ?? 0) < (rows.get(r) ?? 1));
         if (open.length) homes = open;
       }
@@ -2917,7 +2934,15 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         home,
       };
       z.creatures.set(creature.id, creature);
+      z.noteCreaturesChanged();
       standing!.set(templateId, (standing!.get(templateId) ?? 0) + 1); // this call's own tally stays true
+      // ...and so does the per-room one, or two arrivals in one tick would both
+      // read the same room as open and both land in it.
+      {
+        let m = homedBy.get(templateId);
+        if (!m) { m = new Map(); homedBy.set(templateId, m); }
+        m.set(home, (m.get(home) ?? 0) + 1);
+      }
       if (tmpl.is_boss) {
         // What lives behind the black door has reformed — and the door knows.
         for (const [rid, exits] of world.exits) {
@@ -2960,6 +2985,7 @@ export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
       const t = world.mobTemplates.get(c.templateId)!;
       z.roomFeed(c.roomId, `${cap(t.name)} finds its crack in the floor and drags itself back down into the dark, taking its cold heart with it.`, undefined, false);
       c.roomId = c.home && world.rooms.has(c.home) ? c.home : c.roomId;
+      z.noteCreaturesChanged();
       c.surfaced = false;
       c.surfacedAt = undefined;
       c.target = null;
@@ -2973,6 +2999,7 @@ export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
     const dest = rooms[randInt(0, rooms.length - 1)];
     const tmpl = world.mobTemplates.get(c.templateId)!;
     c.roomId = dest;
+    z.noteCreaturesChanged();
     c.surfaced = true;
     c.surfacedAt = now;
     c.hidden = false;   // it's up in the open, filth-streaked and desperate — no lurking
@@ -3166,6 +3193,7 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
         home: creature.roomId, // called out of the throne's dark; it stays near it
       };
       z.creatures.set(summoned.id, summoned);
+      z.noteCreaturesChanged();
       z.roomFeed(creature.roomId, "Something scabby pours out of the dark beneath the throne.");
       z.send(foe, "Something scabby pours out of the dark beneath the throne — and comes for you.");
       z.refreshRoomCtx(creature.roomId);
@@ -3212,9 +3240,7 @@ export function hungers(templateId: string): boolean {
 }
 
 export function creaturesIn(z: ZoneDO, roomId: string): number {
-    let n = 0;
-    for (const c of z.creatures.values()) if (c.roomId === roomId) n++;
-    return n;
+    return z.creaturesInRoom(roomId).length;
   }
 
 // Lurkers only — the crowd rule for an ambush (see LURKER_CROWD). Counting

@@ -122,7 +122,7 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
     z.send(session, got + `You hang ${rawName} on the gate's own smoke-racks, safe behind the door. Give it about ${mins} minutes — it cures while you're gone, and nothing in here or out there can lift it. Come back and take it down keeping. ('cure' reads the racks.)`, "gain");
     gatehouseFeed(z, `${session.name} hangs meat on the gate smoke-racks.`, session.pubkey);
     z.sendCtx(session);
-    await z.persist();
+    z.markSimDirty();
     return;
   }
 
@@ -142,7 +142,7 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
   const base = "The gate keeps its own smoke-racks in the warm behind the door. Feed them raw meat or a fresh catch — 'cure haunch', 'cure fish' — and it cures safe while you're away, slower than the deep racks but nothing can ever lift it."
     + (haveRaw ? "" : " (You've nothing raw to hang.)");
   z.send(session, (got + base + hanging).trim(), collected ? "gain" : undefined);
-  if (collected) { z.sendCtx(session); await z.persist(); }
+  if (collected) { z.sendCtx(session); z.markSimDirty(); }
 }
 
 export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -231,7 +231,7 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
     : `${session.name} wakes the smoke-racks with a torch and hangs ${rawName} to cure.`, session.pubkey, false);
   z.sendStatus(session);
   z.sendCtx(session);
-  await z.persist();
+  z.markSimDirty();
   await z.ensureAlarm();
 }
 
@@ -356,7 +356,7 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
     z.armStrayDecay(session.roomId); // it lies where anything can take it, and it rots on the floor's clock like anything dropped
     z.send(session, `You cook ${rawT.name} through and set it on the stone — your pack will not take it — and ${outT.name} lies there in the firelight, smelling of itself.`, "gain");
     z.refreshRoomCtx(session.roomId);
-    await z.persist();
+    z.markSimDirty();
     return;
   }
   z.send(session, (how === "spent"
@@ -375,7 +375,7 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
   z.sendStatus(session);
   z.sendCtx(session);
   z.refreshRoomCtx(session.roomId);
-  await z.persist();
+  z.markSimDirty();
   await z.ensureAlarm();
 }
 
@@ -421,7 +421,7 @@ async function cookAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
   gatehouseFeed(z, `${session.name} cooks a catch on the brazier.`, session.pubkey);
   z.sendStatus(session);
   z.sendCtx(session);
-  await z.persist();
+  z.markSimDirty();
 }
 // Nobody knows what this does. That includes the dungeon.
 export function cmdSquink(z: ZoneDO, session: Session): void {
@@ -1182,7 +1182,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // dead). Cloth tiptoes past the sleeper; plate wakes the thing in the room.
   await ai.wakeListeners(z, session, session.roomId, WAKE_ENTER * stealthMult, "twists toward the sound of you and lunges!");
   await savePlayer(z.env.DB, session.pubkey, session.roomId, session.hp);
-  await z.persist();
+  z.markSimDirty();
 }
 
 // A wanderer's own words, in the world. The room hears them over the sockets —
@@ -1252,7 +1252,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
     z.roomFeed(session.roomId, `${session.name} takes up the burning torch.`, session.pubkey, false);
     z.sendStatus(session);
     z.refreshRoomCtx(session.roomId);
-    await z.persist();
+    z.markSimDirty();
     return;
   }
   if (!itemId) return z.send(session, "That isn't lying around here.");
@@ -1368,7 +1368,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   z.send(session, `You take ${z.gearName(tmpl.id)}.` + readied + stooped + nowLoud);
   z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)
   z.refreshRoomCtx(session.roomId);
-  await z.persist();
+  z.markSimDirty();
   await z.ensureAlarm();
 }
 
@@ -1386,7 +1386,7 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
     z.roomFeed(session.roomId, `${session.name} sets a burning torch down on the floor.`, session.pubkey, false);
     z.sendStatus(session);
     z.send(session, z.describeRoom(session, false));
-    await z.persist();
+    z.markSimDirty();
     return;
   }
   const carried = z.findCarried(session, arg);
@@ -1399,7 +1399,7 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
   const tn = z.world!.itemTemplates.get(carried.itemId)!.name;
   const tail = left > 0 ? ` (You still carry ${left === 1 ? "one more" : left + " more"} ${tn.replace(/^(a|an|the)\s+/i, "")}.)` : "";
   z.send(session, msg + tail);
-  await z.persist();
+  z.markSimDirty();
   await z.ensureAlarm();
 }
 
@@ -1461,7 +1461,7 @@ export async function cmdBurn(z: ZoneDO, session: Session, arg: string): Promise
   if (carried.serial !== null) await voidMint(z.env.DB, carried.serial);
   z.roomFeed(session.roomId, `${session.name} burns ${tmpl.name} down to nothing.`, session.pubkey, false);
   z.send(session, `You burn ${tmpl.name}. Nothing of it is left.`, "gain");
-  await z.persist();
+  z.markSimDirty();
 }
 
 export async function cmdStance(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -1941,7 +1941,7 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
         "Something heavy and lifeless: old iron off the bottom, good for the forge.",
       ]), "gain");
       z.sendCtx(session);
-      await z.persist();
+      z.markSimDirty();
       return;
     }
     return z.send(session, pick(biting ? [
@@ -2002,7 +2002,7 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
     + ` [${fish.rarity}] (unclaimed — good, fresh food)`, "gain");
   z.roomFeed(session.roomId, `${session.name} lands a catch from the ${beck ? "beck" : surface ? "still water" : "flood"}.`, session.pubkey, false);
   z.sendCtx(session);
-  await z.persist();
+  z.markSimDirty();
 }
 
 // ---- listen: an ear pressed to the dark ----
@@ -2511,7 +2511,7 @@ export async function getInstanced(z: ZoneDO, session: Session, inst: GroundInst
   }
   z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)
   z.refreshRoomCtx(session.roomId);
-  await z.persist();
+  z.markSimDirty();
   await z.ensureAlarm();
 }
 

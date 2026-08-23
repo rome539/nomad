@@ -153,6 +153,11 @@ export class ZoneDO implements DurableObject {
   // thrown error can never leave the latch blocked forever.
   private cacheOpening = new Map<string, number>();
   private leftAt = new Map<string, number>(); // pubkey -> ms it last disconnected (a quick return is a reconnect, not an arrival)
+  // The alarm's own memory (ensureAlarm, 2026-08-22): what this DO last armed,
+  // so a per-message getAlarm read is skipped while it is still pending. Both
+  // zero after a wake — the first call falls through to the storage read once.
+  private alarmArmedAt = 0;
+  private alarmArmedHot = false;
   public creatures = new Map<string, Creature>();
   public ground = new Map<string, string[]>(); // roomId -> item template ids
   // Items on the floor that carry per-instance state a bare template id can't:
@@ -766,6 +771,7 @@ export class ZoneDO implements DurableObject {
       ai.scheduleArrivals(this, t);
     }
     this.pruneTraces(now);
+    this.noteCreaturesChanged(); // the whole world just moved, offline
     this.savedAt = now;
     // The catch-up just advanced EVERYONE to now — the slow clock restarts from
     // here, or it would replay the same gap onto the frozen world.
@@ -827,7 +833,18 @@ export class ZoneDO implements DurableObject {
     }
   }
 
+  // THE DIRTY FLAG (2026-08-22). persist() is a synchronous full-world
+  // serialize + SQLite write on the shared thread; it used to run on 34 call
+  // sites, including every `go`, drop and death. Now the hot paths only mark
+  // the sim dirty, and the tick's own flush (TICK_SIM_FLUSH_MS, honoring this
+  // flag) is the one writer — the same 6-second bound the ambient churn has
+  // always accepted. The rare high-stakes sites (cache opens, init, the board)
+  // still persist immediately, and onLeave keeps its own write.
+  private simDirty = false;
+  public markSimDirty(): void { this.simDirty = true; }
+
   public async persist(): Promise<void> {
+    this.simDirty = false; // whatever was dirty is being written now
     this.savedAt = Date.now();
     const state: SimState = {
       savedAt: this.savedAt,
@@ -1210,7 +1227,7 @@ export class ZoneDO implements DurableObject {
       this.sendStatus(session);
       if (!seamless) this.send(session, gate.describeGatehouse(this, session));
       this.sendCtx(session);
-      await this.persist();
+      this.markSimDirty();
       await this.ensureAlarm();
       return new Response(null, { status: 101, webSocket: client });
     }
@@ -1222,7 +1239,7 @@ export class ZoneDO implements DurableObject {
     if (!seamless) this.send(session, this.describeRoom(session, !reconnecting));
     this.sendCtx(session);
     await ai.provokeGrudges(this, session, false); // reconnect grace: no free first strike
-    await this.persist();
+    this.markSimDirty();
     await this.ensureAlarm();
 
     return new Response(null, { status: 101, webSocket: client });
@@ -1326,6 +1343,7 @@ export class ZoneDO implements DurableObject {
     for (const c of this.creatures.values()) {
       if (c.target === session.pubkey) c.target = null;
     }
+    this.noteCreaturesChanged(); // targetedBy must not still hold a name that left
     await this.trySavePlayer(session.pubkey, session.roomId, session.hp);
     // Flush the worn-down condition of any provisional gear (rust ticks live in
     // memory; D1 catches up here). Sealed gear is frozen, no need.
@@ -1462,6 +1480,9 @@ export class ZoneDO implements DurableObject {
         // Parked socket closed before it was ever rehydrated: its state was
         // already flushed durably, so just note the departure for reconnect grace.
         this.leftAt.set(pubkey, Date.now());
+        if (this.leftAt.size > 200) {
+          for (const k of [...this.leftAt.keys()].slice(0, 100)) this.leftAt.delete(k);
+        }
       }
     }
     try { ws.close(); } catch {}
@@ -2055,7 +2076,7 @@ export class ZoneDO implements DurableObject {
       this.actorFeed(session, session.roomId, `${session.name} hurls ${this.gearName(itmpl.id)} — and misses.`);
       this.combatNoise(session.roomId);
       this.refreshRoomCtx(session.roomId);
-      await this.persist();
+      this.markSimDirty();
       await this.ensureAlarm();
       return;
     }
@@ -2124,7 +2145,7 @@ export class ZoneDO implements DurableObject {
         tvitals ? this.playerVitalsVerb({ tmpl: itmpl }, tmpl.name) : undefined, tvitals);
     }
     this.refreshRoomCtx(session.roomId);
-    await this.persist();
+    this.markSimDirty();
     await this.ensureAlarm();
   }
 
@@ -2160,7 +2181,7 @@ export class ZoneDO implements DurableObject {
     this.creatureNoise(session.roomId);
     await ai.wakeListeners(this, session, session.roomId, WAKE_NOISE, "drops from the dark, roused by the clatter!", true);
     this.refreshRoomCtx(session.roomId);
-    await this.persist();
+    this.markSimDirty();
     await this.ensureAlarm();
   }
 
@@ -3359,6 +3380,7 @@ export class ZoneDO implements DurableObject {
     // Fresh dogpile budget each tick: no player takes more than DOGPILE_CAP blows
     // in one tick, whether from swings in the fight or creatures storming the room.
     this.blowsThisTick.clear();
+    this.noteCreaturesChanged(); // the room index rebuilds once per beat
 
     // Players swing first — the living get initiative. You FOCUS one foe and
     // turn to the next the moment it falls (or the moment something new is on
@@ -3376,8 +3398,7 @@ export class ZoneDO implements DurableObject {
         continue;
       }
       const foes: Creature[] = [];
-      for (const c of this.creatures.values()) {
-        if (c.roomId !== session.roomId) continue;
+      for (const c of this.creaturesInRoom(session.roomId)) {
         if (c.id === session.target || c.target === session.pubkey) foes.push(c);
       }
       if (foes.length === 0) {
@@ -3602,6 +3623,8 @@ export class ZoneDO implements DurableObject {
       }
     }
 
+    mark("swings");
+
     // Wanderers with steel out against each other exchange blows on the same
     // round clock (pvp.ts) — after they've answered the beasts, before the
     // beasts answer them.
@@ -3670,6 +3693,8 @@ export class ZoneDO implements DurableObject {
         }
       }
     }
+
+    mark("seize");
 
     // Creatures act: flee if badly hurt, otherwise fight back. Only so many can
     // reach one player in a tick (DOGPILE_CAP) — the rest press at the edges and
@@ -4166,6 +4191,8 @@ export class ZoneDO implements DurableObject {
         }
       }
     }
+    mark("creatures");
+
     // Surrounded but shielded by the crush: a single line so the player reads
     // why not everything lands, without spamming it every tick.
     for (const pk of heldBack) {
@@ -4237,6 +4264,8 @@ export class ZoneDO implements DurableObject {
         await this.onLeave(session);
       }
     }
+
+    mark("recovery");
 
     // Lights burn down (light.ts): low-flame warnings, burnout, the dark
     // closing back over, and a lantern's last burn spending the lantern.
@@ -4346,6 +4375,7 @@ export class ZoneDO implements DurableObject {
           leavesAt: now + randInt(CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS),
         };
         this.creatures.set(c.id, c);
+        this.noteCreaturesChanged();
         this.refreshRoomCtx(roomId);
       }
     }
@@ -4357,6 +4387,7 @@ export class ZoneDO implements DurableObject {
       const seen = [...this.sessions.values()].some((s) => s.roomId === c.roomId && !this.outOfWorld(s));
       if (seen) this.roomFeed(c.roomId, pick(CHAINMAN_LEAVES), undefined, false, "amb");
       this.creatures.delete(c.id);
+      this.noteCreaturesChanged();
       this.refreshRoomCtx(c.roomId);
     }
 
@@ -4684,11 +4715,13 @@ export class ZoneDO implements DurableObject {
     // not a revert. Combat/move/eat already write through; this catches the
     // in-memory-only heals (chiefly rest) that would otherwise vanish on the
     // next cold start and snap a rested player back to stale HP.
+    // CONCURRENT, not sequential (2026-08-22): the old loop awaited one D1
+    // round-trip per player, so a full zone paid 10-20 stacked awaits in one
+    // beat. The writes are per-player and independent; the beat now waits for
+    // the slowest, not the sum.
     if (now - this.lastFlushAt >= FLUSH_INTERVAL_MS) {
       this.lastFlushAt = now;
-      for (const s of this.sessions.values()) {
-        await this.trySavePlayer(s.pubkey, s.roomId, s.hp);
-      }
+      await Promise.all([...this.sessions.values()].map((s) => this.trySavePlayer(s.pubkey, s.roomId, s.hp)));
     }
     // Every beat, not just every flush: a lost save must not survive long
     // enough for a hibernation wake to rebuild the player from the stale row.
@@ -4756,7 +4789,10 @@ export class ZoneDO implements DurableObject {
     // last flush lands in one write (the delta captures it all). Player-driven
     // saves already persisted immediately from their own handlers, so this only
     // delays ambient world state — bounded by the interval, re-simmable on crash.
-    if (now - this.lastTickFlushAt >= TICK_SIM_FLUSH_MS) {
+    // The simDirty flag (2026-08-22) pulls the flush forward when a command
+    // marked the sim: the hot paths no longer serialize per keystroke, and the
+    // whole world still lands within one TICK_SIM_FLUSH_MS of the last change.
+    if (this.simDirty || now - this.lastTickFlushAt >= TICK_SIM_FLUSH_MS) {
       this.lastTickFlushAt = now;
       await this.persist();
       mark("persist");
@@ -4942,6 +4978,12 @@ export class ZoneDO implements DurableObject {
       const idx = here.indexOf(r.itemId);
       if (idx !== -1) {
         here.splice(idx, 1);
+        // A stamp with no item is a ghost (2026-08-22): groundFreshAt only ever
+        // let go through scavenger scoops, so anything that ROTTED off the floor
+        // left its freshness stamp behind for the life of the world, and every
+        // scoop since has been skipping over a corpse. The rot is the item's
+        // true exit — its stamp goes with it.
+        this.groundFreshAt.delete(`${r.itemId}@${r.roomId}`);
         // The rot clock run backward: raw meat hung in the smokehouse racks has
         // cured through. The raw is gone from the floor; its keeping form takes
         // its place, hanging there for whoever's hand comes for it (yours, if you
@@ -5239,6 +5281,7 @@ export class ZoneDO implements DurableObject {
       return;
     }
     this.creatures.delete(creature.id);
+    this.noteCreaturesChanged(); // a throw can kill between beats
     for (const s of this.sessions.values()) {
       if (s.target === creature.id) s.target = null;
       if (s.seizedBy === creature.id) s.seizedBy = undefined; // its grip dies with it
@@ -5665,12 +5708,19 @@ export class ZoneDO implements DurableObject {
     this.refreshRoomCtx(fell);
     this.refreshRoomCtx(victim.roomId);
     await this.trySavePlayer(victim.pubkey, victim.roomId, victim.hp);
-    await this.persist();
+    this.markSimDirty();
   }
 
   public inCombat(session: Session): boolean {
     if (session.target) return true;
     if (session.pvpTarget) return true;
+    // A LIVE SCAN, ON PURPOSE (2026-08-23). This was briefly served off a
+    // cached target index, but a creature ACQUIRING a target changes no room,
+    // so the cache could not see it and "am I in combat" ran up to a beat
+    // behind the world — and that is a rule the game reads, not a hint. The
+    // scan is ~300 map steps on a keystroke; what the lag work went after was
+    // 4-6 FULL scans per creature per combat round, and that is gone either
+    // way. Exactness wins here.
     for (const c of this.creatures.values()) {
       if (c.target === session.pubkey) return true;
     }
@@ -5716,16 +5766,87 @@ export class ZoneDO implements DurableObject {
     // holding its breath.
     const now = Date.now();
     const hot = this.worldIsHot(now);
+    // THE ALARM'S OWN MEMORY (2026-08-22). ensureAlarm runs after EVERY
+    // message (webSocketMessage) and every tick, and getAlarm was one storage
+    // round-trip per keystroke on the shared thread. The only writer of the
+    // alarm is this function, so the DO can remember what it last armed: while
+    // that alarm is still pending and the world's heat hasn't changed, the
+    // storage read is skipped entirely. A hibernated DO wakes with no memory
+    // (both fields 0/false) and falls through to the read exactly once.
+    if (this.alarmArmedAt > now && this.alarmArmedHot === hot) return;
     const current = await this.state.storage.getAlarm();
     // An overdue alarm is a dead alarm (dev reloads leave them wedged) —
     // setAlarm overwrites, so reschedule rather than trust it. A HOT world
     // waiting on a quiet-length alarm re-arms early: the fight can't wait.
     if (current === null || current < now || (hot && current > now + TICK_MS)) {
-      await this.state.storage.setAlarm(now + (hot ? TICK_MS : IDLE_TICK_MS));
+      const at = now + (hot ? TICK_MS : IDLE_TICK_MS);
+      await this.state.storage.setAlarm(at);
+      this.alarmArmedAt = at;
+      this.alarmArmedHot = hot;
+    } else if (current !== null) {
+      // Not re-arming — but remember what IS pending, so a quiet spell after
+      // a hot one (or a hot one after a quiet one) doesn't re-read every
+      // message: the pending alarm is still this function's own doing.
+      this.alarmArmedAt = current;
+      this.alarmArmedHot = current <= now + TICK_MS;
     }
   }
 
   // ---- rendering & lookup ----
+
+  // THE SOUND INDEX (2026-08-22). Reverse adjacency: roomId -> every room with
+  // an exit INTO it. roomSound used to scan all of world.exits per noise event;
+  // this is built once on first sound, and the breach arc — the only thing that
+  // mutates exits after load — clears it through noteExitsChanged.
+  private soundAdj: Map<string, string[]> | null = null;
+  public noteExitsChanged(): void { this.soundAdj = null; }
+  private adjacentTo(roomId: string): string[] {
+    if (!this.soundAdj) {
+      const adj = new Map<string, string[]>();
+      for (const [rid, exits] of this.world!.exits) {
+        for (const e of exits) {
+          const list = adj.get(e.to_room) ?? [];
+          list.push(rid);
+          adj.set(e.to_room, list);
+        }
+      }
+      this.soundAdj = adj;
+    }
+    return this.soundAdj.get(roomId) ?? [];
+  }
+  public roomsAdjacentTo(roomId: string): string[] { return this.adjacentTo(roomId); }
+
+  // THE ROOM INDEX (2026-08-22). The combat and ctx paths used to scan ALL
+  // creatures per room-scoped question — 4-6 full scans per live creature per
+  // combat round. This caches creatures by room, rebuilt lazily on demand.
+  //
+  // INVALIDATION IS THE WHOLE CORRECTNESS STORY. A beat is not the unit: the
+  // world moves DURING a tick (wander, flee, migration, the dark stepping) and
+  // bodies are born and eaten mid-tick, and the index is then read straight
+  // off the message path — chips, packGaps, creaturesIn — for the whole 2-15s
+  // to the next beat. So every mutation of a creature's ROOM, and every add or
+  // delete, calls noteCreaturesChanged: creatureMoves, the lurker's step,
+  // surfaceDeepKin, the culls, predation's kill, brood/summon/arrival births,
+  // the event spawns and sweeps, the chainman, catchUp, and a throw's kill
+  // between beats. Rebuilds are still far cheaper than what they replace —
+  // a handful of mutations a beat against 4-6 scans per creature per round.
+  // ADD A CALL WITH ANY NEW MUTATOR, or it will serve a room that has moved on.
+  private byRoomValid = false;
+  private byRoomMap = new Map<string, Creature[]>();
+  public noteCreaturesChanged(): void { this.byRoomValid = false; }
+  public creaturesInRoom(roomId: string): Creature[] {
+    if (!this.byRoomValid) {
+      const m = new Map<string, Creature[]>();
+      for (const c of this.creatures.values()) {
+        const list = m.get(c.roomId) ?? [];
+        list.push(c);
+        m.set(c.roomId, list);
+      }
+      this.byRoomMap = m;
+      this.byRoomValid = true;
+    }
+    return this.byRoomMap.get(roomId) ?? [];
+  }
 
   // The room, entered: full prose the first time you see it (and on `look`),
   // brief on every re-entry after — just the name, the ways out, and whatever
@@ -6976,9 +7097,15 @@ export class ZoneDO implements DurableObject {
     // predator in the wood already walking toward the same noise.
     if (!loud && events.rutting(this, sourceRoomId) && chance(RUT_NOISE_MASK)) return;
     const heard = new Set<string>();
-    for (const [rid, exits] of world.exits) {
+    // ADJACENCY, NOT THE WHOLE WORLD (2026-08-22). Sound used to scan every
+    // room in world.exits (~500-1,100 rows) per noise event, and noise events
+    // fire per combat blow. The reverse index maps a room to the rooms with an
+    // exit INTO it — built once, cleared by the breach arc (the one thing that
+    // changes exits after load, via noteExitsChanged). Keyed doors still mute
+    // below, exactly as before.
+    for (const rid of this.adjacentTo(sourceRoomId)) {
       if (rid === sourceRoomId || rid === excludeRoomId) continue;
-      const toward = exits.find(
+      const toward = (world.exits.get(rid) ?? []).find(
         (e) => e.to_room === sourceRoomId && (!e.key_item || this.openDoors.has(`${rid}:${e.dir}`)),
       );
       if (!toward) continue;
@@ -7012,8 +7139,8 @@ export class ZoneDO implements DurableObject {
     this.roomSound(roomId, "The sounds of a fight echo {dir}.");
     // A fight in the room is almost unmissable — sleepers here roll the noise
     // odds and mostly come awake (the same WAKE_NOISE law the bones obey).
-    for (const c of this.creatures.values()) {
-      if (c.roomId !== roomId || !c.asleep || !chance(WAKE_NOISE)) continue;
+    for (const c of this.creaturesInRoom(roomId)) {
+      if (!c.asleep || !chance(WAKE_NOISE)) continue;
       c.asleep = false;
       c.sleepUntil = undefined;
       c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(2000, 8000));
