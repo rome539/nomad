@@ -57,7 +57,7 @@
 
 ## the-way-up | attachment: the warm ramp, straight at it
 !existing
-> east   the-ramp-head
+> up     the-ramp-head
 
 ## the-cold-plain | attachment: round onto the north shoulder
 !existing
@@ -69,7 +69,7 @@
 
 ## the-gully-top | attachment: the red bowl's drain, round the south
 !existing
-> east   the-red-tail
+> up     the-red-tail
 
 # ---- A. THE RAMP AND THE GLAZED ROCK ---------------------------------------
 
@@ -78,7 +78,7 @@ The ramp levels out and the ground you are standing on is warm through your boot
 > north  the-glazed-slab
 > south  the-warm-flags
 > east   the-black-glass
-> west   the-way-up
+> down   the-way-up
 
 ## the-glazed-slab | The Glazed Slab
 A slab of rock with a surface like a cracked pot glaze, black-brown, shining, catching the light in a way stone does not. Frost has not touched it. Run a hand over it and it is smooth in ropes and runs, as though it was liquid and stopped being liquid quickly, and the ropes all run the same way, downhill.
@@ -437,7 +437,7 @@ The approach ends at a wall of rock with a gap in it, and the gap is the way thr
 ## the-red-tail | The Red Tail
 The red ground runs out in a tail of rust-coloured grit that thins to nothing across a hundred paces, and the rock under it goes grey, then dark, then warm. It is the gentlest way onto this tier and the longest, and everything that walks up here rather than flying takes it.
 > east   the-low-traverse
-> west   the-gully-top
+> down   the-gully-top
 
 ## the-low-traverse | The Low Traverse
 A shelf running east under the whole south side, level and easy, with the tier's business going on somewhere above you and out of sight. It is the only ground on this mountain where you can walk for a while and think about something else, and that is exactly what makes it worth being careful on.

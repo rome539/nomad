@@ -47,11 +47,11 @@
 
 ## the-rake | attachment: the ramp off the crag bands
 !existing
-> east   the-rake-top
+> up     the-rake-top
 
 ## the-mid-shelf | attachment: east onto the south shelves
 !existing
-> east   the-shelf-head
+> up     the-shelf-head
 
 ## the-shattered-crown | attachment: north onto the spur
 !existing
@@ -64,7 +64,7 @@ The ramp runs out onto a shelf under the first of the great ribs, and the ground
 > north  the-rib-foot
 > south  the-under-rib
 > east   the-first-buttress
-> west   the-rake
+> down   the-rake
 
 ## the-first-buttress | The First Buttress
 A rib of rock standing out from the face like a flying wall, sixty feet through at the base and going up until the cloud takes it. It is the first of five you will pass and it is not the largest. Standing at the foot and looking along the line of them is the first time this mountain has shown you its size on purpose.
@@ -448,7 +448,7 @@ Snow banked in the spur's lee in a long tongue that lasts most of the year, hard
 ## the-shelf-head | The Shelf Head
 Round onto the south side and the wind goes off you like a coat coming off, and there is grass again — not much, and thin, but green. The shelves run east from here in a series of terraces, each one a little higher, and after the north side they feel like a kindness. They are not a kindness. They are simply where the sun is.
 > east   the-long-shelf
-> west   the-mid-shelf
+> down   the-mid-shelf
 
 ## the-long-shelf | The Long Shelf
 A terrace running a quarter mile east under a wall, level, dry, and floored with short turf, which up here is close to a road. You can walk it without thinking, which is the first time that has been true since the foot, and it is a habit worth breaking before the shelf ends.
@@ -560,21 +560,21 @@ The shelves end at a drop of two hundred feet onto the tier below, with the grou
 
 ## the-late-field | attachment: the last snow, and the ramp off the top of it
 !existing
-> east   the-cold-ramp
+> up     the-cold-ramp
 
 ## the-hot-scree | attachment: the sun side's shifting ground
 !existing
-> east   the-hot-ledge
+> up     the-hot-ledge
 
 ## the-cold-ramp | The Cold Ramp
 A tongue of old snow lying up the back of the rib, hard all day and harder at night, running up at an angle you can just walk if you kick steps and do not stop. It is the shaded side, so the snow never rots, so the ramp is here in every month of the year. It is the only thing on this face that is reliable.
 > east   the-rib-foot
-> west   the-late-field
+> down   the-late-field
 
 ## the-hot-ledge | The Hot Ledge
 A ledge a stride wide running east across the face above the scree, dry, dusty, and warm enough that the air over it shakes. There is nothing above it but rock and nothing below it for a long way. Everything with hooves on this side of the mountain uses it and the dust is beaten to powder.
 > east   the-sun-traverse
-> west   the-hot-scree
+> down   the-hot-scree
 
 ## the-sun-traverse | The Sun Traverse
 The ledge narrows to the width of your boots and holds that width for a hundred paces, with the rock leaning out slightly overhead so that you go along it turned half sideways. The stone is warm through your palms. There is no possibility of turning round on this and nothing to do about anything you meet.

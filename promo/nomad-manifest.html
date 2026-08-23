@@ -1,0 +1,253 @@
+<meta charset="utf-8">
+<title>NOMAD &mdash; door controller</title>
+<!-- The charset is load-bearing: this file gets captured to video, and a
+     mis-decoded dash cannot be fixed after the encode. -->
+<style>
+  :root{
+    --green:#3BE07C; --green-dim:#1F7A45; --green-mid:#2AA85F; --amber:#E0B25C;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  html,body{height:100%;}
+  body{margin:0;background:#010402;display:flex;align-items:center;justify-content:center;font-family:var(--mono);overflow:hidden;cursor:pointer;}
+  #stage{position:relative;aspect-ratio:16/9;width:min(100vw,177.78vh);overflow:hidden;background:#010402;}
+  /* the tube: a faint green wash, a dither, and the corners falling away */
+  #stage::before{content:"";position:absolute;inset:0;z-index:6;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,0.30) 0 1px,transparent 1px 3px);}
+  #stage::after{content:"";position:absolute;inset:0;z-index:7;pointer-events:none;
+    background:radial-gradient(ellipse 80% 70% at 50% 52%,rgba(24,90,52,0.16),transparent 62%),
+               radial-gradient(ellipse 92% 88% at 50% 50%,transparent 46%,rgba(0,0,0,0.72) 100%);}
+
+  /* A TERMINAL, SO IT BEHAVES LIKE ONE: lines land at the bottom and the older
+     ones ride up off the top. Nothing is centred, nothing animates in; it is a
+     machine printing what it knows. */
+  #screen{position:absolute;left:15%;right:15%;top:7%;bottom:7%;z-index:5;overflow:hidden;
+    display:flex;flex-direction:column;justify-content:flex-end;}
+  .l{color:var(--green);font-size:clamp(8px,1.06vw,17px);line-height:1.62;white-space:pre;letter-spacing:.01em;}
+  .l.dim{color:var(--green-dim);}
+  .l.mid{color:var(--green-mid);}
+  .l.gap{height:.85em;}
+  /* inverse video: the machine raising its voice */
+  .l.bar{background:var(--green);color:#020604;font-weight:700;padding:0 .5em;align-self:flex-start;}
+  .l.row{background:var(--green);color:#020604;padding:0 .5em;align-self:flex-start;}
+  .cur{display:inline-block;width:.6em;height:1.02em;background:var(--green);vertical-align:-.14em;}
+  /* RARITY PUNCHES THROUGH THE PHOSPHOR. These are the client's own hues, not
+     approximations -- the same hsl() values the log, the paperdoll and the
+     forge use (public.ts), at the dark-ground saturation and lightness. A
+     player who has seen a violet name in the feed sees the same violet here.
+     It is the one thing on this screen the tube does not get to recolour,
+     because the grade is not the controller's opinion -- it is on the seal. */
+  .r-common    { color:#6E7A6F; }
+  .r-uncommon  { color:hsl(95, 58%, 68%); }
+  .r-rare      { color:hsl(214, 58%, 68%); }
+  .r-epic      { color:hsl(275, 58%, 68%); }
+  .r-legendary { color:hsl(42, 58%, 68%); }
+  .wm{color:var(--amber);font-weight:800;letter-spacing:.5em;font-size:clamp(22px,3.6vw,54px);
+    align-self:center;margin-top:.7em;text-shadow:0 0 26px rgba(224,178,92,.5);}
+  .url{color:var(--amber);opacity:.85;letter-spacing:.24em;font-size:clamp(9px,1.15vw,18px);align-self:center;margin-top:.35em;}
+
+  #hint,#sndhint{position:absolute;bottom:2.6%;z-index:9;color:var(--green-dim);font-size:clamp(9px,1vw,14px);
+    letter-spacing:.15em;opacity:0;transition:opacity .8s ease;pointer-events:none;}
+  #hint{right:2.2%;} #sndhint{left:2.2%;}
+  #hint.show,#sndhint.show{opacity:.85;}
+</style>
+
+<div id="stage">
+  <div id="screen"></div>
+  <div id="sndhint">CLICK FOR SOUND</div>
+  <div id="hint">CLICK &middot; REPLAY</div>
+</div>
+
+<script>
+(() => {
+  const SHORT = new URLSearchParams(location.search).get("cut") === "short";
+
+  /* ---- sound: a machine room, not a soundtrack ---------------------- */
+  const SFX = {
+    _noise(ctx){ if(ctx.__nb)return ctx.__nb; const b=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),d=b.getChannelData(0);
+      for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1; ctx.__nb=b; return b; },
+    _burst(ctx,t,{type="lowpass",freq=300,q=1,dur=0.1,gain=0.3,sweep=0}){
+      const src=ctx.createBufferSource();src.buffer=this._noise(ctx);
+      const f=ctx.createBiquadFilter();f.type=type;f.Q.value=q;f.frequency.setValueAtTime(freq,t);
+      if(sweep)f.frequency.exponentialRampToValueAtTime(Math.max(sweep,20),t+dur);
+      const g=ctx.createGain();g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+      src.connect(f).connect(g).connect(ctx.destination);src.start(t,Math.random());src.stop(t+dur+0.05); },
+    _tone(ctx,t,{type="sine",f0=440,f1=0,dur=0.3,gain=0.2}){
+      const o=ctx.createOscillator();o.type=type;o.frequency.setValueAtTime(f0,t);
+      if(f1)o.frequency.exponentialRampToValueAtTime(Math.max(f1,1),t+dur);
+      const g=ctx.createGain();g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
+      o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+dur+0.05); },
+    // mains hum with the tube's whine sitting on top of it
+    hum(ctx,t,end){ if(end-t<=0)return;
+      const o=ctx.createOscillator();o.type="sine";o.frequency.value=50;
+      const g=ctx.createGain();g.gain.value=0.05;o.connect(g).connect(ctx.destination);o.start(t);o.stop(end);
+      const w=ctx.createOscillator();w.type="sine";w.frequency.value=15734; // line whistle
+      const wg=ctx.createGain();wg.gain.value=0.006;w.connect(wg).connect(ctx.destination);w.start(t);w.stop(end);
+      const src=ctx.createBufferSource();src.buffer=this._noise(ctx);src.loop=true;
+      const f=ctx.createBiquadFilter();f.type="lowpass";f.frequency.value=900;
+      const ng=ctx.createGain();ng.gain.value=0.012;
+      src.connect(f).connect(ng).connect(ctx.destination);src.start(t);src.stop(end); },
+    tick(ctx,t){ this._burst(ctx,t,{type:"bandpass",freq:2600,q:8,dur:0.016,gain:0.085}); },
+    line(ctx,t,n=7){ for(let i=0;i<n;i++) this.tick(ctx,t+i*0.021+Math.random()*0.008); },
+    clunk(ctx,t){ this._burst(ctx,t,{type:"lowpass",freq:220,dur:0.13,gain:0.45});
+      this._tone(ctx,t,{f0:88,f1:44,dur:0.16,gain:0.35}); },
+    beep(ctx,t){ this._tone(ctx,t,{type:"square",f0:1046.5,dur:0.09,gain:0.12}); },
+    alarm(ctx,t){ [0,0.16,0.32].forEach(d=>this._tone(ctx,t+d,{type:"square",f0:784,dur:0.1,gain:0.13})); },
+    boot(ctx,t){ this._tone(ctx,t,{type:"sawtooth",f0:60,f1:220,dur:0.9,gain:0.22});
+      this._burst(ctx,t,{type:"lowpass",freq:400,sweep:1800,dur:0.8,gain:0.2}); },
+    drop(ctx,t){ this._tone(ctx,t,{f0:92,f1:30,dur:1.6,gain:0.9});
+      this._burst(ctx,t,{freq:200,dur:0.5,gain:0.4}); this._tone(ctx,t,{type:"sine",f0:55,dur:2.4,gain:0.42}); },
+  };
+
+  let actx=null,sfxLog=[],t0Perf=performance.now(),timers=[],run=0;
+  const screen=document.getElementById("screen"), hint=document.getElementById("hint"), sndhint=document.getElementById("sndhint");
+  const updateSndHint=()=>sndhint.classList.toggle("show",!(actx&&actx.state==="running"));
+  function ensureAudio(){ if(!actx){try{actx=new AudioContext();}catch{}} if(actx&&actx.state==="suspended")actx.resume().catch(()=>{});
+    if(actx)actx.onstatechange=updateSndHint; updateSndHint(); return actx; }
+  function playSfx(name,...a){ sfxLog.push([name,(performance.now()-t0Perf)/1000,a]);
+    if(actx&&actx.state==="running"){try{SFX[name](actx,actx.currentTime+0.02,...a);}catch{}} }
+  window.__renderAudio=async(dur,offset)=>{
+    const sr=44100,oc=new OfflineAudioContext(1,Math.ceil(sr*dur),sr);
+    for(const [name,tRel,a] of (window.__take?.log??sfxLog)){ const t=tRel+offset;
+      if(t>=0&&t<dur-0.05){try{SFX[name](oc,t,...a);}catch{}} }
+    const buf=await oc.startRendering(),ch=buf.getChannelData(0);
+    const ab=new ArrayBuffer(44+ch.length*2),v=new DataView(ab);
+    const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+    w(0,"RIFF");v.setUint32(4,36+ch.length*2,true);w(8,"WAVEfmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+    v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,ch.length*2,true);
+    for(let i=0;i<ch.length;i++)v.setInt16(44+i*2,Math.max(-1,Math.min(1,ch[i]))*0x7fff,true);
+    const bytes=new Uint8Array(ab);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+    return btoa(bin);
+  };
+
+  const at=(ms,fn)=>timers.push(setTimeout(fn,ms));
+  function put(cls,text){ const d=document.createElement("div"); d.className="l "+(cls||""); d.textContent=text; screen.appendChild(d); return d; }
+  // A row the tube prints in green, with one span in the grade's own colour.
+  function putRow(pre,name,rar,post){
+    const d=document.createElement("div"); d.className="l";
+    d.appendChild(document.createTextNode(pre));
+    const s=document.createElement("span"); s.className="r-"+rar; s.textContent=name;
+    d.appendChild(s);
+    if(post) d.appendChild(document.createTextNode(post));
+    screen.appendChild(d); return d;
+  }
+  const pad=(s,n)=>String(s)+" ".repeat(Math.max(0,n-String(s).length));
+  const dots=(label,n=13)=>label+" "+".".repeat(Math.max(1,n-label.length));
+
+  /* ---- THE READOUT -------------------------------------------------------
+     The door controller's own status page, as it was, brought up to date.
+     Everything it reports is true of the live game: the mountain and its five
+     tiers, the one tenant at the top, meat that keeps, hands that trade, doors
+     players hold, and a ledger whose causes of death are the ones the systems
+     actually produce. The voice does not change -- flat, parenthetical, and
+     entirely unbothered.                                                    */
+
+  /* EVERY NAME BELOW IS A REAL ROW IN THE GAME. The grades are the client's
+     five, and the one-line notes are what the thing actually does, in the
+     controller's register: no adjectives, no selling. If a rarity here is
+     wrong, this array is the only place to fix it. */
+
+  const ARMOURY = [
+    ["a plug of bog-moss",        "common",    "staunch 5. it grows in every wet hollow at the foot."],
+    ["a hank of fleece",          "common",    "staunch 3. the flock is gone. the wool is on every wall."],
+    ["a torch",                   "common",    "burns down. the dark comes back on its own schedule."],
+    ["a bundle of bloodwort",     "uncommon",  "staunch 6. the best thing that grows."],
+    ["a hunter's journal",        "uncommon",  "somebody else's kills, counted. stealable."],
+    ["a surveyor's map",          "rare",      "true. the crude ones are not, and they do not say so."],
+    ["a graveblade",              "epic",      "signed at the gate. mint recorded."],
+    // The fifth grade gets no name on purpose: the controller will not invent
+    // a row it has not signed, and a manifest that lists a legendary nobody has
+    // carried out is a lie the door would not tell.
+    ["— no entry —",              "legendary", "the grade exists. nothing has come back wearing it."],
+  ];
+
+  const ROSTER = [
+    ["the wood",      "boar, old boar, the woodward, things that were somebody's once"],
+    ["the road",      "rat, fleet-rat, ravens that take what you drop and hide it"],
+    ["the foot",      "hind, stag, roe, goat, billy — and the summer people's walls"],
+    ["the cloud line","stone-adder, gravid adder. you cannot see the room you are in."],
+    ["the high ground","great vulture, brooding vulture, the bone-dropper"],
+    ["the territory", "cave-lion, the old glutton. the rock is warm. the kills come up."],
+    ["the summit",    "1. it has no classification. it was here first."],
+  ];
+
+  const HOLDINGS = [
+    ["rooms",        "1,169 walked or not"],
+    ["the roster",   "every one of them eats something, and can starve"],
+    ["gear",         "five grades. the fifth is not an upgrade, it is a different bet."],
+    ["seals",        "minted at the gate. cracked by dying. never re-issued."],
+  ];
+
+  function play(){
+    const token=++run;
+    timers.forEach(clearTimeout); timers=[];
+    screen.innerHTML="";
+    t0Perf=performance.now(); window.__t0Wall=Date.now(); sfxLog=[];
+    ensureAudio();
+
+    const marks={}; let T=0;
+    const step=(ms)=>{ T+=ms; return T; };
+    const say=(cls,text,ms=200,sfx)=>{ at(T,()=>{ if(sfx)playSfx(...sfx); put(cls,text); }); step(ms); };
+
+    at(30,()=>playSfx("hum",0,SHORT?30:82));
+    at(60,()=>playSfx("boot"));
+
+    marks.boot=0.6;
+    say("dim","NOMAD/0 · door controller · rev 269",1100,["clunk"]);
+    say("dim","inventory audit … the door counts what goes past it",1500);
+    say("gap","",250);
+
+    // THE ARMOURY. The whole point of the cut: the grades, in their own
+    // colours, on a screen that is otherwise one colour.
+    marks.armoury=(T+300)/1000;
+    say("mid","armoury — by grade, as the seal reads it",560,["beep"]);
+    for(const [name,rar,note] of ARMOURY){
+      at(T,()=>{ playSfx("line",6); putRow("  ["+pad(rar,9)+"] ", pad(name,26), rar, "  "+note); });
+      step(SHORT?380:1000);
+    }
+    say("gap","",340);
+    say("dim","  grade is not power. the fifth is a different bet, not a better one.",SHORT?600:1900,["line",8]);
+    say("gap","",480);
+
+    marks.roster=(T+300)/1000;
+    say("mid","roster — what is standing, by ground",560,["beep"]);
+    for(const [where,what] of ROSTER){
+      say("", "  "+pad(dots(where,17),19)+" "+what, SHORT?340:1000, ["line",5]);
+    }
+    say("gap","",340);
+    say("", "note: every line above eats. hungry ones hunt. that is the whole roster.",SHORT?700:2000,["line",8]);
+    say("gap","",480);
+
+    if(!SHORT){
+      marks.holdings=(T+300)/1000;
+      say("mid","holdings —",560,["beep"]);
+      for(const [k,v] of HOLDINGS) say("", "  "+pad(dots(k,14),16)+" "+v, 1000, ["line",5]);
+      say("gap","",520);
+    }
+
+    marks.notice=(T+300)/1000;
+    say("bar","NOTICE",620,["alarm"]);
+    say("", "  none of it is yours until the gate says so.",900);
+    say("", "  the door has counted everything it ever gave back.",1800);
+    say("gap","",460);
+
+    marks.rules=(T+300)/1000;
+    say("dim","rules.txt (complete):",560,["beep"]);
+    say("", "  1. sealed at the gate = yours.",700,["line",5]);
+    say("", "  2. carried = a bet.",700,["line",4]);
+    say("", "  3. weight is not free.",700,["line",4]);
+    say("", "  4. the door does not care.",2200,["line",5]);
+
+    marks.word=(T+600)/1000;
+    at(T,()=>{ playSfx("drop"); put("wm","NOMAD"); }); step(700);
+    at(T,()=>put("url","nomadmud.com")); step(4200);
+
+    marks.END=T/1000; window.__T=marks;
+    at(T,()=>{ hint.classList.add("show"); window.__take={t0:window.__t0Wall,log:sfxLog.slice()}; });
+    at(T+3200,()=>{ if(token===run) play(); });
+  }
+
+  document.body.addEventListener("click",()=>play());
+  document.addEventListener("keydown",e=>{ if(e.key==="r"||e.key==="R") play(); });
+  play();
+})();
+</script>

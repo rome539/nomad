@@ -59,19 +59,19 @@
 
 ## the-cold-crest | attachment: off the top of the permanent ice
 !existing
-> east   the-crest-step
+> up     the-crest-step
 
 ## the-standing-cloud | attachment: out of the cloud, onto the snow
 !existing
-> east   the-high-neve
+> up     the-high-neve
 
 ## the-cloud-shelf | attachment: the same, one row lower
 !existing
-> east   the-drift-foot
+> up     the-drift-foot
 
 ## the-shelf-drop | attachment: the sun side's last shelf, running out
 !existing
-> east   the-shelf-tail
+> up     the-shelf-tail
 
 ## the-cloud-foot | attachment: the cloud's low corner — the fifth way up
 # Added with tier five (rome, 2026-08-19). The throat check counts ALL the ground
@@ -81,12 +81,12 @@
 # cloud line's because the pipeline builds the tiers in order and a room cannot
 # declare a door to ground that does not exist yet.
 !existing
-> east   the-fan-head
+> up     the-fan-head
 
 ## the-fan-head | The Fan Head
 The cloud thins at the corner and the ground ahead falls away into a fan of grey stone running out further than you can see the end of, with everything the mountain has shed lying somewhere on it, sorted by weight. You are standing at the top of it. From here it is all downhill and none of it is walking.
 > east   the-catch-slope
-> west   the-cloud-foot
+> down   the-cloud-foot
 
 # ---- A. THE SNOWFIELD: no cover, no shade, nothing to get behind ------------
 
@@ -111,13 +111,13 @@ You come out of the cloud into flat white light with no shadow in it anywhere, a
 > north  the-snow-brim
 > south  the-drift-foot
 > east   the-wind-slab
-> west   the-standing-cloud
+> down   the-standing-cloud
 
 ## the-drift-foot | The Drift Foot
 The bottom of a drift the size of a village, in the lee where the wind puts down everything it has been carrying. The snow here is deep and soft and slow, and a thing that came down the face this winter is somewhere under it, and will keep until spring, and spring does not come to this height.
 > north  the-high-neve
 > east   the-sun-cup
-> west   the-cloud-shelf
+> down   the-cloud-shelf
 
 ## the-white-slope | The White Slope
 A long even slope of white with a single line of tracks going across it, made by something with a stride longer than yours, walking without hurrying, from nowhere in particular to nowhere in particular. The tracks are old enough to have gone hard and stand up in relief where the wind has taken the loose snow off round them.
@@ -196,7 +196,7 @@ The snow ends in a wet grey lip a foot thick, undercut, dripping, with black roc
 ## the-shelf-tail | The Shelf Tail
 The sun shelves finally run out — the grass gives up, then the moss, then the soil, and what is left is a tail of loose stone spilling east into open ground with nothing growing on it at all. It is the last step out of anywhere that feeds you.
 > east   the-fall-fan
-> west   the-shelf-drop
+> down   the-shelf-drop
 
 ## the-fall-fan | The Fall Fan
 The bottom of the fan, where the smallest things end up: grit, chips, the light stuff that bounced furthest. It is soft walking and dull to look at and the only bones in it are small enough to take for gravel until you pick one up.
@@ -350,7 +350,7 @@ The gully's head narrows to a slot you could touch both sides of, and above it t
 The permanent ice ends and rock begins, and the rock is a step up onto the crest of a ridge that runs away east as far as you can see it. Both sides fall away immediately. From this step on there is no such thing as walking round anything.
 > north  the-first-notch
 > east   the-knife
-> west   the-cold-crest
+> down   the-cold-crest
 
 ## the-first-notch | The First Notch
 A gap in the crest where the ridge dips and the wind comes through from the far side hard enough to lean on. Standing in the notch you can see down the north face, which nobody has any reason to look at twice: it is black, it is vertical, and there is nothing on it.

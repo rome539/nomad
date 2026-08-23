@@ -1,0 +1,99 @@
+<meta charset="utf-8">
+<title>NOMAD &mdash; what it is</title>
+<!-- The charset is load-bearing: without it the game's em dashes render as
+     Latin-1 garbage, and this file gets captured to video where a mangled
+     frame cannot be fixed after the encode. -->
+<script src="trailer-kit.js"></script>
+<script>
+KIT.ready(() => {
+
+  /* THE EVERGREEN CUT. Not news — the pitch. What is this thing, in the order
+     a stranger needs it: a world that is somewhere, a world that moves whether
+     or not you are looking, and a cost that makes the first two matter.
+     Every room and every feed line below is the game's own text. */
+
+  const BEATS = [
+    { key:"eaves", cmd:"east", room:"The Eaves", keep:true,
+      prose:"The wood does not start gradually. One step the light is grey and open and the track is under you, the next the trunks have closed over and it has gone green and close and the air is ten degrees colder. Behind you the gap still shows the road. Ahead there is no gap at all.",
+      sfx:["steps",4,0.36] },
+
+    { key:"path", cmd:"west", room:"The Deer Path",
+      prose:"A narrow line of bare earth winds west between the trunks, packed hard and no wider than a shoulder. Nothing made it on purpose. It goes where the deer needed to go, which is not necessarily anywhere you need to be.",
+      sfx:["steps",4,0.34] },
+
+    // THE WORLD MOVES WITHOUT YOU. Two lines that arrive on their own: one
+    // through a wall, one off the sky. Nobody typed anything to make these.
+    { key:"alone", keep:true,
+      lines:[["feed","The sounds of a fight echo west."],
+             ["sys","nobody typed anything. it is just happening."]],
+      sfx:["hit"] },
+
+    { key:"night", keep:true,
+      lines:[["prose","Night's fully down and the sky over you is open and black &mdash; past the light you're standing in, so is everything else."]],
+      sfx:["bedOut",1.4] },
+  ];
+
+  const CARDS = [
+    { key:"key", ms:4600, keep:true, sfx:["seal"],
+      html:'<div class="eyebrow">no account &middot; no password</div>'+
+           '<div class="claim">your key is your character.</div>'+
+           '<div class="after">a nostr keypair walks in and it is yours.<br>nothing about you lives on anybody\'s server.</div>' },
+    { key:"cost", ms:5400, keep:true, sfx:["death"],
+      html:'<div class="eyebrow">dying is what costs you</div>'+
+           '<div class="toll shake">everything you carry<br>drops where you fall.</div>'+
+           '<div class="after">only the lockbox and the vault keep.<br>what you walk out with is what you kept.</div>' },
+  ];
+
+  function play(){
+    const SHORT=KIT.isShort();
+    const beats=SHORT?BEATS.filter(b=>b.keep):BEATS;
+    const cards=SHORT?CARDS.filter(c=>c.keep):CARDS;
+    const token=KIT.begin();
+    const marks={}; let T=0;
+
+    KIT.at(40,()=>KIT.playSfx("bed",(SHORT?32:58),{from:0.02,to:0.075,f0:260,f1:820}));
+
+    // the claim first, because a stranger needs to know what they are looking at
+    marks[cards[0].key]=(T+1200)/1000;
+    KIT.at(T,()=>{ KIT.playSfx(...cards[0].sfx); KIT.showCard(cards[0].html); });
+    T+=cards[0].ms; KIT.at(T,()=>KIT.hideCard()); T+=900;
+
+    for(const b of beats){
+      marks[b.key]=(T+900)/1000;
+      if(b.lines){
+        KIT.at(T,()=>{ if(b.sfx)KIT.playSfx(...b.sfx); b.lines.forEach(([c,h],i)=>KIT.at(i*900,()=>KIT.line(c,h))); });
+        const longest=b.lines.reduce((m,l)=>Math.max(m,KIT.holdFor(l[1])),0);
+        T+=longest+900*b.lines.length;
+        KIT.at(T,()=>KIT.clearTerm()); T+=700;
+        continue;
+      }
+      KIT.at(T,()=>{ KIT.playSfx("key"); KIT.line("cmd",'&gt; <b>'+b.cmd+'</b>'); }); T+=520;
+      KIT.at(T,()=>{ if(b.sfx)KIT.playSfx(...b.sfx); KIT.line("room",b.room); }); T+=620;
+      KIT.at(T,()=>KIT.line("prose",b.prose));
+      T+=520+KIT.holdFor(b.prose);
+      KIT.at(T,()=>KIT.clearTerm()); T+=700;
+    }
+
+    // and the cost, which is the only reason any of it is worth anything
+    const cost=cards[cards.length-1];
+    marks[cost.key]=(T+1200)/1000;
+    KIT.at(T,()=>{ KIT.playSfx(...cost.sfx); KIT.showCard(cost.html); });
+    T+=cost.ms; KIT.at(T,()=>KIT.hideCard()); T+=900;
+
+    marks.word=(T+1200)/1000;
+    KIT.at(T-120,()=>KIT.playSfx("drop"));
+    KIT.at(T,()=>KIT.showCard('<div class="wordmark">NOMAD</div>'+
+      '<div class="tagsub">a living text dungeon on nostr</div>'+
+      '<div class="url">nomadmud.com</div>'+
+      '<div class="stat">free &middot; no install &middot; bring a key</div>'));
+    KIT.at(T+260,()=>KIT.playSfx("chime"));
+    T+=4600;
+
+    KIT.finish(marks,T,token,play);
+  }
+
+  KIT.mount();
+  KIT.bindReplay(play);
+  play();
+});
+</script>

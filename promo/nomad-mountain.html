@@ -1,0 +1,261 @@
+<meta charset="utf-8">
+<title>NOMAD &mdash; the mountain</title>
+<!-- THE CHARSET IS LOAD-BEARING. Without it a browser opening this off the
+     filesystem (or a host that serves it with no charset header) reads UTF-8
+     bytes as Latin-1, and every em dash in the game's prose renders as the
+     "a-euro" garbage. The text below belongs to the game, so it is also
+     written with entities rather than raw multi-byte characters: belt and
+     braces, because this file gets captured to video and a mangled frame is
+     not something you can fix after the encode. -->
+
+<style>
+  :root{
+    --amber:#E0B25C; --amber-dim:#8A6D38; --blood:#A63226; --bone:#D8D2C4; --gold:#F0C86A;
+    --slate:#6E7A85;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  html,body{height:100%;}
+  body{margin:0;background:#020202;display:flex;align-items:center;justify-content:center;font-family:var(--mono);overflow:hidden;cursor:pointer;}
+  #stage{position:relative;aspect-ratio:16/9;width:min(100vw,177.78vh);overflow:hidden;background:#000;}
+  /* The screen it is actually played on. Static overlays, not motion. */
+  #stage::before{content:"";position:absolute;inset:0;z-index:6;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,0.22) 0 1px,transparent 1px 3px);}
+  #stage::after{content:"";position:absolute;inset:0;z-index:7;pointer-events:none;
+    background:radial-gradient(ellipse 92% 86% at 50% 46%,transparent 52%,rgba(0,0,0,0.62) 100%);}
+
+  /* THE TERMINAL. The product is a screen full of prose, so the trailer is a
+     screen full of prose. Left-aligned, one measure, the client's own colour
+     roles doing the work they already do in the game. */
+  #term{position:absolute;left:11%;right:11%;top:50%;transform:translateY(-50%);z-index:5;
+    display:flex;flex-direction:column;gap:.85em;}
+  .ln{opacity:0;transition:opacity .5s ease;}
+  .ln.in{opacity:1;}
+  .cmd{color:var(--amber-dim);font-size:clamp(11px,1.5vw,22px);letter-spacing:.04em;}
+  .cmd b{color:var(--amber);font-weight:400;}
+  .room{color:var(--amber);font-size:clamp(15px,2.2vw,33px);letter-spacing:.05em;font-weight:700;}
+  .prose{color:var(--bone);opacity:.82;font-size:clamp(12px,1.72vw,26px);line-height:1.62;max-width:38em;}
+  .feed{color:var(--blood);font-size:clamp(12px,1.72vw,26px);line-height:1.62;max-width:38em;
+    text-shadow:0 0 14px rgba(166,50,38,.4);}
+  .sys{color:var(--slate);font-size:clamp(10px,1.35vw,20px);letter-spacing:.22em;text-transform:uppercase;}
+  .cur{display:inline-block;width:.62em;height:1.05em;background:var(--amber);vertical-align:-.16em;margin-left:.12em;}
+  .cur.off{opacity:0;}
+
+  /* The full-frame cards: the toll, and the name. */
+  #card{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;opacity:0;transition:opacity .55s ease;pointer-events:none;padding:0 9%;}
+  #card.show{opacity:1;}
+  .eyebrow{color:var(--slate);font-size:clamp(9px,1.2vw,18px);letter-spacing:.42em;text-transform:uppercase;margin-bottom:1.2em;}
+  .toll{color:var(--blood);font-size:clamp(17px,2.9vw,44px);line-height:1.35;font-weight:700;
+    text-shadow:0 0 18px rgba(166,50,38,.55);}
+  .after{color:var(--slate);font-size:clamp(11px,1.6vw,24px);line-height:1.6;margin-top:1.2em;}
+  .wordmark{color:var(--amber);font-weight:800;font-size:clamp(56px,13vw,190px);letter-spacing:.02em;line-height:1;
+    text-shadow:0 0 30px rgba(224,178,92,.55),0 0 90px rgba(224,178,92,.25);}
+  .tagsub{color:var(--bone);font-size:clamp(13px,2.1vw,31px);letter-spacing:.05em;margin-top:.25em;}
+  .url{color:var(--gold);font-weight:800;font-size:clamp(20px,3.4vw,50px);letter-spacing:.04em;margin-top:.55em;
+    text-shadow:0 0 18px rgba(240,200,106,.5);}
+  .stat{color:var(--amber-dim);font-size:clamp(10px,1.3vw,19px);letter-spacing:.3em;margin-top:1.5em;text-transform:uppercase;}
+  @keyframes tremor{0%,100%{transform:translate(0,0)}25%{transform:translate(-1.1px,.5px)}50%{transform:translate(.8px,-.6px)}75%{transform:translate(-.5px,-.4px)}}
+  .shake{animation:tremor .09s infinite;}
+
+  #hint{position:absolute;right:2.2%;bottom:2.8%;z-index:9;color:var(--amber-dim);font-size:clamp(9px,1vw,14px);letter-spacing:.15em;opacity:0;transition:opacity .8s ease;}
+  #hint.show{opacity:.85;}
+  #sndhint{position:absolute;left:2.2%;bottom:2.8%;z-index:9;color:var(--amber-dim);font-size:clamp(9px,1vw,14px);letter-spacing:.15em;opacity:0;transition:opacity .8s ease;pointer-events:none;}
+  #sndhint.show{opacity:.85;}
+</style>
+
+<div id="stage">
+  <div id="term"></div>
+  <div id="card"></div>
+  <div id="sndhint">CLICK FOR SOUND</div>
+  <div id="hint">CLICK &middot; REPLAY</div>
+</div>
+
+<script>
+(() => {
+  const SHORT = new URLSearchParams(location.search).get("cut") === "short";
+
+  // ---- sound: wind, boots, and the thing at the top ----
+  const SFX = {
+    _noise(ctx){ if(ctx.__nb)return ctx.__nb; const b=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),d=b.getChannelData(0);
+      for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1; ctx.__nb=b; return b; },
+    _burst(ctx,t,{type="lowpass",freq=300,q=1,dur=0.1,gain=0.3,sweep=0}){
+      const src=ctx.createBufferSource();src.buffer=this._noise(ctx);
+      const f=ctx.createBiquadFilter();f.type=type;f.Q.value=q;f.frequency.setValueAtTime(freq,t);
+      if(sweep)f.frequency.exponentialRampToValueAtTime(Math.max(sweep,20),t+dur);
+      const g=ctx.createGain();g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+      src.connect(f).connect(g).connect(ctx.destination);src.start(t,Math.random());src.stop(t+dur+0.05); },
+    _tone(ctx,t,{type="sine",f0=440,f1=0,dur=0.3,gain=0.2}){
+      const o=ctx.createOscillator();o.type=type;o.frequency.setValueAtTime(f0,t);
+      if(f1)o.frequency.exponentialRampToValueAtTime(Math.max(f1,1),t+dur);
+      const g=ctx.createGain();g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
+      o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+dur+0.05); },
+    wind(ctx,t,end,from=0.03,to=0.10,f0=380,f1=1250){ if(end-t<=0)return;
+      const src=ctx.createBufferSource();src.buffer=this._noise(ctx);src.loop=true;
+      const f=ctx.createBiquadFilter();f.type="bandpass";f.Q.value=0.7;
+      f.frequency.setValueAtTime(f0,t);f.frequency.linearRampToValueAtTime(f1,end);
+      const g=ctx.createGain();g.gain.setValueAtTime(from,t);g.gain.linearRampToValueAtTime(to,end);
+      const lfo=ctx.createOscillator();lfo.frequency.value=0.16;const lg=ctx.createGain();lg.gain.value=0.032;
+      lfo.connect(lg).connect(g.gain);lfo.start(t);lfo.stop(end);
+      src.connect(f).connect(g).connect(ctx.destination);src.start(t);src.stop(end); },
+    windOut(ctx,t,dur=1.2){
+      const src=ctx.createBufferSource();src.buffer=this._noise(ctx);src.loop=true;
+      const f=ctx.createBiquadFilter();f.type="bandpass";f.Q.value=0.7;f.frequency.setValueAtTime(1250,t);
+      f.frequency.exponentialRampToValueAtTime(110,t+dur);
+      const g=ctx.createGain();g.gain.setValueAtTime(0.10,t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
+      src.connect(f).connect(g).connect(ctx.destination);src.start(t);src.stop(t+dur+0.1); },
+    key(ctx,t){ this._burst(ctx,t,{type:"bandpass",freq:2400,q:6,dur:0.022,gain:0.10}); },
+    step(ctx,t){this._burst(ctx,t,{freq:230,dur:0.08,gain:0.34});this._tone(ctx,t,{f0:60,f1:38,dur:0.1,gain:0.4});},
+    steps(ctx,t,n=4,dt=0.36){ for(let i=0;i<n;i++)this.step(ctx,t+i*dt); },
+    bones(ctx,t){ for(let i=0;i<5;i++) this._burst(ctx,t+i*0.055+Math.random()*0.03,
+      {type:"bandpass",freq:1500+Math.random()*900,q:7,dur:0.06,gain:0.18}); },
+    roar(ctx,t){
+      const o=ctx.createOscillator();o.type="sawtooth";
+      o.frequency.setValueAtTime(96,t);o.frequency.linearRampToValueAtTime(74,t+1.5);o.frequency.linearRampToValueAtTime(52,t+2.6);
+      const f=ctx.createBiquadFilter();f.type="lowpass";f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(260,t+2.6);
+      const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.72,t+0.35);
+      g.gain.setValueAtTime(0.72,t+1.7);g.gain.exponentialRampToValueAtTime(0.001,t+2.7);
+      const lfo=ctx.createOscillator();lfo.frequency.value=23;const lg=ctx.createGain();lg.gain.value=26;
+      lfo.connect(lg).connect(o.frequency);lfo.start(t);lfo.stop(t+2.7);
+      o.connect(f).connect(g).connect(ctx.destination);o.start(t);o.stop(t+2.8);
+      this._tone(ctx,t,{f0:44,f1:31,dur:2.6,gain:0.48});
+      // and the crags give it back, a second time
+      const e=t+1.15; const o2=ctx.createOscillator();o2.type="sawtooth";
+      o2.frequency.setValueAtTime(72,e);o2.frequency.linearRampToValueAtTime(50,e+1.6);
+      const f2=ctx.createBiquadFilter();f2.type="lowpass";f2.frequency.value=420;
+      const g2=ctx.createGain();g2.gain.setValueAtTime(0.0001,e);g2.gain.exponentialRampToValueAtTime(0.19,e+0.3);
+      g2.gain.exponentialRampToValueAtTime(0.001,e+1.7);
+      o2.connect(f2).connect(g2).connect(ctx.destination);o2.start(e);o2.stop(e+1.8); },
+    drop(ctx,t){this._tone(ctx,t,{f0:92,f1:30,dur:1.6,gain:0.95});this._burst(ctx,t,{freq:200,dur:0.5,gain:0.45});this._tone(ctx,t,{type:"sine",f0:55,dur:2.4,gain:0.45});},
+    chime(ctx,t){[523.25,783.99,1046.5].forEach((f,i)=>this._tone(ctx,t+i*0.09,{f0:f,dur:2.0,gain:0.14}));},
+  };
+
+  let actx=null,sfxLog=[],t0Perf=performance.now();
+  const sndhint=document.getElementById("sndhint");
+  const updateSndHint=()=>sndhint.classList.toggle("show",!(actx&&actx.state==="running"));
+  function ensureAudio(){ if(!actx){try{actx=new AudioContext();}catch{}} if(actx&&actx.state==="suspended")actx.resume().catch(()=>{});
+    if(actx)actx.onstatechange=updateSndHint; updateSndHint(); return actx; }
+  function playSfx(name,...a){ sfxLog.push([name,(performance.now()-t0Perf)/1000,a]);
+    if(actx&&actx.state==="running"){try{SFX[name](actx,actx.currentTime+0.02,...a);}catch{}} }
+  window.__renderAudio=async(dur,offset)=>{
+    const sr=44100,oc=new OfflineAudioContext(1,Math.ceil(sr*dur),sr);
+    for(const [name,tRel,a] of (window.__take?.log??sfxLog)){ const t=tRel+offset;
+      if(t>=0&&t<dur-0.05){try{SFX[name](oc,t,...a);}catch{}} }
+    const buf=await oc.startRendering(),ch=buf.getChannelData(0);
+    const ab=new ArrayBuffer(44+ch.length*2),v=new DataView(ab);
+    const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+    w(0,"RIFF");v.setUint32(4,36+ch.length*2,true);w(8,"WAVEfmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+    v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,ch.length*2,true);
+    for(let i=0;i<ch.length;i++)v.setInt16(44+i*2,Math.max(-1,Math.min(1,ch[i]))*0x7fff,true);
+    const bytes=new Uint8Array(ab);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+    return btoa(bin);
+  };
+
+  const term=document.getElementById("term"), card=document.getElementById("card"), hint=document.getElementById("hint");
+
+  // THE WALK. Every room name and every line of prose below is the game's own
+  // text, off the region files, trimmed to the sentence that carries the tier.
+  // Nothing here is written for the trailer.
+  const WALK = [
+    { key:"foot", cmd:"east", room:"The Turf Wall",
+      prose:"It is not keeping anything in or out. It marks where the grazing was worth walling, and the fact that it stops means somebody decided, precisely, where that was.",
+      sfx:["steps",4,0.36] },
+    { key:"cairn", cmd:"east", room:"The Cairn Line",
+      prose:"They are not graves and they are not boundaries. Somebody put them here to be followed in bad weather, and the arrangement only makes sense if you are walking toward the pass.",
+      sfx:["steps",4,0.34] },
+    { key:"buttress", cmd:"east", room:"The First Buttress", keep:true,
+      prose:"It is the first of five you will pass and it is not the largest. Standing at the foot and looking along the line of them is the first time this mountain has shown you its size on purpose.",
+      sfx:["steps",3,0.4] },
+    { key:"bone", cmd:"east", room:"The Bone Ground", keep:true,
+      prose:"Bone, in quantity, lying loose among the stones. None of it is arranged and none of it is fresh. Everything that dies anywhere above here comes to this fan eventually, and this is where the heavy pieces stop rolling.",
+      sfx:["bones"] },
+    { key:"roar", feed:"Far up the mountain something roars, long and level, and does not stop when it should &mdash; and then the sound of it comes back off the crags a second time.", keep:true,
+      sfx:["roar"] },
+    { key:"summit", cmd:"east", room:"The Summit", keep:true,
+      prose:"The floor is swept and it is warm. The whole sky is here. There is no higher ground anywhere you can see in any direction, and nothing between you and any of it.",
+      sfx:["windOut",1.3] },
+  ];
+  const beats = SHORT ? WALK.filter(b=>b.keep) : WALK;
+
+  // Pace: a command lands, the room names itself, the prose arrives, and it
+  // HOLDS long enough to be read. That hold is the whole trailer — a text game
+  // that does not let you read is advertising the wrong thing.
+  const CMD_MS=520, ROOM_MS=620, PROSE_MS=520;
+  const holdFor=(s)=>Math.max(2600, Math.min(6200, s.split(/\s+/).length*260));
+
+  let timers=[], run=0;
+  const at=(ms,fn)=>timers.push(setTimeout(fn,ms));
+  function line(cls,html){ const d=document.createElement("div"); d.className="ln "+cls; d.innerHTML=html;
+    term.appendChild(d); requestAnimationFrame(()=>d.classList.add("in")); return d; }
+  function clearTerm(){ [...term.children].forEach(c=>c.classList.remove("in"));
+    at(560,()=>{ term.innerHTML=""; }); }
+
+  function play(){
+    const token=++run;
+    timers.forEach(clearTimeout); timers=[];
+    term.innerHTML=""; card.classList.remove("show"); card.innerHTML="";
+    // The hint is NOT cleared on replay: it is the capture harness's stop
+    // signal, and a looping page that takes it back down again can pull it out
+    // from under a recorder mid-poll.
+    t0Perf=performance.now(); window.__t0Wall=Date.now(); sfxLog=[];
+    ensureAudio();
+
+    const marks={};                       // beat -> seconds, for the probe
+    let T=0;
+    // the wind runs the whole climb and climbs with it
+    at(40,()=>playSfx("wind",(SHORT?34:66),0.02,0.11,300,1400));
+
+    // cold open: a prompt, and nothing else
+    at(T+=300,()=>line("sys","east of the crossing, the road stops being anybody's"));
+    T+=2200;
+    at(T,()=>clearTerm()); T+=700;
+
+    for(const b of beats){
+      marks[b.key]=(T+900)/1000;
+      if(b.feed){
+        at(T,()=>{ playSfx(...b.sfx); line("feed",b.feed); });
+        T+=holdFor(b.feed)+900;
+        at(T,()=>clearTerm()); T+=700;
+        continue;
+      }
+      at(T,()=>{ playSfx("key"); line("cmd",'&gt; <b>'+b.cmd+'</b>'); });
+      T+=CMD_MS;
+      at(T,()=>{ if(b.sfx)playSfx(...b.sfx); line("room",b.room); });
+      T+=ROOM_MS;
+      at(T,()=>line("prose",b.prose));
+      T+=PROSE_MS+holdFor(b.prose);
+      at(T,()=>clearTerm()); T+=700;
+    }
+
+    // THE TOLL — the line the whole region was built to earn
+    marks.toll=(T+1200)/1000;
+    at(T,()=>{ playSfx("bones");
+      card.innerHTML='<div class="eyebrow">no gate &middot; no sanctuary &middot; no way on</div>'+
+        '<div class="toll shake">whatever you carry in,<br>you carry back down.</div>'+
+        '<div class="after">past five tiers that have had all day<br>to notice you going up.</div>';
+      card.classList.add("show"); });
+    T+=5200;
+    at(T,()=>card.classList.remove("show")); T+=900;
+
+    // the name
+    marks.word=(T+1200)/1000;
+    at(T-120,()=>playSfx("drop"));
+    at(T,()=>{ card.innerHTML='<div class="wordmark">NOMAD</div>'+
+        '<div class="tagsub">a living text dungeon on nostr</div>'+
+        '<div class="url">nomadmud.com</div>'+
+        '<div class="stat">the mountain is open</div>';
+      card.classList.add("show"); });
+    at(T+260,()=>playSfx("chime"));
+    T+=4600;
+
+    // the capture harness stops here
+    marks.END=T/1000;
+    window.__T=marks;
+    at(T,()=>{ hint.classList.add("show"); window.__take={t0:window.__t0Wall,log:sfxLog.slice()}; });
+    at(T+3200,()=>{ if(token===run) play(); });     // loop
+  }
+
+  document.body.addEventListener("click",()=>play());
+  document.addEventListener("keydown",e=>{if(e.key==="r"||e.key==="R")play();});
+  play();
+})();
+</script>

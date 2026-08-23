@@ -68,19 +68,19 @@
 
 ## the-notch | attachment: the break in the crag line
 !existing
-> east   the-gully-head
+> up     the-gully-head
 
 ## the-bealach | attachment: the pass, onto the high shoulder
 !existing
-> east   the-pass-head
+> up     the-pass-head
 
 ## the-south-shoulder | attachment: round onto the sun flank
 !existing
-> east   the-sun-shoulder
+> up     the-sun-shoulder
 
 ## the-first-crag | attachment: up the crag itself, the fourth way
 !existing
-> east   the-brink
+> up     the-brink
 
 # ---- THE FOURTH WAY: straight up the crag ---------------------------------
 # Added when the gates came off the upper tiers (rome, 2026-08-19) and the
@@ -94,7 +94,7 @@
 ## the-brink | The Brink
 A ledge on the face of the first crag, reached by the one line of holds that goes anywhere, with the whole foot of the mountain laid out underneath and nothing between you and it. It is not a way anything with four legs can come. That is the entire reason it is worth knowing about: everything else on this hill uses the notch or the pass, and nothing at all uses this.
 > east   the-corrie-lip
-> west   the-first-crag
+> down   the-first-crag
 
 # ---- THE CORRIE: the bowl the ice cut --------------------------------------
 
@@ -103,7 +103,7 @@ You come out of the notch and the ground opens without warning into a bowl a hal
 > north  the-corrie-lip
 > south  the-fallen-block
 > east   the-corrie-mouth
-> west   the-notch
+> down   the-notch
 
 ## the-corrie-mouth | The Corrie Mouth
 The lip of the bowl, where the ground stops falling away and starts falling in. Grass runs right to the edge and then there is nothing under it. From here you can see the whole floor at once, and how much of it is water, and how little of it is anywhere you could stand.
@@ -194,7 +194,7 @@ Where the snowfield thins to a tongue and gives up, in a run of wet grit and old
 ## the-pass-head | The Pass Head
 Out of the bealach and onto the shoulder proper, and the whole north side of the mountain arrives at once: a long bare rise going up to a level skyline, with nothing on it. No rock big enough to shelter behind, no dip, no cover of any kind. Anything up here can see you and you can see it.
 > east   the-shoulder-walk
-> west   the-bealach
+> down   the-bealach
 
 ## the-shoulder-walk | The Shoulder Walk
 The easy line along the shoulder, on ground cropped to nothing and firm as a road, which is the one gift this side of the mountain gives. It is also completely exposed for its entire length. Both of those are the same fact.
@@ -430,7 +430,7 @@ The last of the snow, in a thin sheet holding on in the shade of the crest, goin
 ## the-sun-shoulder | The Sun Shoulder
 Round the corner and everything changes: the wind drops, the rock is warm to the hand, and the ground goes from grey to brown and red. It is the same mountain and it is not the same mountain. All the living on this hill that can choose is on this side of it.
 > east   the-heather-shelf
-> west   the-south-shoulder
+> down   the-south-shoulder
 
 ## the-heather-shelf | The Heather Shelf
 Old heather, woody at the base and deep enough to hide anything lying down in it, growing on a broad terrace that runs along the flank at a comfortable angle for the first time since the shore. It smells of resin in the sun. Walking through it is loud and there is no way to make it not.
@@ -565,11 +565,11 @@ A broad shelf where the ground eases at last, with the gorge behind you and the 
 
 ## the-wind-notch | attachment: the foot's gap, and the ramp under the wall
 !existing
-> east   the-slant
+> up     the-slant
 
 ## the-cleft | attachment: the foot's fissure, and what is wedged in it
 !existing
-> east   the-wedge
+> up     the-wedge
 
 # ---- TWO MORE WAYS UP OFF THE FOOT -----------------------------------------
 # Added with tier four (rome, 2026-08-19), and not for the fiction's sake — the
@@ -587,10 +587,10 @@ A broad shelf where the ground eases at last, with the gorge behind you and the 
 ## the-slant | The Slant
 A ramp of turf and broken rock slanting up under the wall of the pass, wide enough to walk and too tilted to stand still on, with the whole weight of the crag leaning over it. Nothing made this and nothing maintains it. It is simply the one line across this face that does not require hands, and everything with four legs on this hill has known that for longer than there have been people to not know it.
 > east   the-shoulder-drop
-> west   the-wind-notch
+> down   the-wind-notch
 
 ## the-wedge | The Wedge
 A block the size of a cart jammed in the fissure at head height, and above it the crack goes on and lets you out on the shelf. Getting past the block is a squeeze with your back on one wall and your boots on the other, and there is nothing to hold on the way through. Something with a wide skull has been through here often enough to polish both sides.
 > east   the-rowan
-> west   the-cleft
+> down   the-cleft
 

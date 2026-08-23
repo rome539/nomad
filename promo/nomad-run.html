@@ -1,0 +1,111 @@
+<meta charset="utf-8">
+<title>NOMAD &mdash; one run</title>
+<!-- The charset is load-bearing: without it the game's em dashes render as
+     Latin-1 garbage, and this file gets captured to video where a mangled
+     frame cannot be fixed after the encode. -->
+<script src="trailer-kit.js"></script>
+<script>
+KIT.ready(() => {
+
+  /* ONE RUN. The narrow cut: a single trip out, told the way the game tells
+     it, ending the way most of them end. This is the only one of the three
+     with a story, and the story is the mechanic — everything you are carrying
+     is provisional until the gate closes over it, and the gate is always one
+     room further than you wanted it to be.
+
+     The room prose is the game's. The two cards are not, and that is the rule:
+     if a line has to be written for a trailer it goes on a card, never into
+     the terminal pretending to be output. */
+
+  const BEATS = [
+    { key:"out", cmd:"east", room:"The Birch Edge",
+      prose:"Birch grows in the poor ground along the wood's margin, thin and white and close-ranked, all of it leaning the same way from a wind that does not reach in this far any more. You can still see daylight through it if you look back east.",
+      sfx:["steps",4,0.36] },
+
+    // the find: gold, and unclaimed, which is the whole hook
+    { key:"find", keep:true, cmd:"take talon",
+      lines:[["gain","An eyrie talon falls into your hands. (unclaimed &mdash; the gate has not signed for this)"],
+             ["sys","it is worth something. it is worth nothing until you are home with it."]],
+      sfx:["seal"] },
+
+    // the world notices, through a wall, on its own clock
+    { key:"heard", keep:true,
+      lines:[["feed","The sounds of a fight echo west."],
+             ["feed","Something is coming up the path behind you, and it is not being quiet about it."]],
+      sfx:["hit"] },
+
+    { key:"bleed", keep:true,
+      lines:[["feed","You are bleeding."],
+             ["sys","the gate is four rooms west."]],
+      sfx:["heart"] },
+  ];
+
+  const FORK = { key:"fork", ms:4400,
+    html:'<div class="eyebrow">four rooms to the gate</div>'+
+         '<div class="claim">or one more room,<br>and one more thing.</div>' };
+
+  const END = { key:"dead", ms:5600,
+    html:'<div class="eyebrow">you took the one more room</div>'+
+         '<div class="toll shake">everything you carried<br>lies where you fell.</div>'+
+         '<div class="after">the gate&rsquo;s seals cracked as they left your hands.<br>somebody else will be along for it.</div>' };
+
+  function play(){
+    const SHORT=KIT.isShort();
+    const beats=SHORT?BEATS.filter(b=>b.keep):BEATS;
+    const token=KIT.begin();
+    const marks={}; let T=0;
+
+    KIT.at(40,()=>KIT.playSfx("bed",(SHORT?30:44),{from:0.02,to:0.085,f0:300,f1:900}));
+
+    KIT.at(T+=300,()=>KIT.line("sys","you went out with nothing, the way everybody does"));
+    T+=2400; KIT.at(T,()=>KIT.clearTerm()); T+=700;
+
+    for(const b of beats){
+      marks[b.key]=(T+900)/1000;
+      if(b.lines){
+        if(b.cmd){ KIT.at(T,()=>{ KIT.playSfx("key"); KIT.line("cmd",'&gt; <b>'+b.cmd+'</b>'); }); T+=560; }
+        KIT.at(T,()=>{ if(b.sfx)KIT.playSfx(...b.sfx); b.lines.forEach(([c,h],i)=>KIT.at(i*1000,()=>KIT.line(c,h))); });
+        const longest=b.lines.reduce((m,l)=>Math.max(m,KIT.holdFor(l[1])),0);
+        T+=longest+1000*b.lines.length;
+        KIT.at(T,()=>KIT.clearTerm()); T+=700;
+        continue;
+      }
+      KIT.at(T,()=>{ KIT.playSfx("key"); KIT.line("cmd",'&gt; <b>'+b.cmd+'</b>'); }); T+=520;
+      KIT.at(T,()=>{ if(b.sfx)KIT.playSfx(...b.sfx); KIT.line("room",b.room); }); T+=620;
+      KIT.at(T,()=>KIT.line("prose",b.prose));
+      T+=520+KIT.holdFor(b.prose);
+      KIT.at(T,()=>KIT.clearTerm()); T+=700;
+    }
+
+    // THE FORK. Everybody who has played this game has stood here.
+    marks[FORK.key]=(T+1200)/1000;
+    KIT.at(T,()=>{ KIT.playSfx("heart"); KIT.showCard(FORK.html); });
+    T+=FORK.ms; KIT.at(T,()=>KIT.hideCard()); T+=800;
+
+    // it takes the second one. it always takes the second one.
+    marks.kill=(T+600)/1000;
+    KIT.at(T,()=>{ KIT.playSfx("crit"); KIT.line("feed","The bleeding doesn't stop."); });
+    KIT.at(T+1100,()=>{ KIT.playSfx("death"); KIT.line("feed","Darkness. Then the gate, again."); });
+    T+=4200; KIT.at(T,()=>KIT.clearTerm()); T+=700;
+
+    marks[END.key]=(T+1200)/1000;
+    KIT.at(T,()=>KIT.showCard(END.html));
+    T+=END.ms; KIT.at(T,()=>KIT.hideCard()); T+=900;
+
+    marks.word=(T+1200)/1000;
+    KIT.at(T-120,()=>KIT.playSfx("drop"));
+    KIT.at(T,()=>KIT.showCard('<div class="wordmark">NOMAD</div>'+
+      '<div class="tagsub">a living text dungeon on nostr</div>'+
+      '<div class="url">nomadmud.com</div>'+
+      '<div class="stat">go back for it</div>'));
+    KIT.at(T+260,()=>KIT.playSfx("chime"));
+    T+=4600;
+
+    KIT.finish(marks,T,token,play);
+  }
+
+  KIT.mount();
+  KIT.bindReplay(play);
+  play();
+});
+</script>

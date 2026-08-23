@@ -2,9 +2,21 @@ node_modules/
 # rendered outputs — the real deliverable is the base64 in game-server/src/assets.ts
 og.jpg
 apple-touch-icon.png
-# promo render byproducts (the source is nomad-cut.html; regenerate any time)
+# promo render byproducts (the source is the trailer html; regenerate any time)
 frames/
+probe*/
 frames.json
 list.ffconcat
 audio.wav
-nomad-promo.mp4
+
+# The encodes themselves. The SOURCE is the deliverable: every one of these is
+# reproducible with `node capture.mjs <page.html> && node assemble.mjs <out>`,
+# and megabytes of h264 in git history is not worth what it buys.
+#
+# nomad-anim.mp4 was the exception and is no longer: at 6.6MB it was ~90% of a
+# 7.3MB repository, on its own, while 270 migrations and the whole game server
+# shared the other megabyte. Untracked 2026-08-23 (it stays on disk, and
+# nomad-anim.html rebuilds it). The blob is still in history -- clearing that
+# needs a rewrite and a force-push, which is a decision to take deliberately
+# and once, for everything, not as a side effect of tidying.
+*.mp4

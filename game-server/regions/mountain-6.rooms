@@ -33,8 +33,8 @@
 
 ## the-summit-gate | attachment: the gap in the wall
 !existing
-> east   the-summit
+> up     the-summit
 
 ## the-summit | The Summit
 The wall opens and the top of the mountain is a bowl of bare rock perhaps two hundred paces across, and there is nothing in it: no snow, no ice, no lichen, no bone. The floor is swept and it is warm. Off the middle of it the rock has run and set in ropes and lobes with the front edges curled over, in a rough ring, and inside the ring the stone is glazed and black and worn smooth in the way a doorstep is worn. The whole sky is here. There is no higher ground anywhere you can see in any direction, and nothing between you and any of it. Whatever made this ring is not small and does not need to be anywhere else, and the wind that has been on you for five tiers has stopped, because there is nothing up here for it to come round.
-> west   the-summit-gate
+> down   the-summit-gate

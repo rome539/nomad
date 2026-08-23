@@ -77,6 +77,25 @@ const flags = new Set(args.filter((a) => a.startsWith("--")));
 // --why: name every square collision as the walk hits it, so a contradicting
 // loop can be tracked to the door that causes it instead of guessed at.
 const why = flags.has("--why");
+// --rewrite: the region in these files is ALREADY in the world, and this run is
+// correcting it in place rather than adding ground. Without it the builder is
+// strictly additive and refuses to touch a room that exists — which is right,
+// because silently redefining live rooms is how a world loses its history.
+//
+// It exists because the mountain shipped with its five tier-to-tier throats
+// written as `east`, so a region whose entire premise is a climb was laid out
+// running sideways across the chart (coordinates are DERIVED from the exit
+// verbs — see DELTA). Fixing that means changing exits and re-walking the
+// coordinates of rooms that are already live, and the alternative was hand-
+// written room SQL, which this pipeline exists to prevent.
+//
+// What it emits instead of INSERTs, for rooms that already exist:
+//   UPDATE rooms SET ... (prose and square, so a corrected file is the truth)
+//   DELETE FROM exits WHERE room_id = ...  then re-INSERT that room's doors
+// Attachment (!existing) rooms keep theirs, written INSERT OR REPLACE so a
+// re-run is idempotent. Room IDs never change, so `walked`, `wall_marks` and
+// anything else keyed on a room survives untouched.
+const rewrite = flags.has("--rewrite");
 const outIdx = args.indexOf("--out");
 const outFile = outIdx >= 0 ? args[outIdx + 1] : null;
 const files = args.filter((a, i) => !a.startsWith("--") && !(outIdx >= 0 && i === outIdx + 1));
@@ -89,6 +108,7 @@ if (!files.length) {
 // ---- parse ---------------------------------------------------------------
 
 const rooms = new Map(); // id -> { id, name, desc[], safe, entry, exits[], file, line }
+const dups = [];         // second declarations of an id — resolved after parsing (see the header parser)
 const errors = [];
 const warnings = [];
 const err = (file, line, msg) => errors.push(`${file}:${line}  ${msg}`);
@@ -115,8 +135,18 @@ for (const file of files) {
       const name = body.slice(bar + 1).trim();
       if (!ID_RE.test(id)) err(file, n, `bad room id "${id}" — lowercase letters, digits and hyphens only`);
       if (!name) err(file, n, `room "${id}" has no display name`);
-      if (rooms.has(id)) err(file, n, `duplicate room id "${id}" (first seen ${rooms.get(id).file}:${rooms.get(id).line})`);
       cur = { id, name, desc: [], safe: false, entry: false, spawn: false, region: fileRegion, exits: [], file, line: n };
+      // A REDECLARATION IS NOT AUTOMATICALLY A MISTAKE. A region authored one
+      // tier per file names the previous tier's boundary room as !existing so
+      // it can bolt the throat onto it — correct when the files are built in
+      // order, one at a time, and the earlier tier is already live. Build the
+      // whole region at once (which a rewrite must) and that same room is
+      // declared twice: once for real, once as a stub.
+      //
+      // So the decision is deferred to the end of parsing, when the !existing
+      // flag on the line BELOW this header has actually been read. Two real
+      // declarations are still a duplicate and still an error.
+      if (rooms.has(id)) { dups.push(cur); return; }
       rooms.set(id, cur);
       return;
     }
@@ -211,6 +241,30 @@ if (!flags.has("--offline")) {
   }
 }
 
+// ---- resolve redeclarations ----------------------------------------------
+// One of the two has to be an !existing stub — a file saying "this room is
+// already out there, here is the door I am adding to it". Fold that door into
+// the real declaration and drop the stub. Two real rooms with one id is still
+// exactly the mistake it always was.
+for (const d of dups) {
+  const first = rooms.get(d.id);
+  const stub = d.existing ? d : (first.existing ? first : null);
+  const real = stub === d ? first : (stub === first ? d : null);
+  if (!stub || !real || stub.existing === real.existing) {
+    err(d.file, d.line, `duplicate room id "${d.id}" (first seen ${first.file}:${first.line})`);
+    continue;
+  }
+  for (const e of stub.exits) {
+    const clash = real.exits.find((x) => x.dir === e.dir);
+    if (clash && clash.target !== e.target) {
+      err(e.file, e.line, `"${d.id}" is declared !existing here with a ${e.dir} exit to "${e.target}", but it is authored at ${real.file}:${real.line} with ${e.dir} -> "${clash.target}"`);
+      continue;
+    }
+    if (!clash) real.exits.push(e);
+  }
+  rooms.set(d.id, real); // the real room wins; the stub was only ever a doorway
+}
+
 // ---- validate ------------------------------------------------------------
 
 const known = (id) => rooms.has(id) || liveRooms.has(id);
@@ -223,10 +277,13 @@ for (const r of rooms.values()) {
     if (!r.exits.length) err(r.file, r.line, `"${r.id}" is marked !existing but adds no exits — it does nothing`);
     for (const e of r.exits) {
       const already = (liveExits.get(r.id) ?? []).some((x) => x.dir === e.dir);
-      if (already) err(e.file, e.line, `"${r.id}" already has a ${e.dir} exit in the world — the PK is room_id+dir, this INSERT would fail`);
+      // On a rewrite the door is expected to be there already: it is this
+      // region's own attachment, written INSERT OR REPLACE below.
+      if (already && !rewrite) err(e.file, e.line, `"${r.id}" already has a ${e.dir} exit in the world — the PK is room_id+dir, this INSERT would fail`);
     }
   } else {
-    if (liveRooms.has(r.id)) err(r.file, r.line, `room "${r.id}" already exists in the world`);
+    if (liveRooms.has(r.id) && !rewrite) err(r.file, r.line, `room "${r.id}" already exists in the world`);
+    if (rewrite && worldKnown && !liveRooms.has(r.id)) warnings.push(`--rewrite: "${r.id}" is not in the world yet; it will be inserted as new ground.`);
     const desc = r.desc.join(" ").trim();
     if (!desc) err(r.file, r.line, `room "${r.id}" has no description`);
     else if (desc.length < MIN_DESC) err(r.file, r.line, `room "${r.id}" description is ${desc.length} chars — that's a placeholder, not a room`);
@@ -248,12 +305,26 @@ for (const r of rooms.values()) {
       warn(e.file, e.line, `"${r.id}" ${e.dir} -> "${e.target}" is ONE-WAY. The distance code's reverse-lookup shortcut only holds while every exit has a return; it detects asymmetry at load and falls back safely, but the world gets slower. Deliberate mazes only.`);
       continue;
     }
-    // the return path: in this file, or already in the world
+    // THE RETURN PATH: in these files, or already standing in the world.
+    //
+    // This used to consult the world ONLY when the target room was absent from
+    // the files entirely — so an !existing attachment stub, which by definition
+    // declares nothing but the new door being bolted onto it, always read as
+    // having no way back. That is why the six mountain files could not be
+    // checked together: 34 false one-ways, every one of them a real door that
+    // was already in the DB from the tier built before it.
+    //
+    // The rule is about whose doors this run REPLACES. A room authored here as
+    // new ground has its exits written from the file and nothing else, so only
+    // the file counts. An attachment — or a room not in these files at all —
+    // keeps what the world already gave it, so the world counts too.
     const back = OPPOSITE[e.dir];
     const other = rooms.get(e.target);
-    const hasReturn = other
-      ? other.exits.some((x) => x.target === r.id)
-      : (liveExits.get(e.target) ?? []).some((x) => x.to === r.id);
+    const inFile = other ? other.exits.some((x) => x.target === r.id) : false;
+    const authoredHere = other && !other.existing;
+    const hasReturn = authoredHere
+      ? inFile
+      : inFile || (liveExits.get(e.target) ?? []).some((x) => x.to === r.id);
     if (!hasReturn) {
       err(e.file, e.line, other
         ? `"${r.id}" exits ${e.dir} to "${e.target}", but "${e.target}" has no way back. Add "> ${back} ${r.id}" to it, or mark this exit "oneway".`
@@ -296,7 +367,14 @@ if (worldKnown && !errors.length) {
 // one door at a time instead of shifting under you every deploy.
 const coords = new Map();
 if (worldKnown) {
-  for (const [id, p] of liveCoords) coords.set(id, p);
+  // A rewrite must NOT seed the region's own rooms from their live squares, or
+  // the walk finds them already placed and re-emits exactly the layout being
+  // corrected. Everything outside these files still seeds normally, so the
+  // region re-walks from the world it attaches to and nothing else moves.
+  for (const [id, p] of liveCoords) {
+    if (rewrite && rooms.has(id) && !rooms.get(id).existing) continue;
+    coords.set(id, p);
+  }
   const occupied = new Set([...coords.values()].map((p) => `${p.x},${p.y}`));
   // Who holds each square, so --why can name the room a loser collided with.
   const holder = new Map();
@@ -535,14 +613,27 @@ out.push(`-- Validated: every exit resolves, every exit has a return path (or is
 out.push(`-- no duplicate ids, no orphans, every room reachable from a gate.`);
 out.push("");
 for (const r of rooms.values()) {
+  const live = rewrite && liveRooms.has(r.id) && !r.existing;
   if (r.existing) out.push(`-- ${r.id}: existing room, new doors only`);
-  else {
+  else if (live) {
+    // Correcting ground that is already out there: the room keeps its id (and
+    // so keeps every trace, mark and memory keyed on it) and takes the file's
+    // prose and the re-walked square. Its old doors go first, or a dir that
+    // moved would leave the stale one behind next to the new one.
+    const at = coords.get(r.id);
+    out.push(`UPDATE rooms SET name = ${q(r.name)}, description = ${q(r.desc)}, is_entry = ${r.entry ? 1 : 0}, is_safe = ${r.safe ? 1 : 0},`);
+    out.push(`  region = ${q(r.region)}, is_spawn = ${r.spawn ? 1 : 0}, map_x = ${at ? at.x : "NULL"}, map_y = ${at ? at.y : "NULL"} WHERE id = ${q(r.id)};`);
+    out.push(`DELETE FROM exits WHERE room_id = ${q(r.id)};`);
+  } else {
     const at = coords.get(r.id);
     out.push(`INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, map_x, map_y) VALUES`);
     out.push(`  (${q(r.id)}, 'door', ${q(r.name)}, ${q(r.desc)}, ${r.entry ? 1 : 0}, ${r.safe ? 1 : 0}, ${q(r.region)}, ${r.spawn ? 1 : 0}, ${at ? at.x : "NULL"}, ${at ? at.y : "NULL"});`);
   }
   for (const e of r.exits) {
-    out.push(`INSERT INTO exits (room_id, dir, to_room, key_item) VALUES (${q(r.id)}, ${q(e.dir)}, ${q(e.target)}, ${e.key ? q(e.key) : "NULL"});`);
+    // OR REPLACE on a rewrite only: an attachment room's door is already out
+    // there, and a plain INSERT would collide on the room_id+dir primary key.
+    const verb = rewrite ? "INSERT OR REPLACE INTO" : "INSERT INTO";
+    out.push(`${verb} exits (room_id, dir, to_room, key_item) VALUES (${q(r.id)}, ${q(e.dir)}, ${q(e.target)}, ${e.key ? q(e.key) : "NULL"});`);
   }
   out.push("");
 }

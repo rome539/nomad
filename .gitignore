@@ -6,3 +6,10 @@ dist/
 # The colosseum (arena spectator app) is a separate Cloudflare/nsite deliverable,
 # not part of the game server — its deploy copy lives here for convenience only.
 arena/
+
+# Working notes that live in the repo root but are NOT the repo's: audit output
+# and investigation write-ups. They have sat untracked and unignored for weeks,
+# which means one `git add -A` publishes them to a public repo. Ignored so that
+# cannot happen by accident.
+findings-merged.md
+lag-report.md
