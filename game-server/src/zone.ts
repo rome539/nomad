@@ -86,7 +86,7 @@ import {
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
   GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, DICE_REGROW, STRAY_DECAY,
-  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, FEVER_MEND_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
+  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, WIND_HEED_MULT, WIND_CHILL_REST_SKIP, FEVER_MEND_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
@@ -1905,7 +1905,11 @@ export class ZoneDO implements DurableObject {
     // while it is in the air swings anyway, and the ambush-opener path would
     // even pay the heavy first blow for it. Same hole the stun rule had.
     if (ai.airborne(creature)) {
-      return this.send(session, `${cap(tmpl.name)} is somewhere above you. There is nothing there to hit.`, "dmgin");
+      // A REACH WEAPON still finds it: a polearm's length, not a swing's arc.
+      // Everything else swings at empty air (the round's guard does the same).
+      if (!hasTrait(this.equippedItem(session, "weapon")?.tmpl, "reach")) {
+        return this.send(session, `${cap(tmpl.name)} is somewhere above you. There is nothing there to hit.`, "dmgin");
+      }
     }
     // Rung senseless: the swing is gone, whether the tick asked for it or YOU
     // did. The combat round (tickCombat) and the steel exchange (tickPvp) both
@@ -2619,15 +2623,15 @@ export class ZoneDO implements DurableObject {
     if (hasTrait(t, "padded")) bits.push("wards stun");
     if (hasTrait(t, "wardhide")) bits.push("wards wounds");
     if (hasTrait(t, "mailward")) bits.push("wards bleeds");
-    if (hasTrait(t, "staunched")) bits.push("staunched — wounds clot sooner");
-    if (hasTrait(t, "hooded")) bits.push("hooded — a flame catches in rain");
+    if (hasTrait(t, "staunched")) bits.push("staunched");
+    if (hasTrait(t, "hooded")) bits.push("hooded");
     if (hasTrait(t, "quiet")) bits.push("quiet");
     if (hasTrait(t, "slick")) bits.push("slick");
     if (hasTrait(t, "strapped")) bits.push("strapped-down");
     const spike = trait(t, "thorns");
     if (spike) bits.push(`spiked ${spike}`);
-    if (hasTrait(t, "riposte")) bits.push("a caught blow answers — bleeds the attacker");
-    if (hasTrait(t, "mancatcher")) bits.push("what it holds cannot flee");
+    if (hasTrait(t, "riposte")) bits.push("riposte");
+    if (hasTrait(t, "mancatcher")) bits.push("mancatcher");
     if (t.id === LANTERN_ITEM) bits.push("long steady light — a tame flame, nothing fears it");
     return bits.length ? ` (${bits.join(", ")})` : "";
   }
@@ -3439,13 +3443,15 @@ export class ZoneDO implements DurableObject {
         this.send(session, "You put it all into that opening blow; the heavy head is slow to rise again.", "dmgout");
         continue;
       }
-      // NOTHING SWUNG REACHES SOMETHING THAT IS NOT ON THE GROUND (mig 237).
-      // The summit's animal goes up in its last third and the fight stops being
-      // a fight for three beats. The out is the THROW, which still reaches it
-      // (cmdThrow), and it is the one place in this game where carrying
-      // something to throw is not a luxury.
+      // NOTHING SWUNG REACHES SOMETHING THAT IS NOT ON THE GROUND (mig 237) —
+      // EXCEPT A REACH WEAPON, which still finds it: a polearm's length, not a
+      // swing's arc. The summit's animal goes up in its last third and the fight
+      // stops being a fight for three beats; the out is the THROW, which still
+      // reaches it (cmdThrow), and it is the one place in this game where
+      // carrying something to throw is not a luxury.
       const airborneFoes = foes.filter((c) => ai.airborne(c, now));
-      if (airborneFoes.length && foes.every((c) => ai.airborne(c, now))) {
+      const hasReach = hasTrait(this.equippedItem(session, "weapon")?.tmpl, "reach");
+      if (airborneFoes.length && foes.every((c) => ai.airborne(c, now)) && !hasReach) {
         if (!session.toldAirborne) {
           session.toldAirborne = true;
           this.send(session, "It is somewhere above you and you are swinging at air. Throw something, or get out.", "dmgin");
@@ -4678,7 +4684,33 @@ export class ZoneDO implements DurableObject {
         // against you. Best worn piece decides — the traits never stack.
         const coldMult = this.wearsTrait(session, "fleeced") ? FLEECED_COLD_MULT
           : this.wearsTrait(session, "sodden") ? SODDEN_COLD_MULT : 1;
-        if (!byFire && !warmed && events.coldBites(this, session.roomId) && chance(COLD_REST_SKIP * coldMult)) continue;
+        // Wind rides the cold: a rest that was already chancy is chancier.
+        const inWind = events.windy(this, session.roomId);
+        const restSkip = inWind ? WIND_CHILL_REST_SKIP : COLD_REST_SKIP;
+        if (!byFire && !warmed && events.coldBites(this, session.roomId) && chance(restSkip * coldMult)) {
+          // A silent tax is a lie: tell them, once in a while, why the rest is
+          // closing nothing. (Throttled — not a line every skipped tick.)
+          //
+          // And NAME THE RIGHT THIEF. In wind the odds being paid are
+          // WIND_CHILL_REST_SKIP (0.75), not COLD_REST_SKIP (0.5) — three rests
+          // in four instead of one in two — so blaming the cold alone told a
+          // man in a gale that the weaker of the two things on him was the one
+          // doing it.
+          const nowMs = Date.now();
+          if (nowMs - (session.coldToldAt ?? 0) > 20_000) {
+            session.coldToldAt = nowMs;
+            this.send(session, inWind ? pick([
+              "The wind finds every seam and takes the rest with it — the wound stays open.",
+              "You cannot rest in this: the wind strips off whatever warmth the sitting earns you.",
+              "The cold gets in on the wind, and this rest closes nothing.",
+            ]) : pick([
+              "The cold steals this rest from you — the wound stays open.",
+              "The cold has its teeth in you: this rest closes nothing.",
+              "You rest, and the cold eats what the rest would have mended.",
+            ]), "amb");
+          }
+          continue;
+        }
         // THE FEVER (2026-08-06). On bad ground sleep will not take: an hour
         // off your feet is worth a fraction of an hour. It is not a cure you
         // can buy or a fight you can win — the answer is to leave, which is the
@@ -4961,7 +4993,11 @@ export class ZoneDO implements DurableObject {
       } else if (t.kind === "passage") {
         // Dust holds a print in the dungeon; out under the sky the ground does.
         const track = region === "upper" || region === "deep" || region === "gate" ? "the dust" : "the ground";
-        if (age < 10 * 60_000) lines.push(`The ${track} is freshly disturbed — someone passed this way minutes ago.`);
+        // cap(track), not "The " + track: the phrase carries its own article
+        // (every entry in this family does), so the literal produced "The the
+        // ground is freshly disturbed" in every outdoor band. Caught on the
+        // mountain, live, an hour after it shipped.
+        if (age < 10 * 60_000) lines.push(`${cap(track)} is freshly disturbed — someone passed this way minutes ago.`);
         else lines.push(`Footprints disturb ${track} here.`);
       }
     }
@@ -6879,7 +6915,7 @@ export class ZoneDO implements DurableObject {
     if (this.wearsTrait(session, "slick")) traits.push("slick (hard to seize)");
     if (this.wearsTrait(session, "strapped")) traits.push("strapped (theft-proof)");
     if (this.wearsTrait(session, "thorns")) traits.push("thorns (blocks bite back)");
-    if (t && hasTrait(t, "reach")) traits.push("reach (blunts the rush)");
+    if (t && hasTrait(t, "reach")) traits.push("reach (blunts the rush; still finds what's off the ground)");
     return {
       hp: session.hp, maxHp: session.maxHp, stance: session.stance,
       slots,
@@ -7110,6 +7146,7 @@ export class ZoneDO implements DurableObject {
     // predator in the wood already walking toward the same noise.
     if (!loud && events.rutting(this, sourceRoomId) && chance(RUT_NOISE_MASK)) return;
     const heard = new Set<string>();
+    const firstHop = new Set<string>(); // rooms that carried the sound — the wind's second hop
     // ADJACENCY, NOT THE WHOLE WORLD (2026-08-22). Sound used to scan every
     // room in world.exits (~500-1,100 rows) per noise event, and noise events
     // fire per combat blow. The reverse index maps a room to the rooms with an
@@ -7122,6 +7159,7 @@ export class ZoneDO implements DurableObject {
         (e) => e.to_room === sourceRoomId && (!e.key_item || this.openDoors.has(`${rid}:${e.dir}`)),
       );
       if (!toward) continue;
+      firstHop.add(rid);
       const line = template.replace("{dir}", dirPhrase(toward.dir));
       // A shout heard through a wall is still a HUMAN — it carries the speech
       // color next door too, so it never reads as one more thing scraping in
@@ -7139,6 +7177,27 @@ export class ZoneDO implements DurableObject {
         if (this.outOfWorld(s)) continue;
         heard.add(s.pubkey);
         try { s.ws.send(frame); } catch {}
+      }
+    }
+    // Wind carries sound a room further on the open ground (exposure): a sprint
+    // is heard two rooms out, and the direction reads from the middle room.
+    if (events.windy(this, sourceRoomId) && OUTDOOR_ROOMS.has(sourceRoomId)) {
+      for (const mid of firstHop) {
+        for (const rid of this.adjacentTo(mid)) {
+          if (rid === mid || rid === sourceRoomId || rid === excludeRoomId || firstHop.has(rid)) continue;
+          const toward = (world.exits.get(rid) ?? []).find(
+            (e) => e.to_room === mid && (!e.key_item || this.openDoors.has(`${rid}:${e.dir}`)),
+          );
+          if (!toward) continue;
+          const line = template.replace("{dir}", dirPhrase(toward.dir));
+          const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: rid, text: line, cls } : { v: 0, kind: 24913, room: rid, text: line });
+          for (const s of this.sessions.values()) {
+            if (s.roomId !== rid || heard.has(s.pubkey)) continue;
+            if (this.outOfWorld(s)) continue;
+            heard.add(s.pubkey);
+            try { s.ws.send(frame); } catch {}
+          }
+        }
       }
     }
   }
@@ -7208,7 +7267,10 @@ export class ZoneDO implements DurableObject {
       const marked = [...this.sessions.values()].some(
         (s) => s.roomId === sourceRoomId && (s.markedUntil ?? 0) > now,
       );
-      const heed = marked ? Math.min(1, NOISE_HEED_ODDS * MARK_HEED_MULT) : NOISE_HEED_ODDS;
+      // Wind carries the noise (exposure): the open ground's curious come
+      // looking that much harder.
+      const windHeed = events.windy(this, sourceRoomId) && OUTDOOR_ROOMS.has(sourceRoomId) ? WIND_HEED_MULT : 1;
+      const heed = Math.min(1, (marked ? Math.min(1, NOISE_HEED_ODDS * MARK_HEED_MULT) : NOISE_HEED_ODDS) * windHeed);
       if (!chance(heed) && !(marked && chance(MARK_CALL_ODDS))) continue;
       const exits = world.exits.get(c.roomId) ?? [];
       const toward = exits.find(

@@ -25,7 +25,7 @@ import {
   BELL_HOURS_UTC, BELL_JITTER_MS, BELL_GRACE_MS,
   BELL_TELEGRAPH_MS, BELL_ACTIVE_MS, BELL_AFTERMATH_MS, BELL_AFTERMATH_WAKE_MULT,
   BOIL_TELEGRAPH_MS, BOIL_STEP_MS, BOIL_AFTERMATH_MS, BOIL_BITE,
-  WAKE_TELEGRAPH_MS, WAKE_ACTIVE_MS, WAKE_AFTERMATH_MS, WAKE_FRESH_MS, WAKE_CAP,
+  WAKE_TELEGRAPH_MS, WAKE_ACTIVE_MS, WAKE_AFTERMATH_MS, WAKE_FRESH_MS, WAKE_CAP, WAKE_CHARGE_CORPSES,
   WANT_TABLE, WANT_MULT, WANT_TELEGRAPH_MS, WANT_ACTIVE_MS, WANT_AFTERMATH_MS,
   ESCAPE_TMPL, ESCAPE_TELEGRAPH_MS, ESCAPE_ACTIVE_MS, ESCAPE_AFTERMATH_MS,
   ESCAPE_STRIDE_MIN_MS, ESCAPE_STRIDE_MAX_MS, ESCAPE_ROUSE_MS,
@@ -36,6 +36,8 @@ import {
   SONG_TELEGRAPH_MS, SONG_ACTIVE_MS, SONG_AFTERMATH_MS, SONG_AFTER_WAKE_MULT,
   FOG_TELEGRAPH_MS, FOG_ACTIVE_MIN_MS, FOG_ACTIVE_MAX_MS, FOG_AFTERMATH_MS, FOG_WAKE_MULT,
   COLD_TELEGRAPH_MS, COLD_ACTIVE_MIN_MS, COLD_ACTIVE_MAX_MS, COLD_AFTERMATH_MS, COLD_TORCH_MULT,
+  WIND_TELEGRAPH_MS, WIND_ACTIVE_MIN_MS, WIND_ACTIVE_MAX_MS, WIND_AFTERMATH_MS, WIND_HEED_MULT,
+  WIND_TORCH_GUTTER_ODDS, WIND_SEA_CHOP_MULT, WIND_CHILL_TORCH_MULT, WIND_CHILL_REST_SKIP,
   BREACH_PAIRS, BREACH_TELEGRAPH_MS, BREACH_ACTIVE_MS, BREACH_AFTERMATH_MS,
   SEA_ROOMS, SEA_INSTRUMENTS, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_HEARD_BANDS, ROAD_HEARD_BANDS, SEA_BITE, SEA_STATES,
   FOOD_KEEPS, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT,
@@ -43,18 +45,19 @@ import {
   TIDEWAYS_ROOMS, TIDE_LEVELS, TIDE_HIGH_ODDS,
   TIDE_EVERY_MIN_MS, TIDE_EVERY_MAX_MS, TIDE_FIRST_MIN_MS, TIDE_FIRST_MAX_MS, TIDE_GRACE_MS,
   TIDE_TELEGRAPH_MS, TIDE_STEP_MS, TIDE_CREST_MS, TIDE_AFTERMATH_MS, TIDE_SILT_ODDS,
-  BROODERS, SENTINELS, DROWNERS, DEEP_ROOMS,
+  BROODERS, SENTINELS, DROWNERS, DEEP_ROOMS, SUMMIT_BOSSES,
   GLOAM_TELEGRAPH_MS, GLOAM_STEP_MS, GLOAM_ACTIVE_MS, GLOAM_AFTERMATH_MS,
-  SPATE_ROOMS, SPATE_COURSE, SPATE_INDEX, SPATE_BITE, SPATE_SWEEP_ODDS, SPATE_CARRY_ODDS,
+  SPATE_ROOMS, SPATE_COURSE, SPATE_INDEX, SPATE_BITE, SPATE_SWEEP_ODDS, SPATE_CARRY_ODDS, ROAD_FORDS,
   CARRIER_TELEGRAPH_MS, CARRIER_ACTIVE_MIN_MS, CARRIER_ACTIVE_MAX_MS, CARRIER_AFTERMATH_MS,
-  CARRIER_FROM, CARRIER_TO, CARRIER_STRIDE, CARRIER_ESCORT, CARRIER_ESCORT_ROOMS, CARRIER_SATCHEL,
+  CARRIER_FROM, CARRIER_TO, CARRIER_STRIDE, CARRIER_SLOW_MULT, CARRIER_ESCORT, CARRIER_ESCORT_ROOMS, CARRIER_SATCHEL,
   SPATE_SWEEP_MIN, SPATE_SWEEP_MAX, SPATE_TELEGRAPH_MS, SPATE_ACTIVE_MIN_MS, SPATE_ACTIVE_MAX_MS, SPATE_AFTERMATH_MS,
-  FORTRESS_BANDS, SURFACE_BANDS, DEEP_HEARD_BANDS, KEEP_HEARD_BANDS, FEN_HEARD_BANDS, WANT_HEARD_BANDS, GLOAM_HEARD_BANDS,
+  FORTRESS_BANDS, SURFACE_BANDS, DEEP_HEARD_BANDS, KEEP_HEARD_BANDS, FEN_HEARD_BANDS, WANT_HEARD_BANDS, GLOAM_HEARD_BANDS, MOUNTAIN_HEARD_BANDS,
   RUT_TELEGRAPH_MS, RUT_ACTIVE_MIN_MS, RUT_ACTIVE_MAX_MS, RUT_AFTERMATH_MS,
   RUT_DEER, RUT_WOLVES, RUT_WOLF_DELAY_MS, RUT_ROAR_EVERY_MS, RUT_ROAR_ODDS,
   WALK_TELEGRAPH_MS, WALK_ACTIVE_MIN_MS, WALK_ACTIVE_MAX_MS, WALK_AFTERMATH_MS,
   WALK_STRIDE_MIN_MS, WALK_STRIDE_MAX_MS, WOODWARD_TMPL,
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
+  SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   PACK_TELEGRAPH_MS, PACK_ACTIVE_MIN_MS, PACK_ACTIVE_MAX_MS, PACK_AFTERMATH_MS,
   PACK_DOGS, PACK_WOLVES, PACK_HYENAS, PACK_HEAD_ODDS, PACK_HEADS_BAD,
   PACK_HEAD, PACK_DOG, PACK_WOLF, PACK_HYENA,
@@ -83,7 +86,7 @@ const NEVER = 9_000_000_000_000_000;
 const ANY = "*";
 const POOL: [string, number, string][] = [
   // the sky, on everything out of doors at once
-  ["rain", 3, ANY], ["fog", 2, ANY], ["cold", 2, ANY], ["crows", 2, ANY],
+  ["rain", 3, ANY], ["fog", 2, ANY], ["cold", 2, ANY], ["wind", 2, ANY], ["crows", 2, ANY],
   // the fortress's own
   ["boil", 2, "warrens"], ["wake", 2, "warrens"],
   ["exhale", 2, "deep"], ["song", 2, "deep"],
@@ -95,6 +98,8 @@ const POOL: [string, number, string][] = [
   ["rut", 2, "wood"], ["walk", 1, "wood"], ["quiet", 2, "wood"],
   // THE DEN GROUND — 60 rooms, likewise
   ["pack", 2, "den"], ["fever", 2, "den"],
+  // THE MOUNTAIN — its one arc is a presence, not a weather: the drake's passage.
+  ["shadow", 2, "mountain"],
   // ["breach", 1, "upper"], — PARKED (rome, 2026-07-11: "park the breech"). The
   // whole arc (tickBreach, BREACH_PAIRS, the wall prose) stays built and idle;
   // restoring it is uncommenting this ticket.
@@ -146,6 +151,13 @@ export function rainDrives(z: ZoneDO, roomId: string): boolean {
 // Mud underfoot: the aftermath, when a fresh print cuts deeper and stays.
 export function muddy(z: ZoneDO, roomId: string): boolean {
   return phaseOf(z, "rain") === "aftermath" && OUTDOOR_ROOMS.has(roomId);
+}
+
+// A road ford under settled rain: the low crossing is up and running, and it
+// costs to wade. Bite-not-block — you can still cross, it just bills you.
+export function fordUp(z: ZoneDO, roomId: string): boolean {
+  const r = z.events.get("rain");
+  return r?.phase === "active" && r.data === "settled" && ROAD_FORDS.has(roomId);
 }
 
 // The keep's interior: where the bell is law. "Upper" region, under a roof,
@@ -268,6 +280,11 @@ export function coldBites(z: ZoneDO, roomId: string): boolean {
   return phaseOf(z, "cold") === "active" && (OUTDOOR_ROOMS.has(roomId) || deepRoom(z, roomId));
 }
 
+// The wind is up on this room (outdoors only — it pools on the open ground).
+export function windy(z: ZoneDO, roomId: string): boolean {
+  return phaseOf(z, "wind") === "active" && OUTDOOR_ROOMS.has(roomId);
+}
+
 // The cold's window (telegraph included): the living head for cover — their
 // retreat IS the telegraph. The HOLLOW don't feel it; that's the free tell:
 // whatever's still walking out there was never alive.
@@ -296,8 +313,15 @@ export function fevered(z: ZoneDO, roomId: string): boolean {
   return phaseOf(z, "fever") === "active" && z.world!.rooms.get(roomId)?.region === "den";
 }
 
+// THE SHADOW is over the mountain: the drake's passage, and only while it runs.
+export function shadowing(z: ZoneDO, roomId: string): boolean {
+  return phaseOf(z, "shadow") === "active" && z.world!.rooms.get(roomId)?.region === "mountain";
+}
+
 export function coldTorchMult(z: ZoneDO, roomId: string): number {
-  return coldBites(z, roomId) ? COLD_TORCH_MULT : 1;
+  if (!coldBites(z, roomId)) return 1;
+  // Wind rides the cold: the already-halved burn becomes a quarter.
+  return windy(z, roomId) ? COLD_TORCH_MULT * WIND_CHILL_TORCH_MULT : COLD_TORCH_MULT;
 }
 
 // ---- the tide's water table ----
@@ -391,6 +415,9 @@ export function skyClause(z: ZoneDO, roomId: string): string {
       case "aftermath": return " The water has dropped and left everything under a skin of silt, printed all over with what the flood brought down.";
       default: break;
     }
+  }
+  if (fordUp(z, roomId)) {
+    return " The rain has the ford up — brown water running over the gravel and pushing at your legs. Wade it and pay, or go round by the bridge.";
   }
   const bp = breachPairOf(z);
   if (bp && (roomId === bp.a || roomId === bp.b)) {
@@ -523,6 +550,14 @@ export function skyClause(z: ZoneDO, roomId: string): string {
       default: break;
     }
   }
+  if (region === "mountain") {
+    switch (phaseOf(z, "shadow")) {
+      case "telegraph": return " A shadow crosses the slope ahead — long, and nothing overhead to have cast it.";
+      case "active": return " Something very large is moving the air above the mountain. The living have gone to ground; the rock has not.";
+      case "aftermath": return " Whatever it was has passed. The birds are slow to come back up.";
+      default: break;
+    }
+  }
   if (!OUTDOOR_ROOMS.has(roomId)) return "";
   switch (phaseOf(z, "rain")) {
     case "telegraph": return " The light has gone iron-grey, and the air smells of coming rain.";
@@ -538,6 +573,11 @@ export function skyClause(z: ZoneDO, roomId: string): string {
     case "telegraph": return " The air is going glass-clear and bitter.";
     case "active": return " The cold has settled in hard. Nothing living wants to be out in it.";
     case "aftermath": return " The worst of the cold is lifting.";
+  }
+  switch (phaseOf(z, "wind")) {
+    case "telegraph": return " The wind is getting up, and every loose thing is starting to talk.";
+    case "active": return " The wind is up and it never lets off. Nothing you carry is quiet, and no open flame is safe out in it.";
+    case "aftermath": return " The wind drops, and the open ground settles back to its own noise.";
   }
   if (LIGHTS_ROOMS.has(roomId)) {
     switch (phaseOf(z, "lights")) {
@@ -557,13 +597,14 @@ export function skyClause(z: ZoneDO, roomId: string): string {
 // first for outdoor rooms; null falls through to the normal pools).
 const RAIN_AMBIENT = [
   "Rain runs off everything that still has an edge.",
-  "The downpour flattens the briars and drums on old stone.",
-  "Somewhere near, water has found a new way through a wall.",
+  "The downpour flattens the briars and drums on the open ground.",
+  "Somewhere near, water has found a new way downhill, and is taking it.",
   "The rain comes harder for a breath, then settles back to its work.",
+  "A squall moves across the ground like a curtain, and is gone.",
 ];
 const MUD_AMBIENT = [
   "The mud pulls at every step.",
-  "Water still drips from the thorn and the broken stone.",
+  "Water still drips from the thorn and the leaf.",
 ];
 const LIGHTS_AMBIENT = [
   "A light shows out over the water — steady, like a carried torch. It doesn't move like a man's.",
@@ -602,6 +643,12 @@ const FEVER_AMBIENT = [
   "Flies, in numbers, on a day with no cause for them.",
   "You are sweating, and the wind is cold, and those two things are not agreeing.",
 ];
+const SHADOW_AMBIENT = [
+  "The shadow crosses again, lower, and the wind goes with it.",
+  "Far above, a shape crosses the sun, and there is no bird in the world that big.",
+  "Every living thing on the slope is holding its breath. The rock is not.",
+  "Somewhere up the height, loose stone lets go — a thing is moving, and the mountain knows it before you do.",
+];
 const CROWS_AMBIENT = [
   "A crow turns its head, following you.",
   "Wings resettle on the stone above, unhurried.",
@@ -625,7 +672,14 @@ const FOG_AMBIENT = [
 const COLD_AMBIENT = [
   "Your breath hangs in the air, and takes its time leaving.",
   "The cold works its way in at every seam.",
-  "Frost is creeping white along the stone's north faces.",
+  "Frost is creeping white along the north side of everything.",
+  "The cold smells of iron and of nothing growing.",
+];
+const WIND_AMBIENT = [
+  "The wind gets under everything and finds the gaps in it.",
+  "A gust slams through the open ground, and something loose goes rattling off with it.",
+  "The wind comes in off the open country with nothing in the way of it, and you lean into it.",
+  "A long note hangs in the wind — a wire, or a stone lip, or the world's own teeth.",
 ];
 const TIDE_FLOOD_AMBIENT = [
   "The water shoulders past you, patient and cold.",
@@ -659,6 +713,8 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
   } else if (region === "den") {
     if (phaseOf(z, "pack") === "active") return pick(PACK_AMBIENT);
     if (phaseOf(z, "fever") === "active") return pick(FEVER_AMBIENT);
+  } else if (region === "mountain") {
+    if (phaseOf(z, "shadow") === "active") return pick(SHADOW_AMBIENT);
   }
   if (!OUTDOOR_ROOMS.has(roomId)) return null;
   const p = phaseOf(z, "rain");
@@ -666,6 +722,7 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
   if (p === "aftermath") return pick(MUD_AMBIENT);
   if (phaseOf(z, "fog") === "active") return pick(FOG_AMBIENT);
   if (phaseOf(z, "cold") === "active") return pick(COLD_AMBIENT);
+  if (phaseOf(z, "wind") === "active") return pick(WIND_AMBIENT);
   if (LIGHTS_ROOMS.has(roomId) && phaseOf(z, "lights") === "active") return pick(LIGHTS_AMBIENT);
   if (phaseOf(z, "crows") === "active") return pick(CROWS_AMBIENT);
   return null;
@@ -746,6 +803,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickSong(z, now);
   await tickFog(z, now);
   await tickCold(z, now);
+  await tickWind(z, now);
   await tickGloam(z, now);
   await tickBreach(z, now);
   await tickTide(z, now);
@@ -755,6 +813,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickQuiet(z, now);
   await tickPack(z, now);
   await tickFever(z, now);
+  await tickShadow(z, now);
   rutWolves(z, now);
   rutRoars(z, now);
 }
@@ -911,6 +970,47 @@ function rutWolves(z: ZoneDO, now: number): void {
   z.roomFeedBands(new Set(["wood"]), "The roaring has been going on long enough now that other things have heard it. Somewhere west, a wolf answers a stag.", "evt");
 }
 
+// ---- THE SHADOW (mountain) ----
+// The mountain's one arc, and it is a presence rather than a weather: the thing
+// the band pool keeps hinting at — "a shadow crosses the slope, and nothing
+// overhead to have cast it" — made real. It is not a fight. While it holds, the
+// living go to ground (ai.ts) and the summit's animal is awake: everything on
+// the mountain goes still except the thing that cast the shadow.
+async function tickShadow(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("shadow");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("shadow", st); }
+  // The summit's animal is up under the shadow (a presence, not a sleeper).
+  if (st.phase === "active") {
+    for (const c of z.creatures.values()) {
+      if (!SUMMIT_BOSSES.has(c.templateId)) continue;
+      c.asleep = false;
+      c.sleepUntil = undefined;
+    }
+  }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + SHADOW_TELEGRAPH_MS;
+      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "A shadow crosses the slope ahead — long, and nothing overhead to have cast it. The rock is cold underfoot for one heartbeat.", "evt");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + randInt(SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS);
+      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Something very large is moving the air above the mountain. Every living thing has gone to ground, and you can feel it waiting to come back up.", "evt");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + SHADOW_AFTERMATH_MS;
+      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Whatever it was has passed. The birds are slow to come back up.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
+}
+
 // ---- THE CARRIER'S RUN (the east road) ----
 // The first arc in this world that is an OPPORTUNITY rather than a hazard —
 // see zone-data CARRIER_SATCHEL for why that matters. A man with a full bag
@@ -929,7 +1029,19 @@ async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
     const carrier = z.creatures.get(st.data.split(",")[0]);
     if (carrier && !carrier.target && carrier.roomId !== CARRIER_TO) {
       carrier.walkingTo = CARRIER_TO;
-      carrier.nextWanderAt = Math.min(carrier.nextWanderAt, now + randInt(CARRIER_STRIDE[0], CARRIER_STRIDE[1]));
+      // Weather taxes the run (exposure economy): rain and mud stretch his
+      // stride, and high water over the road stops him until it drops. He does
+      // not run; he is not in a hurry to die for the bag.
+      const blocked = spated(z, carrier.roomId) || seaUnder(z, carrier.roomId);
+      if (blocked) {
+        carrier.nextWanderAt = Math.max(carrier.nextWanderAt, now + 30_000);
+      } else {
+        const slowed = raining(z, carrier.roomId) || muddy(z, carrier.roomId);
+        const stride: [number, number] = slowed
+          ? [Math.round(CARRIER_STRIDE[0] * CARRIER_SLOW_MULT), Math.round(CARRIER_STRIDE[1] * CARRIER_SLOW_MULT)]
+          : CARRIER_STRIDE;
+        carrier.nextWanderAt = Math.min(carrier.nextWanderAt, now + randInt(stride[0], stride[1]));
+      }
     }
     // ARRIVING ENDS THE RUN. He walks it in about a third of the window, and a
     // carrier who has got where he was going and then stands there for another
@@ -1002,7 +1114,7 @@ async function tickSpate(z: ZoneDO, now: number): Promise<void> {
   // only moves you along a way you could have walked yourself.
   if (st.phase === "active") {
     for (const s of [...z.sessions.values()]) {
-      if (!SPATE_ROOMS.has(s.roomId) || z.outOfWorld(s) || s.hp <= 0) continue;
+      if (!spated(z, s.roomId) || z.outOfWorld(s) || s.hp <= 0) continue;
       s.hp -= SPATE_BITE;
       if (s.hp <= 0) {
         z.send(s, "The beck takes your feet, and then the rest of you, and the last of it is stone and cold and no air at all.", "death big");
@@ -1267,6 +1379,27 @@ async function tickFever(z: ZoneDO, now: number): Promise<void> {
   }
 }
 
+// BIASES, not triggers (the law at the top of this file). Other arcs load the
+// die here — a settled rain banks water (spate, fever), a massacre stirs the
+// dead (wake) — and the next roll with that band free draws the named arc,
+// then the charge is spent. band -> arc id.
+//
+// KEPT IN z.events, NOT IN A MODULE-LEVEL OBJECT, because of the timescales
+// involved. A charge is laid the moment a rain settles and cashed at the NEXT
+// ROLL, which is hours away; module state does not survive a deploy or a DO
+// eviction, and this world ships several times a day. A bank that empties every
+// time we push is a bank that is empty whenever anybody looks in it — the
+// feature would have read as never firing rather than as firing rarely.
+//
+// z.events is in the sim blob (simstore's key list), so a charge laid before a
+// deploy is still there after it. The `charge:` keys are inert to everything
+// else: bandsBusy walks POOL, and phaseOf is looked up by arc id, so nothing
+// mistakes a charge for a running arc.
+const CHARGE_PREFIX = "charge:";
+function chargeBand(z: ZoneDO, band: string, arcId: string): void {
+  z.events.set(CHARGE_PREFIX + band, { phase: "idle", until: NEVER, data: arcId });
+}
+
 // ---- the roll (the world's dice) ----
 // One clock, one die: every few hours it picks ONE arc from the pool and
 // starts it. The tick only runs with an audience, so a roll slept long past
@@ -1297,6 +1430,19 @@ function tickRoll(z: ZoneDO, now: number): void {
   // and if nothing's ground is free this roll passes: quiet is a result too.
   if (phaseOf(z, "bell") !== "idle" || phaseOf(z, "tide") !== "idle") return;
   const busy = bandsBusy(z);
+  // A charged band draws its arc the next roll it is free (bias, not trigger).
+  for (const [key, held] of z.events) {
+    if (!key.startsWith(CHARGE_PREFIX) || !held.data) continue;
+    const band = key.slice(CHARGE_PREFIX.length);
+    if (busy.any || busy.bands.has(band)) continue; // band busy — the charge waits
+    const arcId = held.data;
+    z.events.delete(key);
+    const ev = z.events.get(arcId) ?? { phase: "idle" as const, until: 0 };
+    ev.phase = "idle";
+    ev.until = now;
+    z.events.set(arcId, ev);
+    return;
+  }
   const open = POOL.filter(([, , band]) => band === ANY ? (!busy.any && !busy.bands.size) : (!busy.any && !busy.bands.has(band)));
   if (!open.length) return;
   const total = open.reduce((sum, [, w]) => sum + w, 0);
@@ -1317,6 +1463,32 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
   if (!st) {
     st = { phase: "idle", until: NEVER }; // the roll brings the weather
     z.events.set("rain", st);
+  }
+  // THE FORD BITE works every beat the settled rain stands (the sea and spate
+  // shape): the rain has the low crossings up, and they cost to wade — never a
+  // wall, just a toll. A carried torch dies in it and the pack takes water.
+  if (st.phase === "active" && st.data === "settled") {
+    for (const s of [...z.sessions.values()]) {
+      if (!fordUp(z, s.roomId) || z.outOfWorld(s) || s.hp <= 0) continue;
+      s.hp -= SPATE_BITE;
+      if (s.hp <= 0) {
+        z.send(s, "The rain-fed ford takes your feet and then the rest of you, and the brown water closes over you.", "death big");
+        await z.onPlayerDeath(s, null);
+        continue;
+      }
+      if (z.carriesLight(s) && s.litSource !== "lantern") {
+        s.litUntil = undefined; s.litSource = undefined; s.litRow = undefined; s.torchWarned = false;
+        z.send(s, "The ford's water slaps the flame out of your hand.", "dmgin");
+        z.sendStatus(s);
+      }
+      await wetRations(z, s);
+      z.send(s, pick([
+        `The rain has the ford up — brown water to the knee, running, and pushing at you. [${s.hp}/${s.maxHp} hp]`,
+        `The ford is a river under this rain, and every step is a guess. [${s.hp}/${s.maxHp} hp]`,
+        `Cold water over the gravel, deeper than the name allows. [${s.hp}/${s.maxHp} hp]`,
+      ]), "dmgin");
+      z.sendStatus(s);
+    }
   }
   if (now < st.until) return;
   switch (st.phase) {
@@ -1357,6 +1529,10 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
     }
     case "active": {
       const settled = st.data === "settled";
+      // A settled rain loads the die (BIAS, not trigger — the law at the top of
+      // this file): it banks water, so the next road roll draws the beck, and it
+      // soaks the graves, so the next den roll draws the fever.
+      if (settled) { chargeBand(z, "road", "spate"); chargeBand(z, "den", "fever"); }
       st.phase = "aftermath";
       // A long soaking leaves the ground wrong for longer — the mud outlasts
       // the weather that made it, and by more when there was more of it.
@@ -1617,6 +1793,20 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
   if (!st) {
     st = { phase: "idle", until: NEVER };
     z.events.set("wake", st);
+  }
+  // MASS DEATH CHARGES THE WAKE (bias, not trigger): enough fresh blood and
+  // remains in the warrens, and the next roll with the warrens free draws the
+  // wake instead of the boil. A couple of kills is not a massacre; three is.
+  if (st.phase === "idle") {
+    let fresh = 0;
+    for (const roomId of WARRENS_ROOMS) {
+      const held = z.traces.get(roomId);
+      if (!held) continue;
+      for (const t of held) {
+        if ((t.kind === "blood" || t.kind === "remains") && now - t.at < WAKE_FRESH_MS) fresh++;
+      }
+    }
+    if (fresh >= WAKE_CHARGE_CORPSES) chargeBand(z, "warrens", "wake");
   }
   if (now < st.until) return;
   const inWarrens = (roomId: string) => WARRENS_ROOMS.has(roomId);
@@ -2024,6 +2214,54 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
       st.until = NEVER;
       break;
     }
+  }
+}
+
+// ---- the wind (outdoors) ----
+// Exposure, made a weather. Sound carries, open flame gutters, and the cold it
+// rides in with is worse than the cold alone. The lantern is the answer, as it
+// always is. A quiet, legible hazard that costs you light and attention rather
+// than blood.
+async function tickWind(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("wind");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("wind", st); }
+  // The wind works every beat it blows: an open torch gutters, sometimes out.
+  if (st.phase === "active") {
+    for (const s of [...z.sessions.values()]) {
+      if (!windy(z, s.roomId) || z.outOfWorld(s)) continue;
+      if (s.litSource !== "torch" || !z.carriesLight(s)) continue;
+      // HOODED IS THE WORN ANSWER, exactly as it is for rain (light.ts refuses
+      // to light a bare torch in a downpour and lets a hooded kit through). A
+      // hood that keeps a flame alive in falling water and not in moving air
+      // would be a hood that only reads the weather's name.
+      if (z.wearsTrait(s, "hooded")) continue;
+      if (!chance(WIND_TORCH_GUTTER_ODDS)) continue;
+      s.litUntil = undefined; s.litSource = undefined; s.litRow = undefined; s.torchWarned = false;
+      z.send(s, "The wind gets under the flame and takes it — the torch gutters and dies.", "dmgin");
+      z.sendStatus(s);
+    }
+  }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + WIND_TELEGRAPH_MS;
+      feedOutdoors(z, "The wind is getting up — loose things begin to talk, and the air has a bite in it that wasn't there.");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + randInt(WIND_ACTIVE_MIN_MS, WIND_ACTIVE_MAX_MS);
+      feedOutdoors(z, "The wind is up and it means to stay up. Every sound carries further than it should, and no open flame is safe out in it.");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + WIND_AFTERMATH_MS;
+      feedOutdoors(z, "The wind drops as suddenly as it came up, and the open ground is loud with its own stillness again.");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
   }
 }
 
@@ -2584,7 +2822,7 @@ async function tickSea(z: ZoneDO, now: number): Promise<void> {
   if (level > 0) {
     for (const s of [...z.sessions.values()]) {
       if (z.outOfWorld(s) || s.hp <= 0 || !seaUnder(z, s.roomId)) continue;
-      s.hp -= SEA_BITE;
+      s.hp -= SEA_BITE * (windy(z, s.roomId) ? WIND_SEA_CHOP_MULT : 1);
       if (s.hp <= 0) {
         z.send(s, "The water closes over the road and then over you, and it is very cold, and there is a great deal of it.", "death big");
         await z.onPlayerDeath(s, null);

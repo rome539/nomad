@@ -28,12 +28,12 @@ import {
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
-  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, GRAZERS,
+  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, GRAZERS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
-  QUIET_WANDER_MULT, QUIET_HEED_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
+  QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
   HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS, BEAKS, COILS,
@@ -1016,6 +1016,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     if (events.quieted(z, creature.roomId)) {
       creature.nextWanderAt = now + (creature.nextWanderAt - now) * QUIET_WANDER_MULT;
     }
+    // THE SHADOW (mountain): the living go to ground while the drake passes —
+    // the mountain goes still, and the one thing still moving is the thing that
+    // cast the shadow. The dead don't feel it; the summit's animal is exempt.
+    if (events.shadowing(z, creature.roomId) && !HOLLOW.has(tmpl.id) && !SUMMIT_BOSSES.has(tmpl.id)) {
+      creature.nextWanderAt = now + (creature.nextWanderAt - now) * SHADOW_WANDER_MULT;
+    }
     // Beyond its territory a creature travels with purpose — the walk in from
     // a dark mouth (or back from a rout) is minutes, not an afternoon.
     if (creature.home && !tmpl.is_boss && !z.withinRadius(creature.roomId, creature.home, TERRITORY_RADIUS)) {
@@ -1229,10 +1235,14 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     // strays, the outworks' rats). The bone ground is the answer the fiction was
     // already giving; this makes the code agree with it.
     const carrionEater = SCAVENGERS.has(creature.templateId) && CARRION_ROOMS.has(creature.roomId);
-    if ((grazer && (FORAGE_ROOMS.has(creature.roomId) || world.entryRooms.has(creature.roomId))) || carrionEater) {
+    const grazeHere = grazer && (FORAGE_ROOMS.has(creature.roomId) || world.entryRooms.has(creature.roomId));
+    // WEATHER KEYS THE FORAGE: a hard cold freezes the ground (nothing to
+    // graze), and the mud after a good rain brings up more than the ground
+    // usually gives. Carrion is carrion whatever the sky does.
+    if ((grazeHere && !events.coldBites(z, creature.roomId)) || carrionEater) {
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       creature.hunger = 0;
-      creature.hp = Math.min(tmpl.max_hp, creature.hp + FORAGE_HEAL);
+      creature.hp = Math.min(tmpl.max_hp, creature.hp + (grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT) : FORAGE_HEAL));
       if (!silent) {
         z.roomFeed(creature.roomId, carrionEater && !grazer
           ? `${cap(tmpl.name)} works over something old among the stones, and finds enough.`

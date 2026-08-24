@@ -1889,6 +1889,15 @@ export const QUIET_ACTIVE_MAX_MS = 20 * 60_000;
 export const QUIET_AFTERMATH_MS = 6 * 60_000;
 export const QUIET_WANDER_MULT = 6;   // a creature's next step is six times further off
 export const QUIET_HEED_MULT = 2.2;   // ...and a noise it does hear pulls that much harder
+// THE SHADOW (mountain). The one arc that is a presence rather than a weather:
+// the drake's passage overhead. Not a fight — a fact the mountain states and
+// every living thing on it answers by going to ground. The summit's animal is
+// the single exception, which is the whole point.
+export const SHADOW_TELEGRAPH_MS = 90_000;
+export const SHADOW_ACTIVE_MIN_MS = 8 * 60_000;
+export const SHADOW_ACTIVE_MAX_MS = 14 * 60_000;
+export const SHADOW_AFTERMATH_MS = 4 * 60_000;
+export const SHADOW_WANDER_MULT = 6;   // the living go to ground while it holds: a step becomes six
 
 // ---- THE PACK COMES IN (dens) ----
 // Things off the Waste take the hamlet. It exists to serve the den's founding
@@ -4123,6 +4132,7 @@ export const GRAZERS = new Set<string>([
   "the-baited-bear", "the-chain-breaker",
 ]);
 export const FORAGE_HEAL = 3; // a scavenged nibble — less than a corpse (SCAVENGER_HEAL 6) or a dropped meal
+export const FORAGE_RAIN_MULT = 1.5; // the mud after a good rain brings up half again as much
 // The open sky: every room where weather can reach you (the grounds ring +
 // the overworks rooftops). The room-events engine (events.ts) reads this for
 // rain; anything indoor — keep, warrens, deep — is cover.
@@ -4409,6 +4419,7 @@ export const CARRIER_AFTERMATH_MS = 10 * 60_000;
 export const CARRIER_FROM = "the-thorn-gap";     // the fortress end of the paving
 export const CARRIER_TO = "the-cattle-grid";     // ...and as far as one man walks in a window
 export const CARRIER_STRIDE: [number, number] = [9000, 22_000]; // a working pace, not a stroll and not a run
+export const CARRIER_SLOW_MULT = 2; // rain and mud stretch his stride to twice the time
 export const CARRIER_ESCORT = 2;                 // waymen the word also reached
 export const CARRIER_ESCORT_ROOMS = ["the-hollow-way", "the-cut-bank", "the-verge-shrine", "the-hawthorn-narrows"];
 // WHAT IS IN THE BAG. Loaded onto the creature's `carries`, which means it is
@@ -4483,6 +4494,20 @@ export const SPATE_SWEEP_ODDS = 0.55;           // in a room with a way out, bet
 export const SPATE_SWEEP_MIN = 2;               // ...and when it does it moves you THIS many rooms, because it is fast
 export const SPATE_SWEEP_MAX = 4;
 export const SPATE_CARRY_ODDS = 0.5;            // each item on a flooded floor, per drain: how often it goes downstream
+// THE RAIN'S LOW GROUND (the road and the fen). Under SETTLED rain these rooms
+// read "up" — the ford, the culvert, the quaking flat — and cost to wade. The
+// law is the crossing's: BITE, NOT BLOCK. You can always cross; it just bills
+// you (SPATE_BITE) and waterlogs a ration, same as standing in any flood. None
+// of these is a room the road PROMISES stays dry — they are the rooms named
+// for being the low, wet way, which is exactly why they are here.
+export const ROAD_FORDS = new Set<string>([
+  // the west road's ford and culvert
+  "the-shallow-ford", "the-culvert",
+  // the east road's drowned ford and broken culvert (off the beck's own course)
+  "the-drowned-ford", "the-broken-culvert",
+  // the fen's own low water
+  "the-tussock-ford", "the-open-water", "the-fen-gut", "the-quaking-flat",
+]);
 
 export const NIGHT_HUNT_MULT = 1.6;
 // WHAT THE FULL MOON ACTUALLY DOES (rome, 2026-08-10). Until now the moon was
@@ -4595,6 +4620,7 @@ export const WAKE_ACTIVE_MS = 10 * 60_000;
 export const WAKE_AFTERMATH_MS = 5 * 60_000;
 export const WAKE_FRESH_MS = 90 * 60_000; // how recent a death still calls
 export const WAKE_CAP = 4; // at most this many rise per wake
+export const WAKE_CHARGE_CORPSES = 3; // ...but this many fresh-dead in the warrens loads the die (bias, not trigger)
 // The keeper's want (gate): chalked on the hatch, one named good counts
 // double in trade for the window — a pull event, the only weather that
 // gives you somewhere to GO. The table is all honest gatherables: fen fishing,
@@ -4758,6 +4784,27 @@ export const COLD_ACTIVE_MAX_MS = 15 * 60_000;
 export const COLD_AFTERMATH_MS = 3 * 60_000;
 export const COLD_TORCH_MULT = 0.5; // a torch lit (or caught) in the cold burns half as long
 export const COLD_REST_SKIP = 0.5; // odds a resting tick heals nothing in the cold
+// THE WIND. The one force a coast and a mountain both answer to, and until now
+// the only weather with no arc of its own. Its whole idea is EXPOSURE: sound
+// carries, open flame gutters, the sea bites harder in a chop, and the cold it
+// rides in with is worse than the cold alone. The lantern is the answer, as it
+// always is.
+export const WIND_TELEGRAPH_MS = 60_000;
+export const WIND_ACTIVE_MIN_MS = 10 * 60_000;
+export const WIND_ACTIVE_MAX_MS = 18 * 60_000;
+export const WIND_AFTERMATH_MS = 4 * 60_000;
+export const WIND_HEED_MULT = 1.6;        // creatures heed noise harder — sound carries in the wind
+// PER BEAT, AND THE BEAT IS TICK_MS = 2s — which is what makes this number
+// small. At 0.05 the expected life of a torch was 20 beats (40 SECONDS), and
+// the odds of one surviving even the SHORTEST wind window (10 min = 300 beats)
+// were 0.95^300, about two in ten million. That is not a gamble, it is a
+// schedule. At 0.002 a torch is better than even money to ride out a short
+// blow (0.998^300 = 55%) and worse than even over a long one (540 beats = 34%),
+// which is the coin the comment above always meant to describe.
+export const WIND_TORCH_GUTTER_ODDS = 0.002;
+export const WIND_SEA_CHOP_MULT = 2;      // the sea bites twice as hard in a chop
+export const WIND_CHILL_TORCH_MULT = 0.5; // wind+cold: a lit torch keeps a quarter of its burn
+export const WIND_CHILL_REST_SKIP = 0.75; // wind+cold: rest ticks are stolen three times in four
 // The breach: the map itself is the event. Stone groans in two rooms that
 // share a wall in the fiction (the telegraph), then the wall gives and an
 // exit exists that isn't supposed to — for a window — then the rubble
@@ -5500,16 +5547,23 @@ export const WEAPON_CLASS_READ: Record<string, string> = {
 // lottery traits are both here, because from the reading side there is no
 // difference: they are all things this piece does that a plain one does not.
 //
-// Wording checked against the mechanics, not guessed: reach cancels the ambush
-// multiplier rather than adding range (zone.ts, atLength), a wall drags your
-// swing in proportion to its guard, needling adds pierce rather than damage.
+// Wording checked against the mechanics, not guessed: a wall drags your swing
+// in proportion to its guard, needling adds pierce rather than damage.
+//
+// REACH DOES TWO THINGS NOW, and this text has to say both. It has always
+// cancelled the ambush multiplier (zone.ts, atLength) — and this note used to
+// state, flatly, that it did that "rather than adding range". That stopped
+// being true the day a haft was allowed to find the summit's animal in the air
+// (zone.ts, the airborne guard). A player holding the one weapon that answers
+// the drake's last third was being told, here and on the paperdoll, that it
+// does something else entirely.
 //
 // NOTE: the paperdoll keeps its own parallel list (buildDoll) phrased for the
-// WEARER — "reach (blunts the rush)". Same facts, different voice, and worth
-// converging the day either one is edited.
+// WEARER. Same facts, different voice — both were updated together, and both
+// have to be again the day either one is edited.
 export const TRAIT_DOES: Record<string, string> = {
   // structural — what the smith made it
-  reach: "blunts a rush; the ambush loses its weight",
+  reach: "blunts a rush, and a haft still finds what has left the ground",
   // pierce carries a COUNT and always shows it (TRAIT_COUNTED). `piercing` is
   // deliberately absent: it is the flag that marks the pierce CLASS, which the
   // tag line already prints as PIERCING, and a spear carrying both tags was

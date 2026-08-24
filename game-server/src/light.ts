@@ -127,6 +127,13 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   if (!wantLantern && events.raining(z, session.roomId) && !z.wearsTrait(session, "hooded") && !sheltered) {
     return z.send(session, "The rain would drown a torch before it caught. A hooded lantern wouldn't care.");
   }
+  // The wind takes a spark before the pitch ever catches. Same shape as the
+  // rain above and for the same reason: it was possible to stand in a gale,
+  // light a bare torch, and watch the wind gutter it a few beats later
+  // (tickWind) — the refusal is the honest version, and it spends nothing.
+  if (!wantLantern && events.windy(z, session.roomId) && !z.wearsTrait(session, "hooded") && !sheltered) {
+    return z.send(session, "The wind takes the spark before the pitch can catch. A hooded lantern wouldn't care.");
+  }
   const hoodedFlame = !wantLantern && events.raining(z, session.roomId) && !sheltered;
   // While the deep exhales, the current pulls an open flame apart before it
   // catches — the exhale is the lantern's other argument.
