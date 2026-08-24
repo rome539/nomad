@@ -113,6 +113,7 @@ import {
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT,
   MARKERS, MARK_MS, MARK_HEED_MULT, MARK_CALL_ODDS, SWEEPERS,
   FERRY_DRAG_ROOM, FERRY_DRAG_ODDS, FERRY_DRAG_MAX, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, RAVEN_NEST_ROOMS, RAVEN_SCOOPERS,
+  groundWord, carveMedium, REST_TRACE, throwLand, metalFall,
 } from "./zone-data";
 
 export class ZoneDO implements DurableObject {
@@ -2072,7 +2073,7 @@ export class ZoneDO implements DurableObject {
       if (!creature.target) creature.target = session.pubkey;
       ai.addGrudge(this, creature, session.pubkey);
       session.target = creature.id;
-      this.send(session, `Your throw sails wide — ${this.gearName(itmpl.id)} cracks against the stone. ${cap(tmpl.name)} turns on you.`);
+      this.send(session, `Your throw sails wide — ${throwLand(this.regionOf(session.roomId), this.gearName(itmpl.id))}. ${cap(tmpl.name)} turns on you.`);
       this.actorFeed(session, session.roomId, `${session.name} hurls ${this.gearName(itmpl.id)} — and misses.`);
       this.combatNoise(session.roomId);
       this.refreshRoomCtx(session.roomId);
@@ -2123,7 +2124,7 @@ export class ZoneDO implements DurableObject {
     session.target = creature.id;
     this.actorFeed(session, session.roomId, `${session.name} hurls ${this.gearName(itmpl.id)} at ${tmpl.name}!`);
     this.combatNoise(session.roomId);
-    const landing = shattered ? " It shatters on impact." : " It lands on the stones.";
+    const landing = shattered ? " It shatters on impact." : ` It lands on ${groundWord(this.regionOf(session.roomId), session.roomId)}.`;
     if (creature.hp > 0) {
       if (!creature.target) creature.target = session.pubkey;
       this.send(session, `You hurl ${this.gearName(itmpl.id)} — it strikes ${tmpl.name} for ${dmg}${flourish} (${this.condition(creature)})${landing}`);
@@ -2173,7 +2174,7 @@ export class ZoneDO implements DurableObject {
     // The noise-throw's landing obeys the stray law too — a lure you retrieve
     // in minutes never notices; only the abandoned copy spoils.
     this.armStrayDecay(session.roomId);
-    this.send(session, `You hurl ${this.gearName(itmpl.id)} into the dark. It cracks and clatters off the stone — the sound carries.`);
+    this.send(session, `You hurl ${this.gearName(itmpl.id)} — ${throwLand(this.regionOf(session.roomId), "it")} — the sound carries.`);
     this.roomFeed(session.roomId, `${session.name} sends ${this.gearName(itmpl.id)} clattering across the room.`, session.pubkey, false);
     // The clatter: players next door hear it (WS-only, no relay flood), the idle
     // curious drift in to look, and any lurker here may drop on the noise.
@@ -3980,8 +3981,8 @@ export class ZoneDO implements DurableObject {
                 `${cap(tmpl.name)} strikes where you were — you're already gone.`,
               ])
             : pick([
-                `${cap(tmpl.name)} lunges past you and crashes against the stone.`,
-                `${cap(tmpl.name)} swings wide and its blow finds only wall.`,
+                `${cap(tmpl.name)} lunges past you and crashes on, nothing to stop it.`,
+                `${cap(tmpl.name)} swings wide and its blow finds only air.`,
                 `${cap(tmpl.name)} overreaches, and the stroke goes past you.`,
               ]), "dodge");
           this.combatNoise(victim.roomId);
@@ -4927,6 +4928,10 @@ export class ZoneDO implements DurableObject {
     const list = this.traces.get(roomId);
     if (!list || list.length === 0) return [];
     const lines: string[] = [];
+    // Evidence reads the ground it lies on (flavor audit): a pool of blood in
+    // the wood is not "on the stones", and a carving is not always in a wall.
+    const region = this.regionOf(roomId);
+    const ground = groundWord(region, roomId);
     const carvings = list.filter((t) => t.kind === "carve" && now - t.at < TRACE_LIFE_MS.carve);
     const rest = list
       .filter((t) => t.kind !== "carve" && now - t.at < (TRACE_LIFE_MS[t.kind] ?? 0))
@@ -4935,33 +4940,35 @@ export class ZoneDO implements DurableObject {
     for (const t of rest) {
       const age = now - t.at;
       if (t.kind === "blood") {
-        if (age < 10 * 60_000) lines.push("Fresh blood pools on the stones — something died here moments ago.");
-        else if (age < 3_600_000) lines.push("Blood on the stones, still wet.");
-        else lines.push("A drying bloodstain darkens the floor.");
+        if (age < 10 * 60_000) lines.push(`Fresh blood pools on ${ground} — something died here moments ago.`);
+        else if (age < 3_600_000) lines.push(`Blood on ${ground}, still wet.`);
+        else lines.push(`A drying bloodstain darkens ${ground}.`);
       } else if (t.kind === "drip") {
         // The walking wound: something crossed this room bleeding. The trail
         // never says WHO — you follow it to find out.
-        if (age < 10 * 60_000) lines.push("A trail of blood drops crosses the floor, bright and fresh — something wounded passed through, and not long ago.");
-        else lines.push("A dotted line of blood, going dark, crosses the stones — something wounded passed this way.");
+        if (age < 10 * 60_000) lines.push(`A trail of blood drops crosses ${ground}, bright and fresh — something wounded passed through, and not long ago.`);
+        else lines.push(`A dotted line of blood, going dark, crosses ${ground} — something wounded passed this way.`);
       } else if (t.kind === "remains") {
-        if (age < 10 * 60_000) lines.push("Broken remains litter the stones, still settling.");
+        if (age < 10 * 60_000) lines.push(`Broken remains litter ${ground}, still settling.`);
         else if (age < 3 * 3_600_000) lines.push("Broken remains lie scattered here.");
         else lines.push("Old remains, long picked over.");
       } else if (t.kind === "scraps") {
-        if (age < 3_600_000) lines.push("Fresh gnawed scraps litter the floor.");
-        else lines.push("Gnawed scraps rot quietly in a corner.");
+        if (age < 3_600_000) lines.push(`Fresh gnawed scraps litter ${ground}.`);
+        else lines.push("Gnawed scraps rot quietly where they fell.");
       } else if (t.kind === "rest") {
-        if (age < 3_600_000) lines.push("A patch of floor lies swept clear, sat in not long ago.");
+        if (age < 3_600_000) lines.push(pick(REST_TRACE[region] ?? REST_TRACE.upper!));
         else lines.push("Someone rested here, a while back.");
       } else if (t.kind === "passage") {
-        if (age < 10 * 60_000) lines.push("The dust is freshly disturbed — someone passed this way minutes ago.");
-        else lines.push("Footprints disturb the dust here.");
+        // Dust holds a print in the dungeon; out under the sky the ground does.
+        const track = region === "upper" || region === "deep" || region === "gate" ? "the dust" : "the ground";
+        if (age < 10 * 60_000) lines.push(`The ${track} is freshly disturbed — someone passed this way minutes ago.`);
+        else lines.push(`Footprints disturb ${track} here.`);
       }
     }
     for (const t of carvings.sort((a, b) => a.at - b.at)) {
       const age = now - t.at;
       const wear = age < 3_600_000 ? ", the marks fresh" : age > 7 * 24 * 3_600_000 ? ", half-worn" : "";
-      lines.push(`"${t.words}" is scratched into the stone${wear}.`);
+      lines.push(`"${t.words}" is scratched into ${carveMedium(region, roomId)}${wear}.`);
     }
     return lines;
   }
@@ -5222,10 +5229,16 @@ export class ZoneDO implements DurableObject {
       this.groundCond.set(`${weapon.carried.itemId}@${session.roomId}`, weapon.carried.condition); // a dropped blade keeps its wear when you snatch it back
       if (weapon.carried.loreId) this.groundLore.set(`${weapon.carried.itemId}@${session.roomId}`, weapon.carried.loreId); // and its mark
       if (weapon.carried.rolledTraits) this.groundRolled.set(`${weapon.carried.itemId}@${session.roomId}`, weapon.carried.rolledTraits); // and its roll (099)
-      this.send(session, `Your swing goes wide — ${weapon.tmpl.name} spins from your grip and clatters across the stones!`
+      // TWO CLAUSES, NOT ONE. throwLand's lines carry their own subject ("{w}
+      // cracks against the stone"), so appending one after "and" produced "the
+      // axe spins from your grip and IT cracks against the stone". Cut at the
+      // full stop instead, and compute the landing ONCE so the room and the
+      // fumbler are told about the same event in the same words.
+      const land = cap(throwLand(this.regionOf(session.roomId), "it"));
+      this.send(session, `Your swing goes wide — ${weapon.tmpl.name} spins from your grip. ${land}.`
         + (weapon.carried.serial !== null ? " The seal cracks where it lands." : ""), "fumble");
-      this.roomFeed(session.roomId, `${session.name}'s weapon clatters across the stones!`, session.pubkey, false);
-      this.roomSound(session.roomId, "Metal clatters on stone, {dir}.");
+      this.roomFeed(session.roomId, `${session.name}'s weapon spins from their grip. ${land}.`, session.pubkey, false);
+      this.roomSound(session.roomId, metalFall(this.regionOf(session.roomId)));
       this.creatureNoise(session.roomId);
       this.refreshRoomCtx(session.roomId);
     } else {
@@ -5648,7 +5661,7 @@ export class ZoneDO implements DurableObject {
       victim,
       fell,
       scattered.length > 0
-        ? `${victim.name} is slain by ${slayer}. Their pack scatters across the stones${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
+        ? `${victim.name} is slain by ${slayer}. Their pack scatters across ${groundWord(this.regionOf(fell), fell)}${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
         : `${victim.name} is slain by ${slayer}.`,
     );
     if (slayerName) this.roomFeed(fell, `${slayerName} stands over the body.`, victim.pubkey, false);
@@ -5687,7 +5700,7 @@ export class ZoneDO implements DurableObject {
       ]) + (home.barred ? " The bar is in its sockets." : " There is no bar in the sockets, and the doorway is a doorway."),
     ].join("\n") : slayerName ? pick([
       `${slayerName} kills you.\nDarkness. Then the gate, again.`,
-      `${slayerName} puts you down on the stones.\nThe dark takes you — and gives you back at the gate.`,
+      `${slayerName} puts you down on ${groundWord(this.regionOf(fell), fell)}.\nThe dark takes you — and gives you back at the gate.`,
       `The last thing you see is ${slayerName}, already stooping for your pack.\nThen cold air, and the gate, and breath again.`,
     ]) : tmpl ? pick([
       `${cap(tmpl.name)} kills you.\nDarkness. Then the gate, again.`,
@@ -6150,7 +6163,7 @@ export class ZoneDO implements DurableObject {
       if (itemized || loose.length <= FLOOR_ITEMS_BRIEF) {
         for (const l of loose) lines.push(l);
       } else if (loose.length) {
-        lines.push(`Loot lies scattered across the stones — ${loose.length} things in all. ('look' to pick them out.)`);
+        lines.push(`Loot lies scattered across ${groundWord(this.regionOf(room.id), room.id)} — ${loose.length} things in all. ('look' to pick them out.)`);
       }
       // A CORVID NEST, and what is in it. Only the THREE fixed pools (RAVEN_NEST_ROOMS)
       // can hold a nest — every corvid in the world carries to the nearest of

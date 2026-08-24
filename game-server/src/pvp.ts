@@ -22,6 +22,7 @@ import {
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
   FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_HIT, FEED_REST_CAUGHT,
   playerBleedOdds,
+  groundWord, drownGround,
 } from "./zone-data";
 
 // How hurt the other one looks — the same buckets as selfExamine, because
@@ -282,8 +283,10 @@ async function swingAt(
     // kill at half health otherwise looks like a bug), and an ordinary killing
     // blow prints like any other hit — just with the floor at the end of it.
     z.send(defender, vkill
-      ? `${attacker.name}'s ${weapon ? weapon.tmpl.name.replace(/^(a|an|the)\s+/i, "") : "fist"} finds the mark. ${vkill.taken}`
-      : `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${opts.ambush && !atLength ? " — you never saw it coming" : ""} — and the stones come up to meet you.`, vkill ? "dmgin big vital" : "dmgin big");
+      ? `${attacker.name}'s ${weapon ? weapon.tmpl.name.replace(/^(a|an|the)\s+/i, "") : "fist"} finds the mark. ${vkill.taken
+          .replace("{ground}", groundWord(z.regionOf(defender.roomId), defender.roomId))
+          .replace("{drown}", drownGround(z.regionOf(defender.roomId)))}`
+      : `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${opts.ambush && !atLength ? " — you never saw it coming" : ""} — and the ground comes up to meet you.`, vkill ? "dmgin big vital" : "dmgin big");
     // The killer reads their killing blow too — the SAME hit line as any
     // other swing, with the number, just ending in the body. Without this the
     // fatal swing collapsed to a bare "You put X down" with no damage shown,

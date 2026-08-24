@@ -3,6 +3,7 @@
 // logic. Values and names are unchanged from when they lived in zone.ts.
 import type { Stance } from "./zone-types";
 import { type ItemTemplate, type Region, trait } from "./world";
+import { pick } from "./rng";
 // The wood's own voice (detail.ts). Spread in below rather than pasted here:
 // ROOM_AMBIENCE and DARK_TOUCH must stay SINGLE tables — a lookup split across
 // two files is a lookup that will drift — but 170 rooms of new prose would push
@@ -3071,7 +3072,7 @@ export const VITALS_KILLS: Record<"pierce" | "edge" | "blunt" | "spear" | "fist"
     { hit: "put it in low, into {n}'s kidney",
       taken: "A cold punch low in your back — and the pain is so total there's no room left for anything else." },
     { hit: "lay open the great vein in {n}'s thigh",
-      taken: "The edge opens the big vein in your thigh. You go grey in seconds, and the floor comes up to meet you." },
+      taken: "The edge opens the big vein in your thigh. You go grey in seconds, and the ground comes up to meet you." },
     { hit: "cut deep into the side of {n}'s neck",
       taken: "The cut goes deep in the side of your neck, and you hear your own breath whistle out of the wrong place." },
   ],
@@ -3096,7 +3097,12 @@ export const VITALS_KILLS: Record<"pierce" | "edge" | "blunt" | "spear" | "fist"
     { hit: "run {n} through the heart",
       taken: "The point runs you through the heart, and the room folds shut around it." },
     { hit: "punch through {n}'s ribs and into the lung",
-      taken: "It punches through your ribs into the lung. You drown standing up, on dry stone." },
+      // {drown}, not {ground}: the original was "on dry stone", and DRY was the
+      // whole line — a man drowning where there is no water. Swapping in the
+      // plain surface word threw the joke away and left "on the stone", which
+      // says nothing. DROWN_GROUND keeps the irony in every band, including the
+      // two that have water in them, where it gets sharper rather than weaker.
+      taken: "It punches through your ribs into the lung. You drown standing up, {drown}." },
     { hit: "put the point clean through {n}'s throat",
       taken: "The point goes clean through your throat. You reach for it, and your hands don't answer." },
     { hit: "run {n} through the belly and out the back",
@@ -3335,11 +3341,12 @@ export const FLEE_TELL: Record<string, { out: string[]; in_: string[] }> = {
   edge: {
     out: [
       "flees {dir}, trailing blood.",
-      "breaks and runs {dir}, a red line following it across the stone.",
+      "breaks and runs {dir}, a red line following it across {ground}.",
       "staggers away {dir}, dripping where the edge opened it.",
       "bolts {dir}, slick and shining with its own blood.",
+      "flees {dir}, blood spotting {ground} behind it.",
     ],
-    in_: ["bursts in, bleeding.", "staggers in, leaving red on the stones."],
+    in_: ["bursts in, bleeding.", "staggers in, leaving red on {ground}."],
   },
   blunt: {
     out: [
@@ -6140,6 +6147,367 @@ export const AMBIENCE: Partial<Record<Region, string[]>> = {
     "The rock is scored in long parallel grooves, too deep and too even for weather.",
     "Somewhere far above, stone grinds on stone, and the mountain resettles its weight.",
   ],
+};
+// REST READS THE GROUND IT HAPPENS ON. The old rest pool was one register —
+// cold stone, fallen blocks, a far-off drip — and it answered for the whole
+// world, so a wanderer lying down in a sunlit wood was told the stone was cold
+// and the dark was keeping them company. Same fix as the empty-room sound and
+// AMBIENCE: each band has its own posture now, and the two sub-pools keep the
+// hurt/whole split (a whole man resting is a posture, not a medicine — rome,
+// 2026-07-13). `upper` is the dungeon's own register and doubles as the
+// fallback, so a band added without a pool reads the dungeon rather than
+// someone else's weather.
+export interface RestFlavor {
+  hurt: string[];   // wounded: the body mends while you sit
+  whole: string[];  // unhurt: rest as posture, nothing to close
+}
+export const REST: Partial<Record<Region, RestFlavor>> = {
+  // The dungeon's ring — the original pool, unchanged.
+  upper: {
+    hurt: [
+      "You settle against the cold stone. Wounds close slowly here — any effort ends it.",
+      "You lower yourself down and let your breathing slow. The ache eases, little by little — any effort ends it.",
+      "You find a wall to put your back to and go still. Blood stops where it was running — any effort ends it.",
+      "You sink down where you stand and let the dark hold you a while. The hurt recedes — any effort ends it.",
+      "You crouch in the lee of a fallen block, knees to your chest, and let the shaking pass. It mends, barely — any effort ends it.",
+      "You sit with your weapon across your knees and your eyes half-open. The body patches what it can — any effort ends it.",
+      "You press your back into a corner where nothing can come at it, and breathe until the edges dull — any effort ends it.",
+    ],
+    whole: [
+      "You settle against the cold stone with nothing left to mend, and simply sit — any effort ends it.",
+      "You put your back to a wall and go still. Nothing hurts. You listen instead — any effort ends it.",
+      "You sink down where you stand, whole, and let the dark keep you company a while — any effort ends it.",
+      "You lower yourself down and let your breathing slow. There is nothing to close; you rest anyway — any effort ends it.",
+      "You sit on a fallen block and count the drips somewhere off in the dark. Whole, and in no hurry — any effort ends it.",
+      "You hunker down, unhurt, and give your legs the rest your nerves won't take — any effort ends it.",
+    ],
+  },
+  // The flooded deep: dry ledges above black water. Wet stone, silt, the flood's
+  // slow breathing — the drip's cold, drowned sister.
+  deep: {
+    hurt: [
+      "You settle with your back to the wet stone and let the flood's cold do its work. Wounds close slowly here — any effort ends it.",
+      "You sink down where the ground stays dry and the black water only watches. The hurt eases a little — any effort ends it.",
+      "You sit at the water's edge and breathe with it until the ache dulls — any effort ends it.",
+      "You crouch clear of the waterline and let the cold settle over you. Blood stops where it was running — any effort ends it.",
+      "You settle where the stone is dry and the cold comes up through it. The ache eases a little at a time — any effort ends it.",
+      "You sit with the black water at your feet and let its slow note count the healing — any effort ends it.",
+    ],
+    whole: [
+      "You settle against the wet stone with nothing left to mend, and listen to the flood breathe — any effort ends it.",
+      "You sit at the water's edge, whole, and watch the black surface keep its counsel — any effort ends it.",
+      "You lower yourself down where it is dry and go still. Nothing hurts. The water fills the silence instead — any effort ends it.",
+      "You put your back to the dark, unhurt, and let the deep hold still around you — any effort ends it.",
+      "You settle against the wet stone, whole, and let the dark and the water talk it out — any effort ends it.",
+      "You lower yourself down where it is dry and simply sit, in no hurry, while the flood minds itself — any effort ends it.",
+    ],
+  },
+  // The gate: a threshold, not a room. Stone, the draft through the breach, the
+  // keeper's hatch, and the cold hearth nobody tends.
+  gate: {
+    hurt: [
+      "You settle against the threshold stone, inside the draft, and let the keeper's stillness stand guard. Wounds close slowly here — any effort ends it.",
+      "You sit with your back to the cold hearth and let the place take the shaking. It mends, barely — any effort ends it.",
+      "You lower yourself down in the foot of the broken tower and breathe until the edges dull — any effort ends it.",
+      "You find a place under the keeper's hatch, out of the wind's eye, and go still. Blood stops where it was running — any effort ends it.",
+      "You settle inside the threshold's shelter and let the keeper's nearness take the edge off. Wounds close slowly here — any effort ends it.",
+      "You sit with your back to the cold hearth and breathe until the hurt is a dull thing behind you — any effort ends it.",
+    ],
+    whole: [
+      "You settle against the threshold stone with nothing left to mend, and simply sit — any effort ends it.",
+      "You put your back to the cold hearth, whole, and listen to the draft in the tower above — any effort ends it.",
+      "You lower yourself down at the keeper's foot and let the place hold you a while. Nothing hurts — any effort ends it.",
+      "You sit where the daylight reaches down through the breach and stay out of its way — any effort ends it.",
+      "You settle inside the threshold, whole, and let the draft move past without you — any effort ends it.",
+      "You sit under the breach and watch the daylight go where it goes, in no hurry — any effort ends it.",
+    ],
+  },
+  // The open ground: a hillside under weather. Grass, nettles, rooks, and a
+  // great deal of buried iron. The first outdoor place anybody sees.
+  out: {
+    hurt: [
+      "You settle into the long grass at the wall foot, out of the wind, and let the wounds begin their slow close — any effort ends it.",
+      "You sit with your back against the old stone of the ruin, and the ache eases a little under the open sky — any effort ends it.",
+      "You lower yourself onto the hillside and let the rooks keep watch. Blood stops where it was running — any effort ends it.",
+      "You kneel down in the lee of the nettles and breathe until the shaking passes. It mends, barely — any effort ends it.",
+      "You settle into the long grass and let the hill take your weight. The wounds close, slowly, under the open sky — any effort ends it.",
+      "You sit with your back to the ruin and breathe until blood stops where it was running — any effort ends it.",
+    ],
+    whole: [
+      "You settle into the grass with nothing left to mend, and sit while the rooks go about their business — any effort ends it.",
+      "You put your back against the ruin and go still. Nothing hurts. The wind does the talking — any effort ends it.",
+      "You lower yourself onto the open ground, whole, and let the weather have its way with you a while — any effort ends it.",
+      "You sit on the hill and watch the fortress get no smaller, in no hurry — any effort ends it.",
+      "You settle into the grass, whole, and watch the rooks go up and settle back — any effort ends it.",
+      "You sit on the open ground and let the weather pass over you, in no hurry — any effort ends it.",
+    ],
+  },
+  // The road: exposure. Nothing here hides you, and everything on it is going
+  // somewhere — so rest is a place in the verge, out of the wind's full reach.
+  road: {
+    hurt: [
+      "You drop to the verge and sit with your back to the wind's line. Wounds close slowly here — any effort ends it.",
+      "You settle into the lee of the ditch and let the road go on without you. The ache eases, little by little — any effort ends it.",
+      "You sit in the rut where the grass has come up, out of sight, and let the hurt dull — any effort ends it.",
+      "You hunker against the cut stone in the verge and breathe until blood stops where it was running — any effort ends it.",
+      "You drop onto the verge and let the road's traffic — whatever passes — go by without you. Wounds close slowly here — any effort ends it.",
+      "You settle in the lee of the ditch and breathe until the ache eases, little by little — any effort ends it.",
+    ],
+    whole: [
+      "You sit down on the verge with nothing left to mend, and watch the road unroll both ways — any effort ends it.",
+      "You settle into the ditch, whole, and let the wind go over the top of you — any effort ends it.",
+      "You lower yourself onto the grass at the road's edge and simply sit, in no hurry — any effort ends it.",
+      "You put your back to a leaning stone and go still. Nothing hurts. The country opens on both sides — any effort ends it.",
+      "You settle on the verge, whole, and let the wind come down the road over you — any effort ends it.",
+      "You sit with your back to a leaning stone and watch the way go both directions, in no hurry — any effort ends it.",
+    ],
+  },
+  // The wood: enclosure again, but green and alive. A trunk, a root, leaf-mould
+  // — the sightline never reaches far enough, so you rest where it can't.
+  wood: {
+    hurt: [
+      "You settle against a trunk where the roots make a seat, and let the green dark close over you. Wounds close slowly here — any effort ends it.",
+      "You lower yourself into the leaf-mould, out of sight, and breathe until the hurt eases — any effort ends it.",
+      "You sit with your back to a tree and your eyes half-open. Blood stops where it was running — any effort ends it.",
+      "You crouch in the lee of a root and let the wood's own quiet take the shaking. It mends, barely — any effort ends it.",
+      "You settle into the leaf-mould and let the green quiet close over you. Blood stops where it was running — any effort ends it.",
+      "You sit against a trunk and breathe until the hurt dulls to a thing you can carry — any effort ends it.",
+    ],
+    whole: [
+      "You settle against a trunk with nothing left to mend, and listen to the wood working — any effort ends it.",
+      "You lower yourself into the leaf-mould, whole, and let the green dark keep you company — any effort ends it.",
+      "You sit at the foot of a tree and go still. Nothing hurts. The leaves do the talking — any effort ends it.",
+      "You put your back to the wet bark, unhurt, and let the wood breathe around you — any effort ends it.",
+      "You settle against a trunk, whole, and let the wood go about its business around you — any effort ends it.",
+      "You sit in the leaf-mould and listen to the birds start up again, one by one — any effort ends it.",
+    ],
+  },
+  // The mountain: scale and cold. Rock, scree, frost, and the hint — kept rare
+  // and never named — that something very large has been up here a long time.
+  mountain: {
+    hurt: [
+      "You settle with your back to the cold rock and let the wind find every wound. They close slowly here — any effort ends it.",
+      "You lower yourself into the lee of the scree and breathe until the ache dulls — any effort ends it.",
+      "You sit against the scored stone, knees to your chest, and let the shaking pass. It mends, barely — any effort ends it.",
+      "You crouch out of the wind's full reach and go still. Blood stops where it was running — any effort ends it.",
+      "You settle into the lee of the rock and let the wind have everything it can reach but you. Wounds close slowly here — any effort ends it.",
+      "You sit against the cold stone and breathe until the ache dulls, in the thin air — any effort ends it.",
+    ],
+    whole: [
+      "You settle against the rock with nothing left to mend, and sit while the mountain minds its own business — any effort ends it.",
+      "You lower yourself onto the bare ground, whole, and let the cold have you a while — any effort ends it.",
+      "You put your back to the slope and go still. Nothing hurts. The wind does the talking — any effort ends it.",
+      "You sit and look out over the ground below, in no hurry, while the height waits behind you — any effort ends it.",
+      "You settle against the rock, whole, and let the height hold still around you — any effort ends it.",
+      "You sit on the bare ground and let the wind and the cold be the only things moving — any effort ends it.",
+    ],
+  },
+  // The den ground: an assart that emptied. Shut doors, cold hearths, grass
+  // between the furrows — a place you could live in tonight, and rest like it.
+  den: {
+    hurt: [
+      "You settle in the lee of a wall that has a roof on it still, and let the wounds close slowly — any effort ends it.",
+      "You lower yourself onto the grass between the furrows and breathe until the ache eases — any effort ends it.",
+      "You sit with your back to a shut door that will stay shut, and let blood stop where it was running — any effort ends it.",
+      "You hunker in the lee of a hurdle and let the quiet place take the shaking. It mends, barely — any effort ends it.",
+      "You settle against a shut door and let the roof that is still on take the weather for you. Wounds close slowly here — any effort ends it.",
+      "You lower yourself onto the grass and breathe until blood stops where it was running — any effort ends it.",
+    ],
+    whole: [
+      "You settle against a shut door with nothing left to mend, and sit where people used to sit — any effort ends it.",
+      "You lower yourself onto the grass, whole, and listen to a shutter knocking somewhere down the street — any effort ends it.",
+      "You put your back to a cold hearth and go still. Nothing hurts. The place waits with you — any effort ends it.",
+      "You sit in the lee of the pinfold, unhurt, and give your legs the rest they were promised — any effort ends it.",
+      "You settle against a shut door, whole, and sit where the street is empty and patient — any effort ends it.",
+      "You lower yourself onto the grass and let the quiet hamlet keep its own counsel — any effort ends it.",
+    ],
+  },
+  // The crossing: a mile of moving water somewhere near you at all times. Salt,
+  // shingle, the tideline — rest happens to the sound of the tide going up or
+  // down, never doing nothing.
+  crossing: {
+    hurt: [
+      "You settle onto the shingle, out of the wind's teeth, and let the water's note take the edge off. Wounds close slowly here — any effort ends it.",
+      "You sit on the tideline where the weed lies, and breathe until the ache eases — any effort ends it.",
+      "You lower yourself onto the wet ground and let the moving water keep watch. Blood stops where it was running — any effort ends it.",
+      "You crouch in the lee of a stone, salt on your lips, and let the shaking pass. It mends, barely — any effort ends it.",
+      "You settle onto the shingle and let the water's note take the shaking out of you. Wounds close slowly here — any effort ends it.",
+      "You sit on the tideline and breathe until the ache eases, salt on the wind — any effort ends it.",
+    ],
+    whole: [
+      "You settle onto the shingle with nothing left to mend, and listen to the mile of water moving — any effort ends it.",
+      "You sit on the tideline, whole, and let the salt wind go through you and past — any effort ends it.",
+      "You lower yourself where the weed lies and go still. Nothing hurts. The water keeps on — any effort ends it.",
+      "You sit and watch the far bank look further away than it did an hour ago, in no hurry — any effort ends it.",
+      "You settle onto the shingle, whole, and let the mile of water keep its own time — any effort ends it.",
+      "You sit on the tideline and let the tide go up or down, in no hurry either way — any effort ends it.",
+    ],
+  },
+};
+// THE GROUND UNDERFOOT (flavor audit). What a body, a drop, a boot or a pool of
+// blood meets here, by band. Phrases are chosen to read after "on", "across",
+// "onto" or "over" — the "where it lies / lands / scatters" family. A band with
+// no pool falls back to the dungeon's stone. The throw/fumble/armor SOUNDS and
+// the rest-trace get their own tables below: a soft band doesn't ring, and a
+// patch of grass isn't "swept clear".
+export const GROUND: Partial<Record<Region, string[]>> = {
+  upper: ["the stone", "the cold stone", "the flagstones"],
+  deep: ["the wet stone", "the black stone"],
+  gate: ["the threshold stone", "the worn stone"],
+  out: ["the grass", "the packed earth", "the turf"],
+  road: ["the paving", "the packed earth", "the mud"],
+  wood: ["the leaf-mould", "the soft earth", "the roots"],
+  mountain: ["the rock", "the scree", "the bare stone"],
+  den: ["the grass", "the packed earth", "the turf"],
+  crossing: ["the shingle", "the wet shingle", "the tideline mud"],
+};
+// What a blade can leave a mark on, by band — carve's "into the X". Stone and
+// wall in the fortress, bark in the wood, timber and doorposts in the den,
+// rock and drystone on the mountain, and the road's milestones and stakes.
+export const CARVE_MEDIUM: Partial<Record<Region, string[]>> = {
+  upper: ["the stone", "the wall"],
+  deep: ["the wet stone", "the stone"],
+  gate: ["the stone", "the gatepost"],
+  out: ["the old stone", "the ruin's stone"],
+  road: ["the milestone", "the paving", "a fence post"],
+  wood: ["the bark", "a smooth trunk"],
+  mountain: ["the rock", "a boulder"],
+  den: ["a doorpost", "a timber", "the soft stone"],
+  crossing: ["a stake", "the dressed stone", "driftwood"],
+};
+// The trace a rester leaves on the ground, by band — a patch of floor is a
+// dungeon idea; a wood remembers you differently.
+export const REST_TRACE: Partial<Record<Region, string[]>> = {
+  upper: ["A patch of floor lies swept clear, sat in not long ago."],
+  deep: ["A dry patch of stone is swept clear, sat in not long ago."],
+  gate: ["A spot by the wall is swept clear, sat in not long ago."],
+  out: ["A patch of grass lies pressed flat, sat in not long ago."],
+  road: ["A place in the verge is pressed flat, sat in not long ago."],
+  wood: ["A nest of leaf-mould is pressed flat against a root, sat in not long ago."],
+  mountain: ["A hollow in the scree is smoothed, sat in not long ago."],
+  den: ["A patch of grass by a wall is pressed flat, sat in not long ago."],
+  crossing: ["A place on the shingle is kicked flat, sat in not long ago."],
+};
+// A flung or fumbled thing striking the ground, by band — the SOUND, not just
+// the surface. {w} = the flung thing's name. A soft band thuds or skitters; it
+// does not ring.
+//
+// EVERY LINE MUST LEAVE IT RETRIEVABLE. All three callers — the throw that
+// misses, the noise-throw, and the fumble — put the thing straight onto the
+// room's floor with its condition, its mark and its roll stamped for pickup.
+// The deep and the crossing first shipped with "splashes into the black water"
+// and "splashes into the shallows", which told a player their sealed blade had
+// gone into water it was never in: they would walk away from a weapon lying at
+// their feet. Water is the one thing these lines may never say.
+export const THROW_LAND: Partial<Record<Region, string[]>> = {
+  upper: ["{w} cracks against the stone", "{w} clatters off the stone"],
+  deep: ["{w} cracks against the wet stone", "{w} clatters off the black stone"],
+  gate: ["{w} cracks against the threshold", "{w} clatters across the stone"],
+  out: ["{w} thuds into the grass", "{w} clips a stone and spins off into the turf"],
+  road: ["{w} cracks against the paving", "{w} thuds into the verge"],
+  wood: ["{w} thuds into the leaf-mould", "{w} cracks against a trunk"],
+  mountain: ["{w} cracks against the rock", "{w} skitters down the scree"],
+  den: ["{w} thuds into the grass", "{w} cracks against a wall"],
+  crossing: ["{w} clatters across the shingle", "{w} grinds into the wet shingle"],
+};
+// The room-wide sound of falling metal, by band — broadcast with {dir} to the
+// sockets around the drop.
+export const METAL_FALL: Partial<Record<Region, string[]>> = {
+  upper: ["Metal clatters on stone, {dir}.", "Iron rings on the flagstones, {dir}."],
+  deep: ["Metal clatters on wet stone, {dir}."],
+  gate: ["Metal clatters on stone, {dir}."],
+  out: ["Metal thuds into the grass, {dir}."],
+  road: ["Metal clatters on the paving, {dir}.", "Metal thuds into the verge, {dir}."],
+  wood: ["Metal thuds into the leaf-mould, {dir}."],
+  mountain: ["Metal clatters on rock, {dir}."],
+  den: ["Metal thuds into the earth, {dir}."],
+  crossing: ["Metal clatters on the shingle, {dir}."],
+};
+// A ROOM'S SURFACE IS A FACT ABOUT THE ROOM, NOT A DIE ROLL. These two started
+// out as pick() and it was wrong for what reads them: traceLines runs on every
+// room description, so one bloodstain read "on the grass", then "on the turf",
+// then "on the packed earth" — three surfaces for one puddle, in one room, in
+// under a minute. Same for the floor item you keep looking at and the doorpost
+// you carve twice.
+//
+// So they are DETERMINISTIC PER ROOM: the same room always answers the same
+// word, different rooms in a band answer differently, and the pools still do
+// their job of keeping a band from having one voice. Nothing here is seeded off
+// the clock or the RNG, so it survives a restart and two players standing in
+// the same room are told the same thing.
+//
+// The SOUND tables below (throwLand, metalFall, footfall) keep pick(): a stone
+// turning under your boot is an event, and it is allowed to be a different
+// stone every time.
+function surfaceIdx(roomId: string, len: number): number {
+  let h = 0;
+  for (let i = 0; i < roomId.length; i++) h = (Math.imul(h, 31) + roomId.charCodeAt(i)) | 0;
+  return Math.abs(h) % len;
+}
+// The band's surface word for THIS room; falls back to the dungeon's stone.
+export function groundWord(region: Region, roomId: string): string {
+  const pool = GROUND[region] ?? GROUND.upper!;
+  return pool[surfaceIdx(roomId, pool.length)];
+}
+// What a blade marks in THIS room — the same doorpost every time you come back.
+export function carveMedium(region: Region, roomId: string): string {
+  const pool = CARVE_MEDIUM[region] ?? CARVE_MEDIUM.upper!;
+  return pool[surfaceIdx(roomId, pool.length)];
+}
+// A flung thing's landing, named: "your axe cracks against the paving".
+export function throwLand(region: Region, name: string): string {
+  return pick(THROW_LAND[region] ?? THROW_LAND.upper!).replace("{w}", name);
+}
+// The metal-fall sound a room hears. {dir} is left in — roomSound fills it per
+// listener, because the direction is different for every room that hears it.
+export function metalFall(region: Region): string {
+  return pick(METAL_FALL[region] ?? METAL_FALL.upper!);
+}
+// WHERE YOU DROWN WITH NO WATER IN YOU (see VITALS_KILLS, the lung). One phrase
+// per band, and every one of them keeps the joke the plain surface word lost.
+// The deep and the crossing are the two that actually have water, so theirs put
+// it just out of reach instead of just absent — the same irony, turned over.
+export const DROWN_GROUND: Partial<Record<Region, string>> = {
+  upper: "on dry stone",
+  deep: "on dry stone, with the whole black flood a stride away",
+  gate: "on dry stone, in the doorway of somewhere safe",
+  out: "on dry grass, under all that open sky",
+  road: "in the dry dust of the road",
+  wood: "on dry leaf-mould, a hand's breadth of it",
+  mountain: "on dry rock, in air too thin to have drowned anybody",
+  den: "on dry grass, in somebody's old street",
+  crossing: "on dry shingle, with a mile of water going past behind you",
+};
+export function drownGround(region: Region): string {
+  return DROWN_GROUND[region] ?? DROWN_GROUND.upper!;
+}
+// The small sound of a bare tread, by band — what turns or gives underfoot.
+export const FOOTFALL: Partial<Record<Region, string[]>> = {
+  upper: ["A loose stone turns under your foot", "A bit of rubble grinds under your boot"],
+  deep: ["A loose stone turns under your foot", "Silt slurps under your boot"],
+  gate: ["A loose stone turns under your foot", "Ash and grit crunch under your boot"],
+  out: ["Grass rustles under your foot", "A twig snaps under your boot"],
+  road: ["Gravel grits under your foot", "A stone turns under your boot"],
+  wood: ["A twig snaps under your foot", "Leaf-mould gives under your boot"],
+  mountain: ["Scree shifts under your foot", "A stone turns under your boot"],
+  den: ["Grass rustles under your foot", "Gravel grits under your boot"],
+  crossing: ["Shingle grits under your foot", "Shell cracks under your boot"],
+};
+export function footfall(region: Region): string {
+  return pick(FOOTFALL[region] ?? FOOTFALL.upper!);
+}
+// What an empty room sounds like to a pressed ear, by band — the region's own
+// silence, so the wood never answers with the dungeon's drip.
+export const HEARD_EMPTY: Partial<Record<Region, string[]>> = {
+  upper: ["nothing — stone, and a far-off drip", "nothing — the far drip of water, and your own held breath"],
+  deep: ["nothing — black water, and a slow drip overhead", "nothing — the flood moving, and a drip counting somewhere"],
+  gate: ["nothing — the keeper's stillness, and a draft through the breach", "nothing — cold stone, and a draft somewhere above"],
+  out: ["nothing — wind in the grass, and rooks going up off the ruin", "nothing — the wind, and a long way of open ground"],
+  road: ["nothing — wind, and a long way of open ground", "nothing — the wind down the road, and a bird far off"],
+  wood: ["nothing — leaves, and the wood working somewhere further off", "nothing — the birds, stopping and starting, further off"],
+  mountain: ["nothing — wind off the rock, and the cold under it", "nothing — the wind, and stone settling somewhere above"],
+  den: ["nothing — grass, and somewhere a shutter or a hurdle knocking on its own", "nothing — the grass, and a shutter answering itself down the street"],
+  crossing: ["nothing — water, and the tide going one way or the other", "nothing — the water moving, and a bird a long way out"],
 };
 // The dust your OWN light wakes: carried into a naturally-dark room the dark has
 // held a long time, a flame catches what the dark hid — motes turning in the

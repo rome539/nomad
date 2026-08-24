@@ -37,6 +37,7 @@ import {
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
   HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS, BEAKS, COILS,
+  groundWord,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -1087,7 +1088,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         ? `${cap(tmpl.name)} ${tmpl.is_boss ? "moves" : "slips away"} ${exit.dir}.`
         : runner ? `${cap(tmpl.name)} darts ${exit.dir} and is gone.`
         : hurt ? `${cap(tmpl.name)} ${hurt.out.replace("{dir}", exit.dir)}`
-        : `${cap(tmpl.name)} ${pick(fleeFam.out).replace("{dir}", exit.dir)}`;
+        // `from`, NOT creature.roomId — the creature was already moved (its
+        // roomId is reassigned the moment the exit is chosen, well above this),
+        // so reading it here described the ground of the room it had just left
+        // for, to the people standing in the room it left. A wolf breaking out
+        // of the wood told the wood it was bleeding across the shingle.
+        : `${cap(tmpl.name)} ${pick(fleeFam.out).replace("{dir}", exit.dir).replace("{ground}", groundWord(z.regionOf(from), from))}`;
       // Idle wandering stays LOCAL (off the relay) — that was the flood. A
       // creature FLEEING is a beat in a fight a watcher's following, so that one
       // still reaches the relay.
@@ -1101,7 +1107,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       z.roomFeed(from, outLine, undefined, false);
       const inLine = mode !== "flee" ? "creeps in."
         : runner ? "skitters in, already looking for the next way out."
-        : hurt ? hurt.in_ : pick(fleeFam.in_);
+        : hurt ? hurt.in_ : pick(fleeFam.in_).replace("{ground}", groundWord(z.regionOf(creature.roomId), creature.roomId));
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`, undefined, false);
       z.roomSound(
         creature.roomId,
@@ -3142,6 +3148,44 @@ export function bossRouse(z: ZoneDO, creature: Creature, tmpl: MobTemplate): voi
   z.roomSound(creature.roomId, "Something enormous is roaring {dir}, and it is not a warning.");
   z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Far up the mountain something roars, long and level, and does not stop when it should — and then the sound of it comes back off the crags a second time. Somebody is fighting the thing at the top.");
   z.creatureNoise(creature.roomId);
+}
+
+// THE TOOTH IS IN THE RING (rome, 2026-08-23). Two good rulings made a hole
+// between them. 237 put the shed tooth on the FLOOR of the ring of run stone,
+// deliberately — it is inside the fight, and picking it up is a beat you spent
+// not swinging. Then the animal was allowed to sleep (zone-data, 2026-08-22),
+// on the grounds that an eagle sleeps and this is an animal. Both are right.
+// Together they meant you could climb five tiers, find it down, lift the only
+// epic on the mountain off the ground a body-length from its head, and walk
+// back out having never been in a fight at all — the one prize in this region
+// that was supposed to cost the whole climb AND the thing standing on it,
+// bought with the climb alone.
+//
+// NOT A ROLL. wakeListeners' odds are for a footfall crossing a room; this is a
+// hand closing on something inside the nest of a sleeping animal, and there is
+// no version of that it sleeps through. It wakes, it has you, and you are still
+// bent over it: the same `staggered` opening cmdGet already charges for stooping
+// under a swing, charged here for stooping in front of one about to start.
+//
+// Scoped by the SLEEPER, not by the item — anything lifted out of the ring does
+// it, which is the honest shape of the rule and in practice is the tooth (the
+// summit has no hoard and that spawn does not regrow).
+export function nestRobbed(z: ZoneDO, session: Session): void {
+  for (const c of z.creatures.values()) {
+    if (c.roomId !== session.roomId || !c.asleep) continue;
+    if (!SUMMIT_BOSSES.has(c.templateId)) continue;
+    c.asleep = false;
+    c.sleepUntil = undefined;
+    c.target = session.pubkey;
+    if (!session.target) session.target = c.id;
+    session.staggered = true;
+    const tmpl = z.world!.mobTemplates.get(c.templateId)!;
+    z.send(session, `The weight of it comes off the stone — and the whole floor of the ring moves with it. ${cap(tmpl.name)} has its head up and its eye on you before you are upright again.`, "seize big");
+    z.roomFeed(session.roomId, `${cap(tmpl.name)} comes awake all at once: ${session.name} has taken something out of the ring.`, session.pubkey, false);
+    z.creatureNoise(session.roomId);
+    z.refreshRoomCtx(session.roomId);
+    return;
+  }
 }
 
   // The King does not mind that you came — until you make him stand.

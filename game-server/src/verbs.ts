@@ -21,6 +21,7 @@ import * as lore from "./lore";
 import * as den from "./den";
 import * as detail from "./detail";
 import {
+  REST,
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
@@ -32,6 +33,7 @@ import {
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, SMOKEHOUSE_ROOMS, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS, COOK_RECIPES,
   MILESTONES,
+  groundWord, carveMedium, footfall, HEARD_EMPTY,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor, worksBar } from "./gate";
 
@@ -658,7 +660,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     const floorRoll = z.rolledTell(groundItem, parseTraits(z.groundRolled.get(`${groundItem}@${session.roomId}`)));
     // Say WHERE it is, so a floor piece never reads the same as the twin on your
     // body — 'look' checks the floor first, so this is the one at your feet.
-    return z.send(session, t.description + z.itemStat(t) + floorRoll + wearClause(z, cond) + " It lies here on the stones." + floorLedger + floorHeart);
+    return z.send(session, t.description + z.itemStat(t) + floorRoll + wearClause(z, cond) + ` It lies here on ${groundWord(z.regionOf(session.roomId), session.roomId)}.` + floorLedger + floorHeart);
   }
   const carried = z.findCarried(session, arg);
   if (carried) {
@@ -1165,13 +1167,14 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     const now = Date.now();
     if (now - (session.loudSelfAt ?? 0) >= LOUD_SELF_COOLDOWN_MS) {
       session.loudSelfAt = now;
+      const foot = footfall(z.regionOf(session.roomId));
       z.send(session, armorWt > 0
-        ? "Your armor rings on the stone as you go — that carried far."
+        ? "Your armor rings as you go — that carried far."
         : heldWt > 0
           ? "The gear in your hands knocks and shifts as you go — that carried far."
           : z.burdened(session)
             ? "The iron in your pack knocks and shifts — that carried far."
-            : "A loose stone turns under your foot — small, but the dark is quiet.", "amb");
+            : `${foot} — a small sound, but it carried.`, "amb");
     }
   }
   z.refreshRoomCtx(from);
@@ -1367,6 +1370,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
     : "";
   z.send(session, `You take ${z.gearName(tmpl.id)}.` + readied + stooped + nowLoud);
   z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)
+  ai.nestRobbed(z, session); // reaching into a sleeping drake's ring wakes it, always — the tooth is not a free lift
   z.refreshRoomCtx(session.roomId);
   z.markSimDirty();
   await z.ensureAlarm();
@@ -1858,22 +1862,13 @@ export function cmdRest(z: ZoneDO, session: Session): void {
   // leaves a camp trace, still makes you warm furniture for a rat — and it
   // still drops you the instant you move. The chip just stops nagging.
   const hurt = session.hp < session.maxHp;
-  z.send(session, hurt ? pick([
-    "You settle against the cold stone. Wounds close slowly here — any effort ends it.",
-    "You lower yourself down and let your breathing slow. The ache eases, little by little — any effort ends it.",
-    "You find a wall to put your back to and go still. Blood stops where it was running — any effort ends it.",
-    "You sink down where you stand and let the dark hold you a while. The hurt recedes — any effort ends it.",
-    "You crouch in the lee of a fallen block, knees to your chest, and let the shaking pass. It mends, barely — any effort ends it.",
-    "You sit with your weapon across your knees and your eyes half-open. The body patches what it can — any effort ends it.",
-    "You press your back into a corner where nothing can come at it, and breathe until the edges dull — any effort ends it.",
-  ]) : pick([
-    "You settle against the cold stone with nothing left to mend, and simply sit — any effort ends it.",
-    "You put your back to a wall and go still. Nothing hurts. You listen instead — any effort ends it.",
-    "You sink down where you stand, whole, and let the dark keep you company a while — any effort ends it.",
-    "You lower yourself down and let your breathing slow. There is nothing to close; you rest anyway — any effort ends it.",
-    "You sit on a fallen block and count the drips somewhere off in the dark. Whole, and in no hurry — any effort ends it.",
-    "You hunker down, unhurt, and give your legs the rest your nerves won't take — any effort ends it.",
-  ]));
+  // REST READS THE GROUND (zone-data.REST). The old pool was one register —
+  // cold stone, fallen blocks, a far-off drip — and it answered for the whole
+  // world, so a wanderer lying down in a sunlit wood was told the stone was
+  // cold and the dark was keeping them company. Now the band speaks its own
+  // posture; a band with no pool of its own falls back to the dungeon's.
+  const flavor = REST[z.regionOf(session.roomId)] ?? REST.upper!;
+  z.send(session, pick(hurt ? flavor.hurt : flavor.whole));
   z.roomFeed(session.roomId, `${session.name} settles down to rest.`, session.pubkey, false); // resting: local only, nobody spectates a nap
   // And drop the now-redundant `rest` chip (rome, 2026-08-21). The chip builder
   // has always excluded a resting player; nothing re-pushed chips when the rest
@@ -2040,7 +2035,7 @@ function heardIn(z: ZoneDO, roomId: string): string {
       ?? (DROWNERS.has(c.templateId) ? "water moving, slow, around something standing in it"
         : HOLLOW.has(c.templateId) ? "the dry click and resettle of old bone"
         : THIEVES.has(c.templateId) ? "a boot placed carefully, then stillness"
-        : "slow animal breathing, and claws shifting on stone");
+        : `slow animal breathing, and claws shifting on ${groundWord(z.regionOf(roomId), roomId)}`);
     parts.push(voice + (audible.length > 1 ? " — and it is not alone" : ""));
   }
   // People never hide under the beasts: stillness leaks sound (shifting,
@@ -2069,11 +2064,7 @@ function heardIn(z: ZoneDO, roomId: string): string {
   // dungeon's silence and it was answering for the whole world — including 170
   // rooms of wood, where there is no stone to drip off (2026-08-02).
   const region = z.regionOf(roomId);
-  if (region === "wood") return "nothing — leaves, and the wood working somewhere further off";
-  if (region === "den") return "nothing — grass, and somewhere a shutter or a hurdle knocking on its own";
-  if (region === "road") return "nothing — wind, and a long way of open ground";
-  if (region === "mountain") return "nothing — wind off the rock, and the cold under it";
-  return "nothing — stone, and a far-off drip";
+  return pick(HEARD_EMPTY[region] ?? HEARD_EMPTY.upper!);
 }
 
 // What the fen counts: everything loose in the pack EXCEPT the three things
@@ -2109,9 +2100,10 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
   );
   const picked = want ? exits.filter((e) => e.dir === want) : exits;
   if (picked.length === 0) {
+    const ground = groundWord(z.regionOf(session.roomId), session.roomId);
     return z.send(session, want
-      ? "No way opens that way — just your ear against cold stone."
-      : "Stone all around. Nothing comes through.");
+      ? `No way opens that way — just your ear against ${ground}.`
+      : `${cap(ground)} all around. Nothing comes through.`);
   }
   const quiet = events.quieted(z, session.roomId);
   const lines = [quiet
@@ -2225,12 +2217,16 @@ export function cmdCarve(z: ZoneDO, session: Session, arg: string): void {
   // that weathers off in a day; the stone's register is a different thing.
   if (!words && MILESTONES.has(session.roomId)) { void lore.milestoneCarve(z, session); return; }
   if (!words) return z.send(session, "Carve what? (carve <words>)");
+  // The refusal names the SAME surface the success does, and carveMedium is
+  // per-room, so the thing that turns you down is the thing you end up cutting:
+  // the bark refuses you in the wood, not the stone.
+  const medium = carveMedium(z.regionOf(session.roomId), session.roomId);
   if (words.length > CARVE_MAX_LEN) {
-    return z.send(session, `The stone only takes ${CARVE_MAX_LEN} characters. Chisel it down.`);
+    return z.send(session, `${cap(medium)} only takes ${CARVE_MAX_LEN} characters. Chisel it down.`);
   }
   z.addTrace(session.roomId, { kind: "carve", at: Date.now(), label: session.name, words });
-  z.send(session, `You scratch it into the stone: "${words}"`, "study");
-  z.roomFeed(session.roomId, `${session.name} scratches something into the wall.`, session.pubkey, false);
+  z.send(session, `You scratch it into ${medium}: "${words}"`, "study");
+  z.roomFeed(session.roomId, `${session.name} scratches something into ${medium}.`, session.pubkey, false);
   z.roomSound(session.roomId, "A faint scratching, {dir}.");
   z.creatureNoise(session.roomId);
 }
@@ -2510,6 +2506,7 @@ export async function getInstanced(z: ZoneDO, session: Session, inst: GroundInst
     z.send(session, `You take ${tmpl.name}.` + (pages ? ` Its pages are already ${pages > 8 ? "densely" : "half"} filled — someone else's hunting, now yours.` : "") + stooped);
   }
   z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)
+  ai.nestRobbed(z, session); // same law for an instanced book off that floor — the ring is the ring
   z.refreshRoomCtx(session.roomId);
   z.markSimDirty();
   await z.ensureAlarm();
