@@ -4784,6 +4784,21 @@ export const COLD_ACTIVE_MAX_MS = 15 * 60_000;
 export const COLD_AFTERMATH_MS = 3 * 60_000;
 export const COLD_TORCH_MULT = 0.5; // a torch lit (or caught) in the cold burns half as long
 export const COLD_REST_SKIP = 0.5; // odds a resting tick heals nothing in the cold
+// WHAT THE COLD ACTUALLY COSTS AN ANIMAL. The forage block (ai.creatureEatsHere)
+// was the first half of this rule and, alone, it did almost nothing — measured:
+// grazing only fires at HUNGRY_AT, hunger accrues at 0.5/min, and a cold runs
+// 10-15 minutes. So being refused a meal for a whole cold moved a hungry grazer
+// 7.5 points of the 35 between hungry (50) and starving (85). A cold would have
+// had to last seventy minutes to walk one animal to the end of its rope, and it
+// lasts fifteen, about once a day. The idea was right and the number was noise.
+//
+// The missing half is that cold does not mainly stop a mammal eating — it BURNS
+// it faster. Denying income while expenditure stays flat is the smaller and less
+// true part of the story. At 2x a fifteen-minute cold costs 15 hunger instead of
+// 7.5, which is a real dent in the same gap and compounds with the forage block
+// rather than leaning on it. Raise it to 3 if a cold should be able to walk a
+// herd toward starving on its own; 2 makes it a hard day, not a famine.
+export const COLD_HUNGER_MULT = 2;
 // THE WIND. The one force a coast and a mountain both answer to, and until now
 // the only weather with no arc of its own. Its whole idea is EXPOSURE: sound
 // carries, open flame gutters, the sea bites harder in a chop, and the cold it

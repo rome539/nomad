@@ -745,6 +745,15 @@ export class ZoneDO implements DurableObject {
         const tmpl = world.mobTemplates.get(c.templateId)!;
         c.target = null;
         c.hp = Math.min(tmpl.max_hp, c.hp + CREATURE_HEAL_PER_MIN * mins);
+        // THE FLAT RATE ON PURPOSE, and this is the one hunger site that does
+        // NOT read ai.hungerRate. The other two are real-time ticks, so "is it
+        // cold right now" is a true statement about the minutes they are
+        // charging for. This one replays hours that already happened, and the
+        // weather it would ask about is TODAY'S — billing a whole night of
+        // catch-up at the cold rate because there happens to be a cold on when
+        // somebody logs in is not a simulation, it is a coincidence with a
+        // multiplier. The sim does not keep a weather history, so the honest
+        // rate for unobserved time is the sheltered one.
         if (ai.hungers(c.templateId)) {
           c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * mins);
           if (c.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, c, true, t);
@@ -805,7 +814,7 @@ export class ZoneDO implements DurableObject {
       // Who eats at all lives in ai.hungers now — one predicate for all three
       // hunger sites, because this exemption used to be written out by hand
       // here and nowhere else.
-      if (ai.hungers(c.templateId)) c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * mins);
+      if (ai.hungers(c.templateId)) c.hunger = Math.min(HUNGER_MAX, c.hunger + ai.hungerRate(this, c) * mins);
       else c.hunger = 0;
       if (c.grudges.length) {
         const ms = ai.forgetMs(this, tmpl);
@@ -4524,7 +4533,7 @@ export class ZoneDO implements DurableObject {
         if (watcher) this.send(watcher, `${cap(tmpl.name)} bleeds — ${bd}. (${this.condition(creature)})`);
       }
       if (ai.hungers(creature.templateId)) {
-        creature.hunger = Math.min(HUNGER_MAX, creature.hunger + HUNGER_PER_MIN * tickMins);
+        creature.hunger = Math.min(HUNGER_MAX, creature.hunger + ai.hungerRate(this, creature) * tickMins);
       } else creature.hunger = 0;
       // Time wears grudges away, each kind at its own pace (the boss never lets go).
       if (creature.grudges.length && !tmpl.is_boss) {

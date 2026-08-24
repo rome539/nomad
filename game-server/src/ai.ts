@@ -35,6 +35,7 @@ import {
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
+  HUNGER_PER_MIN, COLD_HUNGER_MULT,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
   HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS, BEAKS, COILS,
   groundWord,
@@ -3291,6 +3292,23 @@ export function hungers(templateId: string): boolean {
   // on this list and hungers exactly as it always did.
   return !HOLLOW.has(templateId) && !CORRODERS.has(templateId) && !DROWNERS.has(templateId)
     && !HOARDERS.has(templateId) && !ROOTED.has(templateId) && !PROVISIONED.has(templateId);
+}
+
+// HOW FAST IT BURNS — the companion to hungers(), and here for the same reason
+// that predicate is: there are THREE places creature hunger accrues, and the
+// last rule written by hand at one of them was written at one of them only.
+//
+// HUNGER_PER_MIN is the sheltered rate. A hard cold costs a warm body more than
+// it denies it (zone-data COLD_HUNGER_MULT has the measurement), so the same
+// weather that shuts the grazing also spends the animal faster while it waits.
+// The two halves are what make the rule bite; either alone is a rounding error.
+//
+// coldBites is the same predicate the forage block reads, so the ground that
+// refuses a meal is exactly the ground that charges for the wait — no third
+// definition of "cold enough" to drift. Anything that does not hunger at all
+// never reaches here: the callers gate on hungers() first.
+export function hungerRate(z: ZoneDO, creature: Creature): number {
+  return events.coldBites(z, creature.roomId) ? HUNGER_PER_MIN * COLD_HUNGER_MULT : HUNGER_PER_MIN;
 }
 
 export function creaturesIn(z: ZoneDO, roomId: string): number {
