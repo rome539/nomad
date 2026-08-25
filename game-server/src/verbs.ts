@@ -847,6 +847,27 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const exit = (world.exits.get(session.roomId) ?? []).find((e) => e.dir === dir);
   if (!exit) return z.send(session, "There is no way " + dir + " from here.");
 
+  // THE TIDE SHUTS THE LOW ROAD. The salting way into the mountain crosses
+  // ground the sea still visits, and unlike the causeway there is no stone road
+  // under it to wade along — so this is refused rather than taxed. It is the
+  // second door to the hill and never the only one: the Shingle Stair is dry
+  // shingle well above any tide, so a shut salting is a longer walk and never a
+  // locked region. The tide posts around the crossing read the water exactly,
+  // which makes this a thing you can plan around rather than a thing that
+  // happens to you.
+  //
+  // IT TESTS THE ROOM YOU ARE GOING TO, NEVER THE ONE YOU ARE IN, and that is
+  // deliberate: caught out on the flat by a tide that came in behind you, you
+  // can always walk out of it. The water bites while you stand in it (SEA_BITE)
+  // and the way you came is still open. A shut way must never be a closed door
+  // with somebody already on the wrong side of it.
+  if (events.seaShut(z, exit.to_room)) {
+    return z.send(session, [
+      `The way ${dir} is under water. Not a channel with a bottom you could find — the whole flat is sea, moving, with the tops of the reeds combing through it and no line anywhere in it to walk.`,
+      `It will go out. It always does.`,
+    ].join("\n"), "dmgin");
+  }
+
   // THE PACK HAS THE GAPS. Every wolf past the first stands in a way out, and
   // that way out is shut while it does. Never all of them (ai.heldExits caps at
   // one short), so this is always a narrowing and never a cage — but the door

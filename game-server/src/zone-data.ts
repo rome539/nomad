@@ -1458,6 +1458,15 @@ export const MOUTHS = [
   "the-road-kiln", "the-marl-hole", "the-gill-pot", "the-quarry-turn", "the-peat-cuttings", // the east road
   "the-ferry-steps", "the-net-stakes", "the-tide-mark", "the-sluice-stone", "the-creek-mouth", "the-gutway",
   "the-sunken-forest", "the-cut-reed", "the-salt-store", "the-shingle-spit",  // the crossing
+  // THE SALTING WAY'S OWN MOUTH (2026-08-25). The low road into the mountain
+  // runs six rooms east of the marsh, and a refill surfaces at the mouth
+  // NEAREST its den and walks in — so without this every animal on the new
+  // corridor would be born back in the reed beds and march the whole way out,
+  // and the way would read as a thing creatures were always LEAVING. The
+  // outfall is where the hill's water arrives on the flat, out of the alders in
+  // one brown chute: a thing can come down it unseen, which is the whole test
+  // this list applies. Not the drain cut, which is the room the tide shuts.
+  "the-outfall",
   // TWO MORE DEEP MOUTHS (rome, 2026-07-27: "the mobs in the deep are just all
   // in the central corridor"). applyArrivals walks a migrant in from the
   // nearest mouth on ITS side of the descent — and only the-weir and root-vault
@@ -6010,7 +6019,45 @@ export const SEA_ROOMS = new Map<string, number>([
   // there; that is the whole of their job in a five-way design, and the bridge
   // is the fast way that is always there. Take either away and the Crossing
   // stops being a choice and becomes a wait.
+  //
+  // ---- THE SALTING WAY (2026-08-25), the low road into the mountain. It is a
+  // SALTING: ground the sea made and still visits, lying behind a turf dyke
+  // nobody has mended, and the tide gets through the breaches whatever the dyke
+  // was built to mean. Ranked so the way is cut in the MIDDLE rather than at
+  // either door — you are stopped on the flat, in the open, by water you can
+  // see coming, and not turned away at a threshold.
+  //
+  //   the-sea-dyke ....... NEVER. It is the bank. Being above the water is the
+  //                        only thing it has ever been for.
+  //   the-flashes ........ 2. An ordinary tide takes it, which is the point:
+  //                        the low way has a WINDOW, and the window is most of
+  //                        a tide, not a rare accident.
+  //   the-drain-cut ...... 3. A spring only. It is a cut, so it fills first and
+  //                        empties last, but it has depth to give.
+  //   the-wet-carr ....... 3. A spring only, and the willows stand in it.
+  //   the-burn-flats, the-outfall: NEVER. Past here the water is the hill's,
+  //                        running down, and the sea does not reach it.
+  //
+  // THE STAIR IS WHY THIS IS ALLOWED. The law two paragraphs up — never leave
+  // the region with no dry way — applies to the mountain as hard as it does to
+  // the water: the Shingle Stair is dry shingle at y9 and no tide has ever been
+  // near it, so the hill always has a door. This shuts the SECOND way, never
+  // the only one.
+  ["the-flashes", 2], ["the-drain-cut", 3], ["the-wet-carr", 3],
 ]);
+// WHERE THE WATER DOES NOT JUST COVER YOU — IT SHUTS THE WAY (2026-08-25).
+//
+// Everywhere else the risen sea is wade-it-and-pay: the causeway is a raised
+// stone road with the water OVER it, and a wanderer who insists can cross and
+// take SEA_BITE for the insisting. That is right there and it stays right.
+//
+// The salting is not that. There is no road under it — it is soft ground the
+// sea has taken back, with no line to follow and nothing underfoot that holds,
+// and a person who walks into it at half flood does not arrive somewhere wetter.
+// So these rooms are refused rather than taxed, and the refusal is the only one
+// of its kind in the world on purpose: the way is shut, you can see the water
+// that shut it, and it will open again on its own.
+export const TIDE_SHUT = new Set<string>(["the-flashes", "the-drain-cut", "the-wet-carr"]);
 // Only the Crossing hears its own water. The wood is a hundred rooms away and
 // has weather of its own; a band line that carried further would be noise.
 // THE INSTRUMENTS. Six rooms that give the water's exact state, and they are

@@ -1,0 +1,84 @@
+# THE CROSSING, 6 — THE SALTING WAY. 6 rooms.
+#
+# THE SECOND DOOR INTO THE MOUNTAIN, and the reason it had to be built rather
+# than moved.
+#
+# The mountain shipped with two entrances and they were two moves apart. Both
+# hung off The Thrift Bank: east up The Shingle Stair to The Track Head, or
+# south and east off The Storm Line onto The Boulder Beach. Two doors sharing a
+# corner is one door with a choice of handle, and behind it sat 398 rooms.
+#
+# That was not carelessness so much as geometry. The crossing and the mountain
+# only TOUCH at y9 and y10 — the crossing tapers to a point exactly where the
+# mountain's toe comes down to meet it, and everywhere else on that border
+# there is a gap of one to thirty-five rooms of nothing. Both doors went in at
+# the only place the two regions already met, because it was the only place
+# anything could be hung without building ground first.
+#
+# So this builds the ground. Six rooms east along the top of the salting, from
+# The Marsh Road out to The Alder Thicket, three rows south of the stair.
+#
+# IT IS THE OPPOSITE WAY IN, on purpose. The stair is what its name says: dry
+# shingle, a climb, and the hill in front of you the whole way up. This is flat
+# and wet and you arrive at the mountain without ever having gone up anything —
+# following the hill's own water back to where it comes from, through drainage
+# that people cut and then stopped maintaining. You reach the alders on the
+# burn, and the burn takes you into the hill from underneath.
+#
+# It lands where the mountain is already wet: The Alder Thicket, and past it
+# the Beck Narrows and the Quaking Moss and the long run east to The Slabs.
+#
+# THE BAND DOES NOT CHANGE UNTIL THE ALDERS. All six of these are crossing —
+# this is still the salting, and it should still smell like it. The mountain
+# begins where it began before, at the thicket, which is also where the ground
+# stops being something people drained and starts being something a hill does.
+
+!region crossing
+
+# ---- the attachment, west end -------------------------------------------
+# The Marsh Road already runs north to the strand and south to the Samphire
+# Turn. It gains one door east and nothing else changes about it.
+
+## the-marsh-road | The Marsh Road
+!existing
+> east the-sea-dyke
+
+# ---- the salting way ------------------------------------------------------
+
+## the-sea-dyke | The Sea Dyke
+An old turf bank running north and south, thrown up by hand to keep the tide off ground that has since stopped being worth keeping it off. It is breached in two places within sight and nobody has closed either. The way east goes over it on a worn ramp of the same turf, and from the top you can see how flat everything ahead of you is, and how far away the hill is that all of it drains toward.
+> west the-marsh-road
+> east the-flashes
+
+## the-flashes | The Flashes
+Standing water in sheets across the salting, too shallow to be pools and too wide to be puddles, lying in every dip the tide ever cut. They are brackish and still and they hold the sky perfectly, so the ground reads as a broken mirror laid out flat to the east. Wading is unavoidable. Nothing here is deeper than your boot and all of it is colder than you expect.
+> west the-sea-dyke
+> east the-drain-cut
+
+## the-drain-cut | The Drain Cut
+A straight channel, cut dead east by people who wanted the water off this ground and had the labour to insist on it. It has silted to half its depth and the reeds have taken the rest, but it still runs, and it still runs the right way. Following a drain inland is the oldest way there is of finding out where the water came from.
+> west the-flashes
+> east the-wet-carr
+
+## the-wet-carr | The Wet Carr
+Scrub willow and sallow standing in water, none of it higher than a man, all of it leaning the same way off the wind that comes down off the hill. The ground between the stems is not ground — it is root and black water and a mat of last year's leaves floating on top of both, and it takes your weight right up until it doesn't.
+> west the-drain-cut
+> east the-burn-flats
+
+## the-burn-flats | The Burn Flats
+The silt gives out and there is gravel underfoot, grey and rounded and graded by size the way only running water grades anything. This is what the hill has been sending down here for a very long time, spread flat where the water lost the speed to carry it further. The stones get bigger toward the east, which tells you which way you are about to be going.
+> west the-wet-carr
+> east the-outfall
+
+## the-outfall | The Outfall
+Where the hill's water finally reaches the flat and stops being a burn: it comes out of the alders ahead in one brown chute, hits the gravel, spreads, and gives up. Standing in the spread of it you can hear the whole of it working somewhere up in the trees, much louder than what is arriving at your feet. Everything you have walked since the dyke came out of here.
+> west the-burn-flats
+> east the-alder-thicket
+
+# ---- the attachment, east end -------------------------------------------
+# The Alder Thicket is the mountain's, and it stays the mountain's. It gains
+# one door west, back down the way the water came.
+
+## the-alder-thicket | The Alder Thicket
+!existing
+> west the-outfall

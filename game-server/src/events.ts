@@ -39,7 +39,7 @@ import {
   WIND_TELEGRAPH_MS, WIND_ACTIVE_MIN_MS, WIND_ACTIVE_MAX_MS, WIND_AFTERMATH_MS, WIND_HEED_MULT,
   WIND_TORCH_GUTTER_ODDS, WIND_SEA_CHOP_MULT, WIND_CHILL_TORCH_MULT, WIND_CHILL_REST_SKIP,
   BREACH_PAIRS, BREACH_TELEGRAPH_MS, BREACH_ACTIVE_MS, BREACH_AFTERMATH_MS,
-  SEA_ROOMS, SEA_INSTRUMENTS, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_HEARD_BANDS, ROAD_HEARD_BANDS, SEA_BITE, SEA_STATES,
+  SEA_ROOMS, SEA_INSTRUMENTS, TIDE_SHUT, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_HEARD_BANDS, ROAD_HEARD_BANDS, SEA_BITE, SEA_STATES,
   FOOD_KEEPS, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT,
   SEA_TELEGRAPH_MS, SEA_MAKE_MS, SEA_STAND_MIN_MS, SEA_STAND_MAX_MS, SEA_EBB_MS,
   TIDEWAYS_ROOMS, TIDE_LEVELS, TIDE_HIGH_ODDS,
@@ -2786,6 +2786,15 @@ function seaCrest(z: ZoneDO): number {
 export function seaUnder(z: ZoneDO, roomId: string): boolean {
   const rank = SEA_ROOMS.get(roomId);
   return rank !== undefined && seaLevel(z) >= rank;
+}
+
+/**
+ * Is this room not merely under water but IMPASSABLE? The salting way only —
+ * soft ground with no road beneath it, where the sea takes the way rather than
+ * just standing on it. Everywhere else the risen water is a toll, not a wall.
+ */
+export function seaShut(z: ZoneDO, roomId: string): boolean {
+  return TIDE_SHUT.has(roomId) && seaUnder(z, roomId);
 }
 
 /** Will it be, before this tide turns? The tide marks read this. */
