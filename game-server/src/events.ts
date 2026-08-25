@@ -593,6 +593,66 @@ export function skyClause(z: ZoneDO, roomId: string): string {
   }
 }
 
+// What the SKY answers to, for `look sky` / `look cloud` / `look weather`.
+// skyClause above is a fragment the room appends to its own description; this is
+// the same truth as a complete sentence, and null when the sky is doing nothing
+// specific — the caller falls through to the region's own static sky rather than
+// say "nothing here". Indoor rooms have no sky, so they get null exactly as
+// skyClause gives them "".
+export function skyLook(z: ZoneDO, roomId: string): string | null {
+  // THE ROOF COMES FIRST, and it has to: the mountain is an outdoor BAND with
+  // twenty-one roofed rooms inside it (INDOOR_ROOMS — the shieling, the stell,
+  // the hollow under, the under-rib, the last shelter). With the shadow check
+  // above this line, a wanderer sheltering under a slab was told a shadow was
+  // crossing the slope, with a mountain's worth of rock between them and it.
+  // OUTDOOR_ROOMS is the right test even for the band-wide arc, because the
+  // band's rooms are folded into it at world load minus exactly those roofs
+  // (zone.ts, the OUTDOOR_REGIONS fold).
+  if (!OUTDOOR_ROOMS.has(roomId)) return null;
+  // The mountain's one arc is a presence in the air, not on the ground — it is
+  // the thing the sky does up there.
+  if (z.world!.rooms.get(roomId)?.region === "mountain") {
+    switch (phaseOf(z, "shadow")) {
+      case "telegraph": return "A shadow crosses the slope ahead — long, and nothing overhead to have cast it.";
+      case "active": return "Something very large is moving the air above the mountain, and the sky has gone still and small under it. The living have gone to ground; the rock has not.";
+      case "aftermath": return "Whatever it was has passed. The sky is its own colour again, and the birds are slow to come back up.";
+      default: break;
+    }
+  }
+  switch (phaseOf(z, "rain")) {
+    case "telegraph": return "The sky has gone iron-grey, and the air smells of coming rain.";
+    case "active": return "Rain hammers down out of a sky the colour of iron, and the open ground is already giving way under it.";
+    case "aftermath": return "The rain has stopped, but the sky is still low and grey, and the ground under it is churned to mud.";
+  }
+  switch (phaseOf(z, "fog")) {
+    case "telegraph": return "A milky haze is creeping up from the low ground, and the sky is going soft at its edges.";
+    case "active": return "Fog stands thick over the open ground, and the sky is gone behind it — everything past arm's reach is a rumour.";
+    case "aftermath": return "The fog is thinning to rags, and the grey sky is coming back through it.";
+  }
+  switch (phaseOf(z, "cold")) {
+    case "telegraph": return "The sky has gone glass-clear and bitter, and the cold is not even fully here yet.";
+    case "active": return "The cold has settled in hard under a pale, flat sky, and nothing living wants to be out under it.";
+    case "aftermath": return "The worst of the cold is lifting, and the sky no longer looks like it is waiting to bite.";
+  }
+  switch (phaseOf(z, "wind")) {
+    case "telegraph": return "The wind is getting up, and the grey lid is beginning to move — it is not as still as it pretends.";
+    case "active": return "The wind is up and it never lets off. The sky streams with it, grey and hurrying, and nothing you carry is quiet.";
+    case "aftermath": return "The wind drops, and the sky settles back into its usual grey stillness.";
+  }
+  if (LIGHTS_ROOMS.has(roomId)) {
+    switch (phaseOf(z, "lights")) {
+      case "telegraph": return "The dark out over the water has gone attentive.";
+      case "active": return "Pale lights stand out over the water against the dark sky, where nothing should be walking.";
+      default: break;
+    }
+  }
+  switch (phaseOf(z, "crows")) {
+    case "telegraph": return "Crows are settling on every high thing, in numbers, and the sky is filling with them.";
+    case "active": return "Crows crowd the sky here, watching everything that moves.";
+    default: return null;
+  }
+}
+
 // Ambience while the sky is doing something (zone's ambientLine reads this
 // first for outdoor rooms; null falls through to the normal pools).
 const RAIN_AMBIENT = [

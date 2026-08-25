@@ -55,12 +55,16 @@ export const COMMON_FEATURES: FeatureTable = {
     "Ground, and it holds a print for a while. Whatever else this place is, people and animals have been putting their weight on it for a long time.",
   "sky|clouds|cloud":
     "Overcast, and the same overcast it always is — a flat grey lid with no sun anywhere in it and no way to read the hour off it.",
+  "sun|moon|moonlight|stars|star":
+    "No sun, and no moon, and no stars — the lid has never broken for any of them, and the sky will not tell you the hour. You read the dark for it instead, whether it is deepening or thinning, and nothing brighter than that has ever answered.",
   "dark|darkness|shadow|shadows":
     "It is not the absence of light. It is a thing with a depth to it, and it starts about as far from you as you can reach.",
   "blood":
     "There is old blood here. There is old blood in most places here. It stops being worth remarking on within a day of your arrival, which is its own kind of remark.",
   "bones|bone|skull|skulls":
     "Bone, weathered pale, mostly broken up small. Some of it is not animal. Nobody has tidied any of it, because there is nobody whose job that is.",
+  "ash|cinders|embers":
+    "Cold ash, wherever a fire was once kept — and a fire was once kept in most places here. It has worked into the ground and the walls and it never quite leaves, the way old blood does not.",
   "water":
     "Standing water, still, with a skin on it. It is the colour of what it is lying in and it tells you nothing about how deep it goes.",
   "tracks|prints|footprints|marks|spoor":
@@ -143,18 +147,28 @@ export const REGION_FEATURES: Record<string, FeatureTable> = {
       "Barrel-vaulted and sound. It has taken the weight of everything that fell in on it from above and has not shifted a stone.",
     "dust":
       "Undisturbed except where you have disturbed it. Your own way back is written across the floor behind you in a line anything can read.",
+    "sky|cloud|clouds":
+      "There is no sky down here — only the vault, and the stone that has held it up through everything that fell in from above. The weather is a rumour the surface keeps to itself.",
   },
   warrens: {
     "wall|walls|earth|dirt|sides":
       "Not built — dug. Packed earth with root and rubble through it, shored here and there with whatever came to hand, and shored by somebody in a hurry.",
     "props|timbers|shoring|beams":
       "Ratholed and soft and doing their job anyway. You can put a thumbnail into any of them. Nothing about that means they will go today.",
+    "roots|root":
+      "Roots run through the packed earth — down the walls and across the roof, cut through where the diggers met them and left the ends showing. They hang in the low places and brush you in the dark. The warrens were dug, not built, and the ground's own veins never stopped running through them.",
+    "sky|cloud|clouds":
+      "There is no sky in the warrens — only packed earth a hand's width over your head, and the roots threaded through it. Whatever the weather is doing up above is none of your concern down here.",
   },
   deep: {
     "water":
       "Black, and it does not move, and it is warmer than it should be. Things go into it and the surface closes over and that is the end of the record.",
     "wall|walls|stone|stonework|masonry":
       "Older work than anything above it, laid by people with better tools and more time, and it is holding back a great deal of water without complaint.",
+    "dark|darkness|black|depth":
+      "The dark down here is not the night dark that lifts with the morning — it has been dark so long it has stopped being an absence and become a thing with its own weight. Your light does not push it back so much as hold it off, and it closes again the moment you look away.",
+    "sky|cloud|clouds":
+      "There is no sky in the deep, and never was — only black water and the older stone, and neither of them ever saw light.",
   },
   // ---- the den ground ---------------------------------------------------
   den: {
@@ -168,6 +182,46 @@ export const REGION_FEATURES: Record<string, FeatureTable> = {
       "One street, and everything faces it, because that is how these places were laid out and nobody ever had cause to lay it out differently.",
     "fields|field|furrows|ridges":
       "The ridge-and-furrow is still readable under the grass, which means the plough stopped mid-cycle and nothing has broken this ground since.",
+  },
+  // ---- the mountain ------------------------------------------------------
+  // WHAT IS TRUE ANYWHERE ON THE HILL, and only that — the same rule the
+  // ambience pool already obeys. Altitude-specific truth (thin air, the country
+  // laid out below, the grey lichen) belongs to the high quarter, not here.
+  mountain: {
+    "rock|stone|scree|boulder|face":
+      "It is one rock, near enough, and everything on it has been worn off it or worn out of it. Where the slope is not bare it is only because the weather has not got round to that part yet.",
+    "wind|air":
+      "It does not stop up here, and it has shaped everything that stands in it. The only still air on the mountain is in the lee of something, and the something is the reason you would be in the lee of it.",
+    "snow|drift":
+      "There is snow on this mountain, and the line of it moves with the year — lower than you think, and never gone. Whether it is under your boots or further up, the cold that keeps it is the same cold.",
+    "shadow":
+      "The shadow is not yours and it is not any bird's. It crosses the slope ahead of you and there is nothing overhead to have cast it. It does not fall on you. It is not for you.",
+    "sun":
+      "The sun is real on this hill in a way it is not in the country below. It cuts the mountain in two: one side it lies on all day and one side it never does, and every living thing on this hill that can choose has chosen the side it keeps.",
+    "sky|cloud|clouds":
+      "The sky up here is not the flat lid the low country keeps — it moves and it breaks, and the cloud line climbs and falls across the slope as the day goes. Where you stand decides whether the sun is on you or the cloud is, and you are nearer the sky than any ground below ever gets.",
+    "water|burn|beck|stream":
+      "The water on this hill never stands and never warms — peat-brown where it has come through the ground, clear over the gravel, and cold enough to ache your hands within a count of ten. It is always going somewhere lower, and you hear it before you see it. Nothing up here has ever been still, and the water least of all.",
+    "summit|height|ridge|top|peak|slope":
+      "It keeps going up, and the air thins with it, and somewhere above the cloud the ground stops being a place and becomes only the last of it. Nothing up there was made for you.",
+    "corpse|body|dead|remains":
+      "The dead up here are not buried and not hidden — the birds and the weather take them, and what is left rolls downhill until it stops. Nothing on this hill tidies anything; it only carries things lower, a little at a time.",
+  },
+  // ---- the crossing ------------------------------------------------------
+  // WHAT IS TRUE ANYWHERE ON THE WATER, and only that. The causeway, the ford,
+  // the bridge and the ferry are specific routes — their own rooms and posts
+  // answer for them (SIGNPOSTS, WAYSTONES, SEA_INSTRUMENTS), not this table.
+  crossing: {
+    "water|tide|sea|flood|channel|channels":
+      "It is always moving, and it is always the same water — in and out, up and down, and never doing nothing. The dry ground here is dry only for as long as the water allows it, which is never a promise and never for long.",
+    "shingle|gravel|stones|stone":
+      "Worn round and sorted by size, the way only water sorts anything. Every piece was carried here from somewhere else and dropped where the water lost the strength to carry it further.",
+    "salt|spray|wind":
+      "Salt is in everything — on your lips, in your kit, in the wind off the water. Nothing here is ever quite dry, and the stone and the posts outlast the wood because of it.",
+    "weed|wrack|seaweed":
+      "The tide's weed is on everything here, dried or still wet — in bands on the stone and the posts that you could read the last few tides by. It hangs where the water hung it and it dries where it dried, and nothing on this shore is ever entirely free of it.",
+    "sky|light|grey|cloud":
+      "The light changes over the whole mile at once — cloud, moving — and every part of the crossing goes a different grey together. The far bank is never where it was an hour ago.",
   },
 };
 
@@ -608,6 +662,375 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   "the-hyena-den": {
     "den|bones|bedding|hollow|floor":
       "The floor is bedded down and the bones are cracked lengthwise, which almost nothing else does — a hyena's jaw gets at marrow no other scavenger can reach. Everything here has been eaten twice.",
+  },
+
+  // ======================= THE MOUNTAIN ==================================
+  // Only the rooms whose own description names a DISTINCT thing, not the
+  // terrain — rock, snow, wind and shadow are the region table's job (above).
+  "the-shieling": {
+    "hut|shieling|fire|turf":
+      "Stone and turf built into the slope, low enough that you duck, and dry inside — more than the mountain offers anywhere else. People came up with the animals every summer and went down before the weather turned, every year for a very long time, and then one year did not. Somebody is here now. The fire is lit, and he does not say who or why.",
+  },
+  "the-milking-fold": {
+    "fold|milking fold|pen|slab|milking":
+      "A round pen of dry stone, waist high, with a gap in it and a flat slab worn smooth beside the gap where somebody sat to do the milking. Beasts were brought in here twice a day and let out again. The ground inside is still a different colour from the ground outside, and it will be for another hundred years.",
+  },
+  "the-hearth-stone": {
+    "hearth|hearth stone|fire|ring|stone":
+      "A broad flat stone with a ring of smaller ones round it, reddened right through by more fires than anybody could count, and no wall or post or footing anywhere near it. Whatever stood over it went back into the ground. The stone will not. You could light a fire on it tonight and it would work.",
+  },
+  "the-stell": {
+    "stell|shelter|ring|roof|hide|fire":
+      "A ring of dry stone built so that beasts inside it could always get out of the wind whichever way it blew — very good thinking done with nothing but stone and time. Half of it has been roofed over since, badly, with poles and turf and a stretched hide. There is a fire under the roofed half, and a man keeping it who came up with the last of the summer people and did not go down with them.",
+  },
+  "the-drowned-fence": {
+    "fence|posts|wire":
+      "A line of posts walking away up the slope and into the bog, each one shorter than the last, until the last two show as knuckles of grey wood in the moss and then there are no more. Whoever set these was fencing ground that has since eaten the fence. The wire is still strung between the first four.",
+  },
+  "the-clapper": {
+    "clapper|bridge|slabs|piers|stones":
+      "Three slabs laid end to end across the burn on two piers of stacked rock, no mortar and no name, and it has not moved. Nobody signs a thing like this. Somebody needed to get across with something heavy, once, and solved it — and the solution is still solving it, every time anything sets a foot on it.",
+  },
+  "the-spring-eye": {
+    "spring|eye|spring eye|sand|water":
+      "Water comes straight up out of flat ground through a bed of pale sand, and the sand boils and settles and boils again where it rises, the whole thing about the size of a shield. It has done this constantly for longer than anything else in view has existed. It is the coldest water on this hill, and you can stand and watch it happen, which changes nothing about it.",
+  },
+  "the-erratic": {
+    "boulder|erratic|stone":
+      "One boulder the size of a small house, standing alone on open ground, of a stone that matches nothing anywhere near it. It was carried here and set down. The thing that carried it was ice, and the ice is gone, and this is what it left behind to say so.",
+  },
+  "the-hollow-under": {
+    "hollow|floor|ring|fire|ash|doorway":
+      "Under the erratic's lifted corner there is a dry floor of sand the size of a small room, out of the wind and out of the rain and out of the sight of everything. Somebody lived in here: a ring of stones for a fire with nothing in it but old ash, and sand that was swept once, long ago. The swept edge has gone soft, and the wind has put a drift across the doorway.",
+  },
+  "the-shelter-crag": {
+    "crag|overhang|shelter|wall|slabs":
+      "The rock leans far enough out that the ground beneath it is dry in any weather, and everything on this mountain has stood under here at some point. Somebody has walled the windward end with stacked slabs and moved in, which is the obvious thing to do and the reason nothing else uses that end any more. There is a smell. Some of it is his.",
+  },
+  "the-raven-stone": {
+    "raven stone|ledges|pellets|tenants":
+      "A blunt tower of rock whitened down one whole side, its ledges packed and trampled, the ground beneath it full of small bones and the wrappings of pellets. It is occupied, and has been, continuously, for longer than the fortress has stood. The tenants have never once been asked.",
+  },
+  "the-slabs": {
+    "slabs|joint|roof|smoke|roofed joint":
+      "The widest joint has been roofed: a slab levered flat across it and packed at the ends, with a hole for smoke and smoke coming out of it. Whoever did that picked the one place on this hillside the water goes past instead of over. It is dry while the rest of the slabs run with water.",
+  },
+  "the-lochan": {
+    "lochan|reflection|water":
+      "Perfectly still and so dark that the reflection of the back wall in it is better lit than the wall itself. It has no inflow you can find and one thin outflow at the far end. Nothing rises in water this cold and this deep and this poor.",
+  },
+  "the-fallen-block": {
+    "block|slab|lean":
+      "A slab the size of a barn that came off the wall and landed on its edge, and has stood that way ever since. Under its lean there is a wedge of dry ground — out of the wind, out of the wet, out of the sight of anything above. It is the only such place in this bowl.",
+  },
+  "the-high-cairn": {
+    "cairn|stones":
+      "Four courses of flat stone, the same as the ones far below at the foot, set in the same careful way — and beyond it, in every direction, there is not another. Whoever built this line built it to here and then either turned back or did not need it any more. The stones are seated. It has not fallen in a very long time.",
+  },
+  "the-white-hollow": {
+    "hollow|feathers|gravel":
+      "A scoop of rock with dry gravel in the bottom, floored with a drift of small bones and old feathers a foot deep in places. Nothing here died today. Something has been carrying its dinner in here for a very, very long time.",
+  },
+  "the-rowan": {
+    "rowan|tree|berry":
+      "One rowan growing out of a cleft in the rock, the only tree above the shore, its roots gone down the crack and its head bent permanently downhill by the wind. Nothing planted it. A bird ate a berry somewhere lower and sat here, once, and that is the entire history of the only tree on this mountain.",
+  },
+  "the-sink": {
+    "sink|boulder|gravel":
+      "The burn goes underground here, entirely, into a gap under a jammed boulder. Below it the streambed is dry gravel with dry weed lying combed along it. The change happens in one stride: water, then no water, and the noise going down and away under your feet.",
+  },
+  "the-resurgence": {
+    "resurgence|arch":
+      "Water comes back out of the hill through a low arch, at pressure, cold enough to take your breath, having gone in half a mile back and a hundred feet higher. Nothing that goes into the sink has ever been seen to come out here. That is worth knowing before you decide the two are connected.",
+  },
+  "the-boulder-gate": {
+    "gate|doorway|blocks":
+      "Two blocks the size of houses, landed leaning against each other, and the gap under them is a doorway with a dry floor and a roof that has held for a very long time. Something has been sleeping in the back of it. There is no smell of anything recent.",
+  },
+  "the-upper-lochan": {
+    "lochan|bottom|silt":
+      "Higher and smaller and paler than the one below, floored with grey silt that comes up in clouds if anything disturbs it and takes an hour to settle. You can see the bottom, which the lower one never allowed. There is nothing on the bottom.",
+  },
+  "the-inversion": {
+    "inversion|summits|cloud floor":
+      "You have come up out of it, and it is below you: a floor of white lying flat across the whole country, with two or three other summits standing out of it like islands. It is the most beautiful thing anybody up here has ever seen, and there has never been anybody up here.",
+  },
+  "the-brocken": {
+    "brocken|spectre|sun":
+      "Standing with the sun behind you and the cloud in front, your own shadow is thrown onto the cloud enormously, with a ring of light round its head, and it moves when you move. Everything about it is explicable. Knowing that does not help as much as you would expect.",
+  },
+  "the-standing-cloud": {
+    "standing cloud":
+      "It forms on this shoulder and stays while the wind goes through it — the air moving hard and the cloud not moving at all, condensing on one side, evaporating on the other, holding station. It is the same cloud, and it is entirely new every few seconds.",
+  },
+  "the-cornice": {
+    "cornice|lip|snow lip":
+      "A lip of snow built out over the edge of the crest, curling and unsupported, reaching a good ten feet past where the ground actually stops. From above there is no way to see where the rock ends. From below you can see exactly, and it is nowhere near where you would have walked.",
+  },
+  "the-high-tarn": {
+    "tarn|pool":
+      "A pool of meltwater three strides across, absolutely clear and absolutely still, with the stones on its bottom as sharp as if there were no water there at all. It freezes solid most nights of the year. Nothing lives in it, which up here has stopped being remarkable.",
+  },
+  "the-bone-ground": {
+    "bone ground|horn|skull":
+      "Bone in quantity, lying loose among the stones — ribs, cannon bones, the long spiral of a horn, skulls with the teeth still bedded. None of it is arranged and none of it is fresh. Everything that dies anywhere above here comes to this fan eventually, and this is where the heavy pieces stop rolling.",
+  },
+  "the-rib-cage": {
+    "rib cage|ribcage|ribs":
+      "The ribcage of something the size of a horse, lying on its side, picked absolutely clean and gone the colour of the stones around it. The bones are still articulated, and the arch of them makes a space underneath a person can lie in out of the weather. Nothing comes in here. Whatever cleaned this did it a very long time ago and has not been back.",
+  },
+  "the-dry-bones": {
+    "dry bones|bone":
+      "Bone that has been up here long enough to stop being bone in any useful sense: chalky, light as cork, crumbling at a touch and blowing away as powder. The mountain finishes everything eventually. Something has still been chewing on the ends of these, which is the only reason anything comes to this ground.",
+  },
+  "the-wind-tooth": {
+    "tooth|blade":
+      "A blade of rock undercut by the wind until it is thinner at the bottom than the top. It hums — not loudly, and not always, but in a steady wind the whole tooth resonates, and you can feel it through the soles of your boots before you can hear it.",
+  },
+  "the-moulin": {
+    "moulin|shaft":
+      "A round shaft in the ice, six feet across and perfectly circular, with a stream going into it and no sound of the stream arriving anywhere. The walls are ribbed and blue and turn out of sight within twenty feet. The snow at the lip is packed hard by something that has stood here and looked in, more than once.",
+  },
+  "the-blue-ice": {
+    "blue ice":
+      "Bare ice with no snow on it at all, polished by wind, hard as glass and the colour of a deep pool. You can see down into it a long way. About four feet under the surface there is something dark, about the size of a dog, and it is going to be another century getting to the bottom.",
+  },
+  "the-summit-foot": {
+    "rock|summit foot|glazed rock":
+      "The rock changes here — darker, and glazed, and in places it has run and set again. Nothing on this tier has an explanation for that. Nothing on this tier comes up here either: no tracks, no droppings, no bones, nothing.",
+  },
+  "the-way-up": {
+    "ramp|warm ramp":
+      "Dark rock scoured bare and warm underfoot — genuinely warm, in a place where the shade never rises above freezing. It goes up out of sight into the cloud. Nothing follows you onto it. Not one thing on this mountain will set foot on this.",
+  },
+  "the-glazed-slab": {
+    "slab|glaze":
+      "A surface like a cracked pot glaze, black-brown and shining, catching the light in a way stone does not. Run a hand over it and it is smooth in ropes and runs, as though it was liquid and stopped being liquid quickly. The ropes all run the same way, downhill.",
+  },
+  "the-basking-flags": {
+    "adders|snakes|basking flags":
+      "Warm flat stone, and on it, arranged with a great deal of care and no interest in you whatever, adders. Adders, at this height, above the snow line, in country where a cold-blooded thing should have died out four tiers down. They are here because the rock is warm, and the rock is warm for a reason nothing on this hillside will explain.",
+  },
+  "the-thin-crack": {
+    "crack|crust|reek":
+      "Too narrow to enter, breathing out warm air with a faint reek in it, and around the mouth of it the rock is stained a pale yellow-white in a crust you can crumble between finger and thumb. It smells of struck matches. It is not a smell this world has anywhere else.",
+  },
+  "the-first-terrace": {
+    "hind|deer|first terrace":
+      "A red deer hind, opened along the belly, most of her still there and nothing yet at her. She did not walk up here — there is no route to this shelf that a deer could take, and the ground where she is lying has no drag mark leading onto it from any direction at all.",
+  },
+  "the-drag-mark": {
+    "drag mark|groove":
+      "A groove worn into the rock, two feet wide, polished, running from the edge of the terrace above out and away over the lip and into open air. Things have been pulled along it, many times, and every one of them pulled the same way: not up onto the shelf and not down off it. Off the edge, into nothing.",
+  },
+  "the-tallow-stone": {
+    "tallow stone|boulder":
+      "A boulder with fat rendered into its surface over years until the stone itself has gone waxy and yellow and takes a thumbprint. It is the one thing up here that has got richer rather than poorer. Insects work it in the warm hours, in a haze, and there is nothing else at this height for them to be doing.",
+  },
+  "the-eyrie-ledge": {
+    "nest|ledge|bird":
+      "A ledge wide enough for four people to stand abreast, and on it a nest — a platform of sticks and bone six feet across, packed and trodden and built up in layers for so many seasons that the bottom of it has gone to peat. There is a bird on it, and the bird is not the size of anything that should be able to build this.",
+  },
+  "the-eyrie-head": {
+    "nest|biggest nest":
+      "The biggest nest of all — abandoned, older than the rest by a long way, and built to a size that the birds on the shelves below could not manage between them. Whatever raised young in this was not a vulture. Nothing has been in it for decades, and nothing has taken it over either.",
+  },
+  "the-black-tower": {
+    "black tower|tower":
+      "A tower of rock gone black on the east face only — not glazed, not run, just burnt, in a hard-edged shadow-shape as though something extremely bright had stood beside it once and gone away again. The west face is grey and ordinary and lichened like any other rock in the world.",
+  },
+  "the-summit-gate": {
+    "gate|gap":
+      "A wall of rock with a gap in it, and beyond the gap there is nothing to see but light, and warm air comes out steadily. The ground at the gap is swept absolutely clean, and the sweeping stops in a line you could draw with a ruler. On this side of the line the grit is undisturbed for as far back as you can see.",
+  },
+  "the-summit": {
+    "ring|bowl|doorstep":
+      "A bowl of bare rock, swept and warm, and off its middle the rock has run and set in ropes and lobes with the front edges curled over, in a rough ring. Inside the ring the stone is glazed and black and worn smooth in the way a doorstep is worn. Whatever made this ring is not small and does not need to be anywhere else.",
+  },
+
+  // ======================= THE CROSSING ==================================
+  // The water people's working infrastructure and the crossing's own
+  // structures — the causeway, the stages, the salt and fish gear, the marsh
+  // works. Tide, shingle, salt and sky are the region table's job (above).
+  "the-ferry-house": {
+    "ferry house|house|rope drum|drum":
+      "Stone, with a wide door facing the water, a stove-in boat under the lean-to, and a window that looks straight down the deep channel to the far bank. Somebody lived here to take people over, and their whole working life was one distance, repeated. The rope-drum is still bolted to the floor, and a lamp burns over a hatch in the road-facing wall.",
+  },
+  "the-rope-walk": {
+    "rope walk|walk|rope":
+      "A long level strip beside the road, fenced on both sides, running perfectly straight for further than anything here needs to be. Rope was laid out and twisted down its length, and the ferry rope was made on it. It is the only piece of ground on this shore that was flattened on purpose.",
+  },
+  "the-hard": {
+    "hard|ramp|slip|slipway":
+      "A ramp of laid stone going down into the water at a shallow angle, wide enough for a cart and grooved by keels — this is where boats were taken out and put in. The stone below the waterline is furred green and the stone above it worn white, and the line between them is the most legible thing on this shore.",
+  },
+  "the-capstan-stone": {
+    "capstan stone|capstan|socket":
+      "A block of dressed stone set flush in the road, with a square socket cut through the middle of it, worn round. A capstan stood here and boats were hauled up past it, and the road runs on over it now as if it were paving — because that is what it has become.",
+  },
+  "the-tide-mark": {
+    "tide mark|mark|post|scale|lantern":
+      "A post set in the shingle above the strand, taller than a man, with a scale cut up it and a bracket at the top for a lantern that is not there. This is how the shore reads the water: one glance, and you know which of the five ways is a way today. Somebody has kept the cut lines clear of weed.",
+  },
+  "the-mussel-scaup": {
+    "mussel scaup|scaup|mussel bed|bed":
+      "Acres of mussel packed edge to edge, blue-black, every shell shut, going out further than you would want to walk and under water half the time. Somebody raked a path through the middle of it, and the path is old, and the mussels have never closed it up.",
+  },
+  "the-rope-stage": {
+    "rope stage|stage|bollard|block":
+      "A timber stage out over the deep water where the ferry came alongside, with a bollard, a fend-off post, and the rope running through a block that still turns. From out here the channel shows its true colour — not grey like the shallows, but green, and then not green.",
+  },
+  "the-half-tide-post": {
+    "half tide post|half-tide post|post|band|white band":
+      "A post set in the causeway's edge with a broad white band painted round it, at knee height. Everything you need to know is in where the water sits against that band — below it you have time, on it you are deciding, above it the decision was made for you a while ago.",
+  },
+  "the-refuge": {
+    "refuge|platform|tally|steps":
+      "A stone platform built out from the causeway's side, six feet up on its own little pier, with three steps, a rail-socket, and room for four people to stand. It is here because the builders knew people would misjudge it. Somebody has cut a tally into the top step, and it is a long tally.",
+  },
+  "the-drain-arch": {
+    "drain arch|arch|culvert|bore":
+      "A low arch built through the causeway to let the water pass rather than pile against it — the one piece of humility in the design. The water goes through it fast, both ways, twice a day, and has polished the stone inside to a shine you can see your hand in.",
+  },
+  "the-lantern-stump": {
+    "lantern stump|stump|lamp|socket":
+      "Off the causeway's edge, on a stub of pier, the base of a lamp-standard snapped off at the collar, with the lead still run into the socket. A light stood here to say where the road was after dark. Nothing says where the road is after dark now.",
+  },
+  "the-bell-buoy": {
+    "buoy|bell|bell buoy":
+      "Aground on the shingle, on its side: an iron float the size of a cow, with a cage on top and a bell in the cage, and the bell still has its clapper. It rang on the water for whoever was out in the dark. You could ring it now, and everything for a mile would hear.",
+  },
+  "the-wreck-ribs": {
+    "wreck ribs|ribs|frames|hull":
+      "The frames of a boat stuck upright in the mud at a slant, black and hard as iron, spaced like ribs because that is what they are. Whatever it was, it was bigger than anything the ferry-house ever ran — and it did not sink here. It was left here.",
+  },
+  "the-beam-walk": {
+    "beam walk|beam|iron beam|girder":
+      "Eight inches of rusted iron, perfectly rigid, which is a mercy — and nothing to hold and nothing on either side, which is not. The wind up here has an opinion. Below, the water is doing something complicated a long way beneath you.",
+  },
+  "the-rope-bridge": {
+    "rope bridge|bridge|ropes|slats":
+      "Three ropes: one to walk, two to hold, with slats lashed to the walking rope at intervals of somebody's stride and not yours. It swings more the further out you get, then less again, and the far end is fast to a ring somebody set in the fourth pier with a great deal of trouble.",
+  },
+  "the-drowned-span": {
+    "drowned span|span|blocks|masonry":
+      "The fallen middle of the bridge, lying in the shallows in enormous keyed blocks, exactly in the order it fell, with the arch's curve still legible in the way they lie. Weed on all of it. You can walk the length of a span that is on its side.",
+  },
+  "the-stranded-hull": {
+    "stranded hull|hull|boat|oars":
+      "A boat on the bank, upright and whole, sitting on the gravel as neatly as if somebody had put it there, oars shipped and a bailer wedged under the thwart. It cannot have got up here except at a height of water that would have covered everything you have walked across.",
+  },
+  "the-midden": {
+    "midden|mound|layers":
+      "Where the shell bank rises into a mound, layered, and cut into on one side by the water so you can read down through it: shell, ash, shell, ash, a bone, shell. Somebody sat on this spot and ate shellfish for generations. There is nothing else of them anywhere.",
+  },
+  "the-tern-scrape": {
+    "tern scrape|scrape|eggs|hollow":
+      "A hollow in the shingle, lined with nothing at all, holding two eggs the colour of the stones around them. The birds are up and screaming the moment you are near it, and they do not stop and they do not go away. Everything within half a mile now knows exactly where you are standing.",
+  },
+  "the-ferry-boat": {
+    "ferry boat|boat|bailer":
+      "Broad, flat-bottomed, tarred, with the rope running through a ring at bow and stern so it cannot go anywhere but across. There is water in the bottom of it and a bailer, and the bailer has been used recently enough to still be wet.",
+  },
+  "the-under-rope": {
+    "under rope|chain|shape":
+      "Below the surface the rope goes on down and the light goes green and then brown, and there is a shape down here — a second rope, or a chain, going off at an angle toward something on the bottom that is too regular to be stone.",
+  },
+  "the-eel-lines": {
+    "eel lines|lines|droppers|hooks":
+      "A long line strung between two stakes in the deep water, with droppers every yard and a hook on every dropper. It is set, it is baited with something that has been down there a while, and it is not yours. Somebody is working this channel.",
+  },
+  "the-boat-house": {
+    "boat house|shed|slipway":
+      "On the far bank above the stage, a shed of tarred board with a slipway running out of it, big enough for one boat and a man to work round it. There is a second boat in here, upside down on trestles, holed amidships and half-mended, with the tools still laid out along the keel.",
+  },
+  "the-signal-mast": {
+    "signal mast|mast|halyard|locker|shapes":
+      "A mast on the eastern bank with a yard and two blocks and a rotten halyard, for hoisting a shape that told the far side whether the boat was coming. The locker at its foot still holds the shapes: a black ball, a black cone, a red diamond gone pink.",
+  },
+  "the-ferryman-stone": {
+    "ferryman stone|slab|memorial|grave":
+      "A slab set upright on the eastern bank above the steps, with a name on it and two dates that are not far apart, and below them a line about the water. It faces the channel. Whoever set it up wanted him to go on looking at the crossing he did not get across.",
+  },
+  "the-deep-mark": {
+    "deep mark|depths|cap|post":
+      "A stone post at the head of the green water with depths cut into it in bands, the deepest band well above the top of the post. The cutter ran out of post before he ran out of water, and marked that fact by cutting the last band on the underside of the cap.",
+  },
+  "the-warping-post": {
+    "warping post|post|groove":
+      "A massive post on the eastern hard with a groove worn all the way round it at chest height, where a rope was taken round to haul boats up out of the water. The groove is a hand deep. That is not one boat — that is every boat, for a lifetime.",
+  },
+  "the-oar-store": {
+    "oar store|oars|rack":
+      "A rack under the boat house eaves holding six oars, blades up, all different lengths and all made for the same rowlock. Five are grey and cracked. One is not, and it has been used, and there is fresh water dripping off the blade of it.",
+  },
+  "the-hook-hut": {
+    "hook hut|hut|coat|bed":
+      "Turf walls, a roof of reed on rafters of reed, one door and no window, and inside it is dry and dark and smells of cut sedge. There is a bed of reed against the wall and a stone for a hearth and, hung on a nail, a coat that would still keep the rain off.",
+  },
+  "the-decoy-pipe": {
+    "decoy pipe|pipe|hoops|netting":
+      "A curving ditch off the chapel channel, netted over on hoops and narrowing to a trap at the far end — a decoy, for taking duck in numbers. The hoops still stand. Most of the netting has gone, and what is left moves when the wind gets under it and looks, from the corner of the eye, like something walking under the net.",
+  },
+  "the-fowlers-hide": {
+    "fowlers hide|fowler hide|hide|pit|shelf|slot":
+      "A pit dug into the black eyot's edge and roofed with cut reed, with a slot to see through at water level and a shelf inside worn smooth by elbows. A man lay in here for hours at a time, waiting for birds. The view through the slot is of open water and nothing else — a very good place to see without being seen.",
+  },
+  "the-eel-hut": {
+    "eel hut|hut|hatch|traps":
+      "On stilts over the water: a plank shack the size of a bed, with a hatch in the floor and a rack of eel-traps on the wall and a stove made from a broken pot. The hatch opens onto black water. This is a place somebody worked at night, on purpose, alone.",
+  },
+  "the-old-boat": {
+    "old boat|boat|punt|quant":
+      "A punt sunk in the reed off the long causey, flat-bottomed and open, with a quant pole still shipped along the gunwale. It is full of water and silt and there is a bird nesting in the bow, and it would float again with a day's work and a way to get a day's work out here.",
+  },
+  "the-sunken-forest": {
+    "sunken forest|stumps|forest|trees":
+      "Off the black eyot's south shore, in the shallow water: stumps. Hundreds of them, black and hard, cut level by the water rather than by any axe, in rows and clusters that are obviously a wood. This was dry land with trees on it. The water is what happened next.",
+  },
+  "the-cut-reed": {
+    "cut reed|stubble|strips":
+      "A stand that has been harvested, the stubble sharp as a hedge of nails underfoot and the standing crop a wall on three sides. The cutting is old but the pattern is legible — they worked in strips, and the strips run east, and following them is the first sensible piece of navigation the marsh has offered.",
+  },
+  "the-salt-pans": {
+    "salt pans|pans|saltern|gate":
+      "Shallow rectangular pans cut into the clay above the tideline, fed by a channel with a wooden gate, where the water was let in and left to go. The pans are dry and crusted white at the edges. Salt is why anybody was ever out here doing anything, and this is where it was made.",
+  },
+  "the-pan-house": {
+    "pan house|pan|flue|boiler":
+      "A shed over the biggest pan, with the iron pan itself still in it — six feet across, on a brick flue, warped and rusted through in one corner. Boiling was the last stage and the fuel was the expensive part. There is a stack of cut peat by the door, still dry.",
+  },
+  "the-salt-store": {
+    "salt store|store|scoop":
+      "A stone building with no windows and a raised wooden floor, built to keep salt dry — which, on this coast, is the hardest thing anybody ever tried to do. The floor is sound. There is a drift of grey salt in one corner, hard as rock, and a wooden scoop lying on it.",
+  },
+  "the-drying-frames": {
+    "drying frames|frames|racks":
+      "Rows of wooden frames on the shingle above the tide, tarred and standing — perhaps two hundred of them — where fish and nets were hung to dry in the wind. They creak all together when the wind comes off the water, which it always is.",
+  },
+  "the-net-loft": {
+    "net loft|loft|nets|pegs":
+      "A shed on staddle stones with a plank floor, hung wall to wall with nets on pegs — herring nets, a seine, a trammel with three walls of mesh — every one of them mended and rolled and hung properly. Whoever kept this gear was good at their work and expected to use it again.",
+  },
+  "the-smoke-house": {
+    "smoke house|smokehouse|rods|ash":
+      "A low stone building with no chimney and a door that fits badly on purpose, and inside, tiers of rods running wall to wall, black with two centuries of smoke, the smell still in the stone hard enough to taste. There is a bed of old ash on the floor and a scatter of oak chips.",
+  },
+  "the-tar-shed": {
+    "tar shed|shed|copper|tar":
+      "An open shed of blackened board with a copper set in a brick surround and a stack of split wood beside it, for boiling the tar that everything on this coast is soaked in. The copper is empty and clean. The smell has got into the ground for ten feet in every direction.",
+  },
+  "the-toll-board": {
+    "toll board|board|figures|numbers":
+      "A board on two posts, boarded and battened and painted, and the paint has gone except where it was thickest, which was the numbers. What survives is a column of figures with nothing to say what they were for. Somebody has scratched a fifth line under the last one, freehand, and doubled it.",
+  },
+  "the-capstan-round": {
+    "capstan round|capstan|bar holes|groove":
+      "A circle of hard-trodden ground with a timber capstan at the centre, waist high, six bar-holes, and a groove worn round the base by the feet of the people who walked it. Boats were hauled up out of the water here by six men going round and round.",
+  },
+  "the-eel-staithe": {
+    "eel staithe|staithe|grigs|landing":
+      "A landing of tarred planks on posts where the creek comes closest to the track, with eel-grigs stacked under it out of the light — a dozen of them, wicker, mended. Somebody keeps this gear the way somebody kept the net loft: properly, and recently.",
   },
 };
 

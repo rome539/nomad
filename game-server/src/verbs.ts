@@ -729,6 +729,14 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // at the top: you cannot examine the carving on a lintel you cannot see. In
   // the dark this falls straight through to the honest "you failed to SEE".
   if (!blind) {
+    // The sky answers the WEATHER, not just the static lid (rome: "fix the
+    // weather"). skyLook is null when the sky is doing nothing specific, so a
+    // clear day falls through to the region's own sky line below — the lid, the
+    // mountain's sun, the crossing's moving light.
+    if (/^(the )?(sky|cloud|clouds|weather)$/i.test(arg.trim())) {
+      const skyNow = events.skyLook(z, session.roomId);
+      if (skyNow) return z.send(session, skyNow, "study");
+    }
     // mapRegionOf, not regionOf: the sim's own reading collapses the whole
     // fortress interior to "upper" and every door to "gate", which would give
     // the warrens the halls' dressed-ashlar answer about their walls when the
@@ -1767,6 +1775,29 @@ export function cmdCensus(z: ZoneDO, session: Session): void {
   const lines = [`Alive in the deep (${z.creatures.size}):`];
   for (const [id, n] of byMob) {
     lines.push(`  ${world.mobTemplates.get(id)?.name ?? id} — ${n}`);
+  }
+  // THE MARKS, off the same walk. The tally above says what is alive; this says
+  // which of them came out of the lottery carrying something. Worth its own
+  // block rather than a column, because a trait rolls ONLY at spawn — so this
+  // is the one honest read on whether the lottery is reaching the world, as
+  // against what the odds say it ought to be doing.
+  const marks = new Map<string, string[]>();
+  let marked = 0;
+  for (const c of z.creatures.values()) {
+    if (!c.traits?.length) continue;
+    marked++;
+    const where = world.rooms.get(c.roomId)?.name ?? c.roomId;
+    for (const t of c.traits) marks.set(t, [...(marks.get(t) ?? []), where]);
+  }
+  lines.push("", `Marked (${marked}):`);
+  if (!marks.size) {
+    // Not a failure, and it should not read as one: everything standing when
+    // the lottery shipped was born before it, and only an ARRIVAL rolls.
+    lines.push("  (none — a mark rolls at spawn, so nothing already standing can grow one)");
+  } else {
+    for (const [t, where] of [...marks.entries()].sort((a, b) => b[1].length - a[1].length)) {
+      lines.push(`  ${t} — ${where.length}   ${where.slice(0, 4).join(", ")}${where.length > 4 ? ", …" : ""}`);
+    }
   }
   z.send(session, lines.join("\n"));
 }
