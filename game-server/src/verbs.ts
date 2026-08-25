@@ -22,7 +22,7 @@ import * as den from "./den";
 import * as detail from "./detail";
 import {
   REST,
-  PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, GEAR_WORN_AT, GEAR_FAILING_AT,
+  PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, MOB_WEAKGRIP_MULT, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
@@ -865,7 +865,10 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     const onRope = !!grip && grip.templateId === "the-drowned-ferryman";
     if (!grip || (!onRope && grip.roomId !== session.roomId)) {
       session.seizedBy = undefined;
-    } else if (chance(SEIZE_BREAK_ODDS + (z.wearsTrait(session, "slick") ? SLICK_BREAK_BONUS : 0))) {
+    // The typed break reads weak-gripped the same way the tick's does (zone.ts)
+    // — the grip is the animal's, not the command's.
+    } else if (chance(SEIZE_BREAK_ODDS * (grip.traits?.includes("weak-gripped") ? MOB_WEAKGRIP_MULT : 1)
+      + (z.wearsTrait(session, "slick") ? SLICK_BREAK_BONUS : 0))) {
       session.seizedBy = undefined;
       session.draggedRooms = 0;
       z.send(session, "You wrench free of its grip.");

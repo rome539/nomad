@@ -39,7 +39,7 @@ import {
   voidMint,
   deedsBump,
   setItemJournalId,
-  journalBumpKill,
+  journalBumpKill, journalTraitAdd, journalLoad,
   type World,
   type MobTemplate,
   type ItemTemplate,
@@ -86,7 +86,7 @@ import {
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
   GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, DICE_REGROW, STRAY_DECAY,
-  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, WIND_HEED_MULT, WIND_CHILL_REST_SKIP, FEVER_MEND_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
+  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, WIND_HEED_MULT, WIND_CHILL_REST_SKIP, FEVER_MEND_MULT, MOB_BLOODTHIRSTY_FLEE_MULT, MOB_BUTTERFINGERS_MULT, MOB_WEAKGRIP_MULT, MOB_SKITTISH_FLEE_MULT, MOB_MARKED_FLEE_MULT, MOB_KEEPS_DROP_MULT, MOB_SHADOW_DMG_MULT, MOB_PATIENT_MULT, MOB_UNDERTOW_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS,
   FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
@@ -655,11 +655,12 @@ export class ZoneDO implements DurableObject {
         // A roaming line takes fresh ground even on its first placement.
         const den = ai.rollDen(this, spawn.template_id, spawn.room_id);
         const tmpl = ai.rollBloodline(this, base, den);
+        const traits = ai.rollMobTraits(tmpl);
         this.creatures.set(spawn.id, {
           id: spawn.id,
           templateId: tmpl.id,
           roomId: den,
-          hp: tmpl.max_hp,
+          hp: Math.max(1, Math.round(tmpl.max_hp * ai.mobHpMult(traits))),
           hunger: randInt(0, HUNGRY_AT - 10),
           grudges: [],
           nextWanderAt: Date.now() + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
@@ -667,6 +668,7 @@ export class ZoneDO implements DurableObject {
           carries: this.rollCarry(tmpl),
           hidden: LURKERS.has(tmpl.id) || undefined,
           home: den,
+          traits: traits.length ? traits : undefined,
         });
       }
       for (const s of world.mobSpawns) this.seededDens.add(s.id);
@@ -682,11 +684,12 @@ export class ZoneDO implements DurableObject {
         // version, once in a while the mean cousin.
         const den = ai.rollDen(this, spawn.template_id, spawn.room_id);
         const tmpl = ai.rollBloodline(this, base, den);
+        const traits = ai.rollMobTraits(tmpl);
         this.creatures.set(spawn.id, {
           id: spawn.id,
           templateId: tmpl.id,
           roomId: den,
-          hp: tmpl.max_hp,
+          hp: Math.max(1, Math.round(tmpl.max_hp * ai.mobHpMult(traits))),
           hunger: randInt(0, HUNGRY_AT - 10),
           grudges: [],
           nextWanderAt: now + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
@@ -694,6 +697,7 @@ export class ZoneDO implements DurableObject {
           carries: this.rollCarry(tmpl),
           hidden: LURKERS.has(tmpl.id) || undefined,
           home: den,
+          traits: traits.length ? traits : undefined,
         });
       }
       this.ground.clear();
@@ -1940,7 +1944,8 @@ export class ZoneDO implements DurableObject {
     // one heavy blow is what sleep grants, and the blow ends the sleep. Never
     // a coup de grace: it wakes swinging (the sentinel rouse law, reused).
     const wasAsleep = !!creature.asleep;
-    const unaware = wasAsleep || (!creature.target && !ai.remembers(this, creature, session.pubkey, Date.now()));
+    // A WARY creature is never caught off guard (mob trait lottery).
+    const unaware = !creature.traits?.includes("wary") && (wasAsleep || (!creature.target && !ai.remembers(this, creature, session.pubkey, Date.now())));
     creature.asleep = false;
     creature.sleepUntil = undefined;
     session.target = creature.id;
@@ -1958,7 +1963,7 @@ export class ZoneDO implements DurableObject {
       // No crit on top: the surprise IS the crit. (Stacked, a pebble
       // one-shots skeletons; unstacked, an ambush is strong, not a cannon.)
       // A point slips plate, a blunt weapon caves it: both ignore that much armor.
-      dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - this.armorIgnore(weapon)));
+      dmg = Math.max(1, dmg - Math.max(0, ai.mobArmor(tmpl, creature) - this.armorIgnore(weapon)));
       creature.hp -= dmg;
       // ...and the opener can find the throat like any other landed blow. The
       // vitals line REPLACES the "one heavy blow" report rather than following
@@ -2067,7 +2072,7 @@ export class ZoneDO implements DurableObject {
     session.nextThrowAt = nowMs + THROW_COOLDOWN_MS;
 
     // A sleeper never sees it coming, grudge or no; the impact ends the sleep.
-    const unaware = !!creature.asleep || (!creature.target && !ai.remembers(this, creature, session.pubkey, Date.now()));
+    const unaware = !creature.traits?.includes("wary") && (!!creature.asleep || (!creature.target && !ai.remembers(this, creature, session.pubkey, Date.now())));
     creature.asleep = false;
     creature.sleepUntil = undefined;
     creature.hidden = false; // hurling at a lurker outs it too — reveal it (room, chip, study)
@@ -2104,7 +2109,7 @@ export class ZoneDO implements DurableObject {
       dmg *= 2;
       flourish = " — a savage throw!";
     }
-    dmg = Math.max(1, dmg - tmpl.armor);
+    dmg = Math.max(1, dmg - ai.mobArmor(tmpl, creature));
 
     // It leaves your hands for good. Whether it survives the landing is the
     // stone's business: impact can shatter it — near-certain against bone
@@ -2935,8 +2940,18 @@ export class ZoneDO implements DurableObject {
   // Claws and teeth open a wound the mail can't turn: armor-ignoring bleed that
   // ticks until it clots (BLEED_TICKS) or you bind it. A fresh cut resets the
   // clock and takes the worse dmg. Mirrors the mob-side wound, pointed at you.
-  public openWound(victim: Session, tmpl: MobTemplate): void {
-    if (!(tmpl.bleed > 0)) return; // undefined/NaN (unmigrated column) or 0: no wound — never leak NaN
+  public openWound(victim: Session, tmpl: MobTemplate, creature?: Creature): void {
+    // PLAGUE-BEARER carries filth in its mouth, and this is the whole of what
+    // that means: the bite always opens, and it opens even on a thing whose
+    // teeth are not otherwise worth a wound. Both halves are needed — a rat's
+    // bleed is small or nothing, so skipping the odds roll alone would have
+    // been a trait that did nothing on the very animal it was written for, and
+    // floored at 1 it is a real wound off a creature nobody respects. That is
+    // the point of putting it on vermin: the cheapest body in the world becomes
+    // the one you have to stop and dress for.
+    const plague = !!creature?.traits?.includes("plague-bearer");
+    if (!plague && !(tmpl.bleed > 0)) return; // undefined/NaN (unmigrated column) or 0: no wound — never leak NaN
+    if (plague) tmpl = { ...tmpl, bleed: Math.max(tmpl.bleed || 0, 1) };
     // Bleed is a per-hit CHANCE, not a certainty (BLEED_ODDS, tiered by threat):
     // roll it first, and on a miss it's just an ordinary bite — no message, since
     // most hits don't open a wound. A bleeder with no entry falls back to every
@@ -3091,9 +3106,9 @@ export class ZoneDO implements DurableObject {
     if (creature.hp <= 0 || tmpl.is_boss) return false;
     if (creature.templateId === "three-hound") return hasTrait(weapon?.tmpl, "piercing") && chance(VITALS_HOUND);
     if (HOLLOW.has(creature.templateId) && !GRAVE_FLESH.has(creature.templateId)) {
-      return (weapon?.tmpl.stun ?? 0) > 0 && this.vitalsLottery(tmpl.armor, VITALS_PVE);
+      return (weapon?.tmpl.stun ?? 0) > 0 && this.vitalsLottery(ai.mobArmor(tmpl, creature), VITALS_PVE);
     }
-    return this.vitalsLottery(tmpl.armor, VITALS_PVE);
+    return this.vitalsLottery(ai.mobArmor(tmpl, creature), VITALS_PVE);
   }
 
 
@@ -3540,10 +3555,11 @@ export class ZoneDO implements DurableObject {
             // answer to armor, never the direct hit) — this is the one
             // moment it gets one, same size as blunt's own baseline.
             const edgeVal = staggered && isEdge ? STAGGER_ARMOR_BONUS : 0;
-            const pierced = pierceVal > 0 && tmpl.armor > 0; // the point beat armor
-            const crushed = bluntVal > 0 && pierceVal === 0 && tmpl.armor > 0; // the weight beat armor
-            const opened = edgeVal > 0 && pierceVal === 0 && bluntVal === 0 && tmpl.armor > 0; // the stagger bonus, edge's one-off
-            dmg = Math.max(1, dmg - Math.max(0, tmpl.armor - Math.max(pierceVal, bluntVal, edgeVal)));
+            const mobArm = ai.mobArmor(tmpl, creature);
+            const pierced = pierceVal > 0 && mobArm > 0; // the point beat armor
+            const crushed = bluntVal > 0 && pierceVal === 0 && mobArm > 0; // the weight beat armor
+            const opened = edgeVal > 0 && pierceVal === 0 && bluntVal === 0 && mobArm > 0; // the stagger bonus, edge's one-off
+            dmg = Math.max(1, dmg - Math.max(0, mobArm - Math.max(pierceVal, bluntVal, edgeVal)));
             creature.hp -= dmg;
             this.markHurt(creature, tmpl, session.pubkey);
             // A landed blow on a crow is a stone in the pond: the murder rises.
@@ -3595,7 +3611,12 @@ export class ZoneDO implements DurableObject {
               // The boss never reels, and a thing already reeling can't be
               // stun-chained deeper (one hit, one lost beat). Still off-balance
               // from its own overreach (staggered) makes that harder to shake.
-              if (weapon && weapon.tmpl.stun > 0 && !tmpl.is_boss && !creature.stunned && chance(weapon.tmpl.stun + (staggered ? STAGGER_STUN_BONUS : 0))) {
+              // SET-FAST takes the blunt answer away. A maul is the standing
+              // reply to armoured bone — it ignores the plate and it rattles
+              // what is inside it — and this one is seated too solidly in its
+              // own frame to rattle. It still takes the damage; it just never
+              // loses the beat.
+              if (weapon && weapon.tmpl.stun > 0 && !tmpl.is_boss && !creature.traits?.includes("set-fast") && !creature.stunned && chance(weapon.tmpl.stun + (staggered ? STAGGER_STUN_BONUS : 0))) {
                 creature.stunned = true;
                 this.send(session, `${cap(tmpl.name)} reels, stunned.`, "stun");
                 this.actorFeed(session, session.roomId, this.feedProc(FEED_STUN, session.name, tmpl.name), "stun");
@@ -3658,7 +3679,13 @@ export class ZoneDO implements DurableObject {
       const onRope = !!grip && grip.templateId === "the-drowned-ferryman";
       if (!grip || (!onRope && grip.roomId !== s.roomId)) { s.seizedBy = undefined; s.draggedRooms = 0; continue; }
       // SLICK hide slips a grip easier, too (the eel was never held).
-      const breakOdds = SEIZE_BREAK_ODDS + (this.wearsTrait(s, "slick") ? SLICK_BREAK_BONUS : 0);
+      // WEAK-GRIPPED is undertow's mirror: that one multiplies the odds it takes
+      // hold, this one multiplies the odds you tear out of it. Wired at BOTH
+      // break sites — this one and the typed break in verbs — because a grip you
+      // could shrug off only when you thought to type at it would be a property
+      // of the interface rather than of the animal.
+      const breakOdds = SEIZE_BREAK_ODDS * (grip.traits?.includes("weak-gripped") ? MOB_WEAKGRIP_MULT : 1)
+        + (this.wearsTrait(s, "slick") ? SLICK_BREAK_BONUS : 0);
       if (chance(breakOdds)) {
         s.seizedBy = undefined;
         s.draggedRooms = 0;
@@ -3941,9 +3968,16 @@ export class ZoneDO implements DurableObject {
         // the dark at low health would carry the entire prize out of a fight you
         // had already spent your weapon's edge on. It is laden and slow. It
         // stands.
-        const wantsFlee = ai.dreadsFire(this, creature, victim)
+        // A MANEATER does not run — from fire, from wounds, from anything. A
+        // BLOODTHIRSTY one runs only when it is truly nearly dead. (mob trait
+        // lottery)
+        const fleeAt = tmpl.max_hp * FLEE_BELOW * (creature.traits?.includes("bloodthirsty") ? MOB_BLOODTHIRSTY_FLEE_MULT
+          : creature.traits?.includes("skittish") ? MOB_SKITTISH_FLEE_MULT
+          : creature.traits?.includes("marked") ? MOB_MARKED_FLEE_MULT : 1);
+        const wantsFlee = !creature.traits?.includes("maneater") && !creature.traits?.includes("hind-mother") && (
+          ai.dreadsFire(this, creature, victim)
           || RUNNERS.has(tmpl.id)
-          || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !HOARDERS.has(tmpl.id) && creature.hp < tmpl.max_hp * FLEE_BELOW && chance(FLEE_CHANCE));
+          || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !HOARDERS.has(tmpl.id) && creature.hp < fleeAt && chance(FLEE_CHANCE)));
         // A BLOWN ANIMAL CANNOT RUN, whatever it wants. It has spent the rout
         // it had in it (ai.creatureMoves), so the roll it just won is worth
         // nothing and it fights where it stands — which is the whole point of
@@ -4046,6 +4080,22 @@ export class ZoneDO implements DurableObject {
           continue;
         }
         let dmg = randInt(tmpl.dmg_min, tmpl.dmg_max) + (tmpl.is_boss ? (creature.phase ?? 0) * 3 : 0);
+        // A snag-toothed hunter's bite lands soft (mob trait lottery).
+        dmg = Math.round(dmg * ai.mobDmgMult(creature.traits));
+        // shadow-born hits harder under the shadow; patient's first blow — before
+        // you've marked it — lands heavy.
+        if (creature.traits?.includes("shadow-born") && events.shadowing(this, creature.roomId)) dmg = Math.round(dmg * MOB_SHADOW_DMG_MULT);
+        // PATIENT SPENDS ITSELF ON ONE BLOW. The test used to be only "you are
+        // not targeting it", which is not "the first blow" — it stays true for
+        // the whole fight in the two cases that matter: a dogpile where your
+        // target is something else, and any fight you are running from rather
+        // than swinging back in. A patient lurker you never turn on was landing
+        // half again as hard every round, forever. It gets the one heavy opener
+        // the trait is written for, and then it is an ordinary animal.
+        if (creature.traits?.includes("patient") && !creature.patientSpent && victim.target !== creature.id) {
+          dmg = Math.round(dmg * MOB_PATIENT_MULT);
+          creature.patientSpent = true;
+        }
         if (ai.scavengerBold(this, creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);
         // A drowned thing that already has hold of you drags harder.
         if (victim.seizedBy === creature.id) dmg = Math.round(dmg * SEIZE_DMG_MULT);
@@ -4093,6 +4143,12 @@ export class ZoneDO implements DurableObject {
         if (victim.hp > 0) {
           this.send(victim, `${cap(tmpl.name)} ${this.creatureHit(tmpl.id)} for ${dmg}${flourish} [${victim.hp}/${victim.maxHp} hp]`, flourish === "." ? "dmgin" : "dmgin big");
           if (drowned) this.send(victim, `${cap(tmpl.name)} drags you under — black water fills your lungs for ${drowned}. (break free, or drown)`, "dmgin big");
+          // light-snuffing: a landed blow puts your flame out (mob trait lottery).
+          if (creature.traits?.includes("light-snuffing") && victim.litSource === "torch" && this.carriesLight(victim)) {
+            victim.litUntil = undefined; victim.litSource = undefined; victim.litRow = undefined; victim.torchWarned = false;
+            this.send(victim, "It reaches through the light and closes on it — your torch goes out without a sound.", "dmgin");
+            this.sendStatus(victim);
+          }
           this.sendStatus(victim);
           // THE BODY BITES BACK (2026-08-20): spiked armor (spiked:N) returns a
           // point of pain to whatever lands a blow on it — the pavise's thorns,
@@ -4115,13 +4171,23 @@ export class ZoneDO implements DurableObject {
           // SLICK hide (eel-skin) gives cold arms half as much to hold; worn MASS
           // (poise) plants you so it can't drag — strongest-wins, never stacked.
           const seizeMult = Math.min(this.wearsTrait(victim, "slick") ? SLICK_SEIZE_MULT : 1, 1 - this.poiseOf(victim));
-          const seizeOdds = SEIZE_ODDS * seizeMult;
-          if (DROWNERS.has(creature.templateId) && !victim.seizedBy && chance(seizeOdds)) {
+          const seizeOdds = SEIZE_ODDS * seizeMult * (creature.traits?.includes("undertow") ? MOB_UNDERTOW_MULT : 1);
+          // LAND-BOUND cannot take hold out of the water, and the reason this is
+          // worth a trait rather than a footnote is WHERE it fires. In its own
+          // flood a drowner is in its element and nothing about it is lesser.
+          // But the drowned SURFACE into the dungeon — they drag themselves up
+          // out of a black crack in the floor, onto dry stone — and that is the
+          // moment this one is shown up: it comes up, it swings, and the arms
+          // close on nothing. It is also the one drowner flaw a player can use
+          // on purpose, by backing onto dry ground.
+          const inWater = events.tideFlooded(this, victim.roomId) || events.seaUnder(this, victim.roomId) || events.spated(this, victim.roomId);
+          const landBound = creature.traits?.includes("land-bound") && !inWater;
+          if (DROWNERS.has(creature.templateId) && !landBound && !victim.seizedBy && chance(seizeOdds)) {
             victim.seizedBy = creature.id;
             this.send(victim, `${cap(tmpl.name)} closes cold arms around you — you're held fast. (break free: keep fighting, or it drags you under)`, "seize");
           }
           // Claws and teeth open a wound the mail can't turn.
-          this.openWound(victim, tmpl);
+          this.openWound(victim, tmpl, creature);
           // The leg-goers go low — a hit can hamstring you.
           this.maybeHobble(victim, tmpl);
           // The toll clerk brands you. A landed blow is the road's tax: while the
@@ -4159,7 +4225,13 @@ export class ZoneDO implements DurableObject {
             // A hungry thief grabs a MEAL before the shiny thing — food off your
             // pack first when its belly's talking (rome, 2026-07-18). Well-fed,
             // it goes for the richest as ever. (Richest food if you carry several.)
-            const foodFirst = creature.hunger >= HUNGRY_AT
+            // CHOOSY ignores its own belly. A hungry thief taking your bread is
+            // the merciful version of this fight — the food is cheap and it is
+            // eaten on the run, so nothing you cared about left with it. This one
+            // walks past the meal it needs and lifts the best thing you own,
+            // which is the outcome you actually mind, and it means hunger stops
+            // being a thing you can hope for.
+            const foodFirst = creature.hunger >= HUNGRY_AT && !creature.traits?.includes("choosy")
               ? takeable.filter((c) => world.itemTemplates.get(c.itemId)?.edible).sort(byRarity)[0]
               : undefined;
             const loot = foodFirst ?? [...takeable].sort(byRarity)[0];
@@ -4168,7 +4240,12 @@ export class ZoneDO implements DurableObject {
             // The miss is loud on purpose: you get a round to decide whether to
             // back out, and it keeps trying every hit, so standing there still
             // costs you (zone-data THIEF_LIFT_ODDS).
-            if (loot && !chance(THIEF_LIFT_ODDS.get(creature.templateId) ?? THIEF_LIFT_DEFAULT)) {
+            // BUTTER-FINGERED is light-fingered's exact mirror: that one skips
+            // this roll entirely, this one halves it. It keeps trying and keeps
+            // fumbling, and every fumble is a round you get to decide in.
+            const liftOdds = (THIEF_LIFT_ODDS.get(creature.templateId) ?? THIEF_LIFT_DEFAULT)
+              * (creature.traits?.includes("butter-fingered") ? MOB_BUTTERFINGERS_MULT : 1);
+            if (loot && !creature.traits?.includes("light-fingered") && !chance(liftOdds)) {
               this.send(victim, `${cap(tmpl.name)}'s hand goes over your pack and comes away with nothing. It will try again.`);
               this.roomFeed(victim.roomId, `${cap(tmpl.name)} makes a grab at ${victim.name}'s pack and misses it.`, victim.pubkey, false);
             } else if (loot) {
@@ -5338,6 +5415,8 @@ export class ZoneDO implements DurableObject {
       this.combatNoise(creature.roomId);
       return;
     }
+    // (`splits-on-death` stood here and was cut — a trait may change a creature,
+    // it may not create one. See the note above reconcilePopulation in ai.ts.)
     this.creatures.delete(creature.id);
     this.noteCreaturesChanged(); // a throw can kill between beats
     for (const s of this.sessions.values()) {
@@ -5367,7 +5446,19 @@ export class ZoneDO implements DurableObject {
     // shares the journalId rail (097) but is NOT a book: skip it, or kills would
     // be misfiled to a map instead of your bestiary.
     const jrn = killer.items.find((c) => c.journalId && !MAP_ITEMS.has(c.itemId));
-    if (jrn?.journalId) await journalBumpKill(this.env.DB, jrn.journalId, tmpl.id);
+    if (jrn?.journalId) {
+      await journalBumpKill(this.env.DB, jrn.journalId, tmpl.id);
+      // Blood reveals the marks — but only once the creature's FULL ACCOUNT is
+      // written (study + enough kills). You cannot name a mark on a thing you do
+      // not yet know (mob trait lottery).
+      if (creature.traits?.length) {
+        const rows = await journalLoad(this.env.DB, jrn.journalId);
+        const row = rows.find((r) => r.templateId === tmpl.id);
+        if (row && row.studied && row.kills >= lore.killsForAccount(tmpl.level)) {
+          for (const t of creature.traits) await journalTraitAdd(this.env.DB, jrn.journalId, t);
+        }
+      }
+    }
     // An engraved weapon keeps its own count: the kill goes into the steel.
     const kw = this.equippedItem(killer, "weapon");
     if (kw?.carried.loreId) await deedsBump(this.env.DB, kw.carried.loreId, "kills");
@@ -5459,7 +5550,8 @@ export class ZoneDO implements DurableObject {
 
     // Drops are provisional: the dungeon signs nothing here. The seal waits
     // at the gate — that walk is the game.
-    if (tmpl.loot_item && chance(tmpl.loot_chance)) {
+    // A keeps-its-bones hollow gives up less of itself (mob trait lottery).
+    if (tmpl.loot_item && (creature.traits?.includes("the-kept") || chance(tmpl.loot_chance * (creature.traits?.includes("keeps-its-bones") ? MOB_KEEPS_DROP_MULT : 1)))) {
       const item = this.world!.itemTemplates.get(tmpl.loot_item);
       if (item) {
         const rolled = this.rollTraits(item); // one roll, whichever way it lands (099)
@@ -5576,7 +5668,7 @@ export class ZoneDO implements DurableObject {
         ? `${cap(tmpl.name)} rushes you — but it meets ${weapon!.tmpl.name} held at length, and the worst of the charge dies on the point. A first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`
         : `${cap(tmpl.name)} is on you before you're set — a first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`, "dmgin big");
       this.sendStatus(victim);
-      this.openWound(victim, tmpl); // an ambush by something with claws cuts deep
+      this.openWound(victim, tmpl, creature); // an ambush by something with claws cuts deep
       this.maybeHobble(victim, tmpl); // and it can take the leg out from under you
       if (worn) await this.wear(victim, worn.carried, worn.tmpl, ARMOR_WEAR);
       if (CORRODERS.has(creature.templateId)) await this.corrodeTouch(victim, tmpl); // rust doesn't wait its turn either

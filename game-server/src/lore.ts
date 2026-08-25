@@ -6,7 +6,7 @@ import type { ZoneDO } from "./zone";
 import type { Region, World, Exit } from "./world";
 import type { Session } from "./zone-types";
 import type { CarriedItem, JournalRow } from "./world";
-import { journalLoad, journalStudy, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
+import { journalLoad, journalStudy, journalTraitsLoad, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import { uuid } from "./rng";
 import * as den from "./den";
@@ -14,7 +14,7 @@ import * as ai from "./ai"; // the close read a `study` prints under its own lin
 import { WOOD_QUARTERS, MAP_QUARTERS, MOB_LORE } from "./detail";
 import {
   MAP_ITEMS, DETAILED_MAP, FULL_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
-  GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM,
+  GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM, MOB_TRAIT_DOES,
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, ROOTED, FIREKEEPERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
   MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF,
@@ -711,10 +711,19 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
   try {
     session.ws.send(JSON.stringify({ v: 0, t: "journal", entries }));
   } catch {}
+  // The marks ledger: what these books have SEEN — studied or killed. Read only,
+  // and it never lists a trait you have not met wearing it.
+  const traitSet = new Set<string>();
+  for (const id of ids) for (const t of await journalTraitsLoad(z.env.DB, id)) traitSet.add(t);
+  const traits = [...traitSet].filter((t) => MOB_TRAIT_DOES[t]).sort();
   const many = ids.length > 1;
-  z.send(session, entries.length
+  const openLine = entries.length
     ? `You open the journal${many ? "s" : ""}.`
-    : `You open the journal${many ? "s" : ""}. ${many ? "Their" : "Its"} pages are blank — study a thing, and kill a few, and ${many ? "they" : "it"} will fill.`);
+    : `You open the journal${many ? "s" : ""}. ${many ? "Their" : "Its"} pages are blank — study a thing, and kill a few, and ${many ? "they" : "it"} will fill.`;
+  const traitLines = traits.length
+    ? `\n\nTraits you have marked:\n` + traits.map((t) => `  ${t} — ${MOB_TRAIT_DOES[t]}`).join("\n")
+    : "";
+  z.send(session, openLine + traitLines);
 }
 
 // ---- the engraving: what the steel remembers (077) ----

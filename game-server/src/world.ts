@@ -815,6 +815,17 @@ export async function journalBumpKill(db: D1Database, journalId: string, templat
     .run();
 }
 
+// The traits a journal has marked (studied or killed — the discovery ledger).
+export async function journalTraitsLoad(db: D1Database, journalId: string): Promise<string[]> {
+  const res = await db.prepare("SELECT trait FROM journal_traits WHERE journal_id = ?").bind(journalId).all<{ trait: string }>();
+  return (res.results ?? []).map((r) => r.trait);
+}
+
+export async function journalTraitAdd(db: D1Database, journalId: string, trait: string): Promise<void> {
+  await db.prepare("INSERT OR IGNORE INTO journal_traits (journal_id, trait, discovered_at) VALUES (?, ?, ?)")
+    .bind(journalId, trait, Math.floor(Date.now() / 1000)).run();
+}
+
 // Mark a creature studied in the book (the observation half of a full account).
 export async function journalStudy(db: D1Database, journalId: string, templateId: string): Promise<void> {
   await db

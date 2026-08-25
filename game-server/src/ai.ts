@@ -28,7 +28,7 @@ import {
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
-  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, GRAZERS,
+  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
@@ -76,6 +76,96 @@ export function rollBloodline(z: ZoneDO, tmpl: MobTemplate, room?: string): MobT
   // the STRAYS first: whatever stands off any den, farthest out (an evicted
   // fixture, a nest pup), and a variant before the plain stock. Den-standing
   // population is untouched, so a healthy world no-ops. Returns the cull count.
+// MOB TRAIT LOTTERY — a spawn rolls a trait off its FAMILY's pool (never a
+// global pool; a deer doesn't roll "bloodthirsty"). A trait can be a boon or a
+// flaw (MOB_BAD_SHARE). The pool only lists WIRED traits — a trait that rolls
+// but does nothing is a lie.
+function mobFamily(tmpl: MobTemplate): string | null {
+  if (HOLLOW.has(tmpl.id)) return "hollow";
+  if (DROWNERS.has(tmpl.id)) return "drowner";
+  if (LURKERS.has(tmpl.id)) return "lurker";
+  if (THIEVES.has(tmpl.id)) return "thief";
+  if (SCAVENGERS.has(tmpl.id)) return "scavenger";
+  if (GRAZERS.has(tmpl.id) || RUNNERS.has(tmpl.id)) return "runner";
+  if (PREYS_ON.has(tmpl.id)) return "hunter"; // the toothed things that prey on others
+  // VERMIN AND COILS LAST, and they catch FAR less than the size of those sets
+  // suggests — measured, not assumed, because assuming is how this went wrong
+  // the first time. Almost everything in both is already claimed above: the rats
+  // are GRAZERS, the vultures are SCAVENGERS, the ravens are THIEVES, the congers
+  // are DROWNERS, the eels and most adders come out with the grazers. Three
+  // animals in the whole roster reach these two lines. They are here so those
+  // three can roll at all, and for no larger reason than that.
+  if (VERMIN.has(tmpl.id)) return "vermin";
+  if (COILS.has(tmpl.id)) return "coil";
+  // There is deliberately NO fallback past this point. A creature that reaches
+  // the end rolls nothing, and the ones that do are listed in zone-data above
+  // MOB_TRAITS — the provisioned men, the sentinels, the corroder, the Gaunt.
+  return null;
+}
+
+export function rollMobTraits(tmpl: MobTemplate): string[] {
+  if (tmpl.is_boss) return [];
+  const fam = mobFamily(tmpl);
+  const pool = fam ? MOB_TRAITS[fam] : undefined;
+  if (!pool) return [];
+  if (!chance(MOB_TRAIT_ODDS)) return [];
+  // A boon or a flaw; a family with only one side falls through to the side it
+  // has (a runt-only runner must not halve its odds for the lack of a boon).
+  const side = pool.good.length && pool.bad.length
+    ? (chance(MOB_BAD_SHARE) ? pool.bad : pool.good)
+    : (pool.good.length ? pool.good : pool.bad);
+  if (!side.length) return [];
+  return [pick(side)];
+}
+
+// Spawn-time hp multiplier for the rolled traits (runt, thin). Nothing else
+// touches this: the stat lives here, the behavior checks live at their own
+// levers (flee, drop, hit).
+export function mobHpMult(traits: string[] | undefined): number {
+  let m = 1;
+  for (const t of traits ?? []) m = Math.min(m, MOB_TRAIT_HP[t] ?? 1);
+  return m;
+}
+
+// Hit-time damage multiplier (snag-toothed) — same shape, at the damage lever.
+export function mobDmgMult(traits: string[] | undefined): number {
+  let m = 1;
+  for (const t of traits ?? []) m = Math.min(m, MOB_TRAIT_DMG[t] ?? 1);
+  return m;
+}
+
+// WHAT THIS THING IS WEARING. `still-harnessed` is a skeleton that never got
+// stripped — it is still in the kit it died in — and armor in this world is a
+// FLAT subtraction, so one point is worth most against a fast weapon and least
+// against a maul, which is exactly the right shape for a body in a cuirass.
+//
+// Every site that reads a creature's armor for damage reads it through here:
+// the typed attack, the throw, the automatic round, and the vitals lottery
+// (a covered throat is a harder throat to find). Splitting that — arming it on
+// one path and not another — is how a trait becomes a thing players cannot
+// learn, because it would only be true when they attacked a particular way.
+export function mobArmor(tmpl: MobTemplate, creature: Creature): number {
+  return tmpl.armor + (creature.traits?.includes("still-harnessed") ? 1 : 0);
+}
+
+// NO TRAIT IN THIS LOTTERY ADDS A BODY (rome, 2026-08-24). `pair-bonded` and
+// `splits-on-death` were both cut here, and the reason is the same for both:
+// the world's population cap is derived from mob_spawns, one row one creature
+// (reconcilePopulation), so anything that puts a second body on a spawn's ledger
+// is over cap the moment it exists. The cull runs at world load — every DO
+// restart, which is every deploy — and it takes the surplus back, tie-breaking
+// on distance-to-den, which for two animals standing in the same room is a coin
+// toss. So a pair was reliably becoming a single, and it could just as easily be
+// the traited one that went.
+//
+// That could have been fixed by teaching the cap to count them. It was cut
+// instead: a trait whose whole claim is "there are two of it" has to be able to
+// promise that, and the ledger this world runs on is not built to hold it.
+//
+// The rule that falls out, and the one to keep: A TRAIT MAY CHANGE A CREATURE.
+// IT MAY NOT CREATE ONE. Everything left in MOB_TRAITS changes what a body does
+// — how hard it hits, when it runs, what it leaves, what it will not walk past.
+// Population belongs to the ecology, and the ecology has one door.
 export function reconcilePopulation(z: ZoneDO, world: World): number {
     const caps = new Map<string, number>();
     const dens = new Map<string, string[]>(); // bloodline base -> its den rooms
@@ -272,7 +362,14 @@ export function creatureRead(z: ZoneDO, creature: Creature, viewer: string): str
   // before the condition, because this is what the thing IS and the condition
   // is what has happened to it since.
   const mark = morphOf(creature.id, creature.templateId, MORPHS);
-  return `${tmpl.description}${mark ? ` ${mark}` : ""} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}`
+  // A traited creature reads as MARKED, but a glance never names the mark — that
+  // is what study and the journal are for (mob trait lottery).
+  const marked = creature.traits?.length ? pick([
+    " There is something off about it — a mark the eye cannot name.",
+    " There is something wrong with it that you cannot quite put your finger on.",
+    " It is marked somehow — the eye sees it, and the mind will not name it.",
+  ]) : "";
+  return `${tmpl.description}${mark ? ` ${mark}` : ""}${marked} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}`
     + (hoard || (bears ? ` It is ${bears.slice(2)}.` : ""));
 }
 
@@ -455,13 +552,30 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       // The marrow-song: an entranced bone wakes to NOTHING while it plays,
       // and to everything for a while after (per-creature — only the deep's
       // hollow hear it).
-      if (!chance(Math.min(1, odds * events.songWakeMult(z, c)))) continue;
+      // HALF-BLIND misses its cue. Note what this flaw actually is: an ambush
+      // that never happens. The player is never told, and never can be — you
+      // cannot notice the thing that did not drop on you — so it is worth
+      // being clear that this one is priced in the aggregate rather than felt
+      // in the moment. It is honest (a real halving of a real roll), it just
+      // lives on the world's side of the ledger, not the player's.
+      const halfBlind = c.traits?.includes("half-blind") ? MOB_HALFBLIND_MULT : 1;
+      if (!chance(Math.min(1, odds * events.songWakeMult(z, c) * halfBlind))) continue;
       const tmpl = z.world!.mobTemplates.get(c.templateId)!;
+      // TWITCHY breaks cover too early. The ambush in this game is not a damage
+      // bonus, it is the free extra blow itself (creatureFirstStrike), so the
+      // whole of this flaw is losing that: it reveals, it commits, it takes its
+      // target — and the fight starts even, from the front, which for a thing
+      // whose entire design is the drop out of the dark is the worst trade it
+      // could make. The player watches it happen, which is the point.
+      const twitchy = lurker && !!c.traits?.includes("twitchy");
       c.hidden = false; // a lurker that strikes is unseen no longer
       // The ambush announcement is the most dangerous line in any log — it
       // bleeds red (and trembles) instead of reading like scenery.
-      z.send(session, lurker ? `${cap(tmpl.name)} drops out of the dark and is on you!` : `${cap(tmpl.name)} ${tell}`, lurker ? "seize big" : undefined);
-      z.roomFeed(roomId, `${cap(tmpl.name)} ${lurker ? "uncoils from the dark" : "lurches awake"}.`, session.pubkey, false); // local: mob reaction
+      z.send(session, twitchy
+        ? `${cap(tmpl.name)} comes out of the dark a beat too early — the drop goes wide of you, and it comes up facing you with nothing gained.`
+        : lurker ? `${cap(tmpl.name)} drops out of the dark and is on you!` : `${cap(tmpl.name)} ${tell}`,
+        twitchy ? undefined : lurker ? "seize big" : undefined); // a wasted ambush is not the log's most dangerous line
+      z.roomFeed(roomId, `${cap(tmpl.name)} ${twitchy ? "breaks cover early and lands short" : lurker ? "uncoils from the dark" : "lurches awake"}.`, session.pubkey, false); // local: mob reaction
       // A LURKER commits to the kill — it locks on and the fight is joined. A
       // blind LISTENER (a skeleton) only lashes out at the sound and then settles
       // back into its stillness: one annoying blow, no rounds, and no din to draw
@@ -471,7 +585,10 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
         c.target = session.pubkey;
         if (!session.target) session.target = c.id;
       }
-      await z.creatureFirstStrike(c, tmpl, session, !lurker);
+      // ...and the twitchy one has already spent its chance getting here. It is
+      // in the fight and it has you; it simply does not get the blow that being
+      // unseen was worth.
+      if (!twitchy) await z.creatureFirstStrike(c, tmpl, session, !lurker);
       return true;
     }
     return false;
@@ -861,6 +978,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         if (safe.length) exits = safe;
       }
     }
+    // Ash-marked: it was burned once — it will not cross a lit room (mob trait
+    // lottery). Lit = any flame; the dark is its home, and it steers back to it.
+    if (mode === "wander" && creature.traits?.includes("ash-marked")) {
+      const unlit = exits.filter((e) => !z.roomLit(e.to_room));
+      if (unlit.length) exits = unlit;
+    }
     // A THING THAT IS GOING SOMEWHERE goes there. `curious` was never this — it
     // looks for an exit that IS the room it wants and clears after one look, so
     // it can only ever reach next door. This closes real distance, one room a
@@ -1023,12 +1146,30 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     if (events.shadowing(z, creature.roomId) && !HOLLOW.has(tmpl.id) && !SUMMIT_BOSSES.has(tmpl.id)) {
       creature.nextWanderAt = now + (creature.nextWanderAt - now) * SHADOW_WANDER_MULT;
     }
+    // Bell-tuned: the bell's ringing holds this hollow still (mob trait lottery).
+    if (creature.traits?.includes("bell-tuned") && events.phaseOf(z, "bell") === "active") {
+      creature.nextWanderAt = now + MOB_HELD_RECHECK_MS; // it stands and sways while the bell rings
+    }
+    // Brine-slow: out of the water it drags (mob trait lottery).
+    if (creature.traits?.includes("brine-slow")) {
+      creature.nextWanderAt = now + (creature.nextWanderAt - now) * MOB_BRINE_SLOW_MULT;
+    }
+    // Tide-called: it rises with the tide, and only with the tide.
+    if (creature.traits?.includes("tide-called") && events.phaseOf(z, "tide") !== "active") {
+      creature.nextWanderAt = now + MOB_HELD_RECHECK_MS; // inert under the water
+    }
+    // Mimic: a false footstep where no one stands.
+    if (creature.traits?.includes("mimic") && chance(0.05)) {
+      z.roomSound(creature.roomId, "A footstep falls {dir} — and no one is there to have made it.");
+    }
     // Beyond its territory a creature travels with purpose — the walk in from
     // a dark mouth (or back from a rout) is minutes, not an afternoon.
     if (creature.home && !tmpl.is_boss && !z.withinRadius(creature.roomId, creature.home, TERRITORY_RADIUS)) {
       creature.nextWanderAt = now + randInt(8000, 25_000);
     }
     if (mode === "flee") {
+      // A lame thing can't help what it leaves (mob trait lottery): a trail to follow.
+      if (creature.traits?.includes("lame")) z.addTrace(creature.roomId, { kind: "drip", at: now });
       creature.target = null;
       for (const s of z.sessions.values()) {
         if (s.target === creature.id) s.target = null;
@@ -1072,9 +1213,15 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         ];
         ratSqueal(z, from, now, creature);
       } else if (THIEVES.has(creature.templateId)) {
+        // BOLT-HOLE has somewhere to be. The steal message promises "kill it to
+        // get it back", and the running half of that promise is what makes the
+        // chase a real window rather than a formality — a warned thief normally
+        // keeps clear of the room for ten minutes, and this one is gone for the
+        // best part of an hour. You get one pursuit, not several tries.
+        const clear = WHISTLE_AVOID_MS * (creature.traits?.includes("bolt-hole") ? MOB_BOLTHOLE_MULT : 1);
         creature.avoids = [
           ...(creature.avoids ?? []).filter((a) => a.until > now && a.roomId !== from),
-          { roomId: from, until: now + WHISTLE_AVOID_MS },
+          { roomId: from, until: now + clear },
         ];
         thiefWhistle(z, from, now, creature);
       } else if (ALARM_CALLERS.has(creature.templateId)) {
@@ -1662,6 +1809,12 @@ export function carriesFire(session: Session): boolean {
   // Returns true only on the round it actually breaks, and says so then.
 export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): boolean {
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    // FIRE-HARDENED has been burned and came back anyway. The flame is the
+    // wood's standing answer — FEARS_FIRE covers 63 of its 87 bodies, and the
+    // note on FIRE_FLEE_CHANCE calls a torch a no-fight button — so the one
+    // animal it does not work on is worth more than any number it could change.
+    // You find out which one it is at the point where the argument usually ends.
+    if (creature.traits?.includes("fire-hardened")) return false;
     if (!FEARS_FIRE.has(tmpl.id)) return false;
     // The fear answers the FLAME, not the hand: a torch burning on the floor
     // holds the room the same as one held up.
@@ -1726,7 +1879,12 @@ export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
   // already gorged bold. While guarding, it turns on anyone who walks in on it —
   // no grudge needed. Disturb its dinner and you are the next course.
 export function hyenaGuardsMeal(z: ZoneDO, creature: Creature): boolean {
-    if (!AGGRO_SCAVENGERS.has(creature.templateId)) return false;
+    // JEALOUS stands over a body whatever it is. Guarding a meal is normally the
+    // privilege of the AGGRO_SCAVENGERS — the hyenas, the things with the nerve
+    // for it — and this is a crow with that nerve. It turns walking up to your
+    // own kill into a decision, because the thing already on it does not read
+    // as something that would argue, and it argues.
+    if (!creature.traits?.includes("jealous") && !AGGRO_SCAVENGERS.has(creature.templateId)) return false;
     if (scavengerBold(z, creature)) return true;
     const list = z.traces.get(creature.roomId);
     return !!list && list.some((tr) => CORPSE_TRACES.has(tr.kind));
@@ -1747,7 +1905,16 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     list.splice(idx, 1);
     if (list.length === 0) z.traces.delete(creature.roomId);
     creature.hunger = 0;
-    creature.hp = Math.min(tmpl.max_hp, creature.hp + SCAVENGER_HEAL);
+    // WHAT THE CORPSE IS WORTH TO THIS ONE. A bone-cracker gets through to the
+    // marrow and takes double; a sour-gutted thing eats and is no better for it.
+    // Both make the FLOOR of a fight tactical rather than scenery: with bodies
+    // down, a bone-cracker tops itself back up between exchanges and has to be
+    // denied them or finished quickly. The hunger is cleared either way — it ate,
+    // whatever the eating did for it.
+    const meal = creature.traits?.includes("sour-gutted") ? 0
+      : creature.traits?.includes("bone-cracker") ? SCAVENGER_HEAL * MOB_BONE_CRACKER_MULT
+      : SCAVENGER_HEAL;
+    creature.hp = Math.min(tmpl.max_hp, creature.hp + meal);
     const before = creature.fed ?? 0;
     creature.fed = before + 1;
     if (!silent) {
@@ -1888,6 +2055,11 @@ export function deadRemembers(z: ZoneDO, creature: Creature, now: number): void 
   // multiplier — one heavy blow, never a coup de grace). The dead never
   // sleep: watch what still moves in the quiet hours and you know what it is.
 export function naps(z: ZoneDO, creature: Creature, now: number): void {
+    // SLEEPLESS never lies up. Walking in on a sleeper is the one free heavy
+    // blow this world hands out — it is why the summit's animal was allowed to
+    // sleep at all — and this is the one that is never there for it. Nothing
+    // says so in advance: you simply keep finding it awake.
+    if (creature.traits?.includes("sleepless")) return;
     if (!NAPPERS.has(creature.templateId) || creature.asleep || creature.target || creature.cuddling) return;
     if (creature.templateId === "cutpurse" && creature.roomId !== creature.home) return;
     if (playerPresent(z, creature.roomId)) return;
@@ -2119,7 +2291,18 @@ export function cantorSings(z: ZoneDO, creature: Creature, now: number): void {
   }
 
 /** Is this thing frozen to the cantor's note right now? */
+// SONG-DEAF hears the note and does not stop. The marrow-song is the deep's one
+// safety net — a cantor's note stands every hollow in the room still, and a
+// player who has learned that trick has learned to walk through the dark behind
+// it. This is the one that keeps coming, and it is the whole reason the trait is
+// worth having: the tactic still works, it just stops being a guarantee, and
+// nothing announces which one it will be until the others stop and it doesn't.
+//
+// Read here rather than at the cantor, deliberately. The song is still SUNG at
+// it — heldUntil is still stamped — it simply does not answer, so a later reader
+// of that field still sees a room the song reached.
 export function heldBySong(creature: Creature, now: number): boolean {
+  if (creature.traits?.includes("song-deaf")) return false;
   return !!creature.heldUntil && now < creature.heldUntil;
 }
 
@@ -2936,11 +3119,12 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
           if (d < bestD) { bestD = d; roomId = m; }
         }
       }
+      const traits = rollMobTraits(tmpl);
       const creature: Creature = {
         id: uuid(),
         templateId: tmpl.id,
         roomId,
-        hp: tmpl.max_hp,
+        hp: Math.max(1, Math.round(tmpl.max_hp * mobHpMult(traits))),
         hunger: randInt(HUNGRY_AT - 20, HUNGRY_AT + 20), // travel works up an appetite
         grudges: [],
         // A fresh migrant starts its walk in promptly; the settled keep their idle clock.
@@ -2949,6 +3133,7 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         carries: z.rollCarry(tmpl),
         hidden: LURKERS.has(tmpl.id) || undefined,
         home,
+        traits: traits.length ? traits : undefined,
       };
       z.creatures.set(creature.id, creature);
       z.noteCreaturesChanged();
@@ -3308,7 +3493,13 @@ export function hungers(templateId: string): boolean {
 // definition of "cold enough" to drift. Anything that does not hunger at all
 // never reaches here: the callers gate on hungers() first.
 export function hungerRate(z: ZoneDO, creature: Creature): number {
-  return events.coldBites(z, creature.roomId) ? HUNGER_PER_MIN * COLD_HUNGER_MULT : HUNGER_PER_MIN;
+  // STARVELING burns it faster than its kind does, always — so it reaches
+  // HUNGRY_AT sooner, hunts sooner, scavenges bolder, and is far likelier to be
+  // at STARVING_AT when you meet it, which is where the behaviour tables start
+  // treating a lone wanderer as meat. It stacks with the cold, deliberately: a
+  // starveling in a cold snap is the animal that comes at you.
+  const starving = creature.traits?.includes("starveling") ? MOB_STARVELING_MULT : 1;
+  return (events.coldBites(z, creature.roomId) ? HUNGER_PER_MIN * COLD_HUNGER_MULT : HUNGER_PER_MIN) * starving;
 }
 
 export function creaturesIn(z: ZoneDO, roomId: string): number {

@@ -559,6 +559,174 @@ export const WANDER_MIN_MS = 45_000;
 export const WANDER_MAX_MS = 150_000;
 export const FLEE_BELOW = 0.18; // flesh runs only when nearly done (was 0.25 — everything bolted early)
 export const FLEE_CHANCE = 0.2; // per round once below the threshold (was 0.5)
+// THE MOB TRAIT LOTTERY. Gear rolls traits at mint; a mob rolls one at SPAWN —
+// same template, different instance, and the trait changes BEHAVIOR, not
+// identity or drops (that's what bloodlines are for). Keyed to the mob's FAMILY
+// (never a global pool — a deer doesn't roll "bloodthirsty"); a trait can be a
+// boon or a flaw. Rides the instance and dies with it.
+export const MOB_TRAIT_ODDS = 0.08;   // ~1 in 12 spawns carries one — special, not wallpaper, not a myth
+export const MOB_BAD_SHARE = 0.35;    // of those, ~1 in 3 is a flaw (gear's BAD_TRAIT_SHARE shape)
+// Spawn-time stat effects. A trait with no entry here AND no behavior check is
+// not a trait — it is a lie, and it must not be in a pool.
+export const MOB_TRAIT_HP: Record<string, number> = {
+  runt: 0.7,   // small for its kind
+  thin: 0.6,   // mostly absence
+};
+// Hit-time and death-time effects. Each trait lives at its own lever; the pool
+// names it and the tell reads it.
+export const MOB_TRAIT_DMG: Record<string, number> = {
+  "snag-toothed": 0.7, // a broken jaw: the bite lands soft
+};
+export const MOB_BLOODTHIRSTY_FLEE_MULT = 0.5; // flees at half the usual threshold
+export const MOB_SKITTISH_FLEE_MULT = 2;      // flees at twice the usual threshold
+export const MOB_MARKED_FLEE_MULT = 6;        // marked: flees at full health (always)
+export const MOB_KEEPS_DROP_MULT = 0.5;        // gives up half as often
+export const MOB_SHADOW_DMG_MULT = 1.35;      // shadow-born: hits harder under the shadow
+export const MOB_PATIENT_MULT = 1.5;          // patient: the first (hidden) blow lands heavy — ONCE, then creature.patientSpent
+export const MOB_STARVELING_MULT = 2;      // starveling: burns appetite at twice its kind, so it reaches hungry and starving sooner
+export const MOB_BONE_CRACKER_MULT = 2;    // bone-cracker: gets to the marrow — a corpse is worth double (sour-gutted gets nothing)
+export const MOB_BOLTHOLE_MULT = 5;        // bolt-hole: keeps clear of the room it robbed for five times the usual ten minutes
+export const MOB_BUTTERFINGERS_MULT = 0.5; // butter-fingered: the mirror of light-fingered — half the odds its hand finds the buckle
+export const MOB_HALFBLIND_MULT = 0.5;     // half-blind: half the odds it catches you crossing its room at all
+export const MOB_WEAKGRIP_MULT = 1.8;      // weak-gripped: undertow.s mirror — you tear out of it far sooner (SEIZE_BREAK_ODDS 0.5 -> 0.9)
+// HOW LONG A HELD THING WAITS BEFORE LOOKING AGAIN. bell-tuned and tide-called
+// do not wander while their condition holds, and the first cut of both re-armed
+// at two seconds — which turned a creature that is doing NOTHING into the most
+// frequently ticked thing in the world, thirty to a hundred times the rate of a
+// normal wanderer. bell-tuned would do it for the ninety seconds of a bell;
+// tide-called does it whenever the tide is out, which is most of the time and
+// has no end. The behaviour is identical at a coarser interval: the only cost is
+// that a hold can overhang its condition by up to this much, which for a thing
+// standing still and swaying is not a cost at all.
+export const MOB_HELD_RECHECK_MS = 15_000;
+export const MOB_BRINE_SLOW_MULT = 2;         // brine-slow: wanders at half speed out of water
+export const MOB_UNDERTOW_MULT = 1.5;         // undertow: seize odds up
+export const MOB_TRAIT_TELL: Record<string, string> = {
+  "plague-bearer": "Its mouth is a bad colour and there is something crusted round it. Whatever it has been eating, it has not been eating it fresh.",
+  "land-bound": "Out of the water it is a poorer thing than it was — the arms hang wrong, and it knows the stone is the wrong place for it.",
+  "weak-gripped": "Its hands are soft and come apart at the edges. There is not much left in them to hold with.",
+  twitchy: "It is wound too tight. Whatever it is waiting for, it is not going to wait long enough.",
+  "half-blind": "One side of its head is ruined, and it keeps turning the good side toward every sound.",
+  choosy: "It is starving and it is not looking at your food. It is looking at everything else.",
+  "bolt-hole": "It keeps glancing at one particular way out, and it has already decided on it.",
+  "butter-fingered": "Its hands are a mess — old breaks, badly set, and they do not close the way hands should.",
+  "bone-cracker": "Its jaw is too heavy for the rest of it, and the bones around here have been opened, not just picked.",
+  jealous: "It has not stepped off the body since you came in, and it is watching your feet, not your hands.",
+  "sour-gutted": "Something is wrong with it below the ribs. It eats, and it stays thin.",
+  "fire-hardened": "It has been burned before. The scar tissue is old, and it is looking straight at your flame.",
+  sleepless: "It has the look of a thing that has not lain down in a long time, and does not intend to.",
+  starveling: "You can count its ribs from here. Whatever it eats, it has not eaten lately.",
+  "song-deaf": "It has no ears left to stop it, and it does not seem to be listening for anything.",
+  "still-harnessed": "It is still in the kit it died in — rusted plate, strapped on bone, and none of it has been taken.",
+  "set-fast": "It is seated too solidly in its own frame. Nothing about it looks like it would rattle.",
+  runt: "It is small for its kind — runted, stunted.",
+  thin: "It is mostly absence — thin, and too little of it to matter.",
+  maneater: "It does not look away. It has eaten a person before, and it is not afraid of you.",
+  "snag-toothed": "Its jaw is broken — the bite lands soft, and it knows it.",
+  bloodthirsty: "There is no give in its eyes — it will not break until it is nearly done.",
+  "keeps-its-bones": "It is holding its bones close — whatever it dies with, the last piece stays.",
+  wary: "It watches you come — there is no getting the drop on it.",
+  skittish: "It is already backing — the first wound will break it.",
+  "bell-tuned": "It sways, listening — the bell has a hold on it.",
+  "ash-marked": "It has been burned once — it will not cross a lit room.",
+  "hind-mother": "It is standing between you and something — and it will not be moved.",
+  lame: "It moves wrong on one leg — when it runs, it leaves a line you can follow.",
+  "light-snuffing": "The dark clings to it — and it means to put your light out.",
+  patient: "It is not in a hurry. It is waiting for you to make the first mistake.",
+  mimic: "It makes a sound that is not its own — a footstep where no one stands.",
+  "shadow-born": "It was born in the dark — and the dark remembers it.",
+  "the-kept": "Something glints in its grip — it is holding what the water took.",
+  "tide-called": "It rises with the tide — and only with the tide.",
+  "brine-slow": "Out of the water it drags, slow and wrong.",
+  undertow: "The water moves around it — and it will pull you under.",
+  marked: "It has been caught before. It knows what you are, and it will not stay to find out.",
+  "light-fingered": "Its hands never stop moving.",
+};
+// What the journal says a trait DOES, once you have marked it (studied or killed
+// a creature wearing it). The close-read tell is the in-world hint; this is the
+// knowledge — plain, short, and only ever shown after discovery.
+export const MOB_TRAIT_DOES: Record<string, string> = {
+  "plague-bearer": "its bite always opens a wound",
+  "land-bound": "cannot take hold on dry ground",
+  "weak-gripped": "its grip barely holds — you tear loose sooner",
+  twitchy: "springs early — no free blow out of the dark",
+  "half-blind": "half as likely to catch you crossing its room",
+  choosy: "takes the best thing you have, hungry or not",
+  "bolt-hole": "once it is away, it stays away",
+  "butter-fingered": "fumbles the lift far more often",
+  "bone-cracker": "a corpse mends it twice over",
+  jealous: "guards any body it stands on",
+  "sour-gutted": "eats, and is no better for it",
+  "fire-hardened": "a torch will not frighten it",
+  sleepless: "never sleeps — never caught lying up",
+  starveling: "starves twice as fast, and hunts on it",
+  "song-deaf": "the marrow-song will not hold it",
+  "still-harnessed": "it kept its armour — harder to cut",
+  "set-fast": "cannot be stunned",
+  runt: "spawns with less health than its kind",
+  thin: "mostly absence — even less of it to hit",
+  maneater: "never flees a fight",
+  "snag-toothed": "its bite lands soft",
+  bloodthirsty: "flees only when nearly dead",
+  "keeps-its-bones": "gives up less when it dies",
+  wary: "cannot be taken unawares",
+  skittish: "bolts at the first wound",
+  "bell-tuned": "the bell holds it still",
+  "ash-marked": "will not cross a lit room",
+  "hind-mother": "never flees",
+  lame: "leaves a blood-trail when it runs",
+  "light-snuffing": "a landed blow puts your torch out",
+  patient: "its first blow lands heavier",
+  mimic: "makes a false footstep",
+  "shadow-born": "hits harder under the shadow",
+  "the-kept": "always drops what it holds",
+  "tide-called": "only rises with the tide",
+  "brine-slow": "drags on dry ground",
+  undertow: "holds and drags harder",
+  marked: "bolts the moment it sees you",
+  "light-fingered": "never fumbles the lift",
+};
+// The pools, by family — a trait must be WIRED before it is listed. Families
+// with no pool yet simply don't roll (mobFamily returns null for them).
+//
+// WHO CANNOT ROLL AT ALL, deliberately, and it is worth writing down so nobody
+// "fixes" it later: the PROVISIONED (the milker, the butter-wife, the
+// bellfounder, the charcoal burner) are men with camps and larders, and a trait
+// lottery on a milkmaid is absurd. Nor the chainman, who is a surveyor who
+// arrives, works his ground and leaves. Nor the Gaunt, the escape arc.s own
+// creature. Nor the rag-and-bone man, whose passivity is load-bearing. Nor the
+// hounds, which are SENTINELS, nor the verdigris thing, which is a CORRODER.
+// Every other non-boss template in the roster resolves to a family below.
+export const MOB_TRAITS: Record<string, { good: string[]; bad: string[] }> = {
+  runner: { good: ["wary", "hind-mother", "sleepless"], bad: ["runt", "lame"] },
+  hunter: { good: ["maneater", "bloodthirsty", "fire-hardened"], bad: ["runt", "snag-toothed"] },
+  lurker: { good: ["light-snuffing", "patient", "mimic", "shadow-born"], bad: ["thin", "twitchy", "half-blind"] },
+  hollow: { good: ["song-deaf", "still-harnessed", "set-fast"], bad: ["keeps-its-bones", "bell-tuned", "ash-marked"] },
+  scavenger: { good: ["starveling", "bone-cracker", "jealous"], bad: ["skittish", "sour-gutted"] },
+  drowner: { good: ["the-kept", "tide-called", "undertow"], bad: ["brine-slow", "land-bound", "weak-gripped"] },
+  thief: { good: ["light-fingered", "choosy", "bolt-hole"], bad: ["marked", "butter-fingered"] },
+  // VERMIN and COIL are the two SMALL pools, and small is the honest word for
+  // them: measured against the live roster they hold three animals between them
+  // (the scarp raven and the dancer; the gravid adder). Everything else in the
+  // VERMIN and COILS sets is claimed by an earlier family — the rats are grazers,
+  // the congers are drowners, the old raven is a thief. That is fine, and it is
+  // written down here so the next reader does not assume these pools are broad.
+  //
+  // Both are built ENTIRELY out of traits that already have behaviour sites, so
+  // neither adds a mechanic. Vermin eat corpses through the same scavengerFeeds
+  // branch the scavengers do (zone.ts, the VERMIN hunger arm), so bone-cracker
+  // and sour-gutted were already wired for them.
+  vermin: { good: ["plague-bearer", "maneater", "bone-cracker"], bad: ["runt", "skittish", "sour-gutted"] },
+  // patient is shared with the lurker on purpose. For a lurker it is the drop
+  // out of the dark; for an adder it is the strike out of stillness. Same rule —
+  // one heavy opening blow, spent once — and both earn it by having waited.
+  // NOT twitchy here, though it reads well for a snake: that one is gated on
+  // `lurker` inside wakeListeners, and an adder is in neither LURKERS nor
+  // LISTENERS, so it never reaches the code at all. snag-toothed is the honest
+  // version of the same idea — a viper whose fangs are broken — and it is table
+  // driven (mobDmgMult), so it works on anything with a mouth.
+  coil: { good: ["plague-bearer", "patient"], bad: ["runt", "snag-toothed"] },
+};
 // FEARS_FIRE, but as nerve rather than a wall (rome, 2026-08-03: "the woods
 // mobs are running away too much when a person has fire, it should be a chance
 // they run away during the rounds"). It was absolute: a fire-fearing thing broke

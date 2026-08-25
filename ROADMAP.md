@@ -361,6 +361,21 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **THE HERALD — a rout that fetches the den** *(parked 2026-08-24 — rome:
+  "we can apply that behaviour to a specific mob for a better outcome")*.
+  Offered as a mob-lottery trait and turned down as one, deliberately: a random
+  1-in-12 animal that calls its whole den when it breaks is a thing that happens
+  TO you, and you can never learn which one it was until it is too late to
+  matter. On a NAMED creature it becomes a rule you can know and plan around —
+  you learn that this one must not be allowed to run, and the fight changes
+  shape because of it. Same behaviour, opposite legibility.
+  The wiring already exists: `shareGrudges` (ai.ts) spreads a fled creature's
+  grudge to kin **standing in the same room**. The herald widens that to the
+  line's dens, so letting it escape stops being free and buys you a reception
+  somewhere you have to walk through later. Wants a creature that already has
+  a den worth calling — the lead-dog, a wolf, something with kin behind it —
+  and its own tell, so the cost of letting it break is legible before you do.
+
 - **THE SCAR — gear that carries its own history** *(pinned 2026-08-13 — rome:
   "pin the scar for later")*. Wear is currently a recurring bill and nothing
   else: repair sets condition flat back to 100 (gate.ts, REPAIR_COST by rarity),
@@ -486,6 +501,31 @@ Directions rome likes and wants held. Design only; no code until he says go.
     its full exit list. A room-shaping threat that acts on the map itself,
     not on HP/gear/position — a genuinely different category from every
     other mechanic on this list.
+
+- **MOB TRAIT LOTTERY — a spawn rolls a trait** *(design accepted 2026-08-24;
+  this is the first use of the "trait ledger" the note above calls missing)*.
+  Gear rolls traits at mint; a mob rolls one at SPAWN — same template, different
+  instance, and the trait changes BEHAVIOR, not identity or drops (that's what
+  bloodlines are for). Rides the instance and dies with it; the next refill
+  rolls fresh. Rules: keyed to the mob's FAMILY (never a global pool — a deer
+  doesn't roll "bloodthirsty"); a trait can be a boon OR a flaw (MOB_BAD_SHARE,
+  gear's shape).
+
+  GREENLIT POOLS (by family, each on an existing lever):
+    runners  — wary · lame · hind-mother
+    hunters  — bloodthirsty · maneater · pair-bonded · den-mother · scavenger's-nose · snag-toothed
+    hollow   — splits-on-death · bell-tuned · ash-marked · dust-drinker · keeps-its-bones
+    lurkers  — light-snuffing · patient · shadow-born · mimic · thin
+    drowners — the-kept · tide-called · brine-slow · undertow
+    scavenge — corpse-laughing · bold · skittish
+    thieves  — marked · light-fingered
+
+  ON HOLD: the "general / wild card" pool (old, the-taint, false-mark,
+  iron-jawed) — no family identity, so it waits; any that return get re-homed
+  into a specific family.
+
+  BUILD ORDER: runt (stat-only proof) → maneater (one flee check) → pair-bonded
+  or splits-on-death (first genuinely new behavior, not a stat).
 
 - **Far-world write cost — mostly already solved; small residual lever** *(rome,
   2026-07-20 — investigated the "lots more mobs" scaling question, found the win

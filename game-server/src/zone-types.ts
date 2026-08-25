@@ -93,6 +93,8 @@ export interface Creature {
   phase?: number; // boss rage tier (0/1/2), climbs at hp thresholds
   stole?: string; // cutpurse: the item id it grabbed and ran with (dropped on death)
   carries?: string[]; // gear it visibly bears (worn/wielded at spawn, or scavenged) — spills on death
+  traits?: string[]; // mob trait lottery: rolled at spawn (e.g. "runt") — behavior + look-line, not drops
+  patientSpent?: boolean; // `patient` has landed its one heavy blow; the rest are ordinary (see MOB_PATIENT_MULT)
   stoleJournal?: string; // the snatched thing's instance identity: when `stole` is a journal, its journalId rides here so the pages survive the theft (spills instanced; bare `stole` was eating books — rome, 2026-07-18)
   fed?: number; // grave-hyena: corpses eaten; enough and it turns bold
   fedAt?: number; // corvid: last time a wanderer fed it — a full bird won't be fed again for a while (RAVEN_BARTER_WAIT_MS)
