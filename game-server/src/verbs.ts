@@ -2347,7 +2347,15 @@ export async function cmdEat(z: ZoneDO, session: Session, arg: string): Promise<
   if (!arg) {
     carried = edibles[0];
   } else {
-    carried = z.findCarried(session, arg);
+    // EAT LOOKS AT THE FOOD FIRST (Lunapilot, 2026-08-25: eating an eel got her
+    // told she was gnawing her boots). `eat eel` used to resolve against the
+    // WHOLE pack, and the pack is full of things named after the animal they
+    // were made out of — eel-hide treads, an eel-skin cloak, an eel cutter's
+    // jerkin, an eel grig — so a word that names a real meal you are carrying
+    // would land on a pair of boots and stop there. The same resolution `cook`
+    // already uses: match the edibles, and only fall through to everything else
+    // so a genuine "eat my sword" still gets the line it deserves.
+    carried = edibles.find((c) => nameMatches(z.displayName(c), arg)) ?? z.findCarried(session, arg);
     if (!carried) return z.send(session, "You carry nothing like that.");
     if (!world.itemTemplates.get(carried.itemId)?.edible) {
       return z.send(session, `You gnaw at ${world.itemTemplates.get(carried.itemId)!.name}. It is not food.`);
@@ -2408,12 +2416,19 @@ export async function cmdFeed(z: ZoneDO, session: Session, arg: string): Promise
   // LONGEST creature name first and walk down: the first split where both
   // halves resolve is the one the player meant. One-word names still hit on
   // the last pass, so "feed crow hardtack" is unchanged.
+  // AND THE FOOD HALF LOOKS AT THE FOOD FIRST, same law as `eat` and `bandage`.
+  // The trophy law means you carry the animal AND the meal off the same body,
+  // so "feed raven rat" found the rat TAIL, and the bird turned its head away
+  // from a hand that had rat meat in it. The fallback still runs, so offering a
+  // raven your sword reads exactly as it did.
+  const foods = carriedFood(z, session);
   let creature: Creature | null = null;
   let carried: CarriedItem | null = null;
   for (let cut = words.length - 1; cut >= 1; cut--) {
     const c = z.findCreatureIn(session.roomId, words.slice(0, cut).join(" "));
     if (!c) continue;
-    const f = z.findCarried(session, words.slice(cut).join(" "));
+    const what = words.slice(cut).join(" ");
+    const f = foods.find((x) => nameMatches(z.displayName(x), what)) ?? z.findCarried(session, what);
     if (!f) { creature ??= c; continue; } // remember the bird; the food is the part that's wrong
     creature = c; carried = f; break;
   }
@@ -2508,7 +2523,13 @@ export async function cmdBandage(z: ZoneDO, session: Session, arg: string): Prom
   let carried: CarriedItem | null;
   if (!arg) carried = dressings[0];
   else {
-    carried = z.findCarried(session, arg);
+    // THE DRESSINGS FIRST, same law as `eat`. This one is worse than eat's,
+    // because you reach for it bleeding: with a moss-packed cap on your head
+    // and grave-moss in the pack, "bandage moss" found the CAP, told you a cap
+    // won't dress a wound, and left you bleeding a round for it. Also "fleece"
+    // against a fleece-lined jack, and "grave" against any of five grave-named
+    // pieces of gear.
+    carried = dressings.find((c) => nameMatches(z.displayName(c), arg)) ?? z.findCarried(session, arg);
     if (!carried) return z.send(session, "You carry nothing like that.");
     if ((z.world!.itemTemplates.get(carried.itemId)?.staunch ?? 0) <= 0)
       return z.send(session, `${cap(z.world!.itemTemplates.get(carried.itemId)!.name)} won't dress a wound.`);
