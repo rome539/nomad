@@ -2661,6 +2661,33 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // and nothing else — 22hp/4-7 against a 12hp bird is not a contest, and it is
   // the only way a thing that never moves gets to eat something that does.
   ["stone-adder", new Set(["mountain-chough", "ptarmigan", "ermine"])],
+  // THE CAVE LION HUNTS (2026-08-25). It had no row at all — the only apex
+  // mammal on the hill that took nothing living, while its smaller neighbours
+  // the lynx, the hill-wolf and the glutton all did. It never starved, because
+  // SCAVENGERS is a real feeding route and it is one; it simply sat in the bone
+  // country waiting for something else to do the killing. At 96hp/6-11/armor 2
+  // it is the largest non-boss mammal on the mountain by a wide margin — the
+  // old glutton is 62 — and a thing that size waiting on other people's kills
+  // is not the animal the prose describes.
+  //
+  // Its territory is three rooms around the Dry Bones, and roughly fifty
+  // animals live inside or one step outside them, so the list is what it can
+  // actually reach rather than everything a lion could theoretically take.
+  //
+  // The game first: the same four the lynx, the owl and the glutton already
+  // work off that ground. Then the two mid predators — 36hp for the hill-wolf
+  // and 50 for the glutton against 96 and armour is the same relationship the
+  // dire hyena has to the grey wolf and the grey wolf has to the grave hyena,
+  // and it is written down in both those rows. Then the three carrion birds,
+  // which are standing on the body it came for; the hyenas take crows and gulls
+  // off a carcass for exactly this reason. The lynx last: outside its hold
+  // today, and a row only ever fires when two animals share a room.
+  //
+  // Eleven, which sets it level with the grey wolf and the grave hyena — right
+  // for an apex that holds a small high territory instead of ranging. It keeps
+  // SCAVENGERS: the glutton and the hill-wolf are both, and so is this.
+  ["cave-lion", new Set(["mountain-hare", "snow-hare", "ptarmigan", "ermine", "mountain-chough",
+    "snow-fox", "hill-wolf", "glutton", "scarp-raven", "carrion-vulture", "lynx"])],
   // NEITHER EYRIE BIRD HAS A ROW. They are SCAVENGERS and AGGRESSIVE, which is a
   // different thing from a hunter: they will have YOU for standing on the ledge
   // and they will not chase a hare across open ground for a living.

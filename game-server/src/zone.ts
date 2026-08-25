@@ -220,6 +220,7 @@ export class ZoneDO implements DurableObject {
   public rot: RotEntry[] = [];
   private placedSpawns = new Set<string>(); // ground spawns already laid once
   private seededDens = new Set<string>(); // mob_spawn ids already populated once — new dens fill on the load that adds them, not on the migration clock
+  private traitsSeeded = false; // the mob trait lottery's ONE pass over the animals that were already alive when it shipped (see loadWorld)
   public groundCond = new Map<string, number>(); // "itemId@roomId" -> condition of gear on the floor, so wear survives a drop/pickup
   public groundTorch = new Map<string, number>(); // roomId -> ms epoch a torch dropped/fallen onto the floor keeps burning until; while now < it the room is lit for EVERYONE in it, and it's an open flame (fire-fear flees, lurkers can't spring). Burns its remaining life down, then guts out.
   public groundLore = new Map<string, string>(); // "itemId@roomId" -> the engraving on floor gear, so the mark survives the stones (077)
@@ -557,6 +558,7 @@ export class ZoneDO implements DurableObject {
       // already knows about as seeded, or the backfill below would re-fill
       // dens whose creature is legitimately dead and on the respawn clock.
       this.seededDens = new Set(saved.seededDens ?? (saved.creatures ?? []).map((c: any) => c.id));
+      this.traitsSeeded = !!saved.traitsSeeded;
       this.groundCond = new Map(Object.entries(saved.groundCond ?? {}));
       this.groundTorch = new Map(Object.entries(saved.groundTorch ?? {}));
       this.groundLore = new Map(Object.entries(saved.groundLore ?? {}));
@@ -672,6 +674,50 @@ export class ZoneDO implements DurableObject {
         });
       }
       for (const s of world.mobSpawns) this.seededDens.add(s.id);
+      // THE MARKS REACH THE WHOLE WORLD, ONCE (rome, 2026-08-25: the only
+      // marked animals were in the mountain).
+      //
+      // He was right, and the mountain was not being favoured — it is simply
+      // where the animals are. 334 of the world's 696 dens are on the hill,
+      // very nearly half, and they refill faster than anywhere else (687s
+      // against the crossing's 1137), and its food web is the densest in the
+      // game so more of it dies and is replaced. A mark rolls at SPAWN and the
+      // only live spawn path is a migrant walking in to refill a den something
+      // died in, so the marks were always going to appear first and fastest
+      // exactly where the killing is.
+      //
+      // The rest of the world would have got there eventually and slowly, and
+      // an animal that never dies would have waited forever: everything already
+      // standing when the lottery shipped was born before it and could not roll.
+      //
+      // So the world gets ONE pass, on the same law and with the same shape as
+      // the fresh-den seeding directly above — new content landing in an old
+      // world should not have to wait out a clock nobody can see. Tracked by
+      // its own flag so it can only ever happen once for the life of a world;
+      // after this every mark is earned the ordinary way, at a spawn.
+      //
+      // Creatures that already carry something are left alone — they earned it
+      // at their own spawn and rerolling them would be the lottery taking a
+      // mark back. And the HP multiplier is applied the way the spawn sites
+      // apply it, except downward only: a runt is smaller than its kind, so its
+      // current health is capped to what a runt's body could hold. Nothing is
+      // healed by being given a mark.
+      if (!this.traitsSeeded) {
+        this.traitsSeeded = true;
+        let marked = 0;
+        for (const c of this.creatures.values()) {
+          if (c.traits?.length) continue;
+          const tmpl = world.mobTemplates.get(c.templateId);
+          if (!tmpl) continue;
+          const rolled = ai.rollMobTraits(tmpl);
+          if (!rolled.length) continue;
+          c.traits = rolled;
+          c.hp = Math.min(c.hp, Math.max(1, Math.round(tmpl.max_hp * ai.mobHpMult(rolled))));
+          marked++;
+        }
+        if (marked) console.log(`trait backfill: ${marked} of ${this.creatures.size} already-living creatures took a mark`);
+        await this.persist();
+      }
       if (addedSpawn || freshDens.length) await this.persist();
     } else {
       // First light: seed the world from D1 templates.
@@ -890,6 +936,7 @@ export class ZoneDO implements DurableObject {
       rot: this.rot,
       placedSpawns: [...this.placedSpawns],
       seededDens: [...this.seededDens],
+      traitsSeeded: this.traitsSeeded,
       groundCond: Object.fromEntries(this.groundCond),
       groundTorch: Object.fromEntries(this.groundTorch),
       groundLore: Object.fromEntries(this.groundLore),
@@ -979,6 +1026,11 @@ export class ZoneDO implements DurableObject {
     this.rot = [];
     this.placedSpawns.clear();
     this.seededDens.clear();
+    // A reseed builds the world at first light, and first light rolls every
+    // creature's marks as it makes it — so the backfill has nothing to do and
+    // must not fire. Cleared anyway, because the flag belongs to the world and
+    // a reseed is a new world.
+    this.traitsSeeded = false;
     this.groundCond.clear();
     this.groundTorch.clear();
     this.groundLore.clear();

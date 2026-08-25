@@ -1893,6 +1893,30 @@ export function hyenaGuardsMeal(z: ZoneDO, creature: Creature): boolean {
   // Eat one corpse (blood/remains litter) in the room: heal, sate, and grow
   // bolder. Leaving the dead lying is what fattens a hyena into a real threat.
 export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): void {
+    // NOTHING EATS WITH A FULL BELLY, and this is the one place in the ecology
+    // that did (rome, 2026-08-25: a grave-hyena stripped a room of bodies).
+    //
+    // A meal here sets hunger to ZERO, and hunger climbs at HUNGER_PER_MIN — so
+    // one corpse buys an animal HUNGRY_AT/HUNGER_PER_MIN minutes, and the next
+    // corpse cost it one beat. A meal was worth a hundred minutes and took two
+    // seconds to repeat, so a scavenger standing on a battlefield ate all of it
+    // at TICK_MS and healed SCAVENGER_HEAL off every body.
+    //
+    // The far world already knew better: slowEcology gates all three feeders on
+    // hunger, and the live tick gated the vermin and the lurkers and not the
+    // scavengers — so the one path where a player could WATCH it was the only
+    // one that was wrong. The rule lives in here now rather than at the call
+    // sites, for the same reason the feeding chain's exclusivity does: a law
+    // four callers have to remember is a law that gets forgotten once.
+    //
+    // THE GORGE SURVIVES, because it is the design and not the bug: leaving the
+    // dead lying is what fattens a scavenger into a real threat, so it may take
+    // its first SCAVENGER_BOLD_AT bodies whenever it finds them — the third is
+    // what turns it bold. `fed` only ever climbs and dies with the animal, so
+    // that is three corpses in a lifetime, not three per battlefield. After
+    // that it eats like everything else in the world: when it is hungry.
+    const gorging = SCAVENGERS.has(creature.templateId) && (creature.fed ?? 0) < SCAVENGER_BOLD_AT;
+    if (creature.hunger < HUNGRY_AT && !gorging) return;
     const list = z.traces.get(creature.roomId);
     if (!list) return;
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
