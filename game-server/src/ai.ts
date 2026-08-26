@@ -29,7 +29,7 @@ import {
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
-  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
@@ -637,13 +637,25 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       }
       creature.target = session.pubkey;
       if (!session.target) session.target = creature.id;
-      const onSight = hostile && !holdsGrudge; // a guardian barring the door, not an old score settled
-      z.send(session, onSight
+      const onSight = hostile && !holdsGrudge; // comes for you unprovoked, rather than settling an old score
+      // AND ONLY A GUARDIAN STANDING ON ITS OWN GROUND BARS A DOOR. Two things
+      // were wrong with saying it for every AGGRESSIVE creature: most of them
+      // guard nothing (GUARDIANS, zone-data, says which do), and "its post"
+      // claims the thing is at HOME — which fifteen of the sixteen are not,
+      // most of the time, because only the brooding vulture is ROOTED and the
+      // rest walk the world on the ordinary wander clock. A gull that drifted
+      // in ten minutes ago has no post here to cross into.
+      const barring = onSight && GUARDIANS.has(creature.templateId) && creature.roomId === creature.home;
+      z.send(session, !onSight
+        ? `${cap(tmpl.name)} remembers you — and comes for you.`
+        : barring
         ? `${cap(tmpl.name)} fixes on you the moment you cross into its post — and moves to bar the way.`
-        : `${cap(tmpl.name)} remembers you — and comes for you.`);
-      z.roomFeed(session.roomId, onSight
+        : `${cap(tmpl.name)} has you, and does not wait to see what you mean by it.`);
+      z.roomFeed(session.roomId, !onSight
+        ? `${cap(tmpl.name)} goes for ${session.name}.`
+        : barring
         ? `${cap(tmpl.name)} moves to bar ${session.name}'s way.`
-        : `${cap(tmpl.name)} goes for ${session.name}.`, session.pubkey, false);
+        : `${cap(tmpl.name)} comes straight at ${session.name}.`, session.pubkey, false);
       // The first one to reach you gets the jump; the rest merely engage.
       if (ambush && !struck) {
         struck = true;

@@ -221,7 +221,6 @@ export interface SimState {
   rot: RotEntry[];
   placedSpawns?: string[]; // "itemId@roomId" ground spawns already laid down once
   seededDens?: string[]; // mob_spawn ids already populated once — so a migration's new dens fill on load instead of trickling in on the migration clock
-  traitsSeeded?: boolean; // the mob trait lottery has made its ONE pass over the creatures that were alive before it existed (zone.loadWorld)
   groundCond?: Record<string, number>; // "itemId@roomId" -> condition of gear on the floor, so wear survives drop/pickup
   groundTorch?: Record<string, number>; // roomId -> ms epoch a torch burning on the floor lasts until (a dropped/fallen flame lighting the room for all in it)
   groundLore?: Record<string, string>; // "itemId@roomId" -> lore_id of engraved gear on the floor, so the mark survives too (077)

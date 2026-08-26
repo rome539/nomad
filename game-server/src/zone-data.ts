@@ -3923,6 +3923,28 @@ export const AGGRESSIVE = new Set([
   // pier, and has never in its life conceded anything to anybody.
   "the-bridge-mason", "the-salt-widow", "great-gull", "black-backed-gull"]);
 
+// ...AND WHICH OF THEM IS ACTUALLY GUARDING SOMETHING (rome, 2026-08-25: a
+// great gull was telling him it moved to bar the way).
+//
+// AGGRESSIVE means HOSTILE ON SIGHT. It got read as "guardian" — the on-sight
+// line said the creature fixed on you the moment you crossed into its POST and
+// moved to BAR THE WAY — and all sixteen said it. For the drake on its hoard,
+// the eyrie birds, the watchman in his turret and the keeper of the holding
+// that is exactly the animal. For a gull, a boar, a wildcat and a cave lion it
+// is nonsense: a gull mobs you, a boar charges, and barring a door is the
+// precise opposite of what an ambush predator does. The file's own comments
+// above already draw the line — the cave lion's says outright that it is not
+// holding a post or a nest.
+//
+// So the guardians keep the barring line and the rest get one that fits a thing
+// simply coming at you. Nothing changes about who attacks: this set is PROSE.
+export const GUARDIANS = new Set<string>([
+  SUMMIT_BOSS, "the-pale-drake",              // a hoard, and the ground over it
+  "eyrie-holder", "brooding-vulture",         // a ledge and a nest
+  "last-watchman", "the-keeper-of-the-holding", "the-one-who-stayed", // a post, a holding, a place nobody else would stay in
+  "the-miller", "the-bridge-mason", "the-salt-widow",                 // a mill, a span, a pan-house: at work, and you are in it
+]);
+
 // SWEEPERS swing for the whole room. A mallet dressing the stone at the point
 // where the bridge stops does not consult you about its arc — a landed blow on
 // one target drags through everyone else standing in the room (a reduced,
