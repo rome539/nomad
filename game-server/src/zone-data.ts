@@ -645,6 +645,26 @@ export const MOB_TRAIT_TELL: Record<string, string> = {
 // What the journal says a trait DOES, once you have marked it (studied or killed
 // a creature wearing it). The close-read tell is the in-world hint; this is the
 // knowledge — plain, short, and only ever shown after discovery.
+// WHAT KIND OF THING WEARS A MARK, in the book's own words (rome, 2026-08-25:
+// the ledger listed the marks and never said which animals carry them).
+//
+// The pools are keyed by family and the key was being thrown away on the way
+// out, so the journal could tell you that `jealous` guards a body and never
+// that it is a carrion-eater's mark — which is the half that tells you where to
+// go looking for one. These are the headings the ledger groups under, in the
+// order MOB_TRAITS declares them rather than alphabetically: prey first, then
+// what eats it.
+export const MOB_FAMILY_NAME: Record<string, string> = {
+  runner: "runners",
+  hunter: "hunters",
+  lurker: "lurkers",
+  hollow: "the hollow",
+  scavenger: "scavengers",
+  drowner: "drowners",
+  thief: "thieves",
+  vermin: "vermin",
+  coil: "serpents",
+};
 export const MOB_TRAIT_DOES: Record<string, string> = {
   "plague-bearer": "its bite always opens a wound",
   "land-bound": "cannot take hold on dry ground",

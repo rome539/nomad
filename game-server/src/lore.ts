@@ -14,7 +14,7 @@ import * as ai from "./ai"; // the close read a `study` prints under its own lin
 import { WOOD_QUARTERS, MAP_QUARTERS, MOB_LORE } from "./detail";
 import {
   MAP_ITEMS, DETAILED_MAP, FULL_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
-  GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM, MOB_TRAIT_DOES,
+  GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM, MOB_TRAIT_DOES, MOB_TRAITS, MOB_FAMILY_NAME,
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, ROOTED, FIREKEEPERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
   MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF,
@@ -708,22 +708,40 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
     })
     .filter(Boolean)
     .sort((a: any, b: any) => (b.tier - a.tier) || a.name.localeCompare(b.name));
-  try {
-    session.ws.send(JSON.stringify({ v: 0, t: "journal", entries }));
-  } catch {}
   // The marks ledger: what these books have SEEN — studied or killed. Read only,
   // and it never lists a trait you have not met wearing it.
+  //
+  // THE MARKS GO IN THE BOOK, NOT IN THE ROOM (rome, 2026-08-25). They used to
+  // be appended to the sentence that OPENS the journal, so the one part of the
+  // page a player earns by studying and killing scrolled past in the chat while
+  // the modal beside it — the thing that IS the journal — had no idea they
+  // existed. That also meant this load ran after the payload had already gone
+  // out; it happens first now, and the marks ride with the entries.
+  //
+  // GROUPED BY WHAT WEARS THEM. A flat alphabetical list told you what `jealous`
+  // does and never that it is a carrion-eater's mark, which is the half that
+  // says where to go looking. A trait belonging to more than one kind is listed
+  // under EACH — bone-cracker is worn by scavengers AND by vermin, and a book
+  // that picked one of them would be lying about where to look. Flaws are
+  // flagged: the pools already know which side of the lottery a mark came off,
+  // and that is exactly the sort of thing a hunter's book carries.
   const traitSet = new Set<string>();
   for (const id of ids) for (const t of await journalTraitsLoad(z.env.DB, id)) traitSet.add(t);
-  const traits = [...traitSet].filter((t) => MOB_TRAIT_DOES[t]).sort();
+  const marks: { kind: string; traits: { name: string; does: string; flaw: boolean }[] }[] = [];
+  for (const [fam, pool] of Object.entries(MOB_TRAITS)) {
+    const seen = (list: string[], flaw: boolean) => list
+      .filter((t) => traitSet.has(t) && MOB_TRAIT_DOES[t])
+      .map((t) => ({ name: t, does: MOB_TRAIT_DOES[t], flaw }));
+    const rows = [...seen(pool.good, false), ...seen(pool.bad, true)];
+    if (rows.length) marks.push({ kind: MOB_FAMILY_NAME[fam] ?? fam, traits: rows });
+  }
+  try {
+    session.ws.send(JSON.stringify({ v: 0, t: "journal", entries, marks }));
+  } catch {}
   const many = ids.length > 1;
-  const openLine = entries.length
+  z.send(session, entries.length
     ? `You open the journal${many ? "s" : ""}.`
-    : `You open the journal${many ? "s" : ""}. ${many ? "Their" : "Its"} pages are blank — study a thing, and kill a few, and ${many ? "they" : "it"} will fill.`;
-  const traitLines = traits.length
-    ? `\n\nTraits you have marked:\n` + traits.map((t) => `  ${t} — ${MOB_TRAIT_DOES[t]}`).join("\n")
-    : "";
-  z.send(session, openLine + traitLines);
+    : `You open the journal${many ? "s" : ""}. ${many ? "Their" : "Its"} pages are blank — study a thing, and kill a few, and ${many ? "they" : "it"} will fill.`);
 }
 
 // ---- the engraving: what the steel remembers (077) ----

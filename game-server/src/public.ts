@@ -838,6 +838,12 @@ export const PAGE = `<!doctype html>
   .jent .jstats { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
   .jent .jstats span { color: var(--dim); font-size: 12px; }
   .jent .jstats b { color: var(--steel); font-weight: 700; }
+  .jmarks { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; }
+  .jmarks .jmh { color: var(--cream); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+  .jmarks .jmk { color: var(--gold); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 10px; }
+  .jmarks .jmr { color: var(--dim); font-size: 12.5px; margin-top: 3px; line-height: 1.45; }
+  .jmarks .jmr b { color: var(--bone); font-weight: 700; }
+  .jmarks .jmr b.jflaw { color: var(--steel); }
   .jent .jlocked { color: var(--dim); font-size: 12px; margin-top: 6px; font-style: italic; }
   .jempty { color: var(--dim); font-size: 13px; font-style: italic; padding: 8px 2px; }
   @media (max-width: 680px) {
@@ -4956,6 +4962,41 @@ function renderJournal(f) {
       card.appendChild(lk);
     }
     jBody.appendChild(card);
+  }
+  // THE MARKS YOU HAVE MET, at the foot of the book. Grouped by the kind of
+  // thing that wears them, because knowing what a mark DOES is only half of it
+  // — the other half is where to go looking. The server sends only marks this
+  // book has actually seen on a body, so this section is earned, not a
+  // catalogue, and it simply is not there until you have met one.
+  var marks = f.marks || [];
+  if (marks.length) {
+    var mw = document.createElement("div");
+    mw.className = "jmarks";
+    var mh = document.createElement("div");
+    mh.className = "jmh";
+    mh.textContent = "Marks you have met";
+    mw.appendChild(mh);
+    for (var m = 0; m < marks.length; m++) {
+      var grp = marks[m];
+      var gh = document.createElement("div");
+      gh.className = "jmk";
+      gh.textContent = grp.kind;
+      mw.appendChild(gh);
+      var rows = grp.traits || [];
+      for (var r = 0; r < rows.length; r++) {
+        var row = document.createElement("div");
+        row.className = "jmr";
+        var mn = document.createElement("b");
+        mn.textContent = rows[r].name;
+        if (rows[r].flaw) mn.className = "jflaw";
+        row.appendChild(mn);
+        var md = document.createElement("span");
+        md.textContent = " \\u2014 " + rows[r].does;
+        row.appendChild(md);
+        mw.appendChild(row);
+      }
+    }
+    jBody.appendChild(mw);
   }
   closeMap();
   jrnlEl.classList.add("open");

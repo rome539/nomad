@@ -7,9 +7,10 @@
 // by ROW COUNT, not bytes, so a living world writing a handful of changed
 // rows every flush blew the daily allowance. The blob was cheap on the
 // billed metric; the rows were scalable. This is the middle path that is
-// both: THREE blobs in the same sim_kv table —
+// both: FOUR blobs in the same sim_kv table —
 //   b:creatures — every creature, one JSON array (sorted by id)
 //   b:ground    — every room's floor state, one JSON object (sorted rooms)
+//   b:walked    — every player's walked rooms and wall marks, one JSON object
 //   b:meta      — every SimState singleton, one JSON object
 // A save re-serializes each category and writes ONLY the dirty blobs: a
 // beat of creature churn is 1 row written, not one per mob. Steady state
@@ -23,7 +24,7 @@
 // from the exact same shape — only where it sleeps changed. MIGRATION IS
 // IN PLACE, NO RESEED: loadSim prefers the b:* blobs; finding only the old
 // per-row keys (c:/r:/m:) it hydrates from those, and the FIRST save writes
-// the three blobs and deletes every stale per-row key in the same
+// the four blobs and deletes every stale per-row key in the same
 // transaction — so the conversion commits whole or not at all, and a crash
 // before it leaves the old rows loadable. (The ancient one-blob "sim" value
 // is still upstream of us: zone.ts falls back to it when loadSim returns
@@ -41,12 +42,12 @@
 //     beat by nature); those ride along on any real meta change, and a
 //     60s throttle writes them anyway so savedAt staleness stays ≤~1min —
 //     catch-up re-sims from savedAt at the sim's own granularity.
-//   • A full flush every 20 minutes writes all three anyway, so nothing
+//   • A full flush every 20 minutes writes all four anyway, so nothing
 //     stays stale past that whatever the diff thinks.
 import type { SimState, Creature, Trace, GroundInstance } from "./zone-types";
 
-const META_THROTTLE_MS = 60_000; // savedAt/arrivals churn lands at most once a minute (riding sooner on any real meta change)
-const FULL_FLUSH_MS = 20 * 60_000; // all three blobs land at least this often — the safety net under the diff
+const META_THROTTLE_MS = 60_000; // churn (savedAt/arrivals, and the walk blob) lands at most once a minute (riding sooner on any real change)
+const FULL_FLUSH_MS = 20 * 60_000; // all four blobs land at least this often — the safety net under the diff
 
 // The creature churn fields: real state, but drifting every beat — excluded
 // from the dirt judgement, carried along in every actual write, and never
@@ -82,9 +83,28 @@ const B_CREATURES = "b:creatures";           // the pre-split single blob: read 
 const B_CREATURES_PREFIX = "b:creatures:";   // ...and this is what replaces it
 const B_GROUND = "b:ground";
 const B_META = "b:meta";
+// THE WALK SPLIT (2026-08-25). walked/wallMarks are the two per-player room
+// sets — every room a player has been SEEN to stand in, and the gatehouse
+// wall's evidence. Neither is ever pruned (that is the design: the record
+// keeps until the world reseeds), so they grow toward the size of the world
+// PER PLAYER. Left inside b:meta they made every step into new ground rewrite
+// the whole singleton blob — measured ~126KB, serialised twice, at p90 900ms
+// against a 2s tick. They now live in their own blob, written churn-throttled
+// like savedAt (at most once a minute, riding sooner on the full flush). A
+// crash inside that window loses at most a minute of the walk — testimony,
+// re-earned by re-walking, the same law arrivals already keeps.
+//
+// ROLLBACK NOTE, deliberate: unlike the creatures split there is NO shadow
+// for the walk. A rollback across this ship loses the walk records (the old
+// build reads b:meta and no longer finds them there once the first save
+// strips them). That is a known, accepted cost — the walk feeds only the
+// wall's carve, nothing mechanical — and the shadow's own header says to
+// remove it as soon as rollback is not a thing; a second shadow for lore is
+// weight, not safety.
+const B_WALKED = "b:walked";
 const isCreatureShard = (k: string) => k.startsWith(B_CREATURES_PREFIX);
 // A row this store owns and must never sweep as a stray.
-const isOurs = (k: string) => k === B_GROUND || k === B_META || isCreatureShard(k)
+const isOurs = (k: string) => k === B_GROUND || k === B_META || k === B_WALKED || isCreatureShard(k)
   || (ROLLBACK_SHADOW && k === B_CREATURES); // the shadow is ours while it stands, and must never be swept
 // Where a creature with no shard goes. Only reachable if a caller passes no
 // sharder at all (tests, or a future caller that does not care) — the world
@@ -120,11 +140,12 @@ const ROLLBACK_SHADOW = true;
 // field and the store silently forgets it on restart" is a tsc error, not a
 // haunting.
 type PerBlobField = "creatures" | "ground" | "groundInstances" | "groundCond"
-  | "groundLore" | "groundRolled" | "groundHeart" | "groundTorch" | "traces";
+  | "groundLore" | "groundRolled" | "groundHeart" | "groundTorch" | "traces"
+  | "walked" | "wallMarks";
 type MetaField = Exclude<keyof SimState, PerBlobField>;
 const META_FIELDS = [
   "savedAt", "regrow", "roamRocks", "arrivals", "openDoors", "doorCloseAt", "fenceOut",
-  "bloodOn", "nextStoneAt", "nextBrandAt", "nextSmokeTorchAt", "nextCarrionAt", "rot", "placedSpawns", "seededDens", "inGatehouse", "inDen", "walked", "wallMarks", "board", "stoneNames",
+  "bloodOn", "nextStoneAt", "nextBrandAt", "nextSmokeTorchAt", "nextCarrionAt", "rot", "placedSpawns", "seededDens", "inGatehouse", "inDen", "board", "stoneNames",
   "cacheSpent", "cacheRoom", "nextSurfaceAt", "events", "fishStock", "works", "nextWorksAt", "nextChainmanAt",
   "nests", "bounties", "nextBountyChurnAt", "nextFenceChurnAt", "bountyTaken", "keeperBowl",
 ] as const satisfies readonly MetaField[];
@@ -137,18 +158,19 @@ void _metaComplete;
 export interface SimCache {
   vals: Map<string, string>; // blob key -> last-written serialization (STABLE form for b:creatures / b:meta) — plus stale legacy keys pending the first-save sweep, held with "" (never compared, only deleted)
   metaWroteAt: number; // ms b:meta last landed — the savedAt/arrivals churn throttle
+  walkedWroteAt: number; // ms b:walked last landed — the walk churn throttle (0 = never, so a crossover's first write is never swallowed)
   lastFullFlushAt: number;
 }
 
 export function newCache(): SimCache {
-  return { vals: new Map(), metaWroteAt: 0, lastFullFlushAt: 0 };
+  return { vals: new Map(), metaWroteAt: 0, walkedWroteAt: 0, lastFullFlushAt: 0 };
 }
 
 export function ensureTable(storage: DurableObjectStorage): void {
   storage.sql.exec("CREATE TABLE IF NOT EXISTS sim_kv (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
 }
 
-// ---- serialization: SimState -> the three blobs ----
+// ---- serialization: SimState -> the four blobs ----
 // Everything is written in a canonical order (creatures sorted by id, rooms
 // and their item maps sorted by key, meta in META_FIELDS order) so the same
 // world always serializes to the same string — the dirt judgement is a plain
@@ -267,6 +289,12 @@ function metaBlob(state: SimState): string {
   return JSON.stringify(out);
 }
 
+// The two player maps, alone in their blob. No churn sub-fields to strip: the
+// whole content IS the dirt, so the stable form is the blob itself.
+function walkedBlob(state: SimState): string {
+  return JSON.stringify({ walked: state.walked ?? null, wallMarks: state.wallMarks ?? null });
+}
+
 function stableMeta(state: SimState): string {
   const out: Record<string, unknown> = {};
   for (const f of META_FIELDS) {
@@ -338,6 +366,20 @@ function unshardBlobs(rows: Map<string, string>): SimState {
     for (const f of META_FIELDS) {
       if (parsed[f] !== null && parsed[f] !== undefined) state[f] = parsed[f];
     }
+    // The walk split: a world saved before it keeps the two player maps inside
+    // b:meta. Read them from there exactly once — the first save writes
+    // b:walked and strips them from meta in one transaction, after which
+    // b:walked is the only copy and wins below.
+    if (!rows.has(B_WALKED)) {
+      if (parsed.walked !== null && parsed.walked !== undefined) state.walked = parsed.walked;
+      if (parsed.wallMarks !== null && parsed.wallMarks !== undefined) state.wallMarks = parsed.wallMarks;
+    }
+  }
+  const w = rows.get(B_WALKED);
+  if (w) {
+    const parsed = JSON.parse(w) as Record<string, unknown>;
+    if (parsed.walked !== null && parsed.walked !== undefined) state.walked = parsed.walked;
+    if (parsed.wallMarks !== null && parsed.wallMarks !== undefined) state.wallMarks = parsed.wallMarks;
   }
   return state as unknown as SimState;
 }
@@ -363,7 +405,7 @@ function unshardLegacy(rows: Map<string, string>): SimState {
 // light, or a pre-rows world whose one-blob "sim" the caller should try
 // next). Seeds the cache so the first save after a load only writes what
 // actually changed — except after a LEGACY load, where the blob keys are
-// left unseeded on purpose: the first save then writes all three blobs and
+// left unseeded on purpose: the first save then writes all four blobs and
 // sweeps every stale per-row key, one transaction, and the migration is done.
 export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimState | null {
   const rows = new Map<string, string>();
@@ -374,7 +416,7 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
   cache.vals.clear();
   const now = Date.now();
   const hasBlobs = rows.has(B_CREATURES) || rows.has(B_GROUND) || rows.has(B_META)
-    || [...rows.keys()].some(isCreatureShard);
+    || rows.has(B_WALKED) || [...rows.keys()].some(isCreatureShard);
   let state: SimState;
   if (hasBlobs) {
     state = unshardBlobs(rows);
@@ -391,8 +433,21 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
       if (isCreatureShard(k)) cache.vals.set(k, stableCreatures(JSON.parse(v) as Creature[]));
     }
     cache.vals.set(B_GROUND, groundBlob(state));
-    cache.vals.set(B_META, stableMeta(state));
-    cache.metaWroteAt = now;
+    // THE WALK SPLIT, crossover discipline. A world whose b:walked row exists
+    // has already crossed: seed it and b:meta and judge dirt normally. A world
+    // without it still keeps the two player maps inside b:meta — leave B_WALKED
+    // and B_META unseeded so the first save writes the stripped meta and the
+    // new walk blob in one transaction, and set both write-stamps to 0 so the
+    // throttles cannot swallow that first write.
+    if (rows.has(B_WALKED)) {
+      cache.vals.set(B_WALKED, walkedBlob(state));
+      cache.vals.set(B_META, stableMeta(state));
+      cache.walkedWroteAt = now;
+      cache.metaWroteAt = now;
+    } else {
+      cache.walkedWroteAt = 0;
+      cache.metaWroteAt = 0;
+    }
     // Anything else in the table is a stray from an older shape (a crashed
     // half-migration can't exist — same transaction — but be thorough):
     // hold it for the delete sweep.
@@ -402,12 +457,13 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
   } else {
     // LEGACY per-row world. Hydrate from it; seed the cache with ONLY the
     // legacy keys (values never compared — they exist to be swept). The blob
-    // keys stay unseeded, so the first save finds all three "dirty", writes
+    // keys stay unseeded, so the first save finds all four "dirty", writes
     // them, and deletes every legacy row in the same transaction. Crash
     // before that save: these rows are still here, still loadable.
     state = unshardLegacy(rows);
     for (const k of rows.keys()) cache.vals.set(k, "");
     cache.metaWroteAt = 0;
+    cache.walkedWroteAt = 0;
   }
   cache.lastFullFlushAt = now;
   return state;
@@ -460,8 +516,29 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
     cacheAs.push([B_META, mStable]);
     wroteMeta = true;
   }
+  // The walk, its own blob and its own churn throttle: written when it moved
+  // AND the throttle has elapsed (at most once a minute), riding sooner on the
+  // full flush. Every step into new ground still dirties it — but a dirty walk
+  // now costs one ~100KB write a minute instead of one per step, and meta no
+  // longer moves when anyone walks.
+  // THE THROTTLE IS ASKED FIRST, and that ordering is the whole point of it.
+  // Built the blob before the throttle and the walk was still serialised on
+  // EVERY beat — thirty ~100KB stringifies a minute to produce a string thrown
+  // away twenty-nine times. That is the same work the split was made to stop
+  // paying, moved off the disk and onto the CPU. Nothing is lost by asking
+  // late: the write is throttled either way, so comparing more often than once
+  // a minute cannot change what lands.
+  let wroteWalked = false;
+  if (fullFlush || now - cache.walkedWroteAt >= META_THROTTLE_MS) {
+    const wBlob = walkedBlob(state);
+    if (fullFlush || cache.vals.get(B_WALKED) !== wBlob) {
+      puts.push([B_WALKED, wBlob]);
+      cacheAs.push([B_WALKED, wBlob]);
+      wroteWalked = true;
+    }
+  }
 
-  // Anything cached that isn't one of the three blobs is a stale row from an
+  // Anything cached that isn't one of the four blobs is a stale row from an
   // older shape (the per-row keys after a legacy load) — sweep it with the
   // write, same transaction.
   // Strays: the per-row keys after a legacy load, the pre-split b:creatures
@@ -487,6 +564,7 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
   // The disk took it — NOW the cache may believe it.
   for (const [k, v] of cacheAs) cache.vals.set(k, v);
   if (wroteMeta) cache.metaWroteAt = now;
+  if (wroteWalked) cache.walkedWroteAt = now;
   for (const k of dels) cache.vals.delete(k);
 
   // The early-warning wire: blobs sit ~2-25KB today. Long before any
@@ -508,5 +586,6 @@ export function clearSim(storage: DurableObjectStorage, cache: SimCache): void {
   storage.sql.exec("DELETE FROM sim_kv");
   cache.vals.clear();
   cache.metaWroteAt = 0;
+  cache.walkedWroteAt = 0;
   cache.lastFullFlushAt = 0;
 }
