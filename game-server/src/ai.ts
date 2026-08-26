@@ -19,7 +19,7 @@ import {
   PACK_HOLDERS, PREY_BREAK_ODDS, PREY_WORRY_MULT, HOLD_LINES, BREAK_LINES,
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
   DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
-  SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS,
+  SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
@@ -2479,6 +2479,21 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
       }
     }
     if (dog) z.roomFeed(creature.roomId, SUMMER_DANCE_DOG_LINE, undefined, false, "evt");
+  }
+
+  // THE WITNESSED HABITS. Every family in the new regions that had only
+  // mechanics has one habit it performs for no reason, when somebody is there
+  // to see it — one table, one function, the drill's law. The AGGRESSIVE
+  // performers (the lion, the gulls, the boars, the tom, the brooding vulture)
+  // fight on sight, so theirs are caught only in the moment before they notice
+  // you; that rarity is the fiction, not a defect.
+  export function mobHabit(z: ZoneDO, creature: Creature, now: number): void {
+    void now;
+    const lines = WITNESSED_LINES[creature.templateId];
+    if (!lines || creature.asleep || creature.target) return;
+    if (!playerPresent(z, creature.roomId)) return;
+    if (!chance(WITNESSED_ODDS)) return;
+    z.roomFeed(creature.roomId, pick(lines), undefined, false, "amb");
   }
 
 /**

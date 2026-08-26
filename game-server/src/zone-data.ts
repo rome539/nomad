@@ -2667,6 +2667,10 @@ export const GHOST_FLOCK_LINES: Record<string, string[]> = {
     "The butter-wife works the churn — up, down, up, down — with nothing in it, the old stroke exactly. The churn has been empty for two centuries, and the butter has never once failed to come, in her mind, on the hour.",
     "The butter-wife sets the churn between her knees and works it, listening for the sound it will make when it turns. It turned a long time ago. She is still hearing it.",
   ],
+  "a-fold-dog": [
+    "The fold dog lies in the gate and watches the empty fold, the way it lay when the fold was full. It has watched this gate longer than anything that ever came through it.",
+    "The fold dog settles into the gate with its head on its paws and keeps the watch it has always kept. The flock is gone. The gate does not know, and neither does the dog.",
+  ],
 };
 // THE CHAINMAN'S COUNT (mob-audit F5). He carries the flail and works the
 // chain — the last motion of the ferry's own trade, counted link by link.
@@ -2701,6 +2705,217 @@ export const SUMMER_DANCE_SOUNDS = [
   "A pipe, faint and off-key, comes {dir} — a tune nobody is playing.",
   "Somewhere near, a pipe plays the same few notes over and over {dir}, patient as a season.",
 ];
+// THE WITNESSED HABITS (the comprehensive pass). Every family in the new
+// regions that had only mechanics now has one habit it performs for no reason,
+// when somebody is there to see it. One table, one function, one law — the
+// drill's: costs nothing, changes nothing. The AGGRESSIVE performers (the
+// cave-lion, the gulls, the boars, the tom, the brooding vulture) fight on
+// sight, so their habits are caught only in the rare moment before they notice
+// you. That rarity is not a bug: the lion marks its ground when it believes it
+// is alone.
+export const WITNESSED_ODDS = 0.02; // per idle tick
+const GULL_LINES = [
+  "The great gull climbs the air and lets the mussel fall, and it breaks open on the shingle below, and the gull comes down after it to the pieces.",
+  "The black-backed gull drops its shell from a height and the stone does the work — the coast's oldest trick, older than the coast's people, and it still works.",
+];
+const OYSTERCATCHER_LINES = [
+  "The oystercatcher sets the shell on the shingle and hammers at it with the long orange bill — once, twice — and pries at the crack that will not come. It has not come for two centuries, and the bird keeps the rhythm.",
+  "The oystercatcher works the same shut shell the way it has worked every shut shell, patient and exact, for the hinge that is no longer there to give.",
+];
+const HERON_LINES = [
+  "The grey heron stands in the shallows on one leg and waits, motionless, for a fish that stopped being here. The waiting is the whole of the bird now, and it does it perfectly.",
+  "The grey heron watches the water the way it has always watched it, from the one leg, for hours, and the water gives nothing back. It has given nothing back for a very long time, and the heron has not once looked away.",
+];
+const BITTERN_LINES = [
+  "The bittern goes still with its bill straight up, becoming exactly a reed among the reeds, and holds while you look at it. It has done this since before there were eyes here to fool, and it works on you the way it has always worked.",
+  "The bittern freezes, bill to the sky, one more reed in the reedbed, and does not breathe. Nothing is hunting it. It is not something the bird knows how to turn off.",
+];
+const CHOUGH_LINES = [
+  "The chough drops off the crag and rolls once in the air, wings shut, and opens them at the last moment and is gone. It did not have to do that. It has never once had to do that.",
+  "The chough tumbles off the high rock, turns over in the wind, and lands again on the same stone, for nothing. The mountain's only joke, and it has been telling it for centuries.",
+];
+const EAGLE_LINES = [
+  "The eagle sits on the high stone and looks out over the whole of its country, and nothing in it moves without it knowing. It is the only thing up here that owns what it sees.",
+  "The eagle turns its head a little and goes back to watching its ground — all of it, the whole tier, held the way a man holds a debt.",
+];
+const OWL_LINES = [
+  "The eagle owl turns its head round to watch you pass, further than a head should turn, and turns it back only when you are gone. It has been keeping this watch since before there was anyone to watch.",
+  "The eagle owl blinks, once, slowly, and goes on looking at you with the whole of its face, the way the night looks at a candle.",
+];
+const VULTURE_LINES = [
+  "The carrion vulture stands on the warm stone with its wings held out wide, sunning the whole of itself, and does not move. Nothing about it is waiting for anything.",
+  "The great vulture opens its wings to the sun and stands like a coat hung out to air, and the sun takes it the way the sun takes the rock.",
+];
+const EYRIE_LINES = [
+  "The eyrie-holder steps off the ledge and lets the updraught take it — one slow turn, then another — and settles back exactly where it was. It is not going anywhere. It is remembering what the air was for.",
+  "The eyrie-holder rides the air above the nest in one wide circle and lands back on the same claw-hold, and folds its wings. The circle was the point. It has never been anything else.",
+];
+const LION_LINES = [
+  "The cave-lion rises and rakes its claws down the rock, once — four fresh lines beside a hundred older ones — and settles again. The whole hill knows it is here. The hill is the only thing it tells.",
+  "The cave-lion works its claws down the stone, slow, deliberate, and the hill keeps the marks the way it keeps everything. You are looking at the only ledger the lion has ever kept.",
+];
+const GLUTTON_LINES = [
+  "The glutton works the carcass long after it is picked clean, jaws grinding on bone for the last of what is not there. It has been full for an hour. That is not the point of eating, and it never was.",
+  "The glutton gnaws the dry bone down to nothing and then sits with it, turning it over, looking for the part it has not found yet. There is no part. It keeps looking.",
+];
+const CAT_LINES = [
+  "The lynx sits down in the middle of its ground and washes one paw, slowly, the way a cat washes when nothing in the world is wrong. Nothing in its world is ever wrong. It is the only thing on this hill that can say so.",
+  "The wildcat washes its face with one careful paw, and the whole hill waits on it, and it does not hurry for anything. It is not pretending. It is exactly what it looks like: the one thing here that is at home.",
+];
+const FOX_LINES = [
+  "The hill-fox scrapes a shallow hole, drops what it was carrying into it, and covers it again with three practised passes of its nose. It will not come back for this. It never comes back, and it keeps burying anyway.",
+  "The snow-fox buries its thing in the gravel and smooths the place over, and looks at it once, and leaves it. The hill keeps what the fox gives it. The fox has never once come back to check.",
+];
+const HARE_LINES = [
+  "The mountain hare sits up very straight and thumps the ground with one hind foot — once, twice — and listens. Nothing answers. The hill was supposed to answer, and it keeps waiting.",
+  "The snow-hare thumps, and the thump goes out into the quiet and is swallowed, and the hare waits the exact right moment before deciding the hill is not there, again.",
+];
+const GOAT_LINES = [
+  "The feral goat climbs onto the highest stone it can find and stands on it, four hooves on a point, looking out over everything below as if it were the king of all of it. For a moment, it is.",
+  "The old billy works his way up the rock to the one ledge that takes a single goat, and stands on it, and owns everything under him. The hill made this ledge for him. He has always known that.",
+];
+const ERMINE_LINES = [
+  "The ermine bounds across the open ground in long looping springs, back and forth over the same six feet, for nothing. It is the only thing on this hill that plays, and the hill lets it.",
+  "The ermine springs, turns in the air, lands where it started, and does it again, a white stitch pulling itself through the heather. Nothing is chasing it and nothing is chased. It is dancing because it can.",
+];
+const DANCER_LINES = [
+  "The dancer comes out into the open and begins its dance — spinning, springing, the whole body turning in the air — and stops as suddenly as it started. Whatever it was dancing at, it has either caught it or it is you.",
+  "The dancer goes through its dance in the middle of the open ground, the terrible little springing, and then sits up and looks around as if it had never been moving at all.",
+];
+const LEAD_WOLF_LINES = [
+  "The lead-wolf carries a piece of the kill down to the burn and lets the water have it, and watches it go, and then walks back up the way it came. The water has always taken its share. The wolf has always given it.",
+  "The lead-wolf drops its piece into the burn and stands over the water until it is gone, and the water takes it the way it takes everything that comes down the hill. The hill and the wolf understand each other.",
+];
+const OTTER_LINES = [
+  "The otter dives and comes up with a worn stone and carries it to the bank, sets it down, and lies beside it a while before taking it back under. It has kept this stone longer than it has kept anything alive.",
+  "The dog-otter surfaces with its stone, turns it over in its paws, and goes back down with it, and the water closes over both of them. The stone has outlasted everything else the otter has ever carried.",
+];
+const SEAL_LINES = [
+  "The grey seal rolls over on the shingle — once, hugely, like weather turning over — and settles on its other side. It is not asleep and not going anywhere. It is exactly where it means to be.",
+  "The bull seal shifts its whole enormous weight, one slow roll, and the shingle takes it, and it is comfortable in a way nothing else on this coast has ever been.",
+];
+const EEL_LINES = [
+  "The ford-eel ties itself into a slow knot in the shallow water and unties again, once, for no reason a fish has. It is the only trick it knows, and it does it for nobody.",
+  "The silver-eel turns over and over in the water and comes out of it straight, and goes on, as if the knot had never been. It does this at the same bend every time. The bend is why.",
+];
+const CRAB_LINES = [
+  "The wrack-crab carries the little shell from one side of the pool to the other and sets it down, and looks at it, and carries it back. It is not a home and not a meal. It is just the thing it is carrying, and the crab does not know how to stop.",
+  "The devil-crab drags its shell across the pool, a journey of a foot, and rests, and drags it back. The pool has watched this crossing for years. The crab has never once left the shell on the far side and been done with it.",
+];
+const CONGER_LINES = [
+  "The conger opens its mouth and closes it, once, slowly — a door testing its hinges — and goes back to being a shadow in the hole.",
+  "The old conger works its jaw open and shut, once, and the water takes no notice. It has done this since before the water was anyone's.",
+];
+const MIRE_WALKER_LINES = [
+  "The mire-walker goes on across the mire, unhurried, through water that would take you to the knee and keep you. It has walked this way since the mire was dry, and it walks it still.",
+  "The mire-walker takes the long way across the flooded ground, exactly the line it has always taken, and the water closes behind it without a mark. The mire keeps no prints of it. The mire knows it.",
+];
+const DROWNED_LINES = [
+  "The drowned thing turns in the water, once, as if listening for something under it, and goes still again. The water keeps its own counsel, and so does it.",
+  "The drowned turns slowly in the black water and comes to rest facing nothing in particular. It was not looking for anything. It was only turning, the way the water turns things.",
+];
+const BOAR_LINES = [
+  "The wild boar lowers itself into the wallow and rolls, once, hugely, and the mud closes over it, and it stays a long time with only its breathing showing. It has been doing this since before the wallow knew its name.",
+  "The old boar settles into the wallow and works the mud into its hide with the whole of its weight, and the wallow takes it the way it has always taken it. This is the oldest appointment on the wood's edge, and it is kept.",
+];
+const BEAR_LINES = [
+  "The bear rises on its hind legs and works its back against the tree, slowly, side to side, and the tree takes it the way it has always taken it. The bark is worn smooth. This has been going on longer than the tree has been standing here.",
+  "The chain-breaker stands and rubs itself along the old trunk, one slow pass, and the tree leans a little with the habit of it. They have kept this appointment through everything, the bear and the tree.",
+];
+const DOG_LINES = [
+  "The drove-dog lies with its head on its paws and watches the road the way a dog watches a road it is paid to watch. Nobody pays it. It watches anyway.",
+  "The marsh-hound settles at the edge of the reed and watches the water with the patience of a thing that has been told to wait. It has been waiting since before the last person who could have told it anything.",
+];
+const PTARMIGAN_LINES = [
+  "The ptarmigan takes three quick steps and goes still, and the snow takes it — the hill's oldest trick, the trick of being the hill.",
+  "The ptarmigan settles into the white and becomes part of it, and you have to look twice to find the eye looking back. It is not hiding from you. It is being where it is.",
+];
+const ADDER_LINES = [
+  "The stone adder works its old skin off against the warm rock in one slow piece and leaves it lying there, a ghost of an adder. It has done this every year the hill can remember. The hill keeps every skin.",
+  "The gravid adder rubs its old skin away against the stone, and the stone takes it, and the new scales come up bright as water. The year turns, and the adder turns with it, the way it always has.",
+];
+const ROAD_CARRIER_LINES = [
+  "The road-carrier shifts its load and walks on, at the pace of a man with somewhere to be, on a road that has forgotten where anywhere is.",
+  "The road-carrier sets its load down for a moment at the verge and rolls its shoulders, the way a man rests between hauls, and takes the load up again. The haul has lasted two centuries. It rests exactly the same as it always did.",
+];
+const BELLFOUNDER_LINES = [
+  "The bellfounder taps the side of the cold mould and listens, head turned, for the note that will say the cast is true. The cast is two centuries old. The note is still coming.",
+  "The bellfounder runs a hand over the dead mould the way a man checks a fever, and goes back to waiting for the pour. There is no pour. There has never been a pour, and the waiting has kept the foundry warm.",
+];
+// The collier had a PROPERTY and no habit: FIREKEEPERS makes the ground he
+// stands on count as having fire, which holds off everything in the wood that
+// fears one. That is a fact about the room and not a thing he ever does — and
+// his own room-sound has always been wood being laid on wood, one piece at a
+// time, by somebody who is not hurrying. Now he lays it.
+const COLLIER_LINES = [
+  "The collier walks the mound with the back of one hand held out to it, feeling along the turf for the place where the burn has come too near the surface, and packs it down before it can show. A mound that breaks open is a week of work gone in one bright hour, and he has never lost one.",
+  "The collier lays another piece on, and another, in no hurry whatever — the same size, the same way round, each one seated before the next goes near it. He stopped needing to watch his own hands a very long time ago.",
+];
+// The clerk had a MECHANIC and no habit: he brands you when he lands a blow, so
+// the road heeds you harder afterwards. His walk-on line has always been that
+// he arrives, stops, and puts his hand out. He never once collected while you
+// stood there and watched.
+const TOLL_CLERK_LINES = [
+  "The toll-clerk puts his hand out and waits — the exact length of time a man waits for a coin, no longer — and then closes it on nothing and writes nothing in the book. The toll is paid. As far as he is concerned it always is.",
+  "The toll-clerk shifts the satchel on his shoulder and the strap creaks under it. The coin inside does not move, because it has not moved in two hundred years. He settles the weight, and puts his hand out again for the next one through.",
+];
+const SAPPER_LINES = [
+  "The sapper walks his line and taps the ground ahead with the pick-butt, listening, the way a man listens for a mine. There is no mine. The war is over. The listening is not.",
+  "The sapper probes the ground ahead, one tap at a time, reading the ground by its sound. The ground says nothing. He has never once taken its word for it.",
+];
+const VERDIGRIS_LINES = [
+  "The verdigris-thing runs one finger down the stone and the stone greens behind it, slow as rust, slow as breath. It is not writing anything. It is only touching, and the stone keeps the touch.",
+  "The verdigris-thing touches the iron and the green follows its hand like a stain following water. It has been doing this since before the iron was iron.",
+];
+export const WITNESSED_LINES: Record<string, string[]> = {
+  // the birds
+  "great-gull": GULL_LINES, "black-backed-gull": GULL_LINES,
+  "oystercatcher": OYSTERCATCHER_LINES,
+  "grey-heron": HERON_LINES,
+  "bittern": BITTERN_LINES,
+  "mountain-chough": CHOUGH_LINES,
+  "hill-eagle": EAGLE_LINES,
+  "eagle-owl": OWL_LINES,
+  "carrion-vulture": VULTURE_LINES, "great-vulture": VULTURE_LINES, "brooding-vulture": VULTURE_LINES,
+  "eyrie-holder": EYRIE_LINES,
+  // the mountain's land
+  "cave-lion": LION_LINES,
+  "glutton": GLUTTON_LINES, "the-old-glutton": GLUTTON_LINES,
+  "lynx": CAT_LINES, "wildcat": CAT_LINES, "the-tom": CAT_LINES,
+  "hill-fox": FOX_LINES, "snow-fox": FOX_LINES, "the-raiding-fox": FOX_LINES, "the-blue-fox": FOX_LINES,
+  "mountain-hare": HARE_LINES, "snow-hare": HARE_LINES,
+  "feral-goat": GOAT_LINES, "old-billy": GOAT_LINES,
+  "ermine": ERMINE_LINES,
+  "the-dancer": DANCER_LINES,
+  "lead-wolf": LEAD_WOLF_LINES,
+  // the crossing's water
+  "otter": OTTER_LINES, "dog-otter": OTTER_LINES,
+  "grey-seal": SEAL_LINES, "bull-seal": SEAL_LINES,
+  "ford-eel": EEL_LINES, "silver-eel": EEL_LINES,
+  "wrack-crab": CRAB_LINES, "devil-crab": CRAB_LINES,
+  "conger": CONGER_LINES, "old-conger": CONGER_LINES,
+  "the-mire-walker": MIRE_WALKER_LINES,
+  "the-drowned": DROWNED_LINES,
+  // the wood's stragglers
+  "wild-boar": BOAR_LINES, "old-boar": BOAR_LINES,
+  "the-baited-bear": BEAR_LINES, "the-chain-breaker": BEAR_LINES,
+  "drove-dog": DOG_LINES, "a-lymer": DOG_LINES, "lead-dog": DOG_LINES, "marsh-hound": DOG_LINES, "masterless-dog": DOG_LINES,
+  // the last holdouts
+  "ptarmigan": PTARMIGAN_LINES,
+  "stone-adder": ADDER_LINES, "the-gravid-adder": ADDER_LINES,
+  "road-carrier": ROAD_CARRIER_LINES,
+  "the-bellfounder": BELLFOUNDER_LINES,
+  "the-sapper": SAPPER_LINES,
+  "verdigris-thing": VERDIGRIS_LINES,
+  // THE LAST TWO WITH A MECHANIC AND NO HABIT. Swept for creatures that owned
+  // nothing performed: the collier's fire is a property of the ground he stands
+  // on, and the clerk's brand only happens when he hits you. Both already had
+  // the sound and the walk-on line that a habit pays off — the collier laying
+  // wood on wood one piece at a time, the clerk arriving and putting his hand
+  // out — and neither ever did the thing its own prose described.
+  "charcoal-burner": COLLIER_LINES,
+  "the-toll-clerk": TOLL_CLERK_LINES,
+};
 // THE CANTOR SINGS. He is called a cantor and has never once sung. When he
 // does, every hollow thing that can hear him stops where it stands and holds
 // until he is done — the only thing in the deep that outranks whatever they

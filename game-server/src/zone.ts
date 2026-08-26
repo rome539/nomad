@@ -4705,6 +4705,8 @@ export class ZoneDO implements DurableObject {
         ai.chainmanCount(this, creature, now);
         // The summer people dance the last night's circle, on some nights.
         ai.summerDance(this, creature, now);
+        // ...and everything else performs the one habit it has, when watched.
+        ai.mobHabit(this, creature, now);
         // ...and the rag-and-bone man decides he likes the look of your pack.
         ai.hoarderCovets(this, creature, now);
         // A brood-mother swells the nest while she's left alone.
