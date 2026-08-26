@@ -53,7 +53,7 @@ const FULL_FLUSH_MS = 20 * 60_000; // all four blobs land at least this often â€
 // from the dirt judgement, carried along in every actual write, and never
 // stale past the full flush. (Restart staleness is repaired by catchUp
 // anyway: hunger and wander clocks re-advance from savedAt.)
-const VOLATILE = new Set(["hunger", "nextWanderAt", "thirstAt", "sleepUntil", "repositionAt", "murmuredAt"]);
+const VOLATILE = new Set(["hunger", "nextWanderAt", "thirstAt", "sleepUntil", "repositionAt", "murmuredAt", "danceUntil"]);
 // The meta churn fields: same idea at the singleton level. savedAt moves
 // every save by definition; arrivals shifts every beat.
 const CHURN_META = new Set(["savedAt", "arrivals"]);

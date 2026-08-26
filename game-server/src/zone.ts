@@ -4695,6 +4695,16 @@ export class ZoneDO implements DurableObject {
         ai.lurkerDrifts(this, creature, now);
         // The cantor opens its jaw and the dead stop where they stand.
         ai.cantorSings(this, creature, now);
+        // The crossing's dead go through the last motion of the job they died at.
+        ai.deadAtWork(this, creature, now);
+        // The lammergeier rings the mountain's anvil for its marrow.
+        ai.boneDrop(this, creature, now);
+        // The summer people keep a flock that is not there.
+        ai.ghostFlock(this, creature, now);
+        // The chainman counts the chain.
+        ai.chainmanCount(this, creature, now);
+        // The summer people dance the last night's circle, on some nights.
+        ai.summerDance(this, creature, now);
         // ...and the rag-and-bone man decides he likes the look of your pack.
         ai.hoarderCovets(this, creature, now);
         // A brood-mother swells the nest while she's left alone.

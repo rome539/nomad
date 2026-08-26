@@ -18,7 +18,8 @@ import {
   HOARD_COVET_RARITY, HOARD_COVET_ODDS, HOARD_COVET_MS, HOARD_COVET_LINES, RARITY_RANK,
   PACK_HOLDERS, PREY_BREAK_ODDS, PREY_WORRY_MULT, HOLD_LINES, BREAK_LINES,
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
-  DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES,
+  DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
+  SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
@@ -2368,6 +2369,116 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
           .replace("{b}", theyAreRank ? ot.name : tmpl.name)
       : pick(DRILL_LINES).replace("{a}", cap(tmpl.name)).replace("{b}", ot.name);
     z.roomFeed(creature.roomId, line, undefined, false, "amb");
+  }
+
+  // THE CROSSING'S DEAD AT WORK. One idle roll, one worker, its own two lines —
+  // the last motion of the job it died at, performed forever, when somebody is
+  // there to see it. The drill's law, told wet: nothing changes but the room.
+  //
+  // AND AN IDLE BEHAVIOUR IS IDLE, which is why every one of these opens on
+  // `creature.target` the way drill does. Four of the performers are AGGRESSIVE
+  // — the mason, the salt-widow, the miller and the one who stayed — so without
+  // it a man swinging at you also stops to dress a stone, and "the work is done,
+  // he is not" lands while he is very much working on you. The rule holds for
+  // all of them and not just the four, because which set a creature sits in is
+  // not something this function should have to know.
+  export function deadAtWork(z: ZoneDO, creature: Creature, now: number): void {
+    void now;
+    const lines = DEAD_WORK_LINES[creature.templateId];
+    if (!lines || creature.asleep || creature.target) return;
+    if (!playerPresent(z, creature.roomId)) return;
+    if (!chance(DEAD_WORK_ODDS)) return;
+    z.roomFeed(creature.roomId, pick(lines), undefined, false, "amb");
+  }
+
+  // THE BONE-DROP. The lammergeier's whole trade, witnessed: up, let go, the
+  // rock does the work, down for the marrow. Audible from next door, like the
+  // howl — you hear the mountain's anvil before you find the bird that rang it.
+  export function boneDrop(z: ZoneDO, creature: Creature, now: number): void {
+    void now;
+    if (creature.templateId !== "bone-breaker" && creature.templateId !== "the-bone-dropper") return;
+    if (creature.asleep || creature.target) return;
+    if (!playerPresent(z, creature.roomId)) return;
+    if (!chance(BONE_DROP_ODDS)) return;
+    z.roomFeed(creature.roomId, pick(BONE_DROP_LINES), undefined, false, "amb");
+    z.roomSound(creature.roomId, BONE_DROP_SOUND);
+  }
+
+  // THE GHOST-FLOCK. The summer people tend a flock that is not there, and the
+  // dog herds nothing around a fold with no sheep in it. One idle roll each,
+  // witnessed only — the mountain's first people, still keeping their end of it.
+  export function ghostFlock(z: ZoneDO, creature: Creature, now: number): void {
+    void now;
+    const lines = GHOST_FLOCK_LINES[creature.templateId];
+    if (!lines || creature.asleep || creature.target) return;
+    if (!playerPresent(z, creature.roomId)) return;
+    if (!chance(GHOST_FLOCK_ODDS)) return;
+    z.roomFeed(creature.roomId, pick(lines), undefined, false, "amb");
+  }
+
+  // THE CHANGE OF GUARD IS NOT HERE, and the reason is worth keeping so nobody
+  // writes it a second time. It wanted two sentinels sharing a room. There is
+  // ONE sentinel den in the world — the three-hound at the Undercroft — and
+  // `two-hound` is that den's 10% variant rather than a second animal, so the
+  // two hounds are the same dog wearing different odds. Sentinels are also
+  // excluded from wandering, so nothing can ever walk into the other's room.
+  // It could not fire, once, ever.
+  //
+  // rome's ruling (2026-08-25): the hound is fine asleep at its post, and the
+  // world does not need a second sentinel to justify a handover line. So the
+  // behaviour goes rather than sitting inert looking like a feature — the same
+  // call the empty `beak` trait pool got.
+
+  // THE CHAINMAN'S COUNT. He carries the flail and works the chain — the last
+  // motion of the ferry's own trade, counted link by link, witnessed only.
+  export function chainmanCount(z: ZoneDO, creature: Creature, now: number): void {
+    void now;
+    if (creature.templateId !== "the-chainman" || creature.asleep || creature.target) return;
+    if (!playerPresent(z, creature.roomId)) return;
+    if (!chance(CHAINMAN_COUNT_ODDS)) return;
+    z.roomFeed(creature.roomId, pick(CHAINMAN_LINES), undefined, false, "amb");
+  }
+
+  // THE SUMMER DANCE. On the last night before going down, the whole household
+  // danced a circle on the summer ground, the dog lying at the edge. They are
+  // dead, the season never ended for them, and on some nights whoever is left
+  // still dances it — the circle wide for the missing, the pipe going in a head
+  // that will not stop. Held for a verse, then back to the flock that is not
+  // there. The cantor's shape: begin, hold, end — one roll, witnessed only.
+  export function summerDance(z: ZoneDO, creature: Creature, now: number): void {
+    if (!SUMMER_PEOPLE.has(creature.templateId) || creature.asleep || creature.target) return;
+    if (creature.danceUntil && now < creature.danceUntil) return;          // mid-dance
+    if (creature.danceUntil && now >= creature.danceUntil) {               // the verse just ended
+      for (const c of z.creatures.values()) {
+        if (c.roomId === creature.roomId && c.danceUntil !== undefined) c.danceUntil = undefined;
+      }
+      z.roomFeed(creature.roomId, pick(SUMMER_DANCE_END_LINES), undefined, false, "evt");
+      return;
+    }
+    if (!isNight(now) || !playerPresent(z, creature.roomId)) return;
+    // A circle already turning in this room must not be started a second time.
+    const turning = [...z.creatures.values()].some(
+      (c) => c.id !== creature.id && c.roomId === creature.roomId && c.danceUntil && now < c.danceUntil,
+    );
+    if (turning || !chance(SUMMER_DANCE_ODDS)) return;
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    creature.danceUntil = now + SUMMER_DANCE_MS;
+    creature.nextWanderAt = Math.max(creature.nextWanderAt, creature.danceUntil);
+    z.roomFeed(creature.roomId, pick(SUMMER_DANCE_BEGIN_LINES).replace("{a}", cap(tmpl.name)), undefined, false, "evt");
+    z.roomSound(creature.roomId, pick(SUMMER_DANCE_SOUNDS));
+    let dog = false;
+    for (const c of z.creatures.values()) {
+      if (c.id === creature.id || c.roomId !== creature.roomId || c.asleep) continue;
+      if (SUMMER_PEOPLE.has(c.templateId)) {
+        c.danceUntil = creature.danceUntil;
+        c.nextWanderAt = Math.max(c.nextWanderAt, c.danceUntil);
+        const ot = z.world!.mobTemplates.get(c.templateId)!;
+        z.roomFeed(creature.roomId, pick(SUMMER_DANCE_JOIN_LINES).replace("{b}", ot.name).replace("{a}", tmpl.name), undefined, false, "evt");
+      } else if (c.templateId === "the-last-dog") {
+        dog = true;
+      }
+    }
+    if (dog) z.roomFeed(creature.roomId, SUMMER_DANCE_DOG_LINE, undefined, false, "evt");
   }
 
 /**

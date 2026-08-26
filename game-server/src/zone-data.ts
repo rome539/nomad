@@ -2169,7 +2169,7 @@ export const NAPPERS = new Set([
   // clock; nothing else was touched.
   "conger", "old-conger", "bittern", "ford-eel", "silver-eel",          // the shore's night shift (see NOCTURNAL)
   "great-gull", "black-backed-gull", "grey-heron", "scarp-raven", // birds roost. A corvid especially: nothing with feathers works the dark
-  "fen-viper",                              // the adder's cousin, and the same animal: a snake is a thing that lies in the sun
+  "fen-viper", "stone-adder", "the-gravid-adder", // the adder and its cousins: a snake is a thing that lies in the sun — the mountain's basking fiction, finally on the clock (mob-audit F5)
   // THE MOUNTAIN'S NIGHT SHIFT, WHICH WAS NEVER ON A CLOCK AT ALL (rome,
   // 2026-08-22). NOCTURNAL is read in exactly one place — inside naps() — and
   // naps() returns on its first line for anything that is not in THIS set. Ten
@@ -2560,7 +2560,10 @@ export const MOON_HOWL_ODDS = 0.5; // per calling creature at moonrise — a cho
 // the room when two of them happen to meet.
 export const DRILL_ODDS = 0.35;         // when two hollow soldiers share a room
 export const DRILL_RANK = new Set(["warden-captain", "forgotten-king", "marrow-king"]); // stood aside for
-export const DRILL_SOLDIERS = new Set(["warden", "warden-surface", "warden-captain", "bone-knight", "last-watchman"]);
+// The road's and the crossing's wardens joined the drill (mob-audit F4): they
+// are wardens — hollow, walking their ground — and they were written after the
+// drill and never added. The office outlived the office out of doors too.
+export const DRILL_SOLDIERS = new Set(["warden", "warden-surface", "warden-captain", "bone-knight", "last-watchman", "the-long-warden", "the-tide-warden"]);
 export const DRILL_LINES = [
   "{a} and {b} pass each other, and each brings a fist to its chestplate. Neither slows. Neither looks.",
   "{a} steps aside to let {b} by, boots grinding a quarter-turn on the stone, and falls back into step behind nothing.",
@@ -2570,6 +2573,133 @@ export const DRILL_LINES = [
 export const DRILL_RANK_LINES = [
   "{b} passes, and {a} goes rigid against the wall — helm up, eyes on nothing, holding the salute long after there is anyone to hold it for.",
   "{a} drops to one knee as {b} comes through, and stays down until the sound of it is gone.",
+];
+// THE CROSSING'S DEAD AT WORK (mob-audit F1). The HOLLOW comment has described
+// these since mig 191 and nothing ever performed them — the dead out there are
+// still AT WORK, each one going through the last motion of the job it died at,
+// when somebody is standing there to see it. The drill's law, told wet: costs
+// nothing, changes nothing, performed forever.
+export const DEAD_WORK_ODDS = 0.03; // per idle tick, per worker
+export const DEAD_WORK_LINES: Record<string, string[]> = {
+  "the-tide-warden": [
+    "The tide-warden takes out his knife and cuts a notch into the post — one more line in a record no one keeps but him. He checks the water, then the mark, and is satisfied with both.",
+    "The tide-warden sets his knife to the wood and cuts, small and sure, where the tide's own mark would go. The record is exact. The water does not care, and he has never once cared whether it did.",
+  ],
+  "the-bridge-mason": [
+    "The bridge-mason taps at the dressed edge of his finished arch with a dead hammer, checking a joint that closed two centuries ago. The work is done. He is not.",
+    "The bridge-mason goes on dressing the last stone past the edge, where the span stops and the air begins. There is no next stone. There has never been a next stone, and he is still working toward it.",
+  ],
+  "the-drover": [
+    "The drover whistles once, low, and walks on as if something walked ahead of him. Nothing does. Nothing has, for a very long time, and he has not noticed.",
+    "The drover turns and calls to the drove — a short, practised sound that used to turn a hundred beasts. The road is empty behind him. He waits the right moment, and then walks on.",
+  ],
+  "the-eel-cutter": [
+    "The eel-cutter hauls his line up hand over hand, reading each empty hook with the same small nod before he lets it back down. The line has been empty so long the hooks have forgotten what they were for. He has not.",
+    "The eel-cutter works along his line, setting a hook here, drawing one there, in an order that means something to nobody but him. The water gives back nothing, and he goes on taking it.",
+  ],
+  "the-fowler": [
+    "The fowler lies still in the hide with the slot before him, watching water no birds have used in generations. He will be here when they come. The only thing he does not know is that they are not coming.",
+    "In the hide, the fowler settles himself exactly, the way a man settles for a long wait, and goes still. The wait has been the long part. He has never once complained about it.",
+  ],
+  "the-reed-walker": [
+    "The reed-walker is behind you, where it has been, moving when you move and stopping when you stop, the way it always has. It is not following you. It is walking with you, and it will not say which is worse.",
+    "The reed-walker keeps your pace on the far side of the reed, visible in snatches, patient as weather. Whatever it is waiting for, you are part of the route to it, and it is in no hurry.",
+  ],
+  "the-salt-widow": [
+    "The salt-widow bends over the cold pan and stirs it, once, the way you stir a boil that is about to take. The pan is cold and dry and has been for two centuries. The stirring is still perfect.",
+    "The salt-widow works the empty pan with the old rake, drawing the salt that is not there into ridges that will not form. She has boiled this pan dry a thousand times, and she is boiling it dry again.",
+  ],
+  "the-drowned-ferryman": [
+    "The drowned ferryman comes along the rope hand over hand, the whole crossing in each pull, and arrives nowhere. He turns, and comes back. The far bank has moved no closer in two centuries, and he has never once asked it to.",
+    "The ferryman hauls himself along the rope, hand over hand, feet trailing in the water, taking the crossing the way he always took it. There is no boat and no fare. There is only the crossing, and he is still on it.",
+  ],
+  "the-pilot": [
+    "The pilot consults the water the way a man reads a channel, finding a line no longer there. He has been finding it every day for two centuries, and it has never been wrong.",
+    "The pilot leans over the rail and reads the water with the whole of his drowned attention — the set of it, the run of it — and knows exactly where the boat should go. The boat is not coming. The water does not know, and he does.",
+  ],
+  "the-scaffold-hand": [
+    "The scaffold-hand hangs in the rotted harness, upside down, and goes on dressing the stone beneath him with the same small careful strokes. The rope will not hold much longer. It has not held for a long time, and it is not asked to.",
+    "Upside down in the harness, the scaffold-hand works the chisel along the stone, patient as if he had all day and a wage at the end of it. The day has lasted two centuries. The wage has not come, and he is not behind.",
+  ],
+  "the-refuge-man": [
+    "The refuge-man stands inside the stone box and waits, the way a man waits out weather he can hear coming. The weather came and went before the box was built. He is still waiting it out, and he will be right when it passes.",
+    "The refuge-man holds the door of the refuge a hand's width open and listens, still as a hare. Whatever he is listening for passed long ago. The listening is the last thing he has, and he keeps it.",
+  ],
+  "the-miller": [
+    "The miller stands waist-deep in his flooded ground floor and goes on turning the air where the stone used to be, one slow turn at a time. The wheel is gone, the grain is gone, the water has come and stayed. The miller has not stopped.",
+    "The miller wades a slow half-circle through his own ground floor, reaching where the hopper hung, checking a measure that no longer matters. The mill drowned long ago. He kept the hours, and the hours kept him.",
+  ],
+};
+// THE BONE-DROP (mob-audit F3). The lammergeier is named for the most famous
+// bird behaviour there is — carrying a bone up and letting it fall so the rock
+// cracks it open for the marrow — and the world kept the name secret. It is
+// performed now: the drop, the wait, the pieces. Costs nothing, changes nothing.
+export const BONE_DROP_ODDS = 0.02; // per idle tick
+export const BONE_DROP_LINES = [
+  "High overhead, the bone-breaker lets go of a bone — it turns as it falls, and it is a long time coming, and it breaks open on the rock below with a sound like one slow knock. Then it is down on the pieces.",
+  "The bone-dropper carries a rib up to the height, turns it in the air, and lets it fall. It is not dropping it. It is cracking it open for the marrow, the way it has always done, and the rock is the tool.",
+];
+export const BONE_DROP_SOUND = "Something falls from the height {dir} and breaks open on the rock.";
+// THE GHOST-FLOCK (mob-audit F2). The summer people keep a flock that is not
+// there, and the last dog circles a home with no sheep in it — the PROVISIONED
+// comment described all of it and no code ever performed it. Now it performs,
+// when somebody is standing on the pasture to see it. Costs nothing, changes
+// nothing.
+export const GHOST_FLOCK_ODDS = 0.02; // per idle tick
+export const GHOST_FLOCK_LINES: Record<string, string[]> = {
+  "the-herd": [
+    "The herd walks the edge of the pasture and calls, once, a sound that used to turn a hundred sheep. The pasture is empty and has been since before he died. The call is still made, on the hour, exactly as if it worked.",
+    "The herd stands at the gate of the fold, waiting, while a flock that is not there comes through it in his head. He closes the gate behind the last of nothing, and is satisfied.",
+  ],
+  "the-milker": [
+    "The milker sits on the worn slab and milks the air with both hands, in the old rhythm, into a pail that will never be full. The beasts are gone. The morning is not.",
+    "The milker sets his stool at the fold and goes through the whole of it — the sitting, the reaching, the two-handed pull — for a herd that is not there. It has kept him through two centuries, this work, and it is keeping him now.",
+  ],
+  "the-last-dog": [
+    "The last dog circles the empty fold once, nose down, and then lies in the gate the way a dog lies where the sheep are. There are no sheep. It knows. It lies there anyway, because somebody must.",
+    "The last dog gets up, circles the pasture at a trot, and comes back to the gate, having herded nothing anywhere. It is the whole of the flock now. It does the whole of the work.",
+  ],
+  "the-one-who-stayed": [
+    "The one who stayed stands in the door of the shieling and looks down the mountain the way the others went, every evening, to see if they are coming back. They are not. The looking is the last of the summer, and he keeps it.",
+    "The one who stayed feeds the fire and sits, and does not say who or why, because it has stopped mattering and it has also stopped being asked.",
+  ],
+  "the-butter-wife": [
+    "The butter-wife works the churn — up, down, up, down — with nothing in it, the old stroke exactly. The churn has been empty for two centuries, and the butter has never once failed to come, in her mind, on the hour.",
+    "The butter-wife sets the churn between her knees and works it, listening for the sound it will make when it turns. It turned a long time ago. She is still hearing it.",
+  ],
+};
+// THE CHAINMAN'S COUNT (mob-audit F5). He carries the flail and works the
+// chain — the last motion of the ferry's own trade, counted link by link.
+export const CHAINMAN_COUNT_ODDS = 0.02; // per idle tick
+export const CHAINMAN_LINES = [
+  "The chainman takes the chain up link by link through his hands, counting what it owes him and what he owes it, and sets it down again in a coil no tighter than the day before. The count never changes. He counts it anyway.",
+  "The chainman walks the length of the chain and back, setting each link straight with the toe of his boot, the way you settle a rope that must not snag. It has not moved in two centuries. It must not snag.",
+];
+// THE SUMMER DANCE. Every year, on the last night before going down, the whole
+// household danced a circle on the summer ground, the dog lying at the edge.
+// They are dead, the season never ended for them, and on some nights whoever is
+// left still dances it — the circle wide for the missing, the pipe going in a
+// head that will not stop. Held for a verse, then they go back to the flock
+// that is not there. Costs nothing, changes nothing but the night.
+export const SUMMER_PEOPLE = new Set(["the-herd", "the-milker", "the-one-who-stayed", "the-butter-wife"]);
+export const SUMMER_DANCE_ODDS = 0.01; // per idle tick, per person, at night — a rare thing, and it must stay rare
+export const SUMMER_DANCE_MS = 24_000; // one verse, held
+export const SUMMER_DANCE_BEGIN_LINES = [
+  "{a} steps out onto the summer ground and begins the dance — the old circle, the steps nobody taught anybody, a pipe going on in a head that has not stopped since the last night of the summer.",
+  "{a} comes out into the open and starts the dance the summer people danced on the last night before they went down — alone now, the circle wide for everyone missing from it, and the steps kept perfectly.",
+];
+export const SUMMER_DANCE_JOIN_LINES = [
+  "{b} falls in beside {a}, finding the old place in the circle as if the circle were still whole.",
+  "{b} steps out and takes a place in the circle, across from {a}, where there was always a place, and dances it.",
+];
+export const SUMMER_DANCE_DOG_LINE = "The last dog lies at the edge of the circle and watches, the way it watched when the circle was full.";
+export const SUMMER_DANCE_END_LINES = [
+  "The dance ends, and they stand a moment where the circle was, and then go back to the flock that is not there, one by one, without a word.",
+  "The dance stops the way it always stopped — all at once, on the same step — and the summer ground goes back to being empty, and they go back to keeping it.",
+];
+export const SUMMER_DANCE_SOUNDS = [
+  "A pipe, faint and off-key, comes {dir} — a tune nobody is playing.",
+  "Somewhere near, a pipe plays the same few notes over and over {dir}, patient as a season.",
 ];
 // THE CANTOR SINGS. He is called a cantor and has never once sung. When he
 // does, every hollow thing that can hear him stops where it stands and holds
