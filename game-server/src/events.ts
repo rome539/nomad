@@ -98,8 +98,17 @@ const POOL: [string, number, string][] = [
   ["rut", 2, "wood"], ["walk", 1, "wood"], ["quiet", 2, "wood"],
   // THE DEN GROUND — 60 rooms, likewise
   ["pack", 2, "den"], ["fever", 2, "den"],
-  // THE MOUNTAIN — its one arc is a presence, not a weather: the drake's passage.
-  ["shadow", 2, "mountain"],
+  // THE MOUNTAIN — its one arc is a presence, not a weather, and it is NOT DRAWN
+  // FOR (rome, 2026-08-26). The shadow used to sit here at weight 2 of 45, which
+  // put a passage over the mountain about once every thirty-four hours, on a die
+  // that knew nothing about the animal casting it — an apex predator hunting
+  // because the sky rolled a two, and never because it was hungry.
+  //
+  // The animal owns it now. It gets hungry, it decides to fly, and it opens this
+  // arc itself (beginShadow, called from ai.drakePassage) — so the shadow is the
+  // world's WORD for the drake leaving rather than the reason it left. Nothing
+  // else claims the mountain band, so taking it out of the draw costs the pool
+  // nothing and frees the roll to spend every ticket on ground that has weather.
   // ["breach", 1, "upper"], — PARKED (rome, 2026-07-11: "park the breech"). The
   // whole arc (tickBreach, BREACH_PAIRS, the wall prose) stays built and idle;
   // restoring it is uncommenting this ticket.
@@ -316,6 +325,39 @@ export function fevered(z: ZoneDO, roomId: string): boolean {
 // THE SHADOW is over the mountain: the drake's passage, and only while it runs.
 export function shadowing(z: ZoneDO, roomId: string): boolean {
   return phaseOf(z, "shadow") === "active" && z.world!.rooms.get(roomId)?.region === "mountain";
+}
+
+// ...and when it lifts. The passage (ai.drakePassage) spaces its legs to fit
+// whatever is left of this, so the animal is on the rock again the beat the
+// shadow ends. The shadow IS the animal; the two of them finishing at different
+// times is the exact lie the passage was built to close.
+export function shadowUntil(z: ZoneDO): number {
+  const st = z.events.get("shadow");
+  return st && st.phase === "active" ? st.until : 0;
+}
+
+/**
+ * THE ANIMAL OPENS ITS OWN ARC. Called by ai.drakePassage when the summit's
+ * animal is hungry enough to fly — the one arc in this file that is not drawn
+ * for (see the POOL note where the shadow's ticket used to be).
+ *
+ * IT STILL TELEGRAPHS. The law at the top of this file is that nothing hits a
+ * player the world didn't announce, and being decided by an appetite rather than
+ * a die does not buy an exemption: this opens the TELEGRAPH, and the ordinary
+ * clock below carries it into active SHADOW_TELEGRAPH_MS later, which is when
+ * the drake actually lifts. That gap is the mountain feeling it coming.
+ *
+ * Returns false if an arc is already mid-run, so a hungry animal cannot stack
+ * two passages or restart its own.
+ */
+export function beginShadow(z: ZoneDO, now: number): boolean {
+  let st = z.events.get("shadow");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("shadow", st); }
+  if (st.phase !== "idle") return false;
+  st.phase = "telegraph";
+  st.until = now + SHADOW_TELEGRAPH_MS;
+  z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "A shadow crosses the slope ahead — long, and nothing overhead to have cast it. The rock is cold underfoot for one heartbeat.", "evt");
+  return true;
 }
 
 export function coldTorchMult(z: ZoneDO, roomId: string): number {
@@ -1049,16 +1091,31 @@ async function tickShadow(z: ZoneDO, now: number): Promise<void> {
   }
   if (now < st.until) return;
   switch (st.phase) {
-    case "idle": {
-      st.phase = "telegraph";
-      st.until = now + SHADOW_TELEGRAPH_MS;
-      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "A shadow crosses the slope ahead — long, and nothing overhead to have cast it. The rock is cold underfoot for one heartbeat.", "evt");
-      break;
-    }
+    // NO `idle` CASE, and its absence is the change: every other arc in this
+    // file opens here when the roll hands it a ticket, and this one is opened by
+    // the ANIMAL instead (beginShadow, from ai.drakePassage). An idle shadow
+    // parks at NEVER like all the rest, so a branch here would be unreachable
+    // code pretending the die still owns this.
     case "telegraph": {
       st.phase = "active";
       st.until = now + randInt(SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS);
-      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Something very large is moving the air above the mountain. Every living thing has gone to ground, and you can feel it waiting to come back up.", "evt");
+      // THE ANIMAL SPEAKS FOR ITSELF NOW (2026-08-26). This used to announce a
+      // passage that never happened — see the ruling above DRAKE_RANGE. The
+      // passage is real from here (ai.drakePassage runs later in this same
+      // tick), and it says its own departure to the whole mountain, so a line
+      // here would be the same news twice.
+      //
+      // THE FALLBACK IS FOR THE ARC WITHOUT AN ANIMAL: it can be dead, or hurt,
+      // or in a fight it will not leave. The conditions below MIRROR the
+      // departure gate in drakePassage exactly, so the mountain is never both
+      // silent and empty-skied — if nothing is going to fly, the old line runs.
+      let flying = false;
+      for (const c of z.creatures.values()) {
+        if (!SUMMIT_BOSSES.has(c.templateId)) continue;
+        const t = z.world!.mobTemplates.get(c.templateId);
+        if (t && !c.target && !c.asleep && c.hp >= t.max_hp) { flying = true; break; }
+      }
+      if (!flying) z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Something very large is moving the air above the mountain. Every living thing has gone to ground, and you can feel it waiting to come back up.", "evt");
       break;
     }
     case "active": {

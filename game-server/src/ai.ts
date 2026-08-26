@@ -28,6 +28,7 @@ import {
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
+  DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
@@ -605,6 +606,12 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
     let struck = false;
     for (const creature of z.creatures.values()) {
       if (creature.roomId !== session.roomId || creature.target) continue;
+      // A grudge needs the thing holding it to BE HERE. A boss never forgets
+      // (forgetMs returns Infinity for one), so without this the summit's animal
+      // would remember you from a hundred miles west and open a fight from the
+      // sky it is currently in — walk into the empty ring it left behind and it
+      // "comes for you" out of nowhere (ai.drakePassage).
+      if (creature.aloft !== undefined) continue;
       // A sleeping grudge-holder sleeps through your entry — unless the
       // entry-noise roll (wakeListeners) wakes it, and THEN it remembers you.
       // SENTINELS (the deep's hound) don't use the generic asleep flag at all —
@@ -3486,6 +3493,206 @@ export function airborne(creature: Creature, now = Date.now()): boolean {
     return creature.airborneUntil !== undefined && now < creature.airborneUntil;
   }
 
+// ---------------------------------------------------------------------------
+// THE PASSAGE. The design ruling and the geography are in zone-data above
+// DRAKE_RANGE; this is the machine. Called once a tick from the spine, not per
+// creature, because it is one animal doing one thing to the whole world.
+//
+// OFF THE MAP IS THE WHOLE TRICK. While `aloft` is set, creaturesInRoom skips
+// the creature — so the bowl is genuinely empty to the room description, to the
+// chips, to targeting, to every count the ecology takes. One filter, one place,
+// and nothing else in the game had to learn a new state. The creature is still
+// in z.creatures (it must be: this function is what brings it home), which is
+// exactly why the only paths that may read it directly are the ones below.
+
+/**
+ * A wanderer with sky over them, in this band, watching it go by. `except` is
+ * the room that is getting the close-up instead — the ring it lifts out of, the
+ * room the stoop happens in — so nobody is told the same thing twice, once from
+ * underneath it and once from a mile off.
+ */
+function skySight(z: ZoneDO, band: string, text: string, except?: string): void {
+  for (const s of z.sessions.values()) {
+    if (s.roomId === except) continue;
+    if (z.regionOf(s.roomId) !== band || !OUTDOOR_ROOMS.has(s.roomId)) continue;
+    if (z.outOfWorld(s) || z.shelteredInDen(s.pubkey)) continue;
+    z.send(s, text, "evt");
+  }
+}
+
+function overhead(z: ZoneDO, band: string, west: boolean, home: string): void {
+  const line = DRAKE_OVER[band];
+  if (line) skySight(z, band, line.replace("{way}", west ? "west" : "east"), home);
+}
+
+// WHAT IT TAKES. Not a template list — those rot the moment a region ships —
+// but the ecology's own answer to "is this an animal": it has a FAMILY. That
+// excludes the provisioned men, the sentinels and the Gaunt (mobFamily returns
+// null for all of them, deliberately), and the two exclusions below cut the
+// families a thing hunting from the air could not take: the hollow are not meat
+// and the drowners are under the water. A boss is not prey to another boss, a
+// hidden lurker is hidden from above as well as from you, and something already
+// held in another animal's jaws is somebody else's kill.
+function stoopTarget(z: ZoneDO, band: string): Creature | null {
+  const world = z.world!;
+  const found: Creature[] = [];
+  for (const c of z.creatures.values()) {
+    if (c.aloft !== undefined || c.hidden || c.heldBy) continue;
+    if (z.regionOf(c.roomId) !== band || !OUTDOOR_ROOMS.has(c.roomId)) continue;
+    const t = world.mobTemplates.get(c.templateId);
+    if (!t || t.is_boss || t.max_hp < DRAKE_PREY_MIN_HP) continue;
+    const fam = mobFamily(t);
+    if (!fam || fam === "hollow" || fam === "drowner") continue;
+    found.push(c);
+  }
+  return found.length ? found[randInt(0, found.length - 1)] : null;
+}
+
+export function drakePassage(z: ZoneDO, now: number): void {
+  const world = z.world;
+  if (!world) return;
+  for (const creature of z.creatures.values()) {
+    if (!SUMMIT_BOSSES.has(creature.templateId)) continue;
+    const tmpl = world.mobTemplates.get(creature.templateId);
+    if (!tmpl) continue;
+
+    // ---- it is out ----
+    if (creature.aloft !== undefined) {
+      if (now >= creature.aloft) { drakeLands(z, creature, tmpl); continue; }
+      if (now < (creature.flightAt ?? 0)) continue;
+      const plan = creature.flightPlan ?? [];
+      const idx = (creature.flightIdx ?? 0) + 1;
+      creature.flightIdx = idx;
+      creature.flightAt = now + strideOf(creature, now);
+      if (idx >= plan.length) continue; // the last leg is home; the landing owns it
+      const turn = (plan.length - 1) / 2; // the plan is out-and-back, so the far end is the middle
+      // THE TURN LEG IS STILL OUTBOUND (`idx <= turn`, not `<`): it is arriving
+      // at the far end when it stoops, and only the leg AFTER that is the way
+      // home. Written `<` first, which told the band it was going east while it
+      // was still coming in.
+      //
+      // IT HUNTS THE WHOLE WAY HOME, not only at the far end. Measured off the
+      // spawn table: the bands are nothing like evenly stocked — the crossing
+      // carries 80 bodies over the size bar and the den carries ONE, because a
+      // den is a settlement and settlements keep dogs, not game. A turn that
+      // could only stoop at its far end would come home empty most times it
+      // turned over the dens, which is not an apex predator, it is a dice roll
+      // about which band it picked. So the turn gets first refusal and every
+      // homeward leg gets a try after it — a thing that crossed a world eats on
+      // the way back if the far end was bare. Once it has something in its jaws
+      // (`prey`) it stops looking, because it is carrying with both of them.
+      // ...BUT NEVER OVER ITS OWN MOUNTAIN, which is the ruling this whole
+      // feature was built around: there is nowhere up there to put a body that
+      // size down except the ring it nests in, and the mountain is home ground
+      // that was eaten bare long ago. The last homeward leg is always the
+      // mountain, so without this the hungry return would hunt it.
+      const hunting = idx >= turn && creature.prey === undefined && plan[idx] !== DRAKE_RANGE[0];
+      // A band gets ONE event, and the stoop is the better one: it only merely
+      // passes over if there was nothing down there worth taking.
+      if (!(hunting && drakeStoops(z, creature, plan[idx]))) {
+        overhead(z, plan[idx], idx <= turn, creature.roomId);
+      }
+      continue;
+    }
+
+    // ---- can it go at all ----
+    // Only whole, and NEVER out of a fight: a thing that vanished into the sky
+    // with your blood on it would be an escape mechanic, and this world does not
+    // let a boss leave a fight it is losing. A sleeping animal is not hunting.
+    const able = !creature.target && !creature.asleep && creature.hp >= tmpl.max_hp;
+
+    // ---- it gets hungry, and THAT is what puts it in the air ----
+    // The arc used to be the cause and the appetite was pinned at zero by
+    // PROVISIONED, which made an apex predator fly because the weather die came
+    // up two. Hunger is the cause now (rome, 2026-08-26) and the shadow is only
+    // the mountain's word for it: crossing HUNGRY_AT opens the arc, the arc
+    // telegraphs for SHADOW_TELEGRAPH_MS, and the lift happens below when that
+    // telegraph turns active. The rest between flights is DRAKE_HUNT_WAIT_MS —
+    // without it an animal that came home empty is still hungry on landing and
+    // would open the next arc in the same breath.
+    if (able && creature.hunger >= HUNGRY_AT && now >= (creature.nextHuntAt ?? 0)
+        && events.phaseOf(z, "shadow") === "idle") {
+      if (events.beginShadow(z, now)) creature.nextHuntAt = now + DRAKE_HUNT_WAIT_MS;
+      continue;
+    }
+
+    // ---- it goes ----
+    if (events.phaseOf(z, "shadow") !== "active" || !able) continue;
+    const until = events.shadowUntil(z);
+    if (until <= now + 60_000) continue; // not enough arc left to make the trip
+    const turn = randInt(DRAKE_TURN_MIN, DRAKE_RANGE.length - 1);
+    const out = DRAKE_RANGE.slice(0, turn + 1);
+    creature.flightPlan = [...out, ...out.slice(0, -1).reverse()];
+    creature.flightIdx = 0;
+    creature.aloft = until;
+    creature.flightAt = now + strideOf(creature, now);
+    creature.prey = undefined;
+    releaseHold(z, creature);
+    for (const s of z.sessions.values()) if (s.target === creature.id) s.target = null;
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} opens out, and the ring of run stone is suddenly a much smaller place than it was. It goes up off the rim without looking at you at all, and west. You are standing in an empty bowl.`);
+    skySight(z, "mountain", "Something comes up off the summit, and keeps coming up, and then it is over you and going west. Every living thing on this mountain has gone into the rock.", creature.roomId);
+    z.creatureNoise(creature.roomId);
+    z.noteCreaturesChanged(); // it is off the map from this instant: no room holds it
+    z.refreshRoomCtx(creature.roomId);
+  }
+}
+
+// The legs are spaced to fit whatever is left of the arc, so it is always home
+// on the beat the shadow lifts — the shadow IS the animal, and the two of them
+// ending at different times would put the lie straight back.
+function strideOf(creature: Creature, now: number): number {
+  const legs = Math.max(1, (creature.flightPlan?.length ?? 1) - (creature.flightIdx ?? 0));
+  return Math.max(4_000, Math.round(((creature.aloft ?? now) - now) / legs));
+}
+
+// THE STOOP. It never lands: the room goes dark, the animal is gone, and the
+// weight that took it is already climbing east. preyFalls is the ordinary
+// creature-killed-by-creature path — spoils on the floor, a corpse trace for
+// the scavengers, migration refilling it like any other death — because that is
+// exactly what this is. The kill leaves the world where it was taken and comes
+// back as remains in the ring, which is the carry made true.
+function drakeStoops(z: ZoneDO, creature: Creature, band: string): boolean {
+  const victim = stoopTarget(z, band);
+  if (!victim) return false; // an empty band is an empty band; it goes home hungry
+  const world = z.world!;
+  const vt = world.mobTemplates.get(victim.templateId)!;
+  const roomId = victim.roomId;
+  z.roomFeed(roomId, `The whole room goes dark at once — and ${vt.name} is simply not there any more. Something enormous is already climbing away east with it, and it never touched the ground.`);
+  z.roomSound(roomId, "Something screams once {dir}, a long way up, and is cut off.");
+  skySight(z, band, "Something screams a long way off, high up, and stops before it should.", roomId);
+  preyFalls(z, victim, vt);
+  creature.prey = vt.name;
+  z.refreshRoomCtx(roomId);
+  return true;
+}
+
+// IT COMES BACK, and if you are still in the ring you are in the ring with it.
+// Nothing here makes that happen: it is AGGRESSIVE, so the next ordinary beat
+// sets it on whoever is standing there. You were told it was coming — you
+// watched it go the other way.
+function drakeLands(z: ZoneDO, creature: Creature, tmpl: MobTemplate): void {
+  const prey = creature.prey;
+  creature.aloft = undefined;
+  creature.flightPlan = undefined;
+  creature.flightIdx = undefined;
+  creature.flightAt = undefined;
+  creature.prey = undefined;
+  creature.nextWanderAt = Date.now();
+  if (prey) {
+    creature.hunger = 0;
+    creature.hp = Math.min(tmpl.max_hp, creature.hp + SCAVENGER_HEAL);
+    z.addTrace(creature.roomId, { kind: "remains", at: Date.now(), label: prey });
+    skySight(z, "mountain", "It comes back over the mountain lower and slower than it went, and it is carrying something. Whatever it took was not small.", creature.roomId);
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} comes down into the ring with ${prey} hanging out of its jaws, and the whole floor takes the weight at once.`);
+  } else {
+    skySight(z, "mountain", "It comes back over the mountain empty-handed, and it comes back fast.", creature.roomId);
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} drops back into the ring with nothing in its jaws. It stands over the swept rock for a while and does not settle.`);
+  }
+  z.creatureNoise(creature.roomId);
+  z.noteCreaturesChanged(); // it is on the map again — the bowl has its animal back
+  z.refreshRoomCtx(creature.roomId);
+}
+
 // THE HILL IS TOLD (rome, 2026-08-21). The King answers a fight out loud — his
 // phase line rolls through the whole fortress on FORTRESS_BANDS — and the drake
 // said nothing past the room it was standing in. A thing that size being set
@@ -3661,7 +3868,11 @@ export function hungerRate(z: ZoneDO, creature: Creature): number {
   // treating a lone wanderer as meat. It stacks with the cold, deliberately: a
   // starveling in a cold snap is the animal that comes at you.
   const starving = creature.traits?.includes("starveling") ? MOB_STARVELING_MULT : 1;
-  return (events.coldBites(z, creature.roomId) ? HUNGER_PER_MIN * COLD_HUNGER_MULT : HUNGER_PER_MIN) * starving;
+  // ...and the summit's animal burns it far slower than anything else alive: it
+  // eats seldom and enormously, and its appetite is now the ONLY thing that puts
+  // it in the air (drakePassage), so this constant is the passage's cadence.
+  const big = SUMMIT_BOSSES.has(creature.templateId) ? DRAKE_HUNGER_MULT : 1;
+  return (events.coldBites(z, creature.roomId) ? HUNGER_PER_MIN * COLD_HUNGER_MULT : HUNGER_PER_MIN) * starving * big;
 }
 
 export function creaturesIn(z: ZoneDO, roomId: string): number {

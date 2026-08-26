@@ -144,6 +144,14 @@ export interface Creature {
   nextBreathAt?: number;  // ...and the soonest it may draw another
   airborneUntil?: number; // THE SUMMIT: ms it is off the ground. Nothing swung can reach it while this holds; a thrown weapon still can
   nextAirAt?: number;     // ...and the soonest it may go up again
+  // THE PASSAGE (ai.drakePassage). The air ABOVE is a fight; this is the air
+  // ACROSS — the summit's animal off its mountain entirely, hunting the world.
+  aloft?: number;      // ms it comes back down. While this is set the creature is OFF THE MAP: creaturesInRoom skips it, so no room holds it and nothing can reach it
+  flightPlan?: string[]; // the bands it crosses, out and home again (the route is a line because the world is one)
+  flightIdx?: number;    // how far along that line it is
+  flightAt?: number;     // ms of its next leg
+  prey?: string;         // what it took, riding home in its jaws (the display name, for the lines and the trace)
+  nextHuntAt?: number;   // ...and the soonest it will set out again, hungry or not: an animal that just crossed a world rests before it does it twice (DRAKE_HUNT_WAIT_MS)
   hurtBy?: string[]; // BOSSES only: every pubkey whose blow drew blood — when the boss falls, all of them share the horror on their sheet (assist credit; the kill itself stays the killer's)
 }
 

@@ -1891,8 +1891,12 @@ export function cmdRest(z: ZoneDO, session: Session): void {
   // hasn't turned on you yet — a rat in the corner is a knife waiting to be
   // drawn. (A hidden lurker doesn't block it: you don't know it's there, and
   // resting into its jaws is exactly the risk it lives on.)
+  // (Nor does one that is OFF THE MAP — the summit's animal out over the world
+  // is not sharing the room with you, and an empty ring is a legal place to
+  // sleep. It landing on you while you lie in it is the risk, and that is a
+  // different rule; see ai.drakePassage.)
   const menace = [...z.creatures.values()].find(
-    (c) => c.roomId === session.roomId && !c.hidden,
+    (c) => c.roomId === session.roomId && !c.hidden && c.aloft === undefined,
   );
   if (menace) {
     const mt = z.world!.mobTemplates.get(menace.templateId)!;
@@ -2079,7 +2083,8 @@ function heardIn(z: ZoneDO, roomId: string): string {
   // The loudest standing thing: a bespoke voice if it has one, else its
   // family's register. More than one audible and the ear can tell.
   const audible = [...z.creatures.values()].filter(
-    (c) => c.roomId === roomId && !(LURKERS.has(c.templateId) && c.hidden),
+    (c) => c.roomId === roomId && c.aloft === undefined // ...nor a thing that is off over the world (ai.drakePassage)
+      && !(LURKERS.has(c.templateId) && c.hidden),
   );
   const parts: string[] = [];
   if (audible.length > 0) {

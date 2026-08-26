@@ -3770,10 +3770,18 @@ export class ZoneDO implements DurableObject {
     // on the slow clock instead. The boss and the loosed Gaunt never freeze:
     // their dramas are map-scale, and they must keep unfolding unwatched.
     const liveRooms = this.liveRooms();
+    // ...WITH ONE THING THAT IS NEITHER FROZEN NOR HERE. A creature off the map
+    // (aloft — ai.drakePassage) skips the ordinary round entirely: it is not in
+    // the room it names, so it must not sleep in it, hunt in it, perform a habit
+    // line into it, or be bled by a wound in it. Its whole beat is the passage,
+    // which the spine runs separately. This gate gets it because BOTH per-
+    // creature loops read it, which is the only reason it belongs here rather
+    // than at seven call sites.
     const live = (c: Creature) =>
-      !liveRooms || liveRooms.has(c.roomId)
-      || c.templateId === ESCAPE_TMPL
-      || world.mobTemplates.get(c.templateId)!.is_boss;
+      c.aloft === undefined
+      && (!liveRooms || liveRooms.has(c.roomId)
+        || c.templateId === ESCAPE_TMPL
+        || world.mobTemplates.get(c.templateId)!.is_boss);
     const heldBack = new Set<string>();
     if (combatRound) for (const creature of this.creatures.values()) {
       if (!live(creature)) {
@@ -4920,6 +4928,10 @@ export class ZoneDO implements DurableObject {
     this.applyRegrow(now, false);
     ai.applyArrivals(this, now, false);
     ai.scheduleArrivals(this, now);
+    // THE PASSAGE: the summit's animal leaves its mountain on the shadow and
+    // hunts the world. Once a tick and world-level, not per creature — it is
+    // one animal doing one thing to every band at once (ai.drakePassage).
+    ai.drakePassage(this, now);
     // While the deep door is SEALED, the deep coughs one of its own up into the
     // shallows on a slow clock — the world minting the corpse-key. Once someone's
     // heart opens the door (or the King's death re-seals it), the clock just idles.
@@ -6021,6 +6033,13 @@ export class ZoneDO implements DurableObject {
     if (!this.byRoomValid) {
       const m = new Map<string, Creature[]>();
       for (const c of this.creatures.values()) {
+        // OFF THE MAP (ai.drakePassage): the summit's animal, out over the world
+        // and in no room at all. Skipping it HERE is the whole implementation of
+        // being gone — the room description, the chips, targeting, the crowd
+        // counts and the ecology all read this index, so the bowl is empty to
+        // every one of them at once. Its roomId still says the summit, because
+        // that is where it comes back to.
+        if (c.aloft !== undefined) continue;
         const list = m.get(c.roomId) ?? [];
         list.push(c);
         m.set(c.roomId, list);
@@ -6366,6 +6385,13 @@ export class ZoneDO implements DurableObject {
     }
     for (const creature of this.creatures.values()) {
       if (creature.roomId !== room.id) continue;
+      // OFF THE MAP is not "hidden": the summit's animal is out over the world
+      // and the ring is genuinely empty (ai.drakePassage). It keeps the summit
+      // as its roomId because that is where it lands, so this scan — which reads
+      // the creature table rather than the room index — has to say so itself.
+      // The empty bowl IS the prize; printing the animal into it would hand back
+      // the whole passage.
+      if (creature.aloft !== undefined) continue;
       const t = world.mobTemplates.get(creature.templateId)!;
       // A lurker lying in wait is unseen — it isn't in the room at all, until it
       // strikes. UNLESS you carry a flame: torchlight finds it pressed into its
@@ -6640,6 +6666,14 @@ export class ZoneDO implements DurableObject {
     let seen = 0;
     for (const creature of this.creatures.values()) {
       if (creature.roomId !== roomId) continue;
+      // ...AND SO IS A THING THAT IS OFF THE MAP. This scan reads the creature
+      // table directly rather than the room index, so it does not get the aloft
+      // filter for free (ai.drakePassage) — and the summit's animal keeps the
+      // summit as its roomId the whole time it is out over the world, because
+      // that is where it comes home to. Without this line you could stand in an
+      // empty bowl and open a fight with something a hundred miles west of you.
+      // Exactly the lurker's rule below, for the opposite reason.
+      if (creature.aloft !== undefined) continue;
       const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
       if (nameMatches(tmpl.name, rest) && ++seen === nth) return creature;
     }

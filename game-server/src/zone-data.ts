@@ -3486,17 +3486,26 @@ export const PROVISIONED = new Set([
   // description says how that is going. Provisioning it is the only way it does
   // not quietly starve out of the world at the cap.
   "the-herd", "the-milker", "a-fold-dog",
-  // THE SUMMIT'S ANIMAL (mig 237), and this is the set its own design note asks
-  // for in as many words: "prey it carries home from four tiers down, because
-  // everything near home was eaten a long time ago." Its larder is off-screen by
-  // authorship. There is nothing alive on the summit to hunt and nothing dead on
-  // it to scavenge — the note is equally explicit that the nest is kept clean and
-  // the room is swept rock — so every route this table has would be a lie about
-  // that room. Without this it banked to the cap and stood up there advertising
-  // "restless with hunger" forever, which is not a hungry animal, it is a broken
-  // one: past STARVING_AT it also sat permanently in the turn-on-you state, so
-  // the hardest fight in the game was in its worst mood by accident.
-  "the-drake", "the-pale-drake"]);
+  // THE SUMMIT'S ANIMAL IS NO LONGER ON THIS LIST (rome, 2026-08-26: hunger is
+  // the only fitting reason for it to fly). It was here from mig 237 because
+  // there is nothing alive on the summit to hunt and nothing dead on it to
+  // scavenge — the nest is kept clean and the room is swept rock — so every
+  // feeding route this table had would have been a lie about that one room, and
+  // without the flag it banked to the cap and stood up there advertising
+  // "restless with hunger" forever.
+  //
+  // IT HAS A REAL ROUTE NOW, and it is the one its own design note always asked
+  // for: "prey it carries home from four tiers down." It gets hungry, and the
+  // hunger is what puts it in the air — off the mountain, west over the world,
+  // and home to the ring with the kill (ai.drakePassage). Appetite drives the
+  // animal and the shadow is only what the mountain calls it going.
+  //
+  // AND STARVING IT IS SAFE, checked rather than assumed: it is not in
+  // STARVE_HUNTERS, and starvingHunts() excludes everything AGGRESSIVE in any
+  // case, so a run of empty skies costs it the look-line and nothing else. A
+  // hungry apex predator reading as hungry is the correct outcome, so there is
+  // no artificial floor under it.
+  ]);
 // REVENANTS don't stay down: put one to 0 and it RISES ONCE, at part health, and
 // comes again. The second death is the real one. A longer fight, not a lost one.
 export const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);
@@ -4367,6 +4376,85 @@ export const DRAKE_AIR_EVERY_MS = 75_000;
 export const DRAKE_AIR_AT = 1 / 3;           // ...and never before the last third of its health
 export const DRAKE_DIVE_MIN = 7;
 export const DRAKE_DIVE_MAX = 12;
+
+// ---------------------------------------------------------------------------
+// THE PASSAGE (rome, 2026-08-26). The air above the ring was the only flying
+// this animal did. Two things in the world were already saying otherwise:
+//
+//   THE SHADOW ARC told the whole mountain that something very large was moving
+//   the air above it, for eight to fourteen minutes at a stretch, while the
+//   animal lay in its bowl with its head on its forelimbs and never moved.
+//
+//   PROVISIONED fed it off-screen, and said why in as many words: "prey it
+//   carries home from four tiers down." The carry was AUTHORSHIP. Nothing on
+//   the summit is alive to hunt because the summit was eaten a long time ago,
+//   so its larder had to be somewhere the sim could not see.
+//
+// Now it goes and gets it. The arc is the animal leaving, and while it is gone
+// the bowl is EMPTY — which is the whole prize, and nothing anywhere announces
+// it. You either watched the thing go over your head or you did not.
+//
+// IT DOES NOT LAND ON THE MOUNTAIN, and this is rome's ruling and the reason
+// the route is a table of BANDS rather than rooms: 398 rooms of crag, gully,
+// chimney and slot, and the one place up there shaped to take a body that size
+// is the ring it nests in. Below the summit it is a shadow going over and
+// nothing else. It comes down on open country, a long way west, or not at all.
+//
+// THE ROUTE IS A LINE BECAUSE THE WORLD IS ONE. Measured off the map, east to
+// west: the mountain sits at x68-112, the crossing at 44-69, the road runs
+// -29..43, the open ground at -5..4, the dens at -31..-25 and the wood at
+// -49..-24. A thing leaving the summit and flying west crosses them in exactly
+// this order, so the passage is that order, out to a turn and home again.
+export const DRAKE_RANGE: string[] = ["mountain", "crossing", "road", "out", "den", "wood"];
+// How far west it bothers to go, in legs off the summit. One is the crossing —
+// far enough that the trip is real; the whole list is the wood, which is the
+// far end of the world. Rolled per passage, so the mountain cannot time it.
+export const DRAKE_TURN_MIN = 1;
+// WHAT IS WORTH CROSSING A WORLD FOR. The roster runs 8hp to 175; everything
+// under this line is a rat, a chick or a crab, and an animal that can empty a
+// summit does not make that flight for one. At 20 the table opens at the foxes
+// and the roe deer and takes everything above them.
+export const DRAKE_PREY_MIN_HP = 20;
+// THE REST BETWEEN FLIGHTS. Hunger decides that it flies (rome, 2026-08-26) and
+// hunger has no cooldown of its own — so an animal that came home empty is still
+// hungry the instant it lands, and would open a second arc off the same
+// appetite, and a third, until it caught something. This is the wingbeat's own
+// cost: whatever happened out there, it does not cross the world twice inside
+// half an hour. Long enough that a failed hunt is a bad afternoon rather than a
+// stutter, short enough that it is not a schedule you could set a watch by
+// (hunger reaches HUNGRY_AT in 1h40m from full, so a fed animal is limited by
+// its appetite and only a starving one ever feels this at all).
+export const DRAKE_HUNT_WAIT_MS = 30 * 60_000;
+// AND IT DOES NOT EAT ON A RAT'S CLOCK. HUNGER_PER_MIN is one rate for the whole
+// roster, and on it the summit's animal crosses HUNGRY_AT every hour and forty
+// minutes — which would put a passage over the world a dozen times a day and
+// make the rarest event on the map into weather. A hundred and fifty hit points
+// of apex predator eats seldom and enormously; that is most of what being one
+// means.
+//
+// At 0.35 it wants to hunt about every four and three quarter hours, so the
+// world sees four or five passages a day (an event you remember, not a schedule
+// you plan around) and the bowl stands empty something like four percent of the
+// time — often enough that a climb can genuinely find it gone, seldom enough
+// that nobody is going to farm the tooth by waiting for it.
+//
+// ONE CONSTANT, so the cadence is one edit if it reads wrong in play. Applied in
+// ai.hungerRate; catchUp deliberately uses the flat rate for unobserved time
+// (its own note explains why), so a world waking from a long sleep finds it
+// hungry — which is the correct answer for an animal that has not eaten.
+export const DRAKE_HUNGER_MULT = 0.35;
+// WHAT EACH GROUND SEES WHEN IT GOES OVER. Sky only — a wanderer under a roof
+// or in a cave sees nothing, which is the same test the weather already uses
+// (OUTDOOR_ROOMS), and is why a thing this size can cross the world unseen by
+// somebody sitting in a bothy with the door shut.
+export const DRAKE_OVER: Record<string, string> = {
+  mountain: "Something goes over the crag-line, {way}, and the rock under you is dark for as long as it takes to pass.",
+  crossing: "A shadow crosses the water going {way}, and every bird on the flats goes up at once.",
+  road: "The light comes off the road for a moment. Whatever crossed it was high, and going {way}, and in no hurry at all.",
+  out: "A shadow slides {way} across the open ground, and the crows come off the field in one piece.",
+  den: "Every dog on the ground goes quiet at the same moment. Something passes over the roofs, {way}, and not one of them will look up at it.",
+  wood: "The canopy darkens in a long stripe going {way} and comes light again behind it. The wood has stopped singing.",
+};
 
 // MARKERS brand you. The toll clerk (mig 188) has had his hand out for two
 // centuries, and when he lands a blow the road knows your face: while the mark
