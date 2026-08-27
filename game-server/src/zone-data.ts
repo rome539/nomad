@@ -85,6 +85,31 @@ export const GEAR_FAILING_AT = 12; // falling past this = the urgent last-chance
 // stacked kit floor every hit to 1). Higher K = armor weaker; lower = stronger.
 export const ARMOR_K = 10;
 export const RUST_PER_TICK = 0.001; // per 2s tick while carried in the damp (~55h to rust away)
+// THE THIRD RUST, and the only one that finishes the job. Carried steel rusts at
+// RUST_PER_TICK (~1.8/hour) and a den shelf at DEN_RUST_PER_HOUR (0.45, floored,
+// never destroys) — but gear lying loose on a floor had no clock at ALL, so every
+// piece ever dropped, thrown or spilled off a corpse stayed exactly where it
+// landed for the life of the world. STRAY_DECAY drains the four growing
+// consumables and nothing else; steel was immortal the moment it touched stone.
+// A gate is the worst place for that — the one room every wanderer walks into —
+// and one had gone sixteen pieces deep before anybody counted it.
+//
+// The floor is the HARSHEST of the three: nothing here is keeping it dry, put
+// away, or oiled, and nobody is coming back for it. From pristine that is ~25
+// hours; the scavenged condition most floor gear actually carries is a good deal
+// less. Long enough to walk back for something you set down, far too short to
+// use a floor as a warehouse — which is what the lockbox, the vault and the den
+// shelf are for, and this is the pressure that says so.
+//
+// DELIBERATELY MATERIAL-BLIND, and that is the difference between this law and
+// the other two. Those model THE DAMP, so they read MATERIAL_DAMP and a bone
+// visor barely notices a wet century. This models THE GROUND, which is a
+// different animal: it rusts the steel, rots the hide, splits the wood, gnaws
+// and weathers the bone, and buries whatever is left. Gating it on MATERIAL_DAMP
+// would leave bone and stone gear lying at a gate forever, which is most of the
+// pile this exists to drain. One rate, everything, no table.
+export const FLOOR_RUST_PER_HOUR = 4;
+export const FLOOR_RUST_STEP_MS = 60_000; // the live tick's sweep cadence: a floor sweep is cheap, but not 30 times a minute
 
 // Wounds are felt, not just counted — on BOTH sides of the blade. Below a
 // third of your blood, your blows soften and your hands shake; same for them.

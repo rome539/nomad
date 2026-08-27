@@ -74,7 +74,7 @@ import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, TICK_SLOW_LOG_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
-  WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, materialDamp, MATERIAL_STONE, MATERIAL_BONE, MATERIAL_WOOD, MATERIAL_HIDE, MATERIAL_CLOTH, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
+  WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, FLOOR_RUST_PER_HOUR, FLOOR_RUST_STEP_MS, materialDamp, MATERIAL_STONE, MATERIAL_BONE, MATERIAL_WOOD, MATERIAL_HIDE, MATERIAL_CLOTH, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON,
   STANCE, RECKLESS_MISS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, PADDED_STUN_MULT, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
@@ -435,6 +435,10 @@ export class ZoneDO implements DurableObject {
   // the old whole-world tick, and the rollback switch.
   // ms of the last slow-world advance (not persisted: a restart skips one slow beat, harmless)
   private lastEcologyAt = 0;
+  // ms of the last floor-rust charge. Not persisted either, and it doesn't need
+  // to be: catchUp seeds it from savedAt and walks it to now, so the gap a
+  // restart leaves is charged there rather than lost.
+  private lastFloorRustAt = 0;
   private liveRooms(): Set<string> | null {
     if (!Number.isFinite(SIM_RADIUS)) return null;
     const live = new Set<string>();
@@ -760,6 +764,13 @@ export class ZoneDO implements DurableObject {
     if (!world) return;
     const now = Date.now();
     let t = Math.max(this.savedAt, now - CATCHUP_CAP_MS);
+    // Floor rust is charged ONCE for the whole gap, after the loop, not stepped
+    // through it. The law is linear in elapsed time so the arithmetic is
+    // identical either way — but a sweep walks every floor in the world, and
+    // running it per 60s step would mean up to 20,000 full sweeps on a wake from
+    // a long sleep, on the one thread the whole zone shares. This is the clock it
+    // charges from.
+    this.lastFloorRustAt = t;
 
     while (t < now) {
       const step = Math.min(SIM_STEP_MS, now - t);
@@ -805,6 +816,7 @@ export class ZoneDO implements DurableObject {
       ai.applyArrivals(this, t, true);
       ai.scheduleArrivals(this, t);
     }
+    this.rustFloors(now, true); // the gap's whole weather on the floors, in one pass
     this.pruneTraces(now);
     this.noteCreaturesChanged(); // the whole world just moved, offline
     this.savedAt = now;
@@ -4917,6 +4929,7 @@ export class ZoneDO implements DurableObject {
     }
 
     this.applyRot(now, false);
+    this.rustFloors(now, false); // and the slower drain, on gear, which nothing else touches
     this.sweepSpoiledHearts(now, false);
     // Every armStrayDecay caller is an EVENT (a drop, a throw, a spill), so a
     // pile that predates its timers would sit there forever with nothing to
@@ -5230,6 +5243,96 @@ export class ZoneDO implements DurableObject {
       for (let i = pending; i < n; i++) {
         this.rot.push({ itemId, roomId, at: Date.now() + randInt(d.min, d.max), kind: d.kind });
       }
+    }
+  }
+
+  // THE GROUND TAKES IT (rome, 2026-08-27, on a gate floor sixteen pieces deep:
+  // gear should be degrading out of the floor). Loose gear loses condition on
+  // the wall clock wherever it lies, and at zero it is gone. This is the drain
+  // the world never had: STRAY_DECAY covers four growing consumables, so a
+  // dropped blade was immortal and a gate floor could only ever grow.
+  //
+  // Charged off ELAPSED TIME, never per-call, which is what lets the two callers
+  // differ: the live tick sweeps at most once a minute, and catchUp charges a
+  // whole offline gap in a single pass. The law is linear in time, so both land
+  // on the same number. FLOOR_RUST_PER_HOUR is the whole dial.
+  private rustFloors(now: number, silent: boolean): void {
+    if (!this.lastFloorRustAt) { this.lastFloorRustAt = now; return; } // first call just starts the clock; the gap before it isn't ours to charge
+    const elapsed = Math.min(now - this.lastFloorRustAt, CATCHUP_CAP_MS);
+    if (elapsed < FLOOR_RUST_STEP_MS) return; // a floor sweep is cheap, but not 30 times a minute
+    this.lastFloorRustAt = now;
+    const amount = (elapsed / 3_600_000) * FLOOR_RUST_PER_HOUR;
+    if (amount <= 0) return;
+    // THE WORLD'S OWN STOCK IS EXEMPT — every ground_spawns copy, not just
+    // the regrowing ones, which is a harder line than armStrayDecay draws and has
+    // to be. A renewal is only ever armed by a PICKUP (verbs.cmdTake), so seeded
+    // gear that rusted away instead of being taken would never come back: the
+    // regrowing pieces would strip themselves out of the floor-renewal law one
+    // room at a time, and the one-shot placements would delete authored loot out
+    // of rooms no player has walked into yet. Only what a hand or a corpse added
+    // rusts.
+    const kept = new Map<string, number>();
+    for (const g of this.world!.groundSpawns) {
+      const k = `${g.item_id}@${g.room_id}`;
+      kept.set(k, (kept.get(k) ?? 0) + 1);
+    }
+    for (const [roomId, floor] of [...this.ground]) {
+      if (!floor.length) continue;
+      // SLOT GEAR ONLY — the things whose condition genuinely means wear. This
+      // deliberately does not use isGear(), which is a wider net: the lantern and
+      // the hammerstone answer yes to it and must not come through here, because
+      // their condition is a fuel gauge and a latch counter respectively, not
+      // weathering. Draining those would put out a lamp and quietly un-latch a
+      // stone the world promises survives anything (THROW_TOUGH, "no repairs for
+      // this rock"). Both are capped, dice-placed supplies that look after
+      // themselves; they do not need this drain and they read wrong under it.
+      const counts = new Map<string, number>();
+      for (const id of floor) {
+        if (!this.world!.itemTemplates.get(id)?.slot) continue;
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+      let changed = false;
+      for (const [itemId, n] of counts) {
+        const strays = n - (kept.get(`${itemId}@${roomId}`) ?? 0);
+        if (strays <= 0) continue;
+        const t = this.world!.itemTemplates.get(itemId);
+        if (!t) continue;
+        const key = `${itemId}@${roomId}`;
+        // Un-stamped gear rolls the scavenged condition a pickup would have given
+        // it anyway (verbs.cmdTake), so a piece starts rusting from where it
+        // actually stands rather than from a free 100.
+        const before = this.groundCond.get(key) ?? rollGearCondition(t.slot, false);
+        // THREE DECIMALS, not the shelf's one. rustShelf can round hard because it
+        // charges a whole stay in a single subtraction; this charges a minute at a
+        // time, and a minute is 0.067 — which rounds to 0.1 and bills half again
+        // what the dial says. That also made the two callers disagree, the live
+        // tick running at 6/hour while catchUp's one-pass gap ran at the honest 4.
+        const after = Math.round((before - amount) * 1000) / 1000;
+        if (after > 0) { this.groundCond.set(key, after); continue; }
+        // Gone: ONE copy leaves the stones. A floor keeps one condition per item
+        // id and not one per copy, so whatever is still lying here starts its own
+        // life rather than inheriting a corpse's zero — a pile drains a piece at
+        // a time, which is also how it should read to somebody standing in it.
+        const idx = floor.indexOf(itemId);
+        if (idx !== -1) { floor.splice(idx, 1); changed = true; }
+        if (strays > 1) this.groundCond.set(key, rollGearCondition(t.slot, false));
+        else {
+          // The last stray is out. Its stamps go with it — a stamp with no item
+          // is a ghost, the same one applyRot's freshness fix exists to stop.
+          // Any seeded copy still here re-rolls on pickup, as an un-stamped
+          // world piece always has.
+          this.groundCond.delete(key);
+          this.groundFreshAt.delete(key);
+          this.groundRolled.delete(key);
+          this.groundLore.delete(key);
+        }
+        if (!silent) {
+          this.roomFeed(roomId, `${cap(t.name)}, left lying on ${groundWord(this.regionOf(roomId), roomId)}, has gone to ruin — the ground takes what nobody comes back for.`, undefined, false); // housekeeping stays off the relay, like every other decay
+        }
+      }
+      if (!changed) continue;
+      if (!floor.length) this.ground.delete(roomId);
+      if (!silent) this.refreshRoomCtx(roomId);
     }
   }
 

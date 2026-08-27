@@ -1204,7 +1204,7 @@ export const PAGE = `<!doctype html>
       <span class="lbl" id="glbl">EASY MODE</span>
       <span class="note" id="gstate" style="display:none"></span>
       <button id="idgoogle" class="primary">Continue with Google</button>
-      <span class="note" id="gnote">Your key, sealed in a vault in your own Drive and opened by a PIN only you know. Sign in on any device to return &#8212; and it works across other Nostr apps.</span>
+      <span class="note" id="gnote">Your key, sealed in a vault in your own Drive and opened by a PIN only you know. Sign in on any device to return.</span>
     </div>
     <div class="sect" id="sectown">
       <span class="lbl">USE YOUR OWN KEYS</span>

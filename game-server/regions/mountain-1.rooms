@@ -147,7 +147,6 @@ A wall built of turf sods laid like bricks, chest high once and thigh high now, 
 ## the-shieling | The Shieling
 A single hut of stone and turf built into the slope with its back to the weather, low enough that you duck, and dry inside, which is more than the mountain offers anywhere else. People came up here with the animals for the summer months and went down again before the weather turned, every year, for a very long time, and then one year did not come. Somebody is here now. He does not say who or why, and the fire is lit.
 !entry
-!spawn
 > north  the-nettle-ground
 > south  the-turf-wall
 > east   the-milking-fold
@@ -186,7 +185,6 @@ A dip holding water it cannot drain, gone entirely to soft rush in dark clumps y
 ## the-stell | The Stell
 A circular dry-stone shelter built in a ring so that beasts inside it could always get out of the wind whichever way it blew — a piece of very good thinking done by somebody with nothing but stone and a lot of time. Half of it has been roofed over since, badly, with poles and turf and a stretched hide, and there is a fire under the roofed half and a man keeping it. He came up with the last of the summer people and did not go down with them.
 !entry
-!spawn
 > north  the-last-pasture
 > east   the-boulder-field
 > west   the-rush-hollow
@@ -440,7 +438,6 @@ Somebody built a wall across the neck of a natural corrie up here, once, in dry 
 ## the-shelter-crag | The Shelter Crag
 An overhang of rock leaning far enough out that the ground beneath it is dry in any weather, and everything on this mountain has stood under here at some point. Somebody has walled the windward end with stacked slabs and moved in, which is the obvious thing to do and is the reason nothing else uses this end any more. There is a smell. Some of it is his.
 !entry
-!spawn
 > north  the-north-scree
 > east   the-raven-stone
 > west   the-wether-ledge
@@ -505,7 +502,6 @@ A narrow deep channel of peat-black water cut down through the bog, four feet de
 ## the-slabs | The Slabs
 Bare rock in great tilted sheets, swept clean by the water that comes over them when the hill is full, with the joints between them opened into cracks you could put an arm down. Dry, they are the fastest walking on the mountain, and they are not often dry. The widest joint has been roofed: a slab levered flat across it and packed at the ends, with a hole for smoke and smoke coming out of it. Whoever did that picked the one place on this hillside the water goes past instead of over.
 !entry
-!spawn
 > south  the-wet-slabs
 > east   the-south-shoulder
 

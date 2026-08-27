@@ -1,0 +1,43 @@
+-- 278 nobody wakes on a doorstep, again (rome, 2026-08-27).
+--
+-- Mig 240 took the mountain's four doors out of the wake pool and gave every
+-- band ONE slot instead, so no region could swamp the spawn table by having more
+-- doors than its neighbours. That held for exactly as long as it took to rebuild
+-- the mountain: mig 270 regenerated the band out of regions/mountain-1.rooms,
+-- the generated SQL rewrites is_entry/is_safe/is_spawn/region/map_x/y for every
+-- room straight from the source's !flags, and the source still carried !spawn on
+-- all four. So 240's fix was silently written back over, with no warning, because
+-- the pipeline never reads what the flags in the database currently are.
+--
+-- WHAT THAT COST, measured against prod before this ran. The pool randomGate()
+-- draws from is world.spawnRooms plus one slot per SPAWN_REGIONS band, picked
+-- flat. That made TWELVE slots where mig 240 left eight:
+--
+--     gate, weeper-arch, sally-port .......... the fortress's three thresholds
+--     the-old-road ........................... the Waystation
+--     the-shieling, the-stell, ............... the mountain's four doors,
+--       the-shelter-crag, the-slabs            which is what this migration is about
+--     @road, @wood, @crossing, @mountain ..... one slot per band
+--
+-- The mountain therefore held five of twelve — its band slot plus its four doors
+-- — and took 42% of every wake in the world, while road, wood, crossing and the
+-- Waystation each ran at 1-in-12 against the 1-in-8 they were meant to have. And
+-- since randomGate serves EVERY DEATH and not only a fresh wanderer's first
+-- morning, dying anywhere at all sent you to the mountain two times in five.
+-- That is the same swamping 240 was written to stop, arriving by a back door.
+--
+-- THE DOORS THEMSELVES ARE RIGHT and nothing here argues with them: four places
+-- to bank on a climb that long is the point, and the mountain keeps all four as
+-- gates. It is only their standing as WAKE points that goes — the band already
+-- has its own slot in the pool, and a region slot deliberately resolves to a
+-- random room inside the band and never to a gate, which is the whole idea. You
+-- wake out on the mountain, not on its doorstep.
+--
+-- AND THE SOURCE IS FIXED IN THE SAME BREATH. regions/mountain-1.rooms loses
+-- !spawn on these four in this commit. Shipping only the SQL would have bought
+-- the same fix a third revert the next time anybody rebuilt the band; shipping
+-- only the source would have left prod exactly as it is, since the .rooms files
+-- do nothing to a live world until they are regenerated. It takes both.
+
+UPDATE rooms SET is_spawn = 0
+ WHERE id IN ('the-shieling', 'the-stell', 'the-shelter-crag', 'the-slabs');
