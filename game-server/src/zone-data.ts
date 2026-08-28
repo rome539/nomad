@@ -2570,6 +2570,187 @@ export const PACK_HOLDERS = new Set(["grey-wolf", "dire-wolf"]);
 // and every wolf in the wood answers every other. It buys no advantage and
 // costs nothing. It is the world being somewhere.
 export const MOON_HOWL_ODDS = 0.5; // per calling creature at moonrise — a chorus, not a roll-call
+// THE SKY'S TWO RARE NIGHTS (2026-08-25). Astronomical, not rolled — pure
+// modulo on the world-clock, the same law isNight and the moon already keep.
+// Both are rare on purpose, both compose with the weather, and each gets
+// exactly one tooth:
+//
+//   THE ECLIPSE — on the eclipse-day, at midday, the light fails. Under the
+//   lid the country only watches the grey go black; on the mountain, where the
+//   sun is real, it watches the sun itself be eaten. The tooth: totality puts
+//   the outdoor ground dark at noon — the day fails for a few minutes, and
+//   every law the dark owns (torches, bold creatures, blind looks) owns those
+//   minutes. Even the mountain, which never goes blind at night, goes dark
+//   under the eaten sun: its exemption was written for the ordinary clock.
+//   THE BLOOD MOON — one full moon in thirteen rises red. The grounds stay lit
+//   in it the way a full moon lights them, but the light is the colour of old
+//   blood. The tooth: the dead remember harder — the hollow murmur, the one
+//   thing the moon's nights are FOR, comes out of the stone all night.
+export const ECLIPSE_EVERY = 43;                // one eclipse-day per 43 day-cycles (~a week of play)
+export const ECLIPSE_TELEGRAPH_MS = 4 * 60_000; // the light thins
+export const ECLIPSE_TOTAL_MS = 6 * 60_000;     // totality — the day fails
+export const ECLIPSE_AFTER_MS = 4 * 60_000;     // the light returns
+export const BLOOD_MOON_EVERY = 13;             // one full moon in thirteen rises red
+export const MURMUR_BLOOD_ODDS = 0.06;          // the dead's night: the murmur, twelve times as often
+export const ECLIPSE_TELL_LINES = [
+  "The light thins. Not cloud — the grey lid itself is going darker, the way a lamp goes when something stands between it and the flame.",
+  "The day dims, slowly, and everything outside goes the colour of an old bruise. Nothing in the sky has changed, and that is what is wrong.",
+];
+export const ECLIPSE_TOTAL_LINES = [
+  "The light is failing. It is midday, and the country is going dark under a lid gone black, and the things that go bold in the dark are going bold in it.",
+  "The grey lid has gone black, and the day with it. It is not night — night is honest about what it is. This is the light being taken away.",
+];
+export const ECLIPSE_AFTER_LINES = [
+  "The light comes back slowly, the way a lamp comes back when whatever stood before it moves on, and the country returns to its usual grey.",
+  "The day returns by degrees, and the birds start up again as if they had never stopped — which they had, and they know it.",
+];
+export const ECLIPSE_MOUNTAIN_LINES = [
+  "The sun is being eaten. Up here there is nothing between you and it, and you can see the black taking it, bite by bite, and the mountain going dark under the bite.",
+  "The shadow is not the drake's shadow. It is the sun's own — a black circle closing over the light, and the whole hill holding its breath under it.",
+];
+export const ECLIPSE_SUN_LINES = [
+  "The sun is being eaten. A black shape sits over it, taking more of it by the moment, and the light is going out of the day. You are watching the one thing the lid never let you see.",
+  "There is no sun to look at — only a black disc where it was, and a ring of failing light around it. The day has been cancelled, and nobody consulted you.",
+];
+export const ECLIPSE_AMBIENT = [
+  "Somewhere a bird settles in the wrong hour, and goes quiet.",
+  "The dark at noon has a different smell to it — colder, and patient.",
+  "For a while, everything that hunts by night is awake and listening.",
+];
+export const BLOOD_MOON_LINES = [
+  "The moon is up, and it is the colour of old blood, and the grounds are lit in it — the only light this country gets, and it is not a light anything should walk by.",
+  "The moon has risen red, and the dark has not come, and the ground lies out under a light the colour of a wound. The dead are awake in it. The living should not be.",
+];
+export const BLOOD_MOON_AMBIENT = [
+  "In the red light, every shadow lies the wrong way.",
+  "The moon hangs there like a wound that will not close, and the night waits under it.",
+  "Something in the stone speaks, low, and the red light carries it further than it should.",
+];
+// The blood moon's teeth and its eyes (2026-08-25): on the red nights the
+// hollow things hit half again as hard — the one night the dead are stronger
+// than the living — and their eyes come up red, two coals the colour of the
+// moon above. The eyes are seen three ways: the close read, the room's glance,
+// and — the one that matters — in the pitch dark, where they are the only
+// light. The dark cannot hide them, because they are the moon's.
+export const BLOOD_MOON_HOLLOW_DMG_MULT = 1.5;
+export const BLOOD_MOON_EYES_READ = " Its eyes are two red coals — lit the colour of the moon above, and they do not blink.";
+export const BLOOD_MOON_EYES_ROOM = ", its eyes two red coals in the dark";
+export const BLOOD_MOON_EYES_DARK = " Two red eyes watch you from the dark — the only light in it.";
+// THE WATCH WAKES (2026-08-25). On the blood-moon nights the hollow SOLDIERS —
+// the ones whose job was fighting — take up their weapons again and attack any
+// living person on sight, no grudge needed. The working dead keep their posts
+// (the clerk chalks, the cantor sings, the ferryman poles); the watch does not.
+// The kings wake with them, which makes the red night the one night the deep's
+// dead hunt.
+// A literal, not a spread of DRILL_SOLDIERS (declared below) — keep the two in
+// step when the drill's roster changes.
+export const BLOOD_MOON_WAKERS = new Set(["warden", "warden-surface", "warden-captain", "bone-knight", "last-watchman", "the-long-warden", "the-tide-warden", "forgotten-king", "marrow-king"]);
+export const BLOOD_MOON_WAKE_TELLS = [
+  "{a}'s eyes are red coals, and it comes for you — the watch has woken, and it is not standing down.",
+  "{a} comes for you without a word, eyes burning red — on this night the watch does not ask what you mean by anything.",
+];
+// ---- PHASE 8: the missing halves (2026-08-25) ------------------------------
+// THE CLOUD-DOWN (8a). The mountain's own fog: the cloud base descends — the
+// high tiers white-out, the foot greys over. It rides the fog's whole chain
+// (foggy() reads it), so the bite is spot odds down both ways and unreadable
+// shapes, at altitude instead of under a canopy.
+export const CLOUDDOWN_TELEGRAPH_MS = 90_000;
+export const CLOUDDOWN_ACTIVE_MIN_MS = 6 * 60_000;
+export const CLOUDDOWN_ACTIVE_MAX_MS = 12 * 60_000;
+export const CLOUDDOWN_AFTERMATH_MS = 90_000;
+export const CLOUDDOWN_AMBIENT = [
+  "The cloud sits on the slope like a thing that lives here and has simply come lower.",
+  "Somewhere above the grey, the summit is still up there. You have to take it on trust.",
+  "Sound comes through the cloud wrong — near things far, and the far things too close.",
+];
+// THE EEL RUN (8b). On the new-moon night the silver eels run the channels —
+// the fiction already says they move at night. The lines and traps fill, and
+// fishing at the eel sites pays double. The eel-cutter's dead work is
+// momentarily REAL again.
+export const EEL_RUN_FISH_MULT = 2;
+export const EEL_RUN_NIGHT = 3; // moonPhase 3: the dark night of the moon's month
+export const EEL_RUN_AMBIENT = [
+  "The water is full of eels — silver, moving, all of them going the same way, and none of them hurrying.",
+  "An eel breaks the surface, turns over, and is gone. The channel is alive with them.",
+];
+// THE MAST YEAR (8c). The beech-mast falls: the wood's floor is full, forage
+// pays, and the mast itself lies there to be picked up. The rut is the deer's
+// event; this is the FOREST's.
+export const MAST_TELEGRAPH_MS = 120_000;
+export const MAST_ACTIVE_MIN_MS = 10 * 60_000;
+export const MAST_ACTIVE_MAX_MS = 18 * 60_000;
+export const MAST_AFTERMATH_MS = 120_000;
+export const MAST_FORAGE_MULT = 2;
+export const MAST_SPAWN_ROOMS = 8; // how many wood rooms get mast on the floor
+// ...AND HOW MUCH MAY LIE UNFOUND AT ONCE. Beech mast is in NATURAL_KEEPS, so it
+// never rots off a floor — which is right for the food and wrong for the event:
+// without a ceiling, every mast year laid another eight down for good and the
+// wood got permanently, cumulatively generous instead of briefly so. One fall's
+// worth is the whole idea, so one fall's worth is the cap; the count is taken
+// before the fall, exactly as the hammerstone and the brand take theirs.
+export const MAST_GROUND_CAP = 8;
+export const MAST_AMBIENT = [
+  "Mast patters down through the leaves, steady as small rain.",
+  "The wood's floor is full — beechnuts everywhere, and everything that eats them knows.",
+  "A tree lets go all at once and the mast comes down in a rush, and then goes back to pattering.",
+];
+// THE SCREEFALL (8d). The mountain's ground, moving: in the scree rooms the
+// slope lets go. A sound that carries, a bite if you are under it, a fresh fan
+// of stone where it fell. The shadow is the mountain's sky; this is its ground.
+export const SCREEFALL_TELEGRAPH_MS = 90_000;
+export const SCREEFALL_ACTIVE_MIN_MS = 4 * 60_000;
+export const SCREEFALL_ACTIVE_MAX_MS = 8 * 60_000;
+export const SCREEFALL_AFTERMATH_MS = 90_000;
+export const SCREEFALL_BITE = 2;   // per beat, in the scree — a bruise, not a sentence
+export const SCREEFALL_ODDS = 0.2; // per beat, per player in the scree
+export const SCREE_ROOMS = new Set([
+  "the-loose-slope", "the-fan", "the-scree-toe", "the-north-scree", "the-hot-scree",
+  "the-black-scree", "the-hanging-scree", "the-red-scree", "the-warm-scree",
+]);
+export const SCREE_AMBIENT = [
+  "Loose stone runs somewhere up the slope, and takes a while to stop.",
+  "A single stone comes down the face, pinging, and no one threw it.",
+];
+// THE WRACK TIDE (8e). After wind and sea, the wrack comes in on the strand —
+// fresh weed, crabs feeding, strand forage up. A composition, not an arc.
+export const WRACK_FORAGE_MULT = 1.5;
+// ---- PHASE 5 + 8f: the mountain's season, and what it does -----------------
+// THE SNOW (5d). Cold + altitude = snow, and it PERSISTS: while the cold arc
+// stands, the mountain gains a season; it lasts SNOW_PERSIST_MS past the cold's
+// end, then melts — and the melt feeds the beck (8f: the next road roll draws
+// the spate, bias-not-trigger). While the snow lies: the mountain keeps its
+// cold tax, travel is quieter, and fresh snow covers the record (traces fade
+// twice as fast).
+export const SNOW_PERSIST_MS = 40 * 60_000;  // the season outlasts the weather
+export const SNOW_TRACE_LIFE_MULT = 0.5;     // fresh snow covers the record
+export const SNOW_NOISE_MULT = 0.5;          // and wraps every sound
+export const SNOW_LINES = [
+  " Snow lies on the mountain — the hill holds its winter, and every sound in it is wrapped and put away.",
+  " The mountain is under snow, and the snow is old enough to have opinions about what stays on it and what sinks.",
+];
+export const SNOW_AMBIENT = [
+  "Your breath hangs in the snow-light, and the hill is too quiet to be only quiet.",
+  "The snow takes every sound and keeps it.",
+];
+export const MELT_LINE = " The melt is on — the burns are up and running the colour of the hill, and the road will know it before long.";
+// THE ICE (5a). Cold freezes the still waters: fishing stops, and the thaw —
+// the cold's aftermath — is unsafe (a chance to go through the rotting ice).
+// The route-opening shortcut stays deferred: the doc's own non-goal until
+// these basics hold.
+export const ICE_THAW_ODDS = 0.1; // per beat, per player on the rotting ice
+export const ICE_THAW_BITE = 2;   // a ducking, never a drowning
+export const ICE_LINES = [
+  " The water is frozen over — the pools and the fen carry a man's weight, and nothing under the ice is taking a line today.",
+];
+// THE FEN WATER TABLE (5b). The fen's channels flood by rank — high water is a
+// fact about where the short ways are, and it moves with the surge (the same
+// sum the sea reads).
+export const FEN_RANKS: Record<string, number> = {
+  "the-tussock-ford": 1, "the-open-water": 1, "the-fen-gut": 1,
+  "the-quaking-flat": 2, "the-quaking-turf": 2, "the-fen-edge": 2, "the-black-fen": 2,
+};
+export const FEN_UP_LINE = " The fen's channels are up — the short ways are drowned, and the long way round is the only way dry.";
+export const FEN_BITE = 1; // per beat in the flooded fen — a toll, never a wall
 // THE BURNER LOOKS UP. He is the one thing in the wood that is not hostile and
 // not a shopkeeper, and until now he ignored a person walking into his clearing
 // completely. He is not going to talk to you. He is going to notice you, and go

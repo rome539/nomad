@@ -14,7 +14,7 @@ import type { ZoneDO } from "./zone";
 import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
-import { foodState } from "./zone-util";
+import { foodState, isNight, moonPhase, eclipsePhase, isBloodMoon } from "./zone-util";
 import { setItemAcquiredAt } from "./world";
 import {
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
@@ -58,6 +58,14 @@ import {
   WALK_STRIDE_MIN_MS, WALK_STRIDE_MAX_MS, WOODWARD_TMPL,
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
+  ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT,
+  CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_ACTIVE_MIN_MS, CLOUDDOWN_ACTIVE_MAX_MS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
+  EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
+  MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
+  SCREEFALL_TELEGRAPH_MS, SCREEFALL_ACTIVE_MIN_MS, SCREEFALL_ACTIVE_MAX_MS, SCREEFALL_AFTERMATH_MS, SCREEFALL_BITE, SCREEFALL_ODDS, SCREE_ROOMS, SCREE_AMBIENT,
+  WRACK_FORAGE_MULT,
+  SNOW_PERSIST_MS, SNOW_LINES, SNOW_AMBIENT, MELT_LINE, ICE_THAW_ODDS, ICE_THAW_BITE, ICE_LINES, FEN_RANKS, FEN_UP_LINE, FEN_BITE,
   PACK_TELEGRAPH_MS, PACK_ACTIVE_MIN_MS, PACK_ACTIVE_MAX_MS, PACK_AFTERMATH_MS,
   PACK_DOGS, PACK_WOLVES, PACK_HYENAS, PACK_HEAD_ODDS, PACK_HEADS_BAD,
   PACK_HEAD, PACK_DOG, PACK_WOLF, PACK_HYENA,
@@ -95,9 +103,13 @@ const POOL: [string, number, string][] = [
   // THE CROSSING — 203 rooms whose whole design is a water that moves.
   ["sea", 3, "crossing"],
   // THE WOOD (mig-less, 2026-08-06) — 170 rooms that had no weather of their own
-  ["rut", 2, "wood"], ["walk", 1, "wood"], ["quiet", 2, "wood"],
+  ["rut", 2, "wood"], ["walk", 1, "wood"], ["quiet", 2, "wood"], ["mast", 2, "wood"],
   // THE DEN GROUND — 60 rooms, likewise
   ["pack", 2, "den"], ["fever", 2, "den"],
+  // THE MOUNTAIN — the shadow is not drawn for (see below); its two WEATHER
+  // arcs are the cloud that comes down the hill (8a) and the slope that lets
+  // go (8d).
+  ["clouddown", 2, "mountain"], ["scree", 2, "mountain"],
   // THE MOUNTAIN — its one arc is a presence, not a weather, and it is NOT DRAWN
   // FOR (rome, 2026-08-26). The shadow used to sit here at weight 2 of 45, which
   // put a passage over the mountain about once every thirty-four hours, on a die
@@ -267,7 +279,29 @@ export function songWakeMult(z: ZoneDO, creature: { roomId: string; templateId: 
 
 // Is the fog on this room? (Outdoors only — it pools on the open ground.)
 export function foggy(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "fog") === "active" && OUTDOOR_ROOMS.has(roomId);
+  return (phaseOf(z, "fog") === "active" && OUTDOOR_ROOMS.has(roomId))
+    // THE CLOUD-DOWN is the mountain's own fog (8a): the cloud base descends and
+    // the high tiers white-out. It rides this same chain — spot odds down both
+    // ways, unreadable shapes — at altitude instead of under a canopy.
+    || (phaseOf(z, "clouddown") === "active" && z.world!.rooms.get(roomId)?.region === "mountain");
+}
+
+// THE EEL RUN (8b). The new-moon night is when the eels move — real eel
+// behaviour, and the game's moon clock already knows which night that is.
+export function eelRunOn(z: ZoneDO, roomId: string): boolean {
+  return isNight() && moonPhase() === EEL_RUN_NIGHT
+    && z.world!.rooms.get(roomId)?.region === "crossing";
+}
+
+// THE MAST YEAR's boon gate (8c): the wood's floor is full.
+export function mastOn(z: ZoneDO): boolean {
+  return phaseOf(z, "mast") === "active";
+}
+
+// THE WRACK TIDE (8e): wind and sea together bring the wrack in on the strand.
+export function wrackIn(z: ZoneDO, roomId: string): boolean {
+  return windy(z, roomId) && seaLevel(z) > 0
+    && z.world!.rooms.get(roomId)?.region === "crossing";
 }
 
 // The fog swallows half of what would spot you (ai.wakeListeners) — and the
@@ -286,7 +320,27 @@ export function fogTell(z: ZoneDO, roomId: string): string | null {
 // the open ground and the deep. (The keep's halls and the warrens' earth
 // stay livable — cover is the answer, and the map already says where.)
 export function coldBites(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "cold") === "active" && (OUTDOOR_ROOMS.has(roomId) || deepRoom(z, roomId));
+  return (phaseOf(z, "cold") === "active" && (OUTDOOR_ROOMS.has(roomId) || deepRoom(z, roomId)))
+    // THE SNOW KEEPS THE COLD (5d): the season outlasts the weather that made
+    // it, so the mountain's cold tax holds while the snow lies.
+    || (z.snowUntil > Date.now() && z.world!.rooms.get(roomId)?.region === "mountain");
+}
+
+// Is the mountain under its snow right now? The one persistent season.
+export function snowed(z: ZoneDO, roomId: string): boolean {
+  return z.snowUntil > Date.now() && z.world!.rooms.get(roomId)?.region === "mountain";
+}
+
+// THE ICE (5a): cold freezes the still fishing waters solid.
+export function frozen(z: ZoneDO, roomId: string): boolean {
+  return phaseOf(z, "cold") === "active" && FISHING_SURFACE.has(roomId);
+}
+
+// THE FEN WATER TABLE (5b): the fen's channels flood by rank, reading the
+// same sum the sea reads — high water is where the short ways are not.
+export function fenUp(z: ZoneDO, roomId: string): boolean {
+  const rank = FEN_RANKS[roomId];
+  return rank !== undefined && seaLevel(z) >= rank;
 }
 
 // The wind is up on this room (outdoors only — it pools on the open ground).
@@ -560,6 +614,29 @@ export function skyClause(z: ZoneDO, roomId: string): string {
   // key on "active" alone and aftermath is only the cooldown before the arc can
   // roll again, so a clause there would describe a state that is not.
   const region = z.world!.rooms.get(roomId)?.region;
+  // THE ROOF COMES FIRST, and the two rare skies immediately after it — the same
+  // order skyLook has always used, and for the same two reasons.
+  //
+  // The roof, because a sky clause has no business under one. This check used to
+  // sit BELOW the three band blocks, so the Shieling and the Stell were told the
+  // cloud was down and the snow lay while their wanderer sat indoors at the fire.
+  //
+  // The rare skies, because they were unreachable behind those same blocks: the
+  // mountain returns on shadow, cloud-down, scree OR lying snow, so on the one
+  // band with its own eclipse lines written for it, an eclipse could almost
+  // never be the thing the sky said. The sun failing and the moon bleeding
+  // outrank any weather under them, which is what the note below always claimed
+  // and what this order finally makes true.
+  if (!OUTDOOR_ROOMS.has(roomId)) return "";
+  const ecl = eclipsePhase();
+  if (ecl !== "idle") {
+    // A leading space, like every other clause here: these are appended to the
+    // room, not returned on their own (skyLook is the one that returns bare).
+    if (ecl === "telegraph") return " " + pick(ECLIPSE_TELL_LINES);
+    if (ecl === "active") return " " + pick(region === "mountain" ? ECLIPSE_MOUNTAIN_LINES : ECLIPSE_TOTAL_LINES);
+    return " " + pick(ECLIPSE_AFTER_LINES);
+  }
+  if (isBloodMoon()) return " " + pick(BLOOD_MOON_LINES);
   if (region === "wood") {
     switch (phaseOf(z, "rut")) {
       case "telegraph": return " Somewhere off through the trees a stag is roaring, and being answered.";
@@ -574,6 +651,12 @@ export function skyClause(z: ZoneDO, roomId: string): string {
     switch (phaseOf(z, "quiet")) {
       case "telegraph": return " The birds have stopped — all of them, together — and the silence has an edge on it.";
       case "active": return " Nothing moves in the whole wood. Your own gear sounds louder than you would like.";
+      default: break;
+    }
+    switch (phaseOf(z, "mast")) {
+      case "telegraph": return " A pattering starts high in the wood, like small rain that never reaches the ground — the mast is coming in.";
+      case "active": return " The wood's floor is full — beechnuts everywhere, and everything that eats them knows.";
+      case "aftermath": return " The mast is picked over now — the floor goes back to being the floor.";
       default: break;
     }
   }
@@ -599,8 +682,28 @@ export function skyClause(z: ZoneDO, roomId: string): string {
       case "aftermath": return " Whatever it was has passed. The birds are slow to come back up.";
       default: break;
     }
+    switch (phaseOf(z, "clouddown")) {
+      case "telegraph": return " The cloud begins to come down the hill — the line of it walking the slope toward you, slow and grey.";
+      case "active": return " The cloud lies down over the mountain, and the hill stops being a place you can see.";
+      case "aftermath": return " The cloud lifts back up the hill, and the mountain comes back room by room.";
+      default: break;
+    }
+    switch (phaseOf(z, "scree")) {
+      case "telegraph": return " Loose stone runs somewhere up the slope, and takes a while to stop.";
+      case "active": return " The scree is coming down — fans of it, gullies of it — and the whole hill is on the move.";
+      case "aftermath": return " The slope has settled, and fresh fans of stone lie where the old ground was.";
+      default: break;
+    }
+    // The season, under the weather: the snow lies even when nothing is moving.
+    if (z.snowUntil > Date.now()) return pick(SNOW_LINES);
   }
-  if (!OUTDOOR_ROOMS.has(roomId)) return "";
+  // (The roof and the two rare skies are answered at the top of this function.)
+  // The crossing's two gifts: the eels run the channels on the new-moon night,
+  // and wind plus water brings the wrack in on the strand.
+  if (region === "crossing" && eelRunOn(z, roomId)) return " The water is full of eels — silver, moving, all of them going the same way. The channels are alive with them.";
+  if (wrackIn(z, roomId)) return " The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
+  if (frozen(z, roomId)) return pick(ICE_LINES);
+  if (fenUp(z, roomId)) return FEN_UP_LINE;
   switch (phaseOf(z, "rain")) {
     case "telegraph": return " The light has gone iron-grey, and the air smells of coming rain.";
     case "active": return " Rain hammers the open ground.";
@@ -641,7 +744,7 @@ export function skyClause(z: ZoneDO, roomId: string): string {
 // specific — the caller falls through to the region's own static sky rather than
 // say "nothing here". Indoor rooms have no sky, so they get null exactly as
 // skyClause gives them "".
-export function skyLook(z: ZoneDO, roomId: string): string | null {
+export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null {
   // THE ROOF COMES FIRST, and it has to: the mountain is an outdoor BAND with
   // twenty-one roofed rooms inside it (INDOOR_ROOMS — the shieling, the stell,
   // the hollow under, the under-rib, the last shelter). With the shadow check
@@ -651,6 +754,38 @@ export function skyLook(z: ZoneDO, roomId: string): string | null {
   // band's rooms are folded into it at world load minus exactly those roofs
   // (zone.ts, the OUTDOOR_REGIONS fold).
   if (!OUTDOOR_ROOMS.has(roomId)) return null;
+  // THE TWO RARE SKIES answer first. `look sun` during totality gets the eaten
+  // sun itself — the one day this world lets you see what the lid has been
+  // hiding; every other probe gets the phase the sky is in.
+  const ecl = eclipsePhase();
+  if (ecl !== "idle") {
+    if (ecl === "active" && /sun/.test(arg ?? "")) return pick(ECLIPSE_SUN_LINES);
+    if (ecl === "telegraph") return pick(ECLIPSE_TELL_LINES);
+    if (ecl === "active") return z.world!.rooms.get(roomId)?.region === "mountain" ? pick(ECLIPSE_MOUNTAIN_LINES) : pick(ECLIPSE_TOTAL_LINES);
+    return pick(ECLIPSE_AFTER_LINES);
+  }
+  if (isNight() && isBloodMoon()) return pick(BLOOD_MOON_LINES);
+  // The mountain's two weather arcs, then its presence.
+  if (z.world!.rooms.get(roomId)?.region === "mountain") {
+    switch (phaseOf(z, "clouddown")) {
+      case "telegraph": return "The cloud begins to come down the hill — the line of it walking the slope toward you, slow and grey.";
+      case "active": return "The cloud lies down over the mountain, and the hill stops being a place you can see.";
+      case "aftermath": return "The cloud lifts back up the hill, and the mountain comes back room by room.";
+      default: break;
+    }
+    switch (phaseOf(z, "scree")) {
+      case "telegraph": return "Loose stone runs somewhere up the slope, and takes a while to stop.";
+      case "active": return "The scree is coming down — fans of it, gullies of it — and the whole hill is on the move.";
+      case "aftermath": return "The slope has settled, and fresh fans of stone lie where the old ground was.";
+      default: break;
+    }
+    // TRIMMED, and so are the ice and the fen below. These three tables are
+    // written the way skyClause wants them — with the leading space that lets a
+    // clause be appended to a room — while every line skyLook returns stands on
+    // its own as the answer to a question. Same strings, two shapes; the probe
+    // takes the space off rather than the tables being duplicated.
+    if (z.snowUntil > Date.now()) return pick(SNOW_LINES).trimStart();
+  }
   // The mountain's one arc is a presence in the air, not on the ground — it is
   // the thing the sky does up there.
   if (z.world!.rooms.get(roomId)?.region === "mountain") {
@@ -661,6 +796,19 @@ export function skyLook(z: ZoneDO, roomId: string): string | null {
       default: break;
     }
   }
+  // The wood's mast year and the crossing's two gifts.
+  if (z.world!.rooms.get(roomId)?.region === "wood") {
+    switch (phaseOf(z, "mast")) {
+      case "telegraph": return "A pattering starts high in the wood, like small rain that never reaches the ground — the mast is coming in.";
+      case "active": return "The wood's floor is full — beechnuts everywhere, and everything that eats them knows.";
+      case "aftermath": return "The mast is picked over now — the floor goes back to being the floor.";
+      default: break;
+    }
+  }
+  if (z.world!.rooms.get(roomId)?.region === "crossing" && eelRunOn(z, roomId)) return "The water is full of eels — silver, moving, all of them going the same way. The channels are alive with them.";
+  if (wrackIn(z, roomId)) return "The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
+  if (frozen(z, roomId)) return pick(ICE_LINES).trimStart();
+  if (fenUp(z, roomId)) return FEN_UP_LINE.trimStart();
   switch (phaseOf(z, "rain")) {
     case "telegraph": return "The sky has gone iron-grey, and the air smells of coming rain.";
     case "active": return "Rain hammers down out of a sky the colour of iron, and the open ground is already giving way under it.";
@@ -793,6 +941,12 @@ const TIDE_WING_AMBIENT = [
   "The drips have all gone quiet — drowned under one long, low sound of water.",
 ];
 export function eventAmbient(z: ZoneDO, roomId: string): string | null {
+  // The two rare skies sound over everything: while the day is failing or the
+  // moon is bleeding, the ordinary weather keeps its voice down.
+  if (OUTDOOR_ROOMS.has(roomId)) {
+    if (eclipsePhase() === "active") return pick(ECLIPSE_AMBIENT);
+    if (isNight() && isBloodMoon()) return pick(BLOOD_MOON_AMBIENT);
+  }
   if (TIDEWAYS_ROOMS.has(roomId) && phaseOf(z, "tide") === "active") {
     return tideFlooded(z, roomId) ? pick(TIDE_FLOOD_AMBIENT) : pick(TIDE_WING_AMBIENT);
   }
@@ -812,13 +966,18 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
     if (phaseOf(z, "rut") === "active") {
       return rutWolvesOut(z, Date.now()) && chance(0.3) ? pick(RUT_WOLF_AMBIENT) : pick(RUT_AMBIENT);
     }
+    if (phaseOf(z, "mast") === "active") return pick(MAST_AMBIENT);
   } else if (region === "den") {
     if (phaseOf(z, "pack") === "active") return pick(PACK_AMBIENT);
     if (phaseOf(z, "fever") === "active") return pick(FEVER_AMBIENT);
   } else if (region === "mountain") {
     if (phaseOf(z, "shadow") === "active") return pick(SHADOW_AMBIENT);
+    if (phaseOf(z, "clouddown") === "active") return pick(CLOUDDOWN_AMBIENT);
+    if (phaseOf(z, "scree") === "active") return pick(SCREE_AMBIENT);
+    if (snowed(z, roomId)) return pick(SNOW_AMBIENT);
   }
   if (!OUTDOOR_ROOMS.has(roomId)) return null;
+  if (region === "crossing" && eelRunOn(z, roomId)) return pick(EEL_RUN_AMBIENT);
   const p = phaseOf(z, "rain");
   if (p === "active") return pick(RAIN_AMBIENT);
   if (p === "aftermath") return pick(MUD_AMBIENT);
@@ -916,8 +1075,42 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickPack(z, now);
   await tickFever(z, now);
   await tickShadow(z, now);
+  await tickClouddown(z, now);
+  await tickMast(z, now);
+  await tickScree(z, now);
+  tickEclipse(z, now);
   rutWolves(z, now);
   rutRoars(z, now);
+}
+
+// ---- THE ECLIPSE'S VOICE ----
+// The eclipse itself is astronomy, not an arc: eclipsePhase() reads it straight
+// off the clock and nothing rolls for it. But that left it MUTE. It was read in
+// four places — the sky clause, the sky probe, the ambient and isDark — and
+// every one of them needs the wanderer to do something: walk into a room, look
+// up, or wait on an ambient beat that only fires at totality. Someone standing
+// still outdoors got no telegraph and no explanation, and since isDark turns
+// every outdoor room dark at totality, the first news they had of the sun going
+// out was going blind in it.
+//
+// So the sky speaks, once per phase, to every surface band. It keeps its place
+// in z.events like the shadow does — an entry that no POOL draw can pick (this
+// arc is not drawn for, it is on the calendar) and that phaseOf reads by id.
+// The stored phase is the last one ANNOUNCED, which is what makes this idempotent
+// across a restart: a wake mid-totality says nothing, because totality was
+// already spoken for.
+function tickEclipse(z: ZoneDO, now: number): void {
+  const phase = eclipsePhase(now);
+  let st = z.events.get("eclipse");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("eclipse", st); }
+  if (st.phase === phase) return;
+  st.phase = phase;
+  st.until = NEVER; // nothing times this out; the clock alone moves it on
+  const line = phase === "telegraph" ? pick(ECLIPSE_TELL_LINES)
+    : phase === "active" ? pick(ECLIPSE_TOTAL_LINES)
+    : phase === "aftermath" ? pick(ECLIPSE_AFTER_LINES)
+    : null;
+  if (line) z.roomFeedBands(SURFACE_BANDS, line, "evt");
 }
 
 // THE ROARING, as a thing the world can hear. Every room holding a rutting
@@ -1122,6 +1315,129 @@ async function tickShadow(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + SHADOW_AFTERMATH_MS;
       z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Whatever it was has passed. The birds are slow to come back up.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
+}
+
+// ---- THE CLOUD-DOWN (mountain, 8a) ----
+// The mountain's own fog: the cloud base descends and the high tiers white-out.
+// The bite rides foggy() — spot odds down both ways, unreadable shapes — and
+// the cold of it is the cold that already lives up there. It is not the
+// lowland's fog; it is the mountain's sky coming down to meet you.
+async function tickClouddown(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("clouddown");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("clouddown", st); }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + CLOUDDOWN_TELEGRAPH_MS;
+      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "The cloud begins to come down the hill — the line of it walking the slope toward you, slow and grey.", "evt");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + randInt(CLOUDDOWN_ACTIVE_MIN_MS, CLOUDDOWN_ACTIVE_MAX_MS);
+      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "The cloud lies down over the mountain, and the hill stops being a place you can see.", "evt");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + CLOUDDOWN_AFTERMATH_MS;
+      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "The cloud lifts back up the hill, and the mountain comes back room by room.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
+}
+
+// ---- THE MAST YEAR (wood, 8c) ----
+// The forest's own event: the beech-mast falls and the floor fills. Forage pays
+// double (ai.ts), mast lies on the floor to be picked up (real food, placed
+// once per fall), and the wood is briefly generous — the one event the wood has
+// that gives rather than takes.
+async function tickMast(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("mast");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("mast", st); }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + MAST_TELEGRAPH_MS;
+      z.roomFeedBands(new Set(["wood"]), "A pattering starts high in the wood, like small rain that never reaches the ground — the mast is coming in.", "evt");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + randInt(MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS);
+      // THE FLOOR FILLS: mast lies where it fell, real food, one fall's worth.
+      // COUNTED FIRST, like the hammerstone and the brand. Mast keeps (it is in
+      // NATURAL_KEEPS, so no rot timer takes it and the floor law leaves food
+      // alone), which means anything still lying from the last mast year is
+      // still lying there — and without this the wood accrued another eight
+      // every fall, for good. What is already down counts against the fall.
+      const rooms = bandRooms(z, "wood");
+      let loose = 0;
+      for (const r of rooms) loose += (z.ground.get(r) ?? []).filter((id) => id === "beech-mast").length;
+      const fall = Math.min(MAST_SPAWN_ROOMS, Math.max(0, MAST_GROUND_CAP - loose));
+      for (let i = 0; i < fall && rooms.length; i++) {
+        const r = rooms.splice(randInt(0, rooms.length - 1), 1)[0];
+        const g = z.ground.get(r);
+        if (g) g.push("beech-mast"); else z.ground.set(r, ["beech-mast"]);
+      }
+      z.roomFeedBands(new Set(["wood"]), "The wood's floor is full — beechnuts everywhere, and everything that eats them knows.", "evt");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + MAST_AFTERMATH_MS;
+      z.roomFeedBands(new Set(["wood"]), "The mast is picked over now — the floor goes back to being the floor.", "evt");
+      break;
+    }
+    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+  }
+}
+
+// ---- THE SCREEFALL (mountain, 8d) ----
+// The mountain's ground, moving: in the scree rooms the slope lets go. A sound
+// that carries, a bruise if you are under it, and then the slope settles back
+// to pretending it is ground. The shadow is the mountain's sky; this is its
+// ground.
+async function tickScree(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("scree");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("scree", st); }
+  // The bite runs every beat while the slope is moving — a bruise, never a
+  // sentence: the scree takes a little of you, the way it takes a little of
+  // everything, and it is never the thing that kills you.
+  if (st.phase === "active") {
+    for (const s of [...z.sessions.values()]) {
+      if (s.hp <= 0 || z.outOfWorld(s) || !SCREE_ROOMS.has(s.roomId)) continue;
+      if (!chance(SCREEFALL_ODDS)) continue;
+      s.hp = Math.max(1, s.hp - SCREEFALL_BITE);
+      z.send(s, "The slope lets go under you — stone comes down, and the bruise of it stays.", "dmgin");
+      z.sendStatus(s);
+    }
+  }
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + SCREEFALL_TELEGRAPH_MS;
+      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Loose stone runs somewhere up the slope, and takes a while to stop. The mountain is shifting.", "evt");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + randInt(SCREEFALL_ACTIVE_MIN_MS, SCREEFALL_ACTIVE_MAX_MS);
+      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "The scree is coming down — fans of it, gullies of it — and the whole hill is on the move.", "evt");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + SCREEFALL_AFTERMATH_MS;
+      z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "The slope settles, and fresh fans of stone lie where the old ground was.", "evt");
       break;
     }
     case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
@@ -1605,6 +1921,19 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
         `Cold water over the gravel, deeper than the name allows. [${s.hp}/${s.maxHp} hp]`,
       ]), "dmgin");
       z.sendStatus(s);
+    }
+    // THE FEN WATER TABLE (5b): the flooded fen is a toll, never a wall — a
+    // small bite and a wet pack, and the long way round stays dry.
+    for (const s of [...z.sessions.values()]) {
+      if (!fenUp(z, s.roomId) || z.outOfWorld(s) || s.hp <= 0) continue;
+      s.hp = Math.max(1, s.hp - FEN_BITE);
+      if (z.carriesLight(s) && s.litSource !== "lantern") {
+        s.litUntil = undefined; s.litSource = undefined; s.litRow = undefined; s.torchWarned = false;
+        z.send(s, "The fen's water slaps the flame out of your hand.", "dmgin");
+        z.sendStatus(s);
+      }
+      await wetRations(z, s);
+      z.send(s, `The fen's channels are up — water to the knee, and every short way is drowned under it. [${s.hp}/${s.maxHp} hp]`, "dmgin");
     }
   }
   if (now < st.until) return;
@@ -2291,6 +2620,25 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
     st = { phase: "idle", until: NEVER };
     z.events.set("cold", st);
   }
+  // THE MELT (8f), checked every beat, not just on the arc's clock: when the
+  // mountain's snow runs out, the burns rise — and the next road roll draws
+  // the spate (bias, never trigger). The season ends loudly.
+  if (z.snowUntil && z.snowUntil < now) {
+    z.snowUntil = 0;
+    chargeBand(z, "road", "spate");
+    z.roomFeedBands(MOUNTAIN_HEARD_BANDS, MELT_LINE, "evt");
+  }
+  // THE THAW (5a): while the cold is coming out of the ground, the ice is
+  // rotting — a chance to go through, and it is never the ice's fault.
+  if (st.phase === "aftermath") {
+    for (const s of [...z.sessions.values()]) {
+      if (s.hp <= 0 || z.outOfWorld(s) || !FISHING_SURFACE.has(s.roomId)) continue;
+      if (!chance(ICE_THAW_ODDS)) continue;
+      s.hp = Math.max(1, s.hp - ICE_THAW_BITE);
+      z.send(s, "The ice gives under you — you go through to the knee, and the water is a shock that stays with you.", "dmgin");
+      z.sendStatus(s);
+    }
+  }
   if (now < st.until) return;
   const inCold = (roomId: string) => OUTDOOR_ROOMS.has(roomId) || deepRoom(z, roomId);
   switch (st.phase) {
@@ -2311,6 +2659,10 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
       st.phase = "active";
       st.until = now + randInt(COLD_ACTIVE_MIN_MS, COLD_ACTIVE_MAX_MS);
       feedSky(z, inCold, "The cold settles in hard. Flames pinch small, and everything living goes to ground.");
+      // THE MOUNTAIN GAINS ITS SEASON (5d): the cold stamps the snow, and the
+      // snow outlasts the cold — persisted, so the hill holds its winter after
+      // the weather has moved on.
+      if (z.snowUntil < st.until + SNOW_PERSIST_MS) z.snowUntil = st.until + SNOW_PERSIST_MS;
       // The first bite eats the flame: a burning torch out in it loses half
       // of whatever it had left. (The lantern's oil doesn't care.)
       for (const s of z.sessions.values()) {

@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL } from "./zone-data";
+import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -27,6 +27,41 @@ export function isFullMoon(now = Date.now()): boolean {
 // until the grounds are walkable after dark, and until the wood starts howling.
 export function moonPhase(now = Date.now()): number {
   return Math.floor(now / DAY_CYCLE_MS) % MOON_FULL_EVERY;
+}
+// THE ECLIPSE (2026-08-25). Astronomical: the eclipse-day is every
+// ECLIPSE_EVERY-th day-cycle, and the shadow crosses at midday. Pure modulo —
+// nothing persisted, nothing rolled, and the sky is readable: a wanderer who
+// knows the calendar could plan around it, and almost nobody does. Totality is
+// the day failing; the mountain goes dark under the eaten sun like everything
+// else (isDark reads this).
+export type SkyPhase = "idle" | "telegraph" | "active" | "aftermath";
+export function eclipsePhase(now = Date.now()): SkyPhase {
+  const cycle = Math.floor(now / DAY_CYCLE_MS);
+  if (cycle % ECLIPSE_EVERY !== 0) return "idle";
+  const t = now - cycle * DAY_CYCLE_MS;      // 0..DAY_CYCLE_MS; the day half comes first
+  if (t >= DAY_CYCLE_MS / 2) return "idle";  // the eclipse belongs to the day
+  const center = DAY_CYCLE_MS / 4;           // midday
+  const half = ECLIPSE_TOTAL_MS / 2;
+  if (t < center - half - ECLIPSE_TELEGRAPH_MS) return "idle";
+  if (t < center - half) return "telegraph";
+  if (t < center + half) return "active";
+  if (t < center + half + ECLIPSE_AFTER_MS) return "aftermath";
+  return "idle";
+}
+// THE BLOOD MOON: one full moon in BLOOD_MOON_EVERY rises red. The whole
+// night half of that day-cycle is the blood night — the grounds stay lit the
+// way a full moon lights them, and the dead remember harder in the red light.
+// IT IS A NIGHT, AND THE GATE BELONGS HERE rather than at each call site. The
+// moon's month turns on the day-cycle, so without this the red moon is "up" for
+// the DAYLIGHT half too — and the sky lines are all night-gated, so the two
+// halves of the feature disagreed: for two hours of every blood cycle the
+// hollow hit harder, woke hostile, murmured more and read with red eyes under a
+// midday sun that said nothing about it. Gated here, every reader gets the same
+// answer (ai's teeth and eyes, zone's damage and room line, events' prose).
+export function isBloodMoon(now = Date.now()): boolean {
+  return isNight(now)
+    && moonPhase(now) === 0
+    && (Math.floor(now / (DAY_CYCLE_MS * MOON_FULL_EVERY)) % BLOOD_MOON_EVERY === 0);
 }
 // Predators hunt harder after dark, outdoors only — day/night has no opinion
 // on indoor rooms, so neither does this. 1 = no change, the common case.

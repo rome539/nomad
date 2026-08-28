@@ -8,13 +8,14 @@ import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
 import { hasTrait } from "./world";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, isNight, isFullMoon, morphOf } from "./zone-util";
+import { cap, isNight, isFullMoon, isBloodMoon, morphOf } from "./zone-util";
 import * as events from "./events";
 import { underCover, MAP_QUARTERS } from "./detail";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, DRINKERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_MS, HOARD_TRAIL_MS, HOARD_SPOOK_MS,
-  CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_COOLDOWN_MS,
+  CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_BLOOD_ODDS, MURMUR_COOLDOWN_MS,
+  BLOOD_MOON_HOLLOW_DMG_MULT, BLOOD_MOON_EYES_READ, BLOOD_MOON_WAKERS, BLOOD_MOON_WAKE_TELLS,
   HOARD_COVET_RARITY, HOARD_COVET_ODDS, HOARD_COVET_MS, HOARD_COVET_LINES, RARITY_RANK,
   PACK_HOLDERS, PREY_BREAK_ODDS, PREY_WORRY_MULT, HOLD_LINES, BREAK_LINES,
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
@@ -30,7 +31,7 @@ import {
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
-  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
+  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
@@ -371,8 +372,17 @@ export function creatureRead(z: ZoneDO, creature: Creature, viewer: string): str
     " There is something wrong with it that you cannot quite put your finger on.",
     " It is marked somehow — the eye sees it, and the mind will not name it.",
   ]) : "";
-  return `${tmpl.description}${mark ? ` ${mark}` : ""}${marked} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}`
+  // On a blood moon the hollow read by their eyes before anything else.
+  const redEyes = isBloodMoon() && HOLLOW.has(creature.templateId) ? BLOOD_MOON_EYES_READ : "";
+  return `${tmpl.description}${mark ? ` ${mark}` : ""}${marked}${redEyes} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}`
     + (hoard || (bears ? ` It is ${bears.slice(2)}.` : ""));
+}
+
+// THE BLOOD MOON PUTS TEETH IN THE DEAD. On the red nights the hollow things
+// hit half again as hard — the one night the dead are stronger than the
+// living, and the deep knows it even where the moon is not visible.
+export function bloodMoonHollowMult(templateId: string): number {
+  return (isBloodMoon() && HOLLOW.has(templateId)) ? BLOOD_MOON_HOLLOW_DMG_MULT : 1;
 }
 
   // The legible deep sim (Qud's lesson): a creature's live state reads in the
@@ -627,7 +637,11 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       // A hostile guardian (AGGRESSIVE) needs no grudge — it bars its post to
       // everyone. It's never a hyena-meal-guard, so it falls straight through to
       // the target-and-strike below with a guardian's line, not a hyena wind-up.
-      const hostile = AGGRESSIVE.has(creature.templateId);
+      // THE WATCH WAKES (2026-08-25). On blood-moon nights the hollow soldiers
+      // need no grudge either — they attack any living person on sight. The
+      // working dead stay at work; the soldiers do not.
+      const bloodWake = isBloodMoon() && BLOOD_MOON_WAKERS.has(creature.templateId);
+      const hostile = AGGRESSIVE.has(creature.templateId) || bloodWake;
       if (!holdsGrudge && !guards && !hostile) continue;
       const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
       // A dire-hyena guarding its kill no longer jumps you the instant you walk
@@ -658,6 +672,8 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
         ? `${cap(tmpl.name)} remembers you — and comes for you.`
         : barring
         ? `${cap(tmpl.name)} fixes on you the moment you cross into its post — and moves to bar the way.`
+        : bloodWake
+        ? pick(BLOOD_MOON_WAKE_TELLS).replace("{a}", cap(tmpl.name))
         : `${cap(tmpl.name)} has you, and does not wait to see what you mean by it.`);
       z.roomFeed(session.roomId, !onSight
         ? `${cap(tmpl.name)} goes for ${session.name}.`
@@ -1410,7 +1426,10 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     if ((grazeHere && !events.coldBites(z, creature.roomId)) || carrionEater) {
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       creature.hunger = 0;
-      creature.hp = Math.min(tmpl.max_hp, creature.hp + (grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT) : FORAGE_HEAL));
+      creature.hp = Math.min(tmpl.max_hp, creature.hp + (grazeHere && events.mastOn(z) ? Math.round(FORAGE_HEAL * MAST_FORAGE_MULT)
+        : grazeHere && events.wrackIn(z, creature.roomId) ? Math.round(FORAGE_HEAL * WRACK_FORAGE_MULT)
+        : grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT)
+        : FORAGE_HEAL));
       if (!silent) {
         z.roomFeed(creature.roomId, carrionEater && !grazer
           ? `${cap(tmpl.name)} works over something old among the stones, and finds enough.`
@@ -2053,7 +2072,7 @@ export function deadRemembers(z: ZoneDO, creature: Creature, now: number): void 
     const ears = [...z.sessions.values()].filter(
       (s) => s.roomId === creature.roomId && z.reachable(s) && s.hp > 0,
     );
-    if (ears.length === 0 || !chance(MURMUR_ODDS)) return;
+    if (ears.length === 0 || !chance(isBloodMoon() ? MURMUR_BLOOD_ODDS : MURMUR_ODDS)) return;
     const world = z.world!;
     const tmpl = world.mobTemplates.get(creature.templateId)!;
     const beast = tmpl.name.replace(/^(a|an|the)\s+/i, "");

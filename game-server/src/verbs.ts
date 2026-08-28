@@ -24,7 +24,7 @@ import {
   REST,
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, MOB_WEAKGRIP_MULT, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
-  RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS,
+  RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS, EEL_RUN_FISH_MULT, SNOW_NOISE_MULT,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
@@ -728,15 +728,30 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // NOT WHEN BLIND, and this is the whole reason the check sits here rather than
   // at the top: you cannot examine the carving on a lintel you cannot see. In
   // the dark this falls straight through to the honest "you failed to SEE".
+  // THE SKY IS NOT IN THE ROOM, so the blind check does not own it. Everything
+  // below needs light because it is a thing you stoop to — a carving, a socket,
+  // a mark on a stone. Looking UP is not that, and gating it with the rest had
+  // one absurd consequence: an eclipse blinds every outdoor room (isDark), so
+  // the one moment the sun is worth looking at was the one moment you could not
+  // look at it, and the lines written for exactly that were reachable only by a
+  // wanderer holding a lit torch at noon. Being unable to see the ground has
+  // never meant being unable to see the weather.
+  //
+  // It stays honest under a roof: skyLook returns null for any room that is not
+  // OUTDOOR_ROOMS, so a blind delver in the deep asking after the sky falls
+  // through to the same refusal as before. The dark itself still answers for the
+  // night sky — those lines are the sky doing something, and they are true.
+  //
+  // The sky answers the WEATHER, not just the static lid (rome: "fix the
+  // weather"). skyLook is null when the sky is doing nothing specific, so a
+  // clear day falls through to the region's own sky line below — the lid, the
+  // mountain's sun, the crossing's moving light.
+  if (/^(the )?(sky|cloud|clouds|weather|sun)$/i.test(arg.trim())) {
+    // `sun` rides the same call so an eclipse can answer what the lid hides.
+    const skyNow = events.skyLook(z, session.roomId, arg);
+    if (skyNow) return z.send(session, skyNow, "study");
+  }
   if (!blind) {
-    // The sky answers the WEATHER, not just the static lid (rome: "fix the
-    // weather"). skyLook is null when the sky is doing nothing specific, so a
-    // clear day falls through to the region's own sky line below — the lid, the
-    // mountain's sun, the crossing's moving light.
-    if (/^(the )?(sky|cloud|clouds|weather)$/i.test(arg.trim())) {
-      const skyNow = events.skyLook(z, session.roomId);
-      if (skyNow) return z.send(session, skyNow, "study");
-    }
     // mapRegionOf, not regionOf: the sim's own reading collapses the whole
     // fortress interior to "upper" and every door to "gate", which would give
     // the warrens the halls' dressed-ashlar answer about their walls when the
@@ -1180,7 +1195,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // you land — SCALE with the load (rome, 2026-07-19). Cloth is dead quiet and
   // sneaks; full plate broadcasts every step. Worn mass reads as armor, the pack
   // as loose iron.
-  const noiseOdds = Math.min(NOISE_CAP, NOISE_FLOOR + z.loadOf(session) * NOISE_PER_WEIGHT);
+  const noiseOdds = Math.min(NOISE_CAP, NOISE_FLOOR + z.loadOf(session) * NOISE_PER_WEIGHT)
+    * (events.snowed(z, session.roomId) ? SNOW_NOISE_MULT : 1); // the season wraps every sound (5d)
   if (chance(noiseOdds)) {
     // The flavor has to name what's actually heavy on you, or a rock-and-shield
     // delver with no armor gets told his "armor rings" (Lunapilot, 2026-07-20).
@@ -1959,6 +1975,11 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   if (!FISHING_ROOMS.has(session.roomId)) {
     return z.send(session, "There's no water here to fish. You'd need to drop a line where the flood pools deep — or where the fen lies still.");
   }
+  // THE ICE (5a): the still waters freeze over in the cold, and nothing takes
+  // a line through it.
+  if (events.frozen(z, session.roomId)) {
+    return z.send(session, "The water is frozen solid — nothing takes a line through it, and nothing under it is biting either.");
+  }
   const now = Date.now();
   if (session.lastFishAt && now - session.lastFishAt < FISH_COOLDOWN_MS) {
     return z.send(session, "You've only just cast. Let the line settle.");
@@ -1986,7 +2007,7 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   const grigs = CROSSING_TRAPS.has(session.roomId);
   const traps = session.roomId === "the-trap-line" || grigs;
   const biting = (surface || sea) && events.raining(z, session.roomId);
-  if (!chance(Math.min(0.9, FISH_ODDS * (biting ? RAIN_BITE_MULT : 1)))) {
+  if (!chance(Math.min(0.9, FISH_ODDS * (biting ? RAIN_BITE_MULT : 1) * (events.eelRunOn(z, session.roomId) ? EEL_RUN_FISH_MULT : 1)))) {
     // The bottom keeps old iron; sometimes the hook finds that instead.
     if (chance(JUNK_SNAG_ODDS) && (await z.grantItem(session, "scrap-iron"))) {
       spendPool(z, session.roomId, pool);

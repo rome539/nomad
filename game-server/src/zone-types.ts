@@ -249,6 +249,7 @@ export interface SimState {
   nextChainmanAt?: number; // ms the world next rolls whether the chainman turns up somewhere
   works?: Record<string, number>; // gate roomId -> ms epoch its door reopens (the gatehouse shut for works; the gate ROOM is untouched)
   nextWorksAt?: number; // ms epoch the world next considers shutting a gatehouse
+  snowUntil?: number; // ms the mountain's snow lasts to (the season outlasts the cold that made it; 0 = no snow)
   nests?: Record<string, string[]>; // corvid nests: nest roomId -> gear the raven carried home (ABSTRACT — off the floor, visible only through feeding/raiding the nest itself)
   bounties?: [string, string, number?][]; // the keeper's bounty board: [trophyId, foodId, count?] currently posted (rotates like the fence)
   nextBountyChurnAt?: number; // ms the board next rolls a fresh set of trophies

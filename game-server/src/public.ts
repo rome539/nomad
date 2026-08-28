@@ -2513,6 +2513,14 @@ var connectingSince = 0; // when the in-flight handshake started, so a wedged
 // prologue; the readyState===1 check closes the live-wire case.
 var connecting = false;
 var CONNECT_STALL_MS = 10000;
+// WHO IS DIALLING, AND WHICH DIAL THIS IS. Minted once per page load and counted
+// up per dial, sent to the server on every handshake. The server needs both to
+// tell a real second window from THIS page's own abandoned handshake arriving
+// late — a stalled dial is closed here, but the upgrade request it already sent
+// cannot be recalled, and when it lands the server used to read it as another
+// client and close the live wire out from under us. See the guard in zone's /ws.
+var pageId = (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+var dialAttempt = 0;
 var freshLoad = true;    // this page just loaded with an EMPTY scroll — the first connect must ask the server to repaint the room (fresh=1), or a fast refresh lands on a blank pane. A websocket reweave keeps its scroll and never sets this.
 
 async function connect() {
@@ -2600,7 +2608,9 @@ async function connect() {
   // \u2014 and every handler below mutates page-wide state. Without this, a dead
   // socket's late event speaks for the living one.
   var stallWatch = null;
-  var sock = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : ""));
+  dialAttempt++;
+  var sock = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : "")
+    + "&pid=" + encodeURIComponent(pageId) + "&att=" + dialAttempt);
   ws = sock;
   var mine = function () { return ws === sock; };
   // A FIRST dial can hang in CONNECTING with no close event and nothing left
@@ -2739,7 +2749,7 @@ async function connect() {
     // hands the body over and closes THIS socket on purpose (1000 "reconnected").
     // Don't fight it — reconnecting here would yank the body back and forth.
     if (e && e.code === 1000 && e.reason === "reconnected") {
-      print("— your spirit is called to another window; this one goes still —", "sys");
+      print("— your spirit is called to another window; this one goes still. (type anything to call it back) —", "sys");
       ws = null;
       // AND IT STAYS STILL. Setting ws = null used to be enough, because the
       // only way back was the retry chain and this branch skips it. Then
@@ -2912,6 +2922,19 @@ function sendCmd(text) {
   if (bareSecret) { importKey(t); return; } // importKey routes bunker:// too
   if (localCmd(text)) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "cmd", text: text }));
+  // A STILLED TAB IS NOT A DEAD ONE. The stilled flag outranks every AUTOMATIC wake —
+  // focus, visibility, online — and must keep doing so: two windows trading the
+  // body several times a second is the storm it was written to stop. A keystroke
+  // is not a wake. It is the wanderer saying, deliberately, that they want the
+  // body in this window, which is the one thing that was always allowed to move
+  // it. Without this the flag is a one-way door: a single displacement costs a
+  // reload, and the scroll with it — and a displacement can be spurious, which
+  // is the whole reason the /ws staleness guard exists.
+  else if (stilled) {
+    stilled = false;
+    print("— you take the thread up again —", "sys");
+    connect();
+  }
   else print("— not connected —", "sys");
 }
 

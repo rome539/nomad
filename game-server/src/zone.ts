@@ -53,7 +53,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, moonPhase, nightHuntMult } from "./zone-util";
+import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, moonPhase, nightHuntMult, eclipsePhase, isBloodMoon } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -92,6 +92,8 @@ import {
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
+  BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
+  SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
@@ -241,6 +243,7 @@ export class ZoneDO implements DurableObject {
   // Keyed by pubkey: your chalk, your chart. The plaster is communal furniture;
   // what is written on it is not.
   public wallMarks = new Map<string, Set<string>>();
+  public snowUntil = 0; // ms the mountain's snow lasts to — the season, persisted like the walk
   public walked = new Map<string, Set<string>>();   // rooms each player has crossed — the wall's evidence (walkedOf)
   private wallLoaded = new Set<string>();          // pubkeys whose marks have been read up out of D1 this wake
   // The gatehouse board, oldest first. The only place a player's words outlive
@@ -577,11 +580,11 @@ export class ZoneDO implements DurableObject {
       this.wallMarks = new Map(
         savedWall && !Array.isArray(savedWall)
           ? Object.entries(savedWall as Record<string, string[]>).map(([pk, rooms]) => [pk, new Set(rooms)] as const)
-          : [],
-      );
+          : [],      );
       this.walked = new Map(
         Object.entries(saved.walked ?? {}).map(([pk, rooms]) => [pk, new Set(rooms)] as const),
       );
+      this.snowUntil = (saved.snowUntil as number) ?? 0;
       this.board = saved.board ?? [];
       this.stoneNames = new Map(Object.entries(saved.stoneNames ?? {}));
       this.cacheSpent = new Map(Object.entries(saved.cacheSpent ?? {}));
@@ -947,6 +950,7 @@ export class ZoneDO implements DurableObject {
       nextSurfaceAt: this.nextSurfaceAt,
       events: Object.fromEntries(this.events),
       fishStock: Object.fromEntries(this.fishStock),
+      snowUntil: this.snowUntil,
       nests: Object.fromEntries(this.nests),
     };
     // Rows, not the blob (simstore.ts): only what changed since the last save
@@ -1098,7 +1102,46 @@ export class ZoneDO implements DurableObject {
     // this, a refresh inside the 45s seamless window lands you on a blank pane —
     // the HUD says where you are, but nothing paints it (rome, 2026-07-17: the
     // gatehouse came back empty on refresh).
-    const fresh = new URL(req.url).searchParams.get("fresh") === "1";
+    const qs = new URL(req.url).searchParams;
+    const fresh = qs.get("fresh") === "1";
+    // WHICH PAGE IS DIALLING, AND WHICH OF ITS DIALS THIS IS. `pid` is minted
+    // once per page load, `att` counts that page's dials. Together they let the
+    // one-body-per-soul close below tell a genuinely new window from this
+    // window's own abandoned handshake. Absent on an older cached client, in
+    // which case the guard simply doesn't fire and displacement behaves as it
+    // always did.
+    const pid = qs.get("pid");
+    const attRaw = Number(qs.get("att"));
+    const att = Number.isFinite(attRaw) ? attRaw : null;
+
+    // A ZOMBIE HANDSHAKE MUST NOT EVICT THE LIVE WIRE (2026-08-28). The client
+    // gives up on a handshake that stalls past CONNECT_STALL_MS, nulls its
+    // handlers, closes its end and dials again — but closing a socket that never
+    // opened cannot recall an upgrade already on its way here. That request can
+    // still land, seconds after the replacement wire is up and painting, and the
+    // one-body-per-soul close below would read it as "another client" and shut
+    // the socket the wanderer is actually looking at. Their page then prints
+    // that their spirit is called to another window and goes still — and since
+    // nothing on that page ever cleared the flag, it refused to dial again until
+    // a reload. One window, locked out of the world by its own abandoned dial.
+    //
+    // The page says who it is and which of its dials this is, so an arrival can
+    // be ordered against what is already here. SAME page, and not a later dial
+    // than the one already holding the socket, means this request lost a race
+    // with itself: it is the stale one, and it is refused rather than served.
+    // A DIFFERENT page is a genuine second window and still takes the body, so
+    // opening this wanderer on a phone works exactly as before — no clock is
+    // compared across devices, only a counter within one page.
+    //
+    // Answered before init/catchUp/D1, because a dead dial should cost nothing.
+    if (pid && att !== null) {
+      for (const other of this.state.getWebSockets()) {
+        if (this.wsPubkey(other) !== pubkey) continue;
+        const a = this.wsAttachment(other);
+        if (a?.pid !== pid || typeof a.att !== "number") continue;
+        if (att <= a.att) return new Response("stale connection", { status: 409 });
+      }
+    }
 
     await this.init(zone);
     // The first observer in a while collapses the elapsed time. "Observed" now
@@ -1145,7 +1188,9 @@ export class ZoneDO implements DurableObject {
     this.state.acceptWebSocket(server);
     // la = lastActiveAt, the idle-sweep stamp: it rides the attachment so a
     // hibernation rebuild (hydrateSessions) doesn't read a parked socket as fresh.
-    server.serializeAttachment({ pubkey, la: Date.now() });
+    // pid/att ride the socket too, so the staleness guard above still works after
+    // a hibernation wake, when the only thing left of a connection is its socket.
+    server.serializeAttachment({ pubkey, la: Date.now(), pid, att });
     // Answer pings without waking the DO — keeps parked sockets warm for cheap.
     this.state.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
 
@@ -1447,9 +1492,9 @@ export class ZoneDO implements DurableObject {
 
   // The socket's attachment: the owner's key, stashed at accept-time, plus
   // `la` — the idle stamp (see Session.lastActiveAt).
-  private wsAttachment(ws: WebSocket): { pubkey?: string; la?: number } | null {
+  private wsAttachment(ws: WebSocket): { pubkey?: string; la?: number; pid?: string | null; att?: number | null } | null {
     try {
-      return ws.deserializeAttachment() as { pubkey?: string; la?: number } | null;
+      return ws.deserializeAttachment() as { pubkey?: string; la?: number; pid?: string | null; att?: number | null } | null;
     } catch { return null; }
   }
 
@@ -1564,7 +1609,14 @@ export class ZoneDO implements DurableObject {
     // stamp rides the socket too, so a hibernation rebuild keeps it.
     session.lastActiveAt = now;
     this.lastCommandAt = now;
-    try { session.ws.serializeAttachment({ pubkey: session.pubkey, la: now }); } catch {}
+    // Re-stamping the idle clock must CARRY the dial's identity, not drop it:
+    // rewriting the attachment with pubkey+la alone would strip pid/att off the
+    // socket on the wanderer's very first command, and the staleness guard would
+    // be blind again a second after it was armed.
+    try {
+      const a = this.wsAttachment(session.ws);
+      session.ws.serializeAttachment({ pubkey: session.pubkey, la: now, pid: a?.pid ?? null, att: a?.att ?? null });
+    } catch {}
     session.tokens = Math.min(
       RATE_CAPACITY,
       session.tokens + ((now - session.tokensAt) / 1000) * RATE_REFILL_PER_SEC,
@@ -1788,6 +1840,11 @@ export class ZoneDO implements DurableObject {
     // gatehouse door). A gloamed sky still puts them out: the gloam is a thing
     // that takes the light, and a lamp is exactly what it comes for.
     if (DARK_ROOMS.has(roomId) || events.gloamed(this, roomId)) return true;
+    // THE ECLIPSE (2026-08-25). Totality takes the day itself, so the dark at
+    // noon owns the mountain too — the band's night-blindness exemption below
+    // was written for the ordinary clock, not for the sun being eaten. Like
+    // the gloam, this comes for every lamp and every open slope.
+    if (OUTDOOR_ROOMS.has(roomId) && eclipsePhase() === "active") return true;
     // THE MOUNTAIN DOES NOT GO BLIND AT NIGHT (rome, 2026-08-19). Every other
     // outdoor band in this world is under something — a canopy, a valley side,
     // a wall, weather off the sea — and "dark" there means you genuinely cannot
@@ -4121,8 +4178,9 @@ export class ZoneDO implements DurableObject {
           continue;
         }
         let dmg = randInt(tmpl.dmg_min, tmpl.dmg_max) + (tmpl.is_boss ? (creature.phase ?? 0) * 3 : 0);
-        // A snag-toothed hunter's bite lands soft (mob trait lottery).
-        dmg = Math.round(dmg * ai.mobDmgMult(creature.traits));
+        // A snag-toothed hunter's bite lands soft (mob trait lottery); a blood
+        // moon puts teeth in the dead (the hollow hit half again as hard).
+        dmg = Math.round(dmg * ai.mobDmgMult(creature.traits) * ai.bloodMoonHollowMult(creature.templateId));
         // shadow-born hits harder under the shadow; patient's first blow — before
         // you've marked it — lands heavy.
         if (creature.traits?.includes("shadow-born") && events.shadowing(this, creature.roomId)) dmg = Math.round(dmg * MOB_SHADOW_DMG_MULT);
@@ -4820,9 +4878,12 @@ export class ZoneDO implements DurableObject {
         // rest both keep the slow rate. (And the cold never reaches the fire.)
         const byFire = session.resting && this.outOfWorld(session);
         // A fleeced lining keeps the cold off your rest; a sodden one holds it
-        // against you. Best worn piece decides — the traits never stack.
+        // against you. Best worn piece decides — the traits never stack. And
+        // the RAIN is the same thief for everyone (5c): real rain holds the
+        // cold against you like a sodden coat, and the wind and the dry
+        // weather after it is the drying.
         const coldMult = this.wearsTrait(session, "fleeced") ? FLEECED_COLD_MULT
-          : this.wearsTrait(session, "sodden") ? SODDEN_COLD_MULT : 1;
+          : (this.wearsTrait(session, "sodden") || events.raining(this, session.roomId)) ? SODDEN_COLD_MULT : 1;
         // Wind rides the cold: a rest that was already chancy is chancier.
         const inWind = events.windy(this, session.roomId);
         const restSkip = inWind ? WIND_CHILL_REST_SKIP : COLD_REST_SKIP;
@@ -5093,7 +5154,11 @@ export class ZoneDO implements DurableObject {
 
   private pruneTraces(now: number): void {
     for (const [roomId, list] of this.traces) {
-      const alive = list.filter((t) => now - t.at < (TRACE_LIFE_MS[t.kind] ?? 0));
+      // FRESH SNOW COVERS THE RECORD (5d): the mountain under snow lets its
+      // prints go twice as fast — the season hides what walked it.
+      const snowedHere = this.snowUntil > now && this.world!.rooms.get(roomId)?.region === "mountain";
+      const lifeMult = snowedHere ? SNOW_TRACE_LIFE_MULT : 1;
+      const alive = list.filter((t) => now - t.at < (TRACE_LIFE_MS[t.kind] ?? 0) * lifeMult);
       if (alive.length === 0) this.traces.delete(roomId);
       else if (alive.length !== list.length) this.traces.set(roomId, alive);
     }
@@ -5796,6 +5861,7 @@ export class ZoneDO implements DurableObject {
     const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
     let dmg = randInt(tmpl.dmg_min, tmpl.dmg_max) + (tmpl.is_boss ? (creature.phase ?? 0) * 3 : 0);
     if (ai.scavengerBold(this, creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);
+    if (ai.bloodMoonHollowMult(creature.templateId) > 1) dmg = Math.round(dmg * ai.bloodMoonHollowMult(creature.templateId));
     // REACH blunts the rush: a haft held at length means the thing arrives on
     // the point first — the blow still lands, but without the ambush's weight.
     const weapon = this.equippedItem(victim, "weapon");
@@ -6316,7 +6382,12 @@ export class ZoneDO implements DurableObject {
         const touch = own ? ` ${own}` : "";
         return `Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind.${wet}${touch} A light would show it. (light a torch, or feel your way back the way you came)`;
       }
-      return "Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water. A light would show it. (light a torch, or feel your way back the way you came)";
+      // On a blood moon the hollow things are lit from inside — the one light
+      // the dark cannot take, and the one thing you can still see in it.
+      const redEyesInDark = isBloodMoon() && [...this.creatures.values()]
+        .some((c) => c.roomId === room.id && HOLLOW.has(c.templateId))
+        ? BLOOD_MOON_EYES_DARK : "";
+      return `Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water.${redEyesInDark} A light would show it. (light a torch, or feel your way back the way you came)`;
     }
     const title = den.roomTitle(this, session, room.name);
     const lines = full ? [title, room.description] : [title];
@@ -6362,7 +6433,9 @@ export class ZoneDO implements DurableObject {
     // either a torch holding the dark at bay or a full moon lighting the
     // grounds outright; either way, say which (rome, 2026-07-22).
     if (OUTDOOR_ROOMS.has(room.id) && isNight()) {
-      lines.push(isFullMoon()
+      lines.push(isBloodMoon()
+        ? "A red moon rides over the grounds — the light it gives is the colour of old blood, and nothing under it is quite asleep."
+        : isFullMoon()
         ? "A full moon rides high and white — the grounds lie almost as bright as day."
         // Whose light it is matters here: this line runs for anyone the room is
         // lit FOR, and telling a man he can see past "your light" when the
@@ -6517,7 +6590,8 @@ export class ZoneDO implements DurableObject {
       // In fog the tell already says "you cannot read it" — so the glance must
       // not then hand over its exact wounds and its haul in the same breath.
       const fogged = events.foggy(this, room.id);
-      lines.push(`${cap(t.name)} is here${fogged ? "" : this.bearsClause(creature)}${tell ? `, ${tell}` : ""}.${!fogged && creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
+      const redEyes = isBloodMoon() && HOLLOW.has(creature.templateId) ? BLOOD_MOON_EYES_ROOM : "";
+      lines.push(`${cap(t.name)} is here${fogged ? "" : this.bearsClause(creature)}${tell ? `, ${tell}` : ""}${fogged ? "" : redEyes}.${!fogged && creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
     }
     // Blood on a stranger's hands is a CLOSE read: the fog swallows it and the
     // rain runs it off them. The room glance only carries the mark in weather

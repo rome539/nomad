@@ -146,7 +146,7 @@ type MetaField = Exclude<keyof SimState, PerBlobField>;
 const META_FIELDS = [
   "savedAt", "regrow", "roamRocks", "arrivals", "openDoors", "doorCloseAt", "fenceOut",
   "bloodOn", "nextStoneAt", "nextBrandAt", "nextSmokeTorchAt", "nextCarrionAt", "rot", "placedSpawns", "seededDens", "inGatehouse", "inDen", "board", "stoneNames",
-  "cacheSpent", "cacheRoom", "nextSurfaceAt", "events", "fishStock", "works", "nextWorksAt", "nextChainmanAt",
+  "cacheSpent", "cacheRoom", "nextSurfaceAt", "events", "fishStock", "works", "nextWorksAt", "nextChainmanAt", "snowUntil",
   "nests", "bounties", "nextBountyChurnAt", "nextFenceChurnAt", "bountyTaken", "keeperBowl",
 ] as const satisfies readonly MetaField[];
 // Errors when a MetaField is missing from META_FIELDS (the type collapses to
