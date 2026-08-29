@@ -8,6 +8,7 @@ import type { Session } from "./zone-types";
 import type { CarriedItem, JournalRow } from "./world";
 import { journalLoad, journalStudy, journalTraitsLoad, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
+import { pick, chance } from "./rng";
 import { uuid } from "./rng";
 import * as den from "./den";
 import * as ai from "./ai"; // the close read a `study` prints under its own line
@@ -18,7 +19,7 @@ import {
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, ROOTED, FIREKEEPERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
   MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF,
-  GATE_TELLINGS,
+  GATE_TELLINGS, DOOR_TELLINGS, DOOR_TELLING_ODDS,
 } from "./zone-data";
 
 // ---- the milestones: the road's register of who walked it ----
@@ -807,11 +808,23 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
   // gate ROOM'S OWN region, as the design note in zone-data always said: the
   // door you ran for decides what you find out. The old fortress gates declare
   // no region, so they fall back to "gate" exactly as they always did. (The
-  // crossing has no telling written yet — its two doors keep the quiet the
-  // `lines` check below was built for.)
+  // crossing got its telling 2026-08-29; the `lines` check below still stands
+  // for any band that gets a gate before it gets a story.)
   const band = (z.world!.rooms.get(session.roomId)?.region as Region | undefined) || "gate";
   const lines = GATE_TELLINGS[band as Region];
   if (!lines?.length) return false; // a band with no telling written yet keeps its own quiet
+  // THE RARE ASIDE (2026-08-29): now and then he says the other thing instead —
+  // the story with a door inside it, from his own ground. It deliberately does
+  // NOT touch keeperTold: the region's telling is eleven lines and stays eleven
+  // lines, and this is a night he talked about something else rather than a page
+  // torn out of it. Keyed like the telling, so no keeper knows a door that is
+  // not on his ground, and the road knows none because the road has none.
+  const aside = DOOR_TELLINGS[band as Region];
+  if (aside?.length && chance(DOOR_TELLING_ODDS)) {
+    session.keeperDueAt = 0;
+    z.send(session, pick(aside), "study");
+    return true;
+  }
   const heard = session.keeperTold.get(band) ?? 0;
   // Past the last line he begins again from the top. Not a fallback for running
   // out of content — it is the truest thing about him. He has told this to every

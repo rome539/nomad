@@ -8179,6 +8179,85 @@ export const GATE_TELLINGS: Partial<Record<Region, string[]>> = {
     "\"He's still walking it, and he's still taking tools off people, and he does not stop to hear which right you think you've got. Big man, oiled leather, felling axe carried like it weighs nothing.\"",
     "\"Past the first few stands in there the wood stops telling you the truth about which way you're facing, and that's where he does his rounds.\" He goes back to the counter. \"That wood had a court,\" he says. \"Proper one.\"",
   ],
+
+  // THE CROSSING (2026-08-29). It had two gates and no telling, which is why
+  // keeperTells carried a note about the crossing keeping its own quiet. Its
+  // institution was never in doubt once you read the room names off it: a ford,
+  // a causeway, a ferry and a bridge, all over ONE water, plus a toll board, a
+  // toll post, a toll cottage and a tollhouse shell. Four ways over and an
+  // authority that licensed every one of them.
+  //
+  // THE JOKE IS STRUCTURAL and it is the region's own: four rivals spent two
+  // centuries competing with each other instead of with the river, and the free
+  // one outlasted the three that charged. That is also the honest reason a
+  // wanderer cares — the ford is still there and the bridge is four piers.
+  //
+  // It picks up the warden with the gauge-post from the GATE telling, seen from
+  // the far end: upriver he is a man doing his job and being ignored; down here
+  // he is a warning nobody acted on. Same water, same man, two hatches.
+  crossing: [
+    "The keeper looks past you at the water. \"Four ways over, once. Ford, causey, ferry, bridge. Every one of them put in by somebody who thought the last one had it wrong, and every one of them charging.\"",
+    "\"Board's still up at the parting of the ways. Man and pack, a penny. Beast, twopence. Cart, fourpence and a half — and the half is for the beast pulling it, which people argued about for two hundred years.\"",
+    "\"The ford's the oldest and the ford's free, and that's the whole of the trouble. Free at low water, a drowning at high, and nobody could ever get the two lists of hours to agree.\"",
+    "\"So they laid the causey. Brushwood and stone, dead straight, toll on it.\" He turns a hand over. \"Point of a causey isn't that it's dry. Point of it is that it's dry AND it's charged, and the ford is only free.\"",
+    "\"Ferry took the deep channel, where neither of them could go. One man, one boat, one distance, over and back, his whole working life.\" A pause. \"House is still standing. So's the rope-drum. Boat's stove in.\"",
+    "\"Then somebody built the bridge, and that was the most money anybody ever put into this water. Four piers.\" He almost smiles. \"You can still count them. You can count them because they're all there is to count.\"",
+    "\"And the four of them spent two hundred years fighting each other, and not one hour of it fighting the river.\"",
+    "\"There was a warden upriver reading the level off a post twice a day and writing down which way it was going. He sent it down to us.\" He shrugs. \"It was read. They went on charging.\"",
+    "\"Bridge went first, which surprised people and shouldn't have — it was the only one of the four that couldn't get out of the way.\" He wipes the counter. \"Ferry went when the ferryman did. Causey's under, most hours. Ford's where it always was.\"",
+    "\"So the free one outlasted the three that charged, and the water has all four of them in the end regardless.\" He sets the rag down. \"It still charges. It just stopped taking pennies.\"",
+    "He looks back out at the water. \"Four ways over, once,\" he says. \"Ford, causey, ferry, bridge.\"",
+  ],
+};
+
+// ---- THE RARE ASIDE (2026-08-29) --------------------------------------------
+// Now and then, instead of the next line of his region's story, the keeper says
+// the other thing: the one about the door on his own ground.
+//
+// THIS IS NOT THE THING THAT WAS KILLED. That was a word of the doors — a
+// rumour bought over the counter that named where a door was, which is a
+// tooltip with a price on it. This names no mechanic, no hour and no method. It
+// is a story with a door inside it, told by a man who does not know it is a
+// door, and every one of these is something he heard rather than something he
+// did. What it buys the wanderer is a REASON TO GO AND STAND SOMEWHERE, which
+// was the only real hole: the doors all announce themselves once you are in the
+// room, and nothing ever sent you to the room.
+//
+// KEYED THE SAME WAY THE TELLINGS ARE — the gate you ran for decides what you
+// find out, so each keeper only knows the door on his own ground. The road has
+// none, because there is no door on the road, and a keeper inventing one would
+// be the first liar in this building.
+//
+// It does not spend your place in the telling. The story is 11 lines and it
+// stays 11 lines; the aside is a night he talks about something else.
+export const DOOR_TELLING_ODDS = 0.07; // about one visit in fourteen
+export const DOOR_TELLINGS: Partial<Record<Region, string[]>> = {
+  // THE MOUNTAIN keeper has no institution and never invents one. So his aside
+  // is not knowledge, it is an inheritance he cannot use — the same shape as the
+  // rest of his telling, which is the shape of what is not yours.
+  mountain: [
+    "He is quiet a while. \"There's a wall at the back of the corrie, under the crags. Black, wet, seven hundred foot.\" He sets a turf on edge. \"There's no way up it. I've stood at the foot of it and I'll tell you for nothing there is no way up it. My grandfather said there was a way IN.\" A pause. \"He wasn't a liar and he wasn't a clever man, so I've never known what to do with that.\"",
+    "\"That wall my grandfather went on about.\" He does not look round. \"He said it asked him something. Said he hadn't the answer at the time, and he had sixty years to come up with one, and by the end of it he couldn't get back up the hill to give it.\" He turns the turf. \"He was ninety. Could as easily have been the fever.\"",
+  ],
+  // THE WOOD keeper reads from a court roll, so his aside is a line in it that
+  // does not behave like the others: no offender, no fine, just an instruction.
+  wood: [
+    "\"There's an entry in that roll I've never made sense of.\" He taps the hatch. \"The acre north of the birdless ground — ordered, that none go there on the full of the moon. No fine set. No man named.\" He shrugs. \"Every other line in that book is a man and a fourpence. That one's an instruction, and somebody thought it worth the ink.\"",
+    "\"Same acre, later roll, different hand.\" He is enjoying this one. \"Presented: that the ground north of the pale keeps itself, and the court has no business in it. A court that fined men fourpence for a stick of green wood, writing down that a piece of its own wood was none of its affair.\"",
+  ],
+  // THE CROSSING keeper deals in hours and water, so his aside is an hour and a
+  // water, and the arithmetic that killed a man is left for you to do.
+  crossing: [
+    "\"You'll have seen the gauge post at the green water.\" He wipes the hatch down. \"There's a cave under the head of it that the sea has the run of. Goes back into the hill further than anybody's followed it, because you get about the one hour, and it's never the same hour twice.\" He sets the rag aside. \"Two men I know of went in on a falling tide. One came out.\"",
+    "\"The one that came out wouldn't say what he'd got. Wouldn't say what he'd seen, either.\" A pause. \"He did say the water comes back quicker than it goes away, which any man who has worked this water could have told him beforehand and for nothing.\"",
+  ],
+  // THE GATE keeper's aside picks the muster roll back up at the end of it: the
+  // strength-of-one company he has already told you about is the man ringing,
+  // and the store nobody opened is what he was ringing for.
+  gate: [
+    "\"That last name on the roll.\" He is quiet a moment. \"Whoever he was, he kept ringing. It's in the fabric book — the bell rung twice daily, on the hours, by the watch.\" He turns the cup over in the rag. \"And the watch, by then, is him. Ringing a muster for a garrison of one.\"",
+    "\"There's a store over the armoury that never once got opened.\" He shrugs. \"Papers have it stocked. Papers never have it issued. Whatever they had in there, they were holding it for the men who'd come when the bell went.\" A beat. \"Nobody came. It'll still be stocked.\"",
+  ],
 };
 
 // ONE LINE PER VISIT. NOT A DRIP (rome, 2026-08-02: "this seems like spam").
