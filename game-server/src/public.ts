@@ -4,7 +4,7 @@ export const PAGE = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<title>NOMAD — the Door</title>
+<title>NOMAD</title>
 <meta name="description" content="A living text dungeon on Nostr. Your key is your character. The dead stay dead.">
 <link rel="icon" type="image/png" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -12,14 +12,14 @@ export const PAGE = `<!doctype html>
 <meta name="theme-color" content="#16120c">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="NOMAD">
-<meta property="og:title" content="NOMAD — the Door">
+<meta property="og:title" content="NOMAD">
 <meta property="og:description" content="A living text dungeon on Nostr. Your key is your character. What you carry is provisional until the gate seals it — and the dead stay dead.">
 <meta property="og:url" content="https://nomadmud.com">
 <meta property="og:image" content="https://nomadmud.com/og.jpg?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="NOMAD — the Door">
+<meta name="twitter:title" content="NOMAD">
 <meta name="twitter:description" content="A living text dungeon on Nostr. The dead stay dead.">
 <meta name="twitter:image" content="https://nomadmud.com/og.jpg?v=2">
 <style>

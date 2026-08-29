@@ -11,7 +11,7 @@ import {
   loadLeaderboard, leaderboardRank,
   setItemLoreId, deedsBump, trait, hasTrait, parseTraits,
 } from "./world";
-import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState } from "./zone-util";
+import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState, isNight, isFullMoon, isBloodMoon } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
 import * as ai from "./ai";
 import * as light from "./light";
@@ -25,6 +25,8 @@ import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, MOB_WEAKGRIP_MULT, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS, EEL_RUN_FISH_MULT, SNOW_NOISE_MULT,
+  RIDDLE_DOOR_KEY, MOON_DOOR_KEY, TIDE_DOOR_KEY, BELL_DOOR_KEY, RIDDLE_ROTATE_MS, RIDDLES, RIDDLE_ASK, RIDDLE_OPEN_LINE, RIDDLE_WRONG, RIDDLE_HINT, RIDDLE_HINT_AFTER, RIDDLE_WINDOW_MS,
+  tideSiltLine,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
@@ -633,6 +635,10 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     if (!z.cacheLocked(cacheHere)) {
       return z.send(session, `${cacheHere.description} It hangs sprung and empty. Give it time to be worth forcing again.`);
     }
+    if (cacheHere.keyItem === "") {
+      // A prize box: the door was the lock, so there is no lock to read.
+      return z.send(session, `${cacheHere.description} There is no lock on it — the door that guards this room is the only lock it has.`);
+    }
     const hasKey = session.items.some((c) => c.itemId === cacheHere.keyItem);
     return z.send(session, `${cacheHere.description} It is locked.`
       + (keyT ? (hasKey ? ` ${cap(keyT.name)} in your pack fits that lock.` : ` The lock wants ${keyT.name}.`) : ""));
@@ -746,8 +752,13 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // weather"). skyLook is null when the sky is doing nothing specific, so a
   // clear day falls through to the region's own sky line below — the lid, the
   // mountain's sun, the crossing's moving light.
-  if (/^(the )?(sky|cloud|clouds|weather|sun)$/i.test(arg.trim())) {
+  if (/^(the )?(sky|cloud|clouds|weather|sun|moon)$/i.test(arg.trim())) {
     // `sun` rides the same call so an eclipse can answer what the lid hides.
+    // `moon` rides it for the same reason and a better one: the moon runs a
+    // six-night month that decides when a door in the wood opens, and until now
+    // it was announced ONCE, at the instant the light failed, to whoever was
+    // outdoors in that second. It was not a probe word, so `look moon` did not
+    // even reach the sky. A month you cannot look up at is not a month.
     const skyNow = events.skyLook(z, session.roomId, arg);
     if (skyNow) return z.send(session, skyNow, "study");
   }
@@ -976,6 +987,44 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     z.roomFeed(session.roomId, `${session.name} presses something to the black door, and it grinds open.`, session.pubkey, false);
     z.roomSound(session.roomId, "Iron grinds against stone, {dir}.");
     z.creatureNoise(session.roomId);
+  } else if (exit.key_item === RIDDLE_DOOR_KEY && !z.openDoors.has(doorKey)) {
+    // THE DOOR THAT ASKS. Its riddle turns over on a slow clock, and it is
+    // answered with `say` — cmdSay is the only hand that opens it. Wrong
+    // answers are answered, never punished; after enough of them it hints.
+    const i = Math.floor(Date.now() / RIDDLE_ROTATE_MS) % RIDDLES.length;
+    return z.send(session, RIDDLE_ASK.replace("{q}", RIDDLES[i].q), "study");
+  } else if (exit.key_item === MOON_DOOR_KEY) {
+    // THE MOON DOOR keeps no state: the moon IS the state. Full and white,
+    // and not the red one — the red moon belongs to the dead.
+    if (!isNight() || !isFullMoon() || isBloodMoon()) {
+      return z.send(session, "The black door will not move. The moon cut into it is dark, and the iron is cold against your hand. It opens for the full moon, and for no other.", "dmgin");
+    }
+    // open — fall through and walk
+  } else if (exit.key_item === TIDE_DOOR_KEY) {
+    // THE TIDE DOOR keeps the silt: the sea buries the sill every tide, and
+    // the door opens for whoever digs it clear while the water is out. The
+    // digging is `pry`'s work (cmdUnlock); this is only the door's refusal.
+    if (events.seaLevel(z) > 0) {
+      return z.send(session, "The door is under water — the sea stands over its sill, and it will not open against its own weight. When the water goes out, the door is there, and so is the silt. (pry the door while the water is out)", "dmgin");
+    }
+    if (z.tideSilt > 0) {
+      return z.send(session, `The door will not move — ${tideSiltLine(z.tideSilt)}. Pry it clear while the water is out.`, "dmgin");
+    }
+    // open — fall through and walk
+  } else if (exit.key_item === BELL_DOOR_KEY) {
+    // THE BELL DOOR keeps no state: the bell IS the state. It opens with the
+    // ringing and holds through the quiet after — and the bell rings only
+    // while the last watchman lives to ring it from his turret far above. The one
+    // mob in the world worth keeping alive.
+    if (events.bellOpen(z)) {
+      // open — fall through and walk
+    } else if (z.events.get("bell")?.phase === "telegraph") {
+      return z.send(session, "The door overhead trembles in its frame — the note is in the air, but the ringing has not begun. It opens with the bell, not the warning.", "dmgin");
+    } else if (![...z.creatures.values()].some((c) => c.templateId === "last-watchman")) {
+      return z.send(session, "The door overhead will not move. It opens with the bell — and the bell has no one left to ring it. The watch is dead, and the hours are silent until it rises.", "dmgin");
+    } else {
+      return z.send(session, "The door overhead will not move. It opens with the bell — twice a day, near the same hours, when the last watchman rings it from his turret at the top of the fortress.", "dmgin");
+    }
   } else if (exit.key_item && exit.key_item !== DEEP_HEART && !z.openDoors.has(doorKey)) {
     if (!session.items.some((c) => c.itemId === exit.key_item)) {
       const key = world.itemTemplates.get(exit.key_item);
@@ -1244,8 +1293,48 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
 // (speechOut) unchanged — this is `say` alone, not a blanket speech policy.
 export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
   if (!msg) return z.send(session, "Say what?");
+  // THE WORDS ARE SPOKEN FIRST, ALWAYS, and this order is the whole point. The
+  // riddle door listens to the room — but LISTENING is not INTERCEPTING, and
+  // making every word either an answer or nothing else turned the Buried Chapel
+  // into a room where two people cannot talk to each other. It is a through-room
+  // with two ordinary ways out, and the door's window is four minutes, so that
+  // was a permanent silence in a corridor of the fortress. The door hears you
+  // say it; so does everybody standing there.
   z.send(session, `You say: ${msg}`, "say");
   z.roomFeed(session.roomId, `${session.name} says: ${msg}`, session.pubkey, false, "say", { name: session.name, pk: session.pubkey });
+  // ...AND THEN THE IRON ANSWERS. A right word buys a window — open for
+  // everyone, the iron remembering its shape — and a wrong one is answered,
+  // never punished, until the door takes pity and hints.
+  const world = z.world!;
+  const doorExit = (world.exits.get(session.roomId) ?? []).find((e) => e.key_item === RIDDLE_DOOR_KEY);
+  if (!doorExit) return;
+  const doorKey = `${session.roomId}:${doorExit.dir}`;
+  if (z.openDoors.has(doorKey)) return;
+  const i = Math.floor(Date.now() / RIDDLE_ROTATE_MS) % RIDDLES.length;
+  // BOTH SIDES ARE NORMALISED. Stripping the article off only the ANSWER left
+  // every "the ..." spelling in the tables unmatchable — "the moon" and "the lid"
+  // were dead entries that could never fire, and any later one would have been
+  // too. Now the table can be written however it reads best.
+  const norm = (s: string) => s.toLowerCase().replace(/^(the |a |an )/, "").trim();
+  const said = norm(msg);
+  const patience = `${doorKey}|${session.pubkey}`;
+  if (RIDDLES[i].a.some((ans) => norm(ans) === said)) {
+    z.openDoors.add(doorKey);
+    z.doorCloseAt.set(doorKey, Date.now() + RIDDLE_WINDOW_MS);
+    z.riddleWrong.delete(patience); // answered: this wanderer's slate is clean
+    z.send(session, RIDDLE_OPEN_LINE, "unlock");
+    z.roomFeed(session.roomId, `${session.name} speaks to the black door, and it grinds open.`, session.pubkey, false);
+    z.roomSound(session.roomId, "Iron grinds against stone, {dir}.");
+    z.creatureNoise(session.roomId);
+    return;
+  }
+  // PATIENCE IS PER WANDERER, not per door. Keyed by the door alone, two wrong
+  // guesses by anyone put it into hint-only mode for EVERYBODY for the rest of
+  // the wake — one person's fumbling handing the answer to every stranger who
+  // walked in after them. The door is patient with each of you separately.
+  const wrongs = (z.riddleWrong.get(patience) ?? 0) + 1;
+  z.riddleWrong.set(patience, wrongs);
+  z.send(session, wrongs >= RIDDLE_HINT_AFTER ? pick(RIDDLE_HINT) : pick(RIDDLE_WRONG), "study");
 }
 
 // Shout: your words thrown hard enough to cross walls. The trade IS the verb —
@@ -2191,7 +2280,13 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
     ? "You go still. There is nothing to listen past — the wood is holding its breath with you."
     : "You go still and give the dark your ear."];
   for (const e of picked) {
-    const sealed = e.key_item && !z.openDoors.has(`${session.roomId}:${e.dir}`);
+    // The secret doors keep their own state: the moon, the tide and the bell
+    // are not in openDoors, but a door standing open is not cold iron either —
+    // and a tide door standing silted is cold iron, whatever the water is doing.
+    const sealed = e.key_item && !z.openDoors.has(`${session.roomId}:${e.dir}`)
+      && !(e.key_item === MOON_DOOR_KEY && isNight() && isFullMoon() && !isBloodMoon())
+      && !(e.key_item === TIDE_DOOR_KEY && events.seaLevel(z) === 0 && z.tideSilt <= 0)
+      && !(e.key_item === BELL_DOOR_KEY && events.bellOpen(z));
     lines.push(`${cap(dirPhrase(e.dir))}: ${sealed ? "cold iron, and nothing through it" : heardIn(z, e.to_room)}.`);
     // IN THE QUIET, SOUND CARRIES A ROOM FURTHER (2026-08-06). The silence is
     // not safety, it is a better microphone — and it points BOTH ways: what you

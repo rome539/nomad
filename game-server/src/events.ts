@@ -40,6 +40,7 @@ import {
   WIND_TORCH_GUTTER_ODDS, WIND_SEA_CHOP_MULT, WIND_CHILL_TORCH_MULT, WIND_CHILL_REST_SKIP,
   BREACH_PAIRS, BREACH_TELEGRAPH_MS, BREACH_ACTIVE_MS, BREACH_AFTERMATH_MS,
   SEA_ROOMS, SEA_INSTRUMENTS, TIDE_SHUT, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_HEARD_BANDS, ROAD_HEARD_BANDS, SEA_BITE, SEA_STATES,
+  TIDE_SILT_COURSES, TIDE_SILT_PER_TIDE, TIDE_SILT_MAX,
   FOOD_KEEPS, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT,
   SEA_TELEGRAPH_MS, SEA_MAKE_MS, SEA_STAND_MIN_MS, SEA_STAND_MAX_MS, SEA_EBB_MS,
   TIDEWAYS_ROOMS, TIDE_LEVELS, TIDE_HIGH_ODDS,
@@ -59,7 +60,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, MOON_SKY, MOON_DAY,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_ACTIVE_MIN_MS, CLOUDDOWN_ACTIVE_MAX_MS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -227,6 +228,14 @@ export function bellWakeMult(z: ZoneDO, roomId: string): number {
 export function bellDrivesRats(z: ZoneDO, creature: { roomId: string; templateId: string }): boolean {
   return phaseOf(z, "bell") === "active" && keepRoom(z, creature.roomId)
     && creature.templateId.includes("rat") && !BROODERS.has(creature.templateId);
+}
+
+// The bell door reads the bell directly: open with the ringing, hold through
+// the aftermath — the note leaving the air. The telegraph is the warning,
+// never the key. The door itself keeps no state; the bell is the state.
+export function bellOpen(z: ZoneDO): boolean {
+  const p = z.events.get("bell")?.phase;
+  return p === "active" || p === "aftermath";
 }
 
 // Where the rat-tide is RIGHT NOW (null when no boil runs). The tide itself is
@@ -765,6 +774,11 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
     return pick(ECLIPSE_AFTER_LINES);
   }
   if (isNight() && isBloodMoon()) return pick(BLOOD_MOON_LINES);
+  // ASKING AFTER THE MOON GETS THE MOON, ahead of the weather. Every other
+  // probe below is the sky doing something to you — rain, cloud, cold; this one
+  // is a question about where the month is, and rain does not stop the month.
+  // (The red nights answer above, because a blood moon IS the moon's answer.)
+  if (/moon/i.test(arg ?? "")) return isNight() ? MOON_SKY[moonPhase()] ?? MOON_SKY[3] : MOON_DAY;
   // The mountain's two weather arcs, then its presence.
   if (z.world!.rooms.get(roomId)?.region === "mountain") {
     switch (phaseOf(z, "clouddown")) {
@@ -839,8 +853,14 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   switch (phaseOf(z, "crows")) {
     case "telegraph": return "Crows are settling on every high thing, in numbers, and the sky is filling with them.";
     case "active": return "Crows crowd the sky here, watching everything that moves.";
-    default: return null;
+    default: break;
   }
+  // AND WHEN THE SKY IS DOING NOTHING ELSE, at night, it is still doing the
+  // moon. Last, so no arc ever loses its line to it — a wanderer asking after
+  // the sky in the rain gets the rain, which is the sky's most urgent news. On
+  // a quiet night the news is the month, and that is worth having.
+  if (isNight()) return MOON_SKY[moonPhase()] ?? MOON_SKY[3];
+  return null;
 }
 
 // Ambience while the sky is doing something (zone's ambientLine reads this
@@ -2068,20 +2088,22 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       st.until = now + BELL_TELEGRAPH_MS;
       // Standing at the source gets its own line — "somewhere above" is a lie
       // if you're the one under the bell (rome, 2026-07-24).
-      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote", "Somewhere above, a single bell-note rolls through the halls — then silence.");
+      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "Somewhere above, a single bell-note rolls through the halls — then silence.");
       // A fortress bell is heard from the road, and through the floor. It is the
       // one SCHEDULED thing in this world — a player can learn its hours — and
       // until now you could only know that by standing inside the keep for it.
       z.roomFeedBands(KEEP_HEARD_BANDS, "One bell-note comes off the fortress and rolls out over everything, and then nothing.", "evt");
       z.roomFeed("the-bell-cote", "The bell shudders under your hand before it even sounds — one note, so close it isn't sound anymore, just impact.", undefined, false, "evt");
+      z.roomFeed("the-issue-room", "The note comes down through the stone and every racked blade in the room answers it at once, one thin hum out of two hundred edges. The dust stands up off them.", undefined, false, "evt");
       break;
     }
     case "telegraph": {
       st.phase = "active";
       st.until = now + BELL_ACTIVE_MS;
-      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote", "The bell begins to RING — over and over, iron on iron, and the keep is waking around you.");
+      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "The bell begins to RING — over and over, iron on iron, and the keep is waking around you.");
       z.roomFeedBands(KEEP_HEARD_BANDS, "The fortress bell is RINGING — on and on, iron on iron, and whatever is inside those walls is waking to it.", "evt");
       z.roomFeed("the-bell-cote", "The bell is RINGING inches from you — iron on iron, filling your skull, drowning every other sense you have.", undefined, false, "evt");
+      z.roomFeed("the-issue-room", "The bell is RINGING, a long way up and coming down through every stone of the fortress into this room. The racks sing with it. This is the sound they were stacked here for, and it is two centuries late.", undefined, false, "evt");
       // Everything under the keep's roof stirs at once; the rats are already
       // running for the earth (see bellDrivesRats).
       for (const c of z.creatures.values()) {
@@ -2094,9 +2116,10 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
     case "active": {
       st.phase = "aftermath";
       st.until = now + BELL_AFTERMATH_MS;
-      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote", "The bell stops. The silence after is worse — the halls are still listening.");
+      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "The bell stops. The silence after is worse — the halls are still listening.");
       z.roomFeedBands(KEEP_HEARD_BANDS, "The bell stops. The fortress goes back to being quiet, which is worse.", "evt");
       z.roomFeed("the-bell-cote", "The bell goes still under your palm — the ringing's out of the air, but not out of your bones yet.", undefined, false, "evt");
+      z.roomFeed("the-issue-room", "The note goes out of the stone and the dust settles back onto the racks. The room is still, and every weapon in it is listening for the next one.", undefined, false, "evt");
       break;
     }
     case "aftermath": {
@@ -3331,6 +3354,25 @@ async function tickSea(z: ZoneDO, now: number): Promise<void> {
       z.roomSound(roomId, "Water goes over stone {dir}, and keeps going.");
       seaDrives(z, now, roomId);
       for (const s of z.sessions.values()) if (s.roomId === roomId) tideSoaksTorch(z, s);
+      // The sea re-buries the tide door's sill every time it comes in — and
+      // whoever dug it last watches the water take the work back (witnessed:
+      // the reset is announced in the room, never silent).
+      // IT ADDS, it does not reset. A flat reset gave the same sill to the
+      // wanderer who dug it out last tide and the one who has never touched it,
+      // so keeping the door clear bought nothing for anybody. Now neglect
+      // accrues and upkeep is worth something — capped, because a door nobody
+      // can open is a wall, and the doors in this world are windows.
+      if (roomId === "the-deep-mark" && z.tideSilt < TIDE_SILT_MAX) {
+        // What was left, plus this tide's courses, and never less than a fresh
+        // burial. Written this way so DIGGING ALWAYS PAYS: leave it half done
+        // and you come back to a fresh sill, not to the deeper one you would
+        // have had for doing nothing. Only an untouched sill actually climbs.
+        const was = z.tideSilt;
+        z.tideSilt = Math.min(TIDE_SILT_MAX, Math.max(was + TIDE_SILT_PER_TIDE, TIDE_SILT_COURSES));
+        z.roomFeed(roomId, z.tideSilt > TIDE_SILT_COURSES
+          ? "The water comes over the sill and lays another course down on top of what was already there. The sea buries its door deeper every tide nobody works it."
+          : "The water comes over the sill and takes the digging back. The sea buries its door every time it comes in.", undefined, false, "evt");
+      }
     } else {
       z.roomFeed(roomId, "The water goes off the stone and leaves it running and black and walkable again.", undefined, false, "evt");
     }

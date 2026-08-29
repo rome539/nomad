@@ -2751,6 +2751,110 @@ export const FEN_RANKS: Record<string, number> = {
 };
 export const FEN_UP_LINE = " The fen's channels are up — the short ways are drowned, and the long way round is the only way dry.";
 export const FEN_BITE = 1; // per beat in the flooded fen — a toll, never a wall
+// ---- THE SECRET DOORS (2026-08-25) ----------------------------------------
+// Three new doors, three new kinds of key: what you KNOW (the riddle door on
+// the sealed cell), when it IS (the moon door on the glade), where the WATER
+// is (the tide door on the sea cave). Each obeys the deep door's law: a
+// window, never a wall; the way back is always unkeyed; none of them sits on a
+// route that was already open.
+export const RIDDLE_DOOR_KEY = "riddle-door";
+export const MOON_DOOR_KEY = "moon-door";
+export const TIDE_DOOR_KEY = "tide-door";
+export const RIDDLE_ROTATE_MS = 30 * 60_000; // the riddle turns over, stateless
+export const RIDDLE_HINT_AFTER = 2;          // wrong answers before the door takes pity
+export const RIDDLE_WINDOW_MS = 4 * 60_000;  // a solved door's window
+export const RIDDLES: { q: string; a: string[] }[] = [
+  { q: "The black door drinks me while I am still cold. What am I?", a: ["heart"] },
+  { q: "The mountain keeps me after the cold has gone. What am I?", a: ["snow"] },
+  { q: "I rise red once in thirteen moons. What am I?", a: ["moon", "blood moon", "the moon"] },
+  { q: "I fall and I am not rain, and the wood's floor fills with me. What am I?", a: ["mast", "beechmast", "beech mast"] },
+  { q: "I am above the whole world and I have never broken. What am I?", a: ["lid", "the lid"] },
+];
+export const RIDDLE_ASK = "The black door speaks, from somewhere in the iron: \"{q}\" (answer it with 'say')";
+export const RIDDLE_OPEN_LINE = "The door is still a moment. \"So you have walked the world,\" it says, \"and the world has kept you.\" The iron grinds open.";
+export const RIDDLE_WRONG = [
+  "The door is silent a long moment. \"No,\" it says, from somewhere in the iron. \"No. Think again, or walk on.\"",
+  "The iron answers, flat and patient: \"It has heard that answer before. It was wrong then, too.\"",
+];
+export const RIDDLE_HINT = [
+  "The door takes pity, or something like it: \"You have walked further than this. The answer is a thing you have already met.\"",
+  "The door speaks again, slower: \"It is not a word from elsewhere. It is a word from HERE. You have held it, or stood under it, or cut it.\"",
+];
+export const MOON_DOOR_SHUT = " A black door stands in the {dir} wall with a moon cut into it — dark now, and shut.";
+export const MOON_DOOR_OPEN = " The moon door stands open, and the moon cut into it is full of light. It will not stand open for long.";
+export const TIDE_DOOR_SHUT = " A door of black iron is set low in the {dir}, and water stands over its sill. The tide holds it shut.";
+export const TIDE_DOOR_OPEN = " The tide door stands open — the water has gone out, and the way {dir} is dry.";
+// THE TIDE DOOR IS A PUZZLE, NOT A GATE (2026-08-28). The water alone would
+// be a schedule; the silt makes it work. Every tide the sea buries the sill
+// again, and the door only opens for whoever digs it clear while the water is
+// out — bare hands take one course at a time, a pick (sapper's, crow-beak,
+// horseman's, rusted — or a crawler's hooks, or an eel-grig) takes two, and
+// the door takes a beat between courses. The deep mark's own post reads the
+// water (it is an instrument, and the door stands at its foot), and the turn
+// is announced three minutes before the sea comes — work too late, and the
+// water takes the digging back with the door.
+export const TIDE_SILT_COURSES = 6;
+export const TIDE_PRY_MS = 40_000; // the door's beat between courses
+// THE SILT REMEMBERS BEING NEGLECTED (2026-08-28). Measured: six courses is
+// four minutes bare-handed, two with a pick, and the tides are five to seven
+// HOURS apart. No count you could set makes a four-minute job race a five-hour
+// clock, so the race the door was written for cannot happen and chasing it with
+// bigger numbers would only make the chore longer.
+//
+// So the door is not a race, it is UPKEEP, and the sea keeps the ledger. Every
+// tide that comes in on an undug sill adds to it instead of resetting it: a door
+// somebody works stays a few minutes' work, and a door nobody has touched in a
+// week is a job. That makes clearing it worth something to everybody who comes
+// after — the one thing a flat reset could never do, because under a flat reset
+// the wanderer who digs it out and the wanderer who never has face exactly the
+// same sill.
+//
+// Capped, because a door that becomes impossible is a wall, and this world's
+// doors are windows. At the cap it is two full digs from a cold start.
+export const TIDE_SILT_PER_TIDE = 2;  // courses the sea lays down each time it comes in
+export const TIDE_SILT_MAX = 12;      // ...and the most it can ever hold: two clears' work
+export const TIDE_DIGGING_TOOLS = new Set(["sappers-pick", "crow-beak-pick", "horsemans-pick", "rusted-pick", "crawlers-hooks", "eel-grig"]);
+/** The sill's state, as prose — shared by the room line, `go`'s refusal, and
+ *  the pry results, so the count can never drift between them. */
+export function tideSiltLine(n: number): string {
+  // Past a fresh burial the sill is telling you nobody has worked it in a long
+  // while — which is a fact about the world, and worth saying out loud.
+  if (n > TIDE_SILT_COURSES) return `the sill buried in ${n} courses of packed silt, tide on tide of it, nobody having touched this door in a long time`;
+  if (n >= TIDE_SILT_COURSES) return `the sill buried in ${n} courses of packed silt, set by the last tide`;
+  if (n === 1) return "the sill nearly clear — one more course of silt and the door will give";
+  return `the sill half dug out, ${n} courses of silt still holding it`;
+}
+export const TIDE_DOOR_SILT = " A door of black iron is set low in the {dir}, {silt}. (pry the door while the water is out)";
+export const TIDE_PRY_WET = "The sea is over the sill. The water owns the door until it goes out — and every tide it buries the sill again.";
+export const TIDE_PRY_SETTLE = "The silt there is still settling from the last work. Give it a moment, then pry again.";
+export const TIDE_PRY_TOOL_HINT = " A pick would take two courses where your hands take one.";
+export const TIDE_PRY_MAKING = " The mark reads making — the sea is on its way back to this door.";
+export const TIDE_PRY_OPEN = "The last of the silt comes away, and the door sags open a hand's width — black iron letting the sea air through. It will stand open while the water stays out. The way {dir} is yours.";
+// THE BELL DOOR (2026-08-28) — the fourth door, and the only one keyed to the
+// world's schedule: it opens with the fortress bell and holds through the
+// quiet after. It keeps no state (the bell is the state); it only names the
+// bell's law — the bell rings only while the watch is kept, and the door says
+// so. The door is in the Stripped Armory's ceiling, opening UP into the issue
+// room — the one store the garrison could not reach on their way out.
+export const BELL_DOOR_KEY = "bell-door";
+export const BELL_DOOR_SHUT = " Overhead, a black door is set in the roof with a bell cut into it, dark and shut. It opens with the bell — and the bell rings only while the watch is kept.";
+export const BELL_DOOR_TREMBLE = " Overhead, the black door trembles in its frame — the note is coming. It opens with the bell, not the warning.";
+export const BELL_DOOR_OPEN = " Overhead, the door to the issue room stands open, and the bell's note is in the iron of it. It will shut when the note goes out of the air.";
+// PRIZE BOXES. The four doors' boxes (box-kept, box-glade, box-cave,
+// box-armory) and the reliquary obey a different law from every other chest in
+// the world: the DOOR is the lock, so the box itself never asks for anything.
+// Two consequences — it never ROAMS (a roaming chest would scatter out of the
+// sealed room and leave the door guarding nothing), and it is never a DUD
+// (the price of standing before it was already paid at the door; an empty box
+// would be too bitter for that). Its key_item is '' — no key exists — and it
+// opens to the hand, unforced.
+//
+// IT IS box-kept, NOT "box-cell". The riddle door's box was renamed with its
+// room when the door moved out of the warrens and into the mountain's head
+// wall. A stale id here does not throw — it silently drops the riddle door's
+// box out of BOTH laws at once, so the box walks out of the sealed room it is
+// the whole point of and can come up empty when you finally reach it.
+export const DOOR_PRIZE_BOXES = new Set(["reliquary", "box-kept", "box-glade", "box-cave", "box-armory"]);
 // THE BURNER LOOKS UP. He is the one thing in the wood that is not hostile and
 // not a shopkeeper, and until now he ignored a person walking into his clearing
 // completely. He is not going to talk to you. He is going to notice you, and go
@@ -3634,7 +3738,17 @@ export const ROOTED = new Set([
   // be anywhere else today, and a bird that has been sitting a nest for six
   // weeks is not going to start wandering now. Neither is drawn by noise,
   // neither joins a scrum, and neither ever leaves the room it belongs to.
-  "stone-adder", "brooding-vulture"]);
+  "stone-adder", "brooding-vulture",
+  // THE SEA CAVE'S CRABS (mig 281). A crab in a cave pool holds its stone and
+  // waits for the water to bring it something; it does not go looking. That is
+  // true of crabs, and it is also the only thing that keeps them in the cave —
+  // the way IN is behind the tide door, but the way OUT is deliberately unkeyed
+  // so nobody can be sealed in, and creatures walk unkeyed exits freely. A
+  // wandering crab would therefore leak out to the shore one at a time and never
+  // come back, and since reconcilePopulation caps the bloodline at what the
+  // spawn table allows, the cave would end up empty while the crabs milled about
+  // on the causeway. Rooted, they stay where the cave put them.
+  "devil-crab"]);
 
 // FIREKEEPERS tend a fire, and the fire is REAL — the room they are standing in
 // is lit for everyone in it, and an open flame will catch there even in rain.
@@ -4809,6 +4923,15 @@ export const DARK_ROOMS = new Set([
   "blackreach", "the-lightless-march", "the-gasping-dark", "black-threshold", "black-canal",
   "the-crawl-of-teeth", "the-earth-throat", // the warrens' lightless squeezes (058)
   "the-long-swallow", "the-tide-throat", "the-silt-chapel", "the-still-cradle", // the Tideways' drowned half (069)
+  // THE SEA CAVE'S INNER ROOMS (mig 279). The mouth keeps its daylight — the sea
+  // is right there and the sun comes in off it — and the moment the roof comes
+  // down, that stops. Seven rooms, every one of them black, which is the whole
+  // reason the cave is a place and not a cupboard: the tide door buys you the
+  // entrance, and a light is what buys you the rest. Go in without one and the
+  // chest at the back might as well not exist. (NOT "the-black-pool": that id is
+  // the wood's open water since mig 132. The cave's dead end is the-salt-pool.)
+  "the-sand-crawl", "the-drowned-chamber", "the-weed-gallery", "the-shingle-bank",
+  "the-blowhole", "the-fallen-roof", "the-salt-pool",
   // The holloway (2026-08-01): sunk between root walls with the leaf canopy
   // closed over it. Dark at noon, not just at night — the one room on the road
   // that needs a torch in daylight, and it is the last room before the wood.
@@ -4827,6 +4950,10 @@ export const DARK_ROOMS = new Set([
   "the-road-kiln",     // inside a stone bottle with one mouth
   "the-oak-hollow",    // inside a tree
   "the-fall-shelter",  // behind a waterfall, and the water is the door
+  // THE KEPT ROOM (mig 279), cut back under the foot of the corrie's head wall.
+  // A room with a mountain over it and one iron door, and the door is shut most
+  // of the time. There is nowhere for light to come from.
+  "the-kept-room",
 ]);
 // The 058 blocks, named for the MAP's display regions only — game logic (chest
 // tiers, ambience fallback) still reads them as "upper" via regionOf. The map
@@ -5243,6 +5370,17 @@ export const INDOOR_ROOMS = new Set<string>([
   // and its own last sentence is that you cannot see the sky from it. It was
   // being rained on and told the sky over it had gone black.
   "the-beck-narrows",
+  // ---- THE KEPT ROOM (mig 279): a room cut into a mountain. The most roofed
+  // thing in the world.
+  "the-kept-room",
+  // ---- THE SEA CAVE'S INNER ROOMS (mig 279). Region 'crossing' is an outdoor
+  // band, so without this every one of these rooms was having the weather fall
+  // on it under several hundred feet of hill — the same fault the four mountain
+  // doors above were shipped with. The MOUTH is deliberately left off: its own
+  // description gives it daylight for the first dozen feet with the sea right
+  // outside, so it should keep both the sun and the sky it is standing in.
+  "the-sand-crawl", "the-drowned-chamber", "the-weed-gallery", "the-shingle-bank",
+  "the-blowhole", "the-fallen-roof", "the-salt-pool",
 ]);
 // A day/night world-clock (rome, 2026-07-22): every OUTDOOR room only, deep/
 // warrens/keep are always their own dark regardless. Deliberately faster than
@@ -5275,6 +5413,29 @@ export const MOON_NIGHTS = [
   "The light fails. A thin moon climbs the other side of its month, and the grounds keep their dark a while yet.",
   "The light fails, and the moon comes up very nearly whole. One more night of this and you will be able to see out here.",
 ];
+// ...AND THE SAME SIX NIGHTS, FOR LOOKING UP (2026-08-29). MOON_NIGHTS fires
+// once, at the instant the light fails, to whoever is online and standing
+// outdoors in that second — once every four hours. Neither the room's own sky
+// clause nor `look sky` mentioned the moon at all; the only sky reads in the
+// world were the eclipse and the blood moon. So the moon rode a six-night
+// modulo that decided when a door opened, and a wanderer had no way to look up
+// and find out where in that month they were. These are the same six nights
+// asked as a question instead of announced as an event.
+//
+// THEY DO NOT SOLVE ANYTHING. They name no door and give no date; they say
+// which night this is and which WAY it is going, which is all a sky ever says.
+// The counting is still yours, and you still have to be outdoors, at night,
+// with something over your head that is not rock.
+export const MOON_SKY = [
+  "The moon is full — the whole white round of it, high and holding still. There is light enough out here tonight to do without a torch.",
+  "The moon is one night past full: a shaving gone off the one edge and the rest of it still bright. It is going down the month from here.",
+  "Half a moon, and the shadow has the other half of it. Whatever it lights, it is lighting less of each night now.",
+  "There is no moon at all. The sky has its stars and nothing else in it, and the dark out here is the whole of the dark there is.",
+  "A thin moon, new-side up, climbing the far side of its month. It gives you nothing yet. It is coming back.",
+  "The moon is very nearly whole — one clean edge of it left to fill. One more night of this.",
+];
+// ...and what the sky says when somebody asks after the moon in broad daylight.
+export const MOON_DAY = "You look for the moon and get the day instead. Whatever it is doing, it is doing it on the other side of that.";
 // Predators hunt harder after dark: a straight multiplier on the two
 // wind-up odds (STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS), same shape as the
 // bell's bellWakeMult — never a new mechanic, just the existing roll made
@@ -6654,6 +6815,8 @@ export const SEA_ROOMS = new Map<string, number>([
   ["the-long-bank", 3],  // the biggest of them, dry down its whole length until it isn't
   ["the-gravel-flats", 2], ["the-mussel-scaup", 2],  // "stand clear at low water and go under at high" — their own words
   ["the-cockle-beds", 3], ["the-midden", 3], ["the-quicksand-flat", 3], ["the-tern-scrape", 3],
+  // (NOT "the-black-pool": that id belongs to the wood's open water since mig 132.
+  // The cave's dead end is the-salt-pool.)
   // ---- THE BRIDGE. The span never. The feet of the piers, every tide.
   // Everything here is a room you climb DOWN to off the walking span. The span
   // and its landward approach road never flood at any tide, because "high and
@@ -6665,6 +6828,17 @@ export const SEA_ROOMS = new Map<string, number>([
   ["the-ferry-steps", 2], ["the-far-ferry-steps", 2],
   ["the-rope-stage", 3], ["the-far-rope-stage", 3], ["the-channel-brink", 3],
   ["the-drowned-mooring", 1], ["the-deep-mark", 1], ["the-weed-raft", 1],
+  // ---- THE SEA CAVE, all three rooms, at the first level. The salt band runs
+  // round the chamber walls at chest height and the weed hangs above head height
+  // in the crawl — the room descriptions promise the whole cave goes under, and a
+  // room's description is a contract. The tide door already refuses entry at any
+  // water, so this rank is not about keeping people out: it is about what
+  // happens to somebody who is already INSIDE when the sea turns. The way out is
+  // unkeyed from every room of it and the turn is called three minutes ahead, so
+  // it is a walk you can make — at SEA_BITE a beat if you dawdle over the chest.
+  ["the-sea-cave", 1], ["the-sand-crawl", 1], ["the-drowned-chamber", 1],
+  ["the-weed-gallery", 1], ["the-shingle-bank", 1], ["the-blowhole", 1],
+  ["the-fallen-roof", 1], ["the-salt-pool", 1],
   ["the-eel-lines", 2], ["the-slack", 2],
   // ---- THE LOW WAY TO THE MOUNTAIN (rome, 2026-08-19: one of the two ways in
   // ought to shut, because the crossing floods). There are exactly two, and the
@@ -6779,7 +6953,8 @@ export const SEA_INSTRUMENTS = new Set<string>([
   "the-half-tide-post",                   // out on the causeway: the one that tells you to turn back
   "the-parting", "the-far-parting",       // the fingerposts, where you choose
   "the-bell-buoy",                        // it rings the state, if you know the ringing
-]);
+  "the-deep-mark",                        // the depth post the tide door stands at the foot of — the
+]);                                       //   door's own threshold must be readable where you work it
 export const SEA_HEARD_BANDS = new Set<string>(["crossing"]); // the TIDE, on the crossing's own water
 // THE HILL'S OWN NEWS (rome, 2026-08-21). What the drake says when somebody
 // starts on it. The mountain alone, and the reason is geometry rather than

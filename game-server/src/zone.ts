@@ -94,6 +94,9 @@ import {
   HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
+  MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES,
+  BELL_DOOR_KEY, BELL_DOOR_SHUT, BELL_DOOR_TREMBLE, BELL_DOOR_OPEN,
+  TIDE_SILT_COURSES, TIDE_PRY_MS, TIDE_DIGGING_TOOLS, tideSiltLine, TIDE_PRY_WET, TIDE_PRY_SETTLE, TIDE_PRY_TOOL_HINT, TIDE_PRY_MAKING, TIDE_PRY_OPEN,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
@@ -244,6 +247,15 @@ export class ZoneDO implements DurableObject {
   // what is written on it is not.
   public wallMarks = new Map<string, Set<string>>();
   public snowUntil = 0; // ms the mountain's snow lasts to — the season, persisted like the walk
+  public riddleWrong = new Map<string, number>(); // the riddle door's patience, keyed "room:dir|pubkey" — PER WANDERER, so one person's wrong guesses never hand the hint to everybody (not persisted; the door forgets when the world sleeps)
+  // THE TIDE DOOR'S SILL. The door's own state, witnessed by everyone: courses
+  // of silt left, the beat between pries (per wanderer, so a crew digs faster
+  // than a lone hand — the door is one door, but the work is the work), and
+  // who has already been told a pick digs two courses where hands dig one.
+  // Not persisted: a sleeping world wakes with the sea's latest burial.
+  public tideSilt = TIDE_SILT_COURSES;
+  public tidePryAt = new Map<string, number>();
+  public tideToolHint = new Set<string>();
   public walked = new Map<string, Set<string>>();   // rooms each player has crossed — the wall's evidence (walkedOf)
   private wallLoaded = new Set<string>();          // pubkeys whose marks have been read up out of D1 this wake
   // The gatehouse board, oldest first. The only place a player's words outlive
@@ -2299,11 +2311,44 @@ export class ZoneDO implements DurableObject {
 
   // A locked cache: spend the right key to open it, take what it holds. The key
   // is consumed and the box springs empty, refilling on a slow clock. A key is
+  // The bell door's answer to anyone trying to force it, in both its states.
+  private bellDoorRefusal(session: Session): void {
+    this.send(session, events.bellOpen(this)
+      ? "The door overhead stands open already — the bell's note is in the iron of it. Go up."
+      : "The door overhead has no lock to force and no latch to turn. It opens with the bell — twice a day, near the same hours, when the last watchman rings it from his turret at the top of the fortress.", "dmgin");
+  }
+
   // never wasted — a spent lock always gives up at least one thing.
   private async cmdUnlock(session: Session, arg: string): Promise<void> {
     const world = this.world!;
+    // THE TIDE DOOR'S SILL (2026-08-28). 'pry'/'unlock'/'open' at the deep
+    // mark works the tide door — the one lock in the world with no lock on it.
+    // Naming the door always means the door; a bare pry means the door when
+    // the room has no chest in it (a roaming chest that lands here keeps the
+    // bare verb for itself).
+    const doorHere = world.exits.get(session.roomId)?.some((e) => e.key_item === TIDE_DOOR_KEY);
+    if (doorHere && arg && /^(tide )?door$|^sill$/.test(arg)) {
+      return this.cmdTideDoorPry(session);
+    }
+    // THE BELL DOOR has no lock to force — 'open door' in the cote gets the
+    // door's own refusal, teaching the bell's law instead of a shrug about
+    // nothing to unlock. It takes the BELL's words: the pattern here was the
+    // tide door's, copied, which meant "open bell door" — the phrasing the
+    // room's own text teaches — fell through to "there's nothing here to
+    // unlock", while "open sill" and "open tide door" answered in a belfry.
+    const bellHere = world.exits.get(session.roomId)?.some((e) => e.key_item === BELL_DOOR_KEY);
+    if (bellHere && arg && /^(bell |black )?door$|^hatch$|^trap ?door$/.test(arg)) {
+      return this.bellDoorRefusal(session);
+    }
     const here = world.caches.filter((c) => this.cacheRoomId(c) === session.roomId);
-    if (!here.length) return this.send(session, "There's nothing here to unlock.");
+    if (!here.length) {
+      // A bare verb goes to the door only when the room has no chest to claim
+      // it — the same courtesy the tide door gets, and for the same reason: a
+      // roaming chest that lands in the cote keeps the bare verb for itself.
+      if (doorHere && !arg) return this.cmdTideDoorPry(session);
+      if (bellHere && !arg) return this.bellDoorRefusal(session);
+      return this.send(session, "There's nothing here to unlock.");
+    }
     // TWO CHESTS CAN SHARE A ROOM (rome, 2026-08-13: he found a strongbox and a
     // meal-chest in the same hollow). That is the roaming law working — each
     // chest picks its refill room independently, so now and then two land
@@ -2334,7 +2379,17 @@ export class ZoneDO implements DurableObject {
       return this.send(session, "That latch is already being worked — hold on.");
     }
     const key = session.items.find((c) => c.itemId === cache.keyItem);
-    if (!key) {
+    // AN UNKEYED PRIZE BOX opens to the hand: the door was the lock (see
+    // DOOR_PRIZE_BOXES), so there is nothing here to force and nothing to
+    // spend. The refill clock starts BEFORE the grant awaits below, exactly
+    // like the keyed path — a racing second frame reads cacheLocked() false
+    // and turns away instead of re-opening the same box.
+    if (cache.keyItem === "") {
+      this.cacheSpent.set(cache.id, Date.now() + cache.refillSecs * 1000);
+      this.placeCache(cache);
+      this.send(session, `There is no lock on ${cache.name}. You lift the lid, and it gives like a thing that has been waiting.`, "unlock");
+      this.roomFeed(session.roomId, `${session.name} opens ${cache.name}.`, session.pubkey, false);
+    } else if (!key) {
       // No key — then the old way: a rock against the latch (rome, 2026-07-11).
       // Any strongbox latch gives to stone — notched-key shallow or warden-key
       // deep (086 split the keys, not the latches); only the reliquary's iron
@@ -2409,9 +2464,10 @@ export class ZoneDO implements DurableObject {
     }
     // Now and then the box is a lie: forced open on nothing. The key's already
     // spent and the refill clock's already running, so a dud costs you the same
-    // as a haul — that's the sting. The reliquary is exempt: it takes a boss and
-    // the black key to stand here, and a dud would be too bitter for that price.
-    if (cache.keyItem !== "reliquary-key" && chance(CACHE_EMPTY_ODDS)) {
+    // as a haul — that's the sting. The prize boxes are exempt: each one's
+    // price was paid at its DOOR (a boss and the black key; a riddle; a full
+    // moon; the tide), and a dud would be too bitter on top of that.
+    if (!DOOR_PRIZE_BOXES.has(cache.id) && chance(CACHE_EMPTY_ODDS)) {
       this.send(session, pick([
         "Inside: nothing. Picked clean long before you, or never worth the forcing. The key's spent all the same.",
         "The lid comes up on bare iron and cold air. Empty. Someone was here first, or nothing ever was.",
@@ -2448,6 +2504,60 @@ export class ZoneDO implements DurableObject {
     this.refreshRoomCtx(session.roomId);
     this.sendCtx(session);
     await this.persist();
+  }
+
+  // THE TIDE DOOR'S SILL (2026-08-28). Pry it clear while the water is out.
+  // The sea buries the sill every tide; the door takes a beat between courses;
+  // a pick takes two courses where bare hands take one; and the water's turn
+  // is the clock you are racing. No failure state but time — the bite is the
+  // tide, never the door.
+  private async cmdTideDoorPry(session: Session): Promise<void> {
+    const world = this.world!;
+    const dir = world.exits.get(session.roomId)?.find((e) => e.key_item === TIDE_DOOR_KEY)?.dir ?? "south";
+    if (events.seaLevel(this) > 0) {
+      // A FLOOR, never an assignment. The tide's own hook (events, the water
+      // coming over the sill) owns the burial and ADDS to it now, so setting the
+      // count here would hand a wanderer a way to shave a long-neglected sill
+      // back down to a fresh one by prying at high water — undoing everybody
+      // else's neglect with a wasted verb. This only guarantees the water has
+      // buried it at all; it can never lower what the sea has laid down.
+      this.tideSilt = Math.max(this.tideSilt, TIDE_SILT_COURSES);
+      return this.send(session, TIDE_PRY_WET, "dmgin");
+    }
+    if (this.tideSilt <= 0) {
+      return this.send(session, `The sill is clear and the door stands open. The way ${dir} is dry — go ${dir}.`, "study");
+    }
+    const at = this.tidePryAt.get(session.pubkey);
+    const now = Date.now();
+    if (at !== undefined && now < at) {
+      return this.send(session, TIDE_PRY_SETTLE, "dmgin");
+    }
+    this.tidePryAt.set(session.pubkey, now + TIDE_PRY_MS);
+    // The tool you DIG with: the one in your hand first, then anything in the
+    // pack — a pick is a pick whether it is swung or carried.
+    const tool = session.items.find((c) => c.equipped && TIDE_DIGGING_TOOLS.has(c.itemId))
+      ?? session.items.find((c) => TIDE_DIGGING_TOOLS.has(c.itemId));
+    const toolT = tool ? world.itemTemplates.get(tool.itemId) : undefined;
+    const courses = tool ? 2 : 1;
+    this.tideSilt = Math.max(0, this.tideSilt - courses);
+    const worked = tool
+      ? `You lean into the sill with ${toolT?.name ?? "your pick"} and take two courses of silt out.`
+      : "You work the sill with your hands and take a course of silt out.";
+    const making = this.events.get("sea")?.phase === "telegraph" ? TIDE_PRY_MAKING : "";
+    if (this.tideSilt <= 0) {
+      this.send(session, `${worked} ${TIDE_PRY_OPEN.replace("{dir}", dir)}`, "unlock");
+      this.roomFeed(session.roomId, `${session.name} works the last of the silt from the tide door, and it grinds open.`, session.pubkey, false);
+      this.roomSound(session.roomId, "Iron grinds up out of the silt, {dir}.");
+      this.creatureNoise(session.roomId);
+    } else {
+      let hint = "";
+      if (!tool && !this.tideToolHint.has(session.pubkey)) {
+        this.tideToolHint.add(session.pubkey);
+        hint = TIDE_PRY_TOOL_HINT;
+      }
+      this.send(session, `${worked} ${tideSiltLine(this.tideSilt)}.${hint}${making}`, "dmgin");
+    }
+    this.refreshRoomCtx(session.roomId);
   }
 
   // ---- the bench's other trades: salvage, forge, repair (gate only) ----
@@ -6453,6 +6563,45 @@ export class ZoneDO implements DurableObject {
     }
 
     const exits = world.exits.get(room.id) ?? [];
+    // THE SECRET DOORS NAME THEMSELVES (2026-08-25). A door whose state the
+    // room can see must be seen before you walk into it — the moon door says
+    // whether it stands open, the tide door whether the water holds it or the
+    // silt buries it (and how deep), and the riddle door whether the iron
+    // remembers its shape yet.
+    for (const e of exits) {
+      if (e.key_item === MOON_DOOR_KEY) {
+        const openNow = isNight() && isFullMoon() && !isBloodMoon();
+        lines.push((openNow ? MOON_DOOR_OPEN : MOON_DOOR_SHUT).replace("{dir}", e.dir));
+      } else if (e.key_item === TIDE_DOOR_KEY) {
+        // Three states, all visible: the sea over the sill, the silt holding
+        // it (with the count — legibility first), or the door standing open.
+        const level = events.seaLevel(this);
+        lines.push(level === 0 && this.tideSilt <= 0
+          ? TIDE_DOOR_OPEN.replace("{dir}", e.dir)
+          : level > 0
+          ? TIDE_DOOR_SHUT.replace("{dir}", e.dir)
+          : TIDE_DOOR_SILT.replace("{dir}", e.dir).replace("{silt}", tideSiltLine(this.tideSilt)));
+      } else if (e.key_item === RIDDLE_DOOR_KEY) {
+        // The line was written when the door was a compass step and said "in the
+        // wall to the {dir}". The door is in a mountain now and the way through
+        // is DOWN, and "the wall to the down" is not a sentence. A door is in a
+        // wall when the direction is a wall and in the ground when it is not.
+        const where = e.dir === "down" ? "lies flat in the ground at the foot of the wall"
+          : e.dir === "up" ? "is set into the rock overhead"
+          : `stands in the wall to the ${e.dir}`;
+        lines.push(this.openDoors.has(`${room.id}:${e.dir}`)
+          ? " The black door stands open, for now. The iron will remember its shape."
+          : ` A black door ${where}, and it is shut.`);
+      } else if (e.key_item === BELL_DOOR_KEY) {
+        // The bell door keeps no state: the bell is the state. Three faces —
+        // shut (the watch keeps the hours), trembling (the note is coming),
+        // open (the ringing, and the quiet after while the note leaves).
+        const p = this.events.get("bell")?.phase;
+        lines.push(p === "active" || p === "aftermath" ? BELL_DOOR_OPEN
+          : p === "telegraph" ? BELL_DOOR_TREMBLE
+          : BELL_DOOR_SHUT);
+      }
+    }
     // THE PACK'S GAPS ARE MARKED. A refusal you only discover by walking into it
     // is a trap; a line that shows you which ways are shut is a DECISION. You
     // can see the shape of what they have done to the room before you commit.
@@ -6555,7 +6704,9 @@ export class ZoneDO implements DurableObject {
         // empty husk left behind to teleport. A fixed chest still shows its husk.
         if (!locked && this.cacheRoams(cache)) continue;
         lines.push(locked
-          ? `${cap(cache.name)} sits here, locked.`
+          ? (cache.keyItem === ""
+            ? `${cap(cache.name)} sits here, waiting to be opened.`
+            : `${cap(cache.name)} sits here, locked.`)
           : `${cap(cache.name)} sits here, sprung and empty.`);
       }
     }
@@ -6756,11 +6907,14 @@ export class ZoneDO implements DurableObject {
   // Its config room in the `caches` table now only fixes its TIER (gate/upper/
   // deep via regionOf); on each refill it relocates to a random room of that
   // tier — never a safe hideaway or a gate, so all chest loot carries risk (this
-  // is what pulled box-bone/box-crack out of the safe rooms). The King's Hoard is
-  // the one exception: the boss's treasure stays put. Finding a chest becomes
-  // exploration + luck; the supply (chest COUNT) is unchanged, so scarcity holds.
+  // is what pulled box-bone/box-crack out of the safe rooms). The King's Hoard
+  // is the one exception: the boss's treasure stays put. The secret doors'
+  // prize boxes are the same exception, for a sharper reason — the DOOR is the
+  // lock, and a box that roamed away would leave the door guarding nothing.
+  // Finding a chest becomes exploration + luck; the supply (chest COUNT) is
+  // unchanged, so scarcity holds.
   public cacheRoams(cache: Cache): boolean {
-    return cache.keyItem !== "reliquary-key"; // the King's Hoard is fixed
+    return !DOOR_PRIZE_BOXES.has(cache.id);
   }
 
   // Rooms a chest may roam to: its own tier, minus every gate and hideaway.
