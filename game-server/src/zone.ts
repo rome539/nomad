@@ -111,6 +111,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
+  POSES,
   SPAWN_QUARTERS, DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
@@ -1726,10 +1727,21 @@ export class ZoneDO implements DurableObject {
       return;
     }
     // Effort ends rest; watching and talking do not.
-    if (session.resting && (cmd.verb === "go" || cmd.verb === "attack" || cmd.verb === "throw" || cmd.verb === "get" || cmd.verb === "drop" || cmd.verb === "burn")) {
+    const effort = cmd.verb === "go" || cmd.verb === "attack" || cmd.verb === "throw" || cmd.verb === "get" || cmd.verb === "drop" || cmd.verb === "burn";
+    if (session.resting && effort) {
       session.resting = false;
       this.send(session, "You rise.");
       this.sendStatus(session); // the 'resting' pill must clear the instant you rise, not linger until the first combat round pushes the next status
+    }
+    // A POSTURE DROPS TO THE SAME LAW (rome, 2026-08-30). A hand held out toward
+    // a door cannot survive its owner walking through it, and a man crouched
+    // over the ground is not crouched once he is swinging. Silent, unlike the
+    // rest: rising from a crouch is not news, and the room already sees what you
+    // did instead. A gesture is not spoken over, so it needs no line of its own.
+    if (session.pose && (effort || cmd.verb === "rest")) {
+      session.pose = undefined;
+      session.poseAt = undefined;
+      this.sendStatus(session);
     }
     await this.dispatch(session, cmd);
     this.syncCombatCtx();
@@ -1780,6 +1792,14 @@ export class ZoneDO implements DurableObject {
       case "census": return verbs.cmdCensus(this, session);
       case "name": return verbs.cmdName(this, session, cmd.arg);
       case "rest": return verbs.cmdRest(this, session);
+      case "guard": case "lean": case "crouch": return verbs.cmdPose(this, session, cmd.verb);
+      case "point": return verbs.cmdPoint(this, session, cmd.arg);
+      case "beckon": return verbs.cmdBeckon(this, session, cmd.arg);
+      case "whistle": return verbs.cmdWhistle(this, session);
+      case "wave": case "nod": case "brow": return verbs.cmdCourtesy(this, session, cmd.verb, cmd.arg);
+      case "dance": return verbs.cmdDance(this, session, cmd.arg);
+      case "keen": return verbs.cmdKeen(this, session, cmd.arg);
+      case "sing": return verbs.cmdSing(this, session, cmd.arg);
       case "eat": return verbs.cmdEat(this, session, cmd.arg);
       case "feed": return verbs.cmdFeed(this, session, cmd.arg);
       case "bandage": return verbs.cmdBandage(this, session, cmd.arg);
@@ -2825,6 +2845,7 @@ export class ZoneDO implements DurableObject {
     const wasOutOfWorld = this.outOfWorld(session);
     if (!wasOutOfWorld && !session.away) return this.send(session, "You're already out in the world.");
     session.resting = false; // the door wakes you — nobody sleepwalks into the dungeon
+    session.pose = undefined; session.poseAt = undefined; // and no posture survives the threshold
     dice.endGamesFor(this, session.pubkey); // you cannot walk out of the room and keep playing in it
     // The door-shutting line is the GATEHOUSE'S own — a lockbox crouch mid-dungeon
     // never went through any door, and leaveStep already sends the right local
@@ -4425,6 +4446,7 @@ export class ZoneDO implements DurableObject {
           drowned = Math.max(1, Math.round(victim.maxHp * SEIZE_DROWN_FRACTION));
           victim.hp -= drowned;
         }
+        victim.pose = undefined; victim.poseAt = undefined; // teeth end a posture, as they end a rest
         if (victim.resting) {
           victim.resting = false;
           this.send(victim, "You are dragged from your rest.");
@@ -6063,6 +6085,7 @@ export class ZoneDO implements DurableObject {
     dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
     dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
     victim.hp -= dmg;
+    victim.pose = undefined; victim.poseAt = undefined; // a blow ends a posture; nobody keeps a hand out through this
     if (victim.resting) {
       victim.resting = false;
       this.send(victim, "You are torn from your rest.");
@@ -6112,6 +6135,8 @@ export class ZoneDO implements DurableObject {
       if (s.pvpTarget === victim.pubkey) s.pvpTarget = null;
     }
     victim.resting = false;
+    victim.pose = undefined;
+    victim.poseAt = undefined;
     victim.staggered = false;
     victim.stunned = false;
     victim.hobbled = false; victim.limpingSince = undefined; // a new body walks whole
@@ -6834,7 +6859,14 @@ export class ZoneDO implements DurableObject {
       // (mig 172) — you cannot see them, name them, or put steel in them. The
       // doors themselves are counted by denRoomLine, without names.
       if (s.pubkey !== session.pubkey && s.roomId === room.id && this.reachable(s)) {
-        lines.push(`${s.name} is here${s.resting ? ", resting" : ""}.${canReadStains ? pvp.bloodClause(this, s.pubkey) : ""}`);
+        // THE ONE BIT A PERSON USED TO CARRY (rome, 2026-08-30). "X is here,
+        // resting." was the whole of it, against a creature line that hangs six
+        // things off a beast. A posture is read the same way a bearing is: it is
+        // here because whoever struck it is still in it, and it says what they
+        // are doing without saying a word.
+        const pose = s.pose ? POSES[s.pose] : undefined;
+        const poseClause = pose ? `, ${pose.read.replace("{what}", s.poseAt ?? "something")}` : s.resting ? ", resting" : "";
+        lines.push(`${s.name} is here${poseClause}.${canReadStains ? pvp.bloodClause(this, s.pubkey) : ""}`);
       }
     }
     return lines.join("\n");
@@ -7637,6 +7669,7 @@ export class ZoneDO implements DurableObject {
     if (session.hobbled) fx.push("hobbled");
     if (session.bleedTicks && session.bleedTicks > 0) fx.push("bleeding");
     if (session.resting) fx.push("resting");
+    if (session.pose) fx.push(session.pose === "point" ? "pointing" : session.pose);
     // A flame in the shield hand is a real debuff and it was the only invisible
     // one left: the shield stays equipped (so it can't be lost loose in the
     // pack), equippedBlock quietly returns 0, and every surface but the sheet's

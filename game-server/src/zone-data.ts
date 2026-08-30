@@ -1847,6 +1847,7 @@ export const LISTENERS = new Set([
 "skeleton", "bone-knight", "marrow-cantor"]); // the cantor brings ears (and the bone-tax) to the King's Demesne
 export const WAKE_ENTER = 0.3;  // sometimes it catches the sound of you coming in
 export const WAKE_EXIT = 0.45;  // your move for the door is still the loudest thing you do — but it SCALES with your load now (rome, 2026-07-30). At a flat 0.65 leaving a room with a sleeper in it was punished two times in three, with no way to creep out: entry took ENTRY_STEALTH_MIN scaling ("the plate ninja is dead"), the exit took none, so light gear helped you arrive and did nothing for you leaving. Same roll both ways now, and the door stays the louder of the two.
+export const WHISTLE_WAKE = 0.7; // a whistle on purpose: louder than the door you leave by (0.45), just under a brawl (0.8). Whistling in a room with something asleep in it is a decision, and it is meant to be one
 export const WAKE_NOISE = 0.8;  // a fight in the room is almost unmissable
 export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
 // SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing
@@ -2221,6 +2222,38 @@ export const NAPPERS = new Set([
   // between a fight and a mauling. It wakes swinging: the sentinel rouse law
   // holds here as everywhere, and there is no coup de grace on the summit.
   "the-drake", "the-pale-drake",
+  // AND THE OTHER HALF OF THE MOUNTAIN, WHICH NOBODY EVER PUT ON THE CLOCK
+  // (mob audit, 2026-08-30). The 2026-08-22 pass above fixed the hill's night
+  // shift and stopped there, so the mountain ended up with every predator lying
+  // up by day and working the dark — over a prey base that was awake at all
+  // hours, in every weather, forever. 134 spawns of it: the hare and the
+  // ptarmigan alone are 68, the two biggest populations up there.
+  //
+  // That is the exact fault the wood fix named on 2026-08-08, left standing on
+  // the newer band. A wolf that hunts 1.6x harder after dark still had nothing
+  // bedded down to find, and the hare — which is the one animal on this hill a
+  // player might reasonably expect to walk up on in its form — was as available
+  // at four in the morning as at noon.
+  //
+  // These go in DIURNAL, not NOCTURNAL, and that is the whole point: the prey
+  // is down when the hunters are up. It also leaves the day rate's 15% bedded,
+  // which is what keeps a form in the heather worth looking for at noon.
+  "mountain-hare", "snow-hare", "red-hind", "red-stag", "ermine",   // the game
+  "ptarmigan", "mountain-chough", "hill-eagle",                     // the birds roost, as the note above already claimed they did
+  "a-fold-dog",                                                     // a working collie sleeps by the fold; it is the only dog on the hill with somewhere to be
+  // AND TWO RARE BLOODS THAT BROKE FROM THEIR BASE. 46 of the 48 variants match
+  // the line they come from; these were the two that didn't, so the rare rat and
+  // the rare cutpurse were the only ones of their kind that never lay down.
+  "brood-rat", "cutthroat",
+  // AND THE WOOD'S WOLF (rome, 2026-08-30). It was the last wolf line in the
+  // game keeping no hours at all — the 2026-08-08 pass bedded the wood's game
+  // down and deliberately left its hunters up, which made the grey wolf the one
+  // animal out there that was never anywhere but awake. It goes in NOCTURNAL
+  // with the hill pack below, so the wood now reads the way the mountain does:
+  // the wolves lie up through the day while the deer graze, and they are the
+  // thing that is up when the deer are down. The night surge finally belongs to
+  // an animal that spent the afternoon asleep.
+  "grey-wolf", "dire-wolf",
 ]); // hyenas nap via the gorge only
 // THE NIGHT SHIFT. Everything above sleeps by the SAME clock — the two rates
 // below are a diurnal schedule, awake to graze by day and bedded down after
@@ -2258,7 +2291,9 @@ export const NOCTURNAL = new Set([
   // THE MOUNTAIN, TIER THREE (mig 231). The pack works the edges of the day, and
   // the glutton keeps no hours at all — it is on this list because the dark is
   // when it goes round the kills.
-  "hill-wolf", "lead-wolf", "glutton"]);
+  "hill-wolf", "lead-wolf", "glutton",
+  // THE WOOD (rome, 2026-08-30). Its pack keeps the same hours as the hill's.
+  "grey-wolf", "dire-wolf"]);
 // HOW EACH OF THEM LIES UP. The generic line is "curled nose-to-tail, fast
 // asleep", which is a mammal on a floor and is the right picture for a rat, a
 // deer or an otter — and nonsense for a crab, an eel or a bird. A shore where
@@ -2268,6 +2303,151 @@ export const NOCTURNAL = new Set([
 // all, so each one says what the animal actually does rather than that it is
 // unconscious: the bittern's is the whole bird, and it is the reason the reeds
 // out there should never be trusted.
+// ---------------------------------------------------------------------------
+// THE GESTURES (rome, 2026-08-30)
+// ---------------------------------------------------------------------------
+//
+// WHAT WAS ACTUALLY MISSING. A creature standing in a room reads with six
+// things hung on it — what it bears, what it is doing, its condition, whether
+// its eyes take your light, what the fog leaves of it. A PLAYER standing in
+// that same room read: "Lunapilot is here, resting." One bit. After the mob
+// audit put the whole roster on a clock, the least legible things in this world
+// were the people in it: a sleeping hare carried more read than a man did.
+//
+// SO A GESTURE IS A POSTURE, NOT A MESSAGE. `resting` was already the only one
+// of these and it had the shape right — it is state, it survives the moment it
+// was struck in, and somebody who walks in two minutes later still sees it.
+// These are the same. You come down the stair and a stranger is crouched over
+// the cache, or has their back to the wall with their eyes on the way in. That
+// is the world's own legibility law finally pointed at the players.
+//
+// AND THERE IS NO FREE-TEXT EMOTE, now or later. This world's economy is
+// information with a toll on it: the doors say nothing, the keeper is the only
+// voice that explains them, and a telling costs a walk to the gatehouse. Give a
+// player arbitrary prose in the room feed and the first thing minted with it is
+// a counterfeit telling — the keeper's voice, worn. A fixed list costs nothing
+// anybody wanted and closes that outright.
+//
+// `read` is the clause a look hangs on you; `room` is what the room is told
+// once, as it happens. They/their throughout: this game has never asked.
+// THE THREE THAT THE WORLD ANSWERS (rome, 2026-08-30). The rule these passed
+// and the rest of the emote list failed: a gesture earns its place if the world
+// ALREADY HAS THE NOUN. Nothing here is a new mechanic. Each is a thing the
+// world was doing on its own before a player had a word for it, and all three
+// are witnessed-only — no drop, no opening, nothing scored.
+//
+//   dance  the summer circle (ai.summerDance) has been danced on the mountain
+//          at night, by a household that is dead, for as long as the mountain
+//          has existed — and it only ever fires with a player standing there to
+//          see it. It is danced "wide for everyone missing from it". The verb
+//          is one line long because the scene already wrote it: there is a
+//          place in that circle, and you can take it.
+//   keen   the grave-hyena keens over its own dead (ai.mourns), and the deep's
+//          hollow breathe a fallen wanderer's name off the bloodstain
+//          (ai.deadRemembers). The world mourns; the player could not.
+//   sing   the marrow-song is a bone-voice holding one note past any breath,
+//          and every hollow thing below stands entranced in it. You can hold
+//          the note with it. It changes NOTHING — the entrancement is the
+//          cantor's, the arc is the world's, and a player who sings along is a
+//          man singing along.
+//
+// WHY NOTHING IS EARNED. The summer dance's own note says it costs nothing and
+// changes nothing but the night, and that is the whole of its force. Hang a
+// reward on any of these and a haunting becomes a chore.
+export const DANCE_JOIN_SELF = "You step out onto the ground and find the circle. There is a place in it — there was always a place — and they make room for you without one of them looking at you.";
+export const DANCE_JOIN_ROOM = "{name} steps out into the circle and takes a place in it, and the dance goes on around them as if it had been short one.";
+export const DANCE_ALONE = [
+  "You dance a few steps of something, alone, and stop.",
+  "You turn a step and a half of some tune you half know, and think better of the rest of it.",
+];
+export const DANCE_ALONE_ROOM = "{name} dances a few steps of something, alone, and stops.";
+export const KEEN_FALLEN_SELF = "You stand over the stain and keen for {who}, and the sound of it goes off the walls and comes back wrong.";
+export const KEEN_FALLEN_ROOM = "{name} stands over the stain and keens for {who} — a bad sound, and it comes back off the walls worse.";
+export const KEEN_OWN_SELF = "You stand over the stain and keen — and the name in it is your own. You have stood here before, on the other side of it.";
+export const KEEN_OWN_ROOM = "{name} stands over an old stain and keens, and does not seem to be mourning anybody else.";
+export const KEEN_DEAD_SELF = "You keen over what is left on the ground here. Nothing answers, which is the usual way of it.";
+export const KEEN_DEAD_ROOM = "{name} keens over the dead thing on the ground, briefly, and stops.";
+export const KEEN_EMPTY_SELF = "You keen for nobody in particular. It is a bad sound to make in an empty room, and you make it anyway.";
+export const KEEN_EMPTY_ROOM = "{name} keens, briefly, for nobody that anyone here can see.";
+export const SING_SONG_SELF = "You find the note the bone-voice is holding, and hold it with it. Your breath gives out a long way before the song does.";
+export const SING_SONG_ROOM = "{name} finds the note the song is holding and holds it too, until their breath gives out — which is well before the song's does.";
+export const SING_SELF = [
+  "You sing a few bars of something. The place takes the sound and gives none of it back.",
+  "You sing, quietly, mostly to hear a human noise. It does not carry the way you thought it might.",
+];
+export const SING_ROOM = "{name} sings a few bars of something, and lets it go.";
+// THE COURTESIES (rome, 2026-08-30). The other half of the gestures, and the
+// opposite shape: a posture is state that keeps, a courtesy is a moment that
+// passes. Nothing here sets anything — you do it, the room sees it, it is over.
+//
+// WHY THE WAVE READS THE HAND. The close look at a stranger puts their weapon
+// first, and says why in its own comment: steel is what decides whether this is
+// a threat or a mark. So a raised hand in this world is not decoration — it is
+// the answer to the only question anybody in a dark corridor is asking. It is
+// not REFUSED with a blade in your fist, because a wave with a sword in your
+// hand is still a wave. It simply does not read as the same thing, and the
+// world says which one it saw. Let the other man draw his own conclusion; that
+// is the whole of the social layer in a game with a knife in it.
+//
+// The blood needs no code here. bloodClause is already on the player read, so a
+// killer who waves over a fresh corpse waves with red hands and the room says
+// so. The sarcasm answers itself.
+export const COURTESIES: Record<string, { self: string; room: string; selfAt: string; roomAt: string; toldAt: string }> = {
+  wave: {
+    self: "You raise an open hand — empty, and you hold it up long enough that anyone watching can see that it is.",
+    room: "{name} raises an open hand — empty, and holds it up long enough to be sure of it.",
+    selfAt: "You raise an open hand to {who} — empty, and held up long enough for them to see that it is.",
+    roomAt: "{name} raises an open hand to {who} — empty, and holds it there.",
+    toldAt: "{name} raises an open hand to you. It is empty, and they hold it up until you have seen that.",
+  },
+  nod: {
+    self: "You nod once, and that is the whole of it.",
+    room: "{name} nods once, at nothing in particular.",
+    selfAt: "You nod once to {who}.",
+    roomAt: "{name} nods once to {who}.",
+    toldAt: "{name} nods once to you.",
+  },
+  brow: {
+    self: "You touch two fingers to your brow. It is the road's courtesy, and it costs nothing.",
+    room: "{name} touches two fingers to their brow — the road's courtesy, given to the room at large.",
+    selfAt: "You touch two fingers to your brow to {who}.",
+    roomAt: "{name} touches two fingers to their brow to {who}.",
+    toldAt: "{name} touches two fingers to their brow to you.",
+  },
+};
+// ...and what a wave looks like when the hand is NOT empty. Same gesture, and
+// the room reports what is actually in it.
+export const WAVE_ARMED = {
+  self: "You raise your free hand. The steel stays in the other one, and you do not put it down.",
+  room: "{name} raises a hand in greeting. The steel stays in the other one.",
+  selfAt: "You raise your free hand to {who}. The steel stays in the other one.",
+  roomAt: "{name} raises a hand to {who}. The steel stays in the other one.",
+  toldAt: "{name} raises a hand to you in greeting. The steel stays in their other one, and they do not put it down.",
+};
+export const POSES: Record<string, { self: string; room: string; read: string }> = {
+  guard: {
+    self: "You put your back to the wall and your eyes on the way you came in.",
+    room: "{name} puts their back to the wall, watching the way in.",
+    read: "with their back to the wall, watching the way in",
+  },
+  lean: {
+    self: "You put a shoulder to the wall and take the weight off.",
+    room: "{name} leans against the wall and takes the weight off.",
+    read: "leaning against the wall with the weight off one leg",
+  },
+  crouch: {
+    self: "You go down on your heels, low, where the ground is easier to read.",
+    room: "{name} goes down on their heels, low over the ground.",
+    read: "down on their heels, low, reading the ground",
+  },
+  // The pointing hand takes what it is pointing AT (session.poseAt) and is the
+  // only one of these built as a mechanic rather than a picture. See cmdPoint.
+  point: {
+    self: "You put a hand out toward {what}, and hold it there.",
+    room: "{name} puts a hand out toward {what}, and holds it there.",
+    read: "standing with a hand out toward {what}",
+  },
+};
 export const REST_LINES: Record<string, string> = {
   "the-baited-bear": "lying on its side in the road like a fallen wall, the chain pooled beside it, breathing slowly",
   "the-chain-breaker": "asleep sitting up against a tree with its back to the trunk, which is very nearly a man's way of doing it",
@@ -2291,6 +2471,30 @@ export const REST_LINES: Record<string, string> = {
   oystercatcher: "roosting on one leg among a dozen others, all of them facing the wind",
   "feral-goat": "lying up in the lee of a rock, chewing at nothing",
   "old-billy": "lying up in the rocks with his beard in the dirt and one eye not quite shut",
+  // ---- THE MOUNTAIN, WHICH NONE OF THESE COVERED (mob audit, 2026-08-30) ----
+  // Its game went into NAPPERS in the same pass; without a line each, a hare in
+  // a form and an owl on a ledge would both have read "curled nose-to-tail",
+  // which is the mammal-on-a-floor default the note above was written against.
+  // The chough takes the generic roost — a jackdaw-sized crow with its head in
+  // its feathers is exactly what that line says.
+  "mountain-hare": "pressed flat in a form in the heather with its ears laid along its back, the shape of a stone until it is not",
+  "red-hind": "bedded down in the long heather with its legs folded under it, chewing slowly at nothing",
+  "red-stag": "bedded in the open with his antlers laid back along his flank, and he has picked the spot for the view",
+  ermine: "curled into a crack in the wall too small to credit an animal in, white on white",
+  "a-fold-dog": "curled nose-to-tail against the fold wall out of the wind, one ear still working",
+  "hill-eagle": "hunched on the crag with its head sunk and its feathers out, twice the size it flies at",
+  "eagle-owl": "upright on the ledge with its eyes shut and its ear tufts down, and it is bigger asleep than it looked awake",
+  ptarmigan: "sat down into a scrape in the scree with its head tucked, and it is the exact colour of the ground it is sat in",
+  // The summit. It is an animal, and 237's whole ruling was that it be read as
+  // one — so it lies up like a bird and not like a dog on a rug. The pale drake
+  // inherits this through its base.
+  "the-drake": "hunched on the nest with its head down into its shoulders, filling the whole of the ledge",
+  // ---- AND THE TWO RARE BLOODS THE AUDIT FOUND AWAKE ----
+  // The cutpurse's line moved here out of a hardcoded branch in ai.ts, so that
+  // the cutthroat inherits a habit instead of a special case.
+  cutpurse: "dozing in a corner, one eye not quite shut",
+  cutthroat: "asleep sitting up in the corner with the knife still in his hand and his hand on his knee",
+  "brood-rat": "wedged into the nest on her side, too heavy to curl properly, the whole of her going slowly up and down",
 };
 // OUTDOOR GAME KEEPS DIFFERENT HOURS, and needs its own two rates rather than a
 // multiplier on the indoor one. NAP_ODDS is tuned for a rat in a quiet corner —
@@ -8053,6 +8257,18 @@ export const GATEHOUSE_NOARG = new Set([
   // sentence spoken at the fire, not a read. `post` and `tear` are NOT here:
   // they carry their words, and an explicit command must run.
   "board",
+  // THE GESTURES THAT TAKE NOTHING (rome, 2026-08-30). Bare, they command by the
+  // fire; with a single word after them they were a sentence and get said out
+  // loud. This is the whole of "you have to type the word and only the word" —
+  // "sing us one", "dance with me", "lean on it", "keen for him" are all things
+  // a person actually says in a room with other people in it, and every one of
+  // them would otherwise have fired silently instead of being heard.
+  //
+  // wave / nod / brow / beckon / point are NOT here: they take an optional name
+  // and an explicit command must run. They handle their own miss instead — a
+  // name that is nobody by the fire falls through to speech, which is exactly
+  // what `look` has always done in here.
+  "guard", "lean", "crouch", "whistle", "dance", "keen", "sing",
 ]);
 // The gatehouse breathes SLOWER than the dungeon (rome, 2026-07-13): a 3-minute
 // floor, and with the roll on top the lines land about every 3-5 minutes. It is a

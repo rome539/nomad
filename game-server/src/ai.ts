@@ -426,15 +426,32 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
           ? "asleep in the heap, so tangled together you cannot tell where one stops"
           : "asleep back-to-back with the other, breathing in the same slow time";
       }
+      // THE BONES ARE A CLAIM, AND IT HAS TO BE TRUE (mob audit, 2026-08-30).
+      // This branch read a bare `SCAVENGERS.has`, which was written when the
+      // gorge was the only way a scavenger ever went down. It isn't any more —
+      // the mountain's wolves and gluttons are NAPPERS, so they lie up on the
+      // clock, in a scree gully, with nothing dead for a mile, and read as
+      // "asleep beside the stripped bones of its meal". `gorged` is set by the
+      // gorge and cleared by every other route into sleep, so the line is now
+      // only ever printed over a meal it actually ate.
+      if (creature.gorged) return "stretched out asleep beside the stripped bones of its meal, flank rising slow";
       // Its own way of lying up, where the animal has one — a crab does not
-      // curl nose-to-tail and a bittern does not lie down at all.
-      const own = REST_LINES[creature.templateId];
-      if (own && !SCAVENGERS.has(creature.templateId)) return own;
-      return SCAVENGERS.has(creature.templateId)
-        ? "stretched out asleep beside the stripped bones of its meal, flank rising slow"
-        : creature.templateId === "cutpurse"
-          ? "dozing in a corner, one eye not quite shut"
-          : "curled nose-to-tail, fast asleep";
+      // curl nose-to-tail and a bittern does not lie down at all. A rare blood
+      // falls back to its base's line: the old raven roosts the way a raven
+      // roosts, and every variant minted after this one does too, without
+      // anybody remembering to copy a line across.
+      const own = REST_LINES[creature.templateId] ?? REST_LINES[line];
+      if (own) return own;
+      // AND THE SHAPE, WHERE THE ANIMAL HAS NO LINE OF ITS OWN. "Curled
+      // nose-to-tail" is a mammal on a floor, and it was the fallback for the
+      // whole roster — so the owl, the eagle and the adders all curled up like
+      // dogs. The taxonomy that fixed the drinking line fixes this one: a bird
+      // roosts, a snake coils, and only what has legs and fur curls.
+      // Read through the variant here too (`line`, as the heap does), so a rare
+      // blood is the same shape of animal as the thing it came out of.
+      if (BEAKS.has(creature.templateId) || BEAKS.has(line)) return "roosting with its head turned back into its feathers, entirely still";
+      if (COILS.has(creature.templateId) || COILS.has(line)) return "coiled in on itself and gone slack, holding the warmth of the stone";
+      return "curled nose-to-tail, fast asleep";
     }
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
     // The key-bearer reads first: a deep-thing in the shallows is an OPPORTUNITY,
@@ -2024,7 +2041,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
       }
       // A full belly pulls it down onto the bones — but never with a stranger
       // standing over it. You only ever FIND a hyena sleeping on its kill.
-      if (!playerPresent(z, creature.roomId) && chance(GORGE_NAP_ODDS)) fallAsleep(z, creature, now);
+      if (!playerPresent(z, creature.roomId) && chance(GORGE_NAP_ODDS)) fallAsleep(z, creature, now, true);
       z.refreshRoomCtx(creature.roomId);
     }
   }
@@ -2124,7 +2141,12 @@ export function naps(z: ZoneDO, creature: Creature, now: number): void {
     // says so in advance: you simply keep finding it awake.
     if (creature.traits?.includes("sleepless")) return;
     if (!NAPPERS.has(creature.templateId) || creature.asleep || creature.target || creature.cuddling) return;
-    if (creature.templateId === "cutpurse" && creature.roomId !== creature.home) return;
+    // The cutpurse only ever dozes in his own crack, and so does the cutthroat
+    // he sometimes turns out to be — read through the variant so the rare blood
+    // inherits the habit instead of catnapping in the open like nothing else
+    // in the game does.
+    if ((z.variantBase.get(creature.templateId) ?? creature.templateId) === "cutpurse"
+        && creature.roomId !== creature.home) return;
     if (playerPresent(z, creature.roomId)) return;
     // Outdoors, the hour decides: the wood's game grazes by day and lies up
     // after dark, which is what the wolves' night surge is FOR. Indoors keeps
@@ -2149,8 +2171,11 @@ export function naps(z: ZoneDO, creature: Creature, now: number): void {
     fallAsleep(z, creature, now);
   }
 
-export function fallAsleep(z: ZoneDO, creature: Creature, now: number): void {
+export function fallAsleep(z: ZoneDO, creature: Creature, now: number, gorged = false): void {
     creature.asleep = true;
+    // Default false, so every route that is NOT the gorge clears a stale flag
+    // on its way in — the bones line can never outlive the meal.
+    creature.gorged = gorged || undefined;
     creature.sleepUntil = now + randInt(NAP_MIN_MS, NAP_MAX_MS);
     creature.nextWanderAt = Math.max(creature.nextWanderAt, creature.sleepUntil);
   }

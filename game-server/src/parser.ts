@@ -73,6 +73,24 @@ export type Verb =
   | "den"
   | "stow"
   | "fetch"
+  // ---- THE GESTURES (rome, 2026-08-30) ----------------------------------
+  // Three postures the room keeps, and three signals that cost something.
+  // There is deliberately no free-text emote here and there never will be: in
+  // a world whose whole economy is information with a toll on it, arbitrary
+  // player prose is a forged telling waiting to happen, and the keeper's
+  // voice is the one thing that must not be wearable.
+  | "guard"
+  | "lean"
+  | "crouch"
+  | "point"
+  | "beckon"
+  | "whistle"
+  | "wave"
+  | "nod"
+  | "brow"
+  | "dance"
+  | "keen"
+  | "sing"
   | "help";
 
 export interface Command {
@@ -89,7 +107,7 @@ export interface Miss {
 
 export type ParseResult = Command | Miss;
 
-const DIRECTIONS: Record<string, string> = {
+export const DIRECTIONS: Record<string, string> = {
   n: "north", north: "north",
   s: "south", south: "south",
   e: "east", east: "east",
@@ -141,6 +159,36 @@ const VERB_ALIASES: Record<string, Verb> = {
   census: "census",
   name: "name", rename: "name", callme: "name",
   rest: "rest", sleep: "rest", sit: "rest", camp: "rest",
+  // THE GESTURES. Fixed words, no free text. `sit` is already rest's and
+  // `listen` is already the wall's, so neither is claimed here.
+  // ---- THE GESTURES: ONE WORD EACH, AND ONLY THAT WORD (rome, 2026-08-30) ----
+  // Every other verb in this table carries a fistful of synonyms, and these
+  // deliberately carry none. The reason is the gatehouse: in there the input
+  // line is a MOUTH, and anything the parser recognises stops being speech. An
+  // alias list for the gestures would have quietly eaten the commonest words a
+  // person types at a fire — `hi`, `hello`, `greet`, `come`, `cap`, `tip`,
+  // `duck` — and turned each of them into a silent gesture instead of the thing
+  // the player was plainly saying. So the gesture fires on its own name and on
+  // nothing else, everywhere, and every other word a player might reach for
+  // stays available to say out loud.
+  //
+  // (`watch` was never here either, for a different reason: it has belonged to
+  // `study` — the bestiary — since long before this, and that claim is older.)
+  guard: "guard",
+  lean: "lean",
+  crouch: "crouch",
+  point: "point",
+  // `wave` is the GREETING, not the summons — a raised hand means hello before
+  // it means come here, and it is the word a player reaches for first.
+  beckon: "beckon",
+  wave: "wave",
+  nod: "nod",
+  brow: "brow",
+  whistle: "whistle",
+  // The three the world has an answer for — see COURTESIES' note in zone-data.
+  dance: "dance",
+  keen: "keen",
+  sing: "sing",
   eat: "eat", consume: "eat", chew: "eat", devour: "eat",
   feed: "feed", // feed <thing> <food> — a raven for a barter
   bandage: "bandage", bind: "bandage", dress: "bandage", bandages: "bandage",
@@ -529,6 +577,28 @@ export const HELP_TEXT = [
   "                    fades on its own; water takes it now. Anyone watching",
   "                    sees you do it.",
   "  rest              sit and let wounds close. Any effort ends it.",
+  "  guard / lean / crouch",
+  "                    stand a way, and keep standing it. Anyone who comes in",
+  "                    afterwards sees it",
+  "                    on you. Any effort ends it, same as a rest.",
+  "  point <thing>     hold a hand out toward something — a door, a direction, a",
+  "                    beast, anything lying there. The hand stays out. It says",
+  "                    there is something here and nothing whatever about it,",
+  "                    which is generally all you want to say.",
+  "  beckon [name]     call someone on with a hand.",
+  "  wave [name]       a raised hand. If your hands are empty the room",
+  "                    says so, and to an armed stranger in a dark corridor that",
+  "                    is the only sentence that matters. It is not refused with",
+  "                    steel in your fist; it just does not read the same.",
+  "  nod [name]        the passing acknowledgement. Claims nothing.",
+  "  brow [name]       two fingers to the brow. The road's own",
+  "                    courtesy, and the one to give the keeper.",
+  "  dance             mostly it is a few steps of something, alone. Not always.",
+  "  keen              grieve where you are standing. The ground",
+  "                    remembers who fell on it, and so does this.",
+  "  sing              a human noise. The dark takes most of it.",
+  "  whistle           one hard note. It carries into the next room, and it wakes",
+  "                    what is sleeping in this one. Consider what that is first.",
   "  eat <food>        wounds also close from the inside",
   "  feed <bird> <food> hold out food to a raven or crow. One that has been",
   "                    working the road may drop what it picked up for the meal",

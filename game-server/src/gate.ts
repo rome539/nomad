@@ -21,6 +21,7 @@ import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOO
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, GATEHOUSE_ROOM, GATEHOUSE_BAND_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
   GATEHOUSE_RAIN, GATEHOUSE_AFTER_RAIN, GATEHOUSE_FOG, GATEHOUSE_COLD, GATEHOUSE_CROWS, GATEHOUSE_NIGHT, GATEHOUSE_DAY,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
+  POSES, COURTESIES, WAVE_ARMED, DANCE_ALONE, DANCE_ALONE_ROOM, KEEN_EMPTY_SELF, KEEN_EMPTY_ROOM, SING_SELF, SING_ROOM,
   KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS } from "./zone-data";
 import * as den from "./den";
 import { parse } from "./parser";
@@ -2308,7 +2309,14 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
   if (others.length === 0) {
     lines.push("You have it to yourself. The fire ticks.");
   } else {
-    const names = others.map((s) => s.name + (s.resting ? " (dozing)" : ""));
+    // The roll-call reads a posture the same way it reads a doze — it is the
+    // only reason a posture is worth keeping in here rather than passing.
+    const names = others.map((s) => s.name + (
+      s.pose === "guard" ? " (watching the door)"
+      : s.pose === "lean" ? " (leaning on the bar)"
+      : s.pose === "crouch" ? " (down on their heels)"
+      : s.pose === "point" ? " (pointing at something)"
+      : s.resting ? " (dozing)" : ""));
     lines.push(names.length === 1
       ? `${names[0]} is here.`
       : `Here: ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}.`);
@@ -2433,6 +2441,8 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   if (v === "rest") {
     if (session.resting) return z.send(session, "You're already settled in by the fire. Let it do its work.");
     session.resting = true;
+    session.pose = undefined; // you cannot doze standing at the bar
+    session.poseAt = undefined;
     const hurt = session.hp < session.maxHp;
     z.send(session, hurt ? pick([
       "You drag a bench closer to the fire and let the warmth take the weight off. Wounds close quicker here than cold stone ever let them.",
@@ -2445,6 +2455,86 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     ]), "gain");
     gatehouseFeed(z, `${session.name} settles in by the fire to doze.`, session.pubkey);
     z.sendCtx(session); // the `rest` chip goes: you are already doing it
+    return;
+  }
+  // ---- THE GESTURES, BY THE FIRE (rome, 2026-08-30) -----------------------
+  // They must be handled HERE and cannot fall through to the world's dispatch,
+  // because the gatehouse is not a room: its people are out of the world, so
+  // roomFeed would carry a wave to whoever is standing in the dark outside the
+  // arch and to nobody sitting at the bench. gatehouseFeed is the fire's only
+  // channel, and this is the room where a greeting matters most — it is the one
+  // place in the game two strangers meet without either of them being a threat.
+  //
+  // What each one becomes in here: the postures keep (the room's roll-call
+  // reads them), the courtesies pass, and the three the world answers have
+  // nothing to answer them — there is no circle turning by a fire, no stain on
+  // this floor, and the marrow-song does not carry through a very old door. So
+  // they take their ordinary form, which is the right one for a tavern anyway.
+  if (v === "guard" || v === "lean" || v === "crouch") {
+    const p = POSES[v]!;
+    session.resting = false;
+    session.pose = v;
+    session.poseAt = undefined;
+    z.send(session, p.self);
+    gatehouseFeed(z, p.room.replace("{name}", session.name), session.pubkey);
+    return z.sendGateCtx(session);
+  }
+  if (v === "wave" || v === "nod" || v === "brow" || v === "beckon" || v === "point") {
+    const others = gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey);
+    const arg = cmd.arg.trim();
+    const mark = arg ? others.find((s) => nameMatches(s.name, arg)) : undefined;
+    // An argument that names nobody by the fire was never a command — same law
+    // as `look at his hair`, and the reason these are not in GATEHOUSE_NOARG.
+    if (arg && !mark) return gatehouseSay(z, session, text);
+    if (v === "point") {
+      // Pointing in here has no doors worth the finding and no ground to read.
+      // At a person it is rude and legible, which is enough.
+      if (!mark) return gatehouseSay(z, session, text);
+      z.send(session, `You put a hand out toward ${mark.name}, and hold it there.`);
+      z.send(mark, `${session.name} puts a hand out toward you, and holds it there.`, "say");
+      gatehouseFeed(z, `${session.name} puts a hand out toward ${mark.name}, and holds it there.`, session.pubkey);
+      return;
+    }
+    if (v === "beckon") {
+      if (!mark) return z.send(session, others.length ? "Beckon who?" : "You raise a hand, and there is no one here to take it up.");
+      z.send(session, `You catch ${mark.name}'s eye and beckon them over.`);
+      z.send(mark, `${session.name} catches your eye and beckons you over.`, "say");
+      gatehouseFeed(z, `${session.name} beckons ${mark.name} over.`, session.pubkey);
+      return;
+    }
+    const armed = v === "wave" && !!z.equippedItem(session, "weapon");
+    const lines = armed ? WAVE_ARMED : COURTESIES[v]!;
+    if (mark) {
+      z.send(session, lines.selfAt.replace("{who}", mark.name));
+      z.send(mark, lines.toldAt.replace("{name}", session.name), "say");
+      gatehouseFeed(z, lines.roomAt.replace("{name}", session.name).replace("{who}", mark.name), session.pubkey);
+      return;
+    }
+    z.send(session, lines.self);
+    gatehouseFeed(z, lines.room.replace("{name}", session.name), session.pubkey);
+    return;
+  }
+  if (v === "whistle") {
+    // Nothing sleeps in here, so there is nothing to wake — wakeListeners would
+    // refuse it anyway (its first line returns on `away`). It is a noise by a
+    // fire, and everybody looks up.
+    z.send(session, "You put two fingers to your teeth and whistle, and it is far too loud for the room.");
+    gatehouseFeed(z, `${session.name} whistles — far too loud for the room.`, session.pubkey);
+    return;
+  }
+  if (v === "dance") {
+    z.send(session, pick(DANCE_ALONE));
+    gatehouseFeed(z, DANCE_ALONE_ROOM.replace("{name}", session.name), session.pubkey);
+    return;
+  }
+  if (v === "keen") {
+    z.send(session, KEEN_EMPTY_SELF);
+    gatehouseFeed(z, KEEN_EMPTY_ROOM.replace("{name}", session.name), session.pubkey);
+    return;
+  }
+  if (v === "sing") {
+    z.send(session, pick(SING_SELF));
+    gatehouseFeed(z, SING_ROOM.replace("{name}", session.name), session.pubkey);
     return;
   }
   if (GATEHOUSE_BARRED.has(v)) {

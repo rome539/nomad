@@ -13,6 +13,7 @@ import {
 } from "./world";
 import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState, isNight, isFullMoon, isBloodMoon } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
+import { DIRECTIONS } from "./parser";
 import * as ai from "./ai";
 import * as light from "./light";
 import * as events from "./events";
@@ -21,6 +22,11 @@ import * as lore from "./lore";
 import * as den from "./den";
 import * as detail from "./detail";
 import {
+  POSES, COURTESIES, WAVE_ARMED, WHISTLE_WAKE,
+  DANCE_JOIN_SELF, DANCE_JOIN_ROOM, DANCE_ALONE, DANCE_ALONE_ROOM,
+  KEEN_FALLEN_SELF, KEEN_FALLEN_ROOM, KEEN_OWN_SELF, KEEN_OWN_ROOM,
+  KEEN_DEAD_SELF, KEEN_DEAD_ROOM, KEEN_EMPTY_SELF, KEEN_EMPTY_ROOM,
+  SING_SONG_SELF, SING_SONG_ROOM, SING_SELF, SING_ROOM,
   REST,
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, MOB_WEAKGRIP_MULT, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
@@ -498,6 +504,14 @@ export function describePlayer(z: ZoneDO, session: Session, other: Session): str
     : other.hp > other.maxHp * 0.33 ? "badly hurt"
     : "at the very edge of it";
   const out = [`${other.name}, a fellow wanderer (${cond}).`];
+
+  // WHAT THEY ARE DOING, before what they are carrying. A posture outranks the
+  // loadout in a close look for the same reason it does in the room line: it is
+  // the only thing on a person that changes minute to minute, and a hand held
+  // out toward a door is the most informative thing anybody here can show you.
+  const pose = other.pose ? POSES[other.pose] : undefined;
+  if (pose) out.push(`${cap(pose.read.replace("{what}", other.poseAt ?? "something"))}.`);
+  else if (other.resting) out.push("They are sat down, resting.");
 
   // The hands first: steel is what decides whether this is a threat or a mark.
   const w = z.equippedItem(other, "weapon");
@@ -1300,6 +1314,215 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
 // reaches a relay in any form, obfuscated or not. Two of you alone in the dark
 // stays exactly that; shout/gatehouse speech still ride the relay-publish path
 // (speechOut) unchanged — this is `say` alone, not a blanket speech policy.
+// ---------------------------------------------------------------------------
+// THE GESTURES (rome, 2026-08-30). See POSES in zone-data for why these are
+// postures and not messages, and why there is no free-text emote.
+// ---------------------------------------------------------------------------
+
+// A posture is struck, not sent. It sets state the room renders afterwards, so
+// the person who walks in two minutes later sees it — which is the whole
+// difference between this and a line of chat. It drops the moment you do
+// anything that counts as effort (dispatch, zone.ts), exactly as a rest does.
+export function cmdPose(z: ZoneDO, session: Session, pose: "guard" | "lean" | "crouch"): void {
+  if (z.inCombat(session)) return z.send(session, "Not with this going on.");
+  if (session.resting) {
+    session.resting = false;
+    z.send(session, "You rise.");
+  }
+  const p = POSES[pose]!;
+  session.pose = pose;
+  session.poseAt = undefined;
+  z.send(session, p.self);
+  z.roomFeed(session.roomId, p.room.replace("{name}", session.name), session.pubkey, false);
+  z.sendStatus(session);
+}
+
+// POINTING is the one gesture here that is a mechanic rather than a picture,
+// and it exists because of a rule made four days ago: the doors no longer
+// explain themselves (see nomad-dont-telegraph-mechanics). That left players
+// with no way to tell each other about a thing without telling them how it
+// works — and "there is something here" is exactly the shape of knowledge this
+// world wants passed hand to hand, at the finder's discretion, in person.
+//
+// A hand out toward the black door says everything and gives away nothing. The
+// pointing holds as a posture, so it is still there when somebody arrives.
+//
+// WHAT CAN BE POINTED AT is whatever the world already admits exists: a
+// direction, a creature standing there, a thing on the floor, or any noun
+// lookFeature answers to — which is every object the room prose has ever named.
+// Nothing else. The refusal says nothing about what IS here.
+export function cmdPoint(z: ZoneDO, session: Session, arg: string): void {
+  if (z.inCombat(session)) return z.send(session, "Not with this going on.");
+  if (!arg) return z.send(session, "Point at what?");
+  const what = pointable(z, session, arg);
+  if (!what) return z.send(session, "You look for it, and there is nothing there to put a hand toward.");
+  if (session.resting) {
+    session.resting = false;
+    z.send(session, "You rise.");
+  }
+  session.pose = "point";
+  session.poseAt = what;
+  z.send(session, POSES.point!.self.replace("{what}", what));
+  z.roomFeed(session.roomId, POSES.point!.room.replace("{name}", session.name).replace("{what}", what), session.pubkey, false);
+  z.sendStatus(session);
+}
+
+// The word that comes back is the PLAYER'S, not the world's, so a hand out
+// toward "the black door" reads as the thing they saw and called that. Only its
+// existence is checked against the world; nothing here echoes a noun the room
+// does not already own.
+function pointable(z: ZoneDO, session: Session, arg: string): string | null {
+  const roomId = session.roomId;
+  // A direction first — the commonest thing anybody points at, and the one that
+  // needs no noun at all.
+  const dir = DIRECTIONS[arg];
+  if (dir) {
+    const exits = z.world!.exits.get(roomId) ?? [];
+    if (!exits.some((e) => e.dir === dir)) return null;
+    return `the way ${dir}`;
+  }
+  // Anything alive in the room, by its own name.
+  for (const c of z.creatures.values()) {
+    if (c.roomId !== roomId || c.hidden) continue;
+    const t = z.world!.mobTemplates.get(c.templateId);
+    if (t && nameMatches(t.name, arg)) return t.name;
+  }
+  // Anything lying on the floor.
+  for (const itemId of z.ground.get(roomId) ?? []) {
+    const t = z.world!.itemTemplates.get(itemId);
+    if (t && nameMatches(t.name, arg)) return t.name;
+  }
+  // And every noun the world will let you look closer at — which is the whole
+  // point: if `look door` answers here, `point door` must too.
+  if (detail.lookFeature(roomId, z.regionOf(roomId), arg)) return `the ${arg.replace(/^the\s+/i, "")}`;
+  return null;
+}
+
+// THE THREE THE WORLD ANSWERS. See zone-data for the rule these passed and the
+// rest of the emote list failed. Each has an ordinary form and one form the
+// world has an answer for; none of them awards anything, and that is deliberate.
+
+// DANCE. If the summer circle is turning in this room, you are in it. The
+// household's own dance holds their `danceUntil`, so that flag IS the window —
+// no new state, no new clock, and the branch closes itself when the verse ends.
+export function cmdDance(z: ZoneDO, session: Session, arg: string): void {
+  if (z.inCombat(session)) return z.send(session, "Not with this going on.");
+  const now = Date.now();
+  const turning = [...z.creatures.values()].some(
+    (c) => c.roomId === session.roomId && !!c.danceUntil && now < c.danceUntil,
+  );
+  if (turning) {
+    z.send(session, DANCE_JOIN_SELF, "evt");
+    z.roomFeed(session.roomId, DANCE_JOIN_ROOM.replace("{name}", session.name), session.pubkey, false, "evt");
+    return;
+  }
+  z.send(session, pick(DANCE_ALONE));
+  z.roomFeed(session.roomId, DANCE_ALONE_ROOM.replace("{name}", session.name), session.pubkey, false);
+}
+
+// KEEN. Reads the same traces the hollow read (ai.deadRemembers): a blood trace
+// whose label names no creature in the world is a PERSON who died here, and the
+// game has known their name all along. The one it will not soften is the stain
+// with your own name on it.
+export function cmdKeen(z: ZoneDO, session: Session, arg: string): void {
+  if (z.inCombat(session)) return z.send(session, "You have not the breath for it.");
+  const world = z.world!;
+  const list = z.traces.get(session.roomId) ?? [];
+  const creatureNames = new Set([...world.mobTemplates.values()].map((t) => t.name));
+  const fallen = list.filter((tr) => tr.kind === "blood" && !!tr.label && !creatureNames.has(tr.label));
+  if (fallen.length > 0) {
+    const who = fallen[fallen.length - 1]!.label!;
+    const own = who === session.name;
+    z.send(session, own ? KEEN_OWN_SELF : KEEN_FALLEN_SELF.replace("{who}", who), "evt");
+    z.roomFeed(session.roomId,
+      (own ? KEEN_OWN_ROOM : KEEN_FALLEN_ROOM.replace("{who}", who)).replace("{name}", session.name),
+      session.pubkey, false, "evt");
+    return;
+  }
+  if (list.some((tr) => tr.kind === "remains")) {
+    z.send(session, KEEN_DEAD_SELF);
+    z.roomFeed(session.roomId, KEEN_DEAD_ROOM.replace("{name}", session.name), session.pubkey, false);
+    return;
+  }
+  z.send(session, KEEN_EMPTY_SELF);
+  z.roomFeed(session.roomId, KEEN_EMPTY_ROOM.replace("{name}", session.name), session.pubkey, false);
+}
+
+// SING. The marrow-song is a world arc with its own phases and its own cantor,
+// and a player singing does not touch one of them: the entrancement stays the
+// cantor's, the wake odds stay zero, the arc ends when it was always going to.
+// This is a man singing along, and it is worth having for exactly that reason.
+export function cmdSing(z: ZoneDO, session: Session, arg: string): void {
+  if (z.inCombat(session)) return z.send(session, "You have not the breath for it.");
+  if (events.deepRoom(z, session.roomId) && events.phaseOf(z, "song") === "active") {
+    z.send(session, SING_SONG_SELF, "evt");
+    z.roomFeed(session.roomId, SING_SONG_ROOM.replace("{name}", session.name), session.pubkey, false, "evt");
+    return;
+  }
+  z.send(session, pick(SING_SELF));
+  z.roomFeed(session.roomId, SING_ROOM.replace("{name}", session.name), session.pubkey, false);
+}
+
+// A COURTESY IS A MOMENT, NOT A POSTURE. It sets no state — you do it, the room
+// sees it, it is over. `wave <name>` aims it; bare, it is given to the room.
+// Nothing here refuses: you may greet an empty room, and you may wave with a
+// sword in your fist. The world just says which of those it saw.
+export function cmdCourtesy(z: ZoneDO, session: Session, kind: "wave" | "nod" | "brow", arg: string): void {
+  const armed = kind === "wave" && !!z.equippedItem(session, "weapon");
+  const lines = armed ? WAVE_ARMED : COURTESIES[kind]!;
+  const folk = [...z.sessions.values()].filter(
+    (s) => s.roomId === session.roomId && s.pubkey !== session.pubkey && z.reachable(s),
+  );
+  const mark = arg ? folk.find((s) => nameMatches(s.name, arg)) : undefined;
+  if (arg && !mark) return z.send(session, "No one by that name is here.");
+  if (mark) {
+    z.send(session, lines.selfAt.replace("{who}", mark.name));
+    z.send(mark, lines.toldAt.replace("{name}", session.name), "say");
+    z.roomFeed(session.roomId, lines.roomAt.replace("{name}", session.name).replace("{who}", mark.name), session.pubkey, false);
+    return;
+  }
+  z.send(session, lines.self);
+  z.roomFeed(session.roomId, lines.room.replace("{name}", session.name), session.pubkey, false);
+}
+
+// BECKON is the summons, and it kept `hail`/`summon`/`come` when the wave went
+// to the greeting — a raised hand means hello before it means come here. It is
+// the "come here" this game had no word for, and it stays room-local like
+// everything else that isn't a shout.
+export function cmdBeckon(z: ZoneDO, session: Session, arg: string): void {
+  const folk = [...z.sessions.values()].filter(
+    (s) => s.roomId === session.roomId && s.pubkey !== session.pubkey && z.reachable(s),
+  );
+  const mark = arg ? folk.find((s) => nameMatches(s.name, arg)) : folk[0];
+  if (!mark) {
+    return z.send(session, arg ? "No one by that name is here." : "You raise a hand, and there is no one here to take it up.");
+  }
+  z.send(session, `You catch ${mark.name}'s eye and beckon them on.`);
+  z.send(mark, `${session.name} catches your eye and beckons you on.`, "say");
+  z.roomFeed(session.roomId, `${session.name} beckons ${mark.name} on.`, session.pubkey, false, undefined, undefined);
+}
+
+// A WHISTLE IS THE ONLY GESTURE THAT COSTS SOMETHING, and it is the reason the
+// set is worth having at all. It is a deliberate noise in a world that has spent
+// two years pricing noise: it rolls the same wake the rest of the game rolls,
+// so it wakes what is sleeping in the room — and the mob audit just put a whole
+// mountain of bedded game and a napping drake within reach of it.
+//
+// WHISTLE_WAKE sits at 0.7: louder than the door you leave by, just under a
+// brawl. Felt soles still halve it, the bell still outshouts them, the fog still
+// eats half of it — it is the same roll as everything else, and the same gear
+// answers it. Nothing warns you what is asleep in here before you do it.
+export async function cmdWhistle(z: ZoneDO, session: Session): Promise<void> {
+  if (z.inCombat(session)) return z.send(session, "You have not the breath for it.");
+  z.send(session, "You put two fingers to your teeth and whistle — one hard note, and it goes a long way.");
+  z.roomFeed(session.roomId, `${session.name} whistles — one hard note, and it goes a long way.`, session.pubkey, false);
+  // It carries through the wall, like the hyena's laugh: a signal you can set
+  // for somebody a room away, and a thing that gives you away to whoever else
+  // is listening. Both at once, which is the trade.
+  z.roomSound(session.roomId, "A whistle carries {dir} — one hard note, and human.");
+  await ai.wakeListeners(z, session, session.roomId, WHISTLE_WAKE, "comes awake at the whistle and turns on you!", true);
+}
+
 export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
   if (!msg) return z.send(session, "Say what?");
   // THE WORDS ARE SPOKEN FIRST, ALWAYS, and this order is the whole point. The

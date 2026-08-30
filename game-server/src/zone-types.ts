@@ -24,6 +24,13 @@ export interface Session {
   bleedTicks?: number; // open wound: armor-ignoring ticks left before it clots (claws/teeth in the deep)
   bleedDmg?: number; // damage the current wound leaks each combat round
   resting: boolean;
+  // THE POSTURE THE ROOM KEEPS (rome, 2026-08-30). Not a line that scrolls past
+  // whoever happened to be looking — state, read off you by anyone who walks in
+  // afterwards, exactly the way a creature's bearing is. Dropped by effort, the
+  // same triggers that end a rest. `poseAt` is what a POINTING hand is out
+  // toward, in the player's own word, resolved against the world first.
+  pose?: "guard" | "lean" | "crouch" | "point";
+  poseAt?: string;
   away: boolean; // out of the world, untouchable (bench modal, or the keeper's hatch)
   trading?: boolean; // which away it is: true = the keeper's hatch (modal or typed)
   forging?: boolean; // which away it is: true = the gatehouse forge (modal or typed)
@@ -117,6 +124,7 @@ export interface Creature {
   cuddling?: string; // rat-kind: pubkey of the resting wanderer it has curled up against (cleared the moment they rise)
   mournedAt?: number; // grave-hyena: the `at` of the kin-corpse it last keened over, so each body is mourned once
   murmuredAt?: number; // HOLLOW: last time it breathed a name into the dark (the cooldown anchor)
+  gorged?: boolean; // this sleep began on a corpse it had just eaten — the only state that earns the bones line
   asleep?: boolean; // warm blood only: dozing — skips its whole act loop; wakes to entry/noise rolls (the wakeListeners law), a blow, or its own clock
   sleepUntil?: number; // when the doze ends on its own
   thirstAt?: number; // hyenas: when the next watering run calls
