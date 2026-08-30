@@ -2472,6 +2472,14 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // they take their ordinary form, which is the right one for a tavern anyway.
   if (v === "guard" || v === "lean" || v === "crouch") {
     const p = POSES[v]!;
+    // The same word twice releases it, as it does out in the world.
+    if (session.pose === v) {
+      session.pose = undefined;
+      session.poseAt = undefined;
+      z.send(session, p.end);
+      gatehouseFeed(z, p.endRoom.replace("{name}", session.name), session.pubkey);
+      return z.sendGateCtx(session);
+    }
     session.resting = false;
     session.pose = v;
     session.poseAt = undefined;
@@ -2485,15 +2493,45 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     const mark = arg ? others.find((s) => nameMatches(s.name, arg)) : undefined;
     // An argument that names nobody by the fire was never a command — same law
     // as `look at his hair`, and the reason these are not in GATEHOUSE_NOARG.
-    if (arg && !mark) return gatehouseSay(z, session, text);
+    // POINT IS EXEMPT: it reaches the room's fixtures as well as its people, so
+    // it has to do its own miss below. Bailing here was the whole of the bug —
+    // `point door` was answered as speech before the fixtures were ever asked.
+    if (arg && !mark && v !== "point") return gatehouseSay(z, session, text);
     if (v === "point") {
-      // Pointing in here has no doors worth the finding and no ground to read.
-      // At a person it is rude and legible, which is enough.
-      if (!mark) return gatehouseSay(z, session, text);
-      z.send(session, `You put a hand out toward ${mark.name}, and hold it there.`);
-      z.send(mark, `${session.name} puts a hand out toward you, and holds it there.`, "say");
-      gatehouseFeed(z, `${session.name} puts a hand out toward ${mark.name}, and holds it there.`, session.pubkey);
-      return;
+      // Bare `point` while already pointing lowers the hand, as out in the world.
+      if (!arg && session.pose === "point") {
+        session.pose = undefined;
+        session.poseAt = undefined;
+        z.send(session, POSES.point!.end);
+        gatehouseFeed(z, POSES.point!.endRoom.replace("{name}", session.name), session.pubkey);
+        return z.sendGateCtx(session);
+      }
+      // A PERSON, OR ANY FIXTURE THE ROOM ANSWERS FOR (rome, 2026-08-30, from
+      // in here: `point door` and `point keeper` both fell through and were said
+      // out loud). The world's rule is that if `look <noun>` answers in a room
+      // then `point <noun>` must too, and this room has a keeper, a hatch, a
+      // bench, a brazier, a wall chart and a very old door that all answer a
+      // look. gatehouseFixture is the same existence check `look` uses, so the
+      // two can never disagree about what is in here.
+      if (mark) {
+        session.pose = "point";
+        session.poseAt = mark.name;
+        z.send(session, `You put a hand out toward ${mark.name}, and hold it there.`);
+        z.send(mark, `${session.name} puts a hand out toward you, and holds it there.`, "say");
+        gatehouseFeed(z, `${session.name} puts a hand out toward ${mark.name}, and holds it there.`, session.pubkey);
+        return z.sendGateCtx(session);
+      }
+      if (arg && gatehouseFixture(z, session, arg)) {
+        // The player's own word for it comes back, as it does out in the world —
+        // only its existence was ever checked against the room.
+        const what = `the ${arg.replace(/^(the|at|a)\s+/i, "")}`;
+        session.pose = "point";
+        session.poseAt = what;
+        z.send(session, POSES.point!.self.replace("{what}", what));
+        gatehouseFeed(z, POSES.point!.room.replace("{name}", session.name).replace("{what}", what), session.pubkey);
+        return z.sendGateCtx(session);
+      }
+      return gatehouseSay(z, session, text);
     }
     if (v === "beckon") {
       if (!mark) return z.send(session, others.length ? "Beckon who?" : "You raise a hand, and there is no one here to take it up.");

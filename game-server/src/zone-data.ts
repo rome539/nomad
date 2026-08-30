@@ -2424,21 +2424,32 @@ export const WAVE_ARMED = {
   roomAt: "{name} raises a hand to {who}. The steel stays in the other one.",
   toldAt: "{name} raises a hand to you in greeting. The steel stays in their other one, and they do not put it down.",
 };
-export const POSES: Record<string, { self: string; room: string; read: string }> = {
+// `end`/`endRoom` are the way OUT of a posture (rome, 2026-08-30): typing the
+// word again drops it and you stand normally. A posture is the one gesture that
+// keeps, so it is the one that needed a way to stop that was not "walk somewhere
+// else" — the same word, twice, and the second one is a release. Nothing new to
+// learn, and no separate verb to remember.
+export const POSES: Record<string, { self: string; room: string; read: string; end: string; endRoom: string }> = {
   guard: {
     self: "You put your back to the wall and your eyes on the way you came in.",
     room: "{name} puts their back to the wall, watching the way in.",
     read: "with their back to the wall, watching the way in",
+    end: "You come off the wall and stand easy again.",
+    endRoom: "{name} comes off the wall and stands easy.",
   },
   lean: {
     self: "You put a shoulder to the wall and take the weight off.",
     room: "{name} leans against the wall and takes the weight off.",
     read: "leaning against the wall with the weight off one leg",
+    end: "You push off the wall and take your own weight again.",
+    endRoom: "{name} pushes off the wall and stands up.",
   },
   crouch: {
     self: "You go down on your heels, low, where the ground is easier to read.",
     room: "{name} goes down on their heels, low over the ground.",
     read: "down on their heels, low, reading the ground",
+    end: "You straighten up out of it.",
+    endRoom: "{name} straightens up.",
   },
   // The pointing hand takes what it is pointing AT (session.poseAt) and is the
   // only one of these built as a mechanic rather than a picture. See cmdPoint.
@@ -2446,6 +2457,8 @@ export const POSES: Record<string, { self: string; room: string; read: string }>
     self: "You put a hand out toward {what}, and hold it there.",
     room: "{name} puts a hand out toward {what}, and holds it there.",
     read: "standing with a hand out toward {what}",
+    end: "You lower your hand.",
+    endRoom: "{name} lowers their hand.",
   },
 };
 export const REST_LINES: Record<string, string> = {

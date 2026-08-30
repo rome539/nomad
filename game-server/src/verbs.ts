@@ -1330,6 +1330,17 @@ export function cmdPose(z: ZoneDO, session: Session, pose: "guard" | "lean" | "c
     z.send(session, "You rise.");
   }
   const p = POSES[pose]!;
+  // THE SAME WORD TWICE IS THE WAY OUT (rome, 2026-08-30). A posture keeps until
+  // effort ends it, which left standing still as the one state you could not
+  // leave without going somewhere. Typing it again releases it — no second verb,
+  // nothing to remember, and it reads as the plain opposite of what you typed.
+  if (session.pose === pose) {
+    session.pose = undefined;
+    session.poseAt = undefined;
+    z.send(session, p.end);
+    z.roomFeed(session.roomId, p.endRoom.replace("{name}", session.name), session.pubkey, false);
+    return z.sendStatus(session);
+  }
   session.pose = pose;
   session.poseAt = undefined;
   z.send(session, p.self);
@@ -1353,7 +1364,16 @@ export function cmdPose(z: ZoneDO, session: Session, pose: "guard" | "lean" | "c
 // Nothing else. The refusal says nothing about what IS here.
 export function cmdPoint(z: ZoneDO, session: Session, arg: string): void {
   if (z.inCombat(session)) return z.send(session, "Not with this going on.");
-  if (!arg) return z.send(session, "Point at what?");
+  // Bare `point` while already pointing lowers the hand — the same twice-typed
+  // release the postures have. Bare with nothing to release still asks.
+  if (!arg) {
+    if (session.pose !== "point") return z.send(session, "Point at what?");
+    session.pose = undefined;
+    session.poseAt = undefined;
+    z.send(session, POSES.point!.end);
+    z.roomFeed(session.roomId, POSES.point!.endRoom.replace("{name}", session.name), session.pubkey, false);
+    return z.sendStatus(session);
+  }
   const what = pointable(z, session, arg);
   if (!what) return z.send(session, "You look for it, and there is nothing there to put a hand toward.");
   if (session.resting) {
