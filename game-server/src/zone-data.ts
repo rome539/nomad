@@ -2668,6 +2668,17 @@ export const CLOUDDOWN_AMBIENT = [
 // fishing at the eel sites pays double. The eel-cutter's dead work is
 // momentarily REAL again.
 export const EEL_RUN_FISH_MULT = 2;
+// ...AND THE FLOOD IS THE HOUR WITHIN THE NIGHT (2026-08-29). Requiring the
+// tide to be making before the run counted at all made the water a TRIGGER,
+// which is the one thing the building laws say a coupling may never be — and
+// the arithmetic was brutal: the tide is non-idle about nineteen minutes in
+// every six hours, the run's night is two hours once a day, so the expected
+// number of tides inside it is 0.33. The run would have gone from 120 minutes
+// a month to about six, and on roughly seven eel nights in ten there would
+// have been no tide at all and therefore no run — a whole arc that mostly
+// never happened. So the flood LEANS instead: the eels run all night, and
+// they run hardest on the making water.
+export const EEL_RUN_FLOOD_MULT = 2; // on top of EEL_RUN_FISH_MULT, so a flooding run pays quadruple
 export const EEL_RUN_NIGHT = 3; // moonPhase 3: the dark night of the moon's month
 export const EEL_RUN_AMBIENT = [
   "The water is full of eels — silver, moving, all of them going the same way, and none of them hurrying.",
@@ -2840,6 +2851,12 @@ export const BELL_DOOR_KEY = "bell-door";
 export const BELL_DOOR_SHUT = " Overhead, a black door is set in the roof with a bell cut into it, dark and shut. It opens with the bell — and the bell rings only while the watch is kept.";
 export const BELL_DOOR_TREMBLE = " Overhead, the black door trembles in its frame — the note is coming. It opens with the bell, not the warning.";
 export const BELL_DOOR_OPEN = " Overhead, the door to the issue room stands open, and the bell's note is in the iron of it. It will shut when the note goes out of the air.";
+// RINGING (the depth audit, 2026-08-29). The buoy's own text always promised
+// "you could ring it now, and everything for a mile would hear" and nothing
+// in the game could ring. Now `ring` exists, the drowned bell keeps its
+// promise, the cast clapper outshouts them both, and the bells share one
+// cooldown — a bell is rung once, and the air needs a beat to settle.
+export const RING_CD_MS = 45_000;
 // PRIZE BOXES. The four doors' boxes (box-kept, box-glade, box-cave,
 // box-armory) and the reliquary obey a different law from every other chest in
 // the world: the DOOR is the lock, so the box itself never asks for anything.
@@ -5667,6 +5684,10 @@ export const WAKE_AFTERMATH_MS = 5 * 60_000;
 export const WAKE_FRESH_MS = 90 * 60_000; // how recent a death still calls
 export const WAKE_CAP = 4; // at most this many rise per wake
 export const WAKE_CHARGE_CORPSES = 3; // ...but this many fresh-dead in the warrens loads the die (bias, not trigger)
+// THE DEAD'S MOON (the depth audit, 2026-08-29): on the red night the graves
+// are already stirring, so fewer fresh dead are needed to call the wake up.
+// The blood moon leans on the die; it does not force it.
+export const BLOOD_MOON_WAKE_CHARGE = 2;
 // The keeper's want (gate): chalked on the hatch, one named good counts
 // double in trade for the window — a pull event, the only weather that
 // gives you somewhere to GO. The table is all honest gatherables: fen fishing,
@@ -5749,6 +5770,7 @@ export const BOUNTY_TABLE: [string, string, number?][] = [
   ["bear-pelt", "salt-fish", 7],          // 22b -> heal 98   4.45
   ["white-hide", "salt-fish", 8],         // 24b -> heal 112  4.67
   ["bear-skull", "salt-fish", 8],         // 26b -> heal 112  4.31
+  ["summit-tooth", "salt-fish", 7],       // 22b -> heal 98   4.45  <- the summit's own trophy: the board is what makes a tooth worth carrying down
 ];
 // ---- the bones: the gatehouse dice game (2026-08-12) ----
 // Push your luck. Two bones to open, one at a time after, and the whole game is
@@ -6745,6 +6767,27 @@ export const TIDE_LEVELS: string[][] = [
   ["the-breathing-hall"],
 ];
 export const TIDE_HIGH_ODDS = 0.25;
+// THE MOON SETS THE HOUR (the depth audit, 2026-08-29). The prose always
+// claimed the spring was the moon's doing and the roll was flat. Now the
+// spring reads the sky: it is likeliest when the moon is full or dark — the
+// two nights the water answers the most moon — and sleeps through the
+// quarters. A bias on the die, never a trigger: the tide still comes on its
+// own clock either way.
+// ALL SIX NIGHTS, NOT FOUR. moonPhase() runs 0-5 (MOON_FULL_EVERY is six), and
+// this table stopped at 3 — so the waning half was neaped and the WAXING half
+// fell through to 1.0 and was not. One past full drew 0.6 while nearly-whole,
+// exactly as far from full on the other side, drew 1.0; both quarters are
+// quarters and only one of them was a neap. It mirrors now, the way a month
+// does: springs at the full and the dark, neaps at the two quarters, and the
+// shoulders either side of full reading the same.
+export const TIDE_MOON_SPRING: Record<number, number> = {
+  0: 1.6,  // full — the biggest water of the month
+  1: 0.6,  // one past full, going down the month
+  2: 0.6,  // the waning quarter — neap
+  3: 1.4,  // dark — the other spring, and the eels' own night
+  4: 0.6,  // the waxing quarter — neap, and it was missing
+  5: 0.6,  // nearly whole, coming back — mirrors phase 1, and it was missing
+};
 // The tide keeps its own clock, like the bell — tides do not roll dice.
 // Roughly four a day, jittered enough that you read the drips, not a watch.
 export const TIDE_EVERY_MIN_MS = 5 * 3_600_000;

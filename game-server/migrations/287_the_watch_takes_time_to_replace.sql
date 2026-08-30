@@ -1,0 +1,34 @@
+-- THE WATCH TAKES TIME TO REPLACE (2026-08-29). The bell door's whole law is
+-- that the bell rings only while the watch is kept, and tickBell really does
+-- refuse to toll without the last watchman standing on the-watch-turret. But
+-- the coupling had no weight, because he came back in two minutes.
+--
+-- THE ARITHMETIC THAT KILLED IT: the bell waits BELL_GRACE_MS — fifteen
+-- minutes — past its hour for him. At a 120s respawn he was always back inside
+-- that window, walked up, and rang it. The 2026-07-24 comment on tickBell says
+-- so in as many words: a short wait, not a stall, and if he is mid-respawn it
+-- waits for that too. That was honest when the watchman was flavour. The bell
+-- door then leaned on it as though it were a kill switch, and those are two
+-- different claims — only the first was implemented.
+--
+-- THIRTY MINUTES (rome's number). Anything over the fifteen-minute grace makes
+-- a well-timed kill cost a whole ring: the grace runs out, the bell gives up on
+-- that hour and reschedules to the next. Thirty puts the window in which
+-- killing him MATTERS at roughly the three quarters of an hour before a ring —
+-- about six percent of the day, twice a day.
+--
+-- WHICH IS THE POINT, and it is the same law the doors are built on: the
+-- consequence exists only for somebody who knows the schedule. A wanderer who
+-- has not worked out the bell's hours cannot break the door by accident, and
+-- one who has can shut it on everybody else deliberately. The knowledge is the
+-- lever, not the sword — the fortress's own information toll, paid in reverse.
+--
+-- WHAT ELSE IT COSTS: he carries the Last Watch and drops the war-medal, so
+-- this makes him fifteen times slower to farm. That is intended. He is the
+-- keystone of a door now, and a keystone you could harvest every two minutes
+-- was never going to hold anything up.
+--
+-- The marrow-cantor (1200s) and the bellfounder (1500s) already sit near this
+-- and are left alone — they were never the ones the arithmetic broke.
+
+UPDATE mob_templates SET respawn_secs = 1800 WHERE id = 'last-watchman';

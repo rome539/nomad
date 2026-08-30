@@ -256,6 +256,10 @@ export class ZoneDO implements DurableObject {
   public tideSilt = TIDE_SILT_COURSES;
   public tidePryAt = new Map<string, number>();
   public tideToolHint = new Set<string>();
+  // RINGING (the depth audit, 2026-08-29): the bells share one cooldown, the
+  // world's ear settling between rings. Not persisted — silence is the
+  // default a sleeping world wakes to.
+  public ringAt = 0;
   public walked = new Map<string, Set<string>>();   // rooms each player has crossed — the wall's evidence (walkedOf)
   private wallLoaded = new Set<string>();          // pubkeys whose marks have been read up out of D1 this wake
   // The gatehouse board, oldest first. The only place a player's words outlive
@@ -1750,6 +1754,7 @@ export class ZoneDO implements DurableObject {
       case "go": return verbs.cmdGo(this, session, cmd.arg);
       case "say": return verbs.cmdSay(this, session, cmd.arg);
       case "shout": return verbs.cmdShout(this, session, cmd.arg);
+      case "ring": return verbs.cmdRing(this, session, cmd.arg);
       case "attack": return this.cmdAttack(session, cmd.arg);
       case "throw": return this.cmdThrow(session, cmd.arg);
       case "stance": return verbs.cmdStance(this, session, cmd.arg);
@@ -2339,6 +2344,69 @@ export class ZoneDO implements DurableObject {
     const bellHere = world.exits.get(session.roomId)?.some((e) => e.key_item === BELL_DOOR_KEY);
     if (bellHere && arg && /^(bell |black )?door$|^hatch$|^trap ?door$/.test(arg)) {
       return this.bellDoorRefusal(session);
+    }
+    // THE WETHER'S BELL (the depth audit, 2026-08-29). Its clapper is bound up
+    // in wire — "somebody stopped it ringing on purpose" — and the glassed
+    // stone's own text always promised an edge sharp enough to open a hand.
+    // Unbinding is the two near-orphans paying each other off: the stone is
+    // spent, the bell gets its voice back.
+    if (arg && /^wether/.test(arg)) {
+      const wether = session.items.find((c) => c.itemId === "wether-bell");
+      if (!wether) return this.send(session, "You are not carrying a wether's bell.");
+      const glass = session.items.find((c) => c.itemId === "glassed-stone");
+      if (!glass) {
+        return this.send(session, "The clapper is bound up in wire — somebody stopped it ringing on purpose, and it makes no sound. The wire would take a glass edge. (a glassed stone would cut it free)", "dmgin");
+      }
+      // The cut spends the stone, so the bell must have somewhere to land
+      // BEFORE the wire parts — a full pack would eat the stone and drop
+      // nothing for it.
+      if (!this.packRoom(session, "wether-bell-free")) {
+        return this.send(session, "Your pack is full. Make room before you cut the wire — the stone is spent either way.", "dmgin");
+      }
+      await removeItemRow(this.env.DB, glass.rowId);
+      session.items.splice(session.items.indexOf(glass), 1);
+      await removeItemRow(this.env.DB, wether.rowId);
+      session.items.splice(session.items.indexOf(wether), 1);
+      await this.grantItem(session, "wether-bell-free", { kept: true });
+      this.send(session, "You work the glass edge under the wire and it parts with a dry sound, like a stitch giving. The clapper swings free. The bell answers the first shake of it — flat and plain, a sheep-bell's note, and glad of it.", "unlock");
+      this.roomFeed(session.roomId, `${session.name} cuts something free with a shard of glass, and a small bell rings for the first time in a long while.`, session.pubkey, false);
+      return;
+    }
+    // THE POUR (the depth audit, 2026-08-29). The bellfounder has been waiting
+    // two centuries for a pour that never came — "there is no pour," and the
+    // waiting has kept the pit warm. While he lives, the mould will take
+    // bell-metal and give the cast. Bias, never a trigger — the pour was
+    // always optional.
+    //
+    // KILLING HIM SHUTS THE POUR FOR AS LONG AS HE IS DOWN, and no longer: his
+    // respawn is 1500s. The drafted line here said the pour was over forever
+    // and so did the refusal the player read, which was simply not true —
+    // twenty-five minutes later he is back at the mould. A room that lies to
+    // you about a consequence is worse than one that has none.
+    if (session.roomId === "the-bell-pit" && arg && /^(mould|mold|pit|pour)$/.test(arg)) {
+      const founder = [...this.creatures.values()].find((c) => c.templateId === "the-bellfounder");
+      if (!founder) {
+        return this.send(session, "The casting pit is going cold. The founder is not here to tap the mould, and nothing runs without him — whatever is waiting in it goes on waiting until somebody stands over it again.", "dmgin");
+      }
+      if (founder.roomId !== session.roomId) {
+        return this.send(session, "The pit is warm, but the founder is not here to tap the mould. The pour waits for him.", "dmgin");
+      }
+      const metal = session.items.find((c) => c.itemId === "bell-metal");
+      if (!metal) {
+        return this.send(session, "The mould is still waiting, and the pit is warm because the founder has never let it go cold. It wants bell-metal — a lump of it, and the pour.", "dmgin");
+      }
+      // The pour spends the metal, so the cast must have somewhere to land
+      // BEFORE the run — a full pack would drink the metal and drop nothing
+      // for it.
+      if (!this.packRoom(session, "cast-clapper")) {
+        return this.send(session, "Your pack is full. Make room before the pour — the metal goes into the mould either way.", "dmgin");
+      }
+      await removeItemRow(this.env.DB, metal.rowId);
+      session.items.splice(session.items.indexOf(metal), 1);
+      await this.grantItem(session, "cast-clapper", { kept: true });
+      this.send(session, "You lay the bell-metal in the pour. The founder watches it run, taps the side of the mould, and listens — and this time the note comes back true. Two centuries late, the cast is finally in.", "unlock");
+      this.roomFeed(session.roomId, `${session.name} pours the bell-pit, and the founder stands over the mould listening to a note that is finally right.`, session.pubkey, false);
+      return;
     }
     const here = world.caches.filter((c) => this.cacheRoomId(c) === session.roomId);
     if (!here.length) {
@@ -7857,7 +7925,7 @@ export class ZoneDO implements DurableObject {
    * no region column at all, still collapse to "gate" — and those three doors
    * genuinely are the fortress.
    */
-  private bandOf(roomId: string): string {
+  public bandOf(roomId: string): string {
     const own = this.world!.rooms.get(roomId)?.region;
     if (own) return own;
     if (this.world!.entryRooms.has(roomId)) return "gate";

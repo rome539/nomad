@@ -24,9 +24,9 @@ import {
   REST,
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, MOB_WEAKGRIP_MULT, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
-  RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS, EEL_RUN_FISH_MULT, SNOW_NOISE_MULT,
+  RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS, EEL_RUN_FISH_MULT, EEL_RUN_FLOOD_MULT, SNOW_NOISE_MULT,
   RIDDLE_DOOR_KEY, MOON_DOOR_KEY, TIDE_DOOR_KEY, BELL_DOOR_KEY, RIDDLE_ROTATE_MS, RIDDLES, RIDDLE_ASK, RIDDLE_OPEN_LINE, RIDDLE_WRONG, RIDDLE_HINT, RIDDLE_HINT_AFTER, RIDDLE_WINDOW_MS,
-  tideSiltLine,
+  tideSiltLine, RING_CD_MS,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
@@ -1014,8 +1014,13 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   } else if (exit.key_item === BELL_DOOR_KEY) {
     // THE BELL DOOR keeps no state: the bell IS the state. It opens with the
     // ringing and holds through the quiet after — and the bell rings only
-    // while the last watchman lives to ring it from his turret far above. The one
-    // mob in the world worth keeping alive.
+    // while the last watchman lives to ring it from his turret far above — the
+    // one mob in this world worth leaving standing. He is not irreplaceable:
+    // his respawn is 1800s (mig 287, raised from 120s, which was inside the
+    // bell's own fifteen-minute grace and therefore cost nothing at all). What
+    // thirty minutes buys is that killing him in the three quarters of an hour
+    // before a ring costs that ring outright — so the consequence belongs to
+    // whoever knows the hours, and to nobody else.
     if (events.bellOpen(z)) {
       // open — fall through and walk
     } else if (z.events.get("bell")?.phase === "telegraph") {
@@ -1353,6 +1358,69 @@ export function cmdShout(z: ZoneDO, session: Session, msg: string): void {
   z.roomSound(session.roomId, `A voice, raw and carrying, {dir}: ${msg}`, undefined, "say");
   z.speechOut(session, `${session.name} shouts: ${msg}`, "nomad-shout");
   z.creatureNoise(session.roomId); // a shout is a dinner bell with a name on it
+}
+
+// RINGING (the depth audit, 2026-08-29). The buoy's own text always promised
+// "you could ring it now, and everything for a mile would hear," and nothing
+// could. Three bells now ring, each with its own reach — the buoy's carries
+// a mile over the crossing, a carried drowned bell carries a room and its
+// neighbors, and the cast clapper carries a whole band. Every one of them is
+// a dinner bell with a name on it, and the air between rings is shared: the
+// cooldown is the world's ear, not yours.
+export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
+  const now = Date.now();
+  if (now < z.ringAt) return z.send(session, "The bells are still settling from the last ring. Give the air a beat, then ring again.");
+  const atBuoy = session.roomId === "the-bell-buoy";
+  const named = arg && /^(the )?(bell[- ]?buoy|buoy)$/.test(arg);
+  const wether = session.items.some((c) => c.itemId === "wether-bell");
+  const drowned = session.items.some((c) => c.itemId === "drowned-bell");
+  const clapper = session.items.some((c) => c.itemId === "cast-clapper");
+  const free = session.items.some((c) => c.itemId === "wether-bell-free");
+  // The buoy's own bell answers for the buoy — a mile hears it.
+  if (atBuoy && (!arg || named)) {
+    z.ringAt = now + RING_CD_MS;
+    z.send(session, "You put your shoulder into the buoy's bell. It goes once — a long, wet, iron note — and it keeps going in the air after you let go. Everything for a mile hears it.", "unlock");
+    z.roomFeed(session.roomId, `${session.name} rings the bell-buoy, and the note goes out over the water and keeps going.`, session.pubkey, false);
+    z.roomFeedBands(new Set(["crossing"]), "A bell rings once, out on the water — wet and carrying, and everything that hears it lifts its head.", "evt");
+    z.roomSound(session.roomId, "A bell goes {dir}, once, and the note hangs in the air.");
+    z.creatureNoise(session.roomId);
+    return;
+  }
+  // A BOUND BELL IS NOT A VETO (2026-08-29). This refusal used to stand here,
+  // above the two bells that work — so a wanderer carrying a bound wether's
+  // bell AND a cast clapper was told the wire was stopping a bell they were
+  // not trying to ring. It answers at the bottom now, where it belongs: it is
+  // what you get when nothing else in the pack has a voice.
+  //
+  // ...and a bare `ring` rings the bell you have. The guard here used to send
+  // it to "Ring what?", while every branch below ignores `arg` entirely — so
+  // `ring anything` rang your clapper and `ring` on its own did not, which is
+  // exactly backwards from the help ("ring a bell you carry").
+  if (clapper) {
+    z.ringAt = now + RING_CD_MS;
+    z.send(session, "You swing the cast clapper and it finds its note at once — true, and long, and it is still ringing in the air after your arm is still. It was cast to be heard.", "unlock");
+    z.roomFeed(session.roomId, `${session.name} rings a clapper of bell-metal, and the note goes out over everything.`, session.pubkey, false);
+    z.roomFeedBands(new Set([z.bandOf(session.roomId)]), "A bell rings, true and long, and carries over everything.", "evt");
+    z.roomSound(session.roomId, "A bell goes {dir}, true as a struck stone, and carries.");
+    z.creatureNoise(session.roomId);
+    return;
+  }
+  if (drowned || free) {
+    z.ringAt = now + RING_CD_MS;
+    z.send(session, drowned
+      ? "You ring the drowned bell. It rings wet — the note comes out through the green of it — and it is louder than any hand-bell has a right to be."
+      : "You ring the wether's bell. It is flat and plain, the note of a flock finding its way in cloud — but it is its own note again, and it carries.", "unlock");
+    z.roomFeed(session.roomId, `${session.name} rings ${drowned ? "a drowned bell" : "a wether's bell"}, and everything in earshot lifts its head.`, session.pubkey, false);
+    z.roomSound(session.roomId, "A bell rings {dir} — small, and close.");
+    z.creatureNoise(session.roomId);
+    return;
+  }
+  if (wether) {
+    return z.send(session, "The clapper is bound up in wire — somebody stopped it ringing on purpose, and it makes no sound. The wire would take a glass edge. (a glassed stone would cut it free)", "dmgin");
+  }
+  z.send(session, arg
+    ? "You are carrying nothing that rings. (the bell-buoy keeps its own bell; the drowned bell is found, the cast clapper made, and a wether's bell's is bound shut)"
+    : "Ring what? (the bell-buoy rings here — anywhere else, ring a bell you carry)");
 }
 
 export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive = false): Promise<void> {
@@ -2096,7 +2164,14 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   const grigs = CROSSING_TRAPS.has(session.roomId);
   const traps = session.roomId === "the-trap-line" || grigs;
   const biting = (surface || sea) && events.raining(z, session.roomId);
-  if (!chance(Math.min(0.9, FISH_ODDS * (biting ? RAIN_BITE_MULT : 1) * (events.eelRunOn(z, session.roomId) ? EEL_RUN_FISH_MULT : 1)))) {
+  // THE RUN IS THE NIGHT; THE FLOOD IS THE HOUR (2026-08-29). The eels move
+  // all through the dark night of the moon, and hardest on the making water —
+  // so the tide multiplies the run instead of gating it. Double for the run,
+  // double again while the water makes.
+  const runMult = events.eelRunOn(z, session.roomId)
+    ? EEL_RUN_FISH_MULT * (events.eelRunFlooding(z, session.roomId) ? EEL_RUN_FLOOD_MULT : 1)
+    : 1;
+  if (!chance(Math.min(0.9, FISH_ODDS * (biting ? RAIN_BITE_MULT : 1) * runMult))) {
     // The bottom keeps old iron; sometimes the hook finds that instead.
     if (chance(JUNK_SNAG_ODDS) && (await z.grantItem(session, "scrap-iron"))) {
       spendPool(z, session.roomId, pool);

@@ -52,6 +52,7 @@ export type Verb =
   | "study"
   | "journal"
   | "fish"
+  | "ring"
   | "listen"
   | "dive"
   | "wash"
@@ -165,6 +166,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   study: "study", observe: "study", watch: "study", note: "study",
   journal: "journal", bestiary: "journal", logbook: "journal", ledger: "journal",
   fish: "fish", cast: "fish", angle: "fish",
+  ring: "ring", toll: "ring", chime: "ring",
   listen: "listen", hark: "listen", eavesdrop: "listen",
   dive: "dive", swim: "dive", plunge: "dive",
   wash: "wash", scrub: "wash", rinse: "wash", clean: "wash",
@@ -376,6 +378,10 @@ export const HELP_TEXT = [
   "  shout <words>     (yell) — throw your voice through the walls: every",
   "                    neighboring room hears the words — and everything",
   "                    with ears comes to see who owns the voice.",
+  "  ring              (toll) — ring the bell-buoy (a mile of crossing hears",
+  "                    it), or a bell you carry: the drowned bell, the cast",
+  "                    clapper, an unbound wether's bell. Every bell is a",
+  "                    dinner bell with a name on it.",
   "  attack <mob>      (k, kill) — engage; combat resolves in rounds. Move to flee.",
   "                    A wanderer's name works too. Killing one drops EVERYTHING",
   "                    they carry, seals cracked — and their blood stays on your",

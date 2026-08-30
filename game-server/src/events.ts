@@ -25,7 +25,7 @@ import {
   BELL_HOURS_UTC, BELL_JITTER_MS, BELL_GRACE_MS,
   BELL_TELEGRAPH_MS, BELL_ACTIVE_MS, BELL_AFTERMATH_MS, BELL_AFTERMATH_WAKE_MULT,
   BOIL_TELEGRAPH_MS, BOIL_STEP_MS, BOIL_AFTERMATH_MS, BOIL_BITE,
-  WAKE_TELEGRAPH_MS, WAKE_ACTIVE_MS, WAKE_AFTERMATH_MS, WAKE_FRESH_MS, WAKE_CAP, WAKE_CHARGE_CORPSES,
+  WAKE_TELEGRAPH_MS, WAKE_ACTIVE_MS, WAKE_AFTERMATH_MS, WAKE_FRESH_MS, WAKE_CAP, WAKE_CHARGE_CORPSES, BLOOD_MOON_WAKE_CHARGE,
   WANT_TABLE, WANT_MULT, WANT_TELEGRAPH_MS, WANT_ACTIVE_MS, WANT_AFTERMATH_MS,
   ESCAPE_TMPL, ESCAPE_TELEGRAPH_MS, ESCAPE_ACTIVE_MS, ESCAPE_AFTERMATH_MS,
   ESCAPE_STRIDE_MIN_MS, ESCAPE_STRIDE_MAX_MS, ESCAPE_ROUSE_MS,
@@ -43,7 +43,7 @@ import {
   TIDE_SILT_COURSES, TIDE_SILT_PER_TIDE, TIDE_SILT_MAX,
   FOOD_KEEPS, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT,
   SEA_TELEGRAPH_MS, SEA_MAKE_MS, SEA_STAND_MIN_MS, SEA_STAND_MAX_MS, SEA_EBB_MS,
-  TIDEWAYS_ROOMS, TIDE_LEVELS, TIDE_HIGH_ODDS,
+  TIDEWAYS_ROOMS, TIDE_LEVELS, TIDE_HIGH_ODDS, TIDE_MOON_SPRING,
   TIDE_EVERY_MIN_MS, TIDE_EVERY_MAX_MS, TIDE_FIRST_MIN_MS, TIDE_FIRST_MAX_MS, TIDE_GRACE_MS,
   TIDE_TELEGRAPH_MS, TIDE_STEP_MS, TIDE_CREST_MS, TIDE_AFTERMATH_MS, TIDE_SILT_ODDS,
   BROODERS, SENTINELS, DROWNERS, DEEP_ROOMS, SUMMIT_BOSSES,
@@ -297,9 +297,20 @@ export function foggy(z: ZoneDO, roomId: string): boolean {
 
 // THE EEL RUN (8b). The new-moon night is when the eels move — real eel
 // behaviour, and the game's moon clock already knows which night that is.
+// ONE WATER (the depth audit, 2026-08-29): the eels move with the flood, the
+// way the crossing's own prose always claimed everything here does — but the
+// flood LEANS on the run, it does not gate it. Gating it on the tide made the
+// water a trigger (against the building laws) and cut the arc from two hours a
+// month to about six minutes, absent entirely on seven eel nights in ten. The
+// run is the night; the making water is the hour within it (eelRunFlooding).
 export function eelRunOn(z: ZoneDO, roomId: string): boolean {
   return isNight() && moonPhase() === EEL_RUN_NIGHT
     && z.world!.rooms.get(roomId)?.region === "crossing";
+}
+
+/** The run at its height: the eels are moving AND the water is making. */
+export function eelRunFlooding(z: ZoneDO, roomId: string): boolean {
+  return eelRunOn(z, roomId) && seaAstro(z) > 0;
 }
 
 // THE MAST YEAR's boon gate (8c): the wood's floor is full.
@@ -709,7 +720,14 @@ export function skyClause(z: ZoneDO, roomId: string): string {
   // (The roof and the two rare skies are answered at the top of this function.)
   // The crossing's two gifts: the eels run the channels on the new-moon night,
   // and wind plus water brings the wrack in on the strand.
-  if (region === "crossing" && eelRunOn(z, roomId)) return " The water is full of eels — silver, moving, all of them going the same way. The channels are alive with them.";
+  // The run is visible all night; the making water is when it is worth being
+  // here, so the room SAYS which of the two you are standing in rather than
+  // hiding the difference in a multiplier.
+  if (region === "crossing" && eelRunOn(z, roomId)) {
+    return eelRunFlooding(z, roomId)
+      ? " The water is full of eels — silver, moving, all of them going the same way — and the flood is under them and pushing. This is the hour of it."
+      : " The water is full of eels — silver, moving, all of them going the same way. The channels are alive with them.";
+  }
   if (wrackIn(z, roomId)) return " The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
   if (frozen(z, roomId)) return pick(ICE_LINES);
   if (fenUp(z, roomId)) return FEN_UP_LINE;
@@ -819,7 +837,11 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
       default: break;
     }
   }
-  if (z.world!.rooms.get(roomId)?.region === "crossing" && eelRunOn(z, roomId)) return "The water is full of eels — silver, moving, all of them going the same way. The channels are alive with them.";
+  if (z.world!.rooms.get(roomId)?.region === "crossing" && eelRunOn(z, roomId)) {
+    return eelRunFlooding(z, roomId)
+      ? "The water is full of eels — silver, moving, all of them going the same way — and the flood is under them and pushing. This is the hour of it."
+      : "The water is full of eels — silver, moving, all of them going the same way. The channels are alive with them.";
+  }
   if (wrackIn(z, roomId)) return "The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
   if (frozen(z, roomId)) return pick(ICE_LINES).trimStart();
   if (fenUp(z, roomId)) return FEN_UP_LINE.trimStart();
@@ -1813,6 +1835,10 @@ async function tickFever(z: ZoneDO, now: number): Promise<void> {
     case "idle": {
       st.phase = "telegraph";
       st.until = now + FEVER_TELEGRAPH_MS;
+      // THE GRAVES EDGE (the depth audit, 2026-08-29): the fever is "wind off
+      // the graves" and the wake is the graves answering. A fever beginning
+      // loads the warrens' die — bias, never a trigger.
+      chargeBand(z, "warrens", "wake");
       z.roomFeedBands(new Set(["den"]), "The wind turns and comes off the graves, and it is warm, and it is wrong. Everything on this ground smells faintly of the pit.", "evt");
       break;
     }
@@ -2105,7 +2131,11 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       z.roomFeed("the-bell-cote", "The bell is RINGING inches from you — iron on iron, filling your skull, drowning every other sense you have.", undefined, false, "evt");
       z.roomFeed("the-issue-room", "The bell is RINGING, a long way up and coming down through every stone of the fortress into this room. The racks sing with it. This is the sound they were stacked here for, and it is two centuries late.", undefined, false, "evt");
       // Everything under the keep's roof stirs at once; the rats are already
-      // running for the earth (see bellDrivesRats).
+      // running for the earth (see bellDrivesRats) — and a warren full of
+      // bolted rats is a warren nearer to boiling over. The bell loads the
+      // warrens' die, which is the file's own old promise finally kept:
+      // bias, never a trigger.
+      chargeBand(z, "warrens", "boil");
       for (const c of z.creatures.values()) {
         if (keepRoom(z, c.roomId)) {
           c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(2000, 10_000));
@@ -2265,7 +2295,9 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
   }
   // MASS DEATH CHARGES THE WAKE (bias, not trigger): enough fresh blood and
   // remains in the warrens, and the next roll with the warrens free draws the
-  // wake instead of the boil. A couple of kills is not a massacre; three is.
+  // wake instead of the boil. A couple of kills is not a massacre; three is —
+  // and on the blood moon two is, because the dead's moon has the graves
+  // stirring before anyone dies at all (the depth audit, 2026-08-29).
   if (st.phase === "idle") {
     let fresh = 0;
     for (const roomId of WARRENS_ROOMS) {
@@ -2275,7 +2307,8 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
         if ((t.kind === "blood" || t.kind === "remains") && now - t.at < WAKE_FRESH_MS) fresh++;
       }
     }
-    if (fresh >= WAKE_CHARGE_CORPSES) chargeBand(z, "warrens", "wake");
+    const need = isBloodMoon() ? BLOOD_MOON_WAKE_CHARGE : WAKE_CHARGE_CORPSES;
+    if (fresh >= need) chargeBand(z, "warrens", "wake");
   }
   if (now < st.until) return;
   const inWarrens = (roomId: string) => WARRENS_ROOMS.has(roomId);
@@ -2283,6 +2316,20 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
     case "idle": {
       st.phase = "telegraph";
       st.until = now + WAKE_TELEGRAPH_MS;
+      // THE GRAVES EDGE RUNS ONE WAY ONLY (2026-08-29). A wake charging the
+      // fever was drafted here to answer the fever charging the wake, and the
+      // pair closed a loop: fever loads the warrens, the wake fires and loads
+      // the den, the fever fires and loads the warrens again, forever. Each
+      // band holds one charge slot so it cannot stack, and the rolls are hours
+      // apart so it is slow — but those two arcs would have gone on calling
+      // each other and crowding everything else out of both bands.
+      //
+      // So the edge keeps the direction that ADDS something. Nothing charged
+      // the wake before but mass death, and "wind off the graves, then the
+      // graves answer" is the forward reading of it. The den already has an
+      // outside hand on its die — a settled rain soaks the graves and charges
+      // the fever (tickRain's active case) — so the return leg was not the
+      // fever's only caller, only its loop.
       feedWhere(z, inWarrens, "Every hollow thing in the warrens stops at once — heads cocked, listening to something under the floor.");
       z.roomFeedBands(FORTRESS_BANDS, "The floor of the warrens is being opened from underneath, and what is coming up through it was buried a long time before anything else here died.", "evt");
       // The stillness IS the telegraph: the hollow hold where they stand.
@@ -3033,6 +3080,12 @@ async function tickSong(z: ZoneDO, now: number): Promise<void> {
   const inDeep = (roomId: string) => deepRoom(z, roomId);
   switch (st.phase) {
     case "idle": {
+      // NO CHOIR, NO SONG (the watchman's law, told in bone — the depth
+      // audit, 2026-08-29): the marrow-song is the cantor's voice, and the
+      // cantor is a killable thing. While none stands, a drawn song goes
+      // unplayed — the deep's one music dies with the choir, and returns
+      // when it does. Same shape as the woodward's walk: never conjured.
+      if (![...z.creatures.values()].some((c) => c.templateId === "marrow-cantor")) { st.until = NEVER; break; }
       st.phase = "telegraph";
       st.until = now + SONG_TELEGRAPH_MS;
       feedWhere(z, inDeep, "Somewhere below, a bone-voice starts to hum — one note, held long past any breath.");
@@ -3426,7 +3479,11 @@ async function tickTide(z: ZoneDO, now: number): Promise<void> {
       }
       st.phase = "telegraph";
       st.until = now + TIDE_TELEGRAPH_MS;
-      st.data = String(chance(TIDE_HIGH_ODDS) ? TIDE_LEVELS.length - 1 : Math.max(0, TIDE_LEVELS.length - 2));
+      // THE MOON SETS THE HOUR (the depth audit, 2026-08-29): the spring used
+      // to be a flat roll, and the prose claimed the moon. Now the die reads
+      // the sky — fullest at the full and the dark, sleeping through the
+      // quarters. Still a die; the moon leans on it, never forces it.
+      st.data = String(chance(Math.min(1, TIDE_HIGH_ODDS * (TIDE_MOON_SPRING[moonPhase()] ?? 1))) ? TIDE_LEVELS.length - 1 : Math.max(0, TIDE_LEVELS.length - 2));
       tideWingFeed(z, "The drips quicken, everywhere at once — a patter, then a drumming. Below, something vast is inhaling.");
       // The wing gets the water; the rest of the fortress gets the news of it.
       // An arc that drowns a whole region and is inaudible one floor up was the
