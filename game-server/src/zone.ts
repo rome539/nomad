@@ -2319,8 +2319,8 @@ export class ZoneDO implements DurableObject {
   // The bell door's answer to anyone trying to force it, in both its states.
   private bellDoorRefusal(session: Session): void {
     this.send(session, events.bellOpen(this)
-      ? "The door overhead stands open already — the bell's note is in the iron of it. Go up."
-      : "The door overhead has no lock to force and no latch to turn. It opens with the bell — twice a day, near the same hours, when the last watchman rings it from his turret at the top of the fortress.", "dmgin");
+      ? "The hatch overhead stands open already — the bell's note is in the iron of it. Go up."
+      : "The hatch overhead will not move. It has no lock to force and no latch to turn, and it does not answer to any hand.", "dmgin");
   }
 
   // never wasted — a spent lock always gives up at least one thing.

@@ -25,7 +25,7 @@ import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, MOB_WEAKGRIP_MULT, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS, EEL_RUN_FISH_MULT, EEL_RUN_FLOOD_MULT, SNOW_NOISE_MULT,
-  RIDDLE_DOOR_KEY, MOON_DOOR_KEY, TIDE_DOOR_KEY, BELL_DOOR_KEY, RIDDLE_ROTATE_MS, RIDDLES, RIDDLE_ASK, RIDDLE_OPEN_LINE, RIDDLE_WRONG, RIDDLE_HINT, RIDDLE_HINT_AFTER, RIDDLE_WINDOW_MS,
+  RIDDLE_DOOR_KEY, MOON_DOOR_KEY, TIDE_DOOR_KEY, BELL_DOOR_KEY, RIDDLE_ROTATE_MS, RIDDLES, RIDDLE_ASK, RIDDLE_OPEN_LINE, RIDDLE_WRONG, RIDDLE_MOCK, RIDDLE_MOCK_AFTER, RIDDLE_WINDOW_MS,
   tideSiltLine, RING_CD_MS,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
@@ -997,7 +997,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     // THE MOON DOOR keeps no state: the moon IS the state. Full and white,
     // and not the red one — the red moon belongs to the dead.
     if (!isNight() || !isFullMoon() || isBloodMoon()) {
-      return z.send(session, "The black door will not move. The moon cut into it is dark, and the iron is cold against your hand. It opens for the full moon, and for no other.", "dmgin");
+      return z.send(session, "The black door will not move. The moon cut into it is dark, and the iron is cold against your hand.", "dmgin");
     }
     // open — fall through and walk
   } else if (exit.key_item === TIDE_DOOR_KEY) {
@@ -1024,11 +1024,15 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     if (events.bellOpen(z)) {
       // open — fall through and walk
     } else if (z.events.get("bell")?.phase === "telegraph") {
-      return z.send(session, "The door overhead trembles in its frame — the note is in the air, but the ringing has not begun. It opens with the bell, not the warning.", "dmgin");
-    } else if (![...z.creatures.values()].some((c) => c.templateId === "last-watchman")) {
-      return z.send(session, "The door overhead will not move. It opens with the bell — and the bell has no one left to ring it. The watch is dead, and the hours are silent until it rises.", "dmgin");
+      return z.send(session, "The hatch overhead is trembling in its frame, and it will not move.", "dmgin");
     } else {
-      return z.send(session, "The door overhead will not move. It opens with the bell — twice a day, near the same hours, when the last watchman rings it from his turret at the top of the fortress.", "dmgin");
+      // ONE REFUSAL, NOT THREE. There used to be a separate line for "the watch
+      // is dead" that said so outright — which handed a player the whole rule
+      // for the price of walking into a room. Both branches now say the same
+      // thing because the hatch says the same thing either way: it does not
+      // open to you. Whether anybody is alive to ring for it is something to
+      // be worked out, not read off a refusal.
+      return z.send(session, "The hatch overhead will not move. It has no lock to force and no latch to turn, and it does not answer to any hand.", "dmgin");
     }
   } else if (exit.key_item && exit.key_item !== DEEP_HEART && !z.openDoors.has(doorKey)) {
     if (!session.items.some((c) => c.itemId === exit.key_item)) {
@@ -1339,7 +1343,7 @@ export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
   // walked in after them. The door is patient with each of you separately.
   const wrongs = (z.riddleWrong.get(patience) ?? 0) + 1;
   z.riddleWrong.set(patience, wrongs);
-  z.send(session, wrongs >= RIDDLE_HINT_AFTER ? pick(RIDDLE_HINT) : pick(RIDDLE_WRONG), "study");
+  z.send(session, wrongs >= RIDDLE_MOCK_AFTER ? pick(RIDDLE_MOCK) : pick(RIDDLE_WRONG), "study");
 }
 
 // Shout: your words thrown hard enough to cross walls. The trade IS the verb —

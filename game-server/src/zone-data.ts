@@ -2772,7 +2772,11 @@ export const RIDDLE_DOOR_KEY = "riddle-door";
 export const MOON_DOOR_KEY = "moon-door";
 export const TIDE_DOOR_KEY = "tide-door";
 export const RIDDLE_ROTATE_MS = 30 * 60_000; // the riddle turns over, stateless
-export const RIDDLE_HINT_AFTER = 2;          // wrong answers before the door takes pity
+// Wrong answers before the door stops being polite. It does NOT start helping
+// at this count — it starts holding you in contempt. A door that coaches you
+// after two misses is a hint system wearing good prose, and it fired on every
+// player who guessed twice, which is most of them (rome, 2026-08-30).
+export const RIDDLE_MOCK_AFTER = 2;
 export const RIDDLE_WINDOW_MS = 4 * 60_000;  // a solved door's window
 export const RIDDLES: { q: string; a: string[] }[] = [
   { q: "The black door drinks me while I am still cold. What am I?", a: ["heart"] },
@@ -2787,9 +2791,15 @@ export const RIDDLE_WRONG = [
   "The door is silent a long moment. \"No,\" it says, from somewhere in the iron. \"No. Think again, or walk on.\"",
   "The iron answers, flat and patient: \"It has heard that answer before. It was wrong then, too.\"",
 ];
-export const RIDDLE_HINT = [
-  "The door takes pity, or something like it: \"You have walked further than this. The answer is a thing you have already met.\"",
-  "The door speaks again, slower: \"It is not a word from elsewhere. It is a word from HERE. You have held it, or stood under it, or cut it.\"",
+// THE DOOR DOES NOT HELP. It has been asked and answered for a very long time
+// and it has no stake in your getting in — so past the second wrong answer it
+// stops being flat and starts being unkind. Not one of these narrows the
+// answer, and that is the point: the escalation is contempt, not a ladder.
+export const RIDDLE_MOCK = [
+  "The door is quiet a while. \"Others have stood where you are standing,\" it says. \"A great many of them. Most talked more than you have. None of them talked better.\"",
+  "\"It will wait,\" the iron says. \"It has the advantage of you there — it has nothing else to do, and neither, by the look of it, have you.\"",
+  "The door does not trouble with the pause this time. \"No,\" it says. \"You are not thinking. You are saying words at a door.\"",
+  "\"Ah,\" says the iron, with no warmth in it at all. \"You are going to keep going. Very well. It has outlasted better.\"",
 ];
 export const MOON_DOOR_SHUT = " A black door stands in the {dir} wall with a moon cut into it — dark now, and shut.";
 export const MOON_DOOR_OPEN = " The moon door stands open, and the moon cut into it is full of light. It will not stand open for long.";
@@ -2835,7 +2845,10 @@ export function tideSiltLine(n: number): string {
   if (n === 1) return "the sill nearly clear — one more course of silt and the door will give";
   return `the sill half dug out, ${n} courses of silt still holding it`;
 }
-export const TIDE_DOOR_SILT = " A door of black iron is set low in the {dir}, {silt}. (pry the door while the water is out)";
+// The parenthetical keeps the VERB — prose that invites an action has to name a
+// word the parser answers to — and drops the rest. "while the water is out" was
+// restating what the shut line already shows you: the sea standing over the sill.
+export const TIDE_DOOR_SILT = " A door of black iron is set low in the {dir}, {silt}. (pry it)";
 export const TIDE_PRY_WET = "The sea is over the sill. The water owns the door until it goes out — and every tide it buries the sill again.";
 export const TIDE_PRY_SETTLE = "The silt there is still settling from the last work. Give it a moment, then pry again.";
 export const TIDE_PRY_TOOL_HINT = " A pick would take two courses where your hands take one.";
@@ -2848,9 +2861,26 @@ export const TIDE_PRY_OPEN = "The last of the silt comes away, and the door sags
 // so. The door is in the Stripped Armory's ceiling, opening UP into the issue
 // room — the one store the garrison could not reach on their way out.
 export const BELL_DOOR_KEY = "bell-door";
-export const BELL_DOOR_SHUT = " Overhead, a black door is set in the roof with a bell cut into it, dark and shut. It opens with the bell — and the bell rings only while the watch is kept.";
-export const BELL_DOOR_TREMBLE = " Overhead, the black door trembles in its frame — the note is coming. It opens with the bell, not the warning.";
-export const BELL_DOOR_OPEN = " Overhead, the door to the issue room stands open, and the bell's note is in the iron of it. It will shut when the note goes out of the air.";
+// THE DOOR SHOWS A BELL AND SAYS NOTHING ELSE (rome, 2026-08-30). These three
+// lines used to state the rule outright — that it opens with the bell, and that
+// the bell only rings while the watch is kept — which is the whole secret, given
+// away to anyone who walked past. The moon door has always done this correctly:
+// a moon cut into it, dark now, and shut. A bell cut into iron is the clue. The
+// player hears the fortress bell twice a day from most of the world; sooner or
+// later they are standing under this when it goes, and then they know.
+// (ROOF, not ceiling, was a leftover from the draft that hung this door in the
+// bell-cote — a belfry has a roof. It is in the Stripped Armory now, two floors
+// under the keep, and that room's own line calls it a ceiling.)
+// The door does its own explaining by being what it IS. A bell CUT INTO it was
+// decoration — a symbol standing in for a reason — and this world does not put
+// symbols on things, it puts wear on them. This is a muster hatch in the roof
+// of an armoury: no handle on the underside because it was never opened from
+// here, and the stone worn wide and smooth because a great many armed men came
+// down out of it fast, over and over, for years. That is the clue and the
+// history in one, and it states no rule.
+export const BELL_DOOR_SHUT = " Overhead, a hatch of black iron is set into the ceiling, shut, and there is no handle on this side of it. The stone all round it is worn wide and smooth — the wear of a great many men coming down through it in a hurry, over and over, for years.";
+export const BELL_DOOR_TREMBLE = " Overhead, the iron hatch shifts against its frame, and dust sifts down out of the seam of it.";
+export const BELL_DOOR_OPEN = " Overhead, the iron hatch stands open on the dark of the room above, and the bell's note is in the iron of it. It will shut when the note goes out of the air.";
 // RINGING (the depth audit, 2026-08-29). The buoy's own text always promised
 // "you could ring it now, and everything for a mile would hear" and nothing
 // in the game could ring. Now `ring` exists, the drowned bell keeps its

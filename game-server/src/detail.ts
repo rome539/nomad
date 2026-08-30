@@ -619,6 +619,38 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
     "pit|hole|shaft|floor|walls":
       "A bottle-shaped hole with the only opening at the top. The name is the design brief — there is no door, no ledge, no drain and nothing to reach. You are not being held here pending anything.",
   },
+  // THE STRIPPED ARMORY. The room line gives you the wear and the bones; this is
+  // the closer read, and it is still only EVIDENCE — what the hatch is for, and
+  // what it costs to notice that nobody came down it the last time. It names no
+  // rule, no hour and no bell. A wanderer who puts the racks, the bones and the
+  // worn stone together has earned the conclusion; the game does not hand it over.
+  "armory": {
+    "hatch|door|ceiling|roof|opening|iron":
+      "A muster hatch, and a well-built one — it drops on its own weight and it is opened from above, which is why there is no handle down here. The wear tells you how it was used: not the narrow polish of one man on an errand but a wide smooth fan, the mark of a rank of men landing and scattering, again and again, the way a garrison arms and moves when it is called. It has not been opened in a very long time. The dust on the underside of it is unbroken.",
+    "bones|skeleton|skeletons|dead|remains":
+      "They are not scattered and they are not fallen. They are lying in order, on their backs, under the hatch, with their feet toward the racks — men who lay down where they would be standing when it opened, so as to be first up. There is no violence on any of them. They waited longer than the waiting was any use.",
+    "racks|rack|spears|arms|weapons|dust":
+      "Empty, and emptied fast — the pegs are bent where things were pulled off them sideways rather than lifted. Whatever the last issue was, it went out of this room at a run. The bones behind you did not get any of it.",
+  },
+  // THE BACK WALL — the riddle door's ground. The room says there is no way up
+  // this; the close read says the one thing on the whole face that the water has
+  // not touched. Evidence, not a rule: it names no riddle and no answer.
+  "the-back-wall": {
+    "door|iron|hatch|plate|ground":
+      "Black iron, lying flat in the scree at the foot of the wall, and the wall has been running water down onto it for as long as there has been a wall. It is not rusted. Seven hundred feet of wet rock above it, white with the run of it, and this is dry — no scale, no bloom, no pitting, and the scree lies right up to the edge of it without ever having been pushed back. Nothing has come out of here and nothing has gone in.",
+    "wall|rock|face|crag":
+      "Wet black rock, streaked white where the water comes down and green-black where it does not, and it leans over you by a degree or two the whole way up. There is no line on it — no ledge, no crack that carries, no weakness a hand would want. Whoever put a door at the foot of it was not expecting anybody to arrive from above.",
+  },
+
+  // THE BIRDLESS ACRE — the moon door's ground. Its own line says everything
+  // about the acre is right except that nothing lives in it. This is why.
+  "the-birdless-acre": {
+    "door|iron|moon|carving":
+      "A slab of black iron standing in good wood with nothing built around it — no frame, no wall, no footing, no hinge on this side. The moon cut into the face is old work and it is cut DEEP, deeper than showing it needs, the way a thing is carved when the carving has a job rather than a meaning.",
+    "ground|litter|leaves|floor|acre|trees|wood":
+      "Leaf litter two years deep and not a mark in it. No scrape, no run, no droppings, no browse line on anything at standing height — and the litter itself is whole, when a wood floor this old should be turned over daily by a hundred small things looking for food. Nothing has been eaten here in a long time, and nothing has been eaten HERE, which is a different fact and the harder one.",
+  },
+
   "the-buried-chapel": {
     "chapel|altar|stone|walls|vault":
       "Under everything, and it was under everything before the collapse — chapels go at the bottom when what is above them is a garrison and what is below is where the family is. It is intact, which almost nothing down here is.",
@@ -953,6 +985,9 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "A slab set upright on the eastern bank above the steps, with a name on it and two dates that are not far apart, and below them a line about the water. It faces the channel. Whoever set it up wanted him to go on looking at the crossing he did not get across.",
   },
   "the-deep-mark": {
+    // The gauge post had a close read; the DOOR beside it did not.
+    "door|iron|sill|hatch":
+      "Black iron set low into the bank, and the whole of it below the deepest band cut on the post beside it — which is to say it is under water more of the day than it is out of it, and whoever hung it knew that when they hung it. The sill is silted and has been silted and dug out and silted again; the marks of the digging are old and there are a great many of them. Somebody used this on a schedule.",
     "deep mark|depths|cap|post":
       "A stone post at the head of the green water with depths cut into it in bands, the deepest band well above the top of the post. The cutter ran out of post before he ran out of water, and marked that fact by cutting the last band on the underside of the cap.",
   },
