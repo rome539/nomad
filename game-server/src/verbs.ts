@@ -1370,8 +1370,12 @@ export function cmdShout(z: ZoneDO, session: Session, msg: string): void {
 export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
   const now = Date.now();
   if (now < z.ringAt) return z.send(session, "The bells are still settling from the last ring. Give the air a beat, then ring again.");
+  // WHAT A PLAYER STANDING AT A BELL CALLS IT (2026-08-30, from the same live
+  // report that found the wire). "bell" was not on this list, so `ring bell`
+  // AT THE BUOY skipped the buoy, found nothing in the pack, and answered "you
+  // are carrying nothing that rings" — to somebody with their hand on a bell.
   const atBuoy = session.roomId === "the-bell-buoy";
-  const named = arg && /^(the )?(bell[- ]?buoy|buoy)$/.test(arg);
+  const named = !!arg && /^(the )?(bell[- ]?buoy|buoy|bell)$/.test(arg);
   const wether = session.items.some((c) => c.itemId === "wether-bell");
   const drowned = session.items.some((c) => c.itemId === "drowned-bell");
   const clapper = session.items.some((c) => c.itemId === "cast-clapper");
@@ -1396,6 +1400,12 @@ export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
   // it to "Ring what?", while every branch below ignores `arg` entirely — so
   // `ring anything` rang your clapper and `ring` on its own did not, which is
   // exactly backwards from the help ("ring a bell you carry").
+  // ...and naming the buoy where there is no buoy is a fact worth saying. It
+  // used to fall through and quietly ring whatever was in the pack instead,
+  // which answers a question nobody asked.
+  if (!atBuoy && /buoy/.test(arg)) {
+    return z.send(session, "There is no bell-buoy here. It is out on the water at the crossing, and it is the only one.", "dmgin");
+  }
   if (clapper) {
     z.ringAt = now + RING_CD_MS;
     z.send(session, "You swing the cast clapper and it finds its note at once — true, and long, and it is still ringing in the air after your arm is still. It was cast to be heard.", "unlock");
@@ -1416,7 +1426,7 @@ export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
     return;
   }
   if (wether) {
-    return z.send(session, "The clapper is bound up in wire — somebody stopped it ringing on purpose, and it makes no sound. The wire would take a glass edge. (a glassed stone would cut it free)", "dmgin");
+    return z.send(session, "The clapper is bound up in wire — somebody stopped it ringing on purpose, and it makes no sound. The wire would take a glass edge. (with a glassed stone in hand: cut the wire)", "dmgin");
   }
   z.send(session, arg
     ? "You are carrying nothing that rings. (the bell-buoy keeps its own bell; the drowned bell is found, the cast clapper made, and a wether's bell's is bound shut)"

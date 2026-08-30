@@ -110,7 +110,18 @@ const VERB_ALIASES: Record<string, Verb> = {
   drop: "drop", put: "drop", leave: "drop", discard: "drop",
   equip: "equip", wield: "equip", wear: "equip", don: "equip", ready: "equip", hold: "equip",
   remove: "remove", unequip: "remove", unwield: "remove", doff: "remove", sheathe: "remove", sheath: "remove",
+  // `cut` and `unbind` reach the unlock handler because the WETHER'S BELL lives
+  // there and its own hint says "a glassed stone would cut it free" (2026-08-30,
+  // a live player report: Lunapilot had the bell, had the stone, read the line
+  // and had no verb to say it with). A game that names an action in its own
+  // prose has to answer to that word.
   unlock: "unlock", open: "unlock", pry: "unlock", force: "unlock",
+  cut: "unlock", unbind: "unlock", snip: "unlock",
+  // ...and `pour` for the same reason at the bell-pit: its own refusal says the
+  // mould "wants bell-metal — a lump of it, and the pour", and until now the
+  // only sentence that worked was `unlock mould`. (`cast` is NOT added here —
+  // it belongs to fishing, and casting a line is the older claim on the word.)
+  pour: "unlock",
   salvage: "salvage", scrap: "salvage", dismantle: "salvage", break: "salvage",
   burn: "burn", destroy: "burn",
   forge: "forge", craft: "forge", make: "forge", smith: "forge",

@@ -376,8 +376,13 @@ Directions rome likes and wants held. Design only; no code until he says go.
   a den worth calling — the lead-dog, a wolf, something with kin behind it —
   and its own tell, so the cost of letting it break is legible before you do.
 
-- **THE SCAR — gear that carries its own history** *(pinned 2026-08-13 — rome:
-  "pin the scar for later")*. Wear is currently a recurring bill and nothing
+- **THE SCAR — gear that carries its own history** — **REJECTED 2026-08-29.**
+  rome turned it down flatly, and it is not a park this time: do not build it,
+  and do not offer it again. The whole design stays below at his request —
+  the thinking is worth keeping, the feature is not — so read the rest of this
+  entry as a record of a decision, never as a queue item. The open question it
+  ends on was never answered and now never needs to be.
+  *(Originally pinned 2026-08-13 — "pin the scar for later".)* Wear is currently a recurring bill and nothing
   else: repair sets condition flat back to 100 (gate.ts, REPAIR_COST by rarity),
   so a piece of gear is immortal as long as you keep paying. The scar gives that
   system a memory. The FIRST time a piece falls past GEAR_FAILING_AT (12), it

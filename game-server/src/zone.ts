@@ -2350,12 +2350,18 @@ export class ZoneDO implements DurableObject {
     // stone's own text always promised an edge sharp enough to open a hand.
     // Unbinding is the two near-orphans paying each other off: the stone is
     // spent, the bell gets its voice back.
-    if (arg && /^wether/.test(arg)) {
-      const wether = session.items.find((c) => c.itemId === "wether-bell");
-      if (!wether) return this.send(session, "You are not carrying a wether's bell.");
+    // THE WORDS A PLAYER ACTUALLY TYPES (2026-08-30). This matched /^wether/ and
+    // nothing else, so `cut the wire`, `unlock bell` and `cut clapper` — every
+    // phrasing the hint itself suggests — fell through to "there's nothing here
+    // to unlock". It now answers to the bell, the wire and the clapper, and it
+    // is gated on HOLDING one rather than erroring: somebody without a wether's
+    // bell typing `unlock bell` in a room with a chest in it should get the
+    // chest, not a lecture about a bell they have never seen.
+    const wether = session.items.find((c) => c.itemId === "wether-bell");
+    if (wether && arg && /wether|wire|clapper|^(the )?bell$/.test(arg)) {
       const glass = session.items.find((c) => c.itemId === "glassed-stone");
       if (!glass) {
-        return this.send(session, "The clapper is bound up in wire — somebody stopped it ringing on purpose, and it makes no sound. The wire would take a glass edge. (a glassed stone would cut it free)", "dmgin");
+        return this.send(session, "The clapper is bound up in wire — somebody stopped it ringing on purpose, and it makes no sound. The wire would take a glass edge. (with a glassed stone in hand: cut the wire)", "dmgin");
       }
       // The cut spends the stone, so the bell must have somewhere to land
       // BEFORE the wire parts — a full pack would eat the stone and drop
@@ -2383,7 +2389,14 @@ export class ZoneDO implements DurableObject {
     // and so did the refusal the player read, which was simply not true —
     // twenty-five minutes later he is back at the mould. A room that lies to
     // you about a consequence is worse than one that has none.
-    if (session.roomId === "the-bell-pit" && arg && /^(mould|mold|pit|pour)$/.test(arg)) {
+    // A BARE `pour` IS THE POUR (2026-08-30). The refusal says "a lump of it, and
+    // the pour", so `pour` on its own is the obvious thing to type and it was the
+    // one phrasing that missed. It only claims the bare verb when the room has no
+    // chest in it — the same courtesy the tide door gets, so a roaming strongbox
+    // that lands in the pit keeps `unlock` for itself.
+    if (session.roomId === "the-bell-pit"
+      && (arg ? /mould|mold|pour|cast|metal|^(the )?pit$/.test(arg)
+              : !world.caches.some((c) => this.cacheRoomId(c) === session.roomId))) {
       const founder = [...this.creatures.values()].find((c) => c.templateId === "the-bellfounder");
       if (!founder) {
         return this.send(session, "The casting pit is going cold. The founder is not here to tap the mould, and nothing runs without him — whatever is waiting in it goes on waiting until somebody stands over it again.", "dmgin");
