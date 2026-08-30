@@ -2429,7 +2429,7 @@ export const WAVE_ARMED = {
 // keeps, so it is the one that needed a way to stop that was not "walk somewhere
 // else" — the same word, twice, and the second one is a release. Nothing new to
 // learn, and no separate verb to remember.
-export const POSES: Record<string, { self: string; room: string; read: string; end: string; endRoom: string }> = {
+export const POSES: Record<string, { self: string; room: string; read: string; end: string; endRoom: string; move?: string; moveRoom?: string }> = {
   guard: {
     self: "You put your back to the wall and your eyes on the way you came in.",
     room: "{name} puts their back to the wall, watching the way in.",
@@ -2459,6 +2459,14 @@ export const POSES: Record<string, { self: string; room: string; read: string; e
     read: "standing with a hand out toward {what}",
     end: "You lower your hand.",
     endRoom: "{name} lowers their hand.",
+    // AND THE HAND MOVES (rome, 2026-08-30, pointing at a door and then at the
+    // keeper). Pointing twice running read as two unrelated beginnings — "you
+    // put a hand out" and then "you put a hand out" — as though the arm had gone
+    // down in between and nobody had mentioned it. An arm that is already out
+    // does not start again; it swings across. Same word, third reading: struck,
+    // moved, or (at the same thing twice) put down.
+    move: "You take your hand off {old} and put it out toward {what} instead.",
+    moveRoom: "{name} takes their hand off {old} and swings it across toward {what}.",
   },
 };
 export const REST_LINES: Record<string, string> = {

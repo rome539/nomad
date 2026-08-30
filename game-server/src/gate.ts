@@ -2086,9 +2086,9 @@ export function gatehouseFolk(z: ZoneDO): Session[] {
 }
 
 // The tavern's only channel. In memory, over the sockets, gone when it's said.
-export function gatehouseFeed(z: ZoneDO, text: string, exceptPubkey?: string, cls?: string, speaker?: { name: string; pk: string }): void {
+export function gatehouseFeed(z: ZoneDO, text: string, exceptPubkey?: string, cls?: string, speaker?: { name: string; pk: string }, except2?: string): void {
   for (const s of gatehouseFolk(z)) {
-    if (s.pubkey === exceptPubkey) continue;
+    if (s.pubkey === exceptPubkey || (except2 && s.pubkey === except2)) continue;
     z.send(s, text, cls, speaker);
   }
 }
@@ -2315,7 +2315,7 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
       s.pose === "guard" ? " (watching the door)"
       : s.pose === "lean" ? " (leaning on the bar)"
       : s.pose === "crouch" ? " (down on their heels)"
-      : s.pose === "point" ? " (pointing at something)"
+      : s.pose === "point" ? ` (pointing at ${s.poseAt ?? "something"})`
       : s.resting ? " (dozing)" : ""));
     lines.push(names.length === 1
       ? `${names[0]} is here.`
@@ -2513,31 +2513,40 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
       // bench, a brazier, a wall chart and a very old door that all answer a
       // look. gatehouseFixture is the same existence check `look` uses, so the
       // two can never disagree about what is in here.
+      // A person, or any fixture the room answers for — resolved to one word,
+      // so the arm below does not care which it was.
+      const what = mark ? mark.name
+        : arg && gatehouseFixture(z, session, arg) ? `the ${arg.replace(/^(the|at|a)\s+/i, "")}`
+        : null;
+      if (!what) return gatehouseSay(z, session, text);
+      const pt = POSES.point!;
+      const prev = session.pose === "point" ? session.poseAt : undefined;
+      if (prev === what) { // the same thing twice puts the hand down
+        session.pose = undefined;
+        session.poseAt = undefined;
+        z.send(session, pt.end);
+        gatehouseFeed(z, pt.endRoom.replace("{name}", session.name), session.pubkey);
+        return z.sendGateCtx(session);
+      }
+      session.pose = "point";
+      session.poseAt = what;
+      z.send(session, prev ? pt.move!.replace("{old}", prev).replace("{what}", what) : pt.self.replace("{what}", what));
+      // The person on the end of it is told to their face either way.
       if (mark) {
-        session.pose = "point";
-        session.poseAt = mark.name;
-        z.send(session, `You put a hand out toward ${mark.name}, and hold it there.`);
-        z.send(mark, `${session.name} puts a hand out toward you, and holds it there.`, "say");
-        gatehouseFeed(z, `${session.name} puts a hand out toward ${mark.name}, and holds it there.`, session.pubkey);
-        return z.sendGateCtx(session);
+        z.send(mark, prev
+          ? `${session.name} takes their hand off ${prev} and swings it across toward you.`
+          : `${session.name} puts a hand out toward you, and holds it there.`, "say");
       }
-      if (arg && gatehouseFixture(z, session, arg)) {
-        // The player's own word for it comes back, as it does out in the world —
-        // only its existence was ever checked against the room.
-        const what = `the ${arg.replace(/^(the|at|a)\s+/i, "")}`;
-        session.pose = "point";
-        session.poseAt = what;
-        z.send(session, POSES.point!.self.replace("{what}", what));
-        gatehouseFeed(z, POSES.point!.room.replace("{name}", session.name).replace("{what}", what), session.pubkey);
-        return z.sendGateCtx(session);
-      }
-      return gatehouseSay(z, session, text);
+      gatehouseFeed(z,
+        (prev ? pt.moveRoom!.replace("{old}", prev) : pt.room).replace("{name}", session.name).replace("{what}", what),
+        session.pubkey, undefined, undefined, mark?.pubkey);
+      return z.sendGateCtx(session);
     }
     if (v === "beckon") {
       if (!mark) return z.send(session, others.length ? "Beckon who?" : "You raise a hand, and there is no one here to take it up.");
       z.send(session, `You catch ${mark.name}'s eye and beckon them over.`);
       z.send(mark, `${session.name} catches your eye and beckons you over.`, "say");
-      gatehouseFeed(z, `${session.name} beckons ${mark.name} over.`, session.pubkey);
+      gatehouseFeed(z, `${session.name} beckons ${mark.name} over.`, session.pubkey, undefined, undefined, mark.pubkey);
       return;
     }
     const armed = v === "wave" && !!z.equippedItem(session, "weapon");
@@ -2545,7 +2554,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     if (mark) {
       z.send(session, lines.selfAt.replace("{who}", mark.name));
       z.send(mark, lines.toldAt.replace("{name}", session.name), "say");
-      gatehouseFeed(z, lines.roomAt.replace("{name}", session.name).replace("{who}", mark.name), session.pubkey);
+      gatehouseFeed(z, lines.roomAt.replace("{name}", session.name).replace("{who}", mark.name), session.pubkey, undefined, undefined, mark.pubkey);
       return;
     }
     z.send(session, lines.self);

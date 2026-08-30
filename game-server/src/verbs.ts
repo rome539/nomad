@@ -1380,10 +1380,25 @@ export function cmdPoint(z: ZoneDO, session: Session, arg: string): void {
     session.resting = false;
     z.send(session, "You rise.");
   }
+  const p = POSES.point!;
+  const old = session.pose === "point" ? session.poseAt : undefined;
+  // The same thing twice puts the hand down — the postures' own release rule,
+  // and the only reading of "point at what you are already pointing at" that
+  // isn't a no-op.
+  if (old === what) {
+    session.pose = undefined;
+    session.poseAt = undefined;
+    z.send(session, p.end);
+    z.roomFeed(session.roomId, p.endRoom.replace("{name}", session.name), session.pubkey, false);
+    return z.sendStatus(session);
+  }
   session.pose = "point";
   session.poseAt = what;
-  z.send(session, POSES.point!.self.replace("{what}", what));
-  z.roomFeed(session.roomId, POSES.point!.room.replace("{name}", session.name).replace("{what}", what), session.pubkey, false);
+  // An arm already out does not start again. It swings across.
+  z.send(session, old ? p.move!.replace("{old}", old).replace("{what}", what) : p.self.replace("{what}", what));
+  z.roomFeed(session.roomId,
+    (old ? p.moveRoom! .replace("{old}", old) : p.room).replace("{name}", session.name).replace("{what}", what),
+    session.pubkey, false);
   z.sendStatus(session);
 }
 
@@ -1498,7 +1513,9 @@ export function cmdCourtesy(z: ZoneDO, session: Session, kind: "wave" | "nod" | 
   if (mark) {
     z.send(session, lines.selfAt.replace("{who}", mark.name));
     z.send(mark, lines.toldAt.replace("{name}", session.name), "say");
-    z.roomFeed(session.roomId, lines.roomAt.replace("{name}", session.name).replace("{who}", mark.name), session.pubkey, false);
+    // The mark is skipped: they were told in the second person a line ago, and
+    // hearing the room's third-person copy on top of it read as it happening twice.
+    z.roomFeed(session.roomId, lines.roomAt.replace("{name}", session.name).replace("{who}", mark.name), session.pubkey, false, undefined, undefined, mark.pubkey);
     return;
   }
   z.send(session, lines.self);
@@ -1519,7 +1536,7 @@ export function cmdBeckon(z: ZoneDO, session: Session, arg: string): void {
   }
   z.send(session, `You catch ${mark.name}'s eye and beckon them on.`);
   z.send(mark, `${session.name} catches your eye and beckons you on.`, "say");
-  z.roomFeed(session.roomId, `${session.name} beckons ${mark.name} on.`, session.pubkey, false, undefined, undefined);
+  z.roomFeed(session.roomId, `${session.name} beckons ${mark.name} on.`, session.pubkey, false, undefined, undefined, mark.pubkey);
 }
 
 // A WHISTLE IS THE ONLY GESTURE THAT COSTS SOMETHING, and it is the reason the

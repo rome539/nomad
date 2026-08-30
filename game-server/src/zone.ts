@@ -7905,7 +7905,11 @@ export class ZoneDO implements DurableObject {
   // beats passes toRelay=false and stays in the room — banking, trading,
   // claims, loot, respawns, a body gone slack: witnesses see it, the network
   // doesn't. If you add a line naming a player, route it or ground it.
-  public roomFeed(roomId: string, text: string, exceptPubkey?: string, toRelay = true, cls?: string, speaker?: { name: string; pk: string }): void {
+  // `except2` is the second person a line must skip: a gesture aimed at someone
+  // tells them in the second person ("...toward you") and the room in the third,
+  // and without it the target got both (rome, 2026-08-30). Optional and last, so
+  // every existing caller is untouched.
+  public roomFeed(roomId: string, text: string, exceptPubkey?: string, toRelay = true, cls?: string, speaker?: { name: string; pk: string }, except2?: string): void {
     const base: Record<string, unknown> = { v: 0, kind: 24913, room: roomId, text };
     if (cls) base.cls = cls;
     // Speech carries its speaker so the client can key-colour the name; only the
@@ -7913,7 +7917,7 @@ export class ZoneDO implements DurableObject {
     if (speaker) { base.who = speaker.name; base.sp = speaker.pk; }
     const frame = JSON.stringify(base);
     for (const s of this.sessions.values()) {
-      if (s.roomId !== roomId || s.pubkey === exceptPubkey) continue;
+      if (s.roomId !== roomId || s.pubkey === exceptPubkey || (except2 && s.pubkey === except2)) continue;
       // Someone in the GATEHOUSE shares the gate's roomId but is not in the room:
       // they're behind the door. The gate's noise — a rat skittering below, a
       // wanderer blinking in, a bench being closed — doesn't carry through it.
