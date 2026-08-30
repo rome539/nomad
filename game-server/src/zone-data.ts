@@ -8311,18 +8311,21 @@ export const DOOR_TELLINGS: Partial<Record<Region, string[]>> = {
   mountain: [
     "He is quiet a while. \"There's a wall at the back of the corrie, under the crags. Black, wet, seven hundred foot.\" He sets a turf on edge. \"There's no way up it. I've stood at the foot of it and I'll tell you for nothing there is no way up it. My grandfather said there was a way IN.\" A pause. \"He wasn't a liar and he wasn't a clever man, so I've never known what to do with that.\"",
     "\"That wall my grandfather went on about.\" He does not look round. \"He said it asked him something. Said he hadn't the answer at the time, and he had sixty years to come up with one, and by the end of it he couldn't get back up the hill to give it.\" He turns the turf. \"He was ninety. Could as easily have been the fever.\"",
+    "\"He never would say what it asked him.\" He sets the turf down and leaves it. \"He did say a man could stand at that wall the whole of a day and get nowhere, and then say one word and be through it. Not force it. Not find a way round. Say a word to it, and be through.\" He looks at the fire. \"I have never known whether that is a door he found or a story he made.\"",
   ],
   // THE WOOD keeper reads from a court roll, so his aside is a line in it that
   // does not behave like the others: no offender, no fine, just an instruction.
   wood: [
     "\"There's an entry in that roll I've never made sense of.\" He taps the hatch. \"The acre north of the birdless ground — ordered, that none go there on the full of the moon. No fine set. No man named.\" He shrugs. \"Every other line in that book is a man and a fourpence. That one's an instruction, and somebody thought it worth the ink.\"",
     "\"Same acre, later roll, different hand.\" He is enjoying this one. \"Presented: that the ground north of the pale keeps itself, and the court has no business in it. A court that fined men fourpence for a stick of green wood, writing down that a piece of its own wood was none of its affair.\"",
+    "\"Took me years to read that entry right.\" He taps the counter twice. \"It does not say the ground is dangerous on the full of the moon. It says none are to GO there on it — that night and no other.\" He lets it sit. \"You do not forbid a road on the one night of the month it is open. Not unless it is shut the other twenty-nine.\"",
   ],
   // THE CROSSING keeper deals in hours and water, so his aside is an hour and a
   // water, and the arithmetic that killed a man is left for you to do.
   crossing: [
     "\"You'll have seen the gauge post at the green water.\" He wipes the hatch down. \"There's a cave under the head of it that the sea has the run of. Goes back into the hill further than anybody's followed it, because you get about the one hour, and it's never the same hour twice.\" He sets the rag aside. \"Two men I know of went in on a falling tide. One came out.\"",
     "\"The one that came out wouldn't say what he'd got. Wouldn't say what he'd seen, either.\" A pause. \"He did say the water comes back quicker than it goes away, which any man who has worked this water could have told him beforehand and for nothing.\"",
+    "\"The other thing he said, and it is the useful one.\" He leans on the hatch. \"Low water is not enough on its own. The sea packs that sill with silt between one tide and the next, and you have to break it out before the way is open at all — and the digging comes out of the same hour you were meaning to walk in on.\" He straightens up. \"That is what did for the one who did not come out. He spent his hour on the sill.\"",
   ],
   // THE GATE keeper's aside picks the muster roll back up at the end of it: the
   // strength-of-one company he has already told you about is the man ringing,
@@ -8330,6 +8333,7 @@ export const DOOR_TELLINGS: Partial<Record<Region, string[]>> = {
   gate: [
     "\"That last name on the roll.\" He is quiet a moment. \"Whoever he was, he kept ringing. It's in the fabric book — the bell rung twice daily, on the hours, by the watch.\" He turns the cup over in the rag. \"And the watch, by then, is him. Ringing a muster for a garrison of one.\"",
     "\"There's a store over the armoury that never once got opened.\" He shrugs. \"Papers have it stocked. Papers never have it issued. Whatever they had in there, they were holding it for the men who'd come when the bell went.\" A beat. \"Nobody came. It'll still be stocked.\"",
+    "\"I will put the two together for you, because it took me long enough.\" He sets the cup down and leaves his hand on it. \"That store has no lock on it and never had one. It is not a key that opens it. It is the bell — the place was built to answer a muster, and it still answers, twice a day, for a garrison that is not there.\" A beat. \"Which is why it matters whether anybody is left alive up there to ring.\"",
   ],
 };
 
