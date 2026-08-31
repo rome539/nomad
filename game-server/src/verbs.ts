@@ -22,6 +22,7 @@ import * as lore from "./lore";
 import * as den from "./den";
 import * as detail from "./detail";
 import {
+  SURFACE_BANDS, SKY_ROOFED, SKY_UNDER, OUTDOOR_ROOMS,
   POSES, COURTESIES, WAVE_ARMED, WHISTLE_WAKE,
   GREET_ANSWER, GREET_WRONG, GREET_SILENCE, GREET_THIEF, KEEN_HOLLOW_JOIN,
   DANCE_JOIN_SELF, DANCE_JOIN_ROOM, DANCE_ALONE, DANCE_ALONE_ROOM,
@@ -767,7 +768,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // weather"). skyLook is null when the sky is doing nothing specific, so a
   // clear day falls through to the region's own sky line below — the lid, the
   // mountain's sun, the crossing's moving light.
-  if (/^(the )?(sky|cloud|clouds|weather|sun|moon)$/i.test(arg.trim())) {
+  if (/^(the )?(sky|cloud|clouds|weather|sun|moon|moonlight|star|stars|lid|overcast)$/i.test(arg.trim())) {
     // `sun` rides the same call so an eclipse can answer what the lid hides.
     // `moon` rides it for the same reason and a better one: the moon runs a
     // six-night month that decides when a door in the wood opens, and until now
@@ -776,6 +777,28 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     // even reach the sky. A month you cannot look up at is not a month.
     const skyNow = events.skyLook(z, session.roomId, arg);
     if (skyNow) return z.send(session, skyNow, "study");
+    // NO SKY FROM HERE, AND SAY WHICH KIND OF NO (rome, 2026-08-31, asking after
+    // the sun from inside the Stripped Armory and being told about the cloud).
+    // skyLook returns null for every room that is not outdoors, and the probe
+    // used to shrug and let the answer fall through to a general table whose
+    // line was written as WEATHER — so the whole fortress, the warrens and the
+    // deep all reported the overcast from under a hill.
+    //
+    // A roof is a thing you can step out from under; a hill is not. The band
+    // decides which: the surface bands have a sky over their roofs, and nothing
+    // else in this world does.
+    //
+    // ONLY WHERE THERE IS NO SKY, and this gate is load-bearing. skyLook also
+    // returns null for a room that is wide open under a perfectly ordinary quiet
+    // sky — nothing is happening, so it has nothing to report — and without the
+    // OUTDOOR_ROOMS test this line told a man standing on an open mountainside
+    // that there was a roof over him. The region alone cannot answer it: the
+    // mountain is a surface band with twenty-one roofed rooms inside it.
+    if (!OUTDOOR_ROOMS.has(session.roomId)) {
+      return z.send(session, SURFACE_BANDS.has(z.regionOf(session.roomId)) ? SKY_ROOFED : SKY_UNDER, "study");
+    }
+    // Outdoors with a quiet sky: fall through to the region's own standing line
+    // about it — the low country's lid, the mountain's moving one.
   }
   if (!blind) {
     // mapRegionOf, not regionOf: the sim's own reading collapses the whole

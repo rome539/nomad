@@ -55,8 +55,16 @@ export const COMMON_FEATURES: FeatureTable = {
     "Ground, and it holds a print for a while. Whatever else this place is, people and animals have been putting their weight on it for a long time.",
   // Reached only where skyLook returns null — under a roof, or below one. Out
   // in the open the sky answers for itself, hour and weather both.
-  "sky|clouds|cloud|sun|stars|star":
-    "Overcast, and the same overcast it always is — a flat grey lid with no sun anywhere in it, and what you can see of it from in here is not much.",
+  // THE SKY, AND ONLY FROM UNDER AN OPEN ONE (rome, 2026-08-31). Every sky word
+  // now routes through the probe in verbs.ts, which knows what is over the room:
+  // a hill answers stone, a roof answers roof, and this line is reached only
+  // outdoors, on a sky that is doing nothing worth reporting. The old version of
+  // it answered a man two floors under a fortress with an account of the cloud.
+  //
+  // The sun, moon and stars are NOT here: skyLook always has an answer for those
+  // three, quiet sky or not, because they are the hour and the hour never stops.
+  "sky|clouds|cloud|weather|lid|overcast":
+    "Overcast, and the same overcast it always is — a flat grey lid, unbroken from one horizon to the other, doing nothing today that it does not do every day.",
   // THE SUN, THE MOON AND THE STARS ARE NOT ANSWERED HERE ANY MORE (rome,
   // 2026-08-31). This line predates the world having astronomy, and by the time
   // it was read at the Crossing House every clause of it was false: the moon
@@ -71,8 +79,7 @@ export const COMMON_FEATURES: FeatureTable = {
   // under `sky`, because the lid is the low country's conceit and the mountain
   // is written against it. This entry keeps only the words that are still true
   // of a roofed room, where skyLook returns null and something must answer.
-  "moonlight":
-    "No moonlight reaches in here. Whatever the month is doing, it is doing it outside.",
+
   "dark|darkness|shadow|shadows":
     "It is not the absence of light. It is a thing with a depth to it, and it starts about as far from you as you can reach.",
   "blood":
@@ -212,6 +219,8 @@ export const REGION_FEATURES: Record<string, FeatureTable> = {
       "There is snow on this mountain, and the line of it moves with the year — lower than you think, and never gone. Whether it is under your boots or further up, the cold that keeps it is the same cold.",
     "shadow":
       "The shadow is not yours and it is not any bird's. It crosses the slope ahead of you and there is nothing overhead to have cast it. It does not fall on you. It is not for you.",
+    "stars|star":
+      "Stars, and a great many more of them than the low country ever gets — up here the lid is under you as often as it is over you, and on the nights it is under you the whole sky is out.",
     "sun":
       "The sun is real on this hill in a way it is not in the country below. It cuts the mountain in two: one side it lies on all day and one side it never does, and every living thing on this hill that can choose has chosen the side it keeps.",
     "sky|cloud|clouds":

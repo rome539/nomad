@@ -5884,6 +5884,20 @@ export const STARS_DAY = "Nothing to see. Whatever is up there is on the far sid
 export const LID_SLOT_MS = 45 * 60_000;
 export const LID_OPEN_SHARE = 0.35;
 export const LID_MAX_SHUT = 5; // ~3h45m — a ceiling on the run, so no streak eats four nights of a six-night month
+// WHEN THERE IS NO SKY TO ASK (rome, 2026-08-31, standing in the Stripped
+// Armory — two floors down inside a fortress — and being told about the cloud).
+//
+// Every one of these probes falls through to a COMMON_FEATURES line when
+// skyLook returns null, and skyLook returns null for anything that is not an
+// OUTDOOR room. That fallback was written as weather, so it answered a man
+// under a hill with an account of the overcast, which is not a small slip: this
+// world's entire fortress, its warrens and its deep are underground, and the
+// one thing they are known for is that the sky is not a thing you have any more.
+//
+// Two answers, because there are two kinds of no-sky and they are not the same
+// fact. A roof is a thing you can step out from under. A hill is not.
+export const SKY_ROOFED = "There is a roof between you and it. Whatever the sky is doing, it is doing it on the other side of that.";
+export const SKY_UNDER = "There is a great deal of stone between you and any sky — a hill of it, and a fortress on top of that. Whatever is happening up there stopped being anybody's business down here a long time ago.";
 export const SKY_VEILED: Record<string, string> = {
   rain: "Nothing of it. The rain has the whole sky, and looking up gets you a face full of water coming down.",
   fog: "Nothing of it. The fog stands between you and everything above it, and it is not thinning while you look.",
