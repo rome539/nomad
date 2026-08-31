@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY } from "./zone-data";
+import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -27,6 +27,44 @@ export function isFullMoon(now = Date.now()): boolean {
 // until the grounds are walkable after dark, and until the wood starts howling.
 export function moonPhase(now = Date.now()): number {
   return Math.floor(now / DAY_CYCLE_MS) % MOON_FULL_EVERY;
+}
+// IS THE LID OPEN RIGHT NOW (rome, 2026-08-31: it is only fair that sometimes
+// the sky is just cloudy, with no arc running at all). The low country is under
+// permanent overcast — that is its conceit — so being able to read the moon on
+// any night the weather happened to be quiet was the sky owing the player an
+// answer it does not owe anybody.
+//
+// DETERMINISTIC, AND THIS IS THE WHOLE OF THE DESIGN. A coin flipped per look
+// is not weather, it is a slot machine: a player types `look moon` four times
+// and the lid opens. So the sky is a function of the clock, exactly like the
+// moon's own month and the eclipse — one state per window, the same answer to
+// everybody standing under it, and no amount of asking changes it. Wait, or
+// come back, or learn the sky. That is what a sky is.
+//
+// Pure modulo, nothing persisted, nothing rolled: same shape as moonPhase above.
+export function lidOpen(now = Date.now()): boolean {
+  const slot = Math.floor(now / LID_SLOT_MS);
+  if (lidRaw(slot)) return true;
+  // AND IT CANNOT STAY SHUT FOREVER. Measured on the raw hash, the longest run
+  // of closed windows was twenty-one of them — nearly sixteen hours, which at a
+  // four-hour day is four consecutive nights, out of a moon-month that is only
+  // six nights long. A player could lose most of a month to one bad streak and
+  // never know why. So a run that has gone on this long breaks: after
+  // LID_MAX_SHUT closed windows the next one is open, whatever the hash says.
+  // Still a function of the clock, still the same answer for everybody, still
+  // nothing to farm — it is a ceiling on the weather, not a die.
+  for (let i = 1; i <= LID_MAX_SHUT; i++) if (lidRaw(slot - i)) return false;
+  return true;
+}
+// The raw window, before the streak ceiling. A cheap avalanche so consecutive
+// windows do not run in a visible pattern — the sky must not be a stripe you can
+// read off the hour.
+function lidRaw(slot: number): boolean {
+  let h = Math.imul(slot ^ 0x9e3779b9, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return ((h >>> 0) % 1000) / 1000 < LID_OPEN_SHARE;
 }
 // THE ECLIPSE (2026-08-25). Astronomical: the eclipse-day is every
 // ECLIPSE_EVERY-th day-cycle, and the shadow crosses at midday. Pure modulo —

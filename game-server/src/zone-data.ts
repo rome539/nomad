@@ -5791,6 +5791,64 @@ export const MOON_SKY = [
 ];
 // ...and what the sky says when somebody asks after the moon in broad daylight.
 export const MOON_DAY = "You look for the moon and get the day instead. Whatever it is doing, it is doing it on the other side of that.";
+// ...AND THE SUN, WHICH HAD NO ANSWER AT ALL OUTSIDE AN ECLIPSE (rome,
+// 2026-08-31, at the Crossing House). `look sun` reached skyLook, found no arc
+// running, returned null, and fell through to a COMMON_FEATURES line written
+// before any of this world's astronomy existed: "no sun, and no moon, and no
+// stars — the lid has never broken for any of them, and the sky will not tell
+// you the hour."
+//
+// Every clause of that is now false in the low country. The moon runs a six-
+// night month that decides when a door in the wood opens and how far the spring
+// tides reach; MOON_SKY's own dark-of-the-month line says the sky "has its stars
+// and nothing else in it". And the very next thing the sky told him — MOON_DAY,
+// one command later — was that the moon was doing something on the other side
+// of the lid, which is the opposite of never having broken for it.
+//
+// So the lid stays, because the lid is the low country's whole conceit and the
+// mountain is written against it ("the sun is real on this hill in a way it is
+// not in the country below"). What goes is the claim that there is nothing
+// behind it and no hour to read. There is an hour. You simply get it secondhand.
+export const SUN_DAY = "No sun — there is never a sun — but the lid is lit from the other side, evenly and without a source, and that grey is the day. It is as much of one as this country gets.";
+export const SUN_NIGHT = "The sun is down, if it was ever up. It went behind the lid without once showing itself, the way it does, and the grey went out of the cloud rather than off any horizon.";
+export const STARS_NIGHT = "Stars, in the gaps — not many and not often, and the lid closes over them again while you are still looking. On the nights it opens properly there are more of them than anyone down here has any use for.";
+export const STARS_DAY = "Nothing to see. Whatever is up there is on the far side of the day and the lid both.";
+// AND WHAT IS BETWEEN YOU AND ALL THREE (rome, 2026-08-31, asking the right
+// question: does the weather block them?). It did not, and that was wrong.
+//
+// The moon branch has jumped the weather queue since the day it was written,
+// with a comment defending it — "rain does not stop the month" — which is true
+// about the CALENDAR and false about the act the player just performed. Looking
+// up is an observation. You cannot read a phase through fog, and the sun and
+// stars inherited the same fault the moment they were given answers of their own.
+//
+// So the bodies are veiled by anything actually in the way, and the veil says
+// what is in the way rather than what is behind it. The month keeps running; you
+// simply do not get to read it tonight, which is a toll and a short one.
+//
+// The eclipse and the blood moon still outrank this. They are set pieces that
+// darken the world on their own terms, and being told the sun is being eaten
+// matters more than being told it is raining.
+// HOW OFTEN THE LID BREAKS, and how long a break lasts. Deliberately a minority
+// state: the low country's sky is overcast and the mountain is written against
+// that, so an open window is the exception you notice and not the default you
+// assume. Forty-five minutes is long enough to be a condition of the evening
+// rather than a flicker, and short enough that waiting one out is a real option
+// instead of a lost night.
+export const LID_SLOT_MS = 45 * 60_000;
+export const LID_OPEN_SHARE = 0.35;
+export const LID_MAX_SHUT = 5; // ~3h45m — a ceiling on the run, so no streak eats four nights of a six-night month
+export const SKY_VEILED: Record<string, string> = {
+  rain: "Nothing of it. The rain has the whole sky, and looking up gets you a face full of water coming down.",
+  fog: "Nothing of it. The fog stands between you and everything above it, and it is not thinning while you look.",
+  rags: "A smear of light through the rags of the fog, going as they go — enough to know something is up there, and not enough to say what.",
+  snow: "Nothing of it. The snow comes down out of the whole sky at once, and there is no part of that you can read.",
+  cloud: "Nothing of it. The cloud is lying on the hill and you are inside it — there is no up from in here.",
+  // AND THE ORDINARY ONE, which is most of the time and has no arc behind it at
+  // all. This is the sky's default state, not an event; nothing announces it
+  // beginning and nothing announces it ending.
+  lid: "The lid is closed over the whole of it, the way it usually is. Somewhere behind that, something is doing what it does, and you will have to take it on trust tonight.",
+};
 // Predators hunt harder after dark: a straight multiplier on the two
 // wind-up odds (STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS), same shape as the
 // bell's bellWakeMult — never a new mechanic, just the existing roll made

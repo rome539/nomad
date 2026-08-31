@@ -53,10 +53,26 @@ export type FeatureTable = Record<string, string>;
 export const COMMON_FEATURES: FeatureTable = {
   "ground|floor|earth|soil|dirt":
     "Ground, and it holds a print for a while. Whatever else this place is, people and animals have been putting their weight on it for a long time.",
-  "sky|clouds|cloud":
-    "Overcast, and the same overcast it always is — a flat grey lid with no sun anywhere in it and no way to read the hour off it.",
-  "sun|moon|moonlight|stars|star":
-    "No sun, and no moon, and no stars — the lid has never broken for any of them, and the sky will not tell you the hour. You read the dark for it instead, whether it is deepening or thinning, and nothing brighter than that has ever answered.",
+  // Reached only where skyLook returns null — under a roof, or below one. Out
+  // in the open the sky answers for itself, hour and weather both.
+  "sky|clouds|cloud|sun|stars|star":
+    "Overcast, and the same overcast it always is — a flat grey lid with no sun anywhere in it, and what you can see of it from in here is not much.",
+  // THE SUN, THE MOON AND THE STARS ARE NOT ANSWERED HERE ANY MORE (rome,
+  // 2026-08-31). This line predates the world having astronomy, and by the time
+  // it was read at the Crossing House every clause of it was false: the moon
+  // runs a six-night month that opens a door and pulls the spring tides, and
+  // MOON_SKY's own dark-of-the-month line says the sky "has its stars and
+  // nothing else in it". `look moon` one command later said the moon was doing
+  // something on the other side of the lid — which is the exact opposite of
+  // never having broken for it.
+  //
+  // All three are the HOUR, not the weather, so they belong to skyLook with the
+  // moon (events.ts) and they answer the hour there. What stays here is the lid,
+  // under `sky`, because the lid is the low country's conceit and the mountain
+  // is written against it. This entry keeps only the words that are still true
+  // of a roofed room, where skyLook returns null and something must answer.
+  "moonlight":
+    "No moonlight reaches in here. Whatever the month is doing, it is doing it outside.",
   "dark|darkness|shadow|shadows":
     "It is not the absence of light. It is a thing with a depth to it, and it starts about as far from you as you can reach.",
   "blood":

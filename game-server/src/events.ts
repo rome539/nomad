@@ -14,7 +14,7 @@ import type { ZoneDO } from "./zone";
 import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
-import { foodState, isNight, moonPhase, eclipsePhase, isBloodMoon } from "./zone-util";
+import { foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen } from "./zone-util";
 import { setItemAcquiredAt } from "./world";
 import {
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
@@ -60,7 +60,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, MOON_SKY, MOON_DAY,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, MOON_SKY, MOON_DAY, SUN_DAY, SUN_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_ACTIVE_MIN_MS, CLOUDDOWN_ACTIVE_MAX_MS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -771,6 +771,34 @@ export function skyClause(z: ZoneDO, roomId: string): string {
 // specific — the caller falls through to the region's own static sky rather than
 // say "nothing here". Indoor rooms have no sky, so they get null exactly as
 // skyClause gives them "".
+// WHAT IS BETWEEN A WANDERER AND THE SKY, or null for a sky you can actually
+// read. Ordered most-specific first: the cloud you are standing inside beats the
+// snow falling through it beats the fog beats the rain. Only the states that
+// genuinely blind you — a rain TELEGRAPH is a smell in the air and an iron
+// colour, not a roof, and the cold and the wind do not hide anything at all.
+function skyVeil(z: ZoneDO, roomId: string): string | null {
+  const mountain = z.world!.rooms.get(roomId)?.region === "mountain";
+  if (mountain && phaseOf(z, "clouddown") === "active") return SKY_VEILED.cloud!;
+  if (mountain && z.snowUntil > Date.now()) return SKY_VEILED.snow!;
+  const fog = phaseOf(z, "fog");
+  if (fog === "active") return SKY_VEILED.fog!;
+  // Thinning to rags: you get that something is up there and not which thing.
+  if (fog === "aftermath") return SKY_VEILED.rags!;
+  if (phaseOf(z, "rain") === "active") return SKY_VEILED.rain!;
+  // ...AND THE ORDINARY CLOUD, with no arc behind it (rome, 2026-08-31). Most
+  // nights the lid is simply shut, because that is what the lid does. lidOpen is
+  // a function of the clock and not a die, so asking again gets the same answer
+  // and the sky cannot be farmed for one.
+  //
+  // A ROOM THE MOON IS ACTUALLY LIGHTING IS EXEMPT, and it has to be: moonlit()
+  // says there is light enough out here to do without a torch, and a sky that
+  // told you it was shut while you stood reading by it would be the simulation
+  // arguing with itself. If the ground is lit by the moon, you can see the moon.
+  const moonOnTheGround = OUTDOOR_ROOMS.has(roomId) && isNight() && isFullMoon() && !z.isDark(roomId);
+  if (!moonOnTheGround && !lidOpen()) return SKY_VEILED.lid!;
+  return null;
+}
+
 export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null {
   // THE ROOF COMES FIRST, and it has to: the mountain is an outdoor BAND with
   // twenty-one roofed rooms inside it (INDOOR_ROOMS — the shieling, the stell,
@@ -792,11 +820,35 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
     return pick(ECLIPSE_AFTER_LINES);
   }
   if (isNight() && isBloodMoon()) return pick(BLOOD_MOON_LINES);
-  // ASKING AFTER THE MOON GETS THE MOON, ahead of the weather. Every other
-  // probe below is the sky doing something to you — rain, cloud, cold; this one
-  // is a question about where the month is, and rain does not stop the month.
-  // (The red nights answer above, because a blood moon IS the moon's answer.)
+  // ASKING AFTER A BODY GETS THE BODY, ahead of the weather — every other probe
+  // below is the sky doing something to YOU (rain, cloud, cold) while these are
+  // questions about the hour and the month, which the weather does not stop.
+  //
+  // BUT IT DOES STOP YOU SEEING THEM (rome, 2026-08-31). "Rain does not stop the
+  // month" was the old defence of this jump, and it is true about the calendar
+  // and false about the act: looking up is an observation, and you cannot read a
+  // phase through fog. So the veil is checked first and it names what is in the
+  // way rather than what is behind it. The month runs on; you do not get to read
+  // it tonight. (The eclipse and the red nights answer above this — set pieces
+  // that darken the world on their own terms outrank a shower.)
+  const body = /\b(sun|moon|moonlight|stars?)\b/i.test(arg ?? "");
+  if (body) {
+    const veil = skyVeil(z, roomId);
+    if (veil) return veil;
+  }
   if (/moon/i.test(arg ?? "")) return isNight() ? MOON_SKY[moonPhase()] ?? MOON_SKY[3] : MOON_DAY;
+  // AND THE SUN AND THE STARS, for the same reason and the same way. Both are
+  // questions about the hour rather than about the weather, so they outrank it —
+  // and both were falling through every arc to a COMMON_FEATURES line that
+  // denied the moon this function had just answered for.
+  //
+  // THE MOUNTAIN IS EXEMPT AND MUST STAY EXEMPT: it has a real sun and its own
+  // written answer about it (REGION_FEATURES, "the sun is real on this hill in a
+  // way it is not in the country below"), and that line is the whole point of
+  // the hill. Answering here would take it away.
+  const highGround = z.world!.rooms.get(roomId)?.region === "mountain";
+  if (!highGround && /sun/i.test(arg ?? "")) return isNight() ? SUN_NIGHT : SUN_DAY;
+  if (!highGround && /stars?/i.test(arg ?? "")) return isNight() ? STARS_NIGHT : STARS_DAY;
   // The mountain's two weather arcs, then its presence.
   if (z.world!.rooms.get(roomId)?.region === "mountain") {
     switch (phaseOf(z, "clouddown")) {
