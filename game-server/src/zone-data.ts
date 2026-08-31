@@ -5809,8 +5809,54 @@ export const MOON_DAY = "You look for the moon and get the day instead. Whatever
 // mountain is written against it ("the sun is real on this hill in a way it is
 // not in the country below"). What goes is the claim that there is nothing
 // behind it and no hour to read. There is an hour. You simply get it secondhand.
-export const SUN_DAY = "No sun — there is never a sun — but the lid is lit from the other side, evenly and without a source, and that grey is the day. It is as much of one as this country gets.";
-export const SUN_NIGHT = "The sun is down, if it was ever up. It went behind the lid without once showing itself, the way it does, and the grey went out of the cloud rather than off any horizon.";
+// THE SUN GOES UP AND COMES DOWN, AND YOU CAN READ IT (rome, 2026-08-31). Two
+// answers — up, down — was the sky refusing the one question anybody standing
+// under it actually has, which is how much light is left. Five readings now,
+// off skyBand, and the low country reads them off the LID rather than off any
+// sun: there is never a sun down here, but the grey behind it brightens and goes
+// out, and that is the same information arriving secondhand. Which is the whole
+// texture of this country — you get the hour, you just do not get to see it.
+export const SUN_LOW = [
+  "The lid is coming up out of the dark — grey rather than black now, evenly, with no edge anywhere in it to say where. The day is starting, in the only way it ever does here.",
+  "The grey overhead is filling out and still climbing. There is a good stretch of the light left.",
+  "The lid is as bright as it gets, which is not very. This is the top of the day, and you would not know it to look at it if you had not been here a while.",
+  "The grey is going out of the lid — not from any one side, just leaving, the way colour leaves cloth. Whatever you meant to do in the light, do it now.",
+  "The last of the grey is going. Another few minutes of this and it is night, and there was never a sunset to watch it happen.",
+];
+export const SUN_LOW_NIGHT = [
+  "The sun is down, if it was ever up — it went behind the lid without once showing itself, and the grey went out of the cloud rather than off any horizon.",
+  "Down, and a long way down. Nothing is thinning anywhere and nothing is going to for a while yet.",
+  "The black overhead has gone the colour of wet slate. It is not light, and it is on its way to being.",
+];
+// AND ON THE HILL IT IS A REAL SUN, which is the mountain's whole conceit and
+// the thing its own line already said better than anything else in the file:
+// "the sun is real on this hill in a way it is not in the country below." That
+// line is band 2 below, kept word for word — the payoff for climbing is that up
+// here you can watch the thing move instead of reading a lid for it.
+export const SUN_HILL = [
+  "The sun is coming up off the far ridges, low and level, and it puts the whole eastern face into light while the corries opposite are still holding the night.",
+  "The sun is well up and climbing the sky, and the shadow of every ridge on this hill is shortening as it goes.",
+  "The sun is real on this hill in a way it is not in the country below. It cuts the mountain in two: one side it lies on all day and one side it never does, and every living thing on this hill that can choose has chosen the side it keeps.",
+  "The sun is going down the western sky, and the shadows are running out long and blue across the slope. The cold comes with them, ahead of the dark.",
+  "The sun is on the ridge and going behind it. The light is coming off the tops now, upward, and when it leaves the summit it is night up here whatever the low country thinks.",
+];
+export const SUN_HILL_NIGHT = [
+  "The sun is gone behind the western tops. The last of it is still on the very highest rock and it is going while you watch.",
+  "Full dark on the hill, and nothing in the sky doing anything about it.",
+  "The eastern ridges have an edge on them again — not light yet, but the shape of where it will come from.",
+];
+// AND THE MOON RIDES ITS OWN ARC ACROSS THE NIGHT. The phase says WHAT it is
+// (MOON_SKY, six nights of it); this says where it has got to. Appended rather
+// than written into all six, so the month and the hour stay one table each.
+// Skipped on the dark of the month, because a moon that is not there is not
+// climbing anywhere.
+export const MOON_ARC = [
+  " It is low in the east and only just up.",
+  " It is climbing.",
+  " It is as high as it goes tonight.",
+  " It has come over and started down.",
+  " It is low in the west, and going.",
+];
 export const STARS_NIGHT = "Stars, in the gaps — not many and not often, and the lid closes over them again while you are still looking. On the nights it opens properly there are more of them than anyone down here has any use for.";
 export const STARS_DAY = "Nothing to see. Whatever is up there is on the far side of the day and the lid both.";
 // AND WHAT IS BETWEEN YOU AND ALL THREE (rome, 2026-08-31, asking the right

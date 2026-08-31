@@ -14,7 +14,7 @@ import type { ZoneDO } from "./zone";
 import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
-import { foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen } from "./zone-util";
+import { foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand } from "./zone-util";
 import { setItemAcquiredAt } from "./world";
 import {
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
@@ -60,7 +60,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, MOON_SKY, MOON_DAY, SUN_DAY, SUN_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_ACTIVE_MIN_MS, CLOUDDOWN_ACTIVE_MAX_MS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -776,6 +776,11 @@ export function skyClause(z: ZoneDO, roomId: string): string {
 // snow falling through it beats the fog beats the rain. Only the states that
 // genuinely blind you — a rain TELEGRAPH is a smell in the air and an iron
 // colour, not a roof, and the cold and the wind do not hide anything at all.
+// The night's three readings off the day's five: just gone, deep, coming back.
+function nightBand(band: 0 | 1 | 2 | 3 | 4): 0 | 1 | 2 {
+  return band === 0 ? 0 : band === 4 ? 2 : 1;
+}
+
 function skyVeil(z: ZoneDO, roomId: string): string | null {
   const mountain = z.world!.rooms.get(roomId)?.region === "mountain";
   if (mountain && phaseOf(z, "clouddown") === "active") return SKY_VEILED.cloud!;
@@ -836,19 +841,29 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
     const veil = skyVeil(z, roomId);
     if (veil) return veil;
   }
-  if (/moon/i.test(arg ?? "")) return isNight() ? MOON_SKY[moonPhase()] ?? MOON_SKY[3] : MOON_DAY;
+  if (/moon/i.test(arg ?? "")) {
+    if (!isNight()) return MOON_DAY;
+    const phase = moonPhase();
+    // The phase is WHAT it is; the arc is where it has got to. No arc on the
+    // dark of the month — a moon that is not there is not climbing anywhere.
+    return (MOON_SKY[phase] ?? MOON_SKY[3]!) + (phase === 3 ? "" : MOON_ARC[skyBand()] ?? "");
+  }
   // AND THE SUN AND THE STARS, for the same reason and the same way. Both are
   // questions about the hour rather than about the weather, so they outrank it —
   // and both were falling through every arc to a COMMON_FEATURES line that
   // denied the moon this function had just answered for.
   //
-  // THE MOUNTAIN IS EXEMPT AND MUST STAY EXEMPT: it has a real sun and its own
-  // written answer about it (REGION_FEATURES, "the sun is real on this hill in a
-  // way it is not in the country below"), and that line is the whole point of
-  // the hill. Answering here would take it away.
+  // THE SUN, AND WHERE IT HAS GOT TO. The hill reads a real one; the low
+  // country reads the lid for it — same five bands, two different truths. The
+  // mountain's own written line about its sun is band 2 of its own table now,
+  // rather than a REGION_FEATURES entry that could never move.
   const highGround = z.world!.rooms.get(roomId)?.region === "mountain";
-  if (!highGround && /sun/i.test(arg ?? "")) return isNight() ? SUN_NIGHT : SUN_DAY;
-  if (!highGround && /stars?/i.test(arg ?? "")) return isNight() ? STARS_NIGHT : STARS_DAY;
+  if (/\bsun\b/i.test(arg ?? "")) {
+    const band = skyBand();
+    if (highGround) return isNight() ? SUN_HILL_NIGHT[nightBand(band)]! : SUN_HILL[band]!;
+    return isNight() ? SUN_LOW_NIGHT[nightBand(band)]! : SUN_LOW[band]!;
+  }
+  if (!highGround && /\bstars?\b/i.test(arg ?? "")) return isNight() ? STARS_NIGHT : STARS_DAY;
   // The mountain's two weather arcs, then its presence.
   if (z.world!.rooms.get(roomId)?.region === "mountain") {
     switch (phaseOf(z, "clouddown")) {

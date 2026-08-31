@@ -28,6 +28,32 @@ export function isFullMoon(now = Date.now()): boolean {
 export function moonPhase(now = Date.now()): number {
   return Math.floor(now / DAY_CYCLE_MS) % MOON_FULL_EVERY;
 }
+// HOW FAR THROUGH THE CURRENT HALF WE ARE, 0 at its first moment and 1 at its
+// last (rome, 2026-08-31: you should be able to look at the sun or the moon and
+// read whether it is rising or setting).
+//
+// This number has been sitting inside isNight() since the day it was written and
+// being thrown away: that function takes the same modulo and keeps only which
+// side of the halfway mark it landed on. So the sky had two states — up, down —
+// and a wanderer could not tell noon from the last quarter hour of the light.
+// That was tolerable when the hour decided nothing. It decides a great deal now:
+// the hill's hunters lie up by day and work the dark, its game beds down after
+// it, the wolves' surge is a night surge, and a door in the wood answers a moon.
+// "Do I start up this slope" is a question the sky has to be able to answer.
+//
+// The night half reads the same way because the halves are equal — the modulo
+// falls out identically for both, so there is one function and no second clock.
+export function halfFrac(now = Date.now()): number {
+  const half = DAY_CYCLE_MS / 2;
+  return (now % half) / half;
+}
+// ...and which of the five readings that is. Kept here beside the fraction so
+// nothing downstream invents its own thresholds.
+export function skyBand(now = Date.now()): 0 | 1 | 2 | 3 | 4 {
+  const f = halfFrac(now);
+  return f < 0.15 ? 0 : f < 0.4 ? 1 : f < 0.62 ? 2 : f < 0.85 ? 3 : 4;
+}
+
 // IS THE LID OPEN RIGHT NOW (rome, 2026-08-31: it is only fair that sometimes
 // the sky is just cloudy, with no arc running at all). The low country is under
 // permanent overcast — that is its conceit — so being able to read the moon on
