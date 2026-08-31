@@ -2330,6 +2330,89 @@ export const NOCTURNAL = new Set([
 //
 // `read` is the clause a look hangs on you; `room` is what the room is told
 // once, as it happens. They/their throughout: this game has never asked.
+// ---------------------------------------------------------------------------
+// WHAT THE GESTURES DO TO THE THINGS IN THE ROOM (rome, 2026-08-31)
+// ---------------------------------------------------------------------------
+//
+// Four hooks, and not one of them is a new mechanism: each is a switch thrown
+// on machinery that has been running for months with no way for a player to
+// reach it. Law 1 all the way down — couple to what exists.
+
+// CROUCHING SETTLES THE GAME. The rule this turns off is one line in the tick
+// (zone.ts) whose own comment is the feature: a RUNNER "never settles while
+// there's someone to run from — it keeps moving, room to room, and you only
+// land a blow the tick you have it cornered." That is right for a man walking
+// in and wrong for a man on his heels in the heather, and it is the reason
+// there was no such thing as stalking. Every player in the room has to be down:
+// one companion standing up ruins the stalk, which is the correct cruelty.
+//
+// It is also the other half of the mob audit. There is bedded game on that hill
+// now, and this is what lets you get to it before it wakes.
+export const CROUCH_SETTLE_ODDS = 0.05; // per tick it holds — an occasional tell, not a running commentary
+export const CROUCH_SETTLE = [
+  "{a} steps back into the open, one leg at a time, and puts its head down again. It has decided you are a rock.",
+  "{a} looks a long moment at the shape you are making, does not find a man in it, and goes back to feeding.",
+  "{a} settles. Whatever it is watching for, it is not watching for something on its heels.",
+];
+// A BACK TO THE WALL SPOILS THE DROP. The lurker's ambush in this game is not a
+// damage bonus, it is the free extra blow itself (creatureFirstStrike) — the
+// TWITCHY trait's whole flaw is losing it: the thing reveals, commits, and the
+// fight starts even, from the front, which the file already calls the worst
+// trade a lurker can make. Guarding buys that outcome on purpose.
+//
+// HALVED, NOT DENIED, and the reason is the torch: an open flame spoils a
+// lurker's drop OUTRIGHT (it cannot come out of a dark that is not there). A
+// posture must not be strictly better than carrying fire, so it is a coin.
+export const GUARD_SPOIL_ODDS = 0.5;
+export const GUARD_SPOIL = [
+  "Something comes off the dark behind you — and finds you already turned, with the wall where your back was. It lands badly, in front of you.",
+  "It drops for the back of your neck, and the back of your neck is against stone. It comes down in front of you instead, and the two of you look at each other.",
+];
+// WHO ANSWERS A GREETING. The pitch for this was a clean living/dead binary and
+// the data is better than that: the summer people are dead and are not HOLLOW,
+// and neither is the chainman, who has walked the length of the same chain for
+// two centuries. So a nod sorts the world into three and not two —
+//
+//   the living answer, and go back to what they were doing
+//   the lingering answer WRONGLY: to someone else, or to a season that ended
+//   the hollow do not answer at all, and that silence is the whole of the tell
+//
+// It costs nothing, it explains nothing, and it is the world's own voice: you
+// find out what the miller is by nodding at him. (Information has a toll, and
+// this is the toll being one step and one word instead of a wiki.)
+export const GREET_ANSWER: Record<string, string> = {
+  "charcoal-burner": "He nods back without stopping what he is doing, which is the whole of what a nod is for.",
+  "the-sapper": "He lifts his chin an inch, which from a man with both hands full is a great deal.",
+  "road-carrier": "He shifts the load on his shoulder and gives you the road's own greeting back — brief, and meant.",
+  "rag-and-bone": "He looks you over once, decides you are carrying nothing he wants, and nods anyway.",
+  "the-drove-master": "He returns it the way a man returns a greeting from someone he will pass again — properly, and without slowing.",
+};
+export const GREET_WRONG: Record<string, string> = {
+  "the-herd": "He raises a hand back, and holds it up a moment too long, and it is not you he is waving at. He goes back to the flock that is not there.",
+  "the-milker": "She looks up and smiles at you, and it is not you she is smiling at. She goes back to the pail.",
+  "the-butter-wife": "She answers you brightly, the way you answer someone who has come up the same path every day for years. You have never been here before.",
+  "the-one-who-stayed": "He looks straight at you and gives you the whole of a greeting — the season's, the last one, the one they gave each other on the night before they went down.",
+  "the-chainman": "He returns it without lifting his eyes off the chain, and says a name that is not yours, in the tone of a man agreeing to something.",
+  "the-bellfounder": "He answers you and then asks, quite reasonably, whether the metal has come. He has asked before. He will ask again.",
+  "the-dancer": "She answers with a small step rather than a word, keeping time with something you cannot hear, and does not stop.",
+};
+export const GREET_SILENCE = [
+  "Nothing. It goes on standing there, and you have your answer.",
+  "It does not answer. It does not move at all, in fact, and the not-moving is very complete.",
+  "No answer comes. Whatever is under that is not keeping the habit any more.",
+];
+export const GREET_THIEF = [
+  "He looks at your hands, not at your face, and does not answer.",
+  "The greeting is returned with a smile and with the eyes gone somewhere else — your belt, your pack, your grip.",
+];
+// AND THE DEAD KEEN WITH YOU. deadRemembers already has a hollow thing working
+// its jaw around a name off a bloodstain, at a 2% idle roll. This hands the
+// player the first move instead of waiting for the world's die.
+export const KEEN_HOLLOW_JOIN = [
+  "{a}'s jaw works. It finds the same name a beat behind you, in a voice with no breath under it, and holds it after you have stopped.",
+  "{a} turns its head toward the stain and takes up the name with you — badly, a syllable late, and it does not stop when you do.",
+];
+
 // THE THREE THAT THE WORLD ANSWERS (rome, 2026-08-30). The rule these passed
 // and the rest of the emote list failed: a gesture earns its place if the world
 // ALREADY HAS THE NOUN. Nothing here is a new mechanic. Each is a thing the

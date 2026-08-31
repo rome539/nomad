@@ -2443,6 +2443,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     session.resting = true;
     session.pose = undefined; // you cannot doze standing at the bar
     session.poseAt = undefined;
+    session.poseRef = undefined;
     const hurt = session.hp < session.maxHp;
     z.send(session, hurt ? pick([
       "You drag a bench closer to the fire and let the warmth take the weight off. Wounds close quicker here than cold stone ever let them.",
@@ -2476,6 +2477,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     if (session.pose === v) {
       session.pose = undefined;
       session.poseAt = undefined;
+      session.poseRef = undefined;
       z.send(session, p.end);
       gatehouseFeed(z, p.endRoom.replace("{name}", session.name), session.pubkey);
       return z.sendGateCtx(session);
@@ -2483,6 +2485,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     session.resting = false;
     session.pose = v;
     session.poseAt = undefined;
+    session.poseRef = undefined;
     z.send(session, p.self);
     gatehouseFeed(z, p.room.replace("{name}", session.name), session.pubkey);
     return z.sendGateCtx(session);
@@ -2502,6 +2505,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
       if (!arg && session.pose === "point") {
         session.pose = undefined;
         session.poseAt = undefined;
+        session.poseRef = undefined;
         z.send(session, POSES.point!.end);
         gatehouseFeed(z, POSES.point!.endRoom.replace("{name}", session.name), session.pubkey);
         return z.sendGateCtx(session);
@@ -2524,12 +2528,16 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
       if (prev === what) { // the same thing twice puts the hand down
         session.pose = undefined;
         session.poseAt = undefined;
+        session.poseRef = undefined;
         z.send(session, pt.end);
         gatehouseFeed(z, pt.endRoom.replace("{name}", session.name), session.pubkey);
         return z.sendGateCtx(session);
       }
       session.pose = "point";
       session.poseAt = what;
+      // Only a person can leave the fire; the hatch, the bench and the very old
+      // door are what the room is made of.
+      session.poseRef = mark ? `p:${mark.pubkey}` : undefined;
       z.send(session, prev ? pt.move!.replace("{old}", prev).replace("{what}", what) : pt.self.replace("{what}", what));
       // The person on the end of it is told to their face either way.
       if (mark) {

@@ -23,6 +23,7 @@ import * as den from "./den";
 import * as detail from "./detail";
 import {
   POSES, COURTESIES, WAVE_ARMED, WHISTLE_WAKE,
+  GREET_ANSWER, GREET_WRONG, GREET_SILENCE, GREET_THIEF, KEEN_HOLLOW_JOIN,
   DANCE_JOIN_SELF, DANCE_JOIN_ROOM, DANCE_ALONE, DANCE_ALONE_ROOM,
   KEEN_FALLEN_SELF, KEEN_FALLEN_ROOM, KEEN_OWN_SELF, KEEN_OWN_ROOM,
   KEEN_DEAD_SELF, KEEN_DEAD_ROOM, KEEN_EMPTY_SELF, KEEN_EMPTY_ROOM,
@@ -1337,12 +1338,14 @@ export function cmdPose(z: ZoneDO, session: Session, pose: "guard" | "lean" | "c
   if (session.pose === pose) {
     session.pose = undefined;
     session.poseAt = undefined;
+    session.poseRef = undefined;
     z.send(session, p.end);
     z.roomFeed(session.roomId, p.endRoom.replace("{name}", session.name), session.pubkey, false);
     return z.sendStatus(session);
   }
   session.pose = pose;
   session.poseAt = undefined;
+  session.poseRef = undefined;
   z.send(session, p.self);
   z.roomFeed(session.roomId, p.room.replace("{name}", session.name), session.pubkey, false);
   z.sendStatus(session);
@@ -1370,12 +1373,14 @@ export function cmdPoint(z: ZoneDO, session: Session, arg: string): void {
     if (session.pose !== "point") return z.send(session, "Point at what?");
     session.pose = undefined;
     session.poseAt = undefined;
+    session.poseRef = undefined;
     z.send(session, POSES.point!.end);
     z.roomFeed(session.roomId, POSES.point!.endRoom.replace("{name}", session.name), session.pubkey, false);
     return z.sendStatus(session);
   }
-  const what = pointable(z, session, arg);
-  if (!what) return z.send(session, "You look for it, and there is nothing there to put a hand toward.");
+  const found = pointable(z, session, arg);
+  if (!found) return z.send(session, "You look for it, and there is nothing there to put a hand toward.");
+  const { what, ref } = found;
   if (session.resting) {
     session.resting = false;
     z.send(session, "You rise.");
@@ -1388,12 +1393,14 @@ export function cmdPoint(z: ZoneDO, session: Session, arg: string): void {
   if (old === what) {
     session.pose = undefined;
     session.poseAt = undefined;
+    session.poseRef = undefined;
     z.send(session, p.end);
     z.roomFeed(session.roomId, p.endRoom.replace("{name}", session.name), session.pubkey, false);
     return z.sendStatus(session);
   }
   session.pose = "point";
   session.poseAt = what;
+  session.poseRef = ref;
   // An arm already out does not start again. It swings across.
   z.send(session, old ? p.move!.replace("{old}", old).replace("{what}", what) : p.self.replace("{what}", what));
   z.roomFeed(session.roomId,
@@ -1406,7 +1413,9 @@ export function cmdPoint(z: ZoneDO, session: Session, arg: string): void {
 // toward "the black door" reads as the thing they saw and called that. Only its
 // existence is checked against the world; nothing here echoes a noun the room
 // does not already own.
-function pointable(z: ZoneDO, session: Session, arg: string): string | null {
+// Returns the WORD to say and, where the thing is able to walk off, a referent
+// to hold it by. A direction and a fixture get no referent: neither can leave.
+function pointable(z: ZoneDO, session: Session, arg: string): { what: string; ref?: string } | null {
   const roomId = session.roomId;
   // A direction first — the commonest thing anybody points at, and the one that
   // needs no noun at all.
@@ -1414,23 +1423,68 @@ function pointable(z: ZoneDO, session: Session, arg: string): string | null {
   if (dir) {
     const exits = z.world!.exits.get(roomId) ?? [];
     if (!exits.some((e) => e.dir === dir)) return null;
-    return `the way ${dir}`;
+    return { what: `the way ${dir}` };
+  }
+  // Another wanderer, before the beasts: a person in the room is who you mean.
+  for (const s of z.sessions.values()) {
+    if (s.pubkey === session.pubkey || s.roomId !== roomId || !z.reachable(s)) continue;
+    if (nameMatches(s.name, arg)) return { what: s.name, ref: `p:${s.pubkey}` };
   }
   // Anything alive in the room, by its own name.
   for (const c of z.creatures.values()) {
     if (c.roomId !== roomId || c.hidden) continue;
     const t = z.world!.mobTemplates.get(c.templateId);
-    if (t && nameMatches(t.name, arg)) return t.name;
+    if (t && nameMatches(t.name, arg)) return { what: t.name, ref: `c:${c.id}` };
   }
   // Anything lying on the floor.
   for (const itemId of z.ground.get(roomId) ?? []) {
     const t = z.world!.itemTemplates.get(itemId);
-    if (t && nameMatches(t.name, arg)) return t.name;
+    if (t && nameMatches(t.name, arg)) return { what: t.name, ref: `g:${itemId}` };
   }
   // And every noun the world will let you look closer at — which is the whole
   // point: if `look door` answers here, `point door` must too.
-  if (detail.lookFeature(roomId, z.regionOf(roomId), arg)) return `the ${arg.replace(/^the\s+/i, "")}`;
+  if (detail.lookFeature(roomId, z.regionOf(roomId), arg)) return { what: `the ${arg.replace(/^the\s+/i, "")}` };
   return null;
+}
+
+// THE HAND FOLLOWS THE THING (rome, 2026-08-30). A posture keeps, which is its
+// whole point, and that is exactly why a hand held out at something that has
+// walked away is worse than no posture at all: the room goes on telling people
+// you are pointing at a hind that left two minutes ago. So the referent is
+// re-checked on the world's own beat, and the arm comes down on its own.
+//
+// Only three things can leave: a creature, a wanderer, a thing on the floor. A
+// direction and a fixture carry no referent and are never checked — the way
+// north does not wander off, and neither does the door.
+export function pointStillThere(z: ZoneDO, session: Session): boolean {
+  const ref = session.poseRef;
+  if (!ref) return true;
+  const [kind, id] = [ref.slice(0, 1), ref.slice(2)];
+  if (kind === "c") {
+    const c = z.creatures.get(id);
+    return !!c && c.roomId === session.roomId && !c.hidden;
+  }
+  if (kind === "p") {
+    const s = z.sessions.get(id);
+    if (!s) return false;
+    // At the fire, "still here" means still by the fire — the gatehouse shares a
+    // roomId with the gate outside it, so the frame is the test, not the room.
+    return z.outOfWorld(session) ? z.outOfWorld(s) : s.roomId === session.roomId && z.reachable(s);
+  }
+  if (kind === "g") return (z.ground.get(session.roomId) ?? []).includes(id);
+  return true;
+}
+
+// Drops it and says so. Named rather than inlined because the gatehouse needs
+// the same words when somebody you had a hand out toward steps back into the world.
+export function dropPoint(z: ZoneDO, session: Session, feed: (line: string) => void): void {
+  const what = session.poseAt ?? "it";
+  session.pose = undefined;
+  session.poseAt = undefined;
+  session.poseRef = undefined;
+  z.send(session, `${cap(what)} is not there any more, and your hand comes down with it.`);
+  feed(`${session.name}'s hand comes down — there is nothing at the end of it now.`);
+  z.sendStatus(session);
 }
 
 // THE THREE THE WORLD ANSWERS. See zone-data for the rule these passed and the
@@ -1472,6 +1526,17 @@ export function cmdKeen(z: ZoneDO, session: Session, arg: string): void {
     z.roomFeed(session.roomId,
       (own ? KEEN_OWN_ROOM : KEEN_FALLEN_ROOM.replace("{who}", who)).replace("{name}", session.name),
       session.pubkey, false, "evt");
+    // AND THE DEAD TAKE IT UP. deadRemembers has been doing this on a 2% idle
+    // roll since it shipped; keening hands the player the first move. It must
+    // be a thing that is NOT fighting you — a wight mid-lunge does not mourn.
+    const hollow = [...z.creatures.values()].find(
+      (c) => c.roomId === session.roomId && !c.target && !c.asleep && !c.hidden
+        && HOLLOW.has(z.variantBase.get(c.templateId) ?? c.templateId),
+    );
+    if (hollow) {
+      const ht = world.mobTemplates.get(hollow.templateId)!;
+      z.roomFeed(session.roomId, pick(KEEN_HOLLOW_JOIN).replace("{a}", cap(ht.name)), undefined, false, "evt");
+    }
     return;
   }
   if (list.some((tr) => tr.kind === "remains")) {
@@ -1520,6 +1585,29 @@ export function cmdCourtesy(z: ZoneDO, session: Session, kind: "wave" | "nod" | 
   }
   z.send(session, lines.self);
   z.roomFeed(session.roomId, lines.room.replace("{name}", session.name), session.pubkey, false);
+  greetAnswered(z, session);
+}
+
+// WHO ANSWERS. Three registers, and which one you get is the tell — see the
+// note on GREET_ANSWER in zone-data. Only ONE thing answers, the first found,
+// because a room full of people all replying to one nod is a chorus and not a
+// world. Nothing fixed on you answers: a man mid-lunge is not being polite.
+function greetAnswered(z: ZoneDO, session: Session): void {
+  for (const c of z.creatures.values()) {
+    if (c.roomId !== session.roomId || c.target || c.hidden || c.asleep) continue;
+    const id = z.variantBase.get(c.templateId) ?? c.templateId;
+    const tmpl = z.world!.mobTemplates.get(c.templateId);
+    if (!tmpl) continue;
+    const line = GREET_ANSWER[c.templateId] ?? GREET_ANSWER[id]
+      ?? GREET_WRONG[c.templateId] ?? GREET_WRONG[id]
+      ?? (THIEVES.has(c.templateId) || THIEVES.has(id) ? pick(GREET_THIEF) : undefined)
+      // The hollow last, so a man-shaped dead thing that has its OWN answer
+      // written could still use it. None do yet; the silence is the point.
+      ?? (HOLLOW.has(c.templateId) || HOLLOW.has(id) ? pick(GREET_SILENCE) : undefined);
+    if (!line) continue; // an animal has no opinion about a nod
+    z.send(session, line.replace("{a}", cap(tmpl.name)), "study");
+    return;
+  }
 }
 
 // BECKON is the summons, and it kept `hail`/`summon`/`come` when the wave went

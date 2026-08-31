@@ -31,6 +31,12 @@ export interface Session {
   // toward, in the player's own word, resolved against the world first.
   pose?: "guard" | "lean" | "crouch" | "point";
   poseAt?: string;
+  // WHAT THE HAND IS ACTUALLY ON, as opposed to the word for it. `poseAt` is
+  // prose — the player's own word, echoed back — and prose cannot be checked
+  // against the room. This is the referent: "c:<creature id>", "p:<pubkey>" or
+  // "g:<item template>". Absent means the thing cannot leave (a direction, or a
+  // fixture the room is made of), so there is nothing to check.
+  poseRef?: string;
   away: boolean; // out of the world, untouchable (bench modal, or the keeper's hatch)
   trading?: boolean; // which away it is: true = the keeper's hatch (modal or typed)
   forging?: boolean; // which away it is: true = the gatehouse forge (modal or typed)

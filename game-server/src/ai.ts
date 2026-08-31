@@ -22,6 +22,7 @@ import {
   DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
+  CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
@@ -598,6 +599,8 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       // could make. The player watches it happen, which is the point.
       const twitchy = lurker && !!c.traits?.includes("twitchy");
       c.hidden = false; // a lurker that strikes is unseen no longer
+      // (A guarded back is answered inside creatureFirstStrike, which is the one
+      // gate every opening blow in the game passes through — see there.)
       // The ambush announcement is the most dangerous line in any log — it
       // bleeds red (and trembles) instead of reading like scenery.
       z.send(session, twitchy
@@ -1710,6 +1713,28 @@ export function moonHuntMult(z: ZoneDO, creature: Creature, now: number): number
 // — except in the rut, when the roe stop being deer that run and become deer
 // that stand (events.rutting, 2026-08-06). One place to ask, so the flee prose,
 // the fight-joining and the scrum rule all change together and cannot drift.
+// EVERYBODY IN THE ROOM IS ON THEIR HEELS. False if nobody is there at all —
+// an empty room does not calm anything. One person standing spoils it for all
+// of them, which is what makes stalking together a thing you have to agree to.
+export function allCrouched(z: ZoneDO, roomId: string): boolean {
+  let any = false;
+  for (const s of z.sessions.values()) {
+    if (s.roomId !== roomId || !z.reachable(s)) continue;
+    if (s.pose !== "crouch") return false;
+    any = true;
+  }
+  return any;
+}
+
+// THE TELL, occasionally, when a runner holds ground it would have given up.
+// Rolled rather than fired once, because the thing it is describing is a state
+// and not an event: it is still deciding you are a rock, every beat you stay down.
+export function crouchHolds(z: ZoneDO, creature: Creature): void {
+  if (!chance(CROUCH_SETTLE_ODDS)) return;
+  const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+  z.roomFeed(creature.roomId, pick(CROUCH_SETTLE).replace("{a}", cap(tmpl.name)), undefined, false);
+}
+
 export function bolts(z: ZoneDO, templateId: string, roomId: string): boolean {
   if (!RUNNERS.has(templateId)) return false;
   if (templateId === "roe-deer" && events.rutting(z, roomId)) return false;

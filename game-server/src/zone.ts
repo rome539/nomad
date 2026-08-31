@@ -111,7 +111,7 @@ import {
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
-  POSES,
+  POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
   SPAWN_QUARTERS, DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
@@ -1741,6 +1741,7 @@ export class ZoneDO implements DurableObject {
     if (session.pose && (effort || cmd.verb === "rest")) {
       session.pose = undefined;
       session.poseAt = undefined;
+      session.poseRef = undefined;
       this.sendStatus(session);
     }
     await this.dispatch(session, cmd);
@@ -2845,7 +2846,7 @@ export class ZoneDO implements DurableObject {
     const wasOutOfWorld = this.outOfWorld(session);
     if (!wasOutOfWorld && !session.away) return this.send(session, "You're already out in the world.");
     session.resting = false; // the door wakes you — nobody sleepwalks into the dungeon
-    session.pose = undefined; session.poseAt = undefined; // and no posture survives the threshold
+    session.pose = undefined; session.poseAt = undefined; session.poseRef = undefined; // and no posture survives the threshold
     dice.endGamesFor(this, session.pubkey); // you cannot walk out of the room and keep playing in it
     // The door-shutting line is the GATEHOUSE'S own — a lockbox crouch mid-dungeon
     // never went through any door, and leaveStep already sends the right local
@@ -4446,7 +4447,7 @@ export class ZoneDO implements DurableObject {
           drowned = Math.max(1, Math.round(victim.maxHp * SEIZE_DROWN_FRACTION));
           victim.hp -= drowned;
         }
-        victim.pose = undefined; victim.poseAt = undefined; // teeth end a posture, as they end a rest
+        victim.pose = undefined; victim.poseAt = undefined; victim.poseRef = undefined; // teeth end a posture, as they end a rest
         if (victim.resting) {
           victim.resting = false;
           this.send(victim, "You are dragged from your rest.");
@@ -5011,10 +5012,21 @@ export class ZoneDO implements DurableObject {
         // A grip already taken outranks looking for a fresh one — it worries
         // what it has until that kills or slips (ai.worryPrey).
         const hunted = (await ai.worryPrey(this, creature, now)) || await ai.predation(this, creature, now);
-        if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)) {
+        if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)
+            && !ai.allCrouched(this, creature.roomId)) {
           // Never settles while there's someone to run from — it keeps moving,
           // room to room, and you only land a blow the tick you have it cornered.
+          //
+          // ...UNLESS EVERY PERSON IN THE ROOM IS ON THEIR HEELS (rome,
+          // 2026-08-31). This one condition is the whole of stalking: a shape
+          // down in the heather is not a man walking in, and the animal stops
+          // running from it. Stand up, or swing and miss, and the posture drops
+          // (dispatch's effort rule) and this line takes it away again.
           await ai.creatureMoves(this, creature, now, "wander", false);
+        } else if (!hunted && RUNNERS.has(creature.templateId) && ai.allCrouched(this, creature.roomId)) {
+          // Only when the crouch is what held it — `hunted` also lands here, and
+          // a deer that just ate something is not being calmed by anybody.
+          ai.crouchHolds(this, creature); // it holds, and now and then it says so
         } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && !AGGRESSIVE.has(creature.templateId) && !ROOTED.has(creature.templateId)) {
           // Mid-wind-up (rouseAt) it holds its ground — a thing that's telegraphed
           // a lunge doesn't stroll off before it commits (keeps the thief's rob,
@@ -5152,6 +5164,16 @@ export class ZoneDO implements DurableObject {
     // wherever the sky is open (rome: blood washes in the rain). Runs whether
     // or not you're fighting; the sky doesn't wait for a lull.
     for (const session of this.sessions.values()) {
+      // A hand held out at something that has walked off is worse than no
+      // posture at all — the room would go on telling people you were pointing
+      // at a hind that left. Checked on the world's beat, dropped on its own,
+      // and checked at the fire too: somebody you had a hand toward may have
+      // stepped back out through the door.
+      if (session.pose === "point" && !verbs.pointStillThere(this, session)) {
+        verbs.dropPoint(this, session, (line) => this.outOfWorld(session)
+          ? gate.gatehouseFeed(this, line, session.pubkey)
+          : this.roomFeed(session.roomId, line, session.pubkey, false));
+      }
       if (this.outOfWorld(session)) continue;
       if (events.raining(this, session.roomId)) pvp.rainThinsBlood(this, session);
     }
@@ -6065,6 +6087,25 @@ export class ZoneDO implements DurableObject {
     // swings the moment one of the three in front of it goes down or misses
     // its own beat. What it does not get is a free opener through a crowd it
     // cannot physically reach you through.
+    // A BACK TO THE WALL (rome, 2026-08-31). This is the one gate every opening
+    // blow passes through — the grudge-holder storming in, the lurker out of the
+    // dark, the listener's reflex, the loosed Gaunt — so the posture is answered
+    // HERE and only here, and cannot be double-rolled by a caller.
+    //
+    // What it buys is the twitchy outcome: the thing arrives, it commits, and
+    // the fight starts even, from the front. That is the worst trade an ambusher
+    // can make, and standing with your eyes on the way in earns it on a coin.
+    // HALVED, not denied, because an open flame already spoils a drop outright
+    // and a posture must never be strictly better than carrying fire.
+    //
+    // It cannot protect a man who is walking: `go` drops the posture before
+    // dispatch runs, so the entry and exit ambushes are untouched. It answers
+    // what comes to YOU while you stand there — which is exactly what a guard is.
+    if (victim.pose === "guard" && chance(GUARD_SPOIL_ODDS)) {
+      this.send(victim, pick(GUARD_SPOIL));
+      this.roomFeed(victim.roomId, `${cap(tmpl.name)} comes at ${victim.name} and finds them already turned.`, victim.pubkey, false);
+      return;
+    }
     if (this.engagedOn(victim.pubkey, victim.roomId, creature.id) >= DOGPILE_CAP || !this.canLandBlow(victim.pubkey)) {
       if (!quiet) {
         this.send(victim, `${cap(tmpl.name)} shoulders in — and cannot get at you through the press. It waits at your shoulder.`, "dmgin");
@@ -6085,7 +6126,7 @@ export class ZoneDO implements DurableObject {
     dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
     dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
     victim.hp -= dmg;
-    victim.pose = undefined; victim.poseAt = undefined; // a blow ends a posture; nobody keeps a hand out through this
+    victim.pose = undefined; victim.poseAt = undefined; victim.poseRef = undefined; // a blow ends a posture; nobody keeps a hand out through this
     if (victim.resting) {
       victim.resting = false;
       this.send(victim, "You are torn from your rest.");
@@ -6137,6 +6178,7 @@ export class ZoneDO implements DurableObject {
     victim.resting = false;
     victim.pose = undefined;
     victim.poseAt = undefined;
+    victim.poseRef = undefined;
     victim.staggered = false;
     victim.stunned = false;
     victim.hobbled = false; victim.limpingSince = undefined; // a new body walks whole
