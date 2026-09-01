@@ -230,7 +230,8 @@ export interface SimState {
   ground: Record<string, string[]>;
   groundInstances?: Record<string, GroundInstance[]>; // instanced items on the floor (journals: they carry their pages)
   regrow: Regrow[];
-  roamRocks?: string[]; // rooms currently holding a WANDERING fortress rock — the rubble shifts, so a rock's home is state, not a spawn row
+  roamRocks?: string[]; // LEGACY, read once on load and folded into roamedGround: rooms holding a wandering fortress rock, from when the rock was the only thing that moved
+  roamedGround?: string[]; // "itemId@roomId" for every wandered floor thing — it has no spawn row where it lies, so this is what stops the decay sweep taking it for litter
   arrivals: Record<string, number>; // templateId -> ms when a migrant arrives
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
   doorCloseAt?: Record<string, number>; // "roomId:dir" -> ms epoch a timed door re-seals (the deep door: a heart buys a window, not a thoroughfare)

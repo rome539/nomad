@@ -74,6 +74,7 @@ import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
 import {
   TICK_MS, TICK_SIM_FLUSH_MS, TICK_SLOW_LOG_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
+  GROUND_ROOTED,
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, FLOOR_RUST_PER_HOUR, FLOOR_RUST_STEP_MS, materialDamp, MATERIAL_STONE, MATERIAL_BONE, MATERIAL_WOOD, MATERIAL_HIDE, MATERIAL_CLOTH, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON,
@@ -176,7 +177,12 @@ export class ZoneDO implements DurableObject {
   // no fixed home any more (rome, 2026-08-09: the fortress rocks all sat at the
   // gates, and should turn up at random instead) — each one turns up somewhere else in the ruin every
   // time it renews, so its whereabouts is live state rather than a spawn row.
-  public roamRocks: string[] = [];
+  // WHERE A WANDERED THING IS LYING RIGHT NOW, as "itemId@roomId". It has no
+  // spawn row where it lies, so without this the stray-decay sweep would take it
+  // for litter somebody dropped and crumble it away — the world would hand you a
+  // torch and then rot its own copy. Was `roamRocks`, a bare room list, when the
+  // rock was the only thing in the game that moved.
+  public roamedGround: string[] = [];
   private lastCombatRound = 0; // ms of the last tick blows actually landed (see COMBAT_ROUND_MS)
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
   public arrivals = new Map<string, number>();
@@ -556,7 +562,11 @@ export class ZoneDO implements DurableObject {
       this.ground = new Map(Object.entries(saved.ground));
       this.groundInstances = new Map(Object.entries(saved.groundInstances ?? {}));
       this.regrow = saved.regrow;
-      this.roamRocks = saved.roamRocks ?? [];
+      // The old save carried a bare room list, and every entry in it was a rock
+      // by definition — that is the only thing that could wander. Key them and
+      // the live world keeps every stone it has already moved.
+      this.roamedGround = (saved.roamedGround as string[] | undefined)
+        ?? ((saved.roamRocks as string[] | undefined) ?? []).map((r) => `loose-rock@${r}`);
       this.arrivals = new Map(Object.entries(saved.arrivals));
       this.openDoors = new Set(saved.openDoors);
       this.doorCloseAt = new Map(Object.entries(saved.doorCloseAt ?? {}));
@@ -919,7 +929,7 @@ export class ZoneDO implements DurableObject {
       ground: Object.fromEntries(this.ground),
       groundInstances: Object.fromEntries(this.groundInstances),
       regrow: this.regrow,
-      roamRocks: this.roamRocks,
+      roamedGround: this.roamedGround,
       arrivals: Object.fromEntries(this.arrivals),
       openDoors: [...this.openDoors],
       doorCloseAt: Object.fromEntries(this.doorCloseAt),
@@ -1010,7 +1020,7 @@ export class ZoneDO implements DurableObject {
     this.ground.clear();
     this.groundInstances.clear();
     this.regrow = [];
-    this.roamRocks = [];
+    this.roamedGround = [];
     this.arrivals.clear();
     this.openDoors.clear();
     this.doorCloseAt.clear();
@@ -5536,7 +5546,7 @@ export class ZoneDO implements DurableObject {
       // — without this the ruin would hand you a rock and then crumble it back
       // into the rubble as if a player had left it lying.
       const kept = this.world!.groundSpawns.filter((g) => g.item_id === itemId && g.room_id === roomId && g.regrows).length
-        + (itemId === "loose-rock" && this.roamRocks.includes(roomId) ? 1 : 0);
+        + (this.roamedGround.includes(`${itemId}@${roomId}`) ? 1 : 0);
       const n = floor.filter((i) => i === itemId).length - kept;
       if (n <= 0) continue;
       const pending = this.rot.filter((r) => r.kind === d.kind && r.roomId === roomId && r.itemId === itemId).length;
@@ -5576,6 +5586,13 @@ export class ZoneDO implements DurableObject {
       const k = `${g.item_id}@${g.room_id}`;
       kept.set(k, (kept.get(k) ?? 0) + 1);
     }
+    // A WANDERED PIECE IS THE WORLD'S OWN, at an address with no row for it —
+    // the same exemption armStrayDecay makes, and it has to be made twice
+    // because the two sweeps count their keepers separately. Without it, roaming
+    // walked all 144 floor-gear pieces straight out of the spawn table's
+    // protection and the rust would have drained them out of the world one at a
+    // time, permanently: nothing re-arms a regrow except a player's hand.
+    for (const r of this.roamedGround) kept.set(r, (kept.get(r) ?? 0) + 1);
     for (const [roomId, floor] of [...this.ground]) {
       if (!floor.length) continue;
       // SLOT GEAR ONLY — the things whose condition genuinely means wear. This
@@ -5673,12 +5690,11 @@ export class ZoneDO implements DurableObject {
       // at the moment of renewal, rather than when it was picked up: the world
       // decides where the stone is when the stone appears, and a room only holds
       // one, so the four of them drift apart rather than piling up.
-      const wanders = this.rockWanders(g.itemId, g.roomId);
-      const home = (wanders ? this.pickRubble() : null) ?? g.roomId;
+      const wanders = this.groundWanders(g.itemId);
       // Never over-fill: if the room got one back some other way (a dropped or
-      // thrown rock landed here), this regrow just resolves to nothing.
-      const floor = this.ground.get(home) ?? [];
-      if (floor.includes(g.itemId)) return false;
+      // thrown rock landed here), this regrow just resolves to nothing. A
+      // wanderer's destination is not known yet, so its own check is below.
+      if (!wanders && (this.ground.get(g.roomId) ?? []).includes(g.itemId)) return false;
       const t = this.world!.itemTemplates.get(g.itemId);
       // The floor-renewal law: renewable GEAR is dice, not a schedule. Its
       // check came up — roll whether the world coughs one back. A miss leaves
@@ -5689,6 +5705,14 @@ export class ZoneDO implements DurableObject {
         g.at = now + randInt(GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS);
         return true;
       }
+      // AFTER the die, never before: pickGroundHome walks every room in the
+      // world, the die throws away four rolls in five, and picking first meant
+      // paying for a full scan on every miss — a few hundred wasted walks an
+      // hour once the whole floor roams. The world only needs to decide where
+      // the thing is at the moment it actually puts one there.
+      const home = (wanders ? this.pickGroundHome(g.itemId, g.roomId) : null) ?? g.roomId;
+      const floor = this.ground.get(home) ?? [];
+      if (floor.includes(g.itemId)) return false;
       this.ground.set(home, [...floor, g.itemId]);
       // THE FLOOR ROLLS TOO (rome, 2026-08-13, saying he had never seen a rolled
       // trait — he had not, and this is most of why). The lottery only ever ran
@@ -5707,8 +5731,9 @@ export class ZoneDO implements DurableObject {
       // this it would crumble away as litter), and so the next pickup there can
       // arm a fresh wander instead of ending the stone's life.
       if (wanders) {
-        this.roamRocks = this.roamRocks.filter((r) => r !== g.roomId && r !== home);
-        this.roamRocks.push(home);
+        const key = `${g.itemId}@`;
+        this.roamedGround = this.roamedGround.filter((r) => r !== `${key}${g.roomId}` && r !== `${key}${home}`);
+        this.roamedGround.push(`${key}${home}`);
       }
       if (!silent) {
         const rock = g.itemId === "loose-rock";
@@ -5747,25 +5772,37 @@ export class ZoneDO implements DurableObject {
    * Rocks out on the road, in the wood and at the dens are untouched: this is
    * the ruin's rubble, not the world's stones.
    */
-  private rockWanders(itemId: string, roomId: string): boolean {
-    if (itemId !== "loose-rock") return false;
-    return !this.world!.rooms.get(roomId)?.region;              // the original 110 carry no region — that's the fortress
+  // DOES THE NEXT ONE TURN UP SOMEWHERE ELSE (rome, 2026-09-01). This was
+  // `rockWanders` and it answered for exactly one item. The question is not
+  // about rocks: it is whether the thing GREW there. What has roots in that
+  // floor comes back to that floor. What somebody made or carried in has no
+  // reason to reappear in the same room, and every reason not to — a floor you
+  // can memorise is a list of addresses, not a world.
+  private groundWanders(itemId: string): boolean {
+    return !GROUND_ROOTED.has(itemId);
   }
 
   /**
-   * WHERE THE NEXT ONE TURNS UP. Anywhere in the ruin that isn't a door, isn't
-   * one of the boltholes people hide in, and hasn't got a rock already — so the
-   * four of them spread rather than stacking, and no room is ever worth
-   * returning to for one. Returns null if the ruin is somehow full, in which
-   * case the caller leaves the rock where it was.
+   * WHERE THE NEXT ONE TURNS UP. Anywhere in its own band that isn't a door,
+   * isn't one of the boltholes people hide in, and hasn't got one already — so
+   * the copies spread rather than stacking, and no room is ever worth returning
+   * to for one. Returns null if the band is somehow full, in which case the
+   * caller renews it where it lay.
    */
-  private pickRubble(): string | null {
+  private pickGroundHome(itemId: string, from: string): string | null {
+    const world = this.world!;
+    // Its own BAND, which is what keeps this honest: a fortress torch turns up
+    // somewhere else in the fortress, not on a beach. This is the chests' rule —
+    // never a gate, never a bolthole, so everything on the floor carries risk —
+    // plus one of its own: never a room that already holds one, so the copies
+    // spread instead of stacking and no room is worth returning to for it.
+    const band = world.rooms.get(from)?.region ?? "";
     const pool: string[] = [];
-    for (const [id, room] of this.world!.rooms) {
-      if (room.region) continue;                                 // fortress only
-      if (this.world!.entryRooms.has(id) || room.is_safe === 1) continue;
-      if ((this.ground.get(id) ?? []).includes("loose-rock")) continue;
-      if (this.roamRocks.includes(id)) continue;
+    for (const [id, room] of world.rooms) {
+      if ((room.region ?? "") !== band) continue;
+      if (world.entryRooms.has(id) || room.is_safe === 1) continue;
+      if ((this.ground.get(id) ?? []).includes(itemId)) continue;
+      if (this.roamedGround.includes(`${itemId}@${id}`)) continue;
       pool.push(id);
     }
     return pool.length ? pool[randInt(0, pool.length - 1)] : null;

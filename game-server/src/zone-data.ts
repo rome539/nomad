@@ -108,6 +108,286 @@ export const RUST_PER_TICK = 0.001; // per 2s tick while carried in the damp (~5
 // and weathers the bone, and buries whatever is left. Gating it on MATERIAL_DAMP
 // would leave bone and stone gear lying at a gate forever, which is most of the
 // pile this exists to drain. One rate, everything, no table.
+// WHAT GROWS WHERE IT LIES, AND WHAT SOMEBODY DROPPED (rome, 2026-09-01: give
+// floor loot a purpose, and make most of it roam).
+//
+// Every one of the 317 things lying on the world's floors was nailed to one
+// room for the life of the world — so a torch in the undercroft was a fact
+// about the undercroft, forever, and the way to get gear was to learn a list of
+// rooms and walk it. The chests stopped working that way in 2026-07-10 for
+// exactly this reason: a roaming chest makes finding one exploration and luck,
+// and because the COUNT does not change, scarcity holds. The floor never got
+// the same law, and the rock is the only thing in the game that ever wandered.
+//
+// THE SPLIT IS THE POINT, and it is what gives a thing on the floor something to
+// say. Watercress is growing there. A torch is not growing there — somebody
+// carried it in and put it down, and there is no reason the next one should turn
+// up in the same room. So: what grows, stays and renews where it is. What was
+// made or carried, moves. The floor stops being a list of addresses and starts
+// telling you whether you are looking at a PLACE or at an EVENT.
+//
+// Rooted by hand rather than by t.edible, because edible is the wrong question:
+// offal, hardtack and a smoked haunch are all edible and none of them grew where
+// they are lying — somebody left them. Bloodwort and bog-moss are not edible and
+// both are plants. What matters is whether it has roots in that floor.
+export const GROUND_ROOTED = new Set<string>([
+  "watercress", "sloes", "beech-mast", "hoof-fungus", "cave-lichen", "cave-nettle",
+  "grave-moss", "crowberries", "windfall-pears", "pale-cap", "bloodwort", "bog-moss",
+  "melt-water", "well-water",
+]);
+// THE LAST HAND (rome, 2026-09-01: give gear a purpose when you find it on the
+// floor — like picking it off a skeleton).
+//
+// Gear the WORLD laid down has no story attached to it and never did: you stoop,
+// the line says you took it, and the only thing that ever distinguished one find
+// from another was a number in the gear sheet. The piece has a history — it is
+// scavenged, it rolled its wear on the way into your hand — and nothing ever
+// said so.
+//
+// So one line, on the way up, about what is ON it. EVIDENCE, never conclusions:
+// the notches, the repair, the wrapping, what is worked into the seams. The
+// player does the arithmetic about who had it and how they stopped having it.
+// That is the same law the gear sheet lives under — facts yes, odds never — and
+// it keeps the line from ever telegraphing a stat.
+//
+// TWO AXES, both already real:
+//   the BAND says who dies in this country (the fortress's own rooms are the
+//   garrison; the road is people who were going somewhere; the wood is people
+//   who were hunting) — and roaming keeps a piece inside its band, so the story
+//   and the ground never argue.
+//   the CONDITION it just rolled says how it ended: [0] battered, it failed
+//   somebody; [1] worn, it served somebody a long time; [2] barely used, they
+//   never got the good out of it. A player who checks the sheet afterwards finds
+//   a number that agrees with what they were told.
+//
+// Slot-agnostic on purpose: a line about a grip is a lie on a coat. These talk
+// about wear, marks, repairs and weather, which every piece of gear has.
+//
+// The pick is DERIVED from itemId@roomId, the morphOf trick — so the story is
+// stable for as long as that piece lies in that room, and the NEXT one the world
+// lays down somewhere else is a different dead man. A die here would have made
+// it noise; a stored field would have cost the blob.
+// A rock is not a piece of gear that somebody had. The floor's gear list counts
+// anything with a slot, and thirty per cent of it is the loose rock — so without
+// this the world would tell you a dead man's story about a stone it never left
+// anywhere on purpose. Nobody made these two, so nobody was their last hand.
+export const UNMADE = new Set<string>(["loose-rock", "hammerstone"]);
+
+export const LAST_HAND: Record<string, [string[], string[], string[]]> = {
+  // The fortress's own rooms — the garrison, and the men who held them and lost.
+  "": [
+    [
+      "It has taken more damage than anybody bothered to count, and the last of it is worse than the rest.",
+      "Old blood has gone so far into the seams that scrubbing only ever spread it. It has been scrubbed more than once.",
+      "A garrison stamp sits under the damage, worn nearly flat. Nothing here has answered to that mark in a long time.",
+      "The damp has been at it for years and nobody has been down to care.",
+      "It went on being used long after it should have been thrown out.",
+    ],
+    [
+      "The wear on it is even and unhurried, the marks of somebody who kept it up until the day the keeping stopped.",
+      "A strip of cloth is worked into it where it would not show, knotted twice the way the garrison knotted things.",
+      "It hung on a wall for years — there is a clean patch where nothing touched it. It came off that wall in a hurry.",
+      "Somebody kept a tally on it and stopped at eleven.",
+      "It has been re-strapped twice, both times properly.",
+    ],
+    [
+      "It is still stiff. Whatever it was brought up from the stores for came faster than the bringing did.",
+      "The stores-mark has never been rubbed through. It went from a cupboard to this floor and nowhere else.",
+      "It has taken exactly one bad blow. That is the whole of its history.",
+    ],
+  ],
+  // The grounds outside the walls — the ones who never got in.
+  out: [
+    [
+      "The weather has had it long enough to take the colour of the ground it lay on.",
+      "It has been mended with wire, badly, by somebody working cold and in a hurry.",
+      "Something chewed at it while it lay out here, and gave up.",
+      "It is half the colour it started.",
+      "Rain has got inside it and stayed there.",
+    ],
+    [
+      "It has been carried a long way. The wear is all in the places a strap would sit.",
+      "There is a name scratched into it in letters that stop halfway, as though the scratching was interrupted.",
+      "It smells of woodsmoke that has been rained on and dried again, more than once.",
+      "It has been carried further than it was ever built to go.",
+      "There is a burn on one side of it from sleeping too near a fire.",
+    ],
+    [
+      "It is barely marked, and it was lying in the open where anyone could have taken it. Nobody did.",
+      "Whoever brought this out from somewhere better did not get far enough to use it.",
+      "There is a maker's line on it, still crisp. Nothing else on it is.",
+    ],
+  ],
+  // The road — carters, traders, people who were going somewhere.
+  road: [
+    [
+      "It is split where it was used for something it was never meant for, and used that way more than once.",
+      "The road's dust is packed hard into every crack. It has been down a long time.",
+      "It has been broken and lashed back together with harness leather, which was the only leather to hand.",
+      "A wheel went over it.",
+      "It has been used as a lever, more than once, by somebody with no lever.",
+    ],
+    [
+      "The wear runs all one way, the way a thing wears when it rides a cart for years.",
+      "A toll-mark is cut into it, and then a second one over the first. Somebody paid twice to bring this east.",
+      "It has been oiled often and recently, and then not at all.",
+      "It has been packed and unpacked so often the wear is all in the folding.",
+      "Somebody wrote a distance on it and then crossed the number out.",
+    ],
+    [
+      "It is new enough to have come off a trader's stock, and it never reached whatever stall it was bound for.",
+      "There is packing straw still caught in it.",
+      "Whoever was carrying this had it for the journey, not for the trouble. The trouble came anyway.",
+    ],
+  ],
+  // The wood — hunters, trappers, foresters.
+  wood: [
+    [
+      "Sap has dried black in the joins of it and gone hard as resin.",
+      "It has been put to work clearing wood, which it was never meant for, and it shows exactly that.",
+      "Something bit it. The marks are deep and set wide, and they are not tool marks.",
+      "It has gone green in the joins and stayed that way.",
+      "Something dragged it a long way and then lost interest.",
+    ],
+    [
+      "It is bound with cord where it takes the most weight, and the cord has been replaced at least twice.",
+      "Green stains have worked so deep into it that they are part of it now.",
+      "The wear is quiet and careful. Whoever had this went slowly, and did not go slowly enough.",
+      "It smells of pitch. Somebody proofed it against the wet and kept proofing it.",
+      "There are two notches in it, cut a season apart.",
+    ],
+    [
+      "It is clean under the leaf mould, and the leaf mould is not thick. This was set down recently.",
+      "Bark dust sits in the seams and nothing worse does.",
+      "It has never been blooded. Out here that takes either great luck or very little time.",
+    ],
+  ],
+  // The mountain — climbers, shepherds, the ones the snow kept.
+  mountain: [
+    [
+      "Frost has been into it and out of it so many times that the surface has begun to flake away.",
+      "It is scoured pale down one whole side, the side that faced the wind.",
+      "It has been dropped a long way onto rock. Everything about it says so.",
+      "The cold has split it.",
+      "It has been through more winters than it was built for, and the last one finished it.",
+      "Something took it off a body up here and then dropped it again.",
+      "It froze through with something still inside it, and thawed dirty.",
+      "It was left where the wind gets at everything.",
+      "Ice has been in the joints of it and forced them apart.",
+    ],
+    [
+      "It is wrapped against the cold in hide that has been cut down and re-cut to fit.",
+      "It has been patched with hide, cord and a strip of tin, and no two patches are from the same winter.",
+      "Grit is driven into it too deep to come out — the fine grey grit that only lives above the treeline.",
+      "It has been rubbed with fat against the wet, over and over.",
+      "There is a line of stitching in it that somebody put in wearing gloves.",
+      "It has been up and down this mountain more times than most people manage once.",
+      "It has been mended at height, in gloves, by feel.",
+      "There is a cord on it long enough to tie off with.",
+      "The colour has gone out of the side that faces the sun up here.",
+    ],
+    [
+      "It came up the mountain and got no further. There is not enough wear on it for the climb it survived.",
+      "Snow-melt has left a tide-line on it and nothing has scratched through that line.",
+      "It is barely used, and it was lying above the height where anybody sensible turns back.",
+    ],
+  ],
+  // The crossing — ferry traffic, and people waiting to get over.
+  crossing: [
+    [
+      "The salt has been at it. What is left is more crust than surface.",
+      "It has been under water and dried out again, and the shape it dried into is not the shape it was made in.",
+      "Weed has dried onto it in a band, high on one side. That is how deep it sat, and how long.",
+      "The rot is in it now, and rot does not come back out.",
+      "It has been bailed on, stood on, and finally left.",
+    ],
+    [
+      "It is worn smooth the way only years of wet handling does it.",
+      "Somebody put a line through it so it could not go over a side. The line is gone; the wear the line left is not.",
+      "Tar has been worked into it against the water, patchily, by somebody who had better things to do.",
+      "Everything on it that could rust has, evenly, slowly, for years.",
+      "It has been dried by a fire so many times the shape has set.",
+    ],
+    [
+      "It has hardly been touched, and it was lying where the tide would have had it inside a day.",
+      "Sand sits in the seams, dry. It has not been here through a high water yet.",
+      "Whoever had this was carrying it across, not using it. They did not get across.",
+    ],
+  ],
+  // The dens — scavengers. Other people like you.
+  den: [
+    [
+      "It has been repaired by three different hands, and none of them respected what the last one did.",
+      "There are two sets of marks on it where two different owners scratched a tally, and neither tally is finished.",
+      "It has been stripped for parts and then put back together with what was left.",
+      "Three people have owned this and none of them fixed it.",
+      "It has been traded for less each time.",
+    ],
+    [
+      "It has changed hands often. The wear does not sit the way one owner's wear sits.",
+      "A trade-mark is cut into it and then struck through, and then cut again beside it.",
+      "Somebody kept this well for a while, and then somebody else did not.",
+      "It is worth more than anything else that was on the floor with it.",
+      "Somebody scratched their mark off it rather than leave it on.",
+    ],
+    [
+      "It is nearly untouched, which out here means it was taken off somebody very recently.",
+      "It has never ridden in a pack. Everything out here rides in a pack eventually.",
+      "It has been kept back, not used — hidden by somebody who meant to come for it.",
+    ],
+  ],
+};
+
+// AND SOMETIMES A SECOND SENTENCE. Three lines per band per tier reads well once
+// and turns to wallpaper by the tenth pickup — measured, the first repeat landed
+// at pickup seven, and worse than it looks, because the barely-used tier only
+// fires six times in a hundred, so each band really had six lines in play. More
+// lines alone does not fix it: a first repeat out at pickup fifteen would want
+// something near two hundred hand-written primaries.
+//
+// So a second draw, and the trick that lets it compose instead of read assembled
+// is that it is in a DIFFERENT REGISTER. The primary is evidence — what is on
+// the thing. This is the verdict — what became of whoever had it. Two registers
+// sit together as two sentences in a way two evidence lines never would, and the
+// verdict is tier-keyed so it can never disagree with the wear.
+//
+// Band-neutral on purpose: fate does not care which country you died in, and
+// keeping it off the band axis is what makes it multiply rather than add — every
+// one of these goes with every primary, which is where the variety actually
+// comes from.
+//
+// It fires on a little over half, off its own salt of the same stable hash, so
+// the piece either has a verdict on it or does not and that never changes. That
+// is also the length answer: a pickup is sometimes one blunt sentence and
+// sometimes two, and the rhythm moves.
+export const LAST_HAND_END: [string[], string[], string[]] = [
+  [ // battered — it failed somebody
+    "It was already going before the end.",
+    "Nobody set this down by choice.",
+    "There was no mending left in it.",
+    "It got somebody most of the way and no further.",
+    "It stopped being any use before its owner stopped needing it.",
+    "Somebody trusted it a good while longer than they should have.",
+    "Whatever it was for, it was not enough.",
+  ],
+  [ // worn — it served somebody a long time
+    "It outlasted whoever kept it.",
+    "Somebody looked after this for years and then stopped, all at once.",
+    "It was good, and it was not the problem.",
+    "There is nothing wrong with it a week's work would not put right.",
+    "It never failed anybody, which is not always what saves anybody.",
+    "It has served better people than you and it will serve worse.",
+    "Somebody meant to come back for this.",
+  ],
+  [ // barely used — they never got the good out of it
+    "Whatever it was for came early.",
+    "Nobody got the good out of it.",
+    "It was still somebody's best.",
+    "There was no time to wear it in.",
+    "It was worth more than the time its owner had left.",
+  ],
+];
+
 export const FLOOR_RUST_PER_HOUR = 4;
 export const FLOOR_RUST_STEP_MS = 60_000; // the live tick's sweep cadence: a floor sweep is cheap, but not 30 times a minute
 

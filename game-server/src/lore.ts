@@ -14,6 +14,7 @@ import * as den from "./den";
 import * as ai from "./ai"; // the close read a `study` prints under its own line
 import * as events from "./events"; // the keeper speaks of what is actually running on his ground
 import { WOOD_QUARTERS, MAP_QUARTERS, MOB_LORE } from "./detail";
+import { LAST_HAND, LAST_HAND_END, UNMADE } from "./zone-data";
 import {
   MAP_ITEMS, DETAILED_MAP, FULL_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM, MOB_TRAIT_DOES, MOB_TRAITS, MOB_FAMILY_NAME,
@@ -875,4 +876,53 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
   void setKeeperTold(z.env.DB, session.pubkey, packKeeperTold(session.keeperTold))
     .catch(() => { /* a lost place in a story is not worth a thrown tick */ });
   return true;
+}
+
+/**
+ * THE LAST HAND. One line about what is ON a piece of gear the world laid down,
+ * printed as you lift it — evidence, never a conclusion. See LAST_HAND for the
+ * law; the short of it is that the band says who dies in this country and the
+ * wear says how they stopped, and the player does the rest of the arithmetic.
+ *
+ * Callers must have already established that this piece has no history anybody
+ * SAW: not stamped onto the floor by a drop, a corpse or a coffer, and not
+ * carrying a loreId — an engraved piece has a real ledger of owners, and
+ * inventing a dead man for it would argue with the ledger.
+ *
+ * Derived from itemId@roomId, so it holds still for as long as this piece lies
+ * in this room and the next one the world puts down elsewhere is somebody else.
+ * Returns "" for a band with no pool, which is a silence, not a bug.
+ */
+export function lastHand(itemId: string, roomId: string, band: string, condition: number): string {
+  if (UNMADE.has(itemId)) return ""; // a rock had no owner to lose it
+  const pools = LAST_HAND[band];
+  if (!pools) return "";
+  // The same cut the gear sheet reads: it failed somebody / it served somebody /
+  // they never got the good out of it. rollGearCondition's scavenged roll is
+  // 32-78 with a rare 90+, so all three tiers are reachable off the floor.
+  const tier = condition >= 90 ? 2 : condition >= 58 ? 1 : 0;
+  const pool = pools[tier];
+  if (!pool.length) return "";
+  const line = pool[hashSeed(`${itemId}@${roomId}`) % pool.length];
+  // The verdict, on its own salt — so whether this piece carries one is as fixed
+  // as which line it carries — and on its own bits off that hash for the pick, so
+  // the two draws cannot walk in step.
+  //
+  // A PRIMARY THAT IS ALREADY TWO SENTENCES NEVER TAKES ONE. A third of the pool
+  // closes on its own second sentence — "It has taken exactly one bad blow. That
+  // is the whole of its history." — which IS a verdict, and hanging another on it
+  // gave three sentences that all landed the same punch. Gating on raw length
+  // instead was the first try and it was the wrong cut: it went after long lines
+  // rather than finished ones, and cost a sixth of the variety to do it.
+  if (/[.!?] [A-Z]/.test(line)) return line;
+  const h = hashSeed(`${itemId}@${roomId}|end`);
+  const ends = LAST_HAND_END[tier];
+  if (h % 20 >= 13) return line;
+  const end = ends[(h >>> 5) % ends.length];
+  // A cap on the PAIR, not on the primary. Long line plus long verdict is the
+  // only combination that actually reads as a paragraph, and cutting on the
+  // primary alone to prevent it threw away a sixth of the variety to catch a
+  // handful of cases. This drops the tail only where the two together would run
+  // over, so every short line keeps every verdict it could have had.
+  return line.length + end.length > 148 ? line : `${line} ${end}`;
 }

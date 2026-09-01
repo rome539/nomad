@@ -1872,9 +1872,14 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // blade doesn't heal by touching the ground). Un-stamped gear is fresh to the
   // floor — spilled off the dead or seeded here — so it rolls scavenged. Non-gear → 100.
   const condKey = `${itemId}@${session.roomId}`;
-  const condition = z.groundCond.has(condKey)
-    ? z.groundCond.get(condKey)!
-    : rollGearCondition(tmpl.slot, false);
+  // A stamp means somebody SAW this arrive — a drop at your feet, a spill off a
+  // corpse, a coffer too full to hold it. Unstamped means the world laid it here
+  // and no living thing watched it happen, which is the only piece with a
+  // history worth telling (the last hand, below).
+  const worldLaid = !z.groundCond.has(condKey);
+  const condition = worldLaid
+    ? rollGearCondition(tmpl.slot, false)
+    : z.groundCond.get(condKey)!;
   z.groundCond.delete(condKey);
   // An engraved piece keeps its mark through the pickup — the ledger changes
   // hands with the steel (a NEW owner only enters the chain when they SEAL it).
@@ -1897,11 +1902,13 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // one AND nothing's already regrowing here — otherwise throwing a rock and
   // fetching it back mid-fight would queue a fresh regrow every grab, and the
   // stones would breed. (`here` already had the taken item spliced out above.)
-  // A WANDERING ROCK has no spawn row where it lies — the ruin put it there, and
-  // the row it came from is somewhere else entirely. It re-arms off z.roamRocks
-  // instead, and stops counting as living here the moment it's in your hand.
-  const tookRoamRock = itemId === "loose-rock" && z.roamRocks.includes(session.roomId);
-  if (tookRoamRock) z.roamRocks = z.roamRocks.filter((r) => r !== session.roomId);
+  // A WANDERED THING has no spawn row where it lies — the world put it there and
+  // the row it came from is somewhere else entirely. It re-arms off
+  // z.roamedGround instead, and stops counting as living here the moment it is
+  // in your hand. (Was rock-only, when the rock was the only thing that moved.)
+  const roamKey = `${itemId}@${session.roomId}`;
+  const tookRoamRock = z.roamedGround.includes(roamKey);
+  if (tookRoamRock) z.roamedGround = z.roamedGround.filter((r) => r !== roamKey);
   if (tookRoamRock || z.world!.groundSpawns.some((g) => g.item_id === itemId && g.room_id === session.roomId && g.regrows)) {
     const stillHere = here.includes(itemId);
     const alreadyRegrowing = z.regrow.some((r) => r.itemId === itemId && r.roomId === session.roomId);
@@ -1959,6 +1966,15 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
     ? " The pack takes it with a clank — too much loose iron now to slip a blow, and it won't ride quiet."
     : "";
   z.send(session, `You take ${z.gearName(tmpl.id)}.` + readied + stooped + nowLoud);
+  // What is on it, on the way up. Only for gear the world laid down and nobody
+  // watched arrive, and never for an engraved piece — that one has a real
+  // ledger, and `look` reads it. Same voice the keeper speaks in, because it is
+  // the same thing: the world telling you something old that it knows and you
+  // do not.
+  if (worldLaid && tmpl.slot !== "" && !loreId) {
+    const tale = lore.lastHand(itemId, session.roomId, z.world!.rooms.get(session.roomId)?.region ?? "", condition);
+    if (tale) z.send(session, tale, "lore");
+  }
   z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)
   ai.nestRobbed(z, session); // reaching into a sleeping drake's ring wakes it, always — the tooth is not a free lift
   z.refreshRoomCtx(session.roomId);
