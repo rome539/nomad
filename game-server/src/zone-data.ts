@@ -2987,7 +2987,7 @@ export const EEL_RUN_FISH_MULT = 2;
 // never happened. So the flood LEANS instead: the eels run all night, and
 // they run hardest on the making water.
 export const EEL_RUN_FLOOD_MULT = 2; // on top of EEL_RUN_FISH_MULT, so a flooding run pays quadruple
-export const EEL_RUN_NIGHT = 3; // moonPhase 3: the dark night of the moon's month
+export const EEL_RUN_NIGHT = 4; // the dark night of the moon's month — phase 4 since the month went to seven
 export const EEL_RUN_AMBIENT = [
   "The water is full of eels — silver, moving, all of them going the same way, and none of them hurrying.",
   "An eel breaks the surface, turns over, and is gone. The channel is alive with them.",
@@ -5754,7 +5754,28 @@ export const DAY_CYCLE_MS = 4 * 3_600_000; // 2h day, 2h night
 // skips its outdoor-night check on those nights specifically, so a full moon
 // genuinely lights the grounds instead of just being a flavor label. One full
 // moon roughly once a day (6 * DAY_CYCLE_MS's 4h night-halves).
-export const MOON_FULL_EVERY = 6;
+// SEVEN, NOT SIX (rome, 2026-08-31, on seeing a full moon at 22:00 and asking
+// whether that was right). It was — and it was right at 22:00 the night before,
+// and would have been every night after, forever.
+//
+// THE ARITHMETIC. A day-cycle is four hours and the month was six of them, and
+// 6 x 4 = 24. The moon's whole month was exactly one real day, so every phase
+// was welded to the wall clock: the full moon rose at the same minute every
+// night of the world's life, the dark of the month sat at the same minute, and
+// a player's hour of the day decided which moon they were allowed to have. An
+// evening player got the full moon and never the dark; a morning player got the
+// dark and never once, in any session, saw the moon full. The wood's door opens
+// on the full moon. For half the people who could reach it, it never opened.
+//
+// Seven cycles is 28 hours, which shares only a quarter-day with 24 — so the
+// full moon walks four hours round the clock every real day and comes back to
+// where it started after six of them. Every hour of the day gets its turn at
+// every phase. Nothing else had this fault: the eclipse is 43 cycles (172h) and
+// already walked; the blood moon counts full moons, so it inherits the walk.
+//
+// The seventh night is a real one and not padding — the rind between the waning
+// half and the dark, which is the night the month was missing.
+export const MOON_FULL_EVERY = 7;
 // WHAT THE SKY SAYS AT NIGHTFALL, one line per night of the moon's month
 // (zone-util moonPhase; index 0 is the full moon). Written so the waxing half
 // counts you down out loud — the full moon is the one night the grounds stay
@@ -5785,6 +5806,7 @@ export const MOON_SKY = [
   "The moon is full — the whole white round of it, high and holding still. There is light enough out here tonight to do without a torch.",
   "The moon is one night past full: a shaving gone off the one edge and the rest of it still bright. It is going down the month from here.",
   "Half a moon, and the shadow has the other half of it. Whatever it lights, it is lighting less of each night now.",
+  "A rind of moon, and not much of that — the last of it going off the edge. Tomorrow there will be nothing there at all.",
   "There is no moon at all. The sky has its stars and nothing else in it, and the dark out here is the whole of the dark there is.",
   "A thin moon, new-side up, climbing the far side of its month. It gives you nothing yet. It is coming back.",
   "The moon is very nearly whole — one clean edge of it left to fill. One more night of this.",
@@ -7240,9 +7262,10 @@ export const TIDE_MOON_SPRING: Record<number, number> = {
   0: 1.6,  // full — the biggest water of the month
   1: 0.6,  // one past full, going down the month
   2: 0.6,  // the waning quarter — neap
-  3: 1.4,  // dark — the other spring, and the eels' own night
-  4: 0.6,  // the waxing quarter — neap, and it was missing
-  5: 0.6,  // nearly whole, coming back — mirrors phase 1, and it was missing
+  3: 0.6,  // the last rind, going — still neap (the seventh night, 2026-08-31)
+  4: 1.4,  // dark — the other spring, and the eels' own night
+  5: 0.6,  // the waxing quarter — neap
+  6: 0.6,  // nearly whole, coming back — mirrors phase 1
 };
 // The tide keeps its own clock, like the bell — tides do not roll dice.
 // Roughly four a day, jittered enough that you read the drips, not a watch.

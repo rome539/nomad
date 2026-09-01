@@ -846,7 +846,7 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
     const phase = moonPhase();
     // The phase is WHAT it is; the arc is where it has got to. No arc on the
     // dark of the month — a moon that is not there is not climbing anywhere.
-    return (MOON_SKY[phase] ?? MOON_SKY[3]!) + (phase === 3 ? "" : MOON_ARC[skyBand()] ?? "");
+    return (MOON_SKY[phase] ?? MOON_SKY[4]!) + (phase === 4 ? "" : MOON_ARC[skyBand()] ?? "");  // 4 is the dark of the month
   }
   // AND THE SUN AND THE STARS, for the same reason and the same way. Both are
   // questions about the hour rather than about the weather, so they outrank it —
@@ -948,7 +948,7 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   // moon. Last, so no arc ever loses its line to it — a wanderer asking after
   // the sky in the rain gets the rain, which is the sky's most urgent news. On
   // a quiet night the news is the month, and that is worth having.
-  if (isNight()) return MOON_SKY[moonPhase()] ?? MOON_SKY[3];
+  if (isNight()) return MOON_SKY[moonPhase()] ?? MOON_SKY[4];
   return null;
 }
 
