@@ -2898,7 +2898,12 @@ export const ECLIPSE_EVERY = 43;                // one eclipse-day per 43 day-cy
 export const ECLIPSE_TELEGRAPH_MS = 4 * 60_000; // the light thins
 export const ECLIPSE_TOTAL_MS = 6 * 60_000;     // totality — the day fails
 export const ECLIPSE_AFTER_MS = 4 * 60_000;     // the light returns
-export const BLOOD_MOON_EVERY = 13;             // one full moon in thirteen rises red
+// ONE FULL MOON IN FIVE (rome, 2026-09-01). At a 44-hour month that is a red
+// moon every 9.2 days — a little under one a week, and rare enough that it still
+// reads as an omen rather than as weather. It counts MONTHS rather than hours,
+// so it inherits the full moon's walk round the clock for free and lands on
+// whatever hour the month has reached.
+export const BLOOD_MOON_EVERY = 5;
 export const MURMUR_BLOOD_ODDS = 0.06;          // the dead's night: the murmur, twelve times as often
 export const ECLIPSE_TELL_LINES = [
   "The light thins. Not cloud — the grey lid itself is going darker, the way a lamp goes when something stands between it and the flame.",
@@ -2987,7 +2992,7 @@ export const EEL_RUN_FISH_MULT = 2;
 // never happened. So the flood LEANS instead: the eels run all night, and
 // they run hardest on the making water.
 export const EEL_RUN_FLOOD_MULT = 2; // on top of EEL_RUN_FISH_MULT, so a flooding run pays quadruple
-export const EEL_RUN_NIGHT = 4; // the dark night of the moon's month — phase 4 since the month went to seven
+export const EEL_RUN_NIGHT = 6; // the dark night of the moon's month — phase 6 of eleven
 export const EEL_RUN_AMBIENT = [
   "The water is full of eels — silver, moving, all of them going the same way, and none of them hurrying.",
   "An eel breaks the surface, turns over, and is gone. The channel is alive with them.",
@@ -5754,28 +5759,31 @@ export const DAY_CYCLE_MS = 4 * 3_600_000; // 2h day, 2h night
 // skips its outdoor-night check on those nights specifically, so a full moon
 // genuinely lights the grounds instead of just being a flavor label. One full
 // moon roughly once a day (6 * DAY_CYCLE_MS's 4h night-halves).
-// SEVEN, NOT SIX (rome, 2026-08-31, on seeing a full moon at 22:00 and asking
-// whether that was right). It was — and it was right at 22:00 the night before,
-// and would have been every night after, forever.
+// ELEVEN NIGHTS TO THE MONTH (rome, 2026-09-01: six full moons a week is nearly
+// one a day, and that is too many for the thing a door opens on).
 //
-// THE ARITHMETIC. A day-cycle is four hours and the month was six of them, and
-// 6 x 4 = 24. The moon's whole month was exactly one real day, so every phase
-// was welded to the wall clock: the full moon rose at the same minute every
-// night of the world's life, the dark of the month sat at the same minute, and
-// a player's hour of the day decided which moon they were allowed to have. An
-// evening player got the full moon and never the dark; a morning player got the
-// dark and never once, in any session, saw the moon full. The wood's door opens
-// on the full moon. For half the people who could reach it, it never opened.
+// IT WAS SIX AND THAT WAS BROKEN OUTRIGHT: a day-cycle is four hours and six of
+// them is 24, so the moon's whole month was one real day and every phase was
+// welded to the wall clock. The full moon rose at the same minute every night of
+// the world's life, and the hour a player kept decided which moon they were
+// allowed to have — an evening player got the full moon and never the dark, a
+// morning player got the dark and never once saw the moon full. The wood's door
+// opens on the full moon. For half the people who could reach it, it never did.
 //
-// Seven cycles is 28 hours, which shares only a quarter-day with 24 — so the
-// full moon walks four hours round the clock every real day and comes back to
-// where it started after six of them. Every hour of the day gets its turn at
-// every phase. Nothing else had this fault: the eclipse is 43 cycles (172h) and
-// already walked; the blood moon counts full moons, so it inherits the walk.
+// THE CONSTRAINT THAT DECIDES THIS NUMBER. A month of M cycles walks the clock
+// only where gcd(4M, 24) is 4 — that is, where M is coprime with 6. Anything
+// else parks the full moon on a subset of the six night-slots and re-creates a
+// milder version of the same fault: 8 lands on three of them, 9 on two, 12 on
+// one. So the honest choices are 5, 7, 11, 13, and the rate follows from there.
 //
-// The seventh night is a real one and not padding — the rind between the waning
-// half and the dark, which is the night the month was missing.
-export const MOON_FULL_EVERY = 7;
+//   M=7   28h   6.0 a week   (what this was)
+//   M=11  44h   3.8 a week   <= four a week, and still every slot
+//   M=13  52h   3.2 a week
+//
+// Eleven nights is also a better MONTH than seven: room for a full waning arc,
+// a dark, and a waxing arc, instead of jumping half to rind to dark in three
+// steps. The extra nights are written, not padded.
+export const MOON_FULL_EVERY = 11;
 // WHAT THE SKY SAYS AT NIGHTFALL, one line per night of the moon's month
 // (zone-util moonPhase; index 0 is the full moon). Written so the waxing half
 // counts you down out loud — the full moon is the one night the grounds stay
@@ -5805,10 +5813,14 @@ export const MOON_NIGHTS = [
 export const MOON_SKY = [
   "The moon is full — the whole white round of it, high and holding still. There is light enough out here tonight to do without a torch.",
   "The moon is one night past full: a shaving gone off the one edge and the rest of it still bright. It is going down the month from here.",
+  "The moon is going. A clear bite out of the one side now, and what is left of it still lights the ground, but not the way it did.",
   "Half a moon, and the shadow has the other half of it. Whatever it lights, it is lighting less of each night now.",
+  "Less than half, and the dark side of it is winning. You would not read by this.",
   "A rind of moon, and not much of that — the last of it going off the edge. Tomorrow there will be nothing there at all.",
   "There is no moon at all. The sky has its stars and nothing else in it, and the dark out here is the whole of the dark there is.",
   "A thin moon, new-side up, climbing the far side of its month. It gives you nothing yet. It is coming back.",
+  "More of a moon than there was — a proper crescent, and the ground has an edge to it again after a week of not.",
+  "Half a moon, filling. The lit side is the other side now, which is how you know which way the month is going.",
   "The moon is very nearly whole — one clean edge of it left to fill. One more night of this.",
 ];
 // ...and what the sky says when somebody asks after the moon in broad daylight.
@@ -7260,12 +7272,16 @@ export const TIDE_HIGH_ODDS = 0.25;
 // shoulders either side of full reading the same.
 export const TIDE_MOON_SPRING: Record<number, number> = {
   0: 1.6,  // full — the biggest water of the month
-  1: 0.6,  // one past full, going down the month
-  2: 0.6,  // the waning quarter — neap
-  3: 0.6,  // the last rind, going — still neap (the seventh night, 2026-08-31)
-  4: 1.4,  // dark — the other spring, and the eels' own night
-  5: 0.6,  // the waxing quarter — neap
-  6: 0.6,  // nearly whole, coming back — mirrors phase 1
+  1: 0.9,  // one past full, coming off the spring
+  2: 0.7,
+  3: 0.6,  // the waning half — neap
+  4: 0.7,
+  5: 0.9,  // the last rind, building toward the dark spring
+  6: 1.4,  // dark — the other spring, and the eels' own night
+  7: 0.9,  // coming off it again
+  8: 0.7,
+  9: 0.6,  // the waxing half — the other neap
+  10: 0.9, // nearly whole, building back to the full spring
 };
 // The tide keeps its own clock, like the bell — tides do not roll dice.
 // Roughly four a day, jittered enough that you read the drips, not a watch.
