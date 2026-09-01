@@ -2185,7 +2185,7 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       // A fortress bell is heard from the road, and through the floor. It is the
       // one SCHEDULED thing in this world — a player can learn its hours — and
       // until now you could only know that by standing inside the keep for it.
-      z.roomFeedBands(KEEP_HEARD_BANDS, "One bell-note comes off the fortress and rolls out over everything, and then nothing.", "evt");
+      z.roomFeedBands(KEEP_HEARD_BANDS, "One bell-note comes off the fortress and rolls out over everything, and then nothing.", "evt", true);
       z.roomFeed("the-bell-cote", "The bell shudders under your hand before it even sounds — one note, so close it isn't sound anymore, just impact.", undefined, false, "evt");
       z.roomFeed("the-issue-room", "The note comes down through the stone and every racked blade in the room answers it at once, one thin hum out of two hundred edges. The dust stands up off them.", undefined, false, "evt");
       break;
@@ -2194,7 +2194,7 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       st.phase = "active";
       st.until = now + BELL_ACTIVE_MS;
       feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "The bell begins to RING — over and over, iron on iron, and the keep is waking around you.");
-      z.roomFeedBands(KEEP_HEARD_BANDS, "The fortress bell is RINGING — on and on, iron on iron, and whatever is inside those walls is waking to it.", "evt");
+      z.roomFeedBands(KEEP_HEARD_BANDS, "The fortress bell is RINGING — on and on, iron on iron, and whatever is inside those walls is waking to it.", "evt", true);
       z.roomFeed("the-bell-cote", "The bell is RINGING inches from you — iron on iron, filling your skull, drowning every other sense you have.", undefined, false, "evt");
       z.roomFeed("the-issue-room", "The bell is RINGING, a long way up and coming down through every stone of the fortress into this room. The racks sing with it. This is the sound they were stacked here for, and it is two centuries late.", undefined, false, "evt");
       // Everything under the keep's roof stirs at once; the rats are already
@@ -2214,7 +2214,7 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + BELL_AFTERMATH_MS;
       feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "The bell stops. The silence after is worse — the halls are still listening.");
-      z.roomFeedBands(KEEP_HEARD_BANDS, "The bell stops. The fortress goes back to being quiet, which is worse.", "evt");
+      z.roomFeedBands(KEEP_HEARD_BANDS, "The bell stops. The fortress goes back to being quiet, which is worse.", "evt", true);
       z.roomFeed("the-bell-cote", "The bell goes still under your palm — the ringing's out of the air, but not out of your bones yet.", undefined, false, "evt");
       z.roomFeed("the-issue-room", "The note goes out of the stone and the dust settles back onto the racks. The room is still, and every weapon in it is listening for the next one.", undefined, false, "evt");
       break;
