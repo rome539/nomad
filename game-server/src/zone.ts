@@ -8051,7 +8051,21 @@ export class ZoneDO implements DurableObject {
    * The relay copy is never gated: a watcher is watching the world, not sitting
    * in a room of it.
    */
-  public roomFeedBands(bands: Set<string>, text: string, cls?: string, carries = false): void {
+  // A BAND LINE IS HEARD EVERYWHERE IN THE BAND, GATEHOUSES INCLUDED (rome,
+  // 2026-08-31). This channel exists to say a thing to a whole region at once —
+  // the bell over the fortress, the beck up along the east road, the cloud
+  // coming down the hill, the tide turning on the crossing. Every one of those
+  // is heard a map away by definition, and every one of them was being withheld
+  // from the one room in the band with a roof and a fire and people sitting in
+  // it waiting to hear exactly that.
+  //
+  // `carries` was written the other way round — default deaf, with a flag for
+  // the rare line that got through — and in the whole game exactly ONE caller
+  // ever set it. That default was right for roomFeed, which is a room's own
+  // local noise and genuinely stops at the door (a rat below, a bench closing),
+  // and wrong for this one, which is regional news. The flag stays, inverted,
+  // for anything that truly must not reach through: pass false for it.
+  public roomFeedBands(bands: Set<string>, text: string, cls?: string, carries = true): void {
     const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: "*", text, cls } : { v: 0, kind: 24913, room: "*", text });
     for (const s of this.sessions.values()) {
       if (!bands.has(this.bandOf(s.roomId))) continue;

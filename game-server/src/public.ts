@@ -942,6 +942,19 @@ export const PAGE = `<!doctype html>
      world where the other names are real people who can rob and kill you,
      someone stepping into your room is the most actionable line on the screen. */
   #log .who    { color: var(--voice); }
+  /* A TELLING. The keeper's stories, his word on the weather on his own ground,
+     and the asides about his doors — the only lines in the game that are one
+     man handing you knowledge, at a place you had to walk to. They were printing
+     in the log's ordinary grey, indistinguishable from "dry bones clatter from
+     below", which for the single highest-value text in the world is the wrong
+     way round (rome, 2026-08-31).
+     Bone rather than a new hue: this is old knowledge, not an omen and not a
+     living voice, and it should not compete with either. The rule down the left
+     is what actually does the work — nothing else in the log carries one, so a
+     telling is recognisable before a word of it is read, and a long one holds
+     together as a block instead of dissolving into the scroll. */
+  #log .lore   { color: var(--bone); border-left: 2px solid var(--border);
+                 padding-left: 0.6em; margin: 0.15em 0; font-style: italic; }
   #log .big    { animation: tremor 0.35s linear; }
   /* The vitals kill — the rarest strike, on both sides of it (you land one, or
      one lands on you). It keeps its side's colour (gold kill / steel out /
@@ -1716,6 +1729,7 @@ function sndFor(line, c) {
   if (c === "seize") return "grab";
   if (c === "stun") return "thud";
   if (c === "study") return "scratch";
+  if (c === "lore") return "scratch"; // a telling keeps the knowledge channel's voice
   if (c === "unlock") return "latch";
   if (c === "forge") return "forge";
   if (c.indexOf("death") >= 0) return "death";

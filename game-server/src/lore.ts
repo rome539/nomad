@@ -12,6 +12,7 @@ import { pick, chance } from "./rng";
 import { uuid } from "./rng";
 import * as den from "./den";
 import * as ai from "./ai"; // the close read a `study` prints under its own line
+import * as events from "./events"; // the keeper speaks of what is actually running on his ground
 import { WOOD_QUARTERS, MAP_QUARTERS, MOB_LORE } from "./detail";
 import {
   MAP_ITEMS, DETAILED_MAP, FULL_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
@@ -19,7 +20,7 @@ import {
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, ROOTED, FIREKEEPERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
   MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF,
-  GATE_TELLINGS, DOOR_TELLINGS, DOOR_TELLING_ODDS,
+  GATE_TELLINGS, DOOR_TELLINGS, DOOR_TELLING_ODDS, ARC_TELLINGS, ARC_TELLING_ODDS, ARC_BAND,
 } from "./zone-data";
 
 // ---- the milestones: the road's register of who walked it ----
@@ -819,10 +820,35 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
   // lines, and this is a night he talked about something else rather than a page
   // torn out of it. Keyed like the telling, so no keeper knows a door that is
   // not on his ground, and the road knows none because the road has none.
+  // THE WEATHER FIRST, WHEN THERE IS ANY (rome, 2026-08-31). Thirty arcs run in
+  // this world and every one of them was learned by being caught in it. The man
+  // who has sat behind this hatch for two centuries knows them all, and he is
+  // the institution the information toll is supposed to be paid to — so if
+  // something is happening on HIS ground he will generally say so, because it is
+  // the more useful thing to say than the next line of a story he has told a
+  // thousand times.
+  //
+  // COUPLED: only an arc that is actually live, telegraph through aftermath. You
+  // learn the tide by asking on a day the tide is out. And only his own band,
+  // plus the sky, which is everybody's — no keeper knows another man's weather.
+  //
+  // Like the door aside, this does NOT touch keeperTold: the region's telling is
+  // eleven lines and stays eleven lines. A night he talked about the fog is not
+  // a page torn out of it.
+  const live = Object.keys(ARC_TELLINGS).filter((id) => {
+    const owner = ARC_BAND[id];
+    if (owner !== null && owner !== band) return false;
+    return events.phaseOf(z, id) !== "idle";
+  });
+  if (live.length && chance(ARC_TELLING_ODDS)) {
+    session.keeperDueAt = 0;
+    z.send(session, pick(ARC_TELLINGS[pick(live)]!), "lore");
+    return true;
+  }
   const aside = DOOR_TELLINGS[band as Region];
   if (aside?.length && chance(DOOR_TELLING_ODDS)) {
     session.keeperDueAt = 0;
-    z.send(session, pick(aside), "study");
+    z.send(session, pick(aside), "lore");
     return true;
   }
   const heard = session.keeperTold.get(band) ?? 0;
@@ -834,9 +860,16 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
   // NOT the "amb" class, even though this rides the ambience beat: the client
   // DROPS every "amb" line while the tutorial guide is up (public.ts), and the
   // index advances server-side either way — a new player at the bench would lose
-  // the opening of a story and never know. "study" is the knowledge channel (the
-  // milestone register reads on it), is never hushed, and is the honest label.
-  z.send(session, lines[heard % lines.length], "study");
+  // the opening of a story and never know.
+  //
+  // AND NOT "study" ANY MORE EITHER (rome, 2026-08-31). That was the knowledge
+  // channel and it was honest, but it carries no styling of its own, so every
+  // telling printed in the log's ordinary grey — the same grey as dry bones
+  // clattering somewhere below. The single highest-value text in the game, from
+  // the one man who explains anything, read as scenery. "lore" is the same
+  // never-hushed channel with a face: bone-coloured, italic, and ruled down the
+  // left, which nothing else in the log wears. It keeps study's sound.
+  z.send(session, lines[heard % lines.length], "lore");
   // Written as it is heard: one small update per VISIT, which is as cold as a
   // write gets.
   void setKeeperTold(z.env.DB, session.pubkey, packKeeperTold(session.keeperTold))

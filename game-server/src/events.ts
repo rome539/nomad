@@ -1597,7 +1597,7 @@ async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
     case "idle": {
       st.phase = "telegraph";
       st.until = now + CARRIER_TELEGRAPH_MS;
-      z.roomFeedBands(ROAD_HEARD_BANDS, "Word runs the length of the roads before the man does: there is a carrier on the east paving tonight, and the bag is full.", "evt", true);
+      z.roomFeedBands(ROAD_HEARD_BANDS, "Word runs the length of the roads before the man does: there is a carrier on the east paving tonight, and the bag is full.", "evt");
       break;
     }
     case "telegraph": {
@@ -1619,7 +1619,7 @@ async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
       }
       st.data = ids.join(",");
       feedWhere(z, (roomId) => roomId === CARRIER_FROM, "A carrier comes through the thorn gap at a walking pace, satchel buckled, both hands free, and does not stop to talk.");
-      z.roomFeedBands(ROAD_HEARD_BANDS, "He is on the road. So, by now, is everybody who heard.", "evt", true);
+      z.roomFeedBands(ROAD_HEARD_BANDS, "He is on the road. So, by now, is everybody who heard.", "evt");
       break;
     }
     case "active": {
@@ -1633,7 +1633,7 @@ async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
       st.data = undefined;
       z.roomFeedBands(ROAD_HEARD_BANDS, carrier
         ? "The carrier got through. Whatever was in the bag went east with him, and the road is a road again."
-        : "Word comes back down the east road: the carrier did not get through, and somebody is better off tonight.", "evt", true);
+        : "Word comes back down the east road: the carrier did not get through, and somebody is better off tonight.", "evt");
       break;
     }
     case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
@@ -1712,7 +1712,7 @@ async function tickSpate(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + SPATE_TELEGRAPH_MS;
       feedWhere(z, (roomId) => SPATE_ROOMS.has(roomId), "The beck goes brown between one look and the next, and the noise of it climbs. Somewhere up the gill it has already rained.");
-      z.roomFeedBands(ROAD_HEARD_BANDS, "Word comes off the east road: the beck is up and rising, and the low way will not be a way for much longer.", "evt", true);
+      z.roomFeedBands(ROAD_HEARD_BANDS, "Word comes off the east road: the beck is up and rising, and the low way will not be a way for much longer.", "evt");
       // Everything living on the water knows before you do, and starts climbing.
       for (const c of z.creatures.values()) {
         if (SPATE_ROOMS.has(c.roomId) && !DROWNERS.has(c.templateId)) {
@@ -1725,7 +1725,7 @@ async function tickSpate(z: ZoneDO, now: number): Promise<void> {
       st.phase = "active";
       st.until = now + randInt(SPATE_ACTIVE_MIN_MS, SPATE_ACTIVE_MAX_MS);
       feedWhere(z, (roomId) => SPATE_ROOMS.has(roomId), "The beck comes up over the bank all at once, and the low way stops being ground.");
-      z.roomFeedBands(ROAD_HEARD_BANDS, "The beck is over its banks the whole length of the east road. Whatever is down there is in it now.", "evt", true);
+      z.roomFeedBands(ROAD_HEARD_BANDS, "The beck is over its banks the whole length of the east road. Whatever is down there is in it now.", "evt");
       break;
     }
     case "active": {
@@ -1754,7 +1754,7 @@ async function tickSpate(z: ZoneDO, now: number): Promise<void> {
         z.addTrace(roomId, { kind: "scraps", at: now }); // silt, and what came down in it
       }
       feedWhere(z, (roomId) => SPATE_ROOMS.has(roomId), "The water drops as fast as it came up, and leaves the whole course under silt, printed all over with what it brought down.");
-      z.roomFeedBands(ROAD_HEARD_BANDS, "The beck drops back into its bed along the east road. Whatever it took, it has put down somewhere lower.", "evt", true);
+      z.roomFeedBands(ROAD_HEARD_BANDS, "The beck drops back into its bed along the east road. Whatever it took, it has put down somewhere lower.", "evt");
       break;
     }
     case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
@@ -2185,7 +2185,7 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       // A fortress bell is heard from the road, and through the floor. It is the
       // one SCHEDULED thing in this world — a player can learn its hours — and
       // until now you could only know that by standing inside the keep for it.
-      z.roomFeedBands(KEEP_HEARD_BANDS, "One bell-note comes off the fortress and rolls out over everything, and then nothing.", "evt", true);
+      z.roomFeedBands(KEEP_HEARD_BANDS, "One bell-note comes off the fortress and rolls out over everything, and then nothing.", "evt");
       z.roomFeed("the-bell-cote", "The bell shudders under your hand before it even sounds — one note, so close it isn't sound anymore, just impact.", undefined, false, "evt");
       z.roomFeed("the-issue-room", "The note comes down through the stone and every racked blade in the room answers it at once, one thin hum out of two hundred edges. The dust stands up off them.", undefined, false, "evt");
       break;
@@ -2194,7 +2194,7 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       st.phase = "active";
       st.until = now + BELL_ACTIVE_MS;
       feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "The bell begins to RING — over and over, iron on iron, and the keep is waking around you.");
-      z.roomFeedBands(KEEP_HEARD_BANDS, "The fortress bell is RINGING — on and on, iron on iron, and whatever is inside those walls is waking to it.", "evt", true);
+      z.roomFeedBands(KEEP_HEARD_BANDS, "The fortress bell is RINGING — on and on, iron on iron, and whatever is inside those walls is waking to it.", "evt");
       z.roomFeed("the-bell-cote", "The bell is RINGING inches from you — iron on iron, filling your skull, drowning every other sense you have.", undefined, false, "evt");
       z.roomFeed("the-issue-room", "The bell is RINGING, a long way up and coming down through every stone of the fortress into this room. The racks sing with it. This is the sound they were stacked here for, and it is two centuries late.", undefined, false, "evt");
       // Everything under the keep's roof stirs at once; the rats are already
@@ -2214,7 +2214,7 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + BELL_AFTERMATH_MS;
       feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "The bell stops. The silence after is worse — the halls are still listening.");
-      z.roomFeedBands(KEEP_HEARD_BANDS, "The bell stops. The fortress goes back to being quiet, which is worse.", "evt", true);
+      z.roomFeedBands(KEEP_HEARD_BANDS, "The bell stops. The fortress goes back to being quiet, which is worse.", "evt");
       z.roomFeed("the-bell-cote", "The bell goes still under your palm — the ringing's out of the air, but not out of your bones yet.", undefined, false, "evt");
       z.roomFeed("the-issue-room", "The note goes out of the stone and the dust settles back onto the racks. The room is still, and every weapon in it is listening for the next one.", undefined, false, "evt");
       break;
@@ -2514,14 +2514,14 @@ async function tickWant(z: ZoneDO, now: number): Promise<void> {
       const t = z.world!.itemTemplates.get(st.data ?? "");
       feedWhere(z, inGate, `Chalk scrapes on wood: the keeper marks his want on the hatch — ${t?.name ?? "something"}, double in trade, while the chalk lasts.`);
       // ...and word travels OUT, to the ground where the thing is actually found.
-      z.roomFeedBands(WANT_HEARD_BANDS, `Word comes up from the gate: the keeper is asking after ${t?.name ?? "something"} tonight, double in trade, and paying like he means it.`, "evt", true);
+      z.roomFeedBands(WANT_HEARD_BANDS, `Word comes up from the gate: the keeper is asking after ${t?.name ?? "something"} tonight, double in trade, and paying like he means it.`, "evt");
       break;
     }
     case "active": {
       st.phase = "aftermath";
       st.until = now + WANT_AFTERMATH_MS;
       feedWhere(z, inGate, "The keeper wipes the chalk from his hatch. Whatever he wanted it for, the moment has passed.");
-      z.roomFeedBands(WANT_HEARD_BANDS, "Word comes up from the gate: the keeper has wiped his chalk. Whatever he wanted it for, he has stopped wanting it.", "evt", true);
+      z.roomFeedBands(WANT_HEARD_BANDS, "Word comes up from the gate: the keeper has wiped his chalk. Whatever he wanted it for, he has stopped wanting it.", "evt");
       break;
     }
     case "aftermath": {

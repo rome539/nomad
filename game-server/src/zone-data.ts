@@ -8741,6 +8741,184 @@ export const GATE_TELLINGS: Partial<Record<Region, string[]>> = {
 //
 // It does not spend your place in the telling. The story is 11 lines and it
 // stays 11 lines; the aside is a night he talks about something else.
+// ---------------------------------------------------------------------------
+// THE KEEPER ON THE WEATHER (rome, 2026-08-31)
+// ---------------------------------------------------------------------------
+//
+// He had two pools: the region's story, told a line at a time in order, and the
+// rare door aside. Between them they cover what this place WAS and what one
+// sealed room in it does. Nothing covered what the sky is doing tonight, which
+// is the thing a wanderer actually needs, and the thing a man who has sat behind
+// that hatch for two centuries would know better than anybody alive.
+//
+// THIS IS THE INFORMATION TOLL, PAID PROPERLY. Thirty arcs run in this world and
+// every one of them is currently learned by being caught in it: the cloud comes
+// down on the hill and you find out what that costs by being inside it. That is
+// a fair way to learn one of them and a stupid way to learn thirty. So the
+// institution that would know gets to say — at a place you have to reach, in the
+// world's voice, and only about his own ground.
+//
+// COUPLED, NOT A LORE DUMP (law 1). He speaks of an arc that is ACTUALLY LIVE in
+// his band, telegraph through aftermath. You learn the tide by asking on a day
+// the tide is out. A quiet night gets you the story instead, as before — so the
+// weather does not eat the region's telling, it interrupts it.
+//
+// FACTS YES, ODDS NO. He says what a thing is and what it does to a man. He
+// never says a percentage, never names a mechanic, and never tells you a rule
+// you could not have worked out by standing in it long enough — the difference
+// between an institution and a tooltip.
+export const ARC_TELLING_ODDS = 0.4; // when something IS running, it is usually the more useful thing to say
+// Which ground each arc belongs to. Null is the sky, which is everybody's — the
+// rain falls on the fortress and the crossing alike, and any keeper may speak of
+// it. Everything else is one band's business and no other keeper knows it.
+export const ARC_BAND: Record<string, Region | null> = {
+  rain: null, fog: null, cold: null, wind: null, crows: null, eclipse: null,
+  bell: "gate", boil: "gate", gloam: "gate", breach: "gate", escape: "gate", song: "gate", exhale: "gate", wake: "gate", tide: "gate",
+  mast: "wood", rut: "wood", quiet: "wood", walk: "wood",
+  carrier: "road", spate: "road",
+  clouddown: "mountain", scree: "mountain", shadow: "mountain",
+  sea: "crossing", lights: "crossing",
+  pack: "den", fever: "den",
+};
+// Two each. He is a man leaning on a counter, not a lecturer: one line that says
+// what the thing is, one that says what it costs, and both in the voice of
+// somebody who has watched it happen more times than he can count.
+// HE IS BEHIND A SHUT HATCH AND YOU HAVE NEVER SEEN HIS FACE (rome, 2026-08-31).
+// `look keeper` is the authority and it is unambiguous: a pair of forearms, a rag
+// going round the inside of a cup, the top of a head bent over work that does not
+// need doing. He knows the sound of the door. He has never once asked your name.
+//
+// So there are no expressions in here. Nothing almost-smiles, nothing looks at
+// you, nothing is plain on his face — you cannot see his face and you never
+// will. The beats are what reaches you through a shutter: the rag stopping, a cup
+// set down, a pause that goes on slightly too long, and the answer arriving
+// before you have finished asking. He is old, he is unseen, and he knows more
+// about the ground outside than anybody alive has any business knowing.
+//
+// He still tells you the useful thing — facts yes, odds no, the information toll
+// paid at a place you had to walk to. He simply never explains how he comes to
+// know it, and nobody has ever got that out of him.
+export const ARC_TELLINGS: Record<string, string[]> = {
+  // ---- the sky, which belongs to every gate ----
+  rain: [
+    "\"Rain the rest of tonight.\" The rag does not stop going round the cup. \"Take it as a kindness if you are the one doing the following. It puts every scent out and every sound down, and it washes a man's hands for him besides.\"",
+    "\"Ground goes soft.\" A pause, from behind the shutter. \"Everything that walks on it leaves more of a mark than it meant to. Yours included.\"",
+  ],
+  fog: [
+    "\"Fog on the low ground.\" He says it the way another man would say a name.",
+    "\"It does not care which of you is the hunter. You cannot see it and it cannot see you, and in the middle of that the thing with the better nose wins.\"",
+  ],
+  cold: [
+    "\"Hard cold tonight. Nothing living wants to be out in it — so what is out is out because it is hungry enough to be.\"",
+    "\"Cold like this gets into iron and into men in the same order.\" The rag stops. \"Come in before you stop noticing it. That is the part that kills people. Not the cold. The not noticing.\"",
+  ],
+  crows: [
+    "Something settles on the roof, in numbers. He was speaking before it landed. \"They are up, then.\"",
+    "\"Crows do not gather for nothing. Whatever they are on, they were on it before it stopped moving — and they will be there after. Which is how you find it.\"",
+  ],
+  wind: [
+    "The wind has been on the roof an hour. Nothing behind the hatch appears to have noticed. \"That carries a noise further than you would like, and covers the one coming up behind you.\"",
+    "\"Everything with sense is in the lee of something tonight.\" A cup goes down on the sill. \"You will meet the rest.\"",
+  ],
+  eclipse: [
+    "\"You will have seen the light go.\" It is not a question and he does not wait for one. \"It comes round on a count. Some men keep the count. Most are surprised by it every time, and go on being surprised.\"",
+    "\"The dark it makes is not night. Night has a moon in it somewhere.\"",
+  ],
+  // ---- the fortress ----
+  bell: [
+    "\"Twice a day. It has been twice a day since before anybody here was born.\" The rag goes round. \"A garrison mustered to it. There is no garrison. The bell has not been told.\"",
+    "\"While it rings the whole keep is awake. Every hollow thing in it, at once.\" A pause, longer than it needs to be. \"Some men plan a night around not being in there for it. Others plan a night around being in there for exactly that.\"",
+  ],
+  boil: [
+    "\"The warrens are emptying.\" Nothing in the voice moves at all. \"They do that.\"",
+    "\"It is not the rats that are the trouble. It is that they are running from something, and you are about to be standing where they came from.\"",
+  ],
+  wake: [
+    "\"The graves are stirring. Enough dying in one place in one night and the ground takes note — it does not distinguish between a battle and a busy hour.\"",
+    "\"You will have made it yourself, most likely.\" No weight on it, and no accusation either. \"Leave enough of them down there and more comes up than went in.\"",
+  ],
+  gloam: [
+    "\"A room in there has lost its light.\" The rag has stopped and does not start again for a while. \"Not gone out. Taken.\"",
+    "\"Carry a flame tonight, and carry a spare. Whatever is doing it has no interest in you — it wants the light. Standing between the two is the mistake.\"",
+  ],
+  breach: [
+    "\"Something has opened the floor of the warrens from underneath.\" He lets it sit. \"Not dug. Opened. There is a difference, and you would know it if you saw the edges.\"",
+    "\"The keep's dead have gone quiet. Dead things going quiet is the only warning anybody gets.\"",
+  ],
+  escape: [
+    "\"Something got out.\" He might have been saying the fire wanted a turf.",
+    "\"It is coming up, and it is coming fast, and it has been in the dark long enough that it does not much mind what it meets on the way. Whether you are in the way is your business. Not its.\"",
+  ],
+  song: [
+    "\"There is a voice down there holding one note. Every dead thing below is standing still in it, swaying.\" He knows exactly what it sounds like and does not say how. \"You could walk the length of the bone-country and not one would turn a head.\"",
+    "\"The flesh-things hate it, mind. So the corridor is open and the water is agitated — and when the singing stops, the bones wake up wrong.\"",
+  ],
+  exhale: [
+    "The hatch is shut and there is nothing to hear from in here, and he listens anyway. \"The drip has stopped. When the deep stops dripping it is drawing breath.\"",
+    "\"It breathes about as often as a man does. If the man were the size of a hill, and asleep.\"",
+  ],
+  tide: [
+    "\"A whole wing of the deep goes under, and it goes from the bottom up. Everything living down there climbs past you on its way out.\" A pause. \"That is the warning. It is the only one.\"",
+    "\"It puts out every flame it reaches. A man in the dark, in water still rising, has one decision left, and it wants making early.\"",
+  ],
+  // ---- the wood ----
+  mast: [
+    "\"The beech is dropping. Once in a long while the whole wood does it at once, and the floor is thick with it.\"",
+    "\"Good week to be a pig. Good week to be hunting pigs.\" The rag goes round. \"Bad week to walk through a wood full of things that all got there before you did.\"",
+  ],
+  rut: [
+    "\"That roaring is the stags. They lose every ounce of sense they had.\"",
+    "\"A beast that would have run from you a fortnight ago will come down a ride at you now and not stop. And the roaring covers a great deal — for you, and for everything else in there.\"",
+  ],
+  quiet: [
+    "The rag stops. \"The wood has gone quiet. Not calm. Quiet.\"",
+    "\"Every bird in it stopped at once, and the ones that do that are not wrong. Silence is not safety. It is a better ear, and tonight it is not yours.\"",
+  ],
+  walk: [
+    "\"He is out of the middle of it.\" He does not name him, and does not appear to intend to.",
+    "\"Most nights whatever the maze keeps is at the centre of the maze. Tonight it is walking the thing end to end. The birds go up ahead of him, so you will have a moment.\"",
+  ],
+  // ---- the road ----
+  carrier: [
+    "\"There is a carrier on the east paving.\" Word has reached him. Word always has.",
+    "\"A man walking a load along a road. Which sounds like nothing at all, until you count how many people on that road have heard the same thing you just did.\"",
+  ],
+  spate: [
+    "\"The beck is up. The low way is not a way tonight.\"",
+    "\"Water off a hill moves faster than it looks, and takes a man off his feet in a foot of it. Puts everything onto the high ground at once, besides. You, and whatever else was down there.\"",
+  ],
+  // ---- the mountain ----
+  clouddown: [
+    "\"The cloud is coming down the hill. You will see the line of it walking the slope toward you, and then you will not see anything.\"",
+    "\"Inside it there is no up.\" He has known this a long time, and there is no telling from the voice how. \"Men who keep walking in that are the ones we do not hear about again. Sit down. It lifts.\"",
+  ],
+  scree: [
+    "\"The slope is on the move.\" He was listening before you came in.",
+    "\"You hear a little of it run and stop — that is the hill telling you. Then a gully goes at once, and it does not warn you twice. Cross the fans quick, and do not stand in the throat of one.\"",
+  ],
+  shadow: [
+    "\"There is a shadow crossing the slope with nothing above it to have cast one.\" The voice does not change for it, which takes some doing.",
+    "\"The thing on the summit does not stay on the summit. When it is hungry it comes off the mountain. If the hill has gone still and the birds are gone — look up, and then get under something.\"",
+  ],
+  // ---- the crossing ----
+  sea: [
+    "\"The water has turned. Four times in a day, and it can be counted, and the men who count it walk over dry.\"",
+    "\"On a spring it comes further than you think, and takes the sill of more than one door with it. On a neap it barely bothers.\" A pause. \"The difference is the moon, whether the lid lets you see it or not.\"",
+  ],
+  lights: [
+    "\"There are lights out on the fen tonight. Steady ones. Carried ones.\" Nothing else comes for a moment.",
+    "\"Nobody is carrying them. They go where the water is deepest, and they are patient about it, and every year somebody follows one because it looked like a way home.\"",
+  ],
+  // ---- the dens ----
+  pack: [
+    "\"Dogs on the Waste. A lot of them, and none of them anybody's.\" He had stopped work before he said it.",
+    "\"Bar your door and let them through. Or do not, and find out why the ones who stayed out did not come back. Short night either way.\"",
+  ],
+  fever: [
+    "\"The wind has come round off the graves. It comes warm.\" The rag stops. \"That is the wrong thing for it to be.\"",
+    "\"Sleep will not take in it, and a dressing does you no good. Nothing for it but to wait for the wind to come back round off the fen. It always does. The waiting is the cost.\"",
+  ],
+};
 export const DOOR_TELLING_ODDS = 0.07; // about one visit in fourteen
 export const DOOR_TELLINGS: Partial<Record<Region, string[]>> = {
   // THE MOUNTAIN keeper has no institution and never invents one. So his aside
