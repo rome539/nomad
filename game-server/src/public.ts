@@ -4754,8 +4754,35 @@ function drawMap() {
     ctx.fillStyle = dim; ctx.globalAlpha = 0.65;
     ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    // TWO CAPTIONS ON THE SAME GROUND (rome, 2026-08-31: THE OPEN GROUND and
+    // THE EAST ROAD printed through each other). The anchors are the server's
+    // measure of where a band hangs against the whole world, which is what keeps
+    // a caption from sliding when you chart a new room — but nothing ever
+    // checked whether two of them landed in the same place, and where two bands
+    // meet they do. Letter-spaced text at fourteen characters is wide, so the
+    // overlap is not subtle: it reads as one ruined word.
+    //
+    // Measured in SCREEN space, after the zoom, because that is where the
+    // collision actually is — two anchors a comfortable distance apart on the
+    // paper are on top of each other at low magnification. A caption that lands
+    // on one already placed steps down a line and tries again. First come keeps
+    // its place, so the label that has always been there does not move when a
+    // new one appears beside it.
+    var lrects = [], lh = 13 * s;
     for (var lb = 0; lb < g.labels.length; lb++) {
-      ctx.fillText(g.labels[lb].text.split("").join("\\u2009"), sx(g.labels[lb].x), sy(g.labels[lb].y));
+      var ltx = g.labels[lb].text.split("").join("\\u2009");
+      var lpx = sx(g.labels[lb].x), lpy = sy(g.labels[lb].y), lpw = ctx.measureText(ltx).width;
+      for (var lg = 0; lg < 8; lg++) {
+        var clash = false;
+        for (var lr = 0; lr < lrects.length; lr++) {
+          var q = lrects[lr];
+          if (lpx < q.x + q.w && lpx + lpw > q.x && lpy - lh / 2 < q.y + q.h && lpy + lh / 2 > q.y) { clash = true; break; }
+        }
+        if (!clash) break;
+        lpy += lh * 1.35;
+      }
+      lrects.push({ x: lpx, y: lpy - lh / 2, w: lpw, h: lh });
+      ctx.fillText(ltx, lpx, lpy);
     }
     ctx.globalAlpha = 1;
   }

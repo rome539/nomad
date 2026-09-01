@@ -1735,6 +1735,38 @@ export function crouchHolds(z: ZoneDO, creature: Creature): void {
   z.roomFeed(creature.roomId, pick(CROUCH_SETTLE).replace("{a}", cap(tmpl.name)), undefined, false);
 }
 
+// A THING THAT HOLDS ITS GROUND HOLDS IT AT ITS GROUND (rome, 2026-08-31: the
+// bell was not ringing, and the last watchman was standing in the Open Grounds).
+//
+// AGGRESSIVE is excluded from every wander gate in the game, which is right for
+// a boar in its rooting ground: it does not stroll. It is dead wrong for the one
+// AGGRESSIVE creature in the roster that has a PATROLS ROUTE.
+//
+// THE WATCHMAN HAS WALKED A CIRCUIT SINCE MIG 076 — turret, wall-walk, broken
+// battlement, leaning spire, rotted scaffold, the weeper's crown, and back down
+// it — and he has never once walked a step of it, because the wander gate threw
+// him out for being AGGRESSIVE before the route was ever consulted. The gate
+// already carves out patrollers from the BOSS exclusion on the same line
+// (`!tmpl.is_boss || PATROLS[tmpl.id]`) for exactly this reason, and this one
+// case was missed. The homing code two hundred lines down says it outright: a
+// patroller's route IS its territory.
+//
+// So the bell asked whether he was on the turret. A respawn put him in at a
+// MOUTH, his route never ran, and he stood in the grounds for good — the
+// fortress bell stopped the first time anybody killed him, permanently, and the
+// bell door with it, since that hatch opens on the ringing and nothing else.
+//
+// The second clause covers the other eight GUARDIANS, which hold a post rather
+// than walk a round: an eyrie holder or a salt widow put in at a mouth had the
+// same trap waiting, with no route to carry it home. Displaced, it walks back —
+// on the world's own legs, through the homing pull in creatureMoves, which
+// already filters every step to the ones that close on home. On its ground it
+// holds its ground, as before.
+export function walksAnyway(creature: Creature): boolean {
+  if (PATROLS[creature.templateId]) return true;                                  // its route is its ground
+  return !!creature.home && creature.roomId !== creature.home;           // displaced: it goes back
+}
+
 export function bolts(z: ZoneDO, templateId: string, roomId: string): boolean {
   if (!RUNNERS.has(templateId)) return false;
   if (templateId === "roe-deer" && events.rutting(z, roomId)) return false;

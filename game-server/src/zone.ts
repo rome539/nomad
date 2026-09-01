@@ -825,7 +825,7 @@ export class ZoneDO implements DurableObject {
         // has a PATROLS route is exempt, because its route IS where it lives.
         // No existing boss has a route, so nothing else changes.
         if (c.nextWanderAt <= t && (!tmpl.is_boss || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
-            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId) && !ROOTED.has(c.templateId)) {
+            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && (!AGGRESSIVE.has(c.templateId) || ai.walksAnyway(c)) && !ROOTED.has(c.templateId)) {
           // Silent catch-up runs with no one connected, so no ambush fires here.
           void ai.creatureMoves(this, c, t, "wander", true);
         }
@@ -894,7 +894,7 @@ export class ZoneDO implements DurableObject {
       if (HOARDERS.has(c.templateId)) ai.scavengerScoops(this, c);
       const hunted = (await ai.worryPrey(this, c, now)) || await ai.predation(this, c, now);
       if (!hunted && c.nextWanderAt <= now && (!tmpl.is_boss || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
-          && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && !AGGRESSIVE.has(c.templateId) && !ROOTED.has(c.templateId)) {
+          && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && (!AGGRESSIVE.has(c.templateId) || ai.walksAnyway(c)) && !ROOTED.has(c.templateId)) {
         await ai.creatureMoves(this, c, now, "wander", true);
       }
     }
@@ -5027,7 +5027,7 @@ export class ZoneDO implements DurableObject {
           // Only when the crouch is what held it — `hunted` also lands here, and
           // a deer that just ate something is not being calmed by anybody.
           ai.crouchHolds(this, creature); // it holds, and now and then it says so
-        } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && !AGGRESSIVE.has(creature.templateId) && !ROOTED.has(creature.templateId)) {
+        } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && (!AGGRESSIVE.has(creature.templateId) || ai.walksAnyway(creature)) && !ROOTED.has(creature.templateId)) {
           // Mid-wind-up (rouseAt) it holds its ground — a thing that's telegraphed
           // a lunge doesn't stroll off before it commits (keeps the thief's rob,
           // the meal-guard's spring, and the starve-lunge from fizzling out).
