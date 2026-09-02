@@ -1905,11 +1905,11 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // stones would breed. (`here` already had the taken item spliced out above.)
   // A WANDERED THING has no spawn row where it lies — the world put it there and
   // the row it came from is somewhere else entirely. It re-arms off
-  // z.roamedGround instead, and stops counting as living here the moment it is
+  // z.roamed instead, and stops counting as living here the moment it is
   // in your hand. (Was rock-only, when the rock was the only thing that moved.)
   const roamKey = `${itemId}@${session.roomId}`;
-  const tookRoamRock = z.roamedGround.includes(roamKey);
-  if (tookRoamRock) z.roamedGround = z.roamedGround.filter((r) => r !== roamKey);
+  const tookRoamRock = z.roamed.has(roamKey);
+  if (tookRoamRock) z.roamed.delete(roamKey);
   if (tookRoamRock || z.world!.groundSpawns.some((g) => g.item_id === itemId && g.room_id === session.roomId && g.regrows)) {
     const stillHere = here.includes(itemId);
     const alreadyRegrowing = z.regrow.some((r) => r.itemId === itemId && r.roomId === session.roomId);

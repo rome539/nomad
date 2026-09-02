@@ -1411,7 +1411,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       // world's floor food roams now, so this is the third mouth (with the
       // hyena and the raven) that can carry one of these off an address that has
       // no spawn row for it.
-      z.roamedGround = z.roamedGround.filter((r) => r !== `${eaten}@${creature.roomId}`);
+      z.roamed.delete(`${eaten}@${creature.roomId}`);
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       creature.hunger = 0;
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
@@ -2863,10 +2863,10 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
       // a room with no row for it — so without the second half of this test the
       // hoards would quietly vacuum up the world's own gear the moment it moved,
       // and the floors this feature exists to keep interesting would go bare.
-      // roamedGround is the register of exactly that, and the stray-decay sweep
+      // z.roamed is the register of exactly that, and the stray-decay sweep
       // already reads it for the same question.
       if (hoarder && (z.world!.groundSpawns.some((g) => g.room_id === creature.roomId && g.item_id === id)
-        || z.roamedGround.includes(`${id}@${creature.roomId}`))) return false;
+        || z.roamed.has(`${id}@${creature.roomId}`))) return false;
       const fell = z.groundFreshAt.get(`${id}@${creature.roomId}`);
       if (fell !== undefined) {
         if (now - fell < SCOOP_GRACE_MS) return false;
@@ -2904,7 +2904,7 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     // by design), so it is the one that can carry one of these off — and a stale
     // entry would exempt a phantom from the rust forever and strike that room
     // off the wander pool for the life of the world.
-    z.roamedGround = z.roamedGround.filter((r) => r !== `${targetId}@${creature.roomId}`);
+    z.roamed.delete(`${targetId}@${creature.roomId}`);
     (creature.carries ??= []).push(targetId);
     const g = z.world!.itemTemplates.get(targetId);
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
@@ -2957,7 +2957,7 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
       // Not the room's own stock — including a wandered piece, which is the
       // world's own gear standing at an address it has no spawn row for.
       if (z.world!.groundSpawns.some((g) => g.room_id === creature.roomId && g.item_id === id)
-        || z.roamedGround.includes(`${id}@${creature.roomId}`)) return false;
+        || z.roamed.has(`${id}@${creature.roomId}`)) return false;
       const fell = z.groundFreshAt.get(`${id}@${creature.roomId}`);
       if (fell !== undefined) {
         if (now - fell < SCOOP_GRACE_MS) return false; // the kill site is hot
@@ -2970,7 +2970,7 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     floor.splice(idx, 1);
     z.ground.set(creature.roomId, floor);
     z.groundLore.delete(`${targetId}@${creature.roomId}`); // a taken engraving goes silent, like the hyena's
-    z.roamedGround = z.roamedGround.filter((r) => r !== `${targetId}@${creature.roomId}`); // guarded above, but the register never outlives the thing
+    z.roamed.delete(`${targetId}@${creature.roomId}`); // guarded above, but the register never outlives the thing
     // Straight into the pool: the piece is home the moment it is taken.
     const pool = z.nests.get(nest) ?? [];
     pool.push(targetId);

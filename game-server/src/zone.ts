@@ -183,7 +183,12 @@ export class ZoneDO implements DurableObject {
   // for litter somebody dropped and crumble it away — the world would hand you a
   // torch and then rot its own copy. Was `roamRocks`, a bare room list, when the
   // rock was the only thing in the game that moved.
-  public roamedGround: string[] = [];
+  // THE WANDERED FLOOR, as a Set. It is read inside the per-tick stray sweep and
+  // inside pickGroundHome's walk of every room in the world, so an array with
+  // .includes was an O(n) scan in both hot paths — ~280k string compares per
+  // wander pick alone once the whole floor roams. Persisted as an array (see
+  // save/load); a Set is only the in-memory shape.
+  public roamed = new Set<string>();
   private lastCombatRound = 0; // ms of the last tick blows actually landed (see COMBAT_ROUND_MS)
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
   public arrivals = new Map<string, number>();
@@ -485,6 +490,7 @@ export class ZoneDO implements DurableObject {
     if (this.world) return this.world;
     const world = await loadWorld(this.env.DB, zone);
     this.world = world;
+    this.spawnKeptMemo = undefined; // the world's spawn rows just changed under it (reset + reload takes this path too)
     this.dens = await den.loadDens(this);
     this.denBlood = await den.loadDenBlood(this);
     this.buildWorldMaps(world);
@@ -566,8 +572,8 @@ export class ZoneDO implements DurableObject {
       // The old save carried a bare room list, and every entry in it was a rock
       // by definition — that is the only thing that could wander. Key them and
       // the live world keeps every stone it has already moved.
-      this.roamedGround = (saved.roamedGround as string[] | undefined)
-        ?? ((saved.roamRocks as string[] | undefined) ?? []).map((r) => `loose-rock@${r}`);
+      this.roamed = new Set((saved.roamedGround as string[] | undefined)
+        ?? ((saved.roamRocks as string[] | undefined) ?? []).map((r) => `loose-rock@${r}`));
       this.arrivals = new Map(Object.entries(saved.arrivals));
       this.openDoors = new Set(saved.openDoors);
       this.doorCloseAt = new Map(Object.entries(saved.doorCloseAt ?? {}));
@@ -930,7 +936,7 @@ export class ZoneDO implements DurableObject {
       ground: Object.fromEntries(this.ground),
       groundInstances: Object.fromEntries(this.groundInstances),
       regrow: this.regrow,
-      roamedGround: this.roamedGround,
+      roamedGround: [...this.roamed],
       arrivals: Object.fromEntries(this.arrivals),
       openDoors: [...this.openDoors],
       doorCloseAt: Object.fromEntries(this.doorCloseAt),
@@ -1021,7 +1027,7 @@ export class ZoneDO implements DurableObject {
     this.ground.clear();
     this.groundInstances.clear();
     this.regrow = [];
-    this.roamedGround = [];
+    this.roamed.clear();
     this.arrivals.clear();
     this.openDoors.clear();
     this.doorCloseAt.clear();
@@ -5594,6 +5600,25 @@ export class ZoneDO implements DurableObject {
     });
   }
 
+  // The world's own regrowing rows, counted once per wake and keyed
+  // "itemId@roomId". groundSpawns is static for the life of a world load, so
+  // re-filtering all ~317 of it inside a per-tick, per-room, per-kind loop was
+  // pure repetition. Built lazily: the first sweep after a world load pays for
+  // it, every sweep after that is a Map hit.
+  private spawnKeptMemo?: Map<string, number>;
+  private spawnKeptCount(): Map<string, number> {
+    if (!this.spawnKeptMemo) {
+      const m = new Map<string, number>();
+      for (const g of this.world!.groundSpawns) {
+        if (!g.regrows) continue;
+        const k = `${g.item_id}@${g.room_id}`;
+        m.set(k, (m.get(k) ?? 0) + 1);
+      }
+      this.spawnKeptMemo = m;
+    }
+    return this.spawnKeptMemo;
+  }
+
   // The one stray-decay sweep for EVERY growing consumable (rome, 2026-07-17,
   // generalizing the rock/torch laws): call it wherever a renewable thing can
   // pile onto a floor the world didn't grow it on — a drop, a throw, a body's
@@ -5618,9 +5643,18 @@ export class ZoneDO implements DurableObject {
       // A wandering rock is the world's own copy too, even though no row says so
       // — without this the ruin would hand you a rock and then crumble it back
       // into the rubble as if a player had left it lying.
-      const kept = this.world!.groundSpawns.filter((g) => g.item_id === itemId && g.room_id === roomId && g.regrows).length
-        + (this.roamedGround.includes(`${itemId}@${roomId}`) ? 1 : 0);
-      const n = floor.filter((i) => i === itemId).length - kept;
+      // PRESENCE FIRST. The header promises this is a no-op unless a stray is
+      // actually present, and it was not: `kept` was computed before anything
+      // asked whether the room holds one of these at all. This sweep runs over
+      // every floor in the world every tick, so those four filters over the
+      // whole spawn table were being paid ~300 rooms x 4 kinds a tick for the
+      // ~5% of (room, kind) pairs that could ever do anything. Count the floor
+      // first — it is an array of a handful of ids — and leave early.
+      const here = floor.reduce((c, i) => (i === itemId ? c + 1 : c), 0);
+      if (!here) continue;
+      const kept = (this.spawnKeptCount().get(`${itemId}@${roomId}`) ?? 0)
+        + (this.roamed.has(`${itemId}@${roomId}`) ? 1 : 0);
+      const n = here - kept;
       if (n <= 0) continue;
       const pending = this.rot.filter((r) => r.kind === d.kind && r.roomId === roomId && r.itemId === itemId).length;
       for (let i = pending; i < n; i++) {
@@ -5665,7 +5699,7 @@ export class ZoneDO implements DurableObject {
     // walked all 144 floor-gear pieces straight out of the spawn table's
     // protection and the rust would have drained them out of the world one at a
     // time, permanently: nothing re-arms a regrow except a player's hand.
-    for (const r of this.roamedGround) kept.set(r, (kept.get(r) ?? 0) + 1);
+    for (const r of this.roamed) kept.set(r, (kept.get(r) ?? 0) + 1);
     for (const [roomId, floor] of [...this.ground]) {
       if (!floor.length) continue;
       // SLOT GEAR ONLY — the things whose condition genuinely means wear. This
@@ -5805,8 +5839,8 @@ export class ZoneDO implements DurableObject {
       // arm a fresh wander instead of ending the stone's life.
       if (wanders) {
         const key = `${g.itemId}@`;
-        this.roamedGround = this.roamedGround.filter((r) => r !== `${key}${g.roomId}` && r !== `${key}${home}`);
-        this.roamedGround.push(`${key}${home}`);
+        this.roamed.delete(`${key}${g.roomId}`);
+        this.roamed.add(`${key}${home}`);
       }
       if (!silent) {
         const rock = g.itemId === "loose-rock";
@@ -5875,7 +5909,7 @@ export class ZoneDO implements DurableObject {
       if ((room.region ?? "") !== band) continue;
       if (world.entryRooms.has(id) || room.is_safe === 1) continue;
       if ((this.ground.get(id) ?? []).includes(itemId)) continue;
-      if (this.roamedGround.includes(`${itemId}@${id}`)) continue;
+      if (this.roamed.has(`${itemId}@${id}`)) continue;
       pool.push(id);
     }
     return pool.length ? pool[randInt(0, pool.length - 1)] : null;
