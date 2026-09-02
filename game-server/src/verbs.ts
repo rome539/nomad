@@ -35,6 +35,7 @@ import {
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS, EEL_RUN_FISH_MULT, EEL_RUN_FLOOD_MULT, SNOW_NOISE_MULT,
   RIDDLE_DOOR_KEY, MOON_DOOR_KEY, TIDE_DOOR_KEY, BELL_DOOR_KEY, RIDDLE_ROTATE_MS, RIDDLES, RIDDLE_ASK, RIDDLE_OPEN_LINE, RIDDLE_WRONG, RIDDLE_MOCK, RIDDLE_MOCK_AFTER, RIDDLE_WINDOW_MS,
   tideSiltLine, RING_CD_MS,
+  DREAM_ODDS, DREAMS,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
@@ -2502,6 +2503,24 @@ export function cmdRest(z: ZoneDO, session: Session): void {
   // posture; a band with no pool of its own falls back to the dungeon's.
   const flavor = REST[z.regionOf(session.roomId)] ?? REST.upper!;
   z.send(session, pick(hurt ? flavor.hurt : flavor.whole));
+  // DREAMS (2026-08-29). Rest occasionally reads YOU, not just the ground — a
+  // dream keyed to where you slept, and it can teach the world's secrets
+  // without ever being a tutorial. It touches nothing: no heal, no door
+  // opening because you slept, no answer out of the riddle's own mouth.
+  if (chance(DREAM_ODDS)) {
+    const keys: string[] = [];
+    if (isBloodMoon()) keys.push("redmoon");
+    // WHERE YOU SLEPT, and only that. bellOpen and seaLevel are world state, not
+    // room state: with those in, a sleeper in a crypt on the far side of the map
+    // could dream the tide going out because the sea happened to be up somewhere
+    // else. The room-side halves already said the true thing on their own.
+    if (events.keepRoom(z, session.roomId)) keys.push("bell");
+    if ([...z.riddleWrong.keys()].some((k) => k.endsWith(`|${session.pubkey}`))) keys.push("riddle");
+    if (z.regionOf(session.roomId) === "crossing") keys.push("tide");
+    if (z.roomHasFirekeeper(session.roomId) || z.roomLit(session.roomId)) keys.push("fire");
+    if (DEEP_ROOMS.has(session.roomId)) keys.push("deep");
+    z.send(session, pick(DREAMS[keys.length ? pick(keys) : "road"]), "amb");
+  }
   z.roomFeed(session.roomId, `${session.name} settles down to rest.`, session.pubkey, false); // resting: local only, nobody spectates a nap
   // And drop the now-redundant `rest` chip (rome, 2026-08-21). The chip builder
   // has always excluded a resting player; nothing re-pushed chips when the rest

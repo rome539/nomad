@@ -98,6 +98,7 @@ import {
   MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES,
   BELL_DOOR_KEY, BELL_DOOR_SHUT, BELL_DOOR_TREMBLE, BELL_DOOR_OPEN,
   TIDE_SILT_COURSES, TIDE_PRY_MS, TIDE_DIGGING_TOOLS, tideSiltLine, TIDE_PRY_WET, TIDE_PRY_SETTLE, TIDE_PRY_TOOL_HINT, TIDE_PRY_MAKING, TIDE_PRY_OPEN,
+  HABIT_ODDS, HABIT_COOLDOWN_MS, HABITS, HABIT_NIGHT, HABIT_FIRE, HABIT_DEEP, HABIT_GRAVES, QUIRK_ODDS, QUIRK_COOLDOWN_MS, TREASURE_QUIRKS,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
@@ -106,7 +107,7 @@ import {
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, MOB_HIT, MOB_VITALS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   REGION_LABELS, NIGHT_LIT,
-  DEEP_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
+  DEEP_ROOMS, WARRENS_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS, KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
@@ -1513,6 +1514,8 @@ export class ZoneDO implements DurableObject {
       visited: new Set<string>(),
       keeperTold: lore.keeperTold(row.keeper_told),
       lastAmbientAt: Date.now(),
+      habitAt: Date.now(), // the body does not perform the moment you arrive — the cooldown starts with you
+      quirkAt: Date.now(),
       lastActiveAt: Date.now(), // a fresh body is present; hydrateSessions overwrites this from the socket's `la` for a rebuilt one
     };
   }
@@ -5219,6 +5222,35 @@ export class ZoneDO implements DurableObject {
       // region's story and the fire settling must never land on the same
       // breath. Which story is which door you came in by (lore.keeperTells).
       if (inGatehouse && lore.keeperTells(this, session, now)) continue;
+      // THE WANDERER'S OWN HABITS, and the treasures'. These are SIBLINGS of the
+      // room's breath, never passengers on it — the two used to sit under the
+      // ambient send, which meant a habit could only ever fire on a beat the
+      // room had already spoken, arriving welded to the back of a weather line
+      // in the same voice. That is the exact thing the keeper's guard above
+      // exists to prevent, and it also quietly divided the rate by thirty-three:
+      // 0.03 was not 3% of a beat, it was 3% of the ambience's 2.7 minutes, so
+      // a body performed its tells once every ninety minutes and the quirks
+      // never fired at all. Up here the dials mean what they say, and a habit
+      // takes the beat instead of sharing it — the room keeps its peace when
+      // your body is the one talking.
+      if (!inGatehouse && now - session.habitAt >= HABIT_COOLDOWN_MS && chance(HABIT_ODDS)) {
+        const habit = this.drawHabit(session);
+        if (habit) {
+          session.habitAt = now;
+          session.habitLine = habit.line;
+          this.send(session, habit.line, "amb");
+          if (habit.room) this.roomFeed(session.roomId, habit.room.replace("{name}", session.name), session.pubkey, false);
+          continue;
+        }
+      }
+      if (!inGatehouse && now - session.quirkAt >= QUIRK_COOLDOWN_MS && chance(QUIRK_ODDS)) {
+        const quirk = this.drawQuirk(session);
+        if (quirk) {
+          session.quirkAt = now;
+          this.send(session, quirk, "amb");
+          continue;
+        }
+      }
       // The gatehouse keeps its own, slower clock: it's a room where people sit
       // and talk, and the walls shouldn't keep interrupting them.
       const cool = inGatehouse ? GATEHOUSE_AMBIENT_COOLDOWN_MS : AMBIENT_COOLDOWN_MS;
@@ -5346,6 +5378,47 @@ export class ZoneDO implements DurableObject {
     // quiet band than the dungeon's drips leaking into a wood. Add lines to
     // AMBIENCE and it starts breathing.
     return draw(AMBIENCE[this.regionOf(roomId)] ?? []);
+  }
+
+  // THE WANDERER'S OWN HABITS (2026-08-29). The body's tells, drawn from
+  // where the wanderer stands — the same conditional pools the mob habits
+  // use, pointed at the player. Avoids repeating the last line, so the same
+  // tell never lands twice in a row.
+  private drawHabit(session: Session): { line: string; room?: string } | null {
+    const pool: { line: string; room?: string }[] = [...HABITS];
+    if (isNight()) pool.push(...HABIT_NIGHT);
+    if (this.roomHasFirekeeper(session.roomId) || this.roomLit(session.roomId)) pool.push(...HABIT_FIRE);
+    if (DEEP_ROOMS.has(session.roomId)) pool.push(...HABIT_DEEP);
+    if (WARRENS_ROOMS.has(session.roomId)) pool.push(...HABIT_GRAVES);
+    const avoid = session.habitLine;
+    const fresh = pool.filter((h) => h.line !== avoid);
+    return pick(fresh.length ? fresh : pool);
+  }
+
+  // Where a treasure's quirk may perform — the item's own nature meeting the
+  // world that made it. Every one of these is a place the item's text already
+  // claims; the code only lets it happen.
+  private quirkWhere(session: Session, where: string): boolean {
+    const room = session.roomId;
+    switch (where) {
+      case "bell": return events.bellOpen(this);
+      case "water": return this.regionOf(room) === "crossing";
+      case "keep": return events.keepRoom(this, room);
+      case "snow": return events.snowed(this, room);
+      case "warrens": return WARRENS_ROOMS.has(room);
+      case "mountain-night": return this.regionOf(room) === "mountain" && isNight();
+      case "crossing": return this.regionOf(room) === "crossing";
+      default: return false;
+    }
+  }
+
+  private drawQuirk(session: Session): string | null {
+    const candidates: string[] = [];
+    for (const q of TREASURE_QUIRKS) {
+      const held = session.items.some((c) => c.itemId === q.item && (!q.worn || c.equipped));
+      if (held && this.quirkWhere(session, q.where)) candidates.push(...q.lines);
+    }
+    return candidates.length ? pick(candidates) : null;
   }
 
   // ---- creature behavior (shared by live tick and catch-up) ----

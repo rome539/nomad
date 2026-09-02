@@ -259,7 +259,7 @@ export const LAST_HAND: Record<string, [string[], string[], string[]]> = {
     [
       "It is clean under the leaf mould, and the leaf mould is not thick. This was set down recently.",
       "Bark dust sits in the seams and nothing worse does.",
-      "It has never been blooded. Out here that takes either great luck or very little time.",
+      "It has never done the work it was made for. Out here that takes either great luck or very little time.",
     ],
   ],
   // The mountain — climbers, shepherds, the ones the snow kept.
@@ -321,7 +321,7 @@ export const LAST_HAND: Record<string, [string[], string[], string[]]> = {
       "There are two sets of marks on it where two different owners scratched a tally, and neither tally is finished.",
       "It has been stripped for parts and then put back together with what was left.",
       "Three people have owned this and none of them fixed it.",
-      "It has been traded for less each time.",
+      "The last repair is the crudest one, done with whatever was to hand, and there has been no repair since.",
     ],
     [
       "It has changed hands often. The wear does not sit the way one owner's wear sits.",
@@ -3480,6 +3480,116 @@ export const BELL_DOOR_OPEN = " Overhead, the iron hatch stands open on the dark
 // promise, the cast clapper outshouts them both, and the bells share one
 // cooldown — a bell is rung once, and the air needs a beat to settle.
 export const RING_CD_MS = 45_000;
+// ---- THE WANDERER'S HABITS (player weirdness, 2026-08-29) -----------------
+// The mobs' law (mob-weirdness.md), pointed at YOU. A habit that outlived
+// its reason; costs nothing, changes nothing; witnessed only; a chance, not
+// a certainty; the world speaks in variety. The wandering life has its own
+// tells, and the body performs them whether you tell it to or not — on the
+// same beat the room breathes, rarer, and never in a fight. Private lines,
+// mostly; a few have a surface the room can see.
+export const HABIT_ODDS = 0.03;             // per ambient beat, per wanderer
+export const HABIT_COOLDOWN_MS = 3 * 60_000; // the body is not a show
+export const HABITS: { line: string; room?: string }[] = [
+  { line: "You have been walking a long time. You notice because your feet have stopped hurting." },
+  { line: "You check the sky again. You checked it a moment ago. It hasn't changed." },
+  { line: "Your hands have gone to your weapon without you, and gone back, like a man turning in his sleep." },
+  { line: "You realize you have been holding your breath, and let it go." },
+  { line: "You count your steps for a while without meaning to, and lose the count, and do not start again." },
+  { line: "You look back along the way you came. It is exactly as empty as it was when you were standing in it.", room: "{name} looks back the way they came." },
+  { line: "You speak to the dark before you can stop yourself — one low word, nobody's language.", room: "{name} murmurs something under their breath." },
+];
+export const HABIT_NIGHT: { line: string; room?: string }[] = [
+  { line: "You are walking quieter than you mean to. The night has that effect." },
+  { line: "Something about the dark keeps you to the edge of the way." },
+  { line: "You find yourself naming the stars you can still name, and you can still name all of them." },
+];
+export const HABIT_FIRE: { line: string; room?: string }[] = [
+  { line: "You hold your hands toward the fire until they stop being yours, and pull them back." },
+  { line: "You feed the fire a stick without thinking about it, the way you would feed anything that was keeping you alive." },
+  { line: "You watch the fire a while, and the fire watches you back the way fire does." },
+];
+export const HABIT_DEEP: { line: string; room?: string }[] = [
+  { line: "You have been listening so long that the silence has started to sound like a held breath." },
+  { line: "You keep your back to the stone without deciding to, and it is a long time before you notice." },
+  { line: "You are breathing through your nose, shallow, the way you would past something sleeping." },
+];
+export const HABIT_GRAVES: { line: string; room?: string }[] = [
+  { line: "You are standing on your toes. You did not decide to." },
+  { line: "You step over a place in the floor without looking at it, the way you step over a sleeper." },
+  { line: "You keep your voice down, and there is nothing down here that would mind it raised." },
+];
+// THE TREASURES PERFORM THEIR STORIES (2026-08-29). Every carried thing with
+// a past gets to act like it is still in it — the item's own text already
+// claims the behavior, and now the world lets it happen: once in a while,
+// witnessed, mechanical-free. `worn` gear must be on the body; the rest
+// answer from the pack.
+export const QUIRK_ODDS = 0.02;             // per ambient beat, per wanderer
+export const QUIRK_COOLDOWN_MS = 5 * 60_000;
+export const TREASURE_QUIRKS: { item: string; worn: boolean; where: string; lines: string[] }[] = [
+  { item: "the-tenor-bell", worn: true, where: "bell", lines: [
+    "A single thin note, and it comes off your own chest — the Tenor Bell answering the keep's bell, two centuries late and from inside you.",
+    "The bell above is ringing, and the bell you are wearing is ringing back under it, too low to be anything but yours.",
+  ]},
+  { item: "drowned-bell", worn: false, where: "water", lines: [
+    "A small wet sound from the pack, like something far off answering something far off. The drowned bell, ringing once against its will.",
+    "The drowned bell in your pack gives one soft, wet note — then holds still, as if it had heard something.",
+  ]},
+  { item: "the-attainder", worn: false, where: "keep", lines: [
+    "The writ is cold against you, colder than paper has a right to be. It knows where it is.",
+    "In the keep's halls, the Attainder grows heavier, like a thing with work still to do.",
+  ]},
+  { item: "pale-tread", worn: true, where: "snow", lines: [
+    "You look back. There are your prints, a long clear line — and there they stop, where you stand.",
+    "The snow keeps everyone's passing but yours. The Pale Tread is keeping its promise.",
+  ]},
+  { item: "captains-seal", worn: false, where: "warrens", lines: [
+    "The captain's seal is heavy in your pocket, heavier than brass, like it still outranks the dead.",
+    "Among the hollow, the seal in your pack sits like a thing they would still answer to, and it knows it.",
+  ]},
+  { item: "wether-bell", worn: false, where: "mountain-night", lines: [
+    "Something in the pack shifts, once, like the bell tried to ring against the wire and thought better of it.",
+    "On the night mountain, the bound bell in your pack is quiet the way a held thing is quiet.",
+  ]},
+  { item: "tide-tally", worn: false, where: "crossing", lines: [
+    "Your thumb finds the notches of the tide tally and runs along them, counting something the water is doing without you.",
+    "You catch yourself reading the tally against the water, checking its word against the sea's, the way you'd check a watch.",
+  ]},
+];
+// DREAMS (2026-08-29). Rest occasionally reads YOU, not just the ground — a
+// dream keyed to where you slept. Knowledge-as-loot in its purest form: a
+// dream can teach the world's secrets without ever being a tutorial, and it
+// can touch nothing. The pools are picked by the sleeper's state (cmdRest).
+export const DREAM_ODDS = 0.2;
+export const DREAMS: Record<string, string[]> = {
+  redmoon: [
+    "You dream the graves are open and nothing comes out of them, and that is worse than anything coming out of them.",
+    "You dream the moon is bleeding into the ground, and the ground drinks it, and is not satisfied.",
+  ],
+  bell: [
+    "You dream of a ringing that never comes, and wake knowing it was meant for a watch that never came.",
+    "You dream the bell is ringing and the keep's dead are walking toward it, and you walk with them, and it does not feel wrong until you wake.",
+  ],
+  riddle: [
+    "The door asks its question all night. In the dream you answer, and the door is still.",
+    "You dream the riddle again, and this time the answer comes to you — and wakes you, and is gone.",
+  ],
+  tide: [
+    "You dream the water goes out, and keeps going, and the post's lowest band is dry for the first time.",
+    "You dream the tide comes up the cave and over the sill and never stops coming, and the door holds.",
+  ],
+  fire: [
+    "You dream of a fire you did not light, and in the dream you know it is yours to keep going.",
+    "You dream you are the one the fire has been waiting for, and you wake with the smell of it in your nose.",
+  ],
+  deep: [
+    "You dream the deep is breathing, and you are in its breath, and it is warm.",
+    "You dream of a song made of bones, and you wake with the last note still in your teeth.",
+  ],
+  road: [
+    "You dream of the road, and in the dream you are still walking it, and the dream will not let you arrive.",
+    "You dream of a gate that will not open, and you are glad, and you do not know why.",
+  ],
+};
 // PRIZE BOXES. The four doors' boxes (box-kept, box-glade, box-cave,
 // box-armory) and the reliquary obey a different law from every other chest in
 // the world: the DOOR is the lock, so the box itself never asks for anything.

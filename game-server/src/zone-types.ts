@@ -43,6 +43,9 @@ export interface Session {
   bountying?: boolean; // which away it is: true = the keeper's bounty board (modal or typed)
   sorting?: boolean; // which away it is: true = a typed 'inventory' keeping-sort
   stepText?: boolean; // stepped out via a TYPED barter/forge/inventory (text, no modal)
+  habitAt: number;      // last time the body performed one of its own tells; a Session field and not a DO map, like lastAmbientAt, so it dies with the wanderer instead of outliving every session that ever connected
+  habitLine?: string;   // the last tell it performed, so the same one never lands twice running
+  quirkAt: number;      // and the same clock for a carried treasure acting out its past
   loudSelfAt?: number; // last time we told the mover their own load made noise (throttle; ephemeral, not persisted)
   coldToldAt?: number; // last time we told a rester the cold was eating their rest (throttle; ephemeral, not persisted)
   ctxCombat: boolean; // the combat state the last chip set was drawn for (see syncCombatCtx)
