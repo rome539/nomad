@@ -15,6 +15,8 @@ import * as events from "./events";
 import * as works from "./works";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
+  ALTAR_ROOMS, HEART_FRESH_SEC,
+  TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP,
@@ -978,6 +980,78 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
 
 export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
+  // THE TOLL STONES (2026-09-01). Pay the toll and the road forgets you — the
+  // clerk's mark lets go in the field, the one place it otherwise never does
+  // (rest at a gate was the only scrub). A token is spent ONLY when it buys
+  // the forgetting; an unmarked wanderer keeps theirs, and nothing else the
+  // stone is offered is ever taken.
+  if (TOLL_STONES.has(session.roomId)) {
+    if (!arg) {
+      return z.send(session, session.markedUntil
+        ? "The toll stone keeps its own account. Offer a toll-token, and the road forgets you here — the mark the clerk put on you lets go."
+        : "The toll stone keeps its own account. Offer a toll-token, and the road forgets you here.");
+    }
+    if (!(/^toll/.test(arg) || nameMatches("a toll token", arg))) {
+      return z.send(session, "The toll stone takes only the toll.");
+    }
+    const token = session.items.find((c) => c.itemId === "toll-token");
+    if (!token) return z.send(session, "You carry no toll-token.");
+    if (!session.markedUntil) {
+      return z.send(session, "You are not marked. The road has no quarrel with you — keep your token.");
+    }
+    session.items.splice(session.items.indexOf(token), 1);
+    await removeItemRow(z.env.DB, token.rowId);
+    session.markedUntil = undefined;
+    z.send(session, "You set the token down in the stone's hollow. The road takes it — and with it, its eye on you. You are unremarked again.", "gain");
+    z.roomFeed(session.roomId, `${session.name} pays the toll, and the road lets them go.`, session.pubkey, false);
+    return;
+  }
+  // THE SHRINE KEEPS THE COLD (2026-09-01). In an altar room, `offer` is the
+  // shrine's verb — the keeper's trade never was, there is no hatch here. The
+  // altar wants one thing: the deep heart, still cold — and what it gives is
+  // time. The stone keeps the heart cold for you, one promise per wanderer, at
+  // any of the shrine's stones, until you come for it (`take heart`). A spoiled
+  // heart is refused untouched — the stone does not keep what is already gone —
+  // and anything else is refused untouched too. Nothing is ever taken that was
+  // not given for exactly this.
+  if (ALTAR_ROOMS.has(session.roomId)) {
+    if (!arg) {
+      return z.send(session, z.altarHearts.has(session.pubkey)
+        ? "The shrine already keeps a heart for you — one promise per wanderer. Take it from the stone before you lay down another."
+        : "Offer what? The shrine keeps one promise per wanderer: a still-cold heart, kept until you come for it.");
+    }
+    const hearts = session.items.filter((c) => c.itemId === DEEP_HEART);
+    const heartName = world.itemTemplates.get(DEEP_HEART)?.name ?? "";
+    const asksHeart = /^heart/.test(arg) || nameMatches(heartName, arg);
+    if (asksHeart && !hearts.length) return z.send(session, "You carry no heart of the deep.");
+    const heart = asksHeart
+      ? hearts.reduce((best, c) => ((c.acquiredAt ?? -Infinity) > (best.acquiredAt ?? -Infinity) ? c : best), hearts[0])
+      : undefined;
+    if (!heart) {
+      const named = session.items.find((c) => nameMatches(world.itemTemplates.get(c.itemId)?.name ?? "", arg));
+      if (!named) return z.send(session, "You are not carrying that.");
+      return z.send(session, `You hold ${world.itemTemplates.get(named.itemId)?.name ?? "it"} out over the stone. The altar does not want it. It is waiting for a still-cold heart.`);
+    }
+    const cut = heart.acquiredAt;
+    const fresh = cut !== undefined && Math.floor(Date.now() / 1000) - cut < HEART_FRESH_SEC;
+    if (!fresh) {
+      return z.send(session, "You hold the heart out over the stone. The altar does not want it — the cold has gone out of it, and the stone does not keep what is already gone.");
+    }
+    if (z.altarHearts.has(session.pubkey)) {
+      return z.send(session, "The shrine already keeps a heart for you — one promise per wanderer. Take it from the stone before you lay down another.");
+    }
+    // The offering leaves the hand synchronously, before the D1 await — the
+    // cook/cure guard: a racing second frame finds no heart and can never
+    // spend the same one twice.
+    session.items.splice(session.items.indexOf(heart), 1);
+    await removeItemRow(z.env.DB, heart.rowId);
+    z.altarHearts.add(session.pubkey);
+    z.send(session, "You lay the heart on the stone. The stone goes cold under it — colder than the air — and the shrine keeps its promise: the heart will keep until you come for it.", "lore");
+    z.roomFeed(session.roomId, `${session.name} lays a heart on the altar, and the stone keeps it.`, session.pubkey, false);
+    z.roomSound(session.roomId, "A faint chime sounds {dir}.");
+    z.creatureNoise(session.roomId);
+    return;
+  }
   const bar = fenceGuard(z, session);
   if (bar) return z.send(session, bar);
   const trade = session.buying;
@@ -1326,6 +1400,26 @@ export async function repairCore(z: ZoneDO, session: Session, carried: CarriedIt
 }
 
 export async function cmdRepair(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  // THE WHETSTONES (2026-09-01). A field-grade mending, no bench and no
+  // scrap: the stone keeps a WORKING edge, not a good one — it takes a dull
+  // piece up to WHET_CAP and no further. Past that, a piece wants the forge.
+  // No clock, no state: the cap IS the law.
+  if (WHETSTONE_ROOMS.has(session.roomId)) {
+    if (z.inCombat(session)) return z.send(session, "Not while something is trying to kill you.");
+    if (!arg) return z.send(session, "Repair what? (the stone here keeps a working edge — it will not make good steel)");
+    const carried = z.findCarried(session, arg);
+    if (!carried) return z.send(session, "You carry nothing like that.");
+    if (!z.isGear(carried.itemId)) return z.send(session, "The stone keeps an edge. It has nothing for that.");
+    if (carried.condition >= 100) return z.send(session, "It is already whole. The stone has nothing to give it.");
+    if (carried.condition >= WHET_CAP) return z.send(session, "It is already past what a stone can keep. It wants a forge.");
+    carried.condition = Math.min(WHET_CAP, carried.condition + WHET_GAIN);
+    await setItemCondition(z.env.DB, carried.rowId, carried.condition);
+    z.send(session, "You work the piece over the stone — long, even passes, and the old rhythm comes back by itself. It answers with an edge again. A working edge. (past this, it wants a forge)", "gain");
+    z.roomFeed(session.roomId, `${session.name} works a piece over the stone, and the ring of it carries.`, session.pubkey, false);
+    z.roomSound(session.roomId, "Steel sings on stone {dir}, over and over.");
+    z.creatureNoise(session.roomId); // steel on stone is a dinner bell
+    return;
+  }
   const bar = z.benchGuard(session, "bench work");
   if (bar) return z.send(session, bar);
   if (!arg) return z.send(session, "Repair what?");

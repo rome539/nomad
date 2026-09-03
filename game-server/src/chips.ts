@@ -17,6 +17,8 @@ import {
   LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
+  TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM,
+  WRECK_DIVE_ROOMS, WELL_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC,
 } from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
@@ -253,7 +255,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // Blood on your hands and water to lose it in: the chip to scrub it off.
     // Only shown when you're actually marked — it's the quiet affordance a
     // killer looks for, and it never lies to a clean pair of hands.
-    if ((FISHING_ROOMS.has(session.roomId) || drowned || events.raining(z, session.roomId))
+    if ((FISHING_ROOMS.has(session.roomId) || WELL_ROOMS.has(session.roomId) || drowned || events.raining(z, session.roomId))
       && pvp.isBloodied(z, session.pubkey)) suggest.push("wash");
     // Standing in the flood: the way down to the drowned floor. cmdDive
     // refuses with a drowner in the water, so the chip holds back too (the
@@ -261,6 +263,59 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (drowned && ![...z.creatures.values()].some(
       (c) => c.roomId === session.roomId && DROWNERS.has(c.templateId) && !c.hidden,
     )) suggest.push("dive");
+    // THE FIXTURES (2026-09-01). Fifteen of these went in with beautiful room
+    // prose and no way to learn a verb applied — a player could stand in the
+    // room, `look` at the thing, read a paragraph and leave. Twelve got a
+    // sentence in their own voice (detail.ts, the lantern stump's model); these
+    // are the ones where the verb is genuinely unguessable, and the chip is the
+    // only honest way to say it is there. Every one is gated on it actually
+    // WORKING right now, so the row never bait-taps.
+    //
+    // The wrecks: down between the frames, but only with the sea over them and
+    // nothing in the water with you — the same two tests cmdDive makes.
+    if (WRECK_DIVE_ROOMS.has(session.roomId) && events.seaUnder(z, session.roomId)
+      && ![...z.creatures.values()].some(
+        (c) => c.roomId === session.roomId && DROWNERS.has(c.templateId) && !c.hidden,
+      )) suggest.push("dive");
+    // The toll stones: only with the road's eye on you AND the token to buy it
+    // off. Unmarked, the stone has nothing to sell you and the chip stays down.
+    if (TOLL_STONES.has(session.roomId) && session.markedUntil
+      && session.items.some((c) => c.itemId === "toll-token")) suggest.push("offer toll-token");
+    // The shrine: lay a still-cold heart on the stone, or call one back in. The
+    // offer chip checks the cold the way the altar does — a spoiled heart is
+    // refused, so offering one would be a dead tap.
+    if (ALTAR_ROOMS.has(session.roomId)) {
+      if (z.altarHearts.has(session.pubkey)) suggest.push("take heart");
+      else if (session.items.some((c) => c.itemId === DEEP_HEART && c.acquiredAt !== undefined
+        && Math.floor(Date.now() / 1000) - c.acquiredAt < HEART_FRESH_SEC)) suggest.push("offer heart");
+    }
+    // The cold stores and the ossuary: a shelf is only worth naming when you
+    // have something to put on it or something already on it. `fetch` with no
+    // argument reads the shelf back, so it is safe to offer blind.
+    if (COLD_STORE_ROOMS.has(session.roomId) || session.roomId === OSSUARY_ROOM) {
+      if (session.items.some((c) => !c.equipped)) suggest.push("stow");
+      suggest.push("fetch");
+    }
+    // The whetstones: only with something on you the stone could actually take
+    // — dull enough to gain, and not already past what a stone can keep.
+    // Named, like the cure and cook chips: a bare `repair` at the stone only
+    // asks "repair what?", and a chip that answers with a question is a dead
+    // tap. The worst piece first — the one the stone helps most.
+    if (WHETSTONE_ROOMS.has(session.roomId)) {
+      const dull = session.items
+        .filter((c) => z.isGear(c.itemId) && c.condition < WHET_CAP)
+        .sort((a, b) => a.condition - b.condition)[0];
+      if (dull) suggest.push(`repair ${shortName(world.itemTemplates.get(dull.itemId)!.name)}`);
+    }
+    // The gibbet: once ever, in the whole world. If nobody guesses the verb it
+    // never fires for anyone, which is the worst case in the batch.
+    if (session.roomId === GIBBET_ROOM && !z.gibbetCut) suggest.push("cut gibbet");
+    // The road's lamp. The dark-room chip above offers `light torch`, which
+    // lights YOUR torch and walks straight past the socket — so name the socket
+    // here, where it is the better answer: a torch in the stump lights the room
+    // for everyone who comes after you, and keeps burning when you have gone.
+    if (session.roomId === "the-lantern-stump" && !z.roomLit(session.roomId)
+      && session.items.some((c) => c.itemId === TORCH_ITEM)) suggest.push("light stump");
     // OUT AT A GATE THERE IS EXACTLY ONE THING TO DO: go in (rome, 2026-07-13).
     // The hatch and the brazier are fixtures of the GATEHOUSE — they live in its
     // wall, on the other side of the door — so their chips belong in the room that

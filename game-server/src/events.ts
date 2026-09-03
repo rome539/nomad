@@ -238,6 +238,14 @@ export function bellOpen(z: ZoneDO): boolean {
   return p === "active" || p === "aftermath";
 }
 
+// THE ROOST (2026-09-01): a shout under the crow roost puts the crows in the
+// air — the first player-operated bias on the arc system, worked by a voice
+// instead of the weather. The charge-map law holds: the crows become LIKELIER,
+// the roll still decides, and the weather marks everyone, shouter included.
+export function chargeCrows(z: ZoneDO): void {
+  chargeBand(z, "any", "crows");
+}
+
 // Where the rat-tide is RIGHT NOW (null when no boil runs). The tide itself is
 // module-local — a deploy dissolves it and the warrens shrug.
 let boilPath: string[] = [];

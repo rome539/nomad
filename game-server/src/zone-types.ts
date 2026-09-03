@@ -235,6 +235,8 @@ export interface SimState {
   regrow: Regrow[];
   roamRocks?: string[]; // LEGACY, read once on load and folded into roamedGround: rooms holding a wandering fortress rock, from when the rock was the only thing that moved
   roamedGround?: string[]; // "itemId@roomId" for every wandered floor thing — it has no spawn row where it lies, so this is what stops the decay sweep taking it for litter
+  altarHearts?: string[]; // pubkeys whose still-cold heart the shrine is keeping — one promise per wanderer, cold until they come for it
+  gibbetCut?: boolean; // the hanged man is down and stays down — see ZoneDO.gibbetCut for why this is persisted and not per-wake
   arrivals: Record<string, number>; // templateId -> ms when a migrant arrives
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
   doorCloseAt?: Record<string, number>; // "roomId:dir" -> ms epoch a timed door re-seals (the deep door: a heart buys a window, not a thoroughfare)

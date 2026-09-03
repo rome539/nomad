@@ -43,9 +43,10 @@
 // enemy can learn, and the walk home is a walk you now have a reason to survive.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
-import { type CarriedItem, loadContainer, setContainer, setItemCondition, removeItemRow } from "./world";
+import { type CarriedItem, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow } from "./world";
 import { SCRAP_ID, IRON_ID, PACK_CAP, DEN_BUNKS, DEN_CAP, DEN_LAPSE_MS, DEN_BAR_IRON, DEN_BAR_SCRAP,
   DEN_RAISE_IRON, DEN_RAISE_SCRAP,
+  COLD_STORE_ROOMS, COLD_CONTAINER, OSSUARY_ROOM, OSSUARY_CONTAINER,
   DEN_RUST_PER_HOUR, DEN_RUST_FLOOR, DEN_WAKE_CHANCE, SEALED_WEAR_MULT, GEAR_FAILING_AT, GEAR_WORN_AT } from "./zone-data";
 import { nameMatches, shortName } from "./zone-util";
 
@@ -626,6 +627,56 @@ export async function shelvesOf(z: ZoneDO, pubkey: string): Promise<Map<string, 
 }
 
 export async function cmdStow(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  // THE COLD STORES (2026-09-01): the icehouse, the shieling's larder, the
+  // cold hollow — the mountain's cold is ONE institution with three doors.
+  // Food stowed at any of them waits in the same cold and comes out as young
+  // as the day it went in: the shrine's law, told for food.
+  if (COLD_STORE_ROOMS.has(session.roomId)) {
+    const held = await loadContainer(z.env.DB, session.pubkey, COLD_CONTAINER);
+    if (!arg) return z.send(session, held.length
+      ? `The cold keeps: ${held.map((c) => z.world!.itemTemplates.get(c.itemId)?.name ?? c.itemId).join(", ")}.`
+      : "The cold is empty here. It is very good at keeping, and it has nothing to keep.");
+    const carried = z.findCarried(session, arg);
+    if (!carried) return z.send(session, "You carry nothing like that.");
+    if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= DEN_CAP) {
+      return z.send(session, `The cold keeps ${DEN_CAP} of that sort of thing for you and no more.`);
+    }
+    const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
+    const idx = session.items.indexOf(carried);
+    if (idx === -1) return z.send(session, "That's already left your pack.");
+    session.items.splice(idx, 1);
+    carried.equipped = false;
+    await setContainer(z.env.DB, carried.rowId, COLD_CONTAINER);
+    z.send(session, `You set ${tmpl.name} into the cold. It will keep here — the cold does not age anything.`);
+    z.roomFeed(session.roomId, `${session.name} sets something into the cold.`, session.pubkey, false);
+    return;
+  }
+  // THE OSSUARY (2026-09-01): the dead keep their own — a shelf at the dead's
+  // address in the deep. Gear is unlimited here, exactly as the den's shelf,
+  // and nothing in it is preserved: the dead do not keep food fresh, they keep
+  // it. Deep loot stops needing a gate run to be banked, which is what the
+  // dead are for.
+  if (session.roomId === OSSUARY_ROOM) {
+    const held = await loadContainer(z.env.DB, session.pubkey, OSSUARY_CONTAINER);
+    if (!arg) return z.send(session, held.length
+      ? `The dead keep: ${held.map((c) => z.world!.itemTemplates.get(c.itemId)?.name ?? c.itemId).join(", ")}.`
+      : "The dead are keeping nothing for you here.");
+    const carried = z.findCarried(session, arg);
+    if (!carried) return z.send(session, "You carry nothing like that.");
+    if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= DEN_CAP) {
+      return z.send(session, `The dead keep ${DEN_CAP} of that sort of thing for you and no more.`);
+    }
+    const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
+    const idx = session.items.indexOf(carried);
+    if (idx === -1) return z.send(session, "That's already left your pack.");
+    session.items.splice(idx, 1);
+    carried.equipped = false;
+    if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
+    await setContainer(z.env.DB, carried.rowId, OSSUARY_CONTAINER);
+    z.send(session, `You lay ${tmpl.name} among the dead. They keep their own — and they give nothing back one breath younger than it went in.`);
+    z.roomFeed(session.roomId, `${session.name} lays something among the dead.`, session.pubkey, false);
+    return;
+  }
   const den = keepingDen(z, session);
   if (!den) {
     return z.send(session, throughTheDoorNote(z, session)
@@ -668,6 +719,55 @@ export async function cmdStow(z: ZoneDO, session: Session, arg: string): Promise
 }
 
 export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  // THE COLD STORES (2026-09-01): fetching out of the cold. What comes out
+  // comes out as young as it went in — the cold kept it, and the spoiling
+  // clock starts again only when it is in your hand. The shrine's law for
+  // food, and the reason the institution has three doors.
+  if (COLD_STORE_ROOMS.has(session.roomId)) {
+    const held = await loadContainer(z.env.DB, session.pubkey, COLD_CONTAINER);
+    if (!arg) return z.send(session, held.length
+      ? `The cold keeps: ${held.map((c) => z.world!.itemTemplates.get(c.itemId)?.name ?? c.itemId).join(", ")}.`
+      : "The cold is empty here. It is very good at keeping, and it has nothing to keep.");
+    const entry = held.find((c) => {
+      const t = z.world!.itemTemplates.get(c.itemId);
+      return t ? nameMatches(t.name, arg) : false;
+    });
+    if (!entry) return z.send(session, "Nothing of yours in the cold by that name.");
+    const tmpl = z.world!.itemTemplates.get(entry.itemId)!;
+    if (z.foodCapped(session, entry.itemId)) return z.send(session, z.foodFullNote());
+    if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${z.packCap(session)} slots). Make room first.`);
+    await setContainer(z.env.DB, entry.rowId, "");
+    // The cold's whole promise: what comes out is as young as it went in. The
+    // spoiling clock restarts from this breath, for anything that ages.
+    if (tmpl.edible && entry.acquiredAt !== undefined) {
+      entry.acquiredAt = Math.floor(Date.now() / 1000);
+      await setItemAcquiredAt(z.env.DB, entry.rowId, entry.acquiredAt);
+    }
+    session.items.push(entry);
+    z.send(session, `You take ${tmpl.name} from the cold — cold as the day you put it in.`);
+    z.roomFeed(session.roomId, `${session.name} takes something out of the cold.`, session.pubkey, false);
+    return;
+  }
+  // THE OSSUARY (2026-09-01): taking back what the dead were keeping. They give
+  // it up without a word — and not one breath younger than it went in.
+  if (session.roomId === OSSUARY_ROOM) {
+    const held = await loadContainer(z.env.DB, session.pubkey, OSSUARY_CONTAINER);
+    if (!arg) return z.send(session, held.length
+      ? `The dead keep: ${held.map((c) => z.world!.itemTemplates.get(c.itemId)?.name ?? c.itemId).join(", ")}.`
+      : "The dead are keeping nothing for you here.");
+    const entry = held.find((c) => {
+      const t = z.world!.itemTemplates.get(c.itemId);
+      return t ? nameMatches(t.name, arg) : false;
+    });
+    if (!entry) return z.send(session, "Nothing of yours among the dead by that name.");
+    if (z.foodCapped(session, entry.itemId)) return z.send(session, z.foodFullNote());
+    if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${z.packCap(session)} slots). Make room first.`);
+    await setContainer(z.env.DB, entry.rowId, "");
+    session.items.push(entry);
+    z.send(session, `You take ${z.world!.itemTemplates.get(entry.itemId)?.name ?? "it"} back from the dead. They give it up without a word.`);
+    z.roomFeed(session.roomId, `${session.name} takes something back from the dead.`, session.pubkey, false);
+    return;
+  }
   // YOUR THINGS NEVER BECOME UNREACHABLE (rome, 2026-08-03: gear stored in the
   // den must never disappear on him).
   //

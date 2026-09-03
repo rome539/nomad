@@ -99,6 +99,7 @@ import {
   BELL_DOOR_KEY, BELL_DOOR_SHUT, BELL_DOOR_TREMBLE, BELL_DOOR_OPEN,
   TIDE_SILT_COURSES, TIDE_PRY_MS, TIDE_DIGGING_TOOLS, tideSiltLine, TIDE_PRY_WET, TIDE_PRY_SETTLE, TIDE_PRY_TOOL_HINT, TIDE_PRY_MAKING, TIDE_PRY_OPEN,
   HABIT_ODDS, HABIT_COOLDOWN_MS, HABITS, HABIT_NIGHT, HABIT_FIRE, HABIT_DEEP, HABIT_GRAVES, QUIRK_ODDS, QUIRK_COOLDOWN_MS, TREASURE_QUIRKS,
+  SHELTER_ROOMS, YEW_ROOM, GIBBET_ROOM,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
@@ -189,6 +190,16 @@ export class ZoneDO implements DurableObject {
   // wander pick alone once the whole floor roams. Persisted as an array (see
   // save/load); a Set is only the in-memory shape.
   public roamed = new Set<string>();
+  // The shrine's kept hearts — pubkeys with a still-cold heart on the stone,
+  // one promise per wanderer, cold until they come for it. Persisted with the
+  // sim; a sleeping world still keeps what was laid on its altars.
+  public altarHearts = new Set<string>();
+  // The gibbet's rope, once cut, stays cut. PERSISTED, and it has to be: left
+  // to the wake, the world re-hung its dead every time it went quiet — which is
+  // nightly — and the same man paid out another cord, another roll at a
+  // toll-token and another roll at a tin of cigarettes. Cigarettes are the hard
+  // currency; a currency on a nightly timer is a mint.
+  public gibbetCut = false;
   private lastCombatRound = 0; // ms of the last tick blows actually landed (see COMBAT_ROUND_MS)
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
   public arrivals = new Map<string, number>();
@@ -574,6 +585,8 @@ export class ZoneDO implements DurableObject {
       // the live world keeps every stone it has already moved.
       this.roamed = new Set((saved.roamedGround as string[] | undefined)
         ?? ((saved.roamRocks as string[] | undefined) ?? []).map((r) => `loose-rock@${r}`));
+      this.altarHearts = new Set(saved.altarHearts ?? []);
+      this.gibbetCut = saved.gibbetCut ?? false;
       this.arrivals = new Map(Object.entries(saved.arrivals));
       this.openDoors = new Set(saved.openDoors);
       this.doorCloseAt = new Map(Object.entries(saved.doorCloseAt ?? {}));
@@ -937,6 +950,8 @@ export class ZoneDO implements DurableObject {
       groundInstances: Object.fromEntries(this.groundInstances),
       regrow: this.regrow,
       roamedGround: [...this.roamed],
+      altarHearts: [...this.altarHearts],
+      gibbetCut: this.gibbetCut,
       arrivals: Object.fromEntries(this.arrivals),
       openDoors: [...this.openDoors],
       doorCloseAt: Object.fromEntries(this.doorCloseAt),
@@ -1028,6 +1043,8 @@ export class ZoneDO implements DurableObject {
     this.groundInstances.clear();
     this.regrow = [];
     this.roamed.clear();
+    this.altarHearts.clear();
+    this.gibbetCut = false;
     this.arrivals.clear();
     this.openDoors.clear();
     this.doorCloseAt.clear();
@@ -2384,6 +2401,34 @@ export class ZoneDO implements DurableObject {
     const bellHere = world.exits.get(session.roomId)?.some((e) => e.key_item === BELL_DOOR_KEY);
     if (bellHere && arg && /^(bell |black )?door$|^hatch$|^trap ?door$/.test(arg)) {
       return this.bellDoorRefusal(session);
+    }
+    // THE GIBBET (2026-09-01). The cord was cut through cleanly once before —
+    // somebody did this before you. Cut the hanged man down: the cord is the
+    // prize, his leavings are his own, and where he falls he leaves remains —
+    // evidence on the road, for every passer to read. A crime scene you make,
+    // with your own hands, and nothing forces it.
+    if (session.roomId === GIBBET_ROOM && arg && /^(gibbet|rope|noose|body|hanged)/.test(arg)) {
+      if (this.gibbetCut) {
+        return this.send(session, "The rope is already cut. The gibbet is empty now, and the road is one dead man lighter.");
+      }
+      if (!this.packRoom(session, "hempen-cord")) {
+        return this.send(session, "Your pack is full — make room, and then cut him down. The gibbet will keep him a while longer.");
+      }
+      this.gibbetCut = true;
+      this.addTrace(session.roomId, { kind: "remains", at: Date.now() });
+      await this.grantItem(session, "hempen-cord", { kept: true });
+      let leavings = "";
+      if (chance(0.25) && this.packRoom(session, "toll-token")) {
+        await this.grantItem(session, "toll-token", { kept: true });
+        leavings = " In his coat: a toll-token, unpaid.";
+      } else if (chance(0.2) && this.packRoom(session, "dry-cigarettes")) {
+        await this.grantItem(session, "dry-cigarettes", { kept: true });
+        leavings = " In his coat: a tin of cigarettes, dry still.";
+      }
+      this.send(session, `You saw through the rope, and it parts with a dry sound. The body comes down heavy, and the ground takes it the way ground takes everything. The cord is cut cleanly at one end — it would hold your weight today.${leavings}`, "gain");
+      this.roomFeed(session.roomId, `${session.name} cuts the hanged man down from the gibbet, and the road sees it.`, session.pubkey, false);
+      this.roomSound(session.roomId, "Rope parts {dir}, and something heavy comes down.");
+      return;
     }
     // THE WETHER'S BELL (the depth audit, 2026-08-29). Its clapper is bound up
     // in wire — "somebody stopped it ringing on purpose" — and the glassed
@@ -5130,7 +5175,10 @@ export class ZoneDO implements DurableObject {
           : (this.wearsTrait(session, "sodden") || events.raining(this, session.roomId)) ? SODDEN_COLD_MULT : 1;
         // Wind rides the cold: a rest that was already chancy is chancier.
         const inWind = events.windy(this, session.roomId);
-        const restSkip = inWind ? WIND_CHILL_REST_SKIP : COLD_REST_SKIP;
+        // THE SHELTERS (2026-09-01): a roof that holds and walls that break
+        // the wind — the wayside shelter and the withy hut keep the cold and
+        // the gale outside, and a rest under them closes as if it were fair.
+        const restSkip = SHELTER_ROOMS.has(session.roomId) ? 0 : (inWind ? WIND_CHILL_REST_SKIP : COLD_REST_SKIP);
         if (!byFire && !warmed && events.coldBites(this, session.roomId) && chance(restSkip * coldMult)) {
           // A silent tax is a lie: tell them, once in a while, why the rest is
           // closing nothing. (Throttled — not a line every skipped tick.)
@@ -5281,7 +5329,12 @@ export class ZoneDO implements DurableObject {
     // spawn floors were wholly exempt. Sweeping the floors the world is
     // already holding costs a filter over the few rooms that have any items,
     // and guarantees a historical pile drains without waiting on a passer-by.
-    for (const roomId of this.ground.keys()) this.armStrayDecay(roomId);
+    // THE HOLLOW YEW (2026-09-01) keeps what is put in it — the tree is the
+    // world's dead-drop, and the decay sweep has no business in it.
+    for (const roomId of this.ground.keys()) {
+      if (roomId === YEW_ROOM) continue;
+      this.armStrayDecay(roomId);
+    }
     this.applyRegrow(now, false);
     ai.applyArrivals(this, now, false);
     ai.scheduleArrivals(this, now);
@@ -5701,6 +5754,7 @@ export class ZoneDO implements DurableObject {
     // time, permanently: nothing re-arms a regrow except a player's hand.
     for (const r of this.roamed) kept.set(r, (kept.get(r) ?? 0) + 1);
     for (const [roomId, floor] of [...this.ground]) {
+      if (roomId === YEW_ROOM) continue; // the tree keeps what is put in it
       if (!floor.length) continue;
       // SLOT GEAR ONLY — the things whose condition genuinely means wear. This
       // deliberately does not use isGear(), which is a wider net: the lantern and
@@ -6931,6 +6985,7 @@ export class ZoneDO implements DurableObject {
       // A torch someone set (or dropped) on the stone, still burning — the room's
       // own light while it lasts.
       if (this.roomHasFirekeeper(room.id)) lines.push("A charcoal clamp stands smouldering under its turf, a low red seam breathing at the foot of it — banked days ago, and warm the whole way round.");
+      else if (room.id === "the-lantern-stump" && this.roomLit(room.id)) lines.push("The lantern stump is burning — the road has its light back, for as long as the torch in it lasts.");
       else if (this.roomLit(room.id)) lines.push("A torch burns on the floor here, throwing the dark back off the walls.");
       // Or the light is in somebody's hand. Say whose work you're seeing by —
       // in the dark it is the difference between the room being lit and you
@@ -6988,6 +7043,11 @@ export class ZoneDO implements DurableObject {
         lines.push(this.nests.get(room.id)?.length
           ? "High above, wedged where the light hardly reaches, a raven's nest is tucked in — and something in it glints. (feed the raven here, and it may fetch you a piece)"
           : "High above, wedged where the light hardly reaches, a raven's nest is tucked in — sticks and wire and nothing else in it today. (the birds keep what they find here)");
+      }
+      // THE SHRINE KEEPS THE COLD (2026-09-01). Your own promise, named in the
+      // room — per wanderer, so one person's bank never reads as another's.
+      if (ALTAR_ROOMS.has(room.id) && this.altarHearts.has(session.pubkey)) {
+        lines.push("A still-cold heart lies on the altar, kept for you. (take it when you come for it)");
       }
       for (const cache of world.caches) {
         if (this.cacheRoomId(cache) !== room.id) continue;

@@ -759,7 +759,12 @@ export const BECK_EEL_ODDS = 0.06;   // the open beck: an eel now and then, same
 export const TRAP_EEL_ODDS = 0.55;   // the traps: more often than not, because that is what they are for
 export const FISHING_DEEP = new Set(["pocket-of-air", "the-weir", "black-canal", "leech-pools", "the-sump", "the-cistern",
   "the-eel-run", "the-breathing-hall"]); // the Tideways' waters (069) — the tide restocks them when it drains
-export const FISHING_ROOMS = new Set([...FISHING_SURFACE, ...FISHING_DEEP, ...FISHING_CROSSING, ...CROSSING_TRAPS]);
+// THE EEL DITCH (2026-09-01): the wood's first water, cut by somebody who knew
+// eels keep alive out of water. The ditch gives eel, and often — that is what
+// it was cut for.
+export const FISHING_DITCH = new Set(["the-eel-ditch"]);
+export const DITCH_EEL_ODDS = 0.55;
+export const FISHING_ROOMS = new Set([...FISHING_SURFACE, ...FISHING_DEEP, ...FISHING_CROSSING, ...CROSSING_TRAPS, ...FISHING_DITCH]);
 export const SEA_EEL_ODDS = 0.15;    // open salt: an eel oftener than the fen gives one, and never a trout
 export const CROSSING_TRAP_EEL = 0.60;  // the cutter's grigs are set FOR eel and they are set well
 export const FISH_ODDS = 0.18;         // a cast catches SOMETHING less than one time in five
@@ -5578,6 +5583,69 @@ export const SENTINEL_ROOMS = new Set(["undercroft"]);
 // leaked to ~20 altarless rooms — a torch "on the altar" at the gate). Add a
 // room here only if it genuinely has an altar a gift could lie on.
 export const ALTAR_ROOMS = new Set(["shrine", "chapel", "the-buried-chapel", "the-silt-chapel"]);
+// THE SHRINE KEEPS THE COLD (2026-09-01). The altar is the one fixture that
+// already ACTS — "the shrine keeps its promises", and the regrow law puts the
+// bloodwort back on its stone. Its promise, made mechanical: offer a still-cold
+// heart and the stone keeps it cold for you — one promise per wanderer, kept at
+// any of the shrine's stones until you come for it. The heart's whole problem is
+// the clock; the shrine is the one place in the world where the clock stops.
+// The race is still paid on the way IN (a spoiled heart is refused untouched —
+// the stone does not keep what is already gone), and nothing is ever taken that
+// was not given for exactly this.
+// ---- THE WORLD'S INTERACTABLES (2026-09-01) --------------------------------
+// The shrine set the bar: a fixture answers the player standing there, on a
+// verb that already exists, witnessed, bias-not-trigger. The rest of the world
+// follows it in SETS — an institution is never one room.
+//
+// THE TOLL STONES — the clerk's own route. Pay the toll and the road forgets
+// you: the mark the clerk put on you lets go in the field, which is the one
+// place it otherwise never does (rest at a gate was the only scrub).
+export const TOLL_STONES = new Set(["the-toll-stone", "the-weighbridge", "the-tollkeepers-ruin"]);
+// THE WHETSTONES — where the garrison (and the men after them) kept an edge:
+// the forge, both muster yards, the smithy ruin, the sapper's mine. The stone
+// keeps a WORKING edge, not a good one — it mends a dull piece up to 60 and
+// no further; past that, a piece wants a forge. Free, no clock, and honest:
+// the bench is the real smith.
+export const WHETSTONE_ROOMS = new Set(["forge", "muster", "the-mustering-yard", "the-smithy-ruin", "the-mine-gallery", "the-camouflet"]);
+export const WHET_GAIN = 15; // one pass over the stone
+export const WHET_CAP = 60;  // ...and no further — a working edge, not a good one
+// THE COLD STORES — the icehouse, the shieling's stone larder, the cold hollow.
+// The mountain's cold is ONE institution with three doors: food stowed at any
+// of them waits in the same cold, and comes out as young as the day it went
+// in. The shrine's law, told for food — the spoiling clock stops while the
+// cold keeps it.
+export const COLD_STORE_ROOMS = new Set(["the-icehouse", "the-shieling", "the-cold-hollow"]);
+export const COLD_CONTAINER = "cold";
+// THE WRECK DIVES — the ribs of the great boat and the half-drowned cart sit
+// at rank 1 on the tide line: when the sea comes up over them, you can go
+// down through the frames after what they carried. A slow water, like every
+// fishing water: a few catches, then it forgets you.
+export const WRECK_DIVE_ROOMS = new Set(["the-wreck-ribs", "the-half-drowned-cart"]);
+export const WRECK_DIVE_CATCHES = 2;
+export const WRECK_DIVE_REST_MS = 45 * 60_000;
+export const WRECK_LOOT: { item: string; chance: number }[] = [
+  { item: "salt-block", chance: 0.16 },
+  { item: "tide-tally", chance: 0.14 },
+  { item: "scrap-iron", chance: 0.14 },
+  { item: "oyster-knife", chance: 0.12 },
+  { item: "pilots-mark", chance: 0.12 },
+  { item: "pale-eel", chance: 0.10 },
+  { item: "ferrymans-fare", chance: 0.10 },
+  { item: "drowned-bell", chance: 0.06 },
+];
+// THE SECOND WAVE (2026-09-01) — the fixtures that survived the follow-through:
+// each one answers the player standing there, on a verb that already exists.
+export const WELL_ROOMS = new Set(["the-well-court", "the-shallow-well"]); // water where the rain isn't: the wash
+export const CROW_ROOST = "the-crow-roost";       // a shout under it puts the crows up
+export const YEW_ROOM = "the-hollow-yew";         // the tree keeps one thing — the world's dead-drop
+export const YEW_CAP = 1;
+export const GIBBET_ROOM = "the-crooked-gibbet";  // cut him down: the cord, his leavings, the evidence
+export const SHELTER_ROOMS = new Set(["the-wayside-shelter", "the-withy-hut"]); // a roof out of the cold: rest closes
+export const OSSUARY_ROOM = "deep-ossuary";       // the dead keep their own: a shelf in the deep
+export const OSSUARY_CONTAINER = "ossuary";
+export const BEAM_ROOM = "the-beam-walk";         // eight inches of iron; the wind's opinion costs
+export const BEAM_FALL_ODDS = 0.5;                // ...and a cord answers it, spent on the far side
+export const BEAM_FALL_DMG = 5;
 // A roused sentinel stays up this long. Asleep you slip past (and rouse it);
 // awake it bars the way down until it's killed or drops back to sleep. Every
 // fresh disturbance (a passer, a blow) resets the clock, so a busy deep keeps

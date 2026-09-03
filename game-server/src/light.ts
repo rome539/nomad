@@ -73,6 +73,27 @@ export function guardBack(z: ZoneDO, session: Session): string {
 // Kindle a light. No arg lights the torch first, the lantern if you carry no
 // torch; "light lantern" / "light torch" choose. One at a time either way.
 export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<void> {
+  // THE ROAD'S LAMP (2026-09-01). The stump's own text is an open wound: "a
+  // light stood here to say where the road was after dark. Nothing says where
+  // the road is after dark now." `light` the stump spends one of your torches
+  // into the old socket, and the road has its light back for as long as it
+  // burns — shared light, like any floor flame, and gone when it gutters.
+  if (session.roomId === "the-lantern-stump" && /^(the )?(lantern[- ]?stump|stump|lamp|socket|standard)$/.test(arg.trim().toLowerCase())) {
+    if (z.roomLit(session.roomId)) {
+      return z.send(session, "The old socket is already burning. The road has its light, for now.");
+    }
+    const torch = session.items.find((c) => c.itemId === TORCH_ITEM);
+    if (!torch) {
+      return z.send(session, "The socket is empty and waiting — the lead is still run in for a flame. It would take a torch, one of yours, spent into the stone.");
+    }
+    session.items.splice(session.items.indexOf(torch), 1);
+    await removeItemRow(z.env.DB, torch.rowId);
+    z.groundTorch.set(session.roomId, Date.now() + TORCH_BURN_MS);
+    z.send(session, "You work the torch down into the socket where the standard broke, and the old lead takes the flame. The road has its light back — for as long as the torch burns.", "gain");
+    z.roomFeed(session.roomId, `${session.name} sets a torch in the lantern stump, and the road's lamp is alight again.`, session.pubkey, false);
+    z.refreshRoomCtx(session.roomId);
+    return;
+  }
   if (carriesLight(session)) {
     return z.send(session, session.litSource === "lantern"
       ? "Your lantern already burns steady. Let it do its work."

@@ -294,7 +294,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-well-court": {
     "well|shaft|wellhead":
-      "Lined all the way down in dressed stone and dropping further than your eye follows. A well like this is dug before the house is built and it is the reason the house is where it is.",
+      "Lined all the way down in dressed stone and dropping further than your eye follows. A well like this is dug before the house is built and it is the reason the house is where it is. The draw still works. There is water here for anything a wanderer needs water for.",
   },
   "the-gate-arch": {
     "arch|gate|sockets|pins|jambs":
@@ -318,7 +318,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-icehouse": {
     "dome|brick|passage|cold|air":
-      "The passage is clear and the air inside is markedly colder than out, and after this long that is not the brick doing it. An icehouse is a hole you fill with winter to have cold in July. Somebody had staff, and ponds, and a plan for August.",
+      "The passage is clear and the air inside is markedly colder than out, and after this long that is not the brick doing it. An icehouse is a hole you fill with winter to have cold in July. Somebody had staff, and ponds, and a plan for August. The cold in here has not given up yet: set food down in it and the cold will keep it, as young as the day it went in.",
   },
   "the-solar": {
     "carving|lintel|fireplace|ashlar|window":
@@ -326,7 +326,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-hollow-yew": {
     "yew|tree|hollow|inside":
-      "Older than the planted walk by centuries — this one was here before anybody laid out an avenue. The inside is dry, and dark, and smells of nothing at all, which is the strangest thing about it: everything else in this wood smells of the wood.",
+      "Older than the planted walk by centuries — this one was here before anybody laid out an avenue. The inside is dry, and dark, and smells of nothing at all, which is the strangest thing about it: everything else in this wood smells of the wood. The hollow would take one thing and hide it well. One thing — it is a tree, not a shelf.",
   },
   "the-last-light": {
     "shaft|light|hole|ceiling|daylight":
@@ -418,7 +418,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-crow-roost": {
     "crows|birds|pines|droppings":
-      "They stop when you arrive, all of them, and start again when they have decided about you, and the interval is not the same every time. The ground beneath is white and sour and nothing grows in it.",
+      "They stop when you arrive, all of them, and start again when they have decided about you, and the interval is not the same every time. The ground beneath is white and sour and nothing grows in it. A loud enough voice under this tree would put every bird in it into the air at once, and the wood would know about it for a while afterward.",
   },
   "the-hornbeam-row": {
     "hornbeam|trees|row|line":
@@ -474,7 +474,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-withy-hut": {
     "hut|withies|mud|door|walls":
-      "Woven withies plastered with mud, one low door and no window, and dry inside to this day. It was built to cut and soak and bend osier in, which wants shelter and does not want light. Nothing has denned in it — too tight, too much of a smell of man about it, and far too easy to be cornered in.",
+      "Woven withies plastered with mud, one low door and no window, and dry inside to this day. It was built to cut and soak and bend osier in, which wants shelter and does not want light. Nothing has denned in it — too tight, too much of a smell of man about it, and far too easy to be cornered in. The walls break the wind and the roof holds. Whatever the weather is doing out there, it is not doing it in here.",
   },
   "the-first-clearing": {
     "clearing|grass|ground|trees|edge":
@@ -502,7 +502,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   // ======================= THE ROAD ======================================
   "the-crooked-gibbet": {
     "gibbet|gallows|cage|irons|frame":
-      "Iron bands on a wooden frame, shaped to a person and hinged at the side, hanging off an arm that leans further every year. This is not a gallows — hanging is quick and done somewhere else. A gibbet is for afterward: you go in it already dead, on the road, at the boundary, so that everybody using the road has to walk under the arithmetic.",
+      "Iron bands on a wooden frame, shaped to a person and hinged at the side, hanging off an arm that leans further every year. This is not a gallows — hanging is quick and done somewhere else. A gibbet is for afterward: you go in it already dead, on the road, at the boundary, so that everybody using the road has to walk under the arithmetic. The cord above the irons has been cut through cleanly once before, and spliced, and it would cut again. Whatever he still has on him, he is done needing.",
   },
   "the-roadside-graves": {
     "graves|grave|mounds|stones|burials":
@@ -510,7 +510,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-wayside-shelter": {
     "shelter|hut|roof|bench|walls":
-      "Three walls, a roof, and a bench, set at about a day's walk from the last one. Somebody built this out of charity or out of duty and it has outlasted both the charity and the traffic.",
+      "Three walls, a roof, and a bench, set at about a day's walk from the last one. Somebody built this out of charity or out of duty and it has outlasted both the charity and the traffic. Out of the wind and under a roof that holds, a rest is a real rest, however the weather is behaving outside.",
   },
   "the-dry-well": {
     "well|shaft|stones|rope":
@@ -576,7 +576,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-shallow-well": {
     "well|slab|stone|water|cover":
-      "Shallow, which is the whole story: a village well close to the surface is a village well close to whatever is running through the soil, and this one is a hundred paces downhill from the fever graves.",
+      "Shallow, which is the whole story: a village well close to the surface is a village well close to whatever is running through the soil, and this one is a hundred paces downhill from the fever graves. Lift the cover and there is water a hand's depth down — enough to wash in, if you have something to wash off.",
   },
   "the-warreners-lodge": {
     "lodge|building|walls|windows|tower":
@@ -678,7 +678,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
 
   "the-buried-chapel": {
     "chapel|altar|stone|walls|vault":
-      "Under everything, and it was under everything before the collapse — chapels go at the bottom when what is above them is a garrison and what is below is where the family is. It is intact, which almost nothing down here is.",
+      "Under everything, and it was under everything before the collapse — chapels go at the bottom when what is above them is a garrison and what is below is where the family is. It is intact, which almost nothing down here is. The altar stone is colder than the air over it, and it has not stopped being colder in a very long time. Something laid on it would keep.",
   },
   "the-undermine": {
     "tunnel|mine|props|gallery|workings":
@@ -726,7 +726,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   // terrain — rock, snow, wind and shadow are the region table's job (above).
   "the-shieling": {
     "hut|shieling|fire|turf":
-      "Stone and turf built into the slope, low enough that you duck, and dry inside — more than the mountain offers anywhere else. People came up with the animals every summer and went down before the weather turned, every year for a very long time, and then one year did not. Somebody is here now. The fire is lit, and he does not say who or why.",
+      "Stone and turf built into the slope, low enough that you duck, and dry inside — more than the mountain offers anywhere else. People came up with the animals every summer and went down before the weather turned, every year for a very long time, and then one year did not. Somebody is here now. The fire is lit, and he does not say who or why. The stone larder at the back still holds its cold. Food set into it keeps — that is what the cold was for.",
   },
   "the-milking-fold": {
     "fold|milking fold|pen|slab|milking":
@@ -951,7 +951,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-lantern-stump": {
     "lantern stump|stump|lamp|socket":
-      "Off the causeway's edge, on a stub of pier, the base of a lamp-standard snapped off at the collar, with the lead still run into the socket. A light stood here to say where the road was after dark. Nothing says where the road is after dark now.",
+      "Off the causeway's edge, on a stub of pier, the base of a lamp-standard snapped off at the collar, with the lead still run into the socket. A light stood here to say where the road was after dark. Nothing says where the road is after dark now. The lead still takes a flame — light the stump, and the road has its light back for as long as the torch burns.",
   },
   "the-bell-buoy": {
     "buoy|bell|bell buoy":
@@ -959,11 +959,11 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-wreck-ribs": {
     "wreck ribs|ribs|frames|hull":
-      "The frames of a boat stuck upright in the mud at a slant, black and hard as iron, spaced like ribs because that is what they are. Whatever it was, it was bigger than anything the ferry-house ever ran — and it did not sink here. It was left here.",
+      "The frames of a boat stuck upright in the mud at a slant, black and hard as iron, spaced like ribs because that is what they are. Whatever it was, it was bigger than anything the ferry-house ever ran — and it did not sink here. It was left here. When the sea comes up over the frames there is room to go down between them, and whatever the boat was carrying went down with it.",
   },
   "the-beam-walk": {
     "beam walk|beam|iron beam|girder":
-      "Eight inches of rusted iron, perfectly rigid, which is a mercy — and nothing to hold and nothing on either side, which is not. The wind up here has an opinion. Below, the water is doing something complicated a long way beneath you.",
+      "Eight inches of rusted iron, perfectly rigid, which is a mercy — and nothing to hold and nothing on either side, which is not. The wind up here has an opinion. Below, the water is doing something complicated a long way beneath you. A cord would take your weight across, if you had one, and there is nothing else up here that would.",
   },
   "the-rope-bridge": {
     "rope bridge|bridge|ropes|slats":

@@ -36,7 +36,9 @@ import {
   RIDDLE_DOOR_KEY, MOON_DOOR_KEY, TIDE_DOOR_KEY, BELL_DOOR_KEY, RIDDLE_ROTATE_MS, RIDDLES, RIDDLE_ASK, RIDDLE_OPEN_LINE, RIDDLE_WRONG, RIDDLE_MOCK, RIDDLE_MOCK_AFTER, RIDDLE_WINDOW_MS,
   tideSiltLine, RING_CD_MS,
   DREAM_ODDS, DREAMS,
-  CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM,
+  WRECK_DIVE_ROOMS, WRECK_DIVE_CATCHES, WRECK_DIVE_REST_MS, WRECK_LOOT,
+  WELL_ROOMS, CROW_ROOST, BEAM_ROOM, BEAM_FALL_ODDS, BEAM_FALL_DMG, FISHING_DITCH, DITCH_EEL_ODDS, YEW_ROOM, YEW_CAP,
+  CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM, ALTAR_ROOMS,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
   RAVEN_SCOOPERS, RAVEN_BARTER_ODDS, RAVEN_BARTER_WAIT_MS,
@@ -1113,6 +1115,40 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     }
   }
 
+  // THE BEAM-WALK (2026-09-01): eight inches of iron and nothing to hold, and
+  // the wind has an opinion about it. Crossing in a gale is a fall waiting —
+  // unless a cord goes with you: a hempen cord buys one safe crossing, spent on
+  // the far side. The hazard exists only when the weather says so, and the way
+  // is never shut.
+  //
+  // UP HERE WITH THE FEN, and for the fen's own stated reason: a step that does
+  // not happen must not cost a beat. Below the disengage — where this began —
+  // the fall returned AFTER cmdGo had already dropped every hunter's lock, told
+  // them you had broken away, rolled the exit listener (which can swing, and
+  // can kill), cleared every creature's target on you, cleared your stagger and
+  // swept your open trade. Then you did not move. That made a failed crossing a
+  // free aggro wipe on demand, repeatable, for five hp that Math.max floors so
+  // it can never kill you.
+  if (exit.to_room === BEAM_ROOM && events.windy(z, exit.to_room)) {
+    const cord = session.items.find((c) => c.itemId === "hempen-cord");
+    if (!cord) {
+      if (chance(BEAM_FALL_ODDS)) {
+        session.hp = Math.max(1, session.hp - BEAM_FALL_DMG);
+        z.send(session, "You set out along the beam and the wind finds you at the middle — no rail, no rope, and the opinion it has about you is final. You come off the iron, and the fall hurts in a way that will be worse tomorrow.", "dmgin");
+        z.roomFeed(session.roomId, `${session.name} goes out onto the beam in the wind — and comes off it.`, session.pubkey, false);
+        z.sendStatus(session);
+        return;
+      }
+      z.send(session, "You cross the beam with your arms out and your eyes on the far pier, and the wind lets you off with a shove and a warning.", "gain");
+    } else {
+      const idx = session.items.indexOf(cord);
+      session.items.splice(idx, 1);
+      await removeItemRow(z.env.DB, cord.rowId);
+      z.send(session, "You rope yourself to the beam with the cord and go across hand over hand, and the wind can have its opinion — the cord has the weight of you, and it was always going to hold. It parts at the far side, spent.", "gain");
+      z.roomFeed(session.roomId, `${session.name} crosses the beam roped to it, and the wind gets nothing.`, session.pubkey, false);
+    }
+  }
+
   // A SENTINEL guards the way deeper. Asleep, you can step over it — and that
   // rouses it (you've opened the deep, and now it's up for whoever comes next).
   // Awake, it bars the descent outright: the only way down is to put it down.
@@ -1734,6 +1770,15 @@ export function cmdShout(z: ZoneDO, session: Session, msg: string): void {
   z.roomSound(session.roomId, `A voice, raw and carrying, {dir}: ${msg}`, undefined, "say");
   z.speechOut(session, `${session.name} shouts: ${msg}`, "nomad-shout");
   z.creatureNoise(session.roomId); // a shout is a dinner bell with a name on it
+  // THE ROOST (2026-09-01): a shout under the crow roost puts the crows up —
+  // witnessed now, and a bias on the next roll: the crows arc is LIKELIER, the
+  // roll still decides, and the marking weather is everyone's, shouter
+  // included. A lever, never a weapon.
+  if (session.roomId === CROW_ROOST) {
+    events.chargeCrows(z);
+    z.send(session, "The roost comes apart in a black cloud — a hundred birds up at once, shouting back at you. The wood is marked now, or it will be soon.", "evt");
+    z.roomFeedBands(new Set([z.bandOf(session.roomId)]), "A voice goes up under the crow roost, and the roost answers — the sky fills with black birds.", "evt");
+  }
 }
 
 // RINGING (the depth audit, 2026-08-29). The buoy's own text always promised
@@ -1814,6 +1859,22 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   // The street's floor is not in reach from behind your own bar.
   const barred = z.behindTheDoor(session);
   if (barred) return z.send(session, barred);
+  // THE SHRINE KEEPS THE COLD (2026-09-01). Your banked heart is not floor
+  // loot — it is a promise the stone is keeping, and `take heart` at any of
+  // the shrine's stones calls it in. The heart comes off the stone cold as
+  // the day it was cut: the clock starts again only when it is in your hand.
+  if (!fromDive && ALTAR_ROOMS.has(session.roomId) && z.altarHearts.has(session.pubkey)
+      && (/^heart/.test(arg) || nameMatches("a still-cold heart", arg))) {
+    if (!z.packRoom(session, DEEP_HEART)) {
+      return z.send(session, "Your pack is full — the shrine will keep it a while longer. It is good at keeping.");
+    }
+    z.altarHearts.delete(session.pubkey);
+    await z.grantItem(session, DEEP_HEART, { kept: true });
+    z.send(session, "You take the still-cold heart from the stone — cold as the day it was cut, and cold enough to spend. The stone is bare again.", "gain");
+    z.roomFeed(session.roomId, `${session.name} takes a heart from the altar, and the stone is bare again.`, session.pubkey, false);
+    z.roomSound(session.roomId, "A faint chime sounds {dir}.");
+    return;
+  }
   // A tide-drowned floor gives nothing to a standing reach — you go under
   // for it (cmdDive comes through here with the flag) or you wait it out.
   if (!fromDive && events.tideFlooded(z, session.roomId)) {
@@ -1985,6 +2046,12 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
 
 export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise<void> {
   if (!arg) return z.send(session, "Drop what?");
+  // THE HOLLOW YEW (2026-09-01): the tree keeps one thing, and one thing only
+  // — the world's dead-drop. Whatever is in it is safe from the ground's
+  // decay, and whoever comes for it comes for the one thing that is there.
+  if (session.roomId === YEW_ROOM && (z.ground.get(session.roomId) ?? []).length >= YEW_CAP) {
+    return z.send(session, "The hollow already keeps one thing. Take what is there before you put down another — the tree has one hollow, and it is not a shelf.");
+  }
   // A LIT torch is no longer a pack item — it was spent into the flame when you
   // kindled it, and now it's the light you carry. "drop torch" sets that flame
   // on the stone, where it keeps burning and lights the room for EVERYONE in it
@@ -2536,9 +2603,12 @@ export function cmdRest(z: ZoneDO, session: Session): void {
 // food, and the eel is a real meal. A short patience between casts.
 // A catch (or a snag) spends from the water's budget; the last one starts the
 // pool's rest clock — it forgets you slowly.
-function spendPool(z: ZoneDO, roomId: string, pool: { left: number; at: number }): void {
+function spendPool(z: ZoneDO, roomId: string, pool: { left: number; at: number }, restMs = FISH_POOL_REST_MS): void {
   pool.left -= 1;
-  if (pool.left <= 0) pool.at = Date.now() + FISH_POOL_REST_MS;
+  // The rest is the WATER's, not this function's. It was hard-coded to the
+  // fishing rest, which quietly made WRECK_DIVE_REST_MS a dead constant and ran
+  // the wreck on 25 minutes instead of its own 45.
+  if (pool.left <= 0) pool.at = Date.now() + restMs;
   z.fishStock.set(roomId, pool);
 }
 
@@ -2577,6 +2647,9 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
   }
   const surface = FISHING_SURFACE.has(session.roomId);
   const beck = FISHING_BECK.has(session.roomId);
+  // THE EEL DITCH (2026-09-01): the wood's first water, cut by somebody who
+  // knew eels keep alive out of water — so the ditch gives eel, and often.
+  const ditch = FISHING_DITCH.has(session.roomId);
   // THE CROSSING (mig 190) fishes as two different things, because it WAS two
   // different things: open salt water you cast into, and the eel cutter's set
   // grigs, which you do not cast into at all — you lift them.
@@ -2618,6 +2691,10 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
       "The fen lies flat under its own scum. Nothing takes the line.",
       "A ripple crosses the still water, going somewhere else.",
       "You wait. The fen keeps its own counsel.",
+    ] : ditch ? [
+      "The ditch lies brown and still. Nothing takes the line, but something in it watches the hook go by.",
+      "A slow swirl under the far bank, and then nothing. The eels are not hungry for this.",
+      "You wait. The ditch keeps its own counsel, which is older than the fen's.",
     ] : [
       "You lower a line into the black water and wait. Nothing takes it.",
       "The water lies flat and still. Whatever's down there isn't hungry.",
@@ -2639,6 +2716,8 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
     ? (chance(BECK_EEL_ODDS) ? "pale-eel" : "river-trout")
     : surface
     ? (chance(EEL_SURFACE_ODDS) ? "pale-eel" : "cave-fish")
+    : ditch
+    ? (chance(DITCH_EEL_ODDS) ? "pale-eel" : "cave-fish")
     : chance(LAMPREY_ODDS) ? "marrow-lamprey"
     : chance(PALE_EEL_ODDS) ? "pale-eel" : "cave-fish";
   const fish = world.itemTemplates.get(fishId);
@@ -2659,7 +2738,7 @@ export async function cmdFish(z: ZoneDO, session: Session): Promise<void> {
     ? `The line goes across the current and stops, and then everything happens at once — you bring ${fish.name} up the shingle, bright and hard and bending.`
     : `The line goes taut — you haul up ${fish.name}.`)
     + ` [${fish.rarity}] (unclaimed — good, fresh food)`, "gain");
-  z.roomFeed(session.roomId, `${session.name} lands a catch from the ${beck ? "beck" : surface ? "still water" : "flood"}.`, session.pubkey, false);
+  z.roomFeed(session.roomId, `${session.name} lands a catch from the ${beck ? "beck" : surface ? "still water" : ditch ? "ditch" : "flood"}.`, session.pubkey, false);
   z.sendCtx(session);
   z.markSimDirty();
 }
@@ -2806,6 +2885,55 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
 // the drowners' own hour.
 export async function cmdDive(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
+  // THE WRECK DIVES (2026-09-01): the ribs of the great boat and the
+  // half-drowned cart sit at rank 1 — when the sea comes up over them, you
+  // can go down through the frames after what they carried. A slow water,
+  // like every fishing water: a few catches, then it forgets you. The wreck
+  // has no floor to name, so the dive IS the search.
+  if (WRECK_DIVE_ROOMS.has(session.roomId)) {
+    if (!events.seaUnder(z, session.roomId)) {
+      return z.send(session, session.roomId === "the-wreck-ribs"
+        ? "The ribs stand out of the water, black and hard as iron. The sea must come up over them first — the marks read the hour."
+        : "The cart sits half out of the water, and its boards are gone. The sea must come up over it first — the marks read the hour.");
+    }
+    const drowner = [...z.creatures.values()].find(
+      (c) => c.roomId === session.roomId && DROWNERS.has(c.templateId) && !c.hidden,
+    );
+    if (drowner) {
+      const mt = world.mobTemplates.get(drowner.templateId)!;
+      return z.send(session, `Not with ${mt.name} standing in this water. It is better under there than you will ever be.`);
+    }
+    // The water's budget: a few catches, then a rest while it forgets you.
+    let pool = z.fishStock.get(session.roomId);
+    if (!pool || (pool.left <= 0 && Date.now() >= pool.at)) {
+      pool = { left: WRECK_DIVE_CATCHES, at: 0 };
+      z.fishStock.set(session.roomId, pool);
+    }
+    if (pool.left <= 0) {
+      return z.send(session, "The water here has given up what it will for now. It forgets you slowly.");
+    }
+    z.roomFeed(session.roomId, `${session.name} fills their lungs and goes under the black water.`, session.pubkey, false);
+    z.roomSound(session.roomId, "A splash {dir}, then the slow churn of something working underwater.");
+    z.creatureNoise(session.roomId);
+    const won = WRECK_LOOT.filter((e) => chance(e.chance));
+    if (!won.length) {
+      return z.send(session, "You go under into the green dark and work through the frames with your hands: silt, cold iron, the bones of a boat too big for this coast. You come up with nothing but cold.");
+    }
+    const loot = pick(won);
+    spendPool(z, session.roomId, pool, WRECK_DIVE_REST_MS);
+    const item = loot.item;
+    const t = world.itemTemplates.get(item);
+    z.send(session, `You go under into the green dark, and your hands read the frames — and close on ${t?.name ?? "something"} in the silt. You come up with it, streaming.`, "gain");
+    z.roomFeed(session.roomId, `${session.name} goes under at the wreck and comes up with something.`, session.pubkey, false);
+    if (!z.packRoom(session, item)) {
+      z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), item]);
+      z.send(session, "Your pack is full, so it lies at your feet, dripping.");
+      z.refreshRoomCtx(session.roomId);
+      return;
+    }
+    await z.grantItem(session, item, { kept: true });
+    return;
+  }
   if (!events.tideFlooded(z, session.roomId)) {
     return z.send(session, "There's no drowned floor here to go under. The tide decides that.");
   }
@@ -2865,11 +2993,13 @@ export async function cmdDive(z: ZoneDO, session: Session, arg: string): Promise
 // exactly what that means. (rome, 2026-07-12.)
 export function cmdWash(z: ZoneDO, session: Session): void {
   const inRain = events.raining(z, session.roomId);
-  const atWater = FISHING_ROOMS.has(session.roomId) || events.tideFlooded(z, session.roomId);
+  // THE WELLS (2026-09-01): water where the rain isn't — the well-court and
+  // the shallow well keep a draw for whoever has something to wash off.
+  const atWater = FISHING_ROOMS.has(session.roomId) || WELL_ROOMS.has(session.roomId) || events.tideFlooded(z, session.roomId);
   if (!inRain && !atWater) {
     return z.send(session, "There's no water here to wash in — no pool, no rain, nothing to run your hands under.");
   }
-  const where = atWater ? "You kneel at the water" : "You hold your hands up to the rain";
+  const where = WELL_ROOMS.has(session.roomId) ? "You draw from the well" : atWater ? "You kneel at the water" : "You hold your hands up to the rain";
   if (!pvp.isBloodied(z, session.pubkey)) {
     return z.send(session, `${where} and rinse your hands. They were already your own — nothing to answer for.`);
   }
