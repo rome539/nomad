@@ -23,6 +23,7 @@ import {
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
+  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, HUNGER_MAX,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
@@ -847,7 +848,7 @@ export function winded(creature: Creature, now: number): boolean {
   return (creature.windedUntil ?? 0) > now;
 }
 
-export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, mode: "wander" | "flee", silent: boolean): Promise<void> {
+export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, mode: "wander" | "flee", silent: boolean, chased = false): Promise<void> {
     const world = z.world!;
     const tmpl = world.mobTemplates.get(creature.templateId)!;
     let exits = (world.exits.get(creature.roomId) ?? []).filter(
@@ -1223,12 +1224,18 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     if (creature.home && !tmpl.is_boss && !z.withinRadius(creature.roomId, creature.home, TERRITORY_RADIUS)) {
       creature.nextWanderAt = now + randInt(8000, 25_000);
     }
-    if (mode === "flee") {
+    // A RUNNER'S BOLT IS A ROUT, whatever path it took to get here. It moves on
+    // the wander branch (zone's runner rule), so every step used to fall into the
+    // `else` below and hand the animal its breath straight back — a deer walked
+    // down across half a band never spent a single room of its wind.
+    if (mode === "flee" || chased) {
       // A lame thing can't help what it leaves (mob trait lottery): a trail to follow.
       if (creature.traits?.includes("lame")) z.addTrace(creature.roomId, { kind: "drip", at: now });
-      creature.target = null;
-      for (const s of z.sessions.values()) {
-        if (s.target === creature.id) s.target = null;
+      if (mode === "flee") {
+        creature.target = null;
+        for (const s of z.sessions.values()) {
+          if (s.target === creature.id) s.target = null;
+        }
       }
       // The den remembers: a rout that ends among kin spreads the grudge.
       shareGrudges(z, creature, now);
@@ -1246,10 +1253,12 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       }
     } else {
       // It walked instead of bolting, so the rout is over and it got clean
-      // away — the next one starts from nothing. (The blown clock runs on by
-      // itself; getting away does not give the breath back any sooner.)
+      // away — the next one starts from nothing, at a standing start. (The blown
+      // clock runs on by itself; getting away does not give the breath back any
+      // sooner.)
       creature.fled = 0;
       creature.windAt = undefined;
+      creature.boltAt = undefined;
     }
     // A summoned hyena that walks OFF the dinner floor may laugh again someday;
     // while it stood there, it never re-called (a call must not trigger a call).
@@ -1413,7 +1422,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       // no spawn row for it.
       z.roamed.delete(`${eaten}@${creature.roomId}`);
       const tmpl = world.mobTemplates.get(creature.templateId)!;
-      creature.hunger = 0;
+      creature.hunger = Math.max(0, creature.hunger - MEAL_ITEM); // a found meal, not a kill
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
       z.addTrace(creature.roomId, { kind: "scraps", at });
       if (!silent) {
@@ -1452,7 +1461,11 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     // usually gives. Carrion is carrion whatever the sky does.
     if ((grazeHere && !events.coldBites(z, creature.roomId)) || carrionEater) {
       const tmpl = world.mobTemplates.get(creature.templateId)!;
-      creature.hunger = 0;
+      // The edge off, and no more. This is the food web's FLOOR — a mouthful of
+      // ground, or a picked-over bone yard — and zeroing on it bought the animal
+      // the same hundred minutes a deer would have. It comes back to the ground
+      // within the hour now, which is what a thing living on scraps does.
+      creature.hunger = Math.max(0, creature.hunger - MEAL_GRAZE);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + (grazeHere && events.mastOn(z) ? Math.round(FORAGE_HEAL * MAST_FORAGE_MULT)
         : grazeHere && events.wrackIn(z, creature.roomId) ? Math.round(FORAGE_HEAL * WRACK_FORAGE_MULT)
         : grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT)
@@ -1982,7 +1995,7 @@ export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
       templateId: "rat",
       roomId: mother.roomId,
       hp: ratTmpl.max_hp,
-      hunger: randInt(0, HUNGRY_AT - 10),
+      hunger: randInt(0, HUNGER_MAX), // the WHOLE range: capped under HUNGRY_AT, every spawn and respawn put the population back below the line together, so nothing was ever hungry when you met it
       grudges: [],
       nextWanderAt: now + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
       target: null,
@@ -2048,7 +2061,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     const eaten = list[idx];
     list.splice(idx, 1);
     if (list.length === 0) z.traces.delete(creature.roomId);
-    creature.hunger = 0;
+    creature.hunger = Math.max(0, creature.hunger - MEAL_CORPSE); // a whole body, and it still is not a kill
     // WHAT THE CORPSE IS WORTH TO THIS ONE. A bone-cracker gets through to the
     // marrow and takes double; a sour-gutted thing eats and is no better for it.
     // Both make the FLOOR of a fight tactical rather than scenery: with bodies

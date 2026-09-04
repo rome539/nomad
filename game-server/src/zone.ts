@@ -99,6 +99,7 @@ import {
   BELL_DOOR_KEY, BELL_DOOR_SHUT, BELL_DOOR_TREMBLE, BELL_DOOR_OPEN,
   TIDE_SILT_COURSES, TIDE_PRY_MS, TIDE_DIGGING_TOOLS, tideSiltLine, TIDE_PRY_WET, TIDE_PRY_SETTLE, TIDE_PRY_TOOL_HINT, TIDE_PRY_MAKING, TIDE_PRY_OPEN,
   HABIT_ODDS, HABIT_COOLDOWN_MS, HABITS, HABIT_NIGHT, HABIT_FIRE, HABIT_DEEP, HABIT_GRAVES, QUIRK_ODDS, QUIRK_COOLDOWN_MS, TREASURE_QUIRKS,
+  BOLT_TIRE_MS, BOLT_HOLD_ODDS, BOLT_HOLD,
   SHELTER_ROOMS, YEW_ROOM, GIBBET_ROOM,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
@@ -715,7 +716,7 @@ export class ZoneDO implements DurableObject {
           templateId: tmpl.id,
           roomId: den,
           hp: Math.max(1, Math.round(tmpl.max_hp * ai.mobHpMult(traits))),
-          hunger: randInt(0, HUNGRY_AT - 10),
+          hunger: randInt(0, HUNGER_MAX), // the WHOLE range: capped under HUNGRY_AT, every spawn and respawn put the population back below the line together, so nothing was ever hungry when you met it
           grudges: [],
           nextWanderAt: Date.now() + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
           target: null,
@@ -765,7 +766,7 @@ export class ZoneDO implements DurableObject {
           templateId: tmpl.id,
           roomId: den,
           hp: Math.max(1, Math.round(tmpl.max_hp * ai.mobHpMult(traits))),
-          hunger: randInt(0, HUNGRY_AT - 10),
+          hunger: randInt(0, HUNGER_MAX), // the WHOLE range: capped under HUNGRY_AT, every spawn and respawn put the population back below the line together, so nothing was ever hungry when you met it
           grudges: [],
           nextWanderAt: now + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
           target: null,
@@ -5086,7 +5087,27 @@ export class ZoneDO implements DurableObject {
           // down in the heather is not a man walking in, and the animal stops
           // running from it. Stand up, or swing and miss, and the posture drops
           // (dispatch's effort rule) and this line takes it away again.
-          await ai.creatureMoves(this, creature, now, "wander", false);
+          //
+          // ...AND UNLESS IT HAS NOTHING LEFT (rome, 2026-09-03). Blown, it does
+          // not run: it stands at bay for FLEE_WIND_MS and you finish it or you
+          // let it go. Before that it slows — each room it has already given up
+          // pushes the next bolt out by BOLT_TIRE_MS, so the chase visibly runs
+          // down instead of ending on a wall. `chased` is what makes the wander
+          // path count as the rout it is.
+          if (ai.winded(creature, now)) {
+            if (chance(BOLT_HOLD_ODDS)) {
+              this.roomFeed(creature.roomId, pick(BOLT_HOLD).replace("{a}", cap(tmpl.name)), undefined, false);
+            }
+          } else if ((creature.boltAt ?? 0) <= now) {
+            const spent = creature.fled ?? 0;
+            await ai.creatureMoves(this, creature, now, "wander", false, true);
+            // Read AFTER the move: creatureMoves may have blown it on this very
+            // step, and a blown animal's next bolt is the wind clock's business,
+            // not this one.
+            creature.boltAt = ai.winded(creature, now) ? 0 : now + (creature.fled ?? spent) * BOLT_TIRE_MS;
+          } else if (chance(BOLT_HOLD_ODDS)) {
+            this.roomFeed(creature.roomId, pick(BOLT_HOLD).replace("{a}", cap(tmpl.name)), undefined, false);
+          }
         } else if (!hunted && RUNNERS.has(creature.templateId) && ai.allCrouched(this, creature.roomId)) {
           // Only when the crouch is what held it — `hunted` also lands here, and
           // a deer that just ate something is not being calmed by anybody.

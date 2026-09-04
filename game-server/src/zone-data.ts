@@ -864,6 +864,30 @@ export const HUNGRY_AT = 50;
 export const LB_GENRES = ["mud", "extraction", "roguelike", "pvp", "dungeon-crawler"];
 export const LB_BOSS_PTS = 100;
 export const LB_PVP_PTS = 25;
+// WHAT A MEAL IS WORTH (rome, 2026-09-04: almost every mob is fed too often —
+// he could not remember the last hungry one he met).
+//
+// Every feeding route in the game ended in a flat `hunger = 0`, so a mouthful
+// of gnawed ground counted for exactly as much as a whole deer. Paired with a
+// spawn roll capped ten BELOW the threshold and a 100-minute climb, that made
+// hunger a spike rather than a state: a creature crossed HUNGRY_AT, fed on the
+// same tick, and dropped to the floor — measured, about one tick in a hundred
+// minutes, 0.03% of its life. "Restless with hunger" was reachable only by
+// something whose feeding route was BLOCKED, which is the exact state the
+// 2026-08-08 pass removed by taking the non-eaters off the clock.
+//
+// So the whole food web sat above its own trigger and never fired. predation,
+// starvingHunts and the thief's rob are all gated on HUNGRY_AT; none of them
+// could reliably happen. Eleven deer-eating dogs stand on the east road beside
+// the deer and never once look at them.
+//
+// A meal is now worth what it was. A nibble takes the edge off and the animal
+// is back at the ground within the hour; only a kill fills anything.
+export const MEAL_GRAZE = 25;   // gnawed ground, carrion floor — the food web's floor, and it barely counts
+export const MEAL_ITEM = 50;    // a dropped meal off the stones
+export const MEAL_CORPSE = 75;  // a whole body, and it still isn't a kill
+// (a kill zeroes it outright — see worryPrey/predation)
+
 export const STARVING_AT = 85; // past mere hunger: the end of the rope, where a predator with no easier meal eyes a lone delver as meat
 export const WANDER_MIN_MS = 45_000;
 export const WANDER_MAX_MS = 150_000;
@@ -2118,6 +2142,32 @@ export const RUNNERS = new Set(["fleet-rat", "roe-deer",
 export const FLEE_WIND_MIN = 3;      // the shortest rout an animal has in it...
 export const FLEE_WIND_MAX = 6;      // ...and the longest, rolled fresh each time
 export const FLEE_WIND_MS = 45_000;  // blown this long: no running, at bay, and it shows
+// AND THE ROUT SLOWS BEFORE IT ENDS (rome, 2026-09-03: chase them room to room
+// and they should tire — the first bolt fast, and slower each time, until the
+// animal is spent where it stands).
+//
+// The wind above was only ever spent by a COMBAT flee. A RUNNER standing in a
+// room with somebody in it bolts on the wander path instead (zone's runner
+// branch), which took the `else` here and reset `fled` to nothing on every
+// step — so walking a roe deer down across half the wood never cost it a
+// breath, and the rout that was supposed to end never started. `chased` marks
+// that move as what it plainly is.
+//
+// The ramp is the other half. A bolt used to cost the same whether it was the
+// first or the fifth, so the animal ran flat out until it hit the wall. Now
+// each room it has already given up buys you the same pause again before it
+// can go: nothing, then one, then two. Against a four-second combat round that
+// reads as swings — the first room buys none, the third buys one, the fifth
+// buys three — so you can WATCH it running out, and decide whether the next
+// room is worth the walk.
+export const BOLT_TIRE_MS = 3000;    // each room already run adds this much to the next bolt's wind-up
+export const BOLT_HOLD_ODDS = 0.3;   // ...and it says so, now and then, while it stands there getting its breath
+export const BOLT_HOLD = [
+  "{a} stands a moment longer than it meant to, flanks working.",
+  "{a} looks back the way it came, and does not go yet.",
+  "{a} shifts its feet, ready to run and not running.",
+  "{a} is breathing hard enough that you can hear it.",
+];
 
 export const BROODERS = new Set(["brood-rat"]);
 export const BROOD_CAP = 6; // most LIVING pups a mother sustains at once (total, by nest — counts dispersed pups too, so it can't runaway-infest); she breeds a replacement whenever one dies or is culled

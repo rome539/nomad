@@ -145,6 +145,7 @@ export interface Creature {
   fled?: number;        // rooms run in the CURRENT rout — reset when it gets clean away
   windAt?: number;      // how many it had in it this time (FLEE_WIND_MIN..MAX, rolled when the rout starts)
   windedUntil?: number; // ms until it has its breath back; until then it will not run, whatever it is
+  boltAt?: number;      // a chased runner's next bolt: each room already given up pushes this out by BOLT_TIRE_MS, so the rout visibly slows before it ends
   huntFor?: string;     // the room it is walking to because its own ground has nothing left to eat (ai.huntGround)
   huntAt?: number;      // ms until that errand is worth recomputing (HUNT_RECHECK_MS)
   drift?: number;       // rooms walked on a WALKABOUT — set = unmoored, no territory (ai.beginDrift)
