@@ -36,6 +36,15 @@ database_id = "ea7a1945-4a31-429b-9cc8-f66e8964142d"
 [triggers]
 crons = ["17 4 * * *"]
 
+# THE FACES ARE FILES. Favicon, PWA icons, the OG card, the threshold backdrops
+# and the brag-card plates live in public/ and are served straight off the edge
+# before this Worker is woken. They cost NOTHING against the Worker size limit —
+# which is the whole point: as base64 in the script they were six megabytes of a
+# ten-megabyte ceiling. public/_headers carries their year-long caching, and a
+# path that matches no file falls through to the Worker exactly as before.
+[assets]
+directory = "./public"
+
 # Retain console logs in Cloudflare (queryable in the dashboard ~3 days), so a
 # RARE server-side throw is captured whenever it fires — no live `wrangler tail`
 # needed. Catches the silent command soft-lock (onMessage throws that used to

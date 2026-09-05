@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT } from "./zone-data";
+import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, TERRAIN_RULES } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -52,6 +52,47 @@ export function halfFrac(now = Date.now()): number {
 export function skyBand(now = Date.now()): 0 | 1 | 2 | 3 | 4 {
   const f = halfFrac(now);
   return f < 0.15 ? 0 : f < 0.4 ? 1 : f < 0.62 ? 2 : f < 0.85 ? 3 : 4;
+}
+
+// THE TWO EDGES OF THE LIGHT, named at last (rome, 2026-09-05). Dusk has been
+// in this file since skyBand was written and has never once been asked for: the
+// day's last band is already the going of the light, and SUN_LOW[4] has always
+// said so — the last of the grey going, a few minutes off night, and no sunset
+// anywhere to watch it happen. What it did not have was a name anything could
+// branch on, so the only question the sky could answer was up or down.
+//
+// Eighteen minutes each, on a two-hour day half: long enough to be somewhere,
+// short enough that you can feel it leaving. Both ride the SAME modulo as
+// isNight and the moon — no second clock, nothing persisted, no migration.
+//
+// Deliberately READ-ONLY for now: nothing about waking, hunting, light or the
+// dark rules reads these. Night already does real work at eight call sites, and
+// teaching the half-light to count at every one of them is a balance pass over
+// the whole nocturnal roster, not a clock change. These name the hour; they do
+// not yet spend it.
+// WHICH OF THOSE A ROOM IS, or "" for a room whose ground has no name yet.
+// Derived from the id on every status frame — cheap, stateless, and it cannot
+// drift out of step with the world the way a stored column can.
+export function terrainOf(roomId: string, desc?: string): string {
+  // THE NAME FIRST, BECAUSE A NAME IS A CLAIM. "The Warm Scree" says scree.
+  for (const [name, re] of TERRAIN_RULES) if (re.test(roomId)) return name;
+  // ...AND THEN WHAT THE ROOM ACTUALLY SAYS ABOUT ITSELF, because most names
+  // are not about the ground at all. "The Summit Gate" names an event in the
+  // route; its description names warm air coming steadily out of a swept gap in
+  // a wall of rock, which is the only place the terrain was ever written down.
+  // Reading only the id meant every such room fell through to a generic plate
+  // while the answer sat in the next field along.
+  if (desc) {
+    const d = desc.toLowerCase();
+    for (const [name, re] of TERRAIN_RULES) if (re.test(d)) return name;
+  }
+  return "";
+}
+export function isDusk(now = Date.now()): boolean {
+  return !isNight(now) && skyBand(now) === 4;
+}
+export function isDawn(now = Date.now()): boolean {
+  return !isNight(now) && skyBand(now) === 0;
 }
 
 // IS THE LID OPEN RIGHT NOW (rome, 2026-08-31: it is only fair that sometimes

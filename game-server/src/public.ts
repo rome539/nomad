@@ -867,6 +867,117 @@ export const PAGE = `<!doctype html>
     overflow-y: auto;
     padding: 14px;
   }
+
+  /* ------------------------------------------------------------------ *
+   * THE SCENE. Two ways to be in this world: READ it, or LOOK at it.
+   * Text is the default and is untouched — the log keeps the whole
+   * column, exactly as it always has, and #scene is not in the layout at
+   * all. Ask for pictures and the two swap weight: the plate takes the
+   * room and the prose keeps a footing under it, because the prose is
+   * still where the fight is won and a player who cannot read the last
+   * four lines cannot play. It is a strip, not a caption, and it scrolls.
+   * ------------------------------------------------------------------ */
+  #scene { display: none; }
+  /* FULL BLEED. The picture is not a panel with the text under it — it is the
+     room, edge to edge, and everything else floats on top of it. Fixed rather
+     than flexed so it fills the window whatever the log is doing, and z-indexed
+     under the chrome, which is already opaque and needs no help. */
+  body[data-view="image"] #scene {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-color: var(--bg);
+    background-size: cover;
+    background-position: center 55%;
+    background-repeat: no-repeat;
+  }
+  body[data-view="image"] #bar,
+  body[data-view="image"] #chips,
+  body[data-view="image"] #inputline { position: relative; z-index: 1; }
+  /* The weather is a WASH over the plate, not a second plate. One picture
+   * per band, nine skies over it — so the hour and the storm cost nothing
+   * in art and change the moment the world does. When there are real
+   * per-condition plates these scrims go quiet and stay as the polish. */
+  body[data-view="image"] #scene::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--scrim, transparent);
+    transition: background .8s ease;
+    pointer-events: none;
+  }
+  /* THE WASHES ARE TINTS, NOT SHUTTERS. The first cut of these was set by eye
+     against nothing, and it put a 64% black scrim over the torch plate — a
+     painting whose own mean luma is FOUR. Black on black: the picture loaded,
+     was painted, and could not be seen, and it looked for all the world like a
+     broken feature. Halved across the board, and each now leans on hue rather
+     than on simply subtracting light. Any of them can go darker once it has
+     been judged on a real plate; none may take a picture below being one. */
+  #scene.sky-day   { --scrim: transparent; }
+  #scene.sky-dawn  { --scrim: linear-gradient(rgba(84,104,148,.20), rgba(198,168,118,.10)); }
+  #scene.sky-dusk  { --scrim: linear-gradient(rgba(58,38,28,.20), rgba(188,108,48,.14)); }
+  #scene.sky-night { --scrim: linear-gradient(rgba(8,10,26,.46), rgba(8,10,26,.38)); }
+  #scene.sky-moon  { --scrim: linear-gradient(rgba(20,30,60,.32), rgba(30,44,80,.24)); }
+  #scene.sky-fog   { --scrim: linear-gradient(rgba(150,150,145,.30), rgba(118,120,118,.24)); }
+  #scene.sky-rain  { --scrim: linear-gradient(rgba(30,40,50,.28), rgba(24,32,44,.22)); }
+  #scene.sky-snow  { --scrim: linear-gradient(rgba(202,212,226,.22), rgba(168,184,204,.16)); }
+  /* Under a roof the light is one you are carrying, so this warms and vignettes
+     rather than dims — the plate is already the darkest thing in the game. */
+  #scene.sky-in    { --scrim: radial-gradient(ellipse at 50% 62%, rgba(60,40,18,.10) 0%, rgba(10,8,6,.30) 55%, rgba(6,5,4,.52) 100%); }
+  /* THE PROSE LIES ON THE PICTURE. No hard edge, no border, no panel: the log
+     falls to the floor of the column and fades up out of the image, darkest
+     where the newest line sits and clear at the top so the painting keeps most
+     of its room. It grows with what it holds up to a ceiling and then scrolls,
+     so a long fight never swallows the whole window. */
+  body[data-view="image"] #log {
+    position: relative;
+    z-index: 1;
+    margin-top: auto;
+    flex: 0 1 auto;
+    max-height: 25vh;
+    transition: max-height .22s ease;
+    /* Built from --bg so a repainted theme repaints this too. It was three
+       hardcoded browns, which meant every theme but the default one had the
+       prose sitting on the DEFAULT theme's ground. */
+    background: linear-gradient(to bottom,
+      color-mix(in srgb, var(--bg) 0%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 72%, transparent) 12%,
+      color-mix(in srgb, var(--bg) 92%, transparent) 40%,
+      color-mix(in srgb, var(--bg) 97%, transparent) 100%);
+    text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(0,0,0,.8);
+  }
+  /* On a short window the picture yields first, never the words. */
+  /* Pulled open: half the window, for reading back through a fight. */
+  body[data-view="image"][data-log="big"] #log { max-height: 50vh; }
+  @media (max-height: 620px) {
+    body[data-view="image"] #log { max-height: 34vh; }
+    body[data-view="image"][data-log="big"] #log { max-height: 62vh; }
+  }
+  /* The handle: a slim tab on the top edge of the strip, the only chrome the
+     picture is allowed. Hidden entirely in text mode, where the log is already
+     the whole column and there is nothing to pull open. */
+  #loggrip { display: none; }
+  body[data-view="image"] #loggrip {
+    display: block;
+    position: relative;
+    z-index: 2;
+    margin: 0 auto -1px;
+    width: 74px;
+    padding: 3px 0 4px;
+    border: 0;
+    border-radius: 3px 3px 0 0;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    color: var(--dim);
+    font: inherit;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: .18em;
+    cursor: pointer;
+    transition: color .15s, background .15s;
+  }
+  body[data-view="image"] #loggrip:hover,
+  body[data-view="image"] #loggrip:focus-visible { color: var(--gold); background: color-mix(in srgb, var(--bg) 94%, transparent); outline: none; }
   #log div { white-space: pre-wrap; word-break: break-word; margin-bottom: 2px; }
   #log .feed { color: var(--dim); }
   #log .sys  { color: var(--gold); }
@@ -1170,6 +1281,11 @@ export const PAGE = `<!doctype html>
 </style>
 </head>
 <body>
+  <script>/* Before paint, so a picture-mode player never sees the text layout
+    flash past. Wrapped because a locked-down browser throws on storage. */
+    try { document.body.setAttribute("data-view",
+      localStorage.getItem("nomad_view") === "image" && localStorage.getItem("nomad_art") === "1"
+        ? "image" : "text"); } catch (e) {}</script>
   <div id="bar">
     <span class="brand" id="brand" title="settings">NOMAD<span class="caret">&#9662;</span></span>
     <span id="room"></span>
@@ -1373,6 +1489,8 @@ export const PAGE = `<!doctype html>
       <div id="jbody"></div>
     </div>
   </div>
+  <div id="scene" aria-hidden="true"></div>
+  <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
   <div id="log"></div>
   <div id="chips"></div>
   <div id="inputline">
@@ -2678,6 +2796,8 @@ async function connect() {
       // would collapse a "+more" for a step that never left the room.
       if (f.room && f.room !== lastRoomName) chipsExpanded = false;
       lastRoomName = f.room || "";
+      if (f.art) grantArt();
+      paintScene(f.band, f.sky, f.terrain, f.room);
       roomEl.textContent = "";
       if (f.room) {
         roomEl.appendChild(document.createTextNode(f.room));
@@ -5948,6 +6068,222 @@ var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
 var ART_V = "3";
+
+// ---------------------------------------------------------------------------
+// THE VIEW. A band of country per region, washed by whatever the sky is doing.
+//
+// EIGHT PLATES, ELEVEN BANDS: the pictures here are the threshold's own scenes,
+// already painted, already in the right world, already cached by every player
+// who has ever seen the door. So picture mode works TODAY, coarse — one plate a
+// region rather than one a terrain — and when real per-terrain plates exist they
+// drop in behind this same table and nothing else moves.
+//
+// THE LOOKUP IS THE SECURITY. The band and sky values arrive from the server as bare
+// strings and are used ONLY as keys into these two tables. Nothing from the wire
+// is ever concatenated into a URL, so the worst a bad value can do is miss and
+// paint nothing. The log stays textContent-only either way — the scene is its
+// sibling, never its content.
+// (Kept for the threshold only — these are the LOGIN backdrops and no longer
+// paint any room. See paintScene: room art comes from /room-bg alone.)
+var BAND_PLATE = {
+  // ONLY PLATES THAT ARE A PLACE. The threshold's scene set was painted to sit
+  // behind a login screen, and three of the eight assert something a room may
+  // not be: drake and hound each have a CREATURE in them, and rain has weather
+  // of its own that would argue with the sky the server just reported. A
+  // backdrop that claims a drake is on the summit of every mountain room is
+  // worse than no backdrop, so those three are not here, and a band with no
+  // honest plate paints the bare ground instead of lying.
+  //
+  // Which leaves the mountain — the single biggest region in the world, 399
+  // rooms — with nothing. That is not a gap to paper over with the nearest
+  // wrong picture. It is the argument for the real per-terrain set.
+  deep: "torch",         // no sky down here; the light is one you carry
+  upper: "torch",
+  gate: "torch",
+  warrens: "warrens",
+  den: "warrens",
+  wood: "wood",
+  crossing: "holdings",  // roofs, a bridge, somewhere people meant to stay
+  road: "bellcote",
+  sky: "bellcote",
+};
+// THE PLATES THAT EXIST. Keyed by terrain, which is finer than band: the
+// mountain alone is scree and snow and glazed rock and a beck, and painting one
+// picture across all 398 of its rooms was never going to read as a place. A
+// terrain with no plate yet falls back to its band, and a band with no plate
+// paints bare ground — so the set can land one picture at a time and the game
+// is never wrong in the meantime, only sparse.
+// EACH TERRAIN IS A LIST, not one picture. Seven plates over 398 mountain rooms
+// put a hundred and thirty-two of them under the SAME image, and a world where
+// every third room is the same photograph is not a world you believe. So a
+// terrain owns as many plates as have been painted for it, and a room picks one
+// by hashing its own name: stable, so a place always looks like itself; spread,
+// so its neighbours do not. Adding "scree-2" here is the entire cost of killing
+// the repetition — no server change, no migration, nothing else moves.
+var TERRAIN_PLATE = {
+  scree: ["scree"], gully: ["gully"], snow: ["snow"], cairn: ["cairn"],
+  alder: ["alder"], "corrie-rim": ["corrie-rim"], "corrie-floor": ["corrie-floor"],
+};
+// FNV-1a: the same cheap trick the world already uses to hang per-instance
+// detail off an id without storing a byte of it.
+function plateHash(str) {
+  var h = 2166136261;
+  for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+// AND WHAT A BAND FALLS BACK TO when the room's own ground has no picture yet.
+// The mountain is 398 rooms across a dozen kinds of ground and has seven plates,
+// so without this two rooms in three paint NOTHING — and a blank window reads as
+// a broken feature, not as an honest gap. The open bare shoulder is the closest
+// thing the set has to "generic mountain", so it holds the line until the real
+// default exists. Approximate beats absent; only WRONG loses to absent.
+// AND WHEN A TERRAIN HAS NO PLATE, THE NEAREST ONE THAT DOES. Falling every
+// unpainted terrain onto "cairn" made two rooms in three the same bare shoulder,
+// which is how a working feature comes to look broken: the picture stops
+// answering the room. A beck is a rock channel with water in it and the gully
+// already IS that; a boulder field is loose stone at a larger size and the scree
+// already IS that. These are stand-ins chosen on what the ground DOES, and each
+// one retires the moment its own plate lands.
+var TERRAIN_NEAR = {
+  beck: "gully", crag: "gully", boulder: "scree",
+  // Warm flags, glazed rock and steaming ground are all BARE STONE, and the
+  // cairn plate is a grassy shoulder — it was the worst possible stand-in for
+  // the hottest, barest ground on the hill. Scree at least agrees about what
+  // the ground is made of.
+  slab: "scree", glass: "scree", vent: "scree", fold: "cairn",
+};
+// And an unclassified mountain room is bare rock before it is pasture.
+var BAND_FALLBACK = { mountain: "scree" };
+// WHICH BANDS OWN PICTURES AT ALL. Add a band here only once plates exist for
+// it — this is the one line that stops a region wearing another region's face.
+var BANDS_WITH_PLATES = { mountain: 1 };
+var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, fog:1, rain:1, snow:1, "in":1 };
+var sceneEl = document.getElementById("scene");
+var viewBtn = null;   // built only for a granted key, see buildViewRow
+var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
+var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "";
+// THE SERVER DECIDES WHETHER THERE ARE PICTURES. Until a status frame arrives
+// carrying the grant, this client is a text client and has no view control at
+// all — an unlisted wanderer is not shown a door they cannot open. The grant is
+// mirrored to storage only so the next load can skip the text-mode flash.
+var artAllowed = false;
+// NOT HIDDEN — ABSENT. A hidden row still ships in the HTML of every page the
+// world is served, so anyone who opened the source found a control they were
+// never meant to know about. The row does not exist until the server says it
+// does, and for everybody else there is nothing in the document to find.
+var viewRow = null;
+function buildViewRow() {
+  if (viewRow) return;
+  var panel = document.getElementById("setpanel");
+  var anchor = document.getElementById("chipbtn");
+  if (!panel) return;
+  viewRow = document.createElement("div");
+  viewRow.className = "setrow";
+  var label = document.createElement("span");
+  label.textContent = "view";
+  viewBtn = document.createElement("button");
+  viewBtn.type = "button";
+  viewBtn.textContent = viewWant;
+  viewBtn.onclick = function () { setView(viewWant === "image" ? "text" : "image"); };
+  viewRow.appendChild(label);
+  viewRow.appendChild(viewBtn);
+  var after = anchor && anchor.parentNode && anchor.parentNode.parentNode === panel ? anchor.parentNode : null;
+  if (after && after.nextSibling) panel.insertBefore(viewRow, after.nextSibling);
+  else panel.appendChild(viewRow);
+}
+// WHAT WAS ASKED FOR, kept strictly apart from what is on screen. These came
+// apart the hard way: applying the view on load also SAVED it, and on load the
+// grant has not arrived yet, so every refresh wrote "text" over the player's
+// real choice a half-second before the server said they were allowed pictures.
+// The setting could never survive a reload because loading destroyed it.
+//
+// So storage is now written in exactly one place — a deliberate click — and
+// nothing the page does on its own can touch it.
+var viewWant = "text";
+try { if (localStorage.getItem("nomad_view") === "image") viewWant = "image"; } catch (e) {}
+function grantArt() {
+  if (artAllowed) return;
+  artAllowed = true;
+  buildViewRow();
+  try { localStorage.setItem("nomad_art", "1"); } catch (e) {}
+  try { if (typeof print === "function") print("\u2014 pictures unlocked: settings \u203a view \u2014", "sys"); } catch (e) {}
+  applyView();   // and if pictures are what they wanted, they get them now
+}
+
+function paintScene(band, sky, terrain, roomKey) {
+  if (roomKey) lastRoomKey = roomKey;
+  if (band) lastBand = band;
+  if (sky) lastSky = sky;
+  if (terrain !== undefined && terrain !== null) lastTerrain = terrain;
+  if (!sceneEl || viewMode !== "image") return;
+  // Terrain first, band second: the room's own ground beats its region's.
+  // ROOM ART ONLY. The threshold's paintings were never room art: they are oil,
+  // painterly, and each one is a specific somewhere — so a beam walk over open
+  // water was being handed a dusk village in a different MEDIUM entirely. A
+  // region with no plates of its own paints bare ground and waits its turn.
+  // A PLATE BELONGS TO THE COUNTRY IT WAS PAINTED FOR. The terrain rules were
+  // written against the mountain and then let loose on all 1,186 rooms, so a
+  // briar court inside the fortress ring matched a rock word and was handed the
+  // mountain's drain. Scree, gully, snow, cairn, corrie: every one of those is
+  // a MOUNTAIN picture, and nowhere else may borrow them however well the words
+  // happen to line up. Other bands paint bare ground until they own plates.
+  var kind = BANDS_WITH_PLATES[lastBand]
+    ? (TERRAIN_PLATE[lastTerrain] ? lastTerrain
+       : (TERRAIN_NEAR[lastTerrain] || BAND_FALLBACK[lastBand] || ""))
+    : "";
+  var list = kind ? TERRAIN_PLATE[kind] : null;
+  var terr = (list && list.length) ? list[plateHash(lastRoomKey || kind) % list.length] : "";
+  sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".jpg?v=" + ART_V + ")" : "";
+  sceneEl.className = SKY_KNOWN[lastSky] ? "sky-" + lastSky : "";
+  // Each of these paintings has a crop that was MEASURED for the threshold —
+  // where the subject sits, which third survives a narrow window — and there is
+  // no reason to guess a second time here. Guarded because this runs once on
+  // load, before the threshold's own table below has been evaluated.
+  sceneEl.style.backgroundPosition = "center 55%";
+}
+
+// Put on screen whatever is currently both wanted and permitted. Saves nothing,
+// so it is safe to call on load, on the grant, and on every reconnect.
+function applyView() {
+  viewMode = (viewWant === "image" && artAllowed) ? "image" : "text";
+  document.body.setAttribute("data-view", viewMode);
+  // The button reads the CHOICE, not the compromise — otherwise it would say
+  // "text" back to someone who had just asked for pictures and was waiting.
+  if (viewBtn) viewBtn.textContent = viewWant;
+  paintScene(null, null, null, null);
+  // The strip changes height under the text, so put the newest line back on
+  // the floor of it — switching view must never lose your place in a fight.
+  if (typeof log !== "undefined" && log) log.scrollTop = log.scrollHeight;
+}
+// The ONLY thing that writes the preference: somebody clicking the control.
+function setView(mode) {
+  viewWant = mode === "image" ? "image" : "text";
+  try { localStorage.setItem("nomad_view", viewWant); } catch (e) {}
+  applyView();
+}
+applyView();
+
+// THE GRIP. The strip is a quarter of the window because the picture is the
+// point; pull it and you get half, for reading back through a fight you just
+// had. Remembered, because whichever way you like it you will like it every
+// time.
+var logGrip = document.getElementById("loggrip");
+var logBig = false;
+try { logBig = localStorage.getItem("nomad_logbig") === "1"; } catch (e) {}
+function setLogBig(on) {
+  logBig = !!on;
+  document.body.setAttribute("data-log", logBig ? "big" : "small");
+  if (logGrip) {
+    logGrip.textContent = logBig ? "\u25bc" : "\u25b2";
+    logGrip.setAttribute("aria-expanded", logBig ? "true" : "false");
+    logGrip.title = logBig ? "less of the log" : "more of the log";
+  }
+  try { localStorage.setItem("nomad_logbig", logBig ? "1" : "0"); } catch (e) {}
+  if (typeof log !== "undefined" && log) log.scrollTop = log.scrollHeight;
+}
+setLogBig(logBig);
+if (logGrip) logGrip.onclick = function () { setLogBig(!logBig); };
+
 // HOW HARD THE SCRIM PRESSES, per painting. The gradient below is weakest at
 // 45% height \u2014 which is exactly where the title and the line sit \u2014 and one
 // setting cannot serve eight pictures that range from a torchlit corridor to

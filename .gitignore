@@ -17,3 +17,12 @@ flavor-audit.md
 events-scope.md
 mob-audit.md
 mob-weirdness.md
+
+# THE ROOM PLATES STAY OUT. Generated art, megabytes of it, and the set only
+# grows — there is no reason for a public repo to carry it and every reason not
+# to bloat its history with binaries that will be regenerated anyway. Nothing
+# breaks without them: a terrain with no plate paints bare ground, which is the
+# behaviour the client was built around from the first day. They are uploaded
+# from the working tree at deploy time, so KEEP A COPY — a fresh clone can
+# deploy the game correctly but will deploy it without pictures.
+game-server/public/room-bg/

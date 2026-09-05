@@ -1,0 +1,20 @@
+# The faces never change under a name — only the set grows — so they are cached
+# for a year, the same bargain the hand-written routes made before these became
+# files. Kept here rather than in the Worker because the Worker no longer sees
+# these requests at all.
+/icon.png
+  Cache-Control: public, max-age=31536000, immutable
+/icon-512.png
+  Cache-Control: public, max-age=31536000, immutable
+/apple-touch-icon.png
+  Cache-Control: public, max-age=31536000, immutable
+/apple-touch-icon-precomposed.png
+  Cache-Control: public, max-age=31536000, immutable
+/og.jpg
+  Cache-Control: public, max-age=31536000, immutable
+/door-bg.jpg
+  Cache-Control: public, max-age=31536000, immutable
+/door-bg/*
+  Cache-Control: public, max-age=31536000, immutable
+/card-bg/*
+  Cache-Control: public, max-age=31536000, immutable

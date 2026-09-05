@@ -5,8 +5,6 @@ import { GOOGLE_CLIENT_ID } from "./google";
 import { verifyJwt, timingSafeEqual } from "./jwt";
 import { PAGE } from "./public";
 import { GUIDE_PAGE } from "./guide";
-import { iconBytes } from "./icon";
-import { touchIconBytes, iconN512Bytes, ogImageBytes, doorSceneBytes, cardSceneBytes } from "./assets";
 import { signProfileEvent, signSheetEvent, signDeleteEvent, signRetireScoreEvent, isGameKeyConfigured } from "./signing";
 import type { PlayerRow } from "./world";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -89,34 +87,15 @@ export default {
       // Google is now self-custody only: the browser talks straight to Drive
       // (see /vault.js). The old custodial /auth/google endpoint is retired.
 
-      // The dungeon serves its own faces: avatar, home-screen tile, and the
-      // share card — all the same parting-gate seal. Cached hard.
-      const IMMUTABLE = "public, max-age=31536000, immutable";
-      if (m === "GET" && pathname === "/icon.png") {
-        return new Response(iconBytes(), {
-          headers: { "content-type": "image/png", "cache-control": IMMUTABLE },
-        });
-      }
-      if (m === "GET" && (pathname === "/apple-touch-icon.png" || pathname === "/apple-touch-icon-precomposed.png")) {
-        return new Response(touchIconBytes(), {
-          headers: { "content-type": "image/png", "cache-control": IMMUTABLE },
-        });
-      }
-      if (m === "GET" && pathname === "/og.jpg") {
-        return new Response(ogImageBytes(), {
-          headers: { "content-type": "image/jpeg", "cache-control": IMMUTABLE },
-        });
-      }
+      // THE DUNGEON'S FACES ARE FILES NOW, not base64 baked into the script.
+      // /icon.png, /apple-touch-icon*.png, /og.jpg, /icon-512.png, /door-bg*.jpg
+      // and /card-bg/*.jpg all live in public/ and are served by the static-asset
+      // binding before this Worker is ever woken, with public/_headers carrying
+      // the same immutable caching these routes used to set by hand. The art was
+      // six megabytes of the bundle; a Worker should not be a picture frame.
       // PWA-lite: a manifest so the game installs to a home screen and opens
       // standalone — deliberately NO service worker, so a refresh is always
       // current (four-ships-a-day survives no cache).
-      if (m === "GET" && pathname === "/icon-512.png") {
-        // The home-screen / PWA app icon is the N monogram (rome's call) — the
-        // gate stays the favicon + Nostr avatar (/icon.png), the N is the app.
-        return new Response(iconN512Bytes(), {
-          headers: { "content-type": "image/png", "cache-control": IMMUTABLE },
-        });
-      }
       if (m === "GET" && pathname === "/manifest.json") {
         return new Response(JSON.stringify({
           name: "NOMAD",
@@ -134,30 +113,6 @@ export default {
           headers: { "content-type": "application/manifest+json", "cache-control": "public, max-age=86400" },
         });
       }
-      // The threshold's backdrops: /door-bg.jpg stays the torch; the scene set
-      // lives at /door-bg/<name>.jpg (the client picks one per visit).
-      const mScene = pathname === "/door-bg.jpg" ? ["", "torch"] : pathname.match(/^\/door-bg\/([a-z]+)\.jpg$/);
-      if (m === "GET" && mScene) {
-        const scene = doorSceneBytes(mScene[1]);
-        if (scene) {
-          return new Response(scene, {
-            headers: { "content-type": "image/jpeg", "cache-control": IMMUTABLE },
-          });
-        }
-      }
-
-      // The brag card's plates: /card-bg/<name>.jpg. Same immutable caching as
-      // the door scenes — content never changes under a name, only the set grows.
-      const mCard = pathname.match(/^\/card-bg\/([a-z]+)\.jpg$/);
-      if (m === "GET" && mCard) {
-        const plate = cardSceneBytes(mCard[1]);
-        if (plate) {
-          return new Response(plate, {
-            headers: { "content-type": "image/jpeg", "cache-control": IMMUTABLE },
-          });
-        }
-      }
-
       // Keeper-only: sign the dungeon's kind-0 profile with the epoch key and
       // speak it to the relays. Guarded by ADMIN_TOKEN; shut if unset.
       if (m === "POST" && pathname === "/admin/publish-profile") {

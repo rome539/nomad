@@ -6358,6 +6358,54 @@ export const NIGHT_LIT = new Set<string>([
   "the-shieling", "the-stell", "the-slabs", "the-shelter-crag",
 ]);
 export const OUTDOOR_REGIONS = new Set<string>(["out", "road", "wood", "mountain", "den", "crossing"]);
+
+// WHAT KIND OF GROUND A ROOM IS, for the client that paints it (the status
+// frame's `terrain`). Ordered, first match wins, matched against the room ID —
+// so it is derived, never stored, and costs no column, no migration, and
+// nothing a room regen can silently revert.
+//
+// Written against the mountain first because the mountain asked the hardest
+// question: 398 rooms that are NOT one kind of ground. It is bare rock and
+// snow, yes, but it is also GEOTHERMAL — warm flags swept clear of grit, rock
+// glazed to black glass, ground steaming out of a hundred cracks — and at its
+// foot it is a beck with plunge pools and the tumbled stone of people who once
+// brought animals up here for a summer. Six of those had no plate when this
+// was written, and that is fine: a terrain with no picture falls back to its
+// band, and a band with no picture paints bare ground. The classification is
+// honest before the art exists, and the art drops in behind it.
+// WHO CAN SEE THE PICTURES AT ALL. Room art is unfinished — most of the world
+// has no plate and paints bare ground — so it is shut to everybody except the
+// keys listed here, and the gate is on the SERVER: an unlisted wanderer is not
+// sent a band, a sky or a terrain, and never learns there was anything to see.
+// Hiding the toggle client-side alone would have been a suggestion, not a door.
+export const ART_KEYS = new Set<string>([
+  "acee4b2c6111c160a8eb3b68da327ea3242b41136cda46d376af762d768db612",
+  "aacc7f29a6b00fde2381cca237a37777598a103f1ea12e3221fe4e5c586f51c3",
+  "60a6ff7ee84bdfb55e85c7c2836c2c44931b592c88dbcf0ebf0eddb7405154ae",  // the bench key
+  "4f355bdcb7cc0af728ef3cceb9615d90684bb5b2ca5f859ab0f0b704075871aa",  // Geartest, the fixed local probe
+]);
+
+export const TERRAIN_RULES: [string, RegExp][] = [
+  // WORD BOUNDARIES ARE NOT OPTIONAL HERE. Without them "race" caught every
+  // TERRACE on the hill and called twenty-five flat rock shelves a mountain
+  // stream; "ash" caught the outwash, "col" caught the cold, "pen" caught the
+  // deepening. A substring is not a word, and a room is not what it happens to
+  // contain the letters of.
+  ["snow",         /snow|\bice\b|icefall|glacier|drift|\bwhite\b|cornice|\bneve\b|frost|frozen|\bbrim\b/],
+  ["corrie-floor", /(corrie|bowl).*(floor|tarn|bottom)|(floor|tarn).*(corrie|bowl)/],
+  ["corrie-rim",   /corrie|cirque/],
+  ["vent",         /\bvent\b|steam|shimmer|scald|warmth|\bwarm\b|\bheat\b|\bhot\b|fumarole|\breek\b/],
+  ["glass",        /glass|glaze|glazed|\bslag\b|burnt|scorch|\bash\b|tallow|run-stone/],
+  ["crag",         /eyrie|guano|perch|lookout|updraught|\bface\b|\bwall\b|cliff|tower|pinnacle|buttress|\bnest\b/],
+  ["fold",         /shieling|\bstell\b|\bfold\b|\bpen\b|bothy|\bhut\b|\bdyke\b|clapper/],
+  ["beck",         /\bbeck\b|\bburn\b|\bforce\b|plunge|\bpool\b|\blinn\b|spout|\bford\b|\bfall\b/],
+  ["boulder",      /boulder|clatter|block-field/],
+  ["slab",         /\bslab\b|\bslabs\b|\bflag\b|\bflags\b|paving|pavement|\bbask\b|basking|sun-trap|terrace/],
+  ["gully",        /gully|\bdrain\b|chute|couloir|groove|\bgash\b|notch|cleft|\brake\b|gorge/],
+  ["scree",        /scree|talus|\bfan\b|loose|\bslide\b|rubble|scatter|shatter/],
+  ["alder",        /alder|thicket|\bbog\b|\bmoss\b|marsh|\bmire\b|willow|birch|\bpeat\b|\bsike\b|cotton-grass/],
+  ["cairn",        /cairn|shoulder|crest|ridge|\bmoor\b|plateau|shelf|ledge|\bbrow\b|saddle|\bcol\b/],
+];
 // ...AND THE ROOMS INSIDE THEM THAT ARE NOT. A band declares itself outdoors as
 // a whole, which was true enough while the outdoor bands were a road and a wood.
 // The dens are the first band that is mostly weather and partly ROOF — a smithy,

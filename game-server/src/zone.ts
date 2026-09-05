@@ -53,7 +53,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, moonPhase, nightHuntMult, eclipsePhase, isBloodMoon } from "./zone-util";
+import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, nightHuntMult, eclipsePhase, isBloodMoon } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -116,7 +116,7 @@ import {
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  SPAWN_QUARTERS, DARK_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  SPAWN_QUARTERS, DARK_ROOMS, ART_KEYS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -7985,6 +7985,33 @@ export class ZoneDO implements DurableObject {
           // it is built into, so the bar reads the ground outside rather than
           // going blank the moment you step in out of the cold.
           region: REGION_LABELS[lore.mapRegionOf(this, session.roomId)] ?? "",
+          // WHAT THE PLACE LOOKS LIKE, for a client painting it rather than
+          // reading it. `band` is the region SLUG (the line above is a display
+          // label and cannot be looked up); `sky` is the one condition that
+          // most decides the light. Both are strings the client matches against
+          // its own fixed tables and drops on a miss — never a path, never
+          // anything concatenated into a URL.
+          //
+          // Ordered by what your eye would settle on first: a roof beats all
+          // weather, then snow (it LIES there, it outlasts its own storm), then
+          // the two that erase distance, then the dark, then the edges of the
+          // light. A room can be several of these at once and only reports the
+          // loudest, because a picture can only be one.
+          // Shut unless this key is on the art list: no band, no terrain, no sky,
+          // and no `art` flag to unlock the toggle with. The picture set is
+          // half-built, and half-built is not a thing to show the world.
+          art: ART_KEYS.has(session.pubkey) ? 1 : undefined,
+          band: ART_KEYS.has(session.pubkey) ? lore.mapRegionOf(this, session.roomId) : undefined,
+          terrain: ART_KEYS.has(session.pubkey) ? terrainOf(session.roomId, room?.description) : undefined,
+          sky: !ART_KEYS.has(session.pubkey) ? undefined
+            : !OUTDOOR_ROOMS.has(session.roomId) ? "in"
+            : events.snowed(this, session.roomId) ? "snow"
+            : events.foggy(this, session.roomId) ? "fog"
+            : events.raining(this, session.roomId) ? "rain"
+            : isNight() ? (isFullMoon() && !isBloodMoon() ? "moon" : "night")
+            : isDusk() ? "dusk"
+            : isDawn() ? "dawn"
+            : "day",
           fx,
         }),
       );
