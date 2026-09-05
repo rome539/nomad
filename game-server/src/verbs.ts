@@ -37,7 +37,7 @@ import {
   tideSiltLine, RING_CD_MS,
   DREAM_ODDS, DREAMS,
   WRECK_DIVE_ROOMS, WRECK_DIVE_CATCHES, WRECK_DIVE_REST_MS, WRECK_LOOT,
-  WELL_ROOMS, SPRING_ROOMS, VANTAGE_ROOMS, CROW_ROOST, BEAM_ROOM, BEAM_FALL_ODDS, BEAM_FALL_DMG, FISHING_DITCH, DITCH_EEL_ODDS, YEW_ROOM, YEW_CAP,
+  WELL_ROOMS, SPRING_ROOMS, VANTAGE_ROOMS, LANDMARKS, LANDMARK_NEAR, LANDMARK_MID, OUTDOOR_REGIONS, CROW_ROOST, BEAM_ROOM, BEAM_FALL_ODDS, BEAM_FALL_DMG, FISHING_DITCH, DITCH_EEL_ODDS, YEW_ROOM, YEW_CAP,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM, ALTAR_ROOMS,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
@@ -605,6 +605,59 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   const world = z.world!;
 
   if (arg === "self" || arg === "me" || arg === "myself") return z.send(session, selfExamine(z, session));
+
+  // A BEARING (2026-09-04). `look north` was a dead end — DIRECTIONS was imported
+  // into this file for `point` and nothing else, so the commonest thing anybody
+  // types after reading a compass fell through to "nothing like that here".
+  //
+  // What answers it is the map's own geometry. Every room carries map_x/map_y in
+  // its row, the grid runs east +x / north -y, and the landmarks sit at their
+  // real places on it — so this is arithmetic, not authoring, and a region added
+  // next year gets bearings the day it lands.
+  const facing = DIRECTIONS[arg];
+  if (facing && facing !== "up" && facing !== "down") {
+    const here = world.rooms.get(session.roomId);
+    const inside = !OUTDOOR_REGIONS.has(z.regionOf(session.roomId)) && !OUTDOOR_ROOMS.has(session.roomId);
+    if (inside || here?.map_x == null || here.map_y == null) {
+      return z.send(session, "You are looking at a wall. Whatever lies that way, it is on the other side of it.");
+    }
+    if (!z.litFor(session)) return z.send(session, "You look off into the dark and the dark is all of it.");
+    // The same weather that governs a vantage governs a horizon, and for the
+    // same reason: height and distance are the same sense.
+    if (events.foggy(z, session.roomId)) {
+      return z.send(session, "You look that way and the fog gives you about thirty yards of it, all of them the same.");
+    }
+    if (isNight() && !isFullMoon()) {
+      return z.send(session, "The country that way is black on black, and the shapes in it could be anything or nothing. On a bright enough night you might get a bearing.");
+    }
+    const ox = here.map_x, oy = here.map_y;
+    const seen: { d: number; text: string }[] = [];
+    for (const L of LANDMARKS) {
+      const dx = L.x - ox, dy = L.y - oy;
+      // The quadrant this way faces. Four arcs, no overlap and no gaps.
+      const inArc = facing === "east" ? dx > Math.abs(dy)
+        : facing === "west" ? -dx > Math.abs(dy)
+        : facing === "north" ? -dy > Math.abs(dx)
+        : dy > Math.abs(dx);
+      if (!inArc) continue;
+      const d = Math.hypot(dx, dy);
+      if (d > L.reach) continue; // too small to carry this far — rome's rule, and the whole of it
+      // HOW FAR AWAY IT IS, IN ROOMS, NOT IN FRACTIONS OF ITS OWN SIZE. Banding
+      // by reach made the mountain's "near" fifty units wide, so the Crossing
+      // House — twenty-seven rooms off — was told the summit was "behind your
+      // own head". Reach decides whether you can see a thing at all; the plain
+      // distance decides how close it looks, exactly as it would in life.
+      const band = d <= LANDMARK_NEAR ? L.near : d <= LANDMARK_MID ? L.mid : L.far;
+      seen.push({ d, text: band.replace("{dir}", facing) });
+    }
+    if (!seen.length) {
+      return z.send(session, `You look ${facing} and get open country and the weather over it — nothing in that direction is big enough, or near enough, to take a bearing from.`, "study");
+    }
+    // Nearest first: you notice the thing in front of you, and then the thing
+    // behind it. Two is what a look is worth; a list is a map, and maps are bought.
+    seen.sort((a, b) => a.d - b.d);
+    return z.send(session, seen.slice(0, 2).map((l) => l.text).join(" "), "study");
+  }
 
   // The lightless deep takes the WHOLE room from you — the glance already says
   // "you can see nothing, not what shares it with you." A named look has to obey

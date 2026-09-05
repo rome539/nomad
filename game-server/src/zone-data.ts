@@ -5796,6 +5796,68 @@ export const VANTAGE_ROOMS = new Set([
   "the-second-hairpin", "the-third-hairpin",
   "the-marshals-lodging", // the siege laid out below it, from the highest point of the lines
 ]);
+// THE LANDMARKS (rome, 2026-09-04: you should be able to look a direction and
+// take a bearing off the natural features and the structures, the way you would
+// in life — and a big thing should be visible from further off than a small one).
+//
+// NOTHING HERE IS AUTHORED PER ROOM. Every room has carried map_x / map_y in its
+// own row since mig 166 — "a room's place on the paper is a FACT about the room,
+// like its name" — and the grid is clean: east is +x, west is -x, north is -y,
+// south is +y, measured over 2,806 exits. So a bearing is arithmetic. The world
+// lays out as one east-west strip, the wood at x -49 and the mountain out to
+// +112, and every landmark below sits at its real place on it.
+//
+// REACH IS SIZE, which is the whole of rome's rule. The mountain carries 200 and
+// is therefore visible from the far side of the world; the Hurdle Gate carries 8
+// and is a thing you see when you are nearly at it. Distance against reach also
+// picks the words, so the Summit is "on the edge of sight" from the wood and
+// "closes the whole eastern sky" from the ferry, off one table entry.
+//
+// A DIRECTION IS A QUADRANT: east means the thing is further east than it is
+// north or south of you. Four arcs, no overlap, no gaps.
+// How close a thing LOOKS, measured in rooms and not in fractions of its own
+// size. Reach says whether you can see it; these say how it reads when you do.
+export const LANDMARK_NEAR = 6;
+export const LANDMARK_MID = 25;
+export interface Landmark { name: string; x: number; y: number; reach: number; near: string; mid: string; far: string }
+export const LANDMARKS: Landmark[] = [
+  { name: "the mountain", x: 90, y: 2, reach: 200,
+    near: "The mountain is simply there, filling everything, and the top of it is somewhere behind your own head.",
+    mid: "The mountain stands up out of the haze {dir}, with the snow still lying on the north side of it.",
+    far: "Right on the edge of sight {dir} there is a shape too regular for cloud and too big for anything else: the mountain, a long way off." },
+  { name: "the scarp", x: 28, y: 10, reach: 70,
+    near: "The scarp stands over you {dir}, grey and sheer, with the road going up the face of it in stages.",
+    mid: "A grey wall of rock lies across the country {dir} — the scarp, where the road stops pretending it can stay level.",
+    far: "Something pale and level breaks the country {dir}, low down: the scarp, and the tilt of ground running up to it." },
+  { name: "the wood", x: -36, y: 8, reach: 60,
+    near: "The wood is right there {dir}, a wall of trunks with the light going green a few yards inside it.",
+    mid: "The wood lies dark along the whole of the {dir}, and you cannot see one thing that is happening inside it.",
+    far: "There is a dark line low on the {dir} that does not move with the weather. That is the wood." },
+  { name: "the channel", x: 55, y: 10, reach: 55,
+    near: "The water is {dir} of you and moving, wide enough that the far bank is a matter of detail rather than distance.",
+    mid: "The channel shows {dir} as a flat bright band with nothing standing on it.",
+    far: "Far {dir} the country stops and there is a line of light along the end of it, which is the water." },
+  { name: "the Weeper's Arch", x: 1, y: 9, reach: 35,
+    near: "The Weeper's Arch stands over the ground {dir}, and whatever it was part of is not there any more.",
+    mid: "The arch is up {dir}, one standing shape in a country that has stopped standing.",
+    far: "A thin upright breaks the skyline {dir}, small with distance and too straight to have grown: the Weeper's Arch." },
+  { name: "the bridge", x: 47, y: 4, reach: 30,
+    near: "The bridge's piers march out into the water {dir}, four of them, and the arch is gone off three.",
+    mid: "The bridge stands {dir} in the water, in pieces, and the pieces are still enormous.",
+    far: "Out {dir} there are uprights in the water in a line, evenly spaced, which nothing natural does." },
+  { name: "the Boundary Oak", x: -36, y: 15, reach: 12,
+    near: "The Boundary Oak is {dir}, wide enough that four people could stand inside the trunk of it.",
+    mid: "One tree stands up over the rest {dir}, older than everything round it.",
+    far: "A single crown breaks the canopy {dir}." },
+  { name: "the Shingle Stair", x: 68, y: 9, reach: 10,
+    near: "The Shingle Stair goes up {dir} off the beach, and the mountain starts at the top of it.",
+    mid: "The ground steps up {dir} in shingle terraces — the stair, and the way onto the hill.",
+    far: "The land rises {dir} in a series of pale steps." },
+  { name: "the Hurdle Gate", x: -31, y: 14, reach: 8,
+    near: "The Hurdle Gate is {dir}, still hung, still shutting nothing out.",
+    mid: "There is a gate in the boundary {dir}.",
+    far: "Something man-made breaks the hedge line {dir}." },
+];
 export const BEACON_ROOM = "the-perch";
 export const CROW_ROOST = "the-crow-roost";       // a shout under it puts the crows up
 export const YEW_ROOM = "the-hollow-yew";         // the tree keeps one thing — the world's dead-drop
