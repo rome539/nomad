@@ -26,3 +26,6 @@ mob-weirdness.md
 # from the working tree at deploy time, so KEEP A COPY — a fresh clone can
 # deploy the game correctly but will deploy it without pictures.
 game-server/public/room-bg/
+# ...and the creature sprites, for the same reasons and at the same cost:
+# they upload from the working tree at deploy, so KEEP A COPY.
+game-server/public/mob/

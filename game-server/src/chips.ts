@@ -14,7 +14,7 @@ import * as dice from "./dice";
 import { chipName, nameMatches, shortName, isNight, isFullMoon } from "./zone-util";
 import { hasTrait } from "./world";
 import {
-  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM,
+  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM, ART_KEYS,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
@@ -111,6 +111,11 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // findCreatureIn uses, so the chip and the blade always agree — an albino
   // rat counts as a "rat" too, and the plain-rat chips number around it.
   const chipNamesSeen: string[] = [];
+  // AND WHAT A CLIENT PAINTING THE ROOM WOULD SEE STANDING IN IT. Collected in
+  // this same loop rather than a second one, so the picture inherits every rule
+  // the chips already obey — above all the lurker rule: a thing lying in wait
+  // gets no chip and no sprite, and the room stays as quiet as its description.
+  const seen: string[] = [];
   for (const creature of z.creaturesInRoom(session.roomId)) {
     // Torchlight reveals a waiting lurker — so it also gets its attack chip.
     // GLINTING gear does the same by daylight (2026-08-20): the polish leaves
@@ -123,6 +128,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     chipNamesSeen.push(tmpl.name);
     const n = chipNamesSeen.filter((nm) => nameMatches(nm, label)).length;
     suggest.push(`attack ${label}${n > 1 ? ` ${n}` : ""}`);
+    if (seen.length < 4) seen.push(creature.templateId);   // a room paints four at most
   }
   // A throwable in hand and something to throw it at: offer the opener.
   if (creatureHere) {
@@ -411,7 +417,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   const w = z.wayHome.get(session.roomId);
   const home = world.entryRooms.has(session.roomId) ? "here" : (w ? w.dir : "");
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home }));
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, mobs: ART_KEYS.has(session.pubkey) ? seen : undefined }));
   } catch {}
 }
 

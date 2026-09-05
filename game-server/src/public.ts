@@ -914,6 +914,32 @@ export const PAGE = `<!doctype html>
      broken feature. Halved across the board, and each now leans on hue rather
      than on simply subtracting light. Any of them can go darker once it has
      been judged on a real plate; none may take a picture below being one. */
+  /* WHAT IS STANDING IN THE ROOM WITH YOU. A row of cut-out sprites resting on
+     the near ground of whatever plate is showing — which is the whole reason
+     the stage lock reserved the bottom third of every picture. Sized by kind so
+     a hare and an eagle owl stay a hare and an eagle owl, and laid out with the
+     biggest nearest the middle so nothing important hides behind anything else.
+     Hidden with the scene: in text mode there is nothing to stand on. */
+  #mobs { display: none; }
+  body[data-view="image"] #mobs {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0;
+    bottom: 26vh;
+    z-index: 0;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3vw;
+    pointer-events: none;
+    padding: 0 4vw;
+  }
+  body[data-view="image"][data-log="big"] #mobs { bottom: 51vh; }
+  #mobs img {
+    display: block;
+    width: auto;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,.75));
+  }
   #scene.sky-day   { --scrim: transparent; }
   #scene.sky-dawn  { --scrim: linear-gradient(rgba(84,104,148,.20), rgba(198,168,118,.10)); }
   #scene.sky-dusk  { --scrim: linear-gradient(rgba(58,38,28,.20), rgba(188,108,48,.14)); }
@@ -1490,6 +1516,7 @@ export const PAGE = `<!doctype html>
     </div>
   </div>
   <div id="scene" aria-hidden="true"></div>
+  <div id="mobs" aria-hidden="true"></div>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
   <div id="log"></div>
   <div id="chips"></div>
@@ -2822,6 +2849,7 @@ async function connect() {
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
+      paintMobs(f.mobs);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
@@ -6123,6 +6151,7 @@ var BAND_PLATE = {
 var TERRAIN_PLATE = {
   scree: ["scree"], gully: ["gully"], snow: ["snow"], cairn: ["cairn"],
   alder: ["alder"], "corrie-rim": ["corrie-rim"], "corrie-floor": ["corrie-floor"],
+  gatehouse: ["gatehouse"],
 };
 // FNV-1a: the same cheap trick the world already uses to hang per-instance
 // detail off an id without storing a byte of it.
@@ -6227,10 +6256,14 @@ function paintScene(band, sky, terrain, roomKey) {
   // mountain's drain. Scree, gully, snow, cairn, corrie: every one of those is
   // a MOUNTAIN picture, and nowhere else may borrow them however well the words
   // happen to line up. Other bands paint bare ground until they own plates.
-  var kind = BANDS_WITH_PLATES[lastBand]
-    ? (TERRAIN_PLATE[lastTerrain] ? lastTerrain
-       : (TERRAIN_NEAR[lastTerrain] || BAND_FALLBACK[lastBand] || ""))
-    : "";
+  // The gatehouse belongs to no band — it is the same small warm room at every
+  // door — so it paints wherever it is found rather than waiting for the
+  // country outside to have pictures of its own.
+  var kind = lastTerrain === "gatehouse" ? "gatehouse"
+    : BANDS_WITH_PLATES[lastBand]
+      ? (TERRAIN_PLATE[lastTerrain] ? lastTerrain
+         : (TERRAIN_NEAR[lastTerrain] || BAND_FALLBACK[lastBand] || ""))
+      : "";
   var list = kind ? TERRAIN_PLATE[kind] : null;
   var terr = (list && list.length) ? list[plateHash(lastRoomKey || kind) % list.length] : "";
   sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".jpg?v=" + ART_V + ")" : "";
@@ -6251,6 +6284,7 @@ function applyView() {
   // "text" back to someone who had just asked for pictures and was waiting.
   if (viewBtn) viewBtn.textContent = viewWant;
   paintScene(null, null, null, null);
+  if (viewMode !== "image") { lastMobs = "x"; paintMobs(null); }
   // The strip changes height under the text, so put the newest line back on
   // the floor of it — switching view must never lose your place in a fight.
   if (typeof log !== "undefined" && log) log.scrollTop = log.scrollHeight;
@@ -6267,6 +6301,59 @@ applyView();
 // point; pull it and you get half, for reading back through a fight you just
 // had. Remembered, because whichever way you like it you will like it every
 // time.
+// THE SPRITES. Keyed by template id through a fixed table, same law as the
+// plates: nothing off the wire is ever built into a path, and a creature with
+// no sprite yet simply does not appear rather than appearing wrong. The heights
+// are a fraction of the viewport and they are the ONLY thing keeping a stoat
+// from arriving the size of a wolf.
+var MOB_SPRITE = {
+  "mountain-hare": 11, "ptarmigan": 10, "scarp-raven": 11, "carrion-vulture": 17,
+  "feral-goat": 20, "stone-adder": 7, "hill-wolf": 20, "snow-fox": 13,
+  "hill-fox": 13, "lynx": 17, "wildcat": 12, "glutton": 14,
+  "hill-eagle": 18, "eagle-owl": 15, "red-hind": 24, "ermine": 8,
+  // Sheet two: the fliers with their wings out, and the two that the hill is
+  // known for. The eyrie holder and the cave lion are deliberately enormous —
+  // one stands as tall as a man and the other is the size of a pony, and if
+  // they arrive the same size as a fox the room has told the player a lie.
+  "bone-breaker": 22, "mountain-chough": 9, "brooding-vulture": 18,
+  "gill-adder": 8, "eyrie-holder": 30, "cave-lion": 26,
+  // THE SUMMER PEOPLE, and the man is the ruler everything else is measured
+  // against — 22vh is a person standing, so the hind at 24 is genuinely taller
+  // at the shoulder than you, and the stoat at 8 comes to your shin. Their
+  // sprites carry a baked alpha of 140/255: they are not solid, and a player
+  // who walks up to the shieling should be able to tell that before anyone
+  // says so.
+  "the-herd": 22, "the-milker": 15, "a-fold-dog": 12,
+  // AND THE ONE THING ON THE HILL THAT IS ONE OF ONE. Twice the height of a
+  // standing man and half again as wide, which on any window means it is most
+  // of what you can see. There is no version of meeting this that should fit
+  // tidily beside a hare.
+  "the-drake": 46,
+};
+var mobsEl = document.getElementById("mobs");
+var lastMobs = "";
+function paintMobs(ids) {
+  if (!mobsEl) return;
+  var list = [];
+  if (viewMode === "image" && ids && ids.length) {
+    for (var i = 0; i < ids.length; i++) if (MOB_SPRITE[ids[i]]) list.push(ids[i]);
+  }
+  var key = list.join(",");
+  if (key === lastMobs) return;          // nothing changed; do not reflow the row
+  lastMobs = key;
+  while (mobsEl.firstChild) mobsEl.removeChild(mobsEl.firstChild);
+  // Biggest toward the centre, so a hare is never lost behind a hind.
+  list.sort(function (a, b) { return MOB_SPRITE[b] - MOB_SPRITE[a]; });
+  var order = [];
+  for (var j = 0; j < list.length; j++) (j % 2 ? order.push : order.unshift).call(order, list[j]);
+  for (var k = 0; k < order.length; k++) {
+    var im = document.createElement("img");
+    im.src = "/mob/" + order[k] + ".png?v=" + ART_V;
+    im.alt = "";
+    im.style.height = MOB_SPRITE[order[k]] + "vh";
+    mobsEl.appendChild(im);
+  }
+}
 var logGrip = document.getElementById("loggrip");
 var logBig = false;
 try { logBig = localStorage.getItem("nomad_logbig") === "1"; } catch (e) {}

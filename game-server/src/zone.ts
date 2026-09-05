@@ -8002,7 +8002,13 @@ export class ZoneDO implements DurableObject {
           // half-built, and half-built is not a thing to show the world.
           art: ART_KEYS.has(session.pubkey) ? 1 : undefined,
           band: ART_KEYS.has(session.pubkey) ? lore.mapRegionOf(this, session.roomId) : undefined,
-          terrain: ART_KEYS.has(session.pubkey) ? terrainOf(session.roomId, room?.description) : undefined,
+          // BEHIND A DOOR IS ITS OWN GROUND. The gatehouse is not the room whose
+          // id the session still carries — you are out of the world, in a small
+          // warm room with the hatch shut — so it names itself rather than being
+          // classified from a hillside it is no longer standing on.
+          terrain: !ART_KEYS.has(session.pubkey) ? undefined
+            : this.outOfWorld(session) ? "gatehouse"
+            : terrainOf(session.roomId, room?.description),
           sky: !ART_KEYS.has(session.pubkey) ? undefined
             : !OUTDOOR_ROOMS.has(session.roomId) ? "in"
             : events.snowed(this, session.roomId) ? "snow"
