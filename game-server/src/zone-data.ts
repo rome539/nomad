@@ -5685,7 +5685,118 @@ export const WRECK_LOOT: { item: string; chance: number }[] = [
 ];
 // THE SECOND WAVE (2026-09-01) — the fixtures that survived the follow-through:
 // each one answers the player standing there, on a verb that already exists.
-export const WELL_ROOMS = new Set(["the-well-court", "the-shallow-well"]); // water where the rain isn't: the wash
+// WATER WHERE THE RAIN ISN'T (rome, 2026-09-04). `wash` answered in two rooms
+// in the whole world, plus whatever the tide had drowned and whatever the sky
+// was doing. Every other place a wanderer could plausibly get the blood off
+// their hands was written and inert — and this is a game where being seen
+// bloodied is a mechanic, so the scrub having almost nowhere to happen was a
+// hole in the pvp layer, not just a missing convenience.
+//
+// CURATED BY HAND, because the prose is full of traps a keyword sweep walks
+// straight into. The Dry Well "has been dry so long that a rowan has got a
+// footing eight feet down". The smithy yard's trough is "cracked through and
+// empty". The village smithy's is "full of black water" — a quench, not a wash.
+// The cart ruts hold standing rainwater. And half the wood says "every spring"
+// meaning the season. None of those are here; every room below says, in its own
+// text, that there is clean water in it right now.
+export const WELL_ROOMS = new Set(["the-well-court", "the-shallow-well",
+  "the-well-yard",       // the crossing house's: a windlass, a chain, and "the only sweet water within a mile of anywhere"
+]);
+// ...and the water that is not a well, which is most of it: a trough set under
+// a spring, or a burn you kneel at. Same scrub, different sentence — you do not
+// "draw from the well" at a waterfall.
+export const SPRING_ROOMS = new Set([
+  "the-scarp-spring",    // "the cleanest thing for twenty rooms", and the trough under it is older than the road
+  "the-beck-head",       // a stone trough set under the flow by somebody who came this way often enough to want one
+  "the-drovers-stance",  // the spring-fed trough the beasts were held at
+  "the-drove-pound",     // "The gate is off. The trough still runs."
+  "the-scoop-of-grass",  // the mountain's green bowl, spring-fed
+  "the-shepherds-ford",  // shallow water over laid flags — "this is where it came down to drink"
+  "the-lower-beck",      // "cold enough to ache your hands within a count of ten"
+  "the-beck-fork",       // where the two waters meet
+  "the-lower-force",     // the pool under the fall
+]);
+// THE PERCH (rome, 2026-09-04). "A wooden beacon on a tripod of legs standing
+// off the causeway in open water, tarred black, with a cage top for a fire.
+// Reachable at low water by a spit of shingle. Nothing has burned in it in
+// living memory and the cage is full of nest."
+//
+// The lantern stump's sibling, and everything it needs was already written. The
+// tide is the gate — the spit is only there at low water, so lighting the
+// crossing is a thing you have to TIME, and the same rise that opens the wreck
+// dives shuts the beacon. The nest is the kindling; a cage packed with two
+// centuries of dry sticks is why one torch is enough.
+//
+// And unlike the stump, a beacon is FOR being seen. The stump gives one room its
+// light back; this one tells the whole band somebody is out there, which is the
+// only light in the game a player lights for other people rather than for
+// themselves.
+// THE STRIPPED SMITHIES (rome, 2026-09-04). Three rooms in the world are built
+// as working forges and the whetstones you meet first point straight at them —
+// "past this, it wants a forge" — while the only forge in the game is behind the
+// gate door.
+//
+// BUT THE ROOMS SAY NO, and they say it deliberately. "There is an anvil bed and
+// no anvil. An anvil is worth carrying away and everything else here was not."
+// "The anvil block is still bolted down though the anvil went with somebody."
+// Every anvil in the world has been carried off, on purpose, by the author. No
+// anvil item exists to bring, either. So these are not repair rooms and making
+// them repair rooms would be arguing with the fiction to get a feature.
+//
+// WHAT A HEARTH WITHOUT AN ANVIL CAN STILL DO IS MELT. Smelting is heat, not
+// shaping: the forge pit is "a stone hearth in the bottom, a bellows-block still
+// bedded in the clay", which is a smelter and nothing else. So scrap goes down
+// to iron out here, and the shaping stays behind the gate where the anvil is.
+//
+// And it earns its place, because scrap to iron is a FIVE TO ONE compression.
+// Carrying scrap home is the tax on looting the deep; melting it where you stand
+// turns five pack slots into one. The gate keeps the better version — the
+// brazier reaches your lockbox and vault, this reaches your hands — so this is
+// the field answer, not a replacement.
+export const FORGE_ROOMS = new Set([
+  "the-forge-pit",       // the siege lines' own: a dug hollow, a stone hearth, a bellows-block bedded in clay
+  "the-village-smithy",  // open-fronted, the hearth still in the back wall
+  "the-smithy",          // the den's: a stone box with a hood over it, and a wall of hooks with nothing on them
+]);
+// THE VANTAGE POINTS (rome, 2026-09-04). Twenty-three rooms in the world tell
+// you, in their own text, that you can see from them — and none of them let you.
+// The Lodge Loft writes the whole feature by itself: "a slit window on each of
+// the four walls looks out over the whole warren, and that is what this room is
+// for: sitting in the dark, seeing everything, and being seen by nothing."
+//
+// So `scan` — not `climb`, which the parser already spends on movement, and not
+// `watch`, which is already `study`. From a vantage you read the ADJACENT rooms:
+// what is standing in them, and which way. Information with a toll on it, and
+// the toll is the walk up.
+//
+// THE WEATHER IS THE WHOLE BALANCE, and it costs nothing because it already
+// exists. Fog takes it entirely — you cannot see a hundred yards in it and the
+// room already says so to anybody standing there. Night takes it too, unless the
+// moon is full, which is the first time in this game that a full moon has been
+// worth something to a player instead of only to the things hunting them. Rain
+// leaves you movement without detail. A clear day is the only day this is a map.
+//
+// It never reports a LURKER. A thing whose entire nature is being unseen until
+// it strikes is not undone by a man up a tree, and a scan that quietly promised
+// an empty room would be worse than no scan at all.
+export const VANTAGE_ROOMS = new Set([
+  // the mountain, which is mostly edges and can see off all of them
+  "the-corrie-mouth", "the-arete-walk", "the-valley-shoulder", "the-north-rib",
+  "the-sun-buttress", "the-terrace-end", "the-snow-dome", "the-lookout",
+  "the-high-notch", "the-peat-hags",
+  // the wood, where seeing anything at all is the exception
+  "the-hunters-stand",  // "from up there you would be able to see over a good stretch of the canopy"
+  "the-ash-stand", "the-long-glade", "the-moat-bank",
+  // the dens
+  "the-lodge-loft",     // "sitting in the dark, seeing everything, and being seen by nothing"
+  "the-street-head", "the-scrub-end",
+  // the crossing
+  "the-bridge-approach", "the-bridge-strand", "the-far-ferry-steps",
+  // the road and the lines
+  "the-second-hairpin", "the-third-hairpin",
+  "the-marshals-lodging", // the siege laid out below it, from the highest point of the lines
+]);
+export const BEACON_ROOM = "the-perch";
 export const CROW_ROOST = "the-crow-roost";       // a shout under it puts the crows up
 export const YEW_ROOM = "the-hollow-yew";         // the tree keeps one thing — the world's dead-drop
 export const YEW_CAP = 1;
@@ -8120,7 +8231,53 @@ export const SMOKEHOUSE_ROOM = "smokehouse";
 // NOT a sanctuary and NOT a gate, which is the whole point — the deep racks buy
 // their speed with the delve down, and these buy it with a roofless hillside at
 // the door. A safe fast rack would beat both of the ones that already exist.
-export const SMOKEHOUSE_ROOMS = new Set<string>([SMOKEHOUSE_ROOM, "the-hollow-under"]);
+// ...AND THE TWO BANDS THAT HAD NOTHING (rome, 2026-09-04, asking whether the
+// world has enough smokehouses. It did not, and the gap was not close).
+//
+// Measured: two fast racks in the world, both at one end of it — the deep's and
+// the mountain's — and the gate racks, the slow safe answer, exist in exactly
+// two bands (three gates in the fortress, one out on the old road). The WOOD,
+// the ROAD and the CROSSING had no preservation of any kind, fast or slow. With
+// raw meat fresh for an hour and gone at two and a half, that made every kill
+// taken in the wood or at the water eat-it-now or lose it — an entire economy,
+// the one the thirty grazers exist to feed, that could not reach a rack.
+//
+// NEITHER OF THESE IS INVENTED. Both rooms were built with the fiction already
+// finished and no verb behind it, which is the cheapest kind of feature there is:
+//
+//   THE SMOKE HOUSE is a smokehouse. "A low stone building with no chimney and a
+//   door that fits badly on purpose, and inside, tiers of rods running wall to
+//   wall, black with two centuries of smoke, and the smell still in the stone
+//   hard enough to taste." A door that fits badly ON PURPOSE. It has look-detail
+//   and its own ambient lines about ash nobody has walked in, and it did nothing.
+//
+//   THE CHARCOAL FLAT is the wood's answer, and the wood already keeps a burner
+//   in the roster to go with it: "a level circle of ground where the earth is
+//   black to a depth of a foot, and nothing has grown on it since. They stacked
+//   and burned wood here for weeks at a time." A standing fire that runs for
+//   weeks is the whole trade, and this is the ground it ran on.
+//
+//   NOT the charcoal HUT next to it, which was the first pick and was wrong:
+//   the hut is a SAFE room, and the one law this set has is that a fast rack
+//   pays in exposure. The burn site pays in full — a level circle of open
+//   ground with sightlines in every direction and nothing to put your back to.
+//
+// Both obey the Hollow Under's law, which is the only law this set has: a fast
+// rack buys its speed with EXPOSURE. Neither is a gate, neither is a sanctuary,
+// both stand in open country where anything can walk in on you while the meat
+// hangs. A safe fast rack would beat both of the ones that already exist.
+//
+// NOT DONE HERE, deliberately: the crossing's salt rooms (the pans, the pan
+// house, the store) are a different preservation with their own fiction about
+// fuel being the expensive part — a feature, not a room id. And the drying
+// frames are for FISH, which would want its own recipe table; CURE_RECIPES is
+// one flat map today and splitting it is not this change.
+export const SMOKEHOUSE_ROOMS = new Set<string>([
+  SMOKEHOUSE_ROOM,       // the deep's, paid for with the delve down
+  "the-hollow-under",    // the mountain's, paid for with a roofless hillside
+  "the-smoke-house",     // the crossing's, and it was always one
+  "the-charcoal-flat",   // the wood's, the ground the burner's stack stood on
+]);
 export const CURE_MS = 3 * 60_000; // 3 min — long enough to be a wait you leave and risk, short enough you circle back mid-delve
 export const GATE_CURE_MS = 10 * 60_000; // the SAFE gate smokehouse: slower than the deep racks (their only edge is speed), but it can't be lifted and cures while you're away — you collect it black and keeping next time you're at the gate
 export const CURE_RECIPES: Record<string, string> = {

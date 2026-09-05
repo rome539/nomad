@@ -37,7 +37,7 @@ import {
   tideSiltLine, RING_CD_MS,
   DREAM_ODDS, DREAMS,
   WRECK_DIVE_ROOMS, WRECK_DIVE_CATCHES, WRECK_DIVE_REST_MS, WRECK_LOOT,
-  WELL_ROOMS, CROW_ROOST, BEAM_ROOM, BEAM_FALL_ODDS, BEAM_FALL_DMG, FISHING_DITCH, DITCH_EEL_ODDS, YEW_ROOM, YEW_CAP,
+  WELL_ROOMS, SPRING_ROOMS, VANTAGE_ROOMS, CROW_ROOST, BEAM_ROOM, BEAM_FALL_ODDS, BEAM_FALL_DMG, FISHING_DITCH, DITCH_EEL_ODDS, YEW_ROOM, YEW_CAP,
   CARVE_MAX_LEN, HOBBLE_FLEE_MS, DEEP_HEART, HEART_FRESH_SEC, DEEP_DOOR_OPEN_MS, DEEP_DOOR_KEY, DEEP_ROOMS, SENTINELS, HOUND_WAKE_MS, HOUND_HEADS, TREASURY_DOORS, TORCH_ITEM, ALTAR_ROOMS,
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
@@ -164,7 +164,7 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
   const world = z.world!;
   if (z.outOfWorld(session)) return cureAtGate(z, session, arg); // behind the gate door: the SAFE racks
   if (!SMOKEHOUSE_ROOMS.has(session.roomId)) {
-    return z.send(session, "There are no smoke-racks here. The old smokehouse lies deep below the larder, and there is a fire-ring under the erratic at the foot of the mountain — or cure it safe at any gate ('cure' behind the door).");
+    return z.send(session, "There are no smoke-racks here. The old smokehouse lies deep below the larder; there is a fire-ring under the erratic at the foot of the mountain, a smoke house standing on the crossing's shingle, and a burner's flat in the wood where the ground is still black — or cure it safe at any gate ('cure' behind the door).");
   }
   // Whichever rack-room you are standing in owns this cure: the fire, the
   // hanging pieces and the floor are all THIS room's, not the deep one's.
@@ -188,9 +188,9 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
       hanging = ` ${curing.length === 1 ? "A piece hangs" : curing.length + " pieces hang"} in the smoke, curing — ${left <= 20_000 ? "all but done now" : "about " + mins + " minute" + (mins === 1 ? "" : "s") + " yet"}. Leave them hanging; lift one early and it's raw still.`;
     }
     return z.send(session, (lit
-      ? "The smoke-racks are burning, smoke crawling up the black brick. Hang what raw meat or fish you've got — 'cure haunch', 'cure fish' — and load them while the fire holds; each piece keeps on its own once it's cured through."
+      ? "The racks are burning, and the smoke crawls up through them. Hang what raw meat or fish you've got — 'cure haunch', 'cure fish' — and load them while the fire holds; each piece keeps on its own once it's cured through."
         + (haveRaw ? "" : " (Though you've nothing raw to hang.)")
-      : "The smoke-racks hang cold in the black brick, waiting. Feed them a torch and hang raw meat or a fresh catch — 'cure haunch', 'cure fish' — and the old grease-fire wakes; once it's lit you can load the racks with all you carry. It cures where it hangs, so mind that something hungry doesn't come for it first."
+      : "The racks hang cold, waiting. Feed them a torch and hang raw meat or a fresh catch — 'cure haunch', 'cure fish' — and the old grease-fire wakes; once it's lit you can load the racks with all you carry. It cures where it hangs, so mind that something hungry doesn't come for it first."
         + (haveRaw && haveTorch ? "" : haveRaw ? " (You've something raw to hang, but no torch to wake the fire.)" : haveTorch ? " (You've a torch, but nothing raw to cure.)" : ""))
       + hanging);
   }
@@ -2831,6 +2831,67 @@ export function fenGoods(z: ZoneDO, session: Session): number {
   return n;
 }
 
+// THE VANTAGE (2026-09-04). Twenty-three rooms say you can see from them; this
+// is what happens when you do. One hop out, what is standing there and which
+// way — and the weather decides how much of that you actually get, because
+// height is worth nothing through fog and nothing in the dark.
+//
+// LURKERS ARE NEVER REPORTED. A thing whose whole nature is being unseen until
+// it strikes is not undone by a man up a tree, and a scan that quietly called an
+// occupied room empty would be worse than having no scan at all.
+export function cmdScan(z: ZoneDO, session: Session, _arg: string): void {
+  const world = z.world!;
+  if (!VANTAGE_ROOMS.has(session.roomId)) {
+    return z.send(session, "There is nothing to see from here that you cannot see by standing in it. You would want height, or an edge.");
+  }
+  if (z.inCombat(session)) return z.send(session, "Not with something in front of you.");
+  // Fog first: it is the one weather that takes the whole thing, and the room
+  // has already told anybody standing here that it would.
+  if (events.foggy(z, session.roomId)) {
+    return z.send(session, "You look out, and the fog looks back. Somewhere under it the country is doing whatever it is doing, and none of it is any of your business from up here.");
+  }
+  // And the dark. A torch in your hand is worse than useless for this — it buys
+  // you ten feet and costs you everything past them. The exception is the full
+  // moon, which is the first thing in this game a full moon has ever done FOR a
+  // wanderer instead of to them.
+  const night = isNight();
+  const moon = isFullMoon();
+  if (night && !moon) {
+    return z.send(session, "The country is out there in the dark, black on black, and you can make out the shape of nothing in it. On a bright enough night you might.");
+  }
+  const thin = events.raining(z, session.roomId); // movement, but no detail
+  const exits = (world.exits.get(session.roomId) ?? []).filter(
+    (e) => !e.key_item || z.openDoors.has(`${session.roomId}:${e.dir}`),
+  );
+  const lines: string[] = [];
+  for (const e of exits) {
+    const seen: string[] = [];
+    for (const c of z.creaturesInRoom(e.to_room)) {
+      if (c.hidden || LURKERS.has(c.templateId)) continue; // unseen is unseen, height or no height
+      const t = world.mobTemplates.get(c.templateId);
+      if (t) seen.push(t.name);
+    }
+    for (const s of z.sessions.values()) {
+      if (s.roomId !== e.to_room || s.pubkey === session.pubkey || z.outOfWorld(s)) continue;
+      seen.push(s.name);
+    }
+    if (!seen.length) continue;
+    const where = dirPhrase(e.dir);
+    lines.push(thin
+      ? `Something moves ${where}${seen.length > 1 ? " — more than one thing" : ""}.`
+      : `${cap(andList(seen))} ${seen.length > 1 ? "are" : "is"} ${where}.`);
+  }
+  if (!lines.length) {
+    return z.send(session, thin
+      ? "You watch the ground around you through the rain for a while. Nothing in it is moving that the weather is not moving."
+      : "You read the ground around you, one approach at a time, and every one of them is empty. It is worth knowing.", "study");
+  }
+  z.send(session, (thin
+    ? "You get what the rain lets you have: shapes, and the direction of them."
+    : "From up here the ground around you reads like a page.") + "\n" + lines.join("\n"), "study");
+  z.roomFeed(session.roomId, `${session.name} stands a while, reading the ground.`, session.pubkey, false);
+}
+
 export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
   const world = z.world!;
   // Rain flattens everything. Hunting weather works both ways.
@@ -2995,11 +3056,16 @@ export function cmdWash(z: ZoneDO, session: Session): void {
   const inRain = events.raining(z, session.roomId);
   // THE WELLS (2026-09-01): water where the rain isn't — the well-court and
   // the shallow well keep a draw for whoever has something to wash off.
-  const atWater = FISHING_ROOMS.has(session.roomId) || WELL_ROOMS.has(session.roomId) || events.tideFlooded(z, session.roomId);
+  const atWater = FISHING_ROOMS.has(session.roomId) || WELL_ROOMS.has(session.roomId) || SPRING_ROOMS.has(session.roomId) || events.tideFlooded(z, session.roomId);
   if (!inRain && !atWater) {
     return z.send(session, "There's no water here to wash in — no pool, no rain, nothing to run your hands under.");
   }
-  const where = WELL_ROOMS.has(session.roomId) ? "You draw from the well" : atWater ? "You kneel at the water" : "You hold your hands up to the rain";
+  // You do not draw from a well at a waterfall, and you do not kneel at a
+  // windlass. Three sentences for three kinds of water.
+  const where = WELL_ROOMS.has(session.roomId) ? "You draw from the well"
+    : SPRING_ROOMS.has(session.roomId) ? "You kneel at the trough"
+    : atWater ? "You kneel at the water"
+    : "You hold your hands up to the rain";
   if (!pvp.isBloodied(z, session.pubkey)) {
     return z.send(session, `${where} and rinse your hands. They were already your own — nothing to answer for.`);
   }

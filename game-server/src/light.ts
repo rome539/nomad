@@ -12,7 +12,7 @@ import * as events from "./events";
 import { underCover } from "./detail";
 import { setItemCondition, removeItemRow, hasTrait } from "./world";
 import {
-  TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR,
+  TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR, BEACON_ROOM,
   brandBurnMs,
 } from "./zone-data";
 
@@ -78,6 +78,33 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
   // the road is after dark now." `light` the stump spends one of your torches
   // into the old socket, and the road has its light back for as long as it
   // burns — shared light, like any floor flame, and gone when it gutters.
+  // THE PERCH (2026-09-04). The stump's sibling out on the water. Two things the
+  // room already said do all the work: the spit is only walkable at low water,
+  // and the cage is packed with two centuries of nest, which is the kindling.
+  if (session.roomId === BEACON_ROOM && /^(the )?(beacon|perch|cage|tripod|fire)$/.test(arg.trim().toLowerCase())) {
+    if (z.roomLit(session.roomId)) {
+      return z.send(session, "The cage is already burning, and the whole crossing can see it.");
+    }
+    // The tide is the gate: the same rise that opens the wreck dives takes the
+    // shingle spit away, and you are not swimming out to a fire you cannot light.
+    if (events.seaUnder(z, session.roomId)) {
+      return z.send(session, "The spit is under. The beacon stands off in open water with the tide round its legs, and there is no walking out to it until the sea goes back down.");
+    }
+    const torch = session.items.find((c) => c.itemId === TORCH_ITEM);
+    if (!torch) {
+      return z.send(session, "The cage is packed to the bars with old nest, dry as paper and waiting. It would take a flame — a torch, one of yours, and you would not need a second.");
+    }
+    session.items.splice(session.items.indexOf(torch), 1);
+    await removeItemRow(z.env.DB, torch.rowId);
+    z.groundTorch.set(session.roomId, Date.now() + TORCH_BURN_MS);
+    z.send(session, "You go out along the spit and put the torch into the cage, and the nest takes all at once — two centuries of dry sticks going up in one breath. The tar catches after it. Behind you the whole channel comes up orange, and for the first time in living memory the crossing has a light on it.", "gain");
+    z.roomFeed(session.roomId, `${session.name} fires the beacon, and the cage goes up in one breath.`, session.pubkey, false);
+    // A beacon is FOR being seen. This is the one light a player lights for
+    // other people — the whole band gets it, whether they asked or not.
+    z.roomFeedBands(new Set([z.bandOf(session.roomId)]), "Far out on the water, the old beacon is burning — somebody is out on the causeway, and the whole channel knows it.", "evt");
+    z.refreshRoomCtx(session.roomId);
+    return;
+  }
   if (session.roomId === "the-lantern-stump" && /^(the )?(lantern[- ]?stump|stump|lamp|socket|standard)$/.test(arg.trim().toLowerCase())) {
     if (z.roomLit(session.roomId)) {
       return z.send(session, "The old socket is already burning. The road has its light, for now.");

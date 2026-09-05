@@ -11,14 +11,14 @@ import * as den from "./den";
 import * as works from "./works";
 import * as ai from "./ai";
 import * as dice from "./dice";
-import { chipName, nameMatches, shortName } from "./zone-util";
+import { chipName, nameMatches, shortName, isNight, isFullMoon } from "./zone-util";
 import { hasTrait } from "./world";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
-  TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM,
-  WRECK_DIVE_ROOMS, WELL_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC,
+  TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC,
 } from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
@@ -255,7 +255,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // Blood on your hands and water to lose it in: the chip to scrub it off.
     // Only shown when you're actually marked — it's the quiet affordance a
     // killer looks for, and it never lies to a clean pair of hands.
-    if ((FISHING_ROOMS.has(session.roomId) || WELL_ROOMS.has(session.roomId) || drowned || events.raining(z, session.roomId))
+    if ((FISHING_ROOMS.has(session.roomId) || WELL_ROOMS.has(session.roomId) || SPRING_ROOMS.has(session.roomId) || drowned || events.raining(z, session.roomId))
       && pvp.isBloodied(z, session.pubkey)) suggest.push("wash");
     // Standing in the flood: the way down to the drowned floor. cmdDive
     // refuses with a drowner in the water, so the chip holds back too (the
@@ -316,6 +316,22 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // for everyone who comes after you, and keeps burning when you have gone.
     if (session.roomId === "the-lantern-stump" && !z.roomLit(session.roomId)
       && session.items.some((c) => c.itemId === TORCH_ITEM)) suggest.push("light stump");
+    // The beacon, and only while the spit is walkable — the tide takes the chip
+    // away with the ground it stands on.
+    if (session.roomId === BEACON_ROOM && !z.roomLit(session.roomId) && !events.seaUnder(z, session.roomId)
+      && session.items.some((c) => c.itemId === TORCH_ITEM)) suggest.push("light beacon");
+    // A vantage, and only when it would actually show you something: fog takes
+    // the whole thing and so does the dark, so the chip goes with them rather
+    // than offering a tap that answers "you can see nothing".
+    if (VANTAGE_ROOMS.has(session.roomId) && !events.foggy(z, session.roomId)
+      && (!isNight() || isFullMoon())) suggest.push("scan");
+    // A stripped smithy melts even though it cannot shape. Offered only with
+    // enough scrap ON YOUR BACK to actually cast — out here there is no keeping
+    // to reach into — and only if the fire is up or you carry a torch to wake it.
+    if (FORGE_ROOMS.has(session.roomId)
+      && session.items.filter((c) => c.itemId === SCRAP_ID).length >= SMELT_SCRAP_PER_IRON
+      && (Date.now() < (z.groundTorch.get(session.roomId) ?? 0)
+        || session.items.some((c) => c.itemId === TORCH_ITEM))) suggest.push("smelt");
     // OUT AT A GATE THERE IS EXACTLY ONE THING TO DO: go in (rome, 2026-07-13).
     // The hatch and the brazier are fixtures of the GATEHOUSE — they live in its
     // wall, on the other side of the door — so their chips belong in the room that

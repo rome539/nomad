@@ -16,7 +16,7 @@ import * as works from "./works";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
-  TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP,
+  TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP,
@@ -1328,6 +1328,56 @@ export async function cmdSalvage(z: ZoneDO, session: Session, arg: string): Prom
 // one; 'smelt N' casts N; 'smelt all' casts as many as the scrap allows. The
 // brazier reaches the pack AND the gate's keeping, same as forge/salvage.
 export async function cmdSmelt(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  // THE FIELD SMELT (2026-09-04). Three stripped smithies in the world can melt
+  // even though none of them can shape — every anvil was carried off, and the
+  // rooms say so. Scrap down to iron where you stand, off your own back and
+  // nothing else: the gate's brazier reaches your keeping as well as your pack
+  // and stays the better version. What this buys is PACK SPACE, five slots into
+  // one, at the price of standing in the open working a fire while it happens.
+  if (!z.outOfWorld(session) && FORGE_ROOMS.has(session.roomId)) {
+    if (z.inCombat(session)) return z.send(session, "Not with something trying to kill you.");
+    const lit = Date.now() < (z.groundTorch.get(session.roomId) ?? 0);
+    if (!lit) {
+      const torch = session.items.find((c) => c.itemId === TORCH_ITEM);
+      if (!torch) {
+        return z.send(session, "The hearth is cold and the bellows-block is dry-rotted but sound. It would take a flame to wake — a torch, one of yours, and it would hold long enough to work by.");
+      }
+      session.items.splice(session.items.indexOf(torch), 1);
+      await removeItemRow(z.env.DB, torch.rowId);
+      z.groundTorch.set(session.roomId, Date.now() + TORCH_BURN_MS);
+      z.send(session, "You feed the torch into the old hearth and lean on the bellows until it takes. The fire comes up sullen and then properly, and the room is a smithy again for as long as it burns.", "gain");
+      z.roomFeed(session.roomId, `${session.name} wakes the old forge, and the light of it comes up the walls.`, session.pubkey, false);
+      z.refreshRoomCtx(session.roomId);
+    }
+    const inPack = session.items.filter((c) => c.itemId === SCRAP_ID).length;
+    const most = Math.floor(inPack / SMELT_SCRAP_PER_IRON);
+    if (most < 1) {
+      return z.send(session, `A bar takes ${SMELT_SCRAP_PER_IRON} scrap and you are carrying ${inPack}. Out here there is only what is on your back — the gate's brazier reaches your keeping, this reaches your hands.`);
+    }
+    let bars = 1;
+    if (arg) {
+      const want = arg.trim().toLowerCase() === "all" ? most : parseInt(arg, 10);
+      if (Number.isFinite(want) && want >= 1) bars = Math.min(want, most);
+    }
+    // Never cast more than the pack can hold — a bar that spills on the floor of
+    // an open smithy is a bar you smelted for whoever walks in next.
+    let room = 0;
+    while (room < bars && z.packRoom(session, IRON_ID)) {
+      const id = uuid();
+      await insertLoot(z.env.DB, id, session.pubkey, IRON_ID, null);
+      session.items.push({ rowId: id, itemId: IRON_ID, serial: null, equipped: false, condition: 100 });
+      room++;
+    }
+    if (!room) return z.send(session, `Your pack is full (${z.packCap(session)} slots). Make room before you cast.`);
+    const spend = room * SMELT_SCRAP_PER_IRON;
+    await z.takeLooseAcross(session, SCRAP_ID, spend);
+    z.send(session, `You rake the scrap into the hearth and work the bellows until it runs. ${room === 1 ? "A bar" : room + " bars"} of iron, cast in the ash and cooling — ${spend} scrap off your back, and the weight of it gone with them.`, "forge");
+    z.roomFeed(session.roomId, `${session.name} works the bellows, and something runs molten in the old hearth.`, session.pubkey, false);
+    z.creatureNoise(session.roomId); // a fire and a bellows in open country is an announcement
+    z.sendCtx(session);
+    z.markSimDirty();
+    return;
+  }
   const bar = z.benchGuard(session, "smelting");
   if (bar) return z.send(session, bar);
   const shut = worksBar(z, session);

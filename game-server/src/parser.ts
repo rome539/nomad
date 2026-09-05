@@ -21,6 +21,7 @@ export type Verb =
   | "salvage"
   | "burn"
   | "forge"
+  | "scan"
   | "smelt"
   | "repair"
   | "barter"
@@ -223,6 +224,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   top: "leaderboard", standings: "leaderboard", reckoning: "leaderboard",
   map: "map", chart: "map", atlas: "map",
   study: "study", observe: "study", watch: "study", note: "study",
+  scan: "scan", sight: "scan", glass: "scan",
   journal: "journal", bestiary: "journal", logbook: "journal", ledger: "journal",
   fish: "fish", cast: "fish", angle: "fish",
   ring: "ring", toll: "ring", chime: "ring",
@@ -627,6 +629,9 @@ export const HELP_TEXT = [
   "                    trophies, and your legend of kills.",
   "  publish kind 1    (brag) — post your wanderer to your OWN feed, in your own",
   "                    hand — a note your followers will see. Only this touches it.",
+  "  scan              (a vantage) — from a height or an edge, read the ground one\n" +
+  "                    step out: what is standing in it, and which way. Fog takes it,\n" +
+  "                    and so does the dark unless the moon is full.\n" +
   "  map               (chart) — open a map you carry. A surveyor's map charts the",
   "                    halls its carrier walks, set down true — steal a full one;",
   "                    a crude one is half a lie and will walk you wrong.",

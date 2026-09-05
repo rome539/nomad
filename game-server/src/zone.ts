@@ -1816,6 +1816,7 @@ export class ZoneDO implements DurableObject {
       case "unlock": return this.cmdUnlock(session, cmd.arg);
       case "salvage": return gate.cmdSalvage(this, session, cmd.arg);
       case "forge": return gate.cmdForge(this, session, cmd.arg);
+      case "scan": return verbs.cmdScan(this, session, cmd.arg);
       case "smelt": return gate.cmdSmelt(this, session, cmd.arg);
       case "repair": return gate.cmdRepair(this, session, cmd.arg);
       case "barter": return gate.cmdBarter(this, session);
