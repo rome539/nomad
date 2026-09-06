@@ -905,7 +905,12 @@ export const PAGE = `<!doctype html>
     display: block;
     position: fixed;
     inset: 0;
-    z-index: -1;
+    /* NOT -1. A fixed element at a negative z-index paints BEHIND the body's
+       background, and this body has an opaque one — so the sky was drawn, and
+       covered, and every layered room showed its scene over flat brown with no
+       sky at all. Zero puts it in the positioned layer with the scene, and DOM
+       order (sky first) is what keeps the scene on top of it. */
+    z-index: 0;
     background-color: var(--bg);
     background-size: cover;
     background-position: center 55%;
@@ -935,6 +940,11 @@ export const PAGE = `<!doctype html>
   /* A GROUND STANDING IN FOR WEATHER IT WAS NOT SHOT FOR. Only ever reached
      when that scene has not been made yet — dry stone in the rain is still
      wrong, but wrong and dimmed reads better than wrong and bright. */
+  /* A DAY GROUND STANDING IN AFTER DARK. Only reached where a night scene has
+     not been made yet. Dimming is all this can honestly do — the shadows still
+     fall the way noon threw them — so it is deliberately plain, and it should
+     look like something waiting to be replaced. */
+  body[data-view="image"] #scene.t-night { filter: brightness(.42) saturate(.85); }
   body[data-view="image"] #scene.t-fog   { filter: brightness(.92) saturate(.45) contrast(.86); }
   body[data-view="image"] #scene.t-rain  { filter: brightness(.74) saturate(.80) contrast(1.04); }
   body[data-view="image"] #scene.t-snow  { filter: brightness(1.04) saturate(.55); }
@@ -1002,6 +1012,19 @@ export const PAGE = `<!doctype html>
     pointer-events: none;
     padding: 0 4vw;
   }
+  /* The creatures take the hour the same way the ground does. The blood moon is
+     a filter here rather than the scene's masked multiply: a mask needs the
+     picture it is masking, and each sprite is its own picture — and nothing on
+     four legs is carrying a lamp that has to survive. */
+  body[data-view="image"] #mobs.t-dawn    img { filter: brightness(.74) saturate(.88) sepia(.16) hue-rotate(-6deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-dusk    img { filter: brightness(.60) saturate(1.02) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-night   img { filter: brightness(.42) saturate(.85) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-eclipse img { filter: brightness(.70) saturate(.55) contrast(1.06) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-moon    img { filter: brightness(1.10) saturate(.92) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-blood   img { filter: brightness(.80) sepia(1) saturate(1.5) hue-rotate(-38deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-fog     img { filter: brightness(.92) saturate(.45) contrast(.86) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-rain    img { filter: brightness(.74) saturate(.80) contrast(1.04) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-snow    img { filter: brightness(1.04) saturate(.55) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   #mobs img {
     display: block;
     width: auto;
@@ -6170,7 +6193,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "8";
+var ART_V = "9";
 
 // ---------------------------------------------------------------------------
 // THE VIEW. A band of country per region, washed by whatever the sky is doing.
@@ -6309,12 +6332,20 @@ var GATE_PLATE = {
 // over it, so the eight already shipped go on working untouched.
 //   scree: "day night",
 var TERRAIN_SCENES = {
-  // Five mountain grounds, 205 rooms between them.
+  // Eleven mountain grounds, 256 rooms between them.
   snow:  "day night fog rain snow",
   cairn: "day night fog rain snow",
   gully: "day night fog rain snow",
   scree: "day night fog rain snow",
   boulder: "day night fog rain snow",
+  // no night scene yet: after dark this borrows the day ground and t-night
+  // dims it, which is a stopgap and looks like one.
+  slab: "day fog rain snow",
+  glass: "day night fog rain snow",
+  fold:  "day night fog rain snow",
+  alder: "day night fog rain snow",
+  "corrie-rim":   "day night fog rain snow",
+  "corrie-floor": "day night fog rain snow",
 };
 var SKY_PAINTED = {
   day: 1, night: 1, dawn: 1, dusk: 1, moon: 1, blood: 1, eclipse: 1,
@@ -6491,6 +6522,10 @@ function paintScene(band, sky, terrain, roomKey) {
   // No overlay on a layered room — the sky is real. The only thing that changes
   // is how the ground is lit, and that is a filter that respects the cut.
   sceneEl.className = tint ? "t-" + tint : "";
+  // WHAT IS STANDING THERE IS STANDING IN THE SAME LIGHT. The scene got dimmed
+  // for the hour and the creatures did not, so a hare at midnight was lit for
+  // noon and sat on the plate like a sticker. Same class, same hour.
+  if (mobsEl) mobsEl.className = tint ? "t-" + tint : "";
   sceneEl.style.backgroundPosition = "center 55%";
 }
 
