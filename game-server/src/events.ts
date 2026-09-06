@@ -359,6 +359,25 @@ export function snowed(z: ZoneDO, roomId: string): boolean {
   return z.snowUntil > Date.now() && z.world!.rooms.get(roomId)?.region === "mountain";
 }
 
+// WHAT THE SKY OVER THIS ROOM IS DOING, WITHOUT ASKING WHETHER IT LANDS ON YOU.
+// raining() and foggy() gate on OUTDOOR_ROOMS, which is exactly right for the
+// question they were written for — you do not get rained on under a roof. It is
+// the wrong question for a PICTURE of a roofed place: a gate scene is shot from
+// outside looking at the building, and a hollow on the mountain is a photograph
+// of a mountainside. The far half of both frames is weather. So the art asks
+// this, and the room's own shelter still decides whether you get wet.
+//
+// Same three answers, same sources, minus the one test: the snow is the
+// mountain's own season (snowed, which never had a shelter test to drop), the
+// fog keeps its cloud-down branch, and the rain is the rain.
+export function weatherNow(z: ZoneDO, roomId: string): "snow" | "fog" | "rain" | "" {
+  if (snowed(z, roomId)) return "snow";
+  if (phaseOf(z, "fog") === "active"
+    || (phaseOf(z, "clouddown") === "active" && z.world!.rooms.get(roomId)?.region === "mountain")) return "fog";
+  if (phaseOf(z, "rain") === "active") return "rain";
+  return "";
+}
+
 // THE ICE (5a): cold freezes the still fishing waters solid.
 export function frozen(z: ZoneDO, roomId: string): boolean {
   return phaseOf(z, "cold") === "active" && FISHING_SURFACE.has(roomId);

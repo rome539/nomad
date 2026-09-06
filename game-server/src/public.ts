@@ -6250,6 +6250,13 @@ var TERRAIN_PLATE = {
   scree: ["scree"], gully: ["gully"], snow: ["snow"], cairn: ["cairn"],
   alder: ["alder"], "corrie-rim": ["corrie-rim"], "corrie-floor": ["corrie-floor"],
   gatehouse: ["gatehouse"],
+  // THIS TABLE IS WHAT DECIDES A TERRAIN EXISTS AT ALL, and four grounds were
+  // painted, cut, installed and declared in TERRAIN_SCENES without ever being
+  // named here — so every boulder field, tilted slab, glazed rock and stone pen
+  // in the world went on falling through TERRAIN_NEAR onto scree and cairn. All
+  // that art was sitting on disk unreachable. Add a ground to BOTH tables or it
+  // may as well not have been drawn.
+  boulder: ["boulder"], slab: ["slab"], glass: ["glass"], fold: ["fold"],
 };
 // FNV-1a: the same cheap trick the world already uses to hang per-instance
 // detail off an id without storing a byte of it.
@@ -6340,7 +6347,7 @@ var TERRAIN_SCENES = {
   boulder: "day night fog rain snow",
   // no night scene yet: after dark this borrows the day ground and t-night
   // dims it, which is a stopgap and looks like one.
-  slab: "day fog rain snow",
+  slab:  "day night fog rain snow",
   glass: "day night fog rain snow",
   fold:  "day night fog rain snow",
   alder: "day night fog rain snow",
@@ -6369,8 +6376,14 @@ var SKY_BASE = {
   night: "night", moon: "night", blood: "night",
   fog: "fog", rain: "rain", snow: "snow",
 };
-// Indoors there is no sky to draw and the vignette does the work.
-var SKY_NONE = { "in": 1 };
+// KEYED IS THE ONLY THING THAT DECIDES WHETHER A SKY IS DRAWN. It used to also
+// ask whether the server said "in", and that was a hole waiting to happen: a
+// room is "in" when it has a ROOF — a hollow under a boulder, a lean, a gate
+// hut — and those rooms still stand on ground whose plate is an exterior with
+// the sky cut out of it. Twenty-two of them on the mountain alone were painting
+// a cut scene with nothing behind the cut. The vignette is for a plate that was
+// painted as an interior, and such a plate is not keyed, so it never reaches
+// here. If the ground has a hole in it, something goes behind it. Always.
 // WHICH SCENES ARE CUT. Only these two are painted with the sky keyed out, so
 // only these two need one drawn behind them; fog, rain and snow are whole
 // photographs that carry their own and must not have a second sky put under.
@@ -6472,7 +6485,7 @@ function paintScene(band, sky, terrain, roomKey) {
     // in the world, every time it rained anywhere a scene was missing. The sky
     // to draw is the condition's when there is one, and otherwise the sky that
     // belongs to the GROUND actually being used.
-    if (!SKY_NONE[lastSky] && KEYED[want]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : want) + ".jpg";
+    if (KEYED[want]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : want) + ".jpg";
     // BORROWED GROUND NEEDS BRINGING INTO LINE. The tint used to switch off the
     // moment a real sky was drawn, on the reasoning that the picture already WAS
     // the weather — true when the scene was painted for this hour, and false
@@ -6497,7 +6510,7 @@ function paintScene(band, sky, terrain, roomKey) {
       var twant = SKY_BASE[lastSky] || "day";
       if (thave.indexOf(" " + twant + " ") < 0) twant = "day";
       scene = "/room-bg/" + terr + "-" + twant + ".png";
-      if (!SKY_NONE[lastSky] && KEYED[twant]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : twant) + ".jpg";
+      if (KEYED[twant]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : twant) + ".jpg";
       tint = (twant === lastSky) ? "" : lastSky;
     } else {
       // The old single-layer plates: sky baked in, wash on top, unchanged.

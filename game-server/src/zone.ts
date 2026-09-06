@@ -7965,6 +7965,35 @@ export class ZoneDO implements DurableObject {
     }
     if (worst <= GEAR_FAILING_AT) fx.push("kit-failing");
     else if (worst <= GEAR_WORN_AT) fx.push("kit-worn");
+    // A ROOF IS NOT A CEILING OF ROCK, AND THE PICTURE HAS TO KNOW THE
+    // DIFFERENCE. INDOOR_ROOMS answers one question and answers it correctly:
+    // does the weather land on you. Rain must not fall on a man sitting in a
+    // hut with the door shut, and it does not. But the art asked the same set a
+    // different question — is there a sky over this place — and got the wrong
+    // answer for two kinds of room:
+    //
+    //   A GATE IS A ROOF YOU ARE STANDING OUTSIDE OF. Six of the fourteen doors
+    //   are roofed, and every gate scene is shot from OUTSIDE, looking at the
+    //   building, with the sky in the frame. They were drawing a cut-out scene
+    //   over nothing.
+    //
+    //   THE MOUNTAIN IS NOT A CAVE. Twenty-one rooms up there have something
+    //   over your head — an overhang, a hollow under an erratic, a lean, half a
+    //   stell — and INDOOR_ROOMS is right about all of them. But the PICTURE of
+    //   such a room is a photograph of a mountainside, and what is over the far
+    //   half of that frame is the sky. Reading the roof test for the art froze
+    //   the whole band at noon: no night on the mountain, ever, in any of them.
+    //   The one true cave up there is the Kept Room, which is born dark and is
+    //   named in DARK_ROOMS — that is the honest test for a place with no sky,
+    //   and it costs nothing to ask it.
+    //
+    // Both read the weather off the SKY rather than off the room, for the same
+    // reason: what is falling out there is in the picture whether or not it is
+    // landing on you. Nothing else in the game changes — the roof still keeps
+    // you dry, still keeps the cold off, still decides the dark.
+    const openSkyForArt = !this.outOfWorld(session)
+      && (this.world!.entryRooms.has(session.roomId)
+        || (this.regionOf(session.roomId) === "mountain" && !DARK_ROOMS.has(session.roomId)));
     try {
       session.ws.send(
         JSON.stringify({
@@ -8015,11 +8044,15 @@ export class ZoneDO implements DurableObject {
             : this.outOfWorld(session) ? "gatehouse"
             : this.world!.entryRooms.has(session.roomId) ? "gate:" + session.roomId
             : terrainOf(session.roomId, room?.description),
+          // "in" MEANS THERE IS NO SKY OVER THIS PLACE — see openSkyForArt
+          // above for why that is not the same question as whether you are
+          // under a roof, and for the two kinds of room the roof test was
+          // getting wrong.
           sky: !ART_KEYS.has(session.pubkey) ? undefined
-            : !OUTDOOR_ROOMS.has(session.roomId) ? "in"
-            : events.snowed(this, session.roomId) ? "snow"
-            : events.foggy(this, session.roomId) ? "fog"
-            : events.raining(this, session.roomId) ? "rain"
+            : (!OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt) ? "in"
+            : (openSkyForArt ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId)) ? "snow"
+            : (openSkyForArt ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId)) ? "fog"
+            : (openSkyForArt ? events.weatherNow(this, session.roomId) === "rain" : events.raining(this, session.roomId)) ? "rain"
             // A BLOOD MOON IS ITS OWN NIGHT. It was collapsing into plain dark,
             // so the one night in the calendar the whole world changes colour —
             // red eyes in the hollow ones, the full-moon door shut — looked
