@@ -925,32 +925,28 @@ export const PAGE = `<!doctype html>
     display: flex;
     position: fixed;
     left: 0; right: 0;
-    /* THE STANDING LINE IS THE HORIZON'S, NOT THE LOG'S. This was pinned just
-       above whatever height the prose strip happened to be, and it JUMPED to
-       51vh the moment the log was pulled open — so the animals read as resting
-       on the top edge of a text box rather than standing in the room, and they
-       climbed the window when you asked to read. It is a constant now, and the
-       constant is derived rather than eyeballed: the camera lock puts the
-       horizon at 55% of the frame, and under an eye-level camera a creature of
-       your own height has its head ON the horizon at any distance. A standing
-       man is 22vh, so his feet belong at 23vh and his head lands at 55% exactly.
-       Everything else in the sprite table is scaled against that same man. The
-       two vh of overlap with the prose strip is deliberate: it puts the feet in
-       the clear top of the log's gradient, so they tuck into ground haze rather
-       than sitting tangent to a straight line of chrome. */
-    bottom: 23vh;
+    /* CENTRED ON THE HORIZON, NOT STOOD ON A LINE. Sharing one bottom edge is
+       what a real ground plane does, and it was the wrong model here: a common
+       standing line puts every creature's FEET at the same height, so the
+       shorter it is the further it sinks toward the prose, and the fixed tuck
+       that costs a 22vh man a tenth of his legs takes a third of a 7vh adder.
+       An adder ended up hiding behind the text while a hind stood clear of it,
+       which is exactly backwards — the small ones are the ones that need the
+       room. So each sprite is centred on one line instead of stood on one, and
+       the line is the camera's own: the lock puts the horizon at 55% of the
+       frame, which is where an eye-level view looks. Everything meets the eye
+       there whatever size it is, nothing small is lost under the prose, and the
+       biggest thing on the hill is the only one whose feet reach it at all.
+       This is also how the crawlers this is drawn after framed a monster: in
+       the middle of the view window, not standing at the bottom of it. */
+    top: 55%;
+    transform: translateY(-50%);
     z-index: 0;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
     gap: 3vw;
     pointer-events: none;
     padding: 0 4vw;
-  }
-  /* A short window gives the prose more of the screen, so the ground it stands
-     on rises with it. A layout breakpoint, not a live jump: it does not move
-     while you are playing. */
-  @media (max-height: 620px) {
-    body[data-view="image"] #mobs { bottom: 32vh; }
   }
   #mobs img {
     display: block;
@@ -6113,7 +6109,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "7";
+var ART_V = "8";
 
 // ---------------------------------------------------------------------------
 // THE VIEW. A band of country per region, washed by whatever the sky is doing.
