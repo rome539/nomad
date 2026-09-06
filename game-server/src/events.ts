@@ -832,14 +832,13 @@ function skyVeil(z: ZoneDO, roomId: string): string | null {
 }
 
 export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null {
-  // THE ROOF COMES FIRST, and it has to: the mountain is an outdoor BAND with
-  // twenty-one roofed rooms inside it (INDOOR_ROOMS — the shieling, the stell,
-  // the hollow under, the under-rib, the last shelter). With the shadow check
-  // above this line, a wanderer sheltering under a slab was told a shadow was
-  // crossing the slope, with a mountain's worth of rock between them and it.
-  // OUTDOOR_ROOMS is the right test even for the band-wide arc, because the
-  // band's rooms are folded into it at world load minus exactly those roofs
-  // (zone.ts, the OUTDOOR_REGIONS fold).
+  // THE ROOF COMES FIRST, and OUTDOOR_ROOMS is the right test even for the
+  // band-wide arcs: a band's rooms are folded into it at world load minus its
+  // genuine interiors (zone.ts, the OUTDOOR_REGIONS fold), so this one line
+  // covers a mine gallery, a mill and a sea cave alike. The mountain used to
+  // have twenty-one rooms caught by this and should never have had one — an
+  // overhang is not a roof — and they are out of INDOOR_ROOMS now, so the whole
+  // band answers about its own sky.
   if (!OUTDOOR_ROOMS.has(roomId)) return null;
   // THE TWO RARE SKIES answer first. `look sun` during totality gets the eaten
   // sun itself — the one day this world lets you see what the lid has been

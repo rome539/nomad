@@ -6353,8 +6353,9 @@ export const NIGHT_LIT = new Set<string>([
   "the-ferry-house",
   // THE MOUNTAIN'S FOUR (migs 226-236). Same rule as every other gatehouse in
   // the world: somebody is in there and the fire is lit, so the doorway shows
-  // from outside. INDOOR_ROOMS already keeps the sky off them; this is what the
-  // room next door sees.
+  // from outside. This matters more than it used to: the band no longer gets a
+  // pass on night-blindness, so these four are the only lit ground on the whole
+  // mountain after dark, and a light in a doorway is what you steer by.
   "the-shieling", "the-stell", "the-slabs", "the-shelter-crag",
 ]);
 export const OUTDOOR_REGIONS = new Set<string>(["out", "road", "wood", "mountain", "den", "crossing"]);
@@ -6433,34 +6434,37 @@ export const INDOOR_ROOMS = new Set<string>([
   // earthworks, the camp hollows and the churchyard are weather; these are not.
   "the-marshals-lodging", "the-village-smithy", "the-cider-house", "the-culver-house",
   "the-charnel", "the-mine-mouth", "the-mine-gallery", "the-camouflet",
-  // ---- THE MOUNTAIN (migs 226-236). Shipped with NONE of these declared, which
-  // meant the four doors at the foot — a turf-and-stone hut you duck into, a
-  // stell with half a roof and a fire under it, the swept dry sand under the
-  // erratic, an overhang walled at the windward end — were rained on and went
-  // black with the sky like open hillside. rome walked into the Stell at night
-  // and could not see, standing in a room whose own description says the fire is
-  // lit and a man is keeping it.
+  // ---- THE MOUNTAIN IS OUT (rome, 2026-09-06, and the ruling is his because
+  // the mistake was: he added twenty-one mountain rooms to this set back when he
+  // was picturing the band as a cave system, and it has been wrong ever since).
   //
-  // THE TEST IS A ROOF, NOT SHELTER. A hollow out of the wind is still under the
-  // sky and stays outdoors — that is the difference between a fold and a bothy
-  // and it is why the lee side, the tarn edge, the white hollow and the clear
-  // window are NOT on this list, sanctuaries though they are. What is here has
-  // rock, turf, hide or drift over your head.
-  "the-shieling", "the-stell", "the-slabs", "the-shelter-crag",           // the four doors
-  "the-hollow-under",   // ...and the erratic keeps its roof after losing its door: a dry floor under a boulder is roofed whether anybody is living on it or not
-  "the-fallen-block", "the-boulder-gate",                                // the middle's two roofed boltholes
-  "the-under-rib",                                                       // the cloud line's dry cave
-  "the-snow-hollow", "the-drift-hollow", "the-rib-cage",                 // the high ground
-  "the-lean", "the-vent", "the-last-shelter",                            // the territory's roofed three
-  "the-under-step", "the-shelf-walk", "the-warm-under", "the-heat-under", // ...and the low line, which is
-  "the-lower-warm", "the-lower-flags",                                   // one long overhang end to end
-  // AND THE ONE THE ROOF TEST ALREADY CAUGHT AND NOBODY LISTED (2026-08-21):
-  // the burn's slot is "roofed in places by boulders that fell in and jammed"
-  // and its own last sentence is that you cannot see the sky from it. It was
-  // being rained on and told the sky over it had gone black.
-  "the-beck-narrows",
-  // ---- THE KEPT ROOM (mig 279): a room cut into a mountain. The most roofed
-  // thing in the world.
+  // THIS SET HAS EXACTLY ONE EFFECT: it subtracts rooms from OUTDOOR_ROOMS at
+  // world load, and OUTDOOR_ROOMS is what every other rule in the game reads.
+  // So listing a room here does not just keep the rain off it. It takes the sky
+  // away from it entirely — `look sun` and `look sky` answer "there is a roof
+  // between you and it", the moon never reaches the ground, the wind and the
+  // crows and the cold stop at the door — and it did all of that to a man
+  // standing under an overhang on an open hillside four thousand feet up.
+  //
+  // A ROOF WAS THE WRONG TEST FOR A BAND MADE OF ROCK. Almost everything up
+  // there has something over part of your head — an overhang, a hollow under an
+  // erratic, a lean, half a stell — and none of it is a building. You are
+  // outdoors on a mountain the whole time, which is the entire character of the
+  // place: it is the one region in this world nobody made and nobody roofed.
+  // The four doors are shelters on a hillside, not rooms; you can see the
+  // weather from every one of them, which is exactly why people put them there.
+  //
+  // WHAT THIS COSTS, named so nobody rediscovers it as a bug: weather now
+  // touches those twenty-one rooms, and the mountain's creatures lose the only
+  // cover the flee-the-rain walk could find (ai.ts filters on OUTDOOR_ROOMS, and
+  // underCover is the wood's canopy only). Both are right. A hollow is not a
+  // hut, and there is genuinely nowhere on a bare mountainside to get out of the
+  // weather — the animals up there live in it, which is what makes them the
+  // animals that live up there.
+  //
+  // ---- THE KEPT ROOM (mig 279) is the one exception and stays: a room cut back
+  // into the head wall behind an iron door, born dark (DARK_ROOMS), with nowhere
+  // for light to come from. That is a room. The rest are places on a hill.
   "the-kept-room",
   // ---- THE SEA CAVE'S INNER ROOMS (mig 279). Region 'crossing' is an outdoor
   // band, so without this every one of these rooms was having the weather fall

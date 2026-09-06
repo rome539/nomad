@@ -1921,20 +1921,18 @@ export class ZoneDO implements DurableObject {
     // was written for the ordinary clock, not for the sun being eaten. Like
     // the gloam, this comes for every lamp and every open slope.
     if (OUTDOOR_ROOMS.has(roomId) && eclipsePhase() === "active") return true;
-    // THE MOUNTAIN DOES NOT GO BLIND AT NIGHT (rome, 2026-08-19). Every other
-    // outdoor band in this world is under something — a canopy, a valley side,
-    // a wall, weather off the sea — and "dark" there means you genuinely cannot
-    // see your hand. A bare hillside has none of that: it is rock and snow with
-    // the whole sky over it and nothing between, and snow throws back what light
-    // there is. Applying the cave's blackness to open ground four thousand feet
-    // up was the surface rule reaching ground it was never written for.
+    // THE MOUNTAIN GOES DARK LIKE EVERYWHERE ELSE OUTSIDE (rome, 2026-09-06).
+    // A whole-band exemption used to sit here, on the argument that a bare
+    // hillside under an open sky with snow on it holds more light than a wood or
+    // a valley floor. It is a nice argument and it is the wrong one, because it
+    // makes the mountain the single place in the world where being outdoors at
+    // night costs you nothing — no torch, no fire, no reason to be anywhere by
+    // dark. The band that is MOST exposed had the least to fear from the hour.
     //
-    // The band keeps everything else the clock gives it — nightfall still turns,
-    // the nocturnal lines still wake, the moon still rides its phases and gets
-    // its lines — it simply does not take your eyes. A GLOAM still does (checked
-    // above): that is a thing that comes and takes the light, and it is supposed
-    // to work anywhere it can reach.
-    if (this.regionOf(roomId) === "mountain") return false;
+    // So it takes the ordinary rule now: outdoors and night and no full moon is
+    // dark, up there the same as on the road and the open ground. The full moon
+    // still lights it, a lit torch still answers it, and the eclipse above still
+    // takes the day itself.
     if (!OUTDOOR_ROOMS.has(roomId) || !isNight() || isFullMoon()) return false;
     if (NIGHT_LIT.has(roomId)) return false;
     // A HOUSE WITH SOMEBODY IN IT HAS A FIRE IN IT. The only hearths still lit on
@@ -7965,35 +7963,22 @@ export class ZoneDO implements DurableObject {
     }
     if (worst <= GEAR_FAILING_AT) fx.push("kit-failing");
     else if (worst <= GEAR_WORN_AT) fx.push("kit-worn");
-    // A ROOF IS NOT A CEILING OF ROCK, AND THE PICTURE HAS TO KNOW THE
-    // DIFFERENCE. INDOOR_ROOMS answers one question and answers it correctly:
-    // does the weather land on you. Rain must not fall on a man sitting in a
-    // hut with the door shut, and it does not. But the art asked the same set a
-    // different question — is there a sky over this place — and got the wrong
-    // answer for two kinds of room:
+    // A GATE IS A ROOF YOU ARE STANDING OUTSIDE OF. Two of the fourteen doors
+    // are buildings and stay in INDOOR_ROOMS — the Relay House and the Withy Hut
+    // are rooms with walls, and being under them should keep the rain off you.
+    // But every gate SCENE is shot from outside, looking at the building, with
+    // the sky in the frame, so reading the shelter rule for the picture drew a
+    // cut-out scene over nothing. For the picture only, a gate is open air, and
+    // it reads the weather off the sky rather than off the room — what is
+    // falling out there is in the frame whether or not it is landing on you.
     //
-    //   A GATE IS A ROOF YOU ARE STANDING OUTSIDE OF. Six of the fourteen doors
-    //   are roofed, and every gate scene is shot from OUTSIDE, looking at the
-    //   building, with the sky in the frame. They were drawing a cut-out scene
-    //   over nothing.
-    //
-    //   THE MOUNTAIN IS NOT A CAVE. Twenty-one rooms up there have something
-    //   over your head — an overhang, a hollow under an erratic, a lean, half a
-    //   stell — and INDOOR_ROOMS is right about all of them. But the PICTURE of
-    //   such a room is a photograph of a mountainside, and what is over the far
-    //   half of that frame is the sky. Reading the roof test for the art froze
-    //   the whole band at noon: no night on the mountain, ever, in any of them.
-    //   The one true cave up there is the Kept Room, which is born dark and is
-    //   named in DARK_ROOMS — that is the honest test for a place with no sky,
-    //   and it costs nothing to ask it.
-    //
-    // Both read the weather off the SKY rather than off the room, for the same
-    // reason: what is falling out there is in the picture whether or not it is
-    // landing on you. Nothing else in the game changes — the roof still keeps
-    // you dry, still keeps the cold off, still decides the dark.
-    const openSkyForArt = !this.outOfWorld(session)
-      && (this.world!.entryRooms.has(session.roomId)
-        || (this.regionOf(session.roomId) === "mountain" && !DARK_ROOMS.has(session.roomId)));
+    // This used to carry a second clause for the mountain, because twenty-one
+    // rooms up there were in INDOOR_ROOMS and the whole band was therefore
+    // frozen at noon. That was treating the symptom: those rooms were never
+    // indoors, and they have been taken out of the set (see INDOOR_ROOMS). The
+    // mountain gets its sky from the ordinary rule now, like the open ground it
+    // is, and so does everything else that follows from being outdoors.
+    const openSkyForArt = !this.outOfWorld(session) && this.world!.entryRooms.has(session.roomId);
     try {
       session.ws.send(
         JSON.stringify({

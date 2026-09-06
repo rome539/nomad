@@ -1030,6 +1030,21 @@ export const PAGE = `<!doctype html>
     width: auto;
     image-rendering: pixelated;
     filter: drop-shadow(0 3px 6px rgba(0,0,0,.75));
+    /* THE ROW HAS TO FIT THE WINDOW IT IS IN. A sprite is sized in vh, so its
+       WIDTH in vw depends on the shape of the viewport — and a phone held
+       upright is the case that breaks it: the same four creatures that take
+       64vw on a desktop take 245vw on a 390x844 screen, and a row that
+       overflows a centred flex line is simply clipped at both ends, so the
+       outermost creatures lose their heads and tails with nothing to say they
+       were ever there. Images will not shrink on their own — min-width resolves
+       to their intrinsic width — so the two properties below are what let the
+       line give: min-width lets flex take the width, and object-fit keeps the
+       animal's proportions while it does instead of squashing it. A crowded
+       row on a narrow screen now scales itself down to fit, which is the right
+       answer anyway: four things in a room SHOULD read as further off than
+       one thing filling the frame. */
+    min-width: 0;
+    object-fit: contain;
   }
   #scene.sky-day   { --scrim: transparent; }
   #scene.sky-dawn  { --scrim: linear-gradient(rgba(84,104,148,.20), rgba(198,168,118,.10)); }
@@ -1070,12 +1085,29 @@ export const PAGE = `<!doctype html>
       color-mix(in srgb, var(--bg) 97%, transparent) 100%);
     text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(0,0,0,.8);
   }
-  /* On a short window the picture yields first, never the words. */
-  /* Pulled open: half the window, for reading back through a fight. */
-  body[data-view="image"][data-log="big"] #log { max-height: 50vh; }
+  /* PULLED OPEN IS THE WHOLE COLUMN (rome, 2026-09-06). It was half the window,
+     which is the worst of both: not enough to read a long fight back through,
+     and still enough to bury the picture. So the grip is a switch between two
+     whole things rather than a nudge between two partial ones — closed you are
+     LOOKING at the room, open you are READING it, and open is the text client
+     exactly as it stands with no strip and no ceiling.
+     The picture is not thrown away, it is behind the words: the fade at the top
+     is kept so the prose still rises out of the image instead of arriving as a
+     panel with a border, but it reaches full ground within a tenth of the
+     column so nothing you are actually reading sits on stone. */
+  body[data-view="image"][data-log="big"] #log {
+    flex: 1 1 auto;
+    max-height: none;
+    background: linear-gradient(to bottom,
+      color-mix(in srgb, var(--bg) 0%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 86%, transparent) 4%,
+      color-mix(in srgb, var(--bg) 97%, transparent) 10%,
+      color-mix(in srgb, var(--bg) 99%, transparent) 100%);
+  }
+  /* On a short window the picture yields first, never the words. Only the
+     CLOSED height is a fraction of the screen now, so only it needs this. */
   @media (max-height: 620px) {
     body[data-view="image"] #log { max-height: 34vh; }
-    body[data-view="image"][data-log="big"] #log { max-height: 62vh; }
   }
   /* The handle: a slim tab on the top edge of the strip, the only chrome the
      picture is allowed. Hidden entirely in text mode, where the log is already
@@ -6376,6 +6408,19 @@ var SKY_BASE = {
   night: "night", moon: "night", blood: "night",
   fog: "fog", rain: "rain", snow: "snow",
 };
+// EVERY PICTURE IN THIS GAME IS WEBP, and it is not a passing preference — it
+// is the only format that does both jobs at once. The keyed grounds need a real
+// alpha channel (the sky is cut out of them), which rules JPEG out, and PNG
+// stores a photograph about seven times larger than it needs to be: the art was
+// 244MB and is 38MB. That is not a hosting bill, it is the thing the player
+// feels — a room was a 3MB download and is now under half a megabyte, which is
+// the difference between a held frame you notice and one you do not.
+//
+// Encoded at q92 with alphaQuality 100. THE CUT IS THE PART THAT MUST NOT MOVE,
+// and it does not: every one of the 121 files was checked pixel by pixel after
+// encoding and not one transparent pixel became opaque or the reverse. Colour
+// costs under 1% average error, which is well inside what the hour's tint does
+// to the same picture on purpose.
 // KEYED IS THE ONLY THING THAT DECIDES WHETHER A SKY IS DRAWN. It used to also
 // ask whether the server said "in", and that was a hole waiting to happen: a
 // room is "in" when it has a ROOF — a hollow under a boulder, a lean, a gate
@@ -6394,6 +6439,11 @@ var skyEl = document.getElementById("sky");
 var viewBtn = null;   // built only for a granted key, see buildViewRow
 var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
 var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "";
+// WHAT IS ACTUALLY ON SCREEN, and which request owns it. scenePainted is the
+// plate the player can see right now (not the one most recently asked for);
+// sceneSeq is bumped by every request so a slow one can tell it has been
+// overtaken and must not paint. See the swap at the end of paintScene.
+var scenePainted = "", sceneSeq = 0;
 // THE SERVER DECIDES WHETHER THERE ARE PICTURES. Until a status frame arrives
 // carrying the grant, this client is a text client and has no view control at
 // all — an unlisted wanderer is not shown a door they cannot open. The grant is
@@ -6477,7 +6527,7 @@ function paintScene(band, sky, terrain, roomKey) {
     // without anything breaking in between.
     var want = SKY_BASE[lastSky] || "day";
     if (have.indexOf(" " + want + " ") < 0) want = "day";
-    scene = "/room-bg/gate-" + gate + "-" + want + ".png";
+    scene = "/room-bg/gate-" + gate + "-" + want + ".webp";
     // AND A KEYED SCENE MUST ALWAYS GET A SKY. This said so and then did not do
     // it: it asked for the sky of the CONDITION, so a gate with no rain scene
     // fell back to its day ground — which is cut, and transparent where the sky
@@ -6485,7 +6535,7 @@ function paintScene(band, sky, terrain, roomKey) {
     // in the world, every time it rained anywhere a scene was missing. The sky
     // to draw is the condition's when there is one, and otherwise the sky that
     // belongs to the GROUND actually being used.
-    if (KEYED[want]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : want) + ".jpg";
+    if (KEYED[want]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : want) + ".webp";
     // BORROWED GROUND NEEDS BRINGING INTO LINE. The tint used to switch off the
     // moment a real sky was drawn, on the reasoning that the picture already WAS
     // the weather — true when the scene was painted for this hour, and false
@@ -6509,37 +6559,80 @@ function paintScene(band, sky, terrain, roomKey) {
       var thave = " " + TERRAIN_SCENES[terr] + " ";
       var twant = SKY_BASE[lastSky] || "day";
       if (thave.indexOf(" " + twant + " ") < 0) twant = "day";
-      scene = "/room-bg/" + terr + "-" + twant + ".png";
-      if (KEYED[twant]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : twant) + ".jpg";
+      scene = "/room-bg/" + terr + "-" + twant + ".webp";
+      if (KEYED[twant]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : twant) + ".webp";
       tint = (twant === lastSky) ? "" : lastSky;
     } else {
       // The old single-layer plates: sky baked in, wash on top, unchanged.
+      // It still claims the sequence and records what it left on screen, so the
+      // held-frame swap below cannot be fooled by a plate this branch painted:
+      // without these two lines, walking gatehouse -> hillside and back would
+      // find scenePainted still naming the hillside and put it up unloaded.
+      sceneSeq++;
+      scenePainted = terr ? "/room-bg/" + terr + ".webp" : "";
       if (skyEl) skyEl.style.backgroundImage = "";
-      sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".jpg?v=" + ART_V + ")" : "";
+      sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".webp?v=" + ART_V + ")" : "";
       sceneEl.style.backgroundSize = "cover";
       sceneEl.className = SKY_KNOWN[lastSky] ? "sky-" + lastSky : "";
       sceneEl.style.backgroundPosition = "center 55%";
       return;
     }
   }
+  // THE SKY MUST NOT ARRIVE BEFORE THE GROUND (rome, 2026-09-06). Both layers
+  // are assigned in the same breath, so this is not an ordering mistake — it is
+  // the CACHE. There are seven sky files for the entire world, so after the
+  // first minute of play every one of them is local and paints in the same
+  // frame it is asked for. There are eighty scenes averaging 2.7MB, one per
+  // ground per condition, so nearly every room you walk into is a fresh
+  // download. Set both at once and the sky lands instantly and the ground lands
+  // when it lands, and in between the player is looking at an empty sky over
+  // nothing, which reads as the world failing to load rather than as loading.
+  //
+  // So the swap WAITS for the ground. The room you are leaving stays on screen,
+  // whole, until the next one can be shown whole — a held frame reads as a
+  // pause, a skeleton reads as a fault, and the pause is shorter than it looks
+  // because the picture is decoded before it goes up rather than during. A
+  // sequence number makes walking fast safe: a slow plate that arrives after
+  // you have already left cannot paint over the room you are now in.
   var url = "url(" + scene + "?v=" + ART_V + ")";
-  sceneEl.style.backgroundImage = url;
-  sceneEl.style.backgroundSize = "cover";
-  // The mask on the blood tint needs the same picture; a custom property is the
-  // only way to hand a stylesheet a URL that is decided at runtime.
-  sceneEl.style.setProperty("--sceneimg", url);
-  if (skyEl) {
-    skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + ART_V + ")" : "";
-    skyEl.style.backgroundPosition = "center 55%";
-  }
-  // No overlay on a layered room — the sky is real. The only thing that changes
-  // is how the ground is lit, and that is a filter that respects the cut.
-  sceneEl.className = tint ? "t-" + tint : "";
-  // WHAT IS STANDING THERE IS STANDING IN THE SAME LIGHT. The scene got dimmed
-  // for the hour and the creatures did not, so a hare at midnight was lit for
-  // noon and sat on the plate like a sticker. Same class, same hour.
-  if (mobsEl) mobsEl.className = tint ? "t-" + tint : "";
-  sceneEl.style.backgroundPosition = "center 55%";
+  var mine = ++sceneSeq;
+  var put = function () {
+    if (mine !== sceneSeq) return;         // a newer room got here first
+    sceneEl.style.backgroundImage = url;
+    sceneEl.style.backgroundSize = "cover";
+    // The mask on the blood tint needs the same picture; a custom property is
+    // the only way to hand a stylesheet a URL that is decided at runtime.
+    sceneEl.style.setProperty("--sceneimg", url);
+    if (skyEl) {
+      skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + ART_V + ")" : "";
+      skyEl.style.backgroundPosition = "center 55%";
+    }
+    // No overlay on a layered room — the sky is real. The only thing that
+    // changes is how the ground is lit, and that is a filter that respects the cut.
+    sceneEl.className = tint ? "t-" + tint : "";
+    // WHAT IS STANDING THERE IS STANDING IN THE SAME LIGHT. The scene got dimmed
+    // for the hour and the creatures did not, so a hare at midnight was lit for
+    // noon and sat on the plate like a sticker. Same class, same hour.
+    if (mobsEl) mobsEl.className = tint ? "t-" + tint : "";
+    sceneEl.style.backgroundPosition = "center 55%";
+    scenePainted = scene;
+  };
+  // Already up: this is a light change on the same ground (the hour turning, a
+  // sky the scene is borrowed under). Nothing to fetch, so do not hold a frame.
+  if (scene === scenePainted) { put(); return; }
+  var pre = new Image();
+  // A plate that 404s or a connection that dies must not freeze the last room
+  // on screen forever — put it up regardless and let the layer be empty. Same
+  // handler both ways on purpose: the failure case and the success case want
+  // exactly the same thing to happen next.
+  pre.onload = put;
+  pre.onerror = put;
+  pre.src = scene + "?v=" + ART_V;
+  // A picture already in the browser's cache is complete the moment its src is
+  // set and may never fire a load event, which would hold the previous room up
+  // for good. Walking back the way you came is the common case, so this is the
+  // common path, not the edge.
+  if (pre.complete) put();
 }
 
 // Put on screen whatever is currently both wanted and permitted. Saves nothing,
@@ -6573,6 +6666,19 @@ applyView();
 // no sprite yet simply does not appear rather than appearing wrong. The heights
 // are a fraction of the viewport and they are the ONLY thing keeping a stoat
 // from arriving the size of a wolf.
+// ONE DIAL FOR THE WHOLE MENAGERIE (rome, 2026-09-06: most of them are too
+// small). The table below is a set of RELATIONSHIPS, not a set of sizes — a man
+// stands at 22, so the hind above him is genuinely taller at the shoulder and
+// the stoat below comes to your shin — and re-typing thirty numbers to make
+// them all bigger would throw every one of those away. So the numbers stay as
+// written and this multiplies them at paint time. Change this line, not the
+// table; the table is the drawing, this is how close you are standing.
+//
+// WHAT SETS THE CEILING: a room paints four at most (chips.ts), and the row
+// gives way rather than clipping now (see #mobs img), so this is chosen for the
+// COMMON case — one or two creatures — instead of the worst one. A crowd on a
+// narrow screen scales itself down from here.
+var MOB_SCALE = 1.5;
 var MOB_SPRITE = {
   "mountain-hare": 11, "ptarmigan": 10, "scarp-raven": 11, "carrion-vulture": 17,
   "feral-goat": 20, "stone-adder": 7, "hill-wolf": 20, "snow-fox": 13,
@@ -6615,9 +6721,9 @@ function paintMobs(ids) {
   for (var j = 0; j < list.length; j++) (j % 2 ? order.push : order.unshift).call(order, list[j]);
   for (var k = 0; k < order.length; k++) {
     var im = document.createElement("img");
-    im.src = "/mob/" + order[k] + ".png?v=" + ART_V;
+    im.src = "/mob/" + order[k] + ".webp?v=" + ART_V;
     im.alt = "";
-    im.style.height = MOB_SPRITE[order[k]] + "vh";
+    im.style.height = (MOB_SPRITE[order[k]] * MOB_SCALE).toFixed(1) + "vh";
     mobsEl.appendChild(im);
   }
 }

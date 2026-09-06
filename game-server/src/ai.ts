@@ -1695,13 +1695,14 @@ export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
     // grounds — so on that one night in six the dark is not there to be bold in,
     // and the boldness goes with it. Rain and fog are their own weather and are
     // untouched: a storm under a full moon is still hunting weather.
-    // The mountain is the exception the other way (2026-08-19): it is night up
-    // there like everywhere else, and the dark it does not have was never what
-    // made a scavenger bold — the hour is. So the band keeps its nights honest
-    // and this reads the clock for it rather than the blackness it lacks.
+    // The mountain used to need a clause of its own here, because the band was
+    // exempt from night-blindness and so never satisfied the isDark test — the
+    // hour was read directly for it instead. That exemption is gone (zone.ts
+    // isDark: the mountain goes dark like everywhere else outside), so the
+    // ordinary outdoor test covers it and the extra clause would only say the
+    // same thing twice.
     return events.raining(z, creature.roomId) || events.foggy(z, creature.roomId)
-      || (OUTDOOR_ROOMS.has(creature.roomId) && z.isDark(creature.roomId))
-      || (z.regionOf(creature.roomId) === "mountain" && isNight() && !isFullMoon());
+      || (OUTDOOR_ROOMS.has(creature.roomId) && z.isDark(creature.roomId));
   }
 
 // IS THIS ROOM UNDER THE MOON RIGHT NOW — the single gate every full-moon
