@@ -925,7 +925,20 @@ export const PAGE = `<!doctype html>
     display: flex;
     position: fixed;
     left: 0; right: 0;
-    bottom: 26vh;
+    /* THE STANDING LINE IS THE HORIZON'S, NOT THE LOG'S. This was pinned just
+       above whatever height the prose strip happened to be, and it JUMPED to
+       51vh the moment the log was pulled open — so the animals read as resting
+       on the top edge of a text box rather than standing in the room, and they
+       climbed the window when you asked to read. It is a constant now, and the
+       constant is derived rather than eyeballed: the camera lock puts the
+       horizon at 55% of the frame, and under an eye-level camera a creature of
+       your own height has its head ON the horizon at any distance. A standing
+       man is 22vh, so his feet belong at 23vh and his head lands at 55% exactly.
+       Everything else in the sprite table is scaled against that same man. The
+       two vh of overlap with the prose strip is deliberate: it puts the feet in
+       the clear top of the log's gradient, so they tuck into ground haze rather
+       than sitting tangent to a straight line of chrome. */
+    bottom: 23vh;
     z-index: 0;
     align-items: flex-end;
     justify-content: center;
@@ -933,7 +946,12 @@ export const PAGE = `<!doctype html>
     pointer-events: none;
     padding: 0 4vw;
   }
-  body[data-view="image"][data-log="big"] #mobs { bottom: 51vh; }
+  /* A short window gives the prose more of the screen, so the ground it stands
+     on rises with it. A layout breakpoint, not a live jump: it does not move
+     while you are playing. */
+  @media (max-height: 620px) {
+    body[data-view="image"] #mobs { bottom: 32vh; }
+  }
   #mobs img {
     display: block;
     width: auto;
@@ -6095,7 +6113,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "4";
+var ART_V = "5";
 
 // ---------------------------------------------------------------------------
 // THE VIEW. A band of country per region, washed by whatever the sky is doing.
@@ -6186,6 +6204,24 @@ var BAND_FALLBACK = { mountain: "scree" };
 // WHICH BANDS OWN PICTURES AT ALL. Add a band here only once plates exist for
 // it — this is the one line that stops a region wearing another region's face.
 var BANDS_WITH_PLATES = { mountain: 1 };
+// THE FOURTEEN DOORS. A gate is the one room in its region that is not its
+// region: a specific built thing, with a keeper's shuttered hatch in the wall of
+// it, standing on whatever ground happens to be there. No terrain rule can see
+// that — the stell classified as a fold and the ferry house as a beck, and both
+// were handed a hillside. So the server names a gate by its own id and this is
+// the mapping; a gate whose plate is not cut yet is simply absent here and falls
+// back to its terrain like any other room. Band never enters into it: a door
+// looks like a door in a country with no pictures at all.
+// An id goes in here the moment /room-bg/gate-<id>.jpg exists and not before,
+// so a gate still waiting on its plate keeps the fallback it has today instead
+// of painting a hole.
+var GATE_PLATE = {
+  // "gate", "sally-port", "weeper-arch",
+  // "the-ferry-house", "the-crossing-house",
+  // "the-first-milestone", "the-relay-house",
+  // "the-gate-arch", "the-timber-stack", "the-withy-hut",
+  // "the-shieling", "the-stell", "the-shelter-crag", "the-slabs",
+};
 var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, fog:1, rain:1, snow:1, "in":1 };
 var sceneEl = document.getElementById("scene");
 var viewBtn = null;   // built only for a granted key, see buildViewRow
@@ -6259,13 +6295,22 @@ function paintScene(band, sky, terrain, roomKey) {
   // The gatehouse belongs to no band — it is the same small warm room at every
   // door — so it paints wherever it is found rather than waiting for the
   // country outside to have pictures of its own.
-  var kind = lastTerrain === "gatehouse" ? "gatehouse"
-    : BANDS_WITH_PLATES[lastBand]
-      ? (TERRAIN_PLATE[lastTerrain] ? lastTerrain
-         : (TERRAIN_NEAR[lastTerrain] || BAND_FALLBACK[lastBand] || ""))
-      : "";
-  var list = kind ? TERRAIN_PLATE[kind] : null;
-  var terr = (list && list.length) ? list[plateHash(lastRoomKey || kind) % list.length] : "";
+  // A gate is asked for by name before anything else, and if it has no plate
+  // yet the terrain it is standing on answers instead — hence the fallthrough
+  // rather than an early return.
+  var gate = lastTerrain.slice(0, 5) === "gate:" ? lastTerrain.slice(5) : "";
+  var terr = gate && GATE_PLATE[gate] ? "gate-" + gate : "";
+  if (!terr) {
+    var kind = lastTerrain === "gatehouse" ? "gatehouse"
+      : gate ? "" // a plateless gate paints its band's ground, not a terrain word
+      : BANDS_WITH_PLATES[lastBand]
+        ? (TERRAIN_PLATE[lastTerrain] ? lastTerrain
+           : (TERRAIN_NEAR[lastTerrain] || BAND_FALLBACK[lastBand] || ""))
+        : "";
+    if (!kind && gate && BANDS_WITH_PLATES[lastBand]) kind = BAND_FALLBACK[lastBand] || "";
+    var list = kind ? TERRAIN_PLATE[kind] : null;
+    terr = (list && list.length) ? list[plateHash(lastRoomKey || kind) % list.length] : "";
+  }
   sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".jpg?v=" + ART_V + ")" : "";
   sceneEl.className = SKY_KNOWN[lastSky] ? "sky-" + lastSky : "";
   // Each of these paintings has a crop that was MEASURED for the threshold —

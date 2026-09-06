@@ -8006,8 +8006,14 @@ export class ZoneDO implements DurableObject {
           // id the session still carries — you are out of the world, in a small
           // warm room with the hatch shut — so it names itself rather than being
           // classified from a hillside it is no longer standing on.
+          // A GATE IS NOT ITS GROUND EITHER. Every one of the fourteen is a
+          // specific built thing with a specific keeper's hatch in it, and no
+          // terrain rule could ever tell one from the hillside it stands on.
+          // So a gate names itself by id and the client keeps the mapping; a
+          // gate with no plate cut yet falls back to its terrain like any room.
           terrain: !ART_KEYS.has(session.pubkey) ? undefined
             : this.outOfWorld(session) ? "gatehouse"
+            : this.world!.entryRooms.has(session.roomId) ? "gate:" + session.roomId
             : terrainOf(session.roomId, room?.description),
           sky: !ART_KEYS.has(session.pubkey) ? undefined
             : !OUTDOOR_ROOMS.has(session.roomId) ? "in"
