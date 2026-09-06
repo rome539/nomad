@@ -887,10 +887,64 @@ export const PAGE = `<!doctype html>
     position: fixed;
     inset: 0;
     z-index: 0;
+    background-color: transparent;
+    background-size: cover;
+    background-position: center 55%;
+    background-repeat: no-repeat;
+    transition: filter .8s ease;
+  }
+  /* THE SKY IS ITS OWN LAYER, and it has to be, for one reason: the hour's tint
+     must reach the GROUND without touching the sky. When both lived on one
+     element the tint was an overlay across the whole thing, so a dawn wash over
+     a painted dawn sky tinted it twice — and worse, it painted colour over the
+     cut-out holes where the sky shows through a sign or a fence. Two elements
+     and the tint becomes a FILTER on the scene alone, which respects its alpha:
+     the holes stay holes, the sky stays as painted, and only the stone changes. */
+  #sky { display: none; }
+  body[data-view="image"] #sky {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: -1;
     background-color: var(--bg);
     background-size: cover;
     background-position: center 55%;
     background-repeat: no-repeat;
+  }
+  /* AGREEING THE GROUND WITH THE SKY. A borrowed scene is the right place under
+     the wrong light: the day stone under a dusk sky is still lit for noon, and
+     the eye reads the mismatch instantly. These bring it into line — dim and
+     warm for the low hours, red for the blood moon — and they are only ever
+     applied when the scene is NOT the one painted for the condition. */
+  body[data-view="image"] #scene.t-dawn    { filter: brightness(.74) saturate(.88) sepia(.16) hue-rotate(-6deg); }
+  body[data-view="image"] #scene.t-dusk    { filter: brightness(.60) saturate(1.02) sepia(.30) hue-rotate(-16deg); }
+  body[data-view="image"] #scene.t-eclipse { filter: brightness(.70) saturate(.55) contrast(1.06); }
+  body[data-view="image"] #scene.t-moon    { filter: brightness(1.10) saturate(.92); }
+  /* THE BLOOD MOON IS THE ONE TINT A FILTER CANNOT DO. Every CSS filter treats
+     every pixel the same, so reddening the cold stone also reddens the torch —
+     sepia(1) took the lamp from amber to a washed pink and put the flame out.
+     Backing the sepia off saves the torch and stops reddening the stone. There
+     is no setting that does both, because the two things want opposite
+     treatment: the grey must gain a hue and the amber must keep the one it has.
+     MULTIPLY makes that distinction for nothing. Scaling by a red leaves what is
+     already red alone and pulls everything else toward it — stone #969696 goes
+     to #7d483f while the lamp at #e1aa5a goes to #bc5226, which is still a
+     flame. The mask is what keeps it honest: it is the scene's own image, so
+     the red lands only where the scene is opaque and never on the sky showing
+     through a doorway or a gap in the turf. */
+  /* A GROUND STANDING IN FOR WEATHER IT WAS NOT SHOT FOR. Only ever reached
+     when that scene has not been made yet — dry stone in the rain is still
+     wrong, but wrong and dimmed reads better than wrong and bright. */
+  body[data-view="image"] #scene.t-fog   { filter: brightness(.92) saturate(.45) contrast(.86); }
+  body[data-view="image"] #scene.t-rain  { filter: brightness(.74) saturate(.80) contrast(1.04); }
+  body[data-view="image"] #scene.t-snow  { filter: brightness(1.04) saturate(.55); }
+  body[data-view="image"] #scene.t-blood::after {
+    background: #d67c6c;
+    mix-blend-mode: multiply;
+    -webkit-mask-image: var(--sceneimg); mask-image: var(--sceneimg);
+    -webkit-mask-size: cover; mask-size: cover;
+    -webkit-mask-position: center 55%; mask-position: center 55%;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   }
   body[data-view="image"] #bar,
   body[data-view="image"] #chips,
@@ -959,6 +1013,12 @@ export const PAGE = `<!doctype html>
   #scene.sky-dusk  { --scrim: linear-gradient(rgba(58,38,28,.20), rgba(188,108,48,.14)); }
   #scene.sky-night { --scrim: linear-gradient(rgba(8,10,26,.46), rgba(8,10,26,.38)); }
   #scene.sky-moon  { --scrim: linear-gradient(rgba(20,30,60,.32), rgba(30,44,80,.24)); }
+  /* The blood moon was collapsing into ordinary night, so the one night the
+     world changes colour looked like every other one. */
+  #scene.sky-blood { --scrim: linear-gradient(rgba(70,14,14,.42), rgba(46,10,10,.34)); }
+  /* Totality: the light goes wrong at midday. Cold and dim, not warm like dusk,
+     which is the whole difference between an eclipse and an evening. */
+  #scene.sky-eclipse { --scrim: linear-gradient(rgba(18,20,34,.44), rgba(30,26,30,.36)); }
   #scene.sky-fog   { --scrim: linear-gradient(rgba(150,150,145,.30), rgba(118,120,118,.24)); }
   #scene.sky-rain  { --scrim: linear-gradient(rgba(30,40,50,.28), rgba(24,32,44,.22)); }
   #scene.sky-snow  { --scrim: linear-gradient(rgba(202,212,226,.22), rgba(168,184,204,.16)); }
@@ -1529,6 +1589,7 @@ export const PAGE = `<!doctype html>
       <div id="jbody"></div>
     </div>
   </div>
+  <div id="sky" aria-hidden="true"></div>
   <div id="scene" aria-hidden="true"></div>
   <div id="mobs" aria-hidden="true"></div>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
@@ -6208,18 +6269,84 @@ var BANDS_WITH_PLATES = { mountain: 1 };
 // the mapping; a gate whose plate is not cut yet is simply absent here and falls
 // back to its terrain like any other room. Band never enters into it: a door
 // looks like a door in a country with no pictures at all.
-// An id goes in here the moment /room-bg/gate-<id>.jpg exists and not before,
-// so a gate still waiting on its plate keeps the fallback it has today instead
-// of painting a hole.
+// AN ID GOES IN HERE WHEN ITS SCENE EXISTS, and not before, so a gate still
+// waiting keeps the fallback it has today instead of painting a hole.
+//
+// A SCENE HAS NO SKY IN IT. That is the whole architecture and it is what makes
+// the art finite. The scene is cut out — building, ground, hills, everything
+// solid — and saved as a PNG with nothing where the sky was; the sky is a
+// SEPARATE picture drawn behind it. So the hours are painted ONCE for the whole
+// world, not once per room: nine skies total, and they sit behind all 1,186
+// rooms. A room costs one picture, not nine, and adding a room costs one more.
+//
+// Weather that is only in the air — the hour, the moon, fog — is the sky
+// changing behind an unchanged scene. Weather that is on the GROUND is not:
+// rain darkens and wets the stone and snow lies on it, and no sky behind a dry
+// scene will ever look wet. Those get their own scene photo, and the value here
+// lists which of them were painted. Empty means the base scene answers every
+// sky on its own.
+//   "the-relay-house": "rain snow",
 var GATE_PLATE = {
+  "the-relay-house":  "day night fog rain snow",
+  "the-shieling":     "day night fog rain snow",
+  "the-stell":        "day night fog rain snow",
+  "the-slabs":        "day night fog rain snow",
+  "the-shelter-crag": "day night fog rain snow",
   // "gate", "sally-port", "weeper-arch",
   // "the-ferry-house", "the-crossing-house",
   // "the-first-milestone", "the-relay-house",
   // "the-gate-arch", "the-timber-stack", "the-withy-hut",
   // "the-shieling", "the-stell", "the-shelter-crag", "the-slabs",
 };
-var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, fog:1, rain:1, snow:1, "in":1 };
+// The nine skies, painted once, shared by every scene in the game. A sky that
+// has not been painted yet leaves the scene on the flat ground colour and takes
+// the old wash instead, so this fills in one file at a time.
+// THE SAME TABLE FOR GROUND AS FOR DOORS. A terrain plate is shared by every
+// room of that ground — which is the only reason 1,185 rooms do not cost 1,185
+// pictures — so it earns its scenes exactly the way a gate does: name the ones
+// that were painted, and the four hours that reuse a scene come free. A terrain
+// listed here is layered; one that is not keeps the old single JPEG with a wash
+// over it, so the eight already shipped go on working untouched.
+//   scree: "day night",
+var TERRAIN_SCENES = {
+  // Five mountain grounds, 205 rooms between them.
+  snow:  "day night fog rain snow",
+  cairn: "day night fog rain snow",
+  gully: "day night fog rain snow",
+  scree: "day night fog rain snow",
+  boulder: "day night fog rain snow",
+};
+var SKY_PAINTED = {
+  day: 1, night: 1, dawn: 1, dusk: 1, moon: 1, blood: 1, eclipse: 1,
+  // fog, rain and snow need none: those scenes carry their own sky, because
+  // weather you can see the far hills through is weather in the SCENE.
+};
+// WHICH SCENE EACH SKY WANTS. Five of the nine are a different photograph of
+// the place, because five of them change the ground and not just the air: day,
+// night, fog, rain and snow. The other four are the same ground under a
+// different sky — dawn and dusk are the day scene with a different thing over
+// it, moon and blood moon are the night scene with a different thing over it —
+// so they cost a sky and no scene at all. Five scenes and nine skies, and the
+// skies are painted once for the whole world.
+var SKY_BASE = {
+  day: "day", dawn: "day", dusk: "day", "in": "day",
+  // TOTALITY IS A DARK SCENE, not a daylit one under a strange sky. It sits
+  // at midday, so the day ground was the obvious answer and the obvious
+  // answer was wrong: the light goes out, and bright noon stone under a
+  // blacked sun is the one mismatch nobody can look past.
+  eclipse: "night",
+  night: "night", moon: "night", blood: "night",
+  fog: "fog", rain: "rain", snow: "snow",
+};
+// Indoors there is no sky to draw and the vignette does the work.
+var SKY_NONE = { "in": 1 };
+// WHICH SCENES ARE CUT. Only these two are painted with the sky keyed out, so
+// only these two need one drawn behind them; fog, rain and snow are whole
+// photographs that carry their own and must not have a second sky put under.
+var KEYED = { day: 1, night: 1 };
+var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, blood:1, eclipse:1, fog:1, rain:1, snow:1, "in":1 };
 var sceneEl = document.getElementById("scene");
+var skyEl = document.getElementById("sky");
 var viewBtn = null;   // built only for a granted key, see buildViewRow
 var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
 var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "";
@@ -6295,24 +6422,75 @@ function paintScene(band, sky, terrain, roomKey) {
   // yet the terrain it is standing on answers instead — hence the fallthrough
   // rather than an early return.
   var gate = lastTerrain.slice(0, 5) === "gate:" ? lastTerrain.slice(5) : "";
-  var terr = gate && GATE_PLATE[gate] ? "gate-" + gate : "";
-  if (!terr) {
+  var scene = "", sky = "", tint = "";
+  if (gate && GATE_PLATE[gate] !== undefined) {
+    // GROUND WEATHER IS A DIFFERENT PHOTOGRAPH. Night is not the day gone dim,
+    // fog is not a grey wash, rain wets the stone and snow lies on it — none of
+    // those is anything a sky behind a dry daylit scene can do. Five scenes.
+    var have = " " + GATE_PLATE[gate] + " ";
+    // The scene this sky wants, or the day scene if it has not been shot yet —
+    // so a gate can land with one photograph and gain the other four later
+    // without anything breaking in between.
+    var want = SKY_BASE[lastSky] || "day";
+    if (have.indexOf(" " + want + " ") < 0) want = "day";
+    scene = "/room-bg/gate-" + gate + "-" + want + ".png";
+    // AND A KEYED SCENE MUST ALWAYS GET A SKY. This said so and then did not do
+    // it: it asked for the sky of the CONDITION, so a gate with no rain scene
+    // fell back to its day ground — which is cut, and transparent where the sky
+    // was — and then drew nothing behind it, because no rain sky exists. A hole
+    // in the world, every time it rained anywhere a scene was missing. The sky
+    // to draw is the condition's when there is one, and otherwise the sky that
+    // belongs to the GROUND actually being used.
+    if (!SKY_NONE[lastSky] && KEYED[want]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : want) + ".jpg";
+    // BORROWED GROUND NEEDS BRINGING INTO LINE. The tint used to switch off the
+    // moment a real sky was drawn, on the reasoning that the picture already WAS
+    // the weather — true when the scene was painted for this hour, and false
+    // whenever it was borrowed. Day stone under a dusk sky is still lit for
+    // noon, and the eye catches that before it catches anything else.
+    tint = (want === lastSky) ? "" : lastSky;
+  }
+  if (!scene) {
     var kind = lastTerrain === "gatehouse" ? "gatehouse"
-      : gate ? "" // a plateless gate paints its band's ground, not a terrain word
+      : gate ? ""
       : BANDS_WITH_PLATES[lastBand]
         ? (TERRAIN_PLATE[lastTerrain] ? lastTerrain
            : (TERRAIN_NEAR[lastTerrain] || BAND_FALLBACK[lastBand] || ""))
         : "";
     if (!kind && gate && BANDS_WITH_PLATES[lastBand]) kind = BAND_FALLBACK[lastBand] || "";
     var list = kind ? TERRAIN_PLATE[kind] : null;
-    terr = (list && list.length) ? list[plateHash(lastRoomKey || kind) % list.length] : "";
+    var terr = (list && list.length) ? list[plateHash(lastRoomKey || kind) % list.length] : "";
+    if (terr && TERRAIN_SCENES[terr] !== undefined) {
+      // Painted for layering: same law as a gate, and it falls through to the
+      // shared code below rather than repeating it.
+      var thave = " " + TERRAIN_SCENES[terr] + " ";
+      var twant = SKY_BASE[lastSky] || "day";
+      if (thave.indexOf(" " + twant + " ") < 0) twant = "day";
+      scene = "/room-bg/" + terr + "-" + twant + ".png";
+      if (!SKY_NONE[lastSky] && KEYED[twant]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : twant) + ".jpg";
+      tint = (twant === lastSky) ? "" : lastSky;
+    } else {
+      // The old single-layer plates: sky baked in, wash on top, unchanged.
+      if (skyEl) skyEl.style.backgroundImage = "";
+      sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".jpg?v=" + ART_V + ")" : "";
+      sceneEl.style.backgroundSize = "cover";
+      sceneEl.className = SKY_KNOWN[lastSky] ? "sky-" + lastSky : "";
+      sceneEl.style.backgroundPosition = "center 55%";
+      return;
+    }
   }
-  sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".jpg?v=" + ART_V + ")" : "";
-  sceneEl.className = SKY_KNOWN[lastSky] ? "sky-" + lastSky : "";
-  // Each of these paintings has a crop that was MEASURED for the threshold —
-  // where the subject sits, which third survives a narrow window — and there is
-  // no reason to guess a second time here. Guarded because this runs once on
-  // load, before the threshold's own table below has been evaluated.
+  var url = "url(" + scene + "?v=" + ART_V + ")";
+  sceneEl.style.backgroundImage = url;
+  sceneEl.style.backgroundSize = "cover";
+  // The mask on the blood tint needs the same picture; a custom property is the
+  // only way to hand a stylesheet a URL that is decided at runtime.
+  sceneEl.style.setProperty("--sceneimg", url);
+  if (skyEl) {
+    skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + ART_V + ")" : "";
+    skyEl.style.backgroundPosition = "center 55%";
+  }
+  // No overlay on a layered room — the sky is real. The only thing that changes
+  // is how the ground is lit, and that is a filter that respects the cut.
+  sceneEl.className = tint ? "t-" + tint : "";
   sceneEl.style.backgroundPosition = "center 55%";
 }
 

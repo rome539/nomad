@@ -29,3 +29,8 @@ game-server/public/room-bg/
 # ...and the creature sprites, for the same reasons and at the same cost:
 # they upload from the working tree at deploy, so KEEP A COPY.
 game-server/public/mob/
+# ...and the nine skies. These are the ones it would hurt most to lose, because
+# unlike a plate they are not per-room: every layered scene in the world is
+# painted with its sky cut out and one of these drawn behind it, so without them
+# the whole set has a hole where the weather goes. KEEP A COPY.
+game-server/public/sky/

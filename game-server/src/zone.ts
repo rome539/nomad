@@ -8020,7 +8020,15 @@ export class ZoneDO implements DurableObject {
             : events.snowed(this, session.roomId) ? "snow"
             : events.foggy(this, session.roomId) ? "fog"
             : events.raining(this, session.roomId) ? "rain"
-            : isNight() ? (isFullMoon() && !isBloodMoon() ? "moon" : "night")
+            // A BLOOD MOON IS ITS OWN NIGHT. It was collapsing into plain dark,
+            // so the one night in the calendar the whole world changes colour —
+            // red eyes in the hollow ones, the full-moon door shut — looked
+            // exactly like every other night in the picture.
+            : isNight() ? (isBloodMoon() ? "blood" : isFullMoon() ? "moon" : "night")
+            // TOTALITY IS ITS OWN SKY. eclipsePhase has been in this file for
+            // months and never once reached the picture: the one midday the sun
+            // goes out looked like every other midday.
+            : eclipsePhase() === "active" ? "eclipse"
             : isDusk() ? "dusk"
             : isDawn() ? "dawn"
             : "day",
