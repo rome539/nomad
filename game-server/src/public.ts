@@ -94,6 +94,20 @@ export const PAGE = `<!doctype html>
     flex-direction: column;
   }
   #bar {
+    /* THE CHROME DOES NOT GIVE. Every one of these is a flex item in the body
+       column, and a flex item's default is 0 1 auto — it may SHRINK. So when
+       the opened log asked for the whole column, the bar was squeezed shorter
+       and, having overflow:hidden, quietly clipped its own text: the room name
+       cut in half across the middle, the hp with its top sliced off. It read
+       like the bar had moved. It had not; it had been crushed.
+       The log is the only thing in this column that may take or give space.
+       Everything else states its size and keeps it. */
+    flex: 0 0 auto;
+    /* And it sits above the picture and above the prose: image-mode #log is
+       relative and z-indexed 1 so it can lie on the scene, and static chrome
+       would lose to it on any overlap. */
+    position: relative;
+    z-index: 2;
     display: flex;
     justify-content: space-between;
     gap: 1em;
@@ -1016,15 +1030,33 @@ export const PAGE = `<!doctype html>
      a filter here rather than the scene's masked multiply: a mask needs the
      picture it is masking, and each sprite is its own picture — and nothing on
      four legs is carrying a lamp that has to survive. */
-  body[data-view="image"] #mobs.t-dawn    img { filter: brightness(.74) saturate(.88) sepia(.16) hue-rotate(-6deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-dusk    img { filter: brightness(.60) saturate(1.02) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-night   img { filter: brightness(.42) saturate(.85) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-eclipse img { filter: brightness(.70) saturate(.55) contrast(1.06) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-moon    img { filter: brightness(1.10) saturate(.92) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-blood   img { filter: brightness(.80) sepia(1) saturate(1.5) hue-rotate(-38deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-fog     img { filter: brightness(.92) saturate(.45) contrast(.86) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-rain    img { filter: brightness(.74) saturate(.80) contrast(1.04) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-snow    img { filter: brightness(1.04) saturate(.55) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  /* A CREATURE IS DARKER THAN THE GROUND IT STANDS ON, and these numbers are
+     its own rather than the scene's. Reusing the scene's was measurably wrong:
+     the night plates run about .66 of their own day plate, and the eagle-owl
+     sprite comes out of the sheet at luminance 57.7 against a snow-night ground
+     of 57.0 — the same value, which is precisely why an owl on a moonless
+     glacier read as a sticker laid on the photograph.
+     The reason is physical and it is why one shared number could never serve
+     both: open ground faces the sky and catches what light there is, and snow
+     throws most of it back. A creature is a vertical thing with the sky edge-on
+     to it, lit only by what the ground bounces up. So each hour here goes a
+     step past the scene's — the drop-shadow is re-appended every time because a
+     filter list replaces, it does not add. */
+  body[data-view="image"] #mobs.t-dawn    img { filter: brightness(.55) saturate(.80) sepia(.16) hue-rotate(-6deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-dusk    img { filter: brightness(.42) saturate(.95) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-night   img { filter: brightness(.26) saturate(.70) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-eclipse img { filter: brightness(.48) saturate(.45) contrast(1.06) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  /* The full moon LIGHTS the ground — the scene brightens to 1.10 — and a
+     creature standing on lit ground is the thing between you and it. It stays
+     dark; the difference from an ordinary night is that you can see its shape. */
+  body[data-view="image"] #mobs.t-moon    img { filter: brightness(.52) saturate(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-blood   img { filter: brightness(.52) sepia(1) saturate(1.5) hue-rotate(-38deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  /* Fog and falling snow are the two that also push a shape AWAY from you:
+     less contrast and less colour is what distance looks like through weather,
+     and it is what stops a creature reading as a cut-out on a flat wash. */
+  body[data-view="image"] #mobs.t-fog     img { filter: brightness(.78) saturate(.35) contrast(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-rain    img { filter: brightness(.58) saturate(.70) contrast(1.04) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-snow    img { filter: brightness(.82) saturate(.45) contrast(.92) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   #mobs img {
     display: block;
     width: auto;
@@ -1098,6 +1130,14 @@ export const PAGE = `<!doctype html>
   body[data-view="image"][data-log="big"] #log {
     flex: 1 1 auto;
     max-height: none;
+    /* AND IT HAS TO BE ALLOWED TO SHRINK. A flex item's min-height resolves to
+       its CONTENT height by default, so lifting the ceiling was not enough: the
+       log simply grew to whatever it was holding, overflowed the column, and —
+       because margin-top:auto pins it to the bottom — the overflow went UPWARD,
+       straight over the bar. Zero lets flex do its job, and the log scrolls
+       inside the space it is given, which is what it does in text mode too.
+       Exactly the same fault as the sprite row's min-width, one axis over. */
+    min-height: 0;
     background: linear-gradient(to bottom,
       color-mix(in srgb, var(--bg) 0%, transparent) 0%,
       color-mix(in srgb, var(--bg) 86%, transparent) 4%,
@@ -1238,6 +1278,7 @@ export const PAGE = `<!doctype html>
     #log .big { animation: none; }
   }
   #chips {
+    flex: 0 0 auto;   /* chrome does not give — see #bar */
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
@@ -1292,6 +1333,8 @@ export const PAGE = `<!doctype html>
   #chips button.c-gain:hover, #chips button.c-gain:active { background: color-mix(in srgb, var(--gold) 32%, transparent);  border-color: var(--gold);  color: var(--cream); }
   #chips button.c-def:hover,  #chips button.c-def:active  { background: color-mix(in srgb, var(--steel) 32%, transparent); border-color: var(--steel); color: var(--cream); }
   #inputline {
+    flex: 0 0 auto;   /* chrome does not give — see #bar. The one thing you must
+                         never lose is the line you type into. */
     display: flex;
     gap: 8px;
     padding: 10px calc(14px + env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) calc(14px + env(safe-area-inset-left, 0px));
@@ -6225,7 +6268,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "9";
+var ART_V = "10";
 
 // ---------------------------------------------------------------------------
 // THE VIEW. A band of country per region, washed by whatever the sky is doing.
@@ -6610,10 +6653,18 @@ function paintScene(band, sky, terrain, roomKey) {
     // No overlay on a layered room — the sky is real. The only thing that
     // changes is how the ground is lit, and that is a filter that respects the cut.
     sceneEl.className = tint ? "t-" + tint : "";
-    // WHAT IS STANDING THERE IS STANDING IN THE SAME LIGHT. The scene got dimmed
-    // for the hour and the creatures did not, so a hare at midnight was lit for
-    // noon and sat on the plate like a sticker. Same class, same hour.
-    if (mobsEl) mobsEl.className = tint ? "t-" + tint : "";
+    // WHAT IS STANDING THERE IS STANDING IN THE SAME LIGHT — but it does not
+    // take the same class, and sharing one was the bug. The scene's tint is a
+    // CORRECTION: it is only set when the ground is borrowed, because a plate
+    // photographed for this hour needs nothing done to it. A sprite is never in
+    // that position. There is exactly one picture of each creature, lit for day,
+    // and it is borrowed EVERY hour that is not day — so on the night plate,
+    // where the scene rightly asked for no correction, an owl stood in full
+    // daylight on a moonless glacier.
+    //
+    // So the creatures read the HOUR, not the scene's correction for it. Day
+    // and "in" have no rule and pass through untouched, which is what they want.
+    if (mobsEl) mobsEl.className = lastSky ? "t-" + lastSky : "";
     sceneEl.style.backgroundPosition = "center 55%";
     scenePainted = scene;
   };
@@ -6680,29 +6731,64 @@ applyView();
 // narrow screen scales itself down from here.
 var MOB_SCALE = 1.5;
 var MOB_SPRITE = {
-  "mountain-hare": 11, "ptarmigan": 10, "scarp-raven": 11, "carrion-vulture": 17,
-  "feral-goat": 20, "stone-adder": 7, "hill-wolf": 20, "snow-fox": 13,
-  "hill-fox": 13, "lynx": 17, "wildcat": 12, "glutton": 14,
-  "hill-eagle": 18, "eagle-owl": 15, "red-hind": 24, "ermine": 8,
-  // Sheet two: the fliers with their wings out, and the two that the hill is
-  // known for. The eyrie holder and the cave lion are deliberately enormous —
-  // one stands as tall as a man and the other is the size of a pony, and if
-  // they arrive the same size as a fox the room has told the player a lie.
-  "bone-breaker": 22, "mountain-chough": 9, "brooding-vulture": 18,
-  "gill-adder": 8, "eyrie-holder": 30, "cave-lion": 26,
-  // THE SUMMER PEOPLE, and the man is the ruler everything else is measured
-  // against — 22vh is a person standing, so the hind at 24 is genuinely taller
-  // at the shoulder than you, and the stoat at 8 comes to your shin. Their
-  // sprites carry a baked alpha of 140/255: they are not solid, and a player
-  // who walks up to the shieling should be able to tell that before anyone
-  // says so.
-  "the-herd": 22, "the-milker": 15, "a-fold-dog": 12,
-  // AND THE ONE THING ON THE HILL THAT IS ONE OF ONE. Twice the height of a
-  // standing man and half again as wide, which on any window means it is most
-  // of what you can see. There is no version of meeting this that should fit
-  // tidily beside a hare.
-  "the-drake": 46,
+  // EVERY NUMBER HERE IS A HEIGHT IN METRES, CONVERTED. A standing man is 1.75m
+  // and he is 22, so a sprite's number is 22 * (its height / 1.75) and nothing
+  // else. The table used to be written by eye and it drifted badly: a red hind
+  // was 24 against the man's 22, which said a deer stands taller than a person,
+  // and on screen it plainly did. A hind is about 1.2m at the shoulder and 1.45m
+  // with its head up. It is 18. Twenty of the twenty-six were wrong the same
+  // way — everything four-legged and everything with feathers was drifting up
+  // toward human size, because eyeballing a sprite in isolation always does
+  // that. Derive, do not adjust: if one of these looks wrong, change the METRES
+  // in the comment and recompute, so the animals stay right relative to each
+  // other instead of each being right on its own.
+  //
+  // ---- the summer people, and the ruler everything is measured against ------
+  "the-herd": 22,          // 1.75  a man standing. Their sprites carry a baked
+  // THE ONE DELIBERATE EXCEPTION TO THE METRE RULE. She is seated at her pail,
+  // and a seated adult is ~1.3m to the crown, which converts to 16 — and 16 is
+  // correct and looks wrong. Next to a standing man she reads as a child rather
+  // than as a woman sitting down, because a viewer reads the HEAD first and the
+  // ground line second, and this row has no shared ground line to read (the
+  // sprites are centred on the horizon). So she is sized as the person she is,
+  // not as the posture she is in. She stays under the man — that is the rule
+  // the hind broke and it is the one rule here that must hold.
+  "the-milker": 20,        // sized to read, not measured. alpha 140/255:
+  "a-fold-dog": 9,         // 0.70  they are not solid, and a player should be
+  //                                able to see that without being told.
+  // ---- the big animals -------------------------------------------------------
+  "cave-lion": 19,         // 1.50  the size of a pony, and it is head-up here
+  "red-hind": 18,          // 1.45  1.2m at the shoulder — SHORTER than the man
+  "bone-breaker": 14,      // 1.15  a lammergeier stood on the ground
+  "brooding-vulture": 14,  // 1.10
+  "hill-wolf": 13,         // 1.05  a wolf is chest-high on a man, not eye-high
+  "feral-goat": 13,        // 1.00
+  "carrion-vulture": 13,   // 1.00
+  "hill-eagle": 11,        // 0.90  perched. Wings out is a wider sprite, not a taller one
+  "lynx": 10,              // 0.80
+  // ---- and the small ones, which are small ----------------------------------
+  "eagle-owl": 9,          // 0.70  the biggest owl there is, and still knee-high
+  "scarp-raven": 7,        // 0.55
+  "mountain-hare": 6,      // 0.50  sitting up
+  "snow-fox": 6,           // 0.50
+  "hill-fox": 6,           // 0.50
+  "glutton": 6,            // 0.45  a wolverine is a badger's size, not a bear's
+  "wildcat": 5,            // 0.40
+  "mountain-chough": 5,    // 0.39
+  "ptarmigan": 4,          // 0.33
+  "gill-adder": 4,         // 0.30  coiled
+  "ermine": 3,             // 0.25  up on its hind legs
+  "stone-adder": 3,        // 0.25  coiled
+  // ---- THE TWO THAT ARE NOT MEASURED AGAINST A MAN --------------------------
+  // The eyrie holder's own line is that it stands as tall as a man, so it does:
+  // the same 22, and what makes it enormous is that it is a BIRD at that height.
+  "eyrie-holder": 22,      // 1.75
+  // And the one thing on the hill that is one of one — twice the height of a
+  // standing man and half again as wide, which on any window is most of what
+  // you can see. There is no version of meeting this that fits beside a hare.
+  "the-drake": 44,         // 3.50
 };
+
 var mobsEl = document.getElementById("mobs");
 var lastMobs = "";
 function paintMobs(ids) {

@@ -19,7 +19,7 @@ import {
   HOARD_COVET_RARITY, HOARD_COVET_ODDS, HOARD_COVET_MS, HOARD_COVET_LINES, RARITY_RANK,
   PACK_HOLDERS, PREY_BREAK_ODDS, PREY_WORRY_MULT, HOLD_LINES, BREAK_LINES,
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
-  DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
+  DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, MILKER_GOATS, MILKING_ODDS, MILKING_LINES, MILKED_GOAT_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
@@ -2541,8 +2541,38 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
     const lines = GHOST_FLOCK_LINES[creature.templateId];
     if (!lines || creature.asleep || creature.target) return;
     if (!playerPresent(z, creature.roomId)) return;
+    // THE MILKER GETS A REAL ANIMAL SOMETIMES, and when she does the rehearsal
+    // is off — she is not milking air any more, so the ghost-work line would be
+    // a lie standing next to the thing itself. This takes the tick instead of
+    // sharing it. Every other summer person falls straight through.
+    if (milking(z, creature)) return;
     if (!chance(GHOST_FLOCK_ODDS)) return;
     z.roomFeed(creature.roomId, pick(lines), undefined, false, "amb");
+  }
+
+  // SHE ACTUALLY MILKS IT. The one thing any of the summer people do that lands
+  // on something real: a feral goat off the same ground her people kept walks
+  // into the fold and stands for her, and two centuries of practising the motion
+  // at nothing finally has an animal under it.
+  //
+  // The goat must be AWAKE and not fighting — a sleeping goat is not standing
+  // for anybody and a goat in a fight has other business — and she must not be
+  // fighting either. Told from both sides in one beat, hers and then the
+  // animal's, because the whole point is that neither of them finds it strange.
+  // Returns whether it fired, so the ghost-work above can stand down.
+  function milking(z: ZoneDO, creature: Creature): boolean {
+    if (creature.templateId !== "the-milker") return false;
+    let goat: Creature | null = null;
+    for (const c of z.creaturesInRoom(creature.roomId)) {
+      if (c.id === creature.id || !MILKER_GOATS.has(c.templateId)) continue;
+      if (c.asleep || c.target) continue;
+      goat = c; break;
+    }
+    if (!goat) return false;
+    if (!chance(MILKING_ODDS)) return true;   // a goat is here: her tick is spent either way
+    z.roomFeed(creature.roomId, pick(MILKING_LINES), undefined, false, "amb");
+    z.roomFeed(creature.roomId, pick(MILKED_GOAT_LINES), undefined, false, "amb");
+    return true;
   }
 
   // THE CHANGE OF GUARD IS NOT HERE, and the reason is worth keeping so nobody

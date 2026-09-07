@@ -3787,6 +3787,37 @@ export const GHOST_FLOCK_LINES: Record<string, string[]> = {
     "The fold dog settles into the gate with its head on its paws and keeps the watch it has always kept. The flock is gone. The gate does not know, and neither does the dog.",
   ],
 };
+// SHE ACTUALLY MILKS IT (rome, 2026-09-06). Everything else the summer people
+// do is a rehearsal: the herd turns a flock that is not there, the butter-wife
+// works an empty churn, and the milker's own template says the pail has been dry
+// so long the staves have shrunk apart. Two centuries of the motion and nothing
+// under her hands.
+//
+// And then a live goat walks in. The mountain is full of them — feral stock off
+// the same summer ground her people kept, gone wild in the meantime — and it
+// stands for her, because a goat is a goat and this is the one thing on the hill
+// that still knows how to do this properly. The work comes off the rehearsal and
+// lands on an animal, for a minute, after two hundred years of air.
+//
+// It is deliberately louder than the ghost-work it replaces (0.02 -> 0.10): the
+// ordinary rehearsal is wallpaper you catch if you linger, and this is a thing
+// you should get to SEE if you are standing there when a goat wanders in. It
+// still needs a witness, like everything else in this family.
+export const MILKER_GOATS = new Set(["feral-goat", "old-billy"]);
+export const MILKING_ODDS = 0.10; // per idle tick, only with a goat in the room
+export const MILKING_LINES = [
+  "A goat comes off the rocks, walks the length of the fold to where the milker is sitting, and stands. She does not look surprised. She sets the pail under it and her hands find the old rhythm on the second pull, and there is a sound in that pail that has not been in it for two hundred years.",
+  "The milker looks up, and the goat is already coming. It plants itself at her knee with the flat patience of an animal that has done this before, in another century, with somebody else. She milks it. Neither of them treats it as remarkable.",
+  "The goat lets her take it. Two hands, the pause to shift the grip, the glance up the hill between — every part of it exactly as she has been doing it at nothing, and all of it landing now on something warm.",
+  "She works, and the goat chews, and the thin sound of milk on wood goes on longer than you expect. When it stops she moves over on the stone to give the animal room, the same way she moved over for you.",
+];
+// AND WHAT THE GOAT MAKES OF IT, on the animal's own line. The goat has no idea
+// what she is — nothing on the mountain does, and that is the region's whole
+// rule — it only knows the hands are right.
+export const MILKED_GOAT_LINES = [
+  "The goat stands for her with its jaw going sideways, entirely unbothered, the way stock stands for somebody it has decided about.",
+  "The goat shifts a hind foot and settles again, and does not move off until she is finished with it.",
+];
 // THE CHAINMAN'S COUNT (mob-audit F5). He carries the flail and works the
 // chain — the last motion of the ferry's own trade, counted link by link.
 export const CHAINMAN_COUNT_ODDS = 0.02; // per idle tick
