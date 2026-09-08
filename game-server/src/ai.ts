@@ -1674,6 +1674,7 @@ function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate): void {
       for (const id of spoils) z.stampFresh(victim.roomId, id); // a fresh kill site stays hot a while
     }
     z.addTrace(victim.roomId, { kind: HOLLOW.has(victim.templateId) ? "remains" : "blood", at: Date.now(), label: vt.name });
+    z.fxDied(victim.roomId, victim.templateId);
     z.creatures.delete(victim.id);
     z.noteCreaturesChanged(); // eaten between beats: nothing may still find it in the room
     scheduleArrivals(z, Date.now());

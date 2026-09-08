@@ -116,6 +116,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // the chips already obey — above all the lurker rule: a thing lying in wait
   // gets no chip and no sprite, and the room stays as quiet as its description.
   const seen: string[] = [];
+  const rest: string[] = [];
   for (const creature of z.creaturesInRoom(session.roomId)) {
     // Torchlight reveals a waiting lurker — so it also gets its attack chip.
     // GLINTING gear does the same by daylight (2026-08-20): the polish leaves
@@ -128,7 +129,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     chipNamesSeen.push(tmpl.name);
     const n = chipNamesSeen.filter((nm) => nameMatches(nm, label)).length;
     suggest.push(`attack ${label}${n > 1 ? ` ${n}` : ""}`);
-    if (seen.length < 4) seen.push(creature.templateId);   // a room paints four at most
+    if (seen.length < 4) {
+      seen.push(creature.templateId);   // a room paints four at most
+      if (creature.asleep) rest.push(creature.templateId);
+    }
   }
   // A throwable in hand and something to throw it at: offer the opener.
   if (creatureHere) {
@@ -417,7 +421,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   const w = z.wayHome.get(session.roomId);
   const home = world.entryRooms.has(session.roomId) ? "here" : (w ? w.dir : "");
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, mobs: ART_KEYS.has(session.pubkey) ? seen : undefined }));
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, mobs: ART_KEYS.has(session.pubkey) ? seen : undefined, rest: ART_KEYS.has(session.pubkey) && rest.length ? rest : undefined }));
   } catch {}
 }
 

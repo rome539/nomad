@@ -1042,22 +1042,22 @@ export const PAGE = `<!doctype html>
      to it, lit only by what the ground bounces up. So each hour here goes a
      step past the scene's — the drop-shadow is re-appended every time because a
      filter list replaces, it does not add. */
-  body[data-view="image"] #mobs.t-dawn    img { filter: brightness(.55) saturate(.80) sepia(.16) hue-rotate(-6deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-dusk    img { filter: brightness(.42) saturate(.95) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-night   img { filter: brightness(.26) saturate(.70) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-eclipse img { filter: brightness(.48) saturate(.45) contrast(1.06) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-dawn img, body[data-view="image"] #mobs.t-dawn .mob { filter: brightness(.55) saturate(.80) sepia(.16) hue-rotate(-6deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-dusk img, body[data-view="image"] #mobs.t-dusk .mob { filter: brightness(.42) saturate(.95) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-night img, body[data-view="image"] #mobs.t-night .mob { filter: brightness(.26) saturate(.70) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-eclipse img, body[data-view="image"] #mobs.t-eclipse .mob { filter: brightness(.48) saturate(.45) contrast(1.06) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   /* The full moon LIGHTS the ground — the scene brightens to 1.10 — and a
      creature standing on lit ground is the thing between you and it. It stays
      dark; the difference from an ordinary night is that you can see its shape. */
-  body[data-view="image"] #mobs.t-moon    img { filter: brightness(.52) saturate(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-blood   img { filter: brightness(.52) sepia(1) saturate(1.5) hue-rotate(-38deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-moon img, body[data-view="image"] #mobs.t-moon .mob { filter: brightness(.52) saturate(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-blood img, body[data-view="image"] #mobs.t-blood .mob { filter: brightness(.52) sepia(1) saturate(1.5) hue-rotate(-38deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   /* Fog and falling snow are the two that also push a shape AWAY from you:
      less contrast and less colour is what distance looks like through weather,
      and it is what stops a creature reading as a cut-out on a flat wash. */
-  body[data-view="image"] #mobs.t-fog     img { filter: brightness(.78) saturate(.35) contrast(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-rain    img { filter: brightness(.58) saturate(.70) contrast(1.04) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-snow    img { filter: brightness(.82) saturate(.45) contrast(.92) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  #mobs img {
+  body[data-view="image"] #mobs.t-fog img, body[data-view="image"] #mobs.t-fog .mob { filter: brightness(.78) saturate(.35) contrast(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-rain img, body[data-view="image"] #mobs.t-rain .mob { filter: brightness(.58) saturate(.70) contrast(1.04) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-snow img, body[data-view="image"] #mobs.t-snow .mob { filter: brightness(.82) saturate(.45) contrast(.92) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  #mobs img, #mobs .mob {
     display: block;
     width: auto;
     image-rendering: pixelated;
@@ -1077,6 +1077,21 @@ export const PAGE = `<!doctype html>
        one thing filling the frame. */
     min-width: 0;
     object-fit: contain;
+  }
+  /* AN ANIMATED CREATURE IS A WINDOW ONTO A STRIP. Six frames live side by side
+     in one file, and this element shows one of them at a time — background-size
+     is n*100% wide so each frame lands exactly on the element, and stepping
+     background-position-x walks along them. One file, one request, and the
+     frames compress almost to nothing because they are nearly identical.
+     aspect-ratio carries ONE frame's shape, so setting height still gives the
+     right width the way it does for an img. */
+  #mobs .mob {
+    background-repeat: no-repeat;
+    background-position-y: center;
+    /* An <img> may give width to fit a crowded row (see min-width above); a strip
+       window may NOT. Its width is one frame wide by construction, and flex
+       taking any of it stretches the picture instead of scaling it. */
+    flex: 0 0 auto;
   }
   #scene.sky-day   { --scrim: transparent; }
   #scene.sky-dawn  { --scrim: linear-gradient(rgba(84,104,148,.20), rgba(198,168,118,.10)); }
@@ -3022,7 +3037,7 @@ async function connect() {
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
-      paintMobs(f.mobs);
+      paintMobs(f.mobs, f.rest);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
@@ -3032,6 +3047,10 @@ async function connect() {
       wayHome = f.home || "";
       paintWayHome();
       renderChips(f.suggest, f.combat);
+    } else if (f.t === "beat") {
+      // A creature that swung shows its attack; one that was hit recoils. Both
+      // are one-shot: they run once and drop back to whatever they were doing.
+      mobBeat(f.swung, f.struck, f.died);
     } else if (f.t === "bench") {
       if (f.open) renderBench(f); else closeBench();
     } else if (f.t === "trade") {
@@ -6268,7 +6287,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "11";
+var ART_V = "12";
 
 // ---------------------------------------------------------------------------
 // THE VIEW. A band of country per region, washed by whatever the sky is doing.
@@ -6487,6 +6506,14 @@ var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "";
 // sceneSeq is bumped by every request so a slow one can tell it has been
 // overtaken and must not paint. See the swap at the end of paintScene.
 var scenePainted = "", sceneSeq = 0;
+// THE ANIMATION STATE LIVES UP HERE WITH THE REST OF THE VIEW STATE, and it has
+// to: applyView() runs at load and calls runAnims(), and a var further down the
+// file is hoisted but not yet ASSIGNED at that moment - so a declaration next to
+// the code that uses it would read undefined.length on the first paint. paintMobs
+// survives the same order only because it checks mobsEl first.
+var anims = [], animTimer = null;
+var stillness = false;
+try { stillness = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
 // THE SERVER DECIDES WHETHER THERE ARE PICTURES. Until a status frame arrives
 // carrying the grant, this client is a text client and has no view control at
 // all — an unlisted wanderer is not shown a door they cannot open. The grant is
@@ -6696,6 +6723,7 @@ function applyView() {
   if (viewBtn) viewBtn.textContent = viewWant;
   paintScene(null, null, null, null);
   if (viewMode !== "image") { lastMobs = "x"; paintMobs(null); }
+  runAnims();   // a hidden strip must not keep a timer alive
   // The strip changes height under the text, so put the newest line back on
   // the floor of it — switching view must never lose your place in a fight.
   if (typeof log !== "undefined" && log) log.scrollTop = log.scrollHeight;
@@ -6777,8 +6805,31 @@ var MOB_SPRITE = {
   "mountain-chough": 5,    // 0.39
   "ptarmigan": 4,          // 0.33
   "gill-adder": 4,         // 0.30  coiled
+  "the-gravid-adder": 3,   // 0.25  coiled, and heavier than the stone adder rather than taller
   "ermine": 3,             // 0.25  up on its hind legs
   "stone-adder": 3,        // 0.25  coiled
+  // ---- THE RARE BLOOD OF THE MOUNTAIN (mig 247) ------------------------------
+  // Every one of these is the uncommon form of an animal already on this list,
+  // and until now not one of them had a picture: a 12% pale drake and a 15% snow
+  // hare are exactly the things a player should get to SEE are different, and
+  // they were rendering as nothing at all. The gravid adder above was the first
+  // of them to be drawn; these are the rest.
+  "great-vulture": 14,        // 1.15
+  "lead-wolf": 14,            // 1.10
+  "old-billy": 14,            // 1.10
+  "red-stag": 22,             // 1.75  a stag stands as tall as a man; the hind beside him is 18
+  "snow-hare": 6,             // 0.50
+  "the-blue-fox": 6,          // 0.50
+  "the-bone-dropper": 14,     // 1.15
+  "the-butter-wife": 20,      //       sized to read like the milker, not measured - seated at her churn
+  "the-dancer": 3,            // 0.25
+  "the-last-dog": 9,          // 0.70
+  "the-old-glutton": 6,       // 0.50
+  "the-old-raven": 7,         // 0.55
+  "the-one-who-stayed": 22,   // 1.75
+  "the-pale-drake": 44,       // 3.50  twice a standing man, same as the drake it is a variant of
+  "the-raiding-fox": 6,       // 0.50
+  "the-tom": 5,               // 0.40
   // ---- THE TWO THAT ARE NOT MEASURED AGAINST A MAN --------------------------
   // The eyrie holder's own line is that it stands as tall as a man, so it does:
   // the same 22, and what makes it enormous is that it is a BIRD at that height.
@@ -6789,30 +6840,299 @@ var MOB_SPRITE = {
   "the-drake": 44,         // 3.50
 };
 
+// WHAT A CREATURE DOES WHILE YOU STAND THERE. A sprite with an entry here is not
+// one picture but SIX, side by side in one file, and the frames are a small piece
+// of behaviour rather than a loop: an animal mostly holds still, and now and then
+// it does something. So the frames are named in two groups. IDLE is what it does
+// almost all of the time and cycles slowly. ACT is the thing it occasionally
+// breaks into — for an adder, tightening and striking and drawing back — played
+// once, start to finish, and then it settles again.
+//
+// Cycling all six would have every snake in the world striking every three
+// seconds, which is both wrong about snakes and exhausting to stand next to.
+//
+// The 'aspect' field is ONE frame's width over its height, measured off the strip at build
+// time. The element is sized by height like every other sprite, and this is what
+// turns that into the right width.
+// HOW A CREATURE MOVES, AND IT IS NOT MY DESIGN. These animals were drawn as
+// POSE STUDIES with a viewer of their own, and that viewer already worked out
+// what each pose is for and how it is played: a gait is two poses alternating at
+// 5Hz with the body swaying through a sine, a hare and the dancer leave the
+// ground on the beat, a bird beats its wings at 4Hz and rises and shrinks with
+// the distance, and a resting animal breathes on a scale pulse of three parts in
+// a thousand. Cycling the frames in place instead threw all of that away.
+//
+// So the frames are addressed BY NAME here rather than by position, and the
+// driver below is a port of that viewer's own draw(): same constants, same
+// per-species exceptions, same feel. The names are the pose vocabulary the
+// studies were generated with - idle, move-a, move-b, up, down, glide, landing -
+// and each creature simply has the ones it was drawn with.
+var MOB_ANIM = {
+  "a-fold-dog":           { n: 6, aspect: 1.476, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "bone-breaker":         { n: 6, aspect: 1.256, f: {"idle":0,"carry-bone":1,"up":2,"glide":3,"down":4,"landing":5} },
+  "brooding-vulture":     { n: 6, aspect: 1.731, f: {"idle":0,"rest":1,"recover":2,"defend-nest":3,"attack":4,"death":5} },
+  "carrion-vulture":      { n: 6, aspect: 1.154, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
+  "cave-lion":            { n: 6, aspect: 1.722, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "eagle-owl":            { n: 6, aspect: 1.133, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
+  "ermine":               { n: 6, aspect: 1.316, f: {"idle":0,"inspect-upright":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "eyrie-holder":         { n: 6, aspect: 1.09, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
+  "feral-goat":           { n: 6, aspect: 1.201, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "gill-adder":           { n: 8, aspect: 0.936, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5,"death":6,"bask":7} },
+  "glutton":              { n: 6, aspect: 1.766, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "great-vulture":        { n: 6, aspect: 1.261, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
+  "hill-eagle":           { n: 6, aspect: 1.128, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
+  "hill-fox":             { n: 6, aspect: 1.782, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "hill-wolf":            { n: 6, aspect: 1.468, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "lead-wolf":            { n: 6, aspect: 1.207, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "lynx":                 { n: 6, aspect: 1.334, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "mountain-chough":      { n: 6, aspect: 1.107, f: {"idle":0,"alarm-call":1,"up":2,"glide":3,"down":4,"landing":5} },
+  "mountain-hare":        { n: 6, aspect: 1.213, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "old-billy":            { n: 6, aspect: 1.224, f: {"idle":0,"stand-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "ptarmigan":            { n: 6, aspect: 1.233, f: {"idle":0,"alert-alarm":1,"up":2,"glide":3,"down":4,"landing":5} },
+  "red-hind":             { n: 6, aspect: 1.111, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "red-stag":             { n: 6, aspect: 1.157, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "scarp-raven":          { n: 6, aspect: 1.057, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
+  "snow-fox":             { n: 6, aspect: 1.577, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "snow-hare":            { n: 6, aspect: 1.186, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "stone-adder":          { n: 7, aspect: 1.205, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5,"death":6} },
+  "the-blue-fox":         { n: 6, aspect: 1.552, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-bone-dropper":     { n: 6, aspect: 0.978, f: {"idle":0,"carry-stolen-item":1,"up":2,"glide":3,"down":4,"landing":5} },
+  "the-butter-wife":      { n: 6, aspect: 1.216, f: {"idle":0,"listen":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-dancer":           { n: 6, aspect: 1.755, f: {"idle":0,"twisting-leap":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-drake":            { n: 14, aspect: 1.5, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
+  "the-gravid-adder":     { n: 7, aspect: 1.27, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5,"death":6} },
+  "the-herd":             { n: 6, aspect: 0.991, f: {"idle":0,"keep-the-line":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-last-dog":         { n: 6, aspect: 1.577, f: {"idle":0,"call-uphill":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-milker":           { n: 6, aspect: 1.172, f: {"idle":0,"work-pull":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-old-glutton":      { n: 6, aspect: 1.386, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-old-raven":        { n: 6, aspect: 1.115, f: {"idle":0,"steal-cache":1,"up":2,"glide":3,"down":4,"landing":5} },
+  "the-one-who-stayed":   { n: 6, aspect: 1.111, f: {"idle":0,"advance":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-pale-drake":       { n: 14, aspect: 1.543, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
+  "the-raiding-fox":      { n: 6, aspect: 1.297, f: {"idle":0,"snatch-escape":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-tom":              { n: 6, aspect: 1.5, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "wildcat":              { n: 6, aspect: 1.462, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+};
+// Straight from the studies' viewer, and worth keeping as the numbers they are.
+// Which of the drawn poses read as an animal at rest rather than an animal
+// doing something — the one it cuts to between breaths.
+var CALM_POSES = ["rest","bask","graze","feed","listen","watch","hold-ground",
+  "stand-ground","hold-warm-ground","keep-the-line","alert","inspect-upright"];
+var GAIT_HZ = 5;            // gait poses alternate this fast...
+var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
+var WINGBEAT_HZ = 4;        // and wings beat this fast...
+var WINGBEAT_HZ_FAST = 8;   // ...except the ptarmigan, which whirrs
+var SWAY = 0.11;            // body sway while travelling, as a fraction of width
+var HOP = 0.16;             // how far a hare or the dancer leaves the ground, of its height
+var BOB = 0.024;            // and how much everything else nods as it walks
+var LIFT = 0.9;             // a flying bird rises about its own height
+var AIR_SHRINK = 0.25;      // and shrinks, because it is further away
+var BREATH = 0.003;         // the resting scale pulse: three parts in a thousand
+var TRAVEL_MS = 2600;       // how long a creature walks once it starts
+var ROOTED = { "the-milker": 1, "the-butter-wife": 1 };   // they work in place
+
+var IDLE_MS = 1400;      // how long one idle frame is held...
+var IDLE_JITTER = 1100;  // ...plus this much, so two snakes never breathe in step
+var ACT_MS = 190;        // and how fast the thing it does actually happens
+var ACT_ODDS = 0.06;     // per idle beat: roughly once every half-minute
 var mobsEl = document.getElementById("mobs");
 var lastMobs = "";
-function paintMobs(ids) {
+function paintMobs(ids, rest) {
   if (!mobsEl) return;
+  if (mobHold && Date.now() < mobHold) { mobPending = ids; mobPendingRest = rest; return; }
   var list = [];
   if (viewMode === "image" && ids && ids.length) {
     for (var i = 0; i < ids.length; i++) if (MOB_SPRITE[ids[i]]) list.push(ids[i]);
   }
   var key = list.join(",");
-  if (key === lastMobs) return;          // nothing changed; do not reflow the row
+  // Sleep is NOT part of the key: a creature bedding down must not reflow the
+  // row, which would throw away every animation running in it. It is applied
+  // to the sprites already standing there instead.
+  if (key === lastMobs) { applyRest(rest); return; }
   lastMobs = key;
   while (mobsEl.firstChild) mobsEl.removeChild(mobsEl.firstChild);
   // Biggest toward the centre, so a hare is never lost behind a hind.
   list.sort(function (a, b) { return MOB_SPRITE[b] - MOB_SPRITE[a]; });
   var order = [];
   for (var j = 0; j < list.length; j++) (j % 2 ? order.push : order.unshift).call(order, list[j]);
+  anims.length = 0;
   for (var k = 0; k < order.length; k++) {
-    var im = document.createElement("img");
-    im.src = "/mob/" + order[k] + ".webp?v=" + ART_V;
-    im.alt = "";
-    im.style.height = (MOB_SPRITE[order[k]] * MOB_SCALE).toFixed(1) + "vh";
-    mobsEl.appendChild(im);
+    var id = order[k], h = (MOB_SPRITE[id] * MOB_SCALE).toFixed(1) + "vh";
+    var spec = MOB_ANIM[id];
+    if (!spec) {
+      var im = document.createElement("img");
+      im.src = "/mob/" + id + ".webp?v=" + ART_V;
+      im.alt = "";
+      im.style.height = h;
+      mobsEl.appendChild(im);
+      continue;
+    }
+    // A creature with frames is a window onto its strip, not a picture.
+    var el = document.createElement("div");
+    el.className = "mob";
+    el.style.height = h;
+    // WIDTH IS STATED, NOT DERIVED. A strip window only shows one clean frame
+    // while its box is exactly one frame's shape: background-size is n*100% wide,
+    // so if anything moves the width — flex shrinking it, an aspect-ratio the
+    // layout declines to honour — every frame is squeezed or pulled and the whole
+    // row stretches. So the width is computed here from the same height the table
+    // gave, and the element is told not to flex at all.
+    el.style.width = (MOB_SPRITE[id] * MOB_SCALE * spec.aspect).toFixed(1) + "vh";
+    el.style.backgroundImage = "url(/mob/" + id + ".webp?v=" + ART_V + ")";
+    el.style.backgroundSize = (spec.n * 100) + "% 100%";
+    el.style.backgroundPositionX = "0%";
+    mobsEl.appendChild(el);
+    // What this creature can do while you stand there: the calm pose it cuts to
+    // between breaths, and — for one with neither a gait nor wings — the poses it
+    // works through in place.
+    var calm = "", acts = [];
+    for (var q = 0; q < CALM_POSES.length; q++)
+      if (spec.f[CALM_POSES[q]] !== undefined && !calm) calm = CALM_POSES[q];
+    for (var w in spec.f) if (w !== "idle") acts.push(w);
+    spec.acts = acts.length ? acts : ["idle"];
+    var sleep = "idle", strike = "", recoil = "idle";
+    for (var z2 = 0; z2 < SLEEP_POSES.length; z2++)
+      if (spec.f[SLEEP_POSES[z2]] !== undefined) { sleep = SLEEP_POSES[z2]; break; }
+    for (var z3 = 0; z3 < STRIKE_POSES.length; z3++)
+      if (spec.f[STRIKE_POSES[z3]] !== undefined) { strike = STRIKE_POSES[z3]; break; }
+    for (var z4 = 0; z4 < HIT_POSES.length; z4++)
+      if (spec.f[HIT_POSES[z4]] !== undefined) { recoil = HIT_POSES[z4]; break; }
+    anims.push({ el: el, spec: spec, id: id, phase: "idle", t: 0, calm: calm,
+                 sleep: sleep, strike: strike, recoil: recoil,
+                 next: Date.now() + 4000 + Math.random() * 16000 });
+  }
+  applyRest(rest);
+  runAnims();
+}
+function applyRest(rest) {
+  for (var i = 0; i < anims.length; i++) {
+    var a = anims[i], now = !!(rest && rest.indexOf(a.id) >= 0);
+    if (now !== a.asleep && a.phase !== "death") { a.asleep = now; a.t = 0; }
   }
 }
+
+// ONE CLOCK FOR EVERY CREATURE IN THE ROOM, not a timer each: at most four
+// sprites are ever on screen, and a single interval that walks them costs
+// nothing and keeps them from drifting into lockstep with each other.
+// It runs only while there is something animated to run, and stops dead in text
+// mode — a hidden strip must not keep a timer alive.
+// THE DRIVER, ported from the pose studies' viewer. A creature holds its idle
+// pose and breathes; every so often it travels - walkers alternate their two
+// gait poses and sway, birds beat up and down and rise - and then it settles.
+// Position and lift are a CSS transform, so the frame window itself never moves
+// and the strip keeps landing exactly on the box.
+function poseAt(a, now) {
+  var f = a.spec.f, t = a.t, x = 0, air = 0, s = 1, name = "idle";
+  if (a.phase === "death") {
+    // It drops, and then it is a thing on the ground. The only motion is the
+    // settle in the first quarter second; after that nothing about it moves.
+    name = "death";
+    s *= 1 + (1 - Math.min(t / 0.25, 1)) * 0.05;
+  } else if (a.phase === "attack") {
+    var u = Math.min(t / ATTACK_S, 1);
+    name = u < 0.65 ? a.strike : "idle";
+    x = Math.sin(u * Math.PI) * SWAY * 0.5;
+  } else if (a.phase === "hit") {
+    name = a.recoil;
+    x = Math.sin(t * 25) * 0.025 * Math.exp(-t * 5);
+    a.rot = 0.015 * Math.sin(t * 15) * Math.exp(-t * 3);
+  } else if (a.asleep) {
+    // Lying up. It does not travel, it does not cut to its calm pose on a
+    // clock - it holds the one pose and breathes deeper and slower than a
+    // standing creature does.
+    name = a.sleep;
+    s *= 1 + Math.sin(t * 0.9) * BREATH * 1.8;
+  } else if (a.phase === "travel") {
+    if (f["move-a"] !== undefined) {
+      var hz = a.id === "the-old-glutton" ? GAIT_HZ_SLOW : GAIT_HZ;
+      name = Math.floor(t * hz) % 2 ? "move-a" : "move-b";
+      if (!ROOTED[a.id]) {
+        x = Math.sin(t * 1.7) * SWAY;
+        if (a.id.indexOf("hare") >= 0 || a.id === "the-dancer") air = Math.abs(Math.sin(t * 5 * Math.PI)) * HOP;
+        else if (a.id === "a-fold-dog") { x *= 1.8; s *= 1 + 0.05 * Math.cos(t * 1.7); }
+        else air = Math.abs(Math.sin(t * 5 * Math.PI)) * BOB;
+      }
+    } else if (f.up !== undefined) {
+      var wh = a.id === "ptarmigan" ? WINGBEAT_HZ_FAST : WINGBEAT_HZ;
+      name = Math.floor(t * wh) % 2 ? "up" : "down";
+      air = LIFT + Math.sin(t * 3) * 0.04;
+    } else {
+      // No gait and no wings. The rooted ones - the brooding vulture on its nest,
+      // an adder holding its warm stone - travel by doing the thing they were
+      // drawn doing instead of going anywhere, one pose per second.
+      name = a.spec.acts[Math.floor(t) % a.spec.acts.length];
+    }
+  } else {
+    name = a.calm && Math.floor(t / 3) % 2 ? a.calm : "idle";
+    s *= 1 + Math.sin(t * 2) * BREATH;
+  }
+  if (a.phase !== "hit") a.rot = 0;
+  if (f[name] === undefined) name = "idle";
+  s *= 1 - AIR_SHRINK * Math.min(1, air / LIFT);
+  return { k: f[name], x: x, air: air, s: s };
+}
+function runAnims() {
+  var want = anims.length > 0 && viewMode === "image" && !stillness;
+  if (want && !animTimer) animTimer = setInterval(stepAnims, 60);
+  else if (!want && animTimer) { clearInterval(animTimer); animTimer = null; releaseMobs(); }
+}
+// ONE-SHOT COMBAT POSES. attack holds for the first two thirds of its beat and
+// lunges through a half-sine; hit keeps the idle pose and shudders, a decaying
+// wobble in both position and rotation — both taken from the studies' viewer,
+// which is where they were designed. A creature with no attack frame drawn just
+// keeps doing what it was doing.
+var ATTACK_S = 1.3, HIT_S = 0.9, DEATH_S = 1.1;
+// WHAT A SLEEPING ONE LOOKS LIKE, best pose first. A wolf curls up, an adder
+// keeps its warm stone; anything with none of these just stands and breathes
+// slower, which is still the difference between a thing lying up and a thing
+// watching you.
+var SLEEP_POSES = ["rest", "bask", "hold-warm-ground", "hold-ground", "feed"];
+var STRIKE_POSES = ["attack", "bite", "sweep", "breath"];
+var HIT_POSES = ["hit"];
+// A body stays where it fell for a beat before the room repaints without it.
+var mobHold = 0, mobPending = null, mobPendingRest = null;
+function mobBeat(swung, struck, died) {
+  for (var i = 0; i < anims.length; i++) {
+    var a = anims[i];
+    // Dying outranks everything: a thing that took the last blow is not also
+    // recoiling from it. Only a creature with the pose drawn goes down on
+    // screen - the rest simply stop being there, the way they always have.
+    if (died && died.indexOf(a.id) >= 0 && a.spec.f.death !== undefined && a.phase !== "death") {
+      a.phase = "death"; a.t = 0; a.asleep = false;
+      mobHold = Date.now() + DEATH_S * 1000;
+    } else if (a.phase === "death") continue;
+    else if (swung && swung.indexOf(a.id) >= 0 && a.strike) { a.phase = "attack"; a.t = 0; }
+    else if (struck && struck.indexOf(a.id) >= 0) { a.phase = "hit"; a.t = 0; }
+  }
+}
+function stepAnims() {
+  var now = Date.now();
+  for (var i = 0; i < anims.length; i++) {
+    var a = anims[i];
+    a.t += 0.06;
+    // A dead one has no next phase. It holds until the room repaints without it.
+    if (a.phase === "death") { /* it stays down */ }
+    else if (a.phase === "travel") { if (a.t > TRAVEL_MS / 1000 || a.asleep) { a.phase = "idle"; a.t = 0; } }
+    else if (a.phase === "attack") { if (a.t > ATTACK_S) { a.phase = "idle"; a.t = 0; } }
+    else if (a.phase === "hit") { if (a.t > HIT_S) { a.phase = "idle"; a.t = 0; } }
+    else if (!a.asleep && now > a.next) { a.phase = "travel"; a.t = 0; a.next = now + 9000 + Math.random() * 22000; }
+    var p = poseAt(a, now);
+    a.el.style.backgroundPositionX = (p.k * 100 / (a.spec.n - 1)) + "%";
+    a.el.style.transform = "translate(" + (p.x * 100).toFixed(1) + "%," + (-p.air * 100).toFixed(1) + "%)"
+      + " rotate(" + ((a.rot || 0) * 57.3).toFixed(2) + "deg) scale(" + p.s.toFixed(3) + ")";
+  }
+  if (mobHold && now >= mobHold) releaseMobs();
+}
+// The room frame that drops a dead creature arrives immediately behind the
+// death itself, so paintMobs defers while a body is on the ground and the last
+// deferred picture is the one that lands.
+function releaseMobs() {
+  mobHold = 0;
+  if (!mobPending) return;
+  var p = mobPending, r = mobPendingRest;
+  mobPending = null; mobPendingRest = null;
+  paintMobs(p, r);
+}
+
 var logGrip = document.getElementById("loggrip");
 var logBig = false;
 try { logBig = localStorage.getItem("nomad_logbig") === "1"; } catch (e) {}

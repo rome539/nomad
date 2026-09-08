@@ -34,3 +34,18 @@ game-server/public/mob/
 # painted with its sky cut out and one of these drawn behind it, so without them
 # the whole set has a hole where the weather goes. KEEP A COPY.
 game-server/public/sky/
+
+# THE WORKBENCH. Generated art in progress — frame sets, per-creature working
+# directories, the image-gen scratch — 88MB of it and growing every session. Same
+# reasoning as the room plates above: binaries that get regenerated, in a repo
+# that has no use for their history. Nothing breaks without them; they are not
+# inputs to the game, they are what the finished sprites were cut FROM.
+output/
+# ...and this machine's own Claude Code permission list. It is local by
+# definition (that is what the .local suffix means), and it carries absolute
+# paths under the home directory — which on this repo is a dox risk and not a
+# hypothetical one. The shared .claude/settings.json, if there ever is one, is
+# deliberately NOT ignored: config meant for everybody should be visible.
+.claude/settings.local.json
+# The mob preview page and its symlink to the art (scripts/build-mob-preview.mjs).
+game-server/preview/

@@ -202,6 +202,13 @@ export class ZoneDO implements DurableObject {
   // currency; a currency on a nightly timer is a mint.
   public gibbetCut = false;
   private lastCombatRound = 0; // ms of the last tick blows actually landed (see COMBAT_ROUND_MS)
+  // WHAT THE PICTURE NEEDS TO KNOW ABOUT A FIGHT. The creatures were drawn with
+  // an attack pose and a recoil, and the client cannot use either from prose —
+  // it would have to read the log, which is a parser waiting to break. So the
+  // two moments are recorded as they happen and flushed once per combat round:
+  // who swung at you, and who you landed on. Ids only, no damage, no names; the
+  // log still carries everything a player actually reads.
+  private combatFx = new Map<string, { swung: string[]; struck: string[] }>();
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
   public arrivals = new Map<string, number>();
   public openDoors = new Set<string>();
@@ -3928,6 +3935,7 @@ export class ZoneDO implements DurableObject {
             const opened = edgeVal > 0 && pierceVal === 0 && bluntVal === 0 && mobArm > 0; // the stagger bonus, edge's one-off
             dmg = Math.max(1, dmg - Math.max(0, mobArm - Math.max(pierceVal, bluntVal, edgeVal)));
             creature.hp -= dmg;
+            this.noteFx(session.pubkey, "struck", creature.templateId);   // it takes the recoil
             this.markHurt(creature, tmpl, session.pubkey);
             // A landed blow on a crow is a stone in the pond: the murder rises.
             this.rouseCrows(session, creature);
@@ -4492,6 +4500,7 @@ export class ZoneDO implements DurableObject {
         dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
         dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
         victim.hp -= dmg;
+        this.noteFx(victim.pubkey, "swung", creature.templateId);   // and it swings
         // The vitals lottery — the Tarkov headshot. A real threat (not shallow
         // trash) may find the gap on any landed hit: instant, ignoring what hp
         // you had left; armor over the vitals only bought the odds down. Drops to
@@ -4660,6 +4669,18 @@ export class ZoneDO implements DurableObject {
           await this.onPlayerDeath(victim, tmpl);
         }
       }
+    }
+    // AND THE PICTURE IS TOLD, once, at the end of the round that made it true -
+    // AFTER the creatures have answered, or a blow landed on you this round would
+    // not be drawn until the next one and the last blow of a fight never at all.
+    // Flushed rather than sent per blow: a dogpile lands four times in a beat and
+    // the creatures should each move once, not four times.
+    if (this.combatFx.size) {
+      for (const [pubkey, e] of this.combatFx) {
+        const s2 = [...this.sessions.values()].find((x) => x.pubkey === pubkey);
+        if (s2) try { s2.ws.send(JSON.stringify({ v: 0, t: "beat", swung: e.swung, struck: e.struck })); } catch {}
+      }
+      this.combatFx.clear();
     }
     mark("creatures");
 
@@ -6043,6 +6064,20 @@ export class ZoneDO implements DurableObject {
   // BOSS BLOOD: note every hand that wounds a king (bosses only, so the sim
   // blob never fattens on rat brawls). When it falls, everyone on the list
   // shares the horror on their sheet — see the assist pass in onCreatureDeath.
+  public fxDied(roomId: string, templateId: string): void {
+    for (const s of this.sessions.values()) {
+      if (s.roomId !== roomId || !ART_KEYS.has(s.pubkey) || this.outOfWorld(s)) continue;
+      try { s.ws.send(JSON.stringify({ v: 0, t: "beat", died: [templateId] })); } catch {}
+    }
+  }
+
+  private noteFx(pubkey: string, kind: "swung" | "struck", templateId: string): void {
+    if (!ART_KEYS.has(pubkey)) return;   // nobody without pictures needs this
+    let e = this.combatFx.get(pubkey);
+    if (!e) { e = { swung: [], struck: [] }; this.combatFx.set(pubkey, e); }
+    if (e[kind].indexOf(templateId) < 0) e[kind].push(templateId);
+  }
+
   public markHurt(creature: Creature, tmpl: MobTemplate, pubkey: string): void {
     if (!tmpl.is_boss) return;
     // ...and the hill hears the first one land. Every path that wounds a boss
@@ -6083,6 +6118,7 @@ export class ZoneDO implements DurableObject {
     }
     // (`splits-on-death` stood here and was cut — a trait may change a creature,
     // it may not create one. See the note above reconcilePopulation in ai.ts.)
+    this.fxDied(creature.roomId, creature.templateId);
     this.creatures.delete(creature.id);
     this.noteCreaturesChanged(); // a throw can kill between beats
     for (const s of this.sessions.values()) {
