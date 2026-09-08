@@ -74,6 +74,29 @@ and `after-rain` — and every layered room in the world is painted with its sce
 horizon and **one shared sky drawn behind it**, so a sky must survive being
 cropped by any skyline in the game.
 
+**Which ground each sky stands on** is `SKY_BASE`. Only `day` and `after-rain`
+take the day plate; `dawn`, `dusk`, `night`, `moon`, `blood` and `eclipse` all
+take the **night** one. Dusk and dawn moved there on 2026-09-08 (rome), and the
+reason is worth keeping: the ground goes before the sky does. By the time the
+sky is still burning overhead the stone underfoot has already gone — which is
+exactly why anyone reaches for a torch at that hour — and a noon photograph
+turned down is a bright hillside with noon's own shadows in it, not an evening.
+**And they take no ground tint at all** (rome, same day). The hour tint exists
+to repair a ground lit for the *wrong* light — a noon hillside standing in after
+dark. The night plate is not that: it is the right dark ground for a dark hour,
+and the sky behind it is what carries the evening. Washing it warm would be
+inventing light that is not reaching the stone. `NO_GROUND_TINT` holds the two,
+and deliberately not the family around them — the full moon genuinely lights the
+ground, the blood moon genuinely reddens it, and totality genuinely takes the
+light away, so those keep theirs.
+
+One number moved as a consequence, not as a choice. The night plates measure
+0.591 of their day plates across all sixteen pairs, so dawn's ground fell from
+0.74 of day to 0.591 while its *creature* tint stayed at 0.55 — leaving an
+animal at 93% of the stone it stands on, which is the sticker-on-a-photograph
+failure the mob tints exist to prevent. `#mobs.t-dawn` went to 0.44, which is
+the same creature-to-ground ratio the hour had before anything moved.
+
 That gives it constraints a scene does not have:
 
 - **Exactly 1584 x 993**, sky edge to edge. No ground, no horizon line, nothing
@@ -100,11 +123,170 @@ as a variation of an old one.
 
 The working prompts live beside the art in `output/imagegen/`.
 
+## The sixth condition: a torch in your hand
+
+`night-torch` is the same place at the same hour with a flame you are carrying.
+It sits in `TERRAIN_SCENES` and `GATE_PLATE` beside the other five rather than
+in the sky list, and that is the whole argument for how it works: **a torch is
+ground weather.** What happens in the air is the sky changing behind an
+unchanged scene; what happens on the ground is a different photograph. The night
+sky over you does not move when you strike a light — the stone at your feet
+does.
+
+So the client swaps the plate and leaves the sky alone, and three things follow
+that are easy to get backwards:
+
+- **The sky is the base's, never the variant's.** There is no `night-torch.webp`
+  in the sky folder and there never will be. Under a full moon or a blood moon
+  or totality it is still the torch ground, still that sky.
+- **No tint correction.** The hour tint is a fix for *borrowed* ground, and the
+  torch plate was shot for this hour. Comparing the variant instead of the base
+  would find `night-torch !== night` and hang `t-night` — brightness `.42` — over
+  a picture whose entire subject is that it is lit.
+- **The creatures go the other way.** Every other hour a sprite is *darker* than
+  its ground, because open ground faces the sky and a creature stands edge-on to
+  it. A torch is low and near and falls on the upright thing in front of you
+  first, so `t-night-torch` is the one tint that goes brighter than its own
+  scene. It follows the PLATE, not the flame: on a ground with no torch plate
+  cut, nothing is lit by a light the picture cannot see.
+
+A ground that has not been shot this way is simply not listed and keeps its
+ordinary night — `gully` is the one still waiting, and it looks exactly as it
+did before.
+
+**Six hours, not one.** `TORCH_HOURS` is its own table because it is a judgement
+and not a consequence, and deriving it got it wrong first time: keying on
+"is this the night ground" meant a torch lit at dusk did nothing until the clock
+rolled over. Nobody waits for full dark to strike a light — you light it because
+you can see the dark coming. So `night moon blood eclipse dusk dawn` all show a
+carried flame, and the four missing are missing for a reason: plain day has
+nothing to show, and fog, rain and snow are whole photographs that carry their
+own light and were never shot with a flame in them.
+
+**Compose it as the same photograph.** The light changes; the camera does not.
+The keyed skyline of `<name>-night-torch` must sit where `<name>-night`'s does,
+because both are cut and the shared sky shows through both — a horizon that
+moved would make the sky jump when you strike a light. `key-scene.mjs` measures
+this (all fifteen installed plates agree with their night sibling to within
+0.14%) and the light lands where it should: the near ground lifts 1.5x to 2.7x
+while the far country stays dark.
+
+## An hour can own more than one sky
+
+`SKY_POOL` lets an hour hold a list instead of one file, and which one is up
+comes from the **world-day count** the server sends (`worldDay()` — the same
+`floor(now / DAY_CYCLE_MS)` the moon phase has always been read from).
+
+That key is the design, not a detail. There is one sky over this world at any
+instant; that is not a saving, it is the claim the whole two-layer scheme rests
+on. So a sky may vary, but only on something every player reads the same way and
+that changes slowly. Per room would be fatal — walk three steps, get a different
+evening, and the world stops being a place. Per session would be quietly worse:
+two wanderers in one room describing two different nights.
+
+**Swapping and turning are different permissions**, and conflating them locks a
+sky out of something that could never have harmed it.
+
+*Swapping* — showing one hour's picture for another's — is the move that can
+lie. `moon`, `blood` and `eclipse` may never do it: a full moon lights the ground
+and shuts a door, so its sky is a statement about the world, not a mood.
+`after-rain` may not either — an aftermath sky over a plain midday would still be
+a lie. Day, night, dawn and dusk assert nothing but the hour and *may*.
+
+**None of them currently does.** Dawn and dusk borrowed each other until
+2026-09-08, on the argument that a sky with no sun in it asserts no side of the
+day — which is true, and stopped being the point when the new dusk landed at a
+mean of 25 against dawn's 85. Half of dawn's pool would have been a sky less
+than a third as bright as the other half: not variety, a flicker between two
+different times of day. Each hour keeps its own picture now.
+
+What those four hours are free to hold instead is **several pictures of their
+own hour**, which is not a swap at all and is what the pools are really for.
+
+*Turning* cannot lie at all. It is the same photograph, the same colour, the
+same claim, with the cloud somewhere else. A pool entry may carry one:
+
+```
+"night"      as painted        "night/y"    flipped
+"night/x"    mirrored          "night/xy"   turned through 180
+```
+
+Four turns of a rectangle, and all four are distinct arrangements — `/y` is not
+`/xy`, it is `/xy` mirrored. **It costs nothing**: no second file, no download,
+no cache entry, because it is a CSS transform on the sky layer alone, and the
+keyed ground in front is untouched. Five hours take all four, which is 4 skies
+for day, night and after-rain and **8 each for dawn and dusk** — 24 skies out of
+eight files. The three calendar skies are left out of turning too, and only
+because nobody has asked; there is no argument against it.
+
+**Two of the four invert the light**, and that is a cost worth stating rather
+than hiding. Most skies are painted dark at the top and pale toward the bottom —
+thickening air near a horizon below the frame; measured, day runs 84→190 and
+night 25→93. `/x` leaves that alone and only moves the cloud, so it is free.
+`/y` and `/xy` turn it over, and a pale zenith above a dark roof may read as a
+lid lit from above rather than as a sky. Deleting the entry is the whole cost of
+cutting them.
+
+**`dusk` is the exception, and it was chosen that way** (rome, 2026-09-08). It
+replaced a sky that ran 24→86 with one that runs 21 26 28 28 25 — flat, and half
+as bright overall — which departs from the lower-edge rule above and was judged
+better on the picture rather than on the rule. That is the right way round: the
+rule exists to keep skies croppable, and the eye is the authority on whether one
+worked. It also makes dusk the one sky whose `/y` and `/xy` turns cost nothing at
+all, there being no gradient to invert.
+
+A replacement is installed **over the old filename** — the file is named for the
+hour, and a `dusk2` outliving the picture it was numbered against would leave the
+game with no `dusk` at all. That means bumping `ART_V`, every time.
+
+The current set, top of frame to bottom:
+
+```
+after-rain   97 106 121 142 171    mean 127
+day          84  95 127 151 190    mean 130
+dawn         36  53  77 110 152    mean  85
+moon         47  68  60  62  96    mean  67
+eclipse      30  35  37  56 112    mean  54
+night        25  30  37  50  93    mean  47
+dusk         21  26  28  28  25    mean  25
+blood         7  10  11  13  22    mean  13
+```
+
+Every pool is now **one file turned four ways** — four skies each for `day`,
+`night`, `dawn`, `dusk` and `after-rain`, one each for the three calendar skies.
+Twenty in total out of eight files, and every one of them honest about its hour.
+
+To grow a pool: generate the sky, install it, add its name to the list. Nothing
+else moves. **Only ever name a file that exists** — a missing sky is a hole in
+the world, not a fallback. Prompts for the four not yet drawn are waiting in
+`output/imagegen/`: `night-overcast`, `night-clear`, `day-overcast`,
+`day-high-cloud`.
+
+## Cutting the sky out
+
+`game-server/scripts/key-scene.mjs` is the one step between a generated PNG with
+a flat magenta sky and an installed plate with a hole where that sky was:
+
+```
+node scripts/key-scene.mjs <source.png> <plate-name>            # dry
+node scripts/key-scene.mjs <source.png> <plate-name> --write
+```
+
+Magenta is keyed **by hue**, not by matching one colour: alpha drops wherever
+`min(r-g, b-g) > 30`, which survives the compression fringing a flat `#FF00FF`
+test leaves behind as a halo, and the same amount comes off red and blue, which
+is what stops a pink rim along a skyline. It reports the sky fraction, compares
+the skyline against whichever sibling plate is already installed, and writes
+webp q92 / alphaQuality 100.
+
+It is **dry by default** and writing overwrites — the same law as the mob strip
+builder, and for the same reason.
+
 ## Where the output goes
 
-Scenes: `game-server/public/room-bg/<terrain>-<condition>.webp`, five conditions
-per terrain (`day` `night` `fog` `rain` `snow`) plus the gate plates
-(`gate-<name>-<condition>`).
+Scenes: `game-server/public/room-bg/<terrain>-<condition>.webp`, six conditions
+per terrain (`day` `night` `night-torch` `fog` `rain` `snow`) plus the gate
+plates (`gate-<name>-<condition>`).
 
 Skies: `game-server/public/sky/<hour>.webp`, eight of them, listed in
 `SKY_PAINTED` in `public.ts`. Seven are hours; `after-rain` is the odd one — it

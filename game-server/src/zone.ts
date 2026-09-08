@@ -53,7 +53,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, nightHuntMult, eclipsePhase, isBloodMoon } from "./zone-util";
+import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, worldDay, nightHuntMult, eclipsePhase, isBloodMoon } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -8108,6 +8108,29 @@ export class ZoneDO implements DurableObject {
             // their own, and a wet night is still a night.
             : events.phaseOf(this, "rain") === "aftermath" ? "after-rain"
             : "day",
+          // A FLAME IN YOUR HAND IS GROUND WEATHER. The whole architecture
+          // rests on one split: what happens in the AIR is the sky changing
+          // behind an unchanged scene, and what happens on the GROUND is a
+          // different photograph. A torch is as on-the-ground as it gets — the
+          // night sky over you does not move, and the stone at your feet is
+          // suddenly orange — so this rides beside `sky` rather than in it, and
+          // the client swaps the plate while leaving the sky alone.
+          // Only your OWN carried flame. A lit socket or another wanderer's
+          // torch lights the room for the rules; this is the picture, and the
+          // picture is of light falling from something you are holding.
+          // 0 rather than absent when the key is on the art list: the client has
+          // to be able to tell "not lit" from "this frame says nothing about it".
+          torch: !ART_KEYS.has(session.pubkey) ? undefined : this.carriesLight(session) ? 1 : 0,
+          // WHICH SKY, WHEN AN HOUR OWNS MORE THAN ONE. Not a choice made here:
+          // just the day count, handed over so the client can index its own
+          // table with it. The server stays out of the art the way it does with
+          // band and terrain — it reports the world, never a filename.
+          //
+          // The day count and not a random number, because every player must
+          // get the SAME sky. One sky over the world is the claim the two-layer
+          // scheme is built on, and a per-session roll would quietly break it:
+          // two wanderers standing in one room, describing two different nights.
+          skyroll: !ART_KEYS.has(session.pubkey) ? undefined : worldDay(),
           fx,
         }),
       );

@@ -2076,10 +2076,23 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     creature.hp = Math.min(tmpl.max_hp, creature.hp + meal);
     const before = creature.fed ?? 0;
     creature.fed = before + 1;
+    // AND THE BODY IS GONE FROM THE PICTURE, NOT JUST FROM THE WORLD (rome,
+    // 2026-09-08). The splice above is the whole of the cleanup as far as the
+    // simulation is concerned — the trace is out of the room and every rule that
+    // reads it agrees the corpse is eaten. But the picture learns what is on the
+    // floor from the ctx frame, and the tick does not send one: it sends the beat
+    // below, which carries the meal and nothing else. So a scavenger would tear
+    // into a body, the world would forget it, and it would go on lying there in
+    // the picture until the player happened to type something.
+    //
+    // Outside the silent path deliberately: `silent` is the far world catching
+    // up on hours of ecology nobody watched, and there is nobody standing in
+    // that room to repaint for.
     if (!silent) {
       // ...and it is SEEN doing it. The line below has always said so; the
       // picture never did, because nothing on the wire carried the meal.
       z.fxFed(creature.roomId, creature.templateId);
+      z.refreshRoomCtx(creature.roomId);   // ...and the body leaves the floor
       // The dire-hyena feeding on a fallen hyena — its own included — is a colder
       // thing than gnawing a rat. Name it when it happens.
       const hyenaKin = new Set([...SCAVENGERS].map((id) => z.world!.mobTemplates.get(id)?.name));

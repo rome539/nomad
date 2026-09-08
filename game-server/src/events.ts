@@ -2133,6 +2133,11 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
         if (!held?.length) continue;
         const kept = held.filter((t) => t.kind === "carve");
         if (kept.length) z.traces.set(roomId, kept); else z.traces.delete(roomId);
+        // AND THE PICTURE HAS TO HEAR IT. The prose above says the ground has
+        // run clean; a body left painted on it would contradict the line the
+        // player just read. Only rooms that actually lost something, and the
+        // refresh costs nothing where nobody is standing.
+        if (kept.length !== held.length) z.refreshRoomCtx(roomId);
       }
       // And the ground drinks: outdoor forage comes back sooner.
       for (const r of z.regrow) {
@@ -2450,6 +2455,10 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
           const beacon = held[idx];
           held.splice(idx, 1); // the ground closes over what called it up
           if (!held.length) z.traces.delete(roomId);
+          // The corpse does not stay lying there while the thing that came out
+          // of it walks about: this is the one removal where leaving the picture
+          // alone would show both at once.
+          z.refreshRoomCtx(roomId);
           const id = uuid();
           z.creatures.set(id, {
             id,

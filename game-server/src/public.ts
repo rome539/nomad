@@ -950,8 +950,13 @@ export const PAGE = `<!doctype html>
      the eye reads the mismatch instantly. These bring it into line — dim and
      warm for the low hours, red for the blood moon — and they are only ever
      applied when the scene is NOT the one painted for the condition. */
-  body[data-view="image"] #scene.t-dawn    { filter: brightness(.74) saturate(.88) sepia(.16) hue-rotate(-6deg); }
-  body[data-view="image"] #scene.t-dusk    { filter: brightness(.60) saturate(1.02) sepia(.30) hue-rotate(-16deg); }
+  /* THERE ARE NO t-dawn OR t-dusk RULES FOR THE GROUND, and their absence is the
+     decision (rome, 2026-09-08). Both hours stand on the night plate now, which
+     is the right dark ground for a dark hour — so there is nothing to correct,
+     and a warm wash over it would be inventing light that is not reaching the
+     stone. The sky behind carries the evening; the ground is simply dark.
+     The three below stay because each is a real change to what falls on the
+     ground rather than a repair to a borrowed picture. */
   body[data-view="image"] #scene.t-eclipse { filter: brightness(.70) saturate(.55) contrast(1.06); }
   body[data-view="image"] #scene.t-moon    { filter: brightness(1.10) saturate(.92); }
   /* THE BLOOD MOON IS THE ONE TINT A FILTER CANNOT DO. Every CSS filter treats
@@ -1058,9 +1063,26 @@ export const PAGE = `<!doctype html>
      to it, lit only by what the ground bounces up. So each hour here goes a
      step past the scene's — the drop-shadow is re-appended every time because a
      filter list replaces, it does not add. */
-  body[data-view="image"] #mobs.t-dawn img, body[data-view="image"] #mobs.t-dawn .mob { filter: brightness(.55) saturate(.80) sepia(.16) hue-rotate(-6deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  /* DAWN CAME DOWN WITH ITS GROUND. This was .55 against a ground standing at
+     .74 of day — and when dawn moved onto the night plate the ground fell to
+     .59 while the creature stayed put, which left it at 93% of the stone it is
+     standing on. That is the sticker-on-a-photograph failure this whole block
+     was written to stop. .44 holds the same creature-to-ground ratio the hour
+     had before anything moved; the number changed only to keep the relationship
+     that was already there. */
+  body[data-view="image"] #mobs.t-dawn img, body[data-view="image"] #mobs.t-dawn .mob { filter: brightness(.44) saturate(.80) sepia(.16) hue-rotate(-6deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-dusk img, body[data-view="image"] #mobs.t-dusk .mob { filter: brightness(.42) saturate(.95) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-night img, body[data-view="image"] #mobs.t-night .mob { filter: brightness(.26) saturate(.70) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  /* A CARRIED FLAME INVERTS THE RULE ABOVE. Every other hour a creature is
+     DARKER than the ground it stands on, because open ground faces the sky and
+     a creature stands edge-on to it. A torch is the opposite kind of light: it
+     is low, near, and it falls on the upright thing in front of you before it
+     reaches anything else. So this is the only tint in the table that goes
+     BRIGHTER than its own scene — the near ground on these plates lifts about
+     double and the creature standing on it lifts further, which is what puts it
+     in the light rather than on it. Warm, and short of daylight: the flame is
+     orange and it does not reach far. */
+  body[data-view="image"] #mobs.t-night-torch img, body[data-view="image"] #mobs.t-night-torch .mob { filter: brightness(.80) saturate(1.04) sepia(.22) hue-rotate(-14deg) drop-shadow(0 3px 6px rgba(0,0,0,.8)); }
   body[data-view="image"] #mobs.t-eclipse img, body[data-view="image"] #mobs.t-eclipse .mob { filter: brightness(.48) saturate(.45) contrast(1.06) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   /* The full moon LIGHTS the ground — the scene brightens to 1.10 — and a
      creature standing on lit ground is the thing between you and it. It stays
@@ -1102,12 +1124,16 @@ export const PAGE = `<!doctype html>
      frames compress almost to nothing because they are nearly identical.
      aspect-ratio carries ONE frame's shape, so setting height still gives the
      right width the way it does for an img. */
-  /* A BODY IS NOT A CREATURE: it never animates, and it is going into the
-     ground. OPACITY rather than a filter, deliberately — the hour tints are
-     filters at the same specificity as this rule, so a filter here would cancel
-     the night wash and leave a daylit corpse on a dark hill. Opacity composes
-     with all of them. */
-  #mobs .mob.dead { opacity: .68; }
+  /* A BODY IS NOT TRANSPARENT (rome, 2026-09-08). This carried opacity .68, on
+     the reasoning that a corpse should read differently from a living thing and
+     that opacity was the only property which composes with the hour tints —
+     those are filters, and a filter here would have cancelled the night wash and
+     left a daylit corpse on a dark hill.
+     The reasoning about the cascade was right and the premise was wrong: a body
+     is a solid object, and you could see the ground through it. The thing that
+     says it is dead is the DEATH FRAME — the animal is down, held on its last
+     pose, not moving — and that says it without making it a ghost. So there is
+     no rule here at all now, and the absence is the decision. */
   #mobs .mob {
     background-repeat: no-repeat;
     background-position-y: center;
@@ -3035,7 +3061,7 @@ async function connect() {
       if (f.room && f.room !== lastRoomName) chipsExpanded = false;
       lastRoomName = f.room || "";
       if (f.art) grantArt();
-      paintScene(f.band, f.sky, f.terrain, f.room);
+      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll);
       roomEl.textContent = "";
       if (f.room) {
         roomEl.appendChild(document.createTextNode(f.room));
@@ -6346,7 +6372,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "15";
+var ART_V = "18";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -6470,12 +6496,17 @@ var BANDS_WITH_PLATES = { mountain: 1 };
 // lists which of them were painted. Empty means the base scene answers every
 // sky on its own.
 //   "the-relay-house": "rain snow",
+// "night-torch" IS A SIXTH CONDITION, and it belongs in this table rather than
+// in the sky list because it is a photograph of the ground, not of the air. A
+// plate that has one is shown it whenever you are standing in the dark with a
+// flame of your own; a plate that has not been shot that way is simply not
+// listed and keeps its ordinary night, which is what it looked like yesterday.
 var GATE_PLATE = {
-  "the-relay-house":  "day night fog rain snow",
-  "the-shieling":     "day night fog rain snow",
-  "the-stell":        "day night fog rain snow",
-  "the-slabs":        "day night fog rain snow",
-  "the-shelter-crag": "day night fog rain snow",
+  "the-relay-house":  "day night night-torch fog rain snow",
+  "the-shieling":     "day night night-torch fog rain snow",
+  "the-stell":        "day night night-torch fog rain snow",
+  "the-slabs":        "day night night-torch fog rain snow",
+  "the-shelter-crag": "day night night-torch fog rain snow",
   // "gate", "sally-port", "weeper-arch",
   // "the-ferry-house", "the-crossing-house",
   // "the-first-milestone", "the-relay-house",
@@ -6494,19 +6525,20 @@ var GATE_PLATE = {
 //   scree: "day night",
 var TERRAIN_SCENES = {
   // Eleven mountain grounds, 256 rooms between them.
-  snow:  "day night fog rain snow",
-  cairn: "day night fog rain snow",
+  snow:  "day night night-torch fog rain snow",
+  cairn: "day night night-torch fog rain snow",
+  // THE ONE GROUND WITH NO TORCH PLATE YET. Not an oversight to paper over:
+  // the lookup falls back to plain night on its own, so a beck in the dark
+  // looks exactly as it did before and gains the light the day it is painted.
   gully: "day night fog rain snow",
-  scree: "day night fog rain snow",
-  boulder: "day night fog rain snow",
-  // no night scene yet: after dark this borrows the day ground and t-night
-  // dims it, which is a stopgap and looks like one.
-  slab:  "day night fog rain snow",
-  glass: "day night fog rain snow",
-  fold:  "day night fog rain snow",
-  alder: "day night fog rain snow",
-  "corrie-rim":   "day night fog rain snow",
-  "corrie-floor": "day night fog rain snow",
+  scree: "day night night-torch fog rain snow",
+  boulder: "day night night-torch fog rain snow",
+  slab:  "day night night-torch fog rain snow",
+  glass: "day night night-torch fog rain snow",
+  fold:  "day night night-torch fog rain snow",
+  alder: "day night night-torch fog rain snow",
+  "corrie-rim":   "day night night-torch fog rain snow",
+  "corrie-floor": "day night night-torch fog rain snow",
 };
 var SKY_PAINTED = {
   day: 1, night: 1, dawn: 1, dusk: 1, moon: 1, blood: 1, eclipse: 1,
@@ -6520,13 +6552,20 @@ var SKY_PAINTED = {
 };
 // WHICH SCENE EACH SKY WANTS. Five of the nine are a different photograph of
 // the place, because five of them change the ground and not just the air: day,
-// night, fog, rain and snow. The other four are the same ground under a
-// different sky — dawn and dusk are the day scene with a different thing over
-// it, moon and blood moon are the night scene with a different thing over it —
-// so they cost a sky and no scene at all. Five scenes and nine skies, and the
-// skies are painted once for the whole world.
+// night, fog, rain and snow. The rest are the same ground under a different
+// sky, so they cost a sky and no scene at all.
+//
+// DUSK AND DAWN STAND ON THE NIGHT GROUND (rome, 2026-09-08). They used to take
+// the day one and get dimmed, and that was the wrong photograph twice over: the
+// shadows in it fall the way noon threw them, and the ground itself is lit for
+// noon — so the evening was a bright hillside turned down rather than a dark
+// one. The ground goes before the sky does. By the time the sky is still
+// burning overhead the stone underfoot has already gone, which is exactly why
+// anyone reaches for a torch at that hour, and the night plate is the one that
+// says so. Their tints move with them: see the note on those rules, which now
+// bring a night ground UP toward the evening instead of a day one down.
 var SKY_BASE = {
-  day: "day", dawn: "day", dusk: "day", "in": "day",
+  day: "day", "in": "day", dawn: "night", dusk: "night",
   // The ground it borrows is the DAY ground, not the rain ground: the rain
   // plates have rain falling in them, and it has stopped.
   "after-rain": "day",
@@ -6562,13 +6601,142 @@ var SKY_BASE = {
 // WHICH SCENES ARE CUT. Only these two are painted with the sky keyed out, so
 // only these two need one drawn behind them; fog, rain and snow are whole
 // photographs that carry their own and must not have a second sky put under.
-var KEYED = { day: 1, night: 1 };
+// The torch plates are cut on the same skyline as their night siblings (checked
+// plate by plate: the two profiles agree to within 0.14%), so they need a sky
+// drawn behind them exactly as night does — and it is the SAME sky. Lighting the
+// ground does nothing to what is over it.
+var KEYED = { day: 1, night: 1, "night-torch": 1 };
+// WHICH HOURS A CARRIED FLAME SHOWS IN. Its own table, because it is a judgement
+// and not a consequence — and the first version got the judgement wrong by
+// deriving it: it asked whether the ground being used was the NIGHT ground, so a
+// torch lit at dusk did nothing at all until the clock rolled over to night.
+//
+// Dusk is when a light gets struck. Nobody waits for full dark to reach for a
+// torch — you light it because you can see the dark coming, and the game's own
+// hour switch (night or not night, nothing in between) is not a reason for the
+// picture to ignore you for the last of the evening. Dawn is the same moment
+// running the other way, with the flame going out instead of on.
+//
+// Six hours, and the four that are missing are missing for a reason: plain day
+// has nothing to show, and fog, rain and snow are whole photographs that carry
+// their own light and were never shot with a flame in them.
+var TORCH_HOURS = { night: 1, moon: 1, blood: 1, eclipse: 1, dusk: 1, dawn: 1 };
+// AND WHICH BORROWED GROUNDS WANT NO CORRECTION AT ALL (rome, 2026-09-08).
+// The hour tint exists for a ground lit for the WRONG light — a noon hillside
+// standing in after dark. Dusk and dawn are not that any more: since they moved
+// onto the night plate they stand on the RIGHT dark ground, and the sky behind
+// it is the thing carrying the hour. Tinting it warm was inventing light that
+// is not reaching the stone — at dusk the sun is already down, and what is left
+// on the ground is the sky's, which the picture behind it is already showing.
+// So these two take the plate raw.
+// Deliberately not the whole family: the full moon genuinely LIGHTS the ground,
+// the blood moon genuinely reddens it, and totality genuinely takes the light
+// away. Those are real changes to what falls on the stone and they keep theirs.
+var NO_GROUND_TINT = { dawn: 1, dusk: 1 };
+// MORE THAN ONE SKY FOR AN HOUR. An hour listed here owns a POOL, and which one
+// is up is decided by the world-day count the server sends — so the sky changes
+// from one day to the next and never from one room to the next. A sky picked per
+// room would be the end of the whole two-layer idea: walk three steps, get a
+// different evening, and the world stops being a place. An hour not listed here,
+// or listed with one entry, behaves exactly as it always has.
+//
+// SWAPPING AND TURNING ARE DIFFERENT PERMISSIONS, and conflating them locked a
+// sky out of something that could never have harmed it.
+//
+// SWAPPING — showing one hour's picture for another's — is the one that can
+// lie, and the full moon, the blood moon and totality may never do it: a full
+// moon lights the ground and shuts a door, so its sky is a statement about the
+// world and not a mood. Day, night, dawn and dusk assert nothing but the hour
+// and may do it; none of them currently does. Dawn and dusk borrowed each other
+// until 2026-09-08 and no longer do — see the note on the pools. What those four
+// are free to hold instead is SEVERAL PICTURES OF THEIR OWN HOUR, which is not a
+// swap at all and is what the pools are really for: prompts for four more are
+// waiting in output/imagegen.
+//
+// TURNING cannot lie at all. It is the same photograph, the same colour, the
+// same claim, with the cloud somewhere else — so "after-rain" takes its four
+// turns (rome, 2026-09-08) while still being the only sky that means the rain
+// has just stopped. The three calendar skies are left out of even this, and
+// only because nobody has asked for them; there is no argument against it.
+//
+// DAWN AND DUSK SHARE, and can because of a rule the sky recipe already keeps:
+// no sun, no moon, no comet, no focal object of any kind in any sky, ever — it
+// is there so an arbitrary skyline can crop one without cutting a subject in
+// half. What that leaves is a field of coloured cloud at low light, which
+// asserts no direction and no side of the day. The deep red one reads as a hard
+// sunrise as readily as a hard sunset, and the violet one as either.
+//
+// AND A POOL ENTRY MAY BE A TURN OF ONE (rome, 2026-09-08). "night/x" is the
+// night sky mirrored, "night/y" flipped, "night/xy" turned through 180 — the
+// four turns a rectangle has, and all four are here because they are four
+// different arrangements of cloud: /y is not /xy, it is /xy mirrored. It costs
+// NOTHING —
+// no second file, no second download, no cache entry — because it is a CSS
+// transform on the sky layer, and the ground in front is untouched by it, so
+// the same country stands under a sky whose cloud has moved. A field of cloud
+// with no sun, moon or focal object in it (the recipe forbids all three) is
+// unrecognisable mirrored, which is exactly why this works at all.
+//
+// TWO OF THE FOUR INVERT THE LIGHT, and that is a real cost worth stating
+// rather than hiding. Every sky in the set is painted dark at the top and pale
+// toward the bottom, because the bottom is thickening air near a horizon below
+// the frame — measured, they run 85->190 by day and 25->93 at night. /x leaves
+// that alone and only moves the cloud, so it is free. /y and /xy turn it over,
+// and a pale zenith above a dark roof may read as a lid lit from above rather
+// than as a sky. Both are in the pools to be looked at, and they are the first
+// things to cut if they do not hold: deleting the entry is the whole cost.
+var SKY_POOL = {
+  day:   ["day", "day/x", "day/y", "day/xy"],
+  night: ["night", "night/x", "night/y", "night/xy"],
+  // THE DUSK SKY WAS REPLACED, NOT ADDED TO (rome, 2026-09-08). The one it
+  // replaced ran 24 31 40 49 86 from the top of the frame down; this one runs
+  // 21 26 28 28 25 — flat, and half as bright overall. That is a departure from
+  // the recipe's rule about the lower edge (thickening pale air toward a horizon
+  // below the frame, never a flat wall) and it was judged better on the picture
+  // rather than on the rule, which is the right way round.
+  //
+  // Its flatness has one real consequence: it is the only sky in the set whose
+  // /y and /xy turns cost NOTHING, because there is no gradient to put upside
+  // down. Dawn still has one, so dawn/y and dawn/xy still invert it.
+  //
+  // AND THE TWO NO LONGER BORROW EACH OTHER (rome, 2026-09-08). They did, on the
+  // argument that a sky with no sun in it asserts no side of the day — which is
+  // still true, and stopped being the point once the new dusk landed. Dawn
+  // measures 85 and dusk 25, so half of dawn's pool would have been a sky less
+  // than a third as bright as the other half: not variety, a flicker between two
+  // different times of day. Each hour keeps its own picture now, turned four
+  // ways.
+  dawn:  ["dawn", "dawn/x", "dawn/y", "dawn/xy"],
+  dusk:  ["dusk", "dusk/x", "dusk/y", "dusk/xy"],
+  // One file, four arrangements. It never borrows and is never borrowed — an
+  // aftermath sky over a midday is the one swap that would still be a lie.
+  "after-rain": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
+};
+var SKY_TURN = { x: "scaleX(-1)", y: "scaleY(-1)", xy: "scale(-1, -1)" };
+// The day count from the server: one number, the same for everybody, up by one
+// each cycle. Zero until a status frame carries it, which simply means the first
+// entry of every pool until the world says otherwise.
+var skyRoll = 0;
+// WHICH PICTURE THIS HOUR IS WEARING. The one place the pool is read, so a sky
+// can never be chosen from anywhere else — and it falls through to the hour's
+// own name whenever no pool is declared, which is what the other four want.
+function skyPick(hour) {
+  var pool = SKY_POOL[hour];
+  var e = (pool && pool.length) ? pool[skyRoll % pool.length] : hour;
+  var cut = e.indexOf("/");
+  return cut < 0 ? { file: e, turn: "" }
+                 : { file: e.slice(0, cut), turn: SKY_TURN[e.slice(cut + 1)] || "" };
+}
 var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, blood:1, eclipse:1, fog:1, rain:1, snow:1, "in":1, "after-rain":1 };
 var sceneEl = document.getElementById("scene");
 var skyEl = document.getElementById("sky");
 var viewBtn = null;   // built only for a granted key, see buildViewRow
 var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
 var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "";
+// WHETHER YOU ARE CARRYING A LIGHT. Sticky like the other four: applyView calls
+// paintScene with nothing at all when the player turns pictures on, and the
+// scene has to come back the way it was rather than as an unlit night.
+var lastTorch = false;
 // WHAT IS ACTUALLY ON SCREEN, and which request owns it. scenePainted is the
 // plate the player can see right now (not the one most recently asked for);
 // sceneSeq is bumped by every request so a slow one can tell it has been
@@ -6630,10 +6798,14 @@ function grantArt() {
   applyView();   // and if pictures are what they wanted, they get them now
 }
 
-function paintScene(band, sky, terrain, roomKey) {
+function paintScene(band, sky, terrain, roomKey, torch, roll) {
   if (roomKey) lastRoomKey = roomKey;
   if (band) lastBand = band;
   if (sky) lastSky = sky;
+  // A bare truth test would not do: the whole point is that going dark is a
+  // change too, and a falsy-but-present 0 has to be able to put the light out.
+  if (torch !== undefined && torch !== null) lastTorch = !!torch;
+  if (roll !== undefined && roll !== null) skyRoll = roll;
   if (terrain !== undefined && terrain !== null) lastTerrain = terrain;
   if (!sceneEl || viewMode !== "image") return;
   // Terrain first, band second: the room's own ground beats its region's.
@@ -6654,7 +6826,12 @@ function paintScene(band, sky, terrain, roomKey) {
   // yet the terrain it is standing on answers instead — hence the fallthrough
   // rather than an early return.
   var gate = lastTerrain.slice(0, 5) === "gate:" ? lastTerrain.slice(5) : "";
-  var scene = "", sky = "", tint = "";
+  // "lit" below is whether the TORCH PLATE WAS ACTUALLY USED, not the same
+  // question as whether a torch is burning: a ground with no torch plate cut
+  // yet is standing in the plain dark however bright your hand is. The
+  // creatures read this rather than lastTorch, so nothing ever blazes on a
+  // hillside the picture left unlit.
+  var scene = "", sky = "", tint = "", lit = false, turn = "";
   if (gate && GATE_PLATE[gate] !== undefined) {
     // GROUND WEATHER IS A DIFFERENT PHOTOGRAPH. Night is not the day gone dim,
     // fog is not a grey wash, rain wets the stone and snow lies on it — none of
@@ -6663,8 +6840,13 @@ function paintScene(band, sky, terrain, roomKey) {
     // The scene this sky wants, or the day scene if it has not been shot yet —
     // so a gate can land with one photograph and gain the other four later
     // without anything breaking in between.
-    var want = SKY_BASE[lastSky] || "day";
-    if (have.indexOf(" " + want + " ") < 0) want = "day";
+    var base = SKY_BASE[lastSky] || "day";
+    if (have.indexOf(" " + base + " ") < 0) base = "day";
+    // AND A FLAME OF YOUR OWN IS A SIXTH. Only over the night ground, because
+    // that is the only condition it was shot under — and the check is against
+    // this door's own list, so one gate can have the torch plate and its
+    // neighbour go without.
+    var want = (lastTorch && TORCH_HOURS[lastSky] && have.indexOf(" night-torch ") >= 0) ? "night-torch" : base;
     scene = "/room-bg/gate-" + gate + "-" + want + ".webp";
     // AND A KEYED SCENE MUST ALWAYS GET A SKY. This said so and then did not do
     // it: it asked for the sky of the CONDITION, so a gate with no rain scene
@@ -6673,13 +6855,27 @@ function paintScene(band, sky, terrain, roomKey) {
     // in the world, every time it rained anywhere a scene was missing. The sky
     // to draw is the condition's when there is one, and otherwise the sky that
     // belongs to the GROUND actually being used.
-    if (KEYED[want]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : want) + ".webp";
+    // THE SKY IS THE BASE'S, NEVER THE TORCH VARIANT'S. There is no
+    // night-torch.webp in the sky folder and there never will be: a torch is on
+    // the ground and the sky over it is the ordinary night.
+    if (KEYED[want]) {
+      var gp = skyPick(SKY_PAINTED[lastSky] ? lastSky : base);
+      sky = "/sky/" + gp.file + ".webp"; turn = gp.turn;
+    }
     // BORROWED GROUND NEEDS BRINGING INTO LINE. The tint used to switch off the
     // moment a real sky was drawn, on the reasoning that the picture already WAS
     // the weather — true when the scene was painted for this hour, and false
     // whenever it was borrowed. Day stone under a dusk sky is still lit for
     // noon, and the eye catches that before it catches anything else.
-    tint = (want === lastSky) ? "" : lastSky;
+    lit = want === "night-torch";
+    // A TORCH PLATE TAKES NO HOUR CORRECTION, EVER. The correction exists to
+    // relight a ground that was shot under the wrong sky — and a torch plate's
+    // light does not come from the sky. It comes from the flame, and it is the
+    // same flame at every hour it is carried, so there is nothing for the hour
+    // to put right. Dusk is the case that makes it obvious: t-dusk was written
+    // to take a NOON ground down to evening, and laid over an already-dark
+    // picture it dims the one thing the picture is of.
+    tint = (lit || NO_GROUND_TINT[lastSky] || base === lastSky) ? "" : lastSky;
   }
   if (!scene) {
     var kind = lastTerrain === "gatehouse" ? "gatehouse"
@@ -6695,11 +6891,16 @@ function paintScene(band, sky, terrain, roomKey) {
       // Painted for layering: same law as a gate, and it falls through to the
       // shared code below rather than repeating it.
       var thave = " " + TERRAIN_SCENES[terr] + " ";
-      var twant = SKY_BASE[lastSky] || "day";
-      if (thave.indexOf(" " + twant + " ") < 0) twant = "day";
+      var tbase = SKY_BASE[lastSky] || "day";
+      if (thave.indexOf(" " + tbase + " ") < 0) tbase = "day";
+      var twant = (lastTorch && TORCH_HOURS[lastSky] && thave.indexOf(" night-torch ") >= 0) ? "night-torch" : tbase;
       scene = "/room-bg/" + terr + "-" + twant + ".webp";
-      if (KEYED[twant]) sky = "/sky/" + (SKY_PAINTED[lastSky] ? lastSky : twant) + ".webp";
-      tint = (twant === lastSky) ? "" : lastSky;
+      if (KEYED[twant]) {
+        var tp = skyPick(SKY_PAINTED[lastSky] ? lastSky : tbase);
+        sky = "/sky/" + tp.file + ".webp"; turn = tp.turn;
+      }
+      lit = twant === "night-torch";
+      tint = (lit || NO_GROUND_TINT[lastSky] || tbase === lastSky) ? "" : lastSky;
     } else {
       // The old single-layer plates: sky baked in, wash on top, unchanged.
       // It still claims the sequence and records what it left on screen, so the
@@ -6708,7 +6909,7 @@ function paintScene(band, sky, terrain, roomKey) {
       // find scenePainted still naming the hillside and put it up unloaded.
       sceneSeq++;
       scenePainted = terr ? "/room-bg/" + terr + ".webp" : "";
-      if (skyEl) skyEl.style.backgroundImage = "";
+      if (skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; }
       sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".webp?v=" + ART_V + ")" : "";
       sceneEl.style.backgroundSize = "cover";
       // NO WEATHER INDOORS. The gatehouse is one baked plate lit by its own
@@ -6749,6 +6950,9 @@ function paintScene(band, sky, terrain, roomKey) {
     if (skyEl) {
       skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + ART_V + ")" : "";
       skyEl.style.backgroundPosition = "center 55%";
+      // Set every time, cleared when there is no turn: a transform left behind
+      // from the last room would mirror a sky that was never asked to be.
+      skyEl.style.transform = turn;
     }
     // No overlay on a layered room — the sky is real. The only thing that
     // changes is how the ground is lit, and that is a filter that respects the cut.
@@ -6764,7 +6968,13 @@ function paintScene(band, sky, terrain, roomKey) {
     //
     // So the creatures read the HOUR, not the scene's correction for it. Day
     // and "in" have no rule and pass through untouched, which is what they want.
-    if (mobsEl) mobsEl.className = lastSky ? "t-" + lastSky : "";
+    // AND WHAT IS STANDING IN IT IS IN THE TORCHLIGHT TOO. This is the one
+    // place the creatures do not simply read the hour: the hour is still night,
+    // but the light on the thing three yards in front of you is coming from
+    // your hand, and t-night at brightness .26 would leave a wolf as a silhouette
+    // on ground the plate has lit to orange. It follows the PLATE, so an unpainted
+    // ground keeps its dark and nothing is lit by a torch the picture cannot see.
+    if (mobsEl) mobsEl.className = lit ? "t-night-torch" : lastSky ? "t-" + lastSky : "";
     sceneEl.style.backgroundPosition = "center 55%";
     scenePainted = scene;
   };
@@ -6969,7 +7179,7 @@ var MOB_ANIM = {
   "ermine":               { n: 6, aspect: 1.307, f: {"idle":0,"inspect-upright":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "eyrie-holder":         { n: 8, aspect: 1.149, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
   "feral-goat":           { n: 6, aspect: 1.195, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "gill-adder":           { n: 8, aspect: 0.937, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5,"death":6,"bask":7} },
+  "gill-adder":           { n: 6, aspect: 0.938, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5} },
   "glutton":              { n: 6, aspect: 1.735, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "great-vulture":        { n: 8, aspect: 1.091, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
   "hill-eagle":           { n: 8, aspect: 1.118, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"rest":6,"death":7} },
@@ -6986,13 +7196,13 @@ var MOB_ANIM = {
   "scarp-raven":          { n: 8, aspect: 1.102, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"rest":6,"death":7} },
   "snow-fox":             { n: 6, aspect: 1.556, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "snow-hare":            { n: 6, aspect: 1.181, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "stone-adder":          { n: 7, aspect: 1.199, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5,"death":6} },
+  "stone-adder":          { n: 6, aspect: 1.199, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5} },
   "the-blue-fox":         { n: 6, aspect: 1.533, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-bone-dropper":     { n: 8, aspect: 1.115, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"feed":5,"attack":6,"death":7} },
   "the-butter-wife":      { n: 6, aspect: 1.209, f: {"idle":0,"listen":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-dancer":           { n: 6, aspect: 1.723, f: {"idle":0,"twisting-leap":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-drake":            { n: 14, aspect: 1.483, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
-  "the-gravid-adder":     { n: 7, aspect: 1.263, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5,"death":6} },
+  "the-gravid-adder":     { n: 6, aspect: 1.263, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5} },
   "the-herd":             { n: 6, aspect: 0.991, f: {"idle":0,"keep-the-line":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-last-dog":         { n: 6, aspect: 1.556, f: {"idle":0,"call-uphill":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-milker":           { n: 6, aspect: 1.167, f: {"idle":0,"work-pull":1,"move-a":2,"move-b":3,"attack":4,"death":5} },

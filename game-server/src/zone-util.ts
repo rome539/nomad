@@ -28,6 +28,20 @@ export function isFullMoon(now = Date.now()): boolean {
 export function moonPhase(now = Date.now()): number {
   return Math.floor(now / DAY_CYCLE_MS) % MOON_FULL_EVERY;
 }
+// WHICH DAY OF THE WORLD THIS IS. The same count the moon has always been read
+// from, asked without the modulo — one number, shared by everyone alive at this
+// moment, that goes up once a cycle.
+//
+// It exists for the sky. There is ONE sky over this world at any instant: that
+// is not a saving, it is the claim the whole two-layer scheme rests on, and it
+// is why a sky may never be picked per room — walk three steps, get a different
+// evening, and the world stops being a place. A sky may still VARY, but only on
+// something every player reads the same way and that changes slowly, and the
+// day count is exactly that. Tonight is one sky for everyone; tomorrow night is
+// another.
+export function worldDay(now = Date.now()): number {
+  return Math.floor(now / DAY_CYCLE_MS);
+}
 // HOW FAR THROUGH THE CURRENT HALF WE ARE, 0 at its first moment and 1 at its
 // last (rome, 2026-08-31: you should be able to look at the sun or the moon and
 // read whether it is rising or setting).
