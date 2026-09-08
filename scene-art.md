@@ -67,9 +67,49 @@ watermark, or interface elements.
   that looks out over distant country has nowhere to stand them.
 - **NOTHING ALIVE** because everything living is a sprite, drawn separately.
 
+## The skies are a third recipe
+
+A sky is not a scene. There are seven — `day night dawn dusk moon blood eclipse`
+— and every layered room in the world is painted with its scene keyed above the
+horizon and **one shared sky drawn behind it**, so a sky must survive being
+cropped by any skyline in the game.
+
+That gives it constraints a scene does not have:
+
+- **Exactly 1584 x 993**, sky edge to edge. No ground, no horizon line, nothing
+  standing up into it.
+- **No focal object.** No moon, no comet, no Milky Way, no constellation. Spread
+  the interest evenly so every centre, edge and corner survives an arbitrary
+  crop — a composition with a subject will have that subject cut in half by some
+  room's ridgeline.
+- **The bottom 15-20% lightens** into thickening pale air toward an implied
+  horizon *below* the frame. Never a flat black wall, and never a drawn line.
+- **No magenta, purple, pink or red anywhere.** The scenes are keyed on hue and
+  the sky sits behind them; a pink cloud is a hole waiting to happen.
+- **Opaque, no transparency.** The keying happens in the scene, not here.
+
+Style is the same pixel-art discipline as the plates, stated harder because a
+sky is all gradient and gradients are where a generator reaches for smooth
+blending: visible ordered dithering through every transition, every cloud edge
+stepped and speckled rather than blended, crisp square pixels, no
+anti-aliasing, no blur, no depth of field, no painterly brushwork.
+
+Attach the installed skies as pixel-scale reference — but say plainly that
+composition and cloud layout are **not** to be reused, or the new one comes back
+as a variation of an old one.
+
+The working prompts live beside the art in `output/imagegen/`.
+
 ## Where the output goes
 
-`game-server/public/room-bg/<terrain>-<condition>.webp`, five conditions per
-terrain (`day` `night` `fog` `rain` `snow`) plus the gate plates
-(`gate-<name>-<condition>`). That folder is gitignored and uploads from the
-working tree at deploy — KEEP A COPY.
+Scenes: `game-server/public/room-bg/<terrain>-<condition>.webp`, five conditions
+per terrain (`day` `night` `fog` `rain` `snow`) plus the gate plates
+(`gate-<name>-<condition>`).
+
+Skies: `game-server/public/sky/<hour>.webp`, seven of them, listed in
+`SKY_PAINTED` in `public.ts`. Convert at **webp q92**, the same as every other
+asset — that lands a sky around 300-450KB.
+
+Both folders are gitignored and upload from the working tree at deploy — KEEP A
+COPY. And replacing a file that already exists means **bumping `ART_V`**, or
+every browser keeps the old one.

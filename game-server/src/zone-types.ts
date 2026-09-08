@@ -188,6 +188,11 @@ export interface Trace {
   kind: "blood" | "drip" | "remains" | "scraps" | "rest" | "passage" | "carve";
   at: number;
   label?: string;
+  // WHICH CREATURE'S BODY THIS IS. `label` is its name, for prose; this is its
+  // template, so the picture can lay the right animal on the ground. Optional
+  // because traces written before this shipped have no id, and a body nobody
+  // can identify is simply not painted.
+  id?: string;
   words?: string;
 }
 

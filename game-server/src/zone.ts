@@ -2136,6 +2136,7 @@ export class ZoneDO implements DurableObject {
       // A point slips plate, a blunt weapon caves it: both ignore that much armor.
       dmg = Math.max(1, dmg - Math.max(0, ai.mobArmor(tmpl, creature) - this.armorIgnore(weapon)));
       creature.hp -= dmg;
+      this.fxStruck(creature.roomId, creature.templateId);   // and it is SEEN to take it
       // ...and the opener can find the throat like any other landed blow. The
       // vitals line REPLACES the "one heavy blow" report rather than following
       // it: "it never wakes" and "you open its throat" are two accounts of the
@@ -2304,6 +2305,7 @@ export class ZoneDO implements DurableObject {
     }
 
     creature.hp -= dmg;
+    this.fxStruck(creature.roomId, creature.templateId);
     // A thrown point can find the heart too. Gated on the THROWN item, not on
     // whatever is still in your hand — see playerVitals.
     const tvitals = this.playerVitals(creature, tmpl, { tmpl: itmpl });
@@ -4439,6 +4441,7 @@ export class ZoneDO implements DurableObject {
           const spike = shield ? trait(shield.tmpl, "thorns") : undefined;
           if (spike) {
             creature.hp -= spike;
+            this.fxStruck(creature.roomId, creature.templateId);
             this.markHurt(creature, tmpl, victim.pubkey);
             if (creature.hp <= 0) {
               await this.onCreatureDeath(victim, creature, tmpl);
@@ -4542,6 +4545,7 @@ export class ZoneDO implements DurableObject {
           const spikes = this.wornTrait(victim, "spiked");
           if (spikes > 0 && creature.hp > 0) {
             creature.hp -= spikes;
+            this.fxStruck(creature.roomId, creature.templateId);
             if (creature.hp <= 0) {
               await this.onCreatureDeath(victim, creature, tmpl, `${cap(tmpl.name)} drives home on ${victim.name} — and the spikes take it through.`);
               continue;
@@ -6066,11 +6070,18 @@ export class ZoneDO implements DurableObject {
   // shares the horror on their sheet — see the assist pass in onCreatureDeath.
   public fxDied(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "died"); }
   public fxFed(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "fed"); }
+  // A BLOW LANDED OUTSIDE THE ROUND. The combat round buffers its blows and
+  // flushes them together, which is right for a dogpile — but the opener, the
+  // throw and the spikes all resolve the instant they happen, and buffering
+  // those meant the first blow of a fight was drawn up to four seconds late or,
+  // if it ended the fight, never at all. Walking in and striking first showed
+  // nothing whatsoever.
+  public fxStruck(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "struck"); }
 
   // One creature, one thing, told to everyone standing there who has pictures.
   // Sent immediately rather than buffered with the blows: these are announced in
   // prose the same tick, and the picture should not lag the line.
-  private fxOne(roomId: string, templateId: string, kind: "died" | "fed"): void {
+  private fxOne(roomId: string, templateId: string, kind: "died" | "fed" | "struck"): void {
     for (const s of this.sessions.values()) {
       if (s.roomId !== roomId || !ART_KEYS.has(s.pubkey) || this.outOfWorld(s)) continue;
       try { s.ws.send(JSON.stringify({ v: 0, t: "beat", [kind]: [templateId] })); } catch {}
@@ -6218,6 +6229,7 @@ export class ZoneDO implements DurableObject {
       kind: HOLLOW.has(tmpl.id) ? "remains" : "blood",
       at: Date.now(),
       label: tmpl.name,
+      id: tmpl.id,
     });
     this.refreshRoomCtx(creature.roomId);
     if (tmpl.is_boss) {

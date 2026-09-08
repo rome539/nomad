@@ -1100,6 +1100,12 @@ export const PAGE = `<!doctype html>
      frames compress almost to nothing because they are nearly identical.
      aspect-ratio carries ONE frame's shape, so setting height still gives the
      right width the way it does for an img. */
+  /* A BODY IS NOT A CREATURE: it never animates, and it is going into the
+     ground. OPACITY rather than a filter, deliberately — the hour tints are
+     filters at the same specificity as this rule, so a filter here would cancel
+     the night wash and leave a daylit corpse on a dark hill. Opacity composes
+     with all of them. */
+  #mobs .mob.dead { opacity: .68; }
   #mobs .mob {
     background-repeat: no-repeat;
     background-position-y: center;
@@ -3052,7 +3058,7 @@ async function connect() {
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
-      paintMobs(f.mobs, f.doing);
+      paintMobs(f.mobs, f.doing, f.dead);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
@@ -6338,7 +6344,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "13";
+var ART_V = "14";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -7007,14 +7013,20 @@ var ACT_MS = 190;        // and how fast the thing it does actually happens
 var ACT_ODDS = 0.06;     // per idle beat: roughly once every half-minute
 var mobsEl = document.getElementById("mobs");
 var lastMobs = "";
-function paintMobs(ids, doing) {
+function paintMobs(ids, doing, dead) {
   if (!mobsEl) return;
-  if (mobHold && Date.now() < mobHold) { mobPending = ids; mobPendingRest = doing; return; }
+  if (mobHold && Date.now() < mobHold) { mobPending = ids; mobPendingRest = doing; mobPendingDead = dead; return; }
   var list = [];
   if (viewMode === "image" && ids && ids.length) {
     for (var i = 0; i < ids.length; i++) if (MOB_SPRITE[ids[i]]) list.push(ids[i]);
   }
-  var key = list.join(",");
+  // BODIES FIRST, and only ones we have a death frame for. They are part of the
+  // key: a corpse appearing or being eaten has to reflow the row like anything else.
+  var bodies = [];
+  if (viewMode === "image" && dead)
+    for (var d0 = 0; d0 < dead.length; d0++)
+      if (MOB_ANIM[dead[d0]] && MOB_ANIM[dead[d0]].f.death !== undefined) bodies.push(dead[d0]);
+  var key = bodies.join(",") + "|" + list.join(",");
   // Sleep is NOT part of the key: a creature bedding down must not reflow the
   // row, which would throw away every animation running in it. It is applied
   // to the sprites already standing there instead.
@@ -7026,6 +7038,18 @@ function paintMobs(ids, doing) {
   var order = [];
   for (var j = 0; j < list.length; j++) (j % 2 ? order.push : order.unshift).call(order, list[j]);
   anims.length = 0;
+  // A body lies at the near edge of the row, out from under the living.
+  for (var d1 = 0; d1 < bodies.length; d1++) {
+    var bid = bodies[d1], bspec = MOB_ANIM[bid], bvh = mobVh(bid);
+    var bel = document.createElement("div");
+    bel.className = "mob dead";
+    bel.style.height = bvh.toFixed(1) + "vh";
+    bel.style.width = (bvh * bspec.aspect).toFixed(1) + "vh";
+    bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + ART_V + ")";
+    bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
+    bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
+    mobsEl.appendChild(bel);
+  }
   for (var k = 0; k < order.length; k++) {
     var id = order[k], vh = mobVh(id), h = vh.toFixed(1) + "vh";
     var spec = MOB_ANIM[id];
@@ -7147,11 +7171,12 @@ function poseAt(a, now) {
       }
     }
   } else if (a.phase === "hit") {
-    if (t < 0) { name = "idle"; } else {
     name = a.recoil;
-    x = Math.sin(t * 25) * 0.025 * Math.exp(-t * 5);
-    a.rot = 0.015 * Math.sin(t * 15) * Math.exp(-t * 3);
-    }
+    // driven back hard, then a shudder on the way out of it
+    var hu = Math.min(t / HIT_S, 1);
+    x = -0.085 * Math.exp(-t * 6.5) + Math.sin(t * 22) * 0.03 * Math.exp(-t * 4);
+    a.rot = -0.055 * Math.exp(-t * 7) + 0.022 * Math.sin(t * 13) * Math.exp(-t * 3.5);
+    s *= 1 - 0.05 * Math.exp(-t * 9);      // it gives, and comes back up
   } else if (a.phase === "feed") {
     // Head down at the body, with the small working shift of something pulling
     // at meat rather than standing over it.
@@ -7258,7 +7283,7 @@ var HIT_POSES = ["hit"];
 var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
                    "hold-ground", "inspect-upright", "recover", "idle"];
 // A body stays where it fell for a beat before the room repaints without it.
-var mobHold = 0, mobPending = null, mobPendingRest = null;
+var mobHold = 0, mobPending = null, mobPendingRest = null, mobPendingDead = null;
 function mobBeat(swung, struck, died, fed) {
   for (var i = 0; i < anims.length; i++) {
     var a = anims[i];
@@ -7274,7 +7299,7 @@ function mobBeat(swung, struck, died, fed) {
       // without this every creature in a dogpile swings on the same frame.
       a.phase = "attack"; a.t = -Math.random() * STAGGER_S;
     }
-    else if (struck && struck.indexOf(a.id) >= 0) { a.phase = "hit"; a.t = -Math.random() * STAGGER_S * 0.5; }
+    else if (struck && struck.indexOf(a.id) >= 0) { a.phase = "hit"; a.t = 0; }
     else if (fed && fed.indexOf(a.id) >= 0 && a.spec.f.feed !== undefined) { a.phase = "feed"; a.t = 0; }
   }
 }
@@ -7307,9 +7332,9 @@ function stepAnims() {
 function releaseMobs() {
   mobHold = 0;
   if (!mobPending) return;
-  var p = mobPending, r = mobPendingRest;
-  mobPending = null; mobPendingRest = null;
-  paintMobs(p, r);
+  var p = mobPending, r = mobPendingRest, d = mobPendingDead;
+  mobPending = null; mobPendingRest = null; mobPendingDead = null;
+  paintMobs(p, r, d);
 }
 
 var logGrip = document.getElementById("loggrip");

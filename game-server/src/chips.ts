@@ -19,8 +19,7 @@ import {
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
-  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC,
-} from "./zone-data";
+  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES,} from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
 // resting, banking, chatting, or reading the walls while something swings
@@ -123,6 +122,15 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // of this is state the world already keeps; none of it was reaching the eye.
   // Keyed by template because that is what the picture is keyed by.
   const doing: Record<string, string> = {};
+  // AND WHAT IS LYING ON THE GROUND. A body is not a two-second flourish: the
+  // blood stays six hours and a scavenger comes to eat it, so the picture keeps
+  // it until the world lets go of it. Three at most — a battlefield should read
+  // as a battlefield, not fill the row.
+  const dead: string[] = [];
+  for (const tr of z.traces.get(session.roomId) ?? []) {
+    if (dead.length >= 3 || !tr.id || !CORPSE_TRACES.has(tr.kind)) continue;
+    dead.push(tr.id);
+  }
   for (const creature of z.creaturesInRoom(session.roomId)) {
     // Torchlight reveals a waiting lurker — so it also gets its attack chip.
     // GLINTING gear does the same by daylight (2026-08-20): the polish leaves
@@ -441,7 +449,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   const w = z.wayHome.get(session.roomId);
   const home = world.entryRooms.has(session.roomId) ? "here" : (w ? w.dir : "");
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: ART_KEYS.has(session.pubkey) ? seen : undefined, doing: ART_KEYS.has(session.pubkey) && Object.keys(doing).length ? doing : undefined }));
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: ART_KEYS.has(session.pubkey) ? seen : undefined,
+      dead: ART_KEYS.has(session.pubkey) && dead.length ? dead : undefined, doing: ART_KEYS.has(session.pubkey) && Object.keys(doing).length ? doing : undefined }));
   } catch {}
 }
 

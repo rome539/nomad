@@ -76,10 +76,12 @@ t("no strike pose drawn = pose untouched",a.phase===was);
 a=mk("_bare");ctx.set([a]);ctx.mobBeat(null,null,["_bare"]);
 t("no death frame drawn = it just goes, no hold",a.phase!=="death"&&!(ctx.hold()>Date.now()));
 
-a=mk("red-hind");ctx.set([a]);ctx.mobBeat(null,["red-hind"],null);into(a,0.12);
+a=mk("red-hind");ctx.set([a]);ctx.mobBeat(null,["red-hind"],null);
 const p=ctx.poseAt(a,Date.now());
 t("hit recoils on the idle pose",a.phase==="hit"&&inv["red-hind"][p.k]==="idle");
-t("hit actually shakes it",Math.abs(p.x)>0||Math.abs(a.rot)>0,"x="+p.x.toFixed(4)+" rot="+(a.rot||0).toFixed(4));
+t("a blow lands the instant it happens, not on the spread",a.t===0);
+t("...and it is big enough to see",Math.abs(p.x)>0.05,"knocked back "+(Math.abs(p.x)*100).toFixed(1)+"% of its width");
+t("...and twists with it",Math.abs(a.rot)>0.02,(Math.abs(a.rot)*57.3).toFixed(1)+" degrees");
 
 a=mk("hill-wolf");ctx.set([a]);ctx.applyState({"hill-wolf":"rest"});
 t("asleep flagged",a.asleep===true);

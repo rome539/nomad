@@ -71,6 +71,7 @@ The four scripts live in `game-server/scripts/`:
 | `build-mob-preview.mjs` | the preview page, driver lifted from `public.ts` |
 | `test-mob-driver.mjs` | runs that driver headless against fake creatures |
 | `test-build-guard.mjs` | the stale-page guard: reload rules, headless |
+| `test-mob-paint.mjs` | what paintMobs builds, against a DOM stub |
 
 ## The invariants the audit enforces
 
@@ -136,6 +137,7 @@ The world tells the client; the client never parses prose to guess.
 
 ```
 ctx frame     mobs: [ids]        which creatures the room paints (max 4)
+              dead: [ids]        bodies lying in it (max 3)
               rest: [ids]        which of them are lying up
 beat frame    swung: [ids]       struck the player this round
               struck: [ids]      the player hit them this round
