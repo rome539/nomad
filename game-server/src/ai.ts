@@ -2077,6 +2077,9 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     const before = creature.fed ?? 0;
     creature.fed = before + 1;
     if (!silent) {
+      // ...and it is SEEN doing it. The line below has always said so; the
+      // picture never did, because nothing on the wire carried the meal.
+      z.fxFed(creature.roomId, creature.templateId);
       // The dire-hyena feeding on a fallen hyena — its own included — is a colder
       // thing than gnawing a rat. Name it when it happens.
       const hyenaKin = new Set([...SCAVENGERS].map((id) => z.world!.mobTemplates.get(id)?.name));

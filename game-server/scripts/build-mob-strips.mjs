@@ -149,12 +149,23 @@ for (const [id, dir] of [...found].sort()) {
   const Y0 = Math.min(...boxes.map((b) => b.y0)), Y1 = Math.max(...boxes.map((b) => b.y1));
   const w0 = X1 - X0 + 1, h0 = Y1 - Y0 + 1;
   const sc = Math.min(1, MAX_H / h0);
-  const fw = Math.round(w0 * sc), fh = Math.round(h0 * sc);
+  const iw = Math.round(w0 * sc), ih = Math.round(h0 * sc);
+  // A GUTTER, OR THE NEXT POSE LEAKS IN. The crop rect above is the tightest box
+  // holding every pose, so by construction some pose touches each edge — and the
+  // client shows a frame by percentage background-position, which rounds to
+  // subpixels. Ink at the boundary means the neighbouring frame's wingtip
+  // appears at the edge of the window. A few transparent pixels all round costs
+  // nothing and makes that impossible.
+  const gut = Math.max(4, Math.round(iw * 0.012));
+  const fw = iw + gut * 2, fh = ih + gut * 2;
 
   const frames = [];
-  for (const b of norm)
-    frames.push(await sharp(b).extract({ left: X0, top: Y0, width: w0, height: h0 })
-      .resize(fw, fh).png().toBuffer());
+  for (const b of norm) {
+    const cut = await sharp(b).extract({ left: X0, top: Y0, width: w0, height: h0 })
+      .resize(iw, ih).png().toBuffer();
+    frames.push(await sharp({ create: { width: fw, height: fh, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
+      .composite([{ input: cut, left: gut, top: gut }]).png().toBuffer());
+  }
 
   if (write) {
     fs.mkdirSync(OUT, { recursive: true });

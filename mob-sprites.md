@@ -4,6 +4,11 @@ How a drawn pose becomes a creature moving on screen, and the rules that keep it
 from breaking. Written down after a session where most of the cost was not the
 art or the code but believing labels instead of looking at pixels.
 
+**Making the art is a separate document:** `mob-roster.md` holds the prompt
+recipe (sheet geometry, the camera paragraph, the magenta rule, the banned list)
+and the per-creature spec — what each animal looks like, how it behaves, and its
+six poses in order. Read that before generating; read this before packing.
+
 ## The one law
 
 **Verify against the pixels, never against the names.**
@@ -38,7 +43,9 @@ from its real height in metres against a standing man at 1.75m = 22.
 ## The pipeline
 
 ```
-1  drop pose PNGs in                output/mountain-mobs/<id>/<pose>.png
+0  node scripts/mob-prompt.mjs <id>          # the prompt, ready to paste
+   …generate, then save the sheet as        output/mountain-mobs/<id>/source.png
+1  node scripts/cut-mob-sheet.mjs <sheet> <id> <pose> <pose> …
 2  node scripts/build-mob-strips.mjs                # DRY RUN, writes nothing
    node scripts/build-mob-strips.mjs --patch        # build + write MOB_ANIM
 3  node scripts/audit-mob-strips.mjs               # must pass
@@ -57,10 +64,13 @@ The four scripts live in `game-server/scripts/`:
 
 | script | does |
 |---|---|
+| `mob-prompt.mjs` | writes the generation prompt: real description, right poses |
+| `cut-mob-sheet.mjs` | splits a finished sheet into keyed pose PNGs |
 | `build-mob-strips.mjs` | packs pose PNGs into strips, prints `MOB_ANIM` rows |
 | `audit-mob-strips.mjs` | the invariants below; exits non-zero on any break |
 | `build-mob-preview.mjs` | the preview page, driver lifted from `public.ts` |
 | `test-mob-driver.mjs` | runs that driver headless against fake creatures |
+| `test-build-guard.mjs` | the stale-page guard: reload rules, headless |
 
 ## The invariants the audit enforces
 
@@ -111,6 +121,11 @@ stood inert while they killed you.
 - **The art is gitignored** (`game-server/public/mob/`) and uploads from the
   working tree at deploy. A fresh clone has these scripts but not their input, and
   can deploy the game without pictures. KEEP A COPY.
+- **A page open across a deploy goes stale, and now knows it.** The client is
+  stamped with a hash of the page it was served and the room frame carries the
+  world's; when they part it reloads — out of combat only, and once. Any change
+  to `public.ts` moves that hash, so nothing has to be remembered. Server-only
+  changes don't move it, which is right: the client has no reason to reload.
 - **`ART_V` bumps only when an existing filename's content changes.** A brand
   new filename needs no bump. A bump re-uploads every asset - that is the slow
   deploy, several minutes.
@@ -148,5 +163,4 @@ the last slot on `landing`, so they still vanish rather than drop:
     hill-eagle  mountain-chough  ptarmigan  scarp-raven  the-bone-dropper
     the-old-raven
 
-That is a generation job, not a wiring one. When those sheets come back, the
-whole pipeline above is steps 1 through 7.
+When more sheets come back, the whole pipeline above is steps 0 through 8.

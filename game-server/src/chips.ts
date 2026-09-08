@@ -10,6 +10,7 @@ import * as gate from "./gate";
 import * as den from "./den";
 import * as works from "./works";
 import * as ai from "./ai";
+import { BUILD_ID } from "./public";
 import * as dice from "./dice";
 import { chipName, nameMatches, shortName, isNight, isFullMoon } from "./zone-util";
 import { hasTrait } from "./world";
@@ -116,7 +117,12 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // the chips already obey — above all the lurker rule: a thing lying in wait
   // gets no chip and no sprite, and the room stays as quiet as its description.
   const seen: string[] = [];
-  const rest: string[] = [];
+  // WHAT EACH OF THEM IS DOING. The picture used to be told one thing - whether
+  // a creature was asleep - and animated everything else off a timer, so a wolf
+  // that had decided to kill you looked exactly like a wolf drifting past. All
+  // of this is state the world already keeps; none of it was reaching the eye.
+  // Keyed by template because that is what the picture is keyed by.
+  const doing: Record<string, string> = {};
   for (const creature of z.creaturesInRoom(session.roomId)) {
     // Torchlight reveals a waiting lurker — so it also gets its attack chip.
     // GLINTING gear does the same by daylight (2026-08-20): the polish leaves
@@ -131,7 +137,21 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     suggest.push(`attack ${label}${n > 1 ? ` ${n}` : ""}`);
     if (seen.length < 4) {
       seen.push(creature.templateId);   // a room paints four at most
-      if (creature.asleep) rest.push(creature.templateId);
+      // First true thing wins, worst first: a thing running is running whatever
+      // else is true of it, and a thing that has YOU is the one you must read.
+      const now = Date.now();
+      const state =
+          creature.windedUntil && now < creature.windedUntil ? "flee"
+        : creature.fled ? "flee"
+        : creature.stunned || (creature.staggerUntil && now < creature.staggerUntil) ? "reel"
+        : creature.target === session.pubkey ? "hunt"
+        : creature.target ? "fight"
+        : creature.asleep ? "rest"
+        : creature.eyeing ? "eyeing"
+        : creature.hp < (tmpl.max_hp * 0.35) ? "hurt"
+        : creature.curious ? "watch"
+        : "";
+      if (state) doing[creature.templateId] = state;
     }
   }
   // A throwable in hand and something to throw it at: offer the opener.
@@ -421,7 +441,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   const w = z.wayHome.get(session.roomId);
   const home = world.entryRooms.has(session.roomId) ? "here" : (w ? w.dir : "");
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, mobs: ART_KEYS.has(session.pubkey) ? seen : undefined, rest: ART_KEYS.has(session.pubkey) && rest.length ? rest : undefined }));
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: ART_KEYS.has(session.pubkey) ? seen : undefined, doing: ART_KEYS.has(session.pubkey) && Object.keys(doing).length ? doing : undefined }));
   } catch {}
 }
 

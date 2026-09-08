@@ -6064,10 +6064,16 @@ export class ZoneDO implements DurableObject {
   // BOSS BLOOD: note every hand that wounds a king (bosses only, so the sim
   // blob never fattens on rat brawls). When it falls, everyone on the list
   // shares the horror on their sheet — see the assist pass in onCreatureDeath.
-  public fxDied(roomId: string, templateId: string): void {
+  public fxDied(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "died"); }
+  public fxFed(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "fed"); }
+
+  // One creature, one thing, told to everyone standing there who has pictures.
+  // Sent immediately rather than buffered with the blows: these are announced in
+  // prose the same tick, and the picture should not lag the line.
+  private fxOne(roomId: string, templateId: string, kind: "died" | "fed"): void {
     for (const s of this.sessions.values()) {
       if (s.roomId !== roomId || !ART_KEYS.has(s.pubkey) || this.outOfWorld(s)) continue;
-      try { s.ws.send(JSON.stringify({ v: 0, t: "beat", died: [templateId] })); } catch {}
+      try { s.ws.send(JSON.stringify({ v: 0, t: "beat", [kind]: [templateId] })); } catch {}
     }
   }
 

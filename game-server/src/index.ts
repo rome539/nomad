@@ -3,7 +3,7 @@ import { CORS, json } from "./http";
 import { handleChallenge, handleVerify, handleTicket } from "./auth";
 import { GOOGLE_CLIENT_ID } from "./google";
 import { verifyJwt, timingSafeEqual } from "./jwt";
-import { PAGE } from "./public";
+import { PAGE, BUILD_ID } from "./public";
 import { GUIDE_PAGE } from "./guide";
 import { signProfileEvent, signSheetEvent, signDeleteEvent, signRetireScoreEvent, isGameKeyConfigured } from "./signing";
 import type { PlayerRow } from "./world";
@@ -44,7 +44,7 @@ export default {
         const page = PAGE.replace("__GOOGLE_CLIENT_ID__", GOOGLE_CLIENT_ID).replace(
           "__GOOGLE_PICKER_KEY__",
           GOOGLE_PICKER_KEY,
-        );
+        ).replace("__BUILD__", BUILD_ID);
         return new Response(page, {
           headers: {
             "content-type": "text/html; charset=utf-8",

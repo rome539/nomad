@@ -1,4 +1,19 @@
 // The whole client: one page, one log, one input line. Text is the art.
+// WHICH BUILD THIS IS. Derived from the served page rather than a number
+// somebody has to remember to bump: any change to the client changes this, and
+// nothing else can. The client is told its own id at serve time and the world's
+// id on the wire, and reloads itself when they stop matching.
+//
+// A player with the game open across a deploy keeps the OLD script and gets the
+// NEW assets, which is how a strip drawn as one flat picture reached a real
+// player (2026-09-08). The reconnect is seamless by design, so nothing about it
+// ever told the page it had gone stale.
+export function buildId(s: string): string {
+  let h = 2166136261;                       // FNV-1a, enough to notice a change
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+
 export const PAGE = `<!doctype html>
 <html lang="en">
 <head>
@@ -3037,7 +3052,7 @@ async function connect() {
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
-      paintMobs(f.mobs, f.rest);
+      paintMobs(f.mobs, f.doing);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
@@ -3047,10 +3062,11 @@ async function connect() {
       wayHome = f.home || "";
       paintWayHome();
       renderChips(f.suggest, f.combat);
+      if (f.build) checkBuild(f.build);
     } else if (f.t === "beat") {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
-      mobBeat(f.swung, f.struck, f.died);
+      mobBeat(f.swung, f.struck, f.died, f.fed);
     } else if (f.t === "bench") {
       if (f.open) renderBench(f); else closeBench();
     } else if (f.t === "trade") {
@@ -3563,6 +3579,36 @@ function logout() {
 var chipsOn = localStorage.getItem("nomad_chips") !== "0"; // default on
 var lastSuggest = [];
 var lastCombat = false;
+// THE WORLD WAS REBUILT UNDER YOU. A deploy is state-safe and the socket
+// reconnects without a word, so a page open across one keeps its OLD script and
+// is handed the NEW assets - which is how a creature strip drawn as one flat
+// picture reached a real player. The page now carries the id of the build it
+// came from and the room frame carries the world's; when they part, it reloads.
+//
+// NOT the instant it notices. A reload mid-fight costs a round, and the whole
+// point of a state-safe deploy is that nobody loses anything to it - so it waits
+// for the fight to end, which is seconds away at most.
+var staleBuild = false;
+function checkBuild(world) {
+  if (!BUILD || BUILD.charAt(0) === "_" || world === BUILD) return;  // unstamped in dev
+  if (staleBuild) return;
+  staleBuild = true;
+  // ONCE. If something is serving a page the world disagrees with, reloading in
+  // a loop makes it worse and hides the cause, so a second attempt inside the
+  // minute says so and leaves the page alone.
+  var last = 0;
+  try { last = +(sessionStorage.getItem("nomad_reloaded") || 0); } catch (e) {}
+  if (Date.now() - last < 60000) {
+    print("\u2014 the world has been rebuilt and this page is out of step with it; reload when you can \u2014", "sys");
+    return;
+  }
+  maybeReload();
+}
+function maybeReload() {
+  if (!staleBuild || lastCombat) return;
+  try { sessionStorage.setItem("nomad_reloaded", String(Date.now())); } catch (e) {}
+  location.reload();
+}
 // What each chip slot held on the previous render, so a slot whose command
 // changed under the cursor can refuse the click that was already on its way.
 var prevChipCmds = [];
@@ -3683,7 +3729,9 @@ var CHIP_FOLD = 12;
 var chipsExpanded = false;
 function renderChips(suggest, combat) {
   lastSuggest = suggest;
+  var wasFighting = lastCombat;
   lastCombat = !!combat;
+  if (wasFighting && !lastCombat) maybeReload();   // the fight is over: take it now
   chipsEl.textContent = "";
   if (!chipsOn) return; // the quiet terminal: no training wheels
   // The identity lives behind the name button top right — no keys chip, no
@@ -5254,6 +5302,9 @@ function wireMap() {
   document.getElementById("mapzout").addEventListener("click", function () { mapZoom(1 / 1.25); });
   document.getElementById("mapzhere").addEventListener("click", mapCenterHere);
   window.addEventListener("resize", function () { if (mapEl.classList.contains("open")) mapResize(); });
+  // ...and the creature row re-fits, or a window dragged narrower leaves the
+  // room standing at the size it was when you last walked into it.
+  window.addEventListener("resize", fitMobRow);
 }
 
 function renderMap(f) {
@@ -6287,7 +6338,8 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "12";
+var ART_V = "13";
+var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
 // THE VIEW. A band of country per region, washed by whatever the sky is doing.
@@ -6757,7 +6809,26 @@ applyView();
 // gives way rather than clipping now (see #mobs img), so this is chosen for the
 // COMMON case — one or two creatures — instead of the worst one. A crowd on a
 // narrow screen scales itself down from here.
-var MOB_SCALE = 1.5;
+// HOW BIG A CREATURE IS ON SCREEN.
+//
+// MOB_SPRITE holds real height: 22 units is a standing man at 1.75m. Drawing
+// that range straight was the problem. The hill runs from a 3-unit stoat to a
+// 44-unit drake - fifteen to one - so any single multiplier that made a wolf
+// read properly made the drake taller than the window, and any multiplier the
+// drake could live with left the small things as smudges over the prose.
+//
+// So the range is COMPRESSED rather than scaled: vh = K * units^P. Games have
+// always done this; a stoat you cannot see is not more realistic, it is just
+// absent. P below is the amount of squeeze (1 would be the old straight
+// multiply) and K is set so a standing man lands at 42vh - a bit under half the
+// view, which is how the crawlers this is drawn after framed a monster.
+//
+// The art's own stage lock asks for a man at a FIFTH of the frame, which works
+// out at ~22vh. That was followed and it reads as a diorama seen from across
+// the room. This is deliberately larger.
+var MOB_P = 0.85;
+var MOB_K = 42 / Math.pow(22, MOB_P);
+function mobVh(id) { return MOB_K * Math.pow(MOB_SPRITE[id], MOB_P); }
 var MOB_SPRITE = {
   // EVERY NUMBER HERE IS A HEIGHT IN METRES, CONVERTED. A standing man is 1.75m
   // and he is 22, so a sprite's number is 22 * (its height / 1.75) and nothing
@@ -6868,49 +6939,49 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
-  "a-fold-dog":           { n: 6, aspect: 1.476, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "bone-breaker":         { n: 6, aspect: 1.256, f: {"idle":0,"carry-bone":1,"up":2,"glide":3,"down":4,"landing":5} },
-  "brooding-vulture":     { n: 6, aspect: 1.731, f: {"idle":0,"rest":1,"recover":2,"defend-nest":3,"attack":4,"death":5} },
-  "carrion-vulture":      { n: 6, aspect: 1.154, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
-  "cave-lion":            { n: 6, aspect: 1.722, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "eagle-owl":            { n: 6, aspect: 1.133, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
-  "ermine":               { n: 6, aspect: 1.316, f: {"idle":0,"inspect-upright":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "eyrie-holder":         { n: 6, aspect: 1.09, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
-  "feral-goat":           { n: 6, aspect: 1.201, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "gill-adder":           { n: 8, aspect: 0.936, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5,"death":6,"bask":7} },
-  "glutton":              { n: 6, aspect: 1.766, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "great-vulture":        { n: 6, aspect: 1.261, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
-  "hill-eagle":           { n: 6, aspect: 1.128, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
-  "hill-fox":             { n: 6, aspect: 1.782, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "hill-wolf":            { n: 6, aspect: 1.468, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "lead-wolf":            { n: 6, aspect: 1.207, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "lynx":                 { n: 6, aspect: 1.334, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "mountain-chough":      { n: 6, aspect: 1.107, f: {"idle":0,"alarm-call":1,"up":2,"glide":3,"down":4,"landing":5} },
-  "mountain-hare":        { n: 6, aspect: 1.213, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "old-billy":            { n: 6, aspect: 1.224, f: {"idle":0,"stand-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "ptarmigan":            { n: 6, aspect: 1.233, f: {"idle":0,"alert-alarm":1,"up":2,"glide":3,"down":4,"landing":5} },
-  "red-hind":             { n: 6, aspect: 1.111, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "red-stag":             { n: 6, aspect: 1.157, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "scarp-raven":          { n: 6, aspect: 1.057, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5} },
-  "snow-fox":             { n: 6, aspect: 1.577, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "snow-hare":            { n: 6, aspect: 1.186, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "stone-adder":          { n: 7, aspect: 1.205, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5,"death":6} },
-  "the-blue-fox":         { n: 6, aspect: 1.552, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-bone-dropper":     { n: 6, aspect: 0.978, f: {"idle":0,"carry-stolen-item":1,"up":2,"glide":3,"down":4,"landing":5} },
-  "the-butter-wife":      { n: 6, aspect: 1.216, f: {"idle":0,"listen":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-dancer":           { n: 6, aspect: 1.755, f: {"idle":0,"twisting-leap":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-drake":            { n: 14, aspect: 1.5, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
-  "the-gravid-adder":     { n: 7, aspect: 1.27, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5,"death":6} },
+  "a-fold-dog":           { n: 6, aspect: 1.46, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "bone-breaker":         { n: 8, aspect: 1.132, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"feed":5,"attack":6,"death":7} },
+  "brooding-vulture":     { n: 8, aspect: 1.086, f: {"idle":0,"rest":1,"recover":2,"attack":3,"death":4,"feed":5,"move-a":6,"move-b":7} },
+  "carrion-vulture":      { n: 8, aspect: 1.115, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
+  "cave-lion":            { n: 6, aspect: 1.696, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "eagle-owl":            { n: 8, aspect: 1.149, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"rest":6,"death":7} },
+  "ermine":               { n: 6, aspect: 1.307, f: {"idle":0,"inspect-upright":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "eyrie-holder":         { n: 8, aspect: 1.149, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
+  "feral-goat":           { n: 6, aspect: 1.195, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "gill-adder":           { n: 8, aspect: 0.937, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5,"death":6,"bask":7} },
+  "glutton":              { n: 6, aspect: 1.735, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "great-vulture":        { n: 8, aspect: 1.091, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
+  "hill-eagle":           { n: 8, aspect: 1.118, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"rest":6,"death":7} },
+  "hill-fox":             { n: 6, aspect: 1.752, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "hill-wolf":            { n: 6, aspect: 1.452, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "lead-wolf":            { n: 6, aspect: 1.202, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "lynx":                 { n: 6, aspect: 1.324, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "mountain-chough":      { n: 8, aspect: 1.069, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"rest":5,"attack":6,"death":7} },
+  "mountain-hare":        { n: 6, aspect: 1.207, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "old-billy":            { n: 6, aspect: 1.217, f: {"idle":0,"stand-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "ptarmigan":            { n: 8, aspect: 1.099, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"rest":5,"attack":6,"death":7} },
+  "red-hind":             { n: 6, aspect: 1.108, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "red-stag":             { n: 6, aspect: 1.153, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "scarp-raven":          { n: 8, aspect: 1.102, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"rest":6,"death":7} },
+  "snow-fox":             { n: 6, aspect: 1.556, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "snow-hare":            { n: 6, aspect: 1.181, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "stone-adder":          { n: 7, aspect: 1.199, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5,"death":6} },
+  "the-blue-fox":         { n: 6, aspect: 1.533, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-bone-dropper":     { n: 8, aspect: 1.115, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"feed":5,"attack":6,"death":7} },
+  "the-butter-wife":      { n: 6, aspect: 1.209, f: {"idle":0,"listen":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-dancer":           { n: 6, aspect: 1.723, f: {"idle":0,"twisting-leap":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-drake":            { n: 14, aspect: 1.483, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
+  "the-gravid-adder":     { n: 7, aspect: 1.263, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5,"death":6} },
   "the-herd":             { n: 6, aspect: 0.991, f: {"idle":0,"keep-the-line":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-last-dog":         { n: 6, aspect: 1.577, f: {"idle":0,"call-uphill":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-milker":           { n: 6, aspect: 1.172, f: {"idle":0,"work-pull":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-old-glutton":      { n: 6, aspect: 1.386, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-old-raven":        { n: 6, aspect: 1.115, f: {"idle":0,"steal-cache":1,"up":2,"glide":3,"down":4,"landing":5} },
-  "the-one-who-stayed":   { n: 6, aspect: 1.111, f: {"idle":0,"advance":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-pale-drake":       { n: 14, aspect: 1.543, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
-  "the-raiding-fox":      { n: 6, aspect: 1.297, f: {"idle":0,"snatch-escape":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-tom":              { n: 6, aspect: 1.5, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "wildcat":              { n: 6, aspect: 1.462, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-last-dog":         { n: 6, aspect: 1.556, f: {"idle":0,"call-uphill":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-milker":           { n: 6, aspect: 1.167, f: {"idle":0,"work-pull":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-old-glutton":      { n: 6, aspect: 1.373, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-old-raven":        { n: 8, aspect: 1.094, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"rest":5,"attack":6,"death":7} },
+  "the-one-who-stayed":   { n: 6, aspect: 1.108, f: {"idle":0,"advance":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-pale-drake":       { n: 14, aspect: 1.523, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
+  "the-raiding-fox":      { n: 6, aspect: 1.288, f: {"idle":0,"snatch-escape":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-tom":              { n: 6, aspect: 1.483, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "wildcat":              { n: 6, aspect: 1.447, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
 };
 // Straight from the studies' viewer, and worth keeping as the numbers they are.
 // Which of the drawn poses read as an animal at rest rather than an animal
@@ -6936,9 +7007,9 @@ var ACT_MS = 190;        // and how fast the thing it does actually happens
 var ACT_ODDS = 0.06;     // per idle beat: roughly once every half-minute
 var mobsEl = document.getElementById("mobs");
 var lastMobs = "";
-function paintMobs(ids, rest) {
+function paintMobs(ids, doing) {
   if (!mobsEl) return;
-  if (mobHold && Date.now() < mobHold) { mobPending = ids; mobPendingRest = rest; return; }
+  if (mobHold && Date.now() < mobHold) { mobPending = ids; mobPendingRest = doing; return; }
   var list = [];
   if (viewMode === "image" && ids && ids.length) {
     for (var i = 0; i < ids.length; i++) if (MOB_SPRITE[ids[i]]) list.push(ids[i]);
@@ -6947,7 +7018,7 @@ function paintMobs(ids, rest) {
   // Sleep is NOT part of the key: a creature bedding down must not reflow the
   // row, which would throw away every animation running in it. It is applied
   // to the sprites already standing there instead.
-  if (key === lastMobs) { applyRest(rest); return; }
+  if (key === lastMobs) { applyState(doing); return; }
   lastMobs = key;
   while (mobsEl.firstChild) mobsEl.removeChild(mobsEl.firstChild);
   // Biggest toward the centre, so a hare is never lost behind a hind.
@@ -6956,7 +7027,7 @@ function paintMobs(ids, rest) {
   for (var j = 0; j < list.length; j++) (j % 2 ? order.push : order.unshift).call(order, list[j]);
   anims.length = 0;
   for (var k = 0; k < order.length; k++) {
-    var id = order[k], h = (MOB_SPRITE[id] * MOB_SCALE).toFixed(1) + "vh";
+    var id = order[k], vh = mobVh(id), h = vh.toFixed(1) + "vh";
     var spec = MOB_ANIM[id];
     if (!spec) {
       var im = document.createElement("img");
@@ -6976,7 +7047,7 @@ function paintMobs(ids, rest) {
     // layout declines to honour — every frame is squeezed or pulled and the whole
     // row stretches. So the width is computed here from the same height the table
     // gave, and the element is told not to flex at all.
-    el.style.width = (MOB_SPRITE[id] * MOB_SCALE * spec.aspect).toFixed(1) + "vh";
+    el.style.width = (vh * spec.aspect).toFixed(1) + "vh";
     el.style.backgroundImage = "url(/mob/" + id + ".webp?v=" + ART_V + ")";
     el.style.backgroundSize = (spec.n * 100) + "% 100%";
     el.style.backgroundPositionX = "0%";
@@ -6996,17 +7067,49 @@ function paintMobs(ids, rest) {
       if (spec.f[STRIKE_POSES[z3]] !== undefined) { strike = STRIKE_POSES[z3]; break; }
     for (var z4 = 0; z4 < HIT_POSES.length; z4++)
       if (spec.f[HIT_POSES[z4]] !== undefined) { recoil = HIT_POSES[z4]; break; }
-    anims.push({ el: el, spec: spec, id: id, phase: "idle", t: 0, calm: calm,
-                 sleep: sleep, strike: strike, recoil: recoil,
-                 next: Date.now() + 4000 + Math.random() * 16000 });
+    // The pose it fixes you with, and how restless it is. A thing with a gait
+    // shifts often; a thing drawn sitting on a nest hardly ever does.
+    var watch = "idle";
+    for (var z5 = 0; z5 < WATCH_POSES.length; z5++)
+      if (spec.f[WATCH_POSES[z5]] !== undefined) { watch = WATCH_POSES[z5]; break; }
+    var rate = spec.f["move-a"] !== undefined ? 7000 : spec.f.up !== undefined ? 11000 : 20000;
+    anims.push({ el: el, spec: spec, id: id, phase: "idle", t: 0, calm: calm, state: "",
+                 sleep: sleep, strike: strike, recoil: recoil, watch: watch, rate: rate,
+                 next: Date.now() + 2000 + Math.random() * rate * 2 });
   }
-  applyRest(rest);
+  applyState(doing);
+  fitMobRow();
   runAnims();
 }
-function applyRest(rest) {
+// A crowded room stands further off. Worked out from the sizes rather than
+// measured off the DOM: a centred flex line that overflows reports its width
+// unreliably, and these numbers are known exactly.
+function fitMobRow() {
+  if (!mobsEl) return;
+  var vh = window.innerHeight / 100, vw = window.innerWidth / 100, need = 0, n = 0;
+  for (var i = 0; i < mobsEl.children.length; i++) {
+    var c = mobsEl.children[i];
+    need += parseFloat(c.style.width || "0") * vh || c.getBoundingClientRect().width;
+    n++;
+  }
+  if (!n) return;
+  need += (n - 1) * 3 * vw + 8 * vw;          // the gap and the padding, same as the CSS
+  var k = Math.min(1, (window.innerWidth - 8 * vw) / Math.max(1, need - 8 * vw));
+  mobsEl.style.transform = "translateY(-50%)" + (k < 1 ? " scale(" + k.toFixed(3) + ")" : "");
+}
+// WHAT THE WORLD SAYS EACH OF THEM IS DOING. A creature holds this until the
+// world says otherwise; the one-shots (a blow, a meal, a death) play over the
+// top and drop back into it.
+function applyState(doing) {
   for (var i = 0; i < anims.length; i++) {
-    var a = anims[i], now = !!(rest && rest.indexOf(a.id) >= 0);
-    if (now !== a.asleep && a.phase !== "death") { a.asleep = now; a.t = 0; }
+    var a = anims[i], st = (doing && doing[a.id]) || "";
+    if (a.phase === "death") continue;
+    if (st === a.state) continue;
+    a.state = st;
+    a.asleep = st === "rest";
+    a.t = 0;
+    // a creature that has just noticed you does not finish its stroll first
+    if (a.phase === "travel" && st) { a.phase = "idle"; }
   }
 }
 
@@ -7028,13 +7131,65 @@ function poseAt(a, now) {
     name = "death";
     s *= 1 + (1 - Math.min(t / 0.25, 1)) * 0.05;
   } else if (a.phase === "attack") {
-    var u = Math.min(t / ATTACK_S, 1);
-    name = u < 0.65 ? a.strike : "idle";
-    x = Math.sin(u * Math.PI) * SWAY * 0.5;
+    if (t < 0) {
+      name = a.watch;                                   // its turn has not come yet
+    } else {
+      var u = Math.min(t / ATTACK_S, 1);
+      if (u < 0.20) {                                   // gathers, and draws back
+        name = a.watch;
+        x = -Math.sin(u / 0.20 * Math.PI / 2) * SWAY * 0.30;
+      } else if (u < 0.58) {                            // and goes
+        name = a.strike;
+        x = Math.sin((u - 0.20) / 0.38 * Math.PI) * SWAY * 1.0;
+      } else {                                          // and comes off it
+        name = a.watch;
+        x = -(1 - (u - 0.58) / 0.42) * SWAY * 0.22;
+      }
+    }
   } else if (a.phase === "hit") {
+    if (t < 0) { name = "idle"; } else {
     name = a.recoil;
     x = Math.sin(t * 25) * 0.025 * Math.exp(-t * 5);
     a.rot = 0.015 * Math.sin(t * 15) * Math.exp(-t * 3);
+    }
+  } else if (a.phase === "feed") {
+    // Head down at the body, with the small working shift of something pulling
+    // at meat rather than standing over it.
+    name = "feed";
+    x = Math.sin(t * 3.4) * SWAY * 0.10;
+  } else if (a.state === "hunt") {
+    // IT HAS YOU. It does not wander, it does not cut to its calm pose - it
+    // holds the alert it was drawn with and closes, slowly, on a breath that is
+    // too long to be comfortable. The nearest thing this driver has to menace.
+    name = a.watch;
+    x = Math.sin(t * 0.55) * SWAY * 0.42;
+    s *= 1 + Math.sin(t * 0.8) * BREATH * 2.2;
+  } else if (a.state === "fight") {
+    // Busy with somebody else: the same tension, quicker, and not aimed at you.
+    name = a.watch;
+    x = Math.sin(t * 1.9) * SWAY * 0.22;
+  } else if (a.state === "flee") {
+    // Going, and going away: the gait at speed, shrinking as it leaves.
+    name = f["move-a"] !== undefined ? (Math.floor(t * GAIT_HZ * 1.6) % 2 ? "move-a" : "move-b")
+         : f.up !== undefined ? (Math.floor(t * WINGBEAT_HZ_FAST) % 2 ? "up" : "down") : "idle";
+    x = -SWAY * Math.min(1, t / 1.2) * 1.5;
+    if (f.up !== undefined) air = LIFT * Math.min(1, t / 1.2);
+    s *= 1 - 0.08 * Math.min(1, t / 1.5);
+  } else if (a.state === "reel") {
+    // Rung, and not over it: the hit shudder, held rather than decaying out.
+    name = a.recoil;
+    x = Math.sin(t * 9) * 0.02;
+    a.rot = 0.02 * Math.sin(t * 5);
+  } else if (a.state === "hurt") {
+    // Still up, but it has been opened. Low, slow, and it sags.
+    name = a.calm && Math.floor(t / 4) % 3 === 0 ? a.calm : "idle";
+    air = -0.012;
+    s *= 1 + Math.sin(t * 1.1) * BREATH * 2.6;
+  } else if (a.state === "eyeing" || a.state === "watch") {
+    // Head up, fixed on something: the floor gear it means to take, or the room
+    // the noise came from. It has stopped doing anything else.
+    name = a.watch;
+    s *= 1 + Math.sin(t * 1.6) * BREATH;
   } else if (a.asleep) {
     // Lying up. It does not travel, it does not cut to its calm pose on a
     // clock - it holds the one pose and breathes deeper and slower than a
@@ -7053,8 +7208,17 @@ function poseAt(a, now) {
       }
     } else if (f.up !== undefined) {
       var wh = a.id === "ptarmigan" ? WINGBEAT_HZ_FAST : WINGBEAT_HZ;
-      name = Math.floor(t * wh) % 2 ? "up" : "down";
-      air = LIFT + Math.sin(t * 3) * 0.04;
+      var uf = Math.min(t / (TRAVEL_MS / 1000), 1);
+      var beat = Math.floor(t * wh) % 2 ? "up" : "down";
+      if (f.glide === undefined || f.landing === undefined) {
+        name = beat; air = LIFT + Math.sin(t * 3) * 0.04;      // no arc drawn: just fly
+      } else if (uf < 0.32) {
+        name = beat; air = LIFT * (uf / 0.32);                  // climbing out on the beat
+      } else if (uf < 0.72) {
+        name = "glide"; air = LIFT; x = Math.sin(t * 1.2) * SWAY * 0.6;
+      } else {
+        name = "landing"; air = LIFT * (1 - (uf - 0.72) / 0.28); // and down onto the ground
+      }
     } else {
       // No gait and no wings. The rooted ones - the brooding vulture on its nest,
       // an adder holding its warm stone - travel by doing the thing they were
@@ -7080,7 +7244,9 @@ function runAnims() {
 // wobble in both position and rotation — both taken from the studies' viewer,
 // which is where they were designed. A creature with no attack frame drawn just
 // keeps doing what it was doing.
-var ATTACK_S = 1.3, HIT_S = 0.9, DEATH_S = 1.1;
+var ATTACK_S = 1.7, HIT_S = 0.9, DEATH_S = 1.1, FEED_S = 2.4;
+var ROUND_S = 4;          // COMBAT_ROUND_MS, and the beat everything here answers to
+var STAGGER_S = 0.75;     // how far apart blows in the same round are spread
 // WHAT A SLEEPING ONE LOOKS LIKE, best pose first. A wolf curls up, an adder
 // keeps its warm stone; anything with none of these just stands and breathes
 // slower, which is still the difference between a thing lying up and a thing
@@ -7088,9 +7254,12 @@ var ATTACK_S = 1.3, HIT_S = 0.9, DEATH_S = 1.1;
 var SLEEP_POSES = ["rest", "bask", "hold-warm-ground", "hold-ground", "feed"];
 var STRIKE_POSES = ["attack", "bite", "sweep", "breath"];
 var HIT_POSES = ["hit"];
+// How it looks at you when it has decided something about you.
+var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
+                   "hold-ground", "inspect-upright", "recover", "idle"];
 // A body stays where it fell for a beat before the room repaints without it.
 var mobHold = 0, mobPending = null, mobPendingRest = null;
-function mobBeat(swung, struck, died) {
+function mobBeat(swung, struck, died, fed) {
   for (var i = 0; i < anims.length; i++) {
     var a = anims[i];
     // Dying outranks everything: a thing that took the last blow is not also
@@ -7100,8 +7269,13 @@ function mobBeat(swung, struck, died) {
       a.phase = "death"; a.t = 0; a.asleep = false;
       mobHold = Date.now() + DEATH_S * 1000;
     } else if (a.phase === "death") continue;
-    else if (swung && swung.indexOf(a.id) >= 0 && a.strike) { a.phase = "attack"; a.t = 0; }
-    else if (struck && struck.indexOf(a.id) >= 0) { a.phase = "hit"; a.t = 0; }
+    else if (swung && swung.indexOf(a.id) >= 0 && a.strike) {
+      // NOT ALL AT ONCE. The wire reports a whole round in one message, so
+      // without this every creature in a dogpile swings on the same frame.
+      a.phase = "attack"; a.t = -Math.random() * STAGGER_S;
+    }
+    else if (struck && struck.indexOf(a.id) >= 0) { a.phase = "hit"; a.t = -Math.random() * STAGGER_S * 0.5; }
+    else if (fed && fed.indexOf(a.id) >= 0 && a.spec.f.feed !== undefined) { a.phase = "feed"; a.t = 0; }
   }
 }
 function stepAnims() {
@@ -7114,7 +7288,12 @@ function stepAnims() {
     else if (a.phase === "travel") { if (a.t > TRAVEL_MS / 1000 || a.asleep) { a.phase = "idle"; a.t = 0; } }
     else if (a.phase === "attack") { if (a.t > ATTACK_S) { a.phase = "idle"; a.t = 0; } }
     else if (a.phase === "hit") { if (a.t > HIT_S) { a.phase = "idle"; a.t = 0; } }
-    else if (!a.asleep && now > a.next) { a.phase = "travel"; a.t = 0; a.next = now + 9000 + Math.random() * 22000; }
+    else if (a.phase === "feed") { if (a.t > FEED_S) { a.phase = "idle"; a.t = 0; } }
+    // IT ONLY WANDERS WHEN IT HAS NOTHING ELSE ON. Everything above is the world
+    // telling the picture what is happening; the stroll is what is left when
+    // nothing is. Its cadence comes from the animal - a wolf paces, a vulture
+    // sits - so a room is not a metronome with four hands.
+    else if (!a.state && now > a.next) { a.phase = "travel"; a.t = 0; a.next = now + a.rate + Math.random() * a.rate * 1.6; }
     var p = poseAt(a, now);
     a.el.style.backgroundPositionX = (p.k * 100 / (a.spec.n - 1)) + "%";
     a.el.style.transform = "translate(" + (p.x * 100).toFixed(1) + "%," + (-p.air * 100).toFixed(1) + "%)"
@@ -7602,3 +7781,7 @@ function guideNotice(cmdText) {
 </script>
 </body>
 </html>`;
+
+// Computed once, from the finished page. index.ts stamps it into the copy it
+// serves; chips.ts puts the same value on the wire.
+export const BUILD_ID = buildId(PAGE);

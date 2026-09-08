@@ -53,10 +53,10 @@ const ANIM = {};
 for (const m of grab("MOB_ANIM").matchAll(/"([a-z-]+)":\s*\{\s*n:\s*(\d+),\s*aspect:\s*([\d.]+),\s*f:\s*(\{[^}]*\})\s*\}/g))
   ANIM[m[1]] = { n:+m[2], aspect:+m[3], f: JSON.parse(m[4]) };
 const ART_V = (src.match(/var ART_V = "(\d+)"/)||[,"1"])[1];
-const SCALE = +src.match(/var MOB_SCALE = ([\d.]+);/)[1];
+const SIZE = block("MOB_P") + "\n" + fn("mobVh");   // the size curve, lifted like the driver
 
 const CONSTS = block("CALM_POSES") + "\n" + block("ATTACK_S");
-const DRIVER = [fn("poseAt"), fn("mobBeat"), fn("stepAnims"), fn("applyRest")].join("\n");
+const DRIVER = [fn("poseAt"), fn("mobBeat"), fn("stepAnims"), fn("applyState")].join("\n");
 
 const tints = {};
 for (const m of src.matchAll(/#mobs\.t-([a-z]+) +img[^{]*\{ filter: ([^;]+);/g)) tints[m[1]] = m[2];
@@ -91,12 +91,18 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  <button id="atk">attack</button>
  <button id="hit">take a hit</button>
  <button id="die">die</button>
- <button id="slp">sleep</button>
+ <button id="slp" data-st="rest">sleep</button>
+ <button data-st="hunt">hunting you</button>
+ <button data-st="flee">fleeing</button>
+ <button data-st="hurt">wounded</button>
+ <button data-st="reel">reeling</button>
  <span class="n">build ${STAMP} · ART_V ${ART_V} · ${Object.keys(ANIM).length} animated · ${withAtk} strike · ${withDeath} die</span>
 </div>
 <div id="grid"></div>
 <script>
-var SPRITE=${JSON.stringify(SPRITE)}, ANIM=${JSON.stringify(ANIM)}, ART_V="${ART_V}", MOB_SCALE=${SCALE};
+var MOB_SPRITE=${JSON.stringify(SPRITE)}, MOB_ANIM=${JSON.stringify(ANIM)}, ART_V="${ART_V}";
+var SPRITE=MOB_SPRITE, ANIM=MOB_ANIM;   // the page's own shorthand
+${SIZE}
 
 /* ---- lifted verbatim from public.ts ---- */
 ${CONSTS}
@@ -109,7 +115,7 @@ function releaseMobs(){ mobHold = 0; }
 var anims=[], hour=document.getElementById("hour"), sc=document.getElementById("sc"), grid=document.getElementById("grid");
 ["day","night","dawn","dusk","moon","blood","eclipse","fog","rain","snow"].forEach(function(h){
   var o=document.createElement("option");o.textContent=h;hour.appendChild(o);});
-[1,1.5,2,3].forEach(function(v){var o=document.createElement("option");o.textContent=v;o.selected=(v==MOB_SCALE);sc.appendChild(o);});
+[0.6,0.8,1,1.4].forEach(function(v){var o=document.createElement("option");o.textContent=v;o.selected=(v==1);sc.appendChild(o);});
 
 function build(){
   grid.innerHTML=""; anims=[];
@@ -118,18 +124,20 @@ function build(){
     var a=ANIM[id], cell=document.createElement("div"); cell.className="cell";
     var stage=document.createElement("div"); stage.className="stage";
     var el=document.createElement("div"); el.className="mob";
-    el.style.height=(SPRITE[id]*scale*3)+"px";
+    el.style.height=(mobVh(id)*scale*3)+"px";
     if(a){
-      el.style.width=(SPRITE[id]*scale*3*a.aspect)+"px"; el.style.flex="0 0 auto";
+      el.style.width=(mobVh(id)*scale*3*a.aspect)+"px"; el.style.flex="0 0 auto";
       el.style.backgroundImage="url(mob/"+id+".webp?v="+ART_V+")";
       el.style.backgroundSize=(a.n*100)+"% 100%"; el.style.backgroundPositionX="0%";
       // the client's own choices, made the same way
       var calm=""; for(var q=0;q<CALM_POSES.length;q++) if(a.f[CALM_POSES[q]]!==undefined&&!calm) calm=CALM_POSES[q];
       var acts=[]; for(var w in a.f) if(w!=="idle") acts.push(w); a.acts=acts.length?acts:["idle"];
       var sleep="idle"; for(var z=0;z<SLEEP_POSES.length;z++) if(a.f[SLEEP_POSES[z]]!==undefined){sleep=SLEEP_POSES[z];break;}
+      var watch="idle"; for(var z9=0;z9<WATCH_POSES.length;z9++) if(a.f[WATCH_POSES[z9]]!==undefined){watch=WATCH_POSES[z9];break;}
+      var rate=a.f["move-a"]!==undefined?7000:a.f.up!==undefined?11000:20000;
       var strike=""; for(var y=0;y<STRIKE_POSES.length;y++) if(a.f[STRIKE_POSES[y]]!==undefined){strike=STRIKE_POSES[y];break;}
       var recoil="idle"; for(var v=0;v<HIT_POSES.length;v++) if(a.f[HIT_POSES[v]]!==undefined){recoil=HIT_POSES[v];break;}
-      anims.push({el:el,spec:a,id:id,phase:"idle",t:0,calm:calm,sleep:sleep,strike:strike,recoil:recoil,
+      anims.push({el:el,spec:a,id:id,phase:"idle",t:0,state:"",calm:calm,sleep:sleep,strike:strike,recoil:recoil,watch:watch,rate:rate,
                   next:Date.now()+2000+Math.random()*9000});
     } else {
       el.style.aspectRatio="1"; el.style.backgroundImage="url(mob/"+id+".webp?v="+ART_V+")";
@@ -139,7 +147,7 @@ function build(){
     var n=document.createElement("div"); n.className="n";
     var flags=[]; if(a){ if(!STRIKE_POSES.some(function(k){return a.f[k]!==undefined})) flags.push("<span class=no>no attack frame</span>");
                          if(a.f.death===undefined)  flags.push("<span class=no>no death frame</span>"); }
-    n.innerHTML="<b>"+id+"</b><br>"+SPRITE[id]+"vh"+(a?" · "+a.n+" frames":" · still")
+    n.innerHTML="<b>"+id+"</b><br>"+mobVh(id).toFixed(0)+"vh"+(a?" · "+a.n+" frames":" · still")
       +(a?"<br>"+Object.keys(a.f).join(" "):"")+(flags.length?"<br>"+flags.join("<br>"):"");
     cell.appendChild(n); grid.appendChild(cell);
   });
@@ -149,12 +157,17 @@ document.getElementById("fire").onclick=function(){anims.forEach(function(a){if(
 document.getElementById("atk").onclick=function(){mobBeat(ids(),null,null)};
 document.getElementById("hit").onclick=function(){mobBeat(null,ids(),null)};
 document.getElementById("die").onclick=function(){mobBeat(null,null,ids())};
-var sleeping=false;
-document.getElementById("slp").onclick=function(){
-  sleeping=!sleeping; this.className=sleeping?"on":"";
+function mkState(v){var o={};anims.forEach(function(a){o[a.id]=v});return o}
+var state="";
+function setState(v){
+  state = state===v ? "" : v;
+  document.querySelectorAll("[data-st]").forEach(function(b){b.className=b.dataset.st===state?"on":""});
   anims.forEach(function(a){if(a.phase==="death"){a.phase="idle";a.t=0;}});
-  mobHold=0; applyRest(sleeping?ids():[]);
-};
+  mobHold=0; applyState(state?mkState(state):{});
+}
+document.querySelectorAll("[data-st]").forEach(function(b){
+  b.onclick=function(){ setState(b.dataset.st) };
+});
 setInterval(stepAnims,60);
 hour.onchange=function(){ grid.className=hour.value==="day"?"":"t-"+hour.value; };
 sc.onchange=build;
