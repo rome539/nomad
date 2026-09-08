@@ -8103,6 +8103,10 @@ export class ZoneDO implements DurableObject {
             : eclipsePhase() === "active" ? "eclipse"
             : isDusk() ? "dusk"
             : isDawn() ? "dawn"
+            // THE HOUR AFTER THE RAIN. Last in the chain on purpose: it only
+            // ever replaces plain day. Dusk and dawn already carry a colour of
+            // their own, and a wet night is still a night.
+            : events.phaseOf(this, "rain") === "aftermath" ? "after-rain"
             : "day",
           fx,
         }),

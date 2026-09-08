@@ -974,6 +974,7 @@ export const PAGE = `<!doctype html>
      fall the way noon threw them — so it is deliberately plain, and it should
      look like something waiting to be replaced. */
   body[data-view="image"] #scene.t-night { filter: brightness(.42) saturate(.85); }
+  body[data-view="image"] #scene.t-after-rain { filter: brightness(.94) saturate(.80) contrast(.96); }
   body[data-view="image"] #scene.t-fog   { filter: brightness(.92) saturate(.45) contrast(.86); }
   body[data-view="image"] #scene.t-rain  { filter: brightness(.74) saturate(.80) contrast(1.04); }
   body[data-view="image"] #scene.t-snow  { filter: brightness(1.04) saturate(.55); }
@@ -1069,6 +1070,7 @@ export const PAGE = `<!doctype html>
   /* Fog and falling snow are the two that also push a shape AWAY from you:
      less contrast and less colour is what distance looks like through weather,
      and it is what stops a creature reading as a cut-out on a flat wash. */
+  body[data-view="image"] #mobs.t-after-rain img, body[data-view="image"] #mobs.t-after-rain .mob { filter: brightness(.94) saturate(.82) contrast(.97) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-fog img, body[data-view="image"] #mobs.t-fog .mob { filter: brightness(.78) saturate(.35) contrast(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-rain img, body[data-view="image"] #mobs.t-rain .mob { filter: brightness(.58) saturate(.70) contrast(1.04) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-snow img, body[data-view="image"] #mobs.t-snow .mob { filter: brightness(.82) saturate(.45) contrast(.92) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
@@ -6344,7 +6346,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "14";
+var ART_V = "15";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -6508,6 +6510,11 @@ var TERRAIN_SCENES = {
 };
 var SKY_PAINTED = {
   day: 1, night: 1, dawn: 1, dusk: 1, moon: 1, blood: 1, eclipse: 1,
+  // THE HOUR AFTER THE RAIN. The world already knew about it — the rain's
+  // aftermath is a real phase, the ground is churned to mud and the prose says
+  // so — and the picture went straight back to a blue midday. This is the one
+  // sky that exists for a phase rather than an hour.
+  "after-rain": 1,
   // fog, rain and snow need none: those scenes carry their own sky, because
   // weather you can see the far hills through is weather in the SCENE.
 };
@@ -6520,6 +6527,9 @@ var SKY_PAINTED = {
 // skies are painted once for the whole world.
 var SKY_BASE = {
   day: "day", dawn: "day", dusk: "day", "in": "day",
+  // The ground it borrows is the DAY ground, not the rain ground: the rain
+  // plates have rain falling in them, and it has stopped.
+  "after-rain": "day",
   // TOTALITY IS A DARK SCENE, not a daylit one under a strange sky. It sits
   // at midday, so the day ground was the obvious answer and the obvious
   // answer was wrong: the light goes out, and bright noon stone under a
@@ -6553,7 +6563,7 @@ var SKY_BASE = {
 // only these two need one drawn behind them; fog, rain and snow are whole
 // photographs that carry their own and must not have a second sky put under.
 var KEYED = { day: 1, night: 1 };
-var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, blood:1, eclipse:1, fog:1, rain:1, snow:1, "in":1 };
+var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, blood:1, eclipse:1, fog:1, rain:1, snow:1, "in":1, "after-rain":1 };
 var sceneEl = document.getElementById("scene");
 var skyEl = document.getElementById("sky");
 var viewBtn = null;   // built only for a granted key, see buildViewRow
@@ -6701,7 +6711,12 @@ function paintScene(band, sky, terrain, roomKey) {
       if (skyEl) skyEl.style.backgroundImage = "";
       sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".webp?v=" + ART_V + ")" : "";
       sceneEl.style.backgroundSize = "cover";
-      sceneEl.className = SKY_KNOWN[lastSky] ? "sky-" + lastSky : "";
+      // NO WEATHER INDOORS. The gatehouse is one baked plate lit by its own
+      // fire, and washing it with the hour put rain on a room with a roof and
+      // dusk on a room with no window. Whatever is happening outside stops at
+      // the door (rome, 2026-09-08).
+      sceneEl.className = (kind === "gatehouse") ? "" : (SKY_KNOWN[lastSky] ? "sky-" + lastSky : "");
+      if (mobsEl) mobsEl.className = "";
       sceneEl.style.backgroundPosition = "center 55%";
       return;
     }

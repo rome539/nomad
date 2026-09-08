@@ -69,8 +69,8 @@ watermark, or interface elements.
 
 ## The skies are a third recipe
 
-A sky is not a scene. There are seven — `day night dawn dusk moon blood eclipse`
-— and every layered room in the world is painted with its scene keyed above the
+A sky is not a scene. There are eight — `day night dawn dusk moon blood eclipse`
+and `after-rain` — and every layered room in the world is painted with its scene keyed above the
 horizon and **one shared sky drawn behind it**, so a sky must survive being
 cropped by any skyline in the game.
 
@@ -106,8 +106,11 @@ Scenes: `game-server/public/room-bg/<terrain>-<condition>.webp`, five conditions
 per terrain (`day` `night` `fog` `rain` `snow`) plus the gate plates
 (`gate-<name>-<condition>`).
 
-Skies: `game-server/public/sky/<hour>.webp`, seven of them, listed in
-`SKY_PAINTED` in `public.ts`. Convert at **webp q92**, the same as every other
+Skies: `game-server/public/sky/<hour>.webp`, eight of them, listed in
+`SKY_PAINTED` in `public.ts`. Seven are hours; `after-rain` is the odd one — it
+belongs to a weather PHASE, the rain's aftermath, and it exists because the
+world already knew the ground was churned to mud while the picture had gone
+back to a blue midday. Convert at **webp q92**, the same as every other
 asset — that lands a sky around 300-450KB.
 
 Both folders are gitignored and upload from the working tree at deploy — KEEP A
