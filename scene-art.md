@@ -65,6 +65,18 @@ watermark, or interface elements.
 - **STAGE LOCK** is what makes creature sprites work. Mobs are composited onto
   the near ground at a scale where a man is about a fifth of the frame — a plate
   that looks out over distant country has nowhere to stand them.
+
+  **When a plate genuinely has to break it**, say where its ground is in
+  `MOB_LINE` (public.ts). Creatures are centred on 55% of the frame because that
+  is the camera lock; the two corries are bowls seen from the edge, so they look
+  down across water and their nearest standing ground starts near 72%. At 55% a
+  big animal's feet land at 76% and just catch the near terrace, which is how it
+  went unnoticed — but a creature is *centred*, not stood, so a hill adder's feet
+  land at 58% and it floats over the tarn. The small ones give it away.
+
+  The number is the **centre**; feet land at about centre + half the creature's
+  height, and the largest thing in the game is 21% of the frame — which caps the
+  line at 72 rather than 80, because at 80 a stag's feet leave the picture.
 - **NOTHING ALIVE** because everything living is a sprite, drawn separately.
 
 ## The skies are a third recipe
@@ -151,8 +163,10 @@ that are easy to get backwards:
   cut, nothing is lit by a light the picture cannot see.
 
 A ground that has not been shot this way is simply not listed and keeps its
-ordinary night — `gully` is the one still waiting, and it looks exactly as it
-did before.
+ordinary night. **As of 2026-09-08 none is waiting**: all eleven mountain grounds
+and all five doors carry a torch-lit night, sixteen plates in all. The fallback
+still works and is still tested — it is the path a new terrain takes the day it
+lands with one photograph.
 
 **Six hours, not one.** `TORCH_HOURS` is its own table because it is a judgement
 and not a consequence, and deriving it got it wrong first time: keying on

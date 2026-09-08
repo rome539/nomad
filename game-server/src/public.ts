@@ -6524,13 +6524,12 @@ var GATE_PLATE = {
 // over it, so the eight already shipped go on working untouched.
 //   scree: "day night",
 var TERRAIN_SCENES = {
-  // Eleven mountain grounds, 256 rooms between them.
+  // Eleven mountain grounds, 256 rooms between them — and since 2026-09-08 all
+  // eleven carry a torch-lit night. The gully was the last one waiting; there is
+  // no ground left on the mountain that goes dark under a flame.
   snow:  "day night night-torch fog rain snow",
   cairn: "day night night-torch fog rain snow",
-  // THE ONE GROUND WITH NO TORCH PLATE YET. Not an oversight to paper over:
-  // the lookup falls back to plain night on its own, so a beck in the dark
-  // looks exactly as it did before and gains the light the day it is painted.
-  gully: "day night fog rain snow",
+  gully: "day night night-torch fog rain snow",
   scree: "day night night-torch fog rain snow",
   boulder: "day night night-torch fog rain snow",
   slab:  "day night night-torch fog rain snow",
@@ -6713,6 +6712,28 @@ var SKY_POOL = {
   "after-rain": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
 };
 var SKY_TURN = { x: "scaleX(-1)", y: "scaleY(-1)", xy: "scale(-1, -1)" };
+// WHERE THE GROUND IS IN THIS PARTICULAR PICTURE (rome, 2026-09-08: the mobs in
+// the Dry Corrie were standing on the lake).
+//
+// Creatures are centred on 55% of the frame, and that number is not arbitrary —
+// it is the CAMERA LOCK every plate was generated under, horizon at 55% of the
+// frame height, paired with the STAGE LOCK that reserves the bottom third for
+// ground you can stand a large animal on. Hold both and 55% is right for every
+// picture in the game, which is why it was a constant.
+//
+// The two corries hold neither, and they were always going to: a corrie IS a
+// bowl seen from its edge, so the plate looks DOWN across water and the nearest
+// standing ground begins around 72% of the frame. At 55% a big animal's feet
+// land at 76% and just catch the near terrace, which is why this survived — but
+// a creature is centred, not stood, so a hill adder's feet land at 58% and it
+// floats over the tarn. The small ones gave it away.
+//
+// So the line is per plate, and only named where the locks were broken. The
+// number is the CENTRE, and feet land at roughly centre + half the creature's
+// height — 21% for the largest thing in the game, which is what caps this at 72
+// rather than 80: at 80 a stag's feet go off the bottom of the frame.
+var MOB_LINE_DEFAULT = 55;
+var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72 };
 // The day count from the server: one number, the same for everybody, up by one
 // each cycle. Zero until a status frame carries it, which simply means the first
 // entry of every pool until the world says otherwise.
@@ -6831,7 +6852,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll) {
   // yet is standing in the plain dark however bright your hand is. The
   // creatures read this rather than lastTorch, so nothing ever blazes on a
   // hillside the picture left unlit.
-  var scene = "", sky = "", tint = "", lit = false, turn = "";
+  var scene = "", sky = "", tint = "", lit = false, turn = "", line = MOB_LINE_DEFAULT;
   if (gate && GATE_PLATE[gate] !== undefined) {
     // GROUND WEATHER IS A DIFFERENT PHOTOGRAPH. Night is not the day gone dim,
     // fog is not a grey wash, rain wets the stone and snow lies on it — none of
@@ -6868,6 +6889,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll) {
     // whenever it was borrowed. Day stone under a dusk sky is still lit for
     // noon, and the eye catches that before it catches anything else.
     lit = want === "night-torch";
+    line = MOB_LINE["gate-" + gate] || MOB_LINE_DEFAULT;
     // A TORCH PLATE TAKES NO HOUR CORRECTION, EVER. The correction exists to
     // relight a ground that was shot under the wrong sky — and a torch plate's
     // light does not come from the sky. It comes from the flame, and it is the
@@ -6900,6 +6922,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll) {
         sky = "/sky/" + tp.file + ".webp"; turn = tp.turn;
       }
       lit = twant === "night-torch";
+      line = MOB_LINE[terr] || MOB_LINE_DEFAULT;
       tint = (lit || NO_GROUND_TINT[lastSky] || tbase === lastSky) ? "" : lastSky;
     } else {
       // The old single-layer plates: sky baked in, wash on top, unchanged.
@@ -6917,7 +6940,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll) {
       // dusk on a room with no window. Whatever is happening outside stops at
       // the door (rome, 2026-09-08).
       sceneEl.className = (kind === "gatehouse") ? "" : (SKY_KNOWN[lastSky] ? "sky-" + lastSky : "");
-      if (mobsEl) mobsEl.className = "";
+      if (mobsEl) { mobsEl.className = ""; mobsEl.style.top = MOB_LINE_DEFAULT + "%"; }
       sceneEl.style.backgroundPosition = "center 55%";
       return;
     }
@@ -6974,7 +6997,13 @@ function paintScene(band, sky, terrain, roomKey, torch, roll) {
     // your hand, and t-night at brightness .26 would leave a wolf as a silhouette
     // on ground the plate has lit to orange. It follows the PLATE, so an unpainted
     // ground keeps its dark and nothing is lit by a torch the picture cannot see.
-    if (mobsEl) mobsEl.className = lit ? "t-night-torch" : lastSky ? "t-" + lastSky : "";
+    if (mobsEl) {
+      mobsEl.className = lit ? "t-night-torch" : lastSky ? "t-" + lastSky : "";
+      // ...and standing where this plate's ground actually is. Set every time,
+      // never only when it differs: a line left over from the room behind you
+      // would put the next room's animals wherever the last one's stood.
+      mobsEl.style.top = line + "%";
+    }
     sceneEl.style.backgroundPosition = "center 55%";
     scenePainted = scene;
   };

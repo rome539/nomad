@@ -103,9 +103,16 @@ const depsFor = (body, self) => {
   const tables = [], fns = [], seen = new Set(self ? [self] : []);
   const walk = (code) => {
     const bare = code.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
-    for (const m of bare.matchAll(/\b([A-Z][A-Z0-9_]{2,})\s*\[/g)) {
+    // ANY SHOUTED NAME, not only an indexed one. This matched NAME[...] alone,
+    // so a table read as a bare value slipped through — MOB_LINE_DEFAULT is a
+    // number, never indexed, and the page referred to something it had not
+    // been given. A name with no declaration in the client is prose from a
+    // comment or a string and is simply passed over.
+    for (const m of bare.matchAll(/\b([A-Z][A-Z0-9_]{2,})\b/g)) {
       if (seen.has(m[1])) continue;
-      seen.add(m[1]); tables.push(lift(m[1]));
+      seen.add(m[1]);
+      if (src.search(new RegExp("^var " + m[1] + " = ", "m")) < 0) continue;
+      tables.push(lift(m[1]));
     }
     for (const m of bare.matchAll(/\b([a-z][A-Za-z0-9_]*)\s*\(/g)) {
       if (seen.has(m[1])) continue;

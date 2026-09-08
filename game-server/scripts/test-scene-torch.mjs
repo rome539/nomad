@@ -52,9 +52,16 @@ const depsFor = (body, self) => {
   const tables = [], fns = [], seen = new Set(self ? [self] : []);
   const walk = (code) => {
     const bare = code.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
-    for (const m of bare.matchAll(/\b([A-Z][A-Z0-9_]{2,})\s*\[/g)) {
+    // ANY SHOUTED NAME, not only an indexed one. This matched NAME[...] alone,
+    // so a table read as a bare value slipped through — MOB_LINE_DEFAULT is a
+    // number, never indexed, and the page referred to something it had not
+    // been given. A name with no declaration in the client is prose from a
+    // comment or a string and is simply passed over.
+    for (const m of bare.matchAll(/\b([A-Z][A-Z0-9_]{2,})\b/g)) {
       if (seen.has(m[1])) continue;
-      seen.add(m[1]); tables.push(lift(m[1]));
+      seen.add(m[1]);
+      if (src.search(new RegExp("^var " + m[1] + " = ", "m")) < 0) continue;
+      tables.push(lift(m[1]));
     }
     for (const m of bare.matchAll(/\b([a-z][A-Za-z0-9_]*)\s*\(/g)) {
       if (seen.has(m[1])) continue;
@@ -70,7 +77,7 @@ const style = () => ({ setProperty() {} });
 const sceneEl = { style: style(), className: "", setProperty() {} };
 sceneEl.style.setProperty = () => {};
 const skyEl = { style: style() };
-const mobsEl = { className: "" };
+const mobsEl = { className: "", style: {} };
 const ctx = {};
 const code = [
   depsFor(fn("paintScene"), "paintScene"),
@@ -85,7 +92,7 @@ const code = [
   fn("paintScene"),
   // The lifted block declares its own elements from getElementById; the stubs win.
   "sceneEl = _scene; skyEl = _sky; mobsEl = _mobs;",
-  "ctx.paint = paintScene; ctx.pools = SKY_POOL;",
+  "ctx.paint = paintScene; ctx.pools = SKY_POOL; ctx.scenes = TERRAIN_SCENES;",
 ].join("\n");
 new Function("ctx", "_scene", "_sky", "_mobs", "document", code)(
   ctx, sceneEl, skyEl, mobsEl, { getElementById: () => null });
@@ -117,9 +124,21 @@ t("...same sky either way", r.sky === "/sky/night.webp", r.sky);
 t("...and the creatures go dark with it", r.mobs === "t-night", r.mobs);
 
 console.log("a ground with no torch plate cut yet");
-r = paint("night", "gully", 1);
-t("keeps its plain night", r.scene === "/room-bg/gully-night.webp", r.scene);
-t("...and nothing on it is lit", r.mobs === "t-night", r.mobs);
+// EVERY GROUND ON THE MOUNTAIN NOW HAS ONE. The gully was the last, so the
+// fallback has no real example left to point at — and it is exactly the path
+// that will run the day a new terrain lands with one photograph. So the table is
+// held back for the length of this check and put straight back: the code under
+// test is the real code, only the world is missing a plate.
+{
+  const held = ctx.scenes.gully;
+  ctx.scenes.gully = "day night fog rain snow";
+  r = paint("night", "gully", 1);
+  t("keeps its plain night", r.scene === "/room-bg/gully-night.webp", r.scene);
+  t("...and nothing on it is lit", r.mobs === "t-night", r.mobs);
+  ctx.scenes.gully = held;
+  r = paint("night", "gully", 1);
+  t("and with the plate declared it lights", r.scene === "/room-bg/gully-night-torch.webp", r.scene);
+}
 
 console.log("a torch under the other night skies");
 r = paint("moon", "cairn", 1);
@@ -224,6 +243,21 @@ ctx.paint(null, null, null, null);             // what applyView does
 t("a repaint with no news keeps the flame", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-night-torch.webp", strip(sceneEl.style.backgroundImage));
 ctx.paint(null, null, null, null, 0);
 t("and 0 puts it out", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-night.webp", strip(sceneEl.style.backgroundImage));
+
+console.log("where the creatures stand");
+{
+  const at = (terrain) => { ctx.paint("mountain", "night", terrain, "L" + terrain, 0, 0); return mobsEl.style.top; };
+  t("open ground keeps the camera lock", at("scree") === "55%", at("scree"));
+  // A corrie is a bowl seen from its edge: the plate looks down across water and
+  // the nearest standing ground is far lower in the frame than the lock assumes.
+  t("the corrie rim stands lower", at("corrie-rim") === "72%", at("corrie-rim"));
+  t("...and so does the corrie floor", at("corrie-floor") === "72%", at("corrie-floor"));
+  t("walking back out restores the line", at("cairn") === "55%", at("cairn"));
+  // The line must be re-stated on every paint, not only when it changes.
+  ctx.paint("mountain", "night", "corrie-rim", "Lx", 0, 0);
+  ctx.paint("mountain", "night", "gatehouse", "Lg", 0, 0);
+  t("the gatehouse does not inherit the corrie's line", mobsEl.style.top === "55%", mobsEl.style.top);
+}
 
 console.log("no weather indoors");
 r = paint("in", "gatehouse", 1);
