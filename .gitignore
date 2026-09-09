@@ -26,6 +26,13 @@ mob-weirdness.md
 # from the working tree at deploy time, so KEEP A COPY — a fresh clone can
 # deploy the game correctly but will deploy it without pictures.
 game-server/public/room-bg/
+# THE STAGED PREVIEW BUILDS. Both are generated from src/public.ts by
+# build-mob-preview.mjs and neither is a source of anything: preview/ is the
+# working page and its three folders are symlinks into public/, and nsite/ is a
+# trimmed COPY cut for publishing, which means committing it would put a second
+# copy of 35MB of art in the repo. Rebuild either in one command.
+game-server/preview/
+game-server/nsite/
 # ...and the creature sprites, for the same reasons and at the same cost:
 # they upload from the working tree at deploy, so KEEP A COPY.
 game-server/public/mob/

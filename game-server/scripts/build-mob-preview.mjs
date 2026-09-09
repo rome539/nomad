@@ -16,14 +16,45 @@
 // The page has buttons for attack / take a hit / die / sleep because the preview
 // has no combat to drive them - in the game those come off the wire.
 import fs from "node:fs"; import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const GAME = path.resolve(HERE, "..");
 const SRC = path.join(GAME, "src/public.ts");
-const DIR = path.resolve(process.argv[2] ?? path.join(GAME, "preview"));
+const argv = process.argv.slice(2);
+const flag = (f) => argv.includes(f);
+// A TRIMMED BUILD, for publishing rather than for working (2026-09-09).
+//
+//   --mountain   offer only the mountain's grounds, doors, rooms and creatures
+//   --cut-only   offer only the hours whose plate is CUT (day, night, torch)
+//   --copy       copy the assets in rather than symlinking to public/
+//
+// The three together are the nsite recipe. --copy exists because the working
+// preview reaches the art through symlinks into public/, which is right for a
+// page you are editing against and useless for a tree you are going to hash and
+// upload: a publisher needs real files.
+//
+// NOTHING HERE TOUCHES THE DRIVER. The lifted tables and paintScene go across
+// whole, exactly as in the working build, and the trim only decides what the
+// pickers OFFER. That keeps the property the page is built on — it cannot show
+// a plate the game could not — and means the trimmed page behaves identically
+// on everything it does offer, rather than being a second, simpler page.
+//
+// --cut-only IS NOT A SIZE CUT FIRST. fog, rain and snow are whole photographs
+// carrying their own sky; only day, night and night-torch are cut and have a
+// shared sky drawn behind them. So the three conditions that weigh the most are
+// also the three that show the two-layer trick least.
+const ONLY_MOUNTAIN = flag("--mountain");
+const CUT_ONLY = flag("--cut-only");
+const COPY = flag("--copy");
+// The mountain's four doors. The relay house is the east road's and goes.
+const MOUNTAIN_GATES = new Set(["the-shieling", "the-stell", "the-slabs", "the-shelter-crag"]);
+const WHOLE_PHOTOGRAPH = new Set(["fog", "rain", "snow"]);
+const DROP_HOUR_LIST = CUT_ONLY ? [...WHOLE_PHOTOGRAPH] : [];
+const DIR = path.resolve(argv.find((a) => !a.startsWith("--")) ?? path.join(GAME, "preview"));
 fs.mkdirSync(DIR, { recursive: true });
 // the page asks for mob/<id>.webp; point that at the real art rather than copying it
-for (const dir of ["mob", "room-bg", "sky"]) {
+if (!COPY) for (const dir of ["mob", "room-bg", "sky"]) {
   const link = path.join(DIR, dir);
   try { if (fs.lstatSync(link)) fs.unlinkSync(link); } catch {}
   fs.symlinkSync(path.join(GAME, "public", dir), link, "dir");
@@ -50,11 +81,75 @@ const block = first => {
   return src.slice(i, src.indexOf("\nfunction ", i)).trimEnd();
 };
 
+// ---- WHERE A CREATURE CAN ACTUALLY BE FOUND STANDING ----------------------
+//
+// Hand-listed three times and wrong three times: first it covered only "room:"
+// values so every gate walked past it, then it called the Kept Room a sanctuary,
+// then it still stood something in the Summit Gate. The reason is always the
+// same — a list is a snapshot of what somebody thought of, and the world is a
+// graph. So this asks the world.
+//
+// THE MODEL IS IDLE PRESENCE: where can something be found standing when nothing
+// is happening. Chases and routs push creatures through doors they would never
+// choose, and they are transient; this is about what the room normally holds.
+//
+//   creatures spread from every NON-BOSS spawn, along exits with no key on them
+//   (ai.ts: creatures cannot open locked doors), and never into a sanctuary
+//   (world.safeRooms is filtered out for every creature, boss included) and
+//   never into a gate (entry rooms are filtered out for everything but a boss).
+//   a BOSS does not idly wander at all - zone.ts gates the wander call on
+//   (!is_boss || PATROLS) and no boss has a route - so a boss holds its spawn
+//   room and reaches nothing else.
+//
+// The Summit Gate falls out of this rather than being noticed: its only two
+// neighbours are the Summit, whose only occupant is a boss that never leaves,
+// and the Last Shelter, which is a sanctuary and therefore empty. Nothing can
+// walk in from either.
+//
+// D1 IS OPTIONAL. Without it the page simply does not filter, and says so, which
+// is the honest failure: a build on a machine with no local world should not
+// quietly invent an answer.
+const REACH = (() => {
+  const q = (sql) => JSON.parse(execFileSync("./node_modules/.bin/wrangler",
+    ["d1", "execute", "nomad", "--local", "--json", "--command", sql],
+    { cwd: GAME, stdio: ["ignore", "pipe", "ignore"] }))[0].results;
+  try {
+    const rooms = q("SELECT id, is_safe, is_entry FROM rooms;");
+    const exits = q("SELECT room_id, to_room, key_item FROM exits;");
+    const spawns = q("SELECT s.room_id, t.is_boss FROM mob_spawns s JOIN mob_templates t ON t.id = s.template_id;");
+    const safe = new Set(rooms.filter((r) => r.is_safe).map((r) => r.id));
+    const entry = new Set(rooms.filter((r) => r.is_entry).map((r) => r.id));
+    const adj = new Map();
+    for (const e of exits) { if (e.key_item) continue; if (!adj.has(e.room_id)) adj.set(e.room_id, []); adj.get(e.room_id).push(e.to_room); }
+    const open = (id) => !safe.has(id) && !entry.has(id);
+    const seen = new Set(spawns.filter((s) => !s.is_boss).map((s) => s.room_id).filter(open));
+    const queue = [...seen];
+    for (let h = 0; h < queue.length; h++) for (const to of adj.get(queue[h]) ?? [])
+      if (!seen.has(to) && open(to)) { seen.add(to); queue.push(to); }
+    for (const s of spawns) if (s.is_boss) seen.add(s.room_id);
+    return { why: (id) => safe.has(id) ? "a sanctuary \u2014 nothing that walks can follow you in"
+      : entry.has(id) ? "nothing idles in a doorway"
+      : seen.has(id) ? "" : "nothing can reach this room" };
+  } catch { return null; }
+})();
+
 const SPRITE = {}; for (const m of grab("MOB_SPRITE").matchAll(/"([a-z-]+)":\s*(\d+)/g)) SPRITE[m[1]] = +m[2];
 const ANIM = {};
 for (const m of grab("MOB_ANIM").matchAll(/"([a-z-]+)":\s*\{\s*n:\s*(\d+),\s*aspect:\s*([\d.]+),\s*f:\s*(\{[^}]*\})\s*\}/g))
   ANIM[m[1]] = { n:+m[2], aspect:+m[3], f: JSON.parse(m[4]) };
 const ART_V = (src.match(/var ART_V = "(\d+)"/)||[,"1"])[1];
+// THE ROSTER IS TRIMMED HERE, before it is serialised, so the page never learns
+// about a creature whose strip is not in the tree beside it. Read off the world
+// rather than typed: whatever stands in a mountain room is a mountain creature,
+// and a roster edited in a migration turns up here without this file changing.
+const MOUNTAIN_MOBS = new Set(String.raw`a-fold-dog bone-breaker brooding-vulture carrion-vulture
+cave-lion eagle-owl ermine eyrie-holder feral-goat gill-adder glutton hill-eagle hill-fox hill-wolf
+lynx mountain-chough mountain-hare ptarmigan red-hind scarp-raven snow-fox stone-adder the-drake
+the-herd the-milker wildcat`.split(/\s+/).filter(Boolean));
+if (ONLY_MOUNTAIN) {
+  for (const id of Object.keys(SPRITE)) if (!MOUNTAIN_MOBS.has(id)) delete SPRITE[id];
+  for (const id of Object.keys(ANIM))   if (!MOUNTAIN_MOBS.has(id)) delete ANIM[id];
+}
 const SIZE = block("MAN_VH") + "\n" + fn("mobVh");   // the size curve, lifted like the driver
 
 const CONSTS = block("CALM_POSES") + "\n" + block("ATTACK_S");
@@ -171,6 +266,13 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  select,button{background:#241e15;color:#ede3cc;border:1px solid #3a3020;padding:5px 9px;font:inherit;cursor:pointer}
  button:hover,select:hover{border-color:#d8a94e;color:#d8a94e}
  button.on{border-color:#d8a94e;color:#d8a94e;background:#2e2517}
+ /* THE HOUR IS THE CONTROL YOU TOUCH MOST, so it is not behind a menu:
+    twelve values, all of them visible, one click each. */
+ .seg{display:flex;gap:0;border:1px solid #3a3020}
+ .seg button{border:0;border-right:1px solid #3a3020;padding:5px 8px;font-size:11px}
+ .seg button:last-child{border-right:0}
+ .seg button.on{background:#3a2f1c;color:#f0d089}
+ kbd{background:#241e15;border:1px solid #3a3020;border-radius:3px;padding:0 4px;font:inherit;font-size:10px;color:#9a8b66}
  #grid{display:flex;flex-wrap:wrap;gap:6px;padding:18px;align-items:flex-end}
  .cell{border:1px solid #2c2418;background:#100d09;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:150px}
  .stage{height:300px;display:flex;align-items:center;justify-content:center}
@@ -213,9 +315,9 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
 <div id="bar">
  <span style="color:#d8a94e">NOMAD</span>
  <label>ground <select id="gnd"></select></label>
- <label>hour <select id="hour"></select></label>
+ <span id="hours" class="seg"></span><select id="hour" hidden></select>
  <button id="torch">torch</button>
- <button id="roll">next day</button>
+ <button id="roll">next sky</button>
  <label>sky <select id="pick"></select></label>
  <button id="fit">whole plate</button>
  <label>standing <select id="who"></select></label>
@@ -237,6 +339,22 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
 <div id="grid"></div>
 <script>
 var MOB_SPRITE=${JSON.stringify(SPRITE)}, MOB_ANIM=${JSON.stringify(ANIM)}, ART_V="${ART_V}";
+// THE ANSWER, WORKED OUT ABOVE, for exactly the grounds this build offers. null
+// means the world could not be read and the page will not pretend to know.
+var BARREN=${(() => {
+  if (!REACH) return "null";
+  const t = {};
+  new Function("t", SCENE_TABLES + "\nt.gate=GATE_PLATE; t.room=ROOM_PLATE;")(t);
+  const out = { gatehouse: "you are behind the door \u2014 nothing is in the world with you" };
+  for (const id of [...Object.keys(t.room), ...Object.keys(t.gate)]) {
+    const why = REACH.why(id);
+    if (why) out[id] = why;
+  }
+  return JSON.stringify(out);
+})()};
+// What this build OFFERS. null means everything, which is the working preview.
+var ONLY_GATE=${ONLY_MOUNTAIN ? JSON.stringify([...MOUNTAIN_GATES]) : "null"};
+var DROP_HOUR=${CUT_ONLY ? JSON.stringify([...WHOLE_PHOTOGRAPH]) : "null"};
 /* ---- the scene, lifted verbatim from public.ts ---- */
 ${SCENE_TABLES}
 var sceneEl=document.getElementById("scene"), skyEl=document.getElementById("sky"),
@@ -265,13 +383,27 @@ var gnd=document.getElementById("gnd"), who=document.getElementById("who"),
 // THE HOURS ARE THE SKIES THE CLIENT KNOWS, read off its own table rather than
 // typed here — the list was hand-written before and was two short, missing the
 // hour after the rain entirely for as long as that sky has existed.
-Object.keys(SKY_KNOWN).forEach(function(h){
+var HOURS=Object.keys(SKY_KNOWN).filter(function(h){ return !DROP_HOUR||DROP_HOUR.indexOf(h)<0; });
+HOURS.forEach(function(h){
   var o=document.createElement("option");o.textContent=h;o.selected=(h==="dusk");hour.appendChild(o);});
+// AND THE SAME LIST AGAIN AS BUTTONS. The select is kept and hidden rather than
+// removed, because a dozen places read hour.value and every one of them goes on
+// working; this is a second face on the same control, not a replacement for it.
+var hourBar=document.getElementById("hours");
+HOURS.forEach(function(h){
+  var b=document.createElement("button"); b.textContent=h; b.dataset.h=h;
+  b.onclick=function(){ hour.value=h; repaint(); };
+  hourBar.appendChild(b);});
+function markHour(){
+  var kids=hourBar.children;
+  for(var i=0;i<kids.length;i++) kids[i].className=(kids[i].dataset.h===hour.value)?"on":"";
+}
 // AND THE GROUNDS ARE THE ONES WITH PLATES, likewise read off the tables: a
 // ground that gets painted tomorrow appears here the day it is declared.
 Object.keys(TERRAIN_PLATE).sort().forEach(function(t){
   var o=document.createElement("option");o.value=t;o.textContent=t;o.selected=(t==="scree");gnd.appendChild(o);});
 Object.keys(GATE_PLATE).sort().forEach(function(g){
+  if(ONLY_GATE&&ONLY_GATE.indexOf(g)<0) return;
   var o=document.createElement("option");o.value="gate:"+g;o.textContent="gate \u00b7 "+g;gnd.appendChild(o);});
 // THE THIRD TABLE. Rooms that are one of one are picked the same way as the
 // other two — this list was built from terrains and gates alone, so a room plate
@@ -326,11 +458,20 @@ function build(){
 // fraction of the WINDOW height there and of the panel height here, which is
 // the same number scaled by how much of the window the panel takes.
 var STAGE_VH = 62;
+// WHY NOTHING IS STANDING HERE, or "" if something can. One lookup for all three
+// kinds of ground, and the answer was computed from the world rather than typed.
+function barren(){
+  if(!BARREN) return "";
+  var v=gnd.value;
+  if(v==="gatehouse") return BARREN.gatehouse||"";
+  var c=v.indexOf(":");
+  return (c<0?"":BARREN[v.slice(c+1)])||"";
+}
 function dress(){
   var id=who.value, a=MOB_ANIM[id];
   mobsEl.innerHTML=""; 
   if(stageAnim){var k=anims.indexOf(stageAnim);if(k>=0)anims.splice(k,1);stageAnim=null;}
-  if(!a) return;
+  if(!a||barren()!=="") return;
   var el=document.createElement("div"); el.className="mob";
   var h=mobVh(id)*STAGE_VH/100;
   el.style.height=h+"vh"; el.style.width=(h*a.aspect)+"vh"; el.style.flex="0 0 auto";
@@ -378,19 +519,24 @@ function shelfLine(){
   pick.value=String(pool&&pool.length?mix32(plateHash(hour.value+":"+skyRoll))%pool.length:0);
   pick.disabled=!many;
   rollBtn.disabled=!many;
-  rollBtn.textContent=many?"next day \u00b7 "+(mix32(plateHash(hour.value+":"+skyRoll))%pool.length+1)+"/"+pool.length:"next day";
+  rollBtn.textContent=many?"next sky \u00b7 "+(mix32(plateHash(hour.value+":"+skyRoll))%pool.length+1)+"/"+pool.length:"next sky";
   // The turn is invisible in a URL and it is half of what a pool entry says.
   var t=skyEl.style.transform;
   var turn=t.indexOf("-1, -1")>0?" upside down":t?" mirrored":"";
-  rollBtn.title=many?"":"this hour owns one sky";
+  rollBtn.title=many?"walks the world-day forward to the next day this hour shows a different sky":"this hour owns one sky";
   shelf.innerHTML="ground <b>"+sc+"</b>  sky <b>"+sk+turn+"</b>"
     +"  day <b>"+skyRoll+"</b>"+(pool&&pool.length>1?" of "+pool.length+" skies":" \u00b7 one sky")
     +"  scene tint <b>"+(sceneEl.className||"none")+"</b>  creature tint <b>"+(mobsEl.className||"none")+"</b>"
-    +(missing?"  <span class=miss>no torch plate for this ground yet</span>":"");
+    +(missing?"  <span class=miss>no torch plate for this ground yet</span>":"")
+    +(barren()?"  <span class=miss>"+barren()+"</span>":"");
+  markHour();                        // the strip is a view of hour.value, however it changed
   grid.className=mobsEl.className;   // the roster wears whatever the stage's animals wear
 }
 function repaint(){
   var v=gnd.value, room=v.slice(0,5)==="room:"?v.slice(5):"";
+  // Walking ONTO a sanctuary must clear the animal and walking off must bring it
+  // back, so this is re-asked on every paint rather than only when you pick one.
+  if((barren()!=="")!==(mobsEl.children.length===0)) dress();
   // A room plate is passed as the place and the terrain is left as it was, which
   // is exactly how the wire carries it: place BESIDE terrain, never instead.
   paintScene("mountain", hour.value, room?"scree":v, v, torch?1:0, undefined, room);
@@ -399,7 +545,29 @@ function repaint(){
 // STEPPING THE WORLD-DAY. In the game this comes off the clock and moves once
 // a cycle; here it is a button, because an hour whose pool has two skies in it
 // is the one thing you cannot see by waiting.
-rollBtn.onclick=function(){ skyRoll++; repaint(); };
+//
+// IT STEPS TO THE NEXT SKY, NOT THE NEXT DAY, and the difference is the whole
+// reason it was worth touching. The day is HASHED into the pool rather than
+// indexing it, so consecutive days land on the same entry about a quarter of the
+// time (measured across 20,000 days: 24.6-25.4% for all five pools, which is
+// exactly chance for a pool of four, and is correct — a sky genuinely does
+// repeat two days running out on the hill). But a button that does nothing on
+// one press in four does not read as the world being honest, it reads as a
+// broken button, and runs of three and four identical days exist in the first
+// thirty for every hour.
+//
+// So it walks forward to the next day that shows a DIFFERENT sky, which keeps
+// the one property that matters and the picker below already has: every day it
+// lands on is a real world-day, so it can never show a sky the game could not.
+// The shelf still prints the day count, so a jump of three is visible as one.
+rollBtn.onclick=function(){
+  var pool=SKY_POOL[hour.value];
+  if(!pool||pool.length<2){ skyRoll++; repaint(); return; }
+  var now=mix32(plateHash(hour.value+":"+skyRoll))%pool.length;
+  for(var d=skyRoll+1;d<skyRoll+9999;d++)
+    if(mix32(plateHash(hour.value+":"+d))%pool.length!==now){ skyRoll=d; break; }
+  repaint();
+};
 // PINNING MEANS FINDING A DAY THAT SHOWS IT. The picker used to set the day
 // count to the entry's index, which worked only while the day indexed the pool
 // directly. It is hashed now, so this walks forward until it finds a real day
@@ -414,7 +582,32 @@ pick.onchange=function(){
 fitBtn=document.getElementById("fit");
 fitBtn.onclick=function(){ whole=!whole; fitBtn.className=whole?"on":""; shelfLine(); };
 gnd.onchange=repaint; hour.onchange=repaint;
-who.onchange=function(){ dress(); repaint(); };
+// NOTHING HERE SHOULD NEED A MENU AND A CLICK. Stepping ground and hour from the
+// keyboard is the difference between comparing two plates and giving up on it:
+// the whole value of this page is flicking back and forth, and a dropdown puts
+// three actions in front of every comparison.
+function step(sel,d){
+  var n=sel.options.length; if(!n) return;
+  sel.selectedIndex=(sel.selectedIndex+d+n)%n; repaint();
+}
+document.addEventListener("keydown",function(e){
+  // Never steal a key from something being typed into, and never from a
+  // shortcut the browser owns.
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  var t=e.target, tag=t&&t.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||(t&&t.isContentEditable)) return;
+  var k=e.key;
+  if(k==="ArrowRight"){ step(gnd,1); }
+  else if(k==="ArrowLeft"){ step(gnd,-1); }
+  else if(k==="ArrowDown"){ step(hour,1); }
+  else if(k==="ArrowUp"){ step(hour,-1); }
+  else if(k==="t"||k==="T"){ torchBtn.onclick(); }
+  else if(k==="n"||k==="N"||k===" "){ if(!rollBtn.disabled) rollBtn.onclick(); }
+  else if(k==="f"||k==="F"){ fitBtn.onclick(); }
+  else return;
+  e.preventDefault();
+});
+who.onchange=function(){ dress(); repaint(); };   // a gate answers differently for a boss
 torchBtn.onclick=function(){ torch=!torch; torchBtn.className=torch?"on":""; repaint(); };
 
 var ids=function(){return anims.map(function(a){return a.id})};
@@ -436,7 +629,13 @@ document.querySelectorAll("[data-st]").forEach(function(b){
   b.onclick=function(){ setState(b.dataset.st) };
 });
 setInterval(stepAnims,60);
-sc.onchange=build;
+// THE SCALE REBUILDS THE ROSTER, AND THE ROSTER OWNS THE ANIMATION LIST.
+// build() starts with anims=[], which throws away the stage animal's entry while
+// leaving the animal itself on screen — so after touching the scale the creature
+// looked perfectly normal and every action button silently did nothing to it,
+// because ids(), mkState() and setState() all walk anims. It has to be dressed
+// again, in that order, or the stage is a picture rather than an animal.
+sc.onchange=function(){ build(); dress(); };
 build();
 dress();
 repaint();
@@ -453,27 +652,57 @@ repaint();
 const page = fs.readFileSync(OUT, "utf8");
 const script = page.slice(page.indexOf("<script>") + 8, page.lastIndexOf("</script>"));
 const mk = (id) => {
-  const el = { id, className: "", innerHTML: "", textContent: "", value: "", dataset: {}, children: [],
+  const el = { id, className: "", textContent: "", value: "", dataset: {}, children: [],
     disabled: false, title: "",
     style: { setProperty() {} },
     appendChild(c) { el.children.push(c); if (c.selected) el.value = c.value || c.textContent; },
     replaceChildren() { el.children.length = 0; },
     querySelectorAll: () => [] };
+  // innerHTML="" CLEARS CHILDREN, as it does in a browser. It did not here, and a
+  // stub that keeps children a real DOM would have dropped reports rooms as
+  // occupied when they are empty — which had this check calling a fixed bug
+  // broken and, worse, would let a real one through the other way.
+  let html = "";
+  Object.defineProperty(el, "innerHTML", { get: () => html, set(v) { html = v; if (v === "") el.children.length = 0; } });
+  // A SELECT IS A LIST WITH A FINGER ON IT. The keyboard steps grounds and hours
+  // by moving selectedIndex, so a stub whose selects have neither options nor an
+  // index can only ever prove that a listener was REGISTERED — which is the kind
+  // of check that passes while the feature does nothing.
+  let si = 0;
+  Object.defineProperty(el, "options", { get: () => el.children });
+  Object.defineProperty(el, "selectedIndex", {
+    get: () => si,
+    set(i) { si = i; const c = el.children[i]; if (c) el.value = c.value || c.textContent; },
+  });
   return el;
 };
 const nodes = {};
+const heard = {};
 const doc = {
   getElementById: (id) => (nodes[id] || (nodes[id] = mk(id))),
   createElement: () => mk(""),
   querySelectorAll: () => [],
+  // The page listens for keys now. A stub that cannot take a listener throws on
+  // load, which is how this was found rather than shipped.
+  addEventListener: (ev, fn) => { (heard[ev] = heard[ev] || []).push(fn); },
 };
 function FakeImage() { this.complete = true;
   Object.defineProperty(this, "src", { set() { this.onload && this.onload(); } }); }
 let ran = true, why = "";
+const probe = {};
 try {
-  new Function("document", "Image", "setInterval", "requestAnimationFrame", script)(
-    doc, FakeImage, () => 0, () => 0);
+  // The page hands back the three things a behaviour check needs. Appended here
+  // rather than written into the page, so the shipped file carries no test hook.
+  new Function("document", "Image", "setInterval", "requestAnimationFrame", "probe",
+    script + "\nprobe.driven=function(){return anims.indexOf(stageAnim)>=0};"
+           + "\nprobe.scale=function(v){ sc.value=v; sc.onchange(); };")(
+    doc, FakeImage, () => 0, () => 0, probe);
 } catch (e) { ran = false; why = e.message; }
+// CHANGING THE SCALE MUST NOT ORPHAN THE STAGE ANIMAL. It did: build() resets
+// anims and the creature stayed on screen answering none of the action buttons.
+const drivenBefore = ran && probe.driven();
+if (ran) probe.scale("1.4");
+const drivenAfter = ran && probe.driven();
 
 const seen = (k) => (nodes[k] ? (nodes[k].style.backgroundImage || "") : "");
 // WHAT THE PAGE REFERS TO AND NEVER DECLARES. Every lifted table is SHOUTED, so
@@ -489,8 +718,29 @@ const declared = new Set([
 ]);
 const undeclared = [...new Set([...bare.matchAll(/\b([A-Z][A-Z0-9_]{2,})\s*[[.]/g)].map((m) => m[1]))]
   .filter((n) => !declared.has(n) && !KNOWN.has(n));
+// PRESS A KEY AT IT. Registering a handler proves nothing; this drives the real
+// one and asks whether the hour actually moved.
+const press = (key) => {
+  let stopped = false;
+  for (const fn of heard.keydown ?? [])
+    fn({ key, target: { tagName: "BODY" }, preventDefault() { stopped = true; } });
+  return stopped;
+};
+const hourBefore = nodes.hour?.value;
+const keyStopped = ran ? press("ArrowDown") : false;
+const hourAfter = nodes.hour?.value;
+
 const checks = [
   ["the script runs at all", ran, why],
+  // THE HOUR IS A STRIP OF BUTTONS, not a menu, and every hour the client knows
+  // has one — built from the same table the select is, so neither can drift.
+  ["the hour strip has every hour the select has", (nodes.hours?.children.length ?? 0) > 0
+    && (nodes.hours?.children.length ?? 0) === (nodes.hour?.children.length ?? -1),
+    (nodes.hours?.children.length ?? 0) + " buttons, " + (nodes.hour?.children.length ?? 0) + " options"],
+  ["the action buttons reach the stage animal", drivenBefore, "on load"],
+  ["...and still reach it after the scale changes", drivenAfter, "after sc.onchange"],
+  ["a key press moves the hour", keyStopped && hourAfter !== undefined && hourAfter !== hourBefore,
+    hourBefore + " -> " + hourAfter],
   ["the stage got a ground", /room-bg\/\w[\w-]*\.webp/.test(seen("scene")), seen("scene")],
   ["...and a sky behind it", /sky\/\w[\w-]*\.webp/.test(seen("sky")), seen("sky")],
   ["a creature was dressed", (nodes.mobs?.children.length ?? 0) > 0],
@@ -525,7 +775,51 @@ const checks = [
 let bad = 0;
 for (const [name, ok, note] of checks) { if (!ok) { bad++; console.log("  FAIL " + name + (note ? "   " + note : "")); } }
 
-console.log("wrote preview/mobs.html — " + Object.keys(ANIM).length + " animated, "
+console.log("wrote " + path.relative(GAME, OUT) + " — " + Object.keys(ANIM).length + " animated, "
   + withAtk + " strike, " + withDeath + " die, " + Object.keys(tints).length + " tints"
   + (bad ? "  \u2014 " + bad + " CHECKS FAILED" : "  \u2014 verified in a DOM stub"));
 if (bad) process.exit(1);
+
+// ---- THE ASSETS, FOR A TREE THAT HAS TO STAND ON ITS OWN --------------------
+//
+// Worked out from the tables rather than by copying folders, because the whole
+// risk of a trimmed build is a page that offers a plate the tree does not carry:
+// on a gateway that is a broken picture with nothing to explain it. So the list
+// is derived from exactly what the pickers were just given, and anything the
+// tables name and the disk does not have is reported as a hole, loudly, rather
+// than discovered later by a stranger looking at the site.
+if (COPY) {
+  const tables = {};
+  new Function("t", SCENE_TABLES + "\nt.terrain=TERRAIN_SCENES; t.gate=GATE_PLATE; t.room=ROOM_PLATE; t.sky=SKY_PAINTED;")(tables);
+  const drop = new Set(DROP_HOUR_LIST);
+  const conds = (declared) => declared.split(/\s+/).filter((c) => c && !drop.has(c));
+  const want = new Set(["mobs.html"]);
+  for (const id of Object.keys(ANIM)) want.add("mob/" + id + ".webp");
+  for (const h of Object.keys(tables.sky)) want.add("sky/" + h + ".webp");
+  for (const [t, decl] of Object.entries(tables.terrain)) for (const c of conds(decl)) want.add("room-bg/" + t + "-" + c + ".webp");
+  for (const [g, decl] of Object.entries(tables.gate)) {
+    if (ONLY_MOUNTAIN && !MOUNTAIN_GATES.has(g)) continue;
+    for (const c of conds(decl)) want.add("room-bg/gate-" + g + "-" + c + ".webp");
+  }
+  for (const [r, decl] of Object.entries(tables.room)) for (const c of conds(decl)) want.add("room-bg/" + r + "-" + c + ".webp");
+
+  let n = 0, bytes = 0; const holes = [];
+  for (const rel of [...want].sort()) {
+    if (rel === "mobs.html") continue;
+    const from = path.join(GAME, "public", rel), to = path.join(DIR, rel);
+    if (!fs.existsSync(from)) { holes.push(rel); continue; }
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    fs.copyFileSync(from, to);
+    n++; bytes += fs.statSync(to).size;
+  }
+  // The page is served at the root by a gateway, so it has to BE the root.
+  fs.copyFileSync(OUT, path.join(DIR, "index.html"));
+  bytes += fs.statSync(OUT).size;
+  console.log("  staged " + (n + 2) + " files, " + (bytes / 1048576).toFixed(1) + "MB, into " + path.relative(GAME, DIR));
+  console.log("  (mobs.html copied to index.html — a gateway serves the root)");
+  if (holes.length) {
+    console.log("  " + holes.length + " PLATES NAMED BUT NOT ON DISK — the page would offer these and show nothing:");
+    for (const h of holes) console.log("    " + h);
+    process.exit(1);
+  }
+}

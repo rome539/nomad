@@ -227,14 +227,26 @@ console.log("one sky, turned, is more than one sky");
     }
     t(state + " is never swapped for another sky", new Set(files).size === 1, files.join(" "));
   }
-  // ...and the three that are also never turned, against the one that is.
+  // ...and the three that MAY be turned, but only one way (2026-09-09). They were
+  // never turned at all until now. Each has a subject — a full moon, a blood
+  // moon, a corona — so the mirror is worth more here than in the cloud-only
+  // pools, and a vertical turn is worth less than nothing: it drops that subject
+  // to the bottom of the frame where the first ridgeline eats it.
+  //
+  // FOUR DAYS WAS NOT ENOUGH TO ASK THIS. The old check ran d=0..3 and wanted one
+  // distinct transform; when the mirror was added, eclipse happened to land on
+  // /x all four days and PASSED while moon and blood failed — the same rule,
+  // graded differently by luck. Sixty days, and both halves asserted: the two
+  // turns that are allowed must each actually appear, and the two that are not
+  // must never appear at all.
   for (const locked of ["moon", "blood", "eclipse"]) {
-    const got = [];
-    for (let d = 0; d < 4; d++) {
+    const got = new Set();
+    for (let d = 0; d < 60; d++) {
       ctx.paint("mountain", locked, "scree", "k" + locked + d, 0, d);
-      got.push(skyEl.style.transform || "none");
+      got.add(skyEl.style.transform || "none");
     }
-    t(locked + " is never turned either", new Set(got).size === 1, got.join(" "));
+    const only = [...got].every((v) => v === "none" || v === "scaleX(-1)");
+    t(locked + " is mirrored and never flipped", only && got.size === 2, [...got].join(" "));
   }
   const ar = new Set(); const arFiles = new Set();
   for (let d = 0; d < 60; d++) {

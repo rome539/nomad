@@ -6471,6 +6471,14 @@ export const ART_ROOMS = new Set<string>([
   "the-last-shelter",   // a hole under a fallen block, with a slot of sky east
   "the-summit-gate",    // a gap in a rock wall with light coming through it
   "the-summit",         // the bowl, the ring of run stone, and the whole sky
+  // THE LION'S GROUND AND THE DOOR THAT ASKS. Five more rooms the terrain rules
+  // were answering with a generic hillside. The first three are the bone fan the
+  // cave lion feeds on; the last two are the riddle door and what is behind it.
+  "the-dry-bones",      // chalk bone going to powder, and the chewed ends
+  "the-rib-cage",       // a horse-sized ribcage you can lie under, picked clean
+  "the-ochre-shelf",    // brick-red dust holding clean-edged claw prints
+  "the-back-wall",      // the head wall, and the dry iron plate at the foot of it
+  "the-kept-room",      // cut, finished, sealed, and dark — the only interior up there
 ]);
 
 export const INDOOR_ROOMS = new Set<string>([

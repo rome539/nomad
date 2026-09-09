@@ -983,6 +983,10 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #scene.t-fog   { filter: brightness(.92) saturate(.45) contrast(.86); }
   body[data-view="image"] #scene.t-rain  { filter: brightness(.74) saturate(.80) contrast(1.04); }
   body[data-view="image"] #scene.t-snow  { filter: brightness(1.04) saturate(.55); }
+  /* UNREACHABLE AS OF 2026-09-09 and kept on purpose: the blood moon is in
+     NO_GROUND_TINT now, so nothing ever sets t-blood on the scene. Left standing
+     because this is the rule you would switch back on, and a deleted one is a
+     rule nobody knows was ever considered. */
   body[data-view="image"] #scene.t-blood::after {
     background: #d67c6c;
     mix-blend-mode: multiply;
@@ -1088,7 +1092,20 @@ export const PAGE = `<!doctype html>
      creature standing on lit ground is the thing between you and it. It stays
      dark; the difference from an ordinary night is that you can see its shape. */
   body[data-view="image"] #mobs.t-moon img, body[data-view="image"] #mobs.t-moon .mob { filter: brightness(.52) saturate(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-blood img, body[data-view="image"] #mobs.t-blood .mob { filter: brightness(.52) sepia(1) saturate(1.5) hue-rotate(-38deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  /* A TRACE OF RED, NOT A SHEET OF IT (rome, 2026-09-09). This was
+     brightness(.52) sepia(1) saturate(1.5) hue-rotate(-38deg) — a solid red
+     figure, calibrated against a ground that was itself being washed red. That
+     wash is gone (NO_GROUND_TINT), so the animal was standing bright crimson on
+     the plain night plate, which is the sticker-on-a-photograph failure these
+     tints exist to prevent, in its most obvious form.
+     DAWN IS THE SHAPE TO COPY, having been through exactly this: it stands on
+     the same untinted night plate and carries sepia(.16) — a hint that says
+     which hour it is, not a colour laid over the animal. Blood gets twice that
+     hint because its cast really is stronger, and its brightness sits just above
+     night's .26 rather than at dawn's .44, because its sky is the darkest in the
+     game (mean 13, against night's 47 and dawn's 85). It is still a full moon,
+     so there is light; there is just very little of it and it is red. */
+  body[data-view="image"] #mobs.t-blood img, body[data-view="image"] #mobs.t-blood .mob { filter: brightness(.28) saturate(.85) sepia(.30) hue-rotate(-24deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   /* Fog and falling snow are the two that also push a shape AWAY from you:
      less contrast and less colour is what distance looks like through weather,
      and it is what stops a creature reading as a cut-out on a flat wash. */
@@ -6372,7 +6389,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "18";
+var ART_V = "19";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -6521,6 +6538,23 @@ var ROOM_PLATE = {
   // SHELTERED below for why the other three would be three photographs spent on
   // the light in one slot.
   "the-last-shelter": "day night night-torch",
+  // THE LION'S GROUND. Three rooms of the bone fan, shot as open hillside and
+  // cut on the skyline like every other outdoor plate.
+  "the-dry-bones":    "day night night-torch fog rain snow",
+  "the-rib-cage":     "day night night-torch fog rain snow",
+  "the-ochre-shelf":  "day night night-torch fog rain snow",
+  // THE RIDDLE DOOR'S ROOM. Six conditions like any hillside, but the only plate
+  // in the game with NO SKY IN IT: you are at the foot of seven hundred feet of
+  // wall that leans over you, so the rock runs off the top of the frame and the
+  // shared sky is drawn behind an opaque picture and never seen. That costs
+  // nothing and is the honest composition — the room says there is no way up.
+  "the-back-wall":    "day night night-torch fog rain snow",
+  // AND WHAT IS BEHIND IT. One plate, and one is the whole set: the room reports
+  // sky "in", SKY_BASE maps that to the day slot, and "in" is not in TORCH_HOURS
+  // so no flame ever swaps it. It is also in DARK_ROOMS, which means nobody has
+  // ever seen this room without a light in their hand — so the single plate is
+  // painted already lit by the torch you must be carrying to be standing in it.
+  "the-kept-room":    "day",
 };
 // AND WHICH OF THEM THE WEATHER DOES NOT REACH (rome, 2026-09-08).
 //
@@ -6685,10 +6719,18 @@ var TORCH_HOURS = { night: 1, moon: 1, blood: 1, eclipse: 1, dusk: 1, dawn: 1 };
 // is not reaching the stone — at dusk the sun is already down, and what is left
 // on the ground is the sky's, which the picture behind it is already showing.
 // So these two take the plate raw.
-// Deliberately not the whole family: the full moon genuinely LIGHTS the ground,
-// the blood moon genuinely reddens it, and totality genuinely takes the light
-// away. Those are real changes to what falls on the stone and they keep theirs.
-var NO_GROUND_TINT = { dawn: 1, dusk: 1 };
+// Deliberately not the whole family: the full moon genuinely LIGHTS the ground
+// and totality genuinely takes the light away. Those are real changes to what
+// falls on the stone and they keep theirs.
+// AND THE BLOOD MOON JOINS THE OTHER TWO (rome, 2026-09-09). It was argued into
+// the keep-your-tint list on the grounds that a blood moon really does redden
+// what it falls on, which is true of the light and was not true of the picture:
+// the wash is a flat multiply over the whole plate, so it reddened the far
+// country and the near stone by the same amount, and a coloured sheet laid over
+// a photograph is the one thing this table exists to stop. Its ground is the
+// night plate, which is already the right dark ground, and the sky behind it is
+// doing the work — same argument that moved dusk and dawn.
+var NO_GROUND_TINT = { dawn: 1, dusk: 1, blood: 1 };
 // MORE THAN ONE SKY FOR AN HOUR. An hour listed here owns a POOL, and which one
 // is up is decided by the world-day count the server sends — so the sky changes
 // from one day to the next and never from one room to the next. A sky picked per
@@ -6767,6 +6809,28 @@ var SKY_POOL = {
   // One file, four arrangements. It never borrows and is never borrowed — an
   // aftermath sky over a midday is the one swap that would still be a lie.
   "after-rain": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
+  // THE THREE CALENDAR SKIES GET THE MIRROR AND NOTHING ELSE (rome, 2026-09-09).
+  // They were left out of turning entirely, and only because nobody had asked.
+  //
+  // MIRRORING IS WORTH MORE HERE THAN ANYWHERE ELSE, because unlike the other
+  // five these three have a SUBJECT — a full moon, a blood moon, a corona — and
+  // /x carries it right across the sky. Every other pool's turns only move cloud
+  // about; this one moves the thing you are looking at, and does it without
+  // touching the colour, the light or the claim the sky makes about the world.
+  //
+  // AND /y AND /xy ARE OUT FOR THE SAME REASON, not for the usual one. The
+  // standing objection to a vertical turn is that it inverts the light: measured
+  // top-to-bottom, moon runs 47->95 and eclipse 30->116, so both would hang a
+  // pale zenith over a dark horizon and read as a lid. True, and the smaller
+  // problem. The bigger one is that flipping drops the SUBJECT to the bottom of
+  // the frame, where the first ridgeline eats it — a moon half-buried in a hill,
+  // and on the eclipse the sunset band laid across the top of the sky with the
+  // corona down in the rocks. Blood is flat enough (8->24) that the light
+  // argument does not touch it, and it is still out, because its moon goes down
+  // there with the others.
+  moon:    ["moon", "moon/x"],
+  blood:   ["blood", "blood/x"],
+  eclipse: ["eclipse", "eclipse/x"],
 };
 var SKY_TURN = { x: "scaleX(-1)", y: "scaleY(-1)", xy: "scale(-1, -1)" };
 // WHERE THE GROUND IS IN THIS PARTICULAR PICTURE (rome, 2026-09-08: the mobs in
@@ -6790,7 +6854,21 @@ var SKY_TURN = { x: "scaleX(-1)", y: "scaleY(-1)", xy: "scale(-1, -1)" };
 // height — 21% for the largest thing in the game, which is what caps this at 72
 // rather than 80: at 80 a stag's feet go off the bottom of the frame.
 var MOB_LINE_DEFAULT = 55;
-var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72 };
+// The Back Wall's scree begins at 62% and the Kept Room's floor at 65%, both
+// well below the 55% camera lock — at the default a small creature stands with
+// its feet in the rock face or in the far wall. Same fault the corries had.
+// FOUR MORE READ OFF THE PLATES (rome, 2026-09-09). Every one of these puts
+// its nearest standing ground well under the 55% lock, so a creature centred
+// on the lock stood in the middle distance and small ones floated outright:
+//   boulder     a dome of rounded blocks with no level ground until ~64%
+//   glass       broken slabs; everything above ~70% is mid-field rubble
+//   snow        the field dips away and comes back; near snow starts ~64%
+//   the-rib-cage the fan is loose stone from ~66% down, the cage sits on it
+// The rib cage is a SANCTUARY and nothing stands in it in the game, so its
+// number only ever shows in the preview. It is here because a plate that
+// breaks the lock should say so wherever it is drawn.
+var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the-kept-room": 65,
+                 boulder: 64, glass: 70, snow: 64, "the-rib-cage": 66 };
 // The day count from the server: one number, the same for everybody, up by one
 // each cycle. Zero until a status frame carries it, which simply means the first
 // entry of every pool until the world says otherwise.
@@ -7215,7 +7293,24 @@ applyView();
 // the whole picture above him is his. Everything smaller sits comfortably inside
 // that, which is why "centred, not stood on a line" works for the other forty.
 var MAN_VH = 42;
-var MOB_P = 0.85;
+// 0.85 -> 0.65 -> 0.45 (rome, 2026-09-09: twice, the small ones are too small). P is the amount
+// of squeeze and it works from the anchor outwards, so lowering it moves the two
+// ends of the roster and leaves the middle where it is. Across the two steps an
+// adder went 7.7 -> 17.1vh and a ptarmigan 9.9 -> 19.5, while a hill-wolf shifted
+// 26.9 -> 33.1 and a red hind barely moved at all. A standing man is the anchor
+// and does not move by construction.
+//
+// IT ALSO PULLS THE DRAKE IN, 75.7 -> 57.4vh, which is the other half of what was
+// asked for.
+//
+// HOW MUCH FURTHER THIS CAN GO. 0.35 would put an adder at 20.9vh, and that is
+// where the curve starts costing something real: a hare would be 26.7 against a
+// wolf at 34.9 and a hind at 39.2, and the ladder between a small animal, a
+// middling one and a big one stops being readable. 0.45 still has that ladder. Worth knowing that it is the SAME number doing both: the curve has
+// one dial and you cannot raise the small end without lowering the big one.
+// Everything here is further from life-size than it was, and deliberately so —
+// see the note above. A stoat you cannot see is not more realistic, it is absent.
+var MOB_P = 0.45;
 var MOB_K = 42 / Math.pow(22, MOB_P);
 function mobVh(id) { return MOB_K * Math.pow(MOB_SPRITE[id], MOB_P); }
 var MOB_SPRITE = {
