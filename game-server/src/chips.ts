@@ -121,7 +121,17 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // that had decided to kill you looked exactly like a wolf drifting past. All
   // of this is state the world already keeps; none of it was reaching the eye.
   // Keyed by template because that is what the picture is keyed by.
-  const doing: Record<string, string> = {};
+  // ONE ENTRY PER SPRITE, not per kind (rome, 2026-09-08: sleeping mobs moving
+  // around). This was keyed by templateId, and `seen` below is a LIST that can
+  // hold the same template more than once — three wolves in a den are three
+  // sprites and were one key. So the last one to write won for all of them, and
+  // the moment a single wolf woke and started hunting, every sleeper beside it
+  // got up and hunted too. The heap is a designed thing on this mountain, which
+  // made it the common case rather than an edge one.
+  //
+  // Parallel to `seen`, same length, "" where a creature is simply going about
+  // its business. The client walks the two together.
+  const doing: string[] = [];
   // AND WHAT IS LYING ON THE GROUND. A body is not a two-second flourish: the
   // blood stays six hours and a scavenger comes to eat it, so the picture keeps
   // it until the world lets go of it. Three at most — a battlefield should read
@@ -159,7 +169,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         : creature.hp < (tmpl.max_hp * 0.35) ? "hurt"
         : creature.curious ? "watch"
         : "";
-      if (state) doing[creature.templateId] = state;
+      doing.push(state);
     }
   }
   // A throwable in hand and something to throw it at: offer the opener.

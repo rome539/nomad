@@ -116,7 +116,7 @@ import {
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  SPAWN_QUARTERS, DARK_ROOMS, ART_KEYS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  SPAWN_QUARTERS, DARK_ROOMS, ART_KEYS, ART_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -4686,6 +4686,17 @@ export class ZoneDO implements DurableObject {
       }
       this.combatFx.clear();
     }
+    // THE HOUR TURNS UNDER PEOPLE WHO ARE NOT DOING ANYTHING (rome, 2026-09-08).
+    // Status frames ride behind commands, so a player sitting still kept the
+    // night sky over them through daybreak — the world said so in the prose and
+    // the picture went on disagreeing until they typed. One string compare per
+    // watching player per beat, and it catches every cause at once rather than
+    // each of them needing to remember: the hour, dusk and dawn opening and
+    // closing, the moon, an eclipse, weather arriving or lifting.
+    for (const s of this.sessions.values()) {
+      if (!ART_KEYS.has(s.pubkey)) continue;
+      if (this.artSkyFor(s) !== s.artSky) this.sendStatus(s);
+    }
     mark("creatures");
 
     // Surrounded but shielded by the crush: a single line so the player reads
@@ -8083,31 +8094,18 @@ export class ZoneDO implements DurableObject {
             : this.outOfWorld(session) ? "gatehouse"
             : this.world!.entryRooms.has(session.roomId) ? "gate:" + session.roomId
             : terrainOf(session.roomId, room?.description),
+          // AND A ROOM THAT IS ONE OF ONE, beside its terrain rather than
+          // instead of it. A client with no picture for this id falls through to
+          // the ground rules and paints what it always painted, so naming a room
+          // here is free and reversible — unlike the gate prefix, which replaces
+          // the terrain outright and can only be used once the plate is cut.
+          place: ART_KEYS.has(session.pubkey) && ART_ROOMS.has(session.roomId)
+            ? session.roomId : undefined,
           // "in" MEANS THERE IS NO SKY OVER THIS PLACE — see openSkyForArt
           // above for why that is not the same question as whether you are
           // under a roof, and for the two kinds of room the roof test was
           // getting wrong.
-          sky: !ART_KEYS.has(session.pubkey) ? undefined
-            : (!OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt) ? "in"
-            : (openSkyForArt ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId)) ? "snow"
-            : (openSkyForArt ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId)) ? "fog"
-            : (openSkyForArt ? events.weatherNow(this, session.roomId) === "rain" : events.raining(this, session.roomId)) ? "rain"
-            // A BLOOD MOON IS ITS OWN NIGHT. It was collapsing into plain dark,
-            // so the one night in the calendar the whole world changes colour —
-            // red eyes in the hollow ones, the full-moon door shut — looked
-            // exactly like every other night in the picture.
-            : isNight() ? (isBloodMoon() ? "blood" : isFullMoon() ? "moon" : "night")
-            // TOTALITY IS ITS OWN SKY. eclipsePhase has been in this file for
-            // months and never once reached the picture: the one midday the sun
-            // goes out looked like every other midday.
-            : eclipsePhase() === "active" ? "eclipse"
-            : isDusk() ? "dusk"
-            : isDawn() ? "dawn"
-            // THE HOUR AFTER THE RAIN. Last in the chain on purpose: it only
-            // ever replaces plain day. Dusk and dawn already carry a colour of
-            // their own, and a wet night is still a night.
-            : events.phaseOf(this, "rain") === "aftermath" ? "after-rain"
-            : "day",
+          sky: (session.artSky = this.artSkyFor(session)),
           // A FLAME IN YOUR HAND IS GROUND WEATHER. The whole architecture
           // rests on one split: what happens in the AIR is the sky changing
           // behind an unchanged scene, and what happens on the GROUND is a
@@ -8135,6 +8133,42 @@ export class ZoneDO implements DurableObject {
         }),
       );
     } catch {}
+  }
+
+  // WHAT SKY IS OVER THIS PLAYER RIGHT NOW. Lifted out of the status frame so
+  // that the frame is no longer the only thing that can ask (rome, 2026-09-08:
+  // sat in a room, the hour turned to dawn, and the sky did not).
+  //
+  // The picture learns the hour from a status frame and nothing sends one on a
+  // clock — they go out behind commands. So a player standing still watched the
+  // world announce daybreak in the prose while the night sky stayed over them
+  // until they happened to type. The tick compares this against what it last
+  // sent and pushes a frame when it differs, which covers every reason the sky
+  // can change at once: the hour turning, dusk and dawn opening and closing,
+  // the moon, an eclipse, weather arriving or lifting, and walking under a roof.
+  public artSkyFor(session: Session): string | undefined {
+    if (!ART_KEYS.has(session.pubkey)) return undefined;
+    const openSkyForArt = !this.outOfWorld(session) && this.world!.entryRooms.has(session.roomId);
+    return (!OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt) ? "in"
+    : (openSkyForArt ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId)) ? "snow"
+    : (openSkyForArt ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId)) ? "fog"
+    : (openSkyForArt ? events.weatherNow(this, session.roomId) === "rain" : events.raining(this, session.roomId)) ? "rain"
+    // A BLOOD MOON IS ITS OWN NIGHT. It was collapsing into plain dark,
+    // so the one night in the calendar the whole world changes colour —
+    // red eyes in the hollow ones, the full-moon door shut — looked
+    // exactly like every other night in the picture.
+    : isNight() ? (isBloodMoon() ? "blood" : isFullMoon() ? "moon" : "night")
+    // TOTALITY IS ITS OWN SKY. eclipsePhase has been in this file for
+    // months and never once reached the picture: the one midday the sun
+    // goes out looked like every other midday.
+    : eclipsePhase() === "active" ? "eclipse"
+    : isDusk() ? "dusk"
+    : isDawn() ? "dawn"
+    // THE HOUR AFTER THE RAIN. Last in the chain on purpose: it only
+    // ever replaces plain day. Dusk and dawn already carry a colour of
+    // their own, and a wet night is still a night.
+    : events.phaseOf(this, "rain") === "aftermath" ? "after-rain"
+    : "day";
   }
 
   // The chip builders live in chips.ts; these delegates keep the many call

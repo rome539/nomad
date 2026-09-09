@@ -166,3 +166,32 @@ the last slot on `landing`, so they still vanish rather than drop:
     the-old-raven
 
 When more sheets come back, the whole pipeline above is steps 0 through 8.
+
+## The frame is filled by the pose, not by the animal
+
+A sprite's cell is the union bounding box of every pose that creature has, and
+the size table scales whatever is inside it. So the number describes **the drawn
+extent**, not the creature's notional height — and for anything drawn low in
+every one of its poses those are not the same thing.
+
+`the-milker` is the one entry this has bitten (rome, 2026-09-08: she was much
+larger than the herdsman). She is crouched at her pail in all six poses, so her
+frame holds about 0.6 of a standing woman. Sized at 20 — the height a standing
+woman would have — everything about her inflated by the same factor, and the
+first thing that inflates is the head: measured, **1.88x the herdsman's**. She
+did not read as a woman crouching, she read as a giant crouching.
+
+**Head width is the invariant to check against**, because two humans have the
+same head whatever posture they are in. Two cautions from doing it:
+
+- Match against a **typical** figure. The herdsman is drawn long and lanky with
+  a small head, so head-matching him alone over-corrected to 10. The butter wife
+  is the ordinary build of the two standing humans, and matching her gave 13.
+- The metre rule alone was not enough either. A crouched adult is ~1.3m, which
+  converts to 16, and at 16 the head still measured 1.47x the herdsman's —
+  because posture and the art's own head-to-body ratio are two separate errors
+  and this sprite had both.
+
+The general form: **if a creature is drawn low in every pose, size it by a
+feature that does not change with posture, not by how tall the animal is when it
+stands up.**

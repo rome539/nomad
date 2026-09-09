@@ -189,7 +189,21 @@ while the far country stays dark.
 
 `SKY_POOL` lets an hour hold a list instead of one file, and which one is up
 comes from the **world-day count** the server sends (`worldDay()` — the same
-`floor(now / DAY_CYCLE_MS)` the moon phase has always been read from).
+`floor(now / DAY_CYCLE_MS)` the moon phase has always been read from) — **hashed
+into the pool, not used as an index** (rome, 2026-09-08). Indexing marched an
+hour through its list in order and returned to the same sky every Nth day, which
+is a pattern a player learns without meaning to.
+
+It cannot become a real random: one sky over the world is the claim the whole
+scheme rests on, and `Math.random()` here would give two people in the same room
+two different evenings. So the day is hashed, salted with the hour so day, night,
+dawn and dusk stop moving in lockstep. FNV-1a alone was not enough — its low bits
+track the end of the string, so `"night:7" % 4` read the last digit almost
+directly and produced a permuted cycle, with day and night coming out identical
+because they differ only at the *start*. `mix32`, the murmurhash3 finalizer,
+pushes the high bits down where a modulo can see them. Measured over 4000 days:
+each entry used 976–1030 times against an even 1000, and days four apart match
+26% where chance is 25%.
 
 That key is the design, not a detail. There is one sky over this world at any
 instant; that is not a saving, it is the claim the whole two-layer scheme rests
@@ -295,6 +309,73 @@ webp q92 / alphaQuality 100.
 
 It is **dry by default** and writing overwrites — the same law as the mob strip
 builder, and for the same reason.
+
+## A room that is one of one
+
+There are now three ways to name a place, most specific first:
+
+```
+ROOM_PLATE    a single room, by its id      the summit, the last shelter
+GATE_PLATE    a specific built thing        the fourteen doors
+TERRAIN_*     a kind of ground              scree, snow, the corries
+```
+
+The middle one exists because a gate is never its hillside. The first exists for
+the same reason one step further in: the mountain kept making rooms that are
+singular, are not doors, and that the ground rules describe *wrongly* — the Last
+Shelter and the Summit Gate both matched `vent` on their warm air and were handed
+a bare scree slope, and the Summit matched `snow` and was painted as a snowfield
+by a room whose own text says there is no snow in it.
+
+`ART_ROOMS` (zone-data.ts) is the server side and adds a `place` to the status
+frame **beside** the terrain, never instead of it — so naming a room there costs
+nothing and is reversible: a client with no plate for the id paints exactly what
+it painted before. That is the opposite of the `gate:` prefix, which replaces the
+terrain outright and may only be used once the plate is cut.
+
+`ROOM_PLATE` (public.ts) is the client side and follows the same law as the other
+two: **a name goes in when its plate exists, and not before.**
+
+### A room the weather does not reach
+
+`SHELTERED` names the room plates with a roof on them. It is **not** the same
+question as whether the world counts a room indoors: the Last Shelter is a hole
+under a fallen block on an open mountain, so it goes dark at night and the cold
+finds you there — what stops at the stone is the *picture* of the weather. Rain
+cannot change a room with a roof; all it can change is the light in the slot you
+see out of, which is a sixth of the frame and not worth three more photographs.
+
+So a sheltered plate takes **no hour or weather correction at all**, and the
+creatures standing in it read the plate's own condition rather than the sky
+outside. The sky layer is still drawn, which is the whole point: `day` is keyed,
+so the shared sky sits behind the plate and shows through the slot, and the hour
+turns in a bright band at the far end of a dark hole for the cost of no art
+whatever.
+
+Three conditions is the whole set for such a room — `day night night-torch`. The
+gatehouse has had this rule since it was painted; it just lived in the old
+single-plate branch and never reached the layered one.
+
+**Weather is not nothing under a roof, though** (rome, 2026-09-08). Rain, fog,
+snow and the rain's aftermath are dark grey days, and seen from inside a hole
+they do two things, neither of which is a wash over the picture: the room goes
+**dark**, so it takes its night plate, and the slot goes **grey**, so the
+`after-rain` sky is drawn behind it — the one bright overcast sky the game owns,
+and the closest thing to weather-seen-from-indoors without shooting three more
+plates for a sixth of a frame. A dark hole with grey light in the gap.
+
+`after-rain` is the odd one in that list, because it is not weather at all — it
+is a phase, and out on the hill it stays a bright churned grey **day** on the day
+ground. Under a roof the distinction stops mattering: overcast is overcast, and a
+hole with a slot in it is dim under any of the four.
+
+That carries one more rule with it: **a torch shows wherever the room is dark**,
+which under a roof is not the same question as which hour it is. `TORCH_HOURS`
+answers it outdoors, where rain and snow are daylit whole photographs — but a
+sheltered room in rain has just resolved to its night plate, and a room dark
+enough to be drawn at night is a room a flame belongs in. Outdoors that clause
+changes nothing, since every hour whose ground is the night plate is already in
+`TORCH_HOURS`.
 
 ## Where the output goes
 

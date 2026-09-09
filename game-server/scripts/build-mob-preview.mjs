@@ -55,7 +55,7 @@ const ANIM = {};
 for (const m of grab("MOB_ANIM").matchAll(/"([a-z-]+)":\s*\{\s*n:\s*(\d+),\s*aspect:\s*([\d.]+),\s*f:\s*(\{[^}]*\})\s*\}/g))
   ANIM[m[1]] = { n:+m[2], aspect:+m[3], f: JSON.parse(m[4]) };
 const ART_V = (src.match(/var ART_V = "(\d+)"/)||[,"1"])[1];
-const SIZE = block("MOB_P") + "\n" + fn("mobVh");   // the size curve, lifted like the driver
+const SIZE = block("MAN_VH") + "\n" + fn("mobVh");   // the size curve, lifted like the driver
 
 const CONSTS = block("CALM_POSES") + "\n" + block("ATTACK_S");
 const DRIVER = [fn("poseAt"), fn("mobBeat"), fn("stepAnims"), fn("applyState")].join("\n");
@@ -183,8 +183,22 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  ${SCENE_CSS}
  /* ---- end lifted; the four rules below are the only edits: the game's
     layers are fixed to the window and here they line a panel ---- */
- #stage{position:relative;height:62vh;min-height:340px;overflow:hidden;background:#0b0906;
-        border-bottom:1px solid #3a3020}
+ /* FULL WIDTH, like the game — the game's window IS the whole browser, so the
+    stage is too. Constraining this to the plate's own ratio shrank it to a
+    centred box, which was worse than the crop it was fixing; the crop is
+    answered by the "whole plate" button and nowhere else.
+    AND IT ENDS WHERE THE WINDOW ENDS. The bar is sticky, so any part of the
+    stage that does not fit on screen goes UNDER it the moment you scroll to
+    look at it. So the bar and the stage share one viewport-tall box and the
+    stage takes whatever the bar leaves — nothing to scroll, nothing covered,
+    whatever the bar wraps to. */
+ #top{height:100dvh;display:flex;flex-direction:column}
+ #bar{flex:0 0 auto}
+ #stage{position:relative;flex:1 1 auto;min-height:0;
+        overflow:hidden;background:#0b0906;border-bottom:1px solid #3a3020}
+ /* ...and "whole plate" gives up the crop entirely and letterboxes it, for
+    looking at the art rather than at the room. */
+ #stage.whole #scene,#stage.whole #sky{background-size:contain!important;background-position:center!important}
  #stage #scene,#stage #sky{position:absolute}
  #stage #mobs{position:absolute}
  #stage.bare::before{content:"no plate for this ground — the world paints bare here too";
@@ -195,6 +209,7 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  #shelf .miss{color:#8a5a4a}
  ${Object.entries(tints).map(([k,v])=>`.t-${k} .mob{filter:${v}}`).join("\n ")}
 </style>
+<div id="top">
 <div id="bar">
  <span style="color:#d8a94e">NOMAD</span>
  <label>ground <select id="gnd"></select></label>
@@ -202,6 +217,7 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  <button id="torch">torch</button>
  <button id="roll">next day</button>
  <label>sky <select id="pick"></select></label>
+ <button id="fit">whole plate</button>
  <label>standing <select id="who"></select></label>
  <label>scale <select id="sc"></select></label>
  <button id="fire">move</button>
@@ -216,6 +232,7 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  <span class="n">build ${STAMP} · ART_V ${ART_V} · ${Object.keys(ANIM).length} animated · ${withAtk} strike · ${withDeath} die</span>
 </div>
 <div id="stage"><div id="sky"></div><div id="scene"></div><div id="mobs"></div></div>
+</div>
 <div id="shelf"></div>
 <div id="grid"></div>
 <script>
@@ -224,7 +241,7 @@ var MOB_SPRITE=${JSON.stringify(SPRITE)}, MOB_ANIM=${JSON.stringify(ANIM)}, ART_
 ${SCENE_TABLES}
 var sceneEl=document.getElementById("scene"), skyEl=document.getElementById("sky"),
     mobsEl=document.getElementById("mobs"), viewMode="image",
-    lastBand="", lastSky="", lastTerrain="", lastRoomKey="", lastTorch=false, skyRoll=0,
+    lastBand="", lastSky="", lastTerrain="", lastRoomKey="", lastPlace="", lastTorch=false, skyRoll=0,
     scenePainted="", sceneSeq=0;
 ${SCENE_DRIVER}
 /* ---- end lifted ---- */
@@ -242,7 +259,7 @@ function releaseMobs(){ mobHold = 0; }
 var anims=[], hour=document.getElementById("hour"), sc=document.getElementById("sc"), grid=document.getElementById("grid");
 var gnd=document.getElementById("gnd"), who=document.getElementById("who"),
     torchBtn=document.getElementById("torch"), rollBtn=document.getElementById("roll"),
-    pick=document.getElementById("pick"),
+    pick=document.getElementById("pick"), fitBtn=null, whole=false,
     stage=document.getElementById("stage"),
     shelf=document.getElementById("shelf"), torch=false, stageAnim=null;
 // THE HOURS ARE THE SKIES THE CLIENT KNOWS, read off its own table rather than
@@ -256,6 +273,11 @@ Object.keys(TERRAIN_PLATE).sort().forEach(function(t){
   var o=document.createElement("option");o.value=t;o.textContent=t;o.selected=(t==="scree");gnd.appendChild(o);});
 Object.keys(GATE_PLATE).sort().forEach(function(g){
   var o=document.createElement("option");o.value="gate:"+g;o.textContent="gate \u00b7 "+g;gnd.appendChild(o);});
+// THE THIRD TABLE. Rooms that are one of one are picked the same way as the
+// other two — this list was built from terrains and gates alone, so a room plate
+// could be installed and declared and still be unreachable here.
+Object.keys(ROOM_PLATE).sort().forEach(function(r){
+  var o=document.createElement("option");o.value="room:"+r;o.textContent="room \u00b7 "+r;gnd.appendChild(o);});
 Object.keys(MOB_ANIM).sort().forEach(function(id){
   var o=document.createElement("option");o.textContent=id;o.selected=(id==="hill-wolf");who.appendChild(o);});
 [0.6,0.8,1,1.4].forEach(function(v){var o=document.createElement("option");o.textContent=v;o.selected=(v==1);sc.appendChild(o);});
@@ -278,9 +300,14 @@ function build(){
       var sleep="idle"; for(var z=0;z<SLEEP_POSES.length;z++) if(a.f[SLEEP_POSES[z]]!==undefined){sleep=SLEEP_POSES[z];break;}
       var watch="idle"; for(var z9=0;z9<WATCH_POSES.length;z9++) if(a.f[WATCH_POSES[z9]]!==undefined){watch=WATCH_POSES[z9];break;}
       var rate=a.f["move-a"]!==undefined?7000:a.f.up!==undefined?11000:20000;
-      var strike=""; for(var y=0;y<STRIKE_POSES.length;y++) if(a.f[STRIKE_POSES[y]]!==undefined){strike=STRIKE_POSES[y];break;}
+      // EVERY blow, the way the client collects them: the drakes have three and
+      // a preview that kept only the first would show two frames it cannot draw.
+      var strikes=[]; for(var y=0;y<STRIKE_POSES.length;y++) if(a.f[STRIKE_POSES[y]]!==undefined) strikes.push(STRIKE_POSES[y]);
+      var strike=strikes[0]||"";
       var recoil="idle"; for(var v=0;v<HIT_POSES.length;v++) if(a.f[HIT_POSES[v]]!==undefined){recoil=HIT_POSES[v];break;}
-      anims.push({el:el,spec:a,id:id,phase:"idle",t:0,state:"",calm:calm,sleep:sleep,strike:strike,recoil:recoil,watch:watch,rate:rate,
+      anims.push({el:el,spec:a,id:id,phase:"idle",t:0,state:"",calm:calm,sleep:sleep,
+                  strike:strike,strikes:strikes,blow:strike,recoil:recoil,watch:watch,rate:rate,
+                  slot:anims.length, lift:Math.max(0,(mobVh(id)-MAN_VH)/2)/mobVh(id),
                   next:Date.now()+2000+Math.random()*9000});
     } else {
       el.style.aspectRatio="1"; el.style.backgroundImage="url(mob/"+id+".webp?v="+ART_V+")";
@@ -316,10 +343,13 @@ function dress(){
   var acts=[]; for(var w in a.f) if(w!=="idle") acts.push(w); a.acts=acts.length?acts:["idle"];
   var sleep="idle"; for(var z=0;z<SLEEP_POSES.length;z++) if(a.f[SLEEP_POSES[z]]!==undefined){sleep=SLEEP_POSES[z];break;}
   var watch="idle"; for(var z9=0;z9<WATCH_POSES.length;z9++) if(a.f[WATCH_POSES[z9]]!==undefined){watch=WATCH_POSES[z9];break;}
-  var strike=""; for(var y=0;y<STRIKE_POSES.length;y++) if(a.f[STRIKE_POSES[y]]!==undefined){strike=STRIKE_POSES[y];break;}
+  var strikes=[]; for(var y=0;y<STRIKE_POSES.length;y++) if(a.f[STRIKE_POSES[y]]!==undefined) strikes.push(STRIKE_POSES[y]);
+  var strike=strikes[0]||"";
   var recoil="idle"; for(var v=0;v<HIT_POSES.length;v++) if(a.f[HIT_POSES[v]]!==undefined){recoil=HIT_POSES[v];break;}
-  stageAnim={el:el,spec:a,id:id,phase:"idle",t:0,state:"",calm:calm,sleep:sleep,strike:strike,
+  stageAnim={el:el,spec:a,id:id,phase:"idle",t:0,state:"",calm:calm,sleep:sleep,
+             strike:strike,strikes:strikes,blow:strike,
              recoil:recoil,watch:watch,rate:a.f["move-a"]!==undefined?7000:a.f.up!==undefined?11000:20000,
+             slot:anims.length, lift:Math.max(0,(mobVh(id)-MAN_VH)/2)/mobVh(id),
              next:Date.now()+2000+Math.random()*9000};
   anims.push(stageAnim);
 }
@@ -331,7 +361,7 @@ function shelfLine(){
     return a>0 ? v.slice(a, b>0?b:v.length-1) : "\u2014"; };
   var sc=url(sceneEl.style.backgroundImage), sk=url(skyEl.style.backgroundImage);
   var missing=(sc!=="\u2014"&&torch&&SKY_BASE[hour.value]==="night"&&sc.indexOf("night-torch")<0);
-  stage.className = sc==="\u2014" ? "bare" : "";
+  stage.className = (sc==="\u2014" ? "bare " : "") + (whole ? "whole" : "");
   var pool=SKY_POOL[hour.value], many=!!(pool&&pool.length>1);
   // THE POOL, NAMED AND PICKABLE. Stepping is how the game does it — once a
   // cycle, in order — and it is the wrong tool for judging one sky against
@@ -343,10 +373,12 @@ function shelfLine(){
     (pool||[hour.value]).forEach(function(e,i){
       var o=document.createElement("option"); o.value=i; o.textContent=e; pick.appendChild(o);});
   }
-  pick.value=String(pool?skyRoll%pool.length:0);
+  // The day no longer INDEXES the pool, it is hashed into it, so the current
+  // entry has to be asked for the same way the client asks.
+  pick.value=String(pool&&pool.length?mix32(plateHash(hour.value+":"+skyRoll))%pool.length:0);
   pick.disabled=!many;
   rollBtn.disabled=!many;
-  rollBtn.textContent=many?"next day \u00b7 "+(skyRoll%pool.length+1)+"/"+pool.length:"next day";
+  rollBtn.textContent=many?"next day \u00b7 "+(mix32(plateHash(hour.value+":"+skyRoll))%pool.length+1)+"/"+pool.length:"next day";
   // The turn is invisible in a URL and it is half of what a pool entry says.
   var t=skyEl.style.transform;
   var turn=t.indexOf("-1, -1")>0?" upside down":t?" mirrored":"";
@@ -358,14 +390,29 @@ function shelfLine(){
   grid.className=mobsEl.className;   // the roster wears whatever the stage's animals wear
 }
 function repaint(){
-  paintScene("mountain", hour.value, gnd.value, gnd.value, torch?1:0);
+  var v=gnd.value, room=v.slice(0,5)==="room:"?v.slice(5):"";
+  // A room plate is passed as the place and the terrain is left as it was, which
+  // is exactly how the wire carries it: place BESIDE terrain, never instead.
+  paintScene("mountain", hour.value, room?"scree":v, v, torch?1:0, undefined, room);
   shelfLine();
 }
 // STEPPING THE WORLD-DAY. In the game this comes off the clock and moves once
 // a cycle; here it is a button, because an hour whose pool has two skies in it
 // is the one thing you cannot see by waiting.
 rollBtn.onclick=function(){ skyRoll++; repaint(); };
-pick.onchange=function(){ skyRoll=+pick.value; repaint(); };
+// PINNING MEANS FINDING A DAY THAT SHOWS IT. The picker used to set the day
+// count to the entry's index, which worked only while the day indexed the pool
+// directly. It is hashed now, so this walks forward until it finds a real day
+// the world would show the chosen sky on — which keeps the property the picker
+// had from the start: it can never show you a sky the game could not.
+pick.onchange=function(){
+  var want=+pick.value, pool=SKY_POOL[hour.value];
+  if(!pool||!pool.length) return;
+  for(var d=0;d<9999;d++) if(mix32(plateHash(hour.value+":"+d))%pool.length===want){ skyRoll=d; break; }
+  repaint();
+};
+fitBtn=document.getElementById("fit");
+fitBtn.onclick=function(){ whole=!whole; fitBtn.className=whole?"on":""; shelfLine(); };
 gnd.onchange=repaint; hour.onchange=repaint;
 who.onchange=function(){ dress(); repaint(); };
 torchBtn.onclick=function(){ torch=!torch; torchBtn.className=torch?"on":""; repaint(); };
@@ -375,7 +422,9 @@ document.getElementById("fire").onclick=function(){anims.forEach(function(a){if(
 document.getElementById("atk").onclick=function(){mobBeat(ids(),null,null)};
 document.getElementById("hit").onclick=function(){mobBeat(null,ids(),null)};
 document.getElementById("die").onclick=function(){mobBeat(null,null,ids())};
-function mkState(v){var o={};anims.forEach(function(a){o[a.id]=v});return o}
+// BY SLOT. The client indexes states by a sprite's position in the room list,
+// not by what kind of creature it is — three wolves in a den are three slots.
+function mkState(v){var o=[];anims.forEach(function(a){o[a.slot]=v});return o}
 var state="";
 function setState(v){
   state = state===v ? "" : v;

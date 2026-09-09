@@ -31,17 +31,23 @@ new Function("ctx", "document", js + `
   ctx.set=function(v){anims=v}; ctx.hold=function(){return mobHold}; ctx.clr=function(){mobHold=0};
 `)(ctx, { getElementById: () => null });
 
-function mk(id) {
+// A sprite's slot is its place in the room list the server sent, which is what
+// states are indexed by — see applyState. Most fixtures here are the only thing
+// in their room, so slot 0; the den below passes its own.
+function mk(id, slot) {
   const spec = Object.assign({}, ctx.ANIM[id]);
   const acts = []; for (const w in spec.f) if (w !== "idle") acts.push(w);
   spec.acts = acts;
   let sleep = "idle"; for (const p of ctx.SLEEP_POSES) if (spec.f[p] !== undefined) { sleep = p; break; }
   let calm = "";     for (const p of ctx.CALM)        if (spec.f[p] !== undefined && !calm) calm = p;
-  let strike = "";   for (const p of ctx.STRIKE_POSES) if (spec.f[p] !== undefined) { strike = p; break; }
+  const strikes = ctx.STRIKE_POSES.filter((p) => spec.f[p] !== undefined);
+  const strike = strikes[0] || "";
   let recoil = "idle"; for (const p of ctx.HIT_POSES) if (spec.f[p] !== undefined) { recoil = p; break; }
   let watch = "idle"; for (const p of ctx.WATCH_POSES) if (spec.f[p] !== undefined) { watch = p; break; }
   const rate = spec.f["move-a"] !== undefined ? 7000 : spec.f.up !== undefined ? 11000 : 20000;
-  return { el: { style: {} }, spec, id, phase: "idle", t: 0, state: "", calm, sleep, strike, recoil, watch, rate, next: Date.now() + 1e9 };
+  return { el: { style: {} }, spec, id, phase: "idle", t: 0, state: "", calm, sleep,
+    strike, strikes, blow: strike, recoil, watch, rate,
+    slot: slot === undefined ? 0 : slot, next: Date.now() + 1e9 };
 }
 // A CREATURE WITH ALMOST NOTHING DRAWN, invented here on purpose. These two
 // cases used to point at the ptarmigan, which then had its attack and death
@@ -83,16 +89,16 @@ t("a blow lands the instant it happens, not on the spread",a.t===0);
 t("...and it is big enough to see",Math.abs(p.x)>0.05,"knocked back "+(Math.abs(p.x)*100).toFixed(1)+"% of its width");
 t("...and twists with it",Math.abs(a.rot)>0.02,(Math.abs(a.rot)*57.3).toFixed(1)+" degrees");
 
-a=mk("hill-wolf");ctx.set([a]);ctx.applyState({"hill-wolf":"rest"});
+a=mk("hill-wolf");ctx.set([a]);ctx.applyState(["rest"]);
 t("asleep flagged",a.asleep===true);
 t("a sleeping wolf curls up",inv["hill-wolf"][ctx.poseAt(a,Date.now()).k]==="rest");
 a.next=0;ctx.stepAnims();
 t("a sleeper never sets off walking",a.phase!=="travel","phase="+a.phase);
 ctx.mobBeat(null,["hill-wolf"],null);
 t("a blow still reads on a sleeper",a.phase==="hit");
-ctx.applyState({});t("waking clears it",a.asleep===false);
+ctx.applyState([]);t("waking clears it",a.asleep===false);
 
-a=mk("stone-adder");ctx.set([a]);ctx.applyState({"stone-adder":"rest"});
+a=mk("stone-adder");ctx.set([a]);ctx.applyState(["rest"]);
 const sp=inv["stone-adder"][ctx.poseAt(a,Date.now()).k];
 t("an adder lies out flat to bask",sp==="bask","pose="+sp);
 
@@ -100,8 +106,61 @@ a=mk("cave-lion");ctx.set([a]);ctx.mobBeat(null,["cave-lion"],["cave-lion"]);
 t("the killing blow reads as death, not a flinch",a.phase==="death");ctx.clr();
 
 
-a=mk("the-drake");ctx.set([a]);ctx.mobBeat(["the-drake"],null,null);into(a,ctx.ATTACK_S*0.35);
-t("the drake can finally strike",a.phase==="attack"&&inv["the-drake"][ctx.poseAt(a,Date.now()).k]==="bite","pose="+inv["the-drake"][ctx.poseAt(a,Date.now()).k]);
+// THE DRAKE HAS THREE BLOWS AND USES ALL OF THEM (2026-09-08). The strike
+// lookup used to break on the first match, so bite was the only one it could
+// ever throw and sweep and breath sat in the sheet unused.
+{
+  const thrown = new Set();
+  for (let n = 0; n < 200; n++) {
+    a = mk("the-drake"); ctx.set([a]); ctx.mobBeat(["the-drake"], null, null);
+    into(a, ctx.ATTACK_S * 0.50);
+    if (a.phase === "attack") thrown.add(inv["the-drake"][ctx.poseAt(a, Date.now()).k]);
+  }
+  t("the drake throws every blow it was drawn", ["bite","sweep","breath"].every((k)=>thrown.has(k)),
+    "saw: " + [...thrown].join(" "));
+  // and the breath is a longer, different shape than a lunge: it holds the
+  // windup frame well past the point a bite would already have landed.
+  a = mk("the-drake"); ctx.set([a]); ctx.mobBeat(["the-drake"], null, null);
+  a.blow = "breath"; into(a, ctx.ATTACK_S * 0.25);
+  t("the breath draws in first", inv["the-drake"][ctx.poseAt(a, Date.now()).k]==="inhale",
+    "pose=" + inv["the-drake"][ctx.poseAt(a, Date.now()).k]);
+  a.t = ctx.ATTACK_S * 0.55;
+  t("...and then lets go", inv["the-drake"][ctx.poseAt(a, Date.now()).k]==="breath",
+    "pose=" + inv["the-drake"][ctx.poseAt(a, Date.now()).k]);
+  // a bite at the same instant is already back on its guard
+  a = mk("the-drake"); ctx.set([a]); ctx.mobBeat(["the-drake"], null, null);
+  a.blow = "bite"; a.t = ctx.ATTACK_S * 0.25;
+  t("a bite at that moment has already landed", inv["the-drake"][ctx.poseAt(a, Date.now()).k]==="bite",
+    "pose=" + inv["the-drake"][ctx.poseAt(a, Date.now()).k]);
+}
+// AND THE FLIGHT HAS ITS TWO ENDS. takeoff at the very start, dive on the way
+// down, both drake-only; a bird still climbs out on the beat and glides home.
+{
+  const arc = (id, at) => { const b = mk(id); b.phase="travel"; b.t = 2.6*at;
+    return inv[id][ctx.poseAt(b, Date.now()).k]; };
+  t("the drake shoves off the ground", arc("the-drake",0.05)==="takeoff", arc("the-drake",0.05));
+  t("...glides", arc("the-drake",0.45)==="glide", arc("the-drake",0.45));
+  t("...stoops before it lands", arc("the-drake",0.70)==="dive", arc("the-drake",0.70));
+  t("...and puts them out at the end", arc("the-drake",0.92)==="landing", arc("the-drake",0.92));
+  t("a bird has no takeoff and beats instead", ["up","down"].includes(arc("hill-eagle",0.05)), arc("hill-eagle",0.05));
+  t("...and glides straight to the landing", arc("hill-eagle",0.80)==="landing", arc("hill-eagle",0.80));
+}
+
+// A HEAP KEEPS ITS OWN HEADS. States arrive one per sprite, indexed by the slot
+// the creature held in the room list — keyed by name, one wolf waking woke all.
+{
+  const w0 = mk("hill-wolf", 0), w1 = mk("hill-wolf", 1), w2 = mk("hill-wolf", 2);
+  ctx.set([w0, w1, w2]);
+  ctx.applyState(["rest", "hunt", "rest"]);
+  t("the one that woke is the only one awake",
+    w0.asleep === true && w1.asleep === false && w2.asleep === true,
+    [w0.asleep, w1.asleep, w2.asleep].join(","));
+  // and the sleepers must not set off walking behind it
+  w0.next = w2.next = Date.now() - 1;
+  for (let n = 0; n < 40; n++) ctx.stepAnims();
+  t("...and the sleepers never set off walking",
+    w0.phase !== "travel" && w2.phase !== "travel", w0.phase + "/" + w2.phase);
+}
 a=mk("the-pale-drake");ctx.set([a]);ctx.mobBeat(null,["the-pale-drake"],null);into(a,0.1);
 t("the drake uses its own drawn recoil",inv["the-pale-drake"][ctx.poseAt(a,Date.now()).k]==="hit","pose="+inv["the-pale-drake"][ctx.poseAt(a,Date.now()).k]);
 a=mk("hill-wolf");ctx.set([a]);ctx.mobBeat(null,["hill-wolf"],null);into(a,0.1);
@@ -113,16 +172,16 @@ a=mk("ptarmigan");ctx.set([a]);a.phase="travel";a.t=0;
 let seen=new Set(); for(let i=0;i<45;i++){ctx.set([a]);ctx.stepAnims();seen.add(inv["ptarmigan"][ctx.poseAt(a,Date.now()).k]);}
 t("a bird flies a whole arc, not just a wingbeat",seen.has("glide")&&seen.has("landing"),[...seen].join(" "));
 
-a=mk("hill-wolf");ctx.set([a]);ctx.applyState({"hill-wolf":"hunt"});
+a=mk("hill-wolf");ctx.set([a]);ctx.applyState(["hunt"]);
 t("a wolf that has you stops wandering",a.state==="hunt");
 a.next=0;ctx.stepAnims();
 t("...and will not stroll off mid-hunt",a.phase!=="travel","phase="+a.phase);
 const hp=ctx.poseAt(a,Date.now());
 t("...it holds you with its watch pose",inv["hill-wolf"][hp.k]===a.watch,"pose="+inv["hill-wolf"][hp.k]);
-a=mk("red-hind");ctx.set([a]);a.phase="travel";a.t=0;ctx.applyState({"red-hind":"flee"});
+a=mk("red-hind");ctx.set([a]);a.phase="travel";a.t=0;ctx.applyState(["flee"]);
 t("a fleeing creature drops the stroll at once",a.phase!=="travel");
 ctx.stepAnims();t("...and moves away, not across",ctx.poseAt(a,Date.now()).x<0,"x="+ctx.poseAt(a,Date.now()).x.toFixed(3));
-a=mk("hill-wolf");ctx.set([a]);ctx.applyState({});
+a=mk("hill-wolf");ctx.set([a]);ctx.applyState([]);
 t("nothing on the wire = it is free to wander",a.state==="");
 
 let w1=mk("hill-wolf"),w2=mk("cave-lion");ctx.set([w1,w2]);ctx.mobBeat(["hill-wolf","cave-lion"],null,null);

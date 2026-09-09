@@ -59,10 +59,15 @@ console.log(`${name}  ${info.width}x${info.height}  sky ${pct.toFixed(1)}%`);
 
 // The same ground under another condition, if one is already installed: the
 // reference for whether this plate's horizon sits where the others' do.
+// ONLY A CUT PLATE HAS A SKYLINE TO COMPARE. Checking a fog plate against a
+// night one reports the whole sky as a difference, because one has a hole in it
+// and the other is a photograph — 36% apart and both correct.
+const keyedCond = /-(day|night|night-torch)$/.test(name);
+const existed = fs.existsSync(path.join(OUT, name + ".webp"));
 const sibling = name.replace(/-(day|night|night-torch|fog|rain|snow)$/, "");
 const ref = ["night", "day"].map((c) => path.join(OUT, sibling + "-" + c + ".webp"))
   .find((f) => fs.existsSync(f) && path.basename(f, ".webp") !== name);
-if (ref) {
+if (ref && keyedCond) {
   // COMPARED AS A PROFILE, not pixel against pixel: the generator returns
   // 1584x993 one day and 1586x992 the next, and a one-pixel difference in frame
   // size is nothing to the page (each layer is cover-cropped on its own) while
@@ -86,11 +91,20 @@ if (ref) {
   const d = (100 * sum) / 256;
   console.log(`  vs ${path.basename(ref)}: skyline differs by ${d.toFixed(2)}%` +
     (d > 2 ? "  \u2190 TOO FAR APART, check the composition" : ""));
-} else {
+} else if (keyedCond) {
   console.log("  no sibling plate installed — nothing to check the skyline against");
 }
-if (pct < 0.5) console.log("  ← almost nothing keyed; is the sky magenta in the source?");
-if (pct > 70) console.log("  ← most of the frame went; is the GROUND magenta too?");
+// WHAT COUNTS AS RIGHT DEPENDS ON THE CONDITION, and a flat threshold was wrong
+// at both ends. Only day, night and night-torch are cut: fog, rain and snow are
+// whole photographs carrying their own weather sky and must have NO hole in them,
+// so for those a large key is the error and zero is correct. And a keyed plate
+// can legitimately be almost solid — an interior with one small window keys well
+// under a percent (the Last Shelter's east slot is 0.4% of its frame) — so the
+// floor has to be low enough not to cry wolf at the rooms that need it most.
+if (keyedCond && pct < 0.15) console.log("  \u2190 almost nothing keyed; is the sky magenta in the source?");
+if (keyedCond && pct > 70) console.log("  \u2190 most of the frame went; is the GROUND magenta too?");
+if (!keyedCond && pct > 0.5) console.log("  \u2190 THIS CONDITION MUST NOT BE KEYED: fog, rain and snow carry their own sky, and a hole in one shows the wrong weather through it");
+if (!keyedCond && pct <= 0.5) console.log("  opaque, as a weather plate should be");
 
 if (!write) { console.log("  dry run — pass --write to install"); process.exit(0); }
 // q92 / alphaQuality 100, the same as every other asset: colour costs under 1%
@@ -99,4 +113,6 @@ await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 }
   .webp({ quality: 92, alphaQuality: 100 })
   .toFile(path.join(OUT, name + ".webp"));
 const kb = Math.round(fs.statSync(path.join(OUT, name + ".webp")).size / 1024);
-console.log(`  wrote public/room-bg/${name}.webp  (${kb}KB)  — bump ART_V`);
+// ART_V only matters when a URL the world already has is being replaced. A new
+// filename has nobody's cache to beat.
+console.log(`  wrote public/room-bg/${name}.webp  (${kb}KB)` + (existed ? "  — REPLACED, bump ART_V" : ""));

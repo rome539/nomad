@@ -58,6 +58,11 @@ export interface Session {
   litSource?: "torch" | "lantern" | "brand"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack), a brand an open flame in the WEAPON hand (2026-08-20)
   litRow?: string; // WHICH row is alight, when litSource is "brand" (2026-08-20): more than one burning weapon can ride in a pack now, so the burnout must spend the one actually lit and not the first brand it finds
   torchWarned?: boolean; // fired the one-time "burning low" warning for the current light
+  // THE LAST SKY THIS PLAYER WAS TOLD ABOUT. Not state the world runs on — the
+  // sky is derived fresh every time it is asked for — only a record of what has
+  // been SENT, so the tick can notice the hour turning under someone standing
+  // still and push them a frame. Undefined until the first status frame.
+  artSky?: string;
   pvpTarget?: string | null; // pubkey of the wanderer this one has steel out against (transient — a deploy ends the exchange, never the grudge)
   linkdeadUntil?: number; // ms epoch a mid-fight disconnect holds the body in the world until; unset = normally connected (or normally gone)
   hobbled?: boolean; // a leg wound: you can still flee, but only after limping clear (a set delay), cured by rest

@@ -6449,6 +6449,30 @@ export const TERRAIN_RULES: [string, RegExp][] = [
 // rained on and gone dark with the sky since the wood shipped, and both of them
 // are hideaways — the two rooms in that region where being under cover is the
 // entire point of the room.
+// ROOMS THAT ARE ONE OF ONE, for the picture only (rome, 2026-09-08).
+//
+// The art has had two ways to name a place: a TERRAIN, shared by every room
+// standing on that kind of ground, and a GATE, which is a specific built thing
+// named by its own id. Between them sits a third kind the mountain kept making
+// and the tables could not say: a room that is singular, is not a door, and
+// whose ground rules describe it wrongly because it is not really made of
+// ground at all.
+//
+// All three of these were being answered badly. The Last Shelter and the Summit
+// Gate both match "vent" on their warm air and fall through to a bare scree
+// hillside - one is a hole under a fallen block and the other is a gap in a
+// wall. The Summit matches "snow" and is painted as a snowfield by a room whose
+// own description says there is no snow in it.
+//
+// Being in this set costs nothing until a plate exists: it adds a `place` to the
+// status frame beside the terrain, never instead of it, so a client with no
+// picture for the id goes on painting exactly what it painted before.
+export const ART_ROOMS = new Set<string>([
+  "the-last-shelter",   // a hole under a fallen block, with a slot of sky east
+  "the-summit-gate",    // a gap in a rock wall with light coming through it
+  "the-summit",         // the bowl, the ring of run stone, and the whole sky
+]);
+
 export const INDOOR_ROOMS = new Set<string>([
   "the-charcoal-hut", "the-withy-hut",                                  // the wood's two boltholes
   "the-smithy", "the-reeves-house", "the-reeves-loft", "the-north-house", // the Field End

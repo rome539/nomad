@@ -82,7 +82,7 @@ const ctx = {};
 const code = [
   depsFor(fn("paintScene"), "paintScene"),
   'var viewMode = "image";',
-  'var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastTorch = false, skyRoll = 0;',
+  'var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "", lastTorch = false, skyRoll = 0;',
   'var scenePainted = "", sceneSeq = 0;',
   // The preloader is the one thing a stub cannot supply: on the page an Image
   // holds the old room up until the new plate has decoded. Here it lands at once,
@@ -92,7 +92,7 @@ const code = [
   fn("paintScene"),
   // The lifted block declares its own elements from getElementById; the stubs win.
   "sceneEl = _scene; skyEl = _sky; mobsEl = _mobs;",
-  "ctx.paint = paintScene; ctx.pools = SKY_POOL; ctx.scenes = TERRAIN_SCENES;",
+  "ctx.paint = paintScene; ctx.pools = SKY_POOL; ctx.scenes = TERRAIN_SCENES; ctx.rooms = ROOM_PLATE;",
 ].join("\n");
 new Function("ctx", "_scene", "_sky", "_mobs", "document", code)(
   ctx, sceneEl, skyEl, mobsEl, { getElementById: () => null });
@@ -185,29 +185,36 @@ console.log("one sky, turned, is more than one sky");
   // Read off the table rather than counted here, so growing a pool never leaves
   // a stale number in a test — which is exactly what happened when night went
   // from three entries to four.
+  // THE DAY IS HASHED INTO THE POOL, NOT AN INDEX INTO IT (rome, 2026-09-08),
+  // so what is asserted here is a distribution rather than a sequence: every
+  // entry gets used, none of them dominates, and there is no short period a
+  // player could learn. Deterministic all the same — the same day gives the same
+  // sky to everyone alive, which is the thing that may never be traded away.
   const pool = ctx.pools.night;
-  const seen = [];
-  for (let d = 0; d <= pool.length; d++) {
-    ctx.paint("mountain", "night", "scree", "r" + d, 0, d);
-    seen.push(strip(skyEl.style.backgroundImage) + "|" + (skyEl.style.transform || "-"));
-  }
-  t("night walks every entry in its pool", new Set(seen.slice(0, pool.length)).size === pool.length, seen.join("  "));
-  t("...and comes back round after " + pool.length, seen[0] === seen[pool.length], seen[0] + " vs " + seen[pool.length]);
-  // The four turns, each asked for by the day that selects it.
-  for (const [day, want] of [[0, ""], [1, "scaleX(-1)"], [2, "scaleY(-1)"], [3, "scale(-1, -1)"]]) {
-    ctx.paint("mountain", "night", "scree", "r@" + day, 0, day);
-    t("day " + day + " keeps the file and turns the layer" + (want ? " " + want : " not at all"),
-      strip(skyEl.style.backgroundImage) === "/sky/night.webp" && skyEl.style.transform === want,
-      strip(skyEl.style.backgroundImage) + " " + JSON.stringify(skyEl.style.transform));
-  }
+  const at = (d) => { ctx.paint("mountain", "night", "scree", "r" + d, 0, d);
+    return strip(skyEl.style.backgroundImage) + "|" + (skyEl.style.transform || "-"); };
+  const count = {};
+  for (let d = 0; d < 800; d++) { const k = at(d); count[k] = (count[k] || 0) + 1; }
+  const used = Object.keys(count), tally = Object.values(count);
+  t("every entry in the pool gets used", used.length === pool.length, used.length + " of " + pool.length);
+  t("...and none of them dominates", Math.min(...tally) > 800 / pool.length * 0.7
+    && Math.max(...tally) < 800 / pool.length * 1.3, tally.join(" "));
+  t("...on one file, turned", used.every((k) => k.indexOf("/sky/night.webp|") === 0), used.join(" "));
+  // No short period: the old version repeated every pool.length days exactly.
+  let repeats = 0;
+  for (let d = 0; d < 400; d++) if (at(d) === at(d + pool.length)) repeats++;
+  t("no cycle at the pool's own length", repeats > 40 && repeats < 160, repeats + "/400 match (chance is 100)");
+  // ...and the same day is the same sky, every time it is asked.
+  t("the same day always gives the same sky", at(37) === at(37) && at(37) === at(37));
+  const now = at(37); at(38); t("...and asking again after a different day still agrees", at(37) === now);
   // ALL FOUR TURNS, and each a different arrangement: /y is not /xy, it is /xy
   // mirrored, which is why three variants was one short.
-  const turns = [];
-  for (let d = 0; d < 4; d++) {
+  const turns = new Set();
+  for (let d = 0; d < 60; d++) {
     ctx.paint("mountain", "day", "scree", "t" + d, 0, d);
-    turns.push(skyEl.style.transform || "none");
+    turns.add(skyEl.style.transform || "none");
   }
-  t("a day owns all four turns of its sky", new Set(turns).size === 4, turns.join("  "));
+  t("a day owns all four turns of its sky", turns.size === 4, [...turns].join("  "));
 
   // A CALENDAR SKY MAY NOT BE SWAPPED. Swapping is the move that can lie — a
   // full moon lights the ground and shuts a door, so its picture is a statement
@@ -229,12 +236,14 @@ console.log("one sky, turned, is more than one sky");
     }
     t(locked + " is never turned either", new Set(got).size === 1, got.join(" "));
   }
-  const ar = [];
-  for (let d = 0; d < 4; d++) {
+  const ar = new Set(); const arFiles = new Set();
+  for (let d = 0; d < 60; d++) {
     ctx.paint("mountain", "after-rain", "scree", "a" + d, 0, d);
-    ar.push(skyEl.style.transform || "none");
+    ar.add(skyEl.style.transform || "none");
+    arFiles.add(strip(skyEl.style.backgroundImage));
   }
-  t("after-rain turns without ever changing picture", new Set(ar).size === 4, ar.join("  "));
+  t("after-rain turns four ways", ar.size === 4, [...ar].join("  "));
+  t("...without ever changing picture", arFiles.size === 1, [...arFiles].join(" "));
 }
 
 console.log("the flag is sticky");
@@ -243,6 +252,111 @@ ctx.paint(null, null, null, null);             // what applyView does
 t("a repaint with no news keeps the flame", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-night-torch.webp", strip(sceneEl.style.backgroundImage));
 ctx.paint(null, null, null, null, 0);
 t("and 0 puts it out", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-night.webp", strip(sceneEl.style.backgroundImage));
+
+console.log("the three rooms at the top of the mountain");
+{
+  const at = (place, sky, torch) => {
+    ctx.paint("mountain", sky, "scree", "T" + place + sky + torch, torch, 0, place);
+    return strip(sceneEl.style.backgroundImage) + "  " + (strip(skyEl.style.backgroundImage) || "no sky")
+         + (sceneEl.className ? "  " + sceneEl.className : "");
+  };
+  // THE SUMMIT was painted as a snowfield by a room whose text says there is no
+  // snow in it — it matched the "snow" terrain rule on its own description.
+  t("the summit has its own plate", at("the-summit", "day", 0) === "/room-bg/the-summit-day.webp  /sky/day.webp",
+    at("the-summit", "day", 0));
+  t("...not the snowfield it used to borrow", at("the-summit", "day", 0).indexOf("snow") < 0);
+  t("...and a torch lights it",
+    at("the-summit", "night", 1) === "/room-bg/the-summit-night-torch.webp  /sky/night.webp",
+    at("the-summit", "night", 1));
+  t("...its weather is its own photograph, no sky behind",
+    at("the-summit", "snow", 0) === "/room-bg/the-summit-snow.webp  no sky", at("the-summit", "snow", 0));
+  // THE SUMMIT GATE matched "vent" on its warm air and was handed a scree slope.
+  t("the gate room has its own plate", at("the-summit-gate", "night", 0) === "/room-bg/the-summit-gate-night.webp  /sky/night.webp",
+    at("the-summit-gate", "night", 0));
+  t("...at dusk it stands on its night ground", at("the-summit-gate", "dusk", 0) === "/room-bg/the-summit-gate-night.webp  /sky/dusk.webp",
+    at("the-summit-gate", "dusk", 0));
+  // THE LAST SHELTER is roofed: three conditions, and the weather stops outside.
+  t("the shelter is a dark room with a grey slot in the rain",
+    at("the-last-shelter", "rain", 0) === "/room-bg/the-last-shelter-night.webp  /sky/after-rain.webp",
+    at("the-last-shelter", "rain", 0));
+  t("...and the rain does not tint it", sceneEl.className === "", "class=" + sceneEl.className);
+  t("...its plain day is the day plate under the day sky",
+    at("the-last-shelter", "day", 0) === "/room-bg/the-last-shelter-day.webp  /sky/day.webp",
+    at("the-last-shelter", "day", 0));
+  t("...and the aftermath darkens it like the rest",
+    at("the-last-shelter", "after-rain", 0) === "/room-bg/the-last-shelter-night.webp  /sky/after-rain.webp",
+    at("the-last-shelter", "after-rain", 0));
+  // walking out of a singular room must stop naming it
+  ctx.paint("mountain", "day", "scree", "away", 0, 0, "");
+  t("walking out of one drops it", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-day.webp",
+    strip(sceneEl.style.backgroundImage));
+}
+
+console.log("a room with a roof on it");
+{
+  // The Last Shelter is a hole under a fallen block. The world counts it
+  // outdoors — it goes dark at night like the rest of the mountain — but the
+  // PICTURE of the weather stops at the stone: rain cannot change a room with a
+  // roof, only the light in the slot you see out of.
+  const at = (sky, torch) => {
+    ctx.paint("mountain", sky, "scree", "L" + sky + torch, torch, 0, "the-last-shelter");
+    return { scene: strip(sceneEl.style.backgroundImage), sky: strip(skyEl.style.backgroundImage),
+             tint: sceneEl.className, mobs: mobsEl.className };
+  };
+  let r = at("day", 0);
+  t("its own plate is used, not the ground it stands on", r.scene === "/room-bg/the-last-shelter-day.webp", r.scene);
+  t("...and a sky is drawn behind it for the slot", r.sky === "/sky/day.webp", r.sky);
+  // WEATHER FROM UNDER A ROOF (rome, 2026-09-08). It takes no plate of its own,
+  // but it is not nothing either: the room goes dark and the slot goes grey.
+  for (const w of ["rain", "fog", "snow", "after-rain"]) {
+    r = at(w, 0);
+    t(w + " darkens the room to its night plate", r.scene === "/room-bg/the-last-shelter-night.webp", r.scene);
+    t("...with the grey after-rain sky in the slot", r.sky === "/sky/after-rain.webp", r.sky);
+    t("...and still no wash over the picture", r.tint === "" && r.mobs === "t-night", "tint=" + r.tint + " mobs=" + r.mobs);
+    // a room dark enough to be drawn at night is a room a flame belongs in,
+    // even though rain is not a torch hour out on the open hill
+    r = at(w, 1);
+    t("...and a torch lights it", r.scene === "/room-bg/the-last-shelter-night-torch.webp" && r.mobs === "t-night-torch",
+      r.scene + " " + r.mobs);
+  }
+  // Out on the hill the aftermath is a bright grey DAY and keeps the day ground.
+  ctx.paint("mountain", "after-rain", "scree", "wetday", 0, 0, "");
+  t("outdoors the aftermath is still a day", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-day.webp",
+    strip(sceneEl.style.backgroundImage));
+  // and none of this leaks outdoors: a torch in the rain on open ground does nothing
+  ctx.paint("mountain", "rain", "scree", "wet", 1, 0, "");
+  t("a torch in the rain outdoors still changes nothing",
+    strip(sceneEl.style.backgroundImage) === "/room-bg/scree-rain.webp", strip(sceneEl.style.backgroundImage));
+  r = at("blood", 0);
+  t("a blood moon does not redden the inside", r.tint === "" && r.mobs === "t-night", "tint=" + r.tint + " mobs=" + r.mobs);
+  t("...on the night plate", r.scene === "/room-bg/the-last-shelter-night.webp", r.scene);
+  r = at("night", 1);
+  t("a torch lights it", r.scene === "/room-bg/the-last-shelter-night-torch.webp" && r.mobs === "t-night-torch",
+    r.scene + " " + r.mobs);
+  // and an unsheltered room plate is untouched by any of this
+  ctx.rooms["_open"] = "day night";
+  ctx.paint("mountain", "rain", "scree", "open", 0, 0, "_open");
+  t("an open room plate still takes its weather", sceneEl.className === "t-rain", "class=" + sceneEl.className);
+  delete ctx.rooms["_open"];
+}
+
+console.log("the hour turns while you stand still");
+{
+  // Same room, same ground, only the clock moved. The scene url does not change
+  // between night and dawn (both stand on the night plate), so this is the case
+  // where a repaint could quietly decide it had nothing to do.
+  ctx.paint("mountain", "night", "scree", "still", 0, 0);
+  const wasScene = strip(sceneEl.style.backgroundImage), wasSky = strip(skyEl.style.backgroundImage);
+  ctx.paint(null, "dawn", null, null);
+  t("the ground is the same plate", strip(sceneEl.style.backgroundImage) === wasScene, wasScene);
+  t("...and the sky follows the hour anyway",
+    strip(skyEl.style.backgroundImage) === "/sky/dawn.webp" && wasSky === "/sky/night.webp",
+    wasSky + " -> " + strip(skyEl.style.backgroundImage));
+  ctx.paint(null, "day", null, null);
+  t("...and on to day, which is a different ground", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-day.webp",
+    strip(sceneEl.style.backgroundImage));
+  t("...with the day sky over it", strip(skyEl.style.backgroundImage) === "/sky/day.webp", strip(skyEl.style.backgroundImage));
+}
 
 console.log("where the creatures stand");
 {

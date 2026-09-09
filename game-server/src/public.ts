@@ -3061,7 +3061,7 @@ async function connect() {
       if (f.room && f.room !== lastRoomName) chipsExpanded = false;
       lastRoomName = f.room || "";
       if (f.art) grantArt();
-      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll);
+      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place);
       roomEl.textContent = "";
       if (f.room) {
         roomEl.appendChild(document.createTextNode(f.room));
@@ -6501,6 +6501,63 @@ var BANDS_WITH_PLATES = { mountain: 1 };
 // plate that has one is shown it whenever you are standing in the dark with a
 // flame of your own; a plate that has not been shot that way is simply not
 // listed and keeps its ordinary night, which is what it looked like yesterday.
+// AND THE ROOMS THAT ARE ONE OF ONE. Same law as the gate table and the terrain
+// table: a name goes in here when its plate has been cut, and not before. Until
+// then the server names the room, this table misses, and the ground rules answer
+// exactly as they did — so the three below can land one at a time.
+//
+// The value is the file stem, so a plate is public/room-bg/<stem>-<condition>.webp
+// and the conditions listed are the ones that were actually shot.
+//   "the-summit": "day night night-torch fog rain snow",
+var ROOM_PLATE = {
+  // The top of the mountain, and the two rooms of the approach to it. All three
+  // were being answered by the ground rules and answered wrongly — the Summit
+  // was painted as a snowfield by a room whose own text says there is no snow
+  // in it, and the other two matched "vent" on their warm air and were handed a
+  // bare scree slope.
+  "the-summit":       "day night night-torch fog rain snow",
+  "the-summit-gate":  "day night night-torch fog rain snow",
+  // Three conditions, and that is the whole set a roofed room can want — see
+  // SHELTERED below for why the other three would be three photographs spent on
+  // the light in one slot.
+  "the-last-shelter": "day night night-torch",
+};
+// AND WHICH OF THEM THE WEATHER DOES NOT REACH (rome, 2026-09-08).
+//
+// The gatehouse has had this rule since the day it was painted — whatever is
+// happening outside stops at the door — but it lives in the old single-plate
+// branch and a room plate goes through the layered one, so a sheltered room
+// would have been washed with rain it cannot feel.
+//
+// It is not the same thing as being INDOORS to the world. The Last Shelter is a
+// hole under a fallen block on an open mountain: the world rightly counts it
+// outdoors, so it goes dark at night and the cold finds you there. What stops at
+// the stone is the PICTURE of the weather. Rain cannot change a room with a roof
+// on it; all it can change is the light in the slot you can see out of, which is
+// a sixth of the frame and not worth three photographs.
+//
+// So a sheltered plate takes no hour or weather correction at all, and the
+// creatures standing in it read the plate's own condition rather than the sky
+// outside. The sky layer is still drawn — that is the whole point of the slot.
+var SHELTERED = { "the-last-shelter": 1 };
+// AND WHAT WEATHER LOOKS LIKE FROM UNDER ONE (rome, 2026-09-08). A sheltered
+// room takes no weather plate, but that does not mean weather changes nothing:
+// there is a slot, and what comes through it is the whole of the light in there.
+//
+// Rain, fog and snow are dark grey days. Seen from inside a hole they do two
+// things and neither of them is a wash over the picture: the room goes DARK, so
+// it takes its night plate, and the slot goes GREY, so the after-rain sky is
+// drawn behind it — the one bright overcast sky the game owns, and the closest
+// thing to weather-seen-from-indoors without shooting three more plates for a
+// sixth of a frame. A dark hole with grey light in the gap.
+//
+// AND THE AFTERMATH IS ONE OF THEM (rome, 2026-09-08). It is the odd entry here
+// because it is not weather at all — it is the phase after the rain, and out on
+// the hill it is a bright churned grey day that keeps the DAY ground. Under a
+// roof that distinction stops mattering: overcast is overcast, and a hole with
+// a slot in it is dim under any of the four. It is also the only one whose slot
+// sky was already right, so it costs nothing but the darkening.
+var WEATHER_FROM_INSIDE = { rain: 1, fog: 1, snow: 1, "after-rain": 1 };
 var GATE_PLATE = {
   "the-relay-house":  "day night night-torch fog rain snow",
   "the-shieling":     "day night night-torch fog rain snow",
@@ -6741,9 +6798,34 @@ var skyRoll = 0;
 // WHICH PICTURE THIS HOUR IS WEARING. The one place the pool is read, so a sky
 // can never be chosen from anywhere else — and it falls through to the hour's
 // own name whenever no pool is declared, which is what the other four want.
+// NOT IN ORDER (rome, 2026-09-08). This indexed the pool with the day count
+// directly, so a four-entry hour marched plain, mirrored, flipped, turned, plain
+// — and came back to the same sky every fourth day, which is a pattern a player
+// learns without meaning to.
+//
+// It cannot become a real random, though: the one sky over the world is the
+// claim the whole two-layer scheme rests on, and Math.random() in here would
+// give two people standing in the same room two different evenings. So the day
+// count is HASHED instead — the same cheap FNV-1a the plates are picked with.
+// Every client computes the same answer from the same day, and the sequence has
+// no period short enough to notice. Salted with the hour as well, so day, night,
+// dawn and dusk stop moving in lockstep with each other, and a sky may repeat
+// two days running, which is what weather does anyway.
+// AND FNV-1a ALONE IS NOT ENOUGH TO SHUFFLE WITH. Its low bits track the last
+// characters of the string, so hashing "night:7" and taking it modulo four read
+// the day's last digit almost directly: the first attempt at this produced a
+// permuted cycle rather than a scatter, and day and night — differing only at
+// the START of the string — came out with identical sequences. The murmurhash3
+// finalizer is the standard fix and is four lines: it pushes the high bits down
+// into the low ones so a modulo can see the whole hash.
+function mix32(h) {
+  h ^= h >>> 16; h = Math.imul(h, 2246822507);
+  h ^= h >>> 13; h = Math.imul(h, 3266489909);
+  return (h ^ (h >>> 16)) >>> 0;
+}
 function skyPick(hour) {
   var pool = SKY_POOL[hour];
-  var e = (pool && pool.length) ? pool[skyRoll % pool.length] : hour;
+  var e = (pool && pool.length) ? pool[mix32(plateHash(hour + ":" + skyRoll)) % pool.length] : hour;
   var cut = e.indexOf("/");
   return cut < 0 ? { file: e, turn: "" }
                  : { file: e.slice(0, cut), turn: SKY_TURN[e.slice(cut + 1)] || "" };
@@ -6753,7 +6835,7 @@ var sceneEl = document.getElementById("scene");
 var skyEl = document.getElementById("sky");
 var viewBtn = null;   // built only for a granted key, see buildViewRow
 var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
-var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "";
+var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "";
 // WHETHER YOU ARE CARRYING A LIGHT. Sticky like the other four: applyView calls
 // paintScene with nothing at all when the player turns pictures on, and the
 // scene has to come back the way it was rather than as an unlit night.
@@ -6819,8 +6901,11 @@ function grantArt() {
   applyView();   // and if pictures are what they wanted, they get them now
 }
 
-function paintScene(band, sky, terrain, roomKey, torch, roll) {
+function paintScene(band, sky, terrain, roomKey, torch, roll, place) {
   if (roomKey) lastRoomKey = roomKey;
+  // Cleared as well as set: walking out of a singular room and into ordinary
+  // ground must stop naming the room, or the summit follows you down the hill.
+  if (place !== undefined) lastPlace = place || "";
   if (band) lastBand = band;
   if (sky) lastSky = sky;
   // A bare truth test would not do: the whole point is that going dark is a
@@ -6846,6 +6931,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll) {
   // A gate is asked for by name before anything else, and if it has no plate
   // yet the terrain it is standing on answers instead — hence the fallthrough
   // rather than an early return.
+  // A SINGULAR ROOM IS ASKED FOR FIRST, before the door it might be and before
+  // the ground it stands on — it is the most specific thing anything can know
+  // about where you are. It falls through to both when it has no plate yet.
+  var place = (lastPlace && ROOM_PLATE[lastPlace] !== undefined) ? lastPlace : "";
   var gate = lastTerrain.slice(0, 5) === "gate:" ? lastTerrain.slice(5) : "";
   // "lit" below is whether the TORCH PLATE WAS ACTUALLY USED, not the same
   // question as whether a torch is burning: a ground with no torch plate cut
@@ -6853,7 +6942,41 @@ function paintScene(band, sky, terrain, roomKey, torch, roll) {
   // creatures read this rather than lastTorch, so nothing ever blazes on a
   // hillside the picture left unlit.
   var scene = "", sky = "", tint = "", lit = false, turn = "", line = MOB_LINE_DEFAULT;
-  if (gate && GATE_PLATE[gate] !== undefined) {
+  // WHAT HOUR THE CREATURES ARE STANDING IN, which is the sky outside everywhere
+  // except under a roof, where it is whatever the plate was lit for.
+  var mobHour = lastSky;
+  if (place) {
+    // Identical to the gate branch below, and deliberately so: a plate is a
+    // plate, and the only thing that differs is which table named it.
+    var phave = " " + ROOM_PLATE[place] + " ";
+    var shut = !!SHELTERED[place];
+    var pbase = SKY_BASE[lastSky] || "day";
+    // What the slot shows, which is only ever different from the hour under a
+    // roof in bad weather — there is no rain sky in the game, and a dark room
+    // under a bright noon sky would be the wrong half of the picture.
+    var slot = lastSky;
+    if (shut && WEATHER_FROM_INSIDE[lastSky]) { pbase = "night"; slot = "after-rain"; }
+    if (phave.indexOf(" " + pbase + " ") < 0) pbase = "day";
+    // A TORCH SHOWS WHEREVER THE ROOM IS DARK, which under a roof is not the same
+    // question as which hour it is. TORCH_HOURS answers it outdoors — rain and
+    // snow are daylit there, whole photographs with their own light in them. But
+    // a sheltered room in rain has just resolved to its NIGHT plate, and a room
+    // dark enough to be drawn at night is a room a flame belongs in. Outdoors
+    // this clause changes nothing: every hour whose ground is the night plate is
+    // already in TORCH_HOURS.
+    var darkEnough = TORCH_HOURS[lastSky] || pbase === "night";
+    var pwant = (lastTorch && darkEnough && phave.indexOf(" night-torch ") >= 0) ? "night-torch" : pbase;
+    scene = "/room-bg/" + place + "-" + pwant + ".webp";
+    if (KEYED[pwant]) {
+      var pp = skyPick(SKY_PAINTED[slot] ? slot : pbase);
+      sky = "/sky/" + pp.file + ".webp"; turn = pp.turn;
+    }
+    lit = pwant === "night-torch";
+    tint = (lit || shut || NO_GROUND_TINT[lastSky] || pbase === lastSky) ? "" : lastSky;
+    if (shut) mobHour = lit ? "" : pbase;   // a roof is over them too
+    line = MOB_LINE[place] || MOB_LINE_DEFAULT;
+  }
+  if (!scene && gate && GATE_PLATE[gate] !== undefined) {
     // GROUND WEATHER IS A DIFFERENT PHOTOGRAPH. Night is not the day gone dim,
     // fog is not a grey wash, rain wets the stone and snow lies on it — none of
     // those is anything a sky behind a dry daylit scene can do. Five scenes.
@@ -6998,7 +7121,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll) {
     // on ground the plate has lit to orange. It follows the PLATE, so an unpainted
     // ground keeps its dark and nothing is lit by a torch the picture cannot see.
     if (mobsEl) {
-      mobsEl.className = lit ? "t-night-torch" : lastSky ? "t-" + lastSky : "";
+      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + mobHour : "";
       // ...and standing where this plate's ground actually is. Set every time,
       // never only when it differs: a line left over from the room behind you
       // would put the next room's animals wherever the last one's stood.
@@ -7086,6 +7209,12 @@ applyView();
 // The art's own stage lock asks for a man at a FIFTH of the frame, which works
 // out at ~22vh. That was followed and it reads as a diorama seen from across
 // the room. This is deliberately larger.
+// A MAN IS THE ANCHOR OF THE CURVE and also of the FRAME. 42vh is not a free
+// number: centred on the horizon at 55%, a standing man's feet land at 76% and
+// the prose begins at 75%, so he stands exactly on the line the text draws and
+// the whole picture above him is his. Everything smaller sits comfortably inside
+// that, which is why "centred, not stood on a line" works for the other forty.
+var MAN_VH = 42;
 var MOB_P = 0.85;
 var MOB_K = 42 / Math.pow(22, MOB_P);
 function mobVh(id) { return MOB_K * Math.pow(MOB_SPRITE[id], MOB_P); }
@@ -7104,15 +7233,35 @@ var MOB_SPRITE = {
   //
   // ---- the summer people, and the ruler everything is measured against ------
   "the-herd": 22,          // 1.75  a man standing. Their sprites carry a baked
-  // THE ONE DELIBERATE EXCEPTION TO THE METRE RULE. She is seated at her pail,
-  // and a seated adult is ~1.3m to the crown, which converts to 16 — and 16 is
-  // correct and looks wrong. Next to a standing man she reads as a child rather
-  // than as a woman sitting down, because a viewer reads the HEAD first and the
-  // ground line second, and this row has no shared ground line to read (the
-  // sprites are centred on the horizon). So she is sized as the person she is,
-  // not as the posture she is in. She stays under the man — that is the rule
-  // the hind broke and it is the one rule here that must hold.
-  "the-milker": 20,        // sized to read, not measured. alpha 140/255:
+  // THE ONE DELIBERATE EXCEPTION TO THE METRE RULE, corrected once (rome,
+  // 2026-09-08: the milker was much larger than the herd). She is crouched at
+  // her pail, and a crouched adult is ~1.3m to the crown, which converts to 16.
+  // This was set to 20 instead — sized as the person rather than the posture —
+  // on the argument that A VIEWER READS THE HEAD FIRST, there being no shared
+  // ground line in this row to read a posture against (the sprites are centred
+  // on the horizon, not stood on a line).
+  //
+  // The principle was right and the correction was its opposite. Sizing her by
+  // the height a STANDING woman would have, while the art shows her folded into
+  // about 0.6 of that, inflates everything about her by the same factor — and
+  // the first thing it inflates is the head. Measured: at 20 her head came out
+  // 1.88x the herdsman's. She did not read as a woman crouching, she read as a
+  // giant crouching, which is a worse failure than the one being avoided.
+  //
+  // So she is head-matched, and to the BUTTER WIFE rather than to the herdsman:
+  // he is drawn long and lanky with a notably small head, and she is the second
+  // standing human here and the ordinary build of the two. At 13 their heads
+  // measure 7.32 and 7.66 — the same woman, one of them kneeling. That lands her
+  // at 0.64 of a standing man, which is a person on her haunches with her back
+  // straight, and it is still well clear of reading as a child.
+  //
+  // THE TRAP THIS CAME FROM, for whoever sizes the next one: the frame is filled
+  // by the pose, not by the animal. A creature drawn standing has its own height
+  // in the frame; one drawn low has only its crouched extent, and the scale
+  // number governs whatever is IN the picture. Every other human here is drawn
+  // upright, so she is the only entry the distinction has ever bitten.
+  "the-milker": 13,        // 1.30  crouched, and head-matched to the butter wife.
+  //                                alpha 140/255:
   "a-fold-dog": 9,         // 0.70  they are not solid, and a player should be
   //                                able to see that without being told.
   // ---- the big animals -------------------------------------------------------
@@ -7152,7 +7301,13 @@ var MOB_SPRITE = {
   "snow-hare": 6,             // 0.50
   "the-blue-fox": 6,          // 0.50
   "the-bone-dropper": 14,     // 1.15
-  "the-butter-wife": 20,      //       sized to read like the milker, not measured - seated at her churn
+  // 20 IS RIGHT, THE NOTE THAT WAS HERE WAS NOT. It read "sized to read like the
+  // milker, seated at her churn" — the exception that was corrected on
+  // 2026-09-08. It does not apply to her: the DESCRIPTION has her sitting at the
+  // churn and the ART has her standing with a pail, so she needs no exception at
+  // all. 20 is the plain metre rule for a woman on her feet, and her head
+  // measures 7.66vh against the crouched milker's 7.32 — the same build.
+  "the-butter-wife": 20,      // 1.60  a woman standing. Sized like anything else.
   "the-dancer": 3,            // 0.25
   "the-last-dog": 9,          // 0.70
   "the-old-glutton": 6,       // 0.50
@@ -7272,7 +7427,11 @@ function paintMobs(ids, doing, dead) {
   if (mobHold && Date.now() < mobHold) { mobPending = ids; mobPendingRest = doing; mobPendingDead = dead; return; }
   var list = [];
   if (viewMode === "image" && ids && ids.length) {
-    for (var i = 0; i < ids.length; i++) if (MOB_SPRITE[ids[i]]) list.push(ids[i]);
+    // EACH SPRITE CARRIES WHERE IT CAME FROM. The server sends one state per
+    // creature in this list, so a sprite has to remember its own slot in it —
+    // the row is about to be sorted by size and dealt out from the middle, and
+    // after that position in the row says nothing about position on the wire.
+    for (var i = 0; i < ids.length; i++) if (MOB_SPRITE[ids[i]]) list.push({ id: ids[i], idx: i });
   }
   // BODIES FIRST, and only ones we have a death frame for. They are part of the
   // key: a corpse appearing or being eaten has to reflow the row like anything else.
@@ -7280,7 +7439,7 @@ function paintMobs(ids, doing, dead) {
   if (viewMode === "image" && dead)
     for (var d0 = 0; d0 < dead.length; d0++)
       if (MOB_ANIM[dead[d0]] && MOB_ANIM[dead[d0]].f.death !== undefined) bodies.push(dead[d0]);
-  var key = bodies.join(",") + "|" + list.join(",");
+  var key = bodies.join(",") + "|" + list.map(function (e) { return e.id; }).join(",");
   // Sleep is NOT part of the key: a creature bedding down must not reflow the
   // row, which would throw away every animation running in it. It is applied
   // to the sprites already standing there instead.
@@ -7288,7 +7447,7 @@ function paintMobs(ids, doing, dead) {
   lastMobs = key;
   while (mobsEl.firstChild) mobsEl.removeChild(mobsEl.firstChild);
   // Biggest toward the centre, so a hare is never lost behind a hind.
-  list.sort(function (a, b) { return MOB_SPRITE[b] - MOB_SPRITE[a]; });
+  list.sort(function (a, b) { return MOB_SPRITE[b.id] - MOB_SPRITE[a.id]; });
   var order = [];
   for (var j = 0; j < list.length; j++) (j % 2 ? order.push : order.unshift).call(order, list[j]);
   anims.length = 0;
@@ -7302,10 +7461,26 @@ function paintMobs(ids, doing, dead) {
     bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + ART_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
+    // The same rule as the living, applied once: a body never animates, so this
+    // is the only place it can be said. Without it a dead drake lies with its
+    // hindquarters under the prose.
+    var blift = Math.max(0, (bvh - MAN_VH) / 2) / bvh;
+    if (blift) bel.style.transform = "translateY(" + (-blift * 100).toFixed(1) + "%)";
     mobsEl.appendChild(bel);
   }
   for (var k = 0; k < order.length; k++) {
-    var id = order[k], vh = mobVh(id), h = vh.toFixed(1) + "vh";
+    var id = order[k].id, slot = order[k].idx, vh = mobVh(id), h = vh.toFixed(1) + "vh";
+    // NOTHING PUTS ITS FEET THROUGH THE PROSE (rome, 2026-09-08: the drake might
+    // be too big). Centring on the horizon is right up to about the size of a
+    // man and then stops being: at 75.7vh the drake's feet land at 93% with
+    // eighteen points of it behind the text, and a bigger sprite only buries
+    // more. So anything TALLER than a man grows upward out of his line instead
+    // of downward past it — its feet stay where his are and its head goes up,
+    // which is also how you would actually meet the thing. Everything at or
+    // under 42vh gets zero and is untouched.
+    // Expressed as a fraction of the element's OWN height, because that is what
+    // a percentage translate means.
+    var lift = Math.max(0, (vh - MAN_VH) / 2) / vh;
     var spec = MOB_ANIM[id];
     if (!spec) {
       var im = document.createElement("img");
@@ -7341,8 +7516,16 @@ function paintMobs(ids, doing, dead) {
     var sleep = "idle", strike = "", recoil = "idle";
     for (var z2 = 0; z2 < SLEEP_POSES.length; z2++)
       if (spec.f[SLEEP_POSES[z2]] !== undefined) { sleep = SLEEP_POSES[z2]; break; }
+    // EVERY BLOW IT WAS DRAWN WITH, not the first one found. This broke on the
+    // first match and kept a single frame, which is right for forty-one of the
+    // forty-three: they have "attack" and nothing else. The two drakes have
+    // three — bite, sweep and breath — so the break made the other two
+    // unreachable by construction, sitting unused in the most expensive sheet
+    // in the game since the day it shipped.
+    var strikes = [];
     for (var z3 = 0; z3 < STRIKE_POSES.length; z3++)
-      if (spec.f[STRIKE_POSES[z3]] !== undefined) { strike = STRIKE_POSES[z3]; break; }
+      if (spec.f[STRIKE_POSES[z3]] !== undefined) strikes.push(STRIKE_POSES[z3]);
+    strike = strikes[0] || "";
     for (var z4 = 0; z4 < HIT_POSES.length; z4++)
       if (spec.f[HIT_POSES[z4]] !== undefined) { recoil = HIT_POSES[z4]; break; }
     // The pose it fixes you with, and how restless it is. A thing with a gait
@@ -7352,7 +7535,8 @@ function paintMobs(ids, doing, dead) {
       if (spec.f[WATCH_POSES[z5]] !== undefined) { watch = WATCH_POSES[z5]; break; }
     var rate = spec.f["move-a"] !== undefined ? 7000 : spec.f.up !== undefined ? 11000 : 20000;
     anims.push({ el: el, spec: spec, id: id, phase: "idle", t: 0, calm: calm, state: "",
-                 sleep: sleep, strike: strike, recoil: recoil, watch: watch, rate: rate,
+                 sleep: sleep, strike: strike, strikes: strikes, blow: strike,
+                 recoil: recoil, watch: watch, rate: rate, slot: slot, lift: lift,
                  next: Date.now() + 2000 + Math.random() * rate * 2 });
   }
   applyState(doing);
@@ -7380,7 +7564,9 @@ function fitMobRow() {
 // top and drop back into it.
 function applyState(doing) {
   for (var i = 0; i < anims.length; i++) {
-    var a = anims[i], st = (doing && doing[a.id]) || "";
+    // BY SLOT, NOT BY NAME. Keyed by creature id this read one state for every
+    // sprite of a kind, so one wolf waking woke the whole heap.
+    var a = anims[i], st = (doing && doing[a.slot]) || "";
     if (a.phase === "death") continue;
     if (st === a.state) continue;
     a.state = st;
@@ -7412,12 +7598,34 @@ function poseAt(a, now) {
     if (t < 0) {
       name = a.watch;                                   // its turn has not come yet
     } else {
+      var blow = a.blow || a.strike;
       var u = Math.min(t / ATTACK_S, 1);
-      if (u < 0.20) {                                   // gathers, and draws back
+      // A BREATH IS NOT A BITE AND MUST NOT BE TIMED LIKE ONE. The windup is the
+      // whole of what makes it frightening — the chest drawing up and swelling
+      // before anything comes out — and the drakes were drawn a frame for
+      // exactly that. So the gather runs twice as long and is spent on "inhale"
+      // rather than on the watch pose, the release runs longer than a lunge, and
+      // the body swells into it and empties instead of driving forward. Nothing
+      // else in the game owns either frame, so nothing else takes this path.
+      if (blow === "breath" && f.inhale !== undefined) {
+        if (u < 0.38) {                                 // draws it in, and grows
+          name = "inhale";
+          x = -Math.sin(u / 0.38 * Math.PI / 2) * SWAY * 0.18;
+          s *= 1 + (u / 0.38) * 0.045;
+        } else if (u < 0.74) {                          // and lets it go
+          name = "breath";
+          x = Math.sin((u - 0.38) / 0.36 * Math.PI) * SWAY * 0.55;
+          s *= 1.045 - ((u - 0.38) / 0.36) * 0.06;
+        } else {                                        // and is empty after it
+          name = a.watch;
+          x = -(1 - (u - 0.74) / 0.26) * SWAY * 0.14;
+          s *= 0.985 + ((u - 0.74) / 0.26) * 0.015;
+        }
+      } else if (u < 0.20) {                            // gathers, and draws back
         name = a.watch;
         x = -Math.sin(u / 0.20 * Math.PI / 2) * SWAY * 0.30;
       } else if (u < 0.58) {                            // and goes
-        name = a.strike;
+        name = blow;
         x = Math.sin((u - 0.20) / 0.38 * Math.PI) * SWAY * 1.0;
       } else {                                          // and comes off it
         name = a.watch;
@@ -7492,11 +7700,26 @@ function poseAt(a, now) {
       if (f.glide === undefined || f.landing === undefined) {
         name = beat; air = LIFT + Math.sin(t * 3) * 0.04;      // no arc drawn: just fly
       } else if (uf < 0.32) {
-        name = beat; air = LIFT * (uf / 0.32);                  // climbing out on the beat
-      } else if (uf < 0.72) {
+        // LEAVING THE GROUND IS ITS OWN MOVEMENT for anything drawn doing it:
+        // the crouch and the shove, before the wings have air to bite on. Only
+        // the drakes have the frame; every bird climbs out on the beat as before.
+        name = (f.takeoff !== undefined && uf < 0.13) ? "takeoff" : beat;
+        air = LIFT * (uf / 0.32);
+      } else if (uf < (f.dive !== undefined ? 0.60 : 0.72)) {
         name = "glide"; air = LIFT; x = Math.sin(t * 1.2) * SWAY * 0.6;
+      } else if (f.dive !== undefined && uf < 0.84) {
+        // AND IT DOES NOT DRIFT DOWN. A thing that hunts from the air comes off
+        // the glide in a stoop — wings back, head down, and fast — and puts them
+        // out to land only at the end of it. Two frames the drakes carried and
+        // never used, and between them they turn a flat circuit into a flight.
+        name = "dive";
+        air = LIFT * (1 - (uf - 0.60) / 0.24 * 0.72);
+        x = Math.sin(t * 1.2) * SWAY * 0.22;
+        s *= 1 - (uf - 0.60) / 0.24 * 0.05;
       } else {
-        name = "landing"; air = LIFT * (1 - (uf - 0.72) / 0.28); // and down onto the ground
+        var d0 = f.dive !== undefined ? 0.84 : 0.72;
+        name = "landing";
+        air = LIFT * (1 - (uf - d0) / (1 - d0)) * (f.dive !== undefined ? 0.28 : 1);
       }
     } else {
       // No gait and no wings. The rooted ones - the brooding vulture on its nest,
@@ -7552,6 +7775,13 @@ function mobBeat(swung, struck, died, fed) {
       // NOT ALL AT ONCE. The wire reports a whole round in one message, so
       // without this every creature in a dogpile swings on the same frame.
       a.phase = "attack"; a.t = -Math.random() * STAGGER_S;
+      // AND NOT ALWAYS THE SAME BLOW. Rolled per swing rather than held once, so
+      // a long fight with a drake is bite, sweep and breath in no order you can
+      // count on. Everything else has a list one long and gets the frame it
+      // always got.
+      a.blow = (a.strikes && a.strikes.length > 1)
+        ? a.strikes[Math.floor(Math.random() * a.strikes.length)]
+        : a.strike;
     }
     else if (struck && struck.indexOf(a.id) >= 0) { a.phase = "hit"; a.t = 0; }
     else if (fed && fed.indexOf(a.id) >= 0 && a.spec.f.feed !== undefined) { a.phase = "feed"; a.t = 0; }
@@ -7575,7 +7805,8 @@ function stepAnims() {
     else if (!a.state && now > a.next) { a.phase = "travel"; a.t = 0; a.next = now + a.rate + Math.random() * a.rate * 1.6; }
     var p = poseAt(a, now);
     a.el.style.backgroundPositionX = (p.k * 100 / (a.spec.n - 1)) + "%";
-    a.el.style.transform = "translate(" + (p.x * 100).toFixed(1) + "%," + (-p.air * 100).toFixed(1) + "%)"
+    a.el.style.transform = "translate(" + (p.x * 100).toFixed(1) + "%,"
+      + (-(p.air + (a.lift || 0)) * 100).toFixed(1) + "%)"
       + " rotate(" + ((a.rot || 0) * 57.3).toFixed(2) + "deg) scale(" + p.s.toFixed(3) + ")";
   }
   if (mobHold && now >= mobHold) releaseMobs();
