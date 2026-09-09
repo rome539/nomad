@@ -312,6 +312,14 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
     whatever the bar wraps to. */
  #top{height:100dvh;display:flex;flex-direction:column}
  #bar{flex:0 0 auto}
+ /* THE READOUT LIVES INSIDE THE VIEWPORT BOX. It sat after </div>, outside #top,
+    which is 100dvh — so it began exactly at the bottom edge of the screen and
+    had to be scrolled to. That is fallout from the fix that stopped the bar
+    covering the picture: #top became a full-height column and the shelf, already
+    outside it, was pushed off the bottom. It reports which plate and which sky
+    are up, which day the pool is on, both tints, and why nothing is standing
+    here — none of which is any use one scroll below the thing it describes. */
+ #shelf{flex:0 0 auto;border-bottom:0;border-top:1px solid #2c2418}
  #stage{position:relative;flex:1 1 auto;min-height:0;
         overflow:hidden;background:#0b0906;border-bottom:1px solid #3a3020}
  /* ...and "whole plate" gives up the crop entirely and letterboxes it, for
@@ -350,8 +358,8 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  <span class="n">build ${STAMP} · ART_V ${ART_V} · ${Object.keys(ANIM).length} animated · ${withAtk} strike · ${withDeath} die</span>
 </div>
 <div id="stage"><div id="sky"></div><div id="scene"></div><div id="mobs"></div></div>
-</div>
 <div id="shelf"></div>
+</div>
 <div id="grid"></div>
 <script>
 var MOB_SPRITE=${JSON.stringify(SPRITE)}, MOB_ANIM=${JSON.stringify(ANIM)}, ART_V="${ART_V}";
@@ -514,8 +522,11 @@ function dress(){
 // a shelf that worked out the answer a second time could agree with itself and
 // still be wrong about the page.
 function shelfLine(){
+  // Browsers serialise this as url("...") WITH the quotes, so they have to come
+  // off or the shelf prints a stray " in front of every path.
   var url=function(v){ v=v||""; var a=v.indexOf("(")+1, b=v.indexOf("?v=");
-    return a>0 ? v.slice(a, b>0?b:v.length-1) : "\u2014"; };
+    if(a<=0) return "\u2014";
+    return v.slice(a, b>0?b:v.length-1).replace(/^["']|["']$/g,""); };
   var sc=url(sceneEl.style.backgroundImage), sk=url(skyEl.style.backgroundImage);
   var missing=(sc!=="\u2014"&&torch&&SKY_BASE[hour.value]==="night"&&sc.indexOf("night-torch")<0);
   stage.className = (sc==="\u2014" ? "bare " : "") + (whole ? "whole" : "");
@@ -644,6 +655,44 @@ function setState(v){
 document.querySelectorAll("[data-st]").forEach(function(b){
   b.onclick=function(){ setState(b.dataset.st) };
 });
+// THE SHELF WAITS FOR THE PICTURE. repaint() called shelfLine() straight after
+// paintScene, and paintScene does not paint straight away: it holds the previous
+// room up behind a preloader and swaps the background on the image's load event.
+// So on any plate that was not already cached the shelf read the element BEFORE
+// it was set and reported "ground —  sky —" over a room that was plainly on the
+// screen — and never corrected itself, because nothing called it again. A warm
+// cache hid it completely (the preloader completes synchronously then), which is
+// why it survived: it only ever lied on the first look at a plate.
+//
+// Rather than guess a delay, watch what actually happened. The shelf's whole
+// design is to read back off the elements instead of recomputing the answer, so
+// this is the same idea one step further: when what the elements say changes,
+// say it again.
+var shelfWas = "";
+setInterval(function(){
+  var now = (sceneEl.style.backgroundImage||"") + "|" + (skyEl.style.backgroundImage||"")
+          + "|" + (sceneEl.className||"") + "|" + (mobsEl.className||"");
+  if (now !== shelfWas) { shelfWas = now; shelfLine(); }
+}, 120);
+// THE SHELF WAITS FOR THE PICTURE. repaint() called shelfLine() straight after
+// paintScene, and paintScene does not paint straight away: it holds the previous
+// room up behind a preloader and swaps the background on the image's load event.
+// So on any plate not already cached the shelf read the element BEFORE it was
+// set, reported "ground —  sky —" over a room plainly on the screen, and never
+// corrected itself because nothing called it again. A warm cache hid it
+// completely — the preloader completes synchronously then — which is why it
+// survived: it only ever lied on the first look at a plate.
+//
+// Rather than guess a delay, watch what actually happened. The shelf's whole
+// design is to read back off the elements instead of recomputing the answer;
+// this is that idea one step further — when what the elements say changes, say
+// it again.
+var shelfWas = "";
+setInterval(function(){
+  var now = (sceneEl.style.backgroundImage||"") + "|" + (skyEl.style.backgroundImage||"")
+          + "|" + (sceneEl.className||"") + "|" + (mobsEl.className||"") + "|" + gnd.value;
+  if (now !== shelfWas) { shelfWas = now; shelfLine(); }
+}, 120);
 setInterval(stepAnims,60);
 // THE SCALE REBUILDS THE ROSTER, AND THE ROSTER OWNS THE ANIMATION LIST.
 // build() starts with anims=[], which throws away the stage animal's entry while

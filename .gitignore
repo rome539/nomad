@@ -56,3 +56,15 @@ output/
 .claude/settings.local.json
 # The mob preview page and its symlink to the art (scripts/build-mob-preview.mjs).
 game-server/preview/
+
+# ---- THE RAW SPRITE SHEETS (2026-09-09). 18MB of generator output that nothing
+# in the game reads: they are the INPUT to the strip pipeline, not part of it.
+# The route is generator sheet -> scripts/normalize_*.py (grid and fragment
+# clean-up) -> game-server/scripts/cut-mob-sheet.mjs (pose PNGs) ->
+# build-mob-strips.mjs (the .webp the client loads). Only the last of those is
+# in public/mob/, which is itself ignored and kept in the working tree.
+#
+# KEEP A COPY, same bargain as the plates: nine of the sixteen have a finished
+# strip and seven do not, so this is also unfinished work, and re-generating a
+# sheet does not reproduce the one that was cut.
+assets/sprites/

@@ -56,6 +56,32 @@ from its real height in metres against a standing man at 1.75m = 22.
 8  tsc --noEmit  +  node scripts/check-served.mjs  # the standing ship gates
 ```
 
+## Before the cutter: normalising a generated sheet
+
+`cut-mob-sheet.mjs` says it takes a FINISHED sheet, and a generator does not
+produce one. Four scripts stand between the two, and they were untracked and
+undocumented until 2026-09-09 — which is how a step of this pipeline came within
+one `git clean` of being lost:
+
+```
+tools/normalize_sprite_sheet.py      a generated 4x2 sheet -> the production grid
+tools/normalize_sprite_strip.py      a generated four-frame strip -> 768px cells
+scripts/normalize_four_pose_batch.py a 2x2 four-pose canvas -> a validated 4x1 strip
+scripts/normalize_drake_4x3.py       the drake's own grid, which is not like the others
+```
+
+They square the cells and remove the disconnected fragments a generator leaves
+around a silhouette. The whole route is:
+
+```
+generated sheet -> normalize_*.py -> cut-mob-sheet.mjs -> build-mob-strips.mjs -> audit-mob-strips.mjs
+```
+
+The raw sheets themselves live in `assets/sprites/` and are gitignored, on the
+same bargain as the plates: kept in the working tree, not in the repo. Nine of
+the sixteen there have a finished strip and seven do not.
+
+
 Step 3 is not optional and step 6 is not optional. The audit catches what is
 mechanically wrong, the driver test catches a broken state machine, and only your
 eyes catch a pose mapped to the wrong meaning.
