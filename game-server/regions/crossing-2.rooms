@@ -105,6 +105,18 @@ The causeway comes ashore under a stone arch built for no structural reason what
 > west the-causeway-rise
 > north the-far-parting
 > south the-far-strand
+> east the-well-yard
+
+# THE SERVICE LANE'S OTHER HALF (mig 248, written down 2026-09-09). The Well
+# Yard names this door from its side and this room never named it back, so the
+# return leg has only ever existed in that migration. A rewrite of this region
+# deletes every exit on this room and re-inserts what is written here — which
+# would have taken out one half of the only link between the main mass and a
+# 393-room island made of the eastern shore and the whole mountain, and put the
+# world straight back into the state mig 248 exists to fix.
+#
+# It is also why this region would not build at all: the checker has been
+# refusing the crossing on exactly this, correctly, and saying so.
 
 ## the-lantern-stump | The Lantern Stump
 Off the causeway's edge on a stub of pier, the base of a lamp-standard, snapped off at the collar, with the lead still run into the socket. A light stood here to say where the road was after dark. Nothing says where the road is after dark now.

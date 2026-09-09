@@ -7521,7 +7521,21 @@ var MOB_ANIM = {
 // Which of the drawn poses read as an animal at rest rather than an animal
 // doing something — the one it cuts to between breaths.
 var CALM_POSES = ["rest","bask","graze","feed","listen","watch","hold-ground",
-  "stand-ground","hold-warm-ground","keep-the-line","alert","inspect-upright"];
+  "stand-ground","hold-warm-ground","keep-the-line","alert","inspect-upright",
+  // THE VARIANTS' OWN POSES, which were drawn and shipped and never named here
+  // (2026-09-09). Every rare form on the hill is six frames — idle, its own
+  // pose, two of gait, a blow and a death — and the second slot is the one this
+  // list reads. The common forms all have theirs in it: a fold dog rests, an
+  // ermine goes up on its hind legs, a herdsman keeps the line, the butter wife
+  // listens. The variants were drawn with something better in that same slot and
+  // nobody added the new words, so the pose existed in the strip and the driver
+  // could not ask for it. Three of them are the same kind of thing their base
+  // form does, so they belong here and nowhere else:
+  "work-pull",      // the milker, pulling at the pail. She is rooted and this is
+                    // her ordinary work, not an event
+  "twisting-leap",  // the dancer. A stoat dancing IS a stoat at rest — it is
+                    // what the animal is named for and when it does it
+  "call-uphill"];   // the last dog, still calling for people who are not coming
 var GAIT_HZ = 5;            // gait poses alternate this fast...
 var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
 var WINGBEAT_HZ = 4;        // and wings beat this fast...
@@ -7747,7 +7761,18 @@ function poseAt(a, now) {
         name = blow;
         x = Math.sin((u - 0.20) / 0.38 * Math.PI) * SWAY * 1.0;
       } else {                                          // and comes off it
-        name = a.watch;
+        // THROUGH THE FRAME DRAWN FOR COMING OFF IT, where one exists
+        // (2026-09-09). Four creatures carry a "recover" and it is the only
+        // pose in the set whose name says which instant it is for: the adder
+        // gathering itself back into the coil after the strike. The brooding
+        // vulture already showed it, because with no alert and no watch drawn
+        // it wins WATCH_POSES by default — and that accident was the only
+        // reason the frame was ever on screen. The three adders each have an
+        // alert or a watch that beats it in that list, so all three struck and
+        // then snapped straight back to a head-up pose they were not drawn
+        // returning through. The recovery is a real third of the swing here;
+        // it is worth the frame it was given.
+        name = (f.recover !== undefined) ? "recover" : a.watch;
         x = -(1 - (u - 0.58) / 0.42) * SWAY * 0.22;
       }
     }
@@ -7776,7 +7801,15 @@ function poseAt(a, now) {
     x = Math.sin(t * 1.9) * SWAY * 0.22;
   } else if (a.state === "flee") {
     // Going, and going away: the gait at speed, shrinking as it leaves.
-    name = f["move-a"] !== undefined ? (Math.floor(t * GAIT_HZ * 1.6) % 2 ? "move-a" : "move-b")
+    // AND ONE OF THEM LEAVES WITH SOMETHING IN ITS MOUTH (2026-09-09). The
+    // raiding fox was drawn going off with what it came for, which is the whole
+    // of the difference between it and the hill fox it is a variant of — and no
+    // state the wire can report ever reached the frame. It holds for the first
+    // stride only and then the gait takes over, because a held picture stops
+    // reading as flight about half a second in. Nothing else owns the frame, so
+    // nothing else takes this path.
+    name = (f["snatch-escape"] !== undefined && t < 0.55) ? "snatch-escape"
+         : f["move-a"] !== undefined ? (Math.floor(t * GAIT_HZ * 1.6) % 2 ? "move-a" : "move-b")
          : f.up !== undefined ? (Math.floor(t * WINGBEAT_HZ_FAST) % 2 ? "up" : "down") : "idle";
     x = -SWAY * Math.min(1, t / 1.2) * 1.5;
     if (f.up !== undefined) air = LIFT * Math.min(1, t / 1.2);
@@ -7876,8 +7909,14 @@ var SLEEP_POSES = ["rest", "bask", "hold-warm-ground", "hold-ground", "feed"];
 var STRIKE_POSES = ["attack", "bite", "sweep", "breath"];
 var HIT_POSES = ["hit"];
 // How it looks at you when it has decided something about you.
+// AND ONE OF THE VARIANTS' POSES IS NOT AN IDLE CUT. The one who stayed was
+// drawn walking at you, and a man closing the distance is a claim about you,
+// not something a creature does to fill a breath. So it goes here rather than
+// in CALM_POSES with the other three: it is what he does once he has decided
+// something, which is this list's whole subject. He has no other pose in here,
+// so before now his every hunt, fight and windup was drawn on the bare idle.
 var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
-                   "hold-ground", "inspect-upright", "recover", "idle"];
+                   "hold-ground", "inspect-upright", "advance", "recover", "idle"];
 // A body stays where it fell for a beat before the room repaints without it.
 var mobHold = 0, mobPending = null, mobPendingRest = null, mobPendingDead = null;
 function mobBeat(swung, struck, died, fed) {

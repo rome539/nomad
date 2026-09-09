@@ -180,6 +180,22 @@ Scrub grown up under a gap in the canopy and then shaded out again when the gap 
 An ordinary stretch of good wood — mature trees, decent spacing, light coming down in patches — with nothing in it. No birds, no small movement in the litter, no insects in the light shafts. Everything about it is right except that.
 > south the-crooked-stand
 > west the-grey-thicket
+> north the-moon-glade key:moon-door
+
+# ---- THE MOON DOOR, WRITTEN DOWN AT LAST (2026-09-09) ----------------------
+# Standing since mig 279 and never in this file, so it lived only in that
+# migration. A rewrite of this region emits DELETE FROM exits WHERE room_id =
+# 'the-birdless-acre' and re-inserts only what is written here — which would
+# have taken the moon door out and left the glade unreachable, with nothing
+# visibly wrong to notice it by.
+#
+# The glade itself is not a room this pipeline owns: mig 279 gave it its prose,
+# its square and zone 'door', and an !existing stub adds the way back out
+# without touching any of it.
+
+## the-moon-glade | attachment: the glade the moon door opens on
+!existing
+> south the-birdless-acre
 
 ## the-turning-leaves | The Turning Leaves
 The canopy over this stretch has gone to autumn colour while everything around it has not, and the leaves come down steadily the whole time you are standing in it, one at a time, with no wind to account for any of it.

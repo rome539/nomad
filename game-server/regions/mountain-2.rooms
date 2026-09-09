@@ -131,6 +131,29 @@ The head wall of the corrie, seven hundred feet of wet black rock leaning very s
 > south  the-water-lip
 > east   the-hanging-step
 > west   the-lochan
+> down   the-kept-room  key:riddle-door
+
+# ---- THE RIDDLE DOOR, WRITTEN DOWN AT LAST (2026-09-09) --------------------
+# The door above has been standing since mig 279 and has never been in this
+# file, which means it has only ever existed in that migration. That is the
+# same shape as the bug mig 240 fixed and mig 270 silently undid: a hand-made
+# change to a room THIS PIPELINE OWNS.
+#
+# A rewrite of this tier emits DELETE FROM exits WHERE room_id =
+# 'the-back-wall' and then re-inserts only the doors written here. So the next
+# regen would have taken the riddle door out and left the Kept Room standing
+# with its box, its way back, and nothing at all leading in. Nothing would look
+# broken: the room does not vanish, it just stops being reachable, and the only
+# way to find out would be to go looking for a door that is no longer there.
+#
+# The far side is an attachment rather than a room. Mig 279 authored the Kept
+# Room with its own prose, its own square and zone 'door', and an !existing
+# stub adds the way back without touching any of that — see the emit, which
+# writes exits for a stub and never a room row.
+
+## the-kept-room | attachment: what is behind the riddle door
+!existing
+> up     the-back-wall
 
 ## the-corrie-floor | The Corrie Floor
 Flat ground, or nearly, floored with everything the walls have shed and gone over with moss between the blocks. It is out of the wind entirely — the first still air since the shore — and the quiet in here is total and takes some getting used to.

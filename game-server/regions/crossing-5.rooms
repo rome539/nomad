@@ -102,6 +102,18 @@ Shallow rectangular pans cut into the clay above the tideline, fed by a channel 
 > north the-strand-road
 > south the-pan-house
 > east the-salt-store
+> west the-well-yard
+
+# THE SERVICE LANE'S OTHER HALF (mig 248, written down 2026-09-09). The Well
+# Yard names this door from its side and this room never named it back, so the
+# return leg has only ever existed in that migration. A rewrite of this region
+# deletes every exit on this room and re-inserts what is written here — which
+# would have taken out one half of the only link between the main mass and a
+# 393-room island made of the eastern shore and the whole mountain, and put the
+# world straight back into the state mig 248 exists to fix.
+#
+# It is also why this region would not build at all: the checker has been
+# refusing the crossing on exactly this, correctly, and saying so.
 
 ## the-pan-house | The Pan House
 A shed over the biggest pan with the iron pan itself still in it, six feet across, sitting on a brick flue, warped and rusted through in one corner. Boiling was the last stage and the fuel was the expensive part. There is a stack of cut peat by the door, still dry.

@@ -228,6 +228,22 @@ A slab set upright on the eastern bank above the steps, with a name on it and tw
 ## the-deep-mark | The Deep Mark
 A stone post at the head of the green water with depths cut into it in bands, the deepest band well above the top of the post — which means the cutter ran out of post before he ran out of water, and marked that fact by cutting the last band on the underside of the cap.
 > north the-green-water
+> south the-sea-cave key:tide-door
+
+# ---- THE TIDE DOOR, WRITTEN DOWN AT LAST (2026-09-09) ----------------------
+# Standing since mig 279 and never in this file, so it lived only in that
+# migration. A rewrite of this region emits DELETE FROM exits WHERE room_id =
+# 'the-deep-mark' and re-inserts only what is written here — which would have
+# taken the tide door out and sealed the cave, the salt pool and everything in
+# them behind a wall, with nothing visibly wrong to notice it by.
+#
+# Only this side needs writing down. The cave and the pool are mig 279's own
+# rooms, in no file here, so no regen reaches them or the unkeyed doors between
+# them; the stub below adds the way back out and nothing else.
+
+## the-sea-cave | attachment: the cave the tide door opens on
+!existing
+> north the-deep-mark
 
 ## the-slack | The Slack
 The one place in the channel where the current stops, in the lee of a spur of rock, and the water simply stands. Everything the channel is carrying arrives here eventually and turns slowly in a circle. It is the calmest water in the crossing and it is full of things that used to belong to people.
