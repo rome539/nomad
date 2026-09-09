@@ -1186,7 +1186,13 @@ export const PAGE = `<!doctype html>
     z-index: 1;
     margin-top: auto;
     flex: 0 1 auto;
-    max-height: 25vh;
+    /* A THIRD, NOT A QUARTER (rome, 2026-09-09). The closed strip was 25vh and
+       is 33vh, which is the read the prose deserves: a quarter of the column
+       held about four lines of a fight before the oldest one left the top, and
+       a fight is the thing you most need to read back through without pulling
+       the whole log open. It costs the picture 8vh off the bottom, which is the
+       part of a scene plate with the least in it — the ground at your feet. */
+    max-height: 33vh;
     transition: max-height .22s ease;
     /* Built from --bg so a repainted theme repaints this too. It was three
        hardcoded browns, which meant every theme but the default one had the
@@ -1228,7 +1234,7 @@ export const PAGE = `<!doctype html>
   /* On a short window the picture yields first, never the words. Only the
      CLOSED height is a fraction of the screen now, so only it needs this. */
   @media (max-height: 620px) {
-    body[data-view="image"] #log { max-height: 34vh; }
+    body[data-view="image"] #log { max-height: 45vh; }
   }
   /* The handle: a slim tab on the top edge of the strip, the only chrome the
      picture is allowed. Hidden entirely in text mode, where the log is already
@@ -7312,10 +7318,25 @@ applyView();
 // out at ~22vh. That was followed and it reads as a diorama seen from across
 // the room. This is deliberately larger.
 // A MAN IS THE ANCHOR OF THE CURVE and also of the FRAME. 42vh is not a free
-// number: centred on the horizon at 55%, a standing man's feet land at 76% and
-// the prose begins at 75%, so he stands exactly on the line the text draws and
-// the whole picture above him is his. Everything smaller sits comfortably inside
-// that, which is why "centred, not stood on a line" works for the other forty.
+// number: centred on the horizon at 55%, a standing man's feet land at 76%.
+//
+// THAT USED TO BE THE TEXT LINE EXACTLY. The closed prose strip was a quarter of
+// the column, so it began at 75% and he stood on it with the whole picture above
+// him his. The strip is a third now (rome, 2026-09-09) and begins at 67%, so the
+// bottom 9vh of a standing man — about a fifth of him, feet and shins — is behind
+// the prose. Written down because 42 was CHOSEN for the old coincidence and the
+// note claiming it still held would otherwise be a lie in the one place someone
+// would go looking before re-tuning the curve.
+//
+// It is not a defect: the gradient is near-clear at its top edge, and a figure
+// whose feet run under the words reads as standing IN the room rather than in
+// front of it. Restoring the old exactness is possible and neither way is free —
+// the horizon would have to come up from 55% to 46%, which desyncs the creatures
+// from the horizon the plates are actually photographed to, or MAN_VH would have
+// to drop from 42 to 24, which shrinks the whole roster back past where the two
+// MOB_P cuts below just brought it. Left alone deliberately.
+// Everything smaller sits comfortably inside that, which is why "centred, not
+// stood on a line" works for the other forty.
 var MAN_VH = 42;
 // 0.85 -> 0.65 -> 0.45 (rome, 2026-09-09: twice, the small ones are too small). P is the amount
 // of squeeze and it works from the anchor outwards, so lowering it moves the two
