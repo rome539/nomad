@@ -6555,6 +6555,28 @@ var ROOM_PLATE = {
   // ever seen this room without a light in their hand — so the single plate is
   // painted already lit by the torch you must be carrying to be standing in it.
   "the-kept-room":    "day",
+  // TWO ROOMS THAT BORROW. Same conditions as the plate they point at — see
+  // PLATE_OF below for why they are not simply copies of the files.
+  "the-bone-ground":  "day night night-torch fog rain snow",
+  "the-oxide-flat":   "day night night-torch fog rain snow",
+};
+// A PLATE MAY BE SHARED (rome, 2026-09-09). A room plate's file stem has always
+// been the room id, so two rooms that look the same meant two copies of six
+// photographs — twelve files and four megabytes to say a thing twice. This says
+// it once instead: the room is still named in its own right, and the picture it
+// reaches for is somebody else's.
+//
+// ONLY WHERE IT IS HONEST, which is a narrower test than "nearby". Of the eleven
+// rooms around the Ochre Shelf, ten are slopes, gullies, slots or a view out
+// over country, and its picture is flat open ground — it would be wrong in all
+// of them. The Oxide Flat is a flat pavement of red rock and it is right.
+// The Bone Ground is the stronger of the two, and it reads better in the
+// borrowed plate than the plate's own room does: the Dry Bones is bone gone
+// chalky and crumbling to powder, while the picture is full of solid ribs, a
+// horn and a skull — which is the Bone Ground's own sentence, word for word.
+var PLATE_OF = {
+  "the-bone-ground": "the-dry-bones",
+  "the-oxide-flat":  "the-ochre-shelf",
 };
 // AND WHICH OF THEM THE WEATHER DOES NOT REACH (rome, 2026-09-08).
 //
@@ -7044,7 +7066,9 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place) {
     // already in TORCH_HOURS.
     var darkEnough = TORCH_HOURS[lastSky] || pbase === "night";
     var pwant = (lastTorch && darkEnough && phave.indexOf(" night-torch ") >= 0) ? "night-torch" : pbase;
-    scene = "/room-bg/" + place + "-" + pwant + ".webp";
+    // The picture, which may belong to another room (PLATE_OF).
+    var stem = PLATE_OF[place] || place;
+    scene = "/room-bg/" + stem + "-" + pwant + ".webp";
     if (KEYED[pwant]) {
       var pp = skyPick(SKY_PAINTED[slot] ? slot : pbase);
       sky = "/sky/" + pp.file + ".webp"; turn = pp.turn;
@@ -7052,7 +7076,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place) {
     lit = pwant === "night-torch";
     tint = (lit || shut || NO_GROUND_TINT[lastSky] || pbase === lastSky) ? "" : lastSky;
     if (shut) mobHour = lit ? "" : pbase;   // a roof is over them too
-    line = MOB_LINE[place] || MOB_LINE_DEFAULT;
+    line = MOB_LINE[stem] || MOB_LINE_DEFAULT;   // the standing line belongs to the PICTURE
   }
   if (!scene && gate && GATE_PLATE[gate] !== undefined) {
     // GROUND WEATHER IS A DIFFERENT PHOTOGRAPH. Night is not the day gone dim,

@@ -6423,14 +6423,29 @@ export const TERRAIN_RULES: [string, RegExp][] = [
   // stream; "ash" caught the outwash, "col" caught the cold, "pen" caught the
   // deepening. A substring is not a word, and a room is not what it happens to
   // contain the letters of.
-  ["snow",         /snow|\bice\b|icefall|glacier|drift|\bwhite\b|cornice|\bneve\b|frost|frozen|\bbrim\b/],
+  // FROST IS NOT SNOW (rome, 2026-09-09). "frost" was in this list and it does
+  // not describe a surface — it describes the thing that BREAKS one. Nine rooms
+  // of bare shattered rock were being painted as snowfields on the strength of
+  // it: frost-shattered plates that rock and clink underfoot, ground sorted into
+  // stripes by ten thousand winters of lifting and dropping, a plain of broken
+  // stone under the deepest sky on the hill. None of them has snow in it. The
+  // genuine snow and ice rooms all say so in their own words and are untouched;
+  // "frozen" stays, because a frozen thing is a state and not a cause.
+  ["snow",         /snow|\bice\b|icefall|glacier|drift|\bwhite\b|cornice|\bneve\b|frozen|\bbrim\b/],
   ["corrie-floor", /(corrie|bowl).*(floor|tarn|bottom)|(floor|tarn).*(corrie|bowl)/],
   ["corrie-rim",   /corrie|cirque/],
   ["vent",         /\bvent\b|steam|shimmer|scald|warmth|\bwarm\b|\bheat\b|\bhot\b|fumarole|\breek\b/],
   ["glass",        /glass|glaze|glazed|\bslag\b|burnt|scorch|\bash\b|tallow|run-stone/],
   ["crag",         /eyrie|guano|perch|lookout|updraught|\bface\b|\bwall\b|cliff|tower|pinnacle|buttress|\bnest\b/],
   ["fold",         /shieling|\bstell\b|\bfold\b|\bpen\b|bothy|\bhut\b|\bdyke\b|clapper/],
-  ["beck",         /\bbeck\b|\bburn\b|\bforce\b|plunge|\bpool\b|\blinn\b|spout|\bford\b|\bfall\b/],
+  // AND A FALL IS NOT A WATERFALL. "fall" caught everything in this world that
+  // falls, which is most of it: a midden of what the deep has killed and let
+  // fall, a countermine choked with fall, banks that fall away, and — best of
+  // all — a slab the size of a barn door that came off the ridge and DID NOT
+  // FALL. Six rooms with no water anywhere in them, drawn as mountain streams.
+  // Spelled out rather than shortened to \bfalls\b, which was the first attempt
+  // and was worse: it catches "the bank falls away" and "the light falls".
+  ["beck",         /\bbeck\b|\bburn\b|\bforce\b|plunge|\bpool\b|\blinn\b|spout|\bford\b|waterfall|falling water/],
   ["boulder",      /boulder|clatter|block-field/],
   ["slab",         /\bslab\b|\bslabs\b|\bflag\b|\bflags\b|paving|pavement|\bbask\b|basking|sun-trap|terrace/],
   ["gully",        /gully|\bdrain\b|chute|couloir|groove|\bgash\b|notch|cleft|\brake\b|gorge/],
@@ -6479,6 +6494,11 @@ export const ART_ROOMS = new Set<string>([
   "the-ochre-shelf",    // brick-red dust holding clean-edged claw prints
   "the-back-wall",      // the head wall, and the dry iron plate at the foot of it
   "the-kept-room",      // cut, finished, sealed, and dark — the only interior up there
+  // AND TWO THAT BORROW A PLATE RATHER THAN OWNING ONE (rome, 2026-09-09). Both
+  // were being handed a grey hillside by the ground rules while a picture of
+  // exactly what they describe already sat on disk.
+  "the-bone-ground",    // ribs, cannon bones, a horn, skulls — the Dry Bones plate
+  "the-oxide-flat",     // a flat red pavement furred with rust — the Ochre Shelf plate
 ]);
 
 export const INDOOR_ROOMS = new Set<string>([
