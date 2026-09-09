@@ -16,6 +16,7 @@
 // The page has buttons for attack / take a hit / die / sleep because the preview
 // has no combat to drive them - in the game those come off the wire.
 import fs from "node:fs"; import path from "node:path";
+import sharp from "sharp";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -61,6 +62,7 @@ if (!COPY) for (const dir of ["mob", "room-bg", "sky"]) {
 }
 const OUT = path.join(DIR, "mobs.html");
 const src = fs.readFileSync(SRC, "utf8");
+const src2 = src;   // the same text, named for use inside the staging block below
 const grab = n => { const i = src.indexOf("var " + n + " = {"); return src.slice(i, src.indexOf("\n};", i)); };
 // a top-level function, brace-matched, exactly as written
 const fn = n => {
@@ -258,8 +260,22 @@ const withDeath = Object.values(ANIM).filter(a=>a.f.death!==undefined).length;
 const STRIKE = ["attack","bite","sweep","breath"];
 const withAtk   = Object.values(ANIM).filter(a=>STRIKE.some(k=>a.f[k]!==undefined)).length;
 
+// THE SHARE CARD, and it is only in the published build. The working preview has
+// no og.png beside it and a card pointing at a file that is not there is worse
+// than no card. The image is ROOT-RELATIVE: the published URL is not known until
+// the site is deployed, and most scrapers resolve a relative og:image against the
+// document. If one refuses, the fix is to bake the absolute URL in on the next
+// cut, not to guess it now.
+const OG = COPY ? `
+<meta property="og:type" content="website">
+<meta property="og:title" content="NOMAD — The Mountain">
+<meta property="og:description" content="Room and creature art from NOMAD, a MUD that runs on Nostr.">
+<meta property="og:image" content="/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">` : "";
 fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</title>
-<meta http-equiv="cache-control" content="no-store">
+<meta http-equiv="cache-control" content="no-store">${OG}
 <style>
  body{margin:0;background:#16120c;color:#ede3cc;font:13px ui-monospace,Menlo,monospace}
  #bar{position:sticky;top:0;z-index:5;background:#1e1912;border-bottom:1px solid #3a3020;padding:10px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
@@ -790,7 +806,10 @@ if (bad) process.exit(1);
 // than discovered later by a stranger looking at the site.
 if (COPY) {
   const tables = {};
-  new Function("t", SCENE_TABLES + "\nt.terrain=TERRAIN_SCENES; t.gate=GATE_PLATE; t.room=ROOM_PLATE; t.sky=SKY_PAINTED;")(tables);
+  // PLATE_OF too: a room may name a picture that belongs to another room, so the
+  // file to stage is the STEM, not the id. Without this the staging asks for
+  // the-bone-ground-day.webp, which has never existed and never will.
+  new Function("t", SCENE_TABLES + "\nt.terrain=TERRAIN_SCENES; t.gate=GATE_PLATE; t.room=ROOM_PLATE; t.sky=SKY_PAINTED; t.alias=(typeof PLATE_OF==='object'?PLATE_OF:{});")(tables);
   const drop = new Set(DROP_HOUR_LIST);
   const conds = (declared) => declared.split(/\s+/).filter((c) => c && !drop.has(c));
   const want = new Set(["mobs.html"]);
@@ -801,7 +820,7 @@ if (COPY) {
     if (ONLY_MOUNTAIN && !MOUNTAIN_GATES.has(g)) continue;
     for (const c of conds(decl)) want.add("room-bg/gate-" + g + "-" + c + ".webp");
   }
-  for (const [r, decl] of Object.entries(tables.room)) for (const c of conds(decl)) want.add("room-bg/" + r + "-" + c + ".webp");
+  for (const [r, decl] of Object.entries(tables.room)) for (const c of conds(decl)) want.add("room-bg/" + (tables.alias[r] || r) + "-" + c + ".webp");
 
   let n = 0, bytes = 0; const holes = [];
   for (const rel of [...want].sort()) {
@@ -812,6 +831,59 @@ if (COPY) {
     fs.copyFileSync(from, to);
     n++; bytes += fs.statSync(to).size;
   }
+  // THE CARD IS DRAWN, NOT SCREENSHOTTED. It is composited out of the same three
+  // layers the page itself stacks — a shared sky, a scene with its sky cut out,
+  // and a creature stood on the near ground at the size the curve gives it — so
+  // the thing a link preview shows IS the feature rather than a picture of a
+  // browser window. Redrawn on every staged build, so it can never fall behind
+  // the art or the size curve the way a saved screenshot would.
+  //
+  // THE 55% LINE SURVIVES THE CROP. A card is 1200x630 and a plate is 1584x993,
+  // which are not the same shape, so the layers are scaled to width and then cut
+  // about the horizon rather than centred — the same thing the page's
+  // background-position: center 55% does, for the same reason.
+  await (async () => {
+    const W = 1200, H = 630;
+    const src = (rel) => path.join(GAME, "public", rel);
+    const crop = async (rel) => {
+      const h = Math.round(W * 993 / 1584);
+      return sharp(src(rel)).resize(W, h, { fit: "fill" })
+        .extract({ left: 0, top: Math.max(0, Math.round(0.55 * h - 0.55 * H)), width: W, height: H })
+        .toBuffer();
+    };
+    const id = "cave-lion", n = ANIM[id] ? ANIM[id].n : 6, aspect = ANIM[id] ? ANIM[id].aspect : 1.696;
+    const units = SPRITE[id] ?? 19;
+    const P = Number((src2.match(/var MOB_P = ([\d.]+)/) || [, "0.45"])[1]);
+    const tall = Math.round((42 / Math.pow(22, P)) * Math.pow(units, P) / 100 * H);
+    const wide = Math.round(tall * aspect);
+    const m = await sharp(src("mob/" + id + ".webp")).metadata();
+    // AND IT WEARS THE LIGHT IT IS STANDING IN. The page puts a filter on every
+    // creature to match the hour, and t-night-torch is the one that goes BRIGHTER
+    // and warmer than its own scene, because a carried flame is low and near and
+    // falls on the upright thing in front of you first. Compositing the raw strip
+    // instead produced an animal lit for a different light than the ground under
+    // it — a creature stuck onto a photograph, which is what the tints exist to
+    // stop. This is that filter, as near as a raster pass gets it.
+    const beast = await sharp(src("mob/" + id + ".webp"))
+      .extract({ left: 0, top: 0, width: Math.round(m.width / n), height: m.height })
+      .resize(wide, tall, { fit: "fill" })
+      .modulate({ brightness: 0.86, saturation: 1.04 })
+      .tint({ r: 255, g: 226, b: 188 })
+      .toBuffer();
+    const sky = await crop("sky/night.webp");
+    const scene = await crop("room-bg/the-dry-bones-night-torch.webp");
+    await sharp(sky).composite([
+      { input: scene, top: 0, left: 0 },
+      { input: beast, top: Math.round(0.55 * H - tall / 2), left: Math.round((W - wide) / 2) },
+    ]).png({ palette: true, colours: 256, effort: 10 }).toFile(path.join(DIR, "og.png"));
+    // PALETTISED, because a straight 24-bit PNG of this came out at 1.7MB and a
+    // share card that heavy is one a scraper may simply decline to fetch. The
+    // art is pixel art with a limited palette to begin with, so 256 colours
+    // costs it almost nothing and takes about four fifths off the file.
+    const kb = Math.round(fs.statSync(path.join(DIR, "og.png")).size / 1024);
+    console.log("  drew og.png  1200x630  " + kb + "KB  (night sky, torchlit bone ground, the cave lion)");
+  })();
+
   // The page is served at the root by a gateway, so it has to BE the root.
   fs.copyFileSync(OUT, path.join(DIR, "index.html"));
   bytes += fs.statSync(OUT).size;

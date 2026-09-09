@@ -18,3 +18,33 @@
   Cache-Control: public, max-age=31536000, immutable
 /card-bg/*
   Cache-Control: public, max-age=31536000, immutable
+
+# ---- AND THE THREE FOLDERS THE PICTURES LIVE IN (rome, 2026-09-09: switching
+# rooms lags). This file predates the scene art and nobody added them, so every
+# plate, every sky and every creature strip was going out as
+#
+#   cache-control: public, max-age=0, must-revalidate
+#
+# which is not "do not cache" — it is worse to feel. The browser HAS the file and
+# still has to ask the edge whether it may show it, and wait for the answer. Two
+# layers change on a room change, the scene and the sky, so walking through a
+# door cost two round-trips before anything could be drawn, plus one more for
+# every creature strip the room needed. That is the lag, and it never went away
+# with a warm cache, because a warm cache was exactly the case it punished.
+#
+# THE ?v= IS ALREADY THE CACHE-BUSTER. Every one of these is fetched with
+# ?v=ART_V on the end, and the standing rule is that replacing a file means
+# bumping ART_V — which changes the URL and therefore the cache entry. So the
+# files genuinely are immutable under their names, and always were; the header
+# was simply never written down.
+#
+# IT DOES MAKE THAT RULE LOAD-BEARING. Overwrite a plate without bumping ART_V
+# and a year is how long somebody keeps the old one. That was already the rule
+# (see scene-art.md) and key-scene.mjs prints the reminder when it replaces a
+# file; this is what makes forgetting it expensive.
+/room-bg/*
+  Cache-Control: public, max-age=31536000, immutable
+/sky/*
+  Cache-Control: public, max-age=31536000, immutable
+/mob/*
+  Cache-Control: public, max-age=31536000, immutable
