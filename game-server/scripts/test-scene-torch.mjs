@@ -287,13 +287,21 @@ console.log("the three rooms at the top of the mountain");
     at("the-summit-gate", "night", 0));
   t("...at dusk it stands on its night ground", at("the-summit-gate", "dusk", 0) === "/room-bg/the-summit-gate-night.webp  /sky/dusk.webp",
     at("the-summit-gate", "dusk", 0));
-  // THE LAST SHELTER is roofed: three conditions, and the weather stops outside.
+  // THE LAST SHELTER is roofed: TWO conditions, and the weather stops outside.
+  // It gave up its day plate (rome, 2026-09-09) because there is no hour at
+  // which the inside of a hole under a rock is a daylit room — so the interior
+  // is always dark and the hour is carried by the sky in the slot.
   t("the shelter is a dark room with a grey slot in the rain",
     at("the-last-shelter", "rain", 0) === "/room-bg/the-last-shelter-night.webp  /sky/after-rain.webp",
     at("the-last-shelter", "rain", 0));
   t("...and the rain does not tint it", sceneEl.className === "", "class=" + sceneEl.className);
-  t("...its plain day is the day plate under the day sky",
-    at("the-last-shelter", "day", 0) === "/room-bg/the-last-shelter-day.webp  /sky/day.webp",
+  // AND NOON IS THE CASE THAT WOULD HAVE 404ED. With no day plate listed, the
+  // condition fallback used to resolve day -> day and ask for a file that is not
+  // there. It falls back to the plate's own first condition now, so noon is the
+  // dark room with the day sky in its slot — which is what being in there looks
+  // like, and the reason the plate was dropped rather than reshot.
+  t("...at noon it is still dark inside, with the day sky in the slot",
+    at("the-last-shelter", "day", 0) === "/room-bg/the-last-shelter-night.webp  /sky/day.webp",
     at("the-last-shelter", "day", 0));
   t("...and the aftermath darkens it like the rest",
     at("the-last-shelter", "after-rain", 0) === "/room-bg/the-last-shelter-night.webp  /sky/after-rain.webp",
@@ -316,7 +324,7 @@ console.log("a room with a roof on it");
              tint: sceneEl.className, mobs: mobsEl.className };
   };
   let r = at("day", 0);
-  t("its own plate is used, not the ground it stands on", r.scene === "/room-bg/the-last-shelter-day.webp", r.scene);
+  t("its own plate is used, not the ground it stands on", r.scene === "/room-bg/the-last-shelter-night.webp", r.scene);
   t("...and a sky is drawn behind it for the slot", r.sky === "/sky/day.webp", r.sky);
   // WEATHER FROM UNDER A ROOF (rome, 2026-09-08). It takes no plate of its own,
   // but it is not nothing either: the room goes dark and the slot goes grey.

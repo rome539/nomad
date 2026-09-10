@@ -185,6 +185,79 @@ this (all fifteen installed plates agree with their night sibling to within
 0.14%) and the light lands where it should: the near ground lifts 1.5x to 2.7x
 while the far country stays dark.
 
+## The three weather plates are EDITS, not new scenes
+
+`fog`, `rain` and `snow` are the plates most likely to come back as a different
+place, because the obvious way to ask for them is to describe the place again
+with weather in it — and a generator handed a fresh description draws a fresh
+composition. Then the skyline has moved, the ground has moved, and walking from
+day into rain is a cut to somewhere else.
+
+So do not describe the place. **Describe the change to a picture that already
+exists**, and hand it the day plate. The formulation below is rome's (2026-09-09)
+and it is the one that works; it has three moves and all three are load-bearing.
+
+**One — pin everything that must not move, by name.**
+
+```
+Same picture. Keep the building, the camera, the composition and every object
+exactly as they are.
+```
+
+Naming the categories beats saying "keep it the same". Swap "the building" for
+whatever the plate is actually of — the wall, the bones, the pens, the bank.
+
+**Two — say what the weather DOES, physically, object by object.** Not the mood
+of it, not the word for it. Every clause should name a thing in the frame and
+what has happened to it:
+
+```
+Now it is heavy rain: visible streaks falling across the whole frame, every
+stone dark and running with water, standing puddles on the ground throwing back
+the reflection, water off the roof edge, the far distance lost in it.
+```
+
+```
+Now it is snowing AND snow is lying: flakes in the air, the roof white, snow
+filling the joints between the stones of the road, the grass buried, drifts
+banked against the wall, the far ground white and featureless. Everything colder
+and paler except the lamp.
+```
+
+```
+Now it is deep fog: everything beyond the near ground fades out into flat pale
+grey, the far end of the building dissolving, distance gone entirely. Colour
+almost drained.
+```
+
+Two details in there are worth stealing whole. **"snowing AND snow is lying"** —
+asking for snow gets you one or the other and usually the wrong one, and a plate
+with flakes in the air over bare summer ground is worse than no plate. And
+**"everything colder and paler except the lamp"** — naming the one thing that
+must NOT change with the weather is what stops a generator washing the whole
+frame, fire included.
+
+**Three — say the magenta is going away, in those words.**
+
+```
+REPLACE THE MAGENTA WITH REAL SKY - low bruised storm cloud, no magenta anywhere
+in the frame.
+```
+
+This is the move most easily lost, and losing it produces the one failure that
+is invisible until it ships. These three plates are **whole photographs**: they
+are not keyed, no shared sky is drawn behind them, and they carry their own
+weather sky in the picture. The day plate you handed over as reference has a flat
+magenta sky in it, so without this line the model keeps it — and `key-scene.mjs`
+is not run on these, so the magenta installs as magenta and the room paints a hot
+pink sky. Say REPLACE, name the sky you want, and say "no magenta anywhere"
+again at the end.
+
+**Which three sit in which recipe**, since it is the whole reason the prompts
+differ: `day`, `night` and `night-torch` are keyed and take the magenta; `fog`,
+`rain` and `snow` are whole photographs and must not. That is also why the torch
+has no weather variants — see TORCH_HOURS above.
+
 ## An hour can own more than one sky
 
 `SKY_POOL` lets an hour hold a list instead of one file, and which one is up

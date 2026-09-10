@@ -6395,7 +6395,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "19";
+var ART_V = "20";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -6540,10 +6540,17 @@ var ROOM_PLATE = {
   // bare scree slope.
   "the-summit":       "day night night-torch fog rain snow",
   "the-summit-gate":  "day night night-torch fog rain snow",
-  // Three conditions, and that is the whole set a roofed room can want — see
-  // SHELTERED below for why the other three would be three photographs spent on
-  // the light in one slot.
-  "the-last-shelter": "day night night-torch",
+  // TWO CONDITIONS, AND NO DAY AT ALL (rome, 2026-09-09). It was three, and the
+  // third was a lie: this is a hole under a fallen block with one slot in it,
+  // and there is no hour at which the inside of it is a daylit room. The slot
+  // gets bright, the room does not. So the interior is always the dark plate and
+  // what changes with the hour is the SKY BEHIND THE SLOT — at noon that is the
+  // day sky in a dark hole, which is what standing in there actually looks like.
+  //
+  // The other three conditions stay unshot for the older reason: under a roof
+  // they would be three photographs spent on the light in one slot. See
+  // SHELTERED and WEATHER_FROM_INSIDE.
+  "the-last-shelter": "night night-torch",
   // THE LION'S GROUND. Three rooms of the bone fan, shot as open hillside and
   // cut on the skyline like every other outdoor plate.
   "the-dry-bones":    "day night night-torch fog rain snow",
@@ -6896,7 +6903,18 @@ var MOB_LINE_DEFAULT = 55;
 // number only ever shows in the preview. It is here because a plate that
 // breaks the lock should say so wherever it is drawn.
 var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the-kept-room": 65,
-                 boulder: 64, glass: 70, snow: 64, "the-rib-cage": 66 };
+                 boulder: 64, glass: 70, snow: 64, "the-rib-cage": 66,
+                 // THE ALDER IS A BANK WITH WATER BEHIND IT (rome, 2026-09-09:
+                 // the animals sit too high in it). Its near ground starts around
+                 // 70% and the mire lies behind that, so at the default 55 only
+                 // the biggest thing on the plate reached peat: a creature is
+                 // CENTRED on this line, not stood on it, so half its height is
+                 // the whole argument. A hill fox is 23vh and put its feet at
+                 // 67%, a gill adder is 19vh and put them at 64% — both of them
+                 // standing on open water, which the small ones always give away
+                 // first. At 62 the adder lands at 72% and the goat at 78%, and
+                 // everything on this ground is on the bank.
+                 alder: 62 };
 // The day count from the server: one number, the same for everybody, up by one
 // each cycle. Zero until a status frame carries it, which simply means the first
 // entry of every pool until the world says otherwise.
@@ -7062,7 +7080,15 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place) {
     // under a bright noon sky would be the wrong half of the picture.
     var slot = lastSky;
     if (shut && WEATHER_FROM_INSIDE[lastSky]) { pbase = "night"; slot = "after-rain"; }
-    if (phave.indexOf(" " + pbase + " ") < 0) pbase = "day";
+    // AND WHEN THE PLATE HAS NOT GOT THAT CONDITION, THE FIRST ONE IT LISTS.
+    // This was hardcoded to "day" on the assumption every plate owns one, which
+    // held until the Last Shelter gave its up: a room with no day plate resolved
+    // day -> day and asked for a file that is not there, which is a 404 and an
+    // empty frame at the one hour it is most likely to be walked into. Falling
+    // back to the plate's own first condition cannot miss, because a plate is
+    // only ever listed once its files exist. Every other plate in the game leads
+    // with "day", so this changes nothing anywhere else.
+    if (phave.indexOf(" " + pbase + " ") < 0) pbase = ROOM_PLATE[place].split(" ")[0];
     // A TORCH SHOWS WHEREVER THE ROOM IS DARK, which under a roof is not the same
     // question as which hour it is. TORCH_HOURS answers it outdoors — rain and
     // snow are daylit there, whole photographs with their own light in them. But
