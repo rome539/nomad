@@ -6395,7 +6395,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "20";
+var ART_V = "21";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -6460,6 +6460,26 @@ var TERRAIN_PLATE = {
   // that art was sitting on disk unreachable. Add a ground to BOTH tables or it
   // may as well not have been drawn.
   boulder: ["boulder"], slab: ["slab"], glass: ["glass"], fold: ["fold"],
+  // THE ORDINARY HILL (rome, 2026-09-10). Not a ground anything matches — it is
+  // what you get when nothing does, and it is deliberately nothing
+  // in particular: a broad open shoulder of frost-shattered rock and wind-burnt
+  // turf, no path, no cairn, no built thing. Thirty-nine mountain rooms whose
+  // names and descriptions never say what they are standing on have been wearing
+  // the scree plate, which is a specific ground and was answering a question
+  // they never asked.
+  //
+  // IT GETS NO TERRAIN_RULES ENTRY, and that is the point of it. Give a
+  // catch-all a regex and it starts taking rooms off the named grounds, which is
+  // the opposite of what a default is for. It is reached only through
+  // BAND_FALLBACK below, which fires when a room has no terrain at all.
+  mountainside: ["mountainside"],
+  // THE LAST THREE GROUNDS ON THE HILL (rome, 2026-09-10). Every one of them was
+  // a real terrain the rules already named and the art never answered, so each
+  // has been wearing a stand-in out of TERRAIN_NEAR below: 52 rooms of face and
+  // buttress drawn as a drain, 18 rooms of running water drawn as the same
+  // drain, and the whole geothermal ground — the one genuinely strange terrain
+  // the mountain has — drawn as a scree slope.
+  crag: ["crag"], beck: ["beck"], vent: ["vent"],
 };
 // FNV-1a: the same cheap trick the world already uses to hang per-instance
 // detail off an id without storing a byte of it.
@@ -6481,16 +6501,26 @@ function plateHash(str) {
 // already IS that; a boulder field is loose stone at a larger size and the scree
 // already IS that. These are stand-ins chosen on what the ground DOES, and each
 // one retires the moment its own plate lands.
+// THREE ENTRIES RETIRED, 2026-09-10: beck -> gully, crag -> gully and
+// vent -> scree are gone, because all three now have plates of their own and the
+// note above always said a stand-in retires the moment its own ground lands.
+// Nothing depended on them being here — TERRAIN_PLATE is consulted first, so the
+// new plates would have won anyway — but a stand-in left in this table is a
+// claim that the ground has no picture, and that claim is now false.
 var TERRAIN_NEAR = {
-  beck: "gully", crag: "gully", boulder: "scree",
+  boulder: "scree",
   // Warm flags, glazed rock and steaming ground are all BARE STONE, and the
   // cairn plate is a grassy shoulder — it was the worst possible stand-in for
   // the hottest, barest ground on the hill. Scree at least agrees about what
   // the ground is made of.
-  slab: "scree", glass: "scree", vent: "scree", fold: "cairn",
+  slab: "scree", glass: "scree", fold: "cairn",
 };
 // And an unclassified mountain room is bare rock before it is pasture.
-var BAND_FALLBACK = { mountain: "scree" };
+// ...AND WHAT AN UNNAMED ROOM IN THAT BAND STANDS ON. It was "scree" — the
+// nearest thing the set owned to generic hill, and still a specific ground: a
+// slope of loose broken stone, given to thirty-nine rooms that never said they
+// were on one. The mountainside plate exists for exactly this slot.
+var BAND_FALLBACK = { mountain: "mountainside" };
 // WHICH BANDS OWN PICTURES AT ALL. Add a band here only once plates exist for
 // it — this is the one line that stops a region wearing another region's face.
 var BANDS_WITH_PLATES = { mountain: 1 };
@@ -6664,6 +6694,10 @@ var TERRAIN_SCENES = {
   alder: "day night night-torch fog rain snow",
   "corrie-rim":   "day night night-torch fog rain snow",
   "corrie-floor": "day night night-torch fog rain snow",
+  mountainside:   "day night night-torch fog rain snow",
+  crag:           "day night night-torch fog rain snow",
+  beck:           "day night night-torch fog rain snow",
+  vent:           "day night night-torch fog rain snow",
 };
 var SKY_PAINTED = {
   day: 1, night: 1, dawn: 1, dusk: 1, moon: 1, blood: 1, eclipse: 1,
@@ -6914,7 +6948,35 @@ var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the
                  // standing on open water, which the small ones always give away
                  // first. At 62 the adder lands at 72% and the goat at 78%, and
                  // everything on this ground is on the bank.
-                 alder: 62 };
+                 alder: 62,
+                 // THE GULLY IS A FLOOR WITH WALLS OVER IT (rome, 2026-09-10).
+                 // Its near floor starts around 67% and the walls stand behind
+                 // it, so at the default 55 the smallest thing on the plate put
+                 // its feet at 64% — above the floor's near edge, on wall. Four
+                 // points down and the adder lands at 68%, the fox at 71% and
+                 // the wolf at 76%, all three on gravel, and nothing has sunk
+                 // behind the prose. 62 was tried and is too far: it puts the
+                 // adder under the text, which is the one thing the centred line
+                 // exists to avoid.
+                 gully: 59,
+                 // THE BECK IS A POOL WITH A BANK IN FRONT OF IT. Its gravel
+                 // starts around 67%, so at 55 the wolf reached it and the adder
+                 // stood in the water. Five down and all three are on gravel.
+                 beck: 60,
+                 // AND THE CRAG IS A WALL WITH A LEDGE AT THE FOOT OF IT — the
+                 // one ground in the game whose subject is the thing you CANNOT
+                 // stand on. Its floor is the bone-strewn shelf at about 88% and
+                 // everything above that is vertical rock, so at 55 all three
+                 // were pinned to the face like flies. 72 is the documented cap
+                 // on this table (above it the biggest sprite's feet leave the
+                 // picture) and it is what this plate needs: the wolf lands on
+                 // the shelf, the two small ones just above it.
+                 //
+                 // IT IS AT THE CAP, WHICH IS THE THING TO KNOW. If this still
+                 // reads wrong the answer is not a bigger number, it is a plate
+                 // whose shelf sits higher in frame — there is no line left to
+                 // give.
+                 crag: 72 };
 // The day count from the server: one number, the same for everybody, up by one
 // each cycle. Zero until a status frame carries it, which simply means the first
 // entry of every pool until the world says otherwise.
