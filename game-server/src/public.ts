@@ -7147,6 +7147,18 @@ function grantArt() {
   applyView();   // and if pictures are what they wanted, they get them now
 }
 
+// HOW MUCH WATER IS OVER THE ROOM ON SCREEN, 0-3, and DECLARED, which is the
+// whole of this line's history. It was written as a bare assignment inside
+// paintScene and read by floodSuffix, and nothing else ever touched it, so it
+// looked like a local that happened to live between two calls. The served page
+// is a MODULE, and a module is strict: assigning to a name that was never
+// declared is not an implicit global there, it is a ReferenceError. paintScene
+// is called once at the bottom of applyView, applyView is called once at the
+// top level, and so the throw landed during module evaluation and took the
+// whole script with it - every handler defined below that point never bound,
+// which is why the door came up with its static markup and nothing behind it.
+// Shipped that way 2026-09-11; it never worked for anybody, not once.
+var lastSea = 0;
 // THE TIDE LAYER. Called from the two places a scene is painted, and it is the
 // only thing that reads lastSea.
 //

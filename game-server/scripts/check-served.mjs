@@ -66,9 +66,48 @@ const tmp = new URL("../.served-check.mjs", import.meta.url);
 writeFileSync(tmp, js);
 try {
   execFileSync(process.execPath, ["--check", tmp.pathname], { stdio: "pipe" });
-  console.log(`served script OK (${js.length} bytes)`);
 } catch (e) {
   console.error("SERVED SCRIPT IS BROKEN — the page would not run:\n");
   console.error(String(e.stderr ?? e));
   process.exit(1);
 }
+
+// ...AND THEN THE NAMES, because a parse check is only half a gate.
+//
+// node --check answers one question: is this valid JavaScript. `lastSea = 0`
+// with no declaration anywhere is perfectly valid JavaScript, so it passed, and
+// it shipped, and it took the entire client down on every load (2026-09-11).
+// The served page is a MODULE and a module is strict: an assignment to a name
+// that was never declared is a ReferenceError, not an implicit global. It threw
+// during module evaluation, which means nothing below the throw ever ran and no
+// handler below it ever bound. The door came up with its static markup and
+// nothing alive behind it.
+//
+// THE PARSER CANNOT SEE THIS AND NEITHER CAN tsc ON public.ts, because there the
+// whole client is the inside of a string. It only becomes code here, after the
+// template is evaluated — so here is the only place the check can happen.
+//
+// TS2304 AND NOTHING ELSE. Checking this file properly reports around sixty
+// complaints about implicit any and DOM shapes, none of which are bugs and all
+// of which would train whoever runs this to ignore it. "Cannot find name" is
+// the one diagnostic that means a name is genuinely not there.
+let named = "";
+try {
+  execFileSync(process.execPath, [
+    new URL("../node_modules/typescript/bin/tsc", import.meta.url).pathname,
+    "--noEmit", "--allowJs", "--checkJs",
+    "--target", "es2020", "--lib", "es2020,dom",
+    "--module", "esnext", "--moduleResolution", "bundler",
+    tmp.pathname,
+  ], { stdio: "pipe" });
+} catch (e) {
+  named = String(e.stdout ?? "").split("\n").filter((l) => l.includes("TS2304")).join("\n");
+}
+if (named) {
+  console.error("SERVED SCRIPT USES NAMES THAT DO NOT EXIST — the page would throw on load:\n");
+  console.error(named.replace(new RegExp(tmp.pathname.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "the served script"));
+  console.error("\nThe page is a module, so a bare assignment to an undeclared name is a");
+  console.error("ReferenceError that kills everything after it. Declare it.");
+  process.exit(1);
+}
+console.log(`served script OK (${js.length} bytes, names resolved)`);
