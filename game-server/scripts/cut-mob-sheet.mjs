@@ -64,12 +64,82 @@ for (let i = 0; i < poses.length; i++) {
     if (spill > 0) { data[p] = Math.max(0, r - spill); data[p+2] = Math.max(0, b - spill); }
     kept++;
   }
+  // ...AND THEN THROW AWAY WHAT BELONGS TO THE NEXT CELL.
+  //
+  // The prompt asks for generous gutters with nothing crossing a cell boundary,
+  // and the grid divide trusts that. A generator does not always honour it: on
+  // the dancer's sheet the death pose's black tail tip reached left into the
+  // middle cell, so the leap frame shipped with a detached blob hanging under a
+  // creature in mid-air. It is not a near miss either - it is the tail of a
+  // DIFFERENT pose, drawn at a different place on the ground, and in motion it
+  // reads as a piece of the animal coming off.
+  //
+  // So each cell is reduced to its own silhouette: label the opaque pixels into
+  // connected components and keep the largest. This is the same rule the studies
+  // folder's prepare.py already applied before these sheets were ever cut here,
+  // and it carries the same known cost - a genuinely DETACHED prop would be
+  // dropped with the strays. That is why anything sizeable enough to be real is
+  // kept and merely reported: under a twentieth of the main body is litter, and
+  // anything above it is somebody's decision to look at.
+  const W = info.width, H = info.height;
+  const lab = new Int32Array(W * H).fill(-1);
+  const sizes = [];
+  const stack = new Int32Array(W * H);
+  for (let q = 0; q < W * H; q++) {
+    if (data[q * 4 + 3] === 0 || lab[q] >= 0) continue;
+    const id_ = sizes.length; let n = 0, sp = 0;
+    stack[sp++] = q; lab[q] = id_;
+    while (sp) {
+      const c = stack[--sp]; n++;
+      const cx = c % W, cy = (c / W) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const nq = ny * W + nx;
+        if (lab[nq] >= 0 || data[nq * 4 + 3] === 0) continue;
+        lab[nq] = id_; stack[sp++] = nq;
+      }
+    }
+    sizes.push(n);
+  }
+  let main = 0;
+  for (let k = 1; k < sizes.length; k++) if (sizes[k] > sizes[main]) main = k;
+  // WHAT REACHED IN FROM NEXT DOOR TOUCHES THE EDGE, and that is the test worth
+  // having. A size threshold alone is a guess and it guessed wrong here: the
+  // piece hanging under the dancer's leap was a fifth of the animal - far too
+  // big to call litter - and it was still the tail of the pose in the NEXT cell.
+  // A creature drawn inside its own cell with the gutters the prompt asks for
+  // does not touch the cell border; something crossing the boundary does, by
+  // definition, because it entered through it. So a component that is not the
+  // main silhouette AND meets an edge is somebody else's, whatever its size.
+  const edge = new Uint8Array(sizes.length);
+  for (let x = 0; x < W; x++) { const a = lab[x], b = lab[(H - 1) * W + x]; if (a >= 0) edge[a] = 1; if (b >= 0) edge[b] = 1; }
+  for (let y = 0; y < H; y++) { const a = lab[y * W], b = lab[y * W + W - 1]; if (a >= 0) edge[a] = 1; if (b >= 0) edge[b] = 1; }
+  const junk = (k) => k !== main && (edge[k] || sizes[k] < sizes[main] / 20);
+  let dropped = 0, held = 0, fromNextCell = 0;
+  for (let k = 0; k < sizes.length; k++) {
+    if (k === main) continue;
+    if (!junk(k)) { held++; continue; }            // sizeable, interior: somebody's decision
+    if (edge[k] && sizes[k] >= sizes[main] / 20) fromNextCell++;
+    dropped += sizes[k];
+  }
+  if (dropped) {
+    for (let q = 0; q < W * H; q++) {
+      const l = lab[q];
+      if (l >= 0 && junk(l)) data[q * 4] = data[q * 4 + 1] = data[q * 4 + 2] = data[q * 4 + 3] = 0;
+    }
+    kept -= dropped;
+  }
   const pct = kept / (info.width * info.height) * 100;
   const file = path.join(outDir, poses[i] + ".png");
   await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toFile(file);
-  const warn = pct < 2 ? "  ← ALMOST EMPTY, check the sheet" : pct > 85 ? "  ← barely keyed, is the background magenta?" : "";
+  const warn = pct < 2 ? "  \u2190 ALMOST EMPTY, check the sheet" : pct > 85 ? "  \u2190 barely keyed, is the background magenta?" : "";
   if (warn) bad++;
-  console.log("  " + poses[i].padEnd(18) + pct.toFixed(1).padStart(5) + "% creature" + warn);
+  const strays = dropped ? "  swept " + (sizes.length - 1 - held) + " stray bit" + ((sizes.length - 1 - held) === 1 ? "" : "s")
+    + (fromNextCell ? " (" + fromNextCell + " reaching in from the next cell)" : "") : "";
+  const big = held ? "  \u2190 " + held + " DETACHED PIECE" + (held === 1 ? "" : "S") + " kept, look at this frame" : "";
+  if (big) bad++;
+  console.log("  " + poses[i].padEnd(18) + pct.toFixed(1).padStart(5) + "% creature" + strays + big + warn);
 }
 console.log("\nwrote " + poses.length + " poses to output/mountain-mobs/" + id + "/");
 console.log("next: node scripts/build-mob-strips.mjs " + id + " --patch");

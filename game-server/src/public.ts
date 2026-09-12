@@ -929,23 +929,33 @@ export const PAGE = `<!doctype html>
   #stage { display: none; }
   body[data-view="image"] #stage {
     display: block;
-    position: relative;
-    flex: 1 1 auto;
-    min-height: 0;
+    /* THE BOX IS THE PICTURE, AND THE PICTURE IS THE WINDOW (rome, 2026-09-12).
+       It spent two rounds as a flex item above the log, which is what kept it
+       small: everything the prose took came off the top of it, and on a wide
+       window the plate is height-bound, so an inch of log cost an inch of
+       picture and two inches of width with it. Measured at its best, 803x503 on
+       a 1512x860 window - a third of the screen.
+       Out of the column entirely now. The plate gets the whole window, drawn
+       CONTAIN so all of it is there, and the prose lies over the bottom of it
+       again on the fade it used to have. Same window: 1372x860, which is every
+       pixel of height there is. The text costs the picture nothing, because it
+       is no longer standing on the picture's share of the column - it is lying
+       on the picture, which was rome's arrangement from the start.
+       SIZED TO THE PLATE, NOT TO THE WINDOW, and centred with inset+margin. The
+       two are the same thing on a wide window and are not on a phone, and the
+       difference is what makes the creatures right: they are measured in cqh
+       against this box, so the box has to BE the picture or the numbers lie. A
+       window-sized box on a 430x840 phone held a 270-tall picture and made a
+       42-unit man 63 per cent of the ground under him. Stating both axes from
+       the plate's own 1584x993 means the box is exactly what is drawn in it,
+       at every window, and contain has nothing left to letterbox. */
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    margin: auto;
+    width: min(100vw, calc(100dvh * 1584 / 993));
+    height: min(100dvh, calc(100vw * 993 / 1584));
+    z-index: 0;
     container-type: size;
-    /* AND IT NEVER OUTGROWS THE PICTURE IN IT. This is not cosmetic: every
-       creature is sized in cqh, which is a share of THIS BOX, on the assumption
-       that the box and the picture are the same height. They are, whenever the
-       plate is height-bound - which is every wide window. On a narrow one the
-       plate is WIDTH-bound instead, so it sits letterboxed with sky above and
-       below, and the box goes on being taller than the picture: measured on a
-       430x840 phone, a 408 box around a 270 picture. Every sprite was then
-       sized against 408 and stood on a 270 picture, so a 42cqh man came out at
-       63 per cent of the ground he was standing on rather than 42. That arrived
-       with the box itself and has been wrong since; capping the box at the
-       picture's own shape is what makes cqh mean what the numbers say. */
-    max-height: calc(100vw * 993 / 1584);
-    background: var(--bg);
     overflow: hidden;
   }
   body[data-view="image"] #scene {
@@ -969,7 +979,14 @@ export const PAGE = `<!doctype html>
   #sky { display: none; }
   body[data-view="image"] #sky {
     display: block;
-    position: absolute;
+    /* FIXED, AND OUTSIDE THE STAGE. It is the one layer that should be cropped
+       rather than fitted - a backdrop with no composition in it, which is the
+       whole reason one sky can stand behind eighty scenes - so it fills the
+       window while the scene fits inside its own box. It also cannot live in
+       the stage any more even if it wanted to: container-type makes that element
+       a containing block for fixed descendants, so a fixed sky inside it would
+       be pinned to the picture rather than to the window. */
+    position: fixed;
     inset: 0;
     /* NOT -1. A fixed element at a negative z-index paints BEHIND the body's
        background, and this body has an opaque one — so the sky was drawn, and
@@ -978,10 +995,6 @@ export const PAGE = `<!doctype html>
        order (sky first) is what keeps the scene on top of it. */
     z-index: 0;
     background-color: var(--bg);
-    /* THE SKY STAYS COVER. It is a backdrop with no composition in it — that is
-       the whole reason one sky can stand behind eighty scenes — so cropping it
-       costs nothing, and filling the stage is what turns the band beside a
-       contained plate into more sky instead of a strip of flat colour. */
     background-size: cover;
     background-position: center 55%;
     background-repeat: no-repeat;
@@ -1225,56 +1238,28 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #log {
     position: relative;
     z-index: 1;
-    margin-top: auto;
+    /* NO auto MARGIN HERE - the grip above owns it. Two auto top margins in one
+       flex column do not both push down, they SHARE the free space between them,
+       which parked the grip exactly halfway up the picture. One claimant moves
+       the pair to the floor; two of them split the room. */
     flex: 0 1 auto;
-    /* A THIRD, NOT A QUARTER (rome, 2026-09-09). The closed strip was 25vh and
-       is 33vh, which is the read the prose deserves: a quarter of the column
-       held about four lines of a fight before the oldest one left the top, and
-       a fight is the thing you most need to read back through without pulling
-       the whole log open. It costs the picture 8vh off the bottom, which is the
-       part of a scene plate with the least in it — the ground at your feet. */
-    /* THE CEILING IS WHAT THE PICTURE DOES NOT NEED (rome, 2026-09-11: the
-       picture is whole and it is too small). A flat 33vh was a CLAIM, not a
-       ceiling: the log always holds more than it can show, so it took its third
-       whatever the window was, and the stage got the leftovers. Measured on a
-       1512x860 window, those leftovers were 435px - and a 1584x993 plate
-       contained in a 1512x435 box is height-bound, so it drew at 693x435.
-       Forty-six per cent of the stage width. Under a quarter of the window. The
-       whole plate was in frame and it was still the smallest thing on screen,
-       with sky down both sides where the picture should have been.
-       Width was never the lever - the box is already as wide as the window - so
-       height is the only lever there is, and the log was holding it. Now the log
-       asks for what is left after the picture has the height it wants, and the
-       three terms are exactly that: the window, less the chrome, less the height
-       a full-width plate needs (993/1584 of its width).
-       CLAMPED AT BOTH ENDS, because the middle term goes negative on any wide
-       window - a picture that wants more height than the window has. The floor
-       is what stops it, and rome set it at A QUARTER OF THE COLUMN (2026-09-12).
-       That is the floor the prose never goes below, whatever the picture would
-       like; on a 1512x860 window it is 215px, nine lines.
-       AND THE CEILING IS HALF, NOT THE OLD THIRD, because on a narrow window the
-       middle term is POSITIVE - a phone is so much taller than it is wide that
-       the picture cannot use the height even if offered it. A third would have
-       left that surplus as dead ground under the strip. The log takes it
-       instead, which is why the phone picture does not change size here: it was
-       never the thing that was short of room.
-       THE FLOOR IS A SHARE, NOT A LINE COUNT, and it is worth saying why: a
-       count written in em does not mean what it reads as. An em is the font
-       size; a LINE is the font size times the 1.55 line-height, so 8em is five
-       lines and not eight. A vh is the same fraction of the same window the
-       picture is measured against, which is the comparison actually being
-       made. */
-    max-height: clamp(25vh, calc(100dvh - 150px - 100vw * 993 / 1584), 50vh);
+    /* A QUARTER, AND IT LIES ON THE PICTURE AGAIN (rome, 2026-09-12). The strip
+       spent two rounds as a solid panel in the column, which is what starved the
+       picture: a panel takes its height OFF the plate, and on a wide window the
+       plate is height-bound, so every pixel the prose took cost a pixel of
+       picture and one and a half of width with it.
+       It is back over the plate on a fade, which is what it was before, and the
+       height it takes is now free - the picture has the whole window underneath
+       it either way. So a quarter here is a quarter of the SCREEN the words
+       cover, not a quarter of the picture surrendered. */
+    max-height: 25vh;
     transition: max-height .22s ease;
-    /* Built from --bg so a repainted theme repaints this too. It was three
-       hardcoded browns, which meant every theme but the default one had the
-       prose sitting on the DEFAULT theme's ground. */
-    /* SOLID NOW, AND NO FADE. The gradient existed so the prose could rise out
-       of a picture it was lying on; the prose is not lying on anything any more,
-       so a fade at its top edge would be a soft line between two separate
-       things rather than a join. */
-    background: var(--bg);
-    /* and nothing to read it against but its own ground, so no shadow. */
+    background: linear-gradient(to bottom,
+      color-mix(in srgb, var(--bg) 0%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 72%, transparent) 12%,
+      color-mix(in srgb, var(--bg) 92%, transparent) 40%,
+      color-mix(in srgb, var(--bg) 97%, transparent) 100%);
+    text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(0,0,0,.8);
   }
   /* PULLED OPEN IS THE WHOLE COLUMN (rome, 2026-09-06). It was half the window,
      which is the worst of both: not enough to read a long fight back through,
@@ -1316,7 +1301,13 @@ export const PAGE = `<!doctype html>
     display: block;
     position: relative;
     z-index: 2;
-    margin: 0 auto -1px;
+    /* THE AUTO MARGIN LIVES HERE, NOT ON THE LOG. The grip comes before the log
+       in the column, so an auto top margin on the LOG absorbs the free space
+       between the two and pins the tab under the bar at the top of the window
+       with its strip a screen away at the bottom. Putting it on the first of the
+       pair pushes both down together, which is the only arrangement that reads
+       as a handle on the top edge of the strip. */
+    margin: auto auto -1px;
     width: 74px;
     padding: 3px 0 4px;
     border: 0;
@@ -1846,8 +1837,8 @@ export const PAGE = `<!doctype html>
       <div id="jbody"></div>
     </div>
   </div>
+  <div id="sky" aria-hidden="true"></div>
   <div id="stage" aria-hidden="true">
-    <div id="sky"></div>
     <div id="scene"></div>
     <div id="mobs"></div>
   </div>
@@ -6469,7 +6460,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "21";
+var ART_V = "22";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -7784,7 +7775,7 @@ var MOB_ANIM = {
   "the-blue-fox":         { n: 6, aspect: 1.533, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-bone-dropper":     { n: 8, aspect: 1.115, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"feed":5,"attack":6,"death":7} },
   "the-butter-wife":      { n: 6, aspect: 1.209, f: {"idle":0,"listen":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-dancer":           { n: 6, aspect: 1.723, f: {"idle":0,"twisting-leap":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-dancer":           { n: 6, aspect: 1.338, f: {"idle":0,"twisting-leap":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-drake":            { n: 14, aspect: 1.483, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
   "the-gravid-adder":     { n: 6, aspect: 1.263, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5} },
   "the-herd":             { n: 6, aspect: 0.991, f: {"idle":0,"keep-the-line":1,"move-a":2,"move-b":3,"attack":4,"death":5} },

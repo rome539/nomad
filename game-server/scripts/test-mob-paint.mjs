@@ -26,7 +26,7 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +'function runAnims(){}\n'
   +fn("paintMobs")+"\n"+fn("applyState")+"\n"+fn("fitMobRow")+"\n"
   +"mobsEl = _stub;   // the lifted block declares its own, which the stub must win\n"
-  +"ctx.paintMobs=paintMobs; ctx.made=()=>made; ctx.anims=()=>anims;";
+  +"ctx.paintMobs=paintMobs; ctx.made=()=>made; ctx.anims=()=>anims; ctx.mobVh=mobVh;";
 new Function("ctx","_stub","document","window",code)(ctx,mobsEl,
   {createElement:()=>el(), getElementById:()=>null},{innerWidth:1512,innerHeight:850});
 
@@ -55,7 +55,15 @@ ctx.paintMobs(["the-drake"], null, null);
 const drake=ctx.anims()[0];
 t("the drake is lifted", drake.lift>0, drake.lift.toFixed(4));
 {
-  const h=42/Math.pow(22,0.85)*Math.pow(44,0.85);
+  // ASK THE CODE FOR THE HEIGHT, DO NOT REDERIVE IT. This line used to compute
+  // the drake's size from a hand-copied curve with the exponent written into it,
+  // and the exponent is a tuning dial: MOB_P moved from 0.85 to 0.45 and the
+  // copy did not, so the test went on measuring a 75.7-unit drake against a lift
+  // computed for a 57.4-unit one and reported feet at 82.7% forever. The code
+  // was right the whole time. A test that recomputes a constant its subject owns
+  // does not check that subject, it checks whether anybody remembered to update
+  // the test - and a gate that is always red teaches you to stop reading it.
+  const h=ctx.mobVh("the-drake");
   const feet=55+h/2-drake.lift*h;
   t("...to stand its feet where a man's are", Math.abs(feet-76)<0.5, "feet at "+feet.toFixed(1)+"%");
 }
