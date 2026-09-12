@@ -911,60 +911,20 @@ export const PAGE = `<!doctype html>
      room, edge to edge, and everything else floats on top of it. Fixed rather
      than flexed so it fills the window whatever the log is doing, and z-indexed
      under the chrome, which is already opaque and needs no help. */
-  /* THE PICTURE GETS ITS OWN BOX (rome, 2026-09-11). It used to be the whole
-     window with the prose lying over the bottom of it, which meant two things
-     that fought: the plate was always CROPPED to the window's shape, and the
-     third of it the text sat on was only half visible. Now the picture takes
-     the room above the log and the log takes the rest, and nothing overlaps.
-     CONTAIN, NOT COVER, is the point of the change — the whole plate is in
-     frame at last, at the cost of a band at the sides on a wide window or above
-     and below on a tall one. The band is the picture's own ground colour, so it
-     reads as a frame rather than as a gap.
-     AND IT IS A CONTAINER, which is what makes the creatures still work: every
-     sprite is sized against the picture, and a stage that is two thirds of the
-     window would otherwise leave a 42vh man taller than two thirds of the frame
-     he is standing in. container-type lets the same numbers mean what they have
-     always meant — a share of the PICTURE — by measuring cqh against this box
-     instead of vh against the window. */
-  #stage { display: none; }
-  body[data-view="image"] #stage {
-    display: block;
-    /* THE BOX IS THE PICTURE, AND THE PICTURE IS THE WINDOW (rome, 2026-09-12).
-       It spent two rounds as a flex item above the log, which is what kept it
-       small: everything the prose took came off the top of it, and on a wide
-       window the plate is height-bound, so an inch of log cost an inch of
-       picture and two inches of width with it. Measured at its best, 803x503 on
-       a 1512x860 window - a third of the screen.
-       Out of the column entirely now. The plate gets the whole window, drawn
-       CONTAIN so all of it is there, and the prose lies over the bottom of it
-       again on the fade it used to have. Same window: 1372x860, which is every
-       pixel of height there is. The text costs the picture nothing, because it
-       is no longer standing on the picture's share of the column - it is lying
-       on the picture, which was rome's arrangement from the start.
-       SIZED TO THE PLATE, NOT TO THE WINDOW, and centred with inset+margin. The
-       two are the same thing on a wide window and are not on a phone, and the
-       difference is what makes the creatures right: they are measured in cqh
-       against this box, so the box has to BE the picture or the numbers lie. A
-       window-sized box on a 430x840 phone held a 270-tall picture and made a
-       42-unit man 63 per cent of the ground under him. Stating both axes from
-       the plate's own 1584x993 means the box is exactly what is drawn in it,
-       at every window, and contain has nothing left to letterbox. */
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    margin: auto;
-    width: min(100vw, calc(100dvh * 1584 / 993));
-    height: min(100dvh, calc(100vw * 993 / 1584));
-    z-index: 0;
-    container-type: size;
-    overflow: hidden;
-  }
   body[data-view="image"] #scene {
     display: block;
-    position: absolute;
+    position: fixed;
     inset: 0;
     z-index: 0;
     background-color: transparent;
-    background-size: contain;
+    /* COVER, NOT CONTAIN. Fitting the whole plate inside the window sounds like
+       the generous choice and is not: the plate is 1584x993 and a window is not,
+       so contain leaves a band of bare sky down BOTH SIDES of every picture and
+       the scene stops being the room you are standing in. Cover crops instead -
+       the camera lock reserves the edges for exactly this - and the picture
+       reaches every corner, which is what it did from the first plate and what
+       it does again (rome, 2026-09-12). */
+    background-size: cover;
     background-position: center 55%;
     background-repeat: no-repeat;
     transition: filter .8s ease;
@@ -979,13 +939,6 @@ export const PAGE = `<!doctype html>
   #sky { display: none; }
   body[data-view="image"] #sky {
     display: block;
-    /* FIXED, AND OUTSIDE THE STAGE. It is the one layer that should be cropped
-       rather than fitted - a backdrop with no composition in it, which is the
-       whole reason one sky can stand behind eighty scenes - so it fills the
-       window while the scene fits inside its own box. It also cannot live in
-       the stage any more even if it wanted to: container-type makes that element
-       a containing block for fixed descendants, so a fixed sky inside it would
-       be pinned to the picture rather than to the window. */
     position: fixed;
     inset: 0;
     /* NOT -1. A fixed element at a negative z-index paints BEHIND the body's
@@ -1080,7 +1033,7 @@ export const PAGE = `<!doctype html>
   #mobs { display: none; }
   body[data-view="image"] #mobs {
     display: flex;
-    position: absolute;
+    position: fixed;
     left: 0; right: 0;
     /* CENTRED ON THE HORIZON, NOT STOOD ON A LINE. Sharing one bottom edge is
        what a real ground plane does, and it was the wrong model here: a common
@@ -1238,22 +1191,18 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #log {
     position: relative;
     z-index: 1;
-    /* NO auto MARGIN HERE - the grip above owns it. Two auto top margins in one
-       flex column do not both push down, they SHARE the free space between them,
-       which parked the grip exactly halfway up the picture. One claimant moves
-       the pair to the floor; two of them split the room. */
+    margin-top: auto;
     flex: 0 1 auto;
-    /* A QUARTER, AND IT LIES ON THE PICTURE AGAIN (rome, 2026-09-12). The strip
-       spent two rounds as a solid panel in the column, which is what starved the
-       picture: a panel takes its height OFF the plate, and on a wide window the
-       plate is height-bound, so every pixel the prose took cost a pixel of
-       picture and one and a half of width with it.
-       It is back over the plate on a fade, which is what it was before, and the
-       height it takes is now free - the picture has the whole window underneath
-       it either way. So a quarter here is a quarter of the SCREEN the words
-       cover, not a quarter of the picture surrendered. */
+    /* A QUARTER (rome, 2026-09-12). It was 25vh, then 33vh for the read, and it
+       is a quarter again now that the prose is back to lying ON the picture
+       rather than sitting beside it: over the plate the strip costs the picture
+       nothing but what it covers, so the number is only about how much of the
+       room the words are allowed to hide. */
     max-height: 25vh;
     transition: max-height .22s ease;
+    /* Built from --bg so a repainted theme repaints this too. It was three
+       hardcoded browns, which meant every theme but the default one had the
+       prose sitting on the DEFAULT theme's ground. */
     background: linear-gradient(to bottom,
       color-mix(in srgb, var(--bg) 0%, transparent) 0%,
       color-mix(in srgb, var(--bg) 72%, transparent) 12%,
@@ -1301,13 +1250,7 @@ export const PAGE = `<!doctype html>
     display: block;
     position: relative;
     z-index: 2;
-    /* THE AUTO MARGIN LIVES HERE, NOT ON THE LOG. The grip comes before the log
-       in the column, so an auto top margin on the LOG absorbs the free space
-       between the two and pins the tab under the bar at the top of the window
-       with its strip a screen away at the bottom. Putting it on the first of the
-       pair pushes both down together, which is the only arrangement that reads
-       as a handle on the top edge of the strip. */
-    margin: auto auto -1px;
+    margin: 0 auto -1px;
     width: 74px;
     padding: 3px 0 4px;
     border: 0;
@@ -1838,10 +1781,8 @@ export const PAGE = `<!doctype html>
     </div>
   </div>
   <div id="sky" aria-hidden="true"></div>
-  <div id="stage" aria-hidden="true">
-    <div id="scene"></div>
-    <div id="mobs"></div>
-  </div>
+  <div id="scene" aria-hidden="true"></div>
+  <div id="mobs" aria-hidden="true"></div>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
   <div id="log"></div>
   <div id="chips"></div>
@@ -7585,9 +7526,9 @@ applyView();
 // MOB_P cuts below just brought it. Left alone deliberately.
 // Everything smaller sits comfortably inside that, which is why "centred, not
 // stood on a line" works for the other forty.
-// (The unit is cqh now, not vh — a share of the PICTURE rather than of the
-// window, since 2026-09-11 when the picture stopped being the whole window.
-// Every number here kept its meaning by changing what it is measured against.)
+// (The unit is vh: a share of the WINDOW, which is what the picture fills. It
+// spent a day as cqh, measured against a box the picture had to itself, and the
+// box is gone — it cost more of the plate than it was worth.)
 var MAN_VH = 42;
 // 0.85 -> 0.65 -> 0.45 (rome, 2026-09-09: twice, the small ones are too small). P is the amount
 // of squeeze and it works from the anchor outwards, so lowering it moves the two
@@ -7861,8 +7802,8 @@ function paintMobs(ids, doing, dead) {
     var bid = bodies[d1], bspec = MOB_ANIM[bid], bvh = mobVh(bid);
     var bel = document.createElement("div");
     bel.className = "mob dead";
-    bel.style.height = bvh.toFixed(1) + "cqh";
-    bel.style.width = (bvh * bspec.aspect).toFixed(1) + "cqh";
+    bel.style.height = bvh.toFixed(1) + "vh";
+    bel.style.width = (bvh * bspec.aspect).toFixed(1) + "vh";
     bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + ART_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
@@ -7874,7 +7815,7 @@ function paintMobs(ids, doing, dead) {
     mobsEl.appendChild(bel);
   }
   for (var k = 0; k < order.length; k++) {
-    var id = order[k].id, slot = order[k].idx, vh = mobVh(id), h = vh.toFixed(1) + "cqh";
+    var id = order[k].id, slot = order[k].idx, vh = mobVh(id), h = vh.toFixed(1) + "vh";
     // NOTHING PUTS ITS FEET THROUGH THE PROSE (rome, 2026-09-08: the drake might
     // be too big). Centring on the horizon is right up to about the size of a
     // man and then stops being: at 75.7vh the drake's feet land at 93% with
@@ -7905,7 +7846,7 @@ function paintMobs(ids, doing, dead) {
     // layout declines to honour — every frame is squeezed or pulled and the whole
     // row stretches. So the width is computed here from the same height the table
     // gave, and the element is told not to flex at all.
-    el.style.width = (vh * spec.aspect).toFixed(1) + "cqh";
+    el.style.width = (vh * spec.aspect).toFixed(1) + "vh";
     el.style.backgroundImage = "url(/mob/" + id + ".webp?v=" + ART_V + ")";
     el.style.backgroundSize = (spec.n * 100) + "% 100%";
     el.style.backgroundPositionX = "0%";
