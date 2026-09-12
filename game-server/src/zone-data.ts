@@ -6449,7 +6449,22 @@ export const CROSSING_RULES: [string, RegExp][] = [
   ["reed",       /reed/],
   ["eyot",       /eyot|causey|hurdle|chapel|^the-graves$|landing-stage|otter-run|^the-dead-end$|hook-hut|stake-line|sunken-forest|shell-scar/],
   ["marsh",      /marsh|salt-pan|samphire|creek|salting|quaking-turf|fowler|decoy|heron-tree|eel-hut|^the-old-boat$|sea-dyke|flashes|drain-cut|wet-carr|burn-flats|outfall|alder-thicket|saltings/],
-  ["staithe",    /staithe|^the-hard$|capstan|quay|net-poles|net-loft|tar-shed|drying-frames|smoke-house|fisher-huts|salt-store|pan-house|boat-noust|^the-oar|toll|keepers-garden|cart-shed|anchor-stone|bothy|well-yard|hard-standing|hard-approach/],
+  // THE BUILT STRAND, and it has to come before the staithe or the staithe takes
+  // it. These eleven were on the staithe's shingle - a walled kitchen garden, a
+  // smoke house and a salt store standing on a wet beach - because "staithe" was
+  // widened from "the working SHORE" to "anything people made", which is a
+  // different place. They are one place and the map proves it: eleven rooms
+  // inside a block six squares by seven, with the crossing house - the gate -
+  // at the middle of it. A hamlet round a gatehouse, which is a thing the hill
+  // never had, so no existing ground was ever going to be it.
+  ["works",      /salt-store|pan-house|smoke-house|net-loft|tar-shed|fisher-huts|cart-shed|bothy|keepers-garden|well-yard|toll-cottage/],
+  // ...and four that are roadside rather than waterfront: two toll signs, a
+  // levelled chalk yard beside the bridge, and the last of the shore track.
+  ["shore-road", /toll-post|toll-board|hard-standing|hard-approach/],
+  // WHAT IS LEFT IS THE SHORE ITSELF: the hard, the quay, the nets in the water,
+  // the nousts, the capstans, the anchor stone. Ten rooms, every one of them
+  // ground you could stand on with the tide in front of you.
+  ["staithe",    /staithe|^the-hard$|capstan|quay|net-poles|drying-frames|boat-noust|^the-oar|anchor-stone/],
   ["shell",      /wrack|shingle|shell|limpet|mussel-scaup|tide-mark|storm-line|thrift-bank|cockle|mud-shore|gutway|^the-strand|boat-graves/],
   ["shore-road", /road|\blane\b|cart-ruts|drove|parting|passengers-rest|toll-board|gull-flats|wildfowler|shepherds-stone|far-shore-stone|shore-descent|strand|stair/],
 ];

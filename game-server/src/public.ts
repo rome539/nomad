@@ -6502,6 +6502,7 @@ var TERRAIN_PLATE = {
   // AND THE LAST FOUR, which finishes the crossing: eleven grounds, 217 rooms,
   // nothing left wearing a stand-in.
   reed: ["reed"], eyot: ["eyot"], "shore-road": ["shore-road"],
+  works: ["works"],
   "sea-cave": ["sea-cave"],
 };
 // FNV-1a: the same cheap trick the world already uses to hang per-instance
@@ -6760,6 +6761,7 @@ var TERRAIN_SCENES = {
   reed:           "day night night-torch fog rain snow",
   eyot:           "day night night-torch fog rain snow",
   "shore-road":   "day night night-torch fog rain snow",
+  works:          "day night night-torch fog rain snow",
   // TWO, AND THAT IS THE WHOLE SET IT WILL EVER HAVE. The sea cave is a black
   // interior lit by the torch in your hand: there is no weather in it, no sky
   // over it, and daylight does not reach it. Night is the cave without a torch
@@ -7146,6 +7148,12 @@ var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the
                  // in the region and the line can sit high without risk. 60
                  // puts the tide mark at eye level behind the animals, which is
                  // the reading the room wants: you are standing below it.
+                 // THE YARD BETWEEN THE BUILDINGS runs from about 60% down,
+                 // and the buildings stand behind it, so the risk is a creature
+                 // up against a wall rather than out on the ground. 62 puts the
+                 // adder at 72% and a man at 83%, all three well out in the open
+                 // with worn earth in front of and behind them.
+                 works: 62,
                  "sea-cave": 60,
                  // THE TWO CROSSING GATES. Both are a yard in front of a
                  // building with the water behind it, and both yards run from

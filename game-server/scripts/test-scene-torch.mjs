@@ -516,6 +516,15 @@ t("...and the mountain is unchanged beside it", strip(sceneEl.style.backgroundIm
 // stand-in rather than to nothing - the crossing's is the shingle shore.
 ctx.paint("crossing", "day", "no-such-ground", "bx3", 0, 0, "", 0);
 t("an unpainted crossing ground falls back to the shore, not to bare colour", strip(sceneEl.style.backgroundImage) === "/room-bg/shell-day.webp", strip(sceneEl.style.backgroundImage));
+
+// THE TWELFTH GROUND. The crossing has a hamlet round its gatehouse - eleven
+// working buildings inside a block six squares by seven - and for a day they
+// stood on the staithe's wet shingle, because that rule had been widened from
+// "the working SHORE" to "anything people made". Those are different places.
+ctx.paint("crossing", "day", "works", "wk1", 0, 0, "", 0);
+t("the built strand has its own ground", strip(sceneEl.style.backgroundImage) === "/room-bg/works-day.webp", strip(sceneEl.style.backgroundImage));
+ctx.paint("crossing", "night", "works", "wk2", 1, 0, "", 0);
+t("...and a torch in the yard at night", strip(sceneEl.style.backgroundImage) === "/room-bg/works-night-torch.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(0);
 
 t("the gatehouse ignores the torch", r.tint === "" && r.mobs === "", "class=" + r.tint + " mobs=" + r.mobs);
