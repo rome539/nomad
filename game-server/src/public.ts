@@ -6401,7 +6401,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "22";
+var ART_V = "23";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -6495,6 +6495,14 @@ var TERRAIN_PLATE = {
   // crossing to four grounds of eleven. The ferry is the rope stage over the
   // channel; the staithe is the hard, the pots and the drying nets.
   ferry: ["ferry"], staithe: ["staithe"],
+  // AND THREE MORE (2026-09-12), which takes the crossing to seven grounds of
+  // eleven. The bridge is the pier tops and the plank; the marsh is the samphire
+  // flats behind the creeks; the shell is the shingle and its wrack line.
+  bridge: ["bridge"], marsh: ["marsh"], shell: ["shell"],
+  // AND THE LAST FOUR, which finishes the crossing: eleven grounds, 217 rooms,
+  // nothing left wearing a stand-in.
+  reed: ["reed"], eyot: ["eyot"], "shore-road": ["shore-road"],
+  "sea-cave": ["sea-cave"],
 };
 // FNV-1a: the same cheap trick the world already uses to hang per-instance
 // detail off an id without storing a byte of it.
@@ -6617,6 +6625,13 @@ var ROOM_PLATE = {
   // PLATE_OF below for why they are not simply copies of the files.
   "the-bone-ground":  "day night night-torch fog rain snow",
   "the-oxide-flat":   "day night night-torch fog rain snow",
+  // THE CRAB'S LAIR (2026-09-12). Two conditions and that is the whole set it
+  // can have: the back of a sea cave has no sky over it and no weather in it, so
+  // night is the pool without a torch and night-torch is the pool with one. The
+  // room branch already handles a plate with no day - it falls back to the first
+  // condition listed, and a plate that resolved to "night" counts as dark enough
+  // for a flame - so unlike the ground table this needed no code to go with it.
+  "the-salt-pool":    "night night-torch",
 };
 // A PLATE MAY BE SHARED (rome, 2026-09-09). A room plate's file stem has always
 // been the room id, so two rooms that look the same meant two copies of six
@@ -6678,6 +6693,14 @@ var GATE_PLATE = {
   "the-stell":        "day night night-torch fog rain snow",
   "the-slabs":        "day night night-torch fog rain snow",
   "the-shelter-crag": "day night night-torch fog rain snow",
+  // THE CROSSING'S TWO (2026-09-12), and they are a matched pair on purpose: the
+  // region's own notes say the far bank repeats the near bank exactly, and the
+  // ferry house's description says the same arrangement holds on both sides. One
+  // is a shingle yard with a wrecked boat and a rope-drum, the other a cobbled
+  // yard with a well and empty stabling, and both carry the lit hatch every
+  // gatehouse in the world has.
+  "the-ferry-house":    "day night night-torch fog rain snow",
+  "the-crossing-house": "day night night-torch fog rain snow",
   // "gate", "sally-port", "weeper-arch",
   // "the-ferry-house", "the-crossing-house",
   // "the-first-milestone", "the-relay-house",
@@ -6721,6 +6744,18 @@ var TERRAIN_SCENES = {
   // ever falls back to the day plate under weather it was not shot for.
   ferry:          "day night night-torch fog rain snow",
   staithe:        "day night night-torch fog rain snow",
+  bridge:         "day night night-torch fog rain snow",
+  marsh:          "day night night-torch fog rain snow",
+  shell:          "day night night-torch fog rain snow",
+  reed:           "day night night-torch fog rain snow",
+  eyot:           "day night night-torch fog rain snow",
+  "shore-road":   "day night night-torch fog rain snow",
+  // TWO, AND THAT IS THE WHOLE SET IT WILL EVER HAVE. The sea cave is a black
+  // interior lit by the torch in your hand: there is no weather in it, no sky
+  // over it, and daylight does not reach it. Night is the cave without a torch
+  // and night-torch is the cave with one, and every other hour resolves to the
+  // first of those - which is why the fallback above had to stop saying "day".
+  "sea-cave":     "night night-torch",
 };
 // AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
 // top of one, and the layer is what this replaces (rome, 2026-09-11).
@@ -7035,7 +7070,62 @@ var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the
                  // behind it. Six points further down accordingly: the adder at
                  // 78%, the wolf at 84%, a man at 89%, which puts all three on
                  // the shingle among the pots rather than out on the jetty.
-                 staithe: 68 };
+                 staithe: 68,
+                 // THE BRIDGE IS A STONE DECK FORTY FEET UP, and its near edge
+                 // is the parapet rather than a shoreline - there is no shallow
+                 // margin to get wrong. The deck runs from 62% down, so 64 sits
+                 // the adder at 74%, the wolf at 80% and a man at 85%, all three
+                 // well inside the flags with masonry in front of and behind
+                 // them, and nothing standing on the drop.
+                 bridge: 64,
+                 // THE MARSH IS FLAT AND THE CREEKS ARE BEHIND IT. The samphire
+                 // starts about 63% and the cut banks stand behind that, so the
+                 // risk here is the reverse of the alder's: not water in front
+                 // but a creek edge a creature could appear to be standing in.
+                 // 64 keeps all three on the near flat.
+                 marsh: 64,
+                 // AND THE SHELL IS A STORM BEACH WITH ITS WRACK LINE ACROSS IT.
+                 // The shingle starts around 65% but the weed, driftwood and
+                 // bones lie in a band just above it, and a creature standing in
+                 // that band reads as wading through rubbish rather than walking
+                 // the beach. 70 puts the adder at 80% and a man at 91%, which
+                 // is the clean stone below the wrack.
+                 shell: 70,
+                 // THE REED IS A CUT PATH WITH WALLS OF STEM EITHER SIDE. Its
+                 // mud floor starts about 64% and the reeds stand from it, so
+                 // the only way to be wrong here is to put a creature up in the
+                 // stems. 66 lands the adder at 76% and a man at 87%, all three
+                 // on the mud with the bed towering over them - which is also
+                 // the scale check: a reed bed IS taller than a man.
+                 reed: 66,
+                 // THE EYOT IS THE BARE CROWN OF AN ISLAND, willows behind it
+                 // and reed beyond them. The bare ground runs from about 64%
+                 // down and everything above it is somebody else's ground.
+                 eyot: 66,
+                 // THE SHORE ROAD IS A METALLED ROAD BETWEEN TWO KERBS, and the
+                 // kerbs are the whole constraint: off them is either the storm
+                 // beach or the bank. 68 keeps all three between the stones.
+                 "shore-road": 68,
+                 // AND THE SEA CAVE IS THE ONLY INTERIOR ON THE CROSSING. Wet
+                 // sand from about 55% with the tide line on the walls behind
+                 // it, so there is more standing room here than anywhere else
+                 // in the region and the line can sit high without risk. 60
+                 // puts the tide mark at eye level behind the animals, which is
+                 // the reading the room wants: you are standing below it.
+                 "sea-cave": 60,
+                 // THE TWO CROSSING GATES. Both are a yard in front of a
+                 // building with the water behind it, and both yards run from
+                 // about 60% down, so they take the same line: the adder at 72%,
+                 // a man at 83%, everything on the ground in front of the door
+                 // rather than up against the wall of it.
+                 "gate-the-ferry-house": 62, "gate-the-crossing-house": 62,
+                 // AND THE SALT POOL, where the standing ground is the last of
+                 // the dry cave floor and the pool lies across everything behind
+                 // it. The floor starts about 58%, so 64 keeps all three on wet
+                 // rock with the black water behind them - which is the reading
+                 // the room wants, because the thing that lives here comes OUT
+                 // of that water at you.
+                 "the-salt-pool": 64 };
 // The day count from the server: one number, the same for everybody, up by one
 // each cycle. Zero until a status frame carries it, which simply means the first
 // entry of every pool until the world says otherwise.
@@ -7334,8 +7424,26 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
       // shared code below rather than repeating it.
       var thave = " " + TERRAIN_SCENES[terr] + " ";
       var tbase = SKY_BASE[lastSky] || "day";
-      if (thave.indexOf(" " + tbase + " ") < 0) tbase = "day";
-      var twant = (lastTorch && TORCH_HOURS[lastSky] && thave.indexOf(" night-torch ") >= 0) ? "night-torch" : tbase;
+      // A CONDITION THIS GROUND HAS NOT GOT FALLS BACK TO ITS FIRST, not to
+      // "day". Every terrain until now was outdoors and had a day plate, so a
+      // hardcoded day was indistinguishable from "the one it always has" - and
+      // the sea cave is the first ground that has no day at all. It is a black
+      // interior lit by the torch you carry, so it was shot at night and at
+      // night with a torch and nothing else, and asking it for daylight asked
+      // for a file that does not exist: a room with a hole in it instead of a
+      // picture. The first name in the list is the ground's own default, which
+      // is what this was always meant to mean.
+      // Same fault and same fix as the room-plate fallback a few lines down;
+      // that one was found by a room and this one by a ground.
+      if (thave.indexOf(" " + tbase + " ") < 0) tbase = TERRAIN_SCENES[terr].split(" ")[0];
+      // AND INDOORS THE TORCH ANSWERS AT ANY HOUR. TORCH_HOURS is a list of the
+      // hours when a flame changes what you can see, and it is right about the
+      // open air: at noon on a hillside a torch shows you nothing, so it must
+      // not swap the plate. A cave does not care what the sky is doing. The
+      // test for one needs no new table - a ground with no DAY in its list is a
+      // ground daylight never reaches, which is the same sentence.
+      var indoors = thave.indexOf(" day ") < 0;
+      var twant = (lastTorch && (indoors || TORCH_HOURS[lastSky]) && thave.indexOf(" night-torch ") >= 0) ? "night-torch" : tbase;
       scene = "/room-bg/" + terr + "-" + twant + floodSuffix(terr, twant) + ".webp";
       if (KEYED[twant]) {
         var tp = skyPick(SKY_PAINTED[lastSky] ? lastSky : tbase);

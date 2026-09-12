@@ -6499,6 +6499,12 @@ export const ART_ROOMS = new Set<string>([
   // exactly what they describe already sat on disk.
   "the-bone-ground",    // ribs, cannon bones, a horn, skulls — the Dry Bones plate
   "the-oxide-flat",     // a flat red pavement furred with rust — the Ochre Shelf plate
+  // THE FIRST ROOM PLATE OUTSIDE THE MOUNTAIN (2026-09-12), and it is a boss's
+  // lair: the back of the sea cave, where the great crab's rare blood comes up.
+  // It earns its own picture the way the Kept Room does - an interior nothing
+  // else in the region looks like, and the one place on the crossing a ground
+  // plate could not honestly stand in for.
+  "the-salt-pool",
 ]);
 
 export const INDOOR_ROOMS = new Set<string>([

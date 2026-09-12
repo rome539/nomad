@@ -442,6 +442,58 @@ ctx.setSea(3); ctx.paint("mountain", "night", "staithe", "st", 1, 0, "", 3);
 t("nor does the staithe, torch and all", strip(sceneEl.style.backgroundImage) === "/room-bg/staithe-night-torch.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(0); ctx.paint("mountain", "snow", "staithe", "st2", 0, 0, "", 0);
 t("and the staithe was shot for every condition, so snow is its own plate", strip(sceneEl.style.backgroundImage) === "/room-bg/staithe-snow.webp", strip(sceneEl.style.backgroundImage));
+
+// THE BRIDGE IS THE ONE GROUND THAT CANNOT FLOOD BY DESIGN, not merely by not
+// having been shot that way: its own region header says it is never drowned and
+// never whole - four piers stand and the middle went into the water - so the
+// deck is forty feet up and the tide is irrelevant to it. That is the whole
+// bargain it trades against the causeway, and a flood plate here would be
+// arguing with the map.
+ctx.setSea(3); ctx.paint("mountain", "day", "bridge", "br", 0, 0, "", 3);
+t("the bridge is forty feet up and never floods", strip(sceneEl.style.backgroundImage) === "/room-bg/bridge-day.webp", strip(sceneEl.style.backgroundImage));
+ctx.setSea(2); ctx.paint("mountain", "rain", "marsh", "ma", 0, 0, "", 2);
+t("nor does the marsh, whatever the sea is doing", strip(sceneEl.style.backgroundImage) === "/room-bg/marsh-rain.webp", strip(sceneEl.style.backgroundImage));
+ctx.setSea(0); ctx.paint("mountain", "fog", "shell", "sh", 0, 0, "", 0);
+t("and the shell was shot for every condition too", strip(sceneEl.style.backgroundImage) === "/room-bg/shell-fog.webp", strip(sceneEl.style.backgroundImage));
+
+// THE GROUND WITH NO DAYLIGHT, which is the case the terrain fallback was
+// written for and had never met. Every terrain before this one was outdoors and
+// owned a day plate, so falling back to a hardcoded "day" and falling back to
+// "the one it always has" were the same answer and nobody could tell them
+// apart. The sea cave tells them apart: it is a black interior lit by the torch
+// in your hand, shot at night and at night with a torch and nothing else. Ask
+// it for noon and the old code asked the edge for sea-cave-day.webp, which has
+// never existed - a hole in the world at the one room that is already dark.
+ctx.setSea(0); ctx.paint("mountain", "day", "sea-cave", "sc", 0, 0, "", 0);
+t("a ground with no day plate falls back to its own first condition", strip(sceneEl.style.backgroundImage) === "/room-bg/sea-cave-night.webp", strip(sceneEl.style.backgroundImage));
+ctx.setSea(0); ctx.paint("mountain", "day", "sea-cave", "sc2", 1, 0, "", 0);
+t("...and a torch still lights it at any hour", strip(sceneEl.style.backgroundImage) === "/room-bg/sea-cave-night-torch.webp", strip(sceneEl.style.backgroundImage));
+ctx.setSea(0); ctx.paint("mountain", "snow", "sea-cave", "sc3", 0, 0, "", 0);
+t("...and weather does not reach inside it either", strip(sceneEl.style.backgroundImage) === "/room-bg/sea-cave-night.webp", strip(sceneEl.style.backgroundImage));
+ctx.setSea(0); ctx.paint("mountain", "rain", "shore-road", "sr", 0, 0, "", 0);
+t("the shore road has all six, so rain is its own plate", strip(sceneEl.style.backgroundImage) === "/room-bg/shore-road-rain.webp", strip(sceneEl.style.backgroundImage));
+
+// THE CROSSING'S TWO DOORS, which are the first gates painted outside the hill.
+// A gate does not arrive as a place - it comes in the TERRAIN slot with a
+// "gate:" prefix on it, which is worth writing down because getting it wrong
+// looks exactly like the gate not being wired: the room falls through to the
+// band fallback and paints a hillside.
+ctx.paint("mountain", "day", "gate:the-ferry-house", "gh1", 0, 0, "");
+t("the ferry house is a painted gate now", strip(sceneEl.style.backgroundImage) === "/room-bg/gate-the-ferry-house-day.webp", strip(sceneEl.style.backgroundImage));
+ctx.paint("mountain", "night", "gate:the-crossing-house", "gh2", 1, 0, "");
+t("...and its twin takes a torch at night", strip(sceneEl.style.backgroundImage) === "/room-bg/gate-the-crossing-house-night-torch.webp", strip(sceneEl.style.backgroundImage));
+
+// AND THE CRAB'S LAIR, a room plate with no daylight in it - the same shape of
+// case the sea cave made for grounds, proving the ROOM branch handles it too.
+// That branch already did, by a different route: it falls back to the plate's
+// own first condition, and then counts a plate that resolved to "night" as dark
+// enough for a flame. Two tables, two mechanisms, one answer.
+ctx.paint("mountain", "day", "", "sp1", 0, 0, "the-salt-pool");
+t("the salt pool has no day, so noon falls to its night", strip(sceneEl.style.backgroundImage) === "/room-bg/the-salt-pool-night.webp", strip(sceneEl.style.backgroundImage));
+ctx.paint("mountain", "day", "", "sp2", 1, 0, "the-salt-pool");
+t("...and a torch lights the cave at noon", strip(sceneEl.style.backgroundImage) === "/room-bg/the-salt-pool-night-torch.webp", strip(sceneEl.style.backgroundImage));
+ctx.paint("mountain", "snow", "", "sp3", 0, 0, "the-salt-pool");
+t("...and no weather reaches the back of it", strip(sceneEl.style.backgroundImage) === "/room-bg/the-salt-pool-night.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(0);
 
 t("the gatehouse ignores the torch", r.tint === "" && r.mobs === "", "class=" + r.tint + " mobs=" + r.mobs);
