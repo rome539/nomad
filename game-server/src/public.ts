@@ -6401,7 +6401,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "23";
+var ART_V = "24";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -6543,10 +6543,20 @@ var TERRAIN_NEAR = {
 // nearest thing the set owned to generic hill, and still a specific ground: a
 // slope of loose broken stone, given to thirty-nine rooms that never said they
 // were on one. The mountainside plate exists for exactly this slot.
-var BAND_FALLBACK = { mountain: "mountainside" };
+var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell" };
 // WHICH BANDS OWN PICTURES AT ALL. Add a band here only once plates exist for
 // it — this is the one line that stops a region wearing another region's face.
-var BANDS_WITH_PLATES = { mountain: 1 };
+// AND THE CROSSING JOINS IT (2026-09-12). This one line is what the region's
+// eighty-four plates were waiting on, and without it every one of them was dead
+// weight on the edge: terrain resolves to "" for any band not named here, so a
+// crossing room asked for no picture at all and got none. The art had been
+// shipping for a day and reaching nobody.
+// THE SERVER HAD TO LEARN THE GROUND FIRST, which is the other half and the half
+// that could not be a one-liner. terrainOf is what decides WHICH ground a room
+// is, it lives on the server, and it had never heard of a causeway or a staithe
+// - so switching this on alone would have painted a hundred and twelve crossing
+// rooms as crag, scree and snowfield. See CROSSING_RULES in zone-data.ts.
+var BANDS_WITH_PLATES = { mountain: 1, crossing: 1 };
 // THE FOURTEEN DOORS. A gate is the one room in its region that is not its
 // region: a specific built thing, with a keeper's shuttered hatch in the wall of
 // it, standing on whatever ground happens to be there. No terrain rule can see
@@ -6952,7 +6962,20 @@ var SKY_POOL = {
   // different times of day. Each hour keeps its own picture now, turned four
   // ways.
   dawn:  ["dawn", "dawn/x", "dawn/y", "dawn/xy"],
-  dusk:  ["dusk", "dusk/x", "dusk/y", "dusk/xy"],
+  // DUSK DOES NOT TURN OVER (rome, 2026-09-12). The other three hours here take
+  // all four turns because what they have most of is cloud, and cloud upside
+  // down is still cloud. Dusk's subject is the BURN along the horizon - the
+  // orange is the bottom of the picture and it is the whole reason the hour
+  // looks like itself - so /y and /xy hang it in the top of the frame and put
+  // the light in the sky above a dark horizon, which is not a dusk, it is a
+  // mistake. So: two turns each, and a SECOND PICTURE to make the four back up.
+  // That is the first time a sky has had more than one file, and it is the
+  // cheaper half of the trade - a turn costs nothing and a photograph costs a
+  // generation, but a turn can only ever rearrange what is already there, and
+  // an hour whose whole character lives in one edge of the frame has nothing it
+  // can safely rearrange. The two measure 17.5 apart of 255, which is real
+  // variety rather than a mirror: same hour, different evening.
+  dusk:  ["dusk", "dusk/x", "dusk-2", "dusk-2/x"],
   // One file, four arrangements. It never borrows and is never borrowed — an
   // aftermath sky over a midday is the one swap that would still be a lie.
   "after-rain": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
@@ -7026,6 +7049,17 @@ var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the
                  // standing on open water, which the small ones always give away
                  // first. At 62 the adder lands at 72% and the goat at 78%, and
                  // everything on this ground is on the bank.
+                 // THE FIRST TWO CROSSING GROUNDS EVER SHOT, and the two that
+                 // spent longest with no line at all - they were painted,
+                 // declared and shipped while this table still only knew the
+                 // hill, so both sat on MOB_LINE_DEFAULT's 55 and put the
+                 // smallest things on the plate out in the water. Neither was
+                 // reachable in game yet, which is exactly why it went unseen:
+                 // an unwired ground cannot look wrong at you.
+                 // The causeway's road runs from about 60% down between its
+                 // kerbs; the ford's near shingle from 64%, with the channel
+                 // behind it, so it wants four points more.
+                 causeway: 62, ford: 66,
                  alder: 62,
                  // THE GULLY IS A FLOOR WITH WALLS OVER IT (rome, 2026-09-10).
                  // Its near floor starts around 67% and the walls stand behind

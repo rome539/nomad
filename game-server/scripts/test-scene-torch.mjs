@@ -156,10 +156,18 @@ r = paint("eclipse", "cairn", 1);
 t("totality: torch ground, eclipse sky", r.scene === "/room-bg/cairn-night-torch.webp" && r.sky === "/sky/eclipse.webp", r.scene + " + " + r.sky);
 
 console.log("the last of the evening — a light is struck before full dark");
+// AN HOUR MAY OWN MORE THAN ONE PICTURE, so these ask which HOUR's sky is up
+// rather than which file. Pinning the filename was fine while every hour had
+// exactly one, and it broke the moment dusk got a second (dusk-2): the day count
+// is hashed into the pool, so three of these started failing on a change that
+// was entirely correct. What they are actually checking - and what their own
+// names say - is that a torch at dusk leaves you under a DUSK sky rather than
+// night's, and that holds whichever of the hour's pictures the day landed on.
+const skyIs = (got, hour) => got === "/sky/" + hour + ".webp" || got.indexOf("/sky/" + hour + "-") === 0;
 for (const hour of ["dusk", "dawn"]) {
   r = paint(hour, "snow", 1);
   t(hour + ": the torch ground", r.scene === "/room-bg/snow-night-torch.webp", r.scene);
-  t("...under its own sky, not night's", r.sky === "/sky/" + hour + ".webp", r.sky);
+  t("...under its own sky, not night's", skyIs(r.sky, hour), r.sky);
   t("...undimmed by the hour", r.tint === "", "class=" + r.tint);
   // THE GROUND GOES BEFORE THE SKY DOES. Unlit, these two stand on the NIGHT
   // plate under their own sky — a dark hillside under a burning one — and not
@@ -169,7 +177,7 @@ for (const hour of ["dusk", "dawn"]) {
   // NO CORRECTION ON THE GROUND. The night plate is the right dark ground for a
   // dark hour; the sky behind it is what carries the evening.
   t("...and takes the plate raw", r.tint === "", "class=" + r.tint);
-  t("...under its own sky still", r.sky === "/sky/" + hour + ".webp", r.sky);
+  t("...under its own sky still", skyIs(r.sky, hour), r.sky);
 }
 
 console.log("a torch is not a weather");
@@ -291,7 +299,7 @@ console.log("the three rooms at the top of the mountain");
   // THE SUMMIT GATE matched "vent" on its warm air and was handed a scree slope.
   t("the gate room has its own plate", at("the-summit-gate", "night", 0) === "/room-bg/the-summit-gate-night.webp  /sky/night.webp",
     at("the-summit-gate", "night", 0));
-  t("...at dusk it stands on its night ground", at("the-summit-gate", "dusk", 0) === "/room-bg/the-summit-gate-night.webp  /sky/dusk.webp",
+  t("...at dusk it stands on its night ground", /^\/room-bg\/the-summit-gate-night\.webp  \/sky\/dusk(-\d+)?\.webp$/.test(at("the-summit-gate", "dusk", 0)),
     at("the-summit-gate", "dusk", 0));
   // THE LAST SHELTER is roofed: TWO conditions, and the weather stops outside.
   // It gave up its day plate (rome, 2026-09-09) because there is no hour at
@@ -494,6 +502,20 @@ ctx.paint("mountain", "day", "", "sp2", 1, 0, "the-salt-pool");
 t("...and a torch lights the cave at noon", strip(sceneEl.style.backgroundImage) === "/room-bg/the-salt-pool-night-torch.webp", strip(sceneEl.style.backgroundImage));
 ctx.paint("mountain", "snow", "", "sp3", 0, 0, "the-salt-pool");
 t("...and no weather reaches the back of it", strip(sceneEl.style.backgroundImage) === "/room-bg/the-salt-pool-night.webp", strip(sceneEl.style.backgroundImage));
+
+// AND THE BAND IS ON. This is the line that made eighty-four plates reachable:
+// terrain resolves to "" for any band not in BANDS_WITH_PLATES, so until the
+// crossing was named there every room in it asked for no picture and got none -
+// the art had been shipping for a day and reaching nobody. Paint a crossing
+// ground and a mountain ground the same way and both must answer.
+ctx.setSea(0); ctx.paint("crossing", "day", "staithe", "bx1", 0, 0, "", 0);
+t("a crossing room paints its own ground now", strip(sceneEl.style.backgroundImage) === "/room-bg/staithe-day.webp", strip(sceneEl.style.backgroundImage));
+ctx.paint("mountain", "day", "scree", "bx2", 0, 0, "", 0);
+t("...and the mountain is unchanged beside it", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-day.webp", strip(sceneEl.style.backgroundImage));
+// A ground with no plate in a band that HAS plates falls to that band's own
+// stand-in rather than to nothing - the crossing's is the shingle shore.
+ctx.paint("crossing", "day", "no-such-ground", "bx3", 0, 0, "", 0);
+t("an unpainted crossing ground falls back to the shore, not to bare colour", strip(sceneEl.style.backgroundImage) === "/room-bg/shell-day.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(0);
 
 t("the gatehouse ignores the torch", r.tint === "" && r.mobs === "", "class=" + r.tint + " mobs=" + r.mobs);

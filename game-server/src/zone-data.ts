@@ -6417,6 +6417,43 @@ export const ART_KEYS = new Set<string>([
   "4f355bdcb7cc0af728ef3cceb9615d90684bb5b2ca5f859ab0f0b704075871aa",  // Geartest, the fixed local probe
 ]);
 
+// THE CROSSING'S OWN GROUND, READ BEFORE THE COMMON RULES AND ONLY THERE.
+//
+// The rules below this were written for a hill and a wood and a road, and a mile
+// of tidal water is none of those. Measured against the crossing's 212 rooms
+// they placed a hundred and twelve of them on MOUNTAIN ground - crags, snow
+// fields, scree and a beck - and left the other hundred and one with no ground
+// at all. Every one of those hundred and twelve would have painted a hillside on
+// a coast the moment the band was switched on.
+//
+// SO THEY ARE SCOPED BY REGION RATHER THAN ADDED TO THE COMMON LIST. A rule for
+// "shell" or "reed" or "bridge" loose in the shared table is a rule that reaches
+// into the wood and the fen and the hill and takes rooms that were never meant
+// for it - the same failure the word-boundary comment below records, one level
+// up. These only ever run for a room the map says is in the crossing.
+//
+// ORDER IS THE WHOLE DESIGN. First match wins, id before description, so the
+// specific stands in front of the general: the sea cave before anything, the
+// shore road's own corners before the ford and ferry can claim them by name, the
+// ferry's channel before the ford's, and the wide categories last.
+export const CROSSING_RULES: [string, RegExp][] = [
+  ["sea-cave",   /sea-cave|salt-pool|blowhole|fallen-roof/],
+  // Three road corners named for what they lead to, which is not what they are.
+  ["shore-road", /^the-ford-corner$|^the-ferry-lane$|^the-strand-road$|^the-marsh-road$/],
+  ["bridge",     /bridge|\bpier\b|plank-span|beam-walk|broken-arch|near-arch|far-arch|starling|scaffold-stub|drowned-span|tollhouse-shell|^the-gap$/],
+  ["causeway",   /causeway|crossing-stone|milestone|drain-arch|landing-arch|half-tide-post|sunken-stretch|^the-refuge$|mussel-bank|cutting-water|weed-flat|lantern-stump|oyster-scars|wreck-ribs|^the-perch$|crab-pools|sluice-stone|bell-buoy|half-drowned-cart/],
+  // The ferry BEFORE the ford, because the deep channel and the shallow channels
+  // are both "channel" and only one of them is wadeable.
+  ["ferry",      /ferry|rope-run|rope-stage|green-water|mid-channel|under-rope|channel-brink|drowned-mooring|eel-lines|cold-spring|boat-house|signal-mast|weed-raft|deep-mark|^the-slack$|far-noust|warping-post|oar-store|far-hard/],
+  ["ford",       /\bford\b|shoal|first-channel|second-channel|third-channel|fourth-channel|fifth-channel|tern-scrape|long-bank|stranded-hull|shell-bank|^the-midden$|with[yi]|gull-stand|eel-grass|quicksand|net-stakes|cockle-beds|tide-race|gravel-flats/],
+  ["reed",       /reed/],
+  ["eyot",       /eyot|causey|hurdle|chapel|^the-graves$|landing-stage|otter-run|^the-dead-end$|hook-hut|stake-line|sunken-forest|shell-scar/],
+  ["marsh",      /marsh|salt-pan|samphire|creek|salting|quaking-turf|fowler|decoy|heron-tree|eel-hut|^the-old-boat$|sea-dyke|flashes|drain-cut|wet-carr|burn-flats|outfall|alder-thicket|saltings/],
+  ["staithe",    /staithe|^the-hard$|capstan|quay|net-poles|net-loft|tar-shed|drying-frames|smoke-house|fisher-huts|salt-store|pan-house|boat-noust|^the-oar|toll|keepers-garden|cart-shed|anchor-stone|bothy|well-yard|hard-standing|hard-approach/],
+  ["shell",      /wrack|shingle|shell|limpet|mussel-scaup|tide-mark|storm-line|thrift-bank|cockle|mud-shore|gutway|^the-strand|boat-graves/],
+  ["shore-road", /road|\blane\b|cart-ruts|drove|parting|passengers-rest|toll-board|gull-flats|wildfowler|shepherds-stone|far-shore-stone|shore-descent|strand|stair/],
+];
+
 export const TERRAIN_RULES: [string, RegExp][] = [
   // WORD BOUNDARIES ARE NOT OPTIONAL HERE. Without them "race" caught every
   // TERRACE on the hill and called twenty-five flat rock shelves a mountain

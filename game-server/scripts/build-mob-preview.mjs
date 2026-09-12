@@ -129,8 +129,17 @@ const REACH = (() => {
     for (let h = 0; h < queue.length; h++) for (const to of adj.get(queue[h]) ?? [])
       if (!seen.has(to) && open(to)) { seen.add(to); queue.push(to); }
     for (const s of spawns) if (s.is_boss) seen.add(s.room_id);
-    return { why: (id) => safe.has(id) ? "a sanctuary \u2014 nothing that walks can follow you in"
-      : entry.has(id) ? "nothing idles in a doorway"
+    // THE GATE ANSWER COMES FIRST, BECAUSE A GATE IS THE MORE SPECIFIC THING.
+    // These two questions are not exclusive: a gate is safe ground by being a
+    // gate - migrations 196 and 198 both say so in as many words, and the .rooms
+    // sources declare !safe on the ferry house and the withy hut for exactly
+    // that reason. Asking "is it safe" first meant the two gates that carry the
+    // flag were reported as SANCTUARIES, which is true and useless: it names the
+    // consequence and hides the cause, on the one kind of room whose whole
+    // identity is being a door with a keeper behind it. Same ordering rule as
+    // the terrain tables - the specific stands in front of the general.
+    return { why: (id) => entry.has(id) ? "a gate \u2014 nothing idles in a doorway"
+      : safe.has(id) ? "a sanctuary \u2014 nothing that walks can follow you in"
       : seen.has(id) ? "" : "nothing can reach this room" };
   } catch { return null; }
 })();

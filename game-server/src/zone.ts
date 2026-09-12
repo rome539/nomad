@@ -8093,7 +8093,7 @@ export class ZoneDO implements DurableObject {
           terrain: !ART_KEYS.has(session.pubkey) ? undefined
             : this.outOfWorld(session) ? "gatehouse"
             : this.world!.entryRooms.has(session.roomId) ? "gate:" + session.roomId
-            : terrainOf(session.roomId, room?.description),
+            : terrainOf(session.roomId, room?.description, lore.mapRegionOf(this, session.roomId)),
           // AND A ROOM THAT IS ONE OF ONE, beside its terrain rather than
           // instead of it. A client with no picture for this id falls through to
           // the ground rules and paints what it always painted, so naming a room
