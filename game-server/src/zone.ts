@@ -116,7 +116,7 @@ import {
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  SPAWN_QUARTERS, DARK_ROOMS, ART_KEYS, ART_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  SPAWN_QUARTERS, DARK_ROOMS, ART_KEYS, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -8101,6 +8101,17 @@ export class ZoneDO implements DurableObject {
           // the terrain outright and can only be used once the plate is cut.
           place: ART_KEYS.has(session.pubkey) && ART_ROOMS.has(session.roomId)
             ? session.roomId : undefined,
+          // AND HOW MUCH WATER IS OVER THIS ROOM, 0-3. The tide is the one
+          // thing on the crossing that changes a room without changing the
+          // room: the prose already says the causeway is under from the middle
+          // out, and the picture went on showing a dry road. This is the whole
+          // of what the client needs to draw the sheet — the ranked depth, not
+          // the tide's phase, because a room three ranks under is not the same
+          // picture as one just awash. Absent (and so nothing drawn) for any
+          // room the sea does not reach, which is most of the world.
+          sea: ART_KEYS.has(session.pubkey) && events.seaUnder(this, session.roomId)
+            ? Math.max(1, events.seaLevel(this) - (SEA_ROOMS.get(session.roomId) ?? 1) + 1)
+            : undefined,
           // "in" MEANS THERE IS NO SKY OVER THIS PLACE — see openSkyForArt
           // above for why that is not the same question as whether you are
           // under a roof, and for the two kinds of room the roof test was

@@ -911,13 +911,38 @@ export const PAGE = `<!doctype html>
      room, edge to edge, and everything else floats on top of it. Fixed rather
      than flexed so it fills the window whatever the log is doing, and z-indexed
      under the chrome, which is already opaque and needs no help. */
+  /* THE PICTURE GETS ITS OWN BOX (rome, 2026-09-11). It used to be the whole
+     window with the prose lying over the bottom of it, which meant two things
+     that fought: the plate was always CROPPED to the window's shape, and the
+     third of it the text sat on was only half visible. Now the picture takes
+     the room above the log and the log takes the rest, and nothing overlaps.
+     CONTAIN, NOT COVER, is the point of the change — the whole plate is in
+     frame at last, at the cost of a band at the sides on a wide window or above
+     and below on a tall one. The band is the picture's own ground colour, so it
+     reads as a frame rather than as a gap.
+     AND IT IS A CONTAINER, which is what makes the creatures still work: every
+     sprite is sized against the picture, and a stage that is two thirds of the
+     window would otherwise leave a 42vh man taller than two thirds of the frame
+     he is standing in. container-type lets the same numbers mean what they have
+     always meant — a share of the PICTURE — by measuring cqh against this box
+     instead of vh against the window. */
+  #stage { display: none; }
+  body[data-view="image"] #stage {
+    display: block;
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    container-type: size;
+    background: var(--bg);
+    overflow: hidden;
+  }
   body[data-view="image"] #scene {
     display: block;
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 0;
     background-color: transparent;
-    background-size: cover;
+    background-size: contain;
     background-position: center 55%;
     background-repeat: no-repeat;
     transition: filter .8s ease;
@@ -932,7 +957,7 @@ export const PAGE = `<!doctype html>
   #sky { display: none; }
   body[data-view="image"] #sky {
     display: block;
-    position: fixed;
+    position: absolute;
     inset: 0;
     /* NOT -1. A fixed element at a negative z-index paints BEHIND the body's
        background, and this body has an opaque one — so the sky was drawn, and
@@ -941,6 +966,10 @@ export const PAGE = `<!doctype html>
        order (sky first) is what keeps the scene on top of it. */
     z-index: 0;
     background-color: var(--bg);
+    /* THE SKY STAYS COVER. It is a backdrop with no composition in it — that is
+       the whole reason one sky can stand behind eighty scenes — so cropping it
+       costs nothing, and filling the stage is what turns the band beside a
+       contained plate into more sky instead of a strip of flat colour. */
     background-size: cover;
     background-position: center 55%;
     background-repeat: no-repeat;
@@ -1026,7 +1055,7 @@ export const PAGE = `<!doctype html>
   #mobs { display: none; }
   body[data-view="image"] #mobs {
     display: flex;
-    position: fixed;
+    position: absolute;
     left: 0; right: 0;
     /* CENTRED ON THE HORIZON, NOT STOOD ON A LINE. Sharing one bottom edge is
        what a real ground plane does, and it was the wrong model here: a common
@@ -1197,12 +1226,12 @@ export const PAGE = `<!doctype html>
     /* Built from --bg so a repainted theme repaints this too. It was three
        hardcoded browns, which meant every theme but the default one had the
        prose sitting on the DEFAULT theme's ground. */
-    background: linear-gradient(to bottom,
-      color-mix(in srgb, var(--bg) 0%, transparent) 0%,
-      color-mix(in srgb, var(--bg) 72%, transparent) 12%,
-      color-mix(in srgb, var(--bg) 92%, transparent) 40%,
-      color-mix(in srgb, var(--bg) 97%, transparent) 100%);
-    text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(0,0,0,.8);
+    /* SOLID NOW, AND NO FADE. The gradient existed so the prose could rise out
+       of a picture it was lying on; the prose is not lying on anything any more,
+       so a fade at its top edge would be a soft line between two separate
+       things rather than a join. */
+    background: var(--bg);
+    /* and nothing to read it against but its own ground, so no shadow. */
   }
   /* PULLED OPEN IS THE WHOLE COLUMN (rome, 2026-09-06). It was half the window,
      which is the worst of both: not enough to read a long fight back through,
@@ -1774,9 +1803,11 @@ export const PAGE = `<!doctype html>
       <div id="jbody"></div>
     </div>
   </div>
-  <div id="sky" aria-hidden="true"></div>
-  <div id="scene" aria-hidden="true"></div>
-  <div id="mobs" aria-hidden="true"></div>
+  <div id="stage" aria-hidden="true">
+    <div id="sky"></div>
+    <div id="scene"></div>
+    <div id="mobs"></div>
+  </div>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
   <div id="log"></div>
   <div id="chips"></div>
@@ -3084,7 +3115,7 @@ async function connect() {
       if (f.room && f.room !== lastRoomName) chipsExpanded = false;
       lastRoomName = f.room || "";
       if (f.art) grantArt();
-      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place);
+      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea);
       roomEl.textContent = "";
       if (f.room) {
         roomEl.appendChild(document.createTextNode(f.room));
@@ -6480,6 +6511,11 @@ var TERRAIN_PLATE = {
   // drain, and the whole geothermal ground — the one genuinely strange terrain
   // the mountain has — drawn as a scree slope.
   crag: ["crag"], beck: ["beck"], vent: ["vent"],
+  // THE FIRST GROUND OUTSIDE THE MOUNTAIN (2026-09-11). It reaches nothing in
+  // the game yet — the crossing is not in BANDS_WITH_PLATES, so no room in that
+  // region asks for a picture at all — but naming it here is what puts it in
+  // front of the preview, which is where a plate is judged before it is trusted.
+  causeway: ["causeway"], ford: ["ford"],
 };
 // FNV-1a: the same cheap trick the world already uses to hang per-instance
 // detail off an id without storing a byte of it.
@@ -6698,6 +6734,30 @@ var TERRAIN_SCENES = {
   crag:           "day night night-torch fog rain snow",
   beck:           "day night night-torch fog rain snow",
   vent:           "day night night-torch fog rain snow",
+  // ONE CONDITION, because one is what has been shot. The other five fall back
+  // to it, which is the same law every plate in this table has always had.
+  causeway:       "day night night-torch fog rain snow",
+  ford:           "day night night-torch fog rain snow",
+};
+// AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
+// top of one, and the layer is what this replaces (rome, 2026-09-11).
+//
+// THE OVERLAY WAS THE CHEAPER IDEA AND IT DID NOT HOLD. One sheet of water
+// drawn over every flooded room would have cost three images for seventy-five
+// rooms instead of six per ground, and it failed on the thing a shared layer
+// cannot know: WHERE THE GROUND STOPS. A sheet has one waterline and every
+// plate puts its horizon somewhere different — the causeway measures 46 against
+// the lock's 55 — so the water either began below the skyline and drew a band
+// across the road, or it climbed the frame with the tide and drew wet ground in
+// FRONT of dry ground behind it, which is the one thing a level sea cannot do.
+// Both were models of water. A photograph is not a model.
+//
+// Same table shape as TERRAIN_SCENES, and the same law: a condition is listed
+// when its file exists. A ground absent here simply never floods on screen, and
+// a condition absent from a ground falls back the way every other plate does.
+var FLOOD_SCENES = {
+  causeway: "day night night-torch fog",
+  ford:     "day night night-torch fog",
 };
 var SKY_PAINTED = {
   day: 1, night: 1, dawn: 1, dusk: 1, moon: 1, blood: 1, eclipse: 1,
@@ -7087,7 +7147,37 @@ function grantArt() {
   applyView();   // and if pictures are what they wanted, they get them now
 }
 
-function paintScene(band, sky, terrain, roomKey, torch, roll, place) {
+// THE TIDE LAYER. Called from the two places a scene is painted, and it is the
+// only thing that reads lastSea.
+//
+// A CONDITION IT HAS NOT GOT FALLS BACK TO DAY, not to nothing: the alternative
+// is a room whose prose says the causeway is under and whose picture says it is
+// a road, which is the failure this layer exists to end. A day sheet under a
+// night plate is the wrong light on the water; no sheet at all is the wrong
+// world.
+// IS THIS ROOM UNDER, AND HAS THE GROUND BEEN SHOT THAT WAY. Returns the "-flood"
+// a plate name takes when both are true and nothing at all when either is not,
+// so a ground with no flood twin goes on painting dry and a dry room goes on
+// painting dry — which is every room outside the crossing.
+//
+// THE CONDITION HAS TO MATCH TOO. The sea does not care what the weather is
+// doing, but the pictures do: a flood plate exists for the day, the night, the
+// torch and the fog, and not yet for rain or snow. Asking for a file that is
+// not there would put a hole in the world at exactly the hour the room most
+// needs to say something, so an unshot condition falls back to the dry plate.
+// The prose still says the causeway is under; the picture is merely a state
+// behind, which is the same bargain every unpainted condition already makes.
+function floodSuffix(ground, cond) {
+  if (!lastSea) return "";
+  var have = FLOOD_SCENES[ground];
+  if (!have) return "";
+  return (" " + have + " ").indexOf(" " + cond + " ") >= 0 ? "-flood" : "";
+}
+function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
+  // HOW MUCH WATER IS OVER THIS ROOM, and cleared the same way place is:
+  // walking off a flooded shoal onto a dry road has to put the sheet away, so
+  // an absent field is zero rather than "leave it as it was".
+  lastSea = sea || 0;
   if (roomKey) lastRoomKey = roomKey;
   // Cleared as well as set: walking out of a singular room and into ordinary
   // ground must stop naming the room, or the summit follows you down the hill.
@@ -7235,7 +7325,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place) {
       var tbase = SKY_BASE[lastSky] || "day";
       if (thave.indexOf(" " + tbase + " ") < 0) tbase = "day";
       var twant = (lastTorch && TORCH_HOURS[lastSky] && thave.indexOf(" night-torch ") >= 0) ? "night-torch" : tbase;
-      scene = "/room-bg/" + terr + "-" + twant + ".webp";
+      scene = "/room-bg/" + terr + "-" + twant + floodSuffix(terr, twant) + ".webp";
       if (KEYED[twant]) {
         var tp = skyPick(SKY_PAINTED[lastSky] ? lastSky : tbase);
         sky = "/sky/" + tp.file + ".webp"; turn = tp.turn;
@@ -7425,6 +7515,9 @@ applyView();
 // MOB_P cuts below just brought it. Left alone deliberately.
 // Everything smaller sits comfortably inside that, which is why "centred, not
 // stood on a line" works for the other forty.
+// (The unit is cqh now, not vh — a share of the PICTURE rather than of the
+// window, since 2026-09-11 when the picture stopped being the whole window.
+// Every number here kept its meaning by changing what it is measured against.)
 var MAN_VH = 42;
 // 0.85 -> 0.65 -> 0.45 (rome, 2026-09-09: twice, the small ones are too small). P is the amount
 // of squeeze and it works from the anchor outwards, so lowering it moves the two
@@ -7698,8 +7791,8 @@ function paintMobs(ids, doing, dead) {
     var bid = bodies[d1], bspec = MOB_ANIM[bid], bvh = mobVh(bid);
     var bel = document.createElement("div");
     bel.className = "mob dead";
-    bel.style.height = bvh.toFixed(1) + "vh";
-    bel.style.width = (bvh * bspec.aspect).toFixed(1) + "vh";
+    bel.style.height = bvh.toFixed(1) + "cqh";
+    bel.style.width = (bvh * bspec.aspect).toFixed(1) + "cqh";
     bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + ART_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
@@ -7711,7 +7804,7 @@ function paintMobs(ids, doing, dead) {
     mobsEl.appendChild(bel);
   }
   for (var k = 0; k < order.length; k++) {
-    var id = order[k].id, slot = order[k].idx, vh = mobVh(id), h = vh.toFixed(1) + "vh";
+    var id = order[k].id, slot = order[k].idx, vh = mobVh(id), h = vh.toFixed(1) + "cqh";
     // NOTHING PUTS ITS FEET THROUGH THE PROSE (rome, 2026-09-08: the drake might
     // be too big). Centring on the horizon is right up to about the size of a
     // man and then stops being: at 75.7vh the drake's feet land at 93% with
@@ -7742,7 +7835,7 @@ function paintMobs(ids, doing, dead) {
     // layout declines to honour — every frame is squeezed or pulled and the whole
     // row stretches. So the width is computed here from the same height the table
     // gave, and the element is told not to flex at all.
-    el.style.width = (vh * spec.aspect).toFixed(1) + "vh";
+    el.style.width = (vh * spec.aspect).toFixed(1) + "cqh";
     el.style.backgroundImage = "url(/mob/" + id + ".webp?v=" + ART_V + ")";
     el.style.backgroundSize = (spec.n * 100) + "% 100%";
     el.style.backgroundPositionX = "0%";

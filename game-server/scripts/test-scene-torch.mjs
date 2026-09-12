@@ -78,11 +78,16 @@ const sceneEl = { style: style(), className: "", setProperty() {} };
 sceneEl.style.setProperty = () => {};
 const skyEl = { style: style() };
 const mobsEl = { className: "", style: {} };
+// THE TIDE SHEET. A stub with no style bag throws the moment paintFlood sets the
+// mask, and paintScene calls it on every layered paint — so leaving it out
+// stopped the whole file rather than failing one check.
+const floodEl = { className: "", style: style() };
 const ctx = {};
 const code = [
   depsFor(fn("paintScene"), "paintScene"),
   'var viewMode = "image";',
   'var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "", lastTorch = false, skyRoll = 0;',
+  'var lastSea = 0;',
   'var scenePainted = "", sceneSeq = 0;',
   // The preloader is the one thing a stub cannot supply: on the page an Image
   // holds the old room up until the new plate has decoded. Here it lands at once,
@@ -91,11 +96,12 @@ const code = [
   'var ART_V = "0";',
   fn("paintScene"),
   // The lifted block declares its own elements from getElementById; the stubs win.
-  "sceneEl = _scene; skyEl = _sky; mobsEl = _mobs;",
+  "sceneEl = _scene; skyEl = _sky; mobsEl = _mobs; floodEl = _flood;",
   "ctx.paint = paintScene; ctx.pools = SKY_POOL; ctx.scenes = TERRAIN_SCENES; ctx.rooms = ROOM_PLATE;",
+  "ctx.setSea = function(v){ lastSea = v; };",
 ].join("\n");
-new Function("ctx", "_scene", "_sky", "_mobs", "document", code)(
-  ctx, sceneEl, skyEl, mobsEl, { getElementById: () => null });
+new Function("ctx", "_scene", "_sky", "_mobs", "_flood", "document", code)(
+  ctx, sceneEl, skyEl, mobsEl, floodEl, { getElementById: () => null });
 
 const strip = (v) => (v || "").replace(/^url\(|\?v=\d+\)$/g, "");
 // A fresh room every time: paintScene remembers, and a test that leaned on the
@@ -397,5 +403,36 @@ console.log("no weather indoors");
 r = paint("in", "gatehouse", 1);
 t("the gatehouse ignores the torch", r.tint === "" && r.mobs === "", "class=" + r.tint + " mobs=" + r.mobs);
 
+// ---- THE TIDE, WHICH IS A DIFFERENT PICTURE -------------------------------
+console.log("the ground with the sea over it");
+const at2 = (sea, sky, torch) => {
+  ctx.setSea(sea);
+  ctx.paint("mountain", sky, "causeway", "C" + sea + sky + torch, torch, 0, "", sea);
+  return strip(sceneEl.style.backgroundImage);
+};
+t("a dry causeway is the dry plate", at2(0, "day", 0) === "/room-bg/causeway-day.webp", at2(0, "day", 0));
+t("...and under the sea it is a different photograph", at2(2, "day", 0) === "/room-bg/causeway-day-flood.webp", at2(2, "day", 0));
+t("...at night too", at2(2, "night", 0) === "/room-bg/causeway-night-flood.webp", at2(2, "night", 0));
+t("...and with a torch in your hand", at2(2, "night", 1) === "/room-bg/causeway-night-torch-flood.webp", at2(2, "night", 1));
+t("walking out of the water goes back to the dry plate", at2(0, "night", 0) === "/room-bg/causeway-night.webp", at2(0, "night", 0));
+// A CONDITION WITH NO FLOOD TWIN FALLS BACK TO DRY rather than asking for a file
+// that is not there. Rain and snow have not been shot flooded; a hole in the
+// world at that hour would be worse than a picture one state behind the prose.
+t("an unshot condition keeps the dry plate", at2(2, "rain", 0) === "/room-bg/causeway-rain.webp", at2(2, "rain", 0));
+// And a ground with no flood plates at all never looks for one.
+ctx.setSea(3); ctx.paint("mountain", "day", "scree", "sc", 0, 0, "", 3);
+t("a ground that was never shot flooded ignores the tide",
+  strip(sceneEl.style.backgroundImage) === "/room-bg/scree-day.webp", strip(sceneEl.style.backgroundImage));
+// The ford is the second ground shot flooded, and it exists to prove the table
+// does the work rather than the causeway being special-cased somewhere.
+ctx.setSea(2); ctx.paint("mountain", "day", "ford", "fd", 0, 0, "", 2);
+t("the ford floods too", strip(sceneEl.style.backgroundImage) === "/room-bg/ford-day-flood.webp", strip(sceneEl.style.backgroundImage));
+ctx.setSea(2); ctx.paint("mountain", "snow", "ford", "fs", 0, 0, "", 2);
+t("...and keeps its dry plate at a condition nobody shot flooded", strip(sceneEl.style.backgroundImage) === "/room-bg/ford-snow.webp", strip(sceneEl.style.backgroundImage));
+ctx.setSea(0);
+
+t("the gatehouse ignores the torch", r.tint === "" && r.mobs === "", "class=" + r.tint + " mobs=" + r.mobs);
+
+// ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");
 process.exit(fail ? 1 : 0);

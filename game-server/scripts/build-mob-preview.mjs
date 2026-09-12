@@ -341,6 +341,7 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  <label>ground <select id="gnd"></select></label>
  <span id="hours" class="seg"></span><select id="hour" hidden></select>
  <button id="torch">torch</button>
+ <span class="seg" id="tides"><button data-sea="0" class="on">dry</button><button data-sea="1">awash</button><button data-sea="2">half</button><button data-sea="3">high</button></span>
  <button id="roll">next sky</button>
  <label>sky <select id="pick"></select></label>
  <button id="fit">whole plate</button>
@@ -384,7 +385,7 @@ ${SCENE_TABLES}
 var sceneEl=document.getElementById("scene"), skyEl=document.getElementById("sky"),
     mobsEl=document.getElementById("mobs"), viewMode="image",
     lastBand="", lastSky="", lastTerrain="", lastRoomKey="", lastPlace="", lastTorch=false, skyRoll=0,
-    scenePainted="", sceneSeq=0;
+    lastSea=0, scenePainted="", sceneSeq=0;
 ${SCENE_DRIVER}
 /* ---- end lifted ---- */
 var SPRITE=MOB_SPRITE, ANIM=MOB_ANIM;   // the page's own shorthand
@@ -566,7 +567,7 @@ function repaint(){
   if((barren()!=="")!==(mobsEl.children.length===0)) dress();
   // A room plate is passed as the place and the terrain is left as it was, which
   // is exactly how the wire carries it: place BESIDE terrain, never instead.
-  paintScene("mountain", hour.value, room?"scree":v, v, torch?1:0, undefined, room);
+  paintScene("mountain", hour.value, room?"scree":v, v, torch?1:0, undefined, room, sea);
   shelfLine();
 }
 // STEPPING THE WORLD-DAY. In the game this comes off the clock and moves once
@@ -636,6 +637,18 @@ document.addEventListener("keydown",function(e){
 });
 who.onchange=function(){ dress(); repaint(); };   // a gate answers differently for a boss
 torchBtn.onclick=function(){ torch=!torch; torchBtn.className=torch?"on":""; repaint(); };
+// THE TIDE, WHICH THE GAME TAKES OFF ITS OWN CLOCK. Here it is a strip, because
+// the whole point of looking is to step the four states over one ground and see
+// where the waterline lands. 0 is dry and draws no sheet at all.
+var sea=0;
+var tideWrap=document.getElementById("tides");
+Array.prototype.forEach.call(tideWrap.children,function(b){
+  b.onclick=function(){
+    sea=+b.getAttribute("data-sea");
+    Array.prototype.forEach.call(tideWrap.children,function(x){ x.className = x===b?"on":""; });
+    repaint();
+  };
+});
 
 var ids=function(){return anims.map(function(a){return a.id})};
 document.getElementById("fire").onclick=function(){anims.forEach(function(a){if(a.phase!=="death"){a.phase="travel";a.t=0;}})};
