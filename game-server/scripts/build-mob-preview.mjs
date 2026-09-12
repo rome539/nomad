@@ -341,7 +341,7 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  <label>ground <select id="gnd"></select></label>
  <span id="hours" class="seg"></span><select id="hour" hidden></select>
  <button id="torch">torch</button>
- <span class="seg" id="tides"><button data-sea="0" class="on">dry</button><button data-sea="1">awash</button><button data-sea="2">half</button><button data-sea="3">high</button></span>
+ <span class="seg" id="tides"><button data-sea="0" class="on">dry</button><button data-sea="1">under</button></span>
  <button id="roll">next sky</button>
  <label>sky <select id="pick"></select></label>
  <button id="fit">whole plate</button>
@@ -567,6 +567,7 @@ function repaint(){
   if((barren()!=="")!==(mobsEl.children.length===0)) dress();
   // A room plate is passed as the place and the terrain is left as it was, which
   // is exactly how the wire carries it: place BESIDE terrain, never instead.
+  tideShow();
   paintScene("mountain", hour.value, room?"scree":v, v, torch?1:0, undefined, room, sea);
   shelfLine();
 }
@@ -588,12 +589,28 @@ function repaint(){
 // the one property that matters and the picker below already has: every day it
 // lands on is a real world-day, so it can never show a sky the game could not.
 // The shelf still prints the day count, so a jump of three is visible as one.
+//
+// AND IT WALKS THE POOL IN ORDER, which is the difference between a button that
+// works and one that appears not to. "The next day that shows a DIFFERENT sky"
+// sounds like stepping and is not: it takes whichever entry the next day
+// happens to land on, and the next day after that can land straight back on the
+// one you just left. Measured on dusk from day 0, six presses gave entries
+// 0 3 0 1 3 2 - the first and third presses showed the SAME sky, and entry 2
+// did not appear until the sixth. Pressing a button twice and arriving back
+// where you started is indistinguishable from pressing a button that does
+// nothing, which is what this was reported as.
+// So it names the entry it wants - the next one along, wrapping - and then
+// walks forward to a day that shows it. Four presses now show four skies. The
+// property that made the old version worth having is untouched: the day it
+// lands on is a real world-day, so it still cannot show a sky the game could
+// not, and the shelf still prints the day count so a jump of three is visible.
 rollBtn.onclick=function(){
   var pool=SKY_POOL[hour.value];
   if(!pool||pool.length<2){ skyRoll++; repaint(); return; }
   var now=mix32(plateHash(hour.value+":"+skyRoll))%pool.length;
+  var want=(now+1)%pool.length;
   for(var d=skyRoll+1;d<skyRoll+9999;d++)
-    if(mix32(plateHash(hour.value+":"+d))%pool.length!==now){ skyRoll=d; break; }
+    if(mix32(plateHash(hour.value+":"+d))%pool.length===want){ skyRoll=d; break; }
   repaint();
 };
 // PINNING MEANS FINDING A DAY THAT SHOWS IT. The picker used to set the day
@@ -637,9 +654,18 @@ document.addEventListener("keydown",function(e){
 });
 who.onchange=function(){ dress(); repaint(); };   // a gate answers differently for a boss
 torchBtn.onclick=function(){ torch=!torch; torchBtn.className=torch?"on":""; repaint(); };
-// THE TIDE, WHICH THE GAME TAKES OFF ITS OWN CLOCK. Here it is a strip, because
-// the whole point of looking is to step the four states over one ground and see
-// where the waterline lands. 0 is dry and draws no sheet at all.
+// THE TIDE, WHICH THE GAME TAKES OFF ITS OWN CLOCK.
+//
+// TWO BUTTONS, BECAUSE THE PICTURE HAS TWO STATES. This was four - dry, awash,
+// half, high - which is the rank the server actually sends, 0 to 3. It is not
+// what the screen can show: floodSuffix asks whether the rank is zero and
+// nothing finer, so awash, half and high all resolve to the same "-flood"
+// plate. Three of the four buttons drew the same photograph as each other and
+// there was no way to tell that from looking at them, which is the one thing a
+// preview must never do. A control that offers a distinction the renderer does
+// not make is lying about the renderer.
+// The rank still matters to the PROSE - a room three under is not a room just
+// awash - and if the pictures ever split that way this goes back to four.
 var sea=0;
 var tideWrap=document.getElementById("tides");
 Array.prototype.forEach.call(tideWrap.children,function(b){
@@ -649,6 +675,18 @@ Array.prototype.forEach.call(tideWrap.children,function(b){
     repaint();
   };
 });
+// AND IT ONLY APPEARS ON GROUND THAT CAN FLOOD. Seven of the eleven crossing
+// grounds have no flood twin and never will - the ferry and the staithe among
+// them - and every ground on the hill is a mile from the sea. Leaving the strip
+// up on those made it dead furniture on all but two plates, and a dead control
+// reads as a broken one. FLOOD_SCENES is the same table the client consults, so
+// the strip appears exactly where the tide can change the picture.
+function tideShow(){
+  var v=gnd.value, can=v.slice(0,5)!=="room:" && !!FLOOD_SCENES[v];
+  tideWrap.style.display = can ? "" : "none";
+  if(!can && sea){ sea=0; Array.prototype.forEach.call(tideWrap.children,function(x){ x.className = x.getAttribute("data-sea")==="0"?"on":""; }); }
+  return can;
+}
 
 var ids=function(){return anims.map(function(a){return a.id})};
 document.getElementById("fire").onclick=function(){anims.forEach(function(a){if(a.phase!=="death"){a.phase="travel";a.t=0;}})};

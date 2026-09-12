@@ -429,6 +429,19 @@ ctx.setSea(2); ctx.paint("mountain", "day", "ford", "fd", 0, 0, "", 2);
 t("the ford floods too", strip(sceneEl.style.backgroundImage) === "/room-bg/ford-day-flood.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(2); ctx.paint("mountain", "snow", "ford", "fs", 0, 0, "", 2);
 t("...and keeps its dry plate at a condition nobody shot flooded", strip(sceneEl.style.backgroundImage) === "/room-bg/ford-snow.webp", strip(sceneEl.style.backgroundImage));
+
+// THE TWO GROUNDS THAT NEVER FLOOD, and that is the thing being checked. The
+// ferry and the staithe are in TERRAIN_PLATE and TERRAIN_SCENES like the other
+// two, but absent from FLOOD_SCENES - so a room of theirs standing three ranks
+// under the sea must still paint dry. A ground gets a flood twin by being named
+// in that table and by nothing else, and the sea cave is the reason the rule is
+// worth a test: it is under at every tide and is deliberately never listed.
+ctx.setSea(3); ctx.paint("mountain", "day", "ferry", "fy", 0, 0, "", 3);
+t("the ferry does not flood on screen, whatever the tide", strip(sceneEl.style.backgroundImage) === "/room-bg/ferry-day.webp", strip(sceneEl.style.backgroundImage));
+ctx.setSea(3); ctx.paint("mountain", "night", "staithe", "st", 1, 0, "", 3);
+t("nor does the staithe, torch and all", strip(sceneEl.style.backgroundImage) === "/room-bg/staithe-night-torch.webp", strip(sceneEl.style.backgroundImage));
+ctx.setSea(0); ctx.paint("mountain", "snow", "staithe", "st2", 0, 0, "", 0);
+t("and the staithe was shot for every condition, so snow is its own plate", strip(sceneEl.style.backgroundImage) === "/room-bg/staithe-snow.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(0);
 
 t("the gatehouse ignores the torch", r.tint === "" && r.mobs === "", "class=" + r.tint + " mobs=" + r.mobs);

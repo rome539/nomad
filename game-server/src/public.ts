@@ -933,6 +933,18 @@ export const PAGE = `<!doctype html>
     flex: 1 1 auto;
     min-height: 0;
     container-type: size;
+    /* AND IT NEVER OUTGROWS THE PICTURE IN IT. This is not cosmetic: every
+       creature is sized in cqh, which is a share of THIS BOX, on the assumption
+       that the box and the picture are the same height. They are, whenever the
+       plate is height-bound - which is every wide window. On a narrow one the
+       plate is WIDTH-bound instead, so it sits letterboxed with sky above and
+       below, and the box goes on being taller than the picture: measured on a
+       430x840 phone, a 408 box around a 270 picture. Every sprite was then
+       sized against 408 and stood on a 270 picture, so a 42cqh man came out at
+       63 per cent of the ground he was standing on rather than 42. That arrived
+       with the box itself and has been wrong since; capping the box at the
+       picture's own shape is what makes cqh mean what the numbers say. */
+    max-height: calc(100vw * 993 / 1584);
     background: var(--bg);
     overflow: hidden;
   }
@@ -1221,7 +1233,38 @@ export const PAGE = `<!doctype html>
        a fight is the thing you most need to read back through without pulling
        the whole log open. It costs the picture 8vh off the bottom, which is the
        part of a scene plate with the least in it — the ground at your feet. */
-    max-height: 33vh;
+    /* THE CEILING IS WHAT THE PICTURE DOES NOT NEED (rome, 2026-09-11: the
+       picture is whole and it is too small). A flat 33vh was a CLAIM, not a
+       ceiling: the log always holds more than it can show, so it took its third
+       whatever the window was, and the stage got the leftovers. Measured on a
+       1512x860 window, those leftovers were 435px - and a 1584x993 plate
+       contained in a 1512x435 box is height-bound, so it drew at 693x435.
+       Forty-six per cent of the stage width. Under a quarter of the window. The
+       whole plate was in frame and it was still the smallest thing on screen,
+       with sky down both sides where the picture should have been.
+       Width was never the lever - the box is already as wide as the window - so
+       height is the only lever there is, and the log was holding it. Now the log
+       asks for what is left after the picture has the height it wants, and the
+       three terms are exactly that: the window, less the chrome, less the height
+       a full-width plate needs (993/1584 of its width).
+       CLAMPED AT BOTH ENDS, because the middle term goes negative on any wide
+       window - a picture that wants more height than the window has. The floor
+       is what stops it, and rome set it at A QUARTER OF THE COLUMN (2026-09-12).
+       That is the floor the prose never goes below, whatever the picture would
+       like; on a 1512x860 window it is 215px, nine lines.
+       AND THE CEILING IS HALF, NOT THE OLD THIRD, because on a narrow window the
+       middle term is POSITIVE - a phone is so much taller than it is wide that
+       the picture cannot use the height even if offered it. A third would have
+       left that surplus as dead ground under the strip. The log takes it
+       instead, which is why the phone picture does not change size here: it was
+       never the thing that was short of room.
+       THE FLOOR IS A SHARE, NOT A LINE COUNT, and it is worth saying why: a
+       count written in em does not mean what it reads as. An em is the font
+       size; a LINE is the font size times the 1.55 line-height, so 8em is five
+       lines and not eight. A vh is the same fraction of the same window the
+       picture is measured against, which is the comparison actually being
+       made. */
+    max-height: clamp(25vh, calc(100dvh - 150px - 100vw * 993 / 1584), 50vh);
     transition: max-height .22s ease;
     /* Built from --bg so a repainted theme repaints this too. It was three
        hardcoded browns, which meant every theme but the default one had the
@@ -6516,6 +6559,10 @@ var TERRAIN_PLATE = {
   // region asks for a picture at all — but naming it here is what puts it in
   // front of the preview, which is where a plate is judged before it is trusted.
   causeway: ["causeway"], ford: ["ford"],
+  // AND THE DEEP WATER AND THE WORKING SHORE (2026-09-12), which takes the
+  // crossing to four grounds of eleven. The ferry is the rope stage over the
+  // channel; the staithe is the hard, the pots and the drying nets.
+  ferry: ["ferry"], staithe: ["staithe"],
 };
 // FNV-1a: the same cheap trick the world already uses to hang per-instance
 // detail off an id without storing a byte of it.
@@ -6738,6 +6785,10 @@ var TERRAIN_SCENES = {
   // to it, which is the same law every plate in this table has always had.
   causeway:       "day night night-torch fog rain snow",
   ford:           "day night night-torch fog rain snow",
+  // BOTH COMPLETE FROM THE FIRST DAY, all six conditions, so neither of these
+  // ever falls back to the day plate under weather it was not shot for.
+  ferry:          "day night night-torch fog rain snow",
+  staithe:        "day night night-torch fog rain snow",
 };
 // AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
 // top of one, and the layer is what this replaces (rome, 2026-09-11).
@@ -7036,7 +7087,23 @@ var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the
                  // reads wrong the answer is not a bigger number, it is a plate
                  // whose shelf sits higher in frame — there is no line left to
                  // give.
-                 crag: 72 };
+                 crag: 72,
+                 // THE FERRY IS A DECK, AND THE DECK IS HALF THE PICTURE. The
+                 // stage was re-shot for exactly this: the first version put its
+                 // back edge at 66% and left a band of planking too shallow to
+                 // stand three creatures on, so the camera stepped back and the
+                 // timber now fills from 52% down. That is the widest standing
+                 // ground on any plate in the game, and the line sits mid-deck
+                 // rather than at either edge - the adder lands at 72%, the wolf
+                 // at 78%, a man at 83%, all three on wood with water behind
+                 // them and planking still running on in front.
+                 ferry: 62,
+                 // THE STAITHE IS A SHORE, and its hard starts lower than the
+                 // ferry's deck - around 62%, with the jetty and the water
+                 // behind it. Six points further down accordingly: the adder at
+                 // 78%, the wolf at 84%, a man at 89%, which puts all three on
+                 // the shingle among the pots rather than out on the jetty.
+                 staithe: 68 };
 // The day count from the server: one number, the same for everybody, up by one
 // each cycle. Zero until a status frame carries it, which simply means the first
 // entry of every pool until the world says otherwise.
