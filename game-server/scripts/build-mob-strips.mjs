@@ -274,7 +274,7 @@ if (patch) {
   }
   fs.writeFileSync(CLIENT, s);
   console.log(`\npatched MOB_ANIM in public.ts (${rows.length} rows)`);
-  console.log("NOW: bump ART_V - these filenames already existed and their content changed.");
+  console.log("NOW: bump MOB_V in public.ts - these filenames already existed and their content changed.");
 } else {
   console.log(write
     ? "\nstrips written. MOB_ANIM rows (--patch to write these in too):\n"

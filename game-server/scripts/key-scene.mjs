@@ -22,7 +22,7 @@
 //   node scripts/key-scene.mjs <source.png> <name> --write
 //
 // Dry by default. Writing overwrites public/room-bg/<name>.webp, and replacing
-// a file the world already has means bumping ART_V in public.ts or every
+// a file the world already has means bumping BG_V in public.ts or every
 // browser keeps the one it cached.
 import sharp from "sharp";
 import fs from "node:fs";
@@ -113,6 +113,6 @@ await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 }
   .webp({ quality: 92, alphaQuality: 100 })
   .toFile(path.join(OUT, name + ".webp"));
 const kb = Math.round(fs.statSync(path.join(OUT, name + ".webp")).size / 1024);
-// ART_V only matters when a URL the world already has is being replaced. A new
+// BG_V only matters when a URL the world already has is being replaced. A new
 // filename has nobody's cache to beat.
 console.log(`  wrote public/room-bg/${name}.webp  (${kb}KB)` + (existed ? "  — REPLACED, bump ART_V" : ""));

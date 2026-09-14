@@ -25,7 +25,7 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +block("NOT_AN_IDLE")+"\n"+fn("mobActs")+"\n"
   +block("ROOTED")+"\n"
   +grab("MOB_EYES")+"\n"
-  +'var viewMode="image", lastMobs="", anims=[], animTimer=null, stillness=false, ART_V="13";\n'
+  +'var viewMode="image", lastMobs="", anims=[], animTimer=null, stillness=false, MOB_V="13";\n'
   +'var lastSky="day";\n'
   +'ctx.setSky=function(s){ lastSky=s; };\n'
   +'function runAnims(){}\n'

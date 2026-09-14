@@ -2258,6 +2258,25 @@ function paintRarity(el, text) {
   if (at < s.length) el.appendChild(document.createTextNode(s.slice(at)));
   return true;
 }
+// A MODAL'S NOTE LINE IS PROSE FROM THE SERVER AND MAY NAME GEAR.
+//
+// The log paints rarity markers and the modals did not: every note was set with
+// .textContent, so \u0001uncommon\u0001a horseman's pick\u0002 went to the
+// screen as three tofu boxes with the word "uncommon" sitting in the middle of
+// the sentence. Reported at the keeper's hatch, where it is worst - the line
+// that tells you what you just bought is the one that names it.
+//
+// Two of the five notes can hold a marker today (the hatch's settle line, built
+// from gearName, and the forge's "comes off the bench"). All five go through
+// here anyway: a note that carries no marker paints as plain text at no cost,
+// and the next person to put an item name in a note does not have to know this
+// rule exists.
+function setNote(el, text) {
+  el.textContent = "";
+  var t = String(text || "");
+  if (!t) return;
+  if (!paintRarity(el, t)) el.textContent = t;
+}
 function paintVoice(el, text, cls, who, pk) {
   if (paintRarity(el, text)) return;
   if ((cls === "say" || cls === "tell") && who && pk && text.indexOf(who) === 0) {
@@ -2622,7 +2641,7 @@ function cardNum(n) {
 async function drawCardTo(ctx, card, W) {
   ctx.fillStyle = "#16120c";
   ctx.fillRect(0, 0, W, W);
-  try { drawCover(ctx, await loadImg("/card-bg/" + cardScene() + ".jpg?v=" + ART_V), W, W); } catch (e) {}
+  try { drawCover(ctx, await loadImg("/card-bg/" + cardScene() + ".jpg?v=" + CARD_V), W, W); } catch (e) {}
 
   // THE PAINTINGS DECIDE THE LAYOUT, not the other way round. Every one of the
   // card scenes is composed the same way — a dark top third, the subject low
@@ -4144,9 +4163,9 @@ function renderBench(state) {
     : benchAtDen
     ? "Your shelf, your pack, your box. A door only keeps things out if you barred it \\u2014 keep your eyes up."
     : "You crouch to dig through your kit \\u2014 but you're still in the dungeon, in the open and in reach. Keep your eyes up.";
-  bnote.textContent = state.note || (benchAtGate ? ""
+  setNote(bnote, state.note || ((benchAtGate ? ""
     : benchAtDen ? "Nothing here is sealed against time: food ages on the shelf and iron rusts \\u2014 though iron left here never rusts away to nothing."
-    : "Away from a gate \\u2014 lockbox only. The vault and the seal wait at the gates.");
+    : "Away from a gate \\u2014 lockbox only. The vault and the seal wait at the gates.")));
   benchEl.classList.toggle("nogate", !benchAtGate);
   benchEl.classList.toggle("hasden", benchAtDen);
   renderDoll(state.sheet);
@@ -4210,7 +4229,7 @@ function bountySend(action, row) {
 }
 function closeBounty() { bountyEl.classList.remove("open"); hideModalChat(); }
 function renderBounty(state) {
-  bynote.textContent = state.note || "";
+  setNote(bynote, state.note);
   byboard.textContent = "";
   if (!state.board || !state.board.length) {
     var e = document.createElement("div");
@@ -4397,7 +4416,7 @@ function renderTrade(state) {
   // paid against their summed cost. Truthy only while something's on the counter
   // \\u2014 that's what unlocks the offer buttons.
   tradeWant = (state.want && state.want.items && state.want.items.length) ? state.want : null;
-  tnote.textContent = state.note || "";
+  setNote(tnote, state.note);
   twant.textContent = "";
   if (tradeWant) {
     var lbl = document.createElement("span");
@@ -4580,7 +4599,7 @@ function swapSideNode(label, confirmed) {
 
 function renderSwap(state) {
   dealreqEl.classList.remove("open");
-  swnote.textContent = state.note || "";
+  setNote(swnote, state.note);
   var partner = state.partner || "your partner";
   fillSwapGoods(swpack, "Your goods", state.pack || []);
   fillSwapCol(swmine, "Your offer", (state.yourOffer || []).map(function (it) {
@@ -4769,7 +4788,7 @@ function paintRead(read) {
 }
 
 function renderForge(state) {
-  fnote.textContent = state.note || "";
+  setNote(fnote, state.note);
   fhave.textContent = "";
   var lbl = document.createElement("span");
   lbl.textContent = "You have ";
@@ -6401,7 +6420,28 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "31";
+// ONE STAMP PER KIND OF PICTURE, NOT ONE FOR ALL OF THEM.
+//
+// This was a single ART_V appended to every asset URL in the game, and that is
+// a cache-buster that busts the wrong caches. A version in the query string
+// makes a NEW URL, and the assets come back "immutable, max-age=1 year", so
+// bumping the number tells every browser it has never seen any of it before.
+//
+// Measured on the 2026-09-14 ship: twenty-two mob strips changed and the bump
+// re-downloaded 111MB — 251 room plates and 9 skies that were byte-for-byte
+// what the player already had. A plate is ~400KB and takes several seconds on
+// an ordinary line, so every room walked into after an art deploy paid for a
+// picture it already owned. That is what "everything feels slightly delayed"
+// was, and it would have happened on every art ship from here on.
+//
+// So the stamp is split by what it protects. Change a mob and mobs re-download;
+// the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
+// when a filename that already exists gets new content, since a new filename
+// needs no bust at all.
+var MOB_V  = "31";      // /mob/      strips and their eye layers
+var BG_V   = "31";      // /room-bg/  the room plates - 91MB, the expensive one
+var SKY_V  = "30";      // /sky/      the nine skies
+var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -6643,6 +6683,10 @@ var ROOM_PLATE = {
   // condition listed, and a plate that resolved to "night" counts as dark enough
   // for a flame - so unlike the ground table this needed no code to go with it.
   "the-salt-pool":    "night night-torch",
+  // THE DEEP MARK (2026-09-14). A depth post on an open mudflat with the tide
+  // door buried at the foot of it - out under the whole sky, so it takes the
+  // full six where the two interiors above take two.
+  "the-deep-mark":    "day night night-torch fog rain snow",
 };
 // A PLATE MAY BE SHARED (rome, 2026-09-09). A room plate's file stem has always
 // been the room id, so two rooms that look the same meant two copies of six
@@ -7115,6 +7159,14 @@ var MOB_LINE = {
                  // at 78%, a man at 83%, all three on wood with water behind
                  // them and planking still running on in front.
                  ferry: 56,
+                 // THE DEEP MARK IS A MUDFLAT WITH THE CHANNEL BEHIND IT, and
+                 // it reads the same as the staithe: the silt begins right at
+                 // the waterline around 62% and runs unbroken to the bottom
+                 // edge, and everything above that is open water. 62 lands a
+                 // conger at 74%, a man at 83% - all of them out on the flat
+                 // with the post beside them and no small thing standing in
+                 // the channel.
+                 "the-deep-mark": 62,
                  // THE STAITHE IS A SHORE, and its hard starts lower than the
                  // ferry's deck - around 62%, with the jetty and the water
                  // behind it. Six points further down accordingly: the adder at
@@ -7538,7 +7590,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
       sceneSeq++;
       scenePainted = terr ? "/room-bg/" + terr + ".webp" : "";
       if (skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; }
-      sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".webp?v=" + ART_V + ")" : "";
+      sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".webp?v=" + BG_V + ")" : "";
       sceneEl.style.backgroundSize = "cover";
       // NO WEATHER INDOORS. The gatehouse is one baked plate lit by its own
       // fire, and washing it with the hour put rain on a room with a roof and
@@ -7566,7 +7618,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
   // because the picture is decoded before it goes up rather than during. A
   // sequence number makes walking fast safe: a slow plate that arrives after
   // you have already left cannot paint over the room you are now in.
-  var url = "url(" + scene + "?v=" + ART_V + ")";
+  var url = "url(" + scene + "?v=" + BG_V + ")";
   var mine = ++sceneSeq;
   var put = function () {
     if (mine !== sceneSeq) return;         // a newer room got here first
@@ -7576,7 +7628,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
     // the only way to hand a stylesheet a URL that is decided at runtime.
     sceneEl.style.setProperty("--sceneimg", url);
     if (skyEl) {
-      skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + ART_V + ")" : "";
+      skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + SKY_V + ")" : "";
       skyEl.style.backgroundPosition = "center 55%";
       // Set every time, cleared when there is no turn: a transform left behind
       // from the last room would mirror a sky that was never asked to be.
@@ -7622,7 +7674,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
   // exactly the same thing to happen next.
   pre.onload = put;
   pre.onerror = put;
-  pre.src = scene + "?v=" + ART_V;
+  pre.src = scene + "?v=" + BG_V;
   // A picture already in the browser's cache is complete the moment its src is
   // set and may never fire a load event, which would hold the previous room up
   // for good. Walking back the way you came is the common case, so this is the
@@ -8194,7 +8246,7 @@ function paintMobs(ids, doing, dead) {
     bel.className = "mob dead";
     bel.style.height = bvh.toFixed(1) + "vh";
     bel.style.width = (bvh * bspec.aspect).toFixed(1) + "vh";
-    bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + ART_V + ")";
+    bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + MOB_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
     // The same rule as the living, applied once: a body never animates, so this
@@ -8248,7 +8300,7 @@ function paintMobs(ids, doing, dead) {
     var spec = MOB_ANIM[id];
     if (!spec) {
       var im = document.createElement("img");
-      im.src = "/mob/" + id + ".webp?v=" + ART_V;
+      im.src = "/mob/" + id + ".webp?v=" + MOB_V;
       im.alt = "";
       im.style.height = h;
       mobsEl.appendChild(im);
@@ -8274,8 +8326,8 @@ function paintMobs(ids, doing, dead) {
     // its own scale and its own frame stepping kept in sync with this one, and
     // would drift by a subpixel the moment any of the three disagreed.
     var redEyes = lastSky === "blood" && MOB_EYES[id];
-    el.style.backgroundImage = (redEyes ? "url(/mob/" + id + ".eyes.webp?v=" + ART_V + "), " : "")
-      + "url(/mob/" + id + ".webp?v=" + ART_V + ")";
+    el.style.backgroundImage = (redEyes ? "url(/mob/" + id + ".eyes.webp?v=" + MOB_V + "), " : "")
+      + "url(/mob/" + id + ".webp?v=" + MOB_V + ")";
     el.style.backgroundSize = redEyes
       ? (spec.n * 100) + "% 100%, " + (spec.n * 100) + "% 100%"
       : (spec.n * 100) + "% 100%";
@@ -8717,13 +8769,13 @@ thrImg.onload = function () {
   threshold.style.backgroundImage = "linear-gradient(rgba(22,18,12,.5), rgba(22,18,12," + mid + ") 45%, rgba(22,18,12,.6)), url(" + thrImg.src + ")";
   threshold.style.backgroundPosition = "center, " + THR_SCENES[thrPick];
 };
-// ART_V BUSTS THE CACHE, and it is not optional. Both image routes answer with
+// THE VERSION STAMP BUSTS THE CACHE, and it is not optional. Both image routes answer with
 // "immutable", which promises the browser the bytes at that URL will never
 // change \u2014 so a browser that has seen a scene once keeps it for a YEAR and
 // will not revalidate, hard reload included. Repaint a scene in place and only
-// brand-new visitors ever see it. Bump ART_V whenever any scene or card plate
+// brand-new visitors ever see it. Bump CARD_V whenever a door or card plate
 // is replaced (the manifest icons have done this with ?v= since they shipped).
-thrImg.src = "/door-bg/" + thrPick + ".jpg?v=" + ART_V;
+thrImg.src = "/door-bg/" + thrPick + ".jpg?v=" + CARD_V;
 if (thrKnown && stored) thrEnter.textContent = "enter as " + thrKnown;
 
 // THE DOOR'S MUSIC — grim and hollow, played live by oscillators (no file,

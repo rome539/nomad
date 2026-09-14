@@ -6557,6 +6557,12 @@ export const ART_ROOMS = new Set<string>([
   // else in the region looks like, and the one place on the crossing a ground
   // plate could not honestly stand in for.
   "the-salt-pool",
+  // AND THE DOOR AT THE FOOT OF THE POST (2026-09-14). The ferry plate was
+  // standing in for this room and a ferry plate is a DECK: half the frame is
+  // planking, and nothing about a stage says depth post, silt bank or buried
+  // iron. The room's whole subject is a thing you read and a thing you dig
+  // out, and both of them are now in the picture.
+  "the-deep-mark",
 ]);
 
 export const INDOOR_ROOMS = new Set<string>([

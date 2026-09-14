@@ -148,7 +148,11 @@ const SPRITE = {}; for (const m of grab("MOB_SPRITE").matchAll(/"([a-z-]+)":\s*(
 const ANIM = {};
 for (const m of grab("MOB_ANIM").matchAll(/"([a-z-]+)":\s*\{\s*n:\s*(\d+),\s*aspect:\s*([\d.]+),\s*f:\s*(\{[^}]*\})\s*\}/g))
   ANIM[m[1]] = { n:+m[2], aspect:+m[3], f: JSON.parse(m[4]) };
-const ART_V = (src.match(/var ART_V = "(\d+)"/)||[,"1"])[1];
+// The page lifts paintScene as well as paintMobs, so it needs every stamp the
+// lifted code reaches for - not just the mob one. Declaring only MOB_V left
+// BG_V undefined and took the whole preview script down with it.
+const stamp = (n) => (src.match(new RegExp("var " + n + "\\s*= \"(\\d+)\""))||[,"1"])[1];
+const MOB_V = stamp("MOB_V"), BG_V = stamp("BG_V"), SKY_V = stamp("SKY_V"), CARD_V = stamp("CARD_V");
 // THE ROSTER IS TRIMMED HERE, before it is serialised, so the page never learns
 // about a creature whose strip is not in the tree beside it. Read off the world
 // rather than typed: whatever stands in a mountain room is a mountain creature,
@@ -372,14 +376,15 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  <button data-st="flee">fleeing</button>
  <button data-st="hurt">wounded</button>
  <button data-st="reel">reeling</button>
- <span class="n">build ${STAMP} · ART_V ${ART_V} · ${Object.keys(ANIM).length} animated · ${withAtk} strike · ${withDeath} die</span>
+ <span class="n">build ${STAMP} · MOB_V ${MOB_V} · ${Object.keys(ANIM).length} animated · ${withAtk} strike · ${withDeath} die</span>
 </div>
 <div id="stage"><div id="sky"></div><div id="scene"></div><div id="mobs"></div></div>
 <div id="shelf"></div>
 </div>
 <div id="grid"></div>
 <script>
-var MOB_SPRITE=${JSON.stringify(SPRITE)}, MOB_ANIM=${JSON.stringify(ANIM)}, ART_V="${ART_V}";
+var MOB_SPRITE=${JSON.stringify(SPRITE)}, MOB_ANIM=${JSON.stringify(ANIM)};
+var MOB_V="${MOB_V}", BG_V="${BG_V}", SKY_V="${SKY_V}", CARD_V="${CARD_V}";
 var MOB_EYES=${JSON.stringify(EYES)};
 // THE ANSWER, WORKED OUT ABOVE, for exactly the grounds this build offers. null
 // means the world could not be read and the page will not pretend to know.
@@ -441,8 +446,8 @@ function refreshEyes(){
 function bloodNow(){ return hour && hour.value === "blood"; }
 function paintEyes(el,id,a){
   var red = bloodNow() && MOB_EYES[id];
-  el.style.backgroundImage = (red ? "url(mob/"+id+".eyes.webp?v="+ART_V+"), " : "")
-    + "url(mob/"+id+".webp?v="+ART_V+")";
+  el.style.backgroundImage = (red ? "url(mob/"+id+".eyes.webp?v="+MOB_V+"), " : "")
+    + "url(mob/"+id+".webp?v="+MOB_V+")";
   el.style.backgroundSize = red ? (a.n*100)+"% 100%, "+(a.n*100)+"% 100%" : (a.n*100)+"% 100%";
   el.style.backgroundPositionX="0%";
 }
@@ -524,8 +529,8 @@ function build(){
                   next:Date.now()+2000+Math.random()*9000});
     } else {
       el.style.aspectRatio="1"; el.dataset.id=id;
-      el.style.backgroundImage=(bloodMoon&&MOB_EYES[id]?"url(mob/"+id+".eyes.webp?v="+ART_V+"), ":"")
-        +"url(mob/"+id+".webp?v="+ART_V+")";
+      el.style.backgroundImage=(bloodMoon&&MOB_EYES[id]?"url(mob/"+id+".eyes.webp?v="+MOB_V+"), ":"")
+        +"url(mob/"+id+".webp?v="+MOB_V+")";
       el.style.backgroundSize=bloodMoon&&MOB_EYES[id]?"contain, contain":"contain";
       el.style.backgroundPositionX="center";
     }

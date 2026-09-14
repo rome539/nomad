@@ -93,7 +93,7 @@ const code = [
   // holds the old room up until the new plate has decoded. Here it lands at once,
   // which is the same path a cached picture takes.
   'function Image(){ this.complete = true; Object.defineProperty(this, "src", { set: function(){ this.onload && this.onload(); } }); }',
-  'var ART_V = "0";',
+  'var BG_V = "0", SKY_V = "0";',
   fn("paintScene"),
   // The lifted block declares its own elements from getElementById; the stubs win.
   "sceneEl = _scene; skyEl = _sky; mobsEl = _mobs; floodEl = _flood;",
