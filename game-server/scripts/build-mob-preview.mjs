@@ -162,6 +162,13 @@ if (ONLY_MOUNTAIN) {
   for (const id of Object.keys(ANIM))   if (!MOUNTAIN_MOBS.has(id)) delete ANIM[id];
 }
 const SIZE = block("MAN_VH") + "\n" + fn("mobVh");   // the size curve, lifted like the driver
+// WHO SHIPS A SECOND STRIP OF EYES, read off the disk rather than copied from a
+// table in public.ts. A hollow creature is drawn with cold pale eyes and carries
+// a red set beside them for blood-moon nights; the preview could not show either
+// until now, which is exactly why the feature looked broken from in here.
+const EYES = {};
+for (const f of fs.readdirSync(path.join(GAME, "public/mob")))
+  if (f.endsWith(".eyes.webp")) EYES[f.slice(0, -10)] = 1;
 
 const CONSTS = block("CALM_POSES") + "\n" + block("ATTACK_S");
 const DRIVER = [fn("poseAt"), fn("mobBeat"), fn("stepAnims"), fn("applyState")].join("\n");
@@ -373,6 +380,7 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
 <div id="grid"></div>
 <script>
 var MOB_SPRITE=${JSON.stringify(SPRITE)}, MOB_ANIM=${JSON.stringify(ANIM)}, ART_V="${ART_V}";
+var MOB_EYES=${JSON.stringify(EYES)};
 // THE ANSWER, WORKED OUT ABOVE, for exactly the grounds this build offers. null
 // means the world could not be read and the page will not pretend to know.
 var BARREN=${(() => {
@@ -398,6 +406,46 @@ var sceneEl=document.getElementById("scene"), skyEl=document.getElementById("sky
 ${SCENE_DRIVER}
 /* ---- end lifted ---- */
 var SPRITE=MOB_SPRITE, ANIM=MOB_ANIM;   // the page's own shorthand
+// EXACTLY WHAT THE CLIENT DOES: two stacked backgrounds on ONE element, so a
+// single background-position steps the creature and its eyes together.
+// GUARDED, because part of this page is lifted and run headless: the driver test
+// slices the script at a known variable declaration, keeps everything above it,
+// and runs that against a document stub carrying getElementById and nothing else.
+// A bare addEventListener up here is a TypeError that takes the whole driver
+// suite down, several hundred lines away from anything to do with eyes.
+//
+// AND DO NOT QUOTE THAT DECLARATION IN A COMMENT ANYWHERE ABOVE THIS POINT. The
+// slice is a plain string search for it, so writing it out lands an earlier copy
+// of the needle in the haystack and the test keeps everything above the COMMENT
+// instead - which is how the driver suite broke for ten minutes on 13 September,
+// reporting that poseAt did not exist.
+function refreshEyes(){
+  // repaint what is already standing there rather than rebuilding the grid, so
+  // nothing loses the animation it is in the middle of - the same reason the
+  // client keeps sleep out of its row key.
+  for(var i=0;i<anims.length;i++){ var an=anims[i];
+    if(an.el&&an.id&&ANIM[an.id]) paintEyes(an.el,an.id,ANIM[an.id]); }
+  // The stage builds its element from scratch, so it is re-dressed rather than
+  // repainted. dress() reads the selector itself and is safe to call again.
+  if(typeof dress==="function") dress();
+  var s=document.querySelectorAll(".mob"); 
+  for(var j=0;j<s.length;j++){ var sid=s[j].dataset&&s[j].dataset.id;
+    if(sid&&ANIM[sid]) paintEyes(s[j],sid,ANIM[sid]); }
+}
+// THE SKY THE PAGE IS ALREADY SHOWING DECIDES THIS, not a control of its own.
+// The client turns these eyes red on lastSky === "blood" and nothing else, so a
+// separate toggle in here would be a second source of truth that could disagree
+// with the picture behind the creature - a red moon overhead and cold eyes under
+// it, or worse, the reverse. The hour bar already has a blood button; pressing
+// it is the whole interaction.
+function bloodNow(){ return hour && hour.value === "blood"; }
+function paintEyes(el,id,a){
+  var red = bloodNow() && MOB_EYES[id];
+  el.style.backgroundImage = (red ? "url(mob/"+id+".eyes.webp?v="+ART_V+"), " : "")
+    + "url(mob/"+id+".webp?v="+ART_V+")";
+  el.style.backgroundSize = red ? (a.n*100)+"% 100%, "+(a.n*100)+"% 100%" : (a.n*100)+"% 100%";
+  el.style.backgroundPositionX="0%";
+}
 ${SIZE}
 
 /* ---- lifted verbatim from public.ts ---- */
@@ -426,7 +474,7 @@ HOURS.forEach(function(h){
 var hourBar=document.getElementById("hours");
 HOURS.forEach(function(h){
   var b=document.createElement("button"); b.textContent=h; b.dataset.h=h;
-  b.onclick=function(){ hour.value=h; repaint(); };
+  b.onclick=function(){ hour.value=h; repaint(); refreshEyes(); };
   hourBar.appendChild(b);});
 function markHour(){
   var kids=hourBar.children;
@@ -458,8 +506,7 @@ function build(){
     el.style.height=(mobVh(id)*scale*3)+"px";
     if(a){
       el.style.width=(mobVh(id)*scale*3*a.aspect)+"px"; el.style.flex="0 0 auto";
-      el.style.backgroundImage="url(mob/"+id+".webp?v="+ART_V+")";
-      el.style.backgroundSize=(a.n*100)+"% 100%"; el.style.backgroundPositionX="0%";
+      el.dataset.id=id; paintEyes(el,id,a);
       // the client's own choices, made the same way
       var calm=""; for(var q=0;q<CALM_POSES.length;q++) if(a.f[CALM_POSES[q]]!==undefined&&!calm) calm=CALM_POSES[q];
       var acts=[]; for(var w in a.f) if(w!=="idle") acts.push(w); a.acts=acts.length?acts:["idle"];
@@ -476,8 +523,11 @@ function build(){
                   slot:anims.length, lift:Math.max(0,(mobVh(id)-MAN_VH)/2)/mobVh(id),
                   next:Date.now()+2000+Math.random()*9000});
     } else {
-      el.style.aspectRatio="1"; el.style.backgroundImage="url(mob/"+id+".webp?v="+ART_V+")";
-      el.style.backgroundSize="contain"; el.style.backgroundPositionX="center";
+      el.style.aspectRatio="1"; el.dataset.id=id;
+      el.style.backgroundImage=(bloodMoon&&MOB_EYES[id]?"url(mob/"+id+".eyes.webp?v="+ART_V+"), ":"")
+        +"url(mob/"+id+".webp?v="+ART_V+")";
+      el.style.backgroundSize=bloodMoon&&MOB_EYES[id]?"contain, contain":"contain";
+      el.style.backgroundPositionX="center";
     }
     stage.appendChild(el); cell.appendChild(stage);
     var n=document.createElement("div"); n.className="n";
@@ -491,7 +541,17 @@ function build(){
 // THE STAGE. One creature, sized the way the game sizes it — mobVh is a
 // fraction of the WINDOW height there and of the panel height here, which is
 // the same number scaled by how much of the window the panel takes.
-var STAGE_VH = 62;
+// TRUE GAME SCALE, AND IT MUST STAY THAT WAY. This was 62, which drew every
+// creature at 62% of the size the client gives it - so the stage was a picture
+// of the game with a constant lie in it, and three rounds of "the sprites are
+// too small" were answered by changing numbers that were already right. A
+// preview that is not 1:1 is worse than no preview: it sends you off to fix the
+// game to make the preview look correct.
+//
+// mobVh returns vh and the client writes it straight onto the element, so the
+// only honest multiplier here is 100. If a creature overflows the stage, that is
+// the creature overflowing the screen in the game too, which is worth seeing.
+var STAGE_VH = 100;
 // WHY NOTHING IS STANDING HERE, or "" if something can. One lookup for all three
 // kinds of ground, and the answer was computed from the world rather than typed.
 function barren(){
@@ -509,8 +569,7 @@ function dress(){
   var el=document.createElement("div"); el.className="mob";
   var h=mobVh(id)*STAGE_VH/100;
   el.style.height=h+"vh"; el.style.width=(h*a.aspect)+"vh"; el.style.flex="0 0 auto";
-  el.style.backgroundImage="url(mob/"+id+".webp?v="+ART_V+")";
-  el.style.backgroundSize=(a.n*100)+"% 100%"; el.style.backgroundPositionX="0%";
+  el.dataset.id=id; paintEyes(el,id,a);
   el.style.backgroundRepeat="no-repeat"; el.style.backgroundPositionY="center";
   mobsEl.appendChild(el);
   // Built exactly the way the grid builds one, so the action buttons reach it.
@@ -635,7 +694,11 @@ pick.onchange=function(){
 };
 fitBtn=document.getElementById("fit");
 fitBtn.onclick=function(){ whole=!whole; fitBtn.className=whole?"on":""; shelfLine(); };
-gnd.onchange=repaint; hour.onchange=repaint;
+gnd.onchange=repaint;
+// EVERY ROUTE TO A NEW SKY, not just the one. The hour can change from the bar,
+// from this select, or from the next-sky roll, and the eyes have to follow all
+// three or the picture and the creature disagree.
+hour.onchange=function(){ repaint(); refreshEyes(); };
 // NOTHING HERE SHOULD NEED A MENU AND A CLICK. Stepping ground and hour from the
 // keyboard is the difference between comparing two plates and giving up on it:
 // the whole value of this page is flicking back and forth, and a dropdown puts
@@ -661,7 +724,7 @@ document.addEventListener("keydown",function(e){
   else return;
   e.preventDefault();
 });
-who.onchange=function(){ dress(); repaint(); };   // a gate answers differently for a boss
+who.onchange=function(){ dress(); repaint(); };   // a gate answers differently for a boss  (dress paints the eyes)
 torchBtn.onclick=function(){ torch=!torch; torchBtn.className=torch?"on":""; repaint(); };
 // THE TIDE, WHICH THE GAME TAKES OFF ITS OWN CLOCK.
 //

@@ -6401,7 +6401,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "24";
+var ART_V = "30";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -7039,7 +7039,21 @@ var MOB_LINE_DEFAULT = 55;
 // The rib cage is a SANCTUARY and nothing stands in it in the game, so its
 // number only ever shows in the preview. It is here because a plate that
 // breaks the lock should say so wherever it is drawn.
-var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the-kept-room": 65,
+var MOB_LINE = {
+  // THE COAST STOOD SIX POINTS TOO LOW (rome, 2026-09-13). Measured against the
+  // hill, which is the only reference that matters: a mountain creature's feet
+  // land between 76% and 85% of the frame, and the crossing's were landing at
+  // 83% to 91% - the shell put a man's boots a tenth of the screen from the
+  // bottom edge, well under a prose strip that starts at 67%.
+  //
+  // Every crossing ground is lifted six, which keeps the per-plate tuning
+  // (a marsh is not a bridge) and moves the whole region into the hill's band:
+  // 77 · 81 · 77 · 83 · 79 · 79 · 85 · 81 · 81 · 83 · 77 · 75.
+  //
+  // It became visible now because the sprites grew. Feet sit at line + half a
+  // man whatever the creature is, so enlarging the roster pushed every short
+  // thing DOWN toward that line and the error stopped hiding in the gap.
+ "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the-kept-room": 65,
                  boulder: 64, glass: 70, snow: 64, "the-rib-cage": 66,
                  // THE ALDER IS A BANK WITH WATER BEHIND IT (rome, 2026-09-09:
                  // the animals sit too high in it). Its near ground starts around
@@ -7061,7 +7075,7 @@ var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the
                  // The causeway's road runs from about 60% down between its
                  // kerbs; the ford's near shingle from 64%, with the channel
                  // behind it, so it wants four points more.
-                 causeway: 62, ford: 66,
+                 causeway: 56, ford: 60,
                  alder: 62,
                  // THE GULLY IS A FLOOR WITH WALLS OVER IT (rome, 2026-09-10).
                  // Its near floor starts around 67% and the walls stand behind
@@ -7100,48 +7114,48 @@ var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the
                  // rather than at either edge - the adder lands at 72%, the wolf
                  // at 78%, a man at 83%, all three on wood with water behind
                  // them and planking still running on in front.
-                 ferry: 62,
+                 ferry: 56,
                  // THE STAITHE IS A SHORE, and its hard starts lower than the
                  // ferry's deck - around 62%, with the jetty and the water
                  // behind it. Six points further down accordingly: the adder at
                  // 78%, the wolf at 84%, a man at 89%, which puts all three on
                  // the shingle among the pots rather than out on the jetty.
-                 staithe: 68,
+                 staithe: 62,
                  // THE BRIDGE IS A STONE DECK FORTY FEET UP, and its near edge
                  // is the parapet rather than a shoreline - there is no shallow
                  // margin to get wrong. The deck runs from 62% down, so 64 sits
                  // the adder at 74%, the wolf at 80% and a man at 85%, all three
                  // well inside the flags with masonry in front of and behind
                  // them, and nothing standing on the drop.
-                 bridge: 64,
+                 bridge: 58,
                  // THE MARSH IS FLAT AND THE CREEKS ARE BEHIND IT. The samphire
                  // starts about 63% and the cut banks stand behind that, so the
                  // risk here is the reverse of the alder's: not water in front
                  // but a creek edge a creature could appear to be standing in.
                  // 64 keeps all three on the near flat.
-                 marsh: 64,
+                 marsh: 58,
                  // AND THE SHELL IS A STORM BEACH WITH ITS WRACK LINE ACROSS IT.
                  // The shingle starts around 65% but the weed, driftwood and
                  // bones lie in a band just above it, and a creature standing in
                  // that band reads as wading through rubbish rather than walking
                  // the beach. 70 puts the adder at 80% and a man at 91%, which
                  // is the clean stone below the wrack.
-                 shell: 70,
+                 shell: 64,
                  // THE REED IS A CUT PATH WITH WALLS OF STEM EITHER SIDE. Its
                  // mud floor starts about 64% and the reeds stand from it, so
                  // the only way to be wrong here is to put a creature up in the
                  // stems. 66 lands the adder at 76% and a man at 87%, all three
                  // on the mud with the bed towering over them - which is also
                  // the scale check: a reed bed IS taller than a man.
-                 reed: 66,
+                 reed: 60,
                  // THE EYOT IS THE BARE CROWN OF AN ISLAND, willows behind it
                  // and reed beyond them. The bare ground runs from about 64%
                  // down and everything above it is somebody else's ground.
-                 eyot: 66,
+                 eyot: 60,
                  // THE SHORE ROAD IS A METALLED ROAD BETWEEN TWO KERBS, and the
                  // kerbs are the whole constraint: off them is either the storm
                  // beach or the bank. 68 keeps all three between the stones.
-                 "shore-road": 68,
+                 "shore-road": 62,
                  // AND THE SEA CAVE IS THE ONLY INTERIOR ON THE CROSSING. Wet
                  // sand from about 55% with the tide line on the walls behind
                  // it, so there is more standing room here than anywhere else
@@ -7153,21 +7167,21 @@ var MOB_LINE = { "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the
                  // up against a wall rather than out on the ground. 62 puts the
                  // adder at 72% and a man at 83%, all three well out in the open
                  // with worn earth in front of and behind them.
-                 works: 62,
-                 "sea-cave": 60,
+                 works: 56,
+                 "sea-cave": 54,
                  // THE TWO CROSSING GATES. Both are a yard in front of a
                  // building with the water behind it, and both yards run from
                  // about 60% down, so they take the same line: the adder at 72%,
                  // a man at 83%, everything on the ground in front of the door
                  // rather than up against the wall of it.
-                 "gate-the-ferry-house": 62, "gate-the-crossing-house": 62,
+                 "gate-the-ferry-house": 56, "gate-the-crossing-house": 56,
                  // AND THE SALT POOL, where the standing ground is the last of
                  // the dry cave floor and the pool lies across everything behind
                  // it. The floor starts about 58%, so 64 keeps all three on wet
                  // rock with the black water behind them - which is the reading
                  // the room wants, because the thing that lives here comes OUT
                  // of that water at you.
-                 "the-salt-pool": 64 };
+                 "the-salt-pool": 58 };
 // The day count from the server: one number, the same for everybody, up by one
 // each cycle. Zero until a status frame carries it, which simply means the first
 // entry of every pool until the world says otherwise.
@@ -7402,7 +7416,19 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
     }
     lit = pwant === "night-torch";
     tint = (lit || shut || NO_GROUND_TINT[lastSky] || pbase === lastSky) ? "" : lastSky;
-    if (shut) mobHour = lit ? "" : pbase;   // a roof is over them too
+    // A ROOF IS OVER THEM TOO — AND SO IS A HILL. SHELTERED names the rooms with
+    // a slot in them; it does not name the ones with no opening at all, because
+    // until the coast there were none. The salt pool is at the back of a sea
+    // cave and the light in there is whatever you carried in, so a creature
+    // standing in it must not be lit by a sky it cannot see.
+    //
+    // The test needs no new table and MUST NOT HAVE ONE, or the table and the
+    // plates drift: a plate list with no DAY in it IS a place daylight never
+    // reaches. That is the same sentence, and the terrain branch below already
+    // reasons this way. pbase has resolved to the plate's own first condition by
+    // here, which for a cave is night — so the creature takes t-night and stands
+    // at brightness .26, a shape in the dark, until a torch says otherwise.
+    if (shut || phave.indexOf(" day ") < 0) mobHour = lit ? "" : pbase;
     line = MOB_LINE[stem] || MOB_LINE_DEFAULT;   // the standing line belongs to the PICTURE
   }
   if (!scene && gate && GATE_PLATE[gate] !== undefined) {
@@ -7494,6 +7520,15 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
       lit = twant === "night-torch";
       line = MOB_LINE[terr] || MOB_LINE_DEFAULT;
       tint = (lit || NO_GROUND_TINT[lastSky] || tbase === lastSky) ? "" : lastSky;
+      // AND THE SAME FOR WHAT IS STANDING IN IT. The ground already knows it is
+      // indoors two lines up and takes its night plate at noon; the creature on
+      // that ground did not, and kept the hour from the sky outside. At any
+      // daylight hour that is the tint named day, there is no rule for day, and
+      // the result was a wrack crab lit for a bright afternoon standing on a
+      // pitch-black cave floor. It reads as a cut-out, because that is what it
+      // was. Only the sea cave is dark enough for this to show, which is why it
+      // survived every mountain ground and both crossing shores.
+      if (indoors) mobHour = lit ? "" : tbase;
     } else {
       // The old single-layer plates: sky baked in, wash on top, unchanged.
       // It still claims the sequence and records what it left on screen, so the
@@ -7806,6 +7841,119 @@ var MOB_SPRITE = {
   // standing man and half again as wide, which on any window is most of what
   // you can see. There is no version of meeting this that fits beside a hare.
   "the-drake": 44,         // 3.50
+  // ---- THE CROSSING (mig 191) ------------------------------------------------
+  // THE HILL STANDS UP AND THE COAST LIES DOWN, and that breaks the metre rule.
+  // Every number here is a HEIGHT, which is the honest measure of an animal that
+  // stands and a bad one for a crab. Three passes settled how to size this coast,
+  // and the method is worth more than the numbers:
+  //
+  //  1 · The number scales the CELL, and the cell is the union of every pose. How
+  //      much of it the animal fills in the pose you actually look at runs from
+  //      54% to 98% here. Every hill creature sits at 96-98% because they are all
+  //      drawn standing, which is why the table never had to say this.
+  //  2 · No single SPAN is posture-free. Ink height called the lymer the bigger
+  //      dog, nose-to-tail called the marsh hound bigger by a lot, and both were
+  //      honestly measured - the hound's idle is head-down, the lymer's head-up.
+  //  3 · So match INK AREA, which goes as size squared whatever the animal is
+  //      doing: sqrt(ink fraction x vh x vh x aspect), against a creature of the
+  //      SAME BUILD already in the game. Same build is the whole of the caveat -
+  //      see the crabs below.
+  //
+  // Measured references, taken the same way: the herdsman 20.3, a hill wolf 22.3,
+  // a fold dog 19.4, a carrion vulture 15.5, a scarp raven 11.8, the butter wife
+  // 24.9. Re-measure after ANY re-cut: a new pose moves the bbox and silently
+  // resizes the animal without the number changing at all.
+  //
+  // ---- THE DEAD STAND TALLER THAN THE LIVING (rome, 2026-09-13) -------------
+  // These eleven were area-matched to the herdsman and landed at 32-45vh as
+  // drawn, which put most of them under the hill's own men. That is defensible
+  // arithmetic and it is the wrong call for this region: the crossing's whole
+  // idea is that these people drowned and the shift did not end, and a thing you
+  // read as a slightly short man in a wet coat is not that.
+  //
+  // So every one of them is solved to 46vh standing - clear of the herdsman at
+  // 37.4 and the one who stayed at 40.3 - measured on the pose that actually
+  // shows the creature upright. That last part is most of the work: the fowler's
+  // idle is PRONE in the sedge, the ferryman's is chest-deep with only his head
+  // and hands out, and measuring either of those would have sized the man by the
+  // part of him you cannot see. Both are solved on a standing frame instead, and
+  // the water and the turf then take the difference, which is the point of them.
+  //
+  // The numbers look large beside the hill's 22 and that is the same lesson this
+  // table keeps teaching: the number buys CELL, and a densely drawn figure needs
+  // more of it. Read the standing column, never the number.
+  //
+  // ---- the two LIVING men keep the herdsman's scale -------------------------
+  // The strand thief and the wrecker are ordinary robbers, not dead, and they
+  // are sized against the hill's living people on purpose: when one of them is
+  // in a room with the tide warden, the difference in height is the difference
+  // between a man who can be reasoned with and a man who cannot.
+  "the-salt-widow": 28,    // matched to the butter wife, who is drawn chunkier than the herdsman
+  "the-reed-walker": 30,   // half behind the stems, so a lot of his cell is reed and air
+  "the-drowned-ferryman": 29, // A MAN, and sized as one. No pose of his shows all of him -
+                           // the idle is head and hands on the rope with the rest under water -
+                           // so area-matching read him as a dog. He is 22 like the rest of them
+                           // and the water takes the difference, which is the whole idea of him.
+  "the-pilot": 29,
+  "the-drover": 30,
+  "strand-thief": 19,
+  "the-eel-cutter": 29,
+  "the-refuge-man": 30,
+  "the-tide-warden": 29,
+  "the-bridge-mason": 29,
+  "the-fowler": 29,        // drawn broad in the reed cloak, so the number comes down
+  "the-scaffold-hand": 32, // hangs in a harness: a tall cell with a man across the middle of it
+  "the-wrecker": 14,       // the densest sheet of the twelve, and the largest figure of them
+  // ---- the beasts, each against its own kind --------------------------------
+  "bull-seal": 34,         // forty stone, against the grey seal at 23
+  "a-lymer": 11,           // stands with a hill wolf, which is what the prose claims
+  "marsh-hound": 9,        // just over a fold dog, which is the same animal
+  "black-backed-gull": 12, // against a carrion vulture; it is the one that eats other birds
+  "great-gull": 15,        // a goose, and a looser silhouette than the vulture
+  "bittern": 20,           // tall but SLIGHT - all neck and no width, so it needs a big cell
+  "oystercatcher": 14,     // see the floor note below
+  // ---- and the ones area cannot measure -------------------------------------
+  // A CRAB IS MOSTLY GAPS. Ink area works between two dogs and lies between a
+  // crab and a cat: the space between eight legs is not the animal, so the great
+  // crab area-matched to a cave lion came out at 46 - drake scale. These five are
+  // sized by what they measure ACROSS instead, which is the dimension a sprawling
+  // thing actually occupies.
+  "the-great-devil-crab": 34, // 2.30m across, and both claws are the big one
+  "the-great-crab": 28,    // 2.00m across: the size of a cart, as the room says
+  "the-quicksand": 11,     // 2.50m of flat, fenced with three withies and a rope
+  // ...AND THE TWO SMALL CRABS ARE THE ONE PLACE THE RULE IS OVERRIDDEN. Measured
+  // honestly a wrack crab is 0.38m across and solves to ONE, below the floor the
+  // hill set for an ermine and a coiled adder. That floor is not an accident and
+  // the note at the top of this table says why: a thing you cannot see is not
+  // more realistic, it is absent. So they sit on it, in proportion to each other.
+  "devil-crab": 10,        // see the floor note below
+  "wrack-crab": 10,        // see the floor note below
+  // ---- A FLOOR ON THE SMALL END (rome, 2026-09-13) ---------------------------
+  // Four of these measured 13-17vh as drawn, which is exactly the band the hill
+  // puts its ermine (12.2), its ptarmigan (12.9) and its wildcat (16.0) in - so
+  // by the metre rule and by precedent they were not wrong. Standing in a room
+  // they still read as too small, and a room is where the question is settled.
+  //
+  // So they are lifted to 20vh drawn, which is the size at which a thing on a
+  // beach is an animal rather than a detail of the shingle. It is the same
+  // argument the note at the top of this table already makes about the ermine,
+  // taken one step further: everything here is further from life-size than it
+  // was, deliberately, because a creature you have to look for is absent.
+  //
+  // Solved, not chosen: measure the drawn height at a trial size, scale to 20,
+  // invert the curve. wrack-crab 4->10, devil-crab 6->10, oystercatcher 7->14,
+  // fen-viper 4->6. The wrack crab and the devil crab land on the same number
+  // and are still different sizes on screen - the devil crab rears with both
+  // claws up and fills more of its cell, which is 27vh of crab against 38vh.
+  // ---- the six whose sheets did not change on 13 September -------------------
+  // Still the numbers solved on the 12th, and still correct: their art was not
+  // re-cut, so their cells and their fill fractions are exactly what they were.
+  "grey-seal": 23,         // two metres of animal, lying down
+  "silver-eel": 21,        // 54% fill - the S-curve's gap is half the cell
+  "ford-eel": 17,          // the same, on a smaller eel
+  "old-conger": 15,        // the heavy coil
+  "conger": 14,            // the lighter coil
+  "fen-viper": 6,          // see the floor note below
 };
 
 // WHAT A CREATURE DOES WHILE YOU STAND THERE. A sprite with an entry here is not
@@ -7836,6 +7984,37 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "the-tide-warden":        { n: 6, aspect: 1.025, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5} },
+  "the-scaffold-hand":      { n: 6, aspect: 1.002, f: {"idle":0,"attack":1,"recover":2,"death":3,"swing":4,"work-the-stone":5} },
+  "the-salt-widow":         { n: 6, aspect: 1.101, f: {"idle":0,"attack":1,"recover":2,"death":3,"feed-the-flue":4,"work-the-pan":5} },
+  "the-refuge-man":         { n: 6, aspect: 1.12, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"turn-from-the-wall":5} },
+  "the-reed-walker":        { n: 6, aspect: 1.009, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"part-the-reed":5} },
+  "the-quicksand":          { n: 6, aspect: 2, f: {"idle":0,"alert":1,"rest":2,"attack":3,"recover":4,"death":5} },
+  "the-pilot":              { n: 6, aspect: 0.941, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"read-the-water":5} },
+  "the-great-devil-crab":   { n: 8, aspect: 1.134, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5,"hit":6,"death":7} },
+  "the-eel-cutter":         { n: 6, aspect: 1.238, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"lift-the-trap":5} },
+  "the-drowned-ferryman":   { n: 6, aspect: 1.218, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-drover":             { n: 6, aspect: 1.18, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"drive-the-road":5} },
+  "the-bridge-mason":       { n: 6, aspect: 0.993, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"dress-the-stone":5} },
+  "bull-seal":              { n: 6, aspect: 1.304, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-wrecker":    { n: 8, aspect: 0.919, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"snatch-escape":5,"recover":6,"hit":7} },
+  "the-fowler":     { n: 6, aspect: 1.068, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"rise-from-the-turf":5} },
+  "strand-thief":   { n: 8, aspect: 0.922, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"snatch-escape":5,"recover":6,"hit":7} },
+  "the-great-crab":   { n: 8, aspect: 1.083, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
+  "marsh-hound":      { n: 8, aspect: 1.551, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
+  "a-lymer":          { n: 8, aspect: 1.52, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
+  "wrack-crab":          { n: 8, aspect: 1.048, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
+  "silver-eel":          { n: 6, aspect: 1.561, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "oystercatcher":       { n: 8, aspect: 1.148, f: {"idle":0,"alert-alarm":1,"attack":2,"up":3,"glide":4,"down":5,"landing":6,"death":7} },
+  "old-conger":          { n: 6, aspect: 1.541, f: {"idle":0,"alert":1,"attack":2,"bite":3,"recover":4,"death":5} },
+  "grey-seal":           { n: 6, aspect: 1.451, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "great-gull":          { n: 8, aspect: 1.117, f: {"idle":0,"alert":1,"attack":2,"up":3,"glide":4,"down":5,"landing":6,"death":7} },
+  "ford-eel":            { n: 6, aspect: 1.587, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "fen-viper":           { n: 6, aspect: 1.922, f: {"idle":0,"watch":1,"bask":2,"attack":3,"recover":4,"death":5} },
+  "devil-crab":          { n: 8, aspect: 1.425, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
+  "conger":              { n: 6, aspect: 1.651, f: {"idle":0,"alert":1,"rest":2,"attack":3,"recover":4,"death":5} },
+  "black-backed-gull":   { n: 8, aspect: 1.107, f: {"idle":0,"alert":1,"attack":2,"up":3,"glide":4,"down":5,"landing":6,"death":7} },
+  "bittern":             { n: 8, aspect: 1.107, f: {"idle":0,"alert":1,"attack":2,"up":3,"glide":4,"down":5,"landing":6,"death":7} },
   "a-fold-dog":           { n: 6, aspect: 1.46, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "bone-breaker":         { n: 8, aspect: 1.132, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"feed":5,"attack":6,"death":7} },
   "brooding-vulture":     { n: 8, aspect: 1.086, f: {"idle":0,"rest":1,"recover":2,"attack":3,"death":4,"feed":5,"move-a":6,"move-b":7} },
@@ -7898,7 +8077,28 @@ var CALM_POSES = ["rest","bask","graze","feed","listen","watch","hold-ground",
                     // her ordinary work, not an event
   "twisting-leap",  // the dancer. A stoat dancing IS a stoat at rest — it is
                     // what the animal is named for and when it does it
-  "call-uphill"];   // the last dog, still calling for people who are not coming
+  "call-uphill",    // the last dog, still calling for people who are not coming
+  // AND THE CROSSING'S DEAD, WHICH IS THE SAME LESSON AT NINE TIMES THE SIZE
+  // (2026-09-13). The region's whole idea is that these people drowned and the
+  // shift did not end, so the pose in slot two IS the creature — a warden who
+  // never cuts his tally is just a wet man standing in the road. Every one of
+  // them was drawn, shipped in the strip, and unreachable, because a name this
+  // list does not know can only ever be selected on the ROOTED path and eight of
+  // the nine have a walk.
+  //
+  // They are all CALM rather than WATCH: this is work, not a decision about you.
+  // The one that is a decision — the fowler coming up out of the turf — is in
+  // WATCH_POSES below with the one who stayed, for exactly that reason.
+  "cut-the-stick",      // the tide warden, notching the tally at every milestone
+  "read-the-water",     // the pilot, sighting a channel that stopped existing
+  "lift-the-trap",      // the eel cutter, hauling a grig he set two centuries ago
+  "drive-the-road",     // the drover, moving stock that is not there
+  "dress-the-stone",    // the bridge mason, making the broken end neat
+  "part-the-reed",      // the reed walker, one cut over and keeping pace
+  "turn-from-the-wall", // the refuge man, coming off the stone he waited at
+  "work-the-stone",     // the scaffold hand, upside down, working the underside
+  "feed-the-flue",      // the salt widow, feeding a fire that went out
+  "work-the-pan"];      // ...and drawing the rake across a pan that is cold
 var GAIT_HZ = 5;            // gait poses alternate this fast...
 var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
 var WINGBEAT_HZ = 4;        // and wings beat this fast...
@@ -7911,6 +8111,16 @@ var AIR_SHRINK = 0.25;      // and shrinks, because it is further away
 var BREATH = 0.003;         // the resting scale pulse: three parts in a thousand
 var TRAVEL_MS = 2600;       // how long a creature walks once it starts
 var ROOTED = { "the-milker": 1, "the-butter-wife": 1 };   // they work in place
+// WHICH CREATURES SHIP A SECOND STRIP OF EYES. Every one is HOLLOW - the game's
+// own register of things with nothing inside - and every one was drawn with its
+// eyes in a flat key colour so the cutter could split them into their own layer.
+// On any night but a red one this table is not read at all: the cold eyes are
+// simply part of the picture, which is what they should be.
+var MOB_EYES = {
+  "the-drowned-ferryman": 1, "the-fowler": 1, "the-eel-cutter": 1, "the-pilot": 1,
+  "the-drover": 1, "the-tide-warden": 1, "the-refuge-man": 1, "the-bridge-mason": 1,
+  "the-reed-walker": 1, "the-scaffold-hand": 1, "the-salt-widow": 1
+};
 
 var IDLE_MS = 1400;      // how long one idle frame is held...
 var IDLE_JITTER = 1100;  // ...plus this much, so two snakes never breathe in step
@@ -7935,7 +8145,15 @@ function paintMobs(ids, doing, dead) {
   if (viewMode === "image" && dead)
     for (var d0 = 0; d0 < dead.length; d0++)
       if (MOB_ANIM[dead[d0]] && MOB_ANIM[dead[d0]].f.death !== undefined) bodies.push(dead[d0]);
-  var key = bodies.join(",") + "|" + list.map(function (e) { return e.id; }).join(",");
+  // THE RED NIGHT IS PART OF THE KEY, because the sprite itself changes on it.
+  // Everything else about a creature's light is a filter on the row and needs no
+  // repaint; the eyes are a second IMAGE, chosen when the element is built. Left
+  // out of the key, a moon that turned red while you stood still would not reach
+  // the things in front of you until something else happened to reflow the row -
+  // you would walk into the next room and find their eyes lit, having watched
+  // them stay cold through the moment the sky went over.
+  var key = bodies.join(",") + "|" + (lastSky === "blood" ? "R|" : "")
+    + list.map(function (e) { return e.id; }).join(",");
   // Sleep is NOT part of the key: a creature bedding down must not reflow the
   // row, which would throw away every animation running in it. It is applied
   // to the sprites already standing there instead.
@@ -7960,7 +8178,18 @@ function paintMobs(ids, doing, dead) {
     // The same rule as the living, applied once: a body never animates, so this
     // is the only place it can be said. Without it a dead drake lies with its
     // hindquarters under the prose.
-    var blift = Math.max(0, (bvh - MAN_VH) / 2) / bvh;
+    // ONE FOOT LINE FOR EVERYTHING (rome, 2026-09-13). This was clamped at zero,
+    // so only a creature TALLER than a man was moved and everything shorter was
+    // simply centred on the line - which means its feet stop short of the ground
+    // by half the difference. On the hill that was invisible: the roster was
+    // small, the plates have broad foreground, and nobody stands beside anybody.
+    // The coast put a crab, a gull and a drowned man in the same room and it is
+    // plain - a fen viper was standing 9.3vh in the AIR above the man's boots.
+    //
+    // Unclamped, the number goes negative for anything short and pushes it DOWN
+    // instead, so every creature's feet land at line + MAN_VH/2 whatever its
+    // size. That is what standing on the same ground means.
+    var blift = (bvh - MAN_VH) / 2 / bvh;
     if (blift) bel.style.transform = "translateY(" + (-blift * 100).toFixed(1) + "%)";
     mobsEl.appendChild(bel);
   }
@@ -7976,7 +8205,7 @@ function paintMobs(ids, doing, dead) {
     // under 42vh gets zero and is untouched.
     // Expressed as a fraction of the element's OWN height, because that is what
     // a percentage translate means.
-    var lift = Math.max(0, (vh - MAN_VH) / 2) / vh;
+    var lift = (vh - MAN_VH) / 2 / vh;   // see the note on blift above
     var spec = MOB_ANIM[id];
     if (!spec) {
       var im = document.createElement("img");
@@ -7997,8 +8226,20 @@ function paintMobs(ids, doing, dead) {
     // row stretches. So the width is computed here from the same height the table
     // gave, and the element is told not to flex at all.
     el.style.width = (vh * spec.aspect).toFixed(1) + "vh";
-    el.style.backgroundImage = "url(/mob/" + id + ".webp?v=" + ART_V + ")";
-    el.style.backgroundSize = (spec.n * 100) + "% 100%";
+    // TWO LAYERS ON ONE ELEMENT, and they must be one element rather than two.
+    // A hollow thing is drawn with cold pale eyes, and on a blood moon the game
+    // says they come up "two coals the colour of the moon above" - so the red
+    // ones ride in a second strip cut from the same pixels on the same rect, and
+    // the whole of the trick is that the browser steps BOTH layers with one
+    // background-position. A separate overlay element would need its own width,
+    // its own scale and its own frame stepping kept in sync with this one, and
+    // would drift by a subpixel the moment any of the three disagreed.
+    var redEyes = lastSky === "blood" && MOB_EYES[id];
+    el.style.backgroundImage = (redEyes ? "url(/mob/" + id + ".eyes.webp?v=" + ART_V + "), " : "")
+      + "url(/mob/" + id + ".webp?v=" + ART_V + ")";
+    el.style.backgroundSize = redEyes
+      ? (spec.n * 100) + "% 100%, " + (spec.n * 100) + "% 100%"
+      : (spec.n * 100) + "% 100%";
     el.style.backgroundPositionX = "0%";
     mobsEl.appendChild(el);
     // What this creature can do while you stand there: the calm pose it cuts to
@@ -8240,7 +8481,16 @@ function poseAt(a, now) {
       // No gait and no wings. The rooted ones - the brooding vulture on its nest,
       // an adder holding its warm stone - travel by doing the thing they were
       // drawn doing instead of going anywhere, one pose per second.
-      name = a.spec.acts[Math.floor(t) % a.spec.acts.length];
+      //
+      // AND IT STARTS WHERE THE LAST ONE STOPPED, which it did not until the
+      // crossing's dead arrived (2026-09-13). A travel lasts TRAVEL_MS, which is
+      // 2.6 seconds, and this shows one pose per second from the top every time -
+      // so a creature with more than three spare poses had the fourth and fifth
+      // drawn, packed, shipped, and never once put on screen. The salt widow
+      // works a cold pan and the scaffold hand swings on his rope; both were
+      // invisible. Rotating the start by one each travel costs nothing and means
+      // every pose comes round, which is all the fixed cycle was ever meant to do.
+      name = a.spec.acts[(((a.actOff | 0) + Math.floor(t)) % a.spec.acts.length)];
     }
   } else {
     name = a.calm && Math.floor(t / 3) % 2 ? a.calm : "idle";
@@ -8278,8 +8528,21 @@ var HIT_POSES = ["hit"];
 // in CALM_POSES with the other three: it is what he does once he has decided
 // something, which is this list's whole subject. He has no other pose in here,
 // so before now his every hunt, fight and windup was drawn on the bare idle.
+// AND THE FOWLER IS THE SAME CASE, ARRIVING FROM THE COAST. He is drawn flat on
+// his face in the turf under a hood of sacking, and that IS his idle — the whole
+// creature is that you did not see him. So the second thing he was drawn doing
+// is him coming up off the ground onto one knee with both hands going to the
+// pole beside him, which is not a breath he fills, it is the moment he has
+// decided about you. Same slot as the one who stayed, same reason.
+//
+// The audit found this one before a player could: a name no list here knows is
+// unreachable for anything that has a gait, because only the ROOTED path cycles
+// a creature's spare poses. Ten more of the crossing's dead are still to come
+// and every one of them has a pose like this - cut-the-stick, read-the-water,
+// lift-the-trap - so this list grows once per sheet until they are all in.
 var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
-                   "hold-ground", "inspect-upright", "advance", "recover", "idle"];
+                   "hold-ground", "inspect-upright", "advance", "rise-from-the-turf",
+                   "recover", "idle"];
 // A body stays where it fell for a beat before the room repaints without it.
 var mobHold = 0, mobPending = null, mobPendingRest = null, mobPendingDead = null;
 function mobBeat(swung, struck, died, fed) {
@@ -8323,7 +8586,7 @@ function stepAnims() {
     // telling the picture what is happening; the stroll is what is left when
     // nothing is. Its cadence comes from the animal - a wolf paces, a vulture
     // sits - so a room is not a metronome with four hands.
-    else if (!a.state && now > a.next) { a.phase = "travel"; a.t = 0; a.next = now + a.rate + Math.random() * a.rate * 1.6; }
+    else if (!a.state && now > a.next) { a.phase = "travel"; a.t = 0; a.actOff = (a.actOff | 0) + 1; a.next = now + a.rate + Math.random() * a.rate * 1.6; }
     var p = poseAt(a, now);
     a.el.style.backgroundPositionX = (p.k * 100 / (a.spec.n - 1)) + "%";
     a.el.style.transform = "translate(" + (p.x * 100).toFixed(1) + "%,"

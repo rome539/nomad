@@ -22,7 +22,10 @@ const mobsEl={firstChild:null,removeChild(){},children:made,
 const ctx={};
 const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+fn("mobVh")+"\n"
   +block("CALM_POSES")+"\n"+block("ATTACK_S")+"\n"
+  +grab("MOB_EYES")+"\n"
   +'var viewMode="image", lastMobs="", anims=[], animTimer=null, stillness=false, ART_V="13";\n'
+  +'var lastSky="day";\n'
+  +'ctx.setSky=function(s){ lastSky=s; };\n'
   +'function runAnims(){}\n'
   +fn("paintMobs")+"\n"+fn("applyState")+"\n"+fn("fitMobRow")+"\n"
   +"mobsEl = _stub;   // the lifted block declares its own, which the stub must win\n"
@@ -44,12 +47,59 @@ made.length=0;
 ctx.paintMobs(["hill-wolf"], null, ["_nosuch"]);
 t("an unknown body is skipped, not drawn blank", !made.some(e=>e.className==="mob dead"));
 
-// NOTHING PUTS ITS FEET THROUGH THE PROSE. Everything up to a man's 42vh is
-// centred on the horizon and untouched; anything taller grows upward out of his
-// line instead of downward past it.
+// ---- THE RED NIGHT ---------------------------------------------------------
+// A hollow thing is drawn with cold pale eyes and gets a second strip of red
+// ones laid over it on a blood moon. Both live on ONE element as two stacked
+// backgrounds, so a single background-position steps them together; the test is
+// that the overlay is there, is FIRST (on top of the base), and that nothing
+// alive ever gets one.
+made.length=0; ctx.setSky("night"); ctx.paintMobs(["the-tide-warden"], null, null);
+let w = made.find(e=>e.className==="mob");
+t("on an ordinary night the dead carry one image", w && w.style.backgroundImage.indexOf(".eyes.webp")<0,
+  w && w.style.backgroundImage);
+
+made.length=0; ctx.setSky("blood"); ctx.paintMobs(["the-tide-warden"], null, null);
+w = made.find(e=>e.className==="mob");
+t("on a blood moon the red eyes are laid on", w && w.style.backgroundImage.indexOf(".eyes.webp")>=0);
+t("...on top of the creature, not under it",
+  w && w.style.backgroundImage.indexOf(".eyes.webp") < w.style.backgroundImage.indexOf("the-tide-warden.webp"));
+t("...and the two layers are stepped as one",
+  w && w.style.backgroundSize.split(",").length===2 && w.style.backgroundPositionX==="0%",
+  w && w.style.backgroundSize);
+
+made.length=0; ctx.setSky("blood"); ctx.paintMobs(["hill-wolf"], null, null);
+w = made.find(e=>e.className==="mob");
+t("a living creature gets no eyes on the red night", w && w.style.backgroundImage.indexOf(".eyes.webp")<0);
+
+// AND THE SKY IS PART OF THE CACHE KEY. paintMobs skips its work when the row is
+// unchanged, and the row IS unchanged when only the moon turns - so without the
+// sky in the key the creature in front of you keeps cold eyes until something
+// else happens to reflow the row.
+made.length=0; ctx.setSky("night"); ctx.paintMobs(["the-tide-warden"], null, null);
+made.length=0; ctx.setSky("blood"); ctx.paintMobs(["the-tide-warden"], null, null);
+t("the moon turning red repaints a row that did not otherwise change", made.length===1,
+  made.length+" elements rebuilt");
+
+// EVERYTHING STANDS ON THE SAME GROUND. The lift used to be clamped at zero, so
+// only creatures TALLER than a man moved and everything shorter was left merely
+// centred on the line - feet stopping short of the ground by half the difference.
+// Unclamped it goes negative for a short creature and pushes it DOWN instead, so
+// a crab, a gull and a drowned man in one room all put their feet in the same
+// place. The test for it is not the sign of the number, it is where the feet land.
 made.length=0;
 ctx.paintMobs(["hill-wolf"], null, null);
-t("a wolf is not lifted", (ctx.anims()[0].lift||0)===0, String(ctx.anims()[0].lift));
+t("a wolf is pushed DOWN, not left floating", ctx.anims()[0].lift < 0,
+  String(ctx.anims()[0].lift.toFixed(4)));
+{
+  // The same arithmetic the drake case uses below, on the shortest thing shipped:
+  // centre = line - lift*vh, feet = centre + vh/2. It must come out at the man's
+  // line whatever the creature is, which is the whole point of unclamping.
+  const LINE=55, vh=ctx.mobVh("stone-adder"), lift=ctx.anims()[0] && 0;
+  made.length=0; ctx.paintMobs(["stone-adder"], null, null);
+  const a=ctx.anims()[0], feet=LINE - a.lift*vh + vh/2;
+  t("...and an adder's feet land exactly where a man's do", Math.abs(feet-76)<0.05,
+    "feet at "+feet.toFixed(1)+"%");
+}
 made.length=0;
 ctx.paintMobs(["the-drake"], null, null);
 const drake=ctx.anims()[0];

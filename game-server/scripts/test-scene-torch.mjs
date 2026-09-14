@@ -503,6 +503,35 @@ t("...and a torch lights the cave at noon", strip(sceneEl.style.backgroundImage)
 ctx.paint("mountain", "snow", "", "sp3", 0, 0, "the-salt-pool");
 t("...and no weather reaches the back of it", strip(sceneEl.style.backgroundImage) === "/room-bg/the-salt-pool-night.webp", strip(sceneEl.style.backgroundImage));
 
+// AND WHAT IS STANDING IN THE DARK IS DARK (rome, 2026-09-12). The plate went
+// black at noon and the creature on it did not: mobHour is the sky OUTSIDE, the
+// sky outside at noon is day, there is no rule for day, so the animal kept full
+// afternoon brightness on a pitch-black cave floor and read as a cut-out
+// pasted over it. Both branches had it and neither was covered, because the
+// three dark plates in the game are the only places it can possibly show.
+//
+// The fix is the same sentence in both: a plate list with no DAY in it is a
+// place daylight never reaches. No new table - one would drift from the plates.
+ctx.setSea(0); ctx.paint("mountain", "day", "sea-cave", "dk1", 0, 0, "", 0);
+t("a creature in the sea cave at NOON is lit by the cave, not the sky", mobsEl.className === "t-night", "mobs=" + mobsEl.className);
+ctx.setSea(0); ctx.paint("mountain", "day", "sea-cave", "dk2", 1, 0, "", 0);
+t("...and by the torch when one is carried", mobsEl.className === "t-night-torch", "mobs=" + mobsEl.className);
+ctx.setSea(0); ctx.paint("mountain", "dawn", "sea-cave", "dk3", 0, 0, "", 0);
+t("...and no hour outside reaches it at all", mobsEl.className === "t-night", "mobs=" + mobsEl.className);
+ctx.paint("mountain", "day", "", "dk4", 0, 0, "the-salt-pool");
+t("the crab stands in the dark at noon too", mobsEl.className === "t-night", "mobs=" + mobsEl.className);
+ctx.paint("mountain", "day", "", "dk5", 1, 0, "the-salt-pool");
+t("...and in the torchlight when you bring one", mobsEl.className === "t-night-torch", "mobs=" + mobsEl.className);
+// THE GUARD ON THE FIX: it must key on the plate list, not on the region. Every
+// crossing ground that HAS a day plate keeps the hour it is actually standing in.
+ctx.setSea(0); ctx.paint("mountain", "day", "shell", "dk6", 0, 0, "", 0);
+// t-day is a class with no rule behind it, and that is on purpose: a sprite is
+// painted for daylight, so at noon it wants no correction. The point of this
+// case is that the shore still reports the HOUR rather than being forced dark.
+t("a shore at noon is still a shore at noon", mobsEl.className === "t-day", "mobs=" + mobsEl.className);
+ctx.setSea(0); ctx.paint("mountain", "night", "ferry", "dk7", 0, 0, "", 0);
+t("...and the ferry at night takes the night, as it always did", mobsEl.className === "t-night", "mobs=" + mobsEl.className);
+
 // AND THE BAND IS ON. This is the line that made eighty-four plates reachable:
 // terrain resolves to "" for any band not in BANDS_WITH_PLATES, so until the
 // crossing was named there every room in it asked for no picture and got none -

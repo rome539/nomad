@@ -38,6 +38,12 @@ if (!sheetArg || !id || !poses.length) {
 const sheet = sheetArg.startsWith("~") ? path.join(process.env.HOME, sheetArg.slice(1)) : path.resolve(sheetArg);
 if (!fs.existsSync(sheet)) { console.error("no such sheet: " + sheet); process.exit(2); }
 
+// The eye marker, and the width of the net thrown round it. Both are stated here
+// rather than derived: the colour is a contract with the prompt, and the
+// tolerance is what lets a compressed edge still be recognised as the marker.
+const EYE = [0, 208, 208], EYE_TOL = 110;
+let eyeTotal = 0, eyeBlobs = 0;
+
 const COLS = { 4: 2, 6: 3, 8: 4, 9: 3, 12: 4 }[poses.length];
 if (!COLS) { console.error(poses.length + " poses — expected 4, 6, 8, 9 or 12"); process.exit(2); }
 const ROWS = Math.ceil(poses.length / COLS);
@@ -130,9 +136,132 @@ for (let i = 0; i < poses.length; i++) {
     }
     kept -= dropped;
   }
+  // THE EYES ARE A SECOND KEY, INSIDE THE CREATURE.
+  //
+  // On a blood moon every HOLLOW thing's eyes come up red — one night in every
+  // 9.2 days — and that cannot be a CSS filter, because a filter treats every
+  // pixel the same. Nor can it be a second sheet: a second generation is a
+  // different individual, so the creature would quietly change on red nights.
+  //
+  // So the dead are drawn with their eyes in flat #00D0D0 and it is split off
+  // here, exactly the way the magenta ground is. Two files come out of one cell
+  // and they share a coordinate frame by construction, which is the whole point:
+  // an overlay cut from the same pixels can never drift from what it sits on.
+  //
+  // Cyan was picked by measurement, not taste. It cannot trip the background key
+  // (min(r-g,b-g) is -208), and the nearest pixel in all 61 shipped strips is 181
+  // away, so nothing already drawn collides with it.
+  //
+  // THE CYAN STAYS. It was proposed here as a key to be replaced with a clouded
+  // grey, and that was wrong about the creature: rome drew these with cold pale
+  // eyes on purpose and that IS what a drowned thing looks like on an ordinary
+  // night. The cyan is the base look, not a placeholder.
+  //
+  // So the split is not "marker out, real colour in" - it is TWO LOOKS OF THE
+  // SAME EYE. The base keeps its cyan, and the layer written beside it holds the
+  // same pixels in red, to be laid over the top on a blood moon, when the game
+  // says every hollow thing's eyes come up "two coals the colour of the moon
+  // above". Cold normally, red on the red nights, and nothing else changes.
+  let eyes = null, eyeN = 0;
+  if (EYE) {
+    const buf = Buffer.alloc(W * H * 4, 0);
+    for (let q = 0; q < W * H; q++) {
+      const o = q * 4;
+      if (data[o + 3] < 24) continue;
+      const d = Math.abs(data[o] - EYE[0]) + Math.abs(data[o + 1] - EYE[1]) + Math.abs(data[o + 2] - EYE[2]);
+      if (d > EYE_TOL) continue;
+      eyeN++;
+      const k = 1 - d / EYE_TOL;                       // 1 at the core, 0 at the rim
+      // The overlay must COVER the cyan underneath it, not blend with it, so the
+      // core is fully opaque and only the rim carries the eye's own soft edge.
+      buf[o] = 255; buf[o + 1] = Math.round(64 * (1 - k)); buf[o + 2] = Math.round(44 * (1 - k));
+      buf[o + 3] = Math.round(255 * Math.min(1, k * 1.6));
+    }
+    if (eyeN) eyes = buf;
+  }
+
   const pct = kept / (info.width * info.height) * 100;
   const file = path.join(outDir, poses[i] + ".png");
   await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toFile(file);
+  // AND THEN IT HAS TO GLOW, WHICH A BLUR CANNOT DO.
+  //
+  // The eye a generator draws is about eight pixels across in a 512 cell, and on
+  // screen that is four. Recoloured red it is red, and it is not "two coals the
+  // colour of the moon above" - it is a red pixel. The first attempt blurred the
+  // marker and screened it back, which looks right in a file viewer and vanishes
+  // in the game: a blur spreads the SAME few hundred pixels of light over a much
+  // larger area, so the wider it reaches the dimmer it gets. Energy is conserved
+  // and that is exactly the wrong property here.
+  //
+  // So the halo is DRAWN, not derived. Each eye is found as a blob of marker
+  // pixels, reduced to a centre and a radius, and a disc is painted around it at
+  // several times that radius with its own falloff and its own brightness -
+  // neither of which is bounded by how much ink the eye had to begin with.
+  //
+  // Baked at cut time rather than filtered at runtime, because the creature and
+  // its eyes share ONE element so a single background-position steps them
+  // together, and any filter on that element would bloom the whole animal.
+  if (eyes) {
+    const lab2 = new Int32Array(W * H).fill(-1), st2 = new Int32Array(W * H);
+    const blobs = [];
+    for (let q = 0; q < W * H; q++) {
+      if (eyes[q * 4 + 3] < 24 || lab2[q] >= 0) continue;
+      const id2 = blobs.length; let n = 0, sx = 0, sy = 0, sp = 0;
+      st2[sp++] = q; lab2[q] = id2;
+      while (sp) {
+        const c = st2[--sp]; n++; sx += c % W; sy += (c / W) | 0;
+        const cx2 = c % W, cy2 = (c / W) | 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = cx2 + dx, ny = cy2 + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const nq = ny * W + nx;
+          if (lab2[nq] >= 0 || eyes[nq * 4 + 3] < 24) continue;
+          lab2[nq] = id2; st2[sp++] = nq;
+        }
+      }
+      blobs.push({ x: sx / n, y: sy / n, r: Math.max(2, Math.sqrt(n / Math.PI)) });
+    }
+    // REACH is what makes it read as light rather than as paint. Seven radii out
+    // is roughly a third of a head, which is what a lit eye does to a dark face.
+    const REACH = 7;
+    for (const bl of blobs) {
+      const R = bl.r * REACH, R2 = R * R;
+      const x0 = Math.max(0, Math.floor(bl.x - R)), x1 = Math.min(W - 1, Math.ceil(bl.x + R));
+      const y0 = Math.max(0, Math.floor(bl.y - R)), y1 = Math.min(H - 1, Math.ceil(bl.y + R));
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const dx = x - bl.x, dy = y - bl.y, d2 = dx * dx + dy * dy;
+        if (d2 > R2) continue;
+        const t = 1 - Math.sqrt(d2) / R;
+        const a = Math.round(255 * Math.pow(t, 2.2) * 0.95);
+        const o = (y * W + x) * 4;
+        if (a <= eyes[o + 3]) continue;
+        eyes[o] = 255;
+        eyes[o + 1] = Math.round(40 + 150 * (1 - t));
+        eyes[o + 2] = Math.round(28 + 120 * (1 - t));
+        eyes[o + 3] = a;
+      }
+    }
+    // ...AND THE COAL ITSELF, WHICH MUST STAY RED. This was written as a near
+    // white centre on the reasoning that the hottest part of a light is white -
+    // true of a flame and wrong here. The eye is small, so at screen size the
+    // white core is most of what you see, and the whole thing reads pale pink
+    // with a red smudge round it instead of a red eye. It also buries the cyan
+    // the creature is drawn with, which is the look on every other night.
+    //
+    // So the centre is RED, kept just bright enough to be the brightest thing in
+    // the frame without going white, and the cyan beneath is left to show at the
+    // rim rather than being stamped over edge to edge.
+    for (let q = 0; q < W * H; q++) {
+      if (lab2[q] < 0) continue;
+      const o = q * 4;
+      eyes[o] = 255; eyes[o + 1] = 46; eyes[o + 2] = 32; eyes[o + 3] = 242;
+    }
+    await sharp(eyes, { raw: { width: W, height: H, channels: 4 } })
+      .png().toFile(path.join(outDir, poses[i] + ".eyes.png"));
+    if (!eyeBlobs) eyeBlobs = 0;
+    eyeBlobs += blobs.length;
+  }
+  eyeTotal += eyeN;
   const warn = pct < 2 ? "  \u2190 ALMOST EMPTY, check the sheet" : pct > 85 ? "  \u2190 barely keyed, is the background magenta?" : "";
   if (warn) bad++;
   const strays = dropped ? "  swept " + (sizes.length - 1 - held) + " stray bit" + ((sizes.length - 1 - held) === 1 ? "" : "s")
@@ -142,6 +271,8 @@ for (let i = 0; i < poses.length; i++) {
   console.log("  " + poses[i].padEnd(18) + pct.toFixed(1).padStart(5) + "% creature" + strays + big + warn);
 }
 console.log("\nwrote " + poses.length + " poses to output/mountain-mobs/" + id + "/");
+if (eyeTotal) console.log("     + an EYES layer: " + eyeBlobs + " eyes found, " + eyeTotal + " marker pixels, glow drawn at 7 radii");
+else if (EYE) console.log("     no eye marker found — if this one is HOLLOW its sheet was drawn without it");
 console.log("next: node scripts/build-mob-strips.mjs " + id + " --patch");
 console.log("      node scripts/audit-mob-strips.mjs");
 if (bad) process.exit(1);

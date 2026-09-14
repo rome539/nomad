@@ -74,7 +74,11 @@ for (const m of blk.matchAll(/^\s*"([a-z0-9-]+)":\s*\{ n: (\d+), aspect: ([\d.]+
 
   const dir = artDir(id);
   if (fs.existsSync(dir)) {
-    const drawn = fs.readdirSync(dir).filter((x) => x.endsWith(".png"))
+    // ...but not "<pose>.eyes.png". Those are the blood-moon eye overlays the
+    // cutter splits off a hollow creature's sheet: a second LAYER of the poses
+    // already here, not six more poses. Counted as art the strip fails to carry,
+    // they report every dead thing in the crossing as half unshipped.
+    const drawn = fs.readdirSync(dir).filter((x) => x.endsWith(".png") && !x.endsWith(".eyes.png"))
       .map((x) => x.slice(0, -4)).filter((x) => !NOT_A_POSE.has(x));
     const missing = drawn.filter((p) => f[p] === undefined);
     if (missing.length) left.push(`${id}: ${missing.join(" ")}`);
@@ -127,7 +131,14 @@ for (const [id, { f }] of Object.entries(anim)) {
   const rec = (a) => { const r = box.poseAt(a, 0); if (r && r.k !== undefined) seen.add(byIdx[r.k]); };
   for (const blow of blows.length ? blows : [null])
     for (let t = 0; t <= 1.8; t += 0.01) rec(mk({ phase: "attack", blow, t }));
-  for (let t = 0; t <= 2.7; t += 0.01) rec(mk({ phase: "travel", t }));
+  // TRAVEL IS SAMPLED ACROSS SUCCESSIVE TRAVELS, not one. A creature with no gait
+  // and no wings spends a travel working through its spare poses one per second,
+  // and TRAVEL_MS only buys 2.6 of them - so which poses it reaches depends on
+  // where the cycle started, and the driver now advances that start each time.
+  // Sweeping the offset is what asks the real question: does this pose EVER come
+  // round, rather than does it come round on the creature's first ever walk.
+  for (let off = 0; off < acts.length + 1; off++)
+    for (let t = 0; t <= 2.7; t += 0.01) rec(mk({ phase: "travel", t, actOff: off }));
   for (const st of ["", "hunt", "fight", "flee", "reel", "hurt", "eyeing", "watch"])
     for (let t = 0; t < 40; t += 0.05) rec(mk({ state: st, t }));   // the idle cycle is slow
   for (let t = 0; t < 2; t += 0.05) {

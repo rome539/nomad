@@ -119,7 +119,13 @@ async function inkBox(buf) {
 const rows = [];
 for (const [id, dir] of [...found].sort()) {
   if (only.length ? !only.includes(id) : FOREIGN.has(id)) continue;
-  const drawn = fs.readdirSync(dir).filter((f) => f.endsWith(".png"))
+  // ...AND NOT THE EYE OVERLAYS. The cutter writes "<pose>.eyes.png" beside each
+  // pose for a creature drawn with the blood-moon eye marker. They live in the
+  // same folder and end in .png, so without this line they read as six more
+  // poses called "idle.eyes", "attack.eyes" and so on — packed into the strip,
+  // doubling its width, and handed to the client as frames it would occasionally
+  // show. They are a SECOND LAYER of the same six, not six more.
+  const drawn = fs.readdirSync(dir).filter((f) => f.endsWith(".png") && !f.endsWith(".eyes.png"))
     .map((f) => f.slice(0, -4)).filter((f) => !NOT_A_POSE.has(f));
   if (!drawn.length) continue;
 
@@ -141,6 +147,45 @@ for (const [id, dir] of [...found].sort()) {
     norm.push(await sharp({ create: { width: cw, height: ch, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
       .composite([{ input: raw[i], left: Math.round((cw - meta[i].width) / 2), top: ch - meta[i].height }])
       .png().toBuffer());
+  }
+
+  // ...AND THEN PUT THE FEET ON ONE LINE, which the block above only did when a
+  // creature's cells were different SIZES. That was the only case the mountain
+  // ever produced — the drake, whose flight cells are taller than its ground
+  // ones — so the padding was written for it and the rest of the roster simply
+  // never needed it. Every hill sheet came back with the animal already sitting
+  // on the bottom edge of its cell, because the prompt asks for exactly that,
+  // and the generator happened to obey.
+  //
+  // THE COAST SHEETS DO NOT OBEY. Their cells are all a uniform 512x512, so the
+  // test above passes them straight through untouched, and the union crop then
+  // faithfully preserves whatever height the animal was drawn at in each cell.
+  // Measured across move-a and move-b: a marsh hound's ink bottom moves 19% of
+  // the frame, a devil crab's 19%, the great crab's 24%. Left and right barely
+  // move at all. So the legs are doing the right thing and the whole animal is
+  // BOUNCING, a fifth of its own height, twice a second. Every hill creature
+  // measures 0.0 there, which is how sure you can be this is the fault.
+  //
+  // GROUND CREATURES ONLY. A bird's up/glide frames are drawn airborne on
+  // purpose and the client adds its own lift on top; dragging them down to the
+  // walking baseline would nail a gliding gull to the beach. A creature with no
+  // flight pose has every pose on the ground, death and sleep included, so one
+  // baseline is simply true of it. The shift is always downward and never past
+  // the lowest pose's own feet, so nothing can leave the canvas.
+  //
+  // This is a no-op on art that already complied — which is all 43 of the hill's
+  // — so it costs a rebuild nothing and cannot move anything that looks right.
+  const eyeShift = new Array(norm.length).fill(0);
+  if (!order.includes("up")) {
+    const pre = await Promise.all(norm.map(inkBox));
+    const floor = Math.max(...pre.map((b) => b.y1));
+    for (let i = 0; i < norm.length; i++) {
+      const dy = floor - pre[i].y1;
+      eyeShift[i] = dy > 0 ? dy : 0;
+      if (dy <= 0) continue;
+      norm[i] = await sharp({ create: { width: cw, height: ch, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
+        .composite([{ input: norm[i], left: 0, top: dy }]).png().toBuffer();
+    }
   }
 
   // ONE crop rect for all of them
@@ -167,8 +212,42 @@ for (const [id, dir] of [...found].sort()) {
       .composite([{ input: cut, left: gut, top: gut }]).png().toBuffer());
   }
 
+  // ---- AND THE EYES, ON EXACTLY THE SAME RECT --------------------------------
+  // A hollow creature ships a second strip holding nothing but its eyes in red,
+  // laid over the base on a blood-moon night. It is built HERE, inside the same
+  // loop, for one reason: it has to use the same X0/Y0/w0/h0, the same scale and
+  // the same gutter as the base. Built separately it would compute its own crop
+  // from its own ink - two red dots - and land them nowhere near the face.
+  //
+  // A pose with no eyes visible gets a BLANK frame, not a missing one. The refuge
+  // man's idle is his back turned with both hands flat on the wall, and the salt
+  // widow dies face down; neither has a face in that frame. Skipping them would
+  // shorten the strip and every frame after it would be off by one.
+  const eyeFiles = order.map((pose) => path.join(dir, pose + ".eyes.png"));
+  const anyEyes = eyeFiles.some((f) => fs.existsSync(f));
+  const eyeFrames = [];
+  if (anyEyes) {
+    const blank = { create: { width: fw, height: fh, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } };
+    for (let i = 0; i < order.length; i++) {
+      if (!fs.existsSync(eyeFiles[i])) { eyeFrames.push(await sharp(blank).png().toBuffer()); continue; }
+      let e = await sharp(eyeFiles[i]).toBuffer();
+      const em = await sharp(e).metadata();
+      // the same bottom-align shift the base got, so the eyes ride with the head
+      if (em.width !== cw || em.height !== ch)
+        e = await sharp({ create: { width: cw, height: ch, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
+              .composite([{ input: e, left: Math.round((cw - em.width) / 2), top: ch - em.height }]).png().toBuffer();
+      if (eyeShift[i]) e = await sharp({ create: { width: cw, height: ch, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
+              .composite([{ input: e, left: 0, top: eyeShift[i] }]).png().toBuffer();
+      const cut = await sharp(e).extract({ left: X0, top: Y0, width: w0, height: h0 }).resize(iw, ih).png().toBuffer();
+      eyeFrames.push(await sharp(blank).composite([{ input: cut, left: gut, top: gut }]).png().toBuffer());
+    }
+  }
+
   if (write) {
     fs.mkdirSync(OUT, { recursive: true });
+    if (anyEyes) await sharp({ create: { width: fw * eyeFrames.length, height: fh, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
+      .composite(eyeFrames.map((b, i) => ({ input: b, left: i * fw, top: 0 })))
+      .webp({ quality: 92, alphaQuality: 100 }).toFile(path.join(OUT, id + ".eyes.webp"));
     await sharp({ create: { width: fw * frames.length, height: fh, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
       .composite(frames.map((b, i) => ({ input: b, left: i * fw, top: 0 })))
       .webp({ quality: 92, alphaQuality: 100 })   // q92 + full alpha: ~6x smaller than png, no alpha flips
