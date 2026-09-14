@@ -251,8 +251,35 @@ for (let i = 0; i < poses.length; i++) {
     // So the centre is RED, kept just bright enough to be the brightest thing in
     // the frame without going white, and the cyan beneath is left to show at the
     // rim rather than being stamped over edge to edge.
+    // ...AND IT HAS TO COVER THE WHOLE EYE, RIM INCLUDED.
+    //
+    // This painted only the pixels that matched the marker within EYE_TOL, and
+    // an eye is drawn anti-aliased: its outer ring is cyan blending into bone,
+    // which is outside the tolerance, is never labelled, and so never got the
+    // red. Measured on the shipped tide warden: 145 cyan pixels in the frame and
+    // only 112 covered - 23% of every eye stayed CYAN on a blood moon, sitting
+    // as a ring around a red centre. At sprite size that does not read as a rim,
+    // it reads as pixels missing out of the eye.
+    //
+    // The detection stays tight (a loose tolerance runs away into the art - 110
+    // finds 115 pixels here, 300 finds 3673). Instead the found mask is GROWN by
+    // a couple of pixels, which can only ever expand around an eye that was
+    // already located, and covers the blend ring it sits in.
+    const CORE_GROW = 2;
+    let core = new Uint8Array(W * H);
+    for (let q = 0; q < W * H; q++) if (lab2[q] >= 0) core[q] = 1;
+    for (let pass = 0; pass < CORE_GROW; pass++) {
+      const grown = core.slice();
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const q = y * W + x;
+        if (core[q]) continue;
+        if ((x > 0 && core[q - 1]) || (x < W - 1 && core[q + 1]) ||
+            (y > 0 && core[q - W]) || (y < H - 1 && core[q + W])) grown[q] = 1;
+      }
+      core = grown;
+    }
     for (let q = 0; q < W * H; q++) {
-      if (lab2[q] < 0) continue;
+      if (!core[q]) continue;
       const o = q * 4;
       eyes[o] = 255; eyes[o + 1] = 46; eyes[o + 2] = 32; eyes[o + 3] = 242;
     }

@@ -1561,7 +1561,7 @@ export const STILL_SOUNDS: Record<string, string> = {
   "the-refuge-man": "breathing held, in a stone box, by something that has no reason left to hold it",
   "the-drowned-ferryman": "wet hemp creaking under a weight, and the weight not letting go",
   "the-pilot": "nothing, and the particular quality of nothing that a man makes when he is counting",
-  "the-scaffold-hand": "rope taking a load, easing, and taking it again",
+  "the-scaffold-hand": "a chisel tapping at nothing, overhead, at a steady working rate that does not vary",
   "the-bridge-mason": "a mallet set down on dressed stone, and picked up",
   "the-eel-cutter": "withy creaking as something in it moves and finds it has nowhere to go",
   "the-reed-walker": "reed, moving, in air you cannot feel moving",
@@ -1953,8 +1953,8 @@ export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-surf
   // AND THE FIVE THAT HOLD WATER, which the first pass missed because they sit
   // in DROWNERS instead of walking. Being sessile is not being alive: the
   // ferryman comes hand over hand with all of him under it, the pilot reads a
-  // line that stopped existing two centuries ago, the scaffold hand hangs
-  // upside down in a rotted harness dressing stone, the refuge man waits out
+  // line that stopped existing two centuries ago, the scaffold hand stands
+  // under the arch dressing a span that is gone, the refuge man waits out
   // something that already passed, and the miller stands waist-deep in his own
   // ground floor. Every one is a drowned MAN. Left out they kept banking hunger
   // to the cap with no mouth to spend it — the same bug, four rooms over.
@@ -3733,8 +3733,8 @@ export const DEAD_WORK_LINES: Record<string, string[]> = {
     "The pilot leans over the rail and reads the water with the whole of his drowned attention — the set of it, the run of it — and knows exactly where the boat should go. The boat is not coming. The water does not know, and he does.",
   ],
   "the-scaffold-hand": [
-    "The scaffold-hand hangs in the rotted harness, upside down, and goes on dressing the stone beneath him with the same small careful strokes. The rope will not hold much longer. It has not held for a long time, and it is not asked to.",
-    "Upside down in the harness, the scaffold-hand works the chisel along the stone, patient as if he had all day and a wage at the end of it. The day has lasted two centuries. The wage has not come, and he is not behind.",
+    "The scaffold-hand stands under the broken arch with both arms up over his head, dressing an underside that went into the channel with the span, with the same small careful strokes. There is nothing above his hands. There has not been for two hundred years.",
+    "Arms up and head back, the scaffold-hand works the chisel along a soffit that is not there, patient as a man with all day and a wage at the end of it. The day has lasted two centuries. The wage has not come, and he is not behind.",
   ],
   "the-refuge-man": [
     "The refuge-man stands inside the stone box and waits, the way a man waits out weather he can hear coming. The weather came and went before the box was built. He is still waiting it out, and he will be right when it passes.",
@@ -4513,7 +4513,7 @@ export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "
   "the-drowned-ferryman",  // the middle of the rope, furthest point from either bank
   "the-pilot",             // the far stage, reading a line that is not there
   "the-refuge-man",        // the causeway's one dry hole, and he is in it
-  "the-scaffold-hand",     // hanging under the arch, over the channel
+  "the-scaffold-hand",     // under the broken arch, arms up, dressing nothing
   "the-quicksand",         // not a creature so much as a place with an opinion
   "conger", "old-conger",                // a mouth on the end of an arm, and the arm is in the pier
 ]);

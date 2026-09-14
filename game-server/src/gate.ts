@@ -1416,7 +1416,12 @@ export async function cmdSmelt(z: ZoneDO, session: Session, arg: string): Promis
   }
   gatehouseFeed(z, `${session.name} works the bellows, smelting scrap down to iron.`, session.pubkey);
   z.send(session, `You rake the scrap into the brazier and work the bellows white-hot. ${bars === 1 ? "A bar" : bars + " bars"} of iron, cast and cooling — ${spend} scrap spent${reached ? `, ${reached} of it out of your keeping` : ""}.`, "forge");
-  z.sendCtx(session);
+  // The scrap is SPENT, so the cached gateSmeltable is stale — the same fault as
+  // the 'cook <catch>' chip that outlived its catch (Lunapilot, 2026-09-14).
+  // sendCtx only reads the cache; refreshGateStock is what recomputes it. Smelt
+  // your last few scrap with the bare send and the 'smelt' chip stays on the
+  // shelf, offering a melt you can no longer make, until you leave and return.
+  await z.sendGateCtx(session);
 }
 
 // Mend a worn piece with scrap iron. Shared with the bench modal.

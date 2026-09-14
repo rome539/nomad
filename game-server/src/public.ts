@@ -6401,7 +6401,7 @@ var thrEnter = document.getElementById("thr-enter");
 var thrKnown = localStorage.getItem("nomad_name");
 // One painting per visit, drawn from the scene set; each knows where its
 // light sits so the crop keeps it in frame. ?scene=<name> forces one.
-var ART_V = "30";
+var ART_V = "31";
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -7920,7 +7920,6 @@ var MOB_SPRITE = {
   // thing actually occupies.
   "the-great-devil-crab": 34, // 2.30m across, and both claws are the big one
   "the-great-crab": 28,    // 2.00m across: the size of a cart, as the room says
-  "the-quicksand": 11,     // 2.50m of flat, fenced with three withies and a rope
   // ...AND THE TWO SMALL CRABS ARE THE ONE PLACE THE RULE IS OVERRIDDEN. Measured
   // honestly a wrack crab is 0.38m across and solves to ONE, below the floor the
   // hill set for an ermine and a coiled adder. That floor is not an accident and
@@ -7984,21 +7983,20 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
-  "the-tide-warden":        { n: 6, aspect: 1.025, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5} },
-  "the-scaffold-hand":      { n: 6, aspect: 1.002, f: {"idle":0,"attack":1,"recover":2,"death":3,"swing":4,"work-the-stone":5} },
-  "the-salt-widow":         { n: 6, aspect: 1.101, f: {"idle":0,"attack":1,"recover":2,"death":3,"feed-the-flue":4,"work-the-pan":5} },
-  "the-refuge-man":         { n: 6, aspect: 1.12, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"turn-from-the-wall":5} },
-  "the-reed-walker":        { n: 6, aspect: 1.009, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"part-the-reed":5} },
-  "the-quicksand":          { n: 6, aspect: 2, f: {"idle":0,"alert":1,"rest":2,"attack":3,"recover":4,"death":5} },
-  "the-pilot":              { n: 6, aspect: 0.941, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"read-the-water":5} },
+  "the-tide-warden":        { n: 8, aspect: 1.007, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5,"alert":6,"recover":7} },
+  "the-scaffold-hand":      { n: 6, aspect: 0.96, f: {"idle":0,"attack":1,"recover":2,"death":3,"swing":4,"work-the-stone":5} },
+  "the-salt-widow":         { n: 6, aspect: 1.011, f: {"idle":0,"attack":1,"recover":2,"death":3,"feed-the-flue":4,"work-the-pan":5} },
+  "the-refuge-man":         { n: 8, aspect: 1.014, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"turn-from-the-wall":5,"alert":6,"recover":7} },
+  "the-reed-walker":        { n: 8, aspect: 1.035, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"part-the-reed":5,"alert":6,"recover":7} },
+  "the-pilot":              { n: 8, aspect: 0.993, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"read-the-water":5,"alert":6,"recover":7} },
   "the-great-devil-crab":   { n: 8, aspect: 1.134, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5,"hit":6,"death":7} },
-  "the-eel-cutter":         { n: 6, aspect: 1.238, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"lift-the-trap":5} },
-  "the-drowned-ferryman":   { n: 6, aspect: 1.218, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-drover":             { n: 6, aspect: 1.18, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"drive-the-road":5} },
-  "the-bridge-mason":       { n: 6, aspect: 0.993, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"dress-the-stone":5} },
+  "the-eel-cutter":         { n: 8, aspect: 1.116, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"lift-the-trap":5,"alert":6,"recover":7} },
+  "the-drowned-ferryman":   { n: 6, aspect: 1.055, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-drover":             { n: 8, aspect: 1.056, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"drive-the-road":5,"alert":6,"recover":7} },
+  "the-bridge-mason":       { n: 8, aspect: 1.035, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"dress-the-stone":5,"alert":6,"recover":7} },
   "bull-seal":              { n: 6, aspect: 1.304, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-wrecker":    { n: 8, aspect: 0.919, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"snatch-escape":5,"recover":6,"hit":7} },
-  "the-fowler":     { n: 6, aspect: 1.068, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"rise-from-the-turf":5} },
+  "the-fowler":     { n: 6, aspect: 1.353, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"rise-from-the-turf":5} },
   "strand-thief":   { n: 8, aspect: 0.922, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"snatch-escape":5,"recover":6,"hit":7} },
   "the-great-crab":   { n: 8, aspect: 1.083, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
   "marsh-hound":      { n: 8, aspect: 1.551, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
@@ -8062,8 +8060,26 @@ var MOB_ANIM = {
 // Straight from the studies' viewer, and worth keeping as the numbers they are.
 // Which of the drawn poses read as an animal at rest rather than an animal
 // doing something — the one it cuts to between breaths.
+// "alert" IS NOT IN HERE, AND THAT IS THE WHOLE POINT (2026-09-13). It used to
+// be, and it sits at the head of WATCH_POSES, so any creature whose only spare
+// frame was an alert used the SAME picture for idling and for having decided
+// about you: it cut to "head up, fixed on you" every three seconds whether or
+// not you existed, and then had nothing left to change to when it actually saw
+// you. Twenty-two creatures were in that state - fourteen of them on the
+// crossing - and on every one of them hunt, fight, eyeing and watch were
+// invisible by construction.
+//
+// It also made the frame impossible to ADD. The crossing's dead are drawn with
+// a work pose in slot two and that pose IS the creature; an alert drawn for
+// them would have won this list ahead of it and quietly taken the work off the
+// screen. So the alert could not be given to the seven that needed it until
+// this word came out of this list.
+//
+// What a creature with nothing but an alert does now: it holds its idle and
+// breathes, which is what a thing going about its business looks like, and the
+// alert means one thing only.
 var CALM_POSES = ["rest","bask","graze","feed","listen","watch","hold-ground",
-  "stand-ground","hold-warm-ground","keep-the-line","alert","inspect-upright",
+  "stand-ground","hold-warm-ground","keep-the-line","inspect-upright",
   // THE VARIANTS' OWN POSES, which were drawn and shipped and never named here
   // (2026-09-09). Every rare form on the hill is six frames — idle, its own
   // pose, two of gait, a blow and a death — and the second slot is the one this
@@ -8111,6 +8127,10 @@ var AIR_SHRINK = 0.25;      // and shrinks, because it is further away
 var BREATH = 0.003;         // the resting scale pulse: three parts in a thousand
 var TRAVEL_MS = 2600;       // how long a creature walks once it starts
 var ROOTED = { "the-milker": 1, "the-butter-wife": 1 };   // they work in place
+// ...and one thing in the world is not drawn at all. See the note in paintMobs:
+// a creature whose entire design is that you cannot see it cannot be given a
+// picture without being ruined by it.
+var UNSEEN = { "the-quicksand": 1 };
 // WHICH CREATURES SHIP A SECOND STRIP OF EYES. Every one is HOLLOW - the game's
 // own register of things with nothing inside - and every one was drawn with its
 // eyes in a flat key colour so the cutter could split them into their own layer.
@@ -8167,7 +8187,9 @@ function paintMobs(ids, doing, dead) {
   anims.length = 0;
   // A body lies at the near edge of the row, out from under the living.
   for (var d1 = 0; d1 < bodies.length; d1++) {
-    var bid = bodies[d1], bspec = MOB_ANIM[bid], bvh = mobVh(bid);
+    var bid = bodies[d1];
+    if (UNSEEN[bid]) continue;          // nothing was drawn, so nothing lies there
+    var bspec = MOB_ANIM[bid], bvh = mobVh(bid);
     var bel = document.createElement("div");
     bel.className = "mob dead";
     bel.style.height = bvh.toFixed(1) + "vh";
@@ -8194,7 +8216,24 @@ function paintMobs(ids, doing, dead) {
     mobsEl.appendChild(bel);
   }
   for (var k = 0; k < order.length; k++) {
-    var id = order[k].id, slot = order[k].idx, vh = mobVh(id), h = vh.toFixed(1) + "vh";
+    var id = order[k].id;
+    // SOME THINGS IN A ROOM HAVE NOTHING TO SHOW. The quicksand is not a
+    // creature, it is a piece of ground with an opinion - the world's own words
+    // for it are "there is no animal here", "it has no shape and there is
+    // nothing in it to hit", and it listens as "nothing at all, from a piece of
+    // ground exactly like every other piece of ground".
+    //
+    // Drawn, it defeats itself. The sheet that shipped was a rimmed oval fenced
+    // with withies and rope, which is a signpost saying HERE over the one thing
+    // in this region whose whole fight is that you are in it to the knee before
+    // you know it is there. No picture can be right: anything legible enough to
+    // draw is legible enough to avoid.
+    //
+    // So it paints nothing, and everything else about it is untouched - it is in
+    // the room, in the chips, in the wire's state list, and it fights. The slot
+    // is skipped rather than blanked so it does not take a gap in the row.
+    if (UNSEEN[id]) continue;
+    var slot = order[k].idx, vh = mobVh(id), h = vh.toFixed(1) + "vh";
     // NOTHING PUTS ITS FEET THROUGH THE PROSE (rome, 2026-09-08: the drake might
     // be too big). Centring on the horizon is right up to about the size of a
     // man and then stops being: at 75.7vh the drake's feet land at 93% with
@@ -8248,7 +8287,7 @@ function paintMobs(ids, doing, dead) {
     var calm = "", acts = [];
     for (var q = 0; q < CALM_POSES.length; q++)
       if (spec.f[CALM_POSES[q]] !== undefined && !calm) calm = CALM_POSES[q];
-    for (var w in spec.f) if (w !== "idle") acts.push(w);
+    acts = mobActs(spec.f);
     spec.acts = acts.length ? acts : ["idle"];
     var sleep = "idle", strike = "", recoil = "idle";
     for (var z2 = 0; z2 < SLEEP_POSES.length; z2++)
@@ -8324,6 +8363,33 @@ function applyState(doing) {
 // gait poses and sway, birds beat up and down and rise - and then it settles.
 // Position and lift are a CSS transform, so the frame window itself never moves
 // and the strip keeps landing exactly on the box.
+// WHICH OF A CREATURE'S FRAMES ARE THINGS IT DOES WHILE NOTHING IS HAPPENING.
+// The rooted path in poseAt shows one of these per second, so this is the list
+// a thing with no gait lives its idle life out of.
+//
+// It used to be every pose but idle, which meant a rooted creature spent that
+// idle cycling through its own attack, its recoil and ITS OWN DEATH. Six of
+// them did it - measured against this same driver - and an undisturbed one
+// reaches the cycle every 20-52 seconds. A conger lying up in its hole rolled
+// over dead, held it a beat, and got up. The salt widow swung at nothing and
+// died at her cold pan, about twice a minute, forever.
+//
+// Everything excluded here is already reachable by its own route - the attack
+// phase owns the blow and the recover, mobBeat owns death, hit and feed - so
+// nothing is lost by keeping them out of the idle.
+//
+// IT LIVES IN ONE PLACE BECAUSE IT USED TO LIVE IN FOUR. This loop was written
+// out by hand in paintMobs, twice more in the preview builder and again in the
+// driver test's fixture, so the bug above was invisible to the suite that
+// exists to catch exactly it: every copy agreed with every other copy and all
+// four were wrong together.
+var NOT_AN_IDLE = ["attack", "bite", "sweep", "breath", "inhale",
+                   "swing", "recover", "hit", "death", "feed"];
+function mobActs(f) {
+  var acts = [];
+  for (var w in f) if (w !== "idle" && NOT_AN_IDLE.indexOf(w) < 0) acts.push(w);
+  return acts;
+}
 function poseAt(a, now) {
   var f = a.spec.f, t = a.t, x = 0, air = 0, s = 1, name = "idle";
   if (a.phase === "death") {
@@ -8359,7 +8425,13 @@ function poseAt(a, now) {
           s *= 0.985 + ((u - 0.74) / 0.26) * 0.015;
         }
       } else if (u < 0.20) {                            // gathers, and draws back
-        name = a.watch;
+        // THROUGH THE FRAME DRAWN FOR THE GATHER, where one exists - the mirror
+        // of the "recover" rule below. One creature carries a "swing", and it is
+        // the load before the blow rather than the blow: arms taken up and back,
+        // body leaning away, nothing released. Without this it was in his IDLE
+        // cycle instead, so he wound up to hit nobody every few seconds and then
+        // struck from a pose he was never drawn gathering in.
+        name = (f.swing !== undefined) ? "swing" : a.watch;
         x = -Math.sin(u / 0.20 * Math.PI / 2) * SWAY * 0.30;
       } else if (u < 0.58) {                            // and goes
         name = blow;

@@ -171,7 +171,7 @@ for (const f of fs.readdirSync(path.join(GAME, "public/mob")))
   if (f.endsWith(".eyes.webp")) EYES[f.slice(0, -10)] = 1;
 
 const CONSTS = block("CALM_POSES") + "\n" + block("ATTACK_S");
-const DRIVER = [fn("poseAt"), fn("mobBeat"), fn("stepAnims"), fn("applyState")].join("\n");
+const DRIVER = [block("NOT_AN_IDLE"), fn("mobActs"), fn("poseAt"), fn("mobBeat"), fn("stepAnims"), fn("applyState")].join("\n");
 
 // THE OTHER TWO LAYERS. A creature on a flat brown field is half a preview: the
 // game is a sky, a keyed ground in front of it, and the animals standing on
@@ -509,7 +509,7 @@ function build(){
       el.dataset.id=id; paintEyes(el,id,a);
       // the client's own choices, made the same way
       var calm=""; for(var q=0;q<CALM_POSES.length;q++) if(a.f[CALM_POSES[q]]!==undefined&&!calm) calm=CALM_POSES[q];
-      var acts=[]; for(var w in a.f) if(w!=="idle") acts.push(w); a.acts=acts.length?acts:["idle"];
+      var acts=mobActs(a.f); a.acts=acts.length?acts:["idle"];
       var sleep="idle"; for(var z=0;z<SLEEP_POSES.length;z++) if(a.f[SLEEP_POSES[z]]!==undefined){sleep=SLEEP_POSES[z];break;}
       var watch="idle"; for(var z9=0;z9<WATCH_POSES.length;z9++) if(a.f[WATCH_POSES[z9]]!==undefined){watch=WATCH_POSES[z9];break;}
       var rate=a.f["move-a"]!==undefined?7000:a.f.up!==undefined?11000:20000;
@@ -574,7 +574,7 @@ function dress(){
   mobsEl.appendChild(el);
   // Built exactly the way the grid builds one, so the action buttons reach it.
   var calm=""; for(var q=0;q<CALM_POSES.length;q++) if(a.f[CALM_POSES[q]]!==undefined&&!calm) calm=CALM_POSES[q];
-  var acts=[]; for(var w in a.f) if(w!=="idle") acts.push(w); a.acts=acts.length?acts:["idle"];
+  var acts=mobActs(a.f); a.acts=acts.length?acts:["idle"];
   var sleep="idle"; for(var z=0;z<SLEEP_POSES.length;z++) if(a.f[SLEEP_POSES[z]]!==undefined){sleep=SLEEP_POSES[z];break;}
   var watch="idle"; for(var z9=0;z9<WATCH_POSES.length;z9++) if(a.f[WATCH_POSES[z9]]!==undefined){watch=WATCH_POSES[z9];break;}
   var strikes=[]; for(var y=0;y<STRIKE_POSES.length;y++) if(a.f[STRIKE_POSES[y]]!==undefined) strikes.push(STRIKE_POSES[y]);
@@ -658,25 +658,33 @@ function repaint(){
 // lands on is a real world-day, so it can never show a sky the game could not.
 // The shelf still prints the day count, so a jump of three is visible as one.
 //
-// AND IT WALKS THE POOL IN ORDER, which is the difference between a button that
-// works and one that appears not to. "The next day that shows a DIFFERENT sky"
-// sounds like stepping and is not: it takes whichever entry the next day
-// happens to land on, and the next day after that can land straight back on the
-// one you just left. Measured on dusk from day 0, six presses gave entries
-// 0 3 0 1 3 2 - the first and third presses showed the SAME sky, and entry 2
-// did not appear until the sixth. Pressing a button twice and arriving back
-// where you started is indistinguishable from pressing a button that does
-// nothing, which is what this was reported as.
-// So it names the entry it wants - the next one along, wrapping - and then
-// walks forward to a day that shows it. Four presses now show four skies. The
-// property that made the old version worth having is untouched: the day it
-// lands on is a real world-day, so it still cannot show a sky the game could
-// not, and the shelf still prints the day count so a jump of three is visible.
+// IT PICKS AT RANDOM, BUT NEVER THE ONE ALREADY ON SCREEN (rome, 2026-09-14).
+//
+// This walked the pool in strict order - 0 1 2 3 - which made the button
+// legible but also made dusk's four skies a fixed carousel: you learn the
+// sequence after one lap and you can never be surprised by the evening, which
+// is the opposite of what a weather pool is for.
+//
+// Straight random was tried first and was reported as a broken button, and the
+// measurement is in the history: six presses on dusk gave 0 3 0 1 3 2 - the
+// first and third showed the SAME sky, and pressing twice to arrive back where
+// you started is indistinguishable from pressing a button that does nothing.
+//
+// Both are fixable at once by drawing at random from the pool MINUS the entry
+// currently showing. Every press changes the sky, and which one it changes to
+// is not predictable. Nothing else moves: the target is still resolved by
+// walking forward to a real world-day that shows it, so the preview still
+// cannot show a sky the game could not, and the shelf still prints the day.
+//
+// This is the PREVIEW's shuffle button and nothing else. The game's own sky is
+// picked in skyPick by hashing the day, and must stay that way - Math.random()
+// there would give two people standing in the same room two different evenings.
 rollBtn.onclick=function(){
   var pool=SKY_POOL[hour.value];
   if(!pool||pool.length<2){ skyRoll++; repaint(); return; }
   var now=mix32(plateHash(hour.value+":"+skyRoll))%pool.length;
-  var want=(now+1)%pool.length;
+  var want=Math.floor(Math.random()*(pool.length-1));
+  if(want>=now) want++;                       // draw from the pool without the current one
   for(var d=skyRoll+1;d<skyRoll+9999;d++)
     if(mix32(plateHash(hour.value+":"+d))%pool.length===want){ skyRoll=d; break; }
   repaint();

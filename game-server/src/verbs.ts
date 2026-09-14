@@ -136,7 +136,8 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
     const mins = Math.round(GATE_CURE_MS / 60_000);
     z.send(session, got + `You hang ${rawName} on the gate's own smoke-racks, safe behind the door. Give it about ${mins} minutes — it cures while you're gone, and nothing in here or out there can lift it. Come back and take it down keeping. ('cure' reads the racks.)`, "gain");
     gatehouseFeed(z, `${session.name} hangs meat on the gate smoke-racks.`, session.pubkey);
-    z.sendCtx(session);
+    // the raw has left your keeping for the racks — same stale-chip bug as cook
+    await z.sendGateCtx(session);
     z.markSimDirty();
     return;
   }
@@ -435,7 +436,17 @@ async function cookAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
   z.send(session, `You lay ${rawT.name} on the brazier's iron and the keeper moves the kettle along without being asked. It comes off in a minute or two: ${world.itemTemplates.get(outId)!.name}. (It will not keep. That is what the racks are for.)`, "gain");
   gatehouseFeed(z, `${session.name} cooks a catch on the brazier.`, session.pubkey);
   z.sendStatus(session);
-  z.sendCtx(session);
+  // ...AND THE CHIP CACHE, BECAUSE THE CATCH IS GONE (Lunapilot, 2026-09-14:
+  // "button called 'cook egg' when i have no eggs"). sendCtx READS
+  // session.gateCookName; only refreshGateStock recomputes it, and this had the
+  // bare send. So cooking your last egg removed the item and left the chip
+  // naming it, until you walked out of the gatehouse and back in.
+  //
+  // Every other gate action that moves your stock — the forge, a trade, the
+  // bench — already goes through sendGateCtx. Cure and cook were the two that
+  // did not, and they are precisely the two that CONSUME from the pools the
+  // cache is built from.
+  await z.sendGateCtx(session);
   z.markSimDirty();
 }
 // Nobody knows what this does. That includes the dungeon.

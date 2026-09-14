@@ -22,6 +22,8 @@ const mobsEl={firstChild:null,removeChild(){},children:made,
 const ctx={};
 const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+fn("mobVh")+"\n"
   +block("CALM_POSES")+"\n"+block("ATTACK_S")+"\n"
+  +block("NOT_AN_IDLE")+"\n"+fn("mobActs")+"\n"
+  +block("ROOTED")+"\n"
   +grab("MOB_EYES")+"\n"
   +'var viewMode="image", lastMobs="", anims=[], animTimer=null, stillness=false, ART_V="13";\n'
   +'var lastSky="day";\n'
@@ -29,7 +31,7 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +'function runAnims(){}\n'
   +fn("paintMobs")+"\n"+fn("applyState")+"\n"+fn("fitMobRow")+"\n"
   +"mobsEl = _stub;   // the lifted block declares its own, which the stub must win\n"
-  +"ctx.paintMobs=paintMobs; ctx.made=()=>made; ctx.anims=()=>anims; ctx.mobVh=mobVh;";
+  +"ctx.clearAnims=function(){ anims.length=0; }; ctx.paintMobs=paintMobs; ctx.made=()=>made; ctx.anims=()=>anims; ctx.mobVh=mobVh;";
 new Function("ctx","_stub","document","window",code)(ctx,mobsEl,
   {createElement:()=>el(), getElementById:()=>null},{innerWidth:1512,innerHeight:850});
 
@@ -138,6 +140,14 @@ t("...two of them asleep, one not", asleep.length===2, asleep.length+" asleep");
 // and each sprite kept the slot it arrived in, whatever the size-sort did to the row
 t("every sprite remembers its slot", wolves.map(a=>a.slot).sort().join(",")==="0,1,2",
   wolves.map(a=>a.slot).join(","));
+
+function mkVh(id){ return ctx.mobVh(id); }
+function mkLift(id){
+  made.length = 0; ctx.clearAnims();
+  ctx.paintMobs([id], null, null);
+  return ctx.anims()[0].lift;
+}
+
 
 console.log(fail?"\n"+fail+" FAILED":"\nall pass");
 process.exit(fail?1:0);

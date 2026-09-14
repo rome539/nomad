@@ -26,7 +26,7 @@ js = js.slice(0, js.indexOf("var anims=[], hour="));   // constants + driver onl
 const ctx = {};
 new Function("ctx", "document", js + `
   ctx.poseAt=poseAt; ctx.mobBeat=mobBeat; ctx.stepAnims=stepAnims; ctx.applyState=applyState;
-  ctx.ANIM=ANIM; ctx.SLEEP_POSES=SLEEP_POSES; ctx.STRIKE_POSES=STRIKE_POSES;
+  ctx.ANIM=ANIM; ctx.mobActs=mobActs; ctx.SLEEP_POSES=SLEEP_POSES; ctx.STRIKE_POSES=STRIKE_POSES;
   ctx.HIT_POSES=HIT_POSES;ctx.WATCH_POSES=WATCH_POSES; ctx.ATTACK_S=ATTACK_S; ctx.STAGGER_S=STAGGER_S; ctx.CALM=CALM_POSES;
   ctx.set=function(v){anims=v}; ctx.hold=function(){return mobHold}; ctx.clr=function(){mobHold=0};
 `)(ctx, { getElementById: () => null });
@@ -36,7 +36,7 @@ new Function("ctx", "document", js + `
 // in their room, so slot 0; the den below passes its own.
 function mk(id, slot) {
   const spec = Object.assign({}, ctx.ANIM[id]);
-  const acts = []; for (const w in spec.f) if (w !== "idle") acts.push(w);
+  const acts = ctx.mobActs(spec.f);   // the CLIENT's own list, not a copy of it
   spec.acts = acts;
   let sleep = "idle"; for (const p of ctx.SLEEP_POSES) if (spec.f[p] !== undefined) { sleep = p; break; }
   let calm = "";     for (const p of ctx.CALM)        if (spec.f[p] !== undefined && !calm) calm = p;
@@ -186,5 +186,48 @@ t("nothing on the wire = it is free to wander",a.state==="");
 
 let w1=mk("hill-wolf"),w2=mk("cave-lion");ctx.set([w1,w2]);ctx.mobBeat(["hill-wolf","cave-lion"],null,null);
 t("two creatures in one round do not swing together",w1.t!==w2.t,"offsets "+w1.t.toFixed(2)+"s / "+w2.t.toFixed(2)+"s");
+
+
+// A ROOTED CREATURE MUST NOT ACT OUT ITS OWN DEATH WHILE NOTHING IS HAPPENING.
+// The rooted path cycles spec.acts one per second, and acts used to be every
+// pose but idle - so a conger lying in its hole rolled over dead, held it a
+// beat and got up, roughly twice a minute. Six creatures did it. The whole
+// reason it survived the suite is that the fixture above built its own copy of
+// the list and agreed with the broken client; it now calls the client's own
+// mobActs, so this assertion is about the shipped code and not about a copy.
+const ROOTED_IDS = Object.keys(ctx.ANIM).filter(function (id) {
+  const f = ctx.ANIM[id].f;
+  return f["move-a"] === undefined && f.up === undefined;
+});
+t("there are rooted creatures to check at all", ROOTED_IDS.length > 0, ROOTED_IDS.length + " of them");
+const NEVER_IDLE = ["death","attack","bite","sweep","breath","inhale","recover","hit","feed"];
+let actedOut = [];
+for (const id of ROOTED_IDS) {
+  const a2 = mk(id);
+  const inv2 = {}; for (const k in a2.spec.f) inv2[a2.spec.f[k]] = k;
+  const shown = new Set();
+  for (let off = 0; off < Math.max(1, a2.spec.acts.length); off++) {
+    a2.phase = "travel"; a2.actOff = off;
+    for (let ms = 0; ms < 2600; ms += 100) { a2.t = ms / 1000; shown.add(inv2[ctx.poseAt(a2, Date.now()).k]); }
+  }
+  const bad = [...shown].filter((n) => NEVER_IDLE.indexOf(n) >= 0);
+  if (bad.length) actedOut.push(id + "[" + bad.join(",") + "]");
+}
+t("a rooted creature never idles through a blow or its own death",
+  actedOut.length === 0, actedOut.join(" ") || "all " + ROOTED_IDS.length + " clean");
+
+// ...and the rooted ones still have their WORK to cycle through, which is the
+// thing the exclusion above must not take away with it.
+const widow = mk("the-salt-widow");
+t("...and still cycles the work it was drawn doing",
+  widow.spec.acts.indexOf("feed-the-flue") >= 0 && widow.spec.acts.indexOf("work-the-pan") >= 0,
+  widow.spec.acts.join(" "));
+
+// AN ALERT IS NOT AN IDLE. "alert" sat in CALM_POSES as well as WATCH_POSES, so
+// a creature whose only spare frame was one cut to it every three seconds and
+// then had nothing left to change to when it actually saw you.
+const seal = mk("bull-seal");
+t("an alert frame is what it shows you, not what it does alone",
+  seal.calm !== "alert" && seal.watch === "alert", "calm=" + (seal.calm || "(none)") + " watch=" + seal.watch);
 
 console.log(fail?"\n"+fail+" FAILED":"\nall pass");process.exit(fail?1:0);
