@@ -6437,7 +6437,19 @@ export const ART_KEYS = new Set<string>([
 // shore road's own corners before the ford and ferry can claim them by name, the
 // ferry's channel before the ford's, and the wide categories last.
 export const CROSSING_RULES: [string, RegExp][] = [
-  ["sea-cave",   /sea-cave|salt-pool|blowhole|fallen-roof/],
+  // THE CAVE IS SEVEN ROOMS, NOT FOUR (2026-09-15). This table's own note says
+  // it is complete and nothing falls through, and that was true of the 212 rooms
+  // the crossing had when it was written. Migration 279 cut the sea cave
+  // afterwards and only four of its rooms carry a word this rule knew, so the
+  // crawl, the drowned chamber and the weed gallery matched NOTHING - on their
+  // id or in their prose - and an empty terrain drops the client out of the
+  // layered path onto the old band wash. The result: three unlit rooms inside a
+  // tide cave, one of which tells you to your face that it is pitch dark, were
+  // painting a bright daylit storm beach under a blue sky.
+  //
+  // They are sea cave and they always were: the terrain already exists, it is
+  // the region's one interior, and it is drawn dark (night / night-torch only).
+  ["sea-cave",   /sea-cave|salt-pool|blowhole|fallen-roof|sand-crawl|drowned-chamber|weed-gallery/],
   // Three road corners named for what they lead to, which is not what they are.
   ["shore-road", /^the-ford-corner$|^the-ferry-lane$|^the-strand-road$|^the-marsh-road$/],
   ["bridge",     /bridge|\bpier\b|plank-span|beam-walk|broken-arch|near-arch|far-arch|starling|scaffold-stub|drowned-span|tollhouse-shell|^the-gap$/],
