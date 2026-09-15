@@ -15,12 +15,15 @@ const fn=(n)=>{const i=src.indexOf("\nfunction "+n+"(");let d=0;
 const block=(f)=>{const i=src.search(new RegExp("^var "+f+" = ","m"));return src.slice(i,src.indexOf("\nfunction ",i));};
 
 const made=[];
-const el=()=>({style:{},className:"",appendChild(){},children:[],
+// dataset is part of the stub because the paint uses it: each sprite carries its
+// width as a share of the picture box, which is what fitMobRow measures the row
+// with now that the style holds a calc() no parseFloat can read.
+const el=()=>({style:{},dataset:{},className:"",appendChild(){},children:[],
   set _c(v){}, getBoundingClientRect:()=>({width:50})});
 const mobsEl={firstChild:null,removeChild(){},children:made,
   appendChild(e){made.push(e)},style:{}};
 const ctx={};
-const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+fn("mobVh")+"\n"
+const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+fn("mobVh")+"\n"+fn("boxPct")+"\n"+fn("picBoxPx")+"\n"
   +block("CALM_POSES")+"\n"+block("ATTACK_S")+"\n"
   +block("NOT_AN_IDLE")+"\n"+fn("mobActs")+"\n"
   +block("ROOTED")+"\n"
@@ -33,7 +36,7 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +"mobsEl = _stub;   // the lifted block declares its own, which the stub must win\n"
   +"ctx.clearAnims=function(){ anims.length=0; }; ctx.paintMobs=paintMobs; ctx.made=()=>made; ctx.anims=()=>anims; ctx.mobVh=mobVh;";
 new Function("ctx","_stub","document","window",code)(ctx,mobsEl,
-  {createElement:()=>el(), getElementById:()=>null},{innerWidth:1512,innerHeight:850});
+  {createElement:()=>el(), getElementById:()=>null}   /* no #scene: picBoxPx falls back to the window, its text-mode path */,{innerWidth:1512,innerHeight:850});
 
 let fail=0; const t=(n,c,e)=>{console.log((c?"  ok   ":"  FAIL ")+n+(e?"   "+e:""));if(!c)fail++;};
 

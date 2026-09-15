@@ -394,17 +394,25 @@ console.log("the hour turns while you stand still");
 
 console.log("where the creatures stand");
 {
-  const at = (terrain) => { ctx.paint("mountain", "night", terrain, "L" + terrain, 0, 0); return mobsEl.style.top; };
-  t("open ground keeps the camera lock", at("scree") === "55%", at("scree"));
+  // THE LINE IS A SHARE OF THE PICTURE BOX NOW, not of the window, so the style
+  // reads calc(var(--picth) * 0.5500) rather than "55%". What the test is about
+  // is unchanged - which line each ground stands on - so it reads the number
+  // back out rather than being loosened to accept anything.
+  const lineOf = (v) => {
+    const m = /^calc\(var\(--picth\) \* ([\d.]+)\)$/.exec(String(v || ""));
+    return m ? Math.round(parseFloat(m[1]) * 1000) / 10 : NaN;   // 0.5500 -> 55
+  };
+  const at = (terrain) => { ctx.paint("mountain", "night", terrain, "L" + terrain, 0, 0); return lineOf(mobsEl.style.top); };
+  t("open ground keeps the camera lock", at("scree") === 55, at("scree"));
   // A corrie is a bowl seen from its edge: the plate looks down across water and
   // the nearest standing ground is far lower in the frame than the lock assumes.
-  t("the corrie rim stands lower", at("corrie-rim") === "72%", at("corrie-rim"));
-  t("...and so does the corrie floor", at("corrie-floor") === "72%", at("corrie-floor"));
-  t("walking back out restores the line", at("cairn") === "55%", at("cairn"));
+  t("the corrie rim stands lower", at("corrie-rim") === 72, at("corrie-rim"));
+  t("...and so does the corrie floor", at("corrie-floor") === 72, at("corrie-floor"));
+  t("walking back out restores the line", at("cairn") === 55, at("cairn"));
   // The line must be re-stated on every paint, not only when it changes.
   ctx.paint("mountain", "night", "corrie-rim", "Lx", 0, 0);
   ctx.paint("mountain", "night", "gatehouse", "Lg", 0, 0);
-  t("the gatehouse does not inherit the corrie's line", mobsEl.style.top === "55%", mobsEl.style.top);
+  t("the gatehouse does not inherit the corrie's line", lineOf(mobsEl.style.top) === 55, mobsEl.style.top);
 }
 
 console.log("no weather indoors");

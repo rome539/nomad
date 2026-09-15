@@ -345,8 +345,20 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  /* ...and "whole plate" gives up the crop entirely and letterboxes it, for
     looking at the art rather than at the room. */
  #stage.whole #scene,#stage.whole #sky{background-size:contain!important;background-position:center!important}
- #stage #scene,#stage #sky{position:absolute}
- #stage #mobs{position:absolute}
+ /* THE LIFT BRINGS THE PAGE'S OWN BOX WITH IT, AND THE STAGE IS NOT THAT BOX.
+    In the game the plate stops short of the prose band - top:0, bottom:--logh -
+    and those two lines come across with everything else. Here --logh is 34vh of
+    the VIEWPORT measured inside a stage a fraction of that tall, so the scene
+    collapsed and the preview went blank. inset:0 puts the picture back on the
+    whole stage, which is what the stage is for. Same specificity as the lifted
+    rule and written after it, which is what makes it win. */
+ #stage #scene,#stage #sky{position:absolute;inset:0}
+ /* ...and the stage IS the picture box, so the standing line - a share of
+    --picth since the layout split - measures against it. 100% and not a
+    container unit: #mobs is absolutely positioned in #stage, so a percentage
+    top already resolves against exactly the height we want, with nothing to
+    contain and nothing to collapse. */
+ #stage #mobs{position:absolute;--picth:100%}
  #stage.bare::before{content:"no plate for this ground — the world paints bare here too";
    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#6b5c40}
  #shelf{padding:8px 14px;color:#9a8b66;font-size:11px;border-bottom:1px solid #2c2418;
@@ -948,7 +960,14 @@ const checks = [
   // A LAYOUT CHECK, because the first version of the stage passed every other
   // one of these while standing the animal in a corner: the rules that place it
   // were simply never lifted, and nothing here asked whether they had been.
-  ["...on the horizon, laid out", /#stage #mobs \{[^}]*top: 55%/.test(page) && /#stage #mobs \{[^}]*display: flex/.test(page)],
+  // The line is a share of the PICTURE BOX now, not of the viewport, so this
+  // asks for the calc rather than the bare percentage - and asks that the stage
+  // actually defines the box, because the rule is inert without it.
+  ["...on the horizon, laid out",
+    /#stage #mobs \{[^}]*top: calc\(var\(--picth\) \* 0\.55/.test(page)
+    && /#stage #mobs \{[^}]*display: flex/.test(page)
+    && /#stage #mobs\{[^}]*--picth:100%/.test(page)
+    && /#stage #scene,#stage #sky\{[^}]*inset:0/.test(page)],
   ["the roster was built", (nodes.grid?.children.length ?? 0) > 20, (nodes.grid?.children.length ?? 0) + " cells"],
   ["every tint reached the CSS", Object.keys(tints).every((k) => page.includes(".t-" + k + " .mob{")), Object.keys(tints).join(" ")],
   ["nothing was left uninterpolated", !page.includes("${")],

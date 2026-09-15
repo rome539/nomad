@@ -96,6 +96,45 @@ export const PAGE = `<!doctype html>
   ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
   html, body { height: 100%; }
   @supports (height: 100dvh) { html, body { height: 100dvh; } }
+  /* HOW THE WINDOW IS DIVIDED IN IMAGE VIEW. One number: the prose band's
+     height. The picture takes what is left, and every measurement inside the
+     picture - the standing line, every sprite's height and width - is a share
+     of --picth rather than of the viewport, which is what keeps the camera
+     lock true when the band moves. */
+  /* BOTH ON THE BODY, AND THAT IS NOT A STYLE CHOICE. A custom property is
+     inherited as a COMPUTED value, so --picth declared on :root would resolve
+     var(--logh) against :root's own --logh and keep that number forever -
+     data-log and data-view live on the body, so every override of the dial
+     would have been inherited by the band and ignored by the picture, and the
+     two halves would overlap by exactly the amount the grip moved. Declared on
+     the same element as the overrides, the reference resolves against whichever
+     --logh won there. */
+  body {
+    /* 24vh, not 34 (rome, 2026-09-15). The band and the picture's width are the
+       same dial wearing two hats: the plate is 1.60:1 and whatever the band
+       leaves is wider than that, so every vh of prose is taken off the sides of
+       the room. At 34 the plate drew 895px of a 1512 window; at 24 it draws
+       1030 and the sky either side falls from 309px to 241. Still a third more
+       prose than the quarter it was before any of this. */
+    --logh: 24vh;
+    /* --botth IS MEASURED, NOT ASSUMED, and that is the whole lesson of this
+       rule. The first cut said calc(100vh - var(--logh)) - the picture is the
+       window less the prose band - and the column does not end at the band:
+       the chip tray and the input line sit below it, in flow. So the plate's
+       bottom edge landed BELOW the band's top by exactly their height, the two
+       overlapped, and the picture ran on behind the chips.
+       fitPicture() sets --botth to the real distance from the top of the grip
+       to the bottom of the window, so whatever is down there - a wrapped chip
+       row, a taller input, something not built yet - the picture ends where the
+       words begin and nowhere else. The fallback is only for the first frame,
+       before any measuring has happened. */
+    --botth: var(--logh);
+    --picth: calc(100dvh - var(--botth));
+  }
+  /* THE GRIP MUST NOT MOVE THE DIAL (rome, 2026-09-15). It set --logh to 62vh,
+     and the picture is the dial's complement stretched to fill it - so opening
+     the log squashed the room into a third of its height. --logh holds still
+     now and the band grows UPWARD over the plate. */
   body {
     background: var(--bg);
     color: var(--cream);
@@ -911,10 +950,23 @@ export const PAGE = `<!doctype html>
      room, edge to edge, and everything else floats on top of it. Fixed rather
      than flexed so it fills the window whatever the log is doing, and z-indexed
      under the chrome, which is already opaque and needs no help. */
+  /* THE PICTURE HAS ITS OWN BOX AGAIN (rome, 2026-09-15). It was full bleed
+     with the prose lying on top of it, and the two were fighting for the same
+     band: MOB_LINE exists to push a creature DOWN onto the near ground, and the
+     near ground is exactly where the words were. Measured on the coast, where
+     every line was lifted six to get animals out of the water, between 15 and
+     ALL 23 of the region's creatures had their feet in the text depending on
+     the ground - 23 of 23 on the storm beach. No tuning fixes that while the
+     words sit on the picture, because every point that puts feet on silt puts
+     them further into the prose.
+     So: the plate ends where the prose begins, and neither covers the other.
+     --logh is the one dial; --picth is what everything in the picture measures
+     itself against, and it is a REAL box, not the window. */
   body[data-view="image"] #scene {
     display: block;
     position: fixed;
-    inset: 0;
+    left: 0; right: 0; top: 0;
+    bottom: var(--botth);
     z-index: 0;
     background-color: transparent;
     /* COVER, NOT CONTAIN. Fitting the whole plate inside the window sounds like
@@ -923,9 +975,56 @@ export const PAGE = `<!doctype html>
        the scene stops being the room you are standing in. Cover crops instead -
        the camera lock reserves the edges for exactly this - and the picture
        reaches every corner, which is what it did from the first plate and what
-       it does again (rome, 2026-09-12). */
-    background-size: cover;
-    background-position: center 55%;
+       it does again (rome, 2026-09-12).
+
+       AND THAT HELD WHILE THE PICTURE WAS THE WHOLE WINDOW (rome, 2026-09-15).
+       It stopped holding the moment the prose took a third of the screen: the
+       plate is 1.60:1 and the box left over is about 2.70:1, so cover scaled to
+       the width and threw away between 32% and 41% of every plate, top and
+       bottom - which is the near ground the stage lock spends its whole bottom
+       third on. Contain shows the room, all of it.
+
+       THE LEFTOVER IS SKY, NOT A BAR. That is the half of the old argument
+       still worth keeping: contain on its own leaves dead ground down both
+       sides. So only the SCENE is contained; the sky layer behind it stays
+       cover and runs edge to edge. A sky is built to survive an arbitrary crop
+       - no focal object, interest spread evenly, and that is written into its
+       own recipe - so it is the one layer in the game that loses nothing by
+       being cut, and it turns two dead margins into more of the same weather. */
+    /* STRETCHED TO THE BOX (rome, 2026-09-15). Not contain, not cover: the
+       plate is pulled to fill the picture box exactly, so the whole room shows
+       with no crop AND no sky margin. It costs the aspect - the box runs about
+       2.3:1 against the plate's 1.60:1, so the room is drawn roughly 47% wider
+       than it was painted - and the creature sprites do NOT stretch with it,
+       being their own elements. Revert is this one line back to contain. */
+    background-size: 100% 100%;
+    background-position: center center;
+    /* AND ITS EDGES DISSOLVE INTO THE WEATHER. Contained, the plate stops dead
+       partway across the box and the hard vertical line reads as a frame - a
+       picture of a room hung on a wall, rather than the room. The sky layer is
+       already behind it and already running edge to edge, so fading the
+       SCENE's alpha at the plate's own edges hands those pixels back to the
+       sky and the seam goes.
+       --pmarg is where the plate actually starts: contain fills the box's
+       height, so the plate is picth * 1.60 wide and the rest is split evenly.
+       max() pins it at zero on a window narrow enough that the plate already
+       spans the full width, where there is no seam to hide. */
+    /* ZERO WHILE THE PLATE IS STRETCHED. There is no margin any more, so the
+       fade would have nothing to dissolve into and would simply rub out 64px
+       of real room at each edge. Put it back to 64px the moment the size goes
+       back to contain - the two belong together. */
+    --pmarg: 0px;
+    --feather: 0px;
+    -webkit-mask-image: linear-gradient(to right,
+      transparent var(--pmarg),
+      #000 calc(var(--pmarg) + var(--feather)),
+      #000 calc(100% - var(--pmarg) - var(--feather)),
+      transparent calc(100% - var(--pmarg)));
+    mask-image: linear-gradient(to right,
+      transparent var(--pmarg),
+      #000 calc(var(--pmarg) + var(--feather)),
+      #000 calc(100% - var(--pmarg) - var(--feather)),
+      transparent calc(100% - var(--pmarg)));
     background-repeat: no-repeat;
     transition: filter .8s ease;
   }
@@ -940,7 +1039,11 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #sky {
     display: block;
     position: fixed;
-    inset: 0;
+    /* THE SAME BOX AS THE SCENE, to the pixel. The scene is keyed above its
+       horizon and this shows through the hole; a sky on a different box would
+       slide against the skyline it is supposed to sit behind. */
+    left: 0; right: 0; top: 0;
+    bottom: var(--botth);
     /* NOT -1. A fixed element at a negative z-index paints BEHIND the body's
        background, and this body has an opaque one — so the sky was drawn, and
        covered, and every layered room showed its scene over flat brown with no
@@ -997,6 +1100,10 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #scene.t-blood::after {
     background: #d67c6c;
     mix-blend-mode: multiply;
+    /* NOTE, if this is ever made reachable again: it REPLACES the edge feather
+       the base rule sets, because mask-image does not compose across rules. A
+       revived blood tint would want both - the scene's own image to keep red
+       off the sky, and the horizontal fade to keep the plate's edge soft. */
     -webkit-mask-image: var(--sceneimg); mask-image: var(--sceneimg);
     -webkit-mask-size: cover; mask-size: cover;
     -webkit-mask-position: center 55%; mask-position: center 55%;
@@ -1049,7 +1156,10 @@ export const PAGE = `<!doctype html>
        biggest thing on the hill is the only one whose feet reach it at all.
        This is also how the crawlers this is drawn after framed a monster: in
        the middle of the view window, not standing at the bottom of it. */
-    top: 55%;
+    /* 55% OF THE PICTURE, NOT OF THE WINDOW. The element is position:fixed, so
+       a bare percentage here would resolve against the viewport and the whole
+       roster would sit wherever the prose band happened to leave it. */
+    top: calc(var(--picth) * 0.55);
     transform: translateY(-50%);
     z-index: 0;
     align-items: center;
@@ -1185,30 +1295,29 @@ export const PAGE = `<!doctype html>
   #scene.sky-in    { --scrim: radial-gradient(ellipse at 50% 62%, rgba(60,40,18,.10) 0%, rgba(10,8,6,.30) 55%, rgba(6,5,4,.52) 100%); }
   /* THE PROSE LIES ON THE PICTURE. No hard edge, no border, no panel: the log
      falls to the floor of the column and fades up out of the image, darkest
-     where the newest line sits and clear at the top so the painting keeps most
-     of its room. It grows with what it holds up to a ceiling and then scrolls,
-     so a long fight never swallows the whole window. */
+     where the newest line sits. It is a BAND now rather than a veil over the
+     picture (rome, 2026-09-15): it holds a fixed share of the window, the plate
+     holds the rest, and a long fight scrolls inside it instead of creeping up
+     over the room. */
   body[data-view="image"] #log {
     position: relative;
     z-index: 1;
-    margin-top: auto;
-    flex: 0 1 auto;
-    /* A QUARTER (rome, 2026-09-12). It was 25vh, then 33vh for the read, and it
-       is a quarter again now that the prose is back to lying ON the picture
-       rather than sitting beside it: over the plate the strip costs the picture
-       nothing but what it covers, so the number is only about how much of the
-       room the words are allowed to hide. */
-    max-height: 25vh;
-    transition: max-height .22s ease;
-    /* Built from --bg so a repainted theme repaints this too. It was three
-       hardcoded browns, which meant every theme but the default one had the
-       prose sitting on the DEFAULT theme's ground. */
-    background: linear-gradient(to bottom,
-      color-mix(in srgb, var(--bg) 0%, transparent) 0%,
-      color-mix(in srgb, var(--bg) 72%, transparent) 12%,
-      color-mix(in srgb, var(--bg) 92%, transparent) 40%,
-      color-mix(in srgb, var(--bg) 97%, transparent) 100%);
-    text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(0,0,0,.8);
+    /* ...and NOT here: see the grip above. */
+    margin-top: 0;
+    /* A BAND, NOT A VEIL. Fixed to --logh both ways: the picture's box is the
+       exact complement of it, so growing one shrinks the other and nothing ever
+       lies over anything. "flex: none" rather than a max-height, because a
+       max-height lets the band shrink to its content and the picture would then
+       stretch to a height the sprites were not measured against. */
+    flex: none;
+    height: var(--logh);
+    min-height: 0;
+    transition: height .22s ease;
+    /* Opaque now, and built from --bg so a repainted theme repaints this too.
+       The gradient existed to let the picture read through the words; there is
+       no picture under here any more. A single hairline keeps the edge honest. */
+    background: var(--bg);
+    border-top: 1px solid var(--line);
   }
   /* PULLED OPEN IS THE WHOLE COLUMN (rome, 2026-09-06). It was half the window,
      which is the worst of both: not enough to read a long fight back through,
@@ -1221,26 +1330,29 @@ export const PAGE = `<!doctype html>
      panel with a border, but it reaches full ground within a tenth of the
      column so nothing you are actually reading sits on stone. */
   body[data-view="image"][data-log="big"] #log {
-    flex: 1 1 auto;
-    max-height: none;
-    /* AND IT HAS TO BE ALLOWED TO SHRINK. A flex item's min-height resolves to
-       its CONTENT height by default, so lifting the ceiling was not enough: the
-       log simply grew to whatever it was holding, overflowed the column, and —
-       because margin-top:auto pins it to the bottom — the overflow went UPWARD,
-       straight over the bar. Zero lets flex do its job, and the log scrolls
-       inside the space it is given, which is what it does in text mode too.
-       Exactly the same fault as the sprite row's min-width, one axis over. */
-    min-height: 0;
+    /* TALLER ON SCREEN, THE SAME SIZE IN THE COLUMN. A flex item's outer size is
+       its height plus its margins, so 62vh of band with (--logh - 62vh) of
+       negative margin still occupies exactly --logh of the column: nothing
+       below it moves and the extra height goes upward, over the plate. z-index
+       1 is on the base rule and the scene is 0, so it paints over the room. */
+    height: 62vh;
+    margin-top: calc(var(--logh) - 62vh);
+    /* Over a picture again, so the veil comes back for this state only. */
     background: linear-gradient(to bottom,
       color-mix(in srgb, var(--bg) 0%, transparent) 0%,
-      color-mix(in srgb, var(--bg) 86%, transparent) 4%,
-      color-mix(in srgb, var(--bg) 97%, transparent) 10%,
+      color-mix(in srgb, var(--bg) 82%, transparent) 5%,
+      color-mix(in srgb, var(--bg) 96%, transparent) 14%,
       color-mix(in srgb, var(--bg) 99%, transparent) 100%);
+    border-top: 0;
+    text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(0,0,0,.8);
   }
-  /* On a short window the picture yields first, never the words. Only the
-     CLOSED height is a fraction of the screen now, so only it needs this. */
+  body[data-view="image"][data-log="big"] #loggrip {
+    transform: translateY(calc(var(--logh) - 62vh));
+  }
+  /* On a short window the picture yields first, never the words - the rule has
+     not changed, only where it is written: one dial moves both halves. */
   @media (max-height: 620px) {
-    body[data-view="image"] #log { max-height: 45vh; }
+    body[data-view="image"] { --logh: 46vh; }
   }
   /* The handle: a slim tab on the top edge of the strip, the only chrome the
      picture is allowed. Hidden entirely in text mode, where the log is already
@@ -1250,7 +1362,16 @@ export const PAGE = `<!doctype html>
     display: block;
     position: relative;
     z-index: 2;
-    margin: 0 auto -1px;
+    /* THE AUTO MARGIN BELONGS TO THE FIRST THING IN THE BOTTOM CLUSTER, and
+       that is the grip, not the log. In a column flex every pixel of free space
+       is absorbed by the FIRST auto margin it meets - so with it on the log,
+       the space opened up BETWEEN the grip and the log and left the grip
+       stranded up by the bar. Harmless while nothing measured it; fatal once
+       the picture's floor was measured from it, which put the plate's bottom
+       edge above its top and painted the room into a forty-pixel sliver.
+       On the grip, the whole cluster - grip, band, chips, input - sits down at
+       the bottom together and the grip is genuinely the top of it. */
+    margin: auto auto -1px;
     width: 74px;
     padding: 3px 0 4px;
     border: 0;
@@ -5385,8 +5506,18 @@ function wireMap() {
   document.getElementById("mapzhere").addEventListener("click", mapCenterHere);
   window.addEventListener("resize", function () { if (mapEl.classList.contains("open")) mapResize(); });
   // ...and the creature row re-fits, or a window dragged narrower leaves the
-  // room standing at the size it was when you last walked into it.
-  window.addEventListener("resize", fitMobRow);
+  // room standing at the size it was when you last walked into it. It goes
+  // through fitPicture because the BOX has to be re-measured before the row
+  // inside it can be: a shorter window wraps the chip tray, which moves the top
+  // of the prose, which is where the picture stops.
+  window.addEventListener("resize", fitPicture);
+  // ...and once the band has finished growing or shrinking. Guarded on the
+  // property because the band also transitions other things, and a measurement
+  // per animated property is a measurement three times too many.
+  var logForFit = document.getElementById("log");
+  if (logForFit) logForFit.addEventListener("transitionend", function (e) {
+    if (e.propertyName === "height") fitPicture();
+  });
 }
 
 function renderMap(f) {
@@ -7591,14 +7722,14 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
       scenePainted = terr ? "/room-bg/" + terr + ".webp" : "";
       if (skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; }
       sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".webp?v=" + BG_V + ")" : "";
-      sceneEl.style.backgroundSize = "cover";
+      sceneEl.style.backgroundSize = "100% 100%";   // see the layered path below
       // NO WEATHER INDOORS. The gatehouse is one baked plate lit by its own
       // fire, and washing it with the hour put rain on a room with a roof and
       // dusk on a room with no window. Whatever is happening outside stops at
       // the door (rome, 2026-09-08).
       sceneEl.className = (kind === "gatehouse") ? "" : (SKY_KNOWN[lastSky] ? "sky-" + lastSky : "");
-      if (mobsEl) { mobsEl.className = ""; mobsEl.style.top = MOB_LINE_DEFAULT + "%"; }
-      sceneEl.style.backgroundPosition = "center 55%";
+      if (mobsEl) { mobsEl.className = ""; mobsEl.style.top = boxPct(MOB_LINE_DEFAULT); }
+      sceneEl.style.backgroundPosition = "center center";
       return;
     }
   }
@@ -7623,7 +7754,11 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
   var put = function () {
     if (mine !== sceneSeq) return;         // a newer room got here first
     sceneEl.style.backgroundImage = url;
-    sceneEl.style.backgroundSize = "cover";
+    // CONTAIN, AND SET INLINE BECAUSE THE PAINT IS INLINE. The stylesheet says
+    // contain; this line said cover on every repaint and an inline style wins,
+    // so the sheet's rule would have been dead the moment a room was walked
+    // into. They have to agree, and the room is the one that must be whole.
+    sceneEl.style.backgroundSize = "100% 100%";
     // The mask on the blood tint needs the same picture; a custom property is
     // the only way to hand a stylesheet a URL that is decided at runtime.
     sceneEl.style.setProperty("--sceneimg", url);
@@ -7659,9 +7794,14 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
       // ...and standing where this plate's ground actually is. Set every time,
       // never only when it differs: a line left over from the room behind you
       // would put the next room's animals wherever the last one's stood.
-      mobsEl.style.top = line + "%";
+      mobsEl.style.top = boxPct(line);
     }
-    sceneEl.style.backgroundPosition = "center 55%";
+    // ...and centred rather than pinned at 55%. The 55% only ever meant
+    // anything while the picture overflowed its box; contained, it does not
+    // overflow vertically at all and the plate fills the box's height exactly -
+    // which is what keeps MOB_LINE honest, since the line is a share of that
+    // same box and the plate now occupies all of it.
+    sceneEl.style.backgroundPosition = "center center";
     scenePainted = scene;
   };
   // Already up: this is a light change on the same ground (the hour turning, a
@@ -7687,6 +7827,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
 function applyView() {
   viewMode = (viewWant === "image" && artAllowed) ? "image" : "text";
   document.body.setAttribute("data-view", viewMode);
+  // The grip, the band and the chips all appear or vanish with the view, so the
+  // floor of the picture is a different number either side of this line. After
+  // a frame, because none of it has been laid out yet.
+  requestAnimationFrame(fitPicture);
   // The button reads the CHOICE, not the compromise — otherwise it would say
   // "text" back to someone who had just asked for pictures and was waiting.
   if (viewBtn) viewBtn.textContent = viewWant;
@@ -7787,6 +7931,12 @@ var MAN_VH = 42;
 var MOB_P = 0.45;
 var MOB_K = 42 / Math.pow(22, MOB_P);
 function mobVh(id) { return MOB_K * Math.pow(MOB_SPRITE[id], MOB_P); }
+// A SHARE OF THE PICTURE, WRITTEN AS CSS. Every number in MOB_SPRITE and
+// MOB_LINE is a percentage of the FRAME, and the frame is now a box inside the
+// window rather than the window itself - so the unit is --picth and not vh.
+// Kept as one function because four callers used to spell "vh" themselves and
+// three of them would have been missed.
+function boxPct(n) { return "calc(var(--picth) * " + (n / 100).toFixed(4) + ")"; }
 var MOB_SPRITE = {
   // EVERY NUMBER HERE IS A HEIGHT IN METRES, CONVERTED. A standing man is 1.75m
   // and he is 22, so a sprite's number is 22 * (its height / 1.75) and nothing
@@ -8244,8 +8394,9 @@ function paintMobs(ids, doing, dead) {
     var bspec = MOB_ANIM[bid], bvh = mobVh(bid);
     var bel = document.createElement("div");
     bel.className = "mob dead";
-    bel.style.height = bvh.toFixed(1) + "vh";
-    bel.style.width = (bvh * bspec.aspect).toFixed(1) + "vh";
+    bel.style.height = boxPct(bvh);
+    bel.style.width = boxPct(bvh * bspec.aspect);
+    bel.dataset.w = (bvh * bspec.aspect).toFixed(2);   // fitMobRow reads this, not the style
     bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + MOB_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
@@ -8285,7 +8436,7 @@ function paintMobs(ids, doing, dead) {
     // the room, in the chips, in the wire's state list, and it fights. The slot
     // is skipped rather than blanked so it does not take a gap in the row.
     if (UNSEEN[id]) continue;
-    var slot = order[k].idx, vh = mobVh(id), h = vh.toFixed(1) + "vh";
+    var slot = order[k].idx, vh = mobVh(id), h = boxPct(vh);
     // NOTHING PUTS ITS FEET THROUGH THE PROSE (rome, 2026-09-08: the drake might
     // be too big). Centring on the horizon is right up to about the size of a
     // man and then stops being: at 75.7vh the drake's feet land at 93% with
@@ -8316,7 +8467,8 @@ function paintMobs(ids, doing, dead) {
     // layout declines to honour — every frame is squeezed or pulled and the whole
     // row stretches. So the width is computed here from the same height the table
     // gave, and the element is told not to flex at all.
-    el.style.width = (vh * spec.aspect).toFixed(1) + "vh";
+    el.style.width = boxPct(vh * spec.aspect);
+    el.dataset.w = (vh * spec.aspect).toFixed(2);
     // TWO LAYERS ON ONE ELEMENT, and they must be one element rather than two.
     // A hollow thing is drawn with cold pale eyes, and on a blood moon the game
     // says they come up "two coals the colour of the moon above" - so the red
@@ -8376,16 +8528,61 @@ function paintMobs(ids, doing, dead) {
 // unreliably, and these numbers are known exactly.
 function fitMobRow() {
   if (!mobsEl) return;
-  var vh = window.innerHeight / 100, vw = window.innerWidth / 100, need = 0, n = 0;
+  // THE WIDTHS ARE ON THE ELEMENTS, NOT IN THEIR STYLE. They used to be plain
+  // vh strings this could parse; they are calc() against the picture box now,
+  // and parseFloat("calc(...)") is NaN - which would silently fall through to
+  // getBoundingClientRect and measure a row that is already scaled, compounding
+  // the scale a little more on every repaint. Each sprite carries its width as
+  // a share of the box in dataset.w, which is the same number the style was
+  // built from and cannot drift from it.
+  var picth = picBoxPx(), vw = window.innerWidth / 100, need = 0, n = 0;
   for (var i = 0; i < mobsEl.children.length; i++) {
     var c = mobsEl.children[i];
-    need += parseFloat(c.style.width || "0") * vh || c.getBoundingClientRect().width;
+    var w = parseFloat(c.dataset.w || "0");
+    need += w ? w / 100 * picth : c.getBoundingClientRect().width;
     n++;
   }
   if (!n) return;
   need += (n - 1) * 3 * vw + 8 * vw;          // the gap and the padding, same as the CSS
   var k = Math.min(1, (window.innerWidth - 8 * vw) / Math.max(1, need - 8 * vw));
   mobsEl.style.transform = "translateY(-50%)" + (k < 1 ? " scale(" + k.toFixed(3) + ")" : "");
+}
+// THE PICTURE BOX, IN PIXELS. Read from the scene element itself rather than
+// recomputed from --logh: the dial can be moved by a media query or the grip,
+// and asking the element is the one answer that is always current.
+function picBoxPx() {
+  var el = document.getElementById("scene");
+  var h = el ? el.getBoundingClientRect().height : 0;
+  return h || window.innerHeight;             // text mode, or before the first paint
+}
+// WHERE THE WORDS ACTUALLY BEGIN. The bottom of the window is not just the
+// prose band: the grip sits on top of it and the chip tray and the input line
+// sit under it, all of them in flow and all of them able to change height - a
+// chip row wraps, the input grows, a theme sets a different line-height. So the
+// picture's floor is measured off the DOM rather than derived from --logh, and
+// re-measured whenever the shape of that stack could have changed.
+//
+// Read from the GRIP because it is the topmost thing in the bottom cluster and
+// it is always present in image view; falling back to the log covers the moment
+// before the grip has been laid out.
+function fitPicture() {
+  if (viewMode !== "image") return;
+  // AND NOT WHILE THE LOG IS OPEN, which is the line the first attempt at this
+  // was missing. Opening the band moves the grip with a CSS transform, and
+  // getBoundingClientRect reports the visual rect - transform included - so
+  // this measured the grip in its raised position, decided the picture's floor
+  // was most of the way up the window, and squashed the room exactly the way
+  // the old --logh override did. The open band is an overlay: it takes no more
+  // room in the column than the closed one, so the floor has not moved and
+  // there is nothing here to re-measure. Freeze it and the picture holds still.
+  if (document.body.getAttribute("data-log") === "big") return;
+  var top = document.getElementById("loggrip"), lg = document.getElementById("log");
+  var r = top && top.offsetParent !== null ? top.getBoundingClientRect()
+        : lg ? lg.getBoundingClientRect() : null;
+  if (!r) return;
+  var bott = Math.max(0, Math.round(window.innerHeight - r.top));
+  document.body.style.setProperty("--botth", bott + "px");
+  fitMobRow();                     // the row is measured against the box, so it follows
 }
 // WHAT THE WORLD SAYS EACH OF THEM IS DOING. A creature holds this until the
 // world says otherwise; the one-shots (a blow, a meal, a death) play over the
@@ -8736,6 +8933,18 @@ try { logBig = localStorage.getItem("nomad_logbig") === "1"; } catch (e) {}
 function setLogBig(on) {
   logBig = !!on;
   document.body.setAttribute("data-log", logBig ? "big" : "small");
+  // MEASURE AFTER THE MOVEMENT, NEVER DURING IT. The open band is an overlay -
+  // it occupies exactly as much of the column as the closed one - so the
+  // picture's floor is the same number either side of this toggle and there is
+  // nothing here that needs re-measuring at all. What there IS, is a .22s
+  // height transition, and a measurement taken inside it reads a column that is
+  // briefly too tall, which pushes the grip up and shrinks the picture to fit a
+  // floor that was never there. That was the snap on closing.
+  //
+  // So: no measurement on the frame after the toggle. One when the transition
+  // actually ends, and one late fallback in case the transition never fires
+  // (interrupted by a second click, or a reduced-motion setting that skips it).
+  setTimeout(fitPicture, 420);
   if (logGrip) {
     logGrip.textContent = logBig ? "\u25bc" : "\u25b2";
     logGrip.setAttribute("aria-expanded", logBig ? "true" : "false");
