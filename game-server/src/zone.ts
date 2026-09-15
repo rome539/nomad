@@ -8099,8 +8099,20 @@ export class ZoneDO implements DurableObject {
           // the ground rules and paints what it always painted, so naming a room
           // here is free and reversible — unlike the gate prefix, which replaces
           // the terrain outright and can only be used once the plate is cut.
-          place: ART_KEYS.has(session.pubkey) && ART_ROOMS.has(session.roomId)
-            ? session.roomId : undefined,
+          //
+          // EMPTY RATHER THAN ABSENT, the same law as `torch` below and for the
+          // same reason (2026-09-14). JSON.stringify DROPS an undefined field,
+          // so a frame for ordinary ground carried no `place` key at all — and
+          // the client only clears on `place !== undefined`. The last singular
+          // room you stood in therefore followed you: walk out of the Deep Mark
+          // into the sea cave and the depth post was still painted on every room
+          // after it, which is exactly what the client's own comment said must
+          // never happen ("or the summit follows you down the hill"). It could
+          // always happen; it went unseen because the mountain's art rooms sit
+          // in a cluster and mostly hand off to each other. The Deep Mark is the
+          // first one standing on a route out into rooms that have no plate.
+          place: !ART_KEYS.has(session.pubkey) ? undefined
+            : ART_ROOMS.has(session.roomId) ? session.roomId : "",
           // AND HOW MUCH WATER IS OVER THIS ROOM, 0-3. The tide is the one
           // thing on the crossing that changes a room without changing the
           // room: the prose already says the causeway is under from the middle
