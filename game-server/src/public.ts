@@ -116,7 +116,11 @@ export const PAGE = `<!doctype html>
        the room. At 34 the plate drew 895px of a 1512 window; at 24 it draws
        1030 and the sky either side falls from 309px to 241. Still a third more
        prose than the quarter it was before any of this. */
-    --logh: 24vh;
+    /* ...plus half an inch (rome, 2026-09-15). The band's top edge moves up by
+       exactly that much and the picture, being the complement, gives up the
+       same. 0.5in is 48px flat - a CSS inch is 96px by definition and does not
+       vary with the screen. */
+    --logh: calc(24vh + 0.5in);
     /* --botth IS MEASURED, NOT ASSUMED, and that is the whole lesson of this
        rule. The first cut said calc(100vh - var(--logh)) - the picture is the
        window less the prose band - and the column does not end at the band:
@@ -1317,7 +1321,9 @@ export const PAGE = `<!doctype html>
        The gradient existed to let the picture read through the words; there is
        no picture under here any more. A single hairline keeps the edge honest. */
     background: var(--bg);
-    border-top: 1px solid var(--line);
+    /* No rule across the top (rome, 2026-09-15). The plate stopping is the edge;
+       it does not need drawing, and a full-width hairline under the picture is
+       the one bit of chrome the room cannot afford. */
   }
   /* PULLED OPEN IS THE WHOLE COLUMN (rome, 2026-09-06). It was half the window,
      which is the worst of both: not enough to read a long fight back through,
@@ -1371,7 +1377,17 @@ export const PAGE = `<!doctype html>
        edge above its top and painted the room into a forty-pixel sliver.
        On the grip, the whole cluster - grip, band, chips, input - sits down at
        the bottom together and the grip is genuinely the top of it. */
-    margin: auto auto -1px;
+    /* NO ROW OF ITS OWN (rome, 2026-09-15). The strip of space between the
+       plate and the first line was this button's flow row, and the band's top
+       edge sat under it - which is where the text was being cut. A negative
+       bottom margin equal to its own height takes that row back out of the
+       column, so the band rises to meet the plate and there is no gap left for
+       anything to hide in. The transform then lifts the button clear onto the
+       plate above, so it sits over the picture rather than over the words.
+       margin-top stays auto: it is still the first thing in the bottom cluster
+       and still the one absorbing the column's free space. */
+    margin: auto auto calc(0px - var(--griph, 18px));
+    transform: translateY(calc(0px - var(--griph, 18px)));
     width: 74px;
     padding: 3px 0 4px;
     border: 0;
@@ -8577,8 +8593,15 @@ function fitPicture() {
   // there is nothing here to re-measure. Freeze it and the picture holds still.
   if (document.body.getAttribute("data-log") === "big") return;
   var top = document.getElementById("loggrip"), lg = document.getElementById("log");
-  var r = top && top.offsetParent !== null ? top.getBoundingClientRect()
-        : lg ? lg.getBoundingClientRect() : null;
+  // Its own height, which the CSS needs to pull it out of the flow. offsetHeight
+  // is the border box, so neither the margin nor the transform doing the moving
+  // changes it, and this cannot chase itself.
+  if (top && top.offsetParent !== null)
+    document.body.style.setProperty("--griph", top.offsetHeight + "px");
+  // MEASURED OFF THE BAND. The button is transformed, and getBoundingClientRect
+  // reports the visual rect - transform included - so reading the button would
+  // put the picture's floor a row too high and squash the room.
+  var r = lg ? lg.getBoundingClientRect() : null;
   if (!r) return;
   var bott = Math.max(0, Math.round(window.innerHeight - r.top));
   document.body.style.setProperty("--botth", bott + "px");
