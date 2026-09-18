@@ -56,9 +56,21 @@ const SOURCES = [
 // and pass the id explicitly to rebuild one on purpose.
 const FOREIGN = new Set(["gill-adder", "stone-adder", "the-gravid-adder"]);
 // Sheets, not poses: the full multi-pose images the cutouts were taken from.
-// POSE NAMES THAT SHARE ANOTHER POSE'S DRAWING. Applied only where the creature
-// has no drawing of its own for the name. See the note beside the map below.
-const ALIAS = { "down": "up" };
+// POSE NAMES THAT SHARE ANOTHER POSE'S DRAWING, in order of preference. Applied
+// only where the creature has no drawing of its own for the name.
+//
+// "down" POINTS AT THE GLIDE, NOT AT THE UP. It pointed at "up" first, which was
+// the obvious reading of "the up and the down can be one frame" and was wrong in
+// the one way that matters: the driver flies a bird by alternating those two
+// names, so with both on one index the wings did not move. rome, watching birds
+// glide across a room like paper cutouts: they do not flap.
+//
+// They do not need a second drawing. A bird's sheet already carries two different
+// wing positions - "up" is the downstroke, wings swept down and forward, and
+// "glide" is the wings held level - and alternating THOSE reads as a wingbeat.
+// So the beat is up-glide-up-glide, the arc still has its glide and its landing,
+// and the cell that was freed still pays for the meal.
+const ALIAS = { "down": ["glide", "up"] };
 
 const NOT_A_POSE = new Set(["source", "combat-source", "flight-source",
                             "ground-source", "approved-ground-source"]);
@@ -273,8 +285,10 @@ for (const [id, dir] of [...found].sort()) {
   //
   // Only ever an alias for a pose the creature does NOT have its own drawing of.
   // A bird drawn with a real down-beat keeps it.
-  for (const [name, same] of Object.entries(ALIAS))
-    if (f[name] === undefined && f[same] !== undefined) f[name] = f[same];
+  for (const [name, prefs] of Object.entries(ALIAS)) {
+    if (f[name] !== undefined) continue;
+    for (const same of prefs) if (f[same] !== undefined) { f[name] = f[same]; break; }
+  }
   rows.push({ id, n: order.length, aspect: +(fw / fh).toFixed(3), f, order });
   console.log(id.padEnd(20) + String(order.length).padStart(2) + " frames  " + order.join(" "));
 }

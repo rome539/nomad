@@ -61,7 +61,11 @@ function mk(id, slot) {
 ctx.ANIM["_bare"] = { n: 2, aspect: 1, f: { idle: 0, "move-a": 1 } };
 
 const inv = {};
-for (const id in ctx.ANIM) { inv[id] = {}; const f = ctx.ANIM[id].f; for (const k in f) inv[id][f[k]] = k; }
+// FIRST NAME WINS A FRAME. Two names may share an index (see ALIAS in
+// build-mob-strips), so a last-wins map renamed the glide frame "down" and the
+// arc test stopped recognising its own pose.
+for (const id in ctx.ANIM) { inv[id] = {}; const f = ctx.ANIM[id].f;
+  for (const k in f) if (inv[id][f[k]] === undefined) inv[id][f[k]] = k; }
 function into(a, secs) { while (a.t < secs) { ctx.set([a]); ctx.stepAnims(); } }
 function run(a, n) { const o = []; for (let i = 0; i < n; i++) { ctx.set([a]); ctx.stepAnims(); o.push(inv[a.id][ctx.poseAt(a, Date.now()).k]); } return o; }
 
@@ -102,6 +106,30 @@ t("a sleeper never sets off walking",a.phase!=="travel","phase="+a.phase);
 ctx.mobBeat(null,["hill-wolf"],null);
 t("a blow still reads on a sleeper",a.phase==="hit");
 ctx.applyState([]);t("waking clears it",a.asleep===false);
+
+// A SLEEPING FRAME IS ONLY FOR SLEEPING (2026-09-18). CALM_POSES led with "rest"
+// and the rooted cycle stepped through it, so thirty-four creatures lay down
+// curled up with their eyes shut every few seconds while wide awake. The same
+// now goes for the eating frames, which have a real trigger of their own.
+{
+  const BANNED = ["rest", "feed", "graze"];
+  const wrong = [];
+  for (const id in ctx.ANIM) {
+    if (id[0] === "_") continue;
+    const b = mk(id);
+    const seen = new Set();
+    // the whole idle rotation, and a rooted travel long enough to come round
+    for (let t = 0; t < 60; t += 0.05) { b.phase = "idle"; b.t = t; seen.add(inv[id][ctx.poseAt(b, Date.now()).k]); }
+    for (let off = 0; off < 10; off++)
+      for (let t = 0; t <= 3; t += 0.05) { b.phase = "travel"; b.t = t; b.actOff = off; seen.add(inv[id][ctx.poseAt(b, Date.now()).k]); }
+    const shown = BANNED.filter((k) => seen.has(k));
+    if (shown.length) wrong.push(id + ":" + shown.join(","));
+  }
+  t("an awake creature never shows sleep or eating", wrong.length === 0, wrong.slice(0, 6).join(" "));
+}
+// ...and it still sleeps when it is actually asleep.
+a=mk("hill-wolf");ctx.set([a]);ctx.applyState(["rest"]);
+t("a napper still lies down when it sleeps",inv["hill-wolf"][ctx.poseAt(a,Date.now()).k]==="rest");
 
 a=mk("stone-adder");ctx.set([a]);ctx.applyState(["rest"]);
 const sp=inv["stone-adder"][ctx.poseAt(a,Date.now()).k];
@@ -147,7 +175,13 @@ t("the killing blow reads as death, not a flinch",a.phase==="death");ctx.clr();
   t("...glides", arc("the-drake",0.45)==="glide", arc("the-drake",0.45));
   t("...stoops before it lands", arc("the-drake",0.70)==="dive", arc("the-drake",0.70));
   t("...and puts them out at the end", arc("the-drake",0.92)==="landing", arc("the-drake",0.92));
-  t("a bird has no takeoff and beats instead", ["up","down"].includes(arc("hill-eagle",0.05)), arc("hill-eagle",0.05));
+  // BY FRAME, NOT BY NAME. The down-beat shares the glide's drawing, so asking
+  // for the name back gets "glide" - correct behaviour, wrong question.
+  {
+    const b = mk("hill-eagle"); b.phase = "travel"; b.t = 2.6 * 0.05;
+    const k = ctx.poseAt(b, Date.now()).k, f = ctx.ANIM["hill-eagle"].f;
+    t("a bird has no takeoff and beats instead", k === f.up || k === f.down, "frame " + k);
+  }
   t("...and glides straight to the landing", arc("hill-eagle",0.80)==="landing", arc("hill-eagle",0.80));
 }
 
@@ -182,11 +216,26 @@ t("a grazer eats with its own graze frame",a.phase==="feed"&&inv["ford-eel"][ctx
 // AND THE BIRDS' WINGBEAT IS ONE DRAWING UNDER TWO NAMES, which is the cell that
 // paid for their meal. Both names must land on the same frame, and the flight
 // arc must still be intact around it.
+// THE BEAT NEEDS TWO DIFFERENT PICTURES (2026-09-18). Sharing a cell between up
+// and down bought the meal its cell, but pointing BOTH names at one frame meant
+// the wings never moved - the birds crossed a room like paper cutouts. The
+// downstroke and the level glide are two drawings the sheet already has, so the
+// beat alternates those and nothing had to be redrawn.
 {
-  const f=ctx.ANIM["great-gull"].f;
-  t("a bird's up and down are the same frame",f.up!==undefined&&f.up===f.down,"up="+f.up+" down="+f.down);
-  t("...and it still has the arc to glide and land",f.glide!==undefined&&f.landing!==undefined);
-  t("...and it was drawn eating",f.feed!==undefined);
+  const wrong = [];
+  for (const id in ctx.ANIM) {
+    const f = ctx.ANIM[id].f;
+    if (f.up === undefined) continue;                  // not a flyer
+    if (f.down === undefined || f.down === f.up) wrong.push(id);
+  }
+  t("every flyer beats between two different frames", wrong.length === 0, wrong.join(" "));
+  const f = ctx.ANIM["great-gull"].f;
+  t("...and still has the arc to glide and land", f.glide !== undefined && f.landing !== undefined);
+  t("...and was drawn eating", f.feed !== undefined);
+  // and the wings actually change picture over a flight
+  const a2 = mk("great-gull"); const seen = new Set();
+  for (let t2 = 0; t2 <= 3; t2 += 0.02) { a2.phase = "travel"; a2.t = t2; seen.add(ctx.poseAt(a2, Date.now()).k); }
+  t("...and a bird in flight shows more than one wing pose", seen.size > 1, "frames seen: " + seen.size);
 }
 a=mk("ptarmigan");ctx.set([a]);a.phase="travel";a.t=0;
 let seen=new Set(); for(let i=0;i<45;i++){ctx.set([a]);ctx.stepAnims();seen.add(inv["ptarmigan"][ctx.poseAt(a,Date.now()).k]);}

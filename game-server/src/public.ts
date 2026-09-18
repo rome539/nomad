@@ -6718,7 +6718,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "32";      // /mob/      strips and their eye layers
+var MOB_V  = "33";      // /mob/      strips and their eye layers
 var BG_V   = "31";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -8354,45 +8354,45 @@ var MOB_ANIM = {
   "a-lymer":          { n: 8, aspect: 1.52, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
   "wrack-crab":          { n: 8, aspect: 1.301, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
   "silver-eel":          { n: 8, aspect: 1.178, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"graze":5,"move-a":6,"move-b":7} },
-  "oystercatcher":       { n: 8, aspect: 1.18, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"graze":6,"up":7,"down":7} },
+  "oystercatcher":       { n: 8, aspect: 1.18, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"graze":6,"up":7,"down":4} },
   "old-conger":          { n: 8, aspect: 1.172, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
   "grey-seal":           { n: 8, aspect: 1.477, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
-  "great-gull":          { n: 8, aspect: 1.19, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":7} },
+  "great-gull":          { n: 8, aspect: 1.19, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":4} },
   "ford-eel":            { n: 8, aspect: 1.408, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"graze":5,"move-a":6,"move-b":7} },
   "fen-viper":           { n: 6, aspect: 1.922, f: {"idle":0,"watch":1,"bask":2,"attack":3,"recover":4,"death":5} },
   "devil-crab":          { n: 8, aspect: 1.155, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
   "conger":              { n: 8, aspect: 1.147, f: {"idle":0,"alert":1,"rest":2,"attack":3,"death":4,"feed":5,"move-a":6,"move-b":7} },
-  "black-backed-gull":   { n: 8, aspect: 1.418, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":7} },
-  "bittern":             { n: 8, aspect: 1.307, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":7} },
+  "black-backed-gull":   { n: 8, aspect: 1.418, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":4} },
+  "bittern":             { n: 8, aspect: 1.307, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":4} },
   "a-fold-dog":           { n: 6, aspect: 1.46, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "bone-breaker":         { n: 8, aspect: 1.132, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"feed":5,"attack":6,"death":7} },
   "brooding-vulture":     { n: 8, aspect: 1.086, f: {"idle":0,"rest":1,"recover":2,"attack":3,"death":4,"feed":5,"move-a":6,"move-b":7} },
   "carrion-vulture":      { n: 8, aspect: 1.115, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
   "cave-lion":            { n: 6, aspect: 1.696, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "eagle-owl":            { n: 8, aspect: 1.315, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":7} },
+  "eagle-owl":            { n: 8, aspect: 1.315, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
   "ermine":               { n: 6, aspect: 1.307, f: {"idle":0,"inspect-upright":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "eyrie-holder":         { n: 8, aspect: 1.149, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
   "feral-goat":           { n: 6, aspect: 1.195, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "gill-adder":           { n: 6, aspect: 0.938, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5} },
   "glutton":              { n: 6, aspect: 1.735, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "great-vulture":        { n: 8, aspect: 1.091, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
-  "hill-eagle":           { n: 8, aspect: 1.203, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":7} },
+  "hill-eagle":           { n: 8, aspect: 1.203, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
   "hill-fox":             { n: 6, aspect: 1.752, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "hill-wolf":            { n: 6, aspect: 1.452, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "lead-wolf":            { n: 6, aspect: 1.202, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "lynx":                 { n: 6, aspect: 1.324, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "mountain-chough":      { n: 8, aspect: 1.258, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":7} },
+  "mountain-chough":      { n: 8, aspect: 1.258, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
   "mountain-hare":        { n: 6, aspect: 1.207, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "old-billy":            { n: 6, aspect: 1.217, f: {"idle":0,"stand-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "ptarmigan":            { n: 8, aspect: 1.207, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"graze":6,"up":7,"down":7} },
+  "old-billy":            { n: 6, aspect: 1.217, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"graze":5} },
+  "ptarmigan":            { n: 8, aspect: 1.207, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"graze":6,"up":7,"down":1} },
   "red-hind":             { n: 6, aspect: 1.108, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "red-stag":             { n: 6, aspect: 1.153, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "scarp-raven":          { n: 8, aspect: 1.181, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":7} },
+  "scarp-raven":          { n: 8, aspect: 1.181, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
   "snow-fox":             { n: 6, aspect: 1.556, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "snow-hare":            { n: 6, aspect: 1.181, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "stone-adder":          { n: 6, aspect: 1.199, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5} },
   "the-blue-fox":         { n: 6, aspect: 1.533, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-bone-dropper":     { n: 8, aspect: 1.172, f: {"idle":0,"glide":1,"landing":2,"feed":3,"attack":4,"death":5,"rest":6,"up":7,"down":7} },
+  "the-bone-dropper":     { n: 8, aspect: 1.172, f: {"idle":0,"glide":1,"landing":2,"feed":3,"attack":4,"death":5,"rest":6,"up":7,"down":1} },
   "the-butter-wife":      { n: 6, aspect: 1.209, f: {"idle":0,"listen":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-dancer":           { n: 6, aspect: 1.338, f: {"idle":0,"twisting-leap":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-drake":            { n: 14, aspect: 1.483, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
@@ -8401,7 +8401,7 @@ var MOB_ANIM = {
   "the-last-dog":         { n: 6, aspect: 1.556, f: {"idle":0,"call-uphill":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-milker":           { n: 6, aspect: 1.167, f: {"idle":0,"work-pull":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-old-glutton":      { n: 6, aspect: 1.373, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-old-raven":        { n: 8, aspect: 1.165, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":7} },
+  "the-old-raven":        { n: 8, aspect: 1.165, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
   "the-one-who-stayed":   { n: 6, aspect: 1.108, f: {"idle":0,"advance":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-pale-drake":       { n: 14, aspect: 1.523, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
   "the-raiding-fox":      { n: 6, aspect: 1.288, f: {"idle":0,"snatch-escape":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
@@ -8429,7 +8429,25 @@ var MOB_ANIM = {
 // What a creature with nothing but an alert does now: it holds its idle and
 // breathes, which is what a thing going about its business looks like, and the
 // alert means one thing only.
-var CALM_POSES = ["rest","bask","graze","feed","listen","watch","hold-ground",
+// WHAT IT DOES INSTEAD OF STANDING THERE. A second picture, held for a few
+// seconds at a time, so an idle creature is not a statue.
+//
+// NOT SLEEP AND NOT EATING, though this list led with "rest" and carried "graze"
+// and "feed" until 2026-09-18. Thirty-four of seventy-three creatures had their
+// SLEEPING frame as their calm pose, so a third of the roster lay curled up with
+// its eyes shut every few seconds while wide awake, and rome watched mobs cycle
+// through poses they had no business being in.
+//
+// Sleep has its own path already - 'asleep' holds one pose out of SLEEP_POSES and
+// does not cut to anything on a clock - so 'rest' here was never anything but a
+// second, wrong way to show it. Feeding is the same case since the fed beat
+// started firing for grazers and hunters: a frame that has a real trigger must
+// not also be idle filler, or the animal eats on a timer with nothing dead in
+// front of it. An EVENT FRAME AND A SLEEP FRAME ARE NEVER IDLES.
+//
+// Basking is not sleeping and stays: an adder flat on a warm stone with its eyes
+// open is exactly what this list is for.
+var CALM_POSES = ["bask","listen","watch","hold-ground",
   "stand-ground","hold-warm-ground","keep-the-line","inspect-upright",
   // THE VARIANTS' OWN POSES, which were drawn and shipped and never named here
   // (2026-09-09). Every rare form on the hill is six frames — idle, its own
@@ -8809,8 +8827,13 @@ function applyState(doing) {
 // driver test's fixture, so the bug above was invisible to the suite that
 // exists to catch exactly it: every copy agreed with every other copy and all
 // four were wrong together.
+// POSES THE ROOTED CYCLE MUST NEVER STEP THROUGH. A creature with no gait spends
+// a travel working through its spare poses one per second, and anything with its
+// own trigger has no business turning up in that rotation - a rooted animal was
+// "travelling" by lying down asleep, dying, and grazing in turn. Same rule as
+// CALM_POSES above: an event frame and a sleep frame are never idles.
 var NOT_AN_IDLE = ["attack", "bite", "sweep", "breath", "inhale",
-                   "swing", "recover", "hit", "death", "feed"];
+                   "swing", "recover", "hit", "death", "feed", "graze", "rest"];
 function mobActs(f) {
   var acts = [];
   for (var w in f) if (w !== "idle" && NOT_AN_IDLE.indexOf(w) < 0) acts.push(w);
