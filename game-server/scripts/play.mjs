@@ -31,7 +31,11 @@ const { token } = await (
 ).json();
 if (!token) throw new Error("login failed");
 
-const ws = new WebSocket(`${WS_BASE}/ws?token=${encodeURIComponent(token)}`);
+const { ticket } = await (await fetch(`${BASE}/auth/ticket`, {
+  method: "POST", headers: { authorization: `Bearer ${token}` },
+})).json();
+if (!ticket) throw new Error("ticket exchange failed");
+const ws = new WebSocket(`${WS_BASE}/ws?ticket=${encodeURIComponent(ticket)}`);
 ws.on("message", (data) => {
   const f = JSON.parse(data.toString());
   if (f.kind === 24912) console.log(f.text);

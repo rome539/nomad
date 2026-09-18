@@ -1,8 +1,9 @@
 import type { Env } from "./env";
 import { CORS, json } from "./http";
-import { handleChallenge, handleVerify, handleTicket } from "./auth";
+import { admitAuthentication } from "./auth-limit";
+import { handleChallenge, handleVerify, handleTicket, consumeTicket } from "./auth";
 import { GOOGLE_CLIENT_ID } from "./google";
-import { verifyJwt, timingSafeEqual } from "./jwt";
+import { timingSafeEqual } from "./jwt";
 import { PAGE, BUILD_ID } from "./public";
 import { GUIDE_PAGE } from "./guide";
 import { signProfileEvent, signSheetEvent, signDeleteEvent, signRetireScoreEvent, isGameKeyConfigured } from "./signing";
@@ -11,6 +12,7 @@ import { publishEvent, publishScore, relayList } from "./relay";
 import BUNKER_SRC from "../../nostr-auth/nip46-bunker.js";
 import VAULT_SRC from "./vault-bundle.js";
 import NOSTR_SRC from "./nostr-bundle.js";
+import QRCODE_SRC from "./qrcode-bundle.js";
 
 // Public, referrer-restricted browser credential for the Drive file picker
 // (cross-app vault import). Not a secret — pairs with GOOGLE_CLIENT_ID.
@@ -40,6 +42,11 @@ export default {
     const m = req.method;
 
     try {
+      if ((m === "POST" && ["/auth/challenge", "/auth/verify", "/auth/ticket"].includes(pathname))
+          || (m === "GET" && pathname === "/ws")) {
+        const limited = await admitAuthentication(req, env);
+        if (limited) return limited;
+      }
       if (m === "GET" && (pathname === "/" || pathname === "/index.html")) {
         const page = PAGE.replace("__GOOGLE_CLIENT_ID__", GOOGLE_CLIENT_ID).replace(
           "__GOOGLE_PICKER_KEY__",
@@ -51,6 +58,9 @@ export default {
             // GIS token popups (the Drive-vault flow) need the opener link kept
             // alive; plain `same-origin` makes them fail as popup_closed.
             "cross-origin-opener-policy": "same-origin-allow-popups",
+            "content-security-policy": "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+            "x-content-type-options": "nosniff",
+            "referrer-policy": "strict-origin-when-cross-origin",
           },
         });
       }
@@ -78,6 +88,11 @@ export default {
       // worker answering, the same one that just served the page.
       if (m === "GET" && pathname === "/nostr.js") {
         return new Response(NOSTR_SRC, {
+          headers: { "content-type": "application/javascript; charset=utf-8" },
+        });
+      }
+      if (m === "GET" && pathname === "/qrcode.js") {
+        return new Response(QRCODE_SRC, {
           headers: { "content-type": "application/javascript; charset=utf-8" },
         });
       }
@@ -242,20 +257,15 @@ export default {
       // proxy logs and in screenshots; a ticket that opens one socket and dies
       // makes all three places worthless.
       //
-      // ?token= is still accepted so a page cached from before this shipped keeps
-      // working. Drop it once nobody is running the old client.
+      // Session credentials are never accepted in URLs; clients obtain a fresh
+      // single-use ticket for each connection attempt.
       if (m === "GET" && pathname === "/ws") {
         if (req.headers.get("Upgrade") !== "websocket") {
           return json({ error: "expected_websocket" }, 426);
         }
         const ticket = url.searchParams.get("ticket") ?? "";
-        const legacy = url.searchParams.get("token") ?? "";
-        const payload = await verifyJwt(ticket || legacy, env.JWT_SECRET);
-        const pubkey = typeof payload?.sub === "string" ? payload.sub : null;
-        // A ticket must BE a ticket; the legacy path must be a plain session
-        // token. Neither may be a challenge — those carry no sub anyway.
-        const okPurpose = ticket ? payload?.purpose === "ws" : payload?.purpose === undefined;
-        if (!pubkey || !okPurpose) return json({ error: "unauthorized" }, 401);
+        const pubkey = await consumeTicket(ticket, env);
+        if (!pubkey) return json({ error: "unauthorized" }, 401);
 
         const zone = url.searchParams.get("zone") ?? "door";
         if (!ZONES.has(zone)) return json({ error: "no_such_zone" }, 404);

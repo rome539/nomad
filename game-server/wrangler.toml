@@ -2,6 +2,8 @@ name = "nomad-server"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
+# Source maps can carry local machine paths. Do not upload them with releases.
+upload_source_maps = false
 
 # The front door: nomadmud.com (workers.dev stays open as a side door).
 routes = [
@@ -13,8 +15,14 @@ routes = [
 # plus the generated Drive-vault bundle (npm run bundle:vault).
 [[rules]]
 type = "Text"
-globs = ["**/nip46-bunker.js", "**/vault-bundle.js", "**/nostr-bundle.js"]
+globs = ["**/nip46-bunker.js", "**/vault-bundle.js", "**/nostr-bundle.js", "**/qrcode-bundle.js"]
 fallthrough = true
+
+# Bound unauthenticated work before cryptography and database admission.
+[[ratelimits]]
+name = "AUTH_RATE_LIMITER"
+namespace_id = "2026091801"
+simple = { limit = 180, period = 60 }
 
 # One Durable Object per zone: authoritative room/mob state, tick via alarms.
 [durable_objects]
@@ -54,6 +62,12 @@ directory = "./public"
 [observability]
 enabled = true
 head_sampling_rate = 1
+
+# Keep application diagnostics, but do not retain automatic request-URL logs
+# (socket URLs contain short-lived authentication tickets).
+[observability.logs]
+enabled = true
+invocation_logs = false
 
 # Secrets (do NOT put these here — use `wrangler secret put` or .dev.vars):
 #   JWT_SECRET   - random string for signing session tokens

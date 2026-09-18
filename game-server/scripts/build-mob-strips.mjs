@@ -56,6 +56,10 @@ const SOURCES = [
 // and pass the id explicitly to rebuild one on purpose.
 const FOREIGN = new Set(["gill-adder", "stone-adder", "the-gravid-adder"]);
 // Sheets, not poses: the full multi-pose images the cutouts were taken from.
+// POSE NAMES THAT SHARE ANOTHER POSE'S DRAWING. Applied only where the creature
+// has no drawing of its own for the name. See the note beside the map below.
+const ALIAS = { "down": "up" };
+
 const NOT_A_POSE = new Set(["source", "combat-source", "flight-source",
                             "ground-source", "approved-ground-source"]);
 // Frame order when a creature is new. An existing creature keeps the order it
@@ -255,6 +259,17 @@ for (const [id, dir] of [...found].sort()) {
   }
 
   const f = {}; order.forEach((p, i) => f[p] = i);
+  // TWO NAMES, ONE DRAWING. A pose map is names to frame INDICES, and nothing
+  // stops two names sharing an index — so a pose that is drawn once can answer
+  // to both. The wingbeat is the case it was added for: a bird's sheet spends
+  // four of its eight cells on flight and had no cell left for the meal, and
+  // rome's answer was that the up and down of a beat can be the same picture.
+  // One cell comes back, no drawn frame is lost, and the strip does not grow.
+  //
+  // Only ever an alias for a pose the creature does NOT have its own drawing of.
+  // A bird drawn with a real down-beat keeps it.
+  for (const [name, same] of Object.entries(ALIAS))
+    if (f[name] === undefined && f[same] !== undefined) f[name] = f[same];
   rows.push({ id, n: order.length, aspect: +(fw / fh).toFixed(3), f, order });
   console.log(id.padEnd(20) + String(order.length).padStart(2) + " frames  " + order.join(" "));
 }

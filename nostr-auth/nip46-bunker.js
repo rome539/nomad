@@ -108,10 +108,13 @@ class RawRelayPool {
                 const data = JSON.parse(msg.data);
                 if (data[0] === 'EVENT' && data[2]) {
                     const ev = data[2];
+                    if (ev.kind !== 24133 || !this.verifyEvent || !this.verifyEvent(ev)) return;
                     const subId = data[1];
                     dlog(`[NIP-46 WS] EVENT received from ${url} sub=${subId} kind=${ev.kind}`);
                     for (const listener of this._listeners) {
-                        if (listener.subId === subId) {
+                        if (listener.subId === subId && ev.tags.some(t => t[0] === "p" && listener.filter["#p"]?.includes(t[1]))
+                            && (!listener.filter.since || ev.created_at >= listener.filter.since)
+                            && ev.created_at <= Math.floor(Date.now() / 1000) + 60) {
                             listener.onEvent(ev, url);
                         }
                     }
@@ -235,7 +238,7 @@ export class BunkerClient {
             let host = url;
             try { host = new URL(url).host; } catch (e) {}
             if (confirm('Your signer wants to open ' + host + ' to approve this login.\n\nOpen it?')) {
-                window.open(url, '_blank', 'width=600,height=700');
+                window.open(url, '_blank', 'noopener,noreferrer,width=600,height=700');
             }
         });
         this.onStatusChange = opts.onStatusChange || (() => {});
@@ -295,6 +298,7 @@ export class BunkerClient {
 
         // Open raw WebSocket connections FIRST
         this._rawPool = new RawRelayPool();
+        this._rawPool.verifyEvent = this.NostrTools.verifyEvent;
         this._rawPool.connect(relays);
 
         // Wait for connections to establish
@@ -319,17 +323,9 @@ export class BunkerClient {
                 // Never log resp wholesale — resp.result IS the secret on success.
                 dlog('[NIP-46] Response id:', resp.id, 'relay:', relayUrl);
 
-                if (resp.result === 'auth_url' && resp.error) {
-                    self._emitAuthUrl(resp.error);
-                    return;
-                }
-                if (resp.error && resp.result !== 'auth_url') {
-                    settled = true; self._connecting = false;
-                    self._rawPool.unsubscribe(subId);
-                    self.onStatusChange('error', resp.error);
-                    rejectFn(new Error(resp.error));
-                    return;
-                }
+                // Before the secret echo binds a signer, errors and URLs are
+                // untrusted. Another relay user must not cancel or redirect login.
+                if (resp.error || resp.result === 'auth_url') return;
                 // The secret echo is the ONLY proof the responder saw the
                 // out-of-band nostrconnect URI — anyone can encrypt a kind-24133
                 // to our published clientPk, so a bare 'ack' proves nothing.
@@ -442,9 +438,9 @@ export class BunkerClient {
                         try {
                             const resp = JSON.parse(await nip44Decrypt(clientSk, ev.pubkey, ev.content));
                             dlog('[BUNKER-URL] response id:', resp.id);
+                            // Only an answer to this request can affect its UI.
+                            if (resp.id !== reqId) return;
                             if (resp.result === 'auth_url' && resp.error) { this._emitAuthUrl(resp.error); return; }
-                            // ...and only an answer to the connect we actually sent.
-                            if (resp.id && resp.id !== reqId) return;
                             if (resp.error && resp.result !== 'auth_url') {
                                 settled = true; cleanup();
                                 this._connecting = false;
@@ -515,6 +511,7 @@ export class BunkerClient {
         // Legacy RawRelayPool path (kept for QR flow / fallback)
         // ────────────────────────────────────────────────────────────────
         this._rawPool = new RawRelayPool();
+        this._rawPool.verifyEvent = this.NostrTools.verifyEvent;
         this._rawPool.connect(relays);
 
         const since = Math.floor(Date.now() / 1000) - 300;
@@ -538,8 +535,8 @@ export class BunkerClient {
                     const decrypted = await nip44Decrypt(clientSk, ev.pubkey, ev.content);
                     const resp = JSON.parse(decrypted);
                     dlog('[BUNKER-URL] response id:', resp.id);
+                    if (resp.id !== reqId) return; // and only our connect
                     if (resp.result === 'auth_url' && resp.error) { this._emitAuthUrl(resp.error); return; }
-                    if (resp.id && resp.id !== reqId) return; // and only our connect
                     if (resp.error && resp.result !== 'auth_url') {
                         settled = true; this._cancelReject = null; this._rawPool.unsubscribe(subId);
                         this._connecting = false;
@@ -598,6 +595,7 @@ export class BunkerClient {
 
         // Connect raw relay pool (no SimplePool injected in this flow)
         this._rawPool = new RawRelayPool();
+        this._rawPool.verifyEvent = this.NostrTools.verifyEvent;
         this._rawPool.connect(relays);
         await new Promise(r => setTimeout(r, 800));
 
@@ -686,22 +684,9 @@ export class BunkerClient {
     }
 
     // ------------------------------------------------------------------
-    // auth_url — THE ONE THING A STRANGER CAN MAKE US DO
-    // ------------------------------------------------------------------
-    //
-    // Every other response is gated: the nostrconnect flow wants the secret
-    // echoed, the bunker flow wants the pubkey from the URL the user pasted.
-    // auth_url is handled BEFORE any of that, and it has to be — a signer sends
-    // it to say "the user must approve in a browser first", which by definition
-    // arrives before we can verify anything. So anybody who can encrypt to our
-    // published clientPk can hand us a URL, and the default handler opened it in
-    // a popup. That is a phishing primitive with our own app's login flow as the
-    // pretext: the window appears exactly when the user is expecting one.
-    //
-    // It cannot be authenticated, so it is CONSTRAINED instead: https only (no
-    // javascript:, no data:, no blob:), parseable, and length-capped. The
-    // consumer still decides whether to open it — the game asks first, naming
-    // the host — but nothing that isn't a real https URL gets that far.
+    // Approval URLs are accepted only for a known signer and matching RPC.
+    // QR pairing ignores them until the connection secret binds a signer.
+    // Constrain even authenticated URLs and ask before opening another origin.
     _emitAuthUrl(raw) {
         if (typeof raw !== 'string' || raw.length > 2048) return;
         let u;
@@ -795,7 +780,7 @@ export class BunkerClient {
         if (!d.sk || !d.pk || !d.signer || !d.user || !d.relays?.length) {
             this.clearSession(); return false;
         }
-        if (d.t && Date.now() - d.t > this.sessionMaxAge) {
+        if (!Number.isFinite(d.t) || d.t > Date.now() + 60000 || Date.now() - d.t > this.sessionMaxAge) {
             this.clearSession(); return false;
         }
 
@@ -813,6 +798,7 @@ export class BunkerClient {
         this._signerPk = d.signer; this._userPk = d.user; this._relays = d.relays;
 
         this._rawPool = new RawRelayPool();
+        this._rawPool.verifyEvent = this.NostrTools.verifyEvent;
         this._rawPool.connect(d.relays);
         await new Promise(r => setTimeout(r, 800));
 

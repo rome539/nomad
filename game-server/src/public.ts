@@ -1932,7 +1932,7 @@ export const PAGE = `<!doctype html>
 // Our own copy, served by this same worker (/nostr.js) — never a public CDN.
 // generateSecretKey mints the key that IS the player's account; code that does
 // that cannot come from a third party's server. See src/nostr-entry.mjs.
-import { generateSecretKey, getPublicKey, finalizeEvent, nip19 } from "/nostr.js";
+import { generateSecretKey, getPublicKey, finalizeEvent, verifyEvent, nip19 } from "/nostr.js";
 
 // "Continue with Google" — the dungeon keeps your key backed up to your Google
 // account (server-side, sealed). Injected at serve time; public by design.
@@ -2491,25 +2491,22 @@ async function makeBunkerClient() {
   }
   var mod = await import("/nip46-bunker.js");
   return new mod.BunkerClient({
-    NostrTools: { generateSecretKey: generateSecretKey, getPublicKey: getPublicKey, finalizeEvent: finalizeEvent },
+    NostrTools: { generateSecretKey: generateSecretKey, getPublicKey: getPublicKey, finalizeEvent: finalizeEvent, verifyEvent: verifyEvent },
     appName: "NOMAD",
     appUrl: location.origin,
-    perms: "get_public_key,sign_event:27235",
+    perms: "get_public_key,sign_event:27235,sign_event:24913,sign_event:24914,sign_event:24915,nip44_encrypt,nip44_decrypt",
     relays: BUNKER_RELAYS,
     storageKey: "nomad_bunker_session",
     sessionMaxAge: 30 * 24 * 3600 * 1000,
     heartbeatMs: 0,
-    // The signer can ask us to open a page so the user can approve there. It
-    // arrives before anything about the sender is verified (see _emitAuthUrl),
-    // so the client has already forced it to https — and we still name the host
-    // and wait to be told. An unasked-for popup during a login is exactly the
-    // shape of a phishing page.
+    // Only a verified, bound signer response can request an approval page.
+    // The client requires HTTPS; show the destination before opening it.
     onAuthUrl: function (url) {
       var host = url;
       try { host = new URL(url).host; } catch (e) {}
       print("\\u2014 your signer wants to open " + host + " to approve this \\u2014", "sys");
       if (confirm("Your signer is asking to open:\\n\\n" + host + "\\n\\nOpen it to approve the login?")) {
-        window.open(url, "_blank", "width=600,height=700");
+        window.open(url, "_blank", "noopener,noreferrer,width=600,height=700");
       } else {
         print("\\u2014 left it closed \\u2014", "sys");
       }
@@ -2533,13 +2530,17 @@ async function fetchJson(url, opts, ms) {
   return await res.json();
 }
 async function login() {
+  var epoch = identityEpoch;
   var ch = await fetchJson("/auth/challenge", { method: "POST" }, 8000);
+  if (epoch !== identityEpoch) throw new Error("identity changed");
   var evt = { kind: 27235, created_at: Math.floor(Date.now()/1000), tags: [], content: ch.challenge };
   var ev;
   if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
   else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
   else ev = finalizeEvent(evt, sk);
+  if (epoch !== identityEpoch) throw new Error("identity changed");
   var r = await fetchJson("/auth/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ event: ev }) }, 8000);
+  if (epoch !== identityEpoch) throw new Error("identity changed");
   if (!r.token) throw new Error("login failed");
   return r.token;
 }
@@ -2622,42 +2623,76 @@ async function publishSpeech(text, tag) {
   }
 }
 
-// ---- A QUIET WORD: sealed, not merely hidden ----
-// Public speech is base64'd, which is obfuscation. A tell is different: it has
-// exactly ONE recipient, so it gets a real cipher. NIP-44 to their npub, kind
-// 24915, ephemeral, p-tagged \\u2014 only they hold the other half of the key, and no
-// relay keeps it. This is the one message in NOMAD that nobody else can read.
+// Private words are encrypted BEFORE they leave this browser. The server
+// resolves presence and forwards a signed ciphertext, never the words.
 var TELL_KIND = 24915;
 var nip44mod = null;
+var pendingTells = new Map();
+var identityEpoch = 0;
 async function sealTo(pk, text) {
-  if (method === "ext" && window.nostr && window.nostr.nip44) return await window.nostr.nip44.encrypt(pk, text);
+  if (method === "ext") {
+    if (!window.nostr || !window.nostr.nip44) throw new Error("Your extension does not support encrypted private messages.");
+    return await window.nostr.nip44.encrypt(pk, text);
+  }
   if (method === "bunker") return await (await ensureBunkerClient()).nip44Encrypt(pk, text);
   if (!nip44mod) nip44mod = (await import("/nostr.js")).nip44;
-  var key = nip44mod.v2.utils.getConversationKey(sk, pk);
-  return nip44mod.v2.encrypt(text, key);
+  return nip44mod.v2.encrypt(text, nip44mod.v2.utils.getConversationKey(sk, pk));
 }
-async function publishTell(pk, text) {
-  if (!pk || !text) return;
+function queuePrivateTell(text) {
+  var m = /^(?:tell|whisper|quietly)(?:\\s|$)/i.exec(text);
+  if (!m) return false;
+  var parts = /^(?:tell|whisper|quietly)\\s+(\\S+)\\s+([\\s\\S]+)$/i.exec(text);
+  if (!parts) { print("Tell who what? ('tell <name> <words>')", "sys"); return true; }
+  if (!ws || ws.readyState !== 1) { print("Not connected.", "sys"); return true; }
+  if (pendingTells.size >= 4) { print("Wait for your quiet words to arrive.", "sys"); return true; }
+  var id = crypto.randomUUID();
+  pendingTells.set(id, { text: parts[2].trim().slice(0, 240), epoch: identityEpoch, socket: ws });
+  ws.send(JSON.stringify({ v: 0, t: "tell-key", id: id, who: parts[1] }));
+  setTimeout(function () { if (pendingTells.delete(id)) print("Your quiet word timed out. Try again.", "sys"); }, 60000);
+  return true;
+}
+async function sendPrivateTell(frame) {
+  var pending = pendingTells.get(frame.id);
+  if (!pending || pending.sending || pending.epoch !== identityEpoch || pending.socket !== ws) return;
+  if (!/^[0-9a-f]{64}$/.test(frame.to)) return;
+  pending.sending = true;
   try {
-    var sealed = await sealTo(pk, String(text));
-    var evt = {
-      kind: TELL_KIND,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [["p", pk], ["t", "nomad-tell"], ["enc", "nip44"], ["v", "0"]],
-      content: sealed,
-    };
-    var ev;
-    if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
-    else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
-    else ev = finalizeEvent(evt, sk);
-    if (!gpubPool) {
-      var poolMod = await import("/nostr.js");
-      gpubPool = new poolMod.SimplePool();
+    var content = await sealTo(frame.to, pending.text);
+    var template = { kind: TELL_KIND, created_at: Math.floor(Date.now()/1000), tags: [["p", frame.to], ["t", "nomad-tell"], ["enc", "nip44"], ["v", "0"]], content: content };
+    var event;
+    if (method === "ext") event = await window.nostr.signEvent(template);
+    else if (method === "bunker") event = await (await ensureBunkerClient()).signEvent(template);
+    else event = finalizeEvent(template, sk);
+    if (pending.epoch !== identityEpoch || pending.socket !== ws || !pendingTells.has(frame.id)) return;
+    if (!verifyEvent(event) || event.kind !== template.kind || event.content !== content || JSON.stringify(event.tags) !== JSON.stringify(template.tags)) throw new Error("The signer changed the message.");
+    pending.event = event;
+    ws.send(JSON.stringify({ v: 0, t: "sealed-tell", id: frame.id, event: event }));
+  } catch (e) { pendingTells.delete(frame.id); print("Quiet word: " + verr(e), "sys"); }
+}
+async function publishSealedTell(event) {
+  try {
+    if (!gpubPool) gpubPool = new (await import("/nostr.js")).SimplePool();
+    await Promise.allSettled(gpubPool.publish(SPEECH_RELAYS, event));
+  } catch (e) { console.warn("[tell] relay delivery failed"); }
+}
+async function receivePrivateTell(frame) {
+  var epoch = identityEpoch;
+  try {
+    var ev = frame.event;
+    if (!ev || ev.kind !== TELL_KIND || typeof ev.content !== "string" || ev.content.length > 4096 || !verifyEvent(ev)) return;
+    var ownPk = method === "ext" ? await window.nostr.getPublicKey() : method === "bunker" ? (await ensureBunkerClient()).userPubkey : getPublicKey(sk);
+    if (!ev.tags.some(function (t) { return t[0] === "p" && t[1] === ownPk; })) return;
+    var text;
+    if (method === "ext") {
+      if (!window.nostr.nip44) throw new Error("Your extension does not support private-message decryption.");
+      text = await window.nostr.nip44.decrypt(ev.pubkey, ev.content);
+    } else if (method === "bunker") text = await (await ensureBunkerClient()).nip44Decrypt(ev.pubkey, ev.content);
+    else {
+      if (!nip44mod) nip44mod = (await import("/nostr.js")).nip44;
+      text = nip44mod.v2.decrypt(ev.content, nip44mod.v2.utils.getConversationKey(sk, ev.pubkey));
     }
-    gpubPool.publish(SPEECH_RELAYS, ev);
-  } catch (e) {
-    console.warn("[tell] seal failed:", e && e.message ? e.message : e);
-  }
+    if (epoch === identityEpoch) print(frame.name + " leans in, close, and says quietly: " + String(text).slice(0, 240), "tell", frame.name, ev.pubkey);
+  } catch (e) { print("Could not open that quiet word: " + verr(e), "sys"); }
 }
 
 // ---- THE ARENA BROADCAST: your deeds, your key ----
@@ -3025,14 +3060,16 @@ function claimName(nm) {
 // Fired at restore time (importKey): look the identity's name up ahead of the
 // status frame and claim it the moment we're connected.
 function prefetchAdoptName(pk) {
+  var epoch = identityEpoch;
   fetchProfileName(pk).then(function (nm) {
-    if (!nm) return;
+    if (!nm || epoch !== identityEpoch) return;
     nameHint = nm;
     claimName(nm);
   });
 }
 
 function maybeAdoptProfileName(f) {
+  var epoch = identityEpoch;
   if (profileTried) return;
   profileTried = true;
   // Guests get a silent lookup: a fresh-minted key has no kind-0, so nothing
@@ -3040,6 +3077,7 @@ function maybeAdoptProfileName(f) {
   // real identity — if the relays know its name, the dungeon adopts it.
   var quiet = method !== "ext" && method !== "bunker";
   currentIdentityPubkey().then(function (pk) {
+    if (epoch !== identityEpoch) return;
     console.log("[profile-name] method:", method, "pk:", pk, "server name:", f.name);
     if (!pk) {
       if (!quiet) print("— your signer would not say who you are; pick a name: name <yourname> —", "sys");
@@ -3050,6 +3088,7 @@ function maybeAdoptProfileName(f) {
     if (nameHint) { claimName(nameHint); return; }
     if (!quiet) print("— asking the relays what your keys are called\\u2026 —", "sys");
     fetchProfileName(pk).then(function (nm) {
+      if (epoch !== identityEpoch) return;
       console.log("[profile-name] relay lookup result:", nm);
       if (!nm) {
         if (!quiet) print("— the relays hold no name for these keys; the dungeon calls you " + f.name + " ('name <yourname>' to overrule) —", "sys");
@@ -3120,6 +3159,7 @@ async function connect() {
   if (connecting) return;                    // one dial at a time (see the flag's note)
   if (ws && ws.readyState === 1) return;     // a live wire is already up — nothing to dial
   connecting = true;
+  var epoch = identityEpoch;
   lastDialAt = Date.now();
   if (ws && ws.readyState === 0) {
     // Still plausibly opening: come back to it, but ALWAYS keep the chain alive.
@@ -3142,8 +3182,13 @@ async function connect() {
   var usedCached = !!sessionToken;
   var token = sessionToken;
   if (!token) {
-    try { token = await login(); sessionToken = token; }
+    try {
+      token = await login();
+      if (epoch !== identityEpoch) return;
+      sessionToken = token;
+    }
     catch (e) {
+      if (epoch !== identityEpoch) return;
       // AN EXPIRED SIGNER SESSION IS NOT A NETWORK BLIP (2026-08-20). The old
       // catch retried everything forever: a dead bunker session threw "signer
       // session expired — use 'connect signer app' again", the retry loop
@@ -3163,22 +3208,22 @@ async function connect() {
     }
   }
 
-  // THE WEEK-LONG TOKEN NEVER TOUCHES THE URL. A browser socket can't send
-  // headers, so something has to go in the query string — trade the session
-  // token for a 90-second ticket that opens one socket and is good for nothing
-  // else. If the exchange fails (an old worker, a blip), fall back to the token
-  // rather than refuse to connect: this is hardening, not a gate.
-  var wsAuth = "token=" + encodeURIComponent(token);
+  // A connection always needs a fresh, single-use ticket. Never put the
+  // reusable session credential in a URL, including on a failed exchange.
+  var wsAuth;
   try {
     var tr = await Promise.race([
       fetch("/auth/ticket", { method: "POST", headers: { authorization: "Bearer " + token } }),
       new Promise(function (_, rej) { setTimeout(function () { rej(new Error("slow")); }, 8000); }),
     ]);
-    if (tr.ok) {
-      var tj = await tr.json();
-      if (tj && tj.ticket) wsAuth = "ticket=" + encodeURIComponent(tj.ticket);
-    }
-  } catch (e) {}
+    if (epoch !== identityEpoch) return;
+    if (tr.status === 401) sessionToken = null;
+    if (!tr.ok) throw new Error("ticket refused");
+    var tj = await tr.json();
+    if (epoch !== identityEpoch) return;
+    if (!tj || !tj.ticket) throw new Error("ticket missing");
+    wsAuth = "ticket=" + encodeURIComponent(tj.ticket);
+  } catch (e) { if (epoch === identityEpoch) return scheduleRetry(); else return; }
 
   var proto = location.protocol === "https:" ? "wss://" : "ws://";
   var opened = false;
@@ -3191,9 +3236,9 @@ async function connect() {
   var stallWatch = null;
   dialAttempt++;
   var sock = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : "")
-    + "&pid=" + encodeURIComponent(pageId) + "&att=" + dialAttempt);
+    + "&tell=1&pid=" + encodeURIComponent(pageId) + "&att=" + dialAttempt);
   ws = sock;
-  var mine = function () { return ws === sock; };
+  var mine = function () { return ws === sock && epoch === identityEpoch; };
   // A FIRST dial can hang in CONNECTING with no close event and nothing left
   // to re-enter connect() — the stall-abandon above only runs when the retry
   // chain is already armed. This watchdog is the first dial's own chain.
@@ -3304,8 +3349,17 @@ async function connect() {
       renderJournal(f);
     } else if (f.t === "gpub") {
       publishSpeech(f.text, f.tag); // your words, your key, your signature
-    } else if (f.t === "tpub") {
-      publishTell(f.to, f.text);    // a quiet word, sealed to them alone
+    } else if (f.t === "tell-key") {
+      sendPrivateTell(f);
+    } else if (f.t === "sealed-tell") {
+      receivePrivateTell(f);
+    } else if (f.t === "tell-sent" || f.t === "tell-error") {
+      var pending = pendingTells.get(f.id);
+      if (pending && pending.epoch === identityEpoch && pending.socket === ws) {
+        print(f.t === "tell-sent" ? "You lean in to " + f.name + ": " + pending.text : f.error, f.t === "tell-sent" ? "tell" : "sys");
+        pendingTells.delete(f.id);
+        if (f.t === "tell-sent" && pending.event) publishSealedTell(pending.event);
+      }
     } else if (f.t === "fpub") {
       publishFeed(f.room, f.text, f.fx);  // your deed, your key — the arena broadcast
     } else if (f.t === "npost") {
@@ -3499,17 +3553,31 @@ function sendCmd(text) {
   // behind 'login' or pasted bare. A bare paste means what it obviously
   // means: these are my keys, let me in.
   var t = text.trim();
-  var bareSecret = /^(nsec1[a-z0-9]{20,}|[0-9a-fA-F]{64}|bunker:\\/\\/\\S+)$/.test(t);
-  var masked = bareSecret || /^login\\s+(nsec1|bunker:\\/\\/|[0-9a-fA-F]{64})/.test(t);
-  history.unshift(masked ? "login \\u2022\\u2022\\u2022\\u2022" : text); histAt = -1;
+  // Identify and consume private-key input before history, echo, or the wire.
+  // The same parser handles casing and every whitespace spelling of login.
+  var loginMatch = /^login(?:\\s+([\\s\\S]*))?$/i.exec(t);
+  var bareSecret = /^(?:nsec1[a-z0-9]+|[0-9a-f]{64}|bunker:\\/\\/\\S+)$/i.test(t);
+  if (loginMatch) {
+    var arg = (loginMatch[1] || "").trim();
+    var normalized = "login " + arg;
+    if (!arg) { print("Use 'login extension', 'login signer', or paste your key.", "sys"); return; }
+    localCmd(normalized);
+    return;
+  }
+  if (bareSecret) { importKey(t); return; }
+  if (/(?:nsec1[023456789acdefghjklmnpqrstuvwxyz]{58}|\\b[0-9a-f]{64}\\b|bunker:\\/\\/\\S+)/i.test(t)) {
+    print("That looks like a private key. Paste it on its own to sign in; it will not be sent.", "sys");
+    return;
+  }
+  history.unshift(text); histAt = -1;
   // Speech doesn't need an echo. The server answers every spoken line with
   // 'You say, "..."' \\u2014 so echoing the command first just prints the words twice
   // and buries the conversation in its own scaffolding. Commands still echo:
   // there, seeing exactly what you typed is the whole point.
-  if (!isSpeech(t)) print("\\u25b8 " + (masked ? "login \\u2022\\u2022\\u2022\\u2022" : text), "echo");
+  if (!isSpeech(t)) print("\\u25b8 " + text, "echo");
   guideNotice(t); // the first walk listens for its steps
-  if (bareSecret) { importKey(t); return; } // importKey routes bunker:// too
   if (localCmd(text)) return;
+  if (queuePrivateTell(t)) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "cmd", text: text }));
   // A STILLED TAB IS NOT A DEAD ONE. The stilled flag outranks every AUTOMATIC wake —
   // focus, visibility, online — and must keep doing so: two windows trading the
@@ -3533,7 +3601,7 @@ function localCmd(text) {
   var t = text.trim(), lower = t.toLowerCase();
   if (lower === "login extension" || lower === "login ext") { loginExtension(); return true; }
   if (lower === "login signer" || lower === "login bunker") { connectSignerApp(); return true; }
-  if (lower.indexOf("login ") === 0) { importKey(t.slice(6).trim()); return true; }
+  if (/^login(?:\\s|$)/i.test(t)) { importKey(t.replace(/^login\\s*/i, "")); return true; }
   if (lower === "logout") { logout(); return true; }
   // 'keys' shows the identity panel; 'keys reveal' shows the secret itself.
   // Both the server's welcome line and the panel's own help advertise these,
@@ -3563,6 +3631,8 @@ function localCmd(text) {
 }
 
 function reconnect() {
+  identityEpoch++;
+  pendingTells.clear();
   // Identity is changing: forget the old session's face immediately so the
   // bar and panel never mix the previous name with the next keys.
   // Drop the cached gate token too — it's minted for the OLD keys; reusing it
@@ -3579,7 +3649,13 @@ function reconnect() {
   hpEl.className = "";
   renderFx([]);
   if (idpanel.classList.contains("open")) refreshIdPanel();
-  try { if (ws) ws.close(); } catch (e) {}
+  var previous = ws;
+  ws = null;
+  connecting = false;
+  stilled = false;
+  clearInterval(hbTimer);
+  try { if (previous) previous.close(); } catch (e) {}
+  connect();
 }
 
 async function showKeys(reveal) {
@@ -3617,6 +3693,7 @@ function importKey(arg) {
     }
   } catch (e) {}
   if (!hex) { print("That is not a key. (nsec1\\u2026 or 64 hex characters)", "sys"); return false; }
+  try { getPublicKey(fromHex(hex)); } catch (e) { print("That key is outside the valid key range.", "sys"); return false; }
   var current = localStorage.getItem("nomad_sk");
   if (current && current !== hex) localStorage.setItem("nomad_sk_prev", current);
   localStorage.setItem("nomad_sk", hex);
@@ -3636,29 +3713,38 @@ function importKey(arg) {
 // or pastes it into their signer app (nsec.app, Amber, Primal...), and the
 // signer knocks back. BunkerClient does the protocol; we do the terminal.
 var pendingBunker = null; // a BunkerClient still waiting for its signer
+var identityChoice = 0; // invalidates asynchronous identity choices, even before reconnect
 function cancelPendingBunker() {
+  identityChoice++;
   if (!pendingBunker) return;
   try { pendingBunker.cancel(); } catch (e) {}
   pendingBunker = null;
 }
 
 async function connectSignerApp() {
-  if (pendingBunker) {
-    cancelPendingBunker();
+  var hadPending = !!pendingBunker;
+  cancelPendingBunker();
+  var choice = identityChoice;
+  if (hadPending) {
     print("— the old courier is torn up; older QR codes are void —", "sys");
   }
   var client = null;
   try {
     client = await makeBunkerClient();
-    var flow = await client.startClientFlow();
+    if (choice !== identityChoice) { client.cancel(); return; }
+    // Persist only after this choice still owns the page. Late signer replies
+    // must not replace the next login's remembered session.
+    client.storageKey = null;
     pendingBunker = client;
+    var flow = await client.startClientFlow();
+    if (choice !== identityChoice) { client.cancel(); return; }
     var uri = flow.connectUri;
     var copied = false;
     if (navigator.clipboard) { try { await navigator.clipboard.writeText(uri); copied = true; } catch (e) {} }
     print("Scan with your signer app (nsec.app, Amber, Primal\\u2026) or paste this" + (copied ? " \\u2014 already on your clipboard:" : ":"), "sys");
     print(uri);
     try {
-      var qrMod = await import("https://esm.sh/qrcode@1.5.4");
+      var qrMod = await import("/qrcode.js");
       var QR = qrMod.default || qrMod;
       var img = document.createElement("img");
       img.src = await QR.toDataURL(uri, { margin: 2, width: 220 });
@@ -3673,8 +3759,10 @@ async function connectSignerApp() {
       flow.waitForConnect,
       new Promise(function (rs, rj) { setTimeout(function () { rj(new Error("no signer connected in time")); }, 300000); }),
     ]);
-    if (pendingBunker !== client) return; // superseded by another login — stand down quietly
+    if (pendingBunker !== client || choice !== identityChoice) return;
     pendingBunker = null;
+    client.storageKey = "nomad_bunker_session";
+    client.saveSession();
     bunkerClient = client;
     burnPocketIfGraduated(userPk);
     localStorage.setItem("nomad_login", "bunker");
@@ -3692,11 +3780,19 @@ async function connectSignerApp() {
 }
 
 function startBunker(url) {
+  var choice = identityChoice;
   (async function () {
     print("— you send word to the bunker\\u2026 —", "sys");
     try {
       var client = await makeBunkerClient();
+      if (choice !== identityChoice) { client.cancel(); return; }
+      client.storageKey = null;
+      pendingBunker = client;
       var userPk = await client.connectBunkerUrl(url);
+      if (choice !== identityChoice || pendingBunker !== client) { client.cancel(); return; }
+      pendingBunker = null;
+      client.storageKey = "nomad_bunker_session";
+      client.saveSession();
       bunkerClient = client;
       burnPocketIfGraduated(userPk);
       localStorage.setItem("nomad_login", "bunker");
@@ -3704,6 +3800,9 @@ function startBunker(url) {
       print("— the bunker answers: you are " + nip19.npubEncode(userPk) + " —", "sys");
       reconnect();
     } catch (e) {
+      if (pendingBunker === client) pendingBunker = null;
+      if (client) client.cancel();
+      if (choice !== identityChoice) return;
       print("— the bunker did not answer (" + (e && e.message ? e.message : e) + ") —", "sys");
     }
   })();
@@ -3737,8 +3836,10 @@ async function loginExtension() {
     return;
   }
   cancelPendingBunker();
+  var choice = identityChoice;
   var extPk = null;
   try { extPk = await window.nostr.getPublicKey(); } catch (e) {}
+  if (choice !== identityChoice) return;
   if (!extPk) { print("The extension didn't answer.", "sys"); return; }
   burnPocketIfGraduated(extPk);
   method = "ext";
@@ -4011,7 +4112,8 @@ function benchSend(action, row) {
   // the server moves the pile in a single handler and renders one settled count —
   // no per-row fan racing at the server's DB awaits (the "weird amount" bug).
   var rows = Array.isArray(row) ? row : (row == null || row === "" ? [] : [row]);
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "bench", action: action, rows: rows }));
+  if (rows.length > 20) print("Sort up to 20 items at a time; repeat for the rest.", "sys");
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "bench", action: action, rows: rows.slice(0, 20) }));
   // If the wire is gone the frame goes nowhere \u2014 so a CLOSE still closes,
   // locally. Nothing traps a wanderer behind a panel that cannot answer.
   else if (action === "close") closeBench();
@@ -5793,6 +5895,14 @@ function vmOpen(mode, title, okLabel) {
   });
 }
 function askSecret(title, okLabel) { return vmOpen("secret", title, okLabel); }
+async function askNewPassphrase(m, title) {
+  while (true) {
+    var value = await askSecret(title + " Use at least 14 characters; several unrelated words are best.", "seal");
+    if (value === null) return null;
+    try { m.validatePassphrase(value); return value; }
+    catch (e) { print(verr(e), "sys"); }
+  }
+}
 function askConfirm(title, okLabel) { return vmOpen("confirm", title, okLabel); }
 function vmDone(ok) {
   if (!vmResolve) return;
@@ -5843,8 +5953,8 @@ async function offerPasskeyRecovery(m, tok, found, dek) {
     var rp = await m.createRecoveryPasskey(lastName || "wanderer");
     var wrap = await m.wrapDekWithPasskey(dek, rp.prfSecret, rp.credentialId, rp.prfSalt);
     var updated = m.withPasskeyWrap(found.backup, wrap);
+    found.fileId = await m.writeVault(tok, updated, found.fileId || null);
     found.backup = updated;
-    await m.writeVault(tok, updated, found.fileId || m.getVaultId());
     print("\\u2014 Face ID is now a backup key to your vault \\u2014", "sys");
   } catch (e) {
     print("\\u2014 couldn't add Face ID: " + verr(e) + " \\u2014", "sys");
@@ -5873,16 +5983,16 @@ async function recoverWithPasskey(m, found) {
 // this just offers a fresh PIN — the portable key that opens the vault on your
 // other devices. Skipping it leaves you logged in with Face ID on this device.
 async function offerNewPin(m, tok, found, dek) {
-  var np1 = await askSecret("Set a NEW PIN for this vault? It's the portable key that opens it on your other devices. Cancel to skip \\u2014 you're already in.", "set PIN");
+  var np1 = await askNewPassphrase(m, "Set a NEW passphrase for this vault? It's the portable key that opens it on your other devices. Cancel to skip \\u2014 you're already in.", "set passphrase");
   if (!np1) return;
-  var np2 = await askSecret("The same new PIN, once more.", "set PIN");
-  if (np1 !== np2) { print("\\u2014 the PINs disagree; PIN unchanged \\u2014", "sys"); return; }
+  var np2 = await askSecret("The same new passphrase, once more.", "set passphrase");
+  if (np1 !== np2) { print("\\u2014 the passphrases disagree; nothing changed \\u2014", "sys"); return; }
   try {
     var updated = await m.rewrapPin(found.backup, dek, np1);
+    found.fileId = await m.writeVault(tok, updated, found.fileId || null);
     found.backup = updated;
-    await m.writeVault(tok, updated, found.fileId || m.getVaultId());
-    print("\\u2014 new PIN set \\u2014", "sys");
-  } catch (e) { print("\\u2014 couldn't set new PIN: " + verr(e) + " \\u2014", "sys"); }
+    print("\\u2014 new passphrase set \\u2014", "sys");
+  } catch (e) { print("\\u2014 couldn't set new passphrase: " + verr(e) + " \\u2014", "sys"); }
 }
 
 // Get into the found vault, or offer the ways out. Returns
@@ -5890,19 +6000,19 @@ async function offerNewPin(m, tok, found, dek) {
 // "fresh". Every dead end has an exit: forget the PIN and you get Face ID;
 // forget BOTH and you can start over with a new vault. (Starting over erases
 // the old key for good — that's the price of a keeper-less, self-custody vault.)
-async function openVault(m, tok, found) {
+async function openVault(m, tok, found, identity) {
   var hasBio = false;
   try { hasBio = m.hasPasskeyWrap(found.backup); } catch (e) {}
   // Primary door: the PIN. A wrong PIN is almost always a typo, so it just
   // RE-PROMPTS — it never cascades toward creating or replacing a key. Only a
   // deliberate Cancel opens the "other ways in" menu below.
   while (true) {
-    var pin = await askSecret("Vault PIN \\u2014 the one you chose when you made it. (Wrong vault, or lost the PIN? Cancel for other ways in.)");
+    var pin = await askSecret("Vault passphrase (or your old PIN) \\u2014 the one you chose when you made it. (Wrong vault, or lost the PIN? Cancel for other ways in.)");
     if (!pin) break; // cancelled → escape menu
     try {
       var dek = await m.unlockDekWithPin(found.backup, pin);
       var secret = await m.decryptNsecFromDek(found.backup, dek);
-      return { secret: secret, dek: dek, mode: "pin", found: found, hasBio: hasBio };
+      return { secret: secret, dek: dek, mode: "pin", found: found, hasBio: hasBio, weakPin: !m.isStrongPassphrase(pin) };
     } catch (e) {
       print("\\u2014 that PIN doesn't turn \\u2014 try again, or Cancel for other ways in \\u2014", "sys");
     }
@@ -5922,7 +6032,7 @@ async function openVault(m, tok, found) {
       m.setVaultId(picked);
       try {
         var pb = await m.readVaultById(tok, picked);
-        return await openVault(m, tok, { fileId: picked, backup: pb });
+        return await openVault(m, tok, { fileId: picked, backup: pb }, identity);
       } catch (e) {
         print("\\u2014 couldn't read that file: " + verr(e) + " \\u2014", "sys");
       }
@@ -5932,7 +6042,7 @@ async function openVault(m, tok, found) {
     "Start over with a NEW vault? This ERASES the vault on this Google account \\u2014 its key is lost for good \\u2014 and seals your current wanderer in its place.",
     "start over",
   )) {
-    return await replaceVault(m, tok, found);
+    return await replaceVault(m, tok, found, identity);
   }
   return null;
 }
@@ -5940,21 +6050,34 @@ async function openVault(m, tok, found) {
 // Seal the CURRENT wanderer into a fresh vault, overwriting the old one. The
 // only way through when both the PIN and Face ID are lost: the old key can't be
 // recovered (by design), so this trades it for a clean start.
-async function replaceVault(m, tok, found) {
-  var pin1 = await askSecret("Choose a PIN for your NEW vault \\u2014 the only thing that opens it. Nobody can reset it.", "seal");
+async function replaceVault(m, tok, found, identity) {
+  identity = identity || { epoch: identityEpoch, choice: identityChoice, secret: nip19.nsecEncode(sk) };
+  var epoch = identity.epoch;
+  var secret = identity.secret;
+  var pin1 = await askNewPassphrase(m, "Choose a passphrase for your NEW vault \\u2014 the only thing that opens it. Nobody can reset it.", "seal");
   if (!pin1) { print("\\u2014 nothing written \\u2014", "sys"); return null; }
-  var pin2 = await askSecret("The same PIN, once more.", "seal");
-  if (pin1 !== pin2) { print("\\u2014 the PINs disagree; nothing written \\u2014", "sys"); return null; }
-  var made = await m.createBackup(nip19.nsecEncode(sk), pin1);
-  var fid = await m.writeVault(tok, made.backup, found ? found.fileId : m.getVaultId());
-  return { secret: nip19.nsecEncode(sk), dek: made.dek, mode: "fresh", found: { fileId: fid, backup: made.backup }, hasBio: false };
+  var pin2 = await askSecret("The same passphrase, once more.", "seal");
+  if (pin1 !== pin2) { print("\\u2014 the passphrases disagree; nothing written \\u2014", "sys"); return null; }
+  if (epoch !== identityEpoch || identity.choice !== identityChoice) throw new Error("Your identity changed; restart the vault operation.");
+  var made = await m.createBackup(secret, pin1);
+  if (epoch !== identityEpoch || identity.choice !== identityChoice) throw new Error("Your identity changed; nothing written.");
+  var fid = await m.writeVault(tok, made.backup, found ? found.fileId : null);
+  return { secret: secret, dek: made.dek, mode: "fresh", found: { fileId: fid, backup: made.backup }, hasBio: false };
 }
 
 // The one Google door: sign in, then open your Drive vault — or, if there
 // isn't one yet, seal THIS wanderer into a new one. Login and backup are the
 // same act, because the vault IS the identity. Self-custody: the dungeon never
 // holds the key or the PIN.
+var vaultBusy = false;
 async function continueWithGoogle() {
+  if (vaultBusy) return;
+  vaultBusy = true;
+  cancelPendingBunker();
+  var choice = identityChoice;
+  var epoch = identityEpoch;
+  var secret = nip19.nsecEncode(sk);
+  var vaultPk = getPublicKey(sk);
   idpanel.classList.remove("open");
   try {
     var m = await vaultKit();
@@ -5976,6 +6099,7 @@ async function continueWithGoogle() {
       );
       if (wantImport) {
         var picked = await m.pickDriveFile(tok);
+        if (!picked) return;
         if (picked) { found = { fileId: picked, backup: await m.readVaultById(tok, picked) }; m.setVaultId(picked); }
       }
     }
@@ -5983,8 +6107,9 @@ async function continueWithGoogle() {
     if (found) {
       // Unlock first, sign in, THEN offer any follow-ups — so cancelling an
       // offer never feels like being thrown back to the start.
-      var opened = await openVault(m, tok, found);
+      var opened = await openVault(m, tok, found, { epoch: epoch, choice: choice, secret: secret });
       if (!opened) { print("\\u2014 the vault stays shut \\u2014", "sys"); return; }
+      if (epoch !== identityEpoch || choice !== identityChoice) throw new Error("Your identity changed; restart the vault operation.");
       if (importKey(opened.secret)) {
         localStorage.setItem("nomad_vault_pk", getPublicKey(sk));
         print(opened.mode === "fresh"
@@ -5993,25 +6118,33 @@ async function continueWithGoogle() {
         // Now signed in. Optional follow-ups: set a fresh PIN if you just
         // recovered by Face ID; otherwise offer to enroll Face ID if there
         // isn't one yet (covers a brand-new vault and a PIN-only login).
-        if (opened.mode === "recovered") await offerNewPin(m, tok, opened.found, opened.dek);
+        if (opened.mode === "recovered" || opened.weakPin) {
+          if (opened.weakPin) print("Your old PIN is weak. Upgrade to a long passphrase to protect your backup.", "sys");
+          await offerNewPin(m, tok, opened.found, opened.dek);
+        }
         else if (!opened.hasBio) await offerPasskeyRecovery(m, tok, opened.found, opened.dek);
       }
       return;
     }
 
     // CREATE: no vault — seal the current wanderer into a new one.
-    var pin1 = await askSecret("Choose a PIN to seal this wanderer into a new Drive vault. It is the ONLY thing that opens it \\u2014 nobody can reset it.", "seal");
+    var pin1 = await askNewPassphrase(m, "Choose a passphrase to seal this wanderer into a new Drive vault. It is the ONLY thing that opens it \\u2014 nobody can reset it.", "seal");
     if (!pin1) { print("\\u2014 nothing written \\u2014", "sys"); return; }
-    var pin2b = await askSecret("The same PIN, once more.", "seal");
-    if (pin1 !== pin2b) { print("\\u2014 the PINs disagree; nothing written \\u2014", "sys"); return; }
-    var made = await m.createBackup(nip19.nsecEncode(sk), pin1);
-    var fid = await m.writeVault(tok, made.backup, m.getVaultId());
-    localStorage.setItem("nomad_vault_pk", getPublicKey(sk));
-    print("\\u2014 sealed into your Drive. This wanderer is yours to keep; your PIN brings it back anywhere. \\u2014", "sys");
+    var pin2b = await askSecret("The same passphrase, once more.", "seal");
+    if (pin1 !== pin2b) { print("\\u2014 the passphrases disagree; nothing written \\u2014", "sys"); return; }
+    if (epoch !== identityEpoch || choice !== identityChoice) throw new Error("Your identity changed; nothing written.");
+    var made = await m.createBackup(secret, pin1);
+    if (epoch !== identityEpoch || choice !== identityChoice) throw new Error("Your identity changed; nothing written.");
+    // A new vault always creates a file. A remembered id is not authority to
+    // overwrite a file that discovery did not successfully open.
+    var fid = await m.writeVault(tok, made.backup, null);
+    if (epoch !== identityEpoch || choice !== identityChoice) return;
+    localStorage.setItem("nomad_vault_pk", vaultPk);
+    print("\\u2014 sealed into your Drive. This wanderer is yours to keep; your passphrase brings it back anywhere. \\u2014", "sys");
     await offerPasskeyRecovery(m, tok, { fileId: fid, backup: made.backup }, made.dek);
   } catch (e) {
     print("\\u2014 vault: " + verr(e) + " \\u2014", "sys");
-  }
+  } finally { vaultBusy = false; }
 }
 
 async function refreshIdPanel() {
@@ -6047,7 +6180,7 @@ async function refreshIdPanel() {
     var vpk = localStorage.getItem("nomad_vault_pk");
     if (vpk && vpk === myPk) {
       glbl.textContent = "SIGNED IN \\u2014 DRIVE VAULT";
-      gstate.textContent = "\\u2713 your key lives in a vault in your own Drive \\u2014 Continue with Google + your PIN restores it on any device.";
+      gstate.textContent = "\\u2713 your key lives in a vault in your own Drive \\u2014 Continue with Google + your passphrase restores it on any device.";
       gstate.style.display = "";
       idgoogle.style.display = "none";
       gnote.style.display = "none";
@@ -8201,36 +8334,36 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
-  "the-tide-warden":        { n: 8, aspect: 1.007, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5,"alert":6,"recover":7} },
+  "the-tide-warden":        { n: 8, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5,"recover":6,"hit":7} },
   "the-scaffold-hand":      { n: 6, aspect: 0.96, f: {"idle":0,"attack":1,"recover":2,"death":3,"swing":4,"work-the-stone":5} },
   "the-salt-widow":         { n: 6, aspect: 1.011, f: {"idle":0,"attack":1,"recover":2,"death":3,"feed-the-flue":4,"work-the-pan":5} },
-  "the-refuge-man":         { n: 8, aspect: 1.014, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"turn-from-the-wall":5,"alert":6,"recover":7} },
-  "the-reed-walker":        { n: 8, aspect: 1.035, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"part-the-reed":5,"alert":6,"recover":7} },
-  "the-pilot":              { n: 8, aspect: 0.993, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"read-the-water":5,"alert":6,"recover":7} },
-  "the-great-devil-crab":   { n: 8, aspect: 1.134, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5,"hit":6,"death":7} },
-  "the-eel-cutter":         { n: 8, aspect: 1.116, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"lift-the-trap":5,"alert":6,"recover":7} },
+  "the-refuge-man":         { n: 8, aspect: 0.908, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"turn-from-the-wall":5,"recover":6,"hit":7} },
+  "the-reed-walker":        { n: 8, aspect: 1.026, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"part-the-reed":5,"recover":6,"hit":7} },
+  "the-pilot":              { n: 8, aspect: 0.988, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"read-the-water":5,"alert":6,"recover":7} },
+  "the-great-devil-crab":   { n: 8, aspect: 1.202, f: {"idle":0,"alert":1,"attack":2,"recover":3,"hit":4,"death":5,"rest":6,"bite":7} },
+  "the-eel-cutter":         { n: 8, aspect: 1.076, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"lift-the-trap":5,"alert":6,"recover":7} },
   "the-drowned-ferryman":   { n: 6, aspect: 1.055, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-drover":             { n: 8, aspect: 1.056, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"drive-the-road":5,"alert":6,"recover":7} },
+  "the-drover":             { n: 8, aspect: 1.051, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"drive-the-road":5,"alert":6,"recover":7} },
   "the-bridge-mason":       { n: 8, aspect: 1.035, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"dress-the-stone":5,"alert":6,"recover":7} },
-  "bull-seal":              { n: 6, aspect: 1.304, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "bull-seal":              { n: 8, aspect: 1.28, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"recover":5,"bite":6,"hit":7} },
   "the-wrecker":    { n: 8, aspect: 0.919, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"snatch-escape":5,"recover":6,"hit":7} },
-  "the-fowler":     { n: 6, aspect: 1.353, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"rise-from-the-turf":5} },
+  "the-fowler":     { n: 8, aspect: 1.568, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"rise-from-the-turf":5,"recover":6,"hit":7} },
   "strand-thief":   { n: 8, aspect: 0.922, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"snatch-escape":5,"recover":6,"hit":7} },
-  "the-great-crab":   { n: 8, aspect: 1.083, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
+  "the-great-crab":   { n: 8, aspect: 1.145, f: {"idle":0,"alert":1,"attack":2,"death":3,"recover":4,"hit":5,"rest":6,"bite":7} },
   "marsh-hound":      { n: 8, aspect: 1.551, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
   "a-lymer":          { n: 8, aspect: 1.52, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
-  "wrack-crab":          { n: 8, aspect: 1.048, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
-  "silver-eel":          { n: 6, aspect: 1.561, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "oystercatcher":       { n: 8, aspect: 1.148, f: {"idle":0,"alert-alarm":1,"attack":2,"up":3,"glide":4,"down":5,"landing":6,"death":7} },
-  "old-conger":          { n: 6, aspect: 1.541, f: {"idle":0,"alert":1,"attack":2,"bite":3,"recover":4,"death":5} },
-  "grey-seal":           { n: 6, aspect: 1.451, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "great-gull":          { n: 8, aspect: 1.117, f: {"idle":0,"alert":1,"attack":2,"up":3,"glide":4,"down":5,"landing":6,"death":7} },
-  "ford-eel":            { n: 6, aspect: 1.587, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "wrack-crab":          { n: 8, aspect: 1.342, f: {"idle":0,"alert":1,"attack":2,"death":3,"recover":4,"hit":5,"rest":6,"bite":7} },
+  "silver-eel":          { n: 8, aspect: 1.11, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"recover":5,"bite":6,"hit":7} },
+  "oystercatcher":       { n: 8, aspect: 1.196, f: {"idle":0,"attack":1,"up":2,"down":3,"death":4,"rest":5,"glide":6,"landing":7} },
+  "old-conger":          { n: 8, aspect: 1.65, f: {"idle":0,"alert":1,"attack":2,"bite":3,"recover":4,"death":5,"rest":6,"hit":7} },
+  "grey-seal":           { n: 8, aspect: 1.996, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"bite":5,"recover":6,"hit":7} },
+  "great-gull":          { n: 8, aspect: 1.163, f: {"idle":0,"attack":1,"up":2,"down":3,"death":4,"rest":5,"glide":6,"landing":7} },
+  "ford-eel":            { n: 8, aspect: 1.54, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"recover":5,"bite":6,"hit":7} },
   "fen-viper":           { n: 6, aspect: 1.922, f: {"idle":0,"watch":1,"bask":2,"attack":3,"recover":4,"death":5} },
-  "devil-crab":          { n: 8, aspect: 1.425, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
-  "conger":              { n: 6, aspect: 1.651, f: {"idle":0,"alert":1,"rest":2,"attack":3,"recover":4,"death":5} },
-  "black-backed-gull":   { n: 8, aspect: 1.107, f: {"idle":0,"alert":1,"attack":2,"up":3,"glide":4,"down":5,"landing":6,"death":7} },
-  "bittern":             { n: 8, aspect: 1.107, f: {"idle":0,"alert":1,"attack":2,"up":3,"glide":4,"down":5,"landing":6,"death":7} },
+  "devil-crab":          { n: 8, aspect: 1.244, f: {"idle":0,"alert":1,"attack":2,"death":3,"recover":4,"hit":5,"rest":6,"bite":7} },
+  "conger":              { n: 8, aspect: 1.332, f: {"idle":0,"alert":1,"rest":2,"attack":3,"recover":4,"death":5,"bite":6,"hit":7} },
+  "black-backed-gull":   { n: 8, aspect: 1.165, f: {"idle":0,"attack":1,"up":2,"down":3,"death":4,"rest":5,"glide":6,"landing":7} },
+  "bittern":             { n: 8, aspect: 1.08, f: {"idle":0,"attack":1,"up":2,"down":3,"death":4,"rest":5,"glide":6,"landing":7} },
   "a-fold-dog":           { n: 6, aspect: 1.46, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "bone-breaker":         { n: 8, aspect: 1.132, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"feed":5,"attack":6,"death":7} },
   "brooding-vulture":     { n: 8, aspect: 1.086, f: {"idle":0,"rest":1,"recover":2,"attack":3,"death":4,"feed":5,"move-a":6,"move-b":7} },
@@ -8332,7 +8465,20 @@ var CALM_POSES = ["rest","bask","graze","feed","listen","watch","hold-ground",
   "turn-from-the-wall", // the refuge man, coming off the stone he waited at
   "work-the-stone",     // the scaffold hand, upside down, working the underside
   "feed-the-flue",      // the salt widow, feeding a fire that went out
-  "work-the-pan"];      // ...and drawing the rake across a pan that is cold
+  "work-the-pan",       // ...and drawing the rake across a pan that is cold
+  // THE LAST THREE OF THE TWELVE, NAMED HERE BEFORE THEY ARE DRAWN. The note
+  // above is a record of the same mistake made nine times over - a pose drawn,
+  // cut, packed and shipped, and unreachable because this list had never heard
+  // of it. The only way that stops happening is to add the word first, so the
+  // slot is waiting when the sheet arrives. A name in here that no strip owns
+  // yet costs nothing: the lookup simply never matches.
+  "work-the-water",     // the miller, both arms in past the elbow, and he keeps hold
+  "shift-the-weight",   // the toll clerk, taking the satchel's weight - the OTHER hand never moves
+  "turn-the-distance",  // the long warden, at the end of a beat, coming round to walk it back
+  // AND THE FERRYMAN FINALLY HAS ONE. He was the only one of the eleven with no
+  // work pose at all, which is why his idle, his hurt and his stroll were all
+  // the same picture. His hands are empty in this one and in no other.
+  "find-the-line"];     // the drowned ferryman, feeling for a rope that is not there
 var GAIT_HZ = 5;            // gait poses alternate this fast...
 var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
 var WINGBEAT_HZ = 4;        // and wings beat this fast...
@@ -8529,9 +8675,17 @@ function paintMobs(ids, doing, dead) {
     var watch = "idle";
     for (var z5 = 0; z5 < WATCH_POSES.length; z5++)
       if (spec.f[WATCH_POSES[z5]] !== undefined) { watch = WATCH_POSES[z5]; break; }
+    // THE POSE IT EATS IN, which is not always called "feed". The fed beat used
+    // to name that frame literally, so an animal drawn with its head down in the
+    // ground could be sent the signal and had nothing to answer it with — and
+    // every grazer in the game is exactly that animal. Read like every other
+    // pose: a preference list, so the art's own word for eating is enough.
+    var eat = "";
+    for (var z6 = 0; z6 < EAT_POSES.length; z6++)
+      if (spec.f[EAT_POSES[z6]] !== undefined) { eat = EAT_POSES[z6]; break; }
     var rate = spec.f["move-a"] !== undefined ? 7000 : spec.f.up !== undefined ? 11000 : 20000;
     anims.push({ el: el, spec: spec, id: id, phase: "idle", t: 0, calm: calm, state: "",
-                 sleep: sleep, strike: strike, strikes: strikes, blow: strike,
+                 sleep: sleep, strike: strike, strikes: strikes, blow: strike, eat: eat,
                  recoil: recoil, watch: watch, rate: rate, slot: slot, lift: lift,
                  next: Date.now() + 2000 + Math.random() * rate * 2 });
   }
@@ -8733,8 +8887,9 @@ function poseAt(a, now) {
     s *= 1 - 0.05 * Math.exp(-t * 9);      // it gives, and comes back up
   } else if (a.phase === "feed") {
     // Head down at the body, with the small working shift of something pulling
-    // at meat rather than standing over it.
-    name = "feed";
+    // at meat rather than standing over it. A grazer does the same thing at the
+    // ground, so the frame is whichever of the two this one was drawn with.
+    name = a.eat || "feed";
     x = Math.sin(t * 3.4) * SWAY * 0.10;
   } else if (a.state === "hunt") {
     // IT HAS YOU. It does not wander, it does not cut to its calm pose - it
@@ -8797,13 +8952,23 @@ function poseAt(a, now) {
       var wh = a.id === "ptarmigan" ? WINGBEAT_HZ_FAST : WINGBEAT_HZ;
       var uf = Math.min(t / (TRAVEL_MS / 1000), 1);
       var beat = Math.floor(t * wh) % 2 ? "up" : "down";
-      if (f.glide === undefined || f.landing === undefined) {
+      // LEAVING THE GROUND IS ITS OWN MOVEMENT for anything drawn doing it: the
+      // crouch and the shove, before the wings have air to bite on.
+      //
+      // THIS USED TO SIT INSIDE THE FULL-ARC BRANCH BELOW, which meant a bird
+      // only ever showed its takeoff if it ALSO owned a glide and a landing.
+      // That was true of the drakes and of nobody else, and when the coast's
+      // birds were redrawn with a takeoff and no arc, the frame was cut, packed
+      // and shipped and could never appear. A creature that owns the drawing
+      // gets the drawing; what it does after the first stride is a separate
+      // question, answered below.
+      if (f.takeoff !== undefined && uf < 0.13) {
+        name = "takeoff";
+        air = LIFT * (uf / 0.32);
+      } else if (f.glide === undefined || f.landing === undefined) {
         name = beat; air = LIFT + Math.sin(t * 3) * 0.04;      // no arc drawn: just fly
       } else if (uf < 0.32) {
-        // LEAVING THE GROUND IS ITS OWN MOVEMENT for anything drawn doing it:
-        // the crouch and the shove, before the wings have air to bite on. Only
-        // the drakes have the frame; every bird climbs out on the beat as before.
-        name = (f.takeoff !== undefined && uf < 0.13) ? "takeoff" : beat;
+        name = beat;
         air = LIFT * (uf / 0.32);
       } else if (uf < (f.dive !== undefined ? 0.60 : 0.72)) {
         name = "glide"; air = LIFT; x = Math.sin(t * 1.2) * SWAY * 0.6;
@@ -8865,6 +9030,12 @@ var STAGGER_S = 0.75;     // how far apart blows in the same round are spread
 var SLEEP_POSES = ["rest", "bask", "hold-warm-ground", "hold-ground", "feed"];
 var STRIKE_POSES = ["attack", "bite", "sweep", "breath"];
 var HIT_POSES = ["hit"];
+// WHAT EATING LOOKS LIKE. Separate from CALM_POSES on purpose: this one answers
+// an EVENT — the world says this animal just ate — so nothing shadows it. A
+// grazer that also sleeps still shows the sleep as its idle alternate and the
+// graze at the moment it feeds, which are two different questions and were
+// being answered by one list.
+var EAT_POSES = ["feed", "graze"];
 // How it looks at you when it has decided something about you.
 // AND ONE OF THE VARIANTS' POSES IS NOT AN IDLE CUT. The one who stayed was
 // drawn walking at you, and a man closing the distance is a claim about you,
@@ -8912,7 +9083,7 @@ function mobBeat(swung, struck, died, fed) {
         : a.strike;
     }
     else if (struck && struck.indexOf(a.id) >= 0) { a.phase = "hit"; a.t = 0; }
-    else if (fed && fed.indexOf(a.id) >= 0 && a.spec.f.feed !== undefined) { a.phase = "feed"; a.t = 0; }
+    else if (fed && fed.indexOf(a.id) >= 0 && a.eat) { a.phase = "feed"; a.t = 0; }
   }
 }
 function stepAnims() {

@@ -126,7 +126,13 @@ import {
   groundWord, carveMedium, REST_TRACE, throwLand, metalFall,
 } from "./zone-data";
 
+import { PrivateMessages } from "./private-messages";
+import { EventQueue, MAX_FRAME_BYTES, MAX_COMMAND_CHARS, MAX_BATCH_ROWS, SECRET_INPUT } from "./security";
+
 export class ZoneDO implements DurableObject {
+  private readonly eventQueue = new EventQueue();
+  private readonly privateMessages = new PrivateMessages();
+  private readonly socketPending = new Map<WebSocket, number>();
   public world: World | null = null;
   public sessions = new Map<string, Session>(); // pubkey -> session
   // WHO LIVES WHERE (mig 162). Room id -> the hold on it. Loaded whole at world
@@ -1122,6 +1128,11 @@ export class ZoneDO implements DurableObject {
   // ---- transport: the direct door ----
 
   async fetch(req: Request): Promise<Response> {
+    if (this.eventQueue.pending >= 64) return new Response("busy", { status: 503 });
+    return this.eventQueue.run(() => this.handleFetch(req));
+  }
+
+  private async handleFetch(req: Request): Promise<Response> {
     // Admin: wipe the world SIM (creatures, ground, arrivals, world state) and
     // re-seed fresh from the spawn tables. Does NOT touch D1 — every player's
     // character, inventory, vault and sealed loot survive. Gated by ADMIN_TOKEN
@@ -1249,7 +1260,7 @@ export class ZoneDO implements DurableObject {
     // hibernation rebuild (hydrateSessions) doesn't read a parked socket as fresh.
     // pid/att ride the socket too, so the staleness guard above still works after
     // a hibernation wake, when the only thing left of a connection is its socket.
-    server.serializeAttachment({ pubkey, la: Date.now(), pid, att });
+    server.serializeAttachment({ pubkey, la: Date.now(), pid, att, sealedTell: qs.get("tell") === "1", cid: crypto.randomUUID() });
     // Answer pings without waking the DO — keeps parked sockets warm for cheap.
     this.state.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
 
@@ -1521,6 +1532,7 @@ export class ZoneDO implements DurableObject {
     const roomId = world.rooms.has(row.room_id) ? row.room_id : this.randomGate();
     return {
       ws,
+      sealedTell: this.wsAttachment(ws)?.sealedTell === true,
       pubkey: row.pubkey,
       name: row.name,
       named: row.named === 1,
@@ -1553,9 +1565,9 @@ export class ZoneDO implements DurableObject {
 
   // The socket's attachment: the owner's key, stashed at accept-time, plus
   // `la` — the idle stamp (see Session.lastActiveAt).
-  private wsAttachment(ws: WebSocket): { pubkey?: string; la?: number; pid?: string | null; att?: number | null } | null {
+  private wsAttachment(ws: WebSocket): { pubkey?: string; la?: number; pid?: string | null; att?: number | null; cid?: string; sealedTell?: boolean } | null {
     try {
-      return ws.deserializeAttachment() as { pubkey?: string; la?: number; pid?: string | null; att?: number | null } | null;
+      return ws.deserializeAttachment() as { pubkey?: string; la?: number; pid?: string | null; att?: number | null; cid?: string; sealedTell?: boolean } | null;
     } catch { return null; }
   }
 
@@ -1596,13 +1608,28 @@ export class ZoneDO implements DurableObject {
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    if (typeof message !== "string" || message.length > MAX_FRAME_BYTES || new TextEncoder().encode(message).length > MAX_FRAME_BYTES) {
+      try { ws.close(1009, "frame too large or not text"); } catch {}
+      return;
+    }
+    const pending = this.socketPending.get(ws) ?? 0;
+    if (pending >= 6 || this.eventQueue.pending >= 64) return;
+    this.socketPending.set(ws, pending + 1);
+    try { await this.eventQueue.run(() => this.handleWebSocketMessage(ws, message)); }
+    finally {
+      const left = (this.socketPending.get(ws) ?? 1) - 1;
+      if (left) this.socketPending.set(ws, left); else this.socketPending.delete(ws);
+    }
+  }
+
+  private async handleWebSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     let session: Session | undefined;
     try {
       await this.hydrateSessions();
       const pubkey = this.wsPubkey(ws);
       if (!pubkey) return;
       session = this.sessions.get(pubkey);
-      if (!session) return;
+      if (!session || (session.ws !== ws && this.wsAttachment(session.ws)?.cid !== this.wsAttachment(ws)?.cid)) return;
       session.ws = ws; // a woken socket is a fresh object — keep the session on it
       await this.onMessage(session, typeof message === "string" ? message : "");
       // A command can open a fight while a quiet-length alarm is still
@@ -1611,12 +1638,12 @@ export class ZoneDO implements DurableObject {
     } catch (e) {
       // A thrown command used to vanish here (a bare `catch {}`) — leaving the
       // player able to see the world's ambient lines but unable to ACT, a silent
-      // soft-lock with nothing recorded. Now: log the pubkey + the exact input +
-      // the stack (visible in `wrangler tail`) so the next occurrence names its
+      // soft-lock with nothing recorded. Now: log the pubkey and stack
+      // (visible in `wrangler tail`) so the next occurrence names its
       // own cause, and tell the player it stumbled so they know to retry rather
-      // than stare. One bad command no longer eats the whole session.
-      const raw = typeof message === "string" ? message.slice(0, 300) : "";
-      console.error("onMessage threw", this.wsPubkey(ws), raw, (e as Error)?.stack ?? String(e));
+      // than stare. Raw input is omitted because it can contain private words or keys.
+      // One bad command no longer eats the whole session.
+      console.error("onMessage threw", this.wsPubkey(ws), (e as Error)?.stack ?? String(e));
       if (session) {
         try { this.send(session, "The dungeon stumbles — that didn't take. Try again, or type 'look'."); } catch {}
       }
@@ -1624,6 +1651,10 @@ export class ZoneDO implements DurableObject {
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
+    return this.eventQueue.run(() => this.handleWebSocketClose(ws));
+  }
+
+  private async handleWebSocketClose(ws: WebSocket): Promise<void> {
     const pubkey = this.wsPubkey(ws);
     if (pubkey) {
       const session = this.sessions.get(pubkey);
@@ -1642,6 +1673,10 @@ export class ZoneDO implements DurableObject {
   }
 
   async webSocketError(ws: WebSocket): Promise<void> {
+    return this.eventQueue.run(() => this.handleWebSocketError(ws));
+  }
+
+  private async handleWebSocketError(ws: WebSocket): Promise<void> {
     const pubkey = this.wsPubkey(ws);
     if (!pubkey) return;
     const session = this.sessions.get(pubkey);
@@ -1657,12 +1692,23 @@ export class ZoneDO implements DurableObject {
     } catch {
       return;
     }
+    if (!frame || typeof frame !== "object" || Array.isArray(frame)) return;
+    if (frame.t === "cmd" && (typeof frame.text !== "string" || frame.text.length > MAX_COMMAND_CHARS)) return;
+    if (frame.t === "cmd" && (SECRET_INPUT.test(frame.text) || /^\s*login(?:\s|$)/i.test(frame.text))) {
+      this.send(session, "Login and private keys must stay in your browser. Refresh before signing in.");
+      return;
+    }
+    if (frame.rows !== undefined && (!Array.isArray(frame.rows) || frame.rows.length > MAX_BATCH_ROWS
+        || frame.rows.some((r: unknown) => typeof r !== "string" || r.length > 128))) return;
+    if (frame.row !== undefined && (typeof frame.row !== "string" || frame.row.length > 128)) return;
+    if (frame.action !== undefined && (typeof frame.action !== "string" || frame.action.length > 32)) return;
+    const isTell = frame.t === "tell-key" || frame.t === "sealed-tell";
     const isBench = frame?.t === "bench";
     const isTrade = frame?.t === "trade";
     const isForge = frame?.t === "forge";
     const isBounty = frame?.t === "bounty";
     const isSwap = frame?.t === "swap";
-    if (!isBench && !isTrade && !isForge && !isBounty && !isSwap && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
+    if (!isTell && !isBench && !isTrade && !isForge && !isBounty && !isSwap && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
 
     // Token bucket per pubkey — castr's daily-cast pattern, compressed.
     const now = Date.now();
@@ -1676,21 +1722,23 @@ export class ZoneDO implements DurableObject {
     // be blind again a second after it was armed.
     try {
       const a = this.wsAttachment(session.ws);
-      session.ws.serializeAttachment({ pubkey: session.pubkey, la: now, pid: a?.pid ?? null, att: a?.att ?? null });
+      session.ws.serializeAttachment({ pubkey: session.pubkey, la: now, pid: a?.pid ?? null, att: a?.att ?? null, cid: a?.cid, sealedTell: a?.sealedTell });
     } catch {}
     session.tokens = Math.min(
       RATE_CAPACITY,
       session.tokens + ((now - session.tokensAt) / 1000) * RATE_REFILL_PER_SEC,
     );
     session.tokensAt = now;
-    if (session.tokens < 1) {
+    const cost = isBench && Array.isArray(frame.rows) ? Math.max(1, Math.ceil(frame.rows.length / 4)) : 1;
+    if (session.tokens < cost) {
       if (!isBench && !isTrade && !isForge && !isBounty && !isSwap) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
       return;
     }
-    session.tokens -= 1;
+    session.tokens -= cost;
 
     // The gatehouse bench (storage modal) and the keeper's hatch (trade
     // modal): each its own little protocol.
+    if (isTell) return this.privateMessages.handle(this, session, frame);
     if (isBench) return gate.handleBench(this, session, frame);
     if (isTrade) return gate.handleTrade(this, session, frame);
     if (isForge) return gate.handleForge(this, session, frame);
@@ -3739,6 +3787,10 @@ export class ZoneDO implements DurableObject {
   // observability will name the next one), the players stay connected, and the
   // next beat is always scheduled.
   async alarm(): Promise<void> {
+    return this.eventQueue.run(() => this.handleAlarm());
+  }
+
+  private async handleAlarm(): Promise<void> {
     try {
       await this.tick();
     } catch (e) {
@@ -8614,20 +8666,9 @@ export class ZoneDO implements DurableObject {
     } catch {}
   }
 
-  // A quiet word gets more than obfuscation: it gets a CIPHER. One recipient
-  // means NIP-44 works cleanly (no room key, no "who was here when"), so the
-  // speaker's client seals it to that npub and publishes an ephemeral kind 24915,
-  // p-tagged. Only they can open it; no relay keeps it.
-  public tellOut(session: Session, toPubkey: string, msg: string): void {
-    try {
-      session.ws.send(JSON.stringify({ v: 0, t: "tpub", to: toPubkey, text: msg }));
-    } catch {}
-  }
-
   // (The relay feed once scrubbed every player name to "a wanderer" to foil a
   // stream-sniper. That wall came down on 2026-07-15: names now ride out in the
   // clear so the world can be watched from outside — a wanderer's own deeds under
   // their own key (actorFeed), the world's lines under the dungeon's. The trade
   // is deliberate; see the arena-broadcast notes in actorFeed and public.ts.)
 }
-

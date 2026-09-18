@@ -1476,6 +1476,11 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
           : THIEVES.has(creature.templateId)
           ? `${cap(tmpl.name)} crouches in a corner, gnawing at something it has scavenged.`
           : `${cap(tmpl.name)} noses through the muck, gnawing at fungus and scraps.`, undefined, false);
+        // AND THE PICTURE IS TOLD, which it was not until now. The line above
+        // has always said the animal is eating; only the scavenger's version of
+        // this moment ever reached the sprite, so every grazer in the game fed
+        // in text while standing idle on screen. Same beat, same signal.
+        z.fxFed(creature.roomId, creature.templateId);
         z.refreshRoomCtx(creature.roomId);
       }
     }
@@ -1587,6 +1592,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} runs down ${vt.name} and tears into it.`, undefined, false);
       z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.");
+      z.fxFed(creature.roomId, creature.templateId);   // "tears into it" — so show it
       z.refreshRoomCtx(creature.roomId);
     } else {
       // IT LIVED — SO IT IS HELD. This used to bolt (a scrap, not a slaughter),
@@ -1649,6 +1655,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} finishes it, and stands over what is left.`, undefined, false);
     z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.");
+    z.fxFed(creature.roomId, creature.templateId);   // it is standing over a kill; show it
     z.refreshRoomCtx(creature.roomId);
     return true;
   }

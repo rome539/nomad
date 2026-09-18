@@ -5,10 +5,11 @@
 // seam moved. `import type` for ZoneDO keeps this a compile-time reference, so
 // there's no runtime import cycle.
 import type { ZoneDO } from "./zone";
+import { MAX_BATCH_ROWS, SECRET_INPUT } from "./security";
 import type { Session } from "./zone-types";
 import type { Region } from "./world";
 import { provokeGrudges } from "./ai";
-import { type ForgeRecipe, type CarriedItem, parseTraits, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner, hasTrait, mapInkLoad, journalLoad } from "./world";
+import { type ForgeRecipe, type CarriedItem, parseTraits, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, withdrawContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner, hasTrait, mapInkLoad, journalLoad } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
@@ -1608,8 +1609,9 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     // amount" drawing a stack out of the vault (2026-07-14). Now the whole pile
     // moves in THIS one handler, and we render ONCE at the end, from settled
     // state. (Legacy single-row `frame.row` still accepted, for safety.)
+    if (Array.isArray(frame.rows) && frame.rows.length > MAX_BATCH_ROWS) return;
     const rows = Array.isArray(frame.rows)
-      ? frame.rows.filter((r: unknown): r is string => typeof r === "string")
+      ? [...new Set<string>(frame.rows.filter((r: unknown): r is string => typeof r === "string" && r.length <= 128))]
       : (typeof frame.row === "string" && frame.row ? [frame.row] : []);
     const KNOWN = new Set(["stash", "vault", "seal", "take", "equip", "remove", "burn", "drop", "salvage", "repair", "stow", "fetch"]);
     if (!KNOWN.has(action) || !rows.length) return;
@@ -1840,7 +1842,7 @@ export async function benchTake(z: ZoneDO, session: Session, row: string): Promi
         if (z.torchCapped(session, entry.itemId)) return z.torchFullNote();
         if (z.dressingCapped(session, entry.itemId)) return z.dressingFullNote();
         if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${z.packCap(session)} slots).`;
-        await setContainer(z.env.DB, entry.rowId, "");
+        if (!await withdrawContainer(z.env.DB, entry.rowId, session.pubkey, key)) return "That item has already moved.";
         session.items.push(entry);
         return undefined;
       }
@@ -2186,7 +2188,7 @@ export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key:
     if (z.torchCapped(session, entry.itemId)) return z.send(session, z.torchFullNote());
     if (z.dressingCapped(session, entry.itemId)) return z.send(session, z.dressingFullNote());
     if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${z.packCap(session)} slots). Make room first.`);
-    await setContainer(z.env.DB, entry.rowId, "");
+    if (!await withdrawContainer(z.env.DB, entry.rowId, session.pubkey, cfg.container)) return z.send(session, "That item has already moved.");
     session.items.push(entry);
     z.send(session, cfg.take(tmpl.name));
     z.sendCtx(session);
@@ -2243,6 +2245,7 @@ export function gatehouseFeed(z: ZoneDO, text: string, exceptPubkey?: string, cl
 }
 
 export function gatehouseSay(z: ZoneDO, session: Session, raw: string): void {
+  if (SECRET_INPUT.test(raw) || /^\s*login(?:\s|$)/i.test(raw)) return z.send(session, "Private keys are never spoken here. Refresh before signing in.");
   const msg = raw.trim().slice(0, 240);
   if (!msg) return;
   const line = `${session.name} says: ${msg}`;
@@ -2809,34 +2812,11 @@ export function wantedItem(z: ZoneDO): { name: string } | null {
 // A quiet word, one to one — leaning in at the bar. Only they hear it; the room
 // doesn't. Gatehouse only: out in the dark there is nowhere to lean.
 //
-// The wire copy is a REAL encrypted Nostr message. This is the one place the
-// encryption question answers itself: a `tell` has exactly ONE recipient, so
-// there's no shared-room-key problem — the speaker's client NIP-44s it to that
-// npub and publishes an ephemeral kind 24915, p-tagged to them. Nobody else can
-// read it. No relay keeps it. (The dungeon still routes the socket copy, so it
-// sees the words in passing — if that must change, the client can encrypt before
-// it sends and the server can forward a blob it can't read.)
-export function cmdTell(z: ZoneDO, session: Session, arg: string): void {
-  if (!z.outOfWorld(session)) {
-    return z.send(session, "Not out here. A quiet word needs a wall at your back — that's what the gatehouse is for.");
-  }
-  const m = arg.trim().match(/^(\S+)\s+(.+)$/s);
-  if (!m) return z.send(session, "Tell who what? ('tell <name> <words>')");
-  const [, who, raw] = m;
-  const msg = raw.trim().slice(0, 240);
-  if (!msg) return z.send(session, "Tell them what?");
-  const others = gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey);
-  const target = others.find((s) => s.name.toLowerCase() === who.toLowerCase())
-    ?? others.find((s) => s.name.toLowerCase().startsWith(who.toLowerCase()));
-  if (!target) {
-    return z.send(session, others.length
-      ? `Nobody here by that name. By the fire: ${others.map((s) => s.name).join(", ")}.`
-      : "There's nobody here to lean toward.");
-  }
-  z.send(session, `You lean in to ${target.name}: ${msg}`, "tell");
-  z.send(target, `${session.name} leans in, close, and says quietly: ${msg}`, "tell", { name: session.name, pk: session.pubkey });
-  // Their key, their eyes only. The speaker's client seals it and puts it out.
-  z.tellOut(session, target.pubkey, msg);
+// Plaintext tells from older clients are refused; private-messages.ts routes ciphertext.
+export function cmdTell(z: ZoneDO, session: Session, _arg: string): void {
+  // Legacy clients must not deliver a plaintext private message. The browser
+  // resolves a recipient then sends a signed ciphertext through sealed-tell.
+  z.send(session, "Refresh your page to send an encrypted quiet word.");
 }
 
 // ---- THE WALL CHART: the players' own map ----

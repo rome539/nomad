@@ -57,6 +57,7 @@ export async function verifyJwt(
   token: string,
   secret: string,
 ): Promise<Record<string, any> | null> {
+  if (typeof token !== "string" || token.length > 4096 || !secret) return null;
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const data = `${parts[0]}.${parts[1]}`;
@@ -64,10 +65,14 @@ export async function verifyJwt(
   if (!timingSafeEqual(expected, parts[2])) return null;
   let payload: Record<string, any>;
   try {
+    const header = JSON.parse(stringFromB64url(parts[0]));
+    if (header?.alg !== "HS256" || header?.typ !== "JWT") return null;
     payload = JSON.parse(stringFromB64url(parts[1]));
   } catch {
     return null;
   }
-  if (typeof payload.exp === "number" && payload.exp < nowSec()) return null;
+  if (!payload || Array.isArray(payload) || typeof payload !== "object") return null;
+  if (!Number.isSafeInteger(payload.exp) || payload.exp <= nowSec()) return null;
+  if (!Number.isSafeInteger(payload.iat) || payload.iat > nowSec() + 60 || payload.iat >= payload.exp) return null;
   return payload;
 }

@@ -2,6 +2,29 @@
 
 Two keys, two very different fires. Know which one you're in.
 
+## Retiring historical Google custody
+
+The current Google flow uses a browser-encrypted Drive vault. The old
+`google_accounts` table and `KEY_ENC_SECRET` belong to the retired custody flow;
+they do not enable the current login. The old `/auth/google` endpoint must stay
+disabled during cleanup.
+
+1. Check only the legacy row count and key-binding presence first. Do not put
+   account identifiers, ciphertext, or plaintext keys into reports or logs.
+2. Keep the old row and encryption key until its owner has demonstrated control
+   of the same Nostr identity and verified an independent, decryptable backup.
+   Merely creating a new character or a new vault does not prove migration.
+3. If that row is the only recovery copy, design a separate authenticated
+   recovery procedure before deletion. Do not restore the old public custody
+   endpoint as a shortcut.
+4. After the owner explicitly approves retirement of the verified migrated
+   record, remove only that record. Check the remaining count again.
+5. Remove the legacy encryption-key binding only when no records depend on it.
+   Document the outcome without including the identity or secret material.
+
+This checklist authorizes no deletion by itself. The security audit preserved
+the existing records and key binding.
+
 ## The epoch key leaked (GAME_SK_HEX) — recoverable, ~15 minutes
 
 Symptoms: signed events you didn't make — loot certs, feed lines, profile

@@ -7,6 +7,7 @@ export type Stance = "reckless" | "steady" | "guarded";
 
 export interface Session {
   ws: WebSocket;
+  sealedTell?: boolean; // client advertised encrypted private-message support
   pubkey: string;
   name: string;
   named: boolean; // chose their name (or client adopted their profile name)

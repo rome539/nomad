@@ -494,6 +494,13 @@ export async function loadContainer(db: D1Database, pubkey: string, container: s
 
 // Move a pack instance into a gate container, or back onto the body (''). The
 // equipped flag is always cleared — nothing stays wielded in a box.
+// Claim a withdrawal only if this owner still has the row in that source.
+export async function withdrawContainer(db: D1Database, rowId: string, pubkey: string, source: string): Promise<boolean> {
+  const changed = await db.prepare("UPDATE player_items SET container = '', equipped = 0, container_at = ? WHERE id = ? AND pubkey = ? AND container = ?")
+    .bind(Date.now(), rowId, pubkey, source).run();
+  return changed.meta.changes === 1;
+}
+
 export async function setContainer(db: D1Database, rowId: string, container: string): Promise<void> {
   // container_at stamps WHEN it went in (mig 165). The den works its rust out
   // against this rather than on a tick, so the stamp has to move every time the
@@ -706,9 +713,20 @@ export async function removeItemRow(db: D1Database, rowId: string): Promise<void
 // lockbox or vault, it lands in your PACK, same as any other acquisition.
 // Equipped clears too — worn gear comes off the body it leaves (same rule
 // setContainer already applies whenever a piece leaves a body for a box).
-export async function transferItems(db: D1Database, moves: { rowId: string; toPubkey: string }[]): Promise<void> {
+export async function transferItems(db: D1Database, moves: { rowId: string; fromPubkey: string; toPubkey: string }[]): Promise<void> {
   if (!moves.length) return;
-  await db.batch(moves.map((m) => db.prepare("UPDATE player_items SET pubkey = ?, container = '', equipped = 0 WHERE id = ?").bind(m.toPubkey, m.rowId)));
+  if (moves.length > 16 || new Set(moves.map(m => m.rowId)).size !== moves.length) throw new Error("invalid trade rows");
+  // One statement changes every owner or none. The ownership predicate is
+  // evaluated against the statement's pre-update snapshot (materialized CTE).
+  const eligible = moves.map(() => "(id = ? AND pubkey = ?)").join(" OR ");
+  const cases = moves.map(() => "WHEN ? THEN ?").join(" ");
+  const ids = moves.map(() => "?").join(",");
+  const result = await db.prepare(`WITH eligible AS MATERIALIZED (SELECT id FROM player_items WHERE ${eligible})
+    UPDATE player_items SET pubkey = CASE id ${cases} END, container = '', equipped = 0
+    WHERE id IN (${ids}) AND (SELECT COUNT(*) FROM eligible) = ? RETURNING id`)
+    .bind(...moves.flatMap(m => [m.rowId, m.fromPubkey]), ...moves.flatMap(m => [m.rowId, m.toPubkey]), ...moves.map(m => m.rowId), moves.length)
+    .all<{ id: string }>();
+  if (result.results.length !== moves.length) throw new Error("trade ownership changed");
 }
 
 // ---- journals: a bestiary keyed to the book, so it travels when the book does ----

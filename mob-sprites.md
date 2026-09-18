@@ -43,7 +43,8 @@ from its real height in metres against a standing man at 1.75m = 22.
 ## The pipeline
 
 ```
-0  node scripts/mob-prompt.mjs <id>          # the prompt, ready to paste
+0a node scripts/audit-mob-behaviour.mjs <id>  # what the world makes it do
+0b node scripts/mob-prompt.mjs <id>          # the prompt, ready to paste
    …generate, then save the sheet as        output/mountain-mobs/<id>/source.png
 1  node scripts/cut-mob-sheet.mjs <sheet> <id> <pose> <pose> …
 2  node scripts/build-mob-strips.mjs                # DRY RUN, writes nothing
@@ -140,6 +141,25 @@ stood inert while they killed you.
   run; name one explicitly to rebuild it on purpose. The studies hold an older,
   different-looking version of those same animals, and a blanket rebuild silently
   swapped the good art for it.
+- **A drawn frame nothing reads is silent.** There is no error, no warning and no
+  audit failure for a pose the driver never asks for. It cuts, packs, lands in
+  `MOB_ANIM` and is simply never shown. That is why the pose list is checked
+  against the behaviour sets before generating and not after — by the time you
+  are looking at pixels, a wasted cell looks exactly like a good one. The choosing
+  rules live in `mob-roster.md`; `audit-mob-behaviour.mjs` is the check.
+- **One set is never the answer.** Every wrong pose list has the same shape: a
+  set was read, it settled the question, and the reading stopped. Sleep frames
+  were specified across a whole month's sheets from `NAPPERS` alone while five
+  other sets that want a frame went unread. Movement was concluded from `ROOTED`
+  while three of the four paths that assign a room do not check it. Both the
+  behaviour table and the travel table in `mob-roster.md` exist to be read
+  **whole**, and the scripts print all of it so that stopping early is visible.
+- **A rare variant is a separate template id.** It inherits none of its base's
+  behaviour sets but spawns everywhere its base spawns, from `mob_variants`. A
+  set added for one region's reasons therefore reaches the variant in every other
+  region its base lives in — which once left one crab nailed to the floor beside
+  the base form it is a 1-in-10 roll of, in a region the set's reasoning had
+  nothing to do with.
 - **A blow is not always called `attack`.** The client picks from preference
   lists, so art that names its poses differently still works:
   `STRIKE_POSES = attack, bite, sweep, breath` · `HIT_POSES = hit` ·

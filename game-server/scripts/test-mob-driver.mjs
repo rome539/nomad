@@ -230,4 +230,31 @@ const seal = mk("bull-seal");
 t("an alert frame is what it shows you, not what it does alone",
   seal.calm !== "alert" && seal.watch === "alert", "calm=" + (seal.calm || "(none)") + " watch=" + seal.watch);
 
+// A TAKEOFF THAT NOBODY COULD EVER SEE. The takeoff branch used to sit INSIDE
+// the full-arc one, so a creature only reached it if it ALSO owned a glide AND
+// a landing. That was the drakes and nobody else - meaning a bird drawn leaving
+// the ground, cut, packed and shipped, would jump straight to a wingbeat and the
+// frame would never once appear. Nothing caught it: the strip audit passes,
+// because the frame IS in the strip and its index IS valid.
+//
+// The fixture is synthetic on purpose. Pointing this at a real creature is how
+// the ptarmigan cases above rotted - the moment somebody draws that animal a
+// glide, the test starts passing for the wrong reason and stops guarding this.
+ctx.ANIM["_launcher"] = { n: 4, aspect: 1, f: { idle: 0, takeoff: 1, up: 2, down: 3 } };
+const lift = mk("_launcher");
+lift.phase = "travel";
+lift.t = 0.13 * (2600 / 1000) * 0.5;                  // inside the first 13% of TRAVEL_MS
+const off = { 0: "idle", 1: "takeoff", 2: "up", 3: "down" }[ctx.poseAt(lift, Date.now()).k];
+t("a bird drawn leaving the ground is shown leaving the ground, arc or no arc",
+  off === "takeoff", "pose=" + off);
+lift.t = 2.0;                                         // well past it
+const flying = { 0: "idle", 1: "takeoff", 2: "up", 3: "down" }[ctx.poseAt(lift, Date.now()).k];
+t("...and then gets on with the beat", flying === "up" || flying === "down", "pose=" + flying);
+// The coast's gulls are the control: redrawn this batch with a beat and NO
+// takeoff drawn, so they must not acquire one.
+const gull = mk("great-gull");
+gull.phase = "travel"; gull.t = 0.1;
+const gp = inv["great-gull"][ctx.poseAt(gull, Date.now()).k];
+t("a bird with no takeoff drawn does not invent one", gp !== "takeoff", "pose=" + gp);
+
 console.log(fail?"\n"+fail+" FAILED":"\nall pass");process.exit(fail?1:0);

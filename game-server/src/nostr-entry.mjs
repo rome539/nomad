@@ -26,7 +26,7 @@
 // Keep this list to exactly what the client uses; every export is bytes on the
 // wire for every player. Today that is: key generation + signing (pure), the
 // npub/nsec codec (nip19), sealed DMs (nip44), and the relay pool.
-export { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools/pure";
+export { generateSecretKey, getPublicKey, finalizeEvent, verifyEvent } from "nostr-tools/pure";
 export * as nip19 from "nostr-tools/nip19";
 export * as nip44 from "nostr-tools/nip44";
 export { SimplePool } from "nostr-tools/pool";

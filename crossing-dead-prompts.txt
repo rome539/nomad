@@ -1,0 +1,507 @@
+# the-tide-warden — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-tide-warden idle cut-the-stick alert move-a move-b attack recover death
+#   node scripts/build-mob-strips.mjs the-tide-warden --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the tide warden. Exact game description: It walks the causeway from end to end with a notched stick in one hand, and at every milestone it stops and looks at the water and cuts the stick, and goes on. The coat is sodden through and has been for a long time. It is not warning anybody. It is keeping the record, and the record is the job.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- THE LEGS ARE GONE BELOW THE KNEE. Two centuries of moving salt water has taken them down to shin bone and dried tendon, with the heavy boots still laced on over them. He walks on that.
+- THE HANDS ARE THE EXCEPTION and are still whole: white, swollen with water, and steady on the stick.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing still in a coat sodden black to the hem, a notched stick held upright in one hand, facing along the way
+2. Head down over the notched stick held up close to the chest, cutting a fresh notch into it with a small blade
+3. The knife and the stick stopped dead mid-notch, both hands still on them, the ruined head come up off the tally and levelled straight at the viewer for the first time
+4. Locomotion contact pose A, natural walking gait on the bare shin bones
+5. Locomotion passing pose B, opposite leg phase, same direction and body size
+6. A hard level swing of the notched stick from the shoulder, both hands on it
+7. Coming down off the swing, the stick dropping back toward one hand, the body squaring up again
+8. Dead, collapsed limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-drowned-ferryman — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-drowned-ferryman idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-drowned-ferryman --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the drowned ferryman. Exact game description: He comes hand over hand along the rope with the whole of him under the water except the hands, and the hands are white and swollen and perfectly steady, and they do not slip on wet hemp. He worked this rope for a lifetime. The lifetime ended and the shift did not. He will take you across. That is the whole of the problem.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- THE HANDS ARE UNTOUCHED AND MUST STAY SO. White, swollen with water to nearly twice a hand's proper size, fingers whole, and absolutely steady. They are the only part of him that still works and must read as the best-preserved thing on the sheet.
+- THE HEAD IS A SKULL. Everything above the collar is gone: bare cranium, the jaw hanging with teeth showing, no hair at all. A skull beside two flawless hands, and the contrast IS the creature.
+- THE ARMS BETWEEN THEM ARE THE TRANSITION, forearm bone giving way to whole swollen flesh at the wrist.
+- THE BODY BELOW IS AN INDISTINCT DARK MASS. Do not detail it and do not draw water, a waterline or a surface.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Head and both hands only, the hands closed in a grip at chest height on a SHORT length of thick hemp rope that begins and ends inside his fists - no rope crossing the cell - the rest of the body an indistinct dark mass below, white swollen hands and a bare skull
+2. Risen higher to the waist, both hands still closed on the short length of rope, the skull come round and level to face
+3. Hand over hand contact pose A, one fist ahead of the other at head height on the short rope length, the body swung under them
+4. Hand over hand passing pose B, the other fist ahead, body swung the other way, same direction and size
+5. One hand opened and driven straight forward and down in a grab at full reach, the other still closed in its grip
+6. Gone slack and face down, arms spread, both hands open and empty
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-pilot — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-pilot idle read-the-water alert move-a move-b attack recover death
+#   node scripts/build-mob-strips.mjs the-pilot --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the pilot. Exact game description: Standing on the far rope stage with a brass plate in his hand, looking at the water and not at you, reading a line across it that has not existed for two hundred years. He knew this channel better than anybody alive knows anything. He has not stopped knowing it. He is simply out of water to know it about.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- THE UPPER FACE IS GONE TO BONE. Brow, both orbits and the bridge of the nose are bare skull, the sockets enormous; the jaw and mouth still carry drawn grey-white skin, so the face is bone above and man below. A pilot's worth was his eyes and his eyes are the part that went.
+- ONE SHOULDER IS STRIPPED to the blade and collarbone under the open coat.
+- THE HANDS ARE STILL WHOLE - he holds the brass plate flat and level and does not shake.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing very straight and still, a small brass plate held flat on the open palm at chest height, the ruined head down over it. The plate is the only object in the cell
+2. One arm out straight and level, sighting along it at something far past the viewer's shoulder, the brass plate still held in the other hand
+3. The brass plate lowered out of the sighting line and held forgotten at the hip, the bare-socketed head come round off the sighting line and levelled at the viewer
+4. Locomotion contact pose A, natural species-specific gait
+5. Locomotion passing pose B, opposite leg phase, same direction and body size
+6. A short hard downward strike with the edge of the brass plate, the other arm out for balance
+7. Drawing the brass plate back in to the chest after the strike, the other arm coming down
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-drover — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-drover idle drive-the-road alert move-a move-b attack recover death
+#   node scripts/build-mob-strips.mjs the-drover --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the drover. Exact game description: Coming the other way across the shoals with a stick over his shoulder and his coat tied at the waist, at the unhurried working pace of a man who has all day because the water says he has all day. There is nothing in front of him. He is still driving it, and he still expects the road.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- THE STICK HAS WORN HIM THROUGH. Across the back of both shoulders, where the long stick has ridden for two hundred years, coat and flesh are worn away to a bright polished groove of bare collarbone and shoulder blade. The stick sits in the groove it made. This is the first thing to notice about him.
+- BOTH WRISTS ARE BONE where they hook over the stick, the hands beyond them still whole.
+- He is the gentlest thing in this region and must not look angry: the stance is unhurried, easy, a working man's.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing at ease with a long stick across the worn grooves of both shoulders and both wrists hooked over it, coat tied at the waist, looking past you up the road
+2. Stick brought down into one hand and swung out low and wide to the side, the other arm out, moving something that is not there
+3. The stick come down off the worn shoulder grooves into both hands across the body, head up, the easy working stance gone out of him entirely
+4. Locomotion contact pose A, natural species-specific gait
+5. Locomotion passing pose B, opposite leg phase, same direction and body size
+6. A hard level swing of the long stick from the shoulder, arms staying below head height
+7. The stick swinging back down to rest after the blow, the body coming back square
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-eel-cutter — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-eel-cutter idle lift-the-trap alert move-a move-b attack recover death
+#   node scripts/build-mob-strips.mjs the-eel-cutter --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the eel cutter. Exact game description: Poling a flat-bottomed boat down the cut with a grig hanging off the transom and his back to you, working the line of traps in order, lifting, emptying, re-setting, moving on. He is very good at it. He has not looked up since before you were born and he will look up now.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- HE HAS BEEN FED ON. Clean rounded bites are taken out of him, each down to clean bone, each the size and shape of something that fed in a circle and moved on: three or four out of each forearm, two out of one calf, one out of the cheek so the back teeth show through the side of the face. The edges are smooth and old, not ragged and not bloody.
+- BETWEEN THE BITES THE SKIN IS INTACT and salt-white. He is not generally rotted, he is specifically eaten.
+- THE HANDS ARE WHOLE and quick, because the hands are the job.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing stooped with a long punt pole held level across the body in both hands, a wicker eel trap hanging at his belt, back half turned, not looking up
+2. Bent right down with both arms out and low in front of him, hauling a dripping wicker eel trap up on its line, the trap and the line hanging clear in his hands. No water and no boat is drawn
+3. The head finally come up. The punt pole still held level and the body still turned away, and only the ruined face come round over the shoulder and fixed on the viewer
+4. Locomotion contact pose A, natural species-specific gait
+5. Locomotion passing pose B, opposite leg phase, same direction and body size
+6. A hard two-handed forward jab with the punt pole, arms staying below head height
+7. Drawing the punt pole back in after the jab, the body settling back into its stoop
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-refuge-man — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-refuge-man idle turn-from-the-wall alert move-a move-b attack recover death
+#   node scripts/build-mob-strips.mjs the-refuge-man --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the refuge man. Exact game description: Standing in the causeway refuge with his back to the opening and his hands flat on the stone at shoulder height, exactly as a man stands when he has got somewhere just barely in time and is waiting for something to pass. It did not pass. He is still standing like that and the refuge is dry today.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- HIS BACK IS GONE AND HIS FRONT IS NOT. He faced the stone and the sea came at him from behind, so everything on his back is stripped: the back of the skull bare, the shoulder blades bare, the whole line of the spine standing clear through a coat torn open down the back.
+- THE FRONT OF HIM IS ALMOST WHOLE - face, chest and both hands intact, salt-white, preserved by being held against rock. When he turns he turns from a wreck into a man, and that is the effect to draw.
+- THE HANDS ARE WHOLE AND STILL SPREAD, fingers together, exactly as a man braces.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Seen from behind: standing upright with both arms raised and both hands flat and open at shoulder height, palms forward, bracing against nothing - no wall is drawn. The entire back of him stripped: bare skull, shoulder blades and the whole line of the spine through a coat torn open down the back
+2. Body rotating, one arm still up and back behind him with the hand flat and open, the other coming round with it, the whole and undamaged face beginning to come round toward the viewer
+3. Turned fully round now, both arms down at his sides, squared up and facing, the intact face on the viewer and the stripped back hidden behind him
+4. Locomotion contact pose A, natural species-specific gait
+5. Locomotion passing pose B, opposite leg phase, same direction and body size
+6. A close two-handed shove driving forward from the chest, shoulders behind it
+7. Drawing both hands back in to the chest after the shove, the shoulders coming down
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-bridge-mason — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-bridge-mason idle dress-the-stone alert move-a move-b attack recover death
+#   node scripts/build-mob-strips.mjs the-bridge-mason --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the bridge mason. Exact game description: Out on the broken edge of the span with a mallet in his fist, working at a joint that has nothing beyond it — dressing the stone at the exact point where the bridge stops. He has been making the end of it neat for two centuries. He does not turn round for you. He turns round for the mallet.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- THE MALLET HAND IS BARE BONE, AND POLISHED. Finger bones, wrist and half the forearm stripped clean, and where the mallet shaft sits in the grip the bone is worn glassy and bright - two hundred years of the same handle in the same place. The other hand, which only holds the chisel, is still whole.
+- THE BACK OF THE SKULL AND THE TOP OF THE SPINE are bare and pitted: his head has been down at the work facing the weather since the fall, and the face underneath is more or less preserved.
+- Stone dust is worked into every seam and has gone to grey paste with the salt. He is not angry; he is a good tradesman finishing an edge.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing three-quarters turned away, a heavy mallet hanging down in one bare-bone fist, the ruined head down and angled at something low in front of him. No stone and no stonework is drawn
+2. Crouched low on one knee, the mallet raised in the bone fist and a chisel held out steady in the whole hand, both hands working together at about knee height in front of him. The mallet and the chisel are the only objects in the cell
+3. Turned round from the work at last, the mallet coming UP in the bare-bone fist rather than down, the head levelled at the viewer
+4. Locomotion contact pose A, natural species-specific gait
+5. Locomotion passing pose B, opposite leg phase, same direction and body size
+6. A hard mallet blow driven forward from the shoulder, both hands on the shaft
+7. The mallet coming back down off the blow, the body returning to its working guard
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-reed-walker — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-reed-walker idle part-the-reed alert move-a move-b attack recover death
+#   node scripts/build-mob-strips.mjs the-reed-walker --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the reed walker. Exact game description: A shape going through the maze one cut over from yours, at your pace, on your side, staying with you. The reed is too thick to see through and it is never quite where the sound says. It is not lost. It has been in here long enough to be the only thing that is not.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- THE REED HAS GROWN THROUGH HIM. Living reed stems are rooted in the cavity of his chest and come up out through the ribs, the shoulders and the open coat, standing well above him and swaying with him. Root matting fills the ribcage where the organs were. He is partly a clump of reed and partly a man and you cannot tell at a glance where one stops.
+- BECAUSE OF THAT HE IS MOSTLY OUTLINE. The less of him that is legible the better this creature works: ribs, one bare shoulder, a jaw with the teeth showing, the face never fully clear.
+- Draw reed ONLY where it is growing out of the body. No reed bed, no loose stems, nothing standing in the cell.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing still, reed stems rooted through the ribs and shoulders and rising well above the head so the outline reads as much reed as man, one bare shoulder clear, the face indistinct behind his own stems. No reed bed and no loose reed is drawn
+2. One arm out and sweeping across in front of him at chest height, body turning with it, the reed growing out of his own ribs bending with the movement
+3. Stopped dead and square-on to the viewer, the reed growing out of his ribs no longer moving, the face still not quite clear behind it
+4. Locomotion contact pose A, natural species-specific gait
+5. Locomotion passing pose B, opposite leg phase, same direction and body size
+6. Coming out at full stretch with both arms forward and low, body committed
+7. Drawing back after the lunge, arms coming in, his own reed settling back around him and the outline closing up again
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-scaffold-hand — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-scaffold-hand idle work-the-stone swing attack recover death
+#   node scripts/build-mob-strips.mjs the-scaffold-hand --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the scaffold hand. Exact game description: Hanging in the rotted scaffold under the arch in a rope harness gone to fibre, upside down at the hip, working at the underside of the stonework with both arms free. That is how the job was done. He is doing the job. The rope has not been sound in living memory.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- HE IS STRIPPED AT THE TOP AND HEAVY AT THE BOTTOM. Inverted, so the hips and legs are the high part: pelvis, thigh bones and both legs are bare dry bone in the harness, boots still on the foot bones. Everything has drained and settled downward into the head, shoulders and arms, which are swollen dark and heavy and still fleshed. The body reads wrong-way-up before you work out which way up it is.
+- THE HARNESS HAS CUT THROUGH TO THE BONE AT THE HIP, the rotted loop sitting in a groove worn into the pelvis, which is the only thing still holding him.
+- THE FACE IS ENGORGED AND HANGING, the skin pulled downward by two hundred years of it, the jaw fallen open away from the skull. Hair hangs straight down.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+THE ONE EXCEPTION TO THE RULE ABOVE IS THIS ONE'S ROPE. It is hanging, so the harness rope is what holds it up and it MUST be drawn running up and off the TOP EDGE of every cell, cut by the edge rather than ending inside it. It is the only thing in this sheet that may touch a cell boundary, and without it the creature reads as a man floating upside down in mid-air. Draw nothing at the other end of it: no scaffold, no timber, no arch, no stonework. EVERY POSE IN THIS SHEET IS A HANGING POSE, the death included - its feet never touch anything.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. This creature HANGS in every pose: put the rope where it leaves the top edge in the same place in every cell, and let the body hang below it. It has no ground poses and its feet never touch anything.
+
+Reading order left to right, top row then bottom row:
+1. Hanging upside down from the hip in a rope harness gone to fibre - bare bone legs uppermost, dark swollen head and arms hanging below, both arms free and working overhead. The harness rope runs UP out of the top edge of the cell
+2. Hanging in the harness with both arms straight out above the head, hands working at nothing, head back. The rope runs up out of the top edge as before
+3. Hanging in the harness and swung right out to one side on the rope, body extended, one arm out, the rope still leaving the top edge at the same place
+4. Hanging in the harness and driving both arms straight out forward at full reach
+5. Pulling back after a blow, body returning to its guard, still hanging
+6. Dead, still hanging: gone completely slack in the harness, both arms hanging straight down past the head, all motion out of him. He is NOT cut down and NOT on the ground - he has hung here for two hundred years and killing him does not change that
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-fowler — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-fowler idle rise-from-the-turf move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-fowler --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the fowler. Exact game description: Flat on his front on the quaking turf in a hood of sacking and reed, absolutely still, with something long beside him under a blanket of cut sedge. You did not see him and you were not going to. He was not waiting for you and he is extremely unhappy about the difference you have just made to his morning.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- THE UNDERSIDE IS PEAT. The whole front of him has lain in wet turf since the fall and the bog has tanned it: dark brown, leathery, flattened, with moss and sedge roots grown in through the sacking and among the ribs, and a crust of peat and root still hanging off him when he lifts. Bog-preserved, not rotted.
+- THE UPPERSIDE IS STRIPPED. The back of him, which has been in the weather, is bare: back of the skull, shoulder blades and spine bone-white and clean.
+- SO HE IS BROWN UNDERNEATH AND WHITE ON TOP, and coming up off his front is what shows it. That transition is the creature. The hands are brown leather and whole.
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Lying flat on his front in a hood of sacking and cut reed, face down, absolutely still, the exposed back of him bone-white, the long fowling pole under one hand and part-covered by cut sedge caught on his own sacking. No ground is drawn
+2. Coming up onto one knee, the sacking hood falling back, the brown bog-tanned underside and its crust of root now showing, both hands closing on the long fowling pole
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A hard forward thrust with the long fowling pole held in both hands, body low and driving
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+============================================================
+
+# the-salt-widow — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-salt-widow idle feed-the-flue work-the-pan attack recover death
+#   node scripts/build-mob-strips.mjs the-salt-widow --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the salt widow. Exact game description: Working the pan house, feeding a flue that has no fire in it, in a coat crusted white to the elbow. The pan is cold and has been cold since the fall and she is boiling it anyway, and the work is the whole of her and there is nothing else left in there at all.
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- SHE IS CURED, NOT DROWNED, and must not match the other ten. She died indoors in a salt house and salt preserves: everything waxy, white and water-swollen on the rest of the crossing's dead is WRONG for her. Dry throughout. The skin is deep tan-brown, hard, papery and drawn tight over the bone like something smoked or salted down - leather where the others are wax.
+- THE FACE IS SHRUNK ONTO THE SKULL, lips pulled right back off the teeth in a long dry grimace, nose collapsed, sockets sunk deep. Hair dry and brittle and mostly still there.
+- THE ARMS ARE THE BEST-PRESERVED PART OF HER, in the salt to the elbow every day for two hundred years: hard brown leather, whole, every tendon standing out, crusted white to the elbow.
+- WHERE SHE HAS CRACKED, SHE HAS CRACKED DRY. Splits across the shoulder and forearm, open and dark and dusty, with no wetness in them at all.
+- THE COAT IS STIFF, PALE AND SALT-RIMED, standing away from the body in board-like folds rather than hanging wet.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing side on and stooped a little forward from the waist, both brown leather arms down and working at something low in front of her at knee height, hands busy, sleeves and coat crusted white to the elbow. What she is working at is NOT drawn
+2. Crouched right down with both arms driven straight out forward and low, in to the elbow, pushing something away from her at ground level. Her hands are empty and nothing she is pushing, and nothing she is pushing it into, is drawn
+3. Standing and leaning far out forward from the hips, a long rake held in both hands with its head down and out at full arm's length, drawing it back toward her across knee height. The rake is the only object in the cell
+4. A hard level swing of the long rake from the shoulder, both hands on it
+5. Pulling back after the blow, the rake coming back in across the body, returning to her guard
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.

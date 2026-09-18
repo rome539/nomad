@@ -13,7 +13,7 @@ mkdirSync(FRAMES, { recursive: true });
 
 const browser = await puppeteer.launch({
   executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-  headless: "new",
+  headless: true,
   args: [
     "--force-device-scale-factor=1",
     "--hide-scrollbars",

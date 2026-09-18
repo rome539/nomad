@@ -14,3 +14,7 @@ declare module "*nostr-bundle.js" {
   const src: string;
   export default src;
 }
+declare module "*qrcode-bundle.js" {
+  const source: string;
+  export default source;
+}

@@ -1,7 +1,7 @@
 // Login = prove control of an npub. Challenge -> sign -> session JWT.
 import { verifyEvent, type Event } from "nostr-tools";
 import type { Env } from "./env";
-import { json } from "./http";
+import { json, readJsonBounded } from "./http";
 import { signJwt, verifyJwt } from "./jwt";
 import { nowSec } from "./util";
 
@@ -43,21 +43,35 @@ export async function handleTicket(req: Request, env: Env): Promise<Response> {
   const sub = typeof payload?.sub === "string" ? payload.sub : null;
   // Only a real session token buys a ticket: a challenge has no sub, and a
   // ticket must not be able to mint another ticket and live forever by relay.
-  if (!sub || payload?.purpose !== undefined) return json({ error: "unauthorized" }, 401);
-  const ticket = await signJwt({ sub, purpose: "ws" }, env.JWT_SECRET, WS_TICKET_TTL);
+  if (!sub || !/^[0-9a-f]{64}$/.test(sub) || payload?.purpose !== undefined) return json({ error: "unauthorized" }, 401);
+  const ticket = await signJwt({ sub, purpose: "ws", jti: crypto.randomUUID() }, env.JWT_SECRET, WS_TICKET_TTL);
   return json({ ticket });
+}
+
+// One atomic insertion wins, including across Worker isolates. Reuse the
+// existing auth_spent table; the prefix separates tickets from challenges.
+export async function consumeTicket(token: string, env: Env): Promise<string | null> {
+  const p = await verifyJwt(token, env.JWT_SECRET);
+  if (p?.purpose !== "ws" || typeof p.sub !== "string" || !/^[0-9a-f]{64}$/.test(p.sub)
+      || typeof p.jti !== "string" || !/^[0-9a-f-]{36}$/.test(p.jti)) return null;
+  const spent = await env.DB.prepare("INSERT OR IGNORE INTO auth_spent (jti, exp) VALUES (?, ?)")
+    .bind("ws:" + p.jti, p.exp).run();
+  if (!spent.meta.changes) return null;
+  await env.DB.prepare("DELETE FROM auth_spent WHERE exp < ?").bind(nowSec()).run();
+  return p.sub;
 }
 
 // POST /auth/verify  { event }  -> { token, pubkey }
 export async function handleVerify(req: Request, env: Env): Promise<Response> {
   let body: { event?: Event };
   try {
-    body = await req.json();
-  } catch {
-    return json({ error: "bad_request" }, 400);
+    body = await readJsonBounded(req);
+  } catch (e) {
+    return json({ error: e instanceof RangeError ? "body_too_large" : "bad_request" }, e instanceof RangeError ? 413 : 400);
   }
-  const event = body.event;
-  if (!event || typeof event.content !== "string") {
+  const event = body?.event;
+  if (!event || typeof event.content !== "string" || event.content.length > 4096
+      || !Number.isSafeInteger(event.created_at) || !Array.isArray(event.tags) || event.tags.length > 16) {
     return json({ error: "missing_event" }, 400);
   }
 
@@ -76,7 +90,9 @@ export async function handleVerify(req: Request, env: Env): Promise<Response> {
   if (Math.abs(nowSec() - event.created_at) > EVENT_SKEW) {
     return json({ error: "stale_event" }, 401);
   }
-  if (!verifyEvent(event)) {
+  let valid = false;
+  try { valid = verifyEvent(event); } catch {}
+  if (!valid) {
     return json({ error: "bad_signature" }, 401);
   }
 
@@ -130,5 +146,5 @@ export async function requirePubkey(req: Request, env: Env): Promise<string | nu
   const header = req.headers.get("Authorization");
   if (!header || !header.startsWith("Bearer ")) return null;
   const payload = await verifyJwt(header.slice(7), env.JWT_SECRET);
-  return typeof payload?.sub === "string" ? payload.sub : null;
+  return payload?.purpose === undefined && typeof payload?.sub === "string" && /^[0-9a-f]{64}$/.test(payload.sub) ? payload.sub : null;
 }

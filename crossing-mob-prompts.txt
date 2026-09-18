@@ -1,0 +1,876 @@
+THE CROSSING — THE WHOLE CREATURE BOOK
+31 sheets. Nothing in this region has a sprite; the mountain's 43 do.
+Six poses each, 3x2 at 1536x1024 — the shipped pattern:
+    idle · its own pose · move-a · move-b · attack · death
+The four birds are eight, because four of their frames go on flight
+(up down glide landing) and at six that costs them the death frame — the
+exact fault the hill's birds were redone at eight to fix.
+
+HOW TO USE ONE
+  1  copy a prompt
+  2  save what comes back as       output/crossing-mobs/<id>/source.png
+  3  run the cut line printed above the prompt
+  4  node scripts/build-mob-strips.mjs <id> --patch
+  5  node scripts/audit-mob-strips.mjs        (must pass)
+  6  node scripts/build-mob-preview.mjs       and LOOK at it
+No ART_V bump: every one of these is a new filename.
+
+WHAT ORDER TO DO THEM IN
+  The six that carry a route, if you only want to see it working first:
+    wrack-crab (16 rooms) · great-gull (11) · ford-eel (11) · conger (8)
+    oystercatcher (6) · marsh-hound (6)
+  Then the other commons, then the seven rare forms, then the three bosses.
+
+ELEVEN OF THESE ARE DEAD, AND THE PROSE NEVER SAYS SO
+  "It walks the causeway from end to end with a notched stick in one hand" does
+  not tell anyone the tide warden drowned two centuries ago. The prompts now say
+  it, read straight off the game's own HOLLOW and GRAVE_FLESH sets so a sheet
+  cannot disagree with the tables that decide whether the thing bleeds.
+  ELEVEN DEAD, EXACTLY TWO LIVING (the strand thief and the wrecker).
+  the-fowler was drawn as a living poacher on this mistake and needs REDOING.
+
+THE DEAD DRAW THEIR EYES IN #00D0D0 CYAN, WHICH IS NOT THE FINAL COLOUR
+  On a blood moon — one night in every 9.2 days — every hollow thing's eyes come
+  up red. That cannot be a filter (CSS reddens every pixel the same) and it must
+  not be a second sheet (the same individual will not come back the same, so the
+  creature would change on red nights). So the eyes are drawn as a flat marker
+  colour and the cutter splits them off into a tiny separate layer, the way the
+  magenta background is split off. Measured: cyan cannot be keyed out, and the
+  nearest pixel in all 61 shipped strips is 181 away, so nothing collides.
+  It costs NO extra sheets — the marker rides in the sheet you were drawing.
+
+THREE THINGS THAT MUST BE WIRED WHEN THE STRIPS LAND
+  1 · MOB_SPRITE has no entry for any of these. Starting heights below.
+  2 · CALM_POSES must gain the work poses, or they are drawn and never shown.
+      Ten of these dead are still AT WORK and the work pose IS the creature —
+      but a name the client does not know is unreachable for anything that has
+      a gait, which is what happened to the hill's variants on 9 September.
+      Add:  cut-the-stick · read-the-water · lift-the-trap · drive-the-road
+            turn-from-the-wall · work-the-stone · feed-the-flue · work-the-pan
+            dress-the-stone · part-the-reed · rise-from-the-turf
+  3 · client ROOTED is still only the milker and the butter wife. The salt
+      widow and the scaffold hand work in place too and belong in it.
+
+MOB_SPRITE — STARTING HEIGHTS, NOT FINAL ONES
+  The number is the DRAWN EXTENT, not the animal. Set these, then head-match
+  the humans against the herdsman before you believe them — that is the
+  check the milker failed.
+    the-great-devil-crab 20 · the-great-crab 18 · bull-seal 14 · old-conger 13
+    a-lymer 11 · conger 11 · bittern 10 · grey-seal 10 · black-backed-gull 10
+    great-gull 9 · marsh-hound 9 · the-quicksand 8 · oystercatcher 5
+    silver-eel 4 · ford-eel 4 · devil-crab 4 · wrack-crab 3 · fen-viper 3
+    every human 22, except the-salt-widow 20 (a woman, like the butter wife)
+
+ONE I DO NOT THINK YOU SHOULD DRAW
+  the-quicksand is not a creature. It has no shape, nothing to hit, and the
+  banned list forbids scenery — its six poses are a patch of ground doing
+  things, which is the one subject this pipeline has no way to make good. Its
+  prompt is at the end anyway, but it is the only sheet here I would skip and
+  let stay pictureless.
+
+TWO SHEETS THAT WILL FIGHT YOU
+  the-eel-cutter works from a punt. The boat is NOT drawn — a punt fills the
+  cell and the pole held upright makes the box two and a half men tall. He gets
+  the pole held level across him, the way the herdsman holds his staff, and a
+  wicker trap at the belt. The boat is implied.
+  the-drowned-ferryman is under the water except his hands. His idle is head
+  and hands only on the rope; he rises through the set. He fights at The
+  Mid-Channel, which has no room plate and keeps the ferry ground, so he stands
+  on the ferry plate's rope and green water.
+
+============================================================
+# wrack-crab — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> wrack-crab idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs wrack-crab --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a wrack crab. Exact game description: The size of two hands across the back, mottled green-black, coming up out of the weed sideways with one claw high and the other tucked. There is never one of them. When you move the weed you find out how many there were.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Coming up sideways out of weed, one claw held high and the other tucked in low, body angled away
+2. Turned to face, that raised claw opened and held there, legs braced
+3. Sideways scuttle contact pose A, legs on the leading side planted
+4. Sideways scuttle passing pose B, opposite legs planted, same direction and body size
+5. A downward chop with the raised claw, body dropped and braced on the legs
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# devil-crab — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> devil-crab idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs devil-crab --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a devil crab. Exact game description: Half again the size of the others and a different colour under the weed — a deep red-brown, with the shell edged in a pale line like something filed. It does not go sideways out of your way. It turns to face you, lifts both claws above the line of its own back, and waits there, and the waiting is the part that tells you what it is. The fishermen who named this one were not being poetic.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Squared up rather than sidling away, both claws half lifted, body low
+2. Turned square to face, BOTH claws lifted above the line of its own back, holding there
+3. Sideways scuttle contact pose A, legs on the leading side planted
+4. Sideways scuttle passing pose B, opposite legs planted, same direction and body size
+5. Both claws driven forward and closed together, body up high on the legs
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-great-crab — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-great-crab idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-great-crab --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the great crab. Exact game description: It is the size of a cart and it has been in this pool long enough to have stopped being a crab and started being a feature of it — the shell crusted white with the same salt as the walls, barnacles on the back of it, a whole small ecology riding an animal. One claw is twice the other and worn smooth at the edge from a lifetime of doing the same thing to the same kind of shell. It does not hurry and it does not retreat. It has never had to.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Settled and immense, the one oversized claw resting on the ground, the small one tucked, shell crusted and barnacled
+2. Turned square on, the oversized claw lifted and opened, the small one tucked, holding
+3. Sideways scuttle contact pose A, legs on the leading side planted, unhurried
+4. Sideways scuttle passing pose B, opposite legs planted, same direction and body size
+5. The oversized claw driven down and closed, whole body dropped behind the weight of it
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-great-devil-crab — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-great-devil-crab idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-great-devil-crab --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the great devil crab. Exact game description: The same animal as the one in every other pool along this coast, and then something went wrong with it, or very right. The shell is the deep bruised red of the small devil crabs and it has gone on growing past any size a shell should hold, until the plates have split along the seams and healed over in ridges. Both claws are the big one. The pale filed line runs the whole edge of it like a blade somebody kept. It does not sit in the water so much as occupy it.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Settled and immense, both oversized claws resting forward, shell plates split along the seams and healed over in ridges
+2. Turned square on, BOTH oversized claws raised high above the back, holding there
+3. Sideways scuttle contact pose A, legs on the leading side planted
+4. Sideways scuttle passing pose B, opposite legs planted, same direction and body size
+5. Both great claws driven forward and closed together at full reach
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# great-gull — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> great-gull idle alert up glide down landing attack death
+#   node scripts/build-mob-strips.mjs great-gull --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a great gull. Exact game description: The big kind — the size of a goose, with a bill built for opening things and an eye with no give in it whatever. It is not frightened of you and there is no version of this where it becomes frightened of you. It has taken a rat off this parapet and it did not need to land to do it.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Head lowered and thrust forward along the body, bill open, wings half out from the shoulders
+3. Wings at the top of the beat, in flight
+4. Wings held straight and level, gliding
+5. Wings at the bottom of the beat, in flight
+6. Landing, wings up and braking, feet reaching forward
+7. A downward driving stab of the bill, neck fully extended, wings out for balance
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# black-backed-gull — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> black-backed-gull idle alert up glide down landing attack death
+#   node scripts/build-mob-strips.mjs black-backed-gull --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a black-backed gull. Exact game description: The size of a goose, with a back like wet slate and a bill that could open a crab or a skull with the same stroke. The others give it the whole pier. It eats what the tide leaves, and it eats what the other birds have, and on a bad week it eats the other birds. It watches you with one eye and then the other, unhurried, the way a thing does when it is decided.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Head lowered and thrust forward along the body, bill open, wings half out from the shoulders
+3. Wings at the top of the beat, in flight
+4. Wings held straight and level, gliding
+5. Wings at the bottom of the beat, in flight
+6. Landing, wings up and braking, feet reaching forward
+7. A downward driving stab of the bill, neck fully extended, wings out for balance
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# oystercatcher — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> oystercatcher idle alert-alarm up glide down landing attack death
+#   node scripts/build-mob-strips.mjs oystercatcher --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: an oystercatcher. Exact game description: Black and white and built out of two straight lines, with a bill the colour of a hot iron, running the tideline ahead of you and stopping and running again. When it decides you are too close it goes up screaming and it does not stop screaming, and every bird on the flats takes it seriously.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Head down and forward, bill open and calling, body flattened along the ground
+3. Wings at the top of the beat, in flight
+4. Wings held straight and level, gliding
+5. Wings at the bottom of the beat, in flight
+6. Landing, wings up and braking, feet reaching forward
+7. A forward jab of the long bill, neck extended, wings out
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# bittern — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> bittern idle alert up glide down landing attack death
+#   node scripts/build-mob-strips.mjs bittern --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a bittern. Exact game description: Somewhere within ten feet of you, pointing straight up, striped exactly like the reed it is standing in and swaying at exactly the reed's rate. You will not find it by looking. You will find it when it decides the distance is wrong and comes out of the stems at the height of your face.
+
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing bolt upright in the reed, bill pointed straight at the sky, neck fully stretched, body narrow and vertical
+2. Head and neck brought down out of the vertical and thrust forward horizontally at chest height, bill levelled
+3. Wings at the top of the beat, in flight
+4. Wings held straight and level, gliding
+5. Wings at the bottom of the beat, in flight
+6. Landing, wings up and braking, feet reaching forward
+7. The neck uncoiled in a straight forward stab of the bill, body low and braced
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# ford-eel — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> ford-eel idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs ford-eel --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a ford eel. Exact game description: A yard of it in four inches of water, going upstream over the gravel with its whole body doing the work, and it is not troubled by the shallowness at all. It can cross wet grass. It is crossing this because the crossing is a thing it does.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Lying in shallow water in a loose curve, head level, the body doing all the work of holding station
+2. Head raised clear of the body, front third lifted and held, the rest still in a loose curve
+3. Swimming contact pose A, the whole body in one deep S-curve
+4. Swimming passing pose B, the S-curve reversed, same direction and body size
+5. A short forward strike, head and front third driving straight out of the curve, jaws open
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# silver-eel — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> silver-eel idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs silver-eel --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a silver eel. Exact game description: Longer than the others and gone the colour of a knife — belly bright, back near black, the eye grown huge. This is what a ford eel turns into when it has decided to leave: it will run the channel to the sea and it will not feed again once it goes. It is fat with everything it has eaten to get ready, and it is in no mood at all.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Lying in a loose curve, belly bright and back near black, the eye grown huge, head level
+2. Head raised clear of the body, front third lifted and held, the rest in a loose curve
+3. Swimming contact pose A, the whole body in one deep S-curve
+4. Swimming passing pose B, the S-curve reversed, same direction and body size
+5. A short forward strike, head and front third driving straight out of the curve, jaws open
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# conger — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> conger idle alert attack recover rest death
+#   node scripts/build-mob-strips.mjs conger --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a conger. Exact game description: Six feet of it out of a hole in the pier foot, thick as a thigh at the shoulder, grey-brown and moving nothing but the last third of itself. It does not chase and it does not need to. It is a mouth on the end of an arm, and the arm goes back into the stone.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Only the head and the front third of the body clear of the stonework, the rest going back into a hole behind it, jaws slightly parted
+2. The front third raised higher and drawn back into an S, jaws open wide, still anchored in the hole
+3. The head and front third driving straight forward out of the hole at full extension, jaws open, the rest still in the stone
+4. Pulling back after a blow, body returning to its guard
+5. Withdrawn almost entirely into the hole, only the head showing, jaws shut
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# old-conger — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> old-conger idle alert attack bite recover death
+#   node scripts/build-mob-strips.mjs old-conger --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the old conger. Exact game description: The hole in the pier is the same hole. What comes out of it is not the same arm. This one is thicker than your leg where it leaves the stone and you never see the end of it — grey going to green, the skin scarred pale where the stone has taken layers off over the years, and a head on it like a wet boot with the teeth raked backward. It has been in this pier longer than the pier has been broken. It has learned the shape of the gap and it knows exactly how far out it can reach.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Only the head and the front third clear of the stonework, thicker than a leg where it leaves the stone, jaws slightly parted
+2. The front third raised and drawn back into a deep S, jaws wide, still anchored in the hole
+3. Head and front third driving straight forward at full extension out of the hole, jaws open
+4. Jaws clamped shut and the whole body twisting hard along its own length
+5. Pulling back after a blow, body returning to its guard
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# fen-viper — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> fen-viper idle watch attack recover bask death
+#   node scripts/build-mob-strips.mjs fen-viper --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a fen viper. Exact game description: Coiled on the one dry plank of the causey, exactly the colour of wet withy, and it has been there since before you came round the reed. It does not want this. It has nowhere to go that is not water, and you are standing on the plank.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Coiled flat on a plank, body in loose overlapping loops, head resting level on the top of the coil
+2. The same coil with the head raised a little and turned to face, tongue out
+3. A short low forward strike, head driving out level and close to the ground, mouth open
+4. Pulling back after a blow, body returning to its guard
+5. Body stretched out loose and flat and straight rather than coiled, head laid down, settled
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# grey-seal — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> grey-seal idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs grey-seal --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a grey seal. Exact game description: Hauled out on the gravel like something dropped there, enormous, comic, and asleep. In the water it is none of those things. It has a dog's head and a dog's teeth and a dog's opinion about what is worth chasing, and it is faster than you in the medium it is in.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Hauled out on the shingle, body flat on the belly, head and shoulders lifted clear on the fore-flippers
+2. Head and shoulders reared high on the fore-flippers, neck stretched up, mouth open
+3. Hauling contact pose A, body arched up and the fore-flippers planted, hindquarters drawn forward
+4. Hauling passing pose B, body extended flat and the fore-flippers reaching, same direction and body size
+5. A lunging open-mouthed bite, head and neck fully extended forward over the planted fore-flippers
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# bull-seal — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> bull-seal idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs bull-seal --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a bull seal. Exact game description: Forty stone of him up on the shingle, and the neck is the tell — thick as a barrel, scarred white all over in the half-moon shapes of other bulls' teeth. He holds this haul-out and he holds it against his own kind, which is a harder job than holding it against you. He comes up the stones faster than anything that shape has any business moving, and he does not bite so much as arrive.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Hauled out on the shingle, body flat on the belly, head and the thick scarred neck lifted clear on the fore-flippers
+2. Reared up high on the fore-flippers, the thick neck stretched and swollen, mouth wide open
+3. Hauling contact pose A, body arched up and the fore-flippers planted, hindquarters drawn forward
+4. Hauling passing pose B, body extended flat and the fore-flippers reaching, same direction and body size
+5. A lunging open-mouthed bite, the whole weight of him coming forward over the planted fore-flippers
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# marsh-hound — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> marsh-hound idle rest move-a move-b attack death
+#   node scripts/build-mob-strips.mjs marsh-hound --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a marsh hound. Exact game description: Lean, wet to the shoulder, and working the reed edge with its nose down and its ears up, quartering ground the way a dog does when it is doing a job it was taught. Somebody taught it. That was a long time ago and it has kept the method and lost the point of it.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing with the head down at ground level and the ears up, working a scent line
+2. Curled down on one side, legs tucked, head laid on the flank, eyes closed
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A driving open-mouthed bite, head and neck extended, forequarters low and braced
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# a-lymer — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> a-lymer idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs a-lymer --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a lymer. Exact game description: It does not quarter the ground like the others. It came straight, and it is already here, and it has been on your scent since the causeway. A lymer is the hound you put on a line ahead of the pack — the one that finds, so the rest can run. Somebody bred this and somebody trained it and both of them are two hundred years dead, and the dog is still working.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing square and still with the head up and the ears forward, already facing, not casting about
+2. Head up and body locked rigid and forward, weight all on the front legs, staring straight ahead
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A driving open-mouthed bite, head and neck extended, forequarters low and braced
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# strand-thief — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> strand-thief idle snatch-escape move-a move-b attack death
+#   node scripts/build-mob-strips.mjs strand-thief --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a strand thief. Exact game description: Working the wrack line ahead of you, turning things over with a foot, and he has already seen you and has already decided how this goes. Everything he owns came off this beach. He does not think of what he does as stealing, because the sea does not own things either.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing on the tideline half turned away, one hand holding something small down at the hip, already looking back over his shoulder
+2. Going away fast at a low run with something clutched in against his chest, looking back
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A short close swing of whatever is in his hand, shoulder turned into it, body low
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-wrecker — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-wrecker idle snatch-escape move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-wrecker --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a wrecker. Exact game description: Heavier than the beachcombers, and dressed out of better wardrobes than the strand provides. He did not wait for the sea to give him things. He worked the lights — a lantern walked along the headland on the wrong night, at the wrong height, until something came in trusting it — and he has the patience of a man who has stood in the cold for a whole tide to be paid at the end of it. He is looking at your pack the way he used to look at a hull.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing heavy and square in a good coat that does not fit the beach, hands down, looking at you and not at the ground
+2. Going away fast at a low run with a pack clutched in against his chest, looking back
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A heavy swing from the shoulder with whatever is in his hand, full commitment, body turned through it
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-fowler — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-fowler idle rise-from-the-turf move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-fowler --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the fowler. Exact game description: Flat on his front on the quaking turf in a hood of sacking and reed, absolutely still, with something long beside him under a blanket of cut sedge. You did not see him and you were not going to. He was not waiting for you and he is extremely unhappy about the difference you have just made to his morning.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Flat on his front on the ground in a hood of sacking and cut reed, face down, absolutely still, something long lying beside him under cut sedge
+2. Coming up off the ground onto one knee, the sacking hood falling back, both hands going to the long thing beside him
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A hard forward thrust with the long fowling pole held in both hands, body low and driving
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-eel-cutter — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-eel-cutter idle lift-the-trap move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-eel-cutter --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the eel cutter. Exact game description: Poling a flat-bottomed boat down the cut with a grig hanging off the transom and his back to you, working the line of traps in order, lifting, emptying, re-setting, moving on. He is very good at it. He has not looked up since before you were born and he will look up now.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing stooped with a long punt pole held level across the body in both hands, a wicker eel trap hanging at his belt, back half turned, not looking up
+2. Bent right down with both arms out over the water, hauling a dripping wicker eel trap up by its line
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A hard two-handed forward jab with the punt pole, arms staying below head height
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-pilot — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-pilot idle read-the-water move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-pilot --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the pilot. Exact game description: Standing on the far rope stage with a brass plate in his hand, looking at the water and not at you, reading a line across it that has not existed for two hundred years. He knew this channel better than anybody alive knows anything. He has not stopped knowing it. He is simply out of water to know it about.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing very straight and still, a small brass plate held flat on the open palm at chest height, head down over it, looking past you at the water
+2. One arm out straight and level, sighting along it across the water, the brass plate still in the other hand
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A short hard downward strike with the edge of the brass plate, the other arm out for balance
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-drover — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-drover idle drive-the-road move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-drover --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the drover. Exact game description: Coming the other way across the shoals with a stick over his shoulder and his coat tied at the waist, at the unhurried working pace of a man who has all day because the water says he has all day. There is nothing in front of him. He is still driving it, and he still expects the road.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing at ease with a long stick across the back of both shoulders and both wrists hooked over it, coat tied at the waist, looking past you up the road
+2. Stick brought down into one hand and swung out low and wide to the side, the other arm out, moving something that is not there
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A hard level swing of the long stick from the shoulder, arms staying below head height
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-tide-warden — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-tide-warden idle cut-the-stick move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-tide-warden --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the tide warden. Exact game description: It walks the causeway from end to end with a notched stick in one hand, and at every milestone it stops and looks at the water and cuts the stick, and goes on. The coat is sodden through and has been for a long time. It is not warning anybody. It is keeping the record, and the record is the job.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing still in a coat sodden black to the hem, a notched stick held upright in one hand, facing along the way
+2. Head down over the notched stick held up close to the chest, cutting a fresh notch into it with a small blade
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A hard level swing of the notched stick from the shoulder, both hands on it
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-refuge-man — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-refuge-man idle turn-from-the-wall move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-refuge-man --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the refuge man. Exact game description: Standing in the causeway refuge with his back to the opening and his hands flat on the stone at shoulder height, exactly as a man stands when he has got somewhere just barely in time and is waiting for something to pass. It did not pass. He is still standing like that and the refuge is dry today.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing with his back turned and both hands flat on a wall at shoulder height, face to the stone, waiting for something to pass
+2. Coming off the wall, body rotating, one hand still flat on the stone behind him, the face beginning to come round
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A close two-handed shove driving forward from the chest, shoulders behind it
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-scaffold-hand — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-scaffold-hand idle work-the-stone swing attack recover death
+#   node scripts/build-mob-strips.mjs the-scaffold-hand --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the scaffold hand. Exact game description: Hanging in the rotted scaffold under the arch in a rope harness gone to fibre, upside down at the hip, working at the underside of the stonework with both arms free. That is how the job was done. He is doing the job. The rope has not been sound in living memory.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Hanging upside down from the hip in a rope harness gone to fibre, both arms free and reaching up over his head, working
+2. Hanging in the harness with both arms straight up above him, picking at stonework overhead, head back
+3. Hanging in the harness and swung right out to one side on the rope, body extended, one arm out
+4. Hanging in the harness and driving both arms straight out forward at full reach
+5. Pulling back after a blow, body returning to its guard
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-salt-widow — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-salt-widow idle feed-the-flue work-the-pan attack recover death
+#   node scripts/build-mob-strips.mjs the-salt-widow --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the salt widow. Exact game description: Working the pan house, feeding a flue that has no fire in it, in a coat crusted white to the elbow. The pan is cold and has been cold since the fall and she is boiling it anyway, and the work is the whole of her and there is nothing else left in there at all.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing at a low cold flue, side on, both hands busy at it, sleeves and coat crusted white to the elbow
+2. Bent down at the mouth of the flue, both arms in to the elbow, pushing fuel into a fire that is not there
+3. Leaning out over a wide shallow pan with a long rake held in both hands, drawing it across
+4. A hard level swing of the long rake from the shoulder, both hands on it
+5. Pulling back after a blow, body returning to its guard
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-bridge-mason — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-bridge-mason idle dress-the-stone move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-bridge-mason --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the bridge mason. Exact game description: Out on the broken edge of the span with a mallet in his fist, working at a joint that has nothing beyond it — dressing the stone at the exact point where the bridge stops. He has been making the end of it neat for two centuries. He does not turn round for you. He turns round for the mallet.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing at the broken edge of stonework with a heavy mallet down in one fist, back three-quarters turned, head down at the joint
+2. Crouched down at the stone with the mallet raised in one hand and a chisel held in the other, striking
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. A hard mallet blow driven forward from the shoulder, both hands on the shaft
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-reed-walker — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-reed-walker idle part-the-reed move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-reed-walker --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the reed walker. Exact game description: A shape going through the maze one cut over from yours, at your pace, on your side, staying with you. The reed is too thick to see through and it is never quite where the sound says. It is not lost. It has been in here long enough to be the only thing that is not.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Standing half hidden in standing reed with the stems crossing in front of the body, only the outline and one shoulder clear, face indistinct
+2. One arm out pushing a curtain of reed stems aside, body turning through the gap, still mostly behind the stems
+3. Locomotion contact pose A, natural species-specific gait
+4. Locomotion passing pose B, opposite leg phase, same direction and body size
+5. Coming out of the reed at full stretch with both arms forward and low, body committed
+6. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-drowned-ferryman — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-drowned-ferryman idle alert move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-drowned-ferryman --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the drowned ferryman. Exact game description: He comes hand over hand along the rope with the whole of him under the water except the hands, and the hands are white and swollen and perfectly steady, and they do not slip on wet hemp. He worked this rope for a lifetime. The lifetime ended and the shift did not. He will take you across. That is the whole of the problem.
+
+THIS IS NOT A LIVING PERSON. This one drowned here and did not stop working. Draw a DEAD BODY that is still upright and still doing its job. The skin is bleached to a waxy blue-white and swollen with water, the hands worst of all; hair plastered flat; the eyes open and clouded over with no light in them; the clothing sodden black all the way through, salt-crusted, with weed caught in it. There is a WHOLE BODY here: not a skeleton, no bare bone, no exposed ribs, no open wounds, no gore, no rot, no missing flesh, no torn-away face. No glowing eyes, no aura, no mist, no supernatural effect of any kind. The wrongness is entirely in the colour of the skin and in the fact that the work has not stopped. It is not menacing the viewer and not looking at the viewer: it is finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible part of both eyes as flat solid opaque #00D0D0 CYAN, filling the whole eye opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour the eyes end up: it is a key the pipeline replaces, exactly the way the magenta background is. Everything else about the eyes stays as you would draw them - the same shape, the same size, the same set in the face, looking the same way in each pose.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. Chest deep in water with the whole of him under it except the head and both hands, the hands closed on a thick horizontal hemp rope above the surface, white and swollen
+2. Risen higher out of the water to the waist, both hands still on the rope, head come round and level to face
+3. Hand over hand along the rope contact pose A, one hand ahead on the rope and the body swung under it
+4. Hand over hand along the rope passing pose B, the other hand ahead, body swung the other way, same direction and size
+5. One hand off the rope and driven straight forward and down in a grab at full reach, the other still holding
+6. Gone slack and face down on the surface, arms spread, hands open, off the rope
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+============================================================
+# the-quicksand — 6 poses, 3x2 sheet at 1536x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-quicksand idle alert attack recover rest death
+#   node scripts/build-mob-strips.mjs the-quicksand --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD crossing mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the quicksand. Exact game description: A patch of the flat exactly like every other patch of the flat, until it is not. It does not move toward you and it has no shape and there is nothing to hit. What there is, is a great deal of it, and it has hold of you to the knee before the ground has finished being ground.
+
+Create 6 full-body poses of this SAME individual in a strict 3 COLUMNS by 2 ROWS sheet, landscape 1536x1024. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest wingspan. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+
+Reading order left to right, top row then bottom row:
+1. A flat featureless patch of wet grey sand with standing water lying on it in sheets, surface unbroken, three thin withy stakes and a slack rope along the near edge
+2. The same surface with one slow low dome risen at the centre of it, water running off the dome, nothing else changed
+3. The surface opened into a broad shallow cone with the sand pouring down the inside of it toward the middle
+4. The cone half closed, the sand slumping back level, a ring of standing water settling over it
+5. Perfectly flat and still, sheeted with standing water, the withies and rope slack
+6. Drained and set hard, the surface cracked into dry grey plates and sunk below the line of the withies
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+

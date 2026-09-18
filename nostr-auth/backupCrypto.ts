@@ -21,6 +21,15 @@
 // forced migration, no risk of dropping a wrap we can't reconstruct).
 
 const PBKDF2_ITERATIONS = 600_000; // OWASP 2023 floor for PBKDF2-HMAC-SHA256
+export function isStrongPassphrase(value: string): boolean {
+  return typeof value === 'string' && value.length >= 14 && value.length <= 256
+    && !/^\d+$/.test(value) && !/^(.)\1+$/.test(value)
+    && !/^(password|letmein|qwerty|123456|nomad)[\d!\s]*$/i.test(value)
+    && !/^(password|letmein|qwerty|nomad)\1+$/i.test(value);
+}
+export function validatePassphrase(value: string): void {
+  if (!isStrongPassphrase(value)) throw new Error('Use a passphrase of 14–256 characters, preferably several unrelated words; avoid numeric PINs and common passwords.');
+}
 const BACKUP_KIND = 'nostr-key-backup' as const; // v2 magic string
 const BACKUP_V = 1 as const;                      // v2 format version
 
@@ -163,6 +172,7 @@ export async function createBackup(
   nsec: string,
   pin: string,
 ): Promise<{ backup: BackupV2; dek: Uint8Array<ArrayBuffer> }> {
+  validatePassphrase(pin);
   const dek = crypto.getRandomValues(new Uint8Array(32));
   const keyCt = await aeadEnc(await skHexFromNsec(nsec), dek);
   const pinWrap = await makePinWrapV2(dek, pin);
@@ -251,6 +261,7 @@ export async function rewrapPin(
   dek: Uint8Array<ArrayBuffer>,
   newPassword: string,
 ): Promise<EncryptedBackup> {
+  validatePassphrase(newPassword);
   if (isV2(backup)) {
     const pinWrap = await makePinWrapV2(dek, newPassword);
     return { ...backup, wraps: [pinWrap, ...backup.wraps.filter(w => w.type !== 'pin')] };

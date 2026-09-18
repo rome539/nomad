@@ -4,11 +4,17 @@ The generation spec for every mountain creature, and the recipe that produced
 them. Companion to `mob-sprites.md`, which covers turning the delivered art into
 a working strip.
 
-**Read this first:** the table below is what was ASKED FOR. It is a request, not
-a record. The generator delivered a generic six for most ground mammals instead
-of the poses specified — which is why a curled sleep and a death pose exist at
-all. What actually shipped is the second table. Always check the two against
-each other, and against the pixels.
+**Read this first.** Two things in this file are requests rather than records,
+and both have burned a day:
+
+- **The pose list you write is a request.** The generator delivered a generic six
+  for most ground mammals instead of the poses specified — which is why a curled
+  sleep and a death pose exist at all. What actually shipped is the last table.
+  Always check the two against each other, and against the pixels.
+- **The pose list you *choose* is a claim about the world**, and it is wrong far
+  more often than the art is. Before writing one, read "Choosing the poses" and
+  "Does it travel?" below. Both are short, both are checkable by script, and
+  every expensive mistake in this pipeline has been in one of them.
 
 ## Write the prompt with the script
 
@@ -20,20 +26,162 @@ actually makes that animal do:
 node scripts/mob-prompt.mjs hill-wolf
 ```
 
-It pulls the description live from D1, proposes a pose set from the creature's
-behaviour sets (a scavenger gets `feed`, a grazer `graze`, a pack caller `call`),
-works out the sheet geometry from the pose count, and prints the cut command with
-the matching pose names already in the right order. Pass your own poses to
-override. Attach an approved sheet as the style reference when you paste it.
+It pulls the description live from D1, derives the pose set from the creature's
+behaviour sets, works out the sheet geometry from the pose count, and prints the
+cut command with the matching pose names already in the right order. Pass your
+own poses to override. Attach an approved sheet as the style reference when you
+paste it.
+
+It also prints, to stderr, every set the creature is in and whether the sheet
+answers it:
+
+```
+  grey-seal  [idle alert move-a move-b attack feed rest death]
+    STARVE_HUNTERS -> feed
+    NAPPERS -> rest
+```
+
+**Read that block every time, including when you passed your own pose list** —
+an overridden list is checked too, because hand-written lists are where the
+misses came from. A `MISSING` line means the sheet does not answer something the
+world makes that animal do. The script refuses outright to emit a dead pose name
+(below) rather than warning about it.
 
 The recipe below is what that script emits, written out so it can be checked and
 changed.
 
+## Choosing the poses: read the world, not the animal
+
+**This is the step that goes wrong.** The art and the packing are mechanical; the
+pose list is a judgement, and a judgement made from the animal's *name* instead of
+its behaviour is how ten creatures shipped unable to cross a room and thirty ended
+up with a feeding route and nothing to eat with.
+
+A pose name is a request to the driver. There is no error for asking it for a
+frame it never reads — the cell is simply drawn, packed, and never shown.
+
+### The sets that want a frame
+
+Six, and only six. The reader is what makes the row real; a set that cannot name
+the line that reads its frame does not belong here.
+
+| set | frame | how it is reached |
+|---|---|---|
+| `SCAVENGERS` | `feed` | **event** — the fed beat |
+| `VERMIN` | `feed` | **event** — the fed beat, once hungry |
+| `LURKERS` | `feed` | **event** — the fed beat, once hungry |
+| `THIEVES` | `snatch-escape` | **event** — the travel branch, first 55% of the crossing |
+| `NAPPERS` | `rest` | `SLEEP_POSES` head, and `CALM_POSES` head |
+| `STARVE_HUNTERS` | `feed` | `CALM_POSES` slot 4 |
+| `GRAZERS` | `graze` | `CALM_POSES` slot 3 |
+| `ALARM_CALLERS` | `alert-alarm` | `WATCH_POSES` slot 3 |
+
+**The fed event is not a scavenger-only thing, whatever the function is called.**
+`fxFed` is emitted from one line, inside `scavengerFeeds` — but `zone.ts` calls
+that function from three branches: `SCAVENGERS` unconditionally, and `VERMIN` and
+`LURKERS` once hungry. A rat, a crab, a chough and a raven all eat on screen.
+Reading only the first of those three call sites is how two crabs were nearly
+specified with `graze`. `STARVE_HUNTERS` and predation, by contrast, fire nothing
+at all — that set is a hunting rule, not an eating animation.
+
+### A slot is filled once, so a second frame for it is dead
+
+This is the one that turns a missing frame into a non-problem, and it is worth
+more than any of the rows above.
+
+`CALM_POSES` and `WATCH_POSES` are searched **in order**, and the loop stops at
+the first name the creature owns. `CALM_POSES` begins with `rest`. So a napper
+that also grazes **can never show `graze`** — `rest` wins the slot, every time,
+and the graze cell is drawn, cut, packed and never displayed.
+
+That rules out a great deal of apparent work. Four of the mountain's birds are
+`STARVE_HUNTERS` with no feed frame, and they need none: they already sleep, and
+for them `feed` is calm-slot-only, so it could never be selected. An event frame
+is different — it is asked for by name rather than searched for, so nothing
+shadows it, which is exactly why the same `feed` name **is** needed on a vermin.
+
+`STRIKE_POSES` is the exception that proves the rule: it collects *every* blow a
+creature owns into a list and picks randomly per swing, so a second and third
+strike are both reachable and buy real variety in a long fight.
+
+`audit-mob-behaviour.mjs` knows all of this and marks a shadowed frame `n/a` with
+the pose that beats it, rather than `MISSING`.
+
+Run `node scripts/audit-mob-behaviour.mjs` for the whole roster, or pass ids for
+a few. It prints every creature short a frame its behaviour asks for, and the
+coverage per set.
+
+### Names nothing reads
+
+`drink`, `call` and `flee` are dead. `DRINKERS`, `PACK_CALLERS` and `RUNNERS`
+hold 28 creatures between them and no branch in the driver reads any of the
+three. The names exist in the prompt script's fallback wording table and nowhere
+else. A cell spent on one is a cell burned.
+
+### Sets that are not about animation at all
+
+Read what reads a set before treating it as one of the six. These read as
+animation sets from the name and are not:
+
+- **`BITERS`, `BEAKS`, `COILS`, `SMALL_BITE`** — text registers. They choose the
+  wording of a hit message (`CREATURE_HIT.teeth` / `.beak` / `.coils` /
+  `.vermin`). They never want a picture.
+- **`DROWNERS`** — seize-and-hold, and excluded from starve-hunting. Not a
+  feeding route.
+- **`GRAZERS`** — despite the name, **not** about grass. Its own header reads
+  "who eats the ground"; it began as the union of `VERMIN` and `THIEVES`, and it
+  gates foraging in `FORAGE_ROOMS`. A snake or a crab in it is correct.
+
+## Does it travel? — the question with six answers
+
+Owning `move-a` and `move-b` is what lets a creature cross the room on screen.
+Without them the driver cycles its poses standing still, which reads as a rooted
+animal however fast the world is actually moving it.
+
+**There is no single guard that answers this.** Six paths assign a room, they
+carry different exemptions, and checking one and stopping is how the wrong answer
+gets made:
+
+| path | where | what it exempts |
+|---|---|---|
+| wander ×3 | `zone.ts` tick, catch-up, and the main beat | `is_boss` (unless in `PATROLS`), `BROODERS`, `DROWNERS`, `SENTINELS`, `AGGRESSIVE`, **`ROOTED`** |
+| flee | `zone.ts`, the `wantsFlee` block | `is_boss` only — **not `ROOTED`** |
+| lurker drift | `ai.ts`, `lurkerDrifts` | `LURKERS` only — **neither `is_boss` nor `ROOTED`** |
+| deep kin surfacing | `ai.ts`, `surfaceDeepKin` | surfaced deep kin only |
+
+So `ROOTED` does **not** mean "never moves", though the set's own comment and the
+lore line shown to the player both say it does. Anything `ROOTED` that also fears
+fire bolts from a torch, and anything `ROOTED` that is also a `LURKER` drifts.
+`is_boss` is the only flag currently checked on every path.
+
+### And check where it spawns
+
+Behaviour sets key on the **template id**, and a rare variant is its own template
+id with its own memberships — but it spawns wherever its base spawns, from
+`mob_variants`. So a set added for one region's reasons silently applies to the
+variant everywhere its base lives. Read `mob_variants` before concluding anything
+about a variant from the set it is in.
+
 ## The prompt recipe
 
-Every sheet is **six poses, 3 columns × 2 rows, landscape 1536×1024, cells
-512×512**, read left to right then top row to bottom. The drakes are the
-exception (three sheets, 14 poses).
+A sheet is **6, 8 or 14 poses. Never 9, never 12.** The cutter will accept 4, 6,
+9 and 12 as well; the game does not use them, and a count the roster has never
+carried is a round trip, not a shortcut. Count the shipped table at the bottom of
+this file before proposing a new geometry.
+
+- **8 poses — 4 columns × 2 rows, 2048×1024, cells 512×512.** The current
+  default, and what everything drawn since the crossing uses.
+- **6 poses — 3 columns × 2 rows, 1536×1024, cells 512×512.** The mountain's
+  original geometry. Most of the older roster is still on it.
+- **14 poses** — the two drakes only, across three sheets.
+
+Read left to right, top row then bottom.
+
+**No struck frame.** `hit` is drawn on the two drakes and a handful of the
+crossing's dead and is not to be specified on new sheets (ruling, 2026-09-17).
+The cell is better spent on the frame the creature's behaviour actually asks for.
+`HIT_POSES` is `["hit"]` alone, so a creature without it simply does not recoil
+on screen — nothing else degrades.
 
 A working prompt has these blocks, in this order:
 
@@ -107,7 +255,13 @@ or barely keyed (a background that was not magenta).
 Then keep the sheet: `output/mountain-mobs/<id>/source.png`. That folder is
 gitignored — it is the only copy.
 
-## The spec — six poses, in order
+## The spec as originally requested — the mountain's six
+
+Historical. This is what the mountain's creatures were ASKED for, at the six-pose
+geometry, before any of the behaviour work above existed. Most rows never arrived
+as specified and several of the pose names here were never read by the driver at
+all. Kept because it records the intent behind each animal; **do not spec a new
+sheet from this table.** What shipped is the table after it.
 
 | Mob | Appearance and behaviour | Six poses, in order |
 |---|---|---|

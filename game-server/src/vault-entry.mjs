@@ -15,6 +15,7 @@ export {
   clearVaultId,
 } from "../../nostr-auth/driveBackup";
 export { createBackupWithPin, unlockWithPin } from "../../nostr-auth/backupCrypto";
+export { isStrongPassphrase, validatePassphrase } from "../../nostr-auth/backupCrypto";
 // Passkey recovery: a second wrap on the vault's DEK so a forgotten PIN can be
 // recovered with Face ID / Touch ID (WebAuthn PRF). PIN stays the primary door;
 // the passkey is enrolled per-domain, so it lives on nomadmud.com only.

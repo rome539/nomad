@@ -129,7 +129,7 @@ function declineDeal(z: ZoneDO, deal: Deal, session: Session): void {
 // The client's side of the swap protocol: {v:0, t:"swap", action, row?}.
 export async function handleSwap(z: ZoneDO, session: Session, frame: any): Promise<void> {
   const deal = session.dealId ? z.deals.get(session.dealId) : undefined;
-  if (!deal) return;
+  if (!deal || deal.settling) return;
   const action = frame?.action;
   if (!deal.accepted) {
     if (action === "accept") return acceptDeal(z, deal, session);
@@ -151,10 +151,15 @@ export async function handleSwap(z: ZoneDO, session: Session, frame: any): Promi
   const mine = deal.aPk === session.pubkey;
   const other = z.sessions.get(otherOf(deal, session.pubkey));
   if (action === "offer") {
+    if (deal.offerA.length + deal.offerB.length >= 16) {
+      await sendDeal(z, session, deal, "A deal can carry at most sixteen items. Settle this handful first.");
+      return;
+    }
     const row = typeof frame.row === "string" ? frame.row : "";
     const pool = frame.pool === "lockbox" || frame.pool === "vault" ? frame.pool : "";
     const already = mine ? deal.offerA : deal.offerB;
     const pools = await tradePools(z, session, deal.gatehouse);
+    if (deal.settling || z.deals.get(deal.id) !== deal || deal.offerA.length + deal.offerB.length >= 16) return;
     const hit = pools.find((p) => p.item.itemId === row && p.pool === pool && !already.some((o) => o.rowId === p.item.rowId));
     if (!hit) { await sendDeal(z, session, deal, "You've nothing more like that to lay down."); return; }
     already.push({ rowId: hit.item.rowId, itemId: hit.item.itemId });
@@ -314,154 +319,148 @@ export function sweepStrandedDeals(z: ZoneDO): void {
 // Both hands shook: move everything at once, or not at all.
 async function settleDeal(z: ZoneDO, deal: Deal): Promise<void> {
   if (deal.settling) return;
-  const a = z.sessions.get(deal.aPk);
-  const b = z.sessions.get(deal.bPk);
-  if (!a || !b) return cancelDeal(z, deal, "The deal falls through — they stepped away.");
-  // handleSwap already refuses the CALLER mid-combat, but the confirm that
-  // tips both flags true can be the far side's — recheck both here, not just
-  // whoever's frame happened to trigger this.
-  if (z.inCombat(a) || z.inCombat(b)) return cancelDeal(z, deal, "Steel's out — the deal's off.");
-
-  // Belt and braces behind sweepStrandedDeals: that sweep normally kills a
-  // strayed deal long before anyone can confirm, but settling is async (it
-  // awaits D1), so someone can still walk off between the confirm and the
-  // write. Same shared predicate, so the two can't disagree.
-  if (!together(z, deal, a, b)) {
-    deal.confirmA = false; deal.confirmB = false;
-    await sendDeal(z, a, deal, "The deal falls apart — you're no longer within arm's reach.");
-    await sendDeal(z, b, deal, "The deal falls apart — you're no longer within arm's reach.");
-    return;
-  }
-
-  // Re-tally against what's ACTUALLY still carried, across every pool this
-  // deal draws from (something offered may have been dropped, worn, stashed
-  // elsewhere, or salvaged since) — same recount discipline gate.ts's
-  // offerCore uses before it lets the keeper's counter clear.
-  const resolve = async (
-    session: Session, offer: DealItem[],
-  ): Promise<{ item: CarriedItem; pool: "" | "lockbox" | "vault" }[] | null> => {
-    const pools = await tradePools(z, session, deal.gatehouse);
-    const rows: { item: CarriedItem; pool: "" | "lockbox" | "vault" }[] = [];
-    for (const o of offer) {
-      const hit = pools.find((p) => p.item.rowId === o.rowId && p.item.itemId === o.itemId);
-      if (!hit) return null;
-      rows.push(hit);
-    }
-    return rows;
-  };
-  const aHits = await resolve(a, deal.offerA);
-  const bHits = await resolve(b, deal.offerB);
-  // RE-CHECK THE GUARD AFTER THE AWAITS (2026-08-20). The `settling` check at
-  // the top of this function is checked before any D1 round trip, but the flag
-  // is only armed at the commit below — so two near-simultaneous confirms (both
-  // players shaking hands at once) used to pass the top check together, both
-  // resolve, and BOTH commit: each recipient's pack ended up holding two
-  // in-memory copies of every traded row (same rowIds — a ghost that could be
-  // eaten twice or laundered into a real duplicate by dropping it). Between
-  // this check and `deal.settling = true` there is no await, so of any number
-  // of concurrent settles exactly one proceeds to commit.
-  if (deal.settling) return;
-  // Whatever's incoming always lands in the RECIPIENT's pack (you don't get
-  // someone else's lockbox or vault) — so the pack has to have room for it.
-  // Simulated against a scratch copy that already LACKS the rows this side is
-  // giving away (2026-08-20: the old scratch kept them, so a pack-exact
-  // 1-for-1 swap was wrongly refused as "no room") — and the same count
-  // ceilings packRoom enforces everywhere else ride on top of the slot math
-  // (food/torches/dressings are capped so a run can't carry bottomless
-  // healing; a deal must not be the way around that).
-  const fits = (recipient: Session, outgoing: DealItem[], incoming: CarriedItem[]): boolean => {
-    const giving = new Set(outgoing.map((o) => o.rowId));
-    const scratch = recipient.items.filter((c) => !giving.has(c.rowId));
-    const countFood = () => scratch.reduce((n, c) => n + (z.world!.itemTemplates.get(c.itemId)?.edible ? 1 : 0), 0);
-    const countTorches = () => scratch.reduce((n, c) => n + (c.itemId === TORCH_ITEM ? 1 : 0), 0);
-    const countDressings = () => scratch.reduce((n, c) => {
-      const t = z.world!.itemTemplates.get(c.itemId);
-      return n + (t && (t.staunch ?? 0) > 0 && !t.edible ? 1 : 0);
-    }, 0);
-    for (const c of incoming) {
-      if (!z.hasRoom(scratch, c.itemId, z.packCap(recipient), "pack")) return false;
-      const t = z.world!.itemTemplates.get(c.itemId);
-      if (t?.edible && countFood() >= PACK_FOOD_CAP) return false;
-      if (c.itemId === TORCH_ITEM && countTorches() >= PACK_TORCH_CAP) return false;
-      if (t && (t.staunch ?? 0) > 0 && !t.edible && countDressings() >= PACK_DRESSING_CAP) return false;
-      scratch.push(c);
-    }
-    return true;
-  };
-  const roomOk = aHits && bHits
-    && fits(b, deal.offerB, aHits.map((h) => h.item))
-    && fits(a, deal.offerA, bHits.map((h) => h.item));
-  if (!aHits || !bHits || !roomOk) {
-    deal.confirmA = false; deal.confirmB = false;
-    if (aHits) deal.offerA = aHits.map((h) => ({ rowId: h.item.rowId, itemId: h.item.itemId }));
-    if (bHits) deal.offerB = bHits.map((h) => ({ rowId: h.item.rowId, itemId: h.item.itemId }));
-    const note = !aHits || !bHits
-      ? "Something on the table changed — recheck the goods and shake again."
-      : "There's no room for this trade in one of your packs — trim it down and shake again.";
-    await sendDeal(z, a, deal, note);
-    await sendDeal(z, b, deal, note);
-    return;
-  }
-
-  const aRows = aHits.map((h) => h.item);
-  const bRows = bHits.map((h) => h.item);
-
-  // Commit in memory FIRST, synchronously, before any await — so a death or
-  // disconnect racing this settlement can't ALSO see these rows sitting in
-  // session.items and double-process them (the exact class of bug c336ef9
-  // fixed: never let a D1 await be the only thing standing between two
-  // triggers and the same state). Only pack rows live in memory at all —
-  // lockbox/vault are read fresh every time, nothing to splice there.
   deal.settling = true;
-  for (const h of aHits) if (h.pool === "") { const i = a.items.indexOf(h.item); if (i !== -1) a.items.splice(i, 1); }
-  for (const h of bHits) if (h.pool === "") { const i = b.items.indexOf(h.item); if (i !== -1) b.items.splice(i, 1); }
-  a.dealId = undefined; b.dealId = undefined;
-  z.deals.delete(deal.id);
-
-  // Locked for the DURATION of the D1 round trip below (unlocked in the
-  // finally no matter how it resolves) — a death landing for either party in
-  // this exact window must not let clearCarriedInventory's blanket delete
-  // sweep these PACK rows out from under the pending UPDATE (they're already
-  // gone from session.items, so nothing else would protect them). Lockbox/
-  // vault rows were never in death's blast radius (container != '' is
-  // outside clearCarriedInventory's own WHERE clause) — nothing to lock there.
-  const packRowIds = [...aHits, ...bHits].filter((h) => h.pool === "").map((h) => h.item.rowId);
-  for (const id of packRowIds) z.tradeLocked.add(id);
+  const offerA = deal.offerA.map(o => ({ ...o }));
+  const offerB = deal.offerB.map(o => ({ ...o }));
   try {
-    await transferItems(z.env.DB, [
-      ...aRows.map((c) => ({ rowId: c.rowId, toPubkey: b.pubkey })),
-      ...bRows.map((c) => ({ rowId: c.rowId, toPubkey: a.pubkey })),
-    ]);
-    for (const c of aRows) if (c.loreId) await deedsOwner(z.env.DB, c.loreId, b.pubkey);
-    for (const c of bRows) if (c.loreId) await deedsOwner(z.env.DB, c.loreId, a.pubkey);
-  } finally {
-    for (const id of packRowIds) z.tradeLocked.delete(id);
-  }
+    const a = z.sessions.get(deal.aPk);
+    const b = z.sessions.get(deal.bPk);
+    if (!a || !b) return cancelDeal(z, deal, "The deal falls through — they stepped away.");
+    // handleSwap already refuses the CALLER mid-combat, but the confirm that
+    // tips both flags true can be the far side's — recheck both here, not just
+    // whoever's frame happened to trigger this.
+    if (z.inCombat(a) || z.inCombat(b)) return cancelDeal(z, deal, "Steel's out — the deal's off.");
 
-  // Deliver into memory only if each session is still the live one for that
-  // pubkey — if they reconnected or fell away mid-settle, D1 already carries
-  // the truth (items is a cache; a fresh session rebuilds from D1 anyway).
-  // Everything lands in the PACK regardless of where it came from
-  // (transferItems already reset container to '' in the same write).
-  const world = z.world!;
-  const nameOf = (c: CarriedItem) => world.itemTemplates.get(c.itemId)?.name ?? c.itemId;
-  if (z.sessions.get(a.pubkey) === a) {
-    a.items.push(...bRows);
-    closeFrame(a);
-    z.send(a, bRows.length || aRows.length
-      ? `Deal struck with ${b.name}.${bRows.length ? ` You take ${bRows.map(nameOf).join(", ")}.` : ""}${aRows.length ? ` You hand over ${aRows.map(nameOf).join(", ")}.` : ""}`
-      : "Deal struck — though neither of you put anything on the table.", "gain");
-    z.sendCtx(a);
-  }
-  if (z.sessions.get(b.pubkey) === b) {
-    b.items.push(...aRows);
-    closeFrame(b);
-    z.send(b, aRows.length || bRows.length
-      ? `Deal struck with ${a.name}.${aRows.length ? ` You take ${aRows.map(nameOf).join(", ")}.` : ""}${bRows.length ? ` You hand over ${bRows.map(nameOf).join(", ")}.` : ""}`
-      : "Deal struck — though neither of you put anything on the table.", "gain");
-    z.sendCtx(b);
-  }
-  const line = `${a.name} and ${b.name} shake on a deal.`;
-  if (deal.gatehouse) gatehouseFeed(z, line);
-  else z.roomFeed(deal.roomId, line, undefined, false);
+    // Belt and braces behind sweepStrandedDeals: that sweep normally kills a
+    // strayed deal long before anyone can confirm, but settling is async (it
+    // awaits D1), so someone can still walk off between the confirm and the
+    // write. Same shared predicate, so the two can't disagree.
+    if (!together(z, deal, a, b)) {
+      deal.confirmA = false; deal.confirmB = false;
+      await sendDeal(z, a, deal, "The deal falls apart — you're no longer within arm's reach.");
+      await sendDeal(z, b, deal, "The deal falls apart — you're no longer within arm's reach.");
+      return;
+    }
+
+    // Re-tally against what's ACTUALLY still carried, across every pool this
+    // deal draws from (something offered may have been dropped, worn, stashed
+    // elsewhere, or salvaged since) — same recount discipline gate.ts's
+    // offerCore uses before it lets the keeper's counter clear.
+    const resolve = async (
+      session: Session, offer: DealItem[],
+    ): Promise<{ item: CarriedItem; pool: "" | "lockbox" | "vault" }[] | null> => {
+      const pools = await tradePools(z, session, deal.gatehouse);
+      const rows: { item: CarriedItem; pool: "" | "lockbox" | "vault" }[] = [];
+      for (const o of offer) {
+        const hit = pools.find((p) => p.item.rowId === o.rowId && p.item.itemId === o.itemId);
+        if (!hit) return null;
+        rows.push(hit);
+      }
+      return rows;
+    };
+    const aHits = await resolve(a, offerA);
+    const bHits = await resolve(b, offerB);
+    if (z.deals.get(deal.id) !== deal || !deal.confirmA || !deal.confirmB
+        || z.sessions.get(a.pubkey) !== a || z.sessions.get(b.pubkey) !== b
+        || !together(z, deal, a, b) || z.inCombat(a) || z.inCombat(b)) return;
+    // Whatever's incoming always lands in the RECIPIENT's pack (you don't get
+    // someone else's lockbox or vault) — so the pack has to have room for it.
+    // Simulated against a scratch copy that already LACKS the rows this side is
+    // giving away (2026-08-20: the old scratch kept them, so a pack-exact
+    // 1-for-1 swap was wrongly refused as "no room") — and the same count
+    // ceilings packRoom enforces everywhere else ride on top of the slot math
+    // (food/torches/dressings are capped so a run can't carry bottomless
+    // healing; a deal must not be the way around that).
+    const fits = (recipient: Session, outgoing: DealItem[], incoming: CarriedItem[]): boolean => {
+      const giving = new Set(outgoing.map((o) => o.rowId));
+      const scratch = recipient.items.filter((c) => !giving.has(c.rowId));
+      const countFood = () => scratch.reduce((n, c) => n + (z.world!.itemTemplates.get(c.itemId)?.edible ? 1 : 0), 0);
+      const countTorches = () => scratch.reduce((n, c) => n + (c.itemId === TORCH_ITEM ? 1 : 0), 0);
+      const countDressings = () => scratch.reduce((n, c) => {
+        const t = z.world!.itemTemplates.get(c.itemId);
+        return n + (t && (t.staunch ?? 0) > 0 && !t.edible ? 1 : 0);
+      }, 0);
+      for (const c of incoming) {
+        if (!z.hasRoom(scratch, c.itemId, z.packCap(recipient), "pack")) return false;
+        const t = z.world!.itemTemplates.get(c.itemId);
+        if (t?.edible && countFood() >= PACK_FOOD_CAP) return false;
+        if (c.itemId === TORCH_ITEM && countTorches() >= PACK_TORCH_CAP) return false;
+        if (t && (t.staunch ?? 0) > 0 && !t.edible && countDressings() >= PACK_DRESSING_CAP) return false;
+        scratch.push(c);
+      }
+      return true;
+    };
+    const roomOk = aHits && bHits
+      && fits(b, offerB, aHits.map((h) => h.item))
+      && fits(a, offerA, bHits.map((h) => h.item));
+    if (!aHits || !bHits || !roomOk) {
+      deal.confirmA = false; deal.confirmB = false;
+      if (aHits) deal.offerA = aHits.map((h) => ({ rowId: h.item.rowId, itemId: h.item.itemId }));
+      if (bHits) deal.offerB = bHits.map((h) => ({ rowId: h.item.rowId, itemId: h.item.itemId }));
+      const note = !aHits || !bHits
+        ? "Something on the table changed — recheck the goods and shake again."
+        : "There's no room for this trade in one of your packs — trim it down and shake again.";
+      await sendDeal(z, a, deal, note);
+      await sendDeal(z, b, deal, note);
+      return;
+    }
+
+    const aRows = aHits.map((h) => h.item);
+    const bRows = bHits.map((h) => h.item);
+
+    // The zone event queue excludes other commands, reconnects, and ticks.
+    // Keep the cache and deal intact until the atomic ownership write succeeds.
+    const packRowIds = [...aHits, ...bHits].filter(h => h.pool === "").map(h => h.item.rowId);
+    for (const id of packRowIds) z.tradeLocked.add(id);
+    try {
+      await transferItems(z.env.DB, [
+        ...aRows.map(c => ({ rowId: c.rowId, fromPubkey: a.pubkey, toPubkey: b.pubkey })),
+        ...bRows.map(c => ({ rowId: c.rowId, fromPubkey: b.pubkey, toPubkey: a.pubkey })),
+      ]);
+    } catch (e) {
+      deal.confirmA = false; deal.confirmB = false;
+      z.send(a, "The deal could not settle. Your goods have not been handed over; check and confirm again.");
+      z.send(b, "The deal could not settle. Your goods have not been handed over; check and confirm again.");
+      throw e;
+    } finally {
+      for (const id of packRowIds) z.tradeLocked.delete(id);
+    }
+    for (const h of aHits) if (h.pool === "") { const i = a.items.indexOf(h.item); if (i !== -1) a.items.splice(i, 1); }
+    for (const h of bHits) if (h.pool === "") { const i = b.items.indexOf(h.item); if (i !== -1) b.items.splice(i, 1); }
+    a.dealId = undefined; b.dealId = undefined;
+    z.deals.delete(deal.id);
+
+    // Deliver into memory only if each session is still the live one for that
+    // pubkey — if they reconnected or fell away mid-settle, D1 already carries
+    // the truth (items is a cache; a fresh session rebuilds from D1 anyway).
+    // Everything lands in the PACK regardless of where it came from
+    // (transferItems already reset container to '' in the same write).
+    const world = z.world!;
+    const nameOf = (c: CarriedItem) => world.itemTemplates.get(c.itemId)?.name ?? c.itemId;
+    if (z.sessions.get(a.pubkey) === a) {
+      a.items.push(...bRows);
+      closeFrame(a);
+      z.send(a, bRows.length || aRows.length
+        ? `Deal struck with ${b.name}.${bRows.length ? ` You take ${bRows.map(nameOf).join(", ")}.` : ""}${aRows.length ? ` You hand over ${aRows.map(nameOf).join(", ")}.` : ""}`
+        : "Deal struck — though neither of you put anything on the table.", "gain");
+      z.sendCtx(a);
+    }
+    if (z.sessions.get(b.pubkey) === b) {
+      b.items.push(...aRows);
+      closeFrame(b);
+      z.send(b, aRows.length || bRows.length
+        ? `Deal struck with ${a.name}.${aRows.length ? ` You take ${aRows.map(nameOf).join(", ")}.` : ""}${bRows.length ? ` You hand over ${bRows.map(nameOf).join(", ")}.` : ""}`
+        : "Deal struck — though neither of you put anything on the table.", "gain");
+      z.sendCtx(b);
+    }
+    for (const [rows, owner] of [[aRows, b.pubkey], [bRows, a.pubkey]] as const) {
+      for (const c of rows) if (c.loreId) {
+        try { await deedsOwner(z.env.DB, c.loreId, owner); }
+        catch (e) { console.error("trade provenance update failed", c.loreId); }
+      }
+    }
+    const line = `${a.name} and ${b.name} shake on a deal.`;
+    if (deal.gatehouse) gatehouseFeed(z, line);
+    else z.roomFeed(deal.roomId, line, undefined, false);
+  } finally { deal.settling = false; }
 }

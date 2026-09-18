@@ -12,11 +12,19 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const [out, ...ids] = process.argv.slice(2);
+// The page is built more than once now and the title was welded to the first
+// batch it ever ran on, which made every later page lie about what it held.
+const argv = process.argv.slice(2);
+let TITLE = "Creature Prompts";
+for (let i = 0; i < argv.length; i++) {
+  if (argv[i] === "--title") { TITLE = argv[i + 1] || TITLE; argv.splice(i, 2); i--; }
+}
+const [out, ...ids] = argv;
 if (!out || !ids.length) {
-  console.error("usage: node scripts/build-mob-prompt-page.mjs <out.html> <id> [id …]");
+  console.error("usage: node scripts/build-mob-prompt-page.mjs [--title <name>] <out.html> <id> [id …]");
   process.exit(2);
 }
+const esc = (t) => t.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
 const cards = ids.map((id) => {
   const raw = execFileSync("node", [path.join(HERE, "mob-prompt.mjs"), id], { encoding: "utf8" });
@@ -28,7 +36,7 @@ const cards = ids.map((id) => {
   return { id, name, cut, prompt: body, poses: +grid[1] || 0, sheet: grid[2] + " · " + grid[3] };
 });
 
-const page = `<title>Crossing Dead Prompts</title>
+const page = `<title>${esc(TITLE)}</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
   :root{--ground:#15161c;--surface:#1d1f27;--raise:#252833;--ink:#e9e5dc;--dim:#9a9484;--faint:#6a6558;--rule:#32353f;--tide:#c07a42}
@@ -53,7 +61,7 @@ const page = `<title>Crossing Dead Prompts</title>
   pre{margin:0;padding:18px;border-top:1px solid var(--rule);font:400 12px/1.6 "IBM Plex Mono",ui-monospace,monospace;white-space:pre-wrap;word-wrap:break-word;max-height:440px;overflow-y:auto}
 </style>
 <div class="wrap">
-<header><h1>Crossing Dead Prompts</h1>
+<header><h1>${esc(TITLE)}</h1>
 <p class="sub">${cards.length} sheets. Copy, generate, then run the cut line on the card.</p></header>
 <div class="grid" id="g"></div>
 </div>

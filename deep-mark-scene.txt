@@ -1,0 +1,130 @@
+THE DEEP MARK — room plate prompt
+Generated for the crossing's tide-door room. Six conditions, one composition.
+
+==========================================================================
+
+Retro dark-fantasy MUD game art in a late-1980s / early-1990s first-person
+dungeon-crawler style.
+
+Low-resolution 8-bit/16-bit-inspired pixel art with deliberately chunky pixels,
+hard pixel edges, limited muted color palette, heavy shadows, strong contrast,
+subtle dithering, restrained highlights, and simple readable silhouettes.
+
+Dark medieval frontier atmosphere: ancient stone, decaying timber, rusted iron,
+mud, blood, bones, ruined architecture, dead vegetation, worn equipment,
+torchlight, fog, rain, darkness, and bleak wilderness.
+
+Artwork should feel handmade and functional rather than polished modern concept
+art. Avoid photorealism, smooth digital painting, modern 3D rendering, excessive
+detail, glossy materials, cinematic realism, anti-aliased edges, and modern
+game-art aesthetics.
+
+RESOLUTION LOCK: rendered natively at 320x200 pixels, 4:3, then displayed
+larger. Do not downscale or upscale from a higher-resolution painting. Pixel
+density must be identical in every asset.
+
+CAMERA LOCK: fixed eye-level first-person viewpoint, horizon exactly at 55% of
+frame height, moderate field of view, strong central perspective. The
+environment occupies the full frame.
+
+THE SCENE IS A BACKDROP, NOT A MAP. Do not depict specific navigable exits,
+doorways or passages as countable or directional. Paths may recede into shadow,
+fog, or the frame edge. The image shows what the place IS, never where the ways
+out are.
+
+STAGE LOCK: this is a place you are STANDING IN, not a view you are looking at.
+The nearest ground must be immediately underfoot and occupy the bottom third of
+the frame, continuous, and level enough to stand a large animal on. Never a
+viewpoint over distant country with nothing near the camera. A creature sprite
+will be composited standing on that near ground at a scale where a man would
+reach roughly a fifth of the frame height — compose so there is room for it.
+
+NOTHING ALIVE. No people, no creatures, no animals, no bodies. The world is
+empty in every plate; anything living is composited in later onto the near
+ground.
+
+No visible player character, hands, weapon, HUD, text, labels, icons, borders,
+watermark, or interface elements.
+
+==========================================================================
+
+SUBJECT: THE DEEP MARK — the head of the green water, and the tide door at the post's foot.
+
+You are standing on the last hard ground at the head of a deep channel, where
+the bottom drops away. Two things are in this place and the plate is about both.
+
+THE POST. A squat stone gauge post standing on the near ground, waist to chest
+high, with depth bands cut across it in horizontal grooves. The bands crowd
+closer toward the top. The cutter RAN OUT OF POST BEFORE HE RAN OUT OF WATER,
+and marked that fact by cutting the last band on the UNDERSIDE OF THE CAP — so
+the deepest reading is on the overhang, upside down, where you have to crouch
+and look up to read it. That detail is the whole point of the post and must be
+visible: the cap projects, and there is a cut band on its underside.
+
+THE DOOR. A door of black iron set LOW into the stone bank beside the post,
+squat and wide, the whole of it below the deepest band on the post — it is under
+water more of the day than it is out of it, and whoever hung it knew that. It is
+SHUT, and its sill is buried: packed silt heaped against the iron, and the stone
+around it CUT ABOUT WITH OLD DIGGING MARKS, a great many of them, old and
+overlapping. Somebody worked this on a schedule for a very long time. Draw no
+opening, no gap, no passage, no interior — shut iron and silt, nothing beyond.
+
+THE WATER. Behind and below, the channel: a hard line where grey shallows become
+green deep, and the green does not lighten again anywhere you can see. Cold,
+opaque, still. The near ground runs to that line and stops.
+
+THE GROUND. Wet tidal stone and packed silt, scarred, standing-flat and
+continuous across the bottom third — a man works this ground with a pick, so it
+must read as somewhere you can stand and dig.
+
+TWO THINGS THIS PLATE MUST NOT DO:
+
+  * NO VISIBLE WAY THROUGH. The door is an OBJECT in this room, not an exit
+    drawn for you to find. It is shut and silted, and nothing of what is behind
+    it appears. The scene shows what the place is, never where the ways out are.
+  * NO WATER OVER THE SILL, AND NO CLEARED SILL EITHER. The door has three
+    states in play and the picture is permanent, so it shows the state it spends
+    almost all its time in: shut, sill silted, water at the foot of the bank and
+    not over the iron. The prose says which state it is in; the plate must not
+    contradict any of them.
+
+SIX PLATES, ONE PHOTOGRAPH.
+
+Compose ONCE and light it six times. The light changes; the camera does not —
+the keyed skyline has to land in exactly the same place in all six or the shared
+sky tears when the hour turns. Same post, same door, same water line, same
+framing, same horizon at 55%.
+
+  the-deep-mark-day.webp          flat grey daylight, no sun, cold
+  the-deep-mark-night.webp        unlit dark, the water black, shapes only
+  the-deep-mark-night-torch.webp  the SAME hour with a flame you are carrying:
+                                  low warm light falling on the post, the iron
+                                  and the near silt; the channel stays black.
+                                  The sky is unchanged — the torch lights the
+                                  ground, never the air.
+  the-deep-mark-fog.webp          the far bank gone, the green line close
+  the-deep-mark-rain.webp         rain on the flat, the stone dark and running
+  the-deep-mark-snow.webp         snow lying on the near stone and the cap, the
+                                  water refusing it
+
+==========================================================================
+
+AFTER EACH GENERATION
+
+  1  save as  output/scenes/the-deep-mark-<condition>.png
+  2  node scripts/key-scene.mjs <that file> the-deep-mark-<condition>
+     (cuts the magenta sky out and writes public/room-bg/)
+  3  when all six are in, the two wiring lines below
+
+WIRING, WHEN THE PLATES LAND
+
+  public.ts  ROOM_PLATE   "the-deep-mark": "day night night-torch fog rain snow",
+  public.ts  MOB_LINE     "the-deep-mark": 56,   <- start here and CHECK IT
+
+  56 is the ferry ground's line, which is what this room paints as today. It is
+  a starting number, not a measured one: the line is the CENTRE of a creature,
+  feet land about half a creature-height below it, and if this plate's near
+  ground starts lower than the ferry deck's the line has to come down with it.
+  Stand something small on it in the preview before believing the number.
+
+  No BG_V bump: these are new filenames, and a new filename needs no cache-bust.
