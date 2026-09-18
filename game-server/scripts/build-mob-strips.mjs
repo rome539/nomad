@@ -88,7 +88,12 @@ blk = blk.slice(0, blk.indexOf("\n};"));
 const existing = {};
 for (const m of blk.matchAll(/^\s*"([a-z0-9-]+)":\s*\{ n: \d+, aspect: [\d.]+, f: (\{[^}]*\}) \}/gm)) {
   const f = JSON.parse(m[2]), order = [];
-  for (const [name, i] of Object.entries(f)) order[i] = name;
+  // FIRST NAME WINS EACH SLOT. Two names may share a frame (see ALIAS), and the
+  // alias is written last, so assigning blindly let `down` take the slot `up`
+  // was drawn into. `down` has no file of its own, so on the next build `up`
+  // failed the "was it in the old order" test and got appended at the end - the
+  // strip reshuffled itself every time it was rebuilt, for no reason at all.
+  for (const [name, i] of Object.entries(f)) if (order[i] === undefined) order[i] = name;
   existing[m[1]] = order;
 }
 

@@ -7,8 +7,8 @@
 //
 //  1 width divisible by n        - a strip window lands between frames otherwise
 //  2 declared aspect == measured - a wrong aspect stretches EVERY frame
-//  3 one name per frame          - a name count that disagrees with n means the
-//                                  map and the file have drifted apart
+//  3 every frame is named         - counted by INDEX, not by name, since two
+//                                  names may share one drawing on purpose
 //  4 every index inside the file - an out-of-range index shows blank
 //
 // It also reports the two ways a pose can exist and never be seen, which are
@@ -64,7 +64,13 @@ for (const m of blk.matchAll(/^\s*"([a-z0-9-]+)":\s*\{ n: (\d+), aspect: ([\d.]+
   if (md.width % N) bad.push(`${id}: width ${md.width} is not divisible by n=${N}`);
   const real = +((md.width / N) / md.height).toFixed(3);
   if (Math.abs(real - aspect) > 0.01) bad.push(`${id}: aspect ${aspect} but the file measures ${real}`);
-  if (Object.keys(f).length !== N) bad.push(`${id}: ${Object.keys(f).length} pose names for n=${N}`);
+  // EVERY FRAME IS NAMED AND NO FRAME IS ORPHANED - counted by INDEX, not by
+  // name, because two names may deliberately share one drawing. The bird sheets
+  // do exactly that: `up` and `down` are one wingbeat frame, which is the cell
+  // that paid for their feeding pose. Counting names instead flagged all eleven
+  // as broken while the strips were perfectly correct.
+  const used = new Set(Object.values(f));
+  if (used.size !== N) bad.push(`${id}: ${used.size} frames named for n=${N}`);
   for (const k in f) if (f[k] < 0 || f[k] >= N) bad.push(`${id}: ${k}=${f[k]} is outside the strip`);
 
   if (STRIKE.some((k) => f[k] !== undefined)) strike++;
@@ -110,12 +116,11 @@ new Function("box", "document", [
   // the client takes it first out of WATCH_POSES.
   "box.poseAt = poseAt; box.STRIKE_POSES = STRIKE_POSES; box.CALM = CALM_POSES;",
   "box.SLEEP = SLEEP_POSES; box.WATCH = WATCH_POSES; box.HIT = HIT_POSES;",
+  "box.EAT = EAT_POSES;",
 ].join("\n"))(box, { getElementById: () => null });
 
 const spare = [];
 for (const [id, { f }] of Object.entries(anim)) {
-  const byIdx = {};
-  for (const [k, v] of Object.entries(f)) byIdx[v] = k;
   const blows = box.STRIKE_POSES.filter((k) => f[k] !== undefined);
   const seen = new Set();
   const first = (list, dflt) => list.find((k) => f[k] !== undefined) || dflt;
@@ -126,9 +131,12 @@ for (const [id, { f }] of Object.entries(anim)) {
     calm: first(box.CALM, ""), sleep: first(box.SLEEP, "idle"),
     strike: blows[0], strikes: blows, blow: blows[0],
     recoil: first(box.HIT, "idle"), watch: first(box.WATCH, "idle"),
+    // The eating frame the client resolves. Without this the feed phase falls
+    // back to the literal name "feed" and every grazer's `graze` reads as dead.
+    eat: first(box.EAT, ""),
     asleep: false, rot: 0,
   }, o);
-  const rec = (a) => { const r = box.poseAt(a, 0); if (r && r.k !== undefined) seen.add(byIdx[r.k]); };
+  const rec = (a) => { const r = box.poseAt(a, 0); if (r && r.k !== undefined) seen.add(r.k); };
   for (const blow of blows.length ? blows : [null])
     for (let t = 0; t <= 1.8; t += 0.01) rec(mk({ phase: "attack", blow, t }));
   // TRAVEL IS SAMPLED ACROSS SUCCESSIVE TRAVELS, not one. A creature with no gait
@@ -145,7 +153,10 @@ for (const [id, { f }] of Object.entries(anim)) {
     rec(mk({ phase: "hit", t })); rec(mk({ phase: "death", t }));
     rec(mk({ phase: "feed", t })); rec(mk({ asleep: true, t }));
   }
-  const never = Object.keys(f).filter((k) => !seen.has(k));
+  // BY INDEX, because `up` and `down` may be one drawing: keying this by name
+  // made the alias look dead, since only one of the two names can be recovered
+  // from a frame index.
+  const never = Object.keys(f).filter((k) => !seen.has(f[k]));
   if (never.length) spare.push(`${id}: ${never.join(" ")}`);
 }
 

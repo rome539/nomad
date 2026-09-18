@@ -28,6 +28,7 @@ new Function("ctx", "document", js + `
   ctx.poseAt=poseAt; ctx.mobBeat=mobBeat; ctx.stepAnims=stepAnims; ctx.applyState=applyState;
   ctx.ANIM=ANIM; ctx.mobActs=mobActs; ctx.SLEEP_POSES=SLEEP_POSES; ctx.STRIKE_POSES=STRIKE_POSES;
   ctx.HIT_POSES=HIT_POSES;ctx.WATCH_POSES=WATCH_POSES; ctx.ATTACK_S=ATTACK_S; ctx.STAGGER_S=STAGGER_S; ctx.CALM=CALM_POSES;
+  ctx.EAT_POSES=EAT_POSES;
   ctx.set=function(v){anims=v}; ctx.hold=function(){return mobHold}; ctx.clr=function(){mobHold=0};
 `)(ctx, { getElementById: () => null });
 
@@ -44,9 +45,13 @@ function mk(id, slot) {
   const strike = strikes[0] || "";
   let recoil = "idle"; for (const p of ctx.HIT_POSES) if (spec.f[p] !== undefined) { recoil = p; break; }
   let watch = "idle"; for (const p of ctx.WATCH_POSES) if (spec.f[p] !== undefined) { watch = p; break; }
+  // The eating frame, resolved the same way the client resolves it. A grazer's
+  // pose is called `graze`, not `feed`, so the fed beat has to go through the
+  // list rather than the literal name.
+  let eat = "";       for (const p of ctx.EAT_POSES)   if (spec.f[p] !== undefined) { eat = p; break; }
   const rate = spec.f["move-a"] !== undefined ? 7000 : spec.f.up !== undefined ? 11000 : 20000;
   return { el: { style: {} }, spec, id, phase: "idle", t: 0, state: "", calm, sleep,
-    strike, strikes, blow: strike, recoil, watch, rate,
+    strike, strikes, blow: strike, recoil, watch, rate, eat,
     slot: slot === undefined ? 0 : slot, next: Date.now() + 1e9 };
 }
 // A CREATURE WITH ALMOST NOTHING DRAWN, invented here on purpose. These two
@@ -168,6 +173,21 @@ t("everything else still flinches on idle",inv["hill-wolf"][ctx.poseAt(a,Date.no
 
 a=mk("great-vulture");ctx.set([a]);ctx.mobBeat(null,null,null,["great-vulture"]);
 t("a scavenger drops its head to the body",a.phase==="feed"&&inv["great-vulture"][ctx.poseAt(a,Date.now()).k]==="feed");
+// A GRAZER EATS TOO, AND ITS FRAME IS NOT CALLED "feed" (2026-09-18). The fed
+// beat used to name that pose literally, so everything drawn with its head down
+// in the ground was sent the signal and had nothing to answer it with.
+a=mk("ford-eel");ctx.set([a]);ctx.mobBeat(null,null,null,["ford-eel"]);
+t("a grazer eats with its own graze frame",a.phase==="feed"&&inv["ford-eel"][ctx.poseAt(a,Date.now()).k]==="graze",
+  "pose="+inv["ford-eel"][ctx.poseAt(a,Date.now()).k]);
+// AND THE BIRDS' WINGBEAT IS ONE DRAWING UNDER TWO NAMES, which is the cell that
+// paid for their meal. Both names must land on the same frame, and the flight
+// arc must still be intact around it.
+{
+  const f=ctx.ANIM["great-gull"].f;
+  t("a bird's up and down are the same frame",f.up!==undefined&&f.up===f.down,"up="+f.up+" down="+f.down);
+  t("...and it still has the arc to glide and land",f.glide!==undefined&&f.landing!==undefined);
+  t("...and it was drawn eating",f.feed!==undefined);
+}
 a=mk("ptarmigan");ctx.set([a]);a.phase="travel";a.t=0;
 let seen=new Set(); for(let i=0;i<45;i++){ctx.set([a]);ctx.stepAnims();seen.add(inv["ptarmigan"][ctx.poseAt(a,Date.now()).k]);}
 t("a bird flies a whole arc, not just a wingbeat",seen.has("glide")&&seen.has("landing"),[...seen].join(" "));

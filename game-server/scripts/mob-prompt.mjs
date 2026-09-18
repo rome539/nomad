@@ -872,6 +872,48 @@ THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bon
 // So the invariants get stated ONCE, up front, and apply to all eight cells.
 // This is an anatomy sheet, not a pose - if it ever reads like a pose, it is in
 // the wrong table.
+
+// NOTHING TOUCHES THE SIDE OF ITS CELL, AND THE PROMPT HAS TO SAY IT AS A TEST.
+//
+// "Generous blank gutters at all four edges" had been in this prompt for months
+// and was being read as a mood. A scan on 2026-09-18 found FIFTEEN of twenty-one
+// freshly drawn sheets with at least one frame cut off at a cell line: the grey
+// seal in five frames, the great crab's claws in three, and every bird's glide.
+// rome saw the wings, because a severed wing is obvious; a seal's flipper ending
+// in a straight vertical line is not, and it had been shipping.
+//
+// What a cut frame costs is worth stating plainly in the prompt, because the
+// generator has no way to know it: the missing part is not cropped, it is in the
+// NEXT animal's cell, and it comes back as a stray limb the cutter has to guess
+// about. Two frames are damaged by one overrun.
+const CONTAIN = `
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over.`;
+
+
+// THE WINGSPAN SETS THE SCALE FOR THE WHOLE SHEET, AND IT KEEPS COMING BACK WRONG.
+//
+// rome, 2026-09-18, on five birds at once: the wings are cut off in the flying
+// frames. They were - and not by the cutter. In the sheets the spread-wing poses
+// were drawn WIDER THAN THEIR CELLS, so each one's wingtips were over the line in
+// the neighbour's cell, where nothing can get them back. The eagle owl's glide
+// lost 72 pixels off one side and 66 off the other.
+//
+// The cause is scale, not composition: a bird drawn at a comfortable size perched
+// has a wingspan two or three times that wide, and it does not fit the same cell.
+// So the spread pose has to set the size and everything else has to be drawn
+// SMALLER to match - which is the opposite of what a generator does by default,
+// because it fills each cell with its subject.
+//
+// The clause is written as a measurable test rather than an instruction, because
+// "generous gutters" had already been in the prompt for months and was being read
+// as a suggestion. The cutter now fails a sheet that breaks it (cut-mob-sheet.mjs).
+const WINGSPAN = `
+THE WINGSPAN DECIDES THE SCALE OF EVERY CELL ON THIS SHEET. Find the pose with the widest spread of wing. That pose must sit INSIDE its cell with CLEAR MAGENTA VISIBLE BEYOND BOTH WINGTIPS - a margin you could fit a thumb in, on the left and on the right. Draw that pose first, at that size, and then draw EVERY OTHER POSE OF THE BIRD AT THE SAME BODY SCALE, which will leave the perched and standing poses looking small in their cells with a lot of empty magenta around them. THAT IS CORRECT. Empty space costs nothing; a wingtip touching the cell edge ruins the frame.
+
+DO NOT enlarge any pose to fill its cell. DO NOT let a wing, a tail, a foot or a bill touch or cross a cell edge in any cell, for any reason. If a wingspan will not fit, the bird is drawn TOO BIG - shrink the whole bird on every cell until it does. A wingtip that reaches the edge of its cell is not a tight crop, it is a severed wing: the rest of it lands in the next bird's cell and is lost.`;
+
 const CONSTANT = {
   "wrack-crab": `
 THE SAME ANIMAL IN ALL EIGHT CELLS - COUNT IT EVERY TIME. One carapace. TWO claws. EIGHT walking legs, four down each side. TWO eyestalks. Never a ninth leg, never a third claw, never a limb growing out of the top or the back of the shell, never a leg that does not reach the body. Every leg is jointed the same way and comes off the shell's edge, not its surface.
@@ -996,7 +1038,7 @@ Subject: ${name}. Exact game description: ${desc || "[PASTE THE IN-GAME DESCRIPT
 ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
 ${CONSTANT[id] || ""}
 ${WHAT_IT_IS}${ALONE}
-Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. Generous blank gutters at all four edges of each cell. Every wing, tail, limb and carried item fully contained WITHIN its cell. Never cross row or column boundaries. ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}. Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. ${CONTAIN} ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}.${flyer ? WINGSPAN : ""} Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
 
 Reading order left to right, top row then bottom row:
 ${poses.map((p, i) => `${i + 1}. ${WORDING[p] || (LINES[id] && LINES[id][p]) || SAY[p] || p.replace(/-/g, " ")}`).join("\n")}

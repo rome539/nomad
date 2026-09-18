@@ -52,14 +52,82 @@ const meta = await sharp(sheet).metadata();
 const cw = Math.floor(meta.width / COLS), ch = Math.floor(meta.height / ROWS);
 console.log(`${meta.width}x${meta.height} → ${COLS}x${ROWS} grid, cells ${cw}x${ch}`);
 
+// FOLLOW THE FIGURES, NOT THE GRID.
+//
+// The sheet is asked for as a strict grid and does not come back as one. The
+// generator lays each pose out where it likes, and a pose with its wings fully
+// open is simply WIDER than a quarter of the sheet - so it runs past the line,
+// and on the eagle owl's top row the gliding bird began 62px inside the cell of
+// the bird beside it. Dividing the width by four and cutting cut wings off.
+//
+// But an overlap is not a collision. Those two owls share a column and never
+// touch a pixel of each other: keyed against the magenta, the row holds four
+// separate connected pieces, one per bird, each whole. So the cut is taken from
+// the PIECES - the COLS biggest components in the row, ordered left to right -
+// and each pose is extracted at its own piece's bounding box. Overlapping poses
+// come out entire because the boxes are allowed to overlap.
+//
+// Everything downstream is unchanged: the box may still contain a slice of a
+// neighbour, and the existing component pass keeps the main silhouette and drops
+// what touches the border, which is what it was already written to do.
+//
+// Two ways this can be wrong, both fall back to an even divide with a warning:
+// a creature drawn in genuinely separate pieces would be read as two poses, and
+// a row where one pose failed to render would promote a stray bit. Both show up
+// as a smallest piece that is tiny next to the largest.
+const sheetRaw = await sharp(sheet).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+const SW = sheetRaw.info.width, SH = sheetRaw.info.height, SC = sheetRaw.info.channels;
+const sInk = (x, y) => {
+  const i = (y * SW + x) * SC;
+  return sheetRaw.data[i + 3] > 8 && Math.min(sheetRaw.data[i] - sheetRaw.data[i + 1],
+                                              sheetRaw.data[i + 2] - sheetRaw.data[i + 1]) <= 30;
+};
+const boxes = [];            // boxes[row][col] = {x0,x1}
+for (let r = 0; r < ROWS; r++) {
+  const y0 = r * ch, y1 = Math.min(SH, y0 + ch) - 1, RH = y1 - y0 + 1;
+  const lab = new Int32Array(SW * RH).fill(-1), st = new Int32Array(SW * RH);
+  const found = [];
+  for (let q = 0; q < SW * RH; q++) {
+    const qx = q % SW, qy = (q / SW) | 0;
+    if (lab[q] >= 0 || !sInk(qx, y0 + qy)) continue;
+    const gid = found.length; let n = 0, minX = SW, maxX = 0, sp = 0;
+    st[sp++] = q; lab[q] = gid;
+    while (sp) {
+      const c = st[--sp], cx = c % SW, cy = (c / SW) | 0;
+      n++; if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= SW || ny >= RH) continue;
+        const nq = ny * SW + nx;
+        if (lab[nq] >= 0 || !sInk(nx, y0 + ny)) continue;
+        lab[nq] = gid; st[sp++] = nq;
+      }
+    }
+    found.push({ n, minX, maxX });
+  }
+  const inRow = Math.min(COLS, poses.length - r * COLS);
+  const big = found.sort((p, q) => q.n - p.n).slice(0, inRow).sort((p, q) => p.minX - q.minX);
+  const usable = big.length === inRow && big[big.length - 1].n >= big[0].n * 0.15;
+  if (!usable) {
+    console.log(`  row ${r + 1}: could not read ${inRow} figures from the artwork - falling back to an even divide`);
+    boxes.push(Array.from({ length: inRow }, (_, k) => ({ x0: k * cw, x1: (k + 1) * cw - 1 })));
+    continue;
+  }
+  const PAD = 6;
+  boxes.push(big.map((g) => ({ x0: Math.max(0, g.minX - PAD), x1: Math.min(SW - 1, g.maxX + PAD) })));
+  const over = big.some((g, k) => k && g.minX <= big[k - 1].maxX);
+  if (over) console.log(`  row ${r + 1}: poses overlap on the sheet - cut from the figures, not the grid`);
+}
+
 const outDir = path.join(REPO, "output/mountain-mobs", id);
 fs.mkdirSync(outDir, { recursive: true });
 
 let bad = 0;
 for (let i = 0; i < poses.length; i++) {
   const col = i % COLS, row = Math.floor(i / COLS);
+  const bx = boxes[row][col];
   const cell = await sharp(sheet)
-    .extract({ left: col * cw, top: row * ch, width: cw, height: ch })
+    .extract({ left: bx.x0, top: row * ch, width: bx.x1 - bx.x0 + 1, height: ch })
     .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { data, info } = cell;
   let kept = 0;
@@ -122,6 +190,24 @@ for (let i = 0; i < poses.length; i++) {
   for (let x = 0; x < W; x++) { const a = lab[x], b = lab[(H - 1) * W + x]; if (a >= 0) edge[a] = 1; if (b >= 0) edge[b] = 1; }
   for (let y = 0; y < H; y++) { const a = lab[y * W], b = lab[y * W + W - 1]; if (a >= 0) edge[a] = 1; if (b >= 0) edge[b] = 1; }
   const junk = (k) => k !== main && (edge[k] || sizes[k] < sizes[main] / 20);
+  // ...AND THE SAME TEST TURNED ON THE CREATURE ITSELF, which is the half that
+  // was missing. The block above uses "touches a side edge" to recognise a
+  // NEIGHBOUR'S limb reaching in, and the reasoning holds just as well the other
+  // way: if the MAIN silhouette meets a side edge then this animal has been cut
+  // off at the cell line, and the missing part is over in the next cell where
+  // nothing can retrieve it.
+  //
+  // Found by rome on five birds at once (2026-09-18): every glide frame had its
+  // wings sliced at both edges, because a fully spread wingspan does not fit a
+  // 512 cell at the body scale the perched poses were drawn at. The sheets
+  // reported nothing but "swept N stray bits" - the sweep was busy deleting the
+  // neighbour's wingtip while this bird's own wingtip went in the bin with it.
+  // A left or right edge is never legitimate. The bottom is (feet stand on it).
+  let clipL = 0, clipR = 0;
+  for (let y = 0; y < H; y++) {
+    if (lab[y * W] === main) clipL++;
+    if (lab[y * W + W - 1] === main) clipR++;
+  }
   let dropped = 0, held = 0, fromNextCell = 0;
   for (let k = 0; k < sizes.length; k++) {
     if (k === main) continue;
@@ -295,7 +381,16 @@ for (let i = 0; i < poses.length; i++) {
     + (fromNextCell ? " (" + fromNextCell + " reaching in from the next cell)" : "") : "";
   const big = held ? "  \u2190 " + held + " DETACHED PIECE" + (held === 1 ? "" : "S") + " kept, look at this frame" : "";
   if (big) bad++;
-  console.log("  " + poses[i].padEnd(18) + pct.toFixed(1).padStart(5) + "% creature" + strays + big + warn);
+  // EIGHT PIXELS, not two. Once the boundaries snap to the sheet's real gaps
+  // (above) what is left at a border is usually the outline itself grazing it,
+  // which nobody can see at sprite size. A severed wing is tens of pixels. Two
+  // was crying wolf on nine sheets that were fine.
+  const TOL = 8;
+  const clip = (clipL > TOL || clipR > TOL)
+    ? "  \u2190 CLIPPED AT THE CELL EDGE: " + [clipL > TOL ? "left " + clipL + "px" : "", clipR > TOL ? "right " + clipR + "px" : ""]
+        .filter(Boolean).join(" and ") + ". The drawing runs past its cell and the rest is unrecoverable - REGENERATE the sheet" : "";
+  if (clip) bad++;
+  console.log("  " + poses[i].padEnd(18) + pct.toFixed(1).padStart(5) + "% creature" + strays + big + warn + clip);
 }
 console.log("\nwrote " + poses.length + " poses to output/mountain-mobs/" + id + "/");
 if (eyeTotal) console.log("     + an EYES layer: " + eyeBlobs + " eyes found, " + eyeTotal + " marker pixels, glow drawn at 7 radii");
