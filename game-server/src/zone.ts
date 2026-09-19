@@ -1615,7 +1615,19 @@ export class ZoneDO implements DurableObject {
     const pending = this.socketPending.get(ws) ?? 0;
     if (pending >= 6 || this.eventQueue.pending >= 64) return;
     this.socketPending.set(ws, pending + 1);
-    try { await this.eventQueue.run(() => this.handleWebSocketMessage(ws, message)); }
+    const queuedAt = Date.now();
+    try {
+      await this.eventQueue.run(async () => {
+        const startedAt = Date.now();
+        try { await this.handleWebSocketMessage(ws, message); }
+        finally {
+          const wait = startedAt - queuedAt, work = Date.now() - startedAt;
+          // No command text, keys or tickets: distinguish shared-queue stalls
+          // from slow command handling without recording players' input.
+          if (wait + work >= TICK_SLOW_LOG_MS) console.log("SLOWCMD wait=" + wait + "ms work=" + work + "ms");
+        }
+      });
+    }
     finally {
       const left = (this.socketPending.get(ws) ?? 1) - 1;
       if (left) this.socketPending.set(ws, left); else this.socketPending.delete(ws);

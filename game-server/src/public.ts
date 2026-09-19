@@ -3444,7 +3444,9 @@ function maybeAdoptProfileName(f) {
 var ws = null;
 var retryMs = 1000;
 var openedAt = 0; // ms the last good socket opened; a wire that lived <5s must not reset the backoff
-var lastPong = Date.now(); // the wire's pulse: the runtime answers "ping" with "pong" (setWebSocketAutoResponse)
+var pongTimer = null;
+var probeWire = null;
+var pendingLookAt = 0; // coalesce unsent look requests; never replay movement or combat
 var lastDialAt = 0; // ms of the last dial attempt; wake events must not storm the gate
 var hbTimer = null; // keepalive: a bare "ping" every 25s the server auto-answers
                     // "pong" without waking the Durable Object — stops NAT/proxy
@@ -3598,23 +3600,34 @@ async function connect() {
     freshLoad = false; // the scroll is (being) painted now — any later reweave is a true seamless one
     failedOpens = 0;
     openedAt = Date.now(); // the backoff reset happens in scheduleRetry, once this wire has PROVED it can hold
-    lastPong = Date.now();
     if (stallWatch) { clearTimeout(stallWatch); stallWatch = null; }
     if (frayTimer) { clearTimeout(frayTimer); frayTimer = null; }
     if (frayTold) { print("— the thread holds; you are back —", "sys"); frayTold = false; }
     clearInterval(hbTimer);
-    hbTimer = setInterval(function () {
-      if (ws && ws.readyState === 1) {
-        // Three pings unanswered = a wire that is dead but still OPEN (half-open
-        // TCP). Nothing else detects it; close() forces the onclose -> retry chain.
-        if (Date.now() - lastPong > 75000) { try { ws.close(); } catch (e) {} return; }
-        ws.send("ping");
-      }
-    }, 25000);
+    clearTimeout(pongTimer); pongTimer = null;
+    probeWire = function () {
+      if (!mine() || sock.readyState !== 1 || pongTimer !== null) return;
+      // Give a resumed tab a fresh probe, rather than judging time spent asleep.
+      pongTimer = setTimeout(function () {
+        pongTimer = null;
+        if (!mine()) return;
+        // A half-open TCP connection may never finish its close handshake.
+        // Run recovery now and retire this socket before its late events arrive.
+        sock.onclose({ code: 4000, reason: "heartbeat timeout" });
+        ws = null;
+        try { sock.close(4000, "heartbeat timeout"); } catch (e) {}
+      }, 10000);
+      try { sock.send("ping"); } catch (e) { /* the watchdog owns recovery */ }
+    };
+    hbTimer = setInterval(function () { if (probeWire) probeWire(); }, 25000);
+    if (pendingLookAt && Date.now() - pendingLookAt <= 30000) {
+      sock.send(JSON.stringify({ v: 0, t: "cmd", text: "look" }));
+    }
+    pendingLookAt = 0;
   };
   ws.onmessage = function (m) {
     if (!mine()) return;
-    if (m.data === "pong") { lastPong = Date.now(); return; }
+    if (m.data === "pong") { clearTimeout(pongTimer); pongTimer = null; return; }
     var f; try { f = JSON.parse(m.data); } catch (e) { return; }
     // During the first walk the world holds its tongue: the feed (others'
     // deeds, sounds through walls) and the ambient weather stay out of the
@@ -3729,6 +3742,7 @@ async function connect() {
     // standing over a dead socket is a trap: its buttons send into nothing, and
     // there is no way out of it but a reload.
     clearInterval(hbTimer);
+    clearTimeout(pongTimer); pongTimer = null; probeWire = null;
     closeBench(); closeTrade(); closeMap(); closeJournal(); closeForge(); closeBounty(); closeSwap();
     // You opened this wanderer in another tab or on another device: the server
     // hands the body over and closes THIS socket on purpose (1000 "reconnected").
@@ -3745,6 +3759,7 @@ async function connect() {
       // event yanked it back again: two windows trading the body several times
       // a second, "goes still" and "take up the thread" alternating down the
       // scroll. This flag is the one thing that outranks a wake.
+      pendingLookAt = 0;
       stilled = true;
       connecting = false; // this attempt is over, and none will follow it
       return;
@@ -3799,7 +3814,12 @@ function wakeReconnect() {
   if (!crossed) return;
   // The body is in another window; looking at this one must not steal it back.
   if (stilled) return;
-  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+  if (ws && ws.readyState === 1) {
+    clearTimeout(pongTimer); pongTimer = null;
+    if (probeWire) probeWire();
+    return;
+  }
+  if (ws && ws.readyState === 0) return;
   if (Date.now() - lastDialAt < 5000) return; // a wake must not storm the gate
   retryMs = 300;
   connect();
@@ -3931,10 +3951,17 @@ function sendCmd(text) {
   // is the whole reason the /ws staleness guard exists.
   else if (stilled) {
     stilled = false;
+    if (/^(look|l)$/i.test(t)) pendingLookAt = Date.now();
     print("— you take the thread up again —", "sys");
     connect();
   }
-  else print("— not connected —", "sys");
+  else {
+    if (/^(look|l)$/i.test(t)) {
+      if (!pendingLookAt) print("— reconnecting; looking when the thread holds —", "sys");
+      pendingLookAt = Date.now();
+    } else print("— reconnecting; command not sent —", "sys");
+    wakeReconnect();
+  }
 }
 
 // Identity commands never leave this page — the server has no business
@@ -3974,6 +4001,8 @@ function localCmd(text) {
 
 function reconnect() {
   identityEpoch++;
+  pendingLookAt = 0;
+  clearTimeout(pongTimer); pongTimer = null; probeWire = null;
   pendingTells.clear();
   // Identity is changing: forget the old session's face immediately so the
   // bar and panel never mix the previous name with the next keys.
@@ -7306,7 +7335,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "34";      // /mob/      strips and their eye layers
+var MOB_V  = "36";      // /mob/      strips and their eye layers
 var BG_V   = "31";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -8950,12 +8979,12 @@ var MOB_ANIM = {
   "the-drover":             { n: 8, aspect: 1.051, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"drive-the-road":5,"alert":6,"recover":7} },
   "the-bridge-mason":       { n: 8, aspect: 1.035, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"dress-the-stone":5,"alert":6,"recover":7} },
   "bull-seal":              { n: 8, aspect: 1.279, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
-  "the-wrecker":    { n: 8, aspect: 0.919, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"snatch-escape":5,"recover":6,"hit":7} },
+  "the-wrecker":    { n: 8, aspect: 1.014, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
   "the-fowler":     { n: 8, aspect: 1.568, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"rise-from-the-turf":5,"recover":6,"hit":7} },
-  "strand-thief":   { n: 8, aspect: 0.922, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"snatch-escape":5,"recover":6,"hit":7} },
+  "strand-thief":   { n: 8, aspect: 0.958, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
   "the-great-crab":   { n: 8, aspect: 1.503, f: {"idle":0,"alert":1,"attack":2,"death":3,"recover":4,"rest":5,"bite":6,"sweep":7} },
-  "marsh-hound":      { n: 8, aspect: 1.551, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
-  "a-lymer":          { n: 8, aspect: 1.52, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6,"hit":7} },
+  "marsh-hound":      { n: 8, aspect: 1.06, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "a-lymer":          { n: 8, aspect: 1.243, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"rest":6,"feed":7} },
   "wrack-crab":          { n: 8, aspect: 1.301, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
   "silver-eel":          { n: 8, aspect: 1.178, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"graze":5,"move-a":6,"move-b":7} },
   "oystercatcher":       { n: 8, aspect: 1.18, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"graze":6,"up":7,"down":4} },
@@ -8963,7 +8992,7 @@ var MOB_ANIM = {
   "grey-seal":           { n: 8, aspect: 1.477, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
   "great-gull":          { n: 8, aspect: 1.19, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":4} },
   "ford-eel":            { n: 8, aspect: 1.408, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"graze":5,"move-a":6,"move-b":7} },
-  "fen-viper":           { n: 6, aspect: 1.922, f: {"idle":0,"watch":1,"bask":2,"attack":3,"recover":4,"death":5} },
+  "fen-viper":           { n: 8, aspect: 1.253, f: {"idle":0,"alert":1,"watch":2,"rest":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "devil-crab":          { n: 8, aspect: 1.155, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
   "conger":              { n: 8, aspect: 1.147, f: {"idle":0,"alert":1,"rest":2,"attack":3,"death":4,"feed":5,"move-a":6,"move-b":7} },
   "black-backed-gull":   { n: 8, aspect: 1.418, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":4} },
@@ -8972,45 +9001,45 @@ var MOB_ANIM = {
   "bone-breaker":         { n: 8, aspect: 1.132, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"feed":5,"attack":6,"death":7} },
   "brooding-vulture":     { n: 8, aspect: 1.086, f: {"idle":0,"rest":1,"recover":2,"attack":3,"death":4,"feed":5,"move-a":6,"move-b":7} },
   "carrion-vulture":      { n: 8, aspect: 1.115, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
-  "cave-lion":            { n: 6, aspect: 1.696, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "cave-lion":            { n: 8, aspect: 1.255, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5,"alert":6,"feed":7} },
   "eagle-owl":            { n: 8, aspect: 1.315, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
-  "ermine":               { n: 6, aspect: 1.307, f: {"idle":0,"inspect-upright":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "ermine":               { n: 8, aspect: 1.234, f: {"idle":0,"inspect-upright":1,"move-a":2,"move-b":3,"attack":4,"death":5,"rest":6,"feed":7} },
   "eyrie-holder":         { n: 8, aspect: 1.149, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
-  "feral-goat":           { n: 6, aspect: 1.195, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "gill-adder":           { n: 6, aspect: 0.938, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"recover":5} },
-  "glutton":              { n: 6, aspect: 1.735, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "feral-goat":           { n: 8, aspect: 1.075, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5,"alert":6,"rest":7} },
+  "gill-adder":           { n: 8, aspect: 1.342, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "glutton":              { n: 8, aspect: 1.234, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "great-vulture":        { n: 8, aspect: 1.091, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
   "hill-eagle":           { n: 8, aspect: 1.203, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
-  "hill-fox":             { n: 6, aspect: 1.752, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "hill-wolf":            { n: 6, aspect: 1.452, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "lead-wolf":            { n: 6, aspect: 1.202, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "lynx":                 { n: 6, aspect: 1.324, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "hill-fox":             { n: 8, aspect: 1.373, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "hill-wolf":            { n: 8, aspect: 1.136, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "lead-wolf":            { n: 8, aspect: 1.152, f: {"idle":0,"rest":1,"hold-ground":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "lynx":                 { n: 8, aspect: 1.186, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "mountain-chough":      { n: 8, aspect: 1.258, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
-  "mountain-hare":        { n: 6, aspect: 1.207, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "old-billy":            { n: 6, aspect: 1.217, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"graze":5} },
+  "mountain-hare":        { n: 8, aspect: 1.048, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "old-billy":            { n: 8, aspect: 1.104, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "ptarmigan":            { n: 8, aspect: 1.207, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"graze":6,"up":7,"down":1} },
-  "red-hind":             { n: 6, aspect: 1.108, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "red-stag":             { n: 6, aspect: 1.153, f: {"idle":0,"hold-ground":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "red-hind":             { n: 8, aspect: 1.009, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "red-stag":             { n: 8, aspect: 1.074, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "scarp-raven":          { n: 8, aspect: 1.181, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
-  "snow-fox":             { n: 6, aspect: 1.556, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "snow-hare":            { n: 6, aspect: 1.181, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "stone-adder":          { n: 6, aspect: 1.199, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5} },
-  "the-blue-fox":         { n: 6, aspect: 1.533, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "snow-fox":             { n: 8, aspect: 1.231, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "snow-hare":            { n: 8, aspect: 1.12, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "stone-adder":          { n: 8, aspect: 1.627, f: {"idle":0,"watch":1,"rest":2,"bask":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-blue-fox":         { n: 8, aspect: 1.294, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-bone-dropper":     { n: 8, aspect: 1.172, f: {"idle":0,"glide":1,"landing":2,"feed":3,"attack":4,"death":5,"rest":6,"up":7,"down":1} },
   "the-butter-wife":      { n: 6, aspect: 1.209, f: {"idle":0,"listen":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-dancer":           { n: 6, aspect: 1.338, f: {"idle":0,"twisting-leap":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-dancer":           { n: 8, aspect: 1.246, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"twisting-leap":5,"attack":6,"death":7} },
   "the-drake":            { n: 14, aspect: 1.483, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
-  "the-gravid-adder":     { n: 6, aspect: 1.263, f: {"idle":0,"watch":1,"hold-warm-ground":2,"attack":3,"recover":4,"bask":5} },
+  "the-gravid-adder":     { n: 8, aspect: 1.774, f: {"idle":0,"watch":1,"rest":2,"bask":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-herd":             { n: 6, aspect: 0.991, f: {"idle":0,"keep-the-line":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-last-dog":         { n: 6, aspect: 1.556, f: {"idle":0,"call-uphill":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-milker":           { n: 6, aspect: 1.167, f: {"idle":0,"work-pull":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-old-glutton":      { n: 6, aspect: 1.373, f: {"idle":0,"feed":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-old-glutton":      { n: 8, aspect: 1.174, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-old-raven":        { n: 8, aspect: 1.165, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
   "the-one-who-stayed":   { n: 6, aspect: 1.108, f: {"idle":0,"advance":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-pale-drake":       { n: 14, aspect: 1.523, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
-  "the-raiding-fox":      { n: 6, aspect: 1.288, f: {"idle":0,"snatch-escape":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-tom":              { n: 6, aspect: 1.483, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "wildcat":              { n: 6, aspect: 1.447, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-raiding-fox":      { n: 8, aspect: 1.27, f: {"idle":0,"rest":1,"feed":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
+  "the-tom":              { n: 8, aspect: 1.117, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "wildcat":              { n: 8, aspect: 1.223, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
 };
 // Straight from the studies' viewer, and worth keeping as the numbers they are.
 // Which of the drawn poses read as an animal at rest rather than an animal

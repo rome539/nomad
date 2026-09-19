@@ -437,6 +437,19 @@ for (let i = 0; i < poses.length; i++) {
   if (clip) bad++;
   console.log("  " + poses[i].padEnd(18) + pct.toFixed(1).padStart(5) + "% creature" + strays + big + warn + clip);
 }
+// THE ORDER THE SHEET WAS READ IN, written down beside the art.
+//
+// Without this the strip builder has only the order the creature ALREADY had,
+// and appends anything new to the end. That is right for adding a frame to a
+// creature nobody is redrawing, and wrong for every sheet redrawn whole: rome
+// draws eight cells in a deliberate order, and the strip came back with his
+// locomotion shuffled to positions six and seven. He has raised it twice.
+//
+// It is the SHEET's order because the sheet is what a person looks at. Nothing
+// in the game reads a frame by position - poses are looked up by name - so this
+// costs the client nothing and buys back the one reader that does care.
+fs.writeFileSync(path.join(outDir, "sheet-order.json"),
+  JSON.stringify({ cut: new Date().toISOString().slice(0, 10), poses }, null, 1));
 console.log("\nwrote " + poses.length + " poses to output/mountain-mobs/" + id + "/");
 if (eyeTotal) console.log("     + an EYES layer: " + eyeBlobs + " eyes found, " + eyeTotal + " marker pixels, glow drawn at 7 radii");
 else if (EYE) console.log("     no eye marker found — if this one is HOLLOW its sheet was drawn without it");

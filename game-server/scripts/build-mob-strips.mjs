@@ -72,7 +72,7 @@ const FOREIGN = new Set(["gill-adder", "stone-adder", "the-gravid-adder"]);
 // and the cell that was freed still pays for the meal.
 const ALIAS = { "down": ["glide", "up"] };
 
-const NOT_A_POSE = new Set(["source", "combat-source", "flight-source",
+const NOT_A_POSE = new Set(["sheet-order", "source", "combat-source", "flight-source",
                             "ground-source", "approved-ground-source"]);
 // Frame order when a creature is new. An existing creature keeps the order it
 // already had and appends whatever is newly drawn, so a rebuild never reshuffles
@@ -150,9 +150,42 @@ for (const [id, dir] of [...found].sort()) {
     .map((f) => f.slice(0, -4)).filter((f) => !NOT_A_POSE.has(f));
   if (!drawn.length) continue;
 
+  // THE SHEET'S OWN ORDER WINS when the cutter left one, because that sheet is
+  // the most recent statement of how this creature is laid out. Falling through
+  // to "the order it already had" is what shuffled a redrawn creature's gait to
+  // the end of its strip: the poses it kept held their old slots and only the new
+  // ones moved, so the eight cells came back in an order matching neither the
+  // sheet nor anything else.
+  //
+  // Safe to prefer: nothing reads a frame by position, and any art change bumps
+  // MOB_V anyway, so the cached-client argument the old rule protected does not
+  // apply to a creature that was just re-cut.
+  // AND IT WINS EVEN WHEN THE FOLDER HOLDS MORE THAN THE SHEET DID. This used to
+  // demand that the sheet account for EVERY file present, and that equality is
+  // what let one leftover file undo the whole rule: a re-cut writes its eight
+  // cells over the old ones and does not remove frames the new layout dropped,
+  // so five creatures came back with a stale pose or two still sitting in the
+  // folder, the count failed to match, and the sheet's order was discarded in
+  // favour of the layout it had just replaced. The gait ended up at the far end
+  // of the strip - exactly the reshuffle rome keeps catching, and mine, not the
+  // tool's. The sheet is authoritative for the poses it names; anything else in
+  // the folder follows it and is called out below.
+  let sheetOrder = null, extra = [];
+  try {
+    const so = JSON.parse(fs.readFileSync(path.join(dir, "sheet-order.json"), "utf8"));
+    if (Array.isArray(so.poses) && so.poses.every((p) => drawn.includes(p))) {
+      sheetOrder = so.poses;
+      extra = drawn.filter((p) => !so.poses.includes(p));
+    }
+  } catch {}
+  // Said out loud, because a leftover is usually a frame the redraw dropped and
+  // it still lands in the strip. A creature cut from two sheets (the drake) is
+  // the legitimate case.
+  if (extra.length) console.log("  " + id + ": " + extra.length + " pose(s) not on the sheet - "
+    + extra.join(" ") + " - kept after it; delete them if the redraw dropped them");
   // the order it already had, then anything new in canonical order, then the rest
   const order = [];
-  for (const p of existing[id] ?? []) if (drawn.includes(p)) order.push(p);
+  for (const p of sheetOrder ?? existing[id] ?? []) if (drawn.includes(p)) order.push(p);
   for (const p of CANON) if (drawn.includes(p) && !order.includes(p)) order.push(p);
   for (const p of drawn.sort()) if (!order.includes(p)) order.push(p);
 

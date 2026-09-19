@@ -17,6 +17,7 @@
     "preview": "node scripts/serve-preview.mjs",
     "db:init": "node scripts/init-local-db.mjs",
     "db:reset": "wrangler d1 execute nomad --local --command \"DELETE FROM players; DELETE FROM player_items\"",
+    "test:reconnect": "node scripts/test-reconnect.mjs",
     "test:security": "node scripts/test-security.mjs",
     "test:security:runtime": "node scripts/test-security-runtime.mjs"
   },
