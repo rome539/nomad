@@ -8181,6 +8181,14 @@ export class ZoneDO implements DurableObject {
           // under a roof, and for the two kinds of room the roof test was
           // getting wrong.
           sky: (session.artSky = this.artSkyFor(session)),
+          // THE RED NIGHT IS NOT A SKY SLOT. `sky` above picks which photograph
+          // to paint, and weather wins that contest - correctly, because a
+          // blood moon behind fog is a foggy picture. But the hollow ones'
+          // eyes are not a picture of the sky, they are a fact about the moon,
+          // and they were being read off the same value: any weather at all on
+          // a blood-moon night and the crossing's dead stayed cold-eyed, which
+          // on a coast is most of them. Two questions, two fields.
+          red: (isNight() && isBloodMoon()) ? 1 : 0,
           // A FLAME IN YOUR HAND IS GROUND WEATHER. The whole architecture
           // rests on one split: what happens in the AIR is the sky changing
           // behind an unchanged scene, and what happens on the GROUND is a

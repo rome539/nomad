@@ -416,6 +416,8 @@ export const PAGE = `<!doctype html>
     padding: 14px 14px 0; width: min(920px, 96vw); min-width: 0; max-height: 90vh;
     display: flex; flex-direction: column; gap: 10px;
   }
+  #bench .bbody { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  #bgear { display: none; }
   #bench .bhead { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   #btitle { color: var(--gold); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; }
   #bsub { color: var(--dim); font-size: 12px; margin-top: 3px; max-width: 52ch; }
@@ -491,23 +493,55 @@ export const PAGE = `<!doctype html>
     color: var(--bone); font: inherit; font-size: 11px; padding: 2px 8px; cursor: pointer;
   }
   #bench .bitem button:hover { color: var(--gold); border-color: var(--gold); }
-  /* burn is the only far-right, destructive action; scrap sits inline like the rest. */
-  #bench .bitem button.burn { color: var(--dim); margin-left: auto; }
+  /* Destructive actions retain their warning and armed states. */
+  #bench .bitem button.burn { color: var(--dim); }
   #bench .bitem button.burn:hover { color: var(--blood); border-color: var(--blood); }
   #bench .bitem button.arm { color: var(--blood); border-color: var(--blood); font-weight: 700; }
-  /* Phone: columns stack, the stack scrolls as one, headers still stick. */
-  @media (max-width: 680px) {
-    #bench .bbox { max-height: 92vh; }
-    /* Rows sized to their lists, never to the leftover height — see the note in
-       the hatch's phone block. Four keepings sharing 155px between them put the
-       pack straight on top of the lockbox. */
-    #bench .bcols {
-      grid-template-columns: minmax(0, 1fr); overflow-y: auto;
-      grid-auto-rows: max-content; align-content: start;
+  /* Keep controls compact, with space between distinct actions. */
+  #bench .bitem .risks {
+    display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px;
+    border-top: 1px solid var(--line); margin-top: 4px;
+  }
+  #bench .bitem .risks button { color: var(--dim); }
+  #bench .bitem .risks button.arm { color: var(--blood); }
+  @media (pointer: coarse), (max-width: 680px) {
+    #bench .bitem .acts { gap: 8px; }
+    #bench .bitem { gap: 6px; padding: 8px 0; }
+  }
+  /* One scroll surface for ALL content; the close button never scrolls away.
+     Match the location selectors so dungeon/den cannot restore desktop columns. */
+  @media (max-width: 680px), (max-height: 500px) and (pointer: coarse) {
+    #bench {
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+        env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+      height: 100%; height: var(--play-height, 100dvh);
     }
-    #bench .bcol { overflow-y: visible; min-height: 0; }
-    /* The paperdoll stacks on a phone: figure+slots one row, the math below. */
+    #bench .bbox {
+      width: 100%; height: 100%; max-height: none; border-radius: 0;
+      padding: 12px 12px 0; overflow: hidden;
+    }
+    #bench .bhead { align-items: center; gap: 8px; }
+    #bench .bhead > div { min-width: 0; }
+    #bench .bbody {
+      flex: 1 1 auto; overflow-y: auto; overscroll-behavior-y: contain;
+      padding-bottom: 12px;
+    }
+    #bench .bbody > * { flex-shrink: 0; }
+    #bench .bcols, #bench.nogate .bcols, #bench.nogate.hasden .bcols {
+      flex: 0 0 auto; grid-template-columns: minmax(0, 1fr);
+      overflow: visible; grid-auto-rows: max-content; align-content: start;
+      padding-bottom: 0;
+    }
+    #bench .bcol { overflow: visible; min-height: 0; }
+    #bench .bcolh { flex-wrap: wrap; }
+    #bgear {
+      display: block; width: 100%; padding: 8px 10px; text-align: left; background: transparent;
+      border: 1px solid var(--border2); border-radius: 5px; color: var(--cream); font-family: inherit;
+    }
+    #bgear[hidden] { display: none; }
     #bdoll { gap: 8px; padding: 8px 10px; }
+    #bench:not(.showgear) #bdoll { display: none; }
+    #dleft { flex-shrink: 1; }
     #dstats { flex: 1 1 100%; min-width: 0; }
     #bdoll .dline { overflow-wrap: anywhere; }
   }
@@ -1706,6 +1740,89 @@ export const PAGE = `<!doctype html>
   /* A short last page must not make the column jump as you step through it. */
   #reckbody .rrows { display: flex; flex-direction: column; min-height: 266px; }
   @media (max-width: 560px) { #reckbody { grid-template-columns: 1fr; gap: 20px; } }
+  /* Shared modal containment: tall summaries must scroll with their lists. */
+  #trade .modalbody, #swap .modalbody, #bounty .modalbody, #forge .modalbody {
+    display: flex; flex-direction: column; gap: 10px; min-height: 0;
+  }
+  .modal-tap-blocked { outline: 1px solid var(--gold); outline-offset: 2px; }
+  @media (max-width: 680px), (max-height: 500px) and (pointer: coarse) {
+    #trade, #swap, #bounty, #forge, #mapm, #jrnl, #reckm {
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+        env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+      height: 100%; height: var(--play-height, 100dvh);
+    }
+    #trade .bbox, #swap .bbox, #bounty .bbox, #forge .bbox,
+    #mapm .lbox, #jrnl .lbox, #reckm .lbox {
+      width: 100%; height: 100%; max-height: none; min-width: 0;
+      border-radius: 0; padding: 12px 12px 0; overflow: hidden;
+    }
+    #trade .modalbody, #swap .modalbody, #bounty .modalbody, #forge .modalbody {
+      flex: 1 1 auto; overflow-y: auto; overscroll-behavior-y: contain; padding-bottom: 12px;
+    }
+    #trade .modalbody > *, #swap .modalbody > *,
+    #bounty .modalbody > *, #forge .modalbody > * { flex-shrink: 0; }
+    #trade .bcols, #swap .bcols, #forge .bcols {
+      flex: 0 0 auto; grid-template-columns: minmax(0, 1fr); overflow: visible;
+      grid-auto-rows: max-content; align-content: start; padding-bottom: 0;
+    }
+    #trade .bcol, #swap .bcol, #forge .bcol { overflow: visible; min-height: 0; }
+    #byboard { flex: 0 0 auto; overflow: visible; }
+    #bench .bhead, #trade .bhead, #swap .bhead, #bounty .bhead, #forge .bhead,
+    #mapm .lhead, #jrnl .lhead, #reckm .lhead { gap: 8px; }
+    .bhead > div, .lhead > div { min-width: 0; overflow-wrap: anywhere; }
+    #forge .bitem .takes { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); overflow-wrap: anywhere; }
+    #mapbody { flex: 1 1 0; margin-bottom: 12px; }
+    #mapwrap { height: 100%; }
+    #jbody, #reckbody { overscroll-behavior-y: contain; overflow-wrap: anywhere; }
+    #reckbody { grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; align-content: start; }
+    #vmodal { padding: 12px; height: var(--play-height, 100dvh); bottom: auto; }
+    #vmodal .vbox { max-height: calc(var(--play-height, 100dvh) - 24px); overflow-y: auto; }
+    #idpanel, #setpanel { max-height: calc(var(--play-height, 100dvh) - 60px); }
+    #vminput, #idpanel input { font-size: 16px; }
+    #idpanel .row { flex-wrap: wrap; }
+    #dealreq { top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+  }
+  .signer-connect { border: 1px solid var(--border2); border-radius: 6px; padding: 12px; margin: 10px 0; max-width: 420px; white-space: normal; }
+  .signer-connect p { margin: 8px 0; font-size: 13px; line-height: 1.5; }
+  .signer-connect img { display: block; width: 220px; max-width: 100%; margin: 8px 0; }
+  .signer-connect a, .signer-connect button { display: inline-block; border: 1px solid var(--border2); border-radius: 4px; background: var(--panel); color: var(--cream); font: inherit; font-size: 13px; padding: 8px 10px; margin: 4px 8px 4px 0; text-decoration: none; cursor: pointer; }
+  .signer-connect a { color: var(--gold); }
+  .signer-connect textarea { display: block; width: 100%; margin: 8px 0; background: var(--bg); color: var(--dim); border: 1px solid var(--border); font: inherit; font-size: 16px; resize: vertical; }
+  #phone-tools, #phone-send, #phone-done { display: none; }
+  #chips .chip-dirs, #chips .chip-actions { display: contents; }
+  #chips .chip-dirs button:disabled { display: none; }
+  #cmd { min-width: 0; }
+  @media (pointer: coarse) and (max-width: 1000px), (max-width: 680px) {
+    html, body { overflow: hidden; }
+    body { height: var(--play-height, 100dvh); }
+    #bar { gap: 8px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) 8px max(10px, env(safe-area-inset-left, 0px)); }
+    #chips {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 6px max(10px, env(safe-area-inset-right, 0px)) 6px max(10px, env(safe-area-inset-left, 0px));
+    }
+    #chips:empty { display: none; }
+    #chips .chip-dirs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+    #chips .chip-dirs button { padding: 5px 0; min-width: 0; }
+    #chips .chip-dirs button:disabled { display: block; opacity: .3; cursor: default; }
+    #chips .chip-actions { display: flex; flex-wrap: wrap; gap: 8px; max-height: min(20dvh, 148px); overflow-y: auto; overscroll-behavior-y: contain; align-content: start; }
+    #chips .chip-actions:empty { display: none; }
+    #chips .chip-actions button { max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; padding: 5px 9px; font-size: 13px; }
+    #phone-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 5px max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); background: var(--panel); flex: 0 0 auto; position: relative; z-index: 1; }
+    #phone-tools button, #phone-send, #phone-done { color: var(--bone); background: transparent; border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; padding: 5px 8px; }
+    #phone-tools button:disabled { opacity: .4; }
+    #phone-latest:not(:disabled) { color: var(--gold); border-color: var(--gold); }
+    #inputline { align-items: center; gap: 6px; padding: 7px max(10px, env(safe-area-inset-right, 0px)) calc(7px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
+    #phone-send { display: block; }
+    body.command-focus #phone-done { display: block; }
+    #log { overscroll-behavior-y: contain; }
+    body[data-view="image"] { --logh: min(25dvh, 180px); }
+    body[data-view="image"][data-log="big"] #log { height: min(55dvh, calc(var(--play-height, 100dvh) - 220px)); margin-top: calc(var(--logh) - min(55dvh, calc(var(--play-height, 100dvh) - 220px))); }
+    body[data-view="image"][data-log="big"] #loggrip { transform: translateY(calc(var(--logh) - min(55dvh, calc(var(--play-height, 100dvh) - 220px)))); }
+    body.command-focus[data-view="image"] #log { flex: 1 1 auto; height: auto; min-height: 60px; margin-top: 0; }
+    body.command-focus[data-view="image"] #loggrip { display: none; }
+    body.command-focus #chips .chip-actions { max-height: 70px; }
+    body.command-focus #inputline { padding-bottom: 7px; }
+  }
 </style>
 </head>
 <body>
@@ -1767,7 +1884,7 @@ export const PAGE = `<!doctype html>
       <span class="lbl">USE YOUR OWN KEYS</span>
       <div class="row">
         <button id="idext">extension</button>
-        <button id="idconn">signer app</button>
+        <button id="idconn">signer / Clave</button>
       </div>
       <div class="row"><input id="idpaste" placeholder="or paste nsec1&#8230; / bunker:// &#8212; enter" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"></div>
     </div>
@@ -1799,22 +1916,25 @@ export const PAGE = `<!doctype html>
         </div>
         <button id="bclose">step back out</button>
       </div>
-      <div id="bnote"></div>
-      <div id="bdoll">
-        <div id="dleft">
-          <svg id="dfig" viewBox="0 0 60 130" aria-hidden="true">
-            <circle cx="30" cy="14" r="9"></circle>
-            <path d="M30 25 C 20 27 16 34 15 44 L 12 74 L 18 74 L 21 50 L 21 78 L 16 122 L 25 122 L 30 88 L 35 122 L 44 122 L 39 78 L 39 50 L 42 74 L 48 74 L 45 44 C 44 34 40 27 30 25 Z"></path>
-          </svg>
-          <div id="dslots"></div>
+      <div class="bbody">
+        <div id="bnote" role="status"></div>
+        <button id="bgear" type="button" aria-expanded="false" aria-controls="bdoll">Show equipment &amp; stats</button>
+        <div id="bdoll">
+          <div id="dleft">
+            <svg id="dfig" viewBox="0 0 60 130" aria-hidden="true">
+              <circle cx="30" cy="14" r="9"></circle>
+              <path d="M30 25 C 20 27 16 34 15 44 L 12 74 L 18 74 L 21 50 L 21 78 L 16 122 L 25 122 L 30 88 L 35 122 L 44 122 L 39 78 L 39 50 L 42 74 L 48 74 L 45 44 C 44 34 40 27 30 25 Z"></path>
+            </svg>
+            <div id="dslots"></div>
+          </div>
+          <div id="dstats"></div>
         </div>
-        <div id="dstats"></div>
-      </div>
-      <div class="bcols">
-        <div class="bcol" id="bpack"></div>
-        <div class="bcol" id="block"></div>
-        <div class="bcol" id="bvault"></div>
-        <div class="bcol" id="bshelf"></div>
+        <div class="bcols">
+          <div class="bcol" id="bpack"></div>
+          <div class="bcol" id="block"></div>
+          <div class="bcol" id="bvault"></div>
+          <div class="bcol" id="bshelf"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1827,11 +1947,13 @@ export const PAGE = `<!doctype html>
         </div>
         <button id="tclose">step back out</button>
       </div>
-      <div id="tnote"></div>
-      <div id="twant"></div>
-      <div class="bcols">
-        <div class="bcol" id="tstock"></div>
-        <div class="bcol" id="tgoods"></div>
+      <div class="modalbody">
+        <div id="tnote"></div>
+        <div id="twant"></div>
+        <div class="bcols">
+          <div class="bcol" id="tstock"></div>
+          <div class="bcol" id="tgoods"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1844,12 +1966,14 @@ export const PAGE = `<!doctype html>
         </div>
         <button id="swclose">wave it off</button>
       </div>
-      <div id="swnote"></div>
-      <div id="swconfirm"></div>
-      <div class="bcols">
-        <div class="bcol" id="swpack"></div>
-        <div class="bcol" id="swmine"></div>
-        <div class="bcol" id="swtheirs"></div>
+      <div class="modalbody">
+        <div id="swnote"></div>
+        <div id="swconfirm"></div>
+        <div class="bcols">
+          <div class="bcol" id="swpack"></div>
+          <div class="bcol" id="swmine"></div>
+          <div class="bcol" id="swtheirs"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1862,8 +1986,10 @@ export const PAGE = `<!doctype html>
         </div>
         <button id="byclose">step back out</button>
       </div>
-      <div id="bynote"></div>
-      <div id="byboard"></div>
+      <div class="modalbody">
+        <div id="bynote"></div>
+        <div id="byboard"></div>
+      </div>
     </div>
   </div>
   <div id="forge">
@@ -1875,11 +2001,13 @@ export const PAGE = `<!doctype html>
         </div>
         <button id="fclose">bank the brazier</button>
       </div>
-      <div id="fnote"></div>
-      <div id="fhave"></div>
-      <div class="bcols">
-        <div class="bcol" id="frecipes"></div>
-        <div class="bcol" id="fread"></div>
+      <div class="modalbody">
+        <div id="fnote"></div>
+        <div id="fhave"></div>
+        <div class="bcols">
+          <div class="bcol" id="frecipes"></div>
+          <div class="bcol" id="fread"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1923,9 +2051,17 @@ export const PAGE = `<!doctype html>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
   <div id="log"></div>
   <div id="chips"></div>
+  <nav id="phone-tools" aria-label="Game shortcuts">
+    <button id="phone-kit" type="button">Kit</button>
+    <button id="phone-map" type="button">Map</button>
+    <button id="phone-journal" type="button">Journal</button>
+    <button id="phone-latest" type="button" disabled>Latest</button>
+  </nav>
   <div id="inputline">
     <span class="prompt">&#9656;</span>
-    <input id="cmd" type="search" name="q" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" autofocus>
+    <input id="cmd" type="search" name="q" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-label="Game command" placeholder="Type a command…">
+    <button id="phone-send" type="button">Send</button>
+    <button id="phone-done" type="button" aria-label="Dismiss keyboard">Done</button>
   </div>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script type="module">
@@ -2468,6 +2604,7 @@ function print(text, cls, who, pk) {
   }
   playSounds(sounds);
   if (stick) log.scrollTop = log.scrollHeight;
+  updateLatestButton();
 }
 
 // Identity: keys in pocket. Guests get keys minted silently; anyone with
@@ -2483,7 +2620,7 @@ var method = localStorage.getItem("nomad_login") || "guest"; // "guest" | "ext" 
 // NIP-46 remote signer: your keys stay in your signer app; the game only
 // ever sends it things to sign. All protocol work lives in /nip46-bunker.js —
 // the battle-tested client from nostr-district.
-var BUNKER_RELAYS = ["wss://relay.nsec.app", "wss://relay.primal.net", "wss://nos.lol", "wss://nostr.mom"];
+var BUNKER_RELAYS = ["wss://relay.powr.build", "wss://relay.nsec.app", "wss://relay.primal.net", "wss://nos.lol", "wss://nostr.mom"];
 var bunkerClient = null;
 async function makeBunkerClient() {
   if (!globalThis.__nip44mod) {
@@ -3291,7 +3428,7 @@ async function connect() {
       if (f.room && f.room !== lastRoomName) chipsExpanded = false;
       lastRoomName = f.room || "";
       if (f.art) grantArt();
-      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea);
+      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red);
       roomEl.textContent = "";
       if (f.room) {
         roomEl.appendChild(document.createTextNode(f.room));
@@ -3316,7 +3453,7 @@ async function connect() {
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
-      paintMobs(f.mobs, f.doing, f.dead);
+      updateMobs(f.mobs, f.doing, f.dead);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
@@ -3712,22 +3849,26 @@ function importKey(arg) {
 // The other direction: WE mint a nostrconnect:// courier, the player scans
 // or pastes it into their signer app (nsec.app, Amber, Primal...), and the
 // signer knocks back. BunkerClient does the protocol; we do the terminal.
+var pendingSignerCard = null;
 var pendingBunker = null; // a BunkerClient still waiting for its signer
 var identityChoice = 0; // invalidates asynchronous identity choices, even before reconnect
 function cancelPendingBunker() {
   identityChoice++;
+  if (pendingSignerCard) { pendingSignerCard.remove(); pendingSignerCard = null; }
   if (!pendingBunker) return;
   try { pendingBunker.cancel(); } catch (e) {}
   pendingBunker = null;
 }
 
 async function connectSignerApp() {
-  var hadPending = !!pendingBunker;
+  if (pendingBunker) {
+    pendingBunker.resumeConnection();
+    if (pendingSignerCard) pendingSignerCard.scrollIntoView({ block: "nearest" });
+    return; // Reuse the URI and secret while approval is pending.
+  }
   cancelPendingBunker();
   var choice = identityChoice;
-  if (hadPending) {
-    print("— the old courier is torn up; older QR codes are void —", "sys");
-  }
+  var timeout = null;
   var client = null;
   try {
     client = await makeBunkerClient();
@@ -3738,29 +3879,49 @@ async function connectSignerApp() {
     pendingBunker = client;
     var flow = await client.startClientFlow();
     if (choice !== identityChoice) { client.cancel(); return; }
+    // Attach a rejection handler before asynchronous QR generation/cancellation.
+    flow.waitForConnect.catch(function () {});
     var uri = flow.connectUri;
-    var copied = false;
-    if (navigator.clipboard) { try { await navigator.clipboard.writeText(uri); copied = true; } catch (e) {} }
-    print("Scan with your signer app (nsec.app, Amber, Primal\\u2026) or paste this" + (copied ? " \\u2014 already on your clipboard:" : ":"), "sys");
-    print(uri);
-    try {
-      var qrMod = await import("/qrcode.js");
-      var QR = qrMod.default || qrMod;
-      var img = document.createElement("img");
-      img.src = await QR.toDataURL(uri, { margin: 2, width: 220 });
-      img.alt = "nostrconnect qr";
-      img.style.width = "220px";
-      img.style.margin = "4px 0";
-      log.appendChild(img);
-      log.scrollTop = log.scrollHeight;
-    } catch (e) {}
-    print("— the gate waits for your signer (up to 5 minutes) —", "sys");
+    var card = document.createElement("div"); card.className = "signer-connect";
+    pendingSignerCard = card;
+    var title = document.createElement("strong"); title.textContent = "Connect your signer"; card.appendChild(title);
+    var hint = document.createElement("p");
+    hint.textContent = "Open Clave on this phone, or scan/copy with Amber, nsec.app, or another signer. After approving, return to this NOMAD tab. If nothing happens, tap Connect with Clave again.";
+    card.appendChild(hint);
+    var link = document.createElement("a");
+    link.textContent = "Connect with Clave";
+    link.href = "https://clave.casa/connect/?uri=" + encodeURIComponent(uri);
+    link.target = "_self"; link.rel = "noreferrer";
+    link.addEventListener("click", function () { client.resumeConnection(); });
+    card.appendChild(link);
+    var copy = document.createElement("button"); copy.type = "button"; copy.textContent = "Copy connect URI";
+    var raw = document.createElement("textarea"); raw.readOnly = true; raw.value = uri;
+    raw.setAttribute("aria-label", "Signer connection URI");
+    copy.addEventListener("click", async function () {
+      try { await navigator.clipboard.writeText(uri); copy.textContent = "Copied"; }
+      catch (e) { raw.focus(); raw.select(); copy.textContent = "Select and copy the URI below"; }
+    });
+    card.appendChild(copy); card.appendChild(raw);
+    var cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel connection";
+    cancel.addEventListener("click", cancelPendingBunker); card.appendChild(cancel);
+    log.appendChild(card); log.scrollTop = log.scrollHeight;
+    // QR is optional and must never delay adoption of an approved connection.
+    (async function () {
+      try {
+        var qrMod = await import("/qrcode.js"); var QR = qrMod.default || qrMod;
+        var data = await QR.toDataURL(uri, { margin: 2, width: 220 });
+        if (pendingBunker !== client || choice !== identityChoice) return;
+        var img = document.createElement("img"); img.src = data; img.alt = "Scan with any Nostr signer";
+        card.insertBefore(img, link); log.scrollTop = log.scrollHeight;
+      } catch (e) {}
+    })();
     var userPk = await Promise.race([
       flow.waitForConnect,
-      new Promise(function (rs, rj) { setTimeout(function () { rj(new Error("no signer connected in time")); }, 300000); }),
+      new Promise(function (rs, rj) { timeout = setTimeout(function () { rj(new Error("connection expired; choose connect signer app to try again")); }, 600000); }),
     ]);
     if (pendingBunker !== client || choice !== identityChoice) return;
     pendingBunker = null;
+    if (pendingSignerCard) { pendingSignerCard.remove(); pendingSignerCard = null; }
     client.storageKey = "nomad_bunker_session";
     client.saveSession();
     bunkerClient = client;
@@ -3770,14 +3931,26 @@ async function connectSignerApp() {
     print("— your signer answers: you are " + nip19.npubEncode(userPk) + " —", "sys");
     reconnect();
   } catch (e) {
-    var superseded = client && pendingBunker !== client;
+    var superseded = choice !== identityChoice || (client && pendingBunker !== client);
+    if (!superseded && pendingSignerCard) { pendingSignerCard.remove(); pendingSignerCard = null; }
     if (pendingBunker === client) pendingBunker = null;
     if (client) { try { client.cancel(); } catch (e2) {} }
     if (!superseded) {
       print("— no signer answered (" + (e && e.message ? e.message : "timeout") + ") —", "sys");
     }
-  }
+  } finally { if (timeout) clearTimeout(timeout); }
 }
+
+// iOS may suspend the relay sockets while the signer is foregrounded. Replay
+// subscriptions on return; only the secret-bound relay reply completes login.
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "visible") resumeSignerConnection();
+});
+function resumeSignerConnection() {
+  var client = pendingBunker || bunkerClient;
+  if (client) client.resumeConnection();
+}
+window.addEventListener("pageshow", resumeSignerConnection);
 
 function startBunker(url) {
   var choice = identityChoice;
@@ -4047,11 +4220,16 @@ function chipButton(s, fresh) {
 // a mob merely walking in and adding a chip no longer folds it back up.
 var CHIP_FOLD = 12;
 var chipsExpanded = false;
+var chipScrollRoom = "";
 function renderChips(suggest, combat) {
   lastSuggest = suggest;
   var wasFighting = lastCombat;
   lastCombat = !!combat;
   if (wasFighting && !lastCombat) maybeReload();   // the fight is over: take it now
+  var followLive = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+  var previousActions = chipsEl.querySelector(".chip-actions");
+  var actionScroll = previousActions && chipScrollRoom === lastRoomName && !(lastCombat && !wasFighting) ? previousActions.scrollTop : 0;
+  chipScrollRoom = lastRoomName;
   chipsEl.textContent = "";
   if (!chipsOn) return; // the quiet terminal: no training wheels
   // The identity lives behind the name button top right — no keys chip, no
@@ -4062,7 +4240,18 @@ function renderChips(suggest, combat) {
   all.forEach(function (s) {
     (/^go (north|south|east|west|up|down)$/.test(s) ? dirs : rest).push(s);
   });
-  var ordered = dirs.concat(rest);
+  var dirTray = document.createElement("div"); dirTray.className = "chip-dirs";
+  var actionTray = document.createElement("div"); actionTray.className = "chip-actions";
+  ["north", "south", "east", "west", "up", "down"].forEach(function (direction) {
+    var command = "go " + direction;
+    var b = chipButton(command, false);
+    b.disabled = dirs.indexOf(command) === -1;
+    b.setAttribute("aria-label", "Go " + direction + (b.disabled ? " (no exit)" : ""));
+    dirTray.appendChild(b);
+  });
+  if (dirs.length) chipsEl.appendChild(dirTray);
+  chipsEl.appendChild(actionTray);
+  var ordered = rest;
   var folded = 0;
   if (!chipsExpanded && ordered.length > CHIP_FOLD + 1) {
     folded = ordered.length - CHIP_FOLD;
@@ -4080,7 +4269,7 @@ function renderChips(suggest, combat) {
   ordered.forEach(function (s, i) {
     var was = prevChipCmds[i];
     var changed = was !== undefined && was !== s && chipBase(was) !== chipBase(s);
-    chipsEl.appendChild(chipButton(s, changed));
+    actionTray.appendChild(chipButton(s, changed));
   });
   prevChipCmds = ordered.slice();
   if (folded > 0) {
@@ -4092,9 +4281,76 @@ function renderChips(suggest, combat) {
       chipsExpanded = true;
       renderChips(lastSuggest, lastCombat);
     });
-    chipsEl.appendChild(more);
+    actionTray.appendChild(more);
   }
+  actionTray.scrollTop = actionScroll;
+  var settledScroll = log.scrollTop;
+  requestAnimationFrame(function () {
+    fitPicture();
+    if (followLive && Math.abs(log.scrollTop - settledScroll) < 1) log.scrollTop = log.scrollHeight;
+    updateLatestButton();
+  });
 }
+
+// Modal taps must stay on the button the finger started on. Live item lists
+// are rebuilt after actions; newly inserted controls get a short settling time.
+var MODAL_SURFACES = "#bench, #trade, #swap, #bounty, #forge, #mapm, #jrnl, #reckm, #vmodal, #idpanel, #setpanel, #dealreq";
+function installModalTapGuard(root, settleNewButtons) {
+  new MutationObserver(function () {
+    if (root.classList.contains("open") && document.activeElement === cmd) cmd.blur();
+  }).observe(root, { attributes: true, attributeFilter: ["class"] });
+  var born = new WeakMap();
+  var press = null;
+  new MutationObserver(function (changes) {
+    changes.forEach(function (change) {
+      change.addedNodes.forEach(function (node) {
+        if (!(node instanceof Element)) return;
+        if (node.matches("button")) born.set(node, performance.now());
+        node.querySelectorAll("button").forEach(function (b) { born.set(b, performance.now()); });
+      });
+    });
+  }).observe(root, { childList: true, subtree: true });
+  root.addEventListener("pointerdown", function (e) {
+    if (e.pointerType !== "touch" && e.pointerType !== "pen") { press = null; return; }
+    var button = e.target.closest("button");
+    press = { id: e.pointerId, button: button, x: e.clientX, y: e.clientY,
+      rect: button && button.getBoundingClientRect(), at: performance.now(),
+      bad: !e.isPrimary || !button || (settleNewButtons !== false && born.has(button) && performance.now() - born.get(button) < 350), up: false };
+  }, true);
+  root.addEventListener("pointermove", function (e) {
+    if (press && e.pointerId === press.id && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) press.bad = true;
+  }, true);
+  root.addEventListener("pointercancel", function () { if (press) press.bad = true; }, true);
+  root.addEventListener("pointerup", function (e) {
+    if (!press || e.pointerId !== press.id) return;
+    press.up = true;
+    var b = press.button;
+    if (!b || !b.isConnected) { press.bad = true; return; }
+    var r = b.getBoundingClientRect(), old = press.rect;
+    if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10 ||
+        Math.abs(r.x - old.x) > 4 || Math.abs(r.y - old.y) > 4 ||
+        Math.abs(r.width - old.width) > 4 || Math.abs(r.height - old.height) > 4 ||
+        e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) press.bad = true;
+  }, true);
+  root.addEventListener("click", function (e) {
+    // Keyboard and assistive activation have no physical press to validate.
+    if (e.detail === 0) return;
+    var touch = e.pointerType === "touch" || e.pointerType === "pen" ||
+      (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) ||
+      (press && performance.now() - press.at < 1500);
+    if (!touch) return;
+    var b = e.target.closest("button");
+    if (!b) return;
+    if (!press || !press.up || press.bad || press.button !== b) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      b.classList.add("modal-tap-blocked");
+      setTimeout(function () { b.classList.remove("modal-tap-blocked"); }, 250);
+    }
+    press = null;
+  }, true);
+}
+document.querySelectorAll(MODAL_SURFACES).forEach(function (root) { installModalTapGuard(root); });
+installModalTapGuard(chipsEl, false);
 
 // ---- the gatehouse bench: sort your pack, out of the world's reach ----
 var benchEl = document.getElementById("bench");
@@ -4106,6 +4362,12 @@ var bnote = document.getElementById("bnote");
 var benchAtGate = false; // vault + seal only when the bench is opened at a gate
 var benchAtDen = false;  // the shelf column, only under a roof you may keep in
 document.getElementById("bclose").addEventListener("click", function () { benchSend("close"); });
+
+document.getElementById("bgear").addEventListener("click", function () {
+  var expanded = benchEl.classList.toggle("showgear");
+  this.setAttribute("aria-expanded", String(expanded));
+  this.textContent = expanded ? "Hide equipment & stats" : "Show equipment & stats";
+});
 
 function benchSend(action, row) {
   // One frame carries the WHOLE selection: a stack sends all its rows at once, so
@@ -4179,7 +4441,7 @@ function benchItemNode(it, place) {
   }
   // Two-tap actions: the first arms it, the second does it. The cls arg sets the
   // look ("burn" for the destructive one; "scrap" reads as an ordinary action).
-  function armBtn(label, action, cls) {
+  function armBtn(label, action, cls, single) {
     var b = document.createElement("button");
     b.type = "button"; b.className = cls || "burn"; b.textContent = label;
     var armed = false, t = null;
@@ -4189,7 +4451,7 @@ function benchItemNode(it, place) {
         t = setTimeout(function () { armed = false; b.textContent = label; b.classList.remove("arm"); }, 3000);
       } else {
         if (t) clearTimeout(t);
-        fire(action);
+        if (single) benchSend(action, rows[0]); else fire(action);
       }
     });
     acts.appendChild(b);
@@ -4236,12 +4498,15 @@ function benchItemNode(it, place) {
     }
   }
   armBtn("burn", "burn");
-  // Drop THIS one to the floor — a single row, never the "dropped both" ambiguity
+  // Confirm before dropping THIS one to the floor — a single row, never the "dropped both" ambiguity
   // of a name. Placed LAST, off on its own past burn, so a stray click among the
   // box/vault banking buttons can't shed gear by mistake (rome, 2026-07-17). Not
   // offered for what you're wearing (remove it first).
-  if (place === "pack" && !it.equipped) btn1("drop", "drop");
+  if (place === "pack" && !it.equipped) armBtn("drop", "drop", "drop", true);
+  var risks = document.createElement("div"); risks.className = "risks";
+  Array.from(acts.querySelectorAll(".burn, .scrap, .drop")).forEach(function (b) { risks.appendChild(b); });
   wrap.appendChild(acts);
+  wrap.appendChild(risks);
   return wrap;
 }
 
@@ -4392,6 +4657,12 @@ function renderDoll(sheet) {
 }
 
 function renderBench(state) {
+  // Dismiss the command keyboard only on entry, never during item updates.
+  if (!benchEl.classList.contains("open")) {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    benchEl.querySelector(".bbody").scrollTop = 0;
+  }
+  document.getElementById("bgear").hidden = !state.sheet;
   benchAtGate = !!state.atGate;
   benchAtDen = !!state.den;
   // At a gate you truly step out of the world; in the dungeon you only crouch to
@@ -5799,12 +6070,46 @@ document.addEventListener("keydown", function (e) {
   }
 });
 
+function phoneControls() {
+  return window.matchMedia("(pointer: coarse) and (max-width: 1000px), (max-width: 680px)").matches;
+}
+function submitCommand() {
+  var text = cmd.value.trim();
+  if (!text) return;
+  cmd.value = "";
+  sendCmd(text);
+}
+function updateLatestButton() {
+  var button = document.getElementById("phone-latest");
+  if (button) button.disabled = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+}
+document.getElementById("phone-kit").onclick = function () { benchSend("open"); };
+document.getElementById("phone-map").onclick = function () { sendCmd("map"); };
+document.getElementById("phone-journal").onclick = function () { sendCmd("journal"); };
+document.getElementById("phone-latest").onclick = function () { log.scrollTop = log.scrollHeight; updateLatestButton(); };
+document.getElementById("phone-send").addEventListener("pointerdown", function (e) {
+  if (document.activeElement === cmd) e.preventDefault(); // keep the keyboard for conversation
+});
+document.getElementById("phone-send").onclick = submitCommand;
+document.getElementById("phone-done").onclick = function () { cmd.blur(); };
+log.addEventListener("scroll", updateLatestButton, { passive: true });
+function syncPhoneViewport() {
+  var vv = window.visualViewport;
+  if (phoneControls() && vv && vv.scale === 1) document.body.style.setProperty("--play-height", Math.round(vv.height) + "px");
+  else document.body.style.removeProperty("--play-height");
+  requestAnimationFrame(function () { fitPicture(); updateLatestButton(); });
+}
+cmd.addEventListener("focus", function () { document.body.classList.add("command-focus"); syncPhoneViewport(); });
+cmd.addEventListener("blur", function () { document.body.classList.remove("command-focus"); syncPhoneViewport(); });
+if (window.visualViewport) window.visualViewport.addEventListener("resize", syncPhoneViewport);
+window.addEventListener("resize", syncPhoneViewport);
+syncPhoneViewport();
+
 cmd.addEventListener("keydown", function (e) {
   if (e.key === "Enter") {
-    var text = cmd.value.trim();
-    cmd.value = "";
-    if (!text) return;
-    sendCmd(text);
+    if (e.isComposing) return;
+    e.preventDefault();
+    submitCommand();
   } else if (e.key === "ArrowUp") {
     if (histAt < history.length - 1) { histAt++; cmd.value = history[histAt]; }
     e.preventDefault();
@@ -5816,15 +6121,15 @@ cmd.addEventListener("keydown", function (e) {
 document.body.addEventListener("click", function (e) {
   var t = e.target;
   if (!t || !t.closest) return;
-  if (t.closest("#idpanel")) return; // clicks inside the panel stay there
-  if (t.closest("#bench")) return; // the bench owns its own clicks; no focus-steal, no backdrop-dismiss
+  if (t.closest(".signer-connect")) return;
+  if (t.closest(MODAL_SURFACES)) return; // modal text must never summon the command keyboard
   var onBtn = t.closest("#idbtn");
   var panel = document.getElementById("idpanel");
   if (!onBtn && panel) panel.classList.remove("open");
   if (onBtn || t.tagName === "BUTTON" || t.tagName === "INPUT") return; // no keyboard steal
   var sel = window.getSelection();
   if (sel && sel.toString()) return; // selecting text from the log — don't wipe it
-  cmd.focus();
+  if (!phoneControls()) cmd.focus();
 });
 
 // The keys panel: same identity actions as the commands, for people who
@@ -6718,7 +7023,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "33";      // /mob/      strips and their eye layers
+var MOB_V  = "34";      // /mob/      strips and their eye layers
 var BG_V   = "31";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -7559,6 +7864,10 @@ var skyEl = document.getElementById("sky");
 var viewBtn = null;   // built only for a granted key, see buildViewRow
 var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
 var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "";
+// Whether the moon is red, kept apart from which sky is painted - see the
+// note beside "red" in zone.ts. Weather decides the picture; the moon decides
+// the eyes, and reading both off one value put the eyes out in any fog.
+var lastRed = 0;
 // WHETHER YOU ARE CARRYING A LIGHT. Sticky like the other four: applyView calls
 // paintScene with nothing at all when the player turns pictures on, and the
 // scene has to come back the way it was rather than as an unlit night.
@@ -7574,6 +7883,7 @@ var scenePainted = "", sceneSeq = 0;
 // the code that uses it would read undefined.length on the first paint. paintMobs
 // survives the same order only because it checks mobsEl first.
 var anims = [], animTimer = null;
+var lastMobFrame = null; // retained in text view so switching does not wait for another status
 var stillness = false;
 try { stillness = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
 // THE SERVER DECIDES WHETHER THERE ARE PICTURES. Until a status frame arrives
@@ -7597,8 +7907,14 @@ function buildViewRow() {
   label.textContent = "view";
   viewBtn = document.createElement("button");
   viewBtn.type = "button";
+  viewBtn.id = "viewbtn";
+  viewBtn.setAttribute("role", "switch");
+  viewBtn.setAttribute("aria-label", "Image view");
   viewBtn.textContent = viewWant;
-  viewBtn.onclick = function () { setView(viewWant === "image" ? "text" : "image"); };
+  viewBtn.onclick = function () {
+    setView(viewWant === "image" ? "text" : "image");
+    if (phoneControls()) panel.classList.remove("open");
+  };
   viewRow.appendChild(label);
   viewRow.appendChild(viewBtn);
   var after = anchor && anchor.parentNode && anchor.parentNode.parentNode === panel ? anchor.parentNode : null;
@@ -7662,7 +7978,7 @@ function floodSuffix(ground, cond) {
   if (!have) return "";
   return (" " + have + " ").indexOf(" " + cond + " ") >= 0 ? "-flood" : "";
 }
-function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
+function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red) {
   // HOW MUCH WATER IS OVER THIS ROOM, and cleared the same way place is:
   // walking off a flooded shoal onto a dry road has to put the sheet away, so
   // an absent field is zero rather than "leave it as it was".
@@ -7673,6 +7989,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea) {
   if (place !== undefined) lastPlace = place || "";
   if (band) lastBand = band;
   if (sky) lastSky = sky;
+  if (red !== undefined && red !== null) lastRed = red ? 1 : 0;
   // A bare truth test would not do: the whole point is that going dark is a
   // change too, and a falsy-but-present 0 has to be able to put the light out.
   if (torch !== undefined && torch !== null) lastTorch = !!torch;
@@ -7982,9 +8299,13 @@ function applyView() {
   requestAnimationFrame(fitPicture);
   // The button reads the CHOICE, not the compromise — otherwise it would say
   // "text" back to someone who had just asked for pictures and was waiting.
-  if (viewBtn) viewBtn.textContent = viewWant;
+  if (viewBtn) {
+    viewBtn.textContent = viewWant;
+    viewBtn.setAttribute("aria-checked", viewMode === "image" ? "true" : "false");
+  }
   paintScene(null, null, null, null);
   if (viewMode !== "image") { lastMobs = "x"; paintMobs(null); }
+  else if (lastMobFrame) paintMobs(lastMobFrame.ids, lastMobFrame.doing, lastMobFrame.dead);
   runAnims();   // a hidden strip must not keep a timer alive
   // The strip changes height under the text, so put the newest line back on
   // the floor of it — switching view must never lose your place in a fight.
@@ -8530,6 +8851,10 @@ var ACT_MS = 190;        // and how fast the thing it does actually happens
 var ACT_ODDS = 0.06;     // per idle beat: roughly once every half-minute
 var mobsEl = document.getElementById("mobs");
 var lastMobs = "";
+function updateMobs(ids, doing, dead) {
+  lastMobFrame = { ids: ids || [], doing: doing || null, dead: dead || [] };
+  paintMobs(lastMobFrame.ids, lastMobFrame.doing, lastMobFrame.dead);
+}
 function paintMobs(ids, doing, dead) {
   if (!mobsEl) return;
   if (mobHold && Date.now() < mobHold) { mobPending = ids; mobPendingRest = doing; mobPendingDead = dead; return; }
@@ -8554,7 +8879,7 @@ function paintMobs(ids, doing, dead) {
   // the things in front of you until something else happened to reflow the row -
   // you would walk into the next room and find their eyes lit, having watched
   // them stay cold through the moment the sky went over.
-  var key = bodies.join(",") + "|" + (lastSky === "blood" ? "R|" : "")
+  var key = bodies.join(",") + "|" + (lastRed ? "R|" : "")
     + list.map(function (e) { return e.id; }).join(",");
   // Sleep is NOT part of the key: a creature bedding down must not reflow the
   // row, which would throw away every animation running in it. It is applied
@@ -8657,7 +8982,7 @@ function paintMobs(ids, doing, dead) {
     // background-position. A separate overlay element would need its own width,
     // its own scale and its own frame stepping kept in sync with this one, and
     // would drift by a subpixel the moment any of the three disagreed.
-    var redEyes = lastSky === "blood" && MOB_EYES[id];
+    var redEyes = lastRed && MOB_EYES[id];
     el.style.backgroundImage = (redEyes ? "url(/mob/" + id + ".eyes.webp?v=" + MOB_V + "), " : "")
       + "url(/mob/" + id + ".webp?v=" + MOB_V + ")";
     el.style.backgroundSize = redEyes
@@ -8755,15 +9080,9 @@ function picBoxPx() {
 // before the grip has been laid out.
 function fitPicture() {
   if (viewMode !== "image") return;
-  // AND NOT WHILE THE LOG IS OPEN, which is the line the first attempt at this
-  // was missing. Opening the band moves the grip with a CSS transform, and
-  // getBoundingClientRect reports the visual rect - transform included - so
-  // this measured the grip in its raised position, decided the picture's floor
-  // was most of the way up the window, and squashed the room exactly the way
-  // the old --logh override did. The open band is an overlay: it takes no more
-  // room in the column than the closed one, so the floor has not moved and
-  // there is nothing here to re-measure. Freeze it and the picture holds still.
-  if (document.body.getAttribute("data-log") === "big") return;
+  // Measure the collapsed footprint even when the log overlays the room.
+  // Freezing this measurement while expanded left portrait dimensions in
+  // place after rotation, collapsing the landscape scene and its sprites.
   var top = document.getElementById("loggrip"), lg = document.getElementById("log");
   // Its own height, which the CSS needs to pull it out of the flow. offsetHeight
   // is the border box, so neither the margin nor the transform doing the moving
@@ -8775,7 +9094,9 @@ function fitPicture() {
   // put the picture's floor a row too high and squash the room.
   var r = lg ? lg.getBoundingClientRect() : null;
   if (!r) return;
-  var bott = Math.max(0, Math.round(window.innerHeight - r.top));
+  var overlay = Math.min(0, parseFloat(getComputedStyle(lg).marginTop) || 0);
+  var baselineTop = r.top - overlay;
+  var bott = Math.max(0, Math.round(window.innerHeight - baselineTop));
   document.body.style.setProperty("--botth", bott + "px");
   fitMobRow();                     // the row is measured against the box, so it follows
 }
@@ -9510,7 +9831,7 @@ function crossThreshold() {
   setTimeout(function () { threshold.remove(); }, 1000);
   print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
   connect();
-  cmd.focus();
+  if (!phoneControls()) cmd.focus();
   // A brand-new key gets the first walk, once the wake-up text has landed.
   // (Anyone else can summon it by typing 'tutorial'.)
   if (guideFresh) setTimeout(guideStart, 3500);

@@ -122,6 +122,19 @@ const shadowedBy = (key, poses, frame) => {
 //   DROWNERS - seize and hold, excluded from starve-hunting (ai.ts:1494).
 //     Not a feeding route.
 const DEAD_NAMES = { drink: "DRINKERS", call: "PACK_CALLERS", flee: "RUNNERS" };
+// POSES THAT ARE OUT BY RULING, not by mechanism. The driver reads both of these
+// perfectly well; rome has decided twice that a cell is not to be spent on them,
+// and both times a later pass put them back - because a new spec was built from
+// what the OLD strip already carried, and the old strips carry them. Reading the
+// existing frames forward is exactly how a settled decision gets un-settled.
+//
+// So the generator refuses them outright, the same way it refuses a dead name. A
+// creature that already has one keeps it until its sheet is redrawn; no new sheet
+// is allowed to ask for one.
+const RULED_OUT = {
+  hit: "the struck frame - out by ruling 2026-09-17",
+  recover: "the recovery frame - out by ruling 2026-09-18",
+};
 
 
 // WHAT EACH OF THE CROSSING'S DEAD IS DOING IN EACH FRAME.
@@ -313,6 +326,126 @@ const LINES = {
 // great-gull, ford-eel and conger. A variant carries its own strip, so it needs
 // its own frame. The clearest case is the conger, which sleeps perfectly well,
 // beside the old-conger, which is the rarer animal and stands up all night.
+"a-lymer": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"cave-lion": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"ermine": {
+  feed: "Head down and pulling hard at something held down under both forefeet, the long back humped over it, the jaws working. WHAT IT HOLDS IS NOT DRAWN",
+  rest: "Asleep curled into a tight ball with the nose tucked under the tail, the long body wound round on itself, eyes shut",
+},
+"fen-viper": {
+  graze: "The head low and pushing forward along the ground with the jaws parted, the forebody flat and searching, the coil loose behind it",
+  rest: "Asleep wound into a tight flat spiral with the head laid down on the outside of its own coil, the whole body slack against the ground",
+},
+"feral-goat": {
+  graze: "Head right down to the ground, cropping, the neck stretched long and low and the muzzle at the ground, the body still and the weight even on all four feet. THE GROUND IS NOT DRAWN - only the animal reaching down to it",
+  rest: "Lying up with the legs folded under the body and the head still raised, settled low on the ground, eyes shut",
+  alert: "Head snapped up and round to face, ears hard forward, the body frozen mid-step with the weight shifted back - the instant before it decides to run",
+},
+"gill-adder": {
+  graze: "The head low and pushing forward along the ground with the jaws parted, the forebody flat and searching, the coil loose behind it",
+  rest: "Asleep wound into a tight flat spiral with the head laid down on the outside of its own coil, the whole body slack against the ground",
+  alert: "The forward third lifted clear off the ground and drawn back into a tight S over itself, the head level and square at the viewer, the tongue out",
+},
+"glutton": {
+  feed: "Head down and pulling hard at something held down under both forefeet, the long back humped over it, the jaws working. WHAT IT HOLDS IS NOT DRAWN",
+  rest: "Asleep curled into a tight ball with the nose tucked under the tail, the long body wound round on itself, eyes shut",
+  alert: "Stopped dead and risen on the forelegs with the head and neck stretched up and forward at the viewer, the body low and long behind it",
+},
+"hill-fox": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"hill-wolf": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"lead-wolf": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+},
+"lynx": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"marsh-hound": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+},
+"mountain-hare": {
+  graze: "Crouched low with the head down to the ground, cropping, the ears laid back along the shoulders and the hind legs folded tight under the body. THE GROUND IS NOT DRAWN",
+  rest: "Asleep pressed flat and round into a squat, the ears laid right back along the body, the legs folded away out of sight, eyes shut",
+  alert: "Sat up on the hind legs with the front paws tucked at the chest, the ears straight up and the head turned to the viewer, frozen",
+},
+"old-billy": {
+  graze: "Head right down to the ground, cropping, the neck stretched long and low and the muzzle at the ground, the body still and the weight even on all four feet. THE GROUND IS NOT DRAWN - only the animal reaching down to it",
+  rest: "Lying up with the legs folded under the body and the head still raised, settled low on the ground, eyes shut",
+  alert: "Head snapped up and round to face, ears hard forward, the body frozen mid-step with the weight shifted back - the instant before it decides to run",
+},
+"red-hind": {
+  graze: "Head right down to the ground, cropping, the neck stretched long and low and the muzzle at the ground, the body still and the weight even on all four feet. THE GROUND IS NOT DRAWN - only the animal reaching down to it",
+  rest: "Lying up with the legs folded under the body and the head still raised, settled low on the ground, eyes shut",
+  alert: "Head snapped up and round to face, ears hard forward, the body frozen mid-step with the weight shifted back - the instant before it decides to run",
+},
+"red-stag": {
+  graze: "Head right down to the ground, cropping, the neck stretched long and low and the muzzle at the ground, the body still and the weight even on all four feet. THE GROUND IS NOT DRAWN - only the animal reaching down to it",
+  rest: "Lying up with the legs folded under the body and the head still raised, settled low on the ground, eyes shut",
+},
+"snow-fox": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"snow-hare": {
+  graze: "Crouched low with the head down to the ground, cropping, the ears laid back along the shoulders and the hind legs folded tight under the body. THE GROUND IS NOT DRAWN",
+  rest: "Asleep pressed flat and round into a squat, the ears laid right back along the body, the legs folded away out of sight, eyes shut",
+  alert: "Sat up on the hind legs with the front paws tucked at the chest, the ears straight up and the head turned to the viewer, frozen",
+},
+"stone-adder": {
+  feed: "The head and forward body low over prey held against the ground in a loop of its own coil, the jaws open and worked wide around it, the throat distended. THE PREY IS NOT DRAWN - only the open jaw and the loop that holds",
+  rest: "Asleep wound into a tight flat spiral with the head laid down on the outside of its own coil, the whole body slack against the ground",
+},
+"the-blue-fox": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"the-dancer": {
+  feed: "Head down and pulling hard at something held down under both forefeet, the long back humped over it, the jaws working. WHAT IT HOLDS IS NOT DRAWN",
+  alert: "Stopped dead and risen on the forelegs with the head and neck stretched up and forward at the viewer, the body low and long behind it",
+},
+"the-gravid-adder": {
+  rest: "Asleep wound into a tight flat spiral with the head laid down on the outside of its own coil, the whole body slack against the ground",
+  alert: "The forward third lifted clear off the ground and drawn back into a tight S over itself, the head level and square at the viewer, the tongue out",
+},
+"the-old-glutton": {
+  feed: "Head down and pulling hard at something held down under both forefeet, the long back humped over it, the jaws working. WHAT IT HOLDS IS NOT DRAWN",
+  rest: "Asleep curled into a tight ball with the nose tucked under the tail, the long body wound round on itself, eyes shut",
+  alert: "Stopped dead and risen on the forelegs with the head and neck stretched up and forward at the viewer, the body low and long behind it",
+},
+"the-raiding-fox": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+},
+"the-tom": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"wildcat": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
 "grey-seal": {
   bite: "The jaws shut hard on nothing at full reach with the head and neck driven straight out low over the ground, the fore flippers braced under the chest, the whole body committed forward behind the bite",
   alert: "Come up off the belly onto the fore flippers with the chest lifted clear of the ground and the head thrown back and round at the viewer, the mouth open on the peg teeth. The hind flippers still trailing flat behind - a seal out of water does NOT stand",
@@ -641,7 +774,48 @@ const BIRD_SHEETS = {
   "the-bone-dropper":   ["idle", "up", "glide", "landing", "attack", "feed", "rest", "death"],
 };
 
-let poses = given.length ? given : BIRD_SHEETS[id] ? BIRD_SHEETS[id] : SLEEP_TOPUP[id] ? SLEEP_TOPUP[id] : CROSSING_POSES[id] ? CROSSING_POSES[id] : (() => {
+// THE REDRAW SET (2026-09-18). Creatures already drawn whose sheets cannot
+// answer something the world makes them do.
+//
+// NO STRUCK FRAME AND NO RECOVERY. Both are out by ruling, and between them
+// they were holding two cells on the sheets that had them. That is where these
+// meals and sleeps come from - and it is also how three adders finally get a
+// death frame, which they have never had in the game: they could be killed but
+// not seen to die.
+//
+// Everything else each creature already carries is kept.
+const REDRAW = {
+  "a-lymer": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "cave-lion": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "ermine": ["idle","inspect-upright","rest","feed","move-a","move-b","attack","death"],
+  "fen-viper": ["idle","alert","watch","rest","bask","graze","attack","death"],
+  "feral-goat": ["idle","alert","rest","graze","move-a","move-b","attack","death"],
+  "gill-adder": ["idle","alert","rest","graze","move-a","move-b","attack","death"],
+  "glutton": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "hill-fox": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "hill-wolf": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "lead-wolf": ["idle","rest","hold-ground","feed","move-a","move-b","attack","death"],
+  "lynx": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "marsh-hound": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "mountain-hare": ["idle","alert","rest","graze","move-a","move-b","attack","death"],
+  "old-billy": ["idle","alert","rest","graze","move-a","move-b","attack","death"],
+  "red-hind": ["idle","alert","rest","graze","move-a","move-b","attack","death"],
+  "red-stag": ["idle","rest","hold-ground","graze","move-a","move-b","attack","death"],
+  "snow-fox": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "snow-hare": ["idle","alert","rest","graze","move-a","move-b","attack","death"],
+  "stone-adder": ["idle","watch","rest","bask","hold-warm-ground","feed","attack","death"],
+  "strand-thief": ["idle","alert","graze","move-a","move-b","snatch-escape","attack","death"],
+  "the-blue-fox": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "the-dancer": ["idle","alert","feed","move-a","move-b","twisting-leap","attack","death"],
+  "the-gravid-adder": ["idle","alert","watch","rest","bask","hold-warm-ground","attack","death"],
+  "the-old-glutton": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "the-raiding-fox": ["idle","rest","feed","move-a","move-b","snatch-escape","attack","death"],
+  "the-tom": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "the-wrecker": ["idle","alert","graze","move-a","move-b","snatch-escape","attack","death"],
+  "wildcat": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+};
+
+let poses = given.length ? given : REDRAW[id] ? REDRAW[id] : BIRD_SHEETS[id] ? BIRD_SHEETS[id] : SLEEP_TOPUP[id] ? SLEEP_TOPUP[id] : CROSSING_POSES[id] ? CROSSING_POSES[id] : (() => {
   const p = flyer ? ["idle", "up", "down", "glide", "landing"] : ["idle", "move-a", "move-b"];
   p.push("attack");
   // EVERY set the world puts this one in, in WANTS order, rather than the one
@@ -688,6 +862,11 @@ let poses = given.length ? given : BIRD_SHEETS[id] ? BIRD_SHEETS[id] : SLEEP_TOP
   for (const pose of poses) if (DEAD_NAMES[pose]) {
     console.error("\n  " + pose + " is a dead name. " + DEAD_NAMES[pose] +
       " has no branch in the driver - this cell would never be shown.\n");
+    process.exit(2);
+  }
+  for (const pose of poses) if (RULED_OUT[pose]) {
+    console.error("\n  " + pose + " is " + RULED_OUT[pose] +
+      ". Do not spec it on a new sheet; spend the cell on what the creature does.\n");
     process.exit(2);
   }
   console.error("  " + id + "  [" + poses.join(" ") + "]");
@@ -974,21 +1153,46 @@ THIS IS NOT A LIVING PERSON. There is nothing inside it. Draw old dry remains he
 ${HOLLOW_EYES}
 `;
 
-// NOTHING IS IN THE CELL BUT THE CREATURE, and this applies to every sheet.
+// NOTHING IS IN THE CELL BUT THE CREATURE.
 //
 // The pose lines used to name the thing being worked on - a flue, a pan, fuel
 // going into a fire, a wall to brace on, stonework to dress. Every one of those
 // gets drawn, fills the cell, wrecks the silhouette and throws the scale off:
-// the salt widow came back loading firewood. The law was already written down
-// for exactly one creature ("the boat is NOT drawn - a punt fills the cell") and
-// never generalised.
+// the salt widow came back loading firewood.
 //
-const ALONE = `
+// IT IS WRITTEN TWICE BECAUSE A WOLF HAS NO HANDS. The clause was drafted for the
+// crossing's drowned workmen and then applied to the whole roster, so every
+// animal in the game was being told what it may be "wearing", what it may hold
+// "in its hands or carrying on its person", and not to draw a scaffold, a flue,
+// a pan, firewood, a reed bed or furniture. None of that means anything to a hill
+// wolf, and a prompt full of instructions that cannot apply is a prompt the
+// generator is free to read loosely.
+// WHO HAS HANDS. The worked version of the clause above talks about what a thing
+// is wearing, what it holds in its hands, and a list of the objects a drowned
+// workman is drawn beside. Every creature in the crossing's dead is one of those;
+// so are the living people scattered through the other regions, and they are NOT
+// in HOLLOW because they are not dead. Choosing the clause by HOLLOW alone handed
+// a shore wrecker the animal version and told him not to draw vegetation.
+//
+// Kept as a plain list because there is no set in the world that means "person" -
+// HOLLOW means undead, THIEVES means it robs you, and a stoat is in THIEVES.
+const PEOPLE = new Set([
+  "strand-thief", "the-wrecker",                       // the shore, living
+  "the-herd", "the-milker", "the-butter-wife", "the-one-who-stayed",   // the mountain's shepherds
+]);
+const worked = () => inSet("HOLLOW") || PEOPLE.has(id);
+
+const ALONE_WORKED = `
 NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
 
 Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
 `;
-;
+const ALONE_ANIMAL = `
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+`;
+
 
 // what each pose is, said the way the sheet needs it said
 const SAY = {
@@ -1037,8 +1241,8 @@ Subject: ${name}. Exact game description: ${desc || "[PASTE THE IN-GAME DESCRIPT
 
 ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
 ${CONSTANT[id] || ""}
-${WHAT_IT_IS}${ALONE}
-Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. ${CONTAIN} ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}.${flyer ? WINGSPAN : ""} Stable body proportions and markings. Feet aligned near the lower edge in ground poses; flight body centred.
+${WHAT_IT_IS}${worked() ? ALONE_WORKED : ALONE_ANIMAL}
+Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. ${CONTAIN} ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}.${flyer ? WINGSPAN : ""} Stable body proportions and markings. Feet aligned near the lower edge in ground poses${flyer ? "; body centred in the flight poses" : ""}.
 
 Reading order left to right, top row then bottom row:
 ${poses.map((p, i) => `${i + 1}. ${WORDING[p] || (LINES[id] && LINES[id][p]) || SAY[p] || p.replace(/-/g, " ")}`).join("\n")}

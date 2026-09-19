@@ -90,6 +90,7 @@ class RawRelayPool {
         this._queue.set(url, []);
 
         ws.onopen = () => {
+            if (this._sockets.get(url) !== ws) return;
             dlog(`[NIP-46 WS] Connected: ${url}`);
             const q = this._queue.get(url) || [];
             this._queue.delete(url);
@@ -127,7 +128,22 @@ class RawRelayPool {
         };
 
         ws.onerror = () => {};
-        ws.onclose = () => { this._sockets.delete(url); };
+        ws.onclose = () => { if (this._sockets.get(url) === ws) this._sockets.delete(url); };
+    }
+
+    resume(urls) {
+        // Preserve subscriptions, but replace sockets Safari may have suspended.
+        for (const ws of this._sockets.values()) { try { ws.close(); } catch (e) {} }
+        this._sockets.clear();
+        const queued = this._queue;
+        this._queue = new Map();
+        this.connect(urls);
+        // Keep requests that were waiting for a socket; subscriptions are
+        // replayed by onopen, so only queued EVENT messages need carrying over.
+        for (const [url, messages] of queued) {
+            const next = this._queue.get(url);
+            if (next) next.push(...messages.filter(msg => JSON.parse(msg)[0] === 'EVENT'));
+        }
     }
 
     subscribe(subId, filter, onEvent) {
@@ -303,6 +319,7 @@ export class BunkerClient {
 
         // Wait for connections to establish
         await new Promise(r => setTimeout(r, 800));
+        if (!this._connecting || !this._rawPool) throw new Error('cancelled');
 
         const since = Math.floor(Date.now() / 1000) - 300;
         const subId = 'nip46-connect-' + randomHex(4);
@@ -315,11 +332,15 @@ export class BunkerClient {
             rejectFn = reject;
         });
 
+        // Cancellation may beat the caller receiving this flow.
+        waitForConnect.catch(() => {});
+        this._cancelReject = (error) => { settled = true; rejectFn(error); };
         this._rawPool.subscribe(subId, { kinds: [24133], '#p': [clientPk], since }, async (ev, relayUrl) => {
-            if (settled) return;
+            if (settled || !this._connecting) return;
             try {
                 const decrypted = await nip44Decrypt(clientSk, ev.pubkey, ev.content);
                 const resp = JSON.parse(decrypted);
+                if (settled || !self._connecting) return;
                 // Never log resp wholesale — resp.result IS the secret on success.
                 dlog('[NIP-46] Response id:', resp.id, 'relay:', relayUrl);
 
@@ -351,6 +372,8 @@ export class BunkerClient {
                     return;
                 }
 
+                if (!self._connecting) return;
+                self._cancelReject = null;
                 self._finishConnect();
                 resolveFn(self._userPk);
             } catch (e) {
@@ -365,6 +388,10 @@ export class BunkerClient {
     // ------------------------------------------------------------------
     // FLOW 2: Signer-initiated (bunker://)
     // ------------------------------------------------------------------
+
+    resumeConnection() {
+        if ((this._connecting || this.connected) && this._rawPool && this._relays) this._rawPool.resume(this._relays);
+    }
 
     async connectBunkerUrl(bunkerUrl) {
         if (this._connecting) throw new Error('Already connecting');

@@ -116,7 +116,7 @@ try {
  await assert.rejects(replacing,/identity changed/);assert.equal(replacementWrites.length,0);
  console.log('PASS: new vaults cannot overwrite remembered unopened files; picker cancellation and identity changes perform no write.');
  let answerExtension;const extensionAnswer=new Promise(r=>answerExtension=r);const adopted=[];
- const extension={identityChoice:0,pendingBunker:null,window:{nostr:{getPublicKey:()=>extensionAnswer}},print(){},
+ const extension={identityChoice:0,pendingSignerCard:null,pendingBunker:null,window:{nostr:{getPublicKey:()=>extensionAnswer}},print(){},
    burnPocketIfGraduated:pk=>adopted.push(pk),localStorage:{setItem(){}},reconnect(){}};
  vm.createContext(extension);vm.runInContext(fn('cancelPendingBunker')+'\n'+fn('loginExtension'),extension);
  const signingIn=vm.runInContext('loginExtension()',extension);
@@ -124,7 +124,7 @@ try {
  await vm.runInContext('loginExtension()',extension);assert.deepEqual(adopted,[pk]);
  let finishBunker;const bunkerReply=new Promise(r=>finishBunker=r);const signerWrites=[];
  const pendingClient={cancel(){},connectBunkerUrl:()=>bunkerReply,saveSession:()=>signerWrites.push('saved')};
- const selection={identityChoice:0,pendingBunker:null,makeBunkerClient:async()=>pendingClient,print(){},
+ const selection={identityChoice:0,pendingSignerCard:null,pendingBunker:null,makeBunkerClient:async()=>pendingClient,print(){},
    burnPocketIfGraduated:()=>signerWrites.push('adopted'),localStorage:{setItem:()=>signerWrites.push('stored')},reconnect(){}};
  vm.createContext(selection);vm.runInContext(fn('cancelPendingBunker')+'\n'+fn('startBunker'),selection);
  vm.runInContext('startBunker("bunker://synthetic")',selection);await Promise.resolve();await Promise.resolve();
@@ -286,9 +286,21 @@ try {
  // A valid secret echo still pairs; invalid signed envelopes never reach pairing.
  const socket2=[...bunker._rawPool._sockets.values()][0];
  const secret=new URL(flow.connectUri).searchParams.get('secret');
+ const oldPk=bunker._clientPk;
+ bunker._rawPool._queue.set('wss://audit.invalid',[JSON.stringify(['EVENT',{id:'queued-request'}]),JSON.stringify(['REQ','old-sub',{}])]);
+ bunker.resumeConnection();
+ assert.deepEqual(bunker._rawPool._queue.get('wss://audit.invalid').map(JSON.parse),[['EVENT',{id:'queued-request'}]]);
+ assert.equal(bunker._clientPk,oldPk);assert.equal(bunker._rawPool._listeners[0].onEvent,callback);
+ assert.notEqual([...bunker._rawPool._sockets.values()][0],socket2);
+ // A delayed close from the suspended socket must not remove its replacement.
+ socket2.onclose();assert.equal(bunker._rawPool._sockets.size,1);
  const forged={...JSON.parse(JSON.stringify(event({result:secret}))),sig:'0'.repeat(128)};
  await socket2.onmessage({data:JSON.stringify(['EVENT',bunker._rawPool._listeners[0].subId,forged])});assert.equal(bunker.connected,false);
  bunker._request=async(method)=>{assert.equal(method,'get_public_key');return pk;};
  await callback(event({result:secret}),'wss://audit.invalid');assert.equal(await flow.waitForConnect,pk);assert.equal(bunker.connected,true);bunker.destroy();
- console.log('PASS: unauthenticated QR controls ignored, invalid signatures filtered, correct secret echo still pairs.');
+ const cancelled=new BunkerClient({NostrTools:api,relays:['wss://audit.invalid'],storageKey:null,heartbeatMs:0});
+ const cancelledFlow=await cancelled.startClientFlow();
+ const cancellation=assert.rejects(cancelledFlow.waitForConnect,/cancelled/);
+ cancelled.cancel();await cancellation;
+ console.log('PASS: QR secret binding, signature checks, resumed subscriptions, stale socket close, and cancellation.');
 } finally {await rm(dir,{recursive:true,force:true});}

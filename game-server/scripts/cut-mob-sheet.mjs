@@ -41,7 +41,21 @@ if (!fs.existsSync(sheet)) { console.error("no such sheet: " + sheet); process.e
 // The eye marker, and the width of the net thrown round it. Both are stated here
 // rather than derived: the colour is a contract with the prompt, and the
 // tolerance is what lets a compressed edge still be recognised as the marker.
-const EYE = [0, 208, 208], EYE_TOL = 110;
+// THE EYE KEY, AND HOW WIDE TO READ IT.
+//
+// 110 was too tight, and the way it failed was the worst kind: it found ONE of a
+// creature's two eyes. rome, on the refuge man - both his eyes are not red when
+// he moves. They were not. The sheets do not draw the pair in one flat colour;
+// the far eye sits in shade a shade paler, around rgb(112,208,192), which is 128
+// from the key and so fell outside. Half his frames walked with one coal lit and
+// one cold, and nothing reported it, because as far as the cutter knew it had
+// found an eye and was done.
+//
+// 200 takes the pale one on every frame that shows two. Measured rather than
+// picked: across five hollow creatures the marker count grows gently from 110 to
+// 200 and then jumps - the refuge man goes 195px to 866px between 200 and 240 -
+// which is the point where it stops finding eyes and starts finding clothes.
+const EYE = [0, 208, 208], EYE_TOL = 200;
 let eyeTotal = 0, eyeBlobs = 0;
 
 const COLS = { 4: 2, 6: 3, 8: 4, 9: 3, 12: 4 }[poses.length];
@@ -293,10 +307,13 @@ for (let i = 0; i < poses.length; i++) {
     for (let q = 0; q < W * H; q++) {
       if (eyes[q * 4 + 3] < 24 || lab2[q] >= 0) continue;
       const id2 = blobs.length; let n = 0, sx = 0, sy = 0, sp = 0;
+      let bx0 = W, bx1 = 0, by0 = H, by1 = 0;
       st2[sp++] = q; lab2[q] = id2;
       while (sp) {
         const c = st2[--sp]; n++; sx += c % W; sy += (c / W) | 0;
         const cx2 = c % W, cy2 = (c / W) | 0;
+        if (cx2 < bx0) bx0 = cx2; if (cx2 > bx1) bx1 = cx2;
+        if (cy2 < by0) by0 = cy2; if (cy2 > by1) by1 = cy2;
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
           const nx = cx2 + dx, ny = cy2 + dy;
           if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
@@ -305,7 +322,35 @@ for (let i = 0; i < poses.length; i++) {
           lab2[nq] = id2; st2[sp++] = nq;
         }
       }
-      blobs.push({ x: sx / n, y: sy / n, r: Math.max(2, Math.sqrt(n / Math.PI)) });
+      // TWO EYES THAT TOUCH ARE STILL TWO EYES.
+      //
+      // The marker for each eye is a handful of pixels, and when a head turns
+      // three-quarter on they come close enough to join into one component. This
+      // then painted ONE disc, centred between the eyes, with a radius taken from
+      // their COMBINED area - so the refuge man walked with a single fat coal in
+      // the middle of his face on every frame where his head was turned, and with
+      // two proper eyes on the frames where it was not. Half his walk cycle.
+      //
+      // A pair of eyes side by side is much wider than it is tall; one eye is
+      // roughly round. So a blob wider than it is tall by half again is split down
+      // the middle and each half kept as its own eye, with its own centre and its
+      // own radius. Anything rounder is left exactly as it was.
+      const bw = bx1 - bx0 + 1, bh = by1 - by0 + 1;
+      if (bw >= bh * 1.5 && n >= 4) {
+        const mid = (bx0 + bx1) / 2;
+        for (const side of [0, 1]) {
+          let ln = 0, lsx = 0, lsy = 0;
+          for (let qq = 0; qq < W * H; qq++) {
+            if (lab2[qq] !== id2) continue;
+            const qx = qq % W;
+            if ((side === 0) !== (qx <= mid)) continue;
+            ln++; lsx += qx; lsy += (qq / W) | 0;
+          }
+          if (ln) blobs.push({ x: lsx / ln, y: lsy / ln, r: Math.max(2, Math.sqrt(ln / Math.PI)) });
+        }
+      } else {
+        blobs.push({ x: sx / n, y: sy / n, r: Math.max(2, Math.sqrt(n / Math.PI)) });
+      }
     }
     // REACH is what makes it read as light rather than as paint. Seven radii out
     // is roughly a third of a head, which is what a lit eye does to a dark face.

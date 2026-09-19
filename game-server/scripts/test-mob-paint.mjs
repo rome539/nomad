@@ -29,8 +29,12 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +block("ROOTED")+"\n"
   +grab("MOB_EYES")+"\n"
   +'var viewMode="image", lastMobs="", anims=[], animTimer=null, stillness=false, MOB_V="13";\n'
-  +'var lastSky="day";\n'
-  +'ctx.setSky=function(s){ lastSky=s; };\n'
+  +'var lastSky="day", lastRed=0;\n'
+  // setSky now sets BOTH, because the tests were written when one value carried
+  // both facts. setRed below is what a blood moon behind weather looks like: the
+  // painted sky is fog, and the moon is still red.
+  +'ctx.setSky=function(s){ lastSky=s; lastRed = (s==="blood")?1:0; };\n'
+  +'ctx.setRed=function(r){ lastRed = r?1:0; };\n'
   +'function runAnims(){}\n'
   +fn("paintMobs")+"\n"+fn("applyState")+"\n"+fn("fitMobRow")+"\n"
   +"mobsEl = _stub;   // the lifted block declares its own, which the stub must win\n"
@@ -72,6 +76,21 @@ t("...and the two layers are stepped as one",
   w && w.style.backgroundSize.split(",").length===2 && w.style.backgroundPositionX==="0%",
   w && w.style.backgroundSize);
 
+// A BLOOD MOON BEHIND WEATHER STILL LIGHTS THEM (2026-09-18). The sky slot and
+// the red night used to be one value, and weather won it - so on the coast,
+// where it is usually fog or rain, the crossing's dead stayed cold-eyed through
+// every red moon. The picture is still the weather; the eyes are the moon.
+// (paint something else between cases: an unchanged row is deliberately skipped,
+//  so the key has to move or the second paint builds nothing at all.)
+const bust = function(){ ctx.paintMobs(["hill-wolf"], null, null); made.length = 0; };
+bust(); ctx.setSky("fog"); ctx.setRed(1); ctx.paintMobs(["the-tide-warden"], null, null);
+w = made.find(e=>e.className==="mob");
+t("a blood moon behind fog still lights the eyes",
+  w && w.style.backgroundImage.indexOf(".eyes.webp") >= 0, w && w.style.backgroundImage);
+bust(); ctx.setSky("fog"); ctx.setRed(0); ctx.paintMobs(["the-tide-warden"], null, null);
+w = made.find(e=>e.className==="mob");
+t("...and ordinary fog leaves them cold",
+  w && w.style.backgroundImage.indexOf(".eyes.webp") < 0, w && w.style.backgroundImage);
 made.length=0; ctx.setSky("blood"); ctx.paintMobs(["hill-wolf"], null, null);
 w = made.find(e=>e.className==="mob");
 t("a living creature gets no eyes on the red night", w && w.style.backgroundImage.indexOf(".eyes.webp")<0);
