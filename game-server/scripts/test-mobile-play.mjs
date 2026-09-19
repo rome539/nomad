@@ -76,6 +76,21 @@ try{
   assert(geometry.height===844&&geometry.log>=60&&geometry.input<=391&&Math.abs(geometry.bar)<1,`${mode} keyboard ${JSON.stringify(geometry)}`);
   if(mode==='image')assert(geometry.picture>=70,'keyboard retains room: '+JSON.stringify(geometry));
  }
+ const drags=await page.evaluate(()=>{
+  function drag(target,dy,count=1){
+   const make=y=>Array.from({length:count},(_,i)=>new Touch({identifier:i,target,clientX:100+i*20,clientY:y}));
+   target.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,touches:make(150)}));
+   const event=new TouchEvent('touchmove',{bubbles:true,cancelable:true,touches:make(150+dy)});
+   target.dispatchEvent(event);return event.defaultPrevented;
+  }
+  log.scrollTop=0;
+  const top=drag(log,30),inside=drag(log,-30),background=drag(document.getElementById('bar'),-30);
+  log.scrollTop=log.scrollHeight;
+  const bottom=drag(log,-30),reverse=drag(log,30),pinch=drag(document.getElementById('bar'),30,2);
+  cmd.blur();const unfocused=drag(document.getElementById('bar'),30);cmd.focus();
+  return {top,inside,background,bottom,reverse,pinch,unfocused};
+ });
+ assert.deepEqual(drags,{top:true,inside:false,background:true,bottom:true,reverse:false,pinch:false,unfocused:false},'typing contains background/edge drags while preserving content scrolling and pinch');
  await page.click('#phone-done');assert.notEqual(await page.evaluate(()=>document.activeElement.id),'cmd');
  assert.deepEqual(errors,[]);
  console.log('PASS contextual controls, Send/Enter/Done, and panned keyboard viewport');

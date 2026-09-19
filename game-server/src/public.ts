@@ -1793,7 +1793,7 @@ export const PAGE = `<!doctype html>
   #chips .chip-dirs button:disabled { display: none; }
   #cmd { min-width: 0; }
   @media (pointer: coarse) and (max-width: 1000px), (max-width: 680px) {
-    html, body { overflow: hidden; }
+    html, body { overflow: hidden; overscroll-behavior: none; }
     /* Anchor the entire game, including fixed scene/modal layers, to the
        visible viewport. Safari can pan that viewport when an input focuses. */
     body { position: fixed; top: var(--play-top, 0px); left: 0; width: 100%; height: var(--play-height, 100dvh); transform: translateZ(0); --picth: calc(var(--play-height, 100dvh) - var(--botth)); }
@@ -6072,6 +6072,33 @@ document.getElementById("phone-send").addEventListener("pointerdown", function (
 });
 document.getElementById("phone-send").onclick = submitCommand;
 document.getElementById("phone-done").onclick = function () { cmd.blur(); };
+// With the keyboard overlay, the layout is intentionally taller than the
+// visual viewport. Contain one-finger drags in actual scrollable content so
+// Safari cannot pan the outer page (including at a log/list scroll boundary).
+var phoneTouchX = 0, phoneTouchY = 0;
+document.addEventListener("touchstart", function (e) {
+  if (e.touches.length !== 1) return;
+  phoneTouchX = e.touches[0].clientX;
+  phoneTouchY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener("touchmove", function (e) {
+  if (!phoneControls() || document.activeElement !== cmd || e.touches.length !== 1 ||
+      (window.visualViewport && window.visualViewport.scale !== 1)) return;
+  var x = e.touches[0].clientX, y = e.touches[0].clientY;
+  var dx = x - phoneTouchX, dy = y - phoneTouchY;
+  phoneTouchX = x; phoneTouchY = y;
+  if (!dy || Math.abs(dx) > Math.abs(dy)) return; // keep horizontal caret selection
+  var el = e.target instanceof Element ? e.target : null;
+  while (el && el !== document.body && el !== document.documentElement) {
+    var overflow = getComputedStyle(el).overflowY;
+    if ((overflow === "auto" || overflow === "scroll") && el.scrollHeight > el.clientHeight + 1) {
+      if ((dy > 0 && el.scrollTop > 0) ||
+          (dy < 0 && el.scrollTop + el.clientHeight < el.scrollHeight - 1)) return;
+    }
+    el = el.parentElement;
+  }
+  if (e.cancelable) e.preventDefault();
+}, { passive: false });
 var phoneLayoutHeight = 0, phoneLayoutWidth = 0;
 function syncPhoneViewport() {
   var vv = window.visualViewport;
