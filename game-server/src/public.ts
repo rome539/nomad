@@ -264,7 +264,7 @@ export const PAGE = `<!doctype html>
      region is the half that goes: the room name is the one you need. */
   #room .rrg { color: var(--dim); }
   @media (max-width: 520px) { #room .rrg { display: none; } }
-  #idbtn { cursor: pointer; user-select: none; min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #idbtn { color: var(--gold); cursor: pointer; user-select: none; min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #idbtn .caret { color: var(--gold); }
   #brand .caret { color: var(--gold); letter-spacing: 0; margin-left: 0.15em; font-size: 0.85em; }
   /* Kill the 350ms double-tap-zoom dance: combat is tapping the same chip
@@ -1443,7 +1443,14 @@ export const PAGE = `<!doctype html>
   #log .echo { color: var(--dim); opacity: 0.7; margin-top: 6px; }
   /* Color-coded events (the trailer's language, in-game): wounds bleed,
      gains glow, the room announces itself, the furniture recedes. */
-  #log .head   { color: var(--gold); font-weight: 700; letter-spacing: 0.05em; margin-top: 8px; }
+  #log .head { display: flex; align-items: center; gap: 12px; color: var(--gold); font-weight: 700; letter-spacing: 0.05em; margin-top: 8px; }
+  #log .head::after {
+    content: "";
+    flex: 1 1 20px;
+    min-width: 12px;
+    height: 1px;
+    background: color-mix(in srgb, var(--gold) 40%, transparent);
+  }
   #log .dmgin  { color: var(--blood); padding-left: 12px; }
   #log .dmgout { color: var(--steel); padding-left: 12px; }
   #log .kill   { color: var(--gold); padding-left: 12px; }
@@ -1788,6 +1795,212 @@ export const PAGE = `<!doctype html>
   .signer-connect a, .signer-connect button { display: inline-block; border: 1px solid var(--border2); border-radius: 4px; background: var(--panel); color: var(--cream); font: inherit; font-size: 13px; padding: 8px 10px; margin: 4px 8px 4px 0; text-decoration: none; cursor: pointer; }
   .signer-connect a { color: var(--gold); }
   .signer-connect textarea { display: block; width: 100%; margin: 8px 0; background: var(--bg); color: var(--dim); border: 1px solid var(--border); font: inherit; font-size: 16px; resize: vertical; }
+  /* Optional theme designs. Geometry and typography, no art filters. */
+  #setpanel .setrow[hidden] { display: none; }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) {
+    --design-ink: var(--panel);
+    --design-rule: var(--border2);
+    --design-pale: var(--cream);
+    --design-page: var(--bg);
+    --design-inset: var(--panel);
+    --design-accent: var(--gold);
+    --design-font: Georgia, "Times New Roman", serif;
+    --design-radius: 0px;
+    --design-arch: 30px 30px 0 0;
+  }
+  body[data-atmosphere="door"] {
+    --design-ink: #141311; --design-rule: #777063; --design-pale: #ded6c4;
+    --design-page: #191713; --design-inset: #1d1b17; --design-accent: #a69a82;
+  }
+  body[data-atmosphere="bone"] {
+    --design-ink: #efe8d8; --design-rule: #998464; --design-pale: #33291e;
+    --design-page: #e9e1cd; --design-inset: #e1d5bc; --design-accent: #866334;
+    --design-arch: 2px; --design-radius: 2px;
+  }
+  body[data-atmosphere="moss"] {
+    --design-ink: #111a14; --design-rule: #597158; --design-pale: #d4e2cb;
+    --design-page: #0d1510; --design-inset: #19241a; --design-accent: #9eb77b;
+    --design-arch: 24px 4px 24px 4px; --design-radius: 12px 2px 12px 2px;
+  }
+  body[data-atmosphere="abyss"] {
+    --design-ink: #101724; --design-rule: #566d8c; --design-pale: #dce5f0;
+    --design-page: #0c111b; --design-inset: #172236; --design-accent: #a3bddd;
+    --design-arch: 0px; --design-radius: 0px;
+  }
+  body[data-atmosphere="ember"] {
+    --design-ink: #1d120e; --design-rule: #916446; --design-pale: #efdaca;
+    --design-page: #160e0b; --design-inset: #2b1b13; --design-accent: #e29b65;
+    --design-arch: 4px; --design-radius: 4px;
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect) {
+    background: var(--design-ink);
+    border: 1px solid var(--design-rule);
+    border-radius: var(--design-radius);
+    outline: 1px solid color-mix(in srgb, var(--design-rule) 33%, transparent);
+    outline-offset: -5px;
+    box-shadow: 0 14px 32px #0009;
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) :is(#bar, #inputline, #chips) {
+    background: var(--design-ink);
+    border-color: var(--design-rule);
+    box-shadow: none;
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #idbtn { color: var(--design-pale); }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #bar .brand {
+    font-family: var(--design-font);
+    letter-spacing: .22em;
+    color: var(--design-pale);
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) :is(#btitle, #maptitle, #jtitle, #setpanel > .lbl, #idpanel .lbl) {
+    font-family: var(--design-font);
+    font-weight: normal;
+    letter-spacing: .12em;
+    color: var(--design-pale);
+    text-transform: uppercase;
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) :is(#btitle, #maptitle, #jtitle) { font-size: 18px; }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #setpanel > .lbl {
+    text-align: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--design-rule);
+    font-size: 13px;
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) :is(#setpanel button, #idpanel button, .bbox button, .lbox button, #chips button) {
+    border-radius: var(--design-radius);
+    background-image: none;
+    box-shadow: none;
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #log {
+    background: var(--design-page);
+    scrollbar-color: var(--design-rule) var(--design-page);
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #log .head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--design-font);
+    font-weight: normal;
+    font-size: 20px;
+    letter-spacing: .06em;
+    color: var(--gold);
+    margin: 14px 0 8px;
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #log .head::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    flex: 0 0 6px;
+    border: 1px solid var(--design-accent);
+    transform: rotate(45deg);
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #log .head::after {
+    content: "";
+    flex: 1 1 20px;
+    min-width: 12px;
+    height: 1px;
+    background: color-mix(in srgb, var(--design-rule) 44%, transparent);
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #bench .bcol {
+    background: var(--design-page);
+    border: 1px solid var(--design-rule);
+    border-radius: var(--design-arch);
+    padding-top: 14px;
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #bench .bcolh {
+    justify-content: center;
+    text-align: center;
+    font-family: var(--design-font);
+    color: var(--design-pale);
+    border-bottom: 1px solid var(--design-rule);
+    padding-bottom: 10px;
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #bench .bitem { border-bottom-color: color-mix(in srgb, var(--design-rule) 25%, transparent); }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #bdoll {
+    border-radius: var(--design-radius);
+    background: var(--design-inset);
+    border-color: var(--design-rule);
+  }
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #inputline .prompt { color: var(--design-pale); }
+  body[data-atmosphere="bone"] #log .head { font-style: italic; }
+  body[data-atmosphere="bone"] #log .head::after { height: 3px; background: none; border-block: 1px solid var(--design-rule); }
+  body[data-atmosphere="moss"] #log .head::before { border-radius: 7px 0 7px 0; width: 9px; height: 9px; flex-basis: 9px; }
+  body[data-atmosphere="abyss"] #log .head::before { transform: none; border-radius: 50%; }
+  body[data-atmosphere="abyss"] #bench .bcolh { border-bottom-style: double; border-bottom-width: 3px; }
+  body[data-atmosphere="ember"] #log .head::before { background: var(--design-accent); width: 5px; height: 5px; flex-basis: 5px; }
+  body[data-atmosphere="ember"] #bench .bcolh { border-bottom-width: 2px; }
+  body[data-atmosphere="custom"] {
+    --design-font: var(--theme-font, Georgia, "Times New Roman", serif);
+    --design-rule: color-mix(in srgb, var(--cream) 35%, var(--panel));
+  }
+  #roomframe { display: contents; }
+  body[data-ornate]:where(:not([data-ornate=""])) #roomframe {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+  body[data-ornate]:where(:not([data-ornate=""])) #roomframe #room { flex: 0 1 auto; }
+  body[data-ornate]:where(:not([data-ornate=""])) #roomframe:not(:has(#room:empty))::before,
+  body[data-ornate]:where(:not([data-ornate=""])) #roomframe:not(:has(#room:empty))::after {
+    content: "";
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    background: var(--design-accent, var(--gold));
+    mask: var(--ornament) center / contain no-repeat;
+    pointer-events: none;
+  }
+  body[data-ornate]:where(:not([data-ornate=""])) #roomframe::after { transform: scaleX(-1); }
+  @media (max-width: 520px) {
+    body[data-ornate]:where(:not([data-ornate=""])) #roomframe { gap: 4px; }
+    body[data-ornate]:where(:not([data-ornate=""])) #roomframe:not(:has(#room:empty))::before,
+    body[data-ornate]:where(:not([data-ornate=""])) #roomframe:not(:has(#room:empty))::after { width: 12px; height: 12px; flex-basis: 12px; }
+  }
+  /* Decorative overlays never participate in layout or intercept taps. */
+  body[data-ornate]:where(:not([data-ornate=""])) :is(.bbox, .lbox, .vbox, .signer-connect) { position: relative; }
+  body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    pointer-events: none;
+    border-radius: inherit;
+    background: var(--design-accent, var(--gold));
+    opacity: .7;
+    mask-image: var(--ornament), var(--ornament), var(--ornament), var(--ornament);
+    mask-size: 14px 14px;
+    mask-position: left top, right top, left bottom, right bottom;
+    mask-repeat: no-repeat;
+  }
+  body[data-ornate="door"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Cpath%20d%3D%22M5%2025V15Q5%207%2015%202Q25%207%2025%2015V25M9%2025V16Q9%2010%2015%206Q21%2010%2021%2016V25M3%2026H27%22%2F%3E%3C%2Fsvg%3E"); }
+  body[data-ornate="bone"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Cpath%20d%3D%22M3%2012V3H12M18%203H27V12M27%2018V27H18M12%2027H3V18M8%208H22V22H8Z%22%2F%3E%3C%2Fsvg%3E"); }
+  body[data-ornate="moss"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Cpath%20d%3D%22M5%2025L25%205M8%2022V14M8%2022H16M15%2015V6M15%2015H24M22%208V3M22%208H27%22%2F%3E%3C%2Fsvg%3E"); }
+  body[data-ornate="abyss"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Cpath%20d%3D%22M15%202L28%2015L15%2028L2%2015ZM15%208L22%2015L15%2022L8%2015ZM15%202V8M28%2015H22M15%2028V22M2%2015H8%22%2F%3E%3C%2Fsvg%3E"); }
+  body[data-ornate="ember"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Ccircle%20cx%3D%2215%22%20cy%3D%2215%22%20r%3D%229%22%2F%3E%3Ccircle%20cx%3D%2215%22%20cy%3D%2215%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M15%202V6M24%2015H28M15%2024V28M2%2015H6%22%2F%3E%3C%2Fsvg%3E"); }
+  body[data-ornate="custom"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Cpath%20d%3D%22M4%2012V4H12M18%204H26V12M26%2018V26H18M12%2026H4V18%22%2F%3E%3C%2Fsvg%3E"); }
+  body[data-ornate="door"] :is(.bbox, .lbox, .vbox)::after {
+    mask-image: var(--ornament), var(--ornament), var(--ornament), var(--ornament), var(--ornament);
+    mask-size: 14px 14px, 14px 14px, 14px 14px, 14px 14px, 22px 22px;
+    mask-position: left top, right top, left bottom, right bottom, center top;
+  }
+  /* The first walk owns the log until the player finishes or skips it. */
+  body[data-tutorial="on"] #log > :not(.guide-step) { display: none; }
+  body[data-tutorial="on"] :is(#scene, #sky, #mobs, #loggrip) { display: none; }
+  body[data-tutorial="on"] #log {
+    flex: 1 1 auto !important;
+    height: auto !important;
+    min-height: 0;
+    margin-top: 0 !important;
+    background: var(--bg);
+    transition: none;
+  }
+  #log .guide-step { max-width: 64ch; white-space: pre-wrap; }
+  #log button.guide-step {
+    color: var(--cream); background: var(--panel); border: 1px solid var(--gold);
+    font: inherit; padding: 8px 14px; margin-top: 14px; cursor: pointer;
+  }
   #phone-send, #phone-done { display: none; }
   #chips .chip-dirs, #chips .chip-actions { display: contents; }
   #chips .chip-dirs button:disabled { display: none; }
@@ -1829,7 +2042,7 @@ export const PAGE = `<!doctype html>
         ? "image" : "text"); } catch (e) {}</script>
   <div id="bar">
     <span class="brand" id="brand" title="settings">NOMAD<span class="caret">&#9662;</span></span>
-    <span id="room"></span>
+    <span id="roomframe"><span id="room"></span></span>
     <span id="rightbar"><span id="fx"></span><span id="idbtn"><span id="hp">keys</span> <span class="caret">&#9662;</span></span></span>
   </div>
   <div id="threshold">
@@ -1856,6 +2069,8 @@ export const PAGE = `<!doctype html>
     <div class="setrow"><span>what is NOMAD</span><button id="aboutbtn">read</button></div>
     <div class="setrow"><span>sound</span><button id="sndbtn">off</button></div>
     <div class="setrow"><span>theme</span><button id="thbtn">door</button></div>
+    <div class="setrow" id="dooratmorow"><span>theme design</span><button id="dooratmobtn" type="button" role="switch" aria-label="Enhanced theme design" aria-checked="false">off</button></div>
+    <div class="setrow"><span>ornate borders</span><button id="ornatebtn" type="button" role="switch" aria-label="Ornate borders" aria-checked="false">off</button></div>
     <div class="setrow"><span>nostr themes</span><button id="thbrowse">browse</button></div>
     <div id="thlist"></div>
     <div class="setrow"><span>command chips</span><button id="chipbtn">on</button></div>
@@ -3403,7 +3618,7 @@ async function connect() {
     var f; try { f = JSON.parse(m.data); } catch (e) { return; }
     // During the first walk the world holds its tongue: the feed (others'
     // deeds, sounds through walls) and the ambient weather stay out of the
-    // lesson text. Your own actions still speak — that's the tutorial.
+    // lesson text. Other output stays in history, hidden by tutorial mode.
     if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls, f.who, f.sp); }
     else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed", f.who, f.sp); }
     else if (f.t === "status") {
@@ -3452,13 +3667,14 @@ async function connect() {
       wayHome = f.home || "";
       paintWayHome();
       renderChips(f.suggest, f.combat);
+      updateGuideExits();
       if (f.build) checkBuild(f.build);
     } else if (f.t === "beat") {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
       mobBeat(f.swung, f.struck, f.died, f.fed);
     } else if (f.t === "bench") {
-      if (f.open) renderBench(f); else closeBench();
+      if (f.open) { renderBench(f); guideNotice("inventory"); } else closeBench();
     } else if (f.t === "trade") {
       if (f.open) renderTrade(f); else closeTrade();
     } else if (f.t === "forge") {
@@ -6641,6 +6857,8 @@ function applyThemeColors(c) {
   // more than it wants to pop, so it dips a little lower in the light.
   document.documentElement.style.setProperty("--rar-s", lightGround ? "66%" : "58%");
   document.documentElement.style.setProperty("--rar-l", lightGround ? "30%" : "68%");
+  if (!okColor(c.wear)) document.documentElement.style.setProperty("--wear", ensureContrast("#d8a94e", c.bg, 3.5));
+  if (!okColor(c.stone)) document.documentElement.style.setProperty("--stone", lightGround ? "#6f7378" : "#d3d6d8");
   applyThemeFont(c && c._font);
 }
 // A worn theme may bring its own face. We honor the family and, if Ditto gave
@@ -6673,7 +6891,33 @@ function applyThemeFont(f) {
   // No usable URL — still honor the name in case the viewer has it installed.
   wear();
 }
+var doorAtmosphere = (localStorage.getItem("nomad_theme_design") || localStorage.getItem("nomad_door_atmosphere")) === "on";
+var doorAtmosphereAvailable = "";
+var ornateBorders = localStorage.getItem("nomad_ornate_borders") !== "off";
+function syncDoorAtmosphere() {
+  document.body.dataset.ornate = ornateBorders ? doorAtmosphereAvailable : "";
+  var ornateButton = document.getElementById("ornatebtn");
+  ornateButton.textContent = ornateBorders ? "on" : "off";
+  ornateButton.setAttribute("aria-checked", String(ornateBorders));
+  document.body.dataset.atmosphere = doorAtmosphere ? doorAtmosphereAvailable : "";
+  document.getElementById("dooratmorow").hidden = !doorAtmosphereAvailable;
+  var button = document.getElementById("dooratmobtn");
+  button.textContent = doorAtmosphere ? "on" : "off";
+  button.setAttribute("aria-checked", String(doorAtmosphere));
+}
+document.getElementById("ornatebtn").addEventListener("click", function () {
+  ornateBorders = !ornateBorders;
+  localStorage.setItem("nomad_ornate_borders", ornateBorders ? "on" : "off");
+  syncDoorAtmosphere();
+});
+document.getElementById("dooratmobtn").addEventListener("click", function () {
+  doorAtmosphere = !doorAtmosphere;
+  localStorage.setItem("nomad_theme_design", doorAtmosphere ? "on" : "off");
+  syncDoorAtmosphere();
+});
 function setTheme(name, colors) {
+  doorAtmosphereAvailable = THEMES[name] && !colors ? name : "custom";
+  syncDoorAtmosphere();
   themeName = name;
   var c = colors || THEMES[name] || THEMES.door;
   if (THEMES[name] && !colors) {
@@ -6694,6 +6938,8 @@ function setTheme(name, colors) {
       if (saved && saved.colors) {
         themeName = saved.name || "nostr theme";
         applyThemeColors(saved.colors);
+        doorAtmosphereAvailable = "custom";
+        syncDoorAtmosphere();
         thbtn.textContent = String(themeName).slice(0, 14);
         return;
       }
@@ -9867,16 +10113,15 @@ function crossThreshold() {
   if (localStorage.getItem("nomad_sound") === null) setSound(true);
   threshold.classList.add("gone");
   setTimeout(function () { threshold.remove(); }, 1000);
+  if (guideFresh) guideStart();
   print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
   connect();
   if (!phoneControls()) cmd.focus();
-  // A brand-new key gets the first walk, once the wake-up text has landed.
-  // (Anyone else can summon it by typing 'tutorial'.)
-  if (guideFresh) setTimeout(guideStart, 3500);
+  // Start before connecting so new players never see a burst of welcome text.
 }
 thrEnter.addEventListener("click", crossThreshold);
 
-// THE FIRST WALK: five lessons printed into the log — where this game's
+// THE FIRST WALK: five isolated lessons in the log — where this game's
 // teaching belongs — each one explaining a real system, each advancing only
 // when you DO the thing it asked. Auto-runs once for a freshly minted key;
 // 'tutorial' replays it for anyone; 'tutorial off' ends it. The lessons
@@ -9939,7 +10184,7 @@ var GUIDE_LESSONS = [
   ] },
 ];
 var guideAt = -1; // index of the lesson whose action we are waiting on
-function guideActive() { return guideAt >= 1 && guideAt < GUIDE_LESSONS.length; }
+function guideActive() { return guideAt >= 1 && guideAt <= GUIDE_LESSONS.length; }
 // THE FIRST WALK KNOWS WHERE THE DOOR IS. Hung on the room bar, in the same
 // muted style the region caption uses, and only while the guide is running:
 // seven hundred rooms and no map is the thing that loses somebody in their
@@ -9955,32 +10200,56 @@ function paintWayHome() {
   el.textContent = wayHome === "here" ? " \u00b7 the door is here" : " \u00b7 the way out lies " + wayHome;
   roomEl.appendChild(el);
 }
-function guidePrint(i) { print(GUIDE_LESSONS[i].text.join("\\n"), "sys"); }
+function updateGuideExits() {
+  var exits = document.getElementById("guide-exits");
+  if (!exits) return;
+  var directions = lastSuggest.filter(function (c) { return /^go\\s/.test(c); });
+  exits.textContent = directions.length
+    ? "Available exits: " + directions.join(", ") + "."
+    : "Waiting for the room's exits. You can type 'look' to check again.";
+}
+function guidePrint(i) {
+  log.querySelectorAll(".guide-step").forEach(function (el) { el.remove(); });
+  print(GUIDE_LESSONS[i].text.join("\\n"), "sys guide-step");
+  if (i === 1) {
+    var exits = document.createElement("div");
+    exits.id = "guide-exits"; exits.className = "guide-step";
+    log.appendChild(exits); updateGuideExits();
+  }
+  if (i === GUIDE_LESSONS.length - 1) {
+    var finish = document.createElement("button");
+    finish.type = "button"; finish.className = "guide-step";
+    finish.textContent = "Enter the dungeon";
+    finish.addEventListener("click", guideOff);
+    log.appendChild(finish);
+  }
+  log.scrollTop = 0;
+}
 function guideStart() {
   guideAt = 1;
+  document.body.dataset.tutorial = "on";
   guidePrint(0);
+  paintWayHome();
 }
 function guideOff() {
-  if (guideAt < 0 || guideAt >= GUIDE_LESSONS.length) { print("\\u2014 no walk is running; 'tutorial' starts one \\u2014", "sys"); return; }
+  if (!guideActive()) { print("\\u2014 no walk is running; 'tutorial' starts one \\u2014", "sys"); return; }
   localStorage.setItem("nomad_guided", "1");
   guideAt = -1;
+  delete document.body.dataset.tutorial;
+  log.querySelectorAll(".guide-step").forEach(function (el) { el.remove(); });
+  paintWayHome();
   print("\\u2014 the walk ends here; 'tutorial' brings it back \\u2014", "sys");
+  log.scrollTop = log.scrollHeight;
+  fitPicture();
+  sendCmd("look");
 }
 function guideNotice(cmdText) {
   if (guideAt < 1 || guideAt >= GUIDE_LESSONS.length) return;
   if (!GUIDE_LESSONS[guideAt].re.test(cmdText.trim().toLowerCase())) return;
-  var landed = guideAt;
-  guideAt++;
-  var last = guideAt >= GUIDE_LESSONS.length;
-  // Let the world answer the command first; the lesson follows it.
-  setTimeout(function () {
-    guidePrint(landed);
-    if (last) {
-      localStorage.setItem("nomad_guided", "1");
-      guideAt = -1;
-    }
-  }, 700);
+  var landed = guideAt++;
+  guidePrint(landed);
 }
+
 </script>
 </body>
 </html>`;
