@@ -1880,7 +1880,7 @@ export const PAGE = `<!doctype html>
       <span class="lbl">USE YOUR OWN KEYS</span>
       <div class="row">
         <button id="idext">extension</button>
-        <button id="idconn">signer / Clave</button>
+        <button id="idconn">signer</button>
       </div>
       <div class="row"><input id="idpaste" placeholder="or paste nsec1&#8230; / bunker:// &#8212; enter" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"></div>
     </div>
@@ -3849,6 +3849,13 @@ function cancelPendingBunker() {
   pendingBunker = null;
 }
 
+function preferredSignerApp() {
+  var ua = navigator.userAgent || "";
+  if (/Android/i.test(ua) || (navigator.userAgentData && navigator.userAgentData.platform === "Android")) return "Amber";
+  if (/iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return "Clave";
+  return "";
+}
+
 async function connectSignerApp() {
   if (pendingBunker) {
     pendingBunker.resumeConnection();
@@ -3875,11 +3882,14 @@ async function connectSignerApp() {
     pendingSignerCard = card;
     var title = document.createElement("strong"); title.textContent = "Connect your signer"; card.appendChild(title);
     var hint = document.createElement("p");
-    hint.textContent = "Open Clave on this phone, or scan/copy with Amber, nsec.app, or another signer. After approving, return to this NOMAD tab. If nothing happens, tap Connect with Clave again.";
+    var app = preferredSignerApp();
+    hint.textContent = app
+      ? "Open " + app + " on this device, approve the connection, then return to this NOMAD tab. If the app does not open, copy the URI into your signer or scan the QR code."
+      : "Open a compatible signer on this device, or scan/copy with Clave, Amber, nsec.app, or another signer. After approving, return to this NOMAD tab.";
     card.appendChild(hint);
     var link = document.createElement("a");
-    link.textContent = "Connect with Clave";
-    link.href = "https://clave.casa/connect/?uri=" + encodeURIComponent(uri);
+    link.textContent = app ? "Open " + app : "Open signer";
+    link.href = app === "Clave" ? "https://clave.casa/connect/?uri=" + encodeURIComponent(uri) : uri;
     link.target = "_self"; link.rel = "noreferrer";
     link.addEventListener("click", function () { client.resumeConnection(); });
     card.appendChild(link);
@@ -6167,6 +6177,8 @@ var idcopy = document.getElementById("idcopy");
 var idext = document.getElementById("idext");
 var idback = document.getElementById("idback");
 var idconn = document.getElementById("idconn");
+var signerApp = preferredSignerApp();
+idconn.textContent = signerApp ? "signer / " + signerApp : "signer";
 var idpaste = document.getElementById("idpaste");
 var sectsave = document.getElementById("sectsave");
 var sectown = document.getElementById("sectown");

@@ -26,6 +26,7 @@ async function makeBunkerClient(){
  c.startClientFlow=async function(){return {connectUri:'nostrconnect://'+'1'.repeat(64)+'?relay=wss%3A%2F%2Frelay.powr.build&secret=synthetic'+clients.length+'&name=NOMAD',waitForConnect:new Promise((resolve,reject)=>{c.resolve=resolve;c.reject=reject})}};
  clients.push(c);return c;
 }
+${fn('preferredSignerApp')}
 ${fn('cancelPendingBunker')}
 ${fn('connectSignerApp')}
 </script>`;
@@ -33,13 +34,30 @@ const browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'/
 try{
  const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
+ for(const [ua,platform,touches,app] of [
+  ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)','iPhone',5,'Clave'],
+  ['Mozilla/5.0 (Linux; Android 14; Pixel 8)','Linux armv8l',5,'Amber'],
+  ['Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X)','iPad',5,'Clave'],
+  ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)','MacIntel',5,'Clave'],
+  ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)','MacIntel',0,'']
+ ]){
+ await page.goto("about:blank");
+ await page.setUserAgent(ua);
  await page.setContent(fixture);
+ await page.evaluate(({platform,touches})=>{
+  Object.defineProperty(navigator,'platform',{configurable:true,value:platform});
+  Object.defineProperty(navigator,'maxTouchPoints',{configurable:true,value:touches});
+ },{platform,touches});
  await page.evaluate(()=>{window.loginPromise=connectSignerApp()});
  await page.waitForSelector('.signer-connect a');
  const first=await page.$eval('.signer-connect a',a=>({href:a.href,target:a.target,label:a.textContent}));
- assert.equal(first.target,'_self');assert.equal(first.label,'Connect with Clave');
- const link=new URL(first.href);assert.equal(link.origin,'https://clave.casa');assert.equal(link.pathname,'/connect/');
- const uri=await page.$eval('.signer-connect textarea',e=>e.value);assert.equal(link.searchParams.get('uri'),uri);
+ assert.equal(first.target,'_self');assert.equal(first.label,app ? 'Open '+app : 'Open signer');
+ const link=new URL(first.href);
+ const uri=await page.$eval('.signer-connect textarea',e=>e.value);
+ if(app==='Clave'){
+  assert.equal(link.origin,'https://clave.casa');assert.equal(link.pathname,'/connect/');assert.equal(link.searchParams.get('uri'),uri);
+ }else{assert.equal(first.href,uri);assert.equal(link.protocol,'nostrconnect:');}
+
  await page.evaluate(()=>connectSignerApp());
  assert.equal(await page.evaluate(()=>clients.length),1,'retry retains same client');
  assert.equal(await page.$eval('.signer-connect a',e=>e.href),first.href,'retry retains same secret');
@@ -58,5 +76,6 @@ try{
  assert.equal(await page.evaluate(()=>method),'bunker');assert.equal(await page.evaluate(()=>clients[1].saved),true);
  assert.equal(await page.evaluate(()=>reconnects),1);assert.equal(await page.$('.signer-connect'),null);
  assert.deepEqual(errors,[]);
- console.log('PASS Clave URL encoding, wake relay, same-tab link, retry identity, cancellation, adoption, and phone layout');
+ console.log('PASS',app||'desktop','opener, URI, resume, retry, cancellation, adoption and layout',platform);
+ }
 }finally{await browser.close()}
