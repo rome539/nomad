@@ -46,7 +46,6 @@ try{
     await page.screenshot({path:process.env.PHONE_SCREENSHOTS+'/'+mode+'.png'});
    }
    if(touch){
-    assert.equal(await page.$eval('#phone-latest',e=>e.disabled),true,'resizing the tray preserves live following');
     assert(geometry.tray<=height*.35,JSON.stringify(geometry));
     const pos=await page.$$eval('.chip-dirs button',els=>els.map(e=>e.getBoundingClientRect().x));
     await page.evaluate(()=>renderChips(['go south','go east','go up',...lastSuggest.filter(s=>!s.startsWith('go '))],true));
@@ -56,9 +55,7 @@ try{
     await page.$eval('.chip-actions button:last-child',e=>e.click());
     assert.equal(await page.$$eval('.chip-actions button',els=>els.length),28,'all actions accessible through more');
     await page.evaluate(()=>{log.scrollTop=0;print('A new voice reaches you.');});
-    assert.equal(await page.$eval('#phone-latest',e=>e.disabled),false);
     assert.equal(await page.$eval('#log',e=>e.scrollTop),0,'new lines preserve reading position');
-    await page.click('#phone-latest');assert.equal(await page.$eval('#phone-latest',e=>e.disabled),true);
     await page.$eval('#log',e=>e.click());assert.notEqual(await page.evaluate(()=>document.activeElement.id),'cmd','scene tap does not focus keyboard');
    }
   }
@@ -66,20 +63,20 @@ try{
  }
  await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});await page.setContent(fixture);
  await page.evaluate(s=>{renderChips(s,true);for(let i=0;i<30;i++)print('The marsh wolf watches from the reeds. '+i)},commands);
- await page.click('#phone-kit');await page.click('#phone-map');await page.click('#phone-journal');
- assert.deepEqual(await page.evaluate(()=>sent),['bench:open','map','journal']);
+ assert.equal(await page.$('#phone-tools'),null,'no unconditional shortcut bar');
  await page.focus('#cmd');await page.type('#cmd','look');await page.keyboard.press('Enter');
  assert.equal(await page.evaluate(()=>sent.at(-1)),'look');assert.equal(await page.$eval('#cmd',e=>e.value),'');
  await page.type('#cmd','say hello');await page.click('#phone-send');assert.equal(await page.evaluate(()=>sent.at(-1)),'say hello');
  for(const mode of ['text','image']){
   const geometry=await page.evaluate(mode=>{
    viewMode=mode;document.body.dataset.view=mode;cmd.focus();
-   Object.defineProperty(window,'visualViewport',{configurable:true,value:{height:390,scale:1}});syncPhoneViewport();
-   const r=log.getBoundingClientRect(),input=document.getElementById('inputline').getBoundingClientRect();return {log:r.height,input:input.bottom};
+   Object.defineProperty(window,'visualViewport',{configurable:true,value:{height:390,offsetTop:180,scale:1}});syncPhoneViewport();
+   fitPicture();const r=log.getBoundingClientRect(),input=document.getElementById('inputline').getBoundingClientRect(),bar=document.getElementById('bar').getBoundingClientRect();return {log:r.height,input:input.bottom-180,bar:bar.top-180,picture:r.top-bar.bottom};
   },mode);
-  assert(geometry.log>=60&&geometry.input<=391,`${mode} keyboard ${JSON.stringify(geometry)}`);
+  assert(geometry.log>=60&&geometry.input<=391&&Math.abs(geometry.bar)<1,`${mode} keyboard ${JSON.stringify(geometry)}`);
+  if(mode==='image')assert(geometry.picture>=70,'keyboard retains room: '+JSON.stringify(geometry));
  }
  await page.click('#phone-done');assert.notEqual(await page.evaluate(()=>document.activeElement.id),'cmd');
  assert.deepEqual(errors,[]);
- console.log('PASS shortcuts, explicit keyboard, Send/Enter/Done, and reduced visual viewport');
+ console.log('PASS contextual controls, Send/Enter/Done, and panned keyboard viewport');
 }finally{await browser.close()}

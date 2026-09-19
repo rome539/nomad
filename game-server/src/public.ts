@@ -1788,13 +1788,15 @@ export const PAGE = `<!doctype html>
   .signer-connect a, .signer-connect button { display: inline-block; border: 1px solid var(--border2); border-radius: 4px; background: var(--panel); color: var(--cream); font: inherit; font-size: 13px; padding: 8px 10px; margin: 4px 8px 4px 0; text-decoration: none; cursor: pointer; }
   .signer-connect a { color: var(--gold); }
   .signer-connect textarea { display: block; width: 100%; margin: 8px 0; background: var(--bg); color: var(--dim); border: 1px solid var(--border); font: inherit; font-size: 16px; resize: vertical; }
-  #phone-tools, #phone-send, #phone-done { display: none; }
+  #phone-send, #phone-done { display: none; }
   #chips .chip-dirs, #chips .chip-actions { display: contents; }
   #chips .chip-dirs button:disabled { display: none; }
   #cmd { min-width: 0; }
   @media (pointer: coarse) and (max-width: 1000px), (max-width: 680px) {
     html, body { overflow: hidden; }
-    body { height: var(--play-height, 100dvh); }
+    /* Anchor the entire game, including fixed scene/modal layers, to the
+       visible viewport. Safari can pan that viewport when an input focuses. */
+    body { position: fixed; top: var(--play-top, 0px); left: 0; width: 100%; height: var(--play-height, 100dvh); transform: translateZ(0); --picth: calc(var(--play-height, 100dvh) - var(--botth)); }
     #bar { gap: 8px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) 8px max(10px, env(safe-area-inset-left, 0px)); }
     #chips {
       display: flex; flex-direction: column; gap: 6px;
@@ -1807,10 +1809,7 @@ export const PAGE = `<!doctype html>
     #chips .chip-actions { display: flex; flex-wrap: wrap; gap: 8px; max-height: min(20dvh, 148px); overflow-y: auto; overscroll-behavior-y: contain; align-content: start; }
     #chips .chip-actions:empty { display: none; }
     #chips .chip-actions button { max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; padding: 5px 9px; font-size: 13px; }
-    #phone-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 5px max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); background: var(--panel); flex: 0 0 auto; position: relative; z-index: 1; }
-    #phone-tools button, #phone-send, #phone-done { color: var(--bone); background: transparent; border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; padding: 5px 8px; }
-    #phone-tools button:disabled { opacity: .4; }
-    #phone-latest:not(:disabled) { color: var(--gold); border-color: var(--gold); }
+    #phone-send, #phone-done { color: var(--bone); background: transparent; border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; padding: 5px 8px; }
     #inputline { align-items: center; gap: 6px; padding: 7px max(10px, env(safe-area-inset-right, 0px)) calc(7px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
     #phone-send { display: block; }
     body.command-focus #phone-done { display: block; }
@@ -1818,7 +1817,7 @@ export const PAGE = `<!doctype html>
     body[data-view="image"] { --logh: min(25dvh, 180px); }
     body[data-view="image"][data-log="big"] #log { height: min(55dvh, calc(var(--play-height, 100dvh) - 220px)); margin-top: calc(var(--logh) - min(55dvh, calc(var(--play-height, 100dvh) - 220px))); }
     body[data-view="image"][data-log="big"] #loggrip { transform: translateY(calc(var(--logh) - min(55dvh, calc(var(--play-height, 100dvh) - 220px)))); }
-    body.command-focus[data-view="image"] #log { flex: 1 1 auto; height: auto; min-height: 60px; margin-top: 0; }
+    body.command-focus[data-view="image"] #log { flex: none; height: clamp(60px, calc(var(--play-height, 100dvh) * .22), 120px); min-height: 0; margin-top: auto; transition: none; }
     body.command-focus[data-view="image"] #loggrip { display: none; }
     body.command-focus #chips .chip-actions { max-height: 70px; }
     body.command-focus #inputline { padding-bottom: 7px; }
@@ -2051,12 +2050,6 @@ export const PAGE = `<!doctype html>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
   <div id="log"></div>
   <div id="chips"></div>
-  <nav id="phone-tools" aria-label="Game shortcuts">
-    <button id="phone-kit" type="button">Kit</button>
-    <button id="phone-map" type="button">Map</button>
-    <button id="phone-journal" type="button">Journal</button>
-    <button id="phone-latest" type="button" disabled>Latest</button>
-  </nav>
   <div id="inputline">
     <span class="prompt">&#9656;</span>
     <input id="cmd" type="search" name="q" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-label="Game command" placeholder="Type a command…">
@@ -2604,7 +2597,6 @@ function print(text, cls, who, pk) {
   }
   playSounds(sounds);
   if (stick) log.scrollTop = log.scrollHeight;
-  updateLatestButton();
 }
 
 // Identity: keys in pocket. Guests get keys minted silently; anyone with
@@ -4288,7 +4280,6 @@ function renderChips(suggest, combat) {
   requestAnimationFrame(function () {
     fitPicture();
     if (followLive && Math.abs(log.scrollTop - settledScroll) < 1) log.scrollTop = log.scrollHeight;
-    updateLatestButton();
   });
 }
 
@@ -6079,29 +6070,28 @@ function submitCommand() {
   cmd.value = "";
   sendCmd(text);
 }
-function updateLatestButton() {
-  var button = document.getElementById("phone-latest");
-  if (button) button.disabled = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
-}
-document.getElementById("phone-kit").onclick = function () { benchSend("open"); };
-document.getElementById("phone-map").onclick = function () { sendCmd("map"); };
-document.getElementById("phone-journal").onclick = function () { sendCmd("journal"); };
-document.getElementById("phone-latest").onclick = function () { log.scrollTop = log.scrollHeight; updateLatestButton(); };
 document.getElementById("phone-send").addEventListener("pointerdown", function (e) {
   if (document.activeElement === cmd) e.preventDefault(); // keep the keyboard for conversation
 });
 document.getElementById("phone-send").onclick = submitCommand;
 document.getElementById("phone-done").onclick = function () { cmd.blur(); };
-log.addEventListener("scroll", updateLatestButton, { passive: true });
 function syncPhoneViewport() {
   var vv = window.visualViewport;
-  if (phoneControls() && vv && vv.scale === 1) document.body.style.setProperty("--play-height", Math.round(vv.height) + "px");
-  else document.body.style.removeProperty("--play-height");
-  requestAnimationFrame(function () { fitPicture(); updateLatestButton(); });
+  if (phoneControls() && vv && vv.scale === 1) {
+    document.body.style.setProperty("--play-height", Math.round(vv.height) + "px");
+    document.body.style.setProperty("--play-top", Math.round(vv.offsetTop || 0) + "px");
+  } else if (!phoneControls()) {
+    document.body.style.removeProperty("--play-height");
+    document.body.style.removeProperty("--play-top");
+  }
+  requestAnimationFrame(function () { fitPicture(); });
 }
 cmd.addEventListener("focus", function () { document.body.classList.add("command-focus"); syncPhoneViewport(); });
 cmd.addEventListener("blur", function () { document.body.classList.remove("command-focus"); syncPhoneViewport(); });
-if (window.visualViewport) window.visualViewport.addEventListener("resize", syncPhoneViewport);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", syncPhoneViewport);
+  window.visualViewport.addEventListener("scroll", syncPhoneViewport);
+}
 window.addEventListener("resize", syncPhoneViewport);
 syncPhoneViewport();
 
@@ -9096,7 +9086,8 @@ function fitPicture() {
   if (!r) return;
   var overlay = Math.min(0, parseFloat(getComputedStyle(lg).marginTop) || 0);
   var baselineTop = r.top - overlay;
-  var bott = Math.max(0, Math.round(window.innerHeight - baselineTop));
+  var viewportBottom = phoneControls() ? document.body.getBoundingClientRect().bottom : window.innerHeight;
+  var bott = Math.max(0, Math.round(viewportBottom - baselineTop));
   document.body.style.setProperty("--botth", bott + "px");
   fitMobRow();                     // the row is measured against the box, so it follows
 }
