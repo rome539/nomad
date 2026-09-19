@@ -71,9 +71,9 @@ try{
   const geometry=await page.evaluate(mode=>{
    viewMode=mode;document.body.dataset.view=mode;cmd.focus();
    Object.defineProperty(window,'visualViewport',{configurable:true,value:{height:390,offsetTop:180,scale:1}});syncPhoneViewport();
-   fitPicture();const r=log.getBoundingClientRect(),input=document.getElementById('inputline').getBoundingClientRect(),bar=document.getElementById('bar').getBoundingClientRect();return {log:r.height,input:input.bottom-180,bar:bar.top-180,picture:r.top-bar.bottom};
+   fitPicture();const r=log.getBoundingClientRect(),input=document.getElementById('inputline').getBoundingClientRect(),bar=document.getElementById('bar').getBoundingClientRect();return {log:r.height,input:input.bottom-180,bar:bar.top-180,picture:r.top-bar.bottom,height:document.body.getBoundingClientRect().height};
   },mode);
-  assert(geometry.log>=60&&geometry.input<=391&&Math.abs(geometry.bar)<1,`${mode} keyboard ${JSON.stringify(geometry)}`);
+  assert(geometry.height===844&&geometry.log>=60&&geometry.input<=391&&Math.abs(geometry.bar)<1,`${mode} keyboard ${JSON.stringify(geometry)}`);
   if(mode==='image')assert(geometry.picture>=70,'keyboard retains room: '+JSON.stringify(geometry));
  }
  await page.click('#phone-done');assert.notEqual(await page.evaluate(()=>document.activeElement.id),'cmd');

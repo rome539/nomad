@@ -1814,13 +1814,10 @@ export const PAGE = `<!doctype html>
     #phone-send { display: block; }
     body.command-focus #phone-done { display: block; }
     #log { overscroll-behavior-y: contain; }
-    body[data-view="image"] { --logh: min(25dvh, 180px); }
+    body[data-view="image"] { --logh: min(calc(var(--play-height, 100dvh) * .25), 180px); }
     body[data-view="image"][data-log="big"] #log { height: min(55dvh, calc(var(--play-height, 100dvh) - 220px)); margin-top: calc(var(--logh) - min(55dvh, calc(var(--play-height, 100dvh) - 220px))); }
     body[data-view="image"][data-log="big"] #loggrip { transform: translateY(calc(var(--logh) - min(55dvh, calc(var(--play-height, 100dvh) - 220px)))); }
-    body.command-focus[data-view="image"] #log { flex: none; height: clamp(60px, calc(var(--play-height, 100dvh) * .22), 120px); min-height: 0; margin-top: auto; transition: none; }
-    body.command-focus[data-view="image"] #loggrip { display: none; }
-    body.command-focus #chips .chip-actions { max-height: 70px; }
-    body.command-focus #inputline { padding-bottom: 7px; }
+    body.command-focus #inputline { transform: translateY(calc(-1 * var(--keyboard-cover, 0px))); z-index: 3; }
   }
 </style>
 </head>
@@ -6075,14 +6072,25 @@ document.getElementById("phone-send").addEventListener("pointerdown", function (
 });
 document.getElementById("phone-send").onclick = submitCommand;
 document.getElementById("phone-done").onclick = function () { cmd.blur(); };
+var phoneLayoutHeight = 0, phoneLayoutWidth = 0;
 function syncPhoneViewport() {
   var vv = window.visualViewport;
   if (phoneControls() && vv && vv.scale === 1) {
-    document.body.style.setProperty("--play-height", Math.round(vv.height) + "px");
+    // Keep the pre-keyboard game geometry. Only the input moves above the
+    // keyboard; shrinking the game would resize the scene and shove its UI up.
+    var typing = document.activeElement === cmd;
+    if (!typing || !phoneLayoutHeight || phoneLayoutWidth !== window.innerWidth) {
+      phoneLayoutHeight = vv.height;
+      phoneLayoutWidth = window.innerWidth;
+    }
+    document.body.style.setProperty("--play-height", Math.round(phoneLayoutHeight) + "px");
+    document.body.style.setProperty("--keyboard-cover", Math.max(0, Math.round(phoneLayoutHeight - vv.height)) + "px");
     document.body.style.setProperty("--play-top", Math.round(vv.offsetTop || 0) + "px");
   } else if (!phoneControls()) {
     document.body.style.removeProperty("--play-height");
     document.body.style.removeProperty("--play-top");
+    document.body.style.removeProperty("--keyboard-cover");
+    phoneLayoutHeight = 0;
   }
   requestAnimationFrame(function () { fitPicture(); });
 }
