@@ -7038,10 +7038,9 @@ export class ZoneDO implements DurableObject {
     // weather — this only runs past the pitch-dark return above, so it's
     // either a torch holding the dark at bay or a full moon lighting the
     // grounds outright; either way, say which (rome, 2026-07-22).
-    if (OUTDOOR_ROOMS.has(room.id) && isNight()) {
-      lines.push(isBloodMoon()
-        ? "A red moon rides over the grounds — the light it gives is the colour of old blood, and nothing under it is quite asleep."
-        : isFullMoon()
+    // skyClause already describes a blood moon; do not repeat it here.
+    if (OUTDOOR_ROOMS.has(room.id) && isNight() && !isBloodMoon()) {
+      lines.push(isFullMoon()
         ? "A full moon rides high and white — the grounds lie almost as bright as day."
         // Whose light it is matters here: this line runs for anyone the room is
         // lit FOR, and telling a man he can see past "your light" when the
