@@ -549,6 +549,22 @@ ctx.setSea(0); ctx.paint("crossing", "day", "staithe", "bx1", 0, 0, "", 0);
 t("a crossing room paints its own ground now", strip(sceneEl.style.backgroundImage) === "/room-bg/staithe-day.webp", strip(sceneEl.style.backgroundImage));
 ctx.paint("mountain", "day", "scree", "bx2", 0, 0, "", 0);
 t("...and the mountain is unchanged beside it", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-day.webp", strip(sceneEl.style.backgroundImage));
+// AND THE ROAD, WHICH SHIPPED DARK. Its forty-two plates went out cut,
+// installed and declared in TERRAIN_SCENES, and no player saw one of them: the
+// band was not in BANDS_WITH_PLATES and the three grounds were not in
+// TERRAIN_PLATE, so every road room asked for no picture exactly the way the
+// crossing's had. The case above was written the day that was fixed for the
+// crossing and it did not generalise, so here is the road's own.
+ctx.paint("road", "day", "the-kept-road", "rd1", 0, 0, "", 0);
+t("a road room paints the road", strip(sceneEl.style.backgroundImage) === "/room-bg/the-kept-road-day.webp", strip(sceneEl.style.backgroundImage));
+ctx.paint("road", "night", "the-cart-ruts", "rd2", 0, 0, "", 0);
+t("...and the ruts at night", strip(sceneEl.style.backgroundImage) === "/room-bg/the-cart-ruts-night.webp", strip(sceneEl.style.backgroundImage));
+ctx.paint("road", "day", "the-frost-heaved-paving", "rd3", 0, 0, "", 0);
+t("...and the frost-heaved stretch", strip(sceneEl.style.backgroundImage) === "/room-bg/the-frost-heaved-paving-day.webp", strip(sceneEl.style.backgroundImage));
+// A road room standing on a ground the road SHARES with the hill must still
+// answer - twelve of the fifteen grounds ROAD_RULES can name are borrowed.
+ctx.paint("road", "day", "beck", "rd4", 0, 0, "", 0);
+t("...and a borrowed ground answers on the road too", strip(sceneEl.style.backgroundImage) === "/room-bg/beck-day.webp", strip(sceneEl.style.backgroundImage));
 // A ground with no plate in a band that HAS plates falls to that band's own
 // stand-in rather than to nothing - the crossing's is the shingle shore.
 ctx.paint("crossing", "day", "no-such-ground", "bx3", 0, 0, "", 0);

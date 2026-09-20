@@ -7417,6 +7417,15 @@ var TERRAIN_PLATE = {
   // the opposite of what a default is for. It is reached only through
   // BAND_FALLBACK below, which fires when a room has no terrain at all.
   mountainside: ["mountainside"],
+  // THE ROAD'S THREE AGES (2026-09-20), and they went in here a ship late. The
+  // grounds were drawn, cut, installed and declared in TERRAIN_SCENES, the
+  // server was taught to name them - and none of it reached a player, because
+  // this is the table that decides a terrain exists at all and it had never
+  // heard of them. The note above says add a ground to BOTH tables or it may as
+  // well not have been drawn. It was right, and I read it and wired one.
+  "the-kept-road": ["the-kept-road"],
+  "the-frost-heaved-paving": ["the-frost-heaved-paving"],
+  "the-cart-ruts": ["the-cart-ruts"],
   // THE LAST THREE GROUNDS ON THE HILL (rome, 2026-09-10). Every one of them was
   // a real terrain the rules already named and the art never answered, so each
   // has been wearing a stand-in out of TERRAIN_NEAR below: 52 rooms of face and
@@ -7482,7 +7491,10 @@ var TERRAIN_NEAR = {
 // nearest thing the set owned to generic hill, and still a specific ground: a
 // slope of loose broken stone, given to thirty-nine rooms that never said they
 // were on one. The mountainside plate exists for exactly this slot.
-var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell" };
+// ...and on the road it is the road. ROAD_RULES ends in a catch-all so no road
+// room reaches this by having no terrain; it is here for the other caller, a
+// road gate whose plate has not been cut yet.
+var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-kept-road" };
 // WHICH BANDS OWN PICTURES AT ALL. Add a band here only once plates exist for
 // it — this is the one line that stops a region wearing another region's face.
 // AND THE CROSSING JOINS IT (2026-09-12). This one line is what the region's
@@ -7495,7 +7507,12 @@ var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell" };
 // is, it lives on the server, and it had never heard of a causeway or a staithe
 // - so switching this on alone would have painted a hundred and twelve crossing
 // rooms as crag, scree and snowfield. See CROSSING_RULES in zone-data.ts.
-var BANDS_WITH_PLATES = { mountain: 1, crossing: 1 };
+// AND THE ROAD JOINS IT (2026-09-20) - the same one-line switch, missed the same
+// way the crossing's nearly was. Its forty-two plates shipped, deployed and
+// reached nobody: terrain resolves to "" for any band not named here, so every
+// room on the road asked for no picture at all and got none. The art was live
+// on the edge for a ship and invisible in the game.
+var BANDS_WITH_PLATES = { mountain: 1, crossing: 1, road: 1 };
 // THE FOURTEEN DOORS. A gate is the one room in its region that is not its
 // region: a specific built thing, with a keeper's shuttered hatch in the wall of
 // it, standing on whatever ground happens to be there. No terrain rule can see
