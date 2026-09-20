@@ -6530,16 +6530,20 @@ function verr(e) { return e && e.message ? e.message : String(e); }
 // the PIN keeps working unchanged. The passkey is bound to nomadmud.com, so it
 // can't ride along from another app — it's enrolled fresh here.
 async function offerPasskeyRecovery(m, tok, found, dek) {
+  var epoch = identityEpoch, choice = identityChoice;
   try { if (!(await m.isPasskeySupported())) return; } catch (e) { return; }
+  if (epoch !== identityEpoch || choice !== identityChoice) return;
   var ok = await askConfirm(
     "Add Face ID / Touch ID as a backup key to this vault, so a forgotten PIN can still get you in?",
     "add Face ID",
   );
   if (!ok) return;
   try {
+    if (epoch !== identityEpoch || choice !== identityChoice) throw new Error("Your identity changed; nothing written.");
     var rp = await m.createRecoveryPasskey(lastName || "wanderer");
     var wrap = await m.wrapDekWithPasskey(dek, rp.prfSecret, rp.credentialId, rp.prfSalt);
     var updated = m.withPasskeyWrap(found.backup, wrap);
+    if (epoch !== identityEpoch || choice !== identityChoice) throw new Error("Your identity changed; nothing written.");
     found.fileId = await m.writeVault(tok, updated, found.fileId || null);
     found.backup = updated;
     print("\\u2014 Face ID is now a backup key to your vault \\u2014", "sys");
@@ -6570,12 +6574,15 @@ async function recoverWithPasskey(m, found) {
 // this just offers a fresh PIN — the portable key that opens the vault on your
 // other devices. Skipping it leaves you logged in with Face ID on this device.
 async function offerNewPin(m, tok, found, dek) {
+  var epoch = identityEpoch, choice = identityChoice;
   var np1 = await askNewPassphrase(m, "Set a NEW passphrase for this vault? It's the portable key that opens it on your other devices. Cancel to skip \\u2014 you're already in.", "set passphrase");
   if (!np1) return;
   var np2 = await askSecret("The same new passphrase, once more.", "set passphrase");
   if (np1 !== np2) { print("\\u2014 the passphrases disagree; nothing changed \\u2014", "sys"); return; }
   try {
+    if (epoch !== identityEpoch || choice !== identityChoice) throw new Error("Your identity changed; nothing written.");
     var updated = await m.rewrapPin(found.backup, dek, np1);
+    if (epoch !== identityEpoch || choice !== identityChoice) throw new Error("Your identity changed; nothing written.");
     found.fileId = await m.writeVault(tok, updated, found.fileId || null);
     found.backup = updated;
     print("\\u2014 new passphrase set \\u2014", "sys");

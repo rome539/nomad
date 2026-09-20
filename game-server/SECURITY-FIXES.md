@@ -147,3 +147,78 @@ it sent no gameplay or chat commands. No production load test was run. Real
 Google consent, external signer approval, physical passkey prompts, and legacy
 custody retirement remain deferred. Passing these checks does not establish that
 the system has no remaining vulnerabilities.
+
+## Follow-up regression review — 2026-09-20
+
+Reviewed the changes from the audited baseline `da3c926` through `158f8c1`,
+including the existing uncommitted gatehouse, browser, and runtime-test changes.
+The security-sensitive changes are signer resume/cancellation, socket reconnects,
+and restoration of parked sessions. Presentation and local art-tool changes were
+also inspected for new executable HTML, credential transport, and command execution.
+Authentication, ticket redemption, private-message encryption, vault crypto,
+inventory transfer, and rate-limit implementations were unchanged from the baseline.
+
+One additional signer-library cancellation race was reproduced: cancellation
+while `get_public_key` was pending allowed a late result to set the client's
+connected state. The bunker-URL paths could also finish and save that cancelled
+session. NOMAD's separate identity-choice checks and disabled persistence on
+pending clients prevented this from establishing an active game login; no account
+takeover was demonstrated. All three pairing paths now check cancellation before
+assigning the identity, and bunker-URL handlers recheck state after decryption.
+
+The new regression failed before the fix and passes afterward. Synthetic tests
+cover cancellation during identity lookup for QR, raw-relay bunker URLs, and
+SimplePool bunker URLs, with no connected state or session write after cancellation.
+The full security suite passes. The local workerd/D1/browser suite, typecheck,
+served-script validation, reconnect tests, gatehouse tests, and synthetic mobile
+signer UI tests also passed during this review. The full runtime/browser suite
+was rerun successfully after both follow-up fixes; the full security suite
+exercises the final fixes and synthetic provider boundaries.
+
+This follow-up fix is recorded with its tests in the dedicated security follow-up
+commit; it has not been deployed by this review.
+Existing workspace edits were preserved. Real Google consent/Drive recovery,
+external signer approvals, physical passkey prompts, legacy custody retirement,
+and provider access/secret-lifecycle review remain open. No production credentials,
+recovery records, or infrastructure settings were modified during this review.
+
+### Recovery and provider follow-up
+
+A second stale-identity gap was reproduced in the optional post-login recovery
+steps. `offerNewPin` and `offerPasskeyRecovery` could update the previously unlocked
+Drive vault after the player switched identities while a prompt or crypto operation
+was pending. Both now snapshot the identity epoch and selection and check them
+before crypto/enrollment and immediately before writing. Tests cover both kinds of
+identity change and verify that unchanged-identity operations still succeed. An
+already dispatched HTTP write cannot be recalled by a later identity change.
+
+Additional tests exercise the exact shipped vault bundle with synthetic provider
+responses: Google requests only the two configured Drive scopes; OAuth tokens are
+not persisted locally; passkey requests require user verification and use the
+current hostname for enrollment; missing PRF results and cancellation fail closed;
+Drive creation ignores remembered unopened file IDs, updates use explicit IDs,
+failed writes preserve the remembered ID, and upload bodies contain neither the
+plaintext secret key nor passphrase. These are provider-boundary tests, not live
+Google consent or physical-authenticator tests.
+
+A read-only Cloudflare CLI identity check succeeded. It reports broad write scopes
+covering Workers, KV, routes, Pages, certificates, AI, queues, and pipelines, plus
+offline refresh access. Account identifiers and tokens were suppressed. This
+establishes the local CLI's reported capabilities, not account-wide IAM policy,
+MFA status, CI-token scope, or whether unused permissions can safely be removed.
+No permissions or secrets were changed. Google administrative configuration is
+not established by inspecting the browser's public client configuration.
+
+Remaining closure evidence:
+
+| Item | Evidence still needed |
+| --- | --- |
+| Google production configuration | Authorized OAuth origins, Picker key API/referrer restrictions, project access and consent configuration from the provider console. |
+| Real recovery flows | A disposable test identity completing Google consent, Drive save/reopen, physical passkey recovery, wrong/cancelled prompts, and real signer approval/cancellation. |
+| Legacy custody | Owner demonstrates the same identity and a separately decryptable backup, then explicitly authorizes retirement of the legacy record. |
+| Operational access | Account/CI principal permissions, MFA/recovery arrangements, and secret generation/rotation evidence without recording secret values. |
+| Existing weak vaults | Each owner upgrades their own wrap; code changes cannot retroactively strengthen stored ciphertext. |
+
+Both follow-up fixes are grouped in the dedicated security follow-up commit,
+separate from the ongoing gatehouse changes. The original production release does
+not contain them until a subsequent deployment is verified.

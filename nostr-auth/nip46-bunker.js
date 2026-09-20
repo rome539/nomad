@@ -361,7 +361,11 @@ export class BunkerClient {
                 self.onStatusChange('waiting', 'Fetching identity…');
                 dlog('[NIP-46] Signer approved! pubkey:', ev.pubkey);
 
-                try { self._userPk = await self._request('get_public_key'); }
+                try {
+                    const userPk = await self._request('get_public_key');
+                    if (!self._connecting) return;
+                    self._userPk = userPk;
+                }
                 catch (e) {
                     // Fail closed: adopting ev.pubkey here would report an
                     // unverified (attacker-chosen) identity as "signed in".
@@ -464,6 +468,7 @@ export class BunkerClient {
                         if (ev.pubkey !== signerPk) return;
                         try {
                             const resp = JSON.parse(await nip44Decrypt(clientSk, ev.pubkey, ev.content));
+                            if (settled || !this._connecting) return;
                             dlog('[BUNKER-URL] response id:', resp.id);
                             // Only an answer to this request can affect its UI.
                             if (resp.id !== reqId) return;
@@ -480,7 +485,11 @@ export class BunkerClient {
                             // Fail closed. Falling back to signerPk reports an identity
                             // the signer never confirmed as "signed in" — and a signer
                             // pubkey is not a user pubkey even when the URL is honest.
-                            try { this._userPk = await this._request('get_public_key'); }
+                            try {
+                                const userPk = await this._request('get_public_key');
+                                if (!this._connecting) { reject(new Error('cancelled')); return; }
+                                this._userPk = userPk;
+                            }
                             catch (e) {
                                 console.warn('[BUNKER-URL] get_public_key failed:', e?.message);
                                 this._signerPk = null; this._connecting = false;
@@ -561,6 +570,7 @@ export class BunkerClient {
                 try {
                     const decrypted = await nip44Decrypt(clientSk, ev.pubkey, ev.content);
                     const resp = JSON.parse(decrypted);
+                    if (settled || !this._connecting) return;
                     dlog('[BUNKER-URL] response id:', resp.id);
                     if (resp.id !== reqId) return; // and only our connect
                     if (resp.result === 'auth_url' && resp.error) { this._emitAuthUrl(resp.error); return; }
@@ -573,7 +583,11 @@ export class BunkerClient {
                     settled = true; this._cancelReject = null;
                     this._rawPool.unsubscribe(subId);
                     // Fail closed, same as every other flow.
-                    try { this._userPk = await this._request('get_public_key'); }
+                    try {
+                        const userPk = await this._request('get_public_key');
+                        if (!this._connecting) { reject(new Error('cancelled')); return; }
+                        this._userPk = userPk;
+                    }
                     catch (e) {
                         console.warn('[BUNKER-URL] get_public_key failed:', e?.message);
                         this._signerPk = null; this._connecting = false;

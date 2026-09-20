@@ -77,6 +77,51 @@ try {
  await assert.rejects(vault.unlockWithPin(repairedLegacy,'7'));
  console.log('PASS: weak new vaults refused; historical weak-v2 and legacy AES-GCM backups still recover and upgrade.');
 
+ // Provider boundaries in the shipped bundle. No real account, credential,
+ // popup, or network: inspect browser/HTTP requests and use synthetic PRF data.
+ const savedGlobals=new Map(['navigator','window','localStorage','fetch'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
+ try {
+   const memory=new Map(),requests=[];let createOptions,getOptions;
+   const credential={rawId:new Uint8Array([1,2,3]).buffer,getClientExtensionResults:()=>({prf:{results:{first:prf.buffer}}})};
+   const credentials={create:async opts=>{createOptions=opts;return credential;},get:async opts=>{getOptions=opts;return credential;}};
+   const setGlobal=(k,value)=>Object.defineProperty(globalThis,k,{configurable:true,writable:true,value});
+   setGlobal('navigator',{credentials});setGlobal('window',{location:{hostname:'audit.invalid'}});
+   setGlobal('localStorage',{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)});
+   vault.configureNostrAuth({appName:'Synthetic audit',googleClientId:'synthetic-client',driveVaultName:'synthetic-vault.json'});
+   const recovery=await vault.createRecoveryPasskey('Synthetic');
+   assert.equal(createOptions.publicKey.rp.id,'audit.invalid');
+   assert.equal(createOptions.publicKey.authenticatorSelection.userVerification,'required');
+   assert.equal(createOptions.publicKey.challenge.length,32);
+   const saltUrl=Buffer.from(recovery.prfSalt).toString('base64url');
+   assert.deepEqual(await vault.getRecoveryPasskeyPrf(recovery.credentialId,saltUrl),prf);
+   assert.equal(getOptions.publicKey.userVerification,'required');
+   assert.deepEqual(new Uint8Array(getOptions.publicKey.allowCredentials[0].id),new Uint8Array([1,2,3]));
+   assert.deepEqual(new Uint8Array(getOptions.publicKey.extensions.prf.eval.first),recovery.prfSalt);
+   assert.equal(memory.size,0,'recovery PRF is never persisted locally');
+   credentials.get=async()=>null;await assert.rejects(vault.getRecoveryPasskeyPrf(recovery.credentialId,saltUrl),/cancelled/);
+   credentials.get=async()=>({getClientExtensionResults:()=>({})});
+   await assert.rejects(vault.getRecoveryPasskeyPrf(recovery.credentialId,saltUrl),/PRF_NOT_SUPPORTED/);
+   let oauthOptions;
+   window.google={accounts:{oauth2:{initTokenClient:opts=>{oauthOptions=opts;return {requestAccessToken:()=>opts.callback({access_token:'synthetic-token',scope:opts.scope})};}}}};
+   assert.equal((await vault.requestGoogleAuth()).accessToken,'synthetic-token');
+   assert.deepEqual(oauthOptions.scope.split(' ').sort(),['https://www.googleapis.com/auth/drive.appdata','https://www.googleapis.com/auth/drive.file'].sort());
+   assert.equal(memory.size,0,'OAuth token is not stored locally');
+   setGlobal('fetch',async(url,options)=>{requests.push({url,options});return Response.json({id:'synthetic-created'});});
+   vault.setVaultId('remembered-unopened');
+   assert.equal(await vault.writeVault('synthetic-token',backup,null),'synthetic-created');
+   assert.equal(requests[0].options.method,'POST');assert.ok(!requests[0].url.includes('remembered-unopened'));
+   await vault.writeVault('synthetic-token',backup,'explicit-opened');
+   assert.equal(requests[1].options.method,'PATCH');assert.ok(requests[1].url.includes('/explicit-opened?'));
+   for(const {url,options} of requests){assert.equal(new URL(url).origin,'https://www.googleapis.com');assert.ok(!url.includes('synthetic-token'));assert.equal(options.headers.Authorization,'Bearer synthetic-token');assert.ok(!options.body.includes(nsec));assert.ok(!options.body.includes(pin));}
+   setGlobal('fetch',async()=>Response.json({error:{message:'synthetic denied'}},{status:403}));
+   await assert.rejects(vault.writeVault('synthetic-token',backup,'different-file'),/403/);
+   assert.equal(vault.getVaultId(),'explicit-opened','failed writes cannot replace remembered file');
+   assert.ok(![...memory.values()].includes('synthetic-token'));
+   console.log('PASS: shipped Google/Drive and passkey boundaries enforce scoped requests, verified-user prompts, explicit vault writes, and no stored OAuth/PRF secrets.');
+ } finally {
+   for(const [key,descriptor] of savedGlobals){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}
+ }
+
  // Extract exact served functions through an AST; mock only browser side effects.
  const moduleText=api.PAGE.split('<script type="module">')[1].split('</script>')[0];
  const ast=parse(moduleText,{ecmaVersion:'latest',sourceType:'module'});
@@ -115,6 +160,23 @@ try {
  replacement.identityEpoch++;finishBackup({backup:{},dek:new Uint8Array(32)});
  await assert.rejects(replacing,/identity changed/);assert.equal(replacementWrites.length,0);
  console.log('PASS: new vaults cannot overwrite remembered unopened files; picker cancellation and identity changes perform no write.');
+ for (const operation of ['offerNewPin','offerPasskeyRecovery']) {
+   for (const change of ['none','epoch','choice']) {
+     const writes=[],original={version:'original'},updated={version:'updated'};
+     const ctx={identityEpoch:0,identityChoice:0,lastName:'synthetic',askConfirm:async()=>true,
+       askNewPassphrase:async()=>pin,askSecret:async()=>pin,print(){},verr:String};
+     const changeIdentity=()=>{if(change==='epoch')ctx.identityEpoch++;if(change==='choice')ctx.identityChoice++;return updated;};
+     const kit={isPasskeySupported:async()=>true,createRecoveryPasskey:async()=>({}),
+       wrapDekWithPasskey:async()=>changeIdentity(),withPasskeyWrap:()=>updated,
+       rewrapPin:async()=>changeIdentity(),writeVault:async(...args)=>{writes.push(args);return 'existing-file';}};
+     vm.createContext(ctx);vm.runInContext(fn(operation),ctx);
+     const found={fileId:'existing-file',backup:original};
+     await ctx[operation](kit,'synthetic',found,new Uint8Array(32));
+     assert.equal(writes.length,change==='none'?1:0,operation+' '+change+' must stop stale recovery writes');
+     assert.equal(found.backup,change==='none'?updated:original);
+   }
+ }
+ console.log('PASS: passphrase upgrades and passkey enrollment stop before writing when the active identity changes.');
  let answerExtension;const extensionAnswer=new Promise(r=>answerExtension=r);const adopted=[];
  const extension={identityChoice:0,pendingSignerCard:null,pendingBunker:null,window:{nostr:{getPublicKey:()=>extensionAnswer}},print(){},
    burnPocketIfGraduated:pk=>adopted.push(pk),localStorage:{setItem(){}},reconnect(){}};
@@ -302,5 +364,40 @@ try {
  const cancelledFlow=await cancelled.startClientFlow();
  const cancellation=assert.rejects(cancelledFlow.waitForConnect,/cancelled/);
  cancelled.cancel();await cancellation;
+ // Cancellation after approval but before get_public_key returns must not
+ // resurrect a connected client or persist its session.
+ const late=new BunkerClient({NostrTools:api,relays:['wss://audit.invalid'],storageKey:null,heartbeatMs:0});
+ const lateFlow=await late.startClientFlow();
+ const lateCallback=late._rawPool._listeners[0].onEvent;
+ let finishIdentity,identityStarted;
+ const startedIdentity=new Promise(r=>identityStarted=r);
+ late._request=async()=>{identityStarted();return new Promise(r=>finishIdentity=r);};
+ let lateSaves=0;late.saveSession=()=>lateSaves++;
+ const lateKey=api.nip44.v2.utils.getConversationKey(adversary,late._clientPk);
+ const approval=api.finalizeEvent({kind:24133,created_at:Math.floor(Date.now()/1000),tags:[['p',late._clientPk]],content:api.nip44.v2.encrypt(JSON.stringify({result:new URL(lateFlow.connectUri).searchParams.get('secret')}),lateKey)},adversary);
+ const handling=lateCallback(approval);await startedIdentity;
+ const lateCancellation=assert.rejects(lateFlow.waitForConnect,/cancelled/);
+ late.cancel();finishIdentity(pk);await handling;await lateCancellation;
+ assert.equal(late.connected,false,'cancelled approval cannot restore connected state');
+ assert.equal(late.userPubkey,null);assert.equal(lateSaves,0);late.destroy();
+ for (const useSimplePool of [false,true]) {
+   let published,receive,finish,started;
+   const sent=new Promise(r=>published=r),identityPending=new Promise(r=>started=r);
+   const pool={ensureRelay:async()=>({publish:async ev=>published(ev)}),subscribeMany(_relays,_filters,handlers){receive=handlers.onevent;return {close(){}};}};
+   const urlClient=new BunkerClient({NostrTools:api,storageKey:null,heartbeatMs:0,...(useSimplePool?{simplePool:pool}:{})});
+   urlClient._request=async()=>{started();return new Promise(r=>finish=r);};
+   let saves=0;urlClient.saveSession=()=>saves++;
+   const login=urlClient.connectBunkerUrl('bunker://'+api.getPublicKey(adversary)+'?relay=wss%3A%2F%2Faudit.invalid');
+   const rejectedLogin=assert.rejects(login,/cancelled/);
+   if(!useSimplePool){urlClient._rawPool.publish=ev=>published(ev);receive=urlClient._rawPool._listeners[0].onEvent;}
+   const requestEvent=await sent;
+   const key=api.nip44.v2.utils.getConversationKey(adversary,urlClient._clientPk);
+   const request=JSON.parse(api.nip44.v2.decrypt(requestEvent.content,key));
+   const reply=api.finalizeEvent({kind:24133,created_at:Math.floor(Date.now()/1000),tags:[['p',urlClient._clientPk]],content:api.nip44.v2.encrypt(JSON.stringify({id:request.id,result:'ack'}),key)},adversary);
+   const receiving=receive(reply);await identityPending;
+   urlClient.cancel();finish(pk);await receiving;await rejectedLogin;
+   assert.equal(urlClient.connected,false);assert.equal(urlClient.userPubkey,null);assert.equal(saves,0);urlClient.destroy();
+ }
+ console.log('PASS: cancellation during identity lookup cannot resurrect or save QR, raw-relay, or SimplePool signer sessions.');
  console.log('PASS: QR secret binding, signature checks, resumed subscriptions, stale socket close, and cancellation.');
 } finally {await rm(dir,{recursive:true,force:true});}
