@@ -1987,7 +1987,7 @@ export const PAGE = `<!doctype html>
   }
   /* The first walk owns the log until the player finishes or skips it. */
   body[data-tutorial="on"] #log > :not(.guide-step) { display: none; }
-  body[data-tutorial="on"] :is(#scene, #sky, #mobs, #loggrip) { display: none; }
+  body[data-tutorial="on"] :is(#scene, #sky, #mobs, #loggrip, #chips) { display: none; }
   body[data-tutorial="on"] #log {
     flex: 1 1 auto !important;
     height: auto !important;
@@ -3488,6 +3488,7 @@ var dialAttempt = 0;
 var freshLoad = true;    // this page just loaded with an EMPTY scroll — the first connect must ask the server to repaint the room (fresh=1), or a fast refresh lands on a blank pane. A websocket reweave keeps its scroll and never sets this.
 
 async function connect() {
+  if (typeof guideActive === "function" && guideActive()) return;
   // The stilled tab never dials, whoever asks, and neither does a page whose
   // player has not crossed the threshold. Both guards sit on the door as well
   // as on wakeReconnect: the whole shape of this bug, twice now, has been a
@@ -3688,7 +3689,7 @@ async function connect() {
       // are one-shot: they run once and drop back to whatever they were doing.
       mobBeat(f.swung, f.struck, f.died, f.fed);
     } else if (f.t === "bench") {
-      if (f.open) { renderBench(f); guideNotice("inventory"); } else closeBench();
+      if (f.open) { renderBench(f); } else closeBench();
     } else if (f.t === "trade") {
       if (f.open) renderTrade(f); else closeTrade();
     } else if (f.t === "forge") {
@@ -3933,12 +3934,12 @@ function sendCmd(text) {
     return;
   }
   history.unshift(text); histAt = -1;
+  if (guideCommand(t)) return;
   // Speech doesn't need an echo. The server answers every spoken line with
   // 'You say, "..."' \\u2014 so echoing the command first just prints the words twice
   // and buries the conversation in its own scaffolding. Commands still echo:
   // there, seeing exactly what you typed is the whole point.
   if (!isSpeech(t)) print("\\u25b8 " + text, "echo");
-  guideNotice(t); // the first walk listens for its steps
   if (localCmd(text)) return;
   if (queuePrivateTell(t)) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "cmd", text: text }));
@@ -10164,13 +10165,13 @@ function crossThreshold() {
   setTimeout(function () { threshold.remove(); }, 1000);
   if (guideFresh) guideStart();
   print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
-  connect();
+  if (!guideActive()) connect();
   if (!phoneControls()) cmd.focus();
   // Start before connecting so new players never see a burst of welcome text.
 }
 thrEnter.addEventListener("click", crossThreshold);
 
-// THE FIRST WALK: five isolated lessons in the log — where this game's
+// THE FIRST WALK: five lessons with readable scrollback in the log — where this game's
 // teaching belongs — each one explaining a real system, each advancing only
 // when you DO the thing it asked. Auto-runs once for a freshly minted key;
 // 'tutorial' replays it for anyone; 'tutorial off' ends it. The lessons
@@ -10180,7 +10181,9 @@ var guideFresh = !stored && !localStorage.getItem("nomad_guided");
 var GUIDE_LESSONS = [
   { re: null, text: [
     "\\u2500 THE FIRST WALK (1/5) \\u2500 the world \\u2500",
-    "This is one live dungeon, shared by everyone in it. It is not",
+    "This is practice: commands here do not move or change your character.",
+    "Scroll up any time to reread earlier lessons.",
+    "Beyond this walkthrough is one live dungeon, shared by everyone. It is not",
     "paused when you look away: creatures hunt, eat, sleep, and hold",
     "grudges \\u2014 they remember faces, and yours is a face. The other",
     "names you meet down here are real people. ('tutorial off' ends this walk)",
@@ -10192,7 +10195,7 @@ var GUIDE_LESSONS = [
     "things travel with you everywhere: light and noise. The deep is",
     "truly dark \\u2014 carry a torch and 'light' it, or see nothing while",
     "everything sees you. And all you do makes sound; sound draws feet.",
-    "\\u2192 type 'go' and any exit the room names.",
+    "\\u2192 practice moving: type 'go north'.",
   ] },
   { re: /^go\\s/, text: [
     "\\u2500 lesson 3/5 \\u2500 your hands \\u2500",
@@ -10252,14 +10255,29 @@ function paintWayHome() {
 function updateGuideExits() {
   var exits = document.getElementById("guide-exits");
   if (!exits) return;
-  var directions = lastSuggest.filter(function (c) { return /^go\\s/.test(c); });
-  exits.textContent = directions.length
-    ? "Available exits: " + directions.join(", ") + "."
-    : "Waiting for the room's exits. You can type 'look' to check again.";
+  exits.textContent = "Practice exit: go north. Your real character stays where it is.";
+}
+function guideCommand(text) {
+  if (!guideActive()) return false;
+  var lower = text.toLowerCase();
+  if (lower === "tutorial off" || lower === "tutorial stop") { guideOff(); return true; }
+  if (lower === "tutorial") { guideStart(); return true; }
+  if (lower === "keys") { idbtn.click(); return true; }
+  var expected = guideAt < GUIDE_LESSONS.length && GUIDE_LESSONS[guideAt].re;
+  if (expected && expected.test(lower) && (guideAt !== 2 || lower === "go north")) {
+    print("Practice: " + text + " — nothing sent to the live dungeon.", "sys guide-step");
+    guideNotice(text);
+  } else {
+    print("Follow the current lesson above, or type 'tutorial off' to enter the live dungeon.", "sys guide-step");
+  }
+  return true;
 }
 function guidePrint(i) {
-  log.querySelectorAll(".guide-step").forEach(function (el) { el.remove(); });
+  // Keep completed lessons and their exit snapshot available for scrolling back.
+  var previousExits = document.getElementById("guide-exits");
+  if (previousExits) previousExits.removeAttribute("id");
   print(GUIDE_LESSONS[i].text.join("\\n"), "sys guide-step");
+  var lesson = log.lastElementChild;
   if (i === 1) {
     var exits = document.createElement("div");
     exits.id = "guide-exits"; exits.className = "guide-step";
@@ -10272,9 +10290,10 @@ function guidePrint(i) {
     finish.addEventListener("click", guideOff);
     log.appendChild(finish);
   }
-  log.scrollTop = 0;
+  log.scrollTop += lesson.getBoundingClientRect().top - log.getBoundingClientRect().top - 14;
 }
 function guideStart() {
+  log.querySelectorAll(".guide-step").forEach(function (el) { el.remove(); });
   guideAt = 1;
   document.body.dataset.tutorial = "on";
   guidePrint(0);

@@ -194,7 +194,7 @@ try {
  assert.deepEqual(signerWrites,[]);assert.equal(selection.pendingBunker,null);
  console.log('PASS: a superseded extension selection cannot change the active identity.');
  const wire=[],printed=[],imports=[];
- const ctx={history:[],histAt:-1,inGatehouseNow:true,ws:{readyState:1,send:s=>wire.push(JSON.parse(s))},print:s=>printed.push(s),guideNotice(){},importKey:s=>imports.push(s)};
+ const ctx={history:[],histAt:-1,inGatehouseNow:true,ws:{readyState:1,send:s=>wire.push(JSON.parse(s))},print:s=>printed.push(s),guideCommand:()=>false,importKey:s=>imports.push(s)};
  const declarations=['SPEECH_VERBS','GATEHOUSE_CMDS','GATEHOUSE_NOARG_CMDS'].map(name=>{const n=ast.body.find(n=>n.type==='VariableDeclaration'&&n.declarations.some(d=>d.id.name===name));assert.ok(n);return moduleText.slice(n.start,n.end);}).join('\n');
  vm.createContext(ctx);vm.runInContext(declarations+'\n'+fn('isSpeech')+'\n'+fn('sendCmd')+'\n'+fn('localCmd'),ctx);
  for(const verb of ['login','LOGIN','Login']) for(const sep of [' ', '\t', '\u00a0', '\n', '  ']) {

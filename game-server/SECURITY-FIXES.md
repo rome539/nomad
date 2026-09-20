@@ -214,7 +214,7 @@ Remaining closure evidence:
 | Item | Evidence still needed |
 | --- | --- |
 | Google production configuration | Authorized OAuth origins, Picker key API/referrer restrictions, project access and consent configuration from the provider console. |
-| Real recovery flows | A disposable test identity completing Google consent, Drive save/reopen, physical passkey recovery, wrong/cancelled prompts, and real signer approval/cancellation. |
+| Real recovery flows | Google/Drive and physical passkey evidence is recorded below. Real external signer approval/cancellation remains open; cross-app Picker import and additional browser/authenticator combinations are not established. |
 | Legacy custody | Owner demonstrates the same identity and a separately decryptable backup, then explicitly authorizes retirement of the legacy record. |
 | Operational access | Account/CI principal permissions, MFA/recovery arrangements, and secret generation/rotation evidence without recording secret values. |
 | Existing weak vaults | Each owner upgrades their own wrap; code changes cannot retroactively strengthen stored ciphertext. |
@@ -244,3 +244,41 @@ an update notice. Existing clients must refresh to load the new browser code.
 The owner/provider-dependent closure items above remain open. This deployment
 does not establish real Google consent, physical passkey or external signer
 approval behavior, and does not retire legacy recovery records.
+
+### User-operated production recovery checks — 2026-09-20
+
+These checks were performed by the user on production after the release above.
+Evidence consists of user reports and screenshots, not an automated observation
+of provider prompts or inspection of the stored ciphertext. No account identifiers,
+public keys, passphrases, or recovery secrets are recorded here.
+
+- Google sign-in reached an existing Drive vault's unlock prompt.
+- An incorrect passphrase returned to the unlock prompt. Cancelling the unlock,
+  alternate-file, and replacement prompts ended with “the vault stays shut.”
+- The user explicitly authorized replacing that vault, then observed confirmation
+  that the new vault was sealed and physical passkey recovery was added in Chrome.
+- In a separate browser login, the new passphrase restored the same public key.
+- Physical passkey recovery in Chrome restored the same public key and offered a
+  passphrase change.
+- After saving a different passphrase, the user confirmed that the previous
+  passphrase was rejected and the replacement passphrase restored the identity.
+
+This completes the exercised Google/Drive unlock, cancellation, authorized
+replacement, passphrase recovery, physical passkey recovery, and passphrase-change
+checks. It does not prove provider administrative settings, cross-app Picker
+import, passkey recovery after the passphrase change, or every device/browser
+combination. Legacy server custody retirement remains a separate operation;
+replacing a Drive vault does not authorize deleting server recovery records.
+
+### User-operated external signer checks — 2026-09-20
+
+The user tested Clave on iPhone: cancelling the connection did not log in, and
+subsequently approving the connection logged in with the public key matching the
+identity selected in Clave. These are user-reported production observations.
+
+The user reported multiple NOMAD entries in Clave's connected-client list and
+clarified that these appeared after starting fresh signer logins. Refreshing an
+already signed-in NOMAD tab restored the same identity without creating another
+Clave client. Cancellation, approved login, and saved-session reuse therefore
+passed in this user-operated Clave/iPhone test. Other signers and device/browser
+combinations are not established by this evidence.

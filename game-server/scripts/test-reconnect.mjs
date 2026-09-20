@@ -22,7 +22,7 @@ function setup() {
     failedOpens: 0, freshLoad: true, dialAttempt: 0, pageId: 'test', CONNECT_STALL_MS: 10000, FRAY_QUIET_MS: 3000,
     location: { protocol: 'https:', host: 'test.invalid' }, print: t => lines.push(t),
     fetch: async () => ({ ok: true, status: 200, json: async () => ({ ticket: 'synthetic' }) }),
-    history: [], localCmd: () => false, queuePrivateTell: () => false, isSpeech: () => false, guideNotice() {},
+    history: [], localCmd: () => false, queuePrivateTell: () => false, isSpeech: () => false, guideCommand: () => false,
     WebSocket: class { constructor() { this.readyState = 0; this.sent = []; sockets.push(this); } send(s) { this.sent.push(s); } close() { this.readyState = 2; } },
   };
   for (const name of ['closeBench', 'closeTrade', 'closeMap', 'closeJournal', 'closeForge', 'closeBounty', 'closeSwap']) c[name] = () => {};
