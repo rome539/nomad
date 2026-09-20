@@ -2,7 +2,7 @@
 // WHICH BUILD THIS IS. Derived from the served page rather than a number
 // somebody has to remember to bump: any change to the client changes this, and
 // nothing else can. The client is told its own id at serve time and the world's
-// id on the wire, and reloads itself when they stop matching.
+// id on the wire, and offers a refresh when they stop matching.
 //
 // A player with the game open across a deploy keeps the OLD script and gets the
 // NEW assets, which is how a strip drawn as one flat picture reached a real
@@ -2032,6 +2032,7 @@ export const PAGE = `<!doctype html>
     body[data-view="image"][data-log="big"] #loggrip { transform: translateY(calc(var(--logh) - min(55dvh, calc(var(--play-height, 100dvh) - 220px)))); }
     body.command-focus #inputline { transform: translateY(calc(-1 * var(--keyboard-cover, 0px))); z-index: 3; }
   }
+
 </style>
 </head>
 <body>
@@ -4320,32 +4321,24 @@ var lastCombat = false;
 // reconnects without a word, so a page open across one keeps its OLD script and
 // is handed the NEW assets - which is how a creature strip drawn as one flat
 // picture reached a real player. The page now carries the id of the build it
-// came from and the room frame carries the world's; when they part, it reloads.
+// came from and the room frame carries the world's; a mismatch shows a notice.
 //
-// NOT the instant it notices. A reload mid-fight costs a round, and the whole
-// point of a state-safe deploy is that nobody loses anything to it - so it waits
-// for the fight to end, which is seconds away at most.
+// A new build is a notice, never a forced navigation during play.
 var staleBuild = false;
 function checkBuild(world) {
   if (!BUILD || BUILD.charAt(0) === "_" || world === BUILD) return;  // unstamped in dev
   if (staleBuild) return;
   staleBuild = true;
-  // ONCE. If something is serving a page the world disagrees with, reloading in
-  // a loop makes it worse and hides the cause, so a second attempt inside the
-  // minute says so and leaves the page alone.
-  var last = 0;
-  try { last = +(sessionStorage.getItem("nomad_reloaded") || 0); } catch (e) {}
-  if (Date.now() - last < 60000) {
-    print("\u2014 the world has been rebuilt and this page is out of step with it; reload when you can \u2014", "sys");
-    return;
-  }
   maybeReload();
 }
 function maybeReload() {
-  if (!staleBuild || lastCombat) return;
-  try { sessionStorage.setItem("nomad_reloaded", String(Date.now())); } catch (e) {}
-  location.reload();
+  // Deploys must never throw a connected player back to the threshold.
+  // Keep the current session; the player chooses when to refresh the page.
+  if (!staleBuild || buildNoticeShown) return;
+  buildNoticeShown = true;
+  print("— a game update is available; refresh the page when you are ready —", "sys");
 }
+var buildNoticeShown = false;
 // What each chip slot held on the previous render, so a slot whose command
 // changed under the cursor can refuse the click that was already on its way.
 var prevChipCmds = [];
@@ -4469,7 +4462,7 @@ function renderChips(suggest, combat) {
   lastSuggest = suggest;
   var wasFighting = lastCombat;
   lastCombat = !!combat;
-  if (wasFighting && !lastCombat) maybeReload();   // the fight is over: take it now
+  if (wasFighting && !lastCombat) maybeReload();   // idempotent update notice; never navigates
   var followLive = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
   var previousActions = chipsEl.querySelector(".chip-actions");
   var actionScroll = previousActions && chipScrollRoom === lastRoomName && !(lastCombat && !wasFighting) ? previousActions.scrollTop : 0;
@@ -8180,6 +8173,24 @@ function skyPick(hour) {
 var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, blood:1, eclipse:1, fog:1, rain:1, snow:1, "in":1, "after-rain":1 };
 var sceneEl = document.getElementById("scene");
 var skyEl = document.getElementById("sky");
+// Cover may crop the moon off either axis. Keep its disc inside the viewport
+// without stretching it or flipping it vertically; clouds still fill the box.
+function fitSky() {
+  if (!skyEl || !skyEl.getBoundingClientRect) return;
+  var image = skyEl.style.backgroundImage || "";
+  var focus = image.indexOf("/sky/blood.webp") >= 0 ? [462, 169, 83]
+    : image.indexOf("/sky/moon.webp") >= 0 ? [468, 185, 68] : null;
+  skyEl.style.backgroundPosition = "center 55%";
+  if (!focus) return;
+  var rect = skyEl.getBoundingClientRect(), w = rect.width, h = rect.height;
+  if (!w || !h) return;
+  var scale = Math.max(w / 1584, h / 993), radius = focus[2] * scale;
+  var x = Math.max(radius + 8, Math.min(w - radius - 8, w * .30));
+  var y = Math.max(radius + 8, Math.min(h - radius - 8, h * .24));
+  var left = Math.max(w - 1584 * scale, Math.min(0, x - focus[0] * scale));
+  var top = Math.max(h - 993 * scale, Math.min(0, y - focus[1] * scale));
+  skyEl.style.backgroundPosition = left + "px " + top + "px";
+}
 var viewBtn = null;   // built only for a granted key, see buildViewRow
 var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
 var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "";
@@ -8553,6 +8564,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red) {
       // Set every time, cleared when there is no turn: a transform left behind
       // from the last room would mirror a sky that was never asked to be.
       skyEl.style.transform = turn;
+      fitSky();
     }
     // No overlay on a layered room — the sky is real. The only thing that
     // changes is how the ground is lit, and that is a filter that respects the cut.
@@ -9418,6 +9430,7 @@ function fitPicture() {
   var viewportBottom = phoneControls() ? document.body.getBoundingClientRect().bottom : window.innerHeight;
   var bott = Math.max(0, Math.round(viewportBottom - baselineTop));
   document.body.style.setProperty("--botth", bott + "px");
+  fitSky();
   fitMobRow();                     // the row is measured against the box, so it follows
 }
 // WHAT THE WORLD SAYS EACH OF THEM IS DOING. A creature holds this until the

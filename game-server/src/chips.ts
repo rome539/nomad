@@ -98,7 +98,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     try {
       // gh: the client needs to know it's in the tavern, where a bare line is
       // speech and not a command — so it can stop echoing what you said.
-      session.ws.send(JSON.stringify({ v: 0, t: "ctx", combat: false, suggest: inside, gh: true }));
+      session.ws.send(JSON.stringify({ v: 0, t: "ctx", combat: false, suggest: inside, gh: true, build: BUILD_ID }));
     } catch {}
     return;
   }

@@ -18,7 +18,8 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = path.join(HERE, "..", "preview", "mobs.html");
-if (!fs.existsSync(PAGE)) execFileSync(process.execPath, [path.join(HERE, "build-mob-preview.mjs")], { stdio: "inherit" });
+// Always extract the current driver; an ignored preview can survive source edits.
+execFileSync(process.execPath, [path.join(HERE, "build-mob-preview.mjs")], { stdio: "inherit" });
 
 const h = fs.readFileSync(PAGE, "utf8");
 let js = h.slice(h.indexOf("<script>") + 8, h.lastIndexOf("</script>"));
@@ -133,7 +134,11 @@ t("a napper still lies down when it sleeps",inv["hill-wolf"][ctx.poseAt(a,Date.n
 
 a=mk("stone-adder");ctx.set([a]);ctx.applyState(["rest"]);
 const sp=inv["stone-adder"][ctx.poseAt(a,Date.now()).k];
-t("an adder lies out flat to bask",sp==="bask","pose="+sp);
+t("a sleeping adder uses its dedicated resting frame",sp==="rest","pose="+sp);
+// Retain coverage for sheets with a basking pose but no dedicated rest frame.
+ctx.ANIM["_basking"] = { n: 2, aspect: 1, f: { idle: 0, bask: 1 } };
+a=mk("_basking");ctx.set([a]);ctx.applyState(["rest"]);
+t("basking remains the sleep fallback without a rest frame",ctx.poseAt(a,Date.now()).k===1);
 
 a=mk("cave-lion");ctx.set([a]);ctx.mobBeat(null,["cave-lion"],["cave-lion"]);
 t("the killing blow reads as death, not a flinch",a.phase==="death");ctx.clr();

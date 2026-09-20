@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, TERRAIN_RULES, CROSSING_RULES } from "./zone-data";
+import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, TERRAIN_RULES, CROSSING_RULES } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -189,6 +189,12 @@ export function isBloodMoon(now = Date.now()): boolean {
   return isNight(now)
     && moonPhase(now) === 0
     && (Math.floor(now / (DAY_CYCLE_MS * MOON_FULL_EVERY)) % BLOOD_MOON_EVERY === 0);
+}
+// The announcement and the art must name the same calendar event.
+export function moonriseLine(now = Date.now()): string {
+  return isBloodMoon(now)
+    ? "A blood moon rises over the grounds, full and red — the hollow things stir beneath it."
+    : MOON_NIGHTS[moonPhase(now)] ?? MOON_NIGHTS[3];
 }
 // Predators hunt harder after dark, outdoors only — day/night has no opinion
 // on indoor rooms, so neither does this. 1 = no change, the common case.

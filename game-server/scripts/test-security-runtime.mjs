@@ -67,6 +67,20 @@ print(json.dumps(out))
  console.log('PASS: signed login/replay and one-use tickets work through real HTTP/WebSocket upgrades; forged privileged headers are stripped.');
  a.send({t:'cmd',text:'in'});b.send({t:'cmd',text:'in'});
  await Promise.all([a.wait(f=>f.t==='ctx'&&f.gh===true),b.wait(f=>f.t==='ctx'&&f.gh===true)]);
+ a.frames.length=0;a.send({t:'cmd',text:'look'});
+ await a.wait(f=>typeof f.text==='string'&&f.text.includes('AuditTwo is here.'));
+ let leftClosed=false;a.ws.addEventListener('close',()=>{leftClosed=true;});
+ a.frames.length=0;b.frames.length=0;
+ a.send({t:'cmd',text:'out'});await a.wait(f=>f.t==='ctx'&&!f.gh);
+ b.send({t:'cmd',text:'look'});
+ await b.wait(f=>typeof f.text==='string'&&f.text.includes('You have it to yourself.'));
+ assert.equal(leftClosed,false);assert.equal(a.ws.readyState,1);
+ a.send({t:'cmd',text:'in'});await a.wait(f=>f.t==='ctx'&&f.gh);
+ b.frames.length=0;b.send({t:'cmd',text:'look'});
+ await b.wait(f=>typeof f.text==='string'&&f.text.includes('AuditOne is here.'));
+ console.log('PASS: look shows current gatehouse occupants after exit/re-entry; exiting keeps the same socket connected.');
+ // Let the command bucket refill after the presence scenario before testing tells.
+ await new Promise(resolve=>setTimeout(resolve,3100));
  const id=crypto.randomUUID();a.send({t:'tell-key',id,who:'AuditTwo'});
  const recipient=await a.wait(f=>f.t==='tell-key'&&f.id===id);assert.equal(recipient.to,pk2);
  const secret='synthetic runtime private word';

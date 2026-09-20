@@ -53,7 +53,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, worldDay, nightHuntMult, eclipsePhase, isBloodMoon } from "./zone-util";
+import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -103,7 +103,7 @@ import {
   SHELTER_ROOMS, YEW_ROOM, GIBBET_ROOM,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_NIGHTS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   BAD_TRAIT_POOL, BAD_TRAIT_SHARE, SECOND_TRAIT_ODDS, TEMPERED_WEAR_MULT, BRITTLE_WEAR_MULT, GREASED_RUST_MULT, PITTED_RUST_MULT, FLEECED_COLD_MULT, SODDEN_COLD_MULT,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, MOB_HIT, MOB_VITALS,
@@ -1214,6 +1214,7 @@ export class ZoneDO implements DurableObject {
     }
 
     await this.init(zone);
+    await this.hydrateSessions(); // include parked occupants before describing the shared gatehouse
     // The first observer in a while collapses the elapsed time. "Observed" now
     // means a live socket, hibernated or not (getWebSockets) — while any socket
     // is parked the alarm keeps ticking the world, so it was never truly dark.
@@ -4864,7 +4865,7 @@ export class ZoneDO implements DurableObject {
       // which night of the month this is, and the waxing half counts you down
       // to the one night the grounds stay lit (zone-data MOON_NIGHTS).
       const line = nightNow
-        ? MOON_NIGHTS[moonPhase(now)] ?? MOON_NIGHTS[3]
+        ? moonriseLine(now)
         : "Dawn breaks over the grounds — the dark thins and lifts.";
       for (const s of this.sessions.values()) {
         if (this.outOfWorld(s) || !OUTDOOR_ROOMS.has(s.roomId)) continue;

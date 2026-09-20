@@ -2233,7 +2233,7 @@ export function keeperNods(z: ZoneDO, arrival: Session): void {
 }
 
 export function gatehouseFolk(z: ZoneDO): Session[] {
-  return [...z.sessions.values()].filter((s) => z.outOfWorld(s));
+  return [...z.sessions.values()].filter((s) => z.outOfWorld(s) && !s.linkdeadUntil && s.ws.readyState === 1);
 }
 
 // The tavern's only channel. In memory, over the sockets, gone when it's said.
@@ -2469,8 +2469,9 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
       : s.pose === "crouch" ? " (down on their heels)"
       : s.pose === "point" ? ` (pointing at ${s.poseAt ?? "something"})`
       : s.resting ? " (dozing)" : ""));
-    lines.push(names.length === 1
-      ? `${names[0]} is here.`
+    lines.push(names.length > 6
+      ? `Here:\n${names.sort((a, b) => a.localeCompare(b)).map(name => "  " + name).join("\n")}`
+      : names.length === 1 ? `${names[0]} is here.`
       : `Here: ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}.`);
   }
   lines.push("(Anything you type in here is spoken aloud. 'out' returns you to the world.)");
@@ -2572,7 +2573,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     const folk = gatehouseFolk(z);
     return z.send(session, folk.length === 1
       ? "You're the only one by the fire."
-      : `By the fire: ${folk.map((s) => s.name).join(", ")}.`);
+      : `By the fire — ${folk.length} people (including you):\n${folk.map((s) => s.name).sort((a, b) => a.localeCompare(b)).map(name => "  " + name).join("\n")}`);
   }
   // The wall chart: in here, carving means the wall, and studying means the wall.
   // (Out in the dark, carve still scratches a room and study still reads corpses.)
