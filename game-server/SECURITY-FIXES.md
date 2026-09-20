@@ -176,7 +176,7 @@ was rerun successfully after both follow-up fixes; the full security suite
 exercises the final fixes and synthetic provider boundaries.
 
 This follow-up fix is recorded with its tests in the dedicated security follow-up
-commit; it has not been deployed by this review.
+commit and was deployed in the verified September 20 release recorded below.
 Existing workspace edits were preserved. Real Google consent/Drive recovery,
 external signer approvals, physical passkey prompts, legacy custody retirement,
 and provider access/secret-lifecycle review remain open. No production credentials,
@@ -220,5 +220,27 @@ Remaining closure evidence:
 | Existing weak vaults | Each owner upgrades their own wrap; code changes cannot retroactively strengthen stored ciphertext. |
 
 Both follow-up fixes are grouped in the dedicated security follow-up commit,
-separate from the ongoing gatehouse changes. The original production release does
-not contain them until a subsequent deployment is verified.
+separate from the gatehouse changes, and are included in the verified release below.
+
+### Verified production release — 2026-09-20
+
+With user authorization, code through `e6dcbb6` (including security commit
+`7554865`) was pushed to `nomad/main` and deployed to both production domains.
+The release also fixes blood-moon announcements, keeps moon artwork in view across
+screen sizes, restores gatehouse occupants, and replaces automatic refreshes with
+an update notice. Existing clients must refresh to load the new browser code.
+
+- Worker version: `f26e3ae2-2ee9-4404-8f8e-00b991e1770f`.
+- Verified browser build: `38lmgf`, matching the tested local source on both domains.
+- Previous production version for rollback: `d144c31d-c21c-41e6-8624-ea394c3c804f`.
+- Pre-release security, runtime/browser, type, served-script, gatehouse, moon clock,
+  moon framing, scene lighting, and animation checks passed. The final privacy scan
+  and deployment dry run passed.
+- Live checks confirmed both follow-up fixes, exact cryptographic bundle matches,
+  security headers, blocked source-map/retired custody routes, unauthenticated
+  admin rejection, synthetic signed login, login replay rejection, live WebSocket
+  status, and single-use ticket rejection.
+
+The owner/provider-dependent closure items above remain open. This deployment
+does not establish real Google consent, physical passkey or external signer
+approval behavior, and does not retire legacy recovery records.
