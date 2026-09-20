@@ -8244,10 +8244,40 @@ export class ZoneDO implements DurableObject {
   public artSkyFor(session: Session): string | undefined {
     if (!ART_KEYS.has(session.pubkey)) return undefined;
     const openSkyForArt = !this.outOfWorld(session) && this.world!.entryRooms.has(session.roomId);
-    return (!OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt) ? "in"
-    : (openSkyForArt ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId)) ? "snow"
-    : (openSkyForArt ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId)) ? "fog"
-    : (openSkyForArt ? events.weatherNow(this, session.roomId) === "rain" : events.raining(this, session.roomId)) ? "rain"
+    // A ROOF IN OPEN COUNTRY IS NOT A FORTRESS INTERIOR (rome, 2026-09-20: the
+    // Carter's Rest showing him daylight on a night the rest of the world was
+    // dark).
+    //
+    // "in" means there is no sky over this room at all, and SKY_BASE maps it to
+    // the DAY slot - which is right for the sealed places it was written for,
+    // and badly wrong for a three-walled cart shelter beside a road. The room is
+    // in INDOOR_ROOMS because it keeps the rain off you, which it does; but you
+    // can stand in it and see the hour perfectly well, and it was painting a
+    // sunlit road at midnight.
+    //
+    // It is the same split the plate book already draws for SHELTERED, one level
+    // out: what stops at the stone is the PICTURE OF THE WEATHER, not the hour.
+    // So a roofed room standing in an outdoor region keeps its shelter - the
+    // weather branches below are skipped for it, no rain plate, no snow - and
+    // takes the hour like everything around it. Only the genuinely sunless
+    // places, the keep and the warrens and the deep, still answer "in".
+    //
+    // THE ROAD ONLY, AND ON PURPOSE. Twenty-nine rooms in the world have a roof
+    // in open country - nine on the road, and twenty more across the dens, the
+    // open ground and the wood - and the same argument is true of all of them.
+    // But "in" is a wash the client already knows how to draw, so widening this
+    // to every region would repaint twenty interiors nobody asked about, in
+    // three bands that have no ground plates at all yet and so gain nothing by
+    // it. The road is the band with pictures and the one that showed the fault.
+    //
+    // The other three want exactly this treatment the day their bands are
+    // painted, and then this is one word.
+    const roofed = !OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt
+      && this.world!.rooms.get(session.roomId)?.region === "road";
+    return (!OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt && !roofed) ? "in"
+    : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId))) ? "snow"
+    : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId))) ? "fog"
+    : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "rain" : events.raining(this, session.roomId))) ? "rain"
     // A BLOOD MOON IS ITS OWN NIGHT. It was collapsing into plain dark,
     // so the one night in the calendar the whole world changes colour —
     // red eyes in the hollow ones, the full-moon door shut — looked
