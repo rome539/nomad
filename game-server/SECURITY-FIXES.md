@@ -214,7 +214,7 @@ Remaining closure evidence:
 | Item | Evidence still needed |
 | --- | --- |
 | Google production configuration | Authorized OAuth origins, Picker key API/referrer restrictions, project access and consent configuration from the provider console. |
-| Real recovery flows | Google/Drive and physical passkey evidence is recorded below. Real external signer approval/cancellation remains open; cross-app Picker import and additional browser/authenticator combinations are not established. |
+| Real recovery flows | Google/Drive, physical passkey, and Clave approval/cancellation/session-reuse evidence is recorded below. Cross-app Picker import, passkey recovery after passphrase change, and additional browser/authenticator combinations are not established. |
 | Legacy custody | Owner demonstrates the same identity and a separately decryptable backup, then explicitly authorizes retirement of the legacy record. |
 | Operational access | Account/CI principal permissions, MFA/recovery arrangements, and secret generation/rotation evidence without recording secret values. |
 | Existing weak vaults | Each owner upgrades their own wrap; code changes cannot retroactively strengthen stored ciphertext. |
@@ -282,3 +282,23 @@ already signed-in NOMAD tab restored the same identity without creating another
 Clave client. Cancellation, approved login, and saved-session reuse therefore
 passed in this user-operated Clave/iPhone test. Other signers and device/browser
 combinations are not established by this evidence.
+
+### Verified tutorial release — 2026-09-20
+
+Code through `0c4f60d` was pushed to `nomad/main` and deployed with user
+authorization. Tutorial commands are handled locally, completed lessons remain
+scrollable, and a first-time player does not connect to the live world until
+finishing or skipping practice. Replaying the tutorial does not pause an existing
+character in the shared world.
+
+- Worker version: `44016366-4d98-4c96-8081-d53747e1eef2`.
+- Browser build: `fhum7k`, verified against local source on both production domains.
+- Rollback version: `f26e3ae2-2ee9-4404-8f8e-00b991e1770f`.
+- Tutorial lifecycle and isolated Chrome checks passed at desktop, phone portrait,
+  and phone landscape sizes, including retained scrollback, blocked practice
+  commands on a connected socket, no initial authentication, and return to live play.
+- Security regression, reconnect, type, served-script, privacy, and deployment
+  dry-run checks passed. Post-deploy synthetic login, replay rejection, live socket,
+  security headers, bundle matching, and protected-route checks passed.
+
+Provider administrative settings review was deferred at the user's request.
