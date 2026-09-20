@@ -115,4 +115,10 @@ await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 }
 const kb = Math.round(fs.statSync(path.join(OUT, name + ".webp")).size / 1024);
 // BG_V only matters when a URL the world already has is being replaced. A new
 // filename has nobody's cache to beat.
-console.log(`  wrote public/room-bg/${name}.webp  (${kb}KB)` + (existed ? "  — REPLACED, bump ART_V" : ""));
+// THE NAME IN THIS LINE HAS TO BE A NAME THAT EXISTS. It said ART_V, and the
+// single stamp was split per asset kind a while back - so the one instruction
+// this tool gives you at the one moment it matters named a variable that is not
+// in the code any more. A stamp that does not get bumped is a browser that
+// keeps the old picture for good, which is the exact failure this line is here
+// to prevent. Room plates are BG_V.
+console.log(`  wrote public/room-bg/${name}.webp  (${kb}KB)` + (existed ? "  — REPLACED, bump BG_V in public.ts" : ""));

@@ -7337,7 +7337,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
 var MOB_V  = "36";      // /mob/      strips and their eye layers
-var BG_V   = "31";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "32";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
@@ -7654,11 +7654,17 @@ var GATE_PLATE = {
   // gatehouse in the world has.
   "the-ferry-house":    "day night night-torch fog rain snow",
   "the-crossing-house": "day night night-torch fog rain snow",
-  // "gate", "sally-port", "weeper-arch",
-  // "the-ferry-house", "the-crossing-house",
-  // "the-first-milestone", "the-relay-house",
-  // "the-gate-arch", "the-timber-stack", "the-withy-hut",
-  // "the-shieling", "the-stell", "the-shelter-crag", "the-slabs",
+  // THE FORTRESS'S OWN TWO, AND THE WEST ROAD'S GATE (2026-09-20). The first
+  // two are the oldest doors in the game and were the last without a picture:
+  // the gate every player has walked in through, and the postern the beck line
+  // leaves by. The third is the second gatehouse on the road - the west road's,
+  // where the Relay House is the east's - and it is a milestone with a house
+  // grown onto it rather than a yard with a wall round it.
+  "gate":                "day night night-torch fog rain snow",
+  "sally-port":          "day night night-torch fog rain snow",
+  "the-first-milestone": "day night night-torch fog rain snow",
+  // Still unpainted, of the world's fourteen doors:
+  // "weeper-arch", "the-gate-arch", "the-timber-stack", "the-withy-hut",
 };
 // The nine skies, painted once, shared by every scene in the game. A sky that
 // has not been painted yet leaves the scene on the flat ground colour and takes
@@ -7704,6 +7710,16 @@ var TERRAIN_SCENES = {
   eyot:           "day night night-torch fog rain snow",
   "shore-road":   "day night night-torch fog rain snow",
   works:          "day night night-torch fog rain snow",
+  // THE ROAD, IN THE THREE STATES IT IS IN (2026-09-20). Not three kinds of
+  // ground so much as one road at three ages, which is the region's whole
+  // argument: dressed squared setts with kerbs and a camber that still drains;
+  // the same stone lifted and tipped by frost with grass standing in the
+  // cracks; and no stone at all, two ruts and a spine of turf between them.
+  // A player walking east out of the fortress should be able to watch the road
+  // fail under them without being told.
+  "the-kept-road":           "day night night-torch fog rain snow",
+  "the-frost-heaved-paving": "day night night-torch fog rain snow",
+  "the-cart-ruts":           "day night night-torch fog rain snow",
   // TWO, AND THAT IS THE WHOLE SET IT WILL EVER HAVE. The sea cave is a black
   // interior lit by the torch in your hand: there is no weather in it, no sky
   // over it, and daylight does not reach it. Night is the cave without a torch

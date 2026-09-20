@@ -39,12 +39,21 @@ function liftRules(name) {
   const o = {}; new Function("t", "t.v = " + Z.slice(i, j).replace(/\/\/[^\n]*/g, ""))(o);
   return o.v;
 }
-const RULES = liftRules("CROSSING_RULES");
+// BOTH REGIONS THAT OWN THEIR GROUND, not just the one this test was written
+// for. The road got its own table on 2026-09-20 for exactly the reason the
+// crossing has one, and it arrived with the same hazard: 196 rooms, 26 of them
+// authored in a migration rather than a .rooms file, and a catch-all last rule
+// that hides a miss instead of reporting it. A test that only knew about the
+// crossing would have watched all of that go by.
+const REGIONS = [
+  { region: "crossing", rules: "CROSSING_RULES", files: (f) => f.startsWith("crossing") },
+  { region: "road",     rules: "ROAD_RULES",     files: (f) => /road/.test(f) },
+];
 
 // Every crossing room we can see statically, with its DESCRIPTION, because
 // terrainOf reads the id first and then the prose - a test that checked only
 // ids would fail on rooms the real function resolves perfectly well.
-const rooms = new Map();   // id -> { desc, where, entry }
+let failed = 0;
 // A SQL row is ('id', zone, 'Name', 'Description', is_entry, ...). Scan it
 // properly rather than with a regex: descriptions contain commas, brackets and
 // escaped apostrophes.
@@ -66,7 +75,10 @@ function sqlFields(txt, from) {
   return out;
 }
 const regionsDir = path.join(ROOT, "regions");
-for (const f of fs.readdirSync(regionsDir).filter(f => f.startsWith("crossing") && f.endsWith(".rooms"))) {
+for (const R of REGIONS) {
+const RULES = liftRules(R.rules);
+const rooms = new Map();   // id -> { desc, where, entry }
+for (const f of fs.readdirSync(regionsDir).filter(f => R.files(f) && f.endsWith(".rooms"))) {
   const lines = fs.readFileSync(path.join(regionsDir, f), "utf8").split("\n");
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(/^##\s+([a-z0-9-]+)\s*\|/);
@@ -83,7 +95,7 @@ for (const f of fs.readdirSync(migDir).filter(f => f.endsWith(".sql")).sort()) {
   let at = 0;
   while ((at = txt.indexOf("('", at)) >= 0) {
     const fl = sqlFields(txt, at); at += 2;
-    if (fl.length < 8 || !/^[a-z0-9-]+$/.test(fl[0]) || !fl.includes("crossing")) continue;
+    if (fl.length < 8 || !/^[a-z0-9-]+$/.test(fl[0]) || !fl.includes(R.region)) continue;
     rooms.set(fl[0], { desc: fl[3] || "", where: f, entry: fl[4] === "1" });
   }
 }
@@ -99,12 +111,36 @@ function terrainOf(id, desc) {
 const bare = [...rooms.entries()]
   .filter(([, r]) => !r.entry)
   .filter(([id, r]) => !terrainOf(id, r.desc));
-console.log("crossing rooms found statically: " + rooms.size);
+console.log(R.region + " rooms found statically: " + rooms.size);
 if (bare.length) {
-  console.log("\nFAIL - these match no CROSSING_RULES entry, so they fall out of the");
+  failed += bare.length;
+  console.log("\nFAIL - these match no " + R.rules + " entry, so they fall out of the");
   console.log("layered scene path and paint the old band wash instead:");
   for (const [id, r] of bare) console.log("  " + id.padEnd(26) + r.where);
   console.log("\nAdd each to the rule for the ground it actually is.");
-  process.exit(1);
+} else {
+  console.log("  every one resolves to a terrain - none falls through to the wash");
 }
-console.log("every one resolves to a terrain - none falls through to the wash");
+// ...AND A TABLE THAT ENDS IN A CATCH-ALL CANNOT FAIL THE CHECK ABOVE, which
+// makes the check a green light that means nothing for that region. The road's
+// last rule matches anything on purpose - a gap in a road is the one thing a
+// player walks straight through - so the real question is not "did everything
+// resolve" but "what did the catch-all quietly absorb". A room added later that
+// is a mill or a marsh lands on dressed paving and nothing says so. Printed
+// rather than failed, because the catch-all is deliberate: it is the number to
+// look at when this region grows.
+const last = RULES[RULES.length - 1];
+if (String(last[1]) === "/.*/") {
+  const took = [...rooms.entries()].filter(([, r]) => !r.entry)
+    .filter(([id, r]) => {
+      for (const [name, re] of RULES.slice(0, -1)) {
+        if (re.test(id)) return false;
+        if (r.desc && re.test(r.desc.toLowerCase())) return false;
+      }
+      return true;
+    });
+  console.log("  " + took.length + " of them reached the catch-all and were called " + last[0] + ":");
+  console.log("    " + took.map(([id]) => id).join(" "));
+}
+}
+if (failed) process.exit(1);

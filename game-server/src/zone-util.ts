@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, TERRAIN_RULES, CROSSING_RULES } from "./zone-data";
+import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -95,7 +95,12 @@ export function terrainOf(roomId: string, desc?: string, region?: string): strin
   // INSTEAD of the common one rather than in front of it - falling through would
   // only hand the leftovers back to the same wrong answers - and it is complete,
   // so nothing falls through. Every other region is untouched by this.
-  const rules = region === "crossing" ? CROSSING_RULES : TERRAIN_RULES;
+  // ...AND SO DOES THE ROAD, for the same reason and with the same result: see
+  // the note on ROAD_RULES. Both tables run INSTEAD of the common one rather
+  // than in front of it, because falling through would only hand the leftovers
+  // back to the answers that were wrong in the first place.
+  const rules = region === "crossing" ? CROSSING_RULES
+    : region === "road" ? ROAD_RULES : TERRAIN_RULES;
   // THE NAME FIRST, BECAUSE A NAME IS A CLAIM. "The Warm Scree" says scree.
   for (const [name, re] of rules) if (re.test(roomId)) return name;
   // ...AND THEN WHAT THE ROOM ACTUALLY SAYS ABOUT ITSELF, because most names

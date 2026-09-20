@@ -6481,6 +6481,61 @@ export const CROSSING_RULES: [string, RegExp][] = [
   ["shore-road", /road|\blane\b|cart-ruts|drove|parting|passengers-rest|toll-board|gull-flats|wildfowler|shepherds-stone|far-shore-stone|shore-descent|strand|stair/],
 ];
 
+// THE ROAD'S OWN GROUND, on the same terms as the crossing's above.
+//
+// Measured against the road's 170 rooms, the common rules below left FIFTY-NINE
+// with no ground at all - which drops the client off the layered path onto the
+// old flat wash - and answered most of the rest with the mountain: twenty-six
+// rooms of dressed paving were painted as a crag, four as a snowfield. Walking
+// east out of the fortress you got a cliff face, then a bare wash, then a stone
+// shelf, then a snowfield, on a road that never leaves the low country.
+//
+// THE PRINCIPLE THE ORDER ENCODES: a room is named for what you can SEE from
+// it, and the plate is what you are STANDING ON. The Elm Avenue is the paved
+// road with elms down the verge; the Crooked Gibbet is the paved road with a
+// gibbet beside it; the Hollow Way is a road running between banks that are
+// revetted dry stone in the fortress's own hand. Reading those names as
+// woodland and as furniture is what put a third of the road on somebody else's
+// ground and made it change underfoot every few steps. So the departures are
+// named one by one, and everything left over is the road.
+//
+// It is complete by construction - the last rule matches anything - and that is
+// deliberate: a road region cannot have a room with no ground, because a gap in
+// a road is the one thing a player walks straight through.
+export const ROAD_RULES: [string, RegExp][] = [
+  // Twenty-six of these rooms are not in any regions/*.rooms file - they were
+  // hand-authored in migration 225 and carry region 'road' in the world table,
+  // so a survey of the region sources alone MISSES them and the catch-all below
+  // would have painted a hut yard, a drying shed and a corpse road as dressed
+  // Roman setts. Check against the rooms table, not the sources.
+  // --- THE BECK LINE. The rooms that leave the road at the postern and do not
+  // come back to it until the scarp: a ditch, a carr, a mill, a gill.
+  ["gully",    /^the-(postern-ditch|drain-mouth|grave-drain|culvert)$/],
+  ["alder",    /^the-(postern-carr|withy-beds|osier-island|sunken-alders|hanging-wood|otter-holt|peat-cuttings|dead-alders|osier-landing|willow-landing|peat-cuts|oak-hollow|hollow-oak)$/],
+  ["beck",     /^the-(spring-bank|stepping-stones|beck-mouth|mill-leat|drowned-mill|mill-loft|tail-race|hatchpool|force|fall-shelter|gill-foot|gill-pot|rowan-gill|gill-narrows|shepherds-ford|spring-line|beck-head|beck-stair|drowned-ford|scarp-spring|bothy-spring|shallow-ford|tussock-ford|flooded-quarry|cattle-drink)$/],
+  ["marsh",    /^the-(millpond|flood-mead|marl-hole|fen-edge|fen-gut|quaking-flat|open-water|ditch-end|lapwing-flat)$/],
+  ["causeway", /^the-(moss-path|turf-road|wet-furlong|dam-walk|plank-crossing|plank-bridge|sinking-path|drowned-hurdles|rush-shore|waste-foot)$/],
+  ["reed",     /^the-(rush-ground|trap-line|eel-traps|heron-stand)$/],
+  ["scree",    /^the-scree-run$/],
+  // --- THE RISE. The scarp face and the shelf above it, where the road is a
+  // track cut into rock and rock is what you see.
+  ["crag",     /^the-(crag-foot|first-hairpin|second-hairpin|third-hairpin|cutting-ledge|rope-post|scarp-top|scarp-foot|quarry-turn|cutting|chalk-cut|cut-bank)$/],
+  ["cairn",    /^the-(top-wall|bank-and-ditch|high-shelf|boundary-cairn|watershed|first-sight|far-shore-stone|shelter-stone|wind-scoured-ridge|drovers-cairn|high-common|common-boundary|hare-ground|marker-stone|saddle-gap|open-heath|high-gorse|wether-slope)$/],
+  // --- THINGS PEOPLE BUILT AND LEFT, off the verge rather than on it.
+  ["fold",     /^the-(wether-fold|herds-hut|hut-yard|first-fold|broken-fold|hanging-fold|shepherds-bothy|fallen-dyke|pinfold|sheep-fold|drove-pound|sheep-creep)$/],
+  ["glass",    /^the-(burnt-brake|burnt-farmstead|smithy-ruin|road-kiln)$/],
+  ["works",    /^the-(winding-house|peat-house|faggot-stack|turf-stacks|well-house|roadwarden-post|mustering-yard|weighbridge|tollkeepers-ruin|toll-stone|dry-well)$/],
+  // --- AND THE ROAD ITSELF, IN THE THREE AGES IT IS IN. One road, three
+  // photographs, and a player walking west should be able to watch it fail
+  // under them without being told: dressed stone, then stone the frost has
+  // lifted, then no stone at all.
+  // No stone left: two ruts and a spine of turf. The droves and the green lanes.
+  ["the-cart-ruts", /^the-(beck-lane|deep-lane|fuel-road|gorse-break|lych-way|sheep-trod|sledge-track|cross-field|coffin-stone|wood-gate|hill-gate|cart-road|track|rutted-track|green-lane|holloway|sunken-lane|sunken-drove|drovers-turn|drovers-stance|gap-in-the-trees|thorn-lane|gorse-tunnel|haul-road|spoil-banks|peat-road|drove-green|drove-head|grid-lane|grid-drop|cattle-grid|thorn-drop|grave-verge|wind-row|broken-cross|high-verge)$/],
+  // The stone still there and no longer flat: lifted, tipped, grass in the joints.
+  ["the-frost-heaved-paving", /^the-(broken-paving|weed-paving|last-paving|paving-end|broken-culvert)$/],
+  // Dressed, kerbed, cambered, draining. Everything the road still is.
+  ["the-kept-road", /.*/],
+];
 export const TERRAIN_RULES: [string, RegExp][] = [
   // WORD BOUNDARIES ARE NOT OPTIONAL HERE. Without them "race" caught every
   // TERRACE on the hill and called twenty-five flat rock shelves a mountain
