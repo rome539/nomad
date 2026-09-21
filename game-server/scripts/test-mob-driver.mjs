@@ -290,12 +290,31 @@ for (const id of ROOTED_IDS) {
 t("a rooted creature never idles through a blow or its own death",
   actedOut.length === 0, actedOut.join(" ") || "all " + ROOTED_IDS.length + " clean");
 
-// ...and the rooted ones still have their WORK to cycle through, which is the
-// thing the exclusion above must not take away with it.
-const widow = mk("the-salt-widow");
-t("...and still cycles the work it was drawn doing",
-  widow.spec.acts.indexOf("feed-the-flue") >= 0 && widow.spec.acts.indexOf("work-the-pan") >= 0,
-  widow.spec.acts.join(" "));
+// ...and the work a creature was DRAWN doing still survives that exclusion,
+// which is the thing it must not take away with it.
+//
+// This named the salt widow and her two work poses. She was the only rooted
+// creature that owned two, so she was the natural example - and then she was
+// redrawn with a gait, gave up work-the-pan for it, and the assertion was left
+// testing a creature that no longer fits its own description and a frame that
+// no longer exists (2026-09-21). A test pinned to one creature goes stale the
+// day that creature is redrawn, and it fails pointing at the roster instead of
+// at the rule. So it asks the rule of EVERY creature instead: a work pose that
+// is drawn must come back out of mobActs, whatever else changes about who owns
+// one. The count is printed so the gate cannot quietly end up with no subjects
+// the way the old one did.
+let workless = [], subjects = 0;
+for (const id of Object.keys(ctx.ANIM)) {
+  const spec2 = mk(id).spec;
+  const works = ctx.CALM.filter((c) => spec2.f[c] !== undefined);
+  if (!works.length) continue;
+  subjects++;
+  const lost = works.filter((c) => spec2.acts.indexOf(c) < 0);
+  if (lost.length) workless.push(id + "[" + lost.join(",") + "]");
+}
+t("the work a creature was drawn doing survives into its act list",
+  subjects > 0 && workless.length === 0,
+  workless.join(" ") || "all " + subjects + " workers clean");
 
 // AN ALERT IS NOT AN IDLE. "alert" sat in CALM_POSES as well as WATCH_POSES, so
 // a creature whose only spare frame was one cut to it every three seconds and

@@ -1480,7 +1480,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
         // has always said the animal is eating; only the scavenger's version of
         // this moment ever reached the sprite, so every grazer in the game fed
         // in text while standing idle on screen. Same beat, same signal.
-        z.fxFed(creature.roomId, creature.templateId);
+        z.fxGrazed(creature.roomId, creature.templateId);
         z.refreshRoomCtx(creature.roomId);
       }
     }

@@ -128,12 +128,19 @@ for (const [id, { f }] of Object.entries(anim)) {
   const mk = (o) => Object.assign({
     spec: { f, acts: acts.length ? acts : ["idle"] },
     id, phase: "idle", t: 0, state: "",
-    calm: first(box.CALM, ""), sleep: first(box.SLEEP, "idle"),
+    // EVERY calm pose, not the first - the driver cycles them (2026-09-21), so
+    // an audit that passed only one would go on calling the rest dead.
+    calm: first(box.CALM, ""), calms: box.CALM.filter((k) => f[k] !== undefined),
+    sleep: first(box.SLEEP, "idle"),
     strike: blows[0], strikes: blows, blow: blows[0],
     recoil: first(box.HIT, "idle"), watch: first(box.WATCH, "idle"),
     // The eating frame the client resolves. Without this the feed phase falls
     // back to the literal name "feed" and every grazer's `graze` reads as dead.
-    eat: first(box.EAT, ""),
+    eat: f["feed"] !== undefined ? "feed" : first(box.EAT, ""),
+    // ...and the grazing frame, which is a DIFFERENT act now (2026-09-21): the
+    // server sends "grazed" for an animal nosing the ground and "fed" for one on
+    // a kill, so a creature drawn with both reaches both.
+    grazeAt: f["graze"] !== undefined ? "graze" : "",
     asleep: false, rot: 0,
   }, o);
   const rec = (a) => { const r = box.poseAt(a, 0); if (r && r.k !== undefined) seen.add(r.k); };
@@ -147,11 +154,18 @@ for (const [id, { f }] of Object.entries(anim)) {
   // round, rather than does it come round on the creature's first ever walk.
   for (let off = 0; off < acts.length + 1; off++)
     for (let t = 0; t <= 2.7; t += 0.01) rec(mk({ phase: "travel", t, actOff: off }));
+  // ...and the idle states are swept across the calm offset too, for the same
+  // reason travel is: which calm pose comes round depends on where the rotation
+  // started, so asking only offset 0 asks whether it comes round on this
+  // creature's first ever breath rather than whether it comes round at all.
   for (const st of ["", "hunt", "fight", "flee", "reel", "hurt", "eyeing", "watch"])
-    for (let t = 0; t < 40; t += 0.05) rec(mk({ state: st, t }));   // the idle cycle is slow
+    for (let off = 0; off < (box.CALM.filter((k) => f[k] !== undefined).length || 1); off++)
+      for (let t = 0; t < 40; t += 0.05) rec(mk({ state: st, t, actOff: off }));   // the idle cycle is slow
   for (let t = 0; t < 2; t += 0.05) {
     rec(mk({ phase: "hit", t })); rec(mk({ phase: "death", t }));
-    rec(mk({ phase: "feed", t })); rec(mk({ asleep: true, t }));
+    rec(mk({ phase: "feed", t, eatAs: f["feed"] !== undefined ? "feed" : first(box.EAT, "") }));
+    rec(mk({ phase: "feed", t, eatAs: f["graze"] !== undefined ? "graze" : "" }));
+    rec(mk({ asleep: true, t }));
   }
   // BY INDEX, because `up` and `down` may be one drawing: keying this by name
   // made the alias look dead, since only one of the two names can be recovered
@@ -160,10 +174,24 @@ for (const [id, { f }] of Object.entries(anim)) {
   if (never.length) spare.push(`${id}: ${never.join(" ")}`);
 }
 
+// PACKED BUT NOT SIZED, which is packed and INVISIBLE (rome, 2026-09-21: the
+// road's new mobs were not showing). The strip builder patches MOB_ANIM and
+// nothing else. mobVh reads its height out of MOB_SPRITE, and a creature that
+// table has never heard of comes back NaN - so all twenty-two of the road's
+// creatures had art, a strip, a pose map and a row in the roster, and rendered
+// at no size at all. Nothing anywhere said so; the page simply had holes in it.
+const sprite = new Set([...src.slice(src.indexOf("var MOB_SPRITE = {"),
+  src.indexOf("\n};", src.indexOf("var MOB_SPRITE = {"))).matchAll(/"([a-z0-9-]+)":\s*\d+/g)].map((m) => m[1]));
+const unsized = Object.keys(anim).filter((id) => !sprite.has(id));
+
 console.log(`${n} animated · ${strike} strike · ${die} die · ${sleep} lie up · ${recoil} drawn recoil`);
 if (left.length) {
   console.log("\nDRAWN BUT NOT SHIPPED (art exists, the strip does not carry it):");
   for (const l of left) console.log("  " + l);
+}
+if (unsized.length) {
+  console.log("\nPACKED BUT NOT SIZED (in the strip and in MOB_ANIM, with no MOB_SPRITE height - it draws at NaN and is invisible):");
+  for (const id of unsized) console.log("  " + id);
 }
 if (spare.length) {
   console.log("\nSHIPPED BUT NEVER DRAWN (in the strip, the driver cannot select it):");
@@ -172,6 +200,8 @@ if (spare.length) {
 if (bad.length) {
   console.log("\nBROKEN:");
   for (const b of bad) console.log("  " + b);
-  process.exit(1);
 }
+// An unsized creature is as broken as a bad frame index - it is simply invisible
+// instead of wrong - so it fails the gate rather than only printing.
+if (bad.length || unsized.length) process.exit(1);
 console.log("\nevery strip matches its map, every frame index in range");

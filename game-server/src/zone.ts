@@ -6146,6 +6146,13 @@ export class ZoneDO implements DurableObject {
   // shares the horror on their sheet — see the assist pass in onCreatureDeath.
   public fxDied(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "died"); }
   public fxFed(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "fed"); }
+  // ...AND EATING THE GROUND IS NOT EATING A KILL (2026-09-21). Both were sent
+  // as "fed", so the client took the first eating pose the creature owned - and
+  // an animal drawn with BOTH, which every rat and both bears now are, showed
+  // itself tearing at a carcass while the prose said it was nosing fungus out of
+  // the muck. Five finished cells of art that nothing could ever select. The
+  // server is the only thing that knows which of the two this is, so it says.
+  public fxGrazed(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "grazed"); }
   // A BLOW LANDED OUTSIDE THE ROUND. The combat round buffers its blows and
   // flushes them together, which is right for a dogpile — but the opener, the
   // throw and the spikes all resolve the instant they happen, and buffering
@@ -6157,7 +6164,7 @@ export class ZoneDO implements DurableObject {
   // One creature, one thing, told to everyone standing there who has pictures.
   // Sent immediately rather than buffered with the blows: these are announced in
   // prose the same tick, and the picture should not lag the line.
-  private fxOne(roomId: string, templateId: string, kind: "died" | "fed" | "struck"): void {
+  private fxOne(roomId: string, templateId: string, kind: "died" | "fed" | "struck" | "grazed"): void {
     for (const s of this.sessions.values()) {
       if (s.roomId !== roomId || !ART_KEYS.has(s.pubkey) || this.outOfWorld(s)) continue;
       try { s.ws.send(JSON.stringify({ v: 0, t: "beat", [kind]: [templateId] })); } catch {}

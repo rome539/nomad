@@ -132,8 +132,12 @@ const DEAD_NAMES = { drink: "DRINKERS", call: "PACK_CALLERS", flee: "RUNNERS" };
 // creature that already has one keeps it until its sheet is redrawn; no new sheet
 // is allowed to ask for one.
 const RULED_OUT = {
+  // HIT IS THE ONE THAT IS OUT, and recover stays (rome, 2026-09-21). I had
+  // these the wrong way round for most of a day and acted on it twice - first
+  // deleting recover frames out of eight drawn sheets, then writing two redraw
+  // prompts around hit. The frame that goes is the STRUCK one, the flinch when
+  // a blow lands on the creature. The settle afterwards is kept.
   hit: "the struck frame - out by ruling 2026-09-17",
-  recover: "the recovery frame - out by ruling 2026-09-18",
 };
 
 
@@ -642,19 +646,24 @@ const CROSSING_POSES = {
   // the same picture. `find-the-line` is his - see LINES for why it is not the
   // haul his idle already shows.
   "the-drowned-ferryman": ["idle","find-the-line","alert","move-a","move-b","attack","recover","death"],
-  // He works upside down under the stonework and has never had a gait. A man
-  // hanging under a scaffold does not walk anywhere, so the two cells a gait
-  // would take go to `alert` and `hit` - and he keeps `swing`, which is his
-  // windup and is read on the attack phase, not from any preference list.
-  "the-scaffold-hand": ["idle","work-the-stone","alert","swing","attack","recover","hit","death"],
+  // HE CAME DOWN OFF THE ROPE, SO HE WALKS NOW (rome, 2026-09-21). This said a
+  // man hanging under a scaffold does not walk anywhere, and that was true of
+  // the creature as first written - migration 289 brought him down to work
+  // standing, and nothing in the art followed. He is not in the server's ROOTED
+  // set, so the world has been moving him the whole time and he slid. The gait
+  // costs him `swing`, his windup: it was a second entry in STRIKE_POSES and the
+  // driver cycles those, so this is a real frame given up, not a spare one.
+  "the-scaffold-hand": ["idle","work-the-stone","alert","move-a","move-b","attack","recover","death"],
   // Already redrawn to eight. This row now matches what the creature carries
   // rather than what it used to.
-  "the-fowler":        ["idle","rise-from-the-turf","move-a","move-b","attack","recover","hit","death"],
-  // She has TWO work poses and both are worth keeping - feeding a fire that
-  // went out and drawing the rake across a pan that is cold are different
-  // halves of the same dead shift. She stands at her pan and does not travel,
-  // so her spare cells go to `alert` and `hit` as well.
-  "the-salt-widow":    ["idle","feed-the-flue","work-the-pan","alert","attack","recover","hit","death"],
+  "the-fowler":        ["idle","rise-from-the-turf","move-a","move-b","attack","recover","death"],
+  // ...AND SO DOES SHE. Same case: not in ROOTED, moved by the world, no gait
+  // drawn. The two work poses were both worth keeping and only one can stay now
+  // - `work-the-pan` is the one that goes. It is a real loss and worth naming:
+  // it was unreachable for months because CALM_POSES kept only the first work
+  // pose a creature owned, that was fixed on 2026-09-21, and it is being cut
+  // three days later. Feeding a fire that went out is the better of the two.
+  "the-salt-widow":    ["idle","feed-the-flue","alert","move-a","move-b","attack","recover","death"],
   // The three that were written and never drawn. Same eight as the others:
   // idle, the work, alert, the gait, the blow, the way out of it, the fall.
   "the-miller":        ["idle","work-the-water","alert","move-a","move-b","attack","recover","death"],
@@ -784,6 +793,12 @@ const BIRD_SHEETS = {
 // not seen to die.
 //
 // Everything else each creature already carries is kept.
+// NOTHING IN THESE TABLES MAY NAME A RULED-OUT FRAME (rome, 2026-09-21), and
+// the table and the guard have to agree about WHICH. They did not: hit is the
+// frame that is out - the flinch when a blow lands - and recover, the settle
+// after the creature's own swing, stays. I read it backwards and purged the
+// wrong one out of sixteen lists, which is how eight drawn sheets lost a real
+// cell. Restored, with hit gone instead.
 const REDRAW = {
   "a-lymer": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "cave-lion": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
@@ -823,7 +838,11 @@ let poses = given.length ? given : REDRAW[id] ? REDRAW[id] : BIRD_SHEETS[id] ? B
   for (const [set, frame] of WANTS) if (inSet(set) && !p.includes(frame) && p.length < 7) p.push(frame);
   p.push("death");
   // keep whatever species pose it already had, if there is room
-  for (const h of had) if (p.length < 8 && !p.includes(h) && !["hit"].includes(h)) p.push(h);
+  // ...and a pose it already owns is only worth re-asking for if it is still
+  // allowed. This named "hit" and not "recover", so a creature that had one kept
+  // being handed it back - the guard and this line disagreed. Driven off
+  // RULED_OUT now, so there is one place the ruling lives.
+  for (const h of had) if (p.length < 8 && !p.includes(h) && !RULED_OUT[h]) p.push(h);
   return p.slice(0, 8);
 })();
 
@@ -1133,7 +1152,7 @@ CAMERA FOR THIS ANIMAL: it is a sideways-walking crab, so it has no profile to t
 };
 
 const HOLLOW_EYES = `
-THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid opaque #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.`;
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.`;
 
 const WHAT_IT_IS = !inSet("HOLLOW") ? "" : inSet("GRAVE_FLESH") ? `
 THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
@@ -1227,6 +1246,18 @@ const SAY = {
 };
 
 const THROWAWAY = poses.filter((p) => p[0] === "_");
+// THE WORD "OPAQUE" IS OUT OF THE MAGENTA LINE (rome, 2026-09-21: it kept
+// fouling the sheets). "Pure opaque solid magenta" reads to a generator as an
+// instruction about ALPHA, and what came back was the creature part-dissolved
+// into its own ground, or a wash laid over the whole cell. The key never needed
+// the word: the cutter drops alpha wherever min(r-g, b-g) > 30, which is a hue
+// test and has never once asked whether a pixel was declared opaque. "Pure
+// solid #FF00FF MAGENTA" says everything the pipeline reads.
+//
+// NOTE ALSO WHERE THIS COMMENT SITS. It was first written one line lower, which
+// put it INSIDE the template literal below - so the note about removing a word
+// from the prompt was itself printed into all 22 prompts. Everything from here
+// to the end of that literal is prompt text, not source.
 console.log(`# ${id} — ${poses.length} poses, ${COLS}x${ROWS} sheet at ${W}x${H}
 # after generating:
 #   node scripts/cut-mob-sheet.mjs <sheet.png> ${id} ${poses.join(" ")}${THROWAWAY.length ? `
@@ -1241,8 +1272,7 @@ Subject: ${name}. Exact game description: ${desc || "[PASTE THE IN-GAME DESCRIPT
 
 ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
 ${CONSTANT[id] || ""}
-${WHAT_IT_IS}${worked() ? ALONE_WORKED : ALONE_ANIMAL}
-Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure opaque solid #FF00FF MAGENTA everywhere outside the creature. ${CONTAIN} ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}.${flyer ? WINGSPAN : ""} Stable body proportions and markings. Feet aligned near the lower edge in ground poses${flyer ? "; body centred in the flight poses" : ""}.
+${WHAT_IT_IS}${worked() ? ALONE_WORKED : ALONE_ANIMAL}Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. ${CONTAIN} ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}.${flyer ? WINGSPAN : ""} Stable body proportions and markings. Feet aligned near the lower edge in ground poses${flyer ? "; body centred in the flight poses" : ""}.
 
 Reading order left to right, top row then bottom row:
 ${poses.map((p, i) => `${i + 1}. ${WORDING[p] || (LINES[id] && LINES[id][p]) || SAY[p] || p.replace(/-/g, " ")}`).join("\n")}

@@ -3687,7 +3687,7 @@ async function connect() {
     } else if (f.t === "beat") {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
-      mobBeat(f.swung, f.struck, f.died, f.fed);
+      mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed);
     } else if (f.t === "bench") {
       if (f.open) { renderBench(f); } else closeBench();
     } else if (f.t === "trade") {
@@ -7336,7 +7336,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "36";      // /mob/      strips and their eye layers
+var MOB_V  = "39";      // /mob/      strips and their eye layers
 var BG_V   = "32";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -8865,6 +8865,42 @@ var MOB_SPRITE = {
   "the-dancer": 3,            // 0.25
   "the-last-dog": 9,          // 0.70
   "the-old-glutton": 6,       // 0.50
+  // ---- THE ROAD'S TWENTY-TWO (2026-09-21) -----------------------------------
+  // NOT IN THIS TABLE IS NOT IN THE GAME. Every one of these had a cut sheet, a
+  // packed strip and a MOB_ANIM row, and not one of them could be seen: the
+  // strip builder patches MOB_ANIM and nothing else, mobVh reads MOB_SPRITE, and
+  // a creature this table has never heard of resolves to a height of NaN. They
+  // were in the roster, in the DOM, and drawn at no size at all.
+  //
+  // Sized by the hill's own rule rather than the coast's, because this is the
+  // hill's country: V is metres x 12.5, which is exactly what the rest of the
+  // set already solves to - the ermine at 0.25 is 3, the wildcat at 0.40 is 5,
+  // the hill wolf at 1.05 is 13, the hind at 1.45 is 18 and a man at 1.75 is 22.
+  // Measured first rather than assumed: all twenty-two sheets fill 96-98% of
+  // their cell, so there is none of the drawn-in air that made the crossing's
+  // dead solve to 29 and the crabs to 10, and the plain rule applies directly.
+  "drove-dog": 9,             // 0.70  a lurcher; just over the marsh hound at 9
+  "the-drove-master": 10,     // 0.80  heavier, and still short of a hill wolf
+  "masterless-dog": 9,        // 0.70
+  "lead-dog": 10,             // 0.80
+  "footpad": 22,              // 1.75  a man
+  "wayman": 22,               // 1.75
+  "road-carrier": 23,         // 1.85  a tall figure, as the prose has it
+  "the-miller": 22,           // 1.75
+  "the-toll-clerk": 22,       // 1.75
+  "the-long-warden": 23,      // 1.85
+  "the-mire-walker": 23,      // 1.80
+  "otter": 4,                 // 0.30  low on land, which is the whole joke of it
+  "dog-otter": 4,             // 0.35
+  "rat": 3,                   // 0.15  the ermine's number, and the floor
+  "brood-rat": 3,             // 0.20
+  "fleet-rat": 3,             // 0.15
+  "albino-rat": 3,            // 0.15
+  "grey-heron": 13,           // 1.00  standing; the same as the feral goat at 1.00
+  "roe-deer": 13,             // 1.00  head up. Smaller than the red hind at 18
+  "white-roe": 13,            // 1.00
+  "the-baited-bear": 15,      // 1.20  on all fours, chained
+  "the-chain-breaker": 17,    // 1.35  the bigger of the two, and the chain is off
   "the-old-raven": 7,         // 0.55
   "the-one-who-stayed": 22,   // 1.75
   "the-pale-drake": 44,       // 3.50  twice a standing man, same as the drake it is a variant of
@@ -9020,20 +9056,42 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "white-roe":           { n: 8, aspect: 1.037, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "wayman":              { n: 8, aspect: 0.957, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-toll-clerk":      { n: 8, aspect: 0.969, f: {"idle":0,"shift-the-weight":1,"alert":2,"count-it-out":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-mire-walker":     { n: 8, aspect: 1.024, f: {"idle":0,"stand-in-it":1,"alert":2,"let-it-settle":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-miller":          { n: 8, aspect: 1.009, f: {"idle":0,"work-the-water":1,"alert":2,"haul-it-up":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-long-warden":     { n: 8, aspect: 1.04, f: {"idle":0,"turn-the-distance":1,"alert":2,"square-the-plates":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-drove-master":    { n: 8, aspect: 1.1, f: {"idle":0,"alert":1,"work-the-line":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-chain-breaker":   { n: 8, aspect: 1.107, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-baited-bear":     { n: 8, aspect: 1.284, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "roe-deer":            { n: 8, aspect: 1.178, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "road-carrier":        { n: 8, aspect: 0.939, f: {"idle":0,"check-the-satchel":1,"alert":2,"set-down-the-load":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "rat":                 { n: 8, aspect: 1.693, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "otter":               { n: 8, aspect: 1.618, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "masterless-dog":      { n: 8, aspect: 1.299, f: {"idle":0,"alert":1,"cast-about":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "lead-dog":            { n: 8, aspect: 1.103, f: {"idle":0,"alert":1,"cast-about":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "grey-heron":          { n: 8, aspect: 1.136, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "footpad":             { n: 8, aspect: 0.929, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "fleet-rat":           { n: 8, aspect: 1.563, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "drove-dog":           { n: 8, aspect: 1.156, f: {"idle":0,"alert":1,"work-the-line":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "dog-otter":           { n: 8, aspect: 1.448, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "brood-rat":           { n: 8, aspect: 1.475, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "albino-rat":          { n: 8, aspect: 1.454, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-tide-warden":        { n: 8, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5,"recover":6,"hit":7} },
-  "the-scaffold-hand":      { n: 6, aspect: 0.96, f: {"idle":0,"attack":1,"recover":2,"death":3,"swing":4,"work-the-stone":5} },
-  "the-salt-widow":         { n: 6, aspect: 1.011, f: {"idle":0,"attack":1,"recover":2,"death":3,"feed-the-flue":4,"work-the-pan":5} },
-  "the-refuge-man":         { n: 8, aspect: 0.908, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"turn-from-the-wall":5,"recover":6,"hit":7} },
+  "the-scaffold-hand":      { n: 8, aspect: 0.972, f: {"idle":0,"work-the-stone":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-salt-widow":         { n: 8, aspect: 1.136, f: {"idle":0,"feed-the-flue":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-refuge-man":         { n: 8, aspect: 1.033, f: {"idle":0,"turn-from-the-wall":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-reed-walker":        { n: 8, aspect: 1.026, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"part-the-reed":5,"recover":6,"hit":7} },
   "the-pilot":              { n: 8, aspect: 0.988, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"read-the-water":5,"alert":6,"recover":7} },
   "the-great-devil-crab":   { n: 8, aspect: 1.254, f: {"idle":0,"alert":1,"attack":2,"recover":3,"death":4,"rest":5,"bite":6,"sweep":7} },
-  "the-eel-cutter":         { n: 8, aspect: 1.076, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"lift-the-trap":5,"alert":6,"recover":7} },
-  "the-drowned-ferryman":   { n: 6, aspect: 1.055, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-drover":             { n: 8, aspect: 1.051, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"drive-the-road":5,"alert":6,"recover":7} },
-  "the-bridge-mason":       { n: 8, aspect: 1.035, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"dress-the-stone":5,"alert":6,"recover":7} },
+  "the-eel-cutter":         { n: 8, aspect: 1.387, f: {"idle":0,"lift-the-trap":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-drowned-ferryman":   { n: 8, aspect: 0.986, f: {"idle":0,"find-the-line":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-drover":             { n: 8, aspect: 1.278, f: {"idle":0,"drive-the-road":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-bridge-mason":       { n: 8, aspect: 1.025, f: {"idle":0,"dress-the-stone":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "bull-seal":              { n: 8, aspect: 1.279, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
   "the-wrecker":    { n: 8, aspect: 1.014, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
-  "the-fowler":     { n: 8, aspect: 1.568, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"rise-from-the-turf":5,"recover":6,"hit":7} },
+  "the-fowler":     { n: 7, aspect: 1.478, f: {"idle":0,"rise-from-the-turf":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6} },
   "strand-thief":   { n: 8, aspect: 0.958, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
   "the-great-crab":   { n: 8, aspect: 1.503, f: {"idle":0,"alert":1,"attack":2,"death":3,"recover":4,"rest":5,"bite":6,"sweep":7} },
   "marsh-hound":      { n: 8, aspect: 1.06, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -9050,7 +9108,7 @@ var MOB_ANIM = {
   "conger":              { n: 8, aspect: 1.147, f: {"idle":0,"alert":1,"rest":2,"attack":3,"death":4,"feed":5,"move-a":6,"move-b":7} },
   "black-backed-gull":   { n: 8, aspect: 1.418, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":4} },
   "bittern":             { n: 8, aspect: 1.307, f: {"idle":0,"attack":1,"death":2,"rest":3,"glide":4,"landing":5,"feed":6,"up":7,"down":4} },
-  "a-fold-dog":           { n: 6, aspect: 1.46, f: {"idle":0,"rest":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "a-fold-dog":           { n: 8, aspect: 1.314, f: {"idle":0,"alert":1,"rest":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "bone-breaker":         { n: 8, aspect: 1.132, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"feed":5,"attack":6,"death":7} },
   "brooding-vulture":     { n: 8, aspect: 1.086, f: {"idle":0,"rest":1,"recover":2,"attack":3,"death":4,"feed":5,"move-a":6,"move-b":7} },
   "carrion-vulture":      { n: 8, aspect: 1.115, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
@@ -9084,7 +9142,7 @@ var MOB_ANIM = {
   "the-drake":            { n: 14, aspect: 1.483, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
   "the-gravid-adder":     { n: 8, aspect: 1.774, f: {"idle":0,"watch":1,"rest":2,"bask":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-herd":             { n: 6, aspect: 0.991, f: {"idle":0,"keep-the-line":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-last-dog":         { n: 6, aspect: 1.556, f: {"idle":0,"call-uphill":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-last-dog":         { n: 8, aspect: 1.231, f: {"idle":0,"alert":1,"call-uphill":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-milker":           { n: 6, aspect: 1.167, f: {"idle":0,"work-pull":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-old-glutton":      { n: 8, aspect: 1.174, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-old-raven":        { n: 8, aspect: 1.165, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
@@ -9182,7 +9240,21 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   // AND THE FERRYMAN FINALLY HAS ONE. He was the only one of the eleven with no
   // work pose at all, which is why his idle, his hurt and his stroll were all
   // the same picture. His hands are empty in this one and in no other.
-  "find-the-line"];     // the drowned ferryman, feeling for a rope that is not there
+  "find-the-line",      // the drowned ferryman, feeling for a rope that is not there
+  // ---- THE ROAD'S NINE (2026-09-21), added BEFORE the sheets were built, which
+  // is the whole point of the note above. Four creatures carry one of these and
+  // reach it; five carry TWO and reach only the first, because this list fills a
+  // single slot with the earliest name a creature owns. Those five are marked in
+  // the road batch and the driver is what has to change, not the art.
+  "work-the-line",      // the drove dog and the drove master, putting you somewhere
+  "cast-about",         // the masterless dog and the lead dog, nose down, quartering
+  "check-the-satchel",  // the carrier, a thumb on the buckles without breaking stride
+  "set-down-the-load",  // ...and the one moment the carrier is not carrying
+  "stand-in-it",        // the mire-walker, sunk to the knee and in no hurry
+  "let-it-settle",      // ...and the stillness just after it stops
+  "haul-it-up",         // the miller, straightening out of the stoop with his fists shut
+  "count-it-out",       // the toll clerk, telling coin into a palm that never moves
+  "square-the-plates"]; // the long warden, settling the coat at the end of a beat
 var GAIT_HZ = 5;            // gait poses alternate this fast...
 var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
 var WINGBEAT_HZ = 4;        // and wings beat this fast...
@@ -9207,7 +9279,18 @@ var UNSEEN = { "the-quicksand": 1 };
 var MOB_EYES = {
   "the-drowned-ferryman": 1, "the-fowler": 1, "the-eel-cutter": 1, "the-pilot": 1,
   "the-drover": 1, "the-tide-warden": 1, "the-refuge-man": 1, "the-bridge-mason": 1,
-  "the-reed-walker": 1, "the-scaffold-hand": 1, "the-salt-widow": 1
+  "the-reed-walker": 1, "the-scaffold-hand": 1, "the-salt-widow": 1,
+  // THE ROAD'S THREE (2026-09-21). They were written as HOLLOW long before they
+  // were drawn, their sheets came back with the cyan marker in them, and the
+  // cutter split an eye layer off every frame that shows a face - so all that
+  // existed and only this line was missing. Without it the overlay ships and is
+  // never once drawn, which is the same shape as every other miss this week.
+  //
+  // The miller carries eyes on six frames of eight, and that is correct rather
+  // than a detection failure: his idle and his work are both drawn turned away
+  // and bent, with the head down between the shoulders, so there is no eye in
+  // the picture to key. Those two frames simply have nothing laid over them.
+  "the-miller": 1, "the-toll-clerk": 1, "the-long-warden": 1
 };
 
 var IDLE_MS = 1400;      // how long one idle frame is held...
@@ -9358,9 +9441,19 @@ function paintMobs(ids, doing, dead) {
     // What this creature can do while you stand there: the calm pose it cuts to
     // between breaths, and — for one with neither a gait nor wings — the poses it
     // works through in place.
-    var calm = "", acts = [];
+    // EVERY CALM POSE IT WAS DRAWN WITH, not the first one found - the same fix
+    // the strikes list below already carries, and the same bug (2026-09-21).
+    // This kept ONE name, which is right for a creature with a single work pose
+    // and wrong for every one with two: the salt widow's work-the-pan has been
+    // in her strip, shipped, since the day she was drawn and has never once been
+    // shown, and the road batch added five more - the miller's haul, the clerk's
+    // count, the warden squaring his coat, the carrier setting the load down and
+    // the mire-walker settling. Ten cells of finished art unreachable because a
+    // loop broke early. It cycles them now, the way it cycles the drake's blows.
+    var calms = [], acts = [];
     for (var q = 0; q < CALM_POSES.length; q++)
-      if (spec.f[CALM_POSES[q]] !== undefined && !calm) calm = CALM_POSES[q];
+      if (spec.f[CALM_POSES[q]] !== undefined) calms.push(CALM_POSES[q]);
+    var calm = calms[0] || "";
     acts = mobActs(spec.f);
     spec.acts = acts.length ? acts : ["idle"];
     var sleep = "idle", strike = "", recoil = "idle";
@@ -9388,13 +9481,21 @@ function paintMobs(ids, doing, dead) {
     // ground could be sent the signal and had nothing to answer it with — and
     // every grazer in the game is exactly that animal. Read like every other
     // pose: a preference list, so the art's own word for eating is enough.
-    var eat = "";
+    // BOTH OF THEM, because the two are different acts. This took the first and
+    // stopped, which is right for an animal drawn with one - and every rat and
+    // both bears are drawn with both, so their graze cell could never be chosen.
+    // The server says which act it is now (fed vs grazed); this keeps the pair
+    // so there is something to choose between, and eat stays the default for
+    // anything that only ever sends the one signal.
+    var eat = "", grazeAt = "";
     for (var z6 = 0; z6 < EAT_POSES.length; z6++)
       if (spec.f[EAT_POSES[z6]] !== undefined) { eat = EAT_POSES[z6]; break; }
+    if (spec.f["graze"] !== undefined) grazeAt = "graze";
+    if (spec.f["feed"] !== undefined) eat = "feed";
     var rate = spec.f["move-a"] !== undefined ? 7000 : spec.f.up !== undefined ? 11000 : 20000;
-    anims.push({ el: el, spec: spec, id: id, phase: "idle", t: 0, calm: calm, state: "",
+    anims.push({ el: el, spec: spec, id: id, phase: "idle", t: 0, calm: calm, calms: calms, state: "",
                  sleep: sleep, strike: strike, strikes: strikes, blow: strike, eat: eat,
-                 recoil: recoil, watch: watch, rate: rate, slot: slot, lift: lift,
+                 recoil: recoil, watch: watch, rate: rate, slot: slot, lift: lift, grazeAt: grazeAt,
                  next: Date.now() + 2000 + Math.random() * rate * 2 });
   }
   applyState(doing);
@@ -9529,6 +9630,20 @@ function mobActs(f) {
 }
 function poseAt(a, now) {
   var f = a.spec.f, t = a.t, x = 0, air = 0, s = 1, name = "idle";
+  // WHICH OF ITS CALM POSES THIS TIME. Kept inside poseAt on purpose: the
+  // driver test and the preview builder both lift this function whole by
+  // brace-matching, so a helper beside it is invisible to them and the page
+  // throws on the first calm beat. One pose is the common case and comes back
+  // unchanged; a creature drawn with two or more walks through them in turn, so
+  // the second is not a cell of art nobody ever sees. Driven off the beat, so it
+  // is steady for a given breath rather than flickering per frame, and offset
+  // per sprite so two of a kind are never in step.
+  var calmNow = function (beat) {
+    var list = a.calms;
+    if (!list || list.length < 2) return a.calm;
+    var k = (Math.floor(beat / 3) + (a.actOff | 0)) % list.length;
+    return list[(k + list.length) % list.length];
+  };
   if (a.phase === "death") {
     // It drops, and then it is a thing on the ground. The only motion is the
     // settle in the first quarter second; after that nothing about it moves.
@@ -9600,7 +9715,7 @@ function poseAt(a, now) {
     // Head down at the body, with the small working shift of something pulling
     // at meat rather than standing over it. A grazer does the same thing at the
     // ground, so the frame is whichever of the two this one was drawn with.
-    name = a.eat || "feed";
+    name = a.eatAs || a.eat || "feed";   // whichever act the signal said this was
     x = Math.sin(t * 3.4) * SWAY * 0.10;
   } else if (a.state === "hunt") {
     // IT HAS YOU. It does not wander, it does not cut to its calm pose - it
@@ -9635,7 +9750,7 @@ function poseAt(a, now) {
     a.rot = 0.02 * Math.sin(t * 5);
   } else if (a.state === "hurt") {
     // Still up, but it has been opened. Low, slow, and it sags.
-    name = a.calm && Math.floor(t / 4) % 3 === 0 ? a.calm : "idle";
+    name = a.calm && Math.floor(t / 4) % 3 === 0 ? calmNow(t / 4) : "idle";
     air = -0.012;
     s *= 1 + Math.sin(t * 1.1) * BREATH * 2.6;
   } else if (a.state === "eyeing" || a.state === "watch") {
@@ -9713,7 +9828,7 @@ function poseAt(a, now) {
       name = a.spec.acts[(((a.actOff | 0) + Math.floor(t)) % a.spec.acts.length)];
     }
   } else {
-    name = a.calm && Math.floor(t / 3) % 2 ? a.calm : "idle";
+    name = a.calm && Math.floor(t / 3) % 2 ? calmNow(t / 3) : "idle";
     s *= 1 + Math.sin(t * 2) * BREATH;
   }
   if (a.phase !== "hit") a.rot = 0;
@@ -9771,7 +9886,7 @@ var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
                    "recover", "idle"];
 // A body stays where it fell for a beat before the room repaints without it.
 var mobHold = 0, mobPending = null, mobPendingRest = null, mobPendingDead = null;
-function mobBeat(swung, struck, died, fed) {
+function mobBeat(swung, struck, died, fed, grazed) {
   for (var i = 0; i < anims.length; i++) {
     var a = anims[i];
     // Dying outranks everything: a thing that took the last blow is not also
@@ -9794,7 +9909,13 @@ function mobBeat(swung, struck, died, fed) {
         : a.strike;
     }
     else if (struck && struck.indexOf(a.id) >= 0) { a.phase = "hit"; a.t = 0; }
-    else if (fed && fed.indexOf(a.id) >= 0 && a.eat) { a.phase = "feed"; a.t = 0; }
+    // WHICH EATING FRAME, decided by which signal arrived. A creature drawn with
+    // only one uses it for both, which is what every grazer and every scavenger
+    // did before either signal existed.
+    else if (grazed && grazed.indexOf(a.id) >= 0 && (a.grazeAt || a.eat)) {
+      a.phase = "feed"; a.t = 0; a.eatAs = a.grazeAt || a.eat;
+    }
+    else if (fed && fed.indexOf(a.id) >= 0 && a.eat) { a.phase = "feed"; a.t = 0; a.eatAs = a.eat; }
   }
 }
 function stepAnims() {

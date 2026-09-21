@@ -56,6 +56,14 @@ if (!fs.existsSync(sheet)) { console.error("no such sheet: " + sheet); process.e
 // 200 and then jumps - the refuge man goes 195px to 866px between 200 and 240 -
 // which is the point where it stops finding eyes and starts finding clothes.
 const EYE = [0, 208, 208], EYE_TOL = 200;
+// The smallest share of the cell's biggest eye, BY PIXEL COUNT, that still
+// counts as an eye. Measured across the eight crossing sheets: a real pair sits
+// within about a third of each other (the refuge man's death is 30 and 28, his
+// attack 21 and 13), while the strays are 1, 2 and 6 pixels against a 21px eye.
+const EYE_SPECK = 0.3;
+// How much wider than tall a blob must be before it is read as two eyes joined
+// rather than one eye drawn side-on. See the note at the split itself.
+const EYE_PAIR = 2.0;
 let eyeTotal = 0, eyeBlobs = 0;
 
 const COLS = { 4: 2, 6: 3, 8: 4, 9: 3, 12: 4 }[poses.length];
@@ -336,7 +344,14 @@ for (let i = 0; i < poses.length; i++) {
       // the middle and each half kept as its own eye, with its own centre and its
       // own radius. Anything rounder is left exactly as it was.
       const bw = bx1 - bx0 + 1, bh = by1 - by0 + 1;
-      if (bw >= bh * 1.5 && n >= 4) {
+      // ...BUT ONE EYE IS NOT TWO, AND 1.5 WAS TOO EAGER (rome, 2026-09-21).
+      // Measured across the eight crossing sheets, a single eye runs 5x5, 6x5
+      // and 6x4 - that last is a ratio of exactly 1.50, so the test split it and
+      // painted two coals side by side on a face that has one eye showing. On
+      // every profile frame in the region that is a coal hanging in the air
+      // beside the nose. A genuinely merged PAIR is far wider than this: it is
+      // two eyes plus the gap between them, which cannot come out under 2.
+      if (bw >= bh * EYE_PAIR && n >= 4) {
         const mid = (bx0 + bx1) / 2;
         for (const side of [0, 1]) {
           let ln = 0, lsx = 0, lsy = 0;
@@ -346,11 +361,40 @@ for (let i = 0; i < poses.length; i++) {
             if ((side === 0) !== (qx <= mid)) continue;
             ln++; lsx += qx; lsy += (qq / W) | 0;
           }
-          if (ln) blobs.push({ x: lsx / ln, y: lsy / ln, r: Math.max(2, Math.sqrt(ln / Math.PI)) });
+          if (ln) blobs.push({ x: lsx / ln, y: lsy / ln, r: Math.max(2, Math.sqrt(ln / Math.PI)), n: ln });
         }
       } else {
-        blobs.push({ x: sx / n, y: sy / n, r: Math.max(2, Math.sqrt(n / Math.PI)) });
+        blobs.push({ x: sx / n, y: sy / n, r: Math.max(2, Math.sqrt(n / Math.PI)), n: n });
       }
+    }
+    // A SPECK IS NOT AN EYE (rome, 2026-09-21: the refuge man's blood eyes are
+    // wrong when he walks).
+    //
+    // Every component found above was painted as a coal, with a radius floored
+    // at 2 and the full drawn halo around it - so a stray pixel or two of
+    // near-key colour anywhere on the face became a second eye. Measured on the
+    // refuge man: his move-b carries one real eye of 21px AND a blob of TWO, his
+    // turn-from-the-wall one of ONE. On a head drawn in profile, where there is
+    // only one real eye to anchor against, that speck reads as a coal hanging in
+    // the air beside his nose - which is exactly what it looked like, on every
+    // profile frame the crossing has.
+    //
+    // So a blob has to be a real share of the biggest one in its own cell to be
+    // drawn. Relative rather than absolute, because the marker is a handful of
+    // pixels on a small creature and a good deal more on a large one - the eel
+    // cutter's eyes run 32-58px against the refuge man's 21 - and a fixed floor
+    // would either keep his specks or drop somebody's real eye.
+    // ...MEASURED ON PIXELS, NOT ON THE RADIUS. The radius is floored at 2 so a
+    // single stray pixel still paints something visible, which means a 2px speck
+    // and a 21px eye come back with almost the same r and a test on r keeps
+    // both. The count is the thing that actually separates them.
+    if (blobs.length > 1) {
+      const big = Math.max(...blobs.map((b) => b.n));
+      const keep = blobs.filter((b) => b.n >= big * EYE_SPECK);
+      if (keep.length !== blobs.length)
+        console.log("     " + poses[i] + ": dropped " + (blobs.length - keep.length)
+          + " speck(s) too small to be an eye");
+      blobs.length = 0; blobs.push(...keep);
     }
     // REACH is what makes it read as light rather than as paint. Seven radii out
     // is roughly a third of a head, which is what a lit eye does to a dark face.
@@ -418,6 +462,28 @@ for (let i = 0; i < poses.length; i++) {
       .png().toFile(path.join(outDir, poses[i] + ".eyes.png"));
     if (!eyeBlobs) eyeBlobs = 0;
     eyeBlobs += blobs.length;
+  }
+  // ...AND A FRAME WITH NO EYES IN IT MUST NOT KEEP THE LAST ONES (rome,
+  // 2026-09-21: the bridge mason lit up on the frame where his back is turned,
+  // and the fowler on the one where he is lying face down).
+  //
+  // The block above only WRITES an eye layer when it finds a marker, which is
+  // right - and it left the old file alone when it found none, which is not. A
+  // redraw that turns a pose away from the viewer produces no new overlay, so
+  // the one from the PREVIOUS drawing survives on disk at the previous frame's
+  // size and in the previous frame's position, and the strip builder packs it:
+  // the mason's idle was 230x443 of man wearing a 447x432 pair of eyes. Both
+  // were the exact frames rome named, which is what a stale file looks like from
+  // the outside - eyes floating on the back of a head.
+  //
+  // The overlay is only ever valid for the cut that made it, so a cut that finds
+  // nothing has to say so by removing what is there.
+  else {
+    const stale = path.join(outDir, poses[i] + ".eyes.png");
+    if (fs.existsSync(stale)) {
+      fs.unlinkSync(stale);
+      console.log("     " + poses[i] + ": no eye in this frame - removed the overlay left by the last cut");
+    }
   }
   eyeTotal += eyeN;
   const warn = pct < 2 ? "  \u2190 ALMOST EMPTY, check the sheet" : pct > 85 ? "  \u2190 barely keyed, is the background magenta?" : "";
