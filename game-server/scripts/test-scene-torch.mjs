@@ -561,10 +561,35 @@ ctx.paint("road", "night", "the-cart-ruts", "rd2", 0, 0, "", 0);
 t("...and the ruts at night", strip(sceneEl.style.backgroundImage) === "/room-bg/the-cart-ruts-night.webp", strip(sceneEl.style.backgroundImage));
 ctx.paint("road", "day", "the-frost-heaved-paving", "rd3", 0, 0, "", 0);
 t("...and the frost-heaved stretch", strip(sceneEl.style.backgroundImage) === "/room-bg/the-frost-heaved-paving-day.webp", strip(sceneEl.style.backgroundImage));
-// A road room standing on a ground the road SHARES with the hill must still
-// answer - twelve of the fifteen grounds ROAD_RULES can name are borrowed.
-ctx.paint("road", "day", "beck", "rd4", 0, 0, "", 0);
-t("...and a borrowed ground answers on the road too", strip(sceneEl.style.backgroundImage) === "/room-bg/beck-day.webp", strip(sceneEl.style.backgroundImage));
+// BORROWING IS FINE. WEARING ANOTHER REGION'S FACE IS NOT (rome, 2026-09-21).
+//
+// The first cut of ROAD_RULES sent 122 of the road's 196 rooms to other bands'
+// grounds, which is most of the region - a tidal causeway with mooring posts
+// and a coastal salt-works hamlet, inland. The second cut swung to zero, which
+// throws away plates that are honestly the same country.
+//
+// Six are allowed, and each was judged by LOOKING at the plate rather than at
+// its name: alder is a wet wood of thin stems standing in water, which is the
+// postern carr exactly; cairn is stony upland grazing, which is the drove;
+// fold is a drystone stock pen; reed is a reed bed with a path through it;
+// marsh is flat wet grazing; scree is loose broken stone, and the Scree Run is
+// literally that. The ones kept out failed the same test by eye - beck is a
+// mountain waterfall into a plunge pool, glass is volcanic slag, works has the
+// sea behind it, causeway is open water on both sides.
+//
+// So this is a whitelist, not a ban: a SEVENTH borrow has to be somebody's
+// decision, taken with the picture in front of them.
+{
+  const zd = fs.readFileSync(path.join(HERE, "..", "src/zone-data.ts"), "utf8");
+  const j = zd.indexOf("export const ROAD_RULES");
+  const rules = eval(zd.slice(zd.indexOf("= [", j) + 2, zd.indexOf("\n];", j) + 2));
+  const named = [...new Set(rules.map((r) => r[0]))];
+  const ROAD_OWN = ["the-kept-road", "the-frost-heaved-paving", "the-cart-ruts"];
+  const ALLOWED_BORROW = ["alder", "cairn", "fold", "reed", "marsh", "scree"];
+  const foreign = named.filter((n) => !ROAD_OWN.includes(n) && !ALLOWED_BORROW.includes(n));
+  t("the road borrows only the six grounds that are the same country",
+    foreign.length === 0, foreign.length ? "also wears " + foreign.join(" ") : named.join(" "));
+}
 // A ground with no plate in a band that HAS plates falls to that band's own
 // stand-in rather than to nothing - the crossing's is the shingle shore.
 ctx.paint("crossing", "day", "no-such-ground", "bx3", 0, 0, "", 0);

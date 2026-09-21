@@ -6502,6 +6502,27 @@ export const CROSSING_RULES: [string, RegExp][] = [
 // It is complete by construction - the last rule matches anything - and that is
 // deliberate: a road region cannot have a room with no ground, because a gap in
 // a road is the one thing a player walks straight through.
+// BORROWING IS FINE; WEARING ANOTHER REGION'S FACE IS NOT (rome, 2026-09-21,
+// on getting crossing and mountain pictures out on the road).
+//
+// The first cut of this table sent 122 of these 196 rooms to other bands'
+// grounds - most of the region - and I had called them "grounds the road
+// shares with the hill" without once looking at one. They are not kinds of
+// surface. Each is ONE PLACE that was photographed once: `causeway` is open
+// tidal water with mooring posts either side, `works` is a coastal hamlet with
+// the sea behind it, `beck` is a mountain waterfall into a plunge pool, and
+// `glass` is volcanic slag. None of that is anywhere near this road.
+//
+// SIX ARE KEPT, every one judged with the picture in front of me: alder is a
+// wet wood of thin stems standing in water, which is the postern carr exactly;
+// cairn is stony upland grazing, which is what the drove crosses; fold is a
+// drystone stock pen; reed is a reed bed with a path parting through it; marsh
+// is flat wet grazing; and scree is loose broken stone, which the Scree Run
+// literally is.
+//
+// A SEVENTH BORROW IS A DECISION, not a convenience - test-scene-torch holds
+// the whitelist and fails on anything else, so it has to be taken deliberately,
+// with the plate open.
 export const ROAD_RULES: [string, RegExp][] = [
   // Twenty-six of these rooms are not in any regions/*.rooms file - they were
   // hand-authored in migration 225 and carry region 'road' in the world table,
@@ -6510,21 +6531,21 @@ export const ROAD_RULES: [string, RegExp][] = [
   // Roman setts. Check against the rooms table, not the sources.
   // --- THE BECK LINE. The rooms that leave the road at the postern and do not
   // come back to it until the scarp: a ditch, a carr, a mill, a gill.
-  ["gully",    /^the-(postern-ditch|drain-mouth|grave-drain|culvert)$/],
+  ["the-frost-heaved-paving",    /^the-(postern-ditch|drain-mouth|grave-drain|culvert)$/],
   ["alder",    /^the-(postern-carr|withy-beds|osier-island|sunken-alders|hanging-wood|otter-holt|peat-cuttings|dead-alders|osier-landing|willow-landing|peat-cuts|oak-hollow|hollow-oak)$/],
-  ["beck",     /^the-(spring-bank|stepping-stones|beck-mouth|mill-leat|drowned-mill|mill-loft|tail-race|hatchpool|force|fall-shelter|gill-foot|gill-pot|rowan-gill|gill-narrows|shepherds-ford|spring-line|beck-head|beck-stair|drowned-ford|scarp-spring|bothy-spring|shallow-ford|tussock-ford|flooded-quarry|cattle-drink)$/],
+  ["the-cart-ruts",     /^the-(spring-bank|stepping-stones|beck-mouth|mill-leat|drowned-mill|mill-loft|tail-race|hatchpool|force|fall-shelter|gill-foot|gill-pot|rowan-gill|gill-narrows|shepherds-ford|spring-line|beck-head|beck-stair|drowned-ford|scarp-spring|bothy-spring|shallow-ford|tussock-ford|flooded-quarry|cattle-drink)$/],
   ["marsh",    /^the-(millpond|flood-mead|marl-hole|fen-edge|fen-gut|quaking-flat|open-water|ditch-end|lapwing-flat)$/],
-  ["causeway", /^the-(moss-path|turf-road|wet-furlong|dam-walk|plank-crossing|plank-bridge|sinking-path|drowned-hurdles|rush-shore|waste-foot)$/],
+  ["the-cart-ruts", /^the-(moss-path|turf-road|wet-furlong|dam-walk|plank-crossing|plank-bridge|sinking-path|drowned-hurdles|rush-shore|waste-foot)$/],
   ["reed",     /^the-(rush-ground|trap-line|eel-traps|heron-stand)$/],
   ["scree",    /^the-scree-run$/],
   // --- THE RISE. The scarp face and the shelf above it, where the road is a
   // track cut into rock and rock is what you see.
-  ["crag",     /^the-(crag-foot|first-hairpin|second-hairpin|third-hairpin|cutting-ledge|rope-post|scarp-top|scarp-foot|quarry-turn|cutting|chalk-cut|cut-bank)$/],
+  ["the-frost-heaved-paving",     /^the-(crag-foot|first-hairpin|second-hairpin|third-hairpin|cutting-ledge|rope-post|scarp-top|scarp-foot|quarry-turn|cutting|chalk-cut|cut-bank)$/],
   ["cairn",    /^the-(top-wall|bank-and-ditch|high-shelf|boundary-cairn|watershed|first-sight|far-shore-stone|shelter-stone|wind-scoured-ridge|drovers-cairn|high-common|common-boundary|hare-ground|marker-stone|saddle-gap|open-heath|high-gorse|wether-slope)$/],
   // --- THINGS PEOPLE BUILT AND LEFT, off the verge rather than on it.
   ["fold",     /^the-(wether-fold|herds-hut|hut-yard|first-fold|broken-fold|hanging-fold|shepherds-bothy|fallen-dyke|pinfold|sheep-fold|drove-pound|sheep-creep)$/],
-  ["glass",    /^the-(burnt-brake|burnt-farmstead|smithy-ruin|road-kiln)$/],
-  ["works",    /^the-(winding-house|peat-house|faggot-stack|turf-stacks|well-house|roadwarden-post|mustering-yard|weighbridge|tollkeepers-ruin|toll-stone|dry-well)$/],
+  ["the-cart-ruts",    /^the-(burnt-brake|burnt-farmstead|smithy-ruin|road-kiln)$/],
+  ["the-kept-road",    /^the-(winding-house|peat-house|faggot-stack|turf-stacks|well-house|roadwarden-post|mustering-yard|weighbridge|tollkeepers-ruin|toll-stone|dry-well)$/],
   // --- AND THE ROAD ITSELF, IN THE THREE AGES IT IS IN. One road, three
   // photographs, and a player walking west should be able to watch it fail
   // under them without being told: dressed stone, then stone the frost has
