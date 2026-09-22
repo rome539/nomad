@@ -7336,8 +7336,8 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "39";      // /mob/      strips and their eye layers
-var BG_V   = "32";      // /room-bg/  the room plates - 91MB, the expensive one
+var MOB_V  = "41";      // /mob/      strips and their eye layers
+var BG_V   = "33";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
@@ -7680,8 +7680,15 @@ var GATE_PLATE = {
   "gate":                "day night night-torch fog rain snow",
   "sally-port":          "day night night-torch fog rain snow",
   "the-first-milestone": "day night night-torch fog rain snow",
-  // Still unpainted, of the world's fourteen doors:
-  // "weeper-arch", "the-gate-arch", "the-timber-stack", "the-withy-hut",
+  // AND THE LAST FOUR (2026-09-21). Every door in the world now has a picture
+  // of itself, which is the first time that has been true: the weeper arch on
+  // the mountain, the gate arch, the timber stack and the withy hut. The
+  // "still unpainted" list that stood here is gone because there is nothing
+  // left to put in it.
+  "weeper-arch":         "day night night-torch fog rain snow",
+  "the-gate-arch":       "day night night-torch fog rain snow",
+  "the-timber-stack":    "day night night-torch fog rain snow",
+  "the-withy-hut":       "day night night-torch fog rain snow",
 };
 // The nine skies, painted once, shared by every scene in the game. A sky that
 // has not been painted yet leaves the scene on the flat ground colour and takes
@@ -9065,7 +9072,7 @@ var MOB_ANIM = {
   "the-drove-master":    { n: 8, aspect: 1.1, f: {"idle":0,"alert":1,"work-the-line":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-chain-breaker":   { n: 8, aspect: 1.107, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-baited-bear":     { n: 8, aspect: 1.284, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "roe-deer":            { n: 8, aspect: 1.178, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "roe-deer":            { n: 8, aspect: 1.028, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "road-carrier":        { n: 8, aspect: 0.939, f: {"idle":0,"check-the-satchel":1,"alert":2,"set-down-the-load":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat":                 { n: 8, aspect: 1.693, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "otter":               { n: 8, aspect: 1.618, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -9254,7 +9261,48 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   "let-it-settle",      // ...and the stillness just after it stops
   "haul-it-up",         // the miller, straightening out of the stoop with his fists shut
   "count-it-out",       // the toll clerk, telling coin into a palm that never moves
-  "square-the-plates"]; // the long warden, settling the coat at the end of a beat
+  "square-the-plates",  // the long warden, settling the coat at the end of a beat
+  // ---- THE FORTRESS'S SEVEN (2026-09-21), added BEFORE the sheets are drawn.
+  // The Door is the least-illustrated ground in the game: nineteen templates
+  // spawn in it and the only four with art are the rats.
+  //
+  // THE FIRST TWO ATTEMPTS AT THIS LIST WERE BOTH WRONG, and in the same way.
+  // One padded the eighth cell with "sweep", which exists on four creatures in
+  // the world (two giant crabs, two drakes) and is a huge animal's wide blow.
+  // The other read each creature's DESCRIPTION and wrote a pose off the prose -
+  // better, and still a guess. What a creature does is not in its description,
+  // it is in the sets it belongs to, and those are right here in zone-data.
+  // These seven come from that: each one is a behaviour the world already
+  // performs for this creature, in text, with nobody drawing it.
+  //
+  // Two more were needed and already existed in WATCH_POSES - "listen" and
+  // "hold-ground" - so they are NOT repeated here. Note that WATCH_POSES fills
+  // a single slot with its FIRST match, and "alert" leads that list: a creature
+  // meant to show "listen" must therefore be drawn WITHOUT an alert, or the
+  // alert wins and the listen is another cell nothing can reach.
+  "hold-the-salute",    // DRILL_SOLDIERS: two of them meet and salute, forever
+  "rise",               // REVENANTS: put one down and it gets back up and comes again
+  "take-hold",          // DROWNERS: it closes on you and does not let go
+  "take-it-up",         // HOARDERS: the rag-and-bone scoops and caches
+  "lay-on-the-hand",    // CORRODERS: metal blooms and flakes where it touches
+  "surface",            // SURFACERS: deep-kin climbing up out of the dark holes
+  "keep-the-seat",      // ...and the forgotten king, who is only ever saluted
+  // AND THE TWO HYENAS ARE NOT THE SAME ANIMAL. They were given one list
+  // between them, which is how the two dogs ended up the same dog. The code
+  // separates them and always did: the dire hyena is the only member of
+  // AGGRO_SCAVENGERS - walk in on it standing over a corpse and it turns on you
+  // unprovoked, hits harder, and holds the grudge an hour longer than its
+  // cousin. That is a posture, and it is the one thing the grave hyena does not
+  // do.
+  //
+  // The grave hyena was going to take a DRINK off DRINKERS, and that was wrong:
+  // the generator refuses "drink" outright as a dead name, because no branch in
+  // this file reads DRINKERS - 26 creatures keep an appointment at the water and
+  // not one of them has a picture of doing it. Putting the cell in CALM_POSES
+  // would not have rescued it either, it would have made it worse: the calm
+  // cycle fires anywhere, so the hyena would drink in a dry room, which is the
+  // same bug as the sleep frame in the idle rotation. It keeps its feed.
+  "guard-the-kill"];    // AGGRO_SCAVENGERS: the dire hyena, over a meal, daring you   // the verdigris thing, touching what you are wearing
 var GAIT_HZ = 5;            // gait poses alternate this fast...
 var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
 var WINGBEAT_HZ = 4;        // and wings beat this fast...
