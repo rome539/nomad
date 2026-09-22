@@ -27,7 +27,7 @@ export const GUIDE_PAGE = `<!doctype html>
 <meta name="description" content="How NOMAD works: what you keep, what armour does, what weight costs, and why the world does not wait for you.">
 <meta property="og:title" content="NOMAD — how it works">
 <meta property="og:description" content="What you keep, what armour does, what weight costs, and why the world does not wait for you.">
-<meta property="og:image" content="https://nomadmud.com/og.jpg?v=3">
+<meta property="og:image" content="https://nomadmud.com/og.jpg?v=4">
 <link rel="icon" href="/icon.png">
 <style>
   :root {

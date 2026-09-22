@@ -31,13 +31,13 @@ export const PAGE = `<!doctype html>
 <meta property="og:title" content="NOMAD">
 <meta property="og:description" content="A living text dungeon on Nostr. The dead stay dead.">
 <meta property="og:url" content="https://nomadmud.com">
-<meta property="og:image" content="https://nomadmud.com/og.jpg?v=3">
+<meta property="og:image" content="https://nomadmud.com/og.jpg?v=4">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="NOMAD">
 <meta name="twitter:description" content="A living text dungeon on Nostr. The dead stay dead.">
-<meta name="twitter:image" content="https://nomadmud.com/og.jpg?v=3">
+<meta name="twitter:image" content="https://nomadmud.com/og.jpg?v=4">
 <style>
   :root {
     --bg: #16120c;
