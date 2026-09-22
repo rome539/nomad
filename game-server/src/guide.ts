@@ -23,10 +23,11 @@ export const GUIDE_PAGE = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NOMAD — how it works</title>
+<link rel="canonical" href="https://nomadmud.com/guide">
 <meta name="description" content="How NOMAD works: what you keep, what armour does, what weight costs, and why the world does not wait for you.">
 <meta property="og:title" content="NOMAD — how it works">
 <meta property="og:description" content="What you keep, what armour does, what weight costs, and why the world does not wait for you.">
-<meta property="og:image" content="https://nomadmud.com/og.jpg?v=2">
+<meta property="og:image" content="https://nomadmud.com/og.jpg?v=3">
 <link rel="icon" href="/icon.png">
 <style>
   :root {
