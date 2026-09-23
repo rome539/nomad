@@ -3512,14 +3512,18 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
       }
       if (tmpl.is_boss) {
         // What lives behind the black door has reformed — and the door knows.
+        let closedDoor = false;
         for (const [rid, exits] of world.exits) {
           for (const e of exits) {
-            if (e.to_room === roomId && e.key_item) z.openDoors.delete(`${rid}:${e.dir}`);
+            if (e.to_room !== roomId || !e.key_item) continue;
+            const key = `${rid}:${e.dir}`;
+            if (z.openDoors.delete(key)) closedDoor = true;
+            z.doorCloseAt.delete(key);
           }
         }
         // The black door is a fortress thing; the wood's keeper reforming under
         // the trees is not something the deep announces (see roomFeedBands).
-        if (!silent) {
+        if (!silent && (closedDoor || SURFACE_BANDS.has(z.regionOf(roomId)))) {
           const bands = SURFACE_BANDS.has(z.regionOf(roomId)) ? SURFACE_BANDS : FORTRESS_BANDS;
           z.roomFeedBands(bands, SURFACE_BANDS.has(z.regionOf(roomId))
             ? "Out west, something heavy settles back onto ground it has always kept."

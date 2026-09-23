@@ -31,7 +31,7 @@ const ROOMS = {
   "the-relay-house":  { region: "road",  outdoor: false },   // a gate: open sky by rule
   "the-black-hut":    { region: "den",   outdoor: false },   // a roof in a band with no plates
 };
-function skyFor(id, { night = false, raining = false } = {}) {
+function skyFor(id, { night = false, raining = false, inside = false } = {}) {
   const ctx = {
     ART_KEYS: { has: () => true },
     OUTDOOR_ROOMS: { has: (r) => !!ROOMS[r]?.outdoor },
@@ -44,7 +44,7 @@ function skyFor(id, { night = false, raining = false } = {}) {
     eclipsePhase: () => "idle", isDusk: () => false, isDawn: () => false,
     session: { pubkey: "k", roomId: id },
     self: {
-      outOfWorld: () => false,
+      outOfWorld: () => inside,
       world: { entryRooms: { has: (r) => r === "the-relay-house" }, rooms: { get: (r) => ROOMS[r] } },
       artSkyFor: null,
     },
@@ -80,9 +80,12 @@ t("a sealed fortress room still has no sky", skyFor("the-deep-cell", { night: tr
 // bands are painted.
 t("a roof in an unpainted band is untouched", skyFor("the-black-hut", { night: true }) === "in",
   skyFor("the-black-hut", { night: true }));
-// A gate was always given the open sky on purpose; that is not disturbed.
-t("a gate keeps its open sky", skyFor("the-relay-house", { raining: true }) === "rain",
+// Gates are exterior approaches; the gatehouse is the separate interior.
+t("an exterior gate keeps its sky and rain", skyFor("the-relay-house", { raining: true }) === "rain",
   skyFor("the-relay-house", { raining: true }));
+
+t("entering the gatehouse hides the sky", skyFor("the-relay-house", { raining: true, inside: true }) === "in");
+t("gatehouse at an open-air gate also hides the sky", skyFor("the-east-paving", { night: true, inside: true }) === "in");
 
 console.log(fail ? "\n" + fail + " FAILED" : "\nall pass — a roof keeps the weather off and lets the hour in");
 process.exit(fail ? 1 : 0);

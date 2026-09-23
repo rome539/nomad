@@ -1176,6 +1176,7 @@ export const PAGE = `<!doctype html>
      a hare and an eagle owl stay a hare and an eagle owl, and laid out with the
      biggest nearest the middle so nothing important hides behind anything else.
      Hidden with the scene: in text mode there is nothing to stand on. */
+  #weather-particles { display: none; position: fixed; z-index: 0; pointer-events: none; }
   #mobs { display: none; }
   body[data-view="image"] #mobs {
     display: flex;
@@ -2261,6 +2262,7 @@ export const PAGE = `<!doctype html>
   <div id="sky" aria-hidden="true"></div>
   <div id="scene" aria-hidden="true"></div>
   <div id="mobs" aria-hidden="true"></div>
+  <canvas id="weather-particles" aria-hidden="true"></canvas>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
   <div id="log"></div>
   <div id="chips"></div>
@@ -3648,7 +3650,7 @@ async function connect() {
       if (f.room && f.room !== lastRoomName) chipsExpanded = false;
       lastRoomName = f.room || "";
       if (f.art) grantArt();
-      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red);
+      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red, f.covered);
       roomEl.textContent = "";
       if (f.room) {
         roomEl.appendChild(document.createTextNode(f.room));
@@ -7337,7 +7339,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "41";      // /mob/      strips and their eye layers
+var MOB_V  = "45";      // /mob/      strips and their eye layers
 var BG_V   = "33";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -7603,6 +7605,126 @@ var ROOM_PLATE = {
   // door buried at the foot of it - out under the whole sky, so it takes the
   // full six where the two interiors above take two.
   "the-deep-mark":    "day night night-torch fog rain snow",
+  // ---- THE FORTRESS, 108 ROOMS ON 31 PLATES (2026-09-23). The Door is the
+  // oldest region in the game and the last with no picture of itself. Its four
+  // doors already had gate plates; everything behind them was painted as a kind
+  // of ground rather than a room, and most of it is not ground at all.
+  //
+  // A plate here is a KIND OF PLACE, not a room: PLATE_OF below points every
+  // room at the one it shares. The grounds and the overworks are outdoors and
+  // take the full six; everything under them has no sky and takes NIGHT, which
+  // is the room lit by the torches burning in it. The eleven rooms in
+  // DARK_ROOMS take a second plate, NIGHT-TORCH, and those two are the same
+  // photograph lit twice - the room as your own flame shows it, and the room
+  // with no light in it at all, which is very nearly a black frame.
+  "the-causeway":           "day night night-torch fog rain snow",
+  "the-old-road":           "day night night-torch fog rain snow",
+  "the-sally-ditch":        "day night night-torch fog rain snow",
+  "the-gatefall":           "day night night-torch fog rain snow",
+  "the-wall-breach":        "day night night-torch fog rain snow",
+  "the-dry-moat":           "day night night-torch fog rain snow",
+  "the-thorn-court":        "day night night-torch fog rain snow",
+  "the-briar-field":        "day night night-torch fog rain snow",
+  "the-mass-grave":         "day night night-torch fog rain snow",
+  "the-hanging-hill":       "day night night-torch fog rain snow",
+  "the-black-fen":          "day night night-torch fog rain snow",
+  "the-drowned-orchard":    "day night night-torch fog rain snow",
+  "the-burned-village":     "day night night-torch fog rain snow",
+  "the-wall-walk":          "day night night-torch fog rain snow",
+  "the-broken-battlement":  "day night night-torch fog rain snow",
+  "the-rotted-scaffold":    "day night night-torch fog rain snow",
+  "the-watch-turret":       "day night night-torch fog rain snow",
+  "the-bell-cote":          "day night night-torch fog rain snow",
+  "the-leaning-spire":      "day night night-torch fog rain snow",
+  "the-weepers-crown":      "day night night-torch fog rain snow",
+  "stair":                  "night",
+  "crypt-steps":            "night",
+  "weeper-hall":            "night",
+  "hollow-crack":           "night",
+  "ossuary":                "night",
+  "catacomb":               "night",
+  "larder":                 "night",
+  "smokehouse":             "night",
+  "scullery":               "night",
+  "cistern":                "night",
+  "forge":                  "night",
+  "well":                   "night",
+  "barracks":               "night",
+  "guardroom":              "night",
+  "kennels":                "night",
+  "warden-post":            "night",
+  "cells":                  "night",
+  "debtors-pit":            "night",
+  "oubliette":              "night",
+  "library":                "night",
+  "scriptorium":            "night",
+  "chapter-house":          "night",
+  "gallery":                "night",
+  "chapel":                 "night",
+  "shrine":                 "night",
+  "hall":                   "night",
+  "muster":                 "night",
+  "refectory":              "night",
+  "undercroft":             "night",
+  "armory":                 "night",
+  "the-issue-room":         "night",
+  "sewer":                  "night",
+  "the-root-gnawed-run":    "night night-torch",
+  "a-dry-burrow":           "night night-torch",
+  "bone-nook":              "night night-torch",
+  "the-crawl-of-teeth":     "night night-torch",
+  "the-rat-warren":         "night",
+  "the-gnaw-hollow":        "night",
+  "the-hyena-den":          "night",
+  "the-bone-midden":        "night",
+  "the-undermine":          "night night-torch",
+  "the-dripping-gallery":   "night night-torch",
+  "the-sewer-slip":         "night night-torch",
+  "the-earth-throat":       "night night-torch",
+  "the-buried-chapel":      "night",
+  "the-descent":            "night night-torch",
+  "silted-stair":           "night night-torch",
+  "the-marrow-road":        "night night-torch",
+  "the-lightless-march":    "night night-torch",
+  "bone-processional":      "night night-torch",
+  "worm-cloister":          "night night-torch",
+  "worm-bore":              "night night-torch",
+  "the-undertow":           "night night-torch",
+  "black-canal":            "night night-torch",
+  "drowned-court":          "night",
+  "drowned-nave":           "night",
+  "sunken-gallery":         "night",
+  "drowned-barracks":       "night",
+  "kings-oratory":          "night",
+  "the-cold-hearth":        "night",
+  "deep-ossuary":           "night",
+  "bone-reliquary":         "night",
+  "carrion-gallery":        "night",
+  "weeping-cells":          "night",
+  "the-death-cell":         "night",
+  "the-sump":               "night",
+  "the-weir":               "night",
+  "the-cistern":            "night",
+  "leech-pools":            "night",
+  "sunless-well":           "night",
+  "root-vault":             "night",
+  "tide-vault":             "night",
+  "pocket-of-air":          "night",
+  "blackreach":             "night night-torch",
+  "the-gasping-dark":       "night night-torch",
+  "black-threshold":        "night night-torch",
+  "sunken-throne":          "night",
+  "kings-hoard":            "night",
+  "the-tide-gate":          "night night-torch",
+  "the-tide-throat":        "night night-torch",
+  "the-long-swallow":       "night night-torch",
+  "the-still-cradle":       "night night-torch",
+  "the-under-weir":         "night night-torch",
+  "the-drowning-stair":     "night night-torch",
+  "the-eel-run":            "night night-torch",
+  "the-salt-vault":         "night night-torch",
+  "the-silt-chapel":        "night night-torch",
+  "the-breathing-hall":     "night",
 };
 // A PLATE MAY BE SHARED (rome, 2026-09-09). A room plate's file stem has always
 // been the room id, so two rooms that look the same meant two copies of six
@@ -7621,6 +7743,108 @@ var ROOM_PLATE = {
 var PLATE_OF = {
   "the-bone-ground": "the-dry-bones",
   "the-oxide-flat":  "the-ochre-shelf",
+  // ---- THE FORTRESS. One plate serves every room of a kind, which is the only
+  // reason 108 rooms cost 31 pictures. The stem is the plate; the key is the room.
+  "the-causeway":           "fort-approach",
+  "the-old-road":           "fort-approach",
+  "the-sally-ditch":        "fort-approach",
+  "the-gatefall":           "fort-wall",
+  "the-wall-breach":        "fort-wall",
+  "the-dry-moat":           "fort-wall",
+  "the-thorn-court":        "fort-waste",
+  "the-briar-field":        "fort-waste",
+  "the-mass-grave":         "fort-waste",
+  "the-hanging-hill":       "fort-waste",
+  "the-black-fen":          "fort-drowned",
+  "the-drowned-orchard":    "fort-drowned",
+  "the-wall-walk":          "fort-overworks",
+  "the-broken-battlement":  "fort-overworks",
+  "the-rotted-scaffold":    "fort-overworks",
+  "the-watch-turret":       "fort-overworks",
+  "the-bell-cote":          "fort-overworks",
+  "the-leaning-spire":      "fort-overworks",
+  "the-weepers-crown":      "fort-overworks",
+  "stair":                  "keep-passage",
+  "crypt-steps":            "keep-passage",
+  "weeper-hall":            "keep-passage",
+  "hollow-crack":           "keep-passage",
+  "ossuary":                "keep-passage",
+  "catacomb":               "keep-passage",
+  "larder":                 "keep-store",
+  "smokehouse":             "keep-store",
+  "scullery":               "keep-store",
+  "cistern":                "keep-store",
+  "forge":                  "keep-store",
+  "well":                   "keep-store",
+  "barracks":               "keep-quarters",
+  "guardroom":              "keep-quarters",
+  "kennels":                "keep-quarters",
+  "warden-post":            "keep-quarters",
+  "cells":                  "keep-holes",
+  "debtors-pit":            "keep-holes",
+  "oubliette":              "keep-holes",
+  "library":                "keep-letters",
+  "scriptorium":            "keep-letters",
+  "chapter-house":          "keep-letters",
+  "gallery":                "keep-letters",
+  "chapel":                 "keep-worship",
+  "shrine":                 "keep-worship",
+  "muster":                 "keep-great",
+  "refectory":              "keep-great",
+  "the-root-gnawed-run":    "warren-run",
+  "a-dry-burrow":           "warren-run",
+  "bone-nook":              "warren-run",
+  "the-crawl-of-teeth":     "warren-run",
+  "the-rat-warren":         "warren-den",
+  "the-gnaw-hollow":        "warren-den",
+  "the-hyena-den":          "warren-den",
+  "the-bone-midden":        "warren-den",
+  "the-undermine":          "warren-mine",
+  "the-dripping-gallery":   "warren-mine",
+  "the-sewer-slip":         "warren-mine",
+  "the-earth-throat":       "warren-mine",
+  "the-descent":            "deep-passage",
+  "silted-stair":           "deep-passage",
+  "the-marrow-road":        "deep-passage",
+  "the-lightless-march":    "deep-passage",
+  "bone-processional":      "deep-passage",
+  "worm-cloister":          "deep-passage",
+  "worm-bore":              "deep-passage",
+  "the-undertow":           "deep-passage",
+  "black-canal":            "deep-passage",
+  "drowned-court":          "deep-hall",
+  "drowned-nave":           "deep-hall",
+  "sunken-gallery":         "deep-hall",
+  "drowned-barracks":       "deep-hall",
+  "kings-oratory":          "deep-hall",
+  "the-cold-hearth":        "deep-hall",
+  "deep-ossuary":           "deep-bone",
+  "bone-reliquary":         "deep-bone",
+  "carrion-gallery":        "deep-bone",
+  "weeping-cells":          "deep-bone",
+  "the-death-cell":         "deep-bone",
+  "the-sump":               "deep-water",
+  "the-weir":               "deep-water",
+  "the-cistern":            "deep-water",
+  "leech-pools":            "deep-water",
+  "sunless-well":           "deep-water",
+  "root-vault":             "deep-water",
+  "tide-vault":             "deep-water",
+  "pocket-of-air":          "deep-water",
+  "blackreach":             "deep-dark",
+  "the-gasping-dark":       "deep-dark",
+  "black-threshold":        "deep-dark",
+  "sunken-throne":          "kings-rooms",
+  "kings-hoard":            "kings-rooms",
+  "the-tide-gate":          "tideway-throat",
+  "the-tide-throat":        "tideway-throat",
+  "the-long-swallow":       "tideway-throat",
+  "the-still-cradle":       "tideway-throat",
+  "the-under-weir":         "tideway-works",
+  "the-drowning-stair":     "tideway-works",
+  "the-eel-run":            "tideway-works",
+  "the-salt-vault":         "tideway-works",
+  "the-silt-chapel":        "tideway-works",
 };
 // AND WHICH OF THEM THE WEATHER DOES NOT REACH (rome, 2026-09-08).
 //
@@ -7639,7 +7863,101 @@ var PLATE_OF = {
 // So a sheltered plate takes no hour or weather correction at all, and the
 // creatures standing in it read the plate's own condition rather than the sky
 // outside. The sky layer is still drawn — that is the whole point of the slot.
-var SHELTERED = { "the-last-shelter": 1 };
+var SHELTERED = {
+  "the-last-shelter": 1,
+  // ---- THE FORTRESS UNDERGROUND (2026-09-23). Not a roof with a slot in it
+  // like the shelter above - no opening at all, and a great deal of stone. The
+  // hour cannot reach these rooms, so they must take no hour correction: a
+  // torchlit cellar washed to dusk is a picture of nothing.
+  "stair": 1,
+  "crypt-steps": 1,
+  "weeper-hall": 1,
+  "hollow-crack": 1,
+  "ossuary": 1,
+  "catacomb": 1,
+  "larder": 1,
+  "smokehouse": 1,
+  "scullery": 1,
+  "cistern": 1,
+  "forge": 1,
+  "well": 1,
+  "barracks": 1,
+  "guardroom": 1,
+  "kennels": 1,
+  "warden-post": 1,
+  "cells": 1,
+  "debtors-pit": 1,
+  "oubliette": 1,
+  "library": 1,
+  "scriptorium": 1,
+  "chapter-house": 1,
+  "gallery": 1,
+  "chapel": 1,
+  "shrine": 1,
+  "hall": 1,
+  "muster": 1,
+  "refectory": 1,
+  "undercroft": 1,
+  "armory": 1,
+  "the-issue-room": 1,
+  "sewer": 1,
+  "the-root-gnawed-run": 1,
+  "a-dry-burrow": 1,
+  "bone-nook": 1,
+  "the-crawl-of-teeth": 1,
+  "the-rat-warren": 1,
+  "the-gnaw-hollow": 1,
+  "the-hyena-den": 1,
+  "the-bone-midden": 1,
+  "the-undermine": 1,
+  "the-dripping-gallery": 1,
+  "the-sewer-slip": 1,
+  "the-earth-throat": 1,
+  "the-buried-chapel": 1,
+  "the-descent": 1,
+  "silted-stair": 1,
+  "the-marrow-road": 1,
+  "the-lightless-march": 1,
+  "bone-processional": 1,
+  "worm-cloister": 1,
+  "worm-bore": 1,
+  "the-undertow": 1,
+  "black-canal": 1,
+  "drowned-court": 1,
+  "drowned-nave": 1,
+  "sunken-gallery": 1,
+  "drowned-barracks": 1,
+  "kings-oratory": 1,
+  "the-cold-hearth": 1,
+  "deep-ossuary": 1,
+  "bone-reliquary": 1,
+  "carrion-gallery": 1,
+  "weeping-cells": 1,
+  "the-death-cell": 1,
+  "the-sump": 1,
+  "the-weir": 1,
+  "the-cistern": 1,
+  "leech-pools": 1,
+  "sunless-well": 1,
+  "root-vault": 1,
+  "tide-vault": 1,
+  "pocket-of-air": 1,
+  "blackreach": 1,
+  "the-gasping-dark": 1,
+  "black-threshold": 1,
+  "sunken-throne": 1,
+  "kings-hoard": 1,
+  "the-tide-gate": 1,
+  "the-tide-throat": 1,
+  "the-long-swallow": 1,
+  "the-still-cradle": 1,
+  "the-under-weir": 1,
+  "the-drowning-stair": 1,
+  "the-eel-run": 1,
+  "the-salt-vault": 1,
+  "the-silt-chapel": 1,
+  "the-breathing-hall": 1,
+};
 // AND WHAT WEATHER LOOKS LIKE FROM UNDER ONE (rome, 2026-09-08). A sheltered
 // room takes no weather plate, but that does not mean weather changes nothing:
 // there is a slot, and what comes through it is the whole of the light in there.
@@ -8172,7 +8490,43 @@ var MOB_LINE = {
                  // rock with the black water behind them - which is the reading
                  // the room wants, because the thing that lives here comes OUT
                  // of that water at you.
-                 "the-salt-pool": 58 };
+                 "the-salt-pool": 58,
+  // ---- THE FORTRESS, 31 PLATES. All start at the camera lock and none has been
+  // measured against a standing creature yet - the near ground in these was
+  // written to be a level band across the bottom third, so 55 should hold, but
+  // the small creatures are the ones that give it away. Check the rats.
+  "fort-approach": 55,
+  "fort-wall": 55,
+  "fort-waste": 55,
+  "fort-drowned": 55,
+  "the-burned-village": 55,
+  "fort-overworks": 55,
+  "keep-passage": 55,
+  "keep-store": 55,
+  "keep-quarters": 55,
+  "keep-holes": 55,
+  "keep-letters": 55,
+  "keep-worship": 55,
+  "hall": 55,
+  "keep-great": 55,
+  "undercroft": 55,
+  "armory": 55,
+  "the-issue-room": 55,
+  "sewer": 55,
+  "warren-run": 55,
+  "warren-den": 55,
+  "warren-mine": 55,
+  "the-buried-chapel": 55,
+  "deep-passage": 55,
+  "deep-hall": 55,
+  "deep-bone": 55,
+  "deep-water": 55,
+  "deep-dark": 55,
+  "kings-rooms": 55,
+  "tideway-throat": 55,
+  "tideway-works": 55,
+  "the-breathing-hall": 55,
+};
 // The day count from the server: one number, the same for everybody, up by one
 // each cycle. Zero until a status frame carries it, which simply means the first
 // entry of every pool until the world says otherwise.
@@ -8350,7 +8704,72 @@ function floodSuffix(ground, cond) {
   if (!have) return "";
   return (" " + have + " ").indexOf(" " + cond + " ") >= 0 ? "-flood" : "";
 }
-function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red) {
+// Precipitation is cosmetic and follows the committed scene, never a local weather clock.
+var weatherCanvas = document.getElementById("weather-particles");
+var weatherCtx = weatherCanvas && weatherCanvas.getContext && weatherCanvas.getContext("2d");
+var weatherKind = "", weatherFrame = null, weatherTime = 0, weatherStamp = 0;
+var weatherMotion = typeof window !== "undefined" && window.matchMedia
+  ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
+function runWeather() {
+  var active = weatherCtx && weatherKind && viewMode === "image" && !document.hidden && !weatherMotion.matches;
+  if (!active) {
+    if (weatherFrame !== null) cancelAnimationFrame(weatherFrame);
+    weatherFrame = null; weatherStamp = 0;
+    if (weatherCanvas) weatherCanvas.style.display = "none";
+    if (weatherCtx) weatherCtx.clearRect(0, 0, weatherCanvas.width, weatherCanvas.height);
+    return;
+  }
+  weatherCanvas.style.display = "block";
+  if (weatherFrame === null) weatherFrame = requestAnimationFrame(drawWeather);
+}
+function setWeather(kind) {
+  kind = kind === "rain" || kind === "snow" ? kind : "";
+  if (kind !== weatherKind) { weatherKind = kind; weatherTime = 0; weatherStamp = 0; }
+  runWeather();
+}
+function drawWeather(now) {
+  weatherFrame = null;
+  if (!weatherKind || viewMode !== "image" || document.hidden || weatherMotion.matches) { runWeather(); return; }
+  // Thirty draws per second, capped resolution and density even on large Retina screens.
+  if (weatherStamp && now - weatherStamp < 32) { weatherFrame = requestAnimationFrame(drawWeather); return; }
+  weatherTime += weatherStamp ? Math.min(.1, (now - weatherStamp) / 1000) : 0;
+  weatherStamp = now;
+  var box = sceneEl.getBoundingClientRect(), w = Math.round(box.width), h = Math.round(box.height);
+  if (!w || !h) { weatherFrame = requestAnimationFrame(drawWeather); return; }
+  weatherCanvas.style.left = box.left + "px"; weatherCanvas.style.top = box.top + "px";
+  weatherCanvas.style.width = w + "px"; weatherCanvas.style.height = h + "px";
+  var scale = Math.min(1, 1280 / w), rw = Math.max(1, Math.round(w * scale)), rh = Math.max(1, Math.round(h * scale));
+  if (weatherCanvas.width !== rw || weatherCanvas.height !== rh) { weatherCanvas.width = rw; weatherCanvas.height = rh; }
+  var ctx = weatherCtx, t = weatherTime, rain = weatherKind === "rain";
+  ctx.setTransform(scale, 0, 0, scale, 0, 0); ctx.clearRect(0, 0, w, h);
+  var count = Math.min(rain ? 170 : 115, Math.max(24, Math.round(w * h / (rain ? 6500 : 9500))));
+  ctx.strokeStyle = "rgba(195,205,203,.33)"; ctx.lineWidth = 1.1;
+  ctx.fillStyle = "rgba(235,231,210,.72)";
+  for (var i = 0; i < count; i++) {
+    var x, y;
+    if (rain) {
+      x = ((i * 173.7 - t * 185) % (w + 100) + w + 100) % (w + 100) - 50;
+      y = (i * 79.1 + t * (650 + i % 7 * 35)) % (h + 70) - 35;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 8, y + 27); ctx.stroke();
+    } else {
+      x = ((i * 131.3 + t * 24 + Math.sin(t + i) * 15) % (w + 80) + w + 80) % (w + 80) - 40;
+      y = (i * 89.1 + t * (24 + i % 35)) % (h + 60) - 30;
+      ctx.beginPath(); ctx.arc(x, y, .8 + i % 3 * .65, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  weatherFrame = requestAnimationFrame(drawWeather);
+}
+if (document.addEventListener) document.addEventListener("visibilitychange", runWeather);
+if (weatherMotion.addEventListener) weatherMotion.addEventListener("change", runWeather);
+
+var lastCovered = false;
+function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered) {
+  var previousRoom = lastRoomKey;
+  if (covered !== undefined) lastCovered = !!covered;
+  else if (sky !== undefined && sky !== null) lastCovered = sky === "in";
+  // Remove the old sky immediately when stepping inside, even while its
+  // replacement ground plate is downloading.
+  if (lastCovered && skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; }
   // HOW MUCH WATER IS OVER THIS ROOM, and cleared the same way place is:
   // walking off a flooded shoal onto a dry road has to put the sheet away, so
   // an absent field is zero rather than "leave it as it was".
@@ -8367,7 +8786,8 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red) {
   if (torch !== undefined && torch !== null) lastTorch = !!torch;
   if (roll !== undefined && roll !== null) skyRoll = roll;
   if (terrain !== undefined && terrain !== null) lastTerrain = terrain;
-  if (!sceneEl || viewMode !== "image") return;
+  if (!sceneEl || viewMode !== "image") { setWeather(""); return; }
+  if (lastCovered || lastRoomKey !== previousRoom || lastSky !== weatherKind) setWeather("");
   // Terrain first, band second: the room's own ground beats its region's.
   // ROOM ART ONLY. The threshold's paintings were never room art: they are oil,
   // painterly, and each one is a specific somewhere — so a beam walk over open
@@ -8589,6 +9009,8 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red) {
   // you have already left cannot paint over the room you are now in.
   var url = "url(" + scene + "?v=" + BG_V + ")";
   var mine = ++sceneSeq;
+  if (lastCovered) { sky = ""; turn = ""; }
+  var precipitation = scene && !lastCovered && !SHELTERED[place] ? mobHour : "";
   var put = function () {
     if (mine !== sceneSeq) return;         // a newer room got here first
     sceneEl.style.backgroundImage = url;
@@ -8642,6 +9064,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red) {
     // same box and the plate now occupies all of it.
     sceneEl.style.backgroundPosition = "center center";
     scenePainted = scene;
+    setWeather(precipitation);
   };
   // Already up: this is a light change on the same ground (the hour turning, a
   // sky the scene is borrowed under). Nothing to fetch, so do not hold a frame.
@@ -8979,6 +9402,33 @@ var MOB_SPRITE = {
   "the-drover": 30,
   "strand-thief": 19,
   "the-eel-cutter": 29,
+  // ---- THE FORTRESS (2026-09-23). Sized against the roster already here: a man
+  // is 29-30, a wolf 13, the drake 44. Each number below is the creature's own
+  // entry read as a height, not a guess at a silhouette.
+  "skeleton": 28,          // a soldier's frame with nothing on it - a man, and lighter
+  "bone-knight": 32,       // "a TALL skeleton", and it stands in mail
+  "warden": 30,            // a man in plate, walking rounds
+  "warden-surface": 30,    // the same warden, outdoors
+  "warden-captain": 34,    // "BIGGER than the wardens it once led"
+  "last-watchman": 30,     // a watchman, dried inside his kit
+  "twice-dead": 29,        // an old man of the barrow-dead
+  "thrice-dead": 29,       // his elder, no bigger
+  "marrow-cantor": 33,     // "a TALL frame of fused bone"
+  "forgotten-king": 31,    // crowned, and mostly seated
+  "marrow-king": 31,       // the same frame, wound through with others
+  "drowned-god": 46,       // "IMMENSE" - sits chest-deep and the dark leans in with it
+  "the-drowned": 30,       // a drowned man, bloated but a man
+  "drowned-hulk": 40,      // "swollen VAST, filling the flooded dark where it stands"
+  "rag-and-bone": 44,      // "about half again the size of" a man, and hung with its load
+  "verdigris-thing": 30,   // "something man-shaped" under a century of crust
+  "pale-crawler": 14,      // low and long on all fours, under a wolf
+  "pale-stalker": 17,      // the bigger blood of the same thing
+  "three-hound": 20,       // a heavy hound - taller than a wolf, three heads up
+  "two-hound": 18,         // "a head short and without the bulk to make up the difference"
+  "grave-hyena": 12,       // a hyena stands under a wolf and slopes away behind
+  "dire-hyena": 15,        // the mean one, and bigger with it
+  "cutpurse": 15,          // "HALF THE SIZE OF A PERSON and twice as quick"
+  "cutthroat": 15,         // the same build with a knife in it
   "the-refuge-man": 30,
   "the-tide-warden": 29,
   "the-bridge-mason": 29,
@@ -9064,6 +9514,30 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "warden-surface":   { n: 8, aspect: 0.93, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "warden":           { n: 8, aspect: 0.93, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "cutthroat":   { n: 8, aspect: 1.026, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "cutpurse":   { n: 8, aspect: 1.243, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "dire-hyena":   { n: 8, aspect: 1.063, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "grave-hyena":   { n: 8, aspect: 1.238, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "forgotten-king":   { n: 8, aspect: 0.931, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"recover":6,"death":7} },
+  "two-hound":   { n: 6, aspect: 1.287, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
+  "three-hound":   { n: 6, aspect: 1.219, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
+  "pale-stalker":   { n: 8, aspect: 1.528, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "pale-crawler":   { n: 8, aspect: 1.661, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "verdigris-thing":   { n: 8, aspect: 1.041, f: {"idle":0,"lay-on-the-hand":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "rag-and-bone":   { n: 8, aspect: 0.978, f: {"idle":0,"take-it-up":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "drowned-god":   { n: 8, aspect: 0.991, f: {"idle":0,"keep-the-seat":1,"take-hold":2,"lift-you-clear":3,"alert":4,"attack":5,"recover":6,"death":7} },
+  "drowned-hulk":   { n: 8, aspect: 0.997, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-drowned":   { n: 8, aspect: 1.05, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "marrow-king":   { n: 8, aspect: 1.012, f: {"idle":0,"keep-the-seat":1,"rise":2,"take-hold":3,"alert":4,"attack":5,"recover":6,"death":7} },
+  "thrice-dead":   { n: 8, aspect: 1.003, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "twice-dead":   { n: 8, aspect: 1, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "last-watchman":   { n: 8, aspect: 1.284, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "warden-captain":   { n: 8, aspect: 1.061, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "bone-knight":   { n: 8, aspect: 1.02, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "marrow-cantor":   { n: 8, aspect: 0.941, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "skeleton":   { n: 8, aspect: 1.132, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "white-roe":           { n: 8, aspect: 1.037, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "wayman":              { n: 8, aspect: 0.957, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-toll-clerk":      { n: 8, aspect: 0.969, f: {"idle":0,"shift-the-weight":1,"alert":2,"count-it-out":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -9086,7 +9560,7 @@ var MOB_ANIM = {
   "dog-otter":           { n: 8, aspect: 1.448, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "brood-rat":           { n: 8, aspect: 1.475, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "albino-rat":          { n: 8, aspect: 1.454, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-tide-warden":        { n: 8, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5,"recover":6,"hit":7} },
+  "the-tide-warden":        { n: 7, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5,"recover":6} },
   "the-scaffold-hand":      { n: 8, aspect: 0.972, f: {"idle":0,"work-the-stone":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-salt-widow":         { n: 8, aspect: 1.136, f: {"idle":0,"feed-the-flue":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-refuge-man":         { n: 8, aspect: 1.033, f: {"idle":0,"turn-from-the-wall":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
@@ -9286,7 +9760,11 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   "take-hold",          // DROWNERS: it closes on you and does not let go
   "take-it-up",         // HOARDERS: the rag-and-bone scoops and caches
   "lay-on-the-hand",    // CORRODERS: metal blooms and flakes where it touches
-  "surface",            // SURFACERS: deep-kin climbing up out of the dark holes
+  // "surface" WAS HERE AND IS NOT A POSE. SURFACERS climb up out of the wells,
+  // which is a real behaviour and reads like a real frame - but a cell draws no
+  // ground, no edge and no hole, and a body defined only by its relation to a
+  // hole that is not drawn comes back floating upright in empty magenta holding
+  // on to nothing. It did. The generator refuses the name now.
   "keep-the-seat",      // ...and the forgotten king, who is only ever saluted
   // AND THE TWO HYENAS ARE NOT THE SAME ANIMAL. They were given one list
   // between them, which is how the two dogs ended up the same dog. The code
@@ -9303,7 +9781,18 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   // would not have rescued it either, it would have made it worse: the calm
   // cycle fires anywhere, so the hyena would drink in a dry room, which is the
   // same bug as the sleep frame in the idle rotation. It keeps its feed.
-  "guard-the-kill"];    // AGGRO_SCAVENGERS: the dire hyena, over a meal, daring you   // the verdigris thing, touching what you are wearing
+  "guard-the-kill",     // AGGRO_SCAVENGERS: the dire hyena, over a meal, daring you
+  // THE THRONE ROOM (2026-09-23). Every boss climbs phases as it goes down -
+  // dmg + phase*3 - but only the forgotten king has the theatre written for it,
+  // and it is two beats, both of them pictures nobody had drawn:
+  //   phase 1  "rises from the throne. The dark rises with him."
+  //   phase 2  "calls - and the dark answers", and something comes out of it
+  // Named "call-the-dark" rather than "call", which the generator refuses as a
+  // dead name: PACK_CALLERS has no branch anywhere, but this one is scripted in
+  // ai.bossPhase and actually happens.
+  "stand-from-the-throne", // the king, up off the seat, and the dark up with him
+  "call-the-dark",         // ...and the summons that answers him
+  "lift-you-clear"];       // the drowned god, holding you off the floor under nothing at all   // the verdigris thing, touching what you are wearing
 var GAIT_HZ = 5;            // gait poses alternate this fast...
 var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
 var WINGBEAT_HZ = 4;        // and wings beat this fast...
@@ -9329,6 +9818,13 @@ var MOB_EYES = {
   "the-drowned-ferryman": 1, "the-fowler": 1, "the-eel-cutter": 1, "the-pilot": 1,
   "the-drover": 1, "the-tide-warden": 1, "the-refuge-man": 1, "the-bridge-mason": 1,
   "the-reed-walker": 1, "the-scaffold-hand": 1, "the-salt-widow": 1,
+  // THE FORTRESS'S HOLLOW (2026-09-23). Eight of the Door's dead carry the cyan
+  // marker and so turn their eyes on a blood moon. The keep's ARMOUR does not
+  // and is deliberately absent: the warden's entry says the visor shows only the
+  // room behind it, so there is nothing in the gap to light up. Its sheets were
+  // drawn with the opening empty and no eye layer was cut for them.
+  "skeleton": 1, "bone-knight": 1, "marrow-cantor": 1, "twice-dead": 1,
+  "thrice-dead": 1, "marrow-king": 1, "drowned-god": 1, "forgotten-king": 1,
   // THE ROAD'S THREE (2026-09-21). They were written as HOLLOW long before they
   // were drawn, their sheets came back with the cyan marker in them, and the
   // cutter split an eye layer off every frame that shows a face - so all that

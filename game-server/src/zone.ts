@@ -98,7 +98,7 @@ import {
   MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES,
   BELL_DOOR_KEY, BELL_DOOR_SHUT, BELL_DOOR_TREMBLE, BELL_DOOR_OPEN,
   TIDE_SILT_COURSES, TIDE_PRY_MS, TIDE_DIGGING_TOOLS, tideSiltLine, TIDE_PRY_WET, TIDE_PRY_SETTLE, TIDE_PRY_TOOL_HINT, TIDE_PRY_MAKING, TIDE_PRY_OPEN,
-  HABIT_ODDS, HABIT_COOLDOWN_MS, HABITS, HABIT_NIGHT, HABIT_FIRE, HABIT_DEEP, HABIT_GRAVES, QUIRK_ODDS, QUIRK_COOLDOWN_MS, TREASURE_QUIRKS,
+  HABIT_ODDS, HABIT_COOLDOWN_MS, HABITS, HABIT_SKY, HABIT_NIGHT, HABIT_FIRE, HABIT_DEEP, HABIT_GRAVES, QUIRK_ODDS, QUIRK_COOLDOWN_MS, TREASURE_QUIRKS,
   BOLT_TIRE_MS, BOLT_HOLD_ODDS, BOLT_HOLD,
   SHELTER_ROOMS, YEW_ROOM, GIBBET_ROOM,
   WAKE_NOISE, RARITY_RANK,
@@ -552,7 +552,11 @@ export class ZoneDO implements DurableObject {
       // falling on someone sitting in a mill with the door shut is simply wrong.
       // Same fix reaches back and covers the wood's two huts, which have been
       // rained on since it shipped.
-      if (OUTDOOR_REGIONS.has(room.region) && !INDOOR_ROOMS.has(room.id)) OUTDOOR_ROOMS.add(room.id);
+      // Gate rooms are the exterior approach. Only entering the gatehouse
+      // puts the session under cover, even when the gate is named for a building.
+      if (world.entryRooms.has(room.id)) OUTDOOR_ROOMS.add(room.id);
+      else if (INDOOR_ROOMS.has(room.id)) OUTDOOR_ROOMS.delete(room.id);
+      else if (OUTDOOR_REGIONS.has(room.region)) OUTDOOR_ROOMS.add(room.id);
       // Same fold for the larder: a band that declares itself forage ground
       // (FORAGE_REGIONS) feeds the things that graze it. Without this the wood
       // was two hundred rooms of trees that a deer could starve in.
@@ -5566,7 +5570,10 @@ export class ZoneDO implements DurableObject {
   // tell never lands twice in a row.
   private drawHabit(session: Session): { line: string; room?: string } | null {
     const pool: { line: string; room?: string }[] = [...HABITS];
-    if (isNight()) pool.push(...HABIT_NIGHT);
+    if (!this.outOfWorld(session) && OUTDOOR_ROOMS.has(session.roomId)) {
+      pool.push(...HABIT_SKY);
+      if (isNight()) pool.push(...HABIT_NIGHT);
+    }
     if (this.roomHasFirekeeper(session.roomId) || this.roomLit(session.roomId)) pool.push(...HABIT_FIRE);
     if (DEEP_ROOMS.has(session.roomId)) pool.push(...HABIT_DEEP);
     if (WARRENS_ROOMS.has(session.roomId)) pool.push(...HABIT_GRAVES);
@@ -8099,22 +8106,6 @@ export class ZoneDO implements DurableObject {
     }
     if (worst <= GEAR_FAILING_AT) fx.push("kit-failing");
     else if (worst <= GEAR_WORN_AT) fx.push("kit-worn");
-    // A GATE IS A ROOF YOU ARE STANDING OUTSIDE OF. Two of the fourteen doors
-    // are buildings and stay in INDOOR_ROOMS — the Relay House and the Withy Hut
-    // are rooms with walls, and being under them should keep the rain off you.
-    // But every gate SCENE is shot from outside, looking at the building, with
-    // the sky in the frame, so reading the shelter rule for the picture drew a
-    // cut-out scene over nothing. For the picture only, a gate is open air, and
-    // it reads the weather off the sky rather than off the room — what is
-    // falling out there is in the frame whether or not it is landing on you.
-    //
-    // This used to carry a second clause for the mountain, because twenty-one
-    // rooms up there were in INDOOR_ROOMS and the whole band was therefore
-    // frozen at noon. That was treating the symptom: those rooms were never
-    // indoors, and they have been taken out of the set (see INDOOR_ROOMS). The
-    // mountain gets its sky from the ordinary rule now, like the open ground it
-    // is, and so does everything else that follows from being outdoors.
-    const openSkyForArt = !this.outOfWorld(session) && this.world!.entryRooms.has(session.roomId);
     try {
       session.ws.send(
         JSON.stringify({
@@ -8195,11 +8186,10 @@ export class ZoneDO implements DurableObject {
           sea: ART_KEYS.has(session.pubkey) && events.seaUnder(this, session.roomId)
             ? Math.max(1, events.seaLevel(this) - (SEA_ROOMS.get(session.roomId) ?? 1) + 1)
             : undefined,
-          // "in" MEANS THERE IS NO SKY OVER THIS PLACE — see openSkyForArt
-          // above for why that is not the same question as whether you are
-          // under a roof, and for the two kinds of room the roof test was
-          // getting wrong.
+          // Lighting and visible sky are separate: a roof can admit daylight.
           sky: (session.artSky = this.artSkyFor(session)),
+          // Light through a doorway can follow the hour without exposing sky.
+          covered: this.outOfWorld(session) || !OUTDOOR_ROOMS.has(session.roomId),
           // THE RED NIGHT IS NOT A SKY SLOT. `sky` above picks which photograph
           // to paint, and weather wins that contest - correctly, because a
           // blood moon behind fog is a foggy picture. But the hollow ones'
@@ -8250,7 +8240,8 @@ export class ZoneDO implements DurableObject {
   // the moon, an eclipse, weather arriving or lifting, and walking under a roof.
   public artSkyFor(session: Session): string | undefined {
     if (!ART_KEYS.has(session.pubkey)) return undefined;
-    const openSkyForArt = !this.outOfWorld(session) && this.world!.entryRooms.has(session.roomId);
+    if (this.outOfWorld(session)) return "in";
+    const openSkyForArt = this.world!.entryRooms.has(session.roomId);
     // A ROOF IN OPEN COUNTRY IS NOT A FORTRESS INTERIOR (rome, 2026-09-20: the
     // Carter's Rest showing him daylight on a night the rest of the world was
     // dark).

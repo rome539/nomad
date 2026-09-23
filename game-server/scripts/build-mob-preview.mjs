@@ -243,6 +243,7 @@ const depsFor = (body, self) => {
 };
 const SCENE_TABLES = depsFor(fn("paintScene"), "paintScene");
 const SCENE_DRIVER = fn("paintScene");
+const WEATHER_STATE = src.slice(src.indexOf("var weatherCanvas ="), src.indexOf("function runWeather()"));
 // And its stylesheet, rule by rule, straight out of the served page: the tints,
 // the blood moon's masked multiply, the scrims. Anything whose selector names
 // the scene or the sky comes over; the page's own overrides go after these and
@@ -383,6 +384,8 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  <button id="atk">attack</button>
  <button id="hit">take a hit</button>
  <button id="die">die</button>
+ <button id="fed">feed</button>
+ <button id="grz">graze</button>
  <button id="slp" data-st="rest">sleep</button>
  <button data-st="hunt">hunting you</button>
  <button data-st="flee">fleeing</button>
@@ -390,7 +393,7 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  <button data-st="reel">reeling</button>
  <span class="n">build ${STAMP} · MOB_V ${MOB_V} · ${Object.keys(ANIM).length} animated · ${withAtk} strike · ${withDeath} die</span>
 </div>
-<div id="stage"><div id="sky"></div><div id="scene"></div><div id="mobs"></div></div>
+<div id="stage"><div id="sky"></div><div id="scene"></div><div id="mobs"></div><canvas id="weather-particles" aria-hidden="true" style="display:none;position:fixed;pointer-events:none;z-index:0"></canvas></div>
 <div id="shelf"></div>
 </div>
 <div id="grid"></div>
@@ -420,6 +423,10 @@ var sceneEl=document.getElementById("scene"), skyEl=document.getElementById("sky
     mobsEl=document.getElementById("mobs"), viewMode="image",
     lastBand="", lastSky="", lastTerrain="", lastRoomKey="", lastPlace="", lastTorch=false, skyRoll=0,
     lastSea=0, scenePainted="", sceneSeq=0;
+${WEATHER_STATE}
+${fn("drawWeather")}
+if (document.addEventListener) document.addEventListener("visibilitychange", runWeather);
+if (weatherMotion.addEventListener) weatherMotion.addEventListener("change", runWeather);
 ${SCENE_DRIVER}
 /* ---- end lifted ---- */
 var SPRITE=MOB_SPRITE, ANIM=MOB_ANIM;   // the page's own shorthand
@@ -513,6 +520,43 @@ Object.keys(MOB_ANIM).sort().forEach(function(id){
   var o=document.createElement("option");o.textContent=id;o.selected=(id==="hill-wolf");who.appendChild(o);});
 [0.6,0.8,1,1.4].forEach(function(v){var o=document.createElement("option");o.textContent=v;o.selected=(v==1);sc.appendChild(o);});
 
+// ONE CREATURE, BUILT ONCE. The grid and the stage each had their own copy of
+// this, and the stage's copy carried a comment saying it matched the grid's -
+// which is exactly the sort of promise that stops being true without anyone
+// noticing. It stopped being true the day the grid learned to collect every
+// calm pose and resolve the two eating frames, and the result was that on the
+// stage, the view with the buttons under it, feed and graze did nothing at all.
+//
+// Every field here is the one paintMobs sets, under the name paintMobs uses.
+// A field missing from this object is a button that silently does nothing.
+//
+// NO BACKTICKS ANYWHERE BELOW THE TEMPLATE LITERAL: this whole page is one, so
+// a pair of them quoting a pose name ends the string and the build dies on a
+// syntax error hundreds of lines from the typo.
+function mkAnim(id,a,el){
+  // every calm pose, not the first - the driver cycles them
+  var calms=[]; for(var q=0;q<CALM_POSES.length;q++) if(a.f[CALM_POSES[q]]!==undefined) calms.push(CALM_POSES[q]);
+  var acts=mobActs(a.f); a.acts=acts.length?acts:["idle"];
+  var sleep="idle"; for(var z=0;z<SLEEP_POSES.length;z++) if(a.f[SLEEP_POSES[z]]!==undefined){sleep=SLEEP_POSES[z];break;}
+  var watch="idle"; for(var z9=0;z9<WATCH_POSES.length;z9++) if(a.f[WATCH_POSES[z9]]!==undefined){watch=WATCH_POSES[z9];break;}
+  // every blow too: the drakes have three, and keeping the first would show two
+  // frames the page then cannot draw
+  var strikes=[]; for(var y=0;y<STRIKE_POSES.length;y++) if(a.f[STRIKE_POSES[y]]!==undefined) strikes.push(STRIKE_POSES[y]);
+  var recoil="idle"; for(var v=0;v<HIT_POSES.length;v++) if(a.f[HIT_POSES[v]]!==undefined){recoil=HIT_POSES[v];break;}
+  // the two frames a creature eats in, resolved as paintMobs resolves them
+  var eat="", grazeAt="";
+  for(var z6=0;z6<EAT_POSES.length;z6++) if(a.f[EAT_POSES[z6]]!==undefined){eat=EAT_POSES[z6];break;}
+  if(a.f["feed"]!==undefined) eat="feed";
+  if(a.f["graze"]!==undefined) grazeAt="graze";
+  return {el:el,spec:a,id:id,phase:"idle",t:0,state:"",
+          calm:calms[0]||"",calms:calms,sleep:sleep,
+          strike:strikes[0]||"",strikes:strikes,blow:strikes[0]||"",
+          recoil:recoil,watch:watch,eat:eat,grazeAt:grazeAt,
+          rate:a.f["move-a"]!==undefined?7000:a.f.up!==undefined?11000:20000,
+          slot:anims.length, lift:Math.max(0,(mobVh(id)-MAN_VH)/2)/mobVh(id),
+          next:Date.now()+2000+Math.random()*9000};
+}
+
 function build(){
   grid.innerHTML=""; anims=[];
   var scale=parseFloat(sc.value);
@@ -524,21 +568,7 @@ function build(){
     if(a){
       el.style.width=(mobVh(id)*scale*3*a.aspect)+"px"; el.style.flex="0 0 auto";
       el.dataset.id=id; paintEyes(el,id,a);
-      // the client's own choices, made the same way
-      var calm=""; for(var q=0;q<CALM_POSES.length;q++) if(a.f[CALM_POSES[q]]!==undefined&&!calm) calm=CALM_POSES[q];
-      var acts=mobActs(a.f); a.acts=acts.length?acts:["idle"];
-      var sleep="idle"; for(var z=0;z<SLEEP_POSES.length;z++) if(a.f[SLEEP_POSES[z]]!==undefined){sleep=SLEEP_POSES[z];break;}
-      var watch="idle"; for(var z9=0;z9<WATCH_POSES.length;z9++) if(a.f[WATCH_POSES[z9]]!==undefined){watch=WATCH_POSES[z9];break;}
-      var rate=a.f["move-a"]!==undefined?7000:a.f.up!==undefined?11000:20000;
-      // EVERY blow, the way the client collects them: the drakes have three and
-      // a preview that kept only the first would show two frames it cannot draw.
-      var strikes=[]; for(var y=0;y<STRIKE_POSES.length;y++) if(a.f[STRIKE_POSES[y]]!==undefined) strikes.push(STRIKE_POSES[y]);
-      var strike=strikes[0]||"";
-      var recoil="idle"; for(var v=0;v<HIT_POSES.length;v++) if(a.f[HIT_POSES[v]]!==undefined){recoil=HIT_POSES[v];break;}
-      anims.push({el:el,spec:a,id:id,phase:"idle",t:0,state:"",calm:calm,sleep:sleep,
-                  strike:strike,strikes:strikes,blow:strike,recoil:recoil,watch:watch,rate:rate,
-                  slot:anims.length, lift:Math.max(0,(mobVh(id)-MAN_VH)/2)/mobVh(id),
-                  next:Date.now()+2000+Math.random()*9000});
+      anims.push(mkAnim(id,a,el));
     } else {
       el.style.aspectRatio="1"; el.dataset.id=id;
       el.style.backgroundImage=(bloodMoon&&MOB_EYES[id]?"url(mob/"+id+".eyes.webp?v="+MOB_V+"), ":"")
@@ -589,19 +619,13 @@ function dress(){
   el.dataset.id=id; paintEyes(el,id,a);
   el.style.backgroundRepeat="no-repeat"; el.style.backgroundPositionY="center";
   mobsEl.appendChild(el);
-  // Built exactly the way the grid builds one, so the action buttons reach it.
-  var calm=""; for(var q=0;q<CALM_POSES.length;q++) if(a.f[CALM_POSES[q]]!==undefined&&!calm) calm=CALM_POSES[q];
-  var acts=mobActs(a.f); a.acts=acts.length?acts:["idle"];
-  var sleep="idle"; for(var z=0;z<SLEEP_POSES.length;z++) if(a.f[SLEEP_POSES[z]]!==undefined){sleep=SLEEP_POSES[z];break;}
-  var watch="idle"; for(var z9=0;z9<WATCH_POSES.length;z9++) if(a.f[WATCH_POSES[z9]]!==undefined){watch=WATCH_POSES[z9];break;}
-  var strikes=[]; for(var y=0;y<STRIKE_POSES.length;y++) if(a.f[STRIKE_POSES[y]]!==undefined) strikes.push(STRIKE_POSES[y]);
-  var strike=strikes[0]||"";
-  var recoil="idle"; for(var v=0;v<HIT_POSES.length;v++) if(a.f[HIT_POSES[v]]!==undefined){recoil=HIT_POSES[v];break;}
-  stageAnim={el:el,spec:a,id:id,phase:"idle",t:0,state:"",calm:calm,sleep:sleep,
-             strike:strike,strikes:strikes,blow:strike,
-             recoil:recoil,watch:watch,rate:a.f["move-a"]!==undefined?7000:a.f.up!==undefined?11000:20000,
-             slot:anims.length, lift:Math.max(0,(mobVh(id)-MAN_VH)/2)/mobVh(id),
-             next:Date.now()+2000+Math.random()*9000};
+  // Built by the SAME function the grid builds with - see mkAnim. It used to be
+  // a second copy of that code under a comment promising it was identical, and
+  // it drifted the moment the grid's copy was corrected: the stage kept one calm
+  // pose and had no eating frames at all, so on the one view a person actually
+  // presses buttons against, feed and graze did nothing and the work cycle was
+  // a single frame. Two copies of a rule is one copy and one lie.
+  stageAnim=mkAnim(id,a,el);
   anims.push(stageAnim);
 }
 // WHAT THE CLIENT DECIDED, read back off the elements rather than recomputed —
@@ -790,6 +814,12 @@ document.getElementById("fire").onclick=function(){anims.forEach(function(a){if(
 document.getElementById("atk").onclick=function(){mobBeat(ids(),null,null)};
 document.getElementById("hit").onclick=function(){mobBeat(null,ids(),null)};
 document.getElementById("die").onclick=function(){mobBeat(null,null,ids())};
+// The two beats the preview could not send. mobBeat has taken five arguments
+// since the grazed act was split off feeding; this page was still calling it
+// with three, so a creature drawn eating could be watched doing everything
+// EXCEPT the thing it was drawn doing.
+document.getElementById("fed").onclick=function(){mobBeat(null,null,null,ids())};
+document.getElementById("grz").onclick=function(){mobBeat(null,null,null,null,ids())};
 // BY SLOT. The client indexes states by a sprite's position in the room list,
 // not by what kind of creature it is — three wolves in a den are three slots.
 function mkState(v){var o=[];anims.forEach(function(a){o[a.slot]=v});return o}

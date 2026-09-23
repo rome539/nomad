@@ -71,6 +71,9 @@ const FOREIGN = new Set(["gill-adder", "stone-adder", "the-gravid-adder"]);
 // So the beat is up-glide-up-glide, the arc still has its glide and its landing,
 // and the cell that was freed still pays for the meal.
 const ALIAS = { "down": ["glide", "up"] };
+// Creatures that are one creature under two template ids — see the copy in the
+// write step. Keyed by the id that is DRAWN, listing the ids that take its art.
+const SAME_ART = { "warden": ["warden-surface"] };
 
 const NOT_A_POSE = new Set(["sheet-order", "source", "combat-source", "flight-source",
                             "ground-source", "approved-ground-source"]);
@@ -306,6 +309,23 @@ for (const [id, dir] of [...found].sort()) {
       .composite(frames.map((b, i) => ({ input: b, left: i * fw, top: 0 })))
       .webp({ quality: 92, alphaQuality: 100 })   // q92 + full alpha: ~6x smaller than png, no alpha flips
       .toFile(path.join(OUT, id + ".webp"));
+    // TWO TEMPLATES, ONE CREATURE. Not a variant — a variant is a different
+    // animal and every pair in the game carries two strips on purpose. This is
+    // the same animal entered twice because it had to be somewhere else: a
+    // warden was moved out of the keep, and a spawn row cannot cross a band, so
+    // the surface got its own template id. Same name, same description, same
+    // level, hp, damage, armour, gear and loot, down the line.
+    //
+    // So it takes the same picture. Drawing it twice would be asking for two
+    // sheets of one creature and hoping they matched. The copy happens here
+    // rather than by hand because the hand forgets: cut the warden, and the
+    // thing walking the surface changes with it in the same command.
+    for (const twin of SAME_ART[id] || []) {
+      fs.copyFileSync(path.join(OUT, id + ".webp"), path.join(OUT, twin + ".webp"));
+      const e = path.join(OUT, id + ".eyes.webp");
+      if (fs.existsSync(e)) fs.copyFileSync(e, path.join(OUT, twin + ".eyes.webp"));
+      console.log("     + " + twin + " shares this strip — the same creature, entered twice");
+    }
   }
 
   const f = {}; order.forEach((p, i) => f[p] = i);
@@ -328,8 +348,17 @@ for (const [id, dir] of [...found].sort()) {
 
 if (!rows.length) { console.log("nothing to build"); process.exit(0); }
 
+// A shared strip needs a shared MAP. The file copy alone would leave the twin
+// reading its own stale row - same picture, different frame indices - which
+// paints the wrong cell out of a correct strip and is worse than no art.
+//
+// BEFORE the column width is measured, not after: the twin's id is longer than
+// the one it copies ("warden" -> "warden-surface"), so adding it later made the
+// padding negative and String.repeat threw on the one row this exists for.
+for (const r of [...rows]) for (const twin of SAME_ART[r.id] || []) rows.push({ ...r, id: twin });
+
 const pad = Math.max(...rows.map((r) => r.id.length)) + 3;
-const line = (r) => `  "${r.id}":` + " ".repeat(pad - r.id.length)
+const line = (r) => `  "${r.id}":` + " ".repeat(Math.max(1, pad - r.id.length))
   + `{ n: ${r.n}, aspect: ${r.aspect}, f: ${JSON.stringify(r.f)} },`;
 
 if (patch) {

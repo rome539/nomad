@@ -121,7 +121,18 @@ const shadowedBy = (key, poses, frame) => {
 //     They pick the wording of a hit message. They never want a picture.
 //   DROWNERS - seize and hold, excluded from starve-hunting (ai.ts:1494).
 //     Not a feeding route.
-const DEAD_NAMES = { drink: "DRINKERS", call: "PACK_CALLERS", flee: "RUNNERS" };
+const DEAD_NAMES = { drink: "DRINKERS", call: "PACK_CALLERS", flee: "RUNNERS",
+  // A POSE CAN BE DEAD FOR A SECOND REASON: the cell law forbids the thing it
+  // is about. SURFACERS climb up out of the wells and the oubliettes, which is
+  // a real behaviour and sounds like a real frame - but the sheet draws NO
+  // ground, no floor, no edge, no hole, and a body defined entirely by its
+  // relation to a hole that is not drawn is a body floating upright in empty
+  // magenta gripping nothing. It came back exactly that way.
+  //
+  // The test for any new pose: cover the scenery and ask whether the BODY still
+  // says what the pose means. A crouch says crouch. A lunge says lunge. Climbing
+  // out says nothing at all without the edge, so it cannot be asked for.
+  surface: "SURFACERS - the cell has no edge to climb out of" };
 // POSES THAT ARE OUT BY RULING, not by mechanism. The driver reads both of these
 // perfectly well; rome has decided twice that a cell is not to be spent on them,
 // and both times a later pass put them back - because a new spec was built from
@@ -152,6 +163,35 @@ const RULED_OUT = {
 // Every line here is written to the law above: the BODY makes the shape and the
 // thing being worked on is never named, because naming it draws it.
 const LINES = {
+// THE ARMED DEAD OF THE KEEP. Every one of these came back throwing a punch
+// with the weapon still frozen in its carry position, because the generic
+// attack line is written for an animal and says nothing about a hand holding
+// something. The blow names the weapon here, and so does the recovery, because
+// a man does not come back to guard from a punch he did not throw.
+"skeleton": {
+  attack: "A downward cut with the rusted sword, the arm come through and the blade past the low point, the whole light frame turned into it. The sword is IN THE SWING, not held at rest",
+  recover: "Bringing the sword back up and in across the body after the cut, coming back to a guard, weight settling onto the back foot",
+},
+"bone-knight": {
+  attack: "A committed sword cut from the shoulder, blade driven through and out past the body, the kite-shield brought up and across the chest behind it. Sword in the blow, shield covering - it fights with both",
+  recover: "Sword drawn back in and up, shield settling back onto the forearm, squaring up again behind it",
+},
+"warden-captain": {
+  attack: "The rusted maul swung through in both fused gauntlets, the head of it past the low point and the whole harness turned behind the weight of it, the tower shield carried through on the other arm. It has no free hand and never strikes with one",
+  recover: "The maul hauled back up out of the swing, slow with its own weight, the shield coming back across the front",
+},
+"last-watchman": {
+  attack: "A hard spear thrust, straight and level: both hands on the shaft, the point driven out past the front foot at chest height, the body behind it in a long lunge, the mantle thrown back off the shoulders. THE SPEAR IS LEVEL AND GOING FORWARD - it is not upright, it is not at the shoulder, and the fist is not doing the work",
+  recover: "The spear hauled back in from the thrust, point coming up off the line, the front foot recovering under him and the body straightening back toward his post",
+},
+"warden": {
+  attack: "A straight armoured punch with the empty gauntlet, driven out from the shoulder past the front foot, the unlit lantern still hanging from the other hand and swinging with the movement. This one has no weapon, so the fist is correct",
+  recover: "The punching arm drawn back in and down, the lantern settling, the body squaring up again",
+},
+"warden-surface": {
+  attack: "A straight armoured punch with the empty gauntlet, driven out from the shoulder past the front foot, the unlit lantern still hanging from the other hand and swinging with the movement. This one has no weapon, so the fist is correct",
+  recover: "The punching arm drawn back in and down, the lantern settling, the body squaring up again",
+},
 "the-tide-warden": {
   idle: "Standing still in a coat sodden black to the hem, a notched stick held upright in one hand, facing along the way",
   "cut-the-stick": "Head down over the notched stick held up close to the chest, cutting a fresh notch into it with a small blade",
@@ -879,8 +919,8 @@ let poses = given.length ? given : REDRAW[id] ? REDRAW[id] : BIRD_SHEETS[id] ? B
     if (dead) wasted.push(frame + " (never shown: \"" + dead + "\" wins that slot)");
   }
   for (const pose of poses) if (DEAD_NAMES[pose]) {
-    console.error("\n  " + pose + " is a dead name. " + DEAD_NAMES[pose] +
-      " has no branch in the driver - this cell would never be shown.\n");
+    console.error("\n  " + pose + " is a dead name: " + DEAD_NAMES[pose] +
+      ". That cell could never be shown.\n");
     process.exit(2);
   }
   for (const pose of poses) if (RULED_OUT[pose]) {
@@ -1154,6 +1194,66 @@ CAMERA FOR THIS ANIMAL: it is a sideways-walking crab, so it has no profile to t
 const HOLLOW_EYES = `
 THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.`;
 
+// A HELM WITH NOBODY IN IT HAS NO EYES TO KEY.
+//
+// HOLLOW drives the blood-moon eyes, so every HOLLOW creature was handed the
+// cyan marker block automatically - and for the keep's armour that is a flat
+// contradiction of the one line anybody remembers about it. The warden's entry
+// is "where a face should be, the visor shows only the room behind it". It was
+// drawn with two lit cyan eyes in the slot, which is the opposite of the
+// creature. The watchman is the same: what looks down the road is the HELM.
+//
+// These get an explicit no-eyes instruction instead. The consequence is that
+// they have no eye layer to turn red on a blood moon, and that is correct -
+// nothing lights up in an empty visor. MOB_EYES gates the overlay, so a
+// creature with no layer cut simply never gets one.
+// MAN-SHAPED THINGS ARE NOT ANIMALS, AND THE BOILERPLATE SAYS ANIMAL.
+//
+// Every line of the standing template is written for a beast: ONE ANIMAL PER
+// CELL, nothing in the cell but the ANIMAL, the ANIMAL stays inside the box,
+// species anatomy must remain authentic, do not make the animal a dragon
+// hybrid. For the HOLLOW that is answered by the body block, which opens "THIS
+// IS NOT A LIVING PERSON" and describes a man. For anything man-shaped that is
+// NOT hollow, nothing anywhere in the prompt says so - and the cutpurse came
+// back as a beaked animal on all fours with claws.
+//
+// Its entry is "whatever it was, it has hands and it knows what a purse is".
+// That is a degraded PERSON, and the picture has to start from a person.
+const MANSHAPED = {
+  "cutpurse": "Half the size of a man and twice as quick, but a MAN'S SHAPE: two arms, two legs, a head on a neck, upright or crouched on its heels the way a man crouches - never on all fours, never a muzzle, never a beak, never an animal's hind leg. Whatever it used to be, it has a man's hands and they are the whole point of it: long, knuckly, grabbing fingers. Ragged and filthy and starved down, not furred and not clawed.",
+  "cutthroat": "Half the size of a man and twice as quick, but a MAN'S SHAPE: two arms, two legs, a head on a neck, upright or crouched on its heels the way a man crouches - never on all fours, never a muzzle, never a beak, never an animal's hind leg. A man's hands, long and knuckly - and this one has a blade in one of them. Ragged and filthy and starved down, not furred and not clawed.",
+  "rag-and-bone": "IT IS MAN-SHAPED AND HALF AGAIN A MAN'S SIZE. Two arms, two legs, a head, standing upright - a big hunched human frame under its load, not a beast. Nothing of the body underneath is visible at all: every inch is hung with what it has found, buckles, snapped blades, mail skirts, a boot, a tin cup, lashed on with wire and gut, and all of it swings when it swings.",
+  "verdigris-thing": "IT IS MAN-SHAPED. Two arms, two legs, a head, standing and moving upright like a man, under a century of green crust that has thickened its outline and blurred the features. A man under corrosion - not an animal, not a lump, not a blob. The shape is still a person's.",
+  "the-drowned": "IT IS A DROWNED MAN AND KEEPS A MAN'S SHAPE. Two arms, two legs, a head on a neck, standing upright. Bloated - swollen thick at the limbs and the belly, the skin tight and waterlogged - but still plainly the body of a person, not a beast and not a shapeless mass.",
+  "drowned-hulk": "IT IS A DROWNED MAN AND KEEPS A MAN'S SHAPE, swollen vast. Two arms, two legs, a head on a neck, standing upright, enormously bloated and pale - far bigger than a man but built like one, not a beast and not a shapeless mass.",
+};
+const MAN = MANSHAPED[id] ? "\n" + MANSHAPED[id] + "\n" : "";
+
+const FACELESS = {
+  "warden": "visor", "warden-surface": "visor", "warden-captain": "visor",
+  "last-watchman": "helm",
+};
+const NO_EYES = `
+THERE IS NO FACE IN THERE, AND NOTHING LIGHTS UP IN THE GAP. The opening in the ${FACELESS[id] || "helm"} is EMPTY and stays empty in every cell: flat black shadow, no eyes, no eyeshine, no pupils, no glow, no points of light, no skull, no features of any kind behind it. Nothing anywhere on this sheet is cyan or near cyan. What the gap shows is dark, and the dark is the whole point of it.`;
+const EYE_BLOCK = FACELESS[id] ? NO_EYES : HOLLOW_EYES;
+
+// WHAT IT HAS IN ITS HANDS, from the world's own tables rather than from the
+// look of the thing. Drawn empty-handed, the keep's soldiery came back as men
+// throwing punches in plate - and the game had already answered the question:
+// gear_item and loot_item say the bone knight holds a sword and a kite shield,
+// the captain a maul rusted to its gauntlets and a tower shield, the warden the
+// lantern that gives no light. An armed creature drawn unarmed is wrong in the
+// one frame that matters most, the attack.
+const CARRIES = {
+  "skeleton": "IT IS ARMED, AND THE SWORD IS WHAT IT FIGHTS WITH. A soldier's arming sword, the edge gone to orange rust-lace, in one bare-boned hand. The sword is PRESENT in every cell and MOVES WITH THE POSE - carried low at rest, up in the guard, swung through in the blow, and lying with the body in death. It is never held in one frozen carry position while the pose changes around it.",
+  "bone-knight": "IT IS ARMED, AND IT KEPT ITS SHIELD. A rusted arming sword in one hand, an ancient kite-shield on the other arm, lacquer crazed over older bone. Both are PRESENT in every cell and BOTH MOVE WITH THE POSE - the sword cuts and the shield covers. This is the one that remembers how to use them, so it must never be drawn striking with anything but the sword.",
+  "warden": "IT CARRIES A LANTERN AND HAS NO WEAPON AT ALL. A dark iron lantern hangs from one gauntlet, unlit - no flame, no glow, no light coming out of it - in every cell. It is a thing carried on a round, not a light source. The other gauntlet is empty, and because it has nothing to fight with, the blow IS that empty gauntlet: a straight armoured punch. That is correct for this one and only this one.",
+  "warden-surface": "IT CARRIES A LANTERN AND HAS NO WEAPON AT ALL. A dark iron lantern hangs from one gauntlet, unlit - no flame, no glow, no light coming out of it - in every cell. It is a thing carried on a round, not a light source. The other gauntlet is empty, and because it has nothing to fight with, the blow IS that empty gauntlet: a straight armoured punch. That is correct for this one and only this one.",
+  "warden-captain": "IT IS ARMED, AND THE WEAPON IS PART OF IT. A long rusted maul CORRODED SOLID TO ITS GAUNTLETS - hands and haft are one piece of rust and do not come apart - and a tower shield on the other arm, its rim worn to an edge. Both are PRESENT in every cell and MOVE WITH THE POSE. It cannot put the maul down and it cannot punch: every blow it throws is thrown with the maul.",
+  "last-watchman": "HE IS STILL IN HIS KIT AND HE IS ARMED WITH A SPEAR. A watchman's harness buckled tight, a grey mantle off the shoulders, boots resoled with mismatched scavenged leather, and a spear. The spear is PRESENT in every cell and MOVES WITH THE POSE - grounded and upright while he stands his post, levelled and driven forward in the blow, lying beside him in death. HE NEVER PUNCHES. A man with a spear in his hands does not throw a fist, and a spear held frozen upright while the body lunges is the single worst thing this sheet can come back as.",
+};
+const HELD = CARRIES[id] ? "\n" + CARRIES[id] + "\n" : "";
+
 const WHAT_IT_IS = !inSet("HOLLOW") ? "" : inSet("GRAVE_FLESH") ? `
 THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
 
@@ -1166,11 +1266,11 @@ ${id === "the-salt-widow"
   : "- The clothing is sodden black through to the hem, salt-crusted, weed caught in it."}${inSet("GRAVE_FLESH") && id === "the-salt-widow" ? "" : SALT_SKIN}
 
 No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
-${HOLLOW_EYES}
-` : `
+${EYE_BLOCK}
+${HELD}` : `
 THIS IS NOT A LIVING PERSON. There is nothing inside it. Draw old dry remains held together and still moving: bone and hardened leather-dry tissue, no wet flesh and no blood anywhere. No aura, no mist, no supernatural effect of any kind.
-${HOLLOW_EYES}
-`;
+${EYE_BLOCK}
+${HELD}`;
 
 // NOTHING IS IN THE CELL BUT THE CREATURE.
 //
@@ -1219,6 +1319,11 @@ const SAY = {
   "move-a": "Locomotion contact pose A, natural species-specific gait",
   "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "Natural physical attack for the species, full body in frame",
+  // AN ARMED THING ATTACKS WITH WHAT IT IS HOLDING. The line above is written
+  // for an animal, and for a soldier it says nothing at all - so the sheets came
+  // back with a spearman throwing a punch, his spear still vertical at his
+  // shoulder because the carry note had frozen it there. The weapon is named in
+  // the blow itself now, for every creature that has one.
   rest: "Sleeping or lying up, low on the ground, eyes closed",
   death: "Dead, lying limp on its side, no gore and no effects",
   feed: "Feeding from a carcass on the ground, head down at the body",
@@ -1270,11 +1375,12 @@ The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours
 
 Subject: ${name}. Exact game description: ${desc || "[PASTE THE IN-GAME DESCRIPTION HERE]"}
 
-ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+ONE ${MANSHAPED[id] ? "FIGURE" : "ANIMAL"} PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+${MAN}
 ${CONSTANT[id] || ""}
 ${WHAT_IT_IS}${worked() ? ALONE_WORKED : ALONE_ANIMAL}Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. ${CONTAIN} ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}.${flyer ? WINGSPAN : ""} Stable body proportions and markings. Feet aligned near the lower edge in ground poses${flyer ? "; body centred in the flight poses" : ""}.
 
 Reading order left to right, top row then bottom row:
 ${poses.map((p, i) => `${i + 1}. ${WORDING[p] || (LINES[id] && LINES[id][p]) || SAY[p] || p.replace(/-/g, " ")}`).join("\n")}
 
-No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.`);
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human.${MANSHAPED[id] ? "" : " Do not make the animal a dragon hybrid."}`);

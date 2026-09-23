@@ -87,7 +87,8 @@ const code = [
   depsFor(fn("paintScene"), "paintScene"),
   'var viewMode = "image";',
   'var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "", lastTorch = false, skyRoll = 0;',
-  'var lastSea = 0;',
+  'var lastSea = 0, lastCovered = false, weatherKind = "";',
+  'function setWeather(kind) { weatherKind = kind; }',
   'var scenePainted = "", sceneSeq = 0;',
   // The preloader is the one thing a stub cannot supply: on the page an Image
   // holds the old room up until the new plate has decoded. Here it lands at once,
@@ -606,6 +607,16 @@ t("...and a torch in the yard at night", strip(sceneEl.style.backgroundImage) ==
 ctx.setSea(0);
 
 t("the gatehouse ignores the torch", r.tint === "" && r.mobs === "", "class=" + r.tint + " mobs=" + r.mobs);
+
+// A server-reported roof suppresses sky even when ground lighting follows the hour.
+ctx.paint("road", "night", "paving", "covered-road", 0, 0, "", 0, 0, true);
+t("a roofed road has no sky layer", !skyEl.style.backgroundImage);
+ctx.paint(null, null, null, null);
+t("repainting a roof retains its cover", !skyEl.style.backgroundImage);
+ctx.paint("road", "day", "paving", "open-road", 0, 0, "", 0, 0, false);
+t("walking outside restores the sky", !!skyEl.style.backgroundImage);
+ctx.paint("crossing", "in", "sea-cave", "underground", 0, 0, "", 0, 0, true);
+t("underground never paints the sky", !skyEl.style.backgroundImage);
 
 // ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");
