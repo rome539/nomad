@@ -48,6 +48,8 @@ game-server/public/sky/
 # that has no use for their history. Nothing breaks without them; they are not
 # inputs to the game, they are what the finished sprites were cut FROM.
 output/
+# Promo drafts, render tools, and dependencies stay local.
+/promo/
 # ...and this machine's own Claude Code permission list. It is local by
 # definition (that is what the .local suffix means), and it carries absolute
 # paths under the home directory — which on this repo is a dox risk and not a
