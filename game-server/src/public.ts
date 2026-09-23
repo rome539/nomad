@@ -8869,7 +8869,18 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // reasons this way. pbase has resolved to the plate's own first condition by
     // here, which for a cave is night — so the creature takes t-night and stands
     // at brightness .26, a shape in the dark, until a torch says otherwise.
-    if (shut || phave.indexOf(" day ") < 0) mobHour = lit ? "" : pbase;
+    //
+    // AND A ROOM CAN BE DARK OF DAYLIGHT AND STILL BE A LIT ROOM (2026-09-23).
+    // "No day plate" meant "a hole you must carry a light into" for as long as
+    // the only such places were holes. The fortress is not: its halls are lit by
+    // the torches burning in them, the picture shows them burning, and a
+    // creature standing in that light was being painted as a shape in the dark.
+    // The plate's own list still answers it and still needs no table — a room
+    // you must light YOURSELF is the one that has a night-torch plate to do it
+    // with. No day and no night-torch is a room that lights itself, and nothing
+    // standing in it takes an hour tint.
+    var selfLit = phave.indexOf(" day ") < 0 && phave.indexOf(" night-torch ") < 0;
+    if (shut || phave.indexOf(" day ") < 0) mobHour = (lit || selfLit) ? "" : pbase;
     line = MOB_LINE[stem] || MOB_LINE_DEFAULT;   // the standing line belongs to the PICTURE
   }
   if (!scene && gate && GATE_PLATE[gate] !== undefined) {
