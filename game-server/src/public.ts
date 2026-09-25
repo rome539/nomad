@@ -9215,6 +9215,25 @@ function mobVh(id) { return MOB_K * Math.pow(MOB_SPRITE[id], MOB_P); }
 // three of them would have been missed.
 function boxPct(n) { return "calc(var(--picth) * " + (n / 100).toFixed(4) + ")"; }
 var MOB_SPRITE = {
+  // ELEVEN SET BY EYE IN THE GAME'S OWN VIEW, NOT DERIVED (rome, 2026-09-25).
+  // Looked at in the real client at /game rather than on the workbench, the
+  // three- and two-hound read too small for what they are, and the coast's
+  // water creatures and birds, the eels, and the pale crawler and stalker all
+  // read too big. The hounds went up about 15% on screen and the rest down
+  // about 20%, each pair kept in step: three-hound 28 / two-hound 24, bull seal
+  // 22 / grey seal 15, crawler 9 / stalker 11, bittern 13, great gull 10,
+  // silver eel 13, ford eel 11, old conger 10. Then the two thieves, which had
+  // been the same size: cutthroat up to 22, the footpad's size, and cutpurse
+  // down to 10. A second look
+  // took the hounds further (three-hound 33, two-hound 28), the eels further down
+  // (silver 9, ford 8), the roe deer up to 16, still under the red hind, and
+  // both seals down hard again (bull 12, grey 8), and the pale ones down again
+  // (stalker 7, crawler 6). The eels and congers once more: silver 6, ford 5,
+  // old conger 7, and the plain conger to 6 so the old one is the heavier coil
+  // again. The bittern down to 9, the carrion vulture up to 16, and both
+  // ermines - the ermine and the dancer - up off the floor to 5. Both gulls a touch down: black-backed 10, great 8. The oystercatcher down to 9, and all three vultures up, great the largest: great 22, carrion 20, brooding 19. The wrecker up to 22, matching the cutthroat. Both great crabs down: the great devil crab 24, the great crab 20. The
+  // metres in the comments below are what they were derived from and are left
+  // as the record.
   // EVERY NUMBER HERE IS A HEIGHT IN METRES, CONVERTED. A standing man is 1.75m
   // and he is 22, so a sprite's number is 22 * (its height / 1.75) and nothing
   // else. The table used to be written by eye and it drifted badly: a red hind
@@ -9264,10 +9283,10 @@ var MOB_SPRITE = {
   "cave-lion": 19,         // 1.50  the size of a pony, and it is head-up here
   "red-hind": 18,          // 1.45  1.2m at the shoulder — SHORTER than the man
   "bone-breaker": 14,      // 1.15  a lammergeier stood on the ground
-  "brooding-vulture": 14,  // 1.10
+  "brooding-vulture": 19,  // 1.10
   "hill-wolf": 13,         // 1.05  a wolf is chest-high on a man, not eye-high
   "feral-goat": 13,        // 1.00
-  "carrion-vulture": 13,   // 1.00
+  "carrion-vulture": 20,   // 1.00
   "hill-eagle": 11,        // 0.90  perched. Wings out is a wider sprite, not a taller one
   "lynx": 10,              // 0.80
   // ---- and the small ones, which are small ----------------------------------
@@ -9282,7 +9301,7 @@ var MOB_SPRITE = {
   "ptarmigan": 4,          // 0.33
   "gill-adder": 4,         // 0.30  coiled
   "the-gravid-adder": 3,   // 0.25  coiled, and heavier than the stone adder rather than taller
-  "ermine": 3,             // 0.25  up on its hind legs
+  "ermine": 5,             // 0.25  up on its hind legs
   "stone-adder": 3,        // 0.25  coiled
   // ---- THE RARE BLOOD OF THE MOUNTAIN (mig 247) ------------------------------
   // Every one of these is the uncommon form of an animal already on this list,
@@ -9290,7 +9309,7 @@ var MOB_SPRITE = {
   // hare are exactly the things a player should get to SEE are different, and
   // they were rendering as nothing at all. The gravid adder above was the first
   // of them to be drawn; these are the rest.
-  "great-vulture": 14,        // 1.15
+  "great-vulture": 22,        // 1.15
   "lead-wolf": 14,            // 1.10
   "old-billy": 14,            // 1.10
   "red-stag": 22,             // 1.75  a stag stands as tall as a man; the hind beside him is 18
@@ -9304,7 +9323,7 @@ var MOB_SPRITE = {
   // all. 20 is the plain metre rule for a woman on her feet, and her head
   // measures 7.66vh against the crouched milker's 7.32 — the same build.
   "the-butter-wife": 20,      // 1.60  a woman standing. Sized like anything else.
-  "the-dancer": 3,            // 0.25
+  "the-dancer": 5,            // 0.25
   "the-last-dog": 9,          // 0.70
   "the-old-glutton": 6,       // 0.50
   // ---- THE ROAD'S TWENTY-TWO (2026-09-21) -----------------------------------
@@ -9339,7 +9358,7 @@ var MOB_SPRITE = {
   "fleet-rat": 3,             // 0.15
   "albino-rat": 3,            // 0.15
   "grey-heron": 13,           // 1.00  standing; the same as the feral goat at 1.00
-  "roe-deer": 13,             // 1.00  head up. Smaller than the red hind at 18
+  "roe-deer": 16,             // 1.00  head up. Smaller than the red hind at 18
   "white-roe": 13,            // 1.00
   "the-baited-bear": 15,      // 1.20  on all fours, chained
   "the-chain-breaker": 17,    // 1.35  the bigger of the two, and the chain is off
@@ -9432,36 +9451,36 @@ var MOB_SPRITE = {
   "drowned-hulk": 40,      // "swollen VAST, filling the flooded dark where it stands"
   "rag-and-bone": 44,      // "about half again the size of" a man, and hung with its load
   "verdigris-thing": 30,   // "something man-shaped" under a century of crust
-  "pale-crawler": 14,      // low and long on all fours, under a wolf
-  "pale-stalker": 17,      // the bigger blood of the same thing
-  "three-hound": 20,       // a heavy hound - taller than a wolf, three heads up
-  "two-hound": 18,         // "a head short and without the bulk to make up the difference"
+  "pale-crawler": 6,      // low and long on all fours, under a wolf
+  "pale-stalker": 7,      // the bigger blood of the same thing
+  "three-hound": 33,       // a heavy hound - taller than a wolf, three heads up
+  "two-hound": 28,         // "a head short and without the bulk to make up the difference"
   "grave-hyena": 12,       // a hyena stands under a wolf and slopes away behind
   "dire-hyena": 15,        // the mean one, and bigger with it
-  "cutpurse": 15,          // "HALF THE SIZE OF A PERSON and twice as quick"
-  "cutthroat": 15,         // the same build with a knife in it
+  "cutpurse": 10,          // "HALF THE SIZE OF A PERSON and twice as quick"
+  "cutthroat": 22,         // the same build with a knife in it
   "the-refuge-man": 30,
   "the-tide-warden": 29,
   "the-bridge-mason": 29,
   "the-fowler": 29,        // drawn broad in the reed cloak, so the number comes down
   "the-scaffold-hand": 32, // hangs in a harness: a tall cell with a man across the middle of it
-  "the-wrecker": 14,       // the densest sheet of the twelve, and the largest figure of them
+  "the-wrecker": 22,       // the densest sheet of the twelve, and the largest figure of them
   // ---- the beasts, each against its own kind --------------------------------
-  "bull-seal": 34,         // forty stone, against the grey seal at 23
+  "bull-seal": 12,         // forty stone, against the grey seal at 23
   "a-lymer": 11,           // stands with a hill wolf, which is what the prose claims
   "marsh-hound": 9,        // just over a fold dog, which is the same animal
-  "black-backed-gull": 12, // against a carrion vulture; it is the one that eats other birds
-  "great-gull": 15,        // a goose, and a looser silhouette than the vulture
-  "bittern": 20,           // tall but SLIGHT - all neck and no width, so it needs a big cell
-  "oystercatcher": 14,     // see the floor note below
+  "black-backed-gull": 10, // against a carrion vulture; it is the one that eats other birds
+  "great-gull": 8,        // a goose, and a looser silhouette than the vulture
+  "bittern": 9,           // tall but SLIGHT - all neck and no width, so it needs a big cell
+  "oystercatcher": 9,     // see the floor note below
   // ---- and the ones area cannot measure -------------------------------------
   // A CRAB IS MOSTLY GAPS. Ink area works between two dogs and lies between a
   // crab and a cat: the space between eight legs is not the animal, so the great
   // crab area-matched to a cave lion came out at 46 - drake scale. These five are
   // sized by what they measure ACROSS instead, which is the dimension a sprawling
   // thing actually occupies.
-  "the-great-devil-crab": 34, // 2.30m across, and both claws are the big one
-  "the-great-crab": 28,    // 2.00m across: the size of a cart, as the room says
+  "the-great-devil-crab": 24, // 2.30m across, and both claws are the big one
+  "the-great-crab": 20,    // 2.00m across: the size of a cart, as the room says
   // ...AND THE TWO SMALL CRABS ARE THE ONE PLACE THE RULE IS OVERRIDDEN. Measured
   // honestly a wrack crab is 0.38m across and solves to ONE, below the floor the
   // hill set for an ermine and a coiled adder. That floor is not an accident and
@@ -9489,11 +9508,11 @@ var MOB_SPRITE = {
   // ---- the six whose sheets did not change on 13 September -------------------
   // Still the numbers solved on the 12th, and still correct: their art was not
   // re-cut, so their cells and their fill fractions are exactly what they were.
-  "grey-seal": 23,         // two metres of animal, lying down
-  "silver-eel": 21,        // 54% fill - the S-curve's gap is half the cell
-  "ford-eel": 17,          // the same, on a smaller eel
-  "old-conger": 15,        // the heavy coil
-  "conger": 14,            // the lighter coil
+  "grey-seal": 8,         // two metres of animal, lying down
+  "silver-eel": 6,        // 54% fill - the S-curve's gap is half the cell
+  "ford-eel": 5,          // the same, on a smaller eel
+  "old-conger": 7,        // the heavy coil
+  "conger": 6,            // the lighter coil
   "fen-viper": 6,          // see the floor note below
 };
 

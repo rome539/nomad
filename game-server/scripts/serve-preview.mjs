@@ -82,9 +82,129 @@ function fresh() {
   }
 }
 
+// ---- /game: THE GAME'S OWN RENDERER, NOT A COPY OF IT --------------------------
+//
+// mobs.html is a workbench: it lifts the tables out of public.ts and draws with
+// its own stage, which is why it can show every pose on demand - and also why it
+// is never quite what a player sees. Scene fitting, mob scale, how a row of
+// creatures is dealt out, the prose strip over the bottom of the picture: the
+// game does all of that itself, and a copy drifts.
+//
+// /game serves the REAL client page and drives it with scripts/game-panel.js,
+// injected inside the page's own module script (its functions are not on
+// window). Two sources, one switch:
+//
+//   /game?src=prod    the page exactly as nomadmud.com serves it right now, and
+//                     every picture fetched from nomadmud.com - what is LIVE
+//   /game?src=local   the page built from src/public.ts and pictures from
+//                     public/ - what the next ship will make live
+//
+// Which source a picture comes from is read off the page that asked for it (the
+// Referer), so the workbench at mobs.html keeps drawing from public/ however
+// many times /game?src=prod has been opened beside it.
+const PROD = "https://nomadmud.com";
+const sourceOf = (req) => {
+  const ref = req.headers.referer || "";
+  if (ref.indexOf("/game") < 0) return "workbench";
+  return /[?&]src=local\b/.test(ref) ? "local" : "prod";
+};
+let prodPage = { at: 0, html: "" };
+let localPage = { mtime: -1, html: "" };
+const PANEL = path.join(HERE, "game-panel.js");
+
+async function gameHtml(src) {
+  let html;
+  if (src === "prod") {
+    // Thirty seconds of cache: long enough to flick PROD/LOCAL back and forth,
+    // short enough that a ship shows up on the next reload.
+    if (Date.now() - prodPage.at > 30000) {
+      const r = await fetch(PROD + "/", { headers: { "cache-control": "no-cache" } });
+      prodPage = { at: Date.now(), html: await r.text() };
+    }
+    html = prodPage.html;
+  } else if (localPage.mtime === mtime(path.join(GAME, "src/public.ts"))) {
+    html = localPage.html;
+  } else {
+    const { transform } = await import("esbuild");
+    const { code } = await transform(fs.readFileSync(path.join(GAME, "src/public.ts"), "utf8"), { loader: "ts", format: "esm" });
+    const { PAGE } = await import("data:text/javascript;base64," + Buffer.from(code).toString("base64") + "#" + Date.now());
+    html = PAGE;
+    localPage = { mtime: mtime(path.join(GAME, "src/public.ts")), html: PAGE };
+  }
+  // No Google sign-in script and nothing else that reaches out on load.
+  html = html.replace(/<script src="https:\/\/accounts\.google\.com[^>]*><\/script>/, "");
+  // A QUIET, OFFLINE CLIENT. The page runs its whole start-up, and left alone
+  // that plays the threshold music and opens a socket to the game and one to
+  // every relay - which then fail here and retry, forever, which is the lag.
+  // This runs BEFORE the client: no AudioContext exists, so every sound bails
+  // at its own try/catch; and a WebSocket is a line that never opens and never
+  // closes, so there is no close for a reconnect loop to fire on.
+  const QUIET = "<script>(function(){"
+    + "function NoAudio(){throw new Error('silent preview');}"
+    + "window.AudioContext=NoAudio;window.webkitAudioContext=NoAudio;"
+    + "function DeadSocket(){this.readyState=0;this.bufferedAmount=0;}"
+    + "DeadSocket.prototype.send=function(){};DeadSocket.prototype.close=function(){};"
+    + "DeadSocket.prototype.addEventListener=function(){};DeadSocket.prototype.removeEventListener=function(){};"
+    + "DeadSocket.CONNECTING=0;DeadSocket.OPEN=1;DeadSocket.CLOSING=2;DeadSocket.CLOSED=3;"
+    + "window.WebSocket=DeadSocket;"
+    + "})();</script>";
+  const head = html.indexOf("<head>");
+  html = head >= 0 ? html.slice(0, head + 6) + QUIET + html.slice(head + 6) : QUIET + html;
+  const panel = "window.__GAME_SRC=" + JSON.stringify(src) + ";\n" + fs.readFileSync(PANEL, "utf8");
+  // INSIDE the last script before </body>, which is the client's module.
+  const end = html.lastIndexOf("</body>");
+  const close = html.lastIndexOf("</script>", end);
+  if (close < 0) throw new Error("could not find the client's script to hook into");
+  return html.slice(0, close) + "\n;" + panel + "\n" + html.slice(close);
+}
+
+const LOCAL_FILES = { "/nostr.js": "src/nostr-bundle.js", "/qrcode.js": "src/qrcode-bundle.js" };
+
+// Pictures are fetched from prod ONCE and held here; the url carries the ?v=
+// cache-bust, so a ship that bumps BG_V or MOB_V is a new key and a new fetch.
+const prodCache = new Map();
+const CACHE = "public, max-age=600";
+async function serveGameAsset(rel, res, from, full) {
+  if (from === "prod") {
+    let hit = prodCache.get(full);
+    if (!hit) {
+      const r = await fetch(PROD + full);
+      hit = { status: r.status, type: r.headers.get("content-type") || "application/octet-stream", body: Buffer.from(await r.arrayBuffer()) };
+      if (r.ok) prodCache.set(full, hit);
+    }
+    res.writeHead(hit.status, { "content-type": hit.type, "cache-control": CACHE }).end(hit.body);
+    return true;
+  }
+  const f = LOCAL_FILES[rel] ? path.join(GAME, LOCAL_FILES[rel]) : path.join(GAME, "public", rel);
+  if (!f.startsWith(GAME + path.sep) || !fs.existsSync(f) || !fs.statSync(f).isFile()) return false;
+  res.writeHead(200, { "content-type": TYPES[path.extname(f)] ?? "application/octet-stream", "cache-control": CACHE }).end(fs.readFileSync(f));
+  return true;
+}
+
 const missed = new Set();
-http.createServer((req, res) => {
+http.createServer(async (req, res) => {
   let rel = decodeURIComponent((req.url || "/").split("?")[0]);
+  if (rel === "/game" || rel === "/game.html") {
+    const src = new URL(req.url, "http://x").searchParams.get("src") === "local" ? "local" : "prod";
+    try {
+      const html = await gameHtml(src);
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }).end(html);
+    } catch (e) {
+      res.writeHead(500, { "content-type": "text/plain; charset=utf-8" }).end("could not build the game page (" + src + "):\n\n" + (e.stack || e.message));
+    }
+    return;
+  }
+  // The client asks for a world and a manifest on load; it gets an empty one
+  // and draws whatever the panel tells it to.
+  if (["/world", "/world.json", "/manifest.json"].includes(rel)) {
+    res.writeHead(200, { "content-type": "application/json" }).end("{}"); return;
+  }
+  // Everything the real client asks for at the root that the workbench does not
+  // carry - pictures, fonts, bundles - comes from the page's own source.
+  const from = sourceOf(req);
+  if (from === "prod" || (from === "local" && !fs.existsSync(path.join(DIR, rel)))) {
+    try { if (await serveGameAsset(rel, res, from, req.url)) return; } catch (e) {}
+  }
   if (rel === "/" || rel === "") rel = "/mobs.html";
   const file = path.join(DIR, rel);
   // Never serve outside the preview directory, symlinked art excepted.
