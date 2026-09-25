@@ -514,8 +514,23 @@ Object.keys(GATE_PLATE).sort().forEach(function(g){
 // THE THIRD TABLE. Rooms that are one of one are picked the same way as the
 // other two — this list was built from terrains and gates alone, so a room plate
 // could be installed and declared and still be unreachable here.
-Object.keys(ROOM_PLATE).sort().forEach(function(r){
-  var o=document.createElement("option");o.value="room:"+r;o.textContent="room \u00b7 "+r;gnd.appendChild(o);});
+//
+// ONE ENTRY PER PICTURE, NOT PER ROOM. Listing this table's keys listed the
+// pictures for as long as a room plate meant one room, and the fortress ended
+// that: 108 rooms share 31 plates there, and every one of them was arriving in
+// this dropdown as its own line. Nobody needs to look at the same plate 108
+// times. Dedupe on the stem, which is what PLATE_OF resolves and what the file
+// is named for; the option's VALUE stays a real room id, because a room id is
+// what the client resolves a plate from.
+// And sorted by the PLATE's name, not the room's: sorting on the hidden room id
+// filed keep-passage under "catacomb" and deep-dark under "black-threshold", so
+// the list read as shuffled and a plate could not be found by looking for it.
+var plateSeen={}, plateAlias=(typeof PLATE_OF==="object"&&PLATE_OF)||{}, plateRows=[];
+Object.keys(ROOM_PLATE).forEach(function(r){
+  var stem=plateAlias[r]||r;
+  if(plateSeen[stem])return; plateSeen[stem]=1; plateRows.push([stem,r]);});
+plateRows.sort(function(a,b){return a[0]<b[0]?-1:1;}).forEach(function(x){
+  var o=document.createElement("option");o.value="room:"+x[1];o.textContent="room \u00b7 "+x[0];gnd.appendChild(o);});
 Object.keys(MOB_ANIM).sort().forEach(function(id){
   var o=document.createElement("option");o.textContent=id;o.selected=(id==="hill-wolf");who.appendChild(o);});
 [0.6,0.8,1,1.4].forEach(function(v){var o=document.createElement("option");o.textContent=v;o.selected=(v==1);sc.appendChild(o);});

@@ -7340,7 +7340,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
 var MOB_V  = "45";      // /mob/      strips and their eye layers
-var BG_V   = "33";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "36";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
