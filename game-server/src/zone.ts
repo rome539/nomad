@@ -4240,6 +4240,7 @@ export class ZoneDO implements DurableObject {
           creature.rouseAt = now + DIRE_ROUSE_MS; // first sight: begin the wind-up, no strike yet
           this.send(prey, `${cap(tmpl.name)} lifts its bloodied muzzle and fixes on you, hackles rising — it hasn't sprung yet. (get out, or hit first)`);
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} rises from its kill, hackles up.`, prey.pubkey, false); // local: mob reaction
+          this.fxPose(creature.roomId, creature.templateId, "guard-the-kill");
         } else if (now >= creature.rouseAt) {
           creature.rouseAt = undefined;
           creature.target = prey.pubkey;
@@ -4591,6 +4592,7 @@ export class ZoneDO implements DurableObject {
         if (victim.seizedBy === creature.id && DROWNERS.has(creature.templateId) && chance(SEIZE_DROWN_ODDS)) {
           drowned = Math.max(1, Math.round(victim.maxHp * SEIZE_DROWN_FRACTION));
           victim.hp -= drowned;
+          this.fxPose(creature.roomId, creature.templateId, "lift-you-clear"); // only the drowned god is drawn doing it
         }
         victim.pose = undefined; victim.poseAt = undefined; victim.poseRef = undefined; // teeth end a posture, as they end a rest
         if (victim.resting) {
@@ -4643,6 +4645,7 @@ export class ZoneDO implements DurableObject {
           const landBound = creature.traits?.includes("land-bound") && !inWater;
           if (DROWNERS.has(creature.templateId) && !landBound && !victim.seizedBy && chance(seizeOdds)) {
             victim.seizedBy = creature.id;
+            this.fxPose(creature.roomId, creature.templateId, "take-hold");
             this.send(victim, `${cap(tmpl.name)} closes cold arms around you — you're held fast. (break free: keep fighting, or it drags you under)`, "seize");
           }
           // Claws and teeth open a wound the mail can't turn.
@@ -6167,6 +6170,17 @@ export class ZoneDO implements DurableObject {
   // if it ended the fight, never at all. Walking in and striking first showed
   // nothing whatsoever.
   public fxStruck(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "struck"); }
+  // A DRAWN BEHAVIOUR, SENT WHEN IT HAPPENS (rome, 2026-09-25). The salute, the
+  // rise, the grip, the king leaving his seat: each has a pose in the strip, and
+  // the client used to cut to them on an idle clock, so a hollow soldier saluted
+  // an empty hall every few seconds. They are events now and the picture waits
+  // for the world: the pose goes out the same tick as the line that tells it.
+  public fxPose(roomId: string, templateId: string, pose: string): void {
+    for (const s of this.sessions.values()) {
+      if (s.roomId !== roomId || !ART_KEYS.has(s.pubkey) || this.outOfWorld(s)) continue;
+      try { s.ws.send(JSON.stringify({ v: 0, t: "beat", posed: [templateId], pose })); } catch {}
+    }
+  }
 
   // One creature, one thing, told to everyone standing there who has pictures.
   // Sent immediately rather than buffered with the blows: these are announced in
@@ -6220,6 +6234,7 @@ export class ZoneDO implements DurableObject {
         `${cap(tmpl.name)} collapses, shudders, and hauls itself upright once more.`,
       ]));
       this.actorFeed(killer, creature.roomId, `${cap(tmpl.name)} rises again.`);
+      this.fxPose(creature.roomId, creature.templateId, "rise");
       this.combatNoise(creature.roomId);
       return;
     }
@@ -7680,6 +7695,7 @@ export class ZoneDO implements DurableObject {
     await this.wear(victim, g.carried, g.tmpl, CORRODE_WEAR);
     // Not every touch gets a line (it'd drown the fight); enough to teach.
     if (this.equippedItem(victim, g.tmpl.slot) && chance(0.35)) {
+      this.fxPose(victim.roomId, tmpl.id, "lay-on-the-hand");
       this.send(victim, `Green bloom spreads where ${tmpl.name} touched — ${g.tmpl.name} pits and flakes.`, "dmgin");
     }
   }

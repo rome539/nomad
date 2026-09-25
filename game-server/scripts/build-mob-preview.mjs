@@ -175,7 +175,7 @@ for (const f of fs.readdirSync(path.join(GAME, "public/mob")))
   if (f.endsWith(".eyes.webp")) EYES[f.slice(0, -10)] = 1;
 
 const CONSTS = block("CALM_POSES") + "\n" + block("ATTACK_S");
-const DRIVER = [block("NOT_AN_IDLE"), fn("mobActs"), fn("poseAt"), fn("mobBeat"), fn("stepAnims"), fn("applyState")].join("\n");
+const DRIVER = [block("NOT_AN_IDLE"), block("EVENT_POSES"), fn("mobActs"), fn("poseAt"), fn("mobBeat"), fn("stepAnims"), fn("applyState")].join("\n");
 
 // THE OTHER TWO LAYERS. A creature on a flat brown field is half a preview: the
 // game is a sky, a keyed ground in front of it, and the animals standing on

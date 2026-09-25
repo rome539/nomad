@@ -3690,7 +3690,7 @@ async function connect() {
     } else if (f.t === "beat") {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
-      mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed);
+      mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose);
     } else if (f.t === "bench") {
       if (f.open) { renderBench(f); } else closeBench();
     } else if (f.t === "trade") {
@@ -9785,11 +9785,6 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   // a single slot with its FIRST match, and "alert" leads that list: a creature
   // meant to show "listen" must therefore be drawn WITHOUT an alert, or the
   // alert wins and the listen is another cell nothing can reach.
-  "hold-the-salute",    // DRILL_SOLDIERS: two of them meet and salute, forever
-  "rise",               // REVENANTS: put one down and it gets back up and comes again
-  "take-hold",          // DROWNERS: it closes on you and does not let go
-  "take-it-up",         // HOARDERS: the rag-and-bone scoops and caches
-  "lay-on-the-hand",    // CORRODERS: metal blooms and flakes where it touches
   // "surface" WAS HERE AND IS NOT A POSE. SURFACERS climb up out of the wells,
   // which is a real behaviour and reads like a real frame - but a cell draws no
   // ground, no edge and no hole, and a body defined only by its relation to a
@@ -9811,7 +9806,6 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   // would not have rescued it either, it would have made it worse: the calm
   // cycle fires anywhere, so the hyena would drink in a dry room, which is the
   // same bug as the sleep frame in the idle rotation. It keeps its feed.
-  "guard-the-kill",     // AGGRO_SCAVENGERS: the dire hyena, over a meal, daring you
   // THE THRONE ROOM (2026-09-23). Every boss climbs phases as it goes down -
   // dmg + phase*3 - but only the forgotten king has the theatre written for it,
   // and it is two beats, both of them pictures nobody had drawn:
@@ -9820,9 +9814,19 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   // Named "call-the-dark" rather than "call", which the generator refuses as a
   // dead name: PACK_CALLERS has no branch anywhere, but this one is scripted in
   // ai.bossPhase and actually happens.
-  "stand-from-the-throne", // the king, up off the seat, and the dark up with him
-  "call-the-dark",         // ...and the summons that answers him
-  "lift-you-clear"];       // the drowned god, holding you off the floor under nothing at all   // the verdigris thing, touching what you are wearing
+  // THE FORTRESS'S EVENT POSES LEFT THIS LIST (rome, 2026-09-25). The salute,
+  // the rise, the grip, the lift, the scoop, the corroding touch, the hyena over
+  // its kill, the king standing and the king calling were all named here, so
+  // every one of them played on the idle clock - the hollow saluted empty halls
+  // every few seconds. Each is a thing that HAPPENS, with a line in the world
+  // when it does, so each now waits for the server's pose beat (EVENT_POSES).
+  // The notes above on why each was drawn still hold; only the trigger moved.
+  ];
+// POSES THAT ONLY EVER PLAY WHEN THE SERVER SAYS THEY HAPPENED. Never an idle,
+// never in the rooted cycle. The rag-and-bone's scoop is here though no beat
+// sends it: it scoops only in an empty room, so nobody is ever there to see it.
+var EVENT_POSES = ["hold-the-salute", "rise", "take-hold", "lift-you-clear", "take-it-up",
+                   "lay-on-the-hand", "guard-the-kill", "stand-from-the-throne", "call-the-dark"];
 var GAIT_HZ = 5;            // gait poses alternate this fast...
 var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
 var WINGBEAT_HZ = 4;        // and wings beat this fast...
@@ -10196,11 +10200,14 @@ function applyState(doing) {
 // own trigger has no business turning up in that rotation - a rooted animal was
 // "travelling" by lying down asleep, dying, and grazing in turn. Same rule as
 // CALM_POSES above: an event frame and a sleep frame are never idles.
+// "alert" too (2026-09-25): the kings, the drowned god and the two great crabs
+// have no gait, so this cycle is how they "walk", and it was lifting their heads
+// at nothing - the same bug CALM_POSES dropped alert for.
 var NOT_AN_IDLE = ["attack", "bite", "sweep", "breath", "inhale",
-                   "swing", "recover", "hit", "death", "feed", "graze", "rest"];
+                   "swing", "recover", "hit", "death", "feed", "graze", "rest", "alert"];
 function mobActs(f) {
   var acts = [];
-  for (var w in f) if (w !== "idle" && NOT_AN_IDLE.indexOf(w) < 0) acts.push(w);
+  for (var w in f) if (w !== "idle" && NOT_AN_IDLE.indexOf(w) < 0 && EVENT_POSES.indexOf(w) < 0) acts.push(w);
   return acts;
 }
 function poseAt(a, now) {
@@ -10286,6 +10293,10 @@ function poseAt(a, now) {
     x = -0.085 * Math.exp(-t * 6.5) + Math.sin(t * 22) * 0.03 * Math.exp(-t * 4);
     a.rot = -0.055 * Math.exp(-t * 7) + 0.022 * Math.sin(t * 13) * Math.exp(-t * 3.5);
     s *= 1 - 0.05 * Math.exp(-t * 9);      // it gives, and comes back up
+  } else if (a.phase === "pose") {
+    // Held, with a breath: the salute is a thing done and kept, not a lunge.
+    name = a.poseAs;
+    s *= 1 + Math.sin(t * 1.4) * BREATH * 1.6;
   } else if (a.phase === "feed") {
     // Head down at the body, with the small working shift of something pulling
     // at meat rather than standing over it. A grazer does the same thing at the
@@ -10422,6 +10433,7 @@ function runAnims() {
 // which is where they were designed. A creature with no attack frame drawn just
 // keeps doing what it was doing.
 var ATTACK_S = 1.7, HIT_S = 0.9, DEATH_S = 1.1, FEED_S = 2.4;
+var POSE_S = 2.6;         // how long an event pose (the salute, the rise) is held
 var ROUND_S = 4;          // COMBAT_ROUND_MS, and the beat everything here answers to
 var STAGGER_S = 0.75;     // how far apart blows in the same round are spread
 // WHAT A SLEEPING ONE LOOKS LIKE, best pose first. A wolf curls up, an adder
@@ -10461,7 +10473,7 @@ var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
                    "recover", "idle"];
 // A body stays where it fell for a beat before the room repaints without it.
 var mobHold = 0, mobPending = null, mobPendingRest = null, mobPendingDead = null;
-function mobBeat(swung, struck, died, fed, grazed) {
+function mobBeat(swung, struck, died, fed, grazed, posed, pose) {
   for (var i = 0; i < anims.length; i++) {
     var a = anims[i];
     // Dying outranks everything: a thing that took the last blow is not also
@@ -10491,6 +10503,13 @@ function mobBeat(swung, struck, died, fed, grazed) {
       a.phase = "feed"; a.t = 0; a.eatAs = a.grazeAt || a.eat;
     }
     else if (fed && fed.indexOf(a.id) >= 0 && a.eat) { a.phase = "feed"; a.t = 0; a.eatAs = a.eat; }
+    // A DRAWN BEHAVIOUR, BECAUSE IT JUST HAPPENED. Only a creature drawn with
+    // that pose answers. One mid-swing finishes the blow first: the grip and the
+    // corroding touch arrive in the same breath as the hit that carried them.
+    else if (posed && posed.indexOf(a.id) >= 0 && pose && a.spec.f[pose] !== undefined) {
+      if (a.phase === "attack") a.thenPose = pose;
+      else { a.phase = "pose"; a.t = 0; a.poseAs = pose; }
+    }
   }
 }
 function stepAnims() {
@@ -10501,7 +10520,8 @@ function stepAnims() {
     // A dead one has no next phase. It holds until the room repaints without it.
     if (a.phase === "death") { /* it stays down */ }
     else if (a.phase === "travel") { if (a.t > TRAVEL_MS / 1000 || a.asleep) { a.phase = "idle"; a.t = 0; } }
-    else if (a.phase === "attack") { if (a.t > ATTACK_S) { a.phase = "idle"; a.t = 0; } }
+    else if (a.phase === "attack") { if (a.t > ATTACK_S) { a.t = 0; if (a.thenPose) { a.phase = "pose"; a.poseAs = a.thenPose; a.thenPose = ""; } else a.phase = "idle"; } }
+    else if (a.phase === "pose") { if (a.t > POSE_S) { a.phase = "idle"; a.t = 0; } }
     else if (a.phase === "hit") { if (a.t > HIT_S) { a.phase = "idle"; a.t = 0; } }
     else if (a.phase === "feed") { if (a.t > FEED_S) { a.phase = "idle"; a.t = 0; } }
     // IT ONLY WANDERS WHEN IT HAS NOTHING ELSE ON. Everything above is the world

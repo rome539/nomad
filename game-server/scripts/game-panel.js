@@ -58,8 +58,23 @@
   Object.keys(MOB_ANIM).sort().forEach(function (id) { var o = document.createElement("option"); o.value = id; o.textContent = id; who.appendChild(o); });
   var addB = mk("button", btnCss, "+ add");
   var clrB = mk("button", btnCss, "clear");
+  // THE BEAT THE SERVER WOULD SEND. The salute, the rise, the grip are events
+  // now - nothing plays them on a clock - so with no server here this is the
+  // only way to see one. Each press sends the next event pose any creature on
+  // screen is drawn with, the same way the wire does.
+  var actB = mk("button", btnCss, "event pose");
+  var actN = 0;
+  actB.onclick = function () {
+    var todo = [];
+    ids.forEach(function (id) { var fr = (MOB_ANIM[id] || {}).f || {};
+      EVENT_POSES.forEach(function (p) { if (fr[p] !== undefined) todo.push([id, p]); }); });
+    if (!todo.length) { actB.textContent = "event pose: none drawn"; return; }
+    var x = todo[actN++ % todo.length];
+    actB.textContent = "event pose: " + x[1];
+    mobBeat(null, null, null, null, null, [x[0]], x[1]);
+  };
   var shown = mk("span", "color:#9a8b66");
-  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch");
+  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose");
   var ids = [];
   addB.onclick = function () { ids.push(who.value); paint(); };
   clrB.onclick = function () { ids = []; paint(); };
@@ -116,6 +131,7 @@
     else if (k === "]") { step(who, 1); ids = [who.value]; paint(); }
     else if (k === "[") { step(who, -1); ids = [who.value]; paint(); }
     else if (k === "t" || k === "T") { torchB.onclick(); }
+    else if (k === "p" || k === "P") { actB.onclick(); }
     else hit = false;
     if (hit) { e.preventDefault(); e.stopPropagation(); }
   }, true);

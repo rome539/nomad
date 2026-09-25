@@ -116,7 +116,7 @@ new Function("box", "document", [
   // the client takes it first out of WATCH_POSES.
   "box.poseAt = poseAt; box.STRIKE_POSES = STRIKE_POSES; box.CALM = CALM_POSES;",
   "box.SLEEP = SLEEP_POSES; box.WATCH = WATCH_POSES; box.HIT = HIT_POSES;",
-  "box.EAT = EAT_POSES;",
+  "box.EAT = EAT_POSES; box.EVENT = EVENT_POSES;",
 ].join("\n"))(box, { getElementById: () => null });
 
 const spare = [];
@@ -166,6 +166,9 @@ for (const [id, { f }] of Object.entries(anim)) {
     rec(mk({ phase: "feed", t, eatAs: f["feed"] !== undefined ? "feed" : first(box.EAT, "") }));
     rec(mk({ phase: "feed", t, eatAs: f["graze"] !== undefined ? "graze" : "" }));
     rec(mk({ asleep: true, t }));
+    // AN EVENT POSE IS REACHED BY ITS BEAT (2026-09-25): the server sends the
+    // salute, the rise, the grip when they happen, and the pose phase holds it.
+    for (const p of box.EVENT) if (f[p] !== undefined) rec(mk({ phase: "pose", t, poseAs: p }));
   }
   // BY INDEX, because `up` and `down` may be one drawing: keying this by name
   // made the alias look dead, since only one of the two names can be recovered

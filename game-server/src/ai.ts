@@ -2522,6 +2522,8 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
           .replace("{b}", theyAreRank ? ot.name : tmpl.name)
       : pick(DRILL_LINES).replace("{a}", cap(tmpl.name)).replace("{b}", ot.name);
     z.roomFeed(creature.roomId, line, undefined, false, "amb");
+    z.fxPose(creature.roomId, creature.templateId, "hold-the-salute");
+    if (other.templateId !== creature.templateId) z.fxPose(creature.roomId, other.templateId, "hold-the-salute");
   }
 
   // THE CROSSING'S DEAD AT WORK. One idle roll, one worker, its own two lines —
@@ -3987,9 +3989,11 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} rises from the throne. The dark rises with him.`);
       z.send(foe, `${cap(tmpl.name)} rises from the throne. The dark rises with him.`);
       z.roomSound(creature.roomId, "Stone scrapes {dir}; something vast has stood up.");
+      z.fxPose(creature.roomId, creature.templateId, "stand-from-the-throne");
       z.creatureNoise(creature.roomId);
     } else {
       z.roomFeedBands(FORTRESS_BANDS, `A voice rolls through the stone: ${cap(tmpl.name)} calls — and the dark answers.`);
+      z.fxPose(creature.roomId, creature.templateId, "call-the-dark");
       const summoned: Creature = {
         id: uuid(),
         templateId: "rat",
