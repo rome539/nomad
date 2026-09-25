@@ -1177,6 +1177,11 @@ export const PAGE = `<!doctype html>
      biggest nearest the middle so nothing important hides behind anything else.
      Hidden with the scene: in text mode there is nothing to stand on. */
   #weather-particles { display: none; position: fixed; z-index: 0; pointer-events: none; }
+  /* THE ROOM'S OWN MOTION: the plate's torches, water and the light in your
+     hand. Placed over the scene box by script, like the weather, and under the
+     creatures so nothing burns in front of them. See fxScene. */
+  #scene-fx, #scene-sparks { display: none; position: fixed; z-index: 0; pointer-events: none; }
+  #scene-sparks { mix-blend-mode: screen; }
   #mobs { display: none; }
   body[data-view="image"] #mobs {
     display: flex;
@@ -2261,6 +2266,8 @@ export const PAGE = `<!doctype html>
   </div>
   <div id="sky" aria-hidden="true"></div>
   <div id="scene" aria-hidden="true"></div>
+  <canvas id="scene-fx" aria-hidden="true"></canvas>
+  <canvas id="scene-sparks" aria-hidden="true"></canvas>
   <div id="mobs" aria-hidden="true"></div>
   <canvas id="weather-particles" aria-hidden="true"></canvas>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
@@ -7343,6 +7350,7 @@ var MOB_V  = "45";      // /mob/      strips and their eye layers
 var BG_V   = "37";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
+var FX_V   = "1";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -8762,6 +8770,7 @@ function drawWeather(now) {
 if (document.addEventListener) document.addEventListener("visibilitychange", runWeather);
 if (weatherMotion.addEventListener) weatherMotion.addEventListener("change", runWeather);
 
+
 var lastCovered = false;
 function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered) {
   var previousRoom = lastRoomKey;
@@ -8786,7 +8795,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   if (torch !== undefined && torch !== null) lastTorch = !!torch;
   if (roll !== undefined && roll !== null) skyRoll = roll;
   if (terrain !== undefined && terrain !== null) lastTerrain = terrain;
-  if (!sceneEl || viewMode !== "image") { setWeather(""); return; }
+  if (!sceneEl || viewMode !== "image") { setWeather(""); if (typeof sceneFx !== "undefined") sceneFx.stop(); return; }
   if (lastCovered || lastRoomKey !== previousRoom || lastSky !== weatherKind) setWeather("");
   // Terrain first, band second: the room's own ground beats its region's.
   // ROOM ART ONLY. The threshold's paintings were never room art: they are oil,
@@ -8999,6 +9008,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       sceneEl.className = (kind === "gatehouse") ? "" : (SKY_KNOWN[lastSky] ? "sky-" + lastSky : "");
       if (mobsEl) { mobsEl.className = ""; mobsEl.style.top = boxPct(MOB_LINE_DEFAULT); }
       sceneEl.style.backgroundPosition = "center center";
+      // The gatehouse is the one single-layer plate with a fire in it; its
+      // hearth and candles burn like any other room's. Every other plate here
+      // has no entry in the effects index, which stops the layer.
+      if (typeof sceneFx !== "undefined") sceneFx.paint(terr ? "/room-bg/" + terr + ".webp" : "", "");
       return;
     }
   }
@@ -9076,6 +9089,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     sceneEl.style.backgroundPosition = "center center";
     scenePainted = scene;
     setWeather(precipitation);
+    if (typeof sceneFx !== "undefined") sceneFx.paint(scene, tint);
   };
   // Already up: this is a light change on the same ground (the hour turning, a
   // sky the scene is borrowed under). Nothing to fetch, so do not hold a frame.
@@ -9094,6 +9108,320 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // common path, not the edge.
   if (pre.complete) put();
 }
+
+// ---- THE ROOM, ALIVE (rome, 2026-09-25) ------------------------------------
+// Live effects laid over the plate, never painted into it. What each plate gets
+// was worked out from its own pixels by scripts/plate-fx.py and sits beside it
+// in /room-fx/: where its flames are and how near each one is, whether its floor
+// is wet, and a depth map. So a room with torches painted in it has them burn;
+// a plate lit by the torch in YOUR hand has that light move. Nothing here
+// decides what a room looks like - the picture already did.
+//
+//   painted torches  flicker, sized by nearness, with embers and dust in the light
+//   wet floors       the reflections ripple
+//   torch-lit halls  low mist on the floor (not at the gates, which are outdoors)
+//   your own torch   the light pool sways and flickers, grit glints, and what is
+//                    standing in front of you throws a shadow away from you
+//
+// ONE CANVAS, AND IT NEVER HIDES THE PLATE. The plate stays exactly where
+// paintScene put it, sky and cut-out and all; this draws only the DIFFERENCE,
+// in premultiplied colour so a single layer can brighten (colour, no cover) and
+// darken (cover, no colour) in the same pass. Where the plate is transparent the
+// layer is too, so a keyed sky is never touched.
+//
+// Off under any hour correction (a tinted plate is a borrowed one, and the
+// effects were read off it as painted), in text view, and for reduced motion.
+var fxCanvas = document.getElementById("scene-fx");
+var sparkCanvas = document.getElementById("scene-sparks");
+var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");
+var fxGl = null, fxProg = null, fxU = {}, fxIndex = null, fxIndexAsked = false;
+var fxName = "", fxEntry = null, fxFrame = null, fxStamp = 0, fxT = 0, fxReady = false;
+var fxTex = {}, fxMobTex = {}, fxEmbers = [], fxDust = [];
+var FX_TORCHES = 24, FX_MOBS = 4;
+function fxInit() {
+  if (fxGl || !fxCanvas) return !!fxGl;
+  try { fxGl = fxCanvas.getContext("webgl", { premultipliedAlpha: true, alpha: true }); } catch (e) { fxGl = null; }
+  if (!fxGl) return false;
+  var gl = fxGl;
+  var vs = "attribute vec2 p; varying vec2 v; void main(){ v = vec2(p.x*.5+.5, .5-p.y*.5); gl_Position = vec4(p,0.,1.); }";
+  var fs = [
+    "#ifdef GL_FRAGMENT_PRECISION_HIGH",
+    "precision highp float;",
+    "#else",
+    "precision mediump float;",
+    "#endif",
+    "varying vec2 v;",
+    "uniform sampler2D plate, depth, mob0, mob1, mob2, mob3;",
+    "uniform float t, aspect, nT, flickOn, wetOn, mistOn, handOn, handFlick;",
+    "uniform vec2 sway;",
+    "uniform vec3 torch[" + FX_TORCHES + "];",
+    "uniform float flick[" + FX_TORCHES + "];",
+    "uniform vec4 mobRect[" + FX_MOBS + "];",
+    "uniform vec2 mobFrame[" + FX_MOBS + "];",
+    "float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }",
+    "float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f);",
+    "  return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }",
+    "float fbm(vec2 p){ float s = 0., a = .5; for (int i = 0; i < 4; i++){ s += a * n(p); p *= 2.03; a *= .5; } return s; }",
+    "vec3 P(vec2 s, float d){ float z = 1. / (d * 3.2 + .32); return vec3((s.x - .5) * z * aspect, (.5 - s.y) * z, z); }",
+    "float I(vec3 p, vec3 L){ vec3 q = p - L; return 1. / (1. + 1.4 * dot(q, q)); }",
+    // A creature's shadow: its own outline, from the frame it is showing now,
+    // laid back along the floor away from you and leaning with the flame.
+    "float shade(sampler2D m, vec4 r, vec2 fr){",
+    "  float foot = r.y + r.w; if (v.y > foot || v.y < foot - r.w * 1.5) return 0.;",
+    "  float up = (foot - v.y) / (r.w * 1.5);",
+    "  float sx = (v.x - r.x + (sway.x * 3. + .55) * up * r.w * 1.25) / r.z;",
+    "  if (sx < 0. || sx > 1.) return 0.;",
+    "  float a = texture2D(m, vec2((fr.x + sx) / fr.y, 1. - up)).a;",
+    "  return a * .7 * (1. - up * .6);",
+    "}",
+    "void main(){",
+    "  vec4 pl = texture2D(plate, v);",
+    "  if (pl.a < .01) { gl_FragColor = vec4(0.); return; }",
+    "  float d = texture2D(depth, v).r;",
+    "  float floorY = smoothstep(.56, .66, v.y);",
+    "  vec2 u = v; float glow = 0., wob = 0., pulse = 0.;",
+    "  for (int i = 0; i < " + FX_TORCHES + "; i++){",
+    "    if (float(i) >= nT) break;",
+    "    vec2 q = (v - torch[i].xy) * vec2(aspect, 1.);",
+    "    float s = torch[i].z, r = .012 + .13 * s;",
+    "    glow += flick[i] * (.3 + .7 * s) * exp(-dot(q, q) / (r * r));",
+    // THE FLAME ITSELF MOVES WHATEVER ITS SIZE (rome, 2026-09-25). The sway was
+    // scaled by nearness alone, so a torch at the back of a hall - painted a
+    // few pixels tall - moved a third of a pixel and sat there frozen while the
+    // two beside you burned. Its GLOW stays small, which is right; its flame
+    // gets a floor on how far it licks and a flicker in its own brightness.
+    "    float fr = .008 + .026 * s, fl = exp(-dot(q, q) / (fr * fr));",
+    "    float fi = float(i) * 3.17;",
+    "    wob += fl;",
+    "    u.x += flickOn * fl * sin(v.y * (900. - 520. * s) + t * 13. + fi) * (.0011 + .0011 * s);",
+    "    u.y += flickOn * fl * (.55 + .45 * sin(t * 8.3 + fi)) * (.001 + .0012 * s);",
+    "    pulse += fl * (.5 * sin(t * 17. + fi) + .3 * sin(t * 31. + fi * 1.7) + .2 * sin(t * 5.1 + fi * .6));",
+    "  }",
+    "  float warm = smoothstep(.25, .6, pl.r - pl.b * .6) * floorY * wetOn;",
+    "  u.x += warm * (sin(v.y * 420. + t * 2.6) * .0016 + (n(vec2(v.x * 40., v.y * 90. - t * .8)) - .5) * .0024);",
+    "  float w = clamp(flickOn * wob * 1.5 + warm, 0., 1.);",
+    "  vec3 D = texture2D(plate, u).rgb;",
+    "  float k = 1. + flickOn * glow * .22;",
+    // ...and the bright core of each flame breathes on its own beat.
+    "  float hot = smoothstep(.45, .85, max(pl.r, pl.g)) * smoothstep(.1, .35, pl.r - pl.b);",
+    "  k *= 1. + flickOn * clamp(pulse, -1., 1.) * hot * .28;",
+    "  vec3 add = flickOn * glow * vec3(.015, .007, 0.);",
+    // The light in your hand: where it is now against where it was painted.
+    "  if (handOn > .5){",
+    "    vec3 p = P(v, d), L0 = vec3(.15, -.35, .05), L = L0 + vec3(sway, 0.);",
+    "    float rel = clamp(I(p, L) / I(p, L0), .55, 1.6);",
+    "    k *= mix(1., rel * handFlick, .25 + .75 * d);",
+    "    vec2 cell = floor(v * vec2(362., 271.));",
+    "    float g = h(cell), b = h(cell + 17.3), sp = h(cell + 41.9);",
+    "    float tw = pow(.5 + .5 * sin(t * (.8 + sp * 5.) + g * 60. + sway.x * 40.), 6. + sp * 14.);",
+    "    add += vec3(1., .82, .55) * step(.979, g) * tw * floorY * d * rel * (.08 + .29 * b * b);",
+    "    float sh = shade(mob0, mobRect[0], mobFrame[0]);",
+    "    sh = max(sh, shade(mob1, mobRect[1], mobFrame[1]));",
+    "    sh = max(sh, shade(mob2, mobRect[2], mobFrame[2]));",
+    "    sh = max(sh, shade(mob3, mobRect[3], mobFrame[3]));",
+    "    k *= 1. - sh * smoothstep(.5, .62, v.y) * handFlick;",
+    "  }",
+    "  float m = 0.; vec3 mc = vec3(0.);",
+    "  if (mistOn > .5){",
+    "    float band = smoothstep(.42, .62, v.y) * (1. - smoothstep(.72, 1., v.y) * .75);",
+    "    m = fbm(vec2(v.x * 3.2 + t * .035, v.y * 7. - t * .01)) * fbm(vec2(v.x * 6. - t * .05, v.y * 11.));",
+    "    m = smoothstep(.02, .32, m) * band * (.5 + .5 * (1. - d)) * .8;",
+    "    mc = vec3(.27, .23, .19) + vec3(.4, .23, .09) * min(glow, 1.5);",
+    "  }",
+    // Written as what to lay over the plate: rest + plate * (1 - a).
+    "  float c = (1. - m) * (1. - w) * k;",
+    "  vec3 rest = (1. - m) * (w * D * k + add) + m * mc;",
+    "  vec4 o = c <= 1. ? vec4(rest, 1. - c) : vec4(rest + (c - 1.) * pl.rgb, 0.);",
+    "  gl_FragColor = o * pl.a;",
+    "}"
+  ].join("\\n");
+  function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+  try {
+    fxProg = gl.createProgram();
+    gl.attachShader(fxProg, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(fxProg, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(fxProg);
+    if (!gl.getProgramParameter(fxProg, gl.LINK_STATUS)) throw new Error("link");
+  } catch (e) { fxGl = null; return false; }   // no effects on this device; the plate is unaffected
+  gl.useProgram(fxProg);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  var ap = gl.getAttribLocation(fxProg, "p"); gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
+  ["plate", "depth", "mob0", "mob1", "mob2", "mob3", "t", "aspect", "nT", "flickOn", "wetOn", "mistOn", "handOn", "handFlick",
+   "sway", "torch", "flick", "mobRect", "mobFrame"].forEach(function (k) { fxU[k] = gl.getUniformLocation(fxProg, k); });
+  gl.uniform1i(fxU.plate, 0); gl.uniform1i(fxU.depth, 1);
+  gl.uniform1i(fxU.mob0, 2); gl.uniform1i(fxU.mob1, 3); gl.uniform1i(fxU.mob2, 4); gl.uniform1i(fxU.mob3, 5);
+  return true;
+}
+function fxUpload(unit, img, linear) {
+  var gl = fxGl, tx = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tx);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  var f = linear ? gl.LINEAR : gl.NEAREST;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
+  return tx;
+}
+function fxLoad(src) { return new Promise(function (ok, no) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = no; i.src = src; }); }
+// Called with every plate that goes up. The index is fetched once, the first
+// time a picture is shown; until it lands nothing is drawn, which is the same
+// as the rooms were before this existed.
+function fxScene(scene, tint) {
+  // The plate's own name: "/room-bg/undercroft-night.webp" is "undercroft-night".
+  var parts = scene ? scene.split("/") : [];
+  var name = parts[1] === "room-bg" && parts[2] ? parts[2].slice(0, parts[2].lastIndexOf(".")) : "";
+  if (name && !fxIndexAsked) {
+    fxIndexAsked = true;
+    fetch("/room-fx/fx.json?v=" + FX_V).then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (j) { fxIndex = j || {}; fxScene(scenePainted, sceneEl ? sceneEl.className : ""); })
+      .catch(function () { fxIndex = {}; });
+  }
+  var entry = (name && !tint && fxIndex && fxIndex[name]) || null;
+  if (!entry || stillness || viewMode !== "image" || !fxInit()) { fxStop(); return; }
+  if (name === fxName && fxReady) { fxRun(); return; }
+  fxName = name; fxEntry = entry; fxReady = false; fxEmbers.length = 0; fxDust.length = 0;
+  var plateAt = scene + "?v=" + BG_V;
+  var depthAt = "/room-fx/" + name + ".png?v=" + FX_V;
+  Promise.all([fxLoad(plateAt), fxLoad(depthAt)]).then(function (im) {
+    if (fxName !== name) return;                 // walked on before it loaded
+    if (fxTex.plate) fxGl.deleteTexture(fxTex.plate);
+    if (fxTex.depth) fxGl.deleteTexture(fxTex.depth);
+    fxTex.plate = fxUpload(0, im[0], false); fxTex.depth = fxUpload(1, im[1], true);
+    fxTex.aspect = im[0].width / im[0].height;
+    var t = entry.t || [], flat = new Float32Array(FX_TORCHES * 3);
+    for (var i = 0; i < t.length && i < FX_TORCHES; i++) { flat[i * 3] = t[i][0]; flat[i * 3 + 1] = t[i][1]; flat[i * 3 + 2] = t[i][2]; }
+    fxGl.useProgram(fxProg);
+    fxGl.uniform3fv(fxU.torch, flat); fxGl.uniform1f(fxU.nT, Math.min(t.length, FX_TORCHES));
+    fxGl.uniform1f(fxU.flickOn, t.length ? 1 : 0); fxGl.uniform1f(fxU.wetOn, entry.w ? 1 : 0);
+    // Mist in the halls underground; not at the doors, which are out of doors,
+    // and not in the gatehouse, which has a fire going and a roof on.
+    fxGl.uniform1f(fxU.mistOn, t.length && name.indexOf("gate") !== 0 ? 1 : 0);
+    fxGl.uniform1f(fxU.handOn, entry.hand ? 1 : 0);
+    if (t.length) for (var k = 0; k < 60; k++) fxDust.push({ x: Math.random(), y: .05 + Math.random() * .7,
+      vx: (Math.random() - .5) * .008, vy: (Math.random() - .6) * .005, s: .6 + Math.random(), ph: Math.random() * 6.3 });
+    fxReady = true; fxRun();
+  }).catch(function () { fxStop(); });
+}
+function fxStop() {
+  fxName = ""; fxEntry = null; fxReady = false;
+  if (fxFrame !== null) cancelAnimationFrame(fxFrame);
+  fxFrame = null; fxStamp = 0;
+  if (fxCanvas) fxCanvas.style.display = "none";
+  if (sparkCanvas) sparkCanvas.style.display = "none";
+}
+function fxRun() {
+  if (!fxReady || document.hidden || viewMode !== "image" || stillness) { if (fxFrame !== null) cancelAnimationFrame(fxFrame); fxFrame = null; return; }
+  fxCanvas.style.display = "block";
+  if (sparkCanvas) sparkCanvas.style.display = (fxEntry && fxEntry.t) ? "block" : "none";
+  if (fxFrame === null) fxFrame = requestAnimationFrame(fxDraw);
+}
+// Each creature on the row, as the shader needs it: where it is in the picture,
+// which frame of its strip it is showing, and the strip itself. Bodies throw no
+// shadow; only four are drawn, which is more than a torch lights anyway.
+function fxMobs(box) {
+  var gl = fxGl, out = [];
+  if (!mobsEl) return out;
+  var els = mobsEl.querySelectorAll(".mob:not(.dead)");
+  for (var i = 0; i < els.length && out.length < FX_MOBS; i++) {
+    var el = els[i], id = el.dataset.id, spec = id && MOB_ANIM[id];
+    if (!spec) continue;
+    var tx = fxMobTex[id];
+    if (tx === undefined) {
+      fxMobTex[id] = null;                       // asked for; drawn once it lands
+      (function (mid) {
+        fxLoad("/mob/" + mid + ".webp?v=" + MOB_V).then(function (im) { fxMobTex[mid] = fxUpload(6, im, false); });
+      })(id);
+      continue;
+    }
+    if (!tx) continue;
+    var r = el.getBoundingClientRect();
+    var fr = Math.round((parseFloat(el.style.backgroundPositionX) || 0) / 100 * (spec.n - 1));
+    out.push({ tx: tx, rect: [(r.left - box.left) / box.width, (r.top - box.top) / box.height, r.width / box.width, r.height / box.height], fr: [fr, spec.n] });
+  }
+  return out;
+}
+function fxDraw(now) {
+  fxFrame = null;
+  if (!fxReady || document.hidden || viewMode !== "image" || stillness) { fxRun(); return; }
+  if (fxStamp && now - fxStamp < 32) { fxFrame = requestAnimationFrame(fxDraw); return; }   // thirty a second is plenty
+  var dt = fxStamp ? Math.min(.1, (now - fxStamp) / 1000) : 0;
+  fxStamp = now; fxT += dt;
+  var box = sceneEl.getBoundingClientRect(), w = Math.round(box.width), h = Math.round(box.height);
+  if (!w || !h) { fxFrame = requestAnimationFrame(fxDraw); return; }
+  var scale = Math.min(1, 1280 / w), rw = Math.max(1, Math.round(w * scale)), rh = Math.max(1, Math.round(h * scale));
+  [fxCanvas, sparkCanvas].forEach(function (c) {
+    if (!c) return;
+    c.style.left = box.left + "px"; c.style.top = box.top + "px"; c.style.width = w + "px"; c.style.height = h + "px";
+    if (c.width !== rw || c.height !== rh) { c.width = rw; c.height = rh; }
+  });
+  var gl = fxGl, t = fxT, e = fxEntry, tl = (e && e.t) || [];
+  gl.viewport(0, 0, rw, rh);
+  gl.useProgram(fxProg);
+  // Each flame on its own: a slow swell and a quick flutter, never in step.
+  var fl = new Float32Array(FX_TORCHES);
+  for (var i = 0; i < tl.length && i < FX_TORCHES; i++) {
+    var s = i * 7.31;
+    fl[i] = .8 + .07 * Math.sin(t * 2.1 + s) + .04 * Math.sin(t * 5.3 + s * 2) + .025 * Math.sin(t * 13.7 + s * 3);
+  }
+  var sx = .09 * Math.sin(t * .55) + .03 * Math.sin(t * 1.7 + 2), sy = .04 * Math.sin(t * .8 + 1);
+  gl.uniform1f(fxU.t, t); gl.uniform1f(fxU.aspect, fxTex.aspect || 1.6);
+  gl.uniform1fv(fxU.flick, fl); gl.uniform2f(fxU.sway, sx, sy);
+  gl.uniform1f(fxU.handFlick, 1 + .06 * Math.sin(t * 2.3) + .04 * Math.sin(t * 6.1 + 1.3) + .03 * Math.sin(t * 15.7 + .4));
+  var mobs = e && e.hand ? fxMobs(box) : [];
+  var rects = new Float32Array(FX_MOBS * 4), frames = new Float32Array(FX_MOBS * 2);
+  for (var m = 0; m < FX_MOBS; m++) {
+    gl.activeTexture(gl.TEXTURE2 + m);
+    if (mobs[m]) {
+      gl.bindTexture(gl.TEXTURE_2D, mobs[m].tx);
+      rects.set(mobs[m].rect, m * 4); frames.set(mobs[m].fr, m * 2);
+    } else { gl.bindTexture(gl.TEXTURE_2D, fxTex.depth); rects.set([-9, -9, 0, 0], m * 4); frames.set([0, 1], m * 2); }
+  }
+  gl.uniform4fv(fxU.mobRect, rects); gl.uniform2fv(fxU.mobFrame, frames);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fxTex.plate);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fxTex.depth);
+  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  // Embers off the painted flames, and dust that only shows where they light it.
+  if (sparkCtx && tl.length) {
+    var W = rw, H = rh, px = W / 1180, a = fxTex.aspect || 1.6;
+    sparkCtx.clearRect(0, 0, W, H);
+    sparkCtx.globalCompositeOperation = "lighter";
+    if (Math.random() < dt * 5) {
+      var q = tl[Math.floor(Math.random() * tl.length)], z = q[2];
+      if (Math.random() < z * .9 + .05) fxEmbers.push({ x: q[0], y: q[1] - .015 * z, vx: (Math.random() - .5) * .024 * (.3 + .7 * z),
+        vy: -(.035 + Math.random() * .035) * (.25 + .75 * z), life: 0, max: 1.4 + Math.random() * 1.8, s: (1 + Math.random()) * (.3 + .7 * z) });
+    }
+    for (var j = fxEmbers.length - 1; j >= 0; j--) {
+      var em = fxEmbers[j]; em.life += dt;
+      if (em.life > em.max) { fxEmbers.splice(j, 1); continue; }
+      em.vx += Math.sin(em.life * 4 + j) * .02 * dt; em.x += em.vx * dt; em.y += em.vy * dt;
+      var kk = 1 - em.life / em.max;
+      sparkCtx.fillStyle = "rgba(255," + (150 + 80 * kk | 0) + ",70," + (kk * .7).toFixed(3) + ")";
+      sparkCtx.beginPath(); sparkCtx.arc(em.x * W, em.y * H, em.s * px * (.5 + kk * .6), 0, 6.283); sparkCtx.fill();
+    }
+    for (var di = 0; di < fxDust.length; di++) {
+      var du = fxDust[di];
+      du.x += (du.vx + Math.sin(t * .4 + du.ph) * .002) * dt; du.y += (du.vy + Math.cos(t * .3 + du.ph) * .0015) * dt;
+      if (du.x < 0) du.x += 1; if (du.x > 1) du.x -= 1; if (du.y < .05) du.y = .75; if (du.y > .78) du.y = .05;
+      var L = 0;
+      for (var ti = 0; ti < tl.length; ti++) {
+        var zz = tl[ti][2], dx = (du.x - tl[ti][0]) * a, dy = du.y - tl[ti][1], rr = .012 + .13 * zz;
+        L += fl[ti] * (.3 + .7 * zz) * Math.exp(-(dx * dx + dy * dy) / (rr * rr * 2.2));
+      }
+      L = Math.min(1, L * 1.3);
+      if (L < .04) continue;
+      sparkCtx.fillStyle = "rgba(255,214,160," + (L * .55).toFixed(3) + ")";
+      sparkCtx.beginPath(); sparkCtx.arc(du.x * W, du.y * H, du.s * px, 0, 6.283); sparkCtx.fill();
+    }
+    sparkCtx.globalCompositeOperation = "source-over";
+  }
+  fxFrame = requestAnimationFrame(fxDraw);
+}
+if (document.addEventListener) document.addEventListener("visibilitychange", fxRun);
+// THE ONE WAY IN. paintScene reaches these through this and only this, and
+// checks it exists first: the page paints its first room before this part of
+// the module has run, and the tests lift paintScene on its own without it.
+var sceneFx = { paint: fxScene, stop: fxStop };
 
 // Put on screen whatever is currently both wanted and permitted. Saves nothing,
 // so it is safe to call on load, on the grant, and on every reconnect.
@@ -9992,6 +10320,7 @@ function paintMobs(ids, doing, dead) {
     // A creature with frames is a window onto its strip, not a picture.
     var el = document.createElement("div");
     el.className = "mob";
+    el.dataset.id = id;   // the room's effects read it to throw this creature's shadow
     el.style.height = h;
     // WIDTH IS STATED, NOT DERIVED. A strip window only shows one clean frame
     // while its box is exactly one frame's shape: background-size is n*100% wide,

@@ -28,7 +28,7 @@ let fail = 0;
 const t = (n, c, e) => { console.log((c ? "  ok   " : "  FAIL ") + n + (e ? "   " + e : "")); if (!c) fail++; };
 
 // which stamp each asset directory must use
-const OWNS = { "mob": "MOB_V", "room-bg": "BG_V", "sky": "SKY_V", "card-bg": "CARD_V", "door-bg": "CARD_V" };
+const OWNS = { "mob": "MOB_V", "room-bg": "BG_V", "room-fx": "FX_V", "sky": "SKY_V", "card-bg": "CARD_V", "door-bg": "CARD_V" };
 
 for (const v of new Set(Object.values(OWNS)))
   t(v + " is declared", new RegExp("var " + v + "\\s*=\\s*\"\\d+\"").test(src));
@@ -38,7 +38,7 @@ const lines = src.split("\n");
 const wrong = [], bare = [];
 lines.forEach((l, i) => {
   if (/^\s*\/\//.test(l)) return;                       // comments may name anything
-  const dir = (l.match(/["(]\/(mob|room-bg|sky|card-bg|door-bg)\//) || [])[1];
+  const dir = (l.match(/["(]\/(mob|room-bg|room-fx|sky|card-bg|door-bg)\//) || [])[1];
   if (!dir) return;
   // A path being STORED is not a path being fetched: scene and sky are built
   // here and stamped where they are handed to the browser, and scenePainted is
@@ -53,7 +53,7 @@ t("no asset URL is built without a version stamp", bare.length === 0, bare.join(
 t("no asset URL carries another kind's stamp", wrong.length === 0, wrong.join("; ") || "all correct");
 
 // the indirect ones: `scene` and `sky` are variables holding a path
-const indirect = lines.filter((l) => !/^\s*\/\//.test(l) && /\+ "\?v=" \+ \w+|"\?v=" \+ \w+/.test(l) && !/["(]\/(mob|room-bg|sky|card-bg|door-bg)\//.test(l));
+const indirect = lines.filter((l) => !/^\s*\/\//.test(l) && /\+ "\?v=" \+ \w+|"\?v=" \+ \w+/.test(l) && !/["(]\/(mob|room-bg|room-fx|sky|card-bg|door-bg)\//.test(l));
 t("the variable-path URLs (scene, sky) are stamped too", indirect.length >= 2,
   indirect.length + " found: " + indirect.map((l) => (l.match(/\?v=" \+ (\w+)/) || [])[1]).join(" "));
 
