@@ -7350,7 +7350,7 @@ var MOB_V  = "45";      // /mob/      strips and their eye layers
 var BG_V   = "37";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "1";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "2";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
