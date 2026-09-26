@@ -7346,7 +7346,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "45";      // /mob/      strips and their eye layers
+var MOB_V  = "46";      // /mob/      strips and their eye layers
 var BG_V   = "37";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -8681,6 +8681,18 @@ var MOB_LINE = {
   "tideway-works": 55,
   "the-breathing-hall": 55,
 };
+// THE KING SITS IN HIS THRONE (rome, 2026-09-26). A king's "keep-the-seat" frame
+// is drawn sitting on nothing, and every creature stands on the one foot line -
+// so on a throne plate he sat on air in front of the dais. Where a picture has a
+// throne, this is where its seat is: while the seated frame shows, the sprite
+// goes UP by that share of its own height and is scaled by s (about its centre,
+// the CSS default), which puts him in the chair. Fitted by compositing each
+// king's real frame at his real in-game size onto the plate. The God's Pool has
+// no entry on purpose: the Drowned God's seat is a crouch on the rim.
+var SEAT_ON = {
+  "sunken-throne": { up: 0.17, s: 0.90 },   // the Forgotten King
+  "marrow-seat":   { up: 0.03, s: 0.95 },   // the Marrow-King
+};
 // The day count from the server: one number, the same for everybody, up by one
 // each cycle. Zero until a status frame carries it, which simply means the first
 // entry of every pool until the world says otherwise.
@@ -8971,6 +8983,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // creatures read this rather than lastTorch, so nothing ever blazes on a
   // hillside the picture left unlit.
   var scene = "", sky = "", tint = "", lit = false, turn = "", line = MOB_LINE_DEFAULT;
+  var seatAt = "";   // the picture's name, so a throne in it can seat its king (SEAT_ON)
   // WHAT HOUR THE CREATURES ARE STANDING IN, which is the sky outside everywhere
   // except under a roof, where it is whatever the plate was lit for.
   var mobHour = lastSky;
@@ -9037,6 +9050,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     var selfLit = phave.indexOf(" day ") < 0 && phave.indexOf(" night-torch ") < 0;
     if (shut || phave.indexOf(" day ") < 0) mobHour = (lit || selfLit) ? "" : pbase;
     line = MOB_LINE[stem] || MOB_LINE_DEFAULT;   // the standing line belongs to the PICTURE
+    seatAt = typeof SEAT_ON !== "undefined" && SEAT_ON[stem] ? stem : "";   // a throne in the picture seats its king
   }
   if (!scene && gate && GATE_PLATE[gate] !== undefined) {
     // GROUND WEATHER IS A DIFFERENT PHOTOGRAPH. Night is not the day gone dim,
@@ -9226,6 +9240,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       // never only when it differs: a line left over from the room behind you
       // would put the next room's animals wherever the last one's stood.
       mobsEl.style.top = boxPct(line);
+      if (mobsEl.dataset) mobsEl.dataset.seat = seatAt;
     }
     // ...and centred rather than pinned at 55%. The 55% only ever meant
     // anything while the picture overflowed its box; contained, it does not
@@ -9918,9 +9933,9 @@ var MOB_SPRITE = {
   "twice-dead": 29,        // an old man of the barrow-dead
   "thrice-dead": 29,       // his elder, no bigger
   "marrow-cantor": 33,     // "a TALL frame of fused bone"
-  "forgotten-king": 31,    // crowned, and mostly seated
-  "marrow-king": 31,       // the same frame, wound through with others
-  "drowned-god": 46,       // "IMMENSE" - sits chest-deep and the dark leans in with it
+  "forgotten-king": 42,    // crowned, and mostly seated - up from 31, rome 2026-09-26: the kings bigger
+  "marrow-king": 42,       // the same frame, wound through with others (31 -> 42 with his brother)
+  "drowned-god": 63,       // 46 -> 63 with the other kings; "IMMENSE" - sits chest-deep and the dark leans in with it
   "the-drowned": 30,       // a drowned man, bloated but a man
   "drowned-hulk": 40,      // "swollen VAST, filling the flooded dark where it stands"
   "rag-and-bone": 44,      // "about half again the size of" a man, and hung with its load
@@ -10889,7 +10904,12 @@ function poseAt(a, now) {
       name = a.spec.acts[(((a.actOff | 0) + Math.floor(t)) % a.spec.acts.length)];
     }
   } else {
-    name = a.calm && Math.floor(t / 3) % 2 ? calmNow(t / 3) : "idle";
+    // A KING KEEPS HIS SEAT (rome, 2026-09-26). The calm cycle stood him up and
+    // sat him down every three seconds. A seated king stays seated until the
+    // world gives him a reason to rise - alert, a blow, the stand-from-the-throne
+    // beat - and every one of those is a branch above this one.
+    name = a.calm === "keep-the-seat" ? a.calm
+         : a.calm && Math.floor(t / 3) % 2 ? calmNow(t / 3) : "idle";
     s *= 1 + Math.sin(t * 2) * BREATH;
   }
   if (a.phase !== "hit") a.rot = 0;
@@ -11003,12 +11023,18 @@ function stepAnims() {
     // telling the picture what is happening; the stroll is what is left when
     // nothing is. Its cadence comes from the animal - a wolf paces, a vulture
     // sits - so a room is not a metronome with four hands.
-    else if (!a.state && now > a.next) { a.phase = "travel"; a.t = 0; a.actOff = (a.actOff | 0) + 1; a.next = now + a.rate + Math.random() * a.rate * 1.6; }
+    // A king keeping his seat does not get up to stroll (see "keep-the-seat" in poseAt).
+    else if (!a.state && now > a.next && a.calm !== "keep-the-seat") { a.phase = "travel"; a.t = 0; a.actOff = (a.actOff | 0) + 1; a.next = now + a.rate + Math.random() * a.rate * 1.6; }
     var p = poseAt(a, now);
+    // ...and while he is seated, in the throne rather than on the air in front of it (SEAT_ON).
+    // Read live, not kept on the sprite: the row outlives a repaint of the room it
+    // stands in, and the throne only lines up with a king alone in the middle of it.
+    var seat = p.k === a.spec.f["keep-the-seat"] && anims.length === 1 && mobsEl.children.length === 1
+      && typeof SEAT_ON !== "undefined" && mobsEl.dataset ? SEAT_ON[mobsEl.dataset.seat || ""] || null : null;
     a.el.style.backgroundPositionX = (p.k * 100 / (a.spec.n - 1)) + "%";
     a.el.style.transform = "translate(" + (p.x * 100).toFixed(1) + "%,"
-      + (-(p.air + (a.lift || 0)) * 100).toFixed(1) + "%)"
-      + " rotate(" + ((a.rot || 0) * 57.3).toFixed(2) + "deg) scale(" + p.s.toFixed(3) + ")";
+      + (-(p.air + (a.lift || 0) + (seat ? seat.up : 0)) * 100).toFixed(1) + "%)"
+      + " rotate(" + ((a.rot || 0) * 57.3).toFixed(2) + "deg) scale(" + (p.s * (seat ? seat.s : 1)).toFixed(3) + ")";
   }
   if (mobHold && now >= mobHold) releaseMobs();
 }
