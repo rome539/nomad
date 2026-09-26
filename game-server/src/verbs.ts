@@ -1244,6 +1244,12 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
       const kt = world.mobTemplates.get(keeper.templateId)!;
       return z.send(session, `${cap(kt.name)} stirs on the throne, and the dark between you and the way ${dir} is suddenly full of him. What he took to the grave, he keeps. The way opens over his body, or not at all.`, "dmgin");
     }
+    // WHICHEVER KING THE DICE SEATED (2026-09-26). The kings have rooms of their
+    // own now (VARIANT_HOMES), so the throne can stand empty while the Drowned God
+    // or the Marrow-King holds the deep from somewhere else. The hoard is still
+    // his: it stays shut while any king of the line lives, wherever he sits.
+    const reigning = [...z.creatures.values()].some((c) => (z.variantBase.get(c.templateId) ?? c.templateId) === keeperId);
+    if (reigning) return z.send(session, `The way ${dir} is shut fast, and does not give.`);
   }
 
   // The gate toll: an awake sentinel holds the door, and nothing walks its room

@@ -376,6 +376,27 @@ Directions rome likes and wants held. Design only; no code until he says go.
   a den worth calling — the lead-dog, a wolf, something with kin behind it —
   and its own tell, so the cost of letting it break is legible before you do.
 
+- **THE BOARDED DOOR — a gate shut for works shows it** *(parked 2026-09-26 by
+  rome)*. When `works.ts` boards a gatehouse up, the gate's picture still shows
+  its door standing open. It was built once and taken back out before it
+  shipped. That version had three parts. The status frame carried `shut: 1`,
+  re-sent to anyone at the gate when the boards went up or came down. Each
+  gate's door was outlined by its four corners. The room-effects layer
+  (`room-fx.md`) fitted a boards image into the doorway and lit it from the
+  wall beside it. What we learned:
+  - A fully planked door looked pasted on: finer pixels than the plate,
+    brighter than the wall, and fitted exactly inside the frame.
+  - One plank across the doorway with the WORKS sign read better. rome wanted
+    it as a NEW image (single plank, flat, magenta background) rather than
+    one cut out of the full-door art.
+  - At the Broken Gate and the Weeper Arch the boarded thing is the keeper's
+    door beside the passage. The big gates stay open, because the room stays
+    walkable while the door is shut.
+
+  **Kept:** `game-server/scripts/plate-fx-doors.json`, the 14 door outlines
+  (TL TR BR BL, 0–1 of the picture). Each was checked against all six
+  conditions, and they hold across all 84 gate pictures.
+
 - **THE SCAR — gear that carries its own history** — **REJECTED 2026-08-29.**
   rome turned it down flatly, and it is not a park this time: do not build it,
   and do not offer it again. The whole design stays below at his request —

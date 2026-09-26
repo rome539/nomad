@@ -27,7 +27,10 @@ art. Avoid photorealism, smooth digital painting, modern 3D rendering, excessive
 detail, glossy materials, cinematic realism, anti-aliased edges, and modern
 game-art aesthetics.
 
-RESOLUTION LOCK: rendered natively at 320x200 pixels, 4:3, then displayed
+FRAME LOCK: WIDE LANDSCAPE, 16:10 aspect ratio, 1584x993 pixels. The image is
+much wider than it is tall. Never square, never portrait, never 4:3.
+
+RESOLUTION LOCK: rendered natively at 320x200 pixels (16:10), then displayed
 larger. Do not downscale or upscale from a higher-resolution painting. Pixel
 density must be identical in every asset.
 

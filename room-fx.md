@@ -10,7 +10,7 @@ The script decides this from the plate's name and from two hand-kept lists. The 
 |---|---|
 | Any plate listed in `scripts/plate-fx-torches.json` | Each flame flickers and licks, sized by how near it is. Its bright core pulses, embers rise from it, and dust shows where its light falls. |
 | The same plates, except gates and the gatehouse | Low mist on the floor, thicker further back. |
-| Plates named in `WET` in `scripts/plate-fx.py`: undercroft, deep-hall, deep-water | The torch reflections on the floor ripple. |
+| Plates named in `WET` in `scripts/plate-fx.py`: undercroft, deep-hall, deep-water, sunken-throne, waiting-hall | The torch reflections on the floor ripple. |
 | Every `-night-torch` plate (the light is the one you carry) | The light pool sways and flickers, grit glints at random, and up to four creatures on the stage cast a shadow away from you. A gate's night-torch plate also keeps its lantern. |
 
 Effects are off in text view, for reduced motion, and on any plate being tinted for a different hour. They sit on a layer between the plate and the creatures, and wherever the plate is transparent (a keyed sky) they draw nothing.

@@ -43,6 +43,7 @@ import {
   HUNGER_PER_MIN, COLD_HUNGER_MULT,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
   HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS, BEAKS, COILS,
+  VARIANT_HOMES,
   groundWord,
 } from "./zone-data";
 
@@ -73,6 +74,31 @@ export function rollBloodline(z: ZoneDO, tmpl: MobTemplate, room?: string): MobT
     }
     return tmpl;
   }
+
+// Where a rolled bloodline lives: its own room if it has one (VARIANT_HOMES),
+// else the den it was rolled for. Every place that rolls a bloodline passes its
+// den through here, so the Drowned God is never seated on the Forgotten King's
+// throne.
+export function bloodlineHome(z: ZoneDO, tmpl: MobTemplate, den: string): string {
+  const own = VARIANT_HOMES.get(tmpl.id);
+  return own && z.world!.rooms.has(own) ? own : den;
+}
+
+// A king rolled before the kings had rooms of their own is still sitting on the
+// old throne in the saved state. On load, send each one home. They are bosses
+// and would never walk there on their own. Returns how many moved.
+export function rehomeVariants(z: ZoneDO): number {
+  let moved = 0;
+  for (const c of z.creatures.values()) {
+    const own = VARIANT_HOMES.get(c.templateId);
+    if (!own || !z.world!.rooms.has(own) || c.home === own) continue;
+    c.home = own;
+    c.roomId = own;
+    c.target = null;
+    moved++;
+  }
+  return moved;
+}
 
   // Never carry more of a bloodline than its dens allow. A deploy that retires
   // spawn rows (as the variant dens were) leaves their creatures alive in the
@@ -3467,6 +3493,7 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
       // usually the ordinary version, once in a while the mean cousin — and a
       // brood promotion only lands on a vacant nest of her line.
       const tmpl = rollBloodline(z, baseTmpl, home);
+      home = bloodlineHome(z, tmpl, home);
       // Migration is a walk, not a materialization: a walker surfaces at the
       // dark mouth nearest its den and makes its way in (territory homing does
       // the walking). The sessile — mothers, the drowned — and the boss simply

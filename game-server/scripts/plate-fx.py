@@ -57,7 +57,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(HERE, "plate-fx-torches.json")) as fh:
     TORCHES = json.load(fh)
 # Floors that are standing water or wet flags, by eye - the ripple is theirs.
-WET = {"undercroft-night", "deep-hall-night", "deep-water-night"}
+WET = {"undercroft-night", "deep-hall-night", "deep-water-night", "sunken-throne-night", "waiting-hall-night", "gods-pool-night"}
 
 # How near each flame is, against the room's own nearest, read off the depth
 # map, and floored so the one at the far end of a hall still shows as a flame.

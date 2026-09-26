@@ -680,10 +680,12 @@ export class ZoneDO implements DurableObject {
       // Trim any bloodline the saved state overstocks (retired dens' creatures,
       // brood pups from an evicted nest) back to what the spawn table allows.
       const culled = ai.reconcilePopulation(this, world);
+      // ...and a king rolled before the kings had rooms of their own goes to his.
+      const rehomed = ai.rehomeVariants(this);
       // Content added since this world's first light (e.g. new gear in a
       // migration) gets laid down once: any ground spawn we've never placed and
       // that isn't already on its floor. Keeps a live world from needing a reset.
-      let addedSpawn = culled > 0;
+      let addedSpawn = culled > 0 || rehomed > 0;
       for (const g of world.groundSpawns) {
         const key = `${g.item_id}@${g.room_id}`;
         if (this.placedSpawns.has(key)) continue;
@@ -725,8 +727,9 @@ export class ZoneDO implements DurableObject {
         const base = world.mobTemplates.get(spawn.template_id);
         if (!base) continue;
         // A roaming line takes fresh ground even on its first placement.
-        const den = ai.rollDen(this, spawn.template_id, spawn.room_id);
-        const tmpl = ai.rollBloodline(this, base, den);
+        const rolledDen = ai.rollDen(this, spawn.template_id, spawn.room_id);
+        const tmpl = ai.rollBloodline(this, base, rolledDen);
+        const den = ai.bloodlineHome(this, tmpl, rolledDen);
         const traits = ai.rollMobTraits(tmpl);
         this.creatures.set(spawn.id, {
           id: spawn.id,
@@ -775,8 +778,9 @@ export class ZoneDO implements DurableObject {
         if (!base) continue;
         // Even at first light, rare blood: a den is usually the ordinary
         // version, once in a while the mean cousin.
-        const den = ai.rollDen(this, spawn.template_id, spawn.room_id);
-        const tmpl = ai.rollBloodline(this, base, den);
+        const rolledDen = ai.rollDen(this, spawn.template_id, spawn.room_id);
+        const tmpl = ai.rollBloodline(this, base, rolledDen);
+        const den = ai.bloodlineHome(this, tmpl, rolledDen);
         const traits = ai.rollMobTraits(tmpl);
         this.creatures.set(spawn.id, {
           id: spawn.id,

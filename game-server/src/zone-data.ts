@@ -1311,6 +1311,7 @@ export const FENCE_LAST_ONE_ODDS = 0.2; // per item bought: that was his last (s
 export const FENCE_CHURN_MIN_MS = 20 * 60_000; // how often the shelf tops itself back up to the rotation target
 export const FENCE_CHURN_MAX_MS = 45 * 60_000;
 export const CARRION_ROOMS = new Set(["the-mass-grave", "the-bone-midden", "carrion-gallery",
+  "the-bone-sift", // the carrion gallery's midden drains down into it (291)
   // THE BONE GROUND (mig 232). The fan under the whole face of the mountain,
   // where everything that comes off it arrives and is sorted by weight the way a
   // river sorts gravel — the heavy end of it is bones, and it is the only place
@@ -5649,6 +5650,16 @@ export const TREASURY_DOORS = new Map<string, string>([
   ["kings-hoard", "forgotten-king"],
 ]);
 
+// EACH KING SITS IN HIS OWN ROOM (rome, 2026-09-26). The deep has one king spawn
+// and the bloodline roll decides who fills it — but until now every king it
+// rolled sat on the same throne. A variant named here takes this room as its
+// home the moment it is rolled; the Forgotten King keeps the spawn row's room.
+// Still one spawn, so still one king alive at a time: the dice choose the room.
+export const VARIANT_HOMES = new Map<string, string>([
+  ["drowned-god", "the-gods-pool"],   // below the bottom of the Tideways — the deep made it out of a king
+  ["marrow-king", "the-marrow-seat"], // in the Bone Choir, which keeps the crown
+]);
+
 // The sentinel lines name their heads, and the runt has one fewer to lift.
 // Quantifier phrase, so it drops into prose whole ("all three heads low and
 // watching" / "both heads low and watching").
@@ -5998,6 +6009,8 @@ export const DARK_ROOMS = new Set([
   "blackreach", "the-lightless-march", "the-gasping-dark", "black-threshold", "black-canal",
   "the-crawl-of-teeth", "the-earth-throat", // the warrens' lightless squeezes (058)
   "the-long-swallow", "the-tide-throat", "the-silt-chapel", "the-still-cradle", // the Tideways' drowned half (069)
+  "the-blind-gallery", "the-scraped-hall", "the-wormcast-pit", "the-scavengers-shelf", "the-drag", // the dark floor (291)
+  "the-lung-vent", // the vent the tideway breathes through (291)
   // THE SEA CAVE'S INNER ROOMS (mig 279). The mouth keeps its daylight — the sea
   // is right there and the sun comes in off it — and the moment the roof comes
   // down, that stops. Seven rooms, every one of them black, which is the whole
@@ -6767,6 +6780,20 @@ export const ART_ROOMS = new Set<string>([
   "the-salt-vault",
   "the-silt-chapel",
   "the-breathing-hall",
+  // THE DEEP, SLAB 2 (mig 291) — shared plates, see PLATE_OF in public.ts
+  "the-sluice-walk", "the-chain-well", "the-flooded-cloister", "the-sunk-bell",
+  "the-silt-bank", "the-drowned-kitchens", "the-cold-pantry", "the-charnel-chute",
+  "the-lock-keepers-room", "the-sluice-gear", "the-flood-mark",
+  "the-chute-foot", "the-blind-gallery", "the-scraped-hall", "the-wormcast-pit",
+  "the-feeling-wall", "the-gnawed-arch", "the-bored-passage", "the-crawlway",
+  "the-drag", "the-bone-sift", "the-scavengers-shelf", "the-root-shaft",
+  "the-choir-stair", "the-singing-gallery", "the-lectern-room", "the-bone-organ",
+  "the-silt-fall", "the-choir-floor", "the-bone-font", "the-long-pews",
+  "the-held-note", "the-cantors-cells", "the-cantors-door", "the-choir-drain",
+  "the-embalming-room", "the-bone-vestry", "the-drain-run",
+  "the-kings-stair", "the-waiting-hall",
+  "the-cooperage", "the-cable-walk", "the-brine-cellar", "the-lung-vent",
+  "the-marrow-seat", "the-gods-pool",
 ]);
 
 export const INDOOR_ROOMS = new Set<string>([
@@ -8323,6 +8350,21 @@ export const DEEP_ROOMS = new Set([
   "the-tide-gate", "the-under-weir", "the-drowning-stair", "the-eel-run",
   "the-long-swallow", "the-salt-vault", "the-breathing-hall", "the-tide-throat",
   "the-silt-chapel", "the-still-cradle",
+  // THE DEEP, SLAB 2 (mig 291, regions/the-deep-2.rooms) — the deep doubled, so
+  // the king is at the end of four floors instead of the bottom of one stair.
+  "the-sluice-walk", "the-chain-well", "the-flooded-cloister", "the-sunk-bell",   // the flooded halls
+  "the-silt-bank", "the-drowned-kitchens", "the-cold-pantry", "the-charnel-chute",
+  "the-lock-keepers-room", "the-sluice-gear", "the-flood-mark",
+  "the-chute-foot", "the-blind-gallery", "the-scraped-hall", "the-wormcast-pit",  // the dark
+  "the-feeling-wall", "the-gnawed-arch", "the-bored-passage", "the-crawlway",
+  "the-drag", "the-bone-sift", "the-scavengers-shelf", "the-root-shaft",
+  "the-choir-stair", "the-singing-gallery", "the-lectern-room", "the-bone-organ", // the bone choir
+  "the-silt-fall", "the-choir-floor", "the-bone-font", "the-long-pews",
+  "the-held-note", "the-cantors-cells", "the-cantors-door", "the-choir-drain",
+  "the-embalming-room", "the-bone-vestry", "the-drain-run",                     // the court
+  "the-kings-stair", "the-waiting-hall",                                         // the king's rooms
+  "the-cooperage", "the-cable-walk", "the-brine-cellar", "the-lung-vent",        // the siege-works
+  "the-marrow-seat", "the-gods-pool",                                           // the kings' own rooms (VARIANT_HOMES)
 ]);
 
 // The Tideways proper (069): the tide's territory, and the flood order. The
@@ -8334,6 +8376,8 @@ export const TIDEWAYS_ROOMS = new Set([
   "the-tide-gate", "the-under-weir", "the-drowning-stair", "the-eel-run",
   "the-long-swallow", "the-salt-vault", "the-breathing-hall", "the-tide-throat",
   "the-silt-chapel", "the-still-cradle",
+  // the siege-works off the Salt-Vault (291) — the tide's ground, never ranked, so never flooded
+  "the-cooperage", "the-cable-walk", "the-brine-cellar", "the-lung-vent",
 ]);
 export const TIDE_LEVELS: string[][] = [
   ["the-still-cradle"],
@@ -9395,6 +9439,17 @@ export const ROOM_AMBIENCE: Record<string, string[]> = {
   "pocket-of-air": ["The air here is thin and breathable and does not smell of the water. You breathe while you can."],
   "sunken-throne": ["The flooded dark hums, low, as if the throne remembers being sat.", "The water around the throne is very, very still."],
   "kings-hoard": ["Gold gleams once in the dark, and is swallowed again."],
+  // ---- the deep, slab 2 (291): the choir, and the way down to the king ----
+  "the-kings-stair": ["Somewhere below, water laps once against stone, and is still.", "The cold comes up the stair to meet you, step by step."],
+  "the-waiting-hall": ["The water around the standing figures does not move. Neither do they.", "A drop falls from the ceiling into the still water, and every ring it makes reaches the far door."],
+  "the-singing-gallery": ["The draught shifts, and a thousand open jaws change their note together.", "The hum drops half a tone, holds, and climbs back."],
+  "the-held-note": ["A sound from long ago goes round the walls once more, fainter than last time, and does not stop."],
+  "the-bone-organ": ["One of the long pipes sighs out a note on its own, and the room answers in your teeth."],
+  "the-choir-floor": ["For a moment the stalls hum as if every seat were full."],
+  "the-sunk-bell": ["The water moves against the bell, and it hums, very low."],
+  "the-chain-well": ["The chain in the well slips down one link, and is still again."],
+  "the-marrow-seat": ["Through the wall the choir holds its note, and the bones of the seat hum with it.", "Something in the seat settles, the way a man settles into a chair he means to keep."],
+  "the-gods-pool": ["The water rises, slow as a breath, and slides a finger further over the rim.", "The pool draws back from the rim, and for a moment you can hear it breathing out."],
   // ---- the fen: the second way west (2026-08-03) ----
   // Water on both sides of every step. The register is deliberately unlike the
   // road's (wind and open ground) and unlike the wood's (leaves and something
