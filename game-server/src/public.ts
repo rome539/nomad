@@ -7346,11 +7346,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "46";      // /mob/      strips and their eye layers
-var BG_V   = "37";      // /room-bg/  the room plates - 91MB, the expensive one
+var MOB_V  = "50";      // /mob/      strips and their eye layers
+var BG_V   = "38";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "3";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "4";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -8690,7 +8690,7 @@ var MOB_LINE = {
 // king's real frame at his real in-game size onto the plate. The God's Pool has
 // no entry on purpose: the Drowned God's seat is a crouch on the rim.
 var SEAT_ON = {
-  "sunken-throne": { up: 0.17, s: 0.90 },   // the Forgotten King
+  "sunken-throne": { up: 0.14, s: 0.90 },   // the Forgotten King
   "marrow-seat":   { up: 0.03, s: 0.95 },   // the Marrow-King
 };
 // The day count from the server: one number, the same for everybody, up by one
@@ -9933,7 +9933,7 @@ var MOB_SPRITE = {
   "twice-dead": 29,        // an old man of the barrow-dead
   "thrice-dead": 29,       // his elder, no bigger
   "marrow-cantor": 33,     // "a TALL frame of fused bone"
-  "forgotten-king": 42,    // crowned, and mostly seated - up from 31, rome 2026-09-26: the kings bigger
+  "forgotten-king": 52,    // crowned, and mostly seated - up from 31, rome 2026-09-26: the kings bigger
   "marrow-king": 42,       // the same frame, wound through with others (31 -> 42 with his brother)
   "drowned-god": 63,       // 46 -> 63 with the other kings; "IMMENSE" - sits chest-deep and the dark leans in with it
   "the-drowned": 30,       // a drowned man, bloated but a man
@@ -10039,7 +10039,7 @@ var MOB_ANIM = {
   "cutpurse":   { n: 8, aspect: 1.243, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "dire-hyena":   { n: 8, aspect: 1.063, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "grave-hyena":   { n: 8, aspect: 1.238, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "forgotten-king":   { n: 8, aspect: 0.931, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"recover":6,"death":7} },
+  "forgotten-king":   { n: 8, aspect: 1.03, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "two-hound":   { n: 6, aspect: 1.287, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "three-hound":   { n: 6, aspect: 1.219, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "pale-stalker":   { n: 8, aspect: 1.528, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
@@ -10047,9 +10047,9 @@ var MOB_ANIM = {
   "verdigris-thing":   { n: 8, aspect: 1.041, f: {"idle":0,"lay-on-the-hand":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "rag-and-bone":   { n: 8, aspect: 0.978, f: {"idle":0,"take-it-up":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "drowned-god":   { n: 8, aspect: 0.991, f: {"idle":0,"keep-the-seat":1,"take-hold":2,"lift-you-clear":3,"alert":4,"attack":5,"recover":6,"death":7} },
-  "drowned-hulk":   { n: 8, aspect: 0.997, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "the-drowned":   { n: 8, aspect: 1.05, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "marrow-king":   { n: 8, aspect: 1.012, f: {"idle":0,"keep-the-seat":1,"rise":2,"take-hold":3,"alert":4,"attack":5,"recover":6,"death":7} },
+  "drowned-hulk":   { n: 8, aspect: 1.059, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-drowned":   { n: 8, aspect: 1.066, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"listen":6,"death":7} },
+  "marrow-king":   { n: 8, aspect: 1.047, f: {"idle":0,"keep-the-seat":1,"rise":2,"take-hold":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "thrice-dead":   { n: 8, aspect: 1.003, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "twice-dead":   { n: 8, aspect: 1, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "last-watchman":   { n: 8, aspect: 1.284, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
