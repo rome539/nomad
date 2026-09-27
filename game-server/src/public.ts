@@ -7347,10 +7347,10 @@ var thrKnown = localStorage.getItem("nomad_name");
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
 var MOB_V  = "50";      // /mob/      strips and their eye layers
-var BG_V   = "38";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "39";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "4";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "6";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -7463,6 +7463,28 @@ var TERRAIN_PLATE = {
   works: ["works"],
   "sea-cave": ["sea-cave"],
 };
+// THE GATEHOUSE KEEPS THE YEAR (rome, 2026-09-27). Four dressings of the same
+// room, painted over the same picture, each hung for a stretch of the real
+// calendar: name: [from month, from day, to month, to day], UTC, both ends
+// included. Yule runs over the new year, so a window may wrap. Outside all four
+// the room is its plain self. Every wanderer sees the same one on the same day,
+// because the date is the only input.
+var GATEHOUSE_FEASTS = {
+  midsummer: [6, 20, 6, 26],
+  harvest:   [9, 21, 10, 5],
+  halloween: [10, 24, 11, 1],
+  yule:      [12, 17, 1, 1]
+};
+var FEAST_FORCE = "";   // the preview panel sets this to look at a feast out of season
+function gatehouseFeast() {
+  if (FEAST_FORCE) return FEAST_FORCE === "none" ? "" : FEAST_FORCE;
+  var d = new Date(), md = (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  for (var name in GATEHOUSE_FEASTS) {
+    var f = GATEHOUSE_FEASTS[name], a = f[0] * 100 + f[1], b = f[2] * 100 + f[3];
+    if (a <= b ? (md >= a && md <= b) : (md >= a || md <= b)) return name;
+  }
+  return "";
+}
 // FNV-1a: the same cheap trick the world already uses to hang per-instance
 // detail off an id without storing a byte of it.
 function plateHash(str) {
@@ -9108,6 +9130,12 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     if (!kind && gate && BANDS_WITH_PLATES[lastBand]) kind = BAND_FALLBACK[lastBand] || "";
     var list = kind ? TERRAIN_PLATE[kind] : null;
     var terr = (list && list.length) ? list[plateHash(lastRoomKey || kind) % list.length] : "";
+    // A feast dresses the gatehouse; guarded because the scene tests lift this
+    // function on its own, without the table above.
+    if (kind === "gatehouse" && terr && typeof gatehouseFeast === "function") {
+      var feast = gatehouseFeast();
+      if (feast) terr = "gatehouse-" + feast;
+    }
     if (terr && TERRAIN_SCENES[terr] !== undefined) {
       // Painted for layering: same law as a gate, and it falls through to the
       // shared code below rather than repeating it.

@@ -15,8 +15,11 @@
 
   var bar = document.createElement("div");
   bar.id = "gp";
-  bar.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;flex-wrap:wrap;gap:8px;"
-    + "align-items:center;padding:8px 10px;background:rgba(11,9,6,.92);border-bottom:1px solid #3d3324;"
+  // AT THE BOTTOM, over the log and the command line - neither does anything
+  // here, with no server behind the page. Pinned to the top it sat over the top
+  // eleventh of every picture and hid it.
+  bar.style.cssText = "position:fixed;bottom:0;left:0;right:0;z-index:99999;display:flex;flex-wrap:wrap;gap:8px;"
+    + "align-items:center;padding:8px 10px;background:rgba(11,9,6,.92);border-top:1px solid #3d3324;"
     + "font:12px ui-monospace,Menlo,monospace;color:#c9bda3";
   document.body.appendChild(bar);
   var mk = function (tag, css, txt) { var e = document.createElement(tag); if (css) e.style.cssText = css; if (txt) e.textContent = txt; bar.appendChild(e); return e; };
@@ -42,6 +45,9 @@
   var gR = group("rooms"); rows.forEach(function (x) { opt(gR, "room:" + x[1], x[0]); });
   var gG = group("doors"); Object.keys(GATE_PLATE).sort().forEach(function (g) { opt(gG, "gate:" + g, g); });
   var gT = group("grounds"); Object.keys(TERRAIN_SCENES).sort().forEach(function (t) { opt(gT, "ground:" + t, t); });
+  // The gatehouse is a single baked plate, so it is not in TERRAIN_SCENES; it is
+  // named here by hand so its feasts can be looked at.
+  opt(gT, "ground:gatehouse", "gatehouse");
 
   var hPrev = mk("button", stepCss, "\u2039");
   var hour = mk("select", btnCss);
@@ -51,6 +57,13 @@
 
   var torchB = mk("button", btnCss, "torch: off"); var torch = 0;
   torchB.onclick = function () { torch = torch ? 0 : 1; torchB.textContent = "torch: " + (torch ? "on" : "off"); torchB.style.color = torch ? "#d8a94e" : "#c9bda3"; paint(); };
+
+  // THE GATEHOUSE'S FEASTS go by the real date, so without this you would wait
+  // months to see three of them. "by date" is what a player gets today.
+  var feast = mk("select", btnCss);
+  [["", "feast: by date"], ["none", "feast: none"], ["midsummer", "midsummer"], ["harvest", "harvest"], ["halloween", "halloween"], ["yule", "yule"]].forEach(function (x) {
+    var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; feast.appendChild(o); });
+  feast.onchange = function () { paint(); };
 
   var wPrev = mk("button", stepCss, "\u2039");
   var who = mk("select", btnCss);
@@ -84,24 +97,29 @@
   // same room with the same animals in it, which is what makes a comparison.
   var KEY = "gp-state";
   try { var st = JSON.parse(localStorage.getItem(KEY) || "{}");
-    if (st.g) gnd.value = st.g; if (st.h) hour.value = st.h; if (st.t) torch = 1; if (st.ids) ids = st.ids; } catch (e) {}
+    if (st.f) feast.value = st.f; if (st.g) gnd.value = st.g; if (st.h) hour.value = st.h; if (st.t) torch = 1; if (st.ids) ids = st.ids; } catch (e) {}
   if (!ids.length) ids = [who.value];
   if (torch) { torchB.textContent = "torch: on"; torchB.style.color = "#d8a94e"; }
 
   function paint() {
     var v = gnd.value, h = hour.value;
+    // THE RED NIGHT IS A FLAG, NOT A SKY. The server sends it beside the sky on
+    // every frame, and it is what lights the hollow's eyes - so choosing the
+    // blood sky here has to raise it too, and every other hour has to lower it.
+    var red = h === "blood" ? 1 : 0;
+    if (typeof FEAST_FORCE !== "undefined") FEAST_FORCE = feast.value;
     if (v.indexOf("room:") === 0) {
       var r = v.slice(5);
-      paintScene("upper", h, "", r, torch, 0, r);
+      paintScene("upper", h, "", r, torch, 0, r, 0, red);
     } else if (v.indexOf("gate:") === 0) {
-      paintScene("mountain", h, v, "preview-gate", torch, 0, "");
+      paintScene("mountain", h, v, "preview-gate", torch, 0, "", 0, red);
     } else {
-      paintScene("mountain", h, v.slice(7), "preview-ground", torch, 0, "");
+      paintScene("mountain", h, v.slice(7), "preview-ground", torch, 0, "", 0, red);
     }
     fitPicture();
     updateMobs(ids.slice(), null, []);
     shown.textContent = ids.length ? "standing: " + ids.join(", ") : "nothing standing";
-    try { localStorage.setItem(KEY, JSON.stringify({ g: gnd.value, h: hour.value, t: torch, ids: ids })); } catch (e) {}
+    try { localStorage.setItem(KEY, JSON.stringify({ g: gnd.value, h: hour.value, t: torch, ids: ids, f: feast.value })); } catch (e) {}
   }
   gnd.onchange = paint; hour.onchange = paint;
 
