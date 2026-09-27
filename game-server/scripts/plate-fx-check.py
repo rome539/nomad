@@ -18,7 +18,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 whole = "--whole" in sys.argv
 with open(os.path.join(HERE, "plate-fx-torches.json")) as fh:
-    T = json.load(fh)
+    # a marker's optional third number is a flame size (plate-fx.py); the check
+    # only wants where it is
+    T = {k: [m[:2] for m in v] for k, v in json.load(fh).items()}
 names = [n for n in sorted(T) if not args or any(a in n for a in args)]
 if not names: sys.exit("no plate in plate-fx-torches.json matches " + " ".join(args))
 

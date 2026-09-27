@@ -68,12 +68,18 @@ def torches(name, depth):
     d = np.asarray(depth, dtype=np.float32) / 255
     dh, dw = d.shape
     out = []
-    for x, y in TORCHES.get(name, []):
+    # A marker may carry a third number, a size: a candle on a table is as near
+    # as a torch on the wall beside it and was given the same glow. It scales
+    # the flame after the nearness is worked out, so it never moves the room's
+    # nearest flame and so never resizes the others.
+    size = []
+    for m in TORCHES.get(name, []):
+        x, y = m[0], m[1]
         near = float(np.median(d[max(0, int(y * dh) - 2):int(y * dh) + 3, max(0, int(x * dw) - 2):int(x * dw) + 3]))
-        out.append([x, y, near])
+        out.append([x, y, near]); size.append(m[2] if len(m) > 2 else 1.)
     if out:
         top = 1. if name.startswith("gate-") else (max(t[2] for t in out) or 1)
-        for t in out: t[2] = round(max(.03, t[2] / top), 2)
+        for t, k in zip(out, size): t[2] = round(max(.03, t[2] / top * k), 2)
     return out
 
 def main():
