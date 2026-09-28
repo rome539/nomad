@@ -7353,7 +7353,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "51";      // /mob/      strips and their eye layers
 var BG_V   = "39";      // /room-bg/  the room plates - 91MB, the expensive one
-var SKY_V  = "30";      // /sky/      the nine skies
+var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FX_V   = "7";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
@@ -8438,9 +8438,12 @@ var SKY_POOL = {
   // still true, and stopped being the point once the new dusk landed. Dawn
   // measures 85 and dusk 25, so half of dawn's pool would have been a sky less
   // than a third as bright as the other half: not variety, a flicker between two
-  // different times of day. Each hour keeps its own picture now, turned four
-  // ways.
-  dawn:  ["dawn", "dawn/x", "dawn/y", "dawn/xy"],
+  // different times of day. Each hour keeps its own picture.
+  //
+  // AND DAWN NO LONGER TURNS OVER, and has a SECOND PICTURE (rome, 2026-09-28).
+  // The new dawn is a glow along the bottom under blue, which upside down is the
+  // same mistake dusk's burn would be; and the second dawn is taken plain only.
+  dawn:  ["dawn", "dawn/x", "dawn-2"],
   // DUSK DOES NOT TURN OVER (rome, 2026-09-12). The other three hours here take
   // all four turns because what they have most of is cloud, and cloud upside
   // down is still cloud. Dusk's subject is the BURN along the horizon - the
@@ -8764,53 +8767,68 @@ var sceneEl = document.getElementById("scene");
 var skyEl = document.getElementById("sky");
 // Cover may crop the moon off either axis. Keep its disc inside the viewport
 // without stretching it or flipping it vertically; clouds still fill the box.
+// Only what shows when the sky is NOT moving - the moving layer carries the
+// whole strip past, disc and all.
 function fitSky() {
   if (!skyEl || !skyEl.getBoundingClientRect) return;
   var image = skyEl.style.backgroundImage || "";
-  var focus = image.indexOf("/sky/blood.webp") >= 0 ? [462, 169, 83]
-    : image.indexOf("/sky/moon.webp") >= 0 ? [468, 185, 68] : null;
+  var focus = image.indexOf("/sky/blood.webp") >= 0 ? ["blood", 616, 260, 75]
+    : image.indexOf("/sky/moon.webp") >= 0 ? ["moon", 566, 246, 60] : null;
   skyEl.style.backgroundPosition = "center 55%";
   if (!focus) return;
   var rect = skyEl.getBoundingClientRect(), w = rect.width, h = rect.height;
   if (!w || !h) return;
-  var scale = Math.max(w / 1584, h / 993), radius = focus[2] * scale;
+  var size = SKY_SIZE[focus[0]], iw = size[0], ih = size[1];
+  var scale = Math.max(w / iw, h / ih), radius = focus[3] * scale;
   var x = Math.max(radius + 8, Math.min(w - radius - 8, w * .30));
   var y = Math.max(radius + 8, Math.min(h - radius - 8, h * .24));
-  var left = Math.max(w - 1584 * scale, Math.min(0, x - focus[0] * scale));
-  var top = Math.max(h - 993 * scale, Math.min(0, y - focus[1] * scale));
+  var left = Math.max(w - iw * scale, Math.min(0, x - focus[1] * scale));
+  var top = Math.max(h - ih * scale, Math.min(0, y - focus[2] * scale));
   skyEl.style.backgroundPosition = left + "px " + top + "px";
 }
 // THE SKY MOVES (rome, 2026-09-28). A layer inside #sky, over the still
 // picture the room already shows, so the room's own turn - mirrored, flipped,
-// both - applies to it for free, and a mirrored turn simply runs it the other
-// way. Nothing here replaces the still sky: if this layer is off (text view,
-// reduced motion, a hidden tab, an indoor room) the picture underneath is the
-// sky exactly as it was.
+// both - applies to it for free. Nothing here replaces the still sky: if this
+// layer is off (text view, reduced motion, a hidden tab, an indoor room) the
+// picture underneath is the sky exactly as it was.
 //
-// Two ways to move, because a sky with a disc in it cannot do the first:
-//   TILED   four copies side by side - plain, mirrored, plain, mirrored - slid
-//           left and wrapped every two copies. Each seam meets its own
-//           reflection, so it never jumps. Day, night, dawn, dusk, after-rain.
-//   PANNED  moon, blood and eclipse. A mirrored copy would put a second moon in
-//           view, so these are drawn once, a third larger than the box, and
-//           panned across its whole overhang and back.
-// One pace for both: SKY_DRIFT of the box width a second at the fastest.
+// EVERY SKY IS A SEAMLESS STRIP NOW, and they all move the same way: plain
+// copies side by side, sliding one way, wrapping on the picture's own width.
+// No mirrored tiles and no panning back and forth. Night, moon, blood, eclipse
+// and dawn are painted TWO SCREENS WIDE, so a moon slides off before its next
+// copy comes round and there is only ever one in the sky. Each sky picks its
+// direction when it goes up, so any look can drift either way.
+//
+// One pace for all: SKY_DRIFT of the box width a second.
 var SKY_DRIFT = .004;
-// The skies with a disc painted in them, which pan rather than tile.
-var SKY_DISC = { moon: 1, blood: 1, eclipse: 1 };
-// THE NIGHT'S OWN STARS, found in the picture (x, y, brightness 1-9), so the
-// twinkle is on the stars that are painted there and moves with the sky.
-var NIGHT_STARS = "299,10,9;589,10,7;732,10,9;1277,10,8;1484,10,6;732,11,9;1130,13,9;1131,15,8;25,19,9;1389,19,9;89,23,9;489,23,9;906,23,9;1386,23,5;893,38,5;177,39,5;805,39,8;807,39,8;1028,39,9;1036,39,4;1507,39,5;1306,42,9;897,43,6;1306,43,9;1515,43,7;256,46,7;961,46,4;324,49,9;617,49,9;886,50,9;322,51,9;410,51,3;720,51,9;1132,51,6;1206,54,5;1527,54,6;949,58,7;117,59,5;1539,59,8;1237,62,5;204,63,8;205,63,8;220,66,5;1166,66,6;1171,71,6;181,75,4;232,75,4;1545,75,9;643,78,6;252,79,7;829,79,9;831,79,9;1333,79,9;874,81,4;1207,83,9;1433,83,8;533,86,9;712,86,4;873,86,5;656,90,8;1348,91,8;1194,94,9;1573,94,6;865,98,9;1519,98,9;397,102,6;976,102,5;1506,102,5;1071,103,9;1072,103,9;1194,103,4;426,115,9;465,115,7;466,115,4;467,115,4;1390,115,9;695,117,9;1237,118,9;1550,122,5;1237,123,9;458,134,7;815,138,4;962,138,9;1033,150,4;1333,150,6;459,153,9;1045,153,8;736,154,9;885,154,9;1004,154,9;1432,154,9;1017,157,9;1103,158,9;1219,161,9;1036,162,9;1020,165,7;1044,166,8;956,170,9;981,170,9;508,174,6;510,174,6;829,174,5;1041,178,4;1048,182,9;1273,182,9;1562,185,6;882,186,9;1017,186,9;1257,186,9;1274,186,8;446,189,9;548,189,7;1009,189,8;1384,189,8;1387,189,7;687,190,9;1031,190,6;465,193,4;778,193,9;988,193,6;1542,193,4;544,194,9;554,194,9;999,194,9;932,197,9;548,198,8;932,198,8;1004,198,7;981,201,5;838,205,4;973,205,6;1009,205,4;1500,205,9;995,210,7;228,213,5;113,217,9;1416,217,4;1244,221,8;1140,222,9;232,225,9;1240,225,9;1248,225,2;1249,225,9;231,226,9;265,226,2;1084,229,5;1244,229,9;564,233,4;199,235,2;321,237,6;976,237,4;728,238,9;1084,249,9;1218,249,6;297,252,6;311,252,9;312,252,9;1170,252,4;78,256,9;76,257,9;78,257,8;348,257,9;675,257,9;1080,257,7;1215,257,5;743,264,5;224,268,5;224,280,9;225,280,9;398,280,7;766,280,9;857,281,9;906,281,5;945,285,8;15,288,9;395,289,9;938,289,6;148,293,9;344,293,5;354,303,6;743,303,6;140,304,9;830,304,5;742,310,7;33,312,5;556,312,5;284,313,6;398,315,4;850,316,5;1245,321,9;62,324,9;240,324,4;545,324,9;989,324,9;1543,324,6;132,328,5;410,328,9;524,328,9;1133,331,9;255,332,6;1133,333,9;442,335,6;144,336,7;1562,336,5;981,339,6;120,343,9;442,344,6;968,344,8;1029,344,4;1074,344,6;140,347,7;141,347,7;478,347,9;491,347,8;505,348,4;692,348,5;1330,348,4;1202,350,7;156,351,5;973,351,9;972,352,9;342,355,9;703,355,9;191,356,9;342,356,9;637,356,9;818,357,9;827,357,9;1112,358,7;251,360,5;925,360,9;823,361,9;108,363,4;652,367,5;1221,367,6;885,371,5;953,371,6;452,376,9;453,376,9;454,376,9;455,376,9;105,379,9;323,379,9;382,383,7;1087,383,5;1179,383,9;956,384,5;1546,384,8;465,387,5;1188,387,3;616,388,5;1017,388,8;311,390,8;49,391,8;858,391,5;692,396,9;216,399,9;383,399,7;1104,399,5;1570,403,8;830,404,8;517,407,8;1462,407,4;362,411,9;512,411,9;521,411,8;645,412,9;724,415,9;1467,415,9;1500,415,6;251,419,5;1545,422,8;1547,422,8;346,423,5;1416,423,6;1455,423,8;580,426,9;632,427,6;411,435,5;620,448,9;545,451,5;612,463,6;1345,467,9;1368,467,4;601,471,7;1380,475,9;1381,475,9;1382,475,9;1487,478,9;1488,478,9;654,479,9;790,479,5;941,483,9;1242,486,4;331,487,9;1112,487,9;1127,487,8;858,494,6;1449,494,9;1240,495,9;933,499,6;1163,499,9;1302,499,6;1567,499,9;1445,500,8;1013,502,7;1449,504,8;714,506,9;807,510,6;818,510,7;553,514,8;1085,514,9;1178,514,9;1178,515,9;810,518,7;1483,518,9;823,519,9;1368,529,9;616,530,9;735,530,8;1284,530,4;901,534,9;592,535,7;429,538,5;802,539,4;897,539,8;906,539,7;731,542,4;1023,542,9;1241,542,6;1394,542,5;901,543,8;360,546,5;445,546,5;1036,550,6;1408,550,5;968,553,9;30,554,8;1073,554,9;1416,554,7;90,557,9;347,557,9;1310,557,9;1516,558,9;1412,561,9;73,562,9;758,563,9;457,566,9;458,566,9;874,566,6;1479,569,9;929,574,9;256,577,9;212,582,4;224,582,7;247,582,8;22,585,5;1100,585,9;235,586,5;1406,589,9;811,590,6;124,593,9;712,598,7;1017,598,9;1271,598,9;1390,598,9;512,601,9;732,601,8;953,602,8;192,605,5;350,605,5;1206,605,6;973,613,9;228,614,8;224,618,8;232,618,8;525,618,6;355,621,9;1264,621,6;229,622,8;969,625,7;652,626,6;679,629,6;814,629,8;676,633,9;984,633,8;1143,638,7;599,639,7;985,639,4;86,645,5;700,645,7;719,645,5;940,645,5;715,649,4;1017,649,9;552,654,8;1070,654,9;153,656,9;458,656,9;459,656,9;933,656,9;457,657,9;842,657,9;1171,657,9;386,664,9;882,664,4;764,669,9;765,669,9;928,669,5;1320,669,9;1346,669,9;1368,673,4;553,677,9;1345,677,9;1356,677,8;303,689,9;700,689,9;1104,693,5;880,697,7;1273,699,4;370,700,9;371,700,9;61,709,9;345,721,7;478,724,9;125,726,6;406,728,9;734,729,9;735,729,9;93,734,5;120,737,9;121,737,9;838,741,6;560,746,8;639,748,9;640,749,9;968,749,9;969,749,9;200,753,5;225,753,9;339,753,5;184,754,5;769,768,9;371,772,8;145,776,4;200,776,6;1071,780,5;1085,780,5;1570,780,8;371,781,7;1570,781,8;251,792,9;422,792,6;1076,792,9;1464,795,9;1132,796,4;1464,796,9;1094,797,4;450,800,4;941,800,5;1048,800,8;379,812,6;453,812,8;1417,812,6;367,817,8;1004,817,4;1325,820,5;1393,820,9;1554,820,5;371,824,5;426,824,4;904,824,8;1511,824,4;331,831,9;1218,831,9;335,836,8;411,836,8;1142,840,4;270,843,4;390,846,4;1289,848,9;1537,848,9;449,851,8;553,852,9;620,852,4;976,852,9;977,852,9;359,855,4;1551,859,5;70,867,4;1432,868,8;1565,868,4;1108,871,8;1017,880,9;1207,881,8;46,895,8;153,896,4;758,896,6;1546,896,8;517,899,4;565,899,4;649,907,8;1337,907,8;1506,907,8;696,915,4;1386,915,6;1562,915,6;533,916,8;383,920,3;1147,923,5;18,927,7;1266,927,8;581,928,8;632,935,3;877,935,5;1171,935,8;1409,935,8;715,936,8;1523,936,8;92,938,3;870,943,8;113,951,8;620,951,8;822,951,8;1310,951,8;1084,952,8;181,954,8;687,967,8;1100,967,7;1147,967,8;1444,974,3;268,975,4;793,975,5;1502,975,8;509,978,4";
+// Each picture's own size. A screen of sky is a 1584:993 window of it at its
+// own height, whatever its width - so a two-screen strip is drawn at the same
+// scale as a one-screen one and simply takes twice as long to come round.
+var SKY_SIZE = {
+  day: [1584, 993], dawn: [2167, 726], "dawn-2": [1584, 993], dusk: [1584, 993], "dusk-2": [1584, 993],
+  "after-rain": [1584, 993], night: [2149, 732], moon: [2142, 734], blood: [2171, 724], eclipse: [2172, 724],
+};
+// THE STARS PAINTED IN EACH SKY THAT HAS ANY, found in the picture: x, y on a
+// 1584 x 993 frame, brightness 2-9, and the star's own colour, so a blood-moon
+// star glints red and a night one white. The twinkle is on the stars that are
+// painted there and moves with the sky.
+var SKY_STARS = {
+  night: "105,19,3,4971a1;234,19,6,7f9abd;324,19,8,b2ceed;411,19,6,80a2ca;693,19,7,a4b7d1;806,19,6,7e99b8;856,19,5,7596c0;941,19,8,96aecf;1019,19,5,7a97bb;1072,19,2,497094;1086,19,5,6d8ab3;1454,19,8,bed5f2;1277,20,5,4c72a3;1383,20,5,678bb4;1159,23,3,2b4470;1540,23,6,061831;691,31,2,3c6391;1307,31,7,9fb7dd;324,33,6,80a0cf;706,33,4,5a83b1;716,33,4,547eaa;808,33,7,88a9d8;857,33,7,a7bee2;124,37,7,96b4d9;1144,46,2,436289;198,52,5,6d95bb;727,52,6,83a4cd;999,52,7,8ba8cc;842,54,5,5c80a8;484,56,5,7b9cc0;890,57,4,182a52;464,60,3,547ba3;137,62,2,486594;870,62,2,06152e;1331,64,4,061534;667,65,8,071730;1473,65,5,678fc1;1092,68,2,304c7b;152,69,6,94a8d3;190,73,2,4b6690;355,73,4,4e7099;380,73,4,6b84ac;643,73,4,35567f;957,73,2,426391;1316,79,3,051730;184,80,6,86a7cd;708,83,3,496e96;1264,83,7,97b4d8;257,85,5,55749e;377,87,6,678bb3;1394,87,4,567daa;1106,88,5,6b90bd;708,96,4,5f84aa;1166,98,3,2f5381;1520,98,2,2a446d;1473,100,2,466387;439,103,5,6582ac;193,104,2,45638f;366,104,6,799dcc;344,106,7,a4bcd9;1403,106,6,90a4c6;306,110,8,91b7e3;1026,111,2,3c5c86;594,114,3,38547d;316,122,4,5c80a9;1031,122,6,91a5c3;550,123,2,334f7b;1132,123,8,9db2d3;285,130,2,395a87;558,130,2,446187;1095,138,5,03122d;288,141,8,8ea6d4;858,142,6,718eb8;1077,142,8,a4badc;1022,152,2,2b4b76;216,153,7,94b3d1;464,153,2,3d5e84;1042,160,3,466691;1091,161,5,7692ba;1499,163,4,5276a6;1194,168,3,4e6d9a;1133,174,3,355d8a;514,175,7,97b2dd;472,180,4,6484ab;332,184,5,7a8eb6;530,184,3,446392;1221,189,5,7a9bc0;428,193,7,02142c;1555,194,7,9ab2d7;1144,202,7,9eb9d7;941,206,3,45668e;1168,206,3,5d7ea1;1163,209,4,5372a5;1215,212,3,587297;172,222,3,577095;1014,222,4,5477a0;13,228,3,587095;1179,232,3,13294d;16,240,3,4a638f;1120,256,2,0b1f3c;684,263,2,37577d;943,263,8,a5c9eb;680,273,3,5c7aa1;938,275,4,5979a9;1572,277,2,4b6690;446,278,3,152e54;53,281,3,4e7095;825,281,3,67799e;108,290,3,112543;868,294,4,4c71a5;875,294,5,5f8abc;654,296,3,496284;1484,298,6,9aadd2;450,300,2,2e4a76;941,304,2,3f5c87;907,307,6,8bafd1;142,313,3,546f99;994,326,7,90afd6;839,330,5,7689ae;969,332,5,1c355c;1023,332,4,2f4b78;907,336,7,a1b8d7;164,339,5,627798;237,339,2,44638d;849,345,4,425e81;504,347,5,7994b6;915,349,2,385584;542,355,3,426089;514,364,7,94b5d8;445,370,2,3e618e;223,372,9,081831;635,372,6,89a8d1;583,373,7,132449;444,388,7,a9c0e1;652,397,2,2c476d;254,402,5,6587af;319,406,8,a9c3e3;433,406,6,849fc7;927,416,5,688dc1;504,421,3,5c7aa3;349,430,2,40618c;1568,430,2,416087;405,437,7,a0b6d3;418,450,2,3d5f8a;943,461,4,577aa8;1004,464,5,6383ac;978,480,5,7089ae;452,484,2,28446e;979,492,3,4a6990;1370,494,2,4d698b;214,496,2,425e84;1155,499,2,253e63;1308,507,5,0a1f3b;1120,509,2,516b8b;397,511,2,49648c;1032,511,6,93a9c5;1002,513,2,517794;355,521,5,6e8fbe;444,529,7,a1b9dc;1256,537,4,7590af;84,540,2,2d466e;487,541,3,2c476f;1053,543,7,94afd6;227,545,6,869dbf;1256,547,6,92afce;1106,548,6,576f98;152,552,7,97b7dc;152,562,2,4a658b;102,564,2,43638d;442,567,2,132a4c;1214,574,2,40668f;537,582,2,3f5c84;1189,582,5,6283af;921,586,2,4e6d93;447,593,2,3c5d88;117,597,6,081d36;82,600,7,748eb5;1159,601,3,5879a4;1156,610,2,446087;1255,610,8,99bcdd;1294,615,4,091f3e;98,617,2,213e69;1242,620,6,88a3c6;149,625,2,0f2746;585,627,2,4c6a91;1199,628,6,0e2441;594,638,6,6e8fc0;1520,639,3,5478a1;1538,642,9,192d51;616,647,8,112642;724,650,8,bad0ee;1463,655,7,a0bee2;1147,657,8,aac7e3;1498,677,2,4e7094;887,678,2,436086;1093,678,9,ddf5ff;202,681,4,385279;791,681,8,152b4b;425,684,7,a7c3df;1412,688,3,59789f;214,689,6,708cb4;322,692,6,7fa0c8;1005,692,7,98b4da;1451,692,2,44688e;929,697,5,122747;946,697,2,2b4a72;405,699,8,0e2544;1496,699,4,6281a8;486,700,2,406081;498,700,2,455f84;1479,701,7,0c1f3f;1106,705,7,90b0dc;464,707,5,0d2243;817,712,2,44628b;325,719,3,2e4b76;1359,728,2,314e78;1521,728,3,132c4f;1428,730,2,426187;1455,731,9,132b4c;411,735,4,4f76a6;1504,735,3,466996;1563,738,2,233d66;1162,739,8,92b3d5;625,741,2,3f638c;1125,742,2,183255;360,743,4,15294d;613,743,5,6d8fb3;1532,743,3,466796;943,745,6,9babcb;1215,745,2,4f688b;961,746,6,96a9c8;1208,746,2,436084;343,747,6,394c6d;921,747,2,355483;1172,747,4,587fa7;600,749,7,849fbb;1423,754,6,85a8d0;780,756,9,162f52;899,756,8,c6d9e8;47,758,2,3f5c86;1443,765,6,93adce;148,773,2,47638e;364,773,2,436287;233,788,5,738eb6;109,790,3,5276a0;133,795,7,8cb0dc;108,809,2,4a668c",
+  moon: "300,19,4,5773a6;1253,19,4,6077a4;16,24,4,627baf;70,24,5,6e88ba;460,24,4,617caf;674,24,3,5670a2;994,24,6,829cc8;1381,24,6,7d98c5;158,30,4,6480b0;238,30,5,7088bb;512,30,9,e1e8f7;1032,30,3,566da0;1077,30,4,637fac;1455,30,8,becae3;577,31,4,031330;334,35,9,e1e8f4;400,35,4,5b74a6;948,35,4,6178a9;1160,35,4,6076a8;1211,35,9,e6eff8;1332,35,4,5771a2;1517,35,4,5e7ab2;110,41,2,435e8f;620,42,4,5672a7;173,47,3,476397;905,47,4,5a76aa;530,51,2,405e92;487,57,4,5870a5;1018,57,2,3a548a;439,58,5,667dae;1480,58,2,365085;266,62,5,718aba;1189,62,5,6381b5;379,64,2,3c5788;612,65,4,5a76a5;1475,69,2,3a548a;1136,73,8,becee8;1427,73,5,7890be;284,74,3,456195;306,74,4,5f7aaf;134,78,9,e8eaf0;410,78,9,ecf1fa;552,78,9,e3e6ea;1052,78,9,e3e9f4;460,80,2,3e578a;975,80,9,c9d9f6;934,91,9,f0f5f7;478,101,5,6b88bb;620,108,5,6686b6;806,108,3,4f6da0;839,108,9,f2f3fb;1007,108,4,4d6aa0;345,114,9,ebecf4;572,114,3,546da2;1398,114,9,edf0f8;507,119,3,516c9f;1086,119,5,637baa;686,123,3,486397;756,124,4,4d6aa1;530,130,9,d6def0;1457,135,6,8a9fc7;27,137,2,3d5688;641,145,9,edf0f6;1472,145,2,3b5588;1034,146,9,f1f4f9;824,152,2,3b5487;1424,152,4,5d72aa;596,157,9,fbf8fb;1532,157,5,6983b4;788,162,9,eff4fa;1003,162,4,5774a4;1378,164,8,95aacd;19,168,5,8096c1;46,168,2,435d8e;179,168,2,3b578c;334,168,9,d7deee;533,175,4,617bac;263,176,9,edf3fd;569,179,3,5e759d;1446,179,5,6d8abe;1499,179,9,e8eff5;124,184,3,526ca1;669,184,4,607bae;830,184,2,345386;1034,184,2,355084;1408,195,6,8499c6;620,200,6,94a6d0;707,200,6,849cc5;1472,200,3,4f6698;72,206,9,ebebf3;237,211,2,395688;221,216,9,f1f3f9;581,216,4,5d76a6;1529,216,6,859dc1;756,222,9,e1e9fa;304,233,5,728cb8;540,233,9,eff2f6;1062,233,6,7b97c5;93,238,5,7e95bb;1371,238,4,5872a9;518,244,2,3d5a8f;1336,244,5,738dbc;1154,245,3,5770a2;1195,250,3,526ea0;55,254,9,f1f4fb;260,254,8,cedef2;1293,260,5,7c8fc3;309,283,9,f4f6fd;1258,283,9,faf8fa;750,298,4,5b7daf;1231,299,2,3d5b8d;558,304,3,476294;686,310,5,6781b0;1305,310,2,3d598b;623,311,7,9fb6dc;521,317,6,8099ce;1282,317,3,446296;587,338,9,ebecf2;303,344,6,8598c0;321,344,4,5a75a9;1401,348,7,97add0;1321,349,3,496ba0;549,354,2,3f5a8e;1383,354,5,6782b3;617,365,5,7f92b8;566,376,8,aebdd8;530,392,6,8399c7;1303,392,4,071b3d;1321,392,3,536ca0;1287,398,4,536ca3;1415,398,5,6989b5;1228,403,8,b0bee2;1165,409,3,516a9d;487,414,9,e7e8f0;1475,419,2,395688;1261,425,3,566e9d;452,436,6,899fc9;1136,436,4,5371a3;1443,436,9,dce3f3;1198,441,9,f8f7fd;1281,441,4,5f78a7;469,457,6,839bc4;1461,457,2,3f5b8e;1492,464,5,6684b2;1160,475,2,425883;581,502,3,466091;605,502,3,4c679d;620,502,5,6b88b7;1547,503,8,b8c7e5;16,509,8,aec1e0;930,513,2,3b588b;1142,519,4,637ba7;541,522,5,3b5075;683,525,2,3d598c;665,530,8,bfcadf;701,530,5,738cb8;890,530,9,d3e1f1;809,547,5,6b83b1;1568,552,9,b7c7e0;913,557,3,546d9c;617,563,2,315287;733,563,9,f5f3f7;708,587,3,3b4f76;759,601,3,4d6e9f;1103,618,5,627baa;730,624,2,314f82;1034,634,6,8197c2;31,640,4,4b679d;450,640,8,bbc5da;1071,640,6,7896c5;409,672,2,3b5485;599,672,7,afbfdb;997,672,9,f9f9fa;1073,672,2,3b598a;1404,672,2,345185;494,678,4,516faa;1324,679,5,6580b4;1361,690,2,3d578b;974,701,3,4b699d;1338,712,8,caccdf;963,728,2,345187;797,733,2,39538b",
+  blood: "276,29,5,c36f4b;684,32,3,974d31;135,37,5,ba7362;795,37,3,a2634c;1519,37,4,a66657;1243,52,6,ba7652;809,60,3,9c5e48;892,63,6,976049;175,64,8,e19465;1553,64,7,d88462;235,89,4,ac6f5d;1119,115,4,ac5d4b;969,126,5,c27a59;600,178,3,9e6552;610,180,6,c57f61;609,192,4,9f4f34;1125,236,3,814930;1170,241,5,c37e5c;1261,292,8,e48a6b;694,315,3,975844;1169,376,3,7c402d;1386,406,3,995d49",
+  eclipse: "394,18,9,fbe29b;611,18,9,fff7ba;80,34,3,896a52;225,34,9,f6cc95;1052,34,4,ab8e6f;1186,34,2,8f7b6b;1426,34,9,fff3c3;457,40,6,c69873;815,40,9,fbe8af;267,69,9,ffffc3;1467,69,9,fffff6;47,73,9,fff9bd;363,73,9,ffedb3;1394,73,9,ffffdf;194,74,9,ffffcf;632,74,9,ffffba;1091,74,9,fffff6;1564,74,9,fff3b6;15,78,5,b49678;1246,78,9,fdfef4;722,100,9,f6f7db;932,100,9,feffef;886,106,3,a17e6b;1362,111,7,e2bd9e;80,112,2,928473;1516,117,4,ac8f76;659,122,9,fff6c3;602,139,4,9e7f6b;707,139,7,d7a77f;1121,144,9,fffff0;960,149,3,9f836b;754,151,9,ffffe4;1278,151,9,ffffdd;1323,151,8,f1c790;222,166,9,ffffd4;1426,166,7,e0c4a6;143,188,9,fff7c6;252,195,9,fbf4cf;314,199,9,fce4b3;1370,204,9,fffbc1;1453,204,9,f4d9aa;626,215,9,fff9da;1222,215,9,fffdc6;1162,237,2,89776c;1350,237,9,f7dba6;1079,266,9,f0e1c8;1047,277,9,fcfae6;1277,288,9,fffbc3;1142,315,9,fdffd7;925,321,7,d4af82;572,326,5,b9a07f;1071,332,3,967e67;1309,332,4,af9681;617,340,9,ffffe6;572,348,2,8a6e53;681,354,9,f7f4dc;850,354,9,fefffe;982,370,9,fafbd0;343,381,9,f9c08b;88,465,9,fff7c1;834,505,9,fff5d6;906,505,9,ffffe2;185,518,9,faf3b8;1450,518,9,f9f0c3;799,536,9,fce4b6;691,558,9,fff7b9;710,664,2,8d7d6c",
+  dawn: "960,18,9,f9e1af;159,41,9,f9f8a8",
+};
 var skyDrift = (function () {
-  var layer = null, tiles = [], starCv = null, starCtx = null, stars = null;
-  var name = "", mode = "", frame = null, stamp = 0, t = 0, geo = null, img = "";
+  var layer = null, tiles = [], starCv = null, starCtx = null, stars = {};
+  var name = "", dir = 1, frame = null, stamp = 0, t = 0, geo = null, img = "";
   var still = typeof window !== "undefined" && window.matchMedia
     ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
   function build() {
     if (layer) return true;
     if (!skyEl || !document.createElement) return false;
     layer = document.createElement("div"); layer.id = "sky-drift";
-    for (var k = 0; k < 4; k++) { var d = document.createElement("i"); if (k % 2) d.style.transform = "scaleX(-1)"; layer.appendChild(d); tiles.push(d); }
+    for (var k = 0; k < 2; k++) { var d = document.createElement("i"); layer.appendChild(d); tiles.push(d); }
     starCv = document.createElement("canvas"); starCv.id = "sky-stars";
     starCtx = starCv.getContext && starCv.getContext("2d");
     skyEl.appendChild(layer); skyEl.appendChild(starCv);
@@ -8827,22 +8845,17 @@ var skyDrift = (function () {
     if (!layer || !name) return;
     var r = skyEl.getBoundingClientRect(), w = r.width, h = r.height;
     if (!w || !h) return;
-    var s = Math.max(w / 1584, h / 993);
-    if (SKY_DISC[name]) {
-      s *= 1.3;
-      var dw = 1584 * s, dh = 993 * s;
-      geo = { w: w, h: h, tw: dw, th: dh, top: -(dh - h) * .15, lo: w - dw, hi: 0 };
-      // cssText REPLACES the whole style, so the picture goes in with it - set
-      // apart, the resize wiped it and the layer slid nothing over the still sky.
-      tiles[0].style.cssText = "left:0;top:0;width:" + dw + "px;height:" + dh + "px;background-image:" + img;
-      for (var k = 1; k < 4; k++) tiles[k].style.display = "none";
-      layer.style.top = geo.top + "px"; layer.style.width = dw + "px"; layer.style.height = dh + "px";
-    } else {
-      var tw = 1584 * s, th = 993 * s;
-      geo = { w: w, h: h, tw: tw, th: th, top: (h - th) * .55 };
-      for (var j = 0; j < 4; j++) tiles[j].style.cssText = "left:" + (j * tw) + "px;top:0;width:" + tw + "px;height:" + th + "px;background-image:" + img + (j % 2 ? ";transform:scaleX(-1)" : "");
-      layer.style.top = geo.top + "px"; layer.style.width = (4 * tw) + "px"; layer.style.height = th + "px";
-    }
+    var size = SKY_SIZE[name] || [1584, 993], ih = size[1];
+    // a 1584:993 window of the picture covers the box; the strip is as long as
+    // the picture is, at that scale - never shorter than the box, so two copies
+    // always fill it
+    var s = Math.max(w / (ih * 1584 / 993), h / ih);
+    var tw = size[0] * s, th = ih * s;
+    geo = { w: w, h: h, tw: tw, th: th, top: (h - th) * .55, px: th / 993 };
+    // cssText REPLACES the whole style, so the picture goes in with it - set
+    // apart, a resize wiped it and the layer slid nothing over the still sky.
+    for (var j = 0; j < 2; j++) tiles[j].style.cssText = "left:" + (j * tw) + "px;top:0;width:" + tw + "px;height:" + th + "px;background-image:" + img;
+    layer.style.top = geo.top + "px"; layer.style.width = (2 * tw) + "px"; layer.style.height = th + "px";
     if (starCv) {
       var sc = Math.min(1, 1280 / w);
       starCv.width = Math.max(1, Math.round(w * sc)); starCv.height = Math.max(1, Math.round(h * sc));
@@ -8850,33 +8863,32 @@ var skyDrift = (function () {
     }
   }
   function offset() {
-    var speed = geo.w * SKY_DRIFT;
-    if (mode === "pan") {
-      var span = geo.hi - geo.lo; if (span <= 0) return geo.hi;
-      var p = (t * speed * 2 / Math.PI) / span % 2; p = p < 1 ? p : 2 - p;
-      return geo.lo + span * (.5 - .5 * Math.cos(p * Math.PI));
-    }
-    return -((t * speed) % (2 * geo.tw));
+    var m = (t * geo.w * SKY_DRIFT * dir) % geo.tw;
+    return -((m + geo.tw) % geo.tw);
+  }
+  function starsOf(n) {
+    if (!stars[n]) stars[n] = SKY_STARS[n].split(";").map(function (e) {
+      var v = e.split(","), hx = v[3] || "f5f7ff";
+      var c = [0, 2, 4].map(function (i) { var x = parseInt(hx.slice(i, i + 2), 16); return Math.round(x + (255 - x) * .5); }).join(",");
+      return [+v[0] / 1584, +v[1] / 993, +v[2] / 10, Math.random() * 6.3, .5 + Math.random() * 1.6, c];
+    });
+    return stars[n];
   }
   function drawStars(x0) {
     if (!starCtx || !geo) return;
-    if (!stars) stars = NIGHT_STARS.split(";").map(function (e) { var v = e.split(","); return [+v[0] / 1584, +v[1] / 993, +v[2] / 10, Math.random() * 6.3, .5 + Math.random() * 1.6]; });
-    var c = starCtx, sc = geo.sc, px = Math.max(1, geo.tw / 1584);
+    var list = starsOf(name), c = starCtx, sc = geo.sc, px = Math.max(1, geo.px);
     c.setTransform(sc, 0, 0, sc, 0, 0); c.clearRect(0, 0, geo.w, geo.h);
-    for (var k = 0; k < 4; k++) {
-      var x = x0 + k * geo.tw, mir = k % 2 === 1;
+    for (var k = 0; k < 2; k++) {
+      var x = x0 + k * geo.tw;
       if (x > geo.w || x + geo.tw < 0) continue;
-      for (var i = 0; i < stars.length; i++) {
-        var st = stars[i], sx = x + (mir ? 1 - st[0] : st[0]) * geo.tw, sy = geo.top + st[1] * geo.th;
-        if (sx < -4 || sx > geo.w + 4 || sy > geo.h) continue;
-        var v = Math.sin(t * st[4] + st[3]);
-        if (v > 0) {
-          var a = .9 * v, sz = px * (1 + 1.4 * v * (.6 + st[2]));
-          c.fillStyle = "rgba(245,247,255," + (a * .35).toFixed(3) + ")"; c.fillRect(sx - sz * 1.5, sy - sz * 1.5, sz * 3, sz * 3);
-          c.fillStyle = "rgba(245,247,255," + a.toFixed(3) + ")"; c.fillRect(sx - sz / 2, sy - sz / 2, sz, sz);
-        } else if (v < -.35) {
-          c.fillStyle = "rgba(8,12,28," + (Math.min(1, (-v - .35) * 1.6) * .85).toFixed(3) + ")"; c.fillRect(sx - px * 2, sy - px * 2, px * 4, px * 4);
-        }
+      for (var i = 0; i < list.length; i++) {
+        var st = list[i], v = Math.sin(t * st[4] + st[3]);
+        if (v <= 0) continue;
+        var sx = x + st[0] * geo.tw, sy = geo.top + st[1] * geo.th, r = px * (1.2 + 1.8 * v * (.6 + st[2]));
+        if (sx < -r || sx > geo.w + r || sy > geo.h) continue;
+        var g = c.createRadialGradient(sx, sy, 0, sx, sy, r);
+        g.addColorStop(0, "rgba(" + st[5] + "," + (.9 * v).toFixed(3) + ")"); g.addColorStop(1, "rgba(" + st[5] + ",0)");
+        c.fillStyle = g; c.fillRect(sx - r, sy - r, r * 2, r * 2);
       }
     }
   }
@@ -8892,14 +8904,14 @@ var skyDrift = (function () {
     if (geo) {
       var x = offset();
       layer.style.transform = "translate3d(" + x.toFixed(2) + "px,0,0)";
-      if (name === "night") drawStars(x);
+      if (SKY_STARS[name]) drawStars(x);
     }
     frame = requestAnimationFrame(tick);
   }
   function run() {
     if (!active() || !build()) { stop(); return; }
     layer.style.display = "block";
-    if (starCv) starCv.style.display = name === "night" ? "block" : "none";
+    if (starCv) starCv.style.display = SKY_STARS[name] ? "block" : "none";
     if (frame === null) frame = requestAnimationFrame(tick);
   }
   // The sky picture the room just put up, as its url, or "" for none.
@@ -8908,7 +8920,7 @@ var skyDrift = (function () {
     var base = next.replace(/-\\d+$/, "");
     if (!SKY_PAINTED[base]) next = "";
     if (next !== name) {
-      name = next; mode = SKY_DISC[next] ? "pan" : "tile"; geo = null; t = Math.random() * 600;
+      name = next; geo = null; t = Math.random() * 600; dir = Math.random() < .5 ? -1 : 1;
       img = name ? "url(/sky/" + name + ".webp?v=" + SKY_V + ")" : "";
       build();
     }
