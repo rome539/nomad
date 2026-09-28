@@ -92,7 +92,7 @@ import {
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
-  HOLLOW, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
+  HOLLOW, BLOODLESS, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
   MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES,
@@ -4074,7 +4074,7 @@ export class ZoneDO implements DurableObject {
               // A fast, cutting edge opens a wound that keeps weeping — damage
               // over time that no armor turns. Fresh hits keep it open. But the
               // HOLLOW don't bleed (dry bone, old iron): the DoT finds no blood.
-              if (weapon && effBleed > 0 && !hollow) {
+              if (weapon && effBleed > 0 && !hollow && !BLOODLESS.has(tmpl.id)) {
                 creature.bleedTicks = BLEED_TICKS;
                 creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, wound);
                 if (freshBleed) this.actorFeed(session, session.roomId, this.feedProc(FEED_BLEED, session.name, tmpl.name), "bleed");
@@ -4528,7 +4528,7 @@ export class ZoneDO implements DurableObject {
           // the wound is fresh — refreshes are silent, like the weapon bleeds.
           // Dry bone doesn't bleed: the HOLLOW shrug the riposte off.
           const rip = shield ? trait(shield.tmpl, "riposte") : undefined;
-          if (rip && !HOLLOW.has(tmpl.id) && creature.hp > 0) {
+          if (rip && !HOLLOW.has(tmpl.id) && !BLOODLESS.has(tmpl.id) && creature.hp > 0) {
             const fresh = !creature.bleedTicks;
             creature.bleedTicks = BLEED_TICKS;
             // The riposte is its OWN wound — it STACKS on top of the weapon's

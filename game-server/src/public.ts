@@ -7346,7 +7346,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "50";      // /mob/      strips and their eye layers
+var MOB_V  = "51";      // /mob/      strips and their eye layers
 var BG_V   = "39";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "30";      // /sky/      the nine skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -9764,7 +9764,7 @@ var MOB_SPRITE = {
   // other instead of each being right on its own.
   //
   // ---- the summer people, and the ruler everything is measured against ------
-  "the-herd": 22,          // 1.75  a man standing. Their sprites carry a baked
+  "the-herd": 28,          // 1.75  a man standing. Their sprites carry a baked
   // THE ONE DELIBERATE EXCEPTION TO THE METRE RULE, corrected once (rome,
   // 2026-09-08: the milker was much larger than the herd). She is crouched at
   // her pail, and a crouched adult is ~1.3m to the crown, which converts to 16.
@@ -9829,7 +9829,7 @@ var MOB_SPRITE = {
   "great-vulture": 22,        // 1.15
   "lead-wolf": 14,            // 1.10
   "old-billy": 14,            // 1.10
-  "red-stag": 22,             // 1.75  a stag stands as tall as a man; the hind beside him is 18
+  "red-stag": 45,             // 1.75  a stag stands as tall as a man; the hind beside him is 18
   "snow-hare": 6,             // 0.50
   "the-blue-fox": 6,          // 0.50
   "the-bone-dropper": 14,     // 1.15
@@ -9839,7 +9839,7 @@ var MOB_SPRITE = {
   // churn and the ART has her standing with a pail, so she needs no exception at
   // all. 20 is the plain metre rule for a woman on her feet, and her head
   // measures 7.66vh against the crouched milker's 7.32 — the same build.
-  "the-butter-wife": 20,      // 1.60  a woman standing. Sized like anything else.
+  "the-butter-wife": 28,      // 1.60  a woman standing. Sized like anything else.
   "the-dancer": 5,            // 0.25
   "the-last-dog": 9,          // 0.70
   "the-old-glutton": 6,       // 0.50
@@ -9861,13 +9861,13 @@ var MOB_SPRITE = {
   "the-drove-master": 10,     // 0.80  heavier, and still short of a hill wolf
   "masterless-dog": 9,        // 0.70
   "lead-dog": 10,             // 0.80
-  "footpad": 22,              // 1.75  a man
-  "wayman": 22,               // 1.75
-  "road-carrier": 23,         // 1.85  a tall figure, as the prose has it
-  "the-miller": 22,           // 1.75
-  "the-toll-clerk": 22,       // 1.75
-  "the-long-warden": 23,      // 1.85
-  "the-mire-walker": 23,      // 1.80
+  "footpad": 28,              // 1.75  a man
+  "wayman": 28,               // 1.75
+  "road-carrier": 30,         // 1.85  a tall figure, as the prose has it
+  "the-miller": 28,           // 1.75
+  "the-toll-clerk": 28,       // 1.75
+  "the-long-warden": 30,      // 1.85
+  "the-mire-walker": 29,      // 1.80
   "otter": 4,                 // 0.30  low on land, which is the whole joke of it
   "dog-otter": 4,             // 0.35
   "rat": 3,                   // 0.15  the ermine's number, and the floor
@@ -9880,7 +9880,7 @@ var MOB_SPRITE = {
   "the-baited-bear": 15,      // 1.20  on all fours, chained
   "the-chain-breaker": 17,    // 1.35  the bigger of the two, and the chain is off
   "the-old-raven": 7,         // 0.55
-  "the-one-who-stayed": 22,   // 1.75
+  "the-one-who-stayed": 28,   // 1.75
   "the-pale-drake": 44,       // 3.50  twice a standing man, same as the drake it is a variant of
   "the-raiding-fox": 6,       // 0.50
   "the-tom": 5,               // 0.40
@@ -9940,14 +9940,14 @@ var MOB_SPRITE = {
   // in a room with the tide warden, the difference in height is the difference
   // between a man who can be reasoned with and a man who cannot.
   "the-salt-widow": 28,    // matched to the butter wife, who is drawn chunkier than the herdsman
-  "the-reed-walker": 30,   // half behind the stems, so a lot of his cell is reed and air
+  "the-reed-walker": 37,   // half behind the stems, so a lot of his cell is reed and air
   "the-drowned-ferryman": 29, // A MAN, and sized as one. No pose of his shows all of him -
                            // the idle is head and hands on the rope with the rest under water -
                            // so area-matching read him as a dog. He is 22 like the rest of them
                            // and the water takes the difference, which is the whole idea of him.
   "the-pilot": 29,
   "the-drover": 30,
-  "strand-thief": 19,
+  "strand-thief": 28,
   "the-eel-cutter": 29,
   // ---- THE FORTRESS (2026-09-23). Sized against the roster already here: a man
   // is 29-30, a wolf 13, the drake 44. Each number below is the creature's own
@@ -9957,7 +9957,7 @@ var MOB_SPRITE = {
   "warden": 30,            // a man in plate, walking rounds
   "warden-surface": 30,    // the same warden, outdoors
   "warden-captain": 34,    // "BIGGER than the wardens it once led"
-  "last-watchman": 30,     // a watchman, dried inside his kit
+  "last-watchman": 44,     // a watchman, dried inside his kit
   "twice-dead": 29,        // an old man of the barrow-dead
   "thrice-dead": 29,       // his elder, no bigger
   "marrow-cantor": 33,     // "a TALL frame of fused bone"
@@ -9974,14 +9974,14 @@ var MOB_SPRITE = {
   "two-hound": 28,         // "a head short and without the bulk to make up the difference"
   "grave-hyena": 12,       // a hyena stands under a wolf and slopes away behind
   "dire-hyena": 15,        // the mean one, and bigger with it
-  "cutpurse": 10,          // "HALF THE SIZE OF A PERSON and twice as quick"
-  "cutthroat": 22,         // the same build with a knife in it
+  "cutpurse": 13,          // "HALF THE SIZE OF A PERSON and twice as quick"
+  "cutthroat": 28,         // the same build with a knife in it
   "the-refuge-man": 30,
   "the-tide-warden": 29,
   "the-bridge-mason": 29,
   "the-fowler": 29,        // drawn broad in the reed cloak, so the number comes down
-  "the-scaffold-hand": 32, // hangs in a harness: a tall cell with a man across the middle of it
-  "the-wrecker": 22,       // the densest sheet of the twelve, and the largest figure of them
+  "the-scaffold-hand": 35, // hangs in a harness: a tall cell with a man across the middle of it
+  "the-wrecker": 28,       // the densest sheet of the twelve, and the largest figure of them
   // ---- the beasts, each against its own kind --------------------------------
   "bull-seal": 12,         // forty stone, against the grey seal at 23
   "a-lymer": 11,           // stands with a hill wolf, which is what the prose claims
@@ -10031,6 +10031,26 @@ var MOB_SPRITE = {
   "old-conger": 7,        // the heavy coil
   "conger": 6,            // the lighter coil
   "fen-viper": 6,          // see the floor note below
+  // THE WOOD AND THE OPEN GROUND (2026-09-27), against a man at 22 and the
+  // shipped kin: the grey wolf a hill wolf, the dire wolf half again; the boar
+  // waist-high; the follower roughly your height; the woodward and the keeper
+  // taller than any man, the Gaunt taller past reason; the sapper on his knees in
+  // every pose, so sized low.
+  "grey-wolf": 13,
+  "dire-wolf": 18,
+  "wild-boar": 12,
+  "old-boar": 14,
+  "root-thing": 24,
+  "the-follower": 28,
+  "something-ahead": 28,
+  "charcoal-burner": 28,
+  "the-woodward": 40,
+  "the-keeper-of-the-holding": 32,
+  "gibbet-crow": 6,
+  "the-bellfounder": 28,
+  "the-sapper": 23,
+  "the-chainman": 28,
+  "the-gaunt": 34,
 };
 
 // WHAT A CREATURE DOES WHILE YOU STAND THERE. A sprite with an entry here is not
@@ -10061,6 +10081,21 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-woodward":                { n: 8, aspect: 1.014, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-sapper":                  { n: 8, aspect: 1.014, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-keeper-of-the-holding":   { n: 8, aspect: 1.007, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-gaunt":                   { n: 8, aspect: 1.005, f: {"idle":0,"alert":1,"cast-about":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-follower":                { n: 8, aspect: 1.038, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-chainman":                { n: 8, aspect: 0.964, f: {"idle":0,"count-it-out":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-bellfounder":             { n: 8, aspect: 0.988, f: {"idle":0,"rake-the-melt":1,"watch":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "something-ahead":             { n: 8, aspect: 1.118, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "root-thing":                  { n: 8, aspect: 1.035, f: {"idle":0,"alert":1,"listen":2,"shift-the-weight":3,"feed":4,"attack":5,"sweep":6,"death":7} },
+  "old-boar":                    { n: 8, aspect: 1.294, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "grey-wolf":                   { n: 8, aspect: 1.122, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "gibbet-crow":                 { n: 8, aspect: 1.254, f: {"idle":0,"watch":1,"up":2,"glide":3,"landing":4,"feed":5,"attack":6,"death":7,"down":3} },
+  "dire-wolf":                   { n: 8, aspect: 1.102, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "charcoal-burner":             { n: 8, aspect: 1, f: {"idle":0,"lay-the-wood":1,"feel-the-turf":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "warden-surface":   { n: 8, aspect: 0.93, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "warden":           { n: 8, aspect: 0.93, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "cutthroat":   { n: 8, aspect: 1.026, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -10308,6 +10343,13 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   // hole that is not drawn comes back floating upright in empty magenta holding
   // on to nothing. It did. The generator refuses the name now.
   "keep-the-seat",      // ...and the forgotten king, who is only ever saluted
+  // THE WOOD AND THE OPEN GROUND (2026-09-27): each of these is the work the
+  // thing is doing when nobody is there - its own line in the world says so.
+  "lay-the-wood",       // the charcoal burner, laying one piece on at a time
+  "feel-the-turf",      // ...and walking the mound with the back of a hand to it
+  "check-the-keys",     // the keeper of the holding, the ring it never puts down
+  "rake-the-melt",      // the bellfounder, drawing the rake through metal long set
+  "work-the-face",      // the sapper, a handful of chalk at a time, still going east
   // AND THE TWO HYENAS ARE NOT THE SAME ANIMAL. They were given one list
   // between them, which is how the two dogs ended up the same dog. The code
   // separates them and always did: the dire hyena is the only member of

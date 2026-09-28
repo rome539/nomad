@@ -1962,6 +1962,11 @@ export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-surf
   // (the-quicksand and the conger stay out on purpose: one is a place, the
   // other is a living eel that eats.)
   "the-drowned-ferryman", "the-pilot", "the-scaffold-hand", "the-refuge-man", "the-miller"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
+// THE WOOD'S OWN (rome, 2026-09-27): the woodward and the charcoal burner are
+// things of timber and char, not men, and a blade that opens a wound in them
+// finds no blood. Bleeding only - they are not HOLLOW, and keep everything else
+// a living creature has (their hunger, their fight, their dead).
+export const BLOODLESS = new Set(["the-woodward", "charcoal-burner"]);
 // GRAVE_FLESH: hollow, but a BODY — dried corpse, not bare bone or old iron
 // (rome, 2026-07-11: "sounds like a zombie"). A wight has a skull to split, a
 // spine to sever, ribs over what used to matter — so the vitals lottery stays
