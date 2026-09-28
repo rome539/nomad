@@ -55,6 +55,16 @@
   ["day", "dawn", "dusk", "night", "moon", "blood", "eclipse", "fog", "rain", "snow", "after-rain"].forEach(function (h) {
     var o = document.createElement("option"); o.value = h; o.textContent = h; hour.appendChild(o); });
 
+  // THE SKY AT 20x. At the game's pace a screen of sky takes four minutes to go
+  // by, which is right for playing and useless for checking a seam; this runs
+  // the same drift twenty times over so the join comes past in seconds.
+  var skyB = mk("button", btnCss, "20x: off"), skyBase = SKY_DRIFT;
+  skyB.onclick = function () {
+    var fast = SKY_DRIFT === skyBase;
+    SKY_DRIFT = fast ? skyBase * 20 : skyBase;
+    skyB.textContent = "20x: " + (fast ? "on" : "off"); skyB.style.color = fast ? "#d8a94e" : "#c9bda3";
+  };
+
   var torchB = mk("button", btnCss, "torch: off"); var torch = 0;
   torchB.onclick = function () { torch = torch ? 0 : 1; torchB.textContent = "torch: " + (torch ? "on" : "off"); torchB.style.color = torch ? "#d8a94e" : "#c9bda3"; paint(); };
 

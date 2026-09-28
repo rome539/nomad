@@ -8765,25 +8765,41 @@ function skyPick(hour) {
 var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, blood:1, eclipse:1, fog:1, rain:1, snow:1, "in":1, "after-rain":1 };
 var sceneEl = document.getElementById("scene");
 var skyEl = document.getElementById("sky");
-// Cover may crop the moon off either axis. Keep its disc inside the viewport
-// without stretching it or flipping it vertically; clouds still fill the box.
-// Only what shows when the sky is NOT moving - the moving layer carries the
-// whole strip past, disc and all.
+// EVERY SKY AT THE SAME SIZE (rome, 2026-09-28). One scale for all of them:
+// the one a 1584 x 993 picture needs to cover the box. A sky painted shorter
+// than 993 is NOT stretched further to fill the height - it was, and its clouds
+// and moon came out a third bigger than every other sky's. It is drawn at the
+// same scale and pinned to the top; the ground's horizon sits well above where
+// it runs out, so the skyline never shows past it.
+function skyScale(w, h) { return Math.max(w / 1584, h / 993); }
+function skyTop(h, th) { return th >= h ? (h - th) * .55 : 0; }
+// Plain string work, no regex: test-scene-torch lifts this from the raw source,
+// where a template-escaped regex does not parse.
+function skyName(url) {
+  var s = url || "", i = s.indexOf("/sky/"), j = s.indexOf(".webp", i);
+  return i < 0 || j < 0 ? "" : s.slice(i + 5, j);
+}
+// Keep the moon's disc inside the viewport when the sky is still; clouds still
+// fill the box. Only what shows when the sky is NOT moving - the moving layer
+// carries the whole strip past, disc and all.
 function fitSky() {
   if (!skyEl || !skyEl.getBoundingClientRect) return;
-  var image = skyEl.style.backgroundImage || "";
-  var focus = image.indexOf("/sky/blood.webp") >= 0 ? ["blood", 616, 260, 75]
-    : image.indexOf("/sky/moon.webp") >= 0 ? ["moon", 566, 246, 60] : null;
-  skyEl.style.backgroundPosition = "center 55%";
-  if (!focus) return;
+  var name = skyName(skyEl.style.backgroundImage), size = SKY_SIZE[name];
+  skyEl.style.backgroundSize = ""; skyEl.style.backgroundPosition = "center 55%";
+  if (!size) return;
   var rect = skyEl.getBoundingClientRect(), w = rect.width, h = rect.height;
   if (!w || !h) return;
-  var size = SKY_SIZE[focus[0]], iw = size[0], ih = size[1];
-  var scale = Math.max(w / iw, h / ih), radius = focus[3] * scale;
-  var x = Math.max(radius + 8, Math.min(w - radius - 8, w * .30));
-  var y = Math.max(radius + 8, Math.min(h - radius - 8, h * .24));
-  var left = Math.max(w - iw * scale, Math.min(0, x - focus[1] * scale));
-  var top = Math.max(h - ih * scale, Math.min(0, y - focus[2] * scale));
+  var iw = size[0], ih = size[1], scale = skyScale(w, h), dw = iw * scale, dh = ih * scale;
+  skyEl.style.backgroundSize = dw + "px " + dh + "px";
+  var left = (w - dw) / 2, top = skyTop(h, dh);
+  var focus = name === "blood" ? [616, 260, 75] : name === "moon" ? [566, 246, 60] : null;
+  if (focus) {
+    var radius = focus[2] * scale;
+    var x = Math.max(radius + 8, Math.min(w - radius - 8, w * .30));
+    var y = Math.max(radius + 8, Math.min(h - radius - 8, h * .24));
+    left = Math.max(w - dw, Math.min(0, x - focus[0] * scale));
+    top = Math.max(Math.min(h - dh, 0), Math.min(0, y - focus[1] * scale));
+  }
   skyEl.style.backgroundPosition = left + "px " + top + "px";
 }
 // THE SKY MOVES (rome, 2026-09-28). A layer inside #sky, over the still
@@ -8801,9 +8817,8 @@ function fitSky() {
 //
 // One pace for all: SKY_DRIFT of the box width a second.
 var SKY_DRIFT = .004;
-// Each picture's own size. A screen of sky is a 1584:993 window of it at its
-// own height, whatever its width - so a two-screen strip is drawn at the same
-// scale as a one-screen one and simply takes twice as long to come round.
+// Each picture's own size in pixels. Every sky is drawn at the same scale
+// (skyScale), so a two-screen strip simply takes twice as long to come round.
 var SKY_SIZE = {
   day: [1584, 993], dawn: [2167, 726], "dawn-2": [1584, 993], dusk: [1584, 993], "dusk-2": [1584, 993],
   "after-rain": [1584, 993], night: [2149, 732], moon: [2142, 734], blood: [2171, 724], eclipse: [2172, 724],
@@ -8845,13 +8860,12 @@ var skyDrift = (function () {
     if (!layer || !name) return;
     var r = skyEl.getBoundingClientRect(), w = r.width, h = r.height;
     if (!w || !h) return;
-    var size = SKY_SIZE[name] || [1584, 993], ih = size[1];
-    // a 1584:993 window of the picture covers the box; the strip is as long as
-    // the picture is, at that scale - never shorter than the box, so two copies
+    var size = SKY_SIZE[name] || [1584, 993];
+    // every sky at the one scale (see skyScale); the strip is as long as the
+    // picture is at that scale - never shorter than the box, so two copies
     // always fill it
-    var s = Math.max(w / (ih * 1584 / 993), h / ih);
-    var tw = size[0] * s, th = ih * s;
-    geo = { w: w, h: h, tw: tw, th: th, top: (h - th) * .55, px: th / 993 };
+    var s = skyScale(w, h), tw = size[0] * s, th = size[1] * s;
+    geo = { w: w, h: h, tw: tw, th: th, top: skyTop(h, th), px: s };
     // cssText REPLACES the whole style, so the picture goes in with it - set
     // apart, a resize wiped it and the layer slid nothing over the still sky.
     for (var j = 0; j < 2; j++) tiles[j].style.cssText = "left:" + (j * tw) + "px;top:0;width:" + tw + "px;height:" + th + "px;background-image:" + img;
@@ -8916,7 +8930,7 @@ var skyDrift = (function () {
   }
   // The sky picture the room just put up, as its url, or "" for none.
   function show(url) {
-    var m = /\\/sky\\/([a-z0-9-]+)\\.webp/.exec(url || ""), next = m ? m[1] : "";
+    var next = skyName(url);
     var base = next.replace(/-\\d+$/, "");
     if (!SKY_PAINTED[base]) next = "";
     if (next !== name) {
