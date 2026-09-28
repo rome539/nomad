@@ -6,7 +6,7 @@ const source = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8'
 const code = source.slice(source.indexOf('var weatherCanvas ='), source.indexOf('function paintScene('));
 const queued = new Map(), listeners = {};
 let id = 0, strokes = 0, flakes = 0;
-const ctx = {clearRect(){},setTransform(){},beginPath(){},moveTo(){},lineTo(){},stroke(){strokes++},arc(){},fill(){flakes++}};
+const ctx = {clearRect(){},fillRect(){},setTransform(){},beginPath(){},moveTo(){},lineTo(){},stroke(){strokes++},arc(){},fill(){flakes++}};
 const canvas = {style:{},width:0,height:0,getContext:()=>ctx};
 const motion = {matches:false,addEventListener:(_,fn)=>listeners.motion=fn};
 const env = {document:{hidden:false,getElementById:()=>canvas,addEventListener:(name,fn)=>listeners[name]=fn},

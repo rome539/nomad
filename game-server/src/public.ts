@@ -1093,7 +1093,12 @@ export const PAGE = `<!doctype html>
     background-size: cover;
     background-position: center 55%;
     background-repeat: no-repeat;
+    overflow: hidden;
   }
+  /* THE MOVING SKY: see skyDrift. Over the still sky, inside the same box. */
+  #sky-drift { position: absolute; left: 0; top: 0; display: none; will-change: transform; }
+  #sky-drift > i { position: absolute; display: block; background-size: 100% 100%; background-repeat: no-repeat; }
+  #sky-stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
   /* AGREEING THE GROUND WITH THE SKY. A borrowed scene is the right place under
      the wrong light: the day stone under a dusk sky is still lit for noon, and
      the eye reads the mismatch instantly. These bring it into line — dim and
@@ -8775,6 +8780,145 @@ function fitSky() {
   var top = Math.max(h - 993 * scale, Math.min(0, y - focus[1] * scale));
   skyEl.style.backgroundPosition = left + "px " + top + "px";
 }
+// THE SKY MOVES (rome, 2026-09-28). A layer inside #sky, over the still
+// picture the room already shows, so the room's own turn - mirrored, flipped,
+// both - applies to it for free, and a mirrored turn simply runs it the other
+// way. Nothing here replaces the still sky: if this layer is off (text view,
+// reduced motion, a hidden tab, an indoor room) the picture underneath is the
+// sky exactly as it was.
+//
+// Two ways to move, because a sky with a disc in it cannot do the first:
+//   TILED   four copies side by side - plain, mirrored, plain, mirrored - slid
+//           left and wrapped every two copies. Each seam meets its own
+//           reflection, so it never jumps. Day, night, dawn, dusk, after-rain.
+//   PANNED  moon, blood and eclipse. A mirrored copy would put a second moon in
+//           view, so these are drawn once, a third larger than the box, and
+//           panned across its whole overhang and back.
+// One pace for both: SKY_DRIFT of the box width a second at the fastest.
+var SKY_DRIFT = .004;
+// The skies with a disc painted in them, which pan rather than tile.
+var SKY_DISC = { moon: 1, blood: 1, eclipse: 1 };
+// THE NIGHT'S OWN STARS, found in the picture (x, y, brightness 1-9), so the
+// twinkle is on the stars that are painted there and moves with the sky.
+var NIGHT_STARS = "299,10,9;589,10,7;732,10,9;1277,10,8;1484,10,6;732,11,9;1130,13,9;1131,15,8;25,19,9;1389,19,9;89,23,9;489,23,9;906,23,9;1386,23,5;893,38,5;177,39,5;805,39,8;807,39,8;1028,39,9;1036,39,4;1507,39,5;1306,42,9;897,43,6;1306,43,9;1515,43,7;256,46,7;961,46,4;324,49,9;617,49,9;886,50,9;322,51,9;410,51,3;720,51,9;1132,51,6;1206,54,5;1527,54,6;949,58,7;117,59,5;1539,59,8;1237,62,5;204,63,8;205,63,8;220,66,5;1166,66,6;1171,71,6;181,75,4;232,75,4;1545,75,9;643,78,6;252,79,7;829,79,9;831,79,9;1333,79,9;874,81,4;1207,83,9;1433,83,8;533,86,9;712,86,4;873,86,5;656,90,8;1348,91,8;1194,94,9;1573,94,6;865,98,9;1519,98,9;397,102,6;976,102,5;1506,102,5;1071,103,9;1072,103,9;1194,103,4;426,115,9;465,115,7;466,115,4;467,115,4;1390,115,9;695,117,9;1237,118,9;1550,122,5;1237,123,9;458,134,7;815,138,4;962,138,9;1033,150,4;1333,150,6;459,153,9;1045,153,8;736,154,9;885,154,9;1004,154,9;1432,154,9;1017,157,9;1103,158,9;1219,161,9;1036,162,9;1020,165,7;1044,166,8;956,170,9;981,170,9;508,174,6;510,174,6;829,174,5;1041,178,4;1048,182,9;1273,182,9;1562,185,6;882,186,9;1017,186,9;1257,186,9;1274,186,8;446,189,9;548,189,7;1009,189,8;1384,189,8;1387,189,7;687,190,9;1031,190,6;465,193,4;778,193,9;988,193,6;1542,193,4;544,194,9;554,194,9;999,194,9;932,197,9;548,198,8;932,198,8;1004,198,7;981,201,5;838,205,4;973,205,6;1009,205,4;1500,205,9;995,210,7;228,213,5;113,217,9;1416,217,4;1244,221,8;1140,222,9;232,225,9;1240,225,9;1248,225,2;1249,225,9;231,226,9;265,226,2;1084,229,5;1244,229,9;564,233,4;199,235,2;321,237,6;976,237,4;728,238,9;1084,249,9;1218,249,6;297,252,6;311,252,9;312,252,9;1170,252,4;78,256,9;76,257,9;78,257,8;348,257,9;675,257,9;1080,257,7;1215,257,5;743,264,5;224,268,5;224,280,9;225,280,9;398,280,7;766,280,9;857,281,9;906,281,5;945,285,8;15,288,9;395,289,9;938,289,6;148,293,9;344,293,5;354,303,6;743,303,6;140,304,9;830,304,5;742,310,7;33,312,5;556,312,5;284,313,6;398,315,4;850,316,5;1245,321,9;62,324,9;240,324,4;545,324,9;989,324,9;1543,324,6;132,328,5;410,328,9;524,328,9;1133,331,9;255,332,6;1133,333,9;442,335,6;144,336,7;1562,336,5;981,339,6;120,343,9;442,344,6;968,344,8;1029,344,4;1074,344,6;140,347,7;141,347,7;478,347,9;491,347,8;505,348,4;692,348,5;1330,348,4;1202,350,7;156,351,5;973,351,9;972,352,9;342,355,9;703,355,9;191,356,9;342,356,9;637,356,9;818,357,9;827,357,9;1112,358,7;251,360,5;925,360,9;823,361,9;108,363,4;652,367,5;1221,367,6;885,371,5;953,371,6;452,376,9;453,376,9;454,376,9;455,376,9;105,379,9;323,379,9;382,383,7;1087,383,5;1179,383,9;956,384,5;1546,384,8;465,387,5;1188,387,3;616,388,5;1017,388,8;311,390,8;49,391,8;858,391,5;692,396,9;216,399,9;383,399,7;1104,399,5;1570,403,8;830,404,8;517,407,8;1462,407,4;362,411,9;512,411,9;521,411,8;645,412,9;724,415,9;1467,415,9;1500,415,6;251,419,5;1545,422,8;1547,422,8;346,423,5;1416,423,6;1455,423,8;580,426,9;632,427,6;411,435,5;620,448,9;545,451,5;612,463,6;1345,467,9;1368,467,4;601,471,7;1380,475,9;1381,475,9;1382,475,9;1487,478,9;1488,478,9;654,479,9;790,479,5;941,483,9;1242,486,4;331,487,9;1112,487,9;1127,487,8;858,494,6;1449,494,9;1240,495,9;933,499,6;1163,499,9;1302,499,6;1567,499,9;1445,500,8;1013,502,7;1449,504,8;714,506,9;807,510,6;818,510,7;553,514,8;1085,514,9;1178,514,9;1178,515,9;810,518,7;1483,518,9;823,519,9;1368,529,9;616,530,9;735,530,8;1284,530,4;901,534,9;592,535,7;429,538,5;802,539,4;897,539,8;906,539,7;731,542,4;1023,542,9;1241,542,6;1394,542,5;901,543,8;360,546,5;445,546,5;1036,550,6;1408,550,5;968,553,9;30,554,8;1073,554,9;1416,554,7;90,557,9;347,557,9;1310,557,9;1516,558,9;1412,561,9;73,562,9;758,563,9;457,566,9;458,566,9;874,566,6;1479,569,9;929,574,9;256,577,9;212,582,4;224,582,7;247,582,8;22,585,5;1100,585,9;235,586,5;1406,589,9;811,590,6;124,593,9;712,598,7;1017,598,9;1271,598,9;1390,598,9;512,601,9;732,601,8;953,602,8;192,605,5;350,605,5;1206,605,6;973,613,9;228,614,8;224,618,8;232,618,8;525,618,6;355,621,9;1264,621,6;229,622,8;969,625,7;652,626,6;679,629,6;814,629,8;676,633,9;984,633,8;1143,638,7;599,639,7;985,639,4;86,645,5;700,645,7;719,645,5;940,645,5;715,649,4;1017,649,9;552,654,8;1070,654,9;153,656,9;458,656,9;459,656,9;933,656,9;457,657,9;842,657,9;1171,657,9;386,664,9;882,664,4;764,669,9;765,669,9;928,669,5;1320,669,9;1346,669,9;1368,673,4;553,677,9;1345,677,9;1356,677,8;303,689,9;700,689,9;1104,693,5;880,697,7;1273,699,4;370,700,9;371,700,9;61,709,9;345,721,7;478,724,9;125,726,6;406,728,9;734,729,9;735,729,9;93,734,5;120,737,9;121,737,9;838,741,6;560,746,8;639,748,9;640,749,9;968,749,9;969,749,9;200,753,5;225,753,9;339,753,5;184,754,5;769,768,9;371,772,8;145,776,4;200,776,6;1071,780,5;1085,780,5;1570,780,8;371,781,7;1570,781,8;251,792,9;422,792,6;1076,792,9;1464,795,9;1132,796,4;1464,796,9;1094,797,4;450,800,4;941,800,5;1048,800,8;379,812,6;453,812,8;1417,812,6;367,817,8;1004,817,4;1325,820,5;1393,820,9;1554,820,5;371,824,5;426,824,4;904,824,8;1511,824,4;331,831,9;1218,831,9;335,836,8;411,836,8;1142,840,4;270,843,4;390,846,4;1289,848,9;1537,848,9;449,851,8;553,852,9;620,852,4;976,852,9;977,852,9;359,855,4;1551,859,5;70,867,4;1432,868,8;1565,868,4;1108,871,8;1017,880,9;1207,881,8;46,895,8;153,896,4;758,896,6;1546,896,8;517,899,4;565,899,4;649,907,8;1337,907,8;1506,907,8;696,915,4;1386,915,6;1562,915,6;533,916,8;383,920,3;1147,923,5;18,927,7;1266,927,8;581,928,8;632,935,3;877,935,5;1171,935,8;1409,935,8;715,936,8;1523,936,8;92,938,3;870,943,8;113,951,8;620,951,8;822,951,8;1310,951,8;1084,952,8;181,954,8;687,967,8;1100,967,7;1147,967,8;1444,974,3;268,975,4;793,975,5;1502,975,8;509,978,4";
+var skyDrift = (function () {
+  var layer = null, tiles = [], starCv = null, starCtx = null, stars = null;
+  var name = "", mode = "", frame = null, stamp = 0, t = 0, geo = null, img = "";
+  var still = typeof window !== "undefined" && window.matchMedia
+    ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
+  function build() {
+    if (layer) return true;
+    if (!skyEl || !document.createElement) return false;
+    layer = document.createElement("div"); layer.id = "sky-drift";
+    for (var k = 0; k < 4; k++) { var d = document.createElement("i"); if (k % 2) d.style.transform = "scaleX(-1)"; layer.appendChild(d); tiles.push(d); }
+    starCv = document.createElement("canvas"); starCv.id = "sky-stars";
+    starCtx = starCv.getContext && starCv.getContext("2d");
+    skyEl.appendChild(layer); skyEl.appendChild(starCv);
+    return true;
+  }
+  function active() { return !!name && viewMode === "image" && !document.hidden && !still.matches; }
+  function stop() {
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null; stamp = 0;
+    if (layer) layer.style.display = "none";
+    if (starCv) starCv.style.display = "none";
+  }
+  function refit() {
+    if (!layer || !name) return;
+    var r = skyEl.getBoundingClientRect(), w = r.width, h = r.height;
+    if (!w || !h) return;
+    var s = Math.max(w / 1584, h / 993);
+    if (SKY_DISC[name]) {
+      s *= 1.3;
+      var dw = 1584 * s, dh = 993 * s;
+      geo = { w: w, h: h, tw: dw, th: dh, top: -(dh - h) * .15, lo: w - dw, hi: 0 };
+      // cssText REPLACES the whole style, so the picture goes in with it - set
+      // apart, the resize wiped it and the layer slid nothing over the still sky.
+      tiles[0].style.cssText = "left:0;top:0;width:" + dw + "px;height:" + dh + "px;background-image:" + img;
+      for (var k = 1; k < 4; k++) tiles[k].style.display = "none";
+      layer.style.top = geo.top + "px"; layer.style.width = dw + "px"; layer.style.height = dh + "px";
+    } else {
+      var tw = 1584 * s, th = 993 * s;
+      geo = { w: w, h: h, tw: tw, th: th, top: (h - th) * .55 };
+      for (var j = 0; j < 4; j++) tiles[j].style.cssText = "left:" + (j * tw) + "px;top:0;width:" + tw + "px;height:" + th + "px;background-image:" + img + (j % 2 ? ";transform:scaleX(-1)" : "");
+      layer.style.top = geo.top + "px"; layer.style.width = (4 * tw) + "px"; layer.style.height = th + "px";
+    }
+    if (starCv) {
+      var sc = Math.min(1, 1280 / w);
+      starCv.width = Math.max(1, Math.round(w * sc)); starCv.height = Math.max(1, Math.round(h * sc));
+      geo.sc = sc;
+    }
+  }
+  function offset() {
+    var speed = geo.w * SKY_DRIFT;
+    if (mode === "pan") {
+      var span = geo.hi - geo.lo; if (span <= 0) return geo.hi;
+      var p = (t * speed * 2 / Math.PI) / span % 2; p = p < 1 ? p : 2 - p;
+      return geo.lo + span * (.5 - .5 * Math.cos(p * Math.PI));
+    }
+    return -((t * speed) % (2 * geo.tw));
+  }
+  function drawStars(x0) {
+    if (!starCtx || !geo) return;
+    if (!stars) stars = NIGHT_STARS.split(";").map(function (e) { var v = e.split(","); return [+v[0] / 1584, +v[1] / 993, +v[2] / 10, Math.random() * 6.3, .5 + Math.random() * 1.6]; });
+    var c = starCtx, sc = geo.sc, px = Math.max(1, geo.tw / 1584);
+    c.setTransform(sc, 0, 0, sc, 0, 0); c.clearRect(0, 0, geo.w, geo.h);
+    for (var k = 0; k < 4; k++) {
+      var x = x0 + k * geo.tw, mir = k % 2 === 1;
+      if (x > geo.w || x + geo.tw < 0) continue;
+      for (var i = 0; i < stars.length; i++) {
+        var st = stars[i], sx = x + (mir ? 1 - st[0] : st[0]) * geo.tw, sy = geo.top + st[1] * geo.th;
+        if (sx < -4 || sx > geo.w + 4 || sy > geo.h) continue;
+        var v = Math.sin(t * st[4] + st[3]);
+        if (v > 0) {
+          var a = .9 * v, sz = px * (1 + 1.4 * v * (.6 + st[2]));
+          c.fillStyle = "rgba(245,247,255," + (a * .35).toFixed(3) + ")"; c.fillRect(sx - sz * 1.5, sy - sz * 1.5, sz * 3, sz * 3);
+          c.fillStyle = "rgba(245,247,255," + a.toFixed(3) + ")"; c.fillRect(sx - sz / 2, sy - sz / 2, sz, sz);
+        } else if (v < -.35) {
+          c.fillStyle = "rgba(8,12,28," + (Math.min(1, (-v - .35) * 1.6) * .85).toFixed(3) + ")"; c.fillRect(sx - px * 2, sy - px * 2, px * 4, px * 4);
+        }
+      }
+    }
+  }
+  function tick(now) {
+    frame = null;
+    if (!active()) { stop(); return; }
+    // Fifteen draws a second: at a screen every four minutes the sky moves
+    // about a pixel a frame even at that rate, and the stars need no more.
+    if (stamp && now - stamp < 66) { frame = requestAnimationFrame(tick); return; }
+    t += stamp ? Math.min(.2, (now - stamp) / 1000) : 0;
+    stamp = now;
+    if (!geo) refit();
+    if (geo) {
+      var x = offset();
+      layer.style.transform = "translate3d(" + x.toFixed(2) + "px,0,0)";
+      if (name === "night") drawStars(x);
+    }
+    frame = requestAnimationFrame(tick);
+  }
+  function run() {
+    if (!active() || !build()) { stop(); return; }
+    layer.style.display = "block";
+    if (starCv) starCv.style.display = name === "night" ? "block" : "none";
+    if (frame === null) frame = requestAnimationFrame(tick);
+  }
+  // The sky picture the room just put up, as its url, or "" for none.
+  function show(url) {
+    var m = /\\/sky\\/([a-z0-9-]+)\\.webp/.exec(url || ""), next = m ? m[1] : "";
+    var base = next.replace(/-\\d+$/, "");
+    if (!SKY_PAINTED[base]) next = "";
+    if (next !== name) {
+      name = next; mode = SKY_DISC[next] ? "pan" : "tile"; geo = null; t = Math.random() * 600;
+      img = name ? "url(/sky/" + name + ".webp?v=" + SKY_V + ")" : "";
+      build();
+    }
+    if (!name) { stop(); return; }
+    run();
+  }
+  if (document.addEventListener) document.addEventListener("visibilitychange", run);
+  if (still.addEventListener) still.addEventListener("change", run);
+  return { show: show, refit: function () { geo = null; run(); } };
+})();
 var viewBtn = null;   // built only for a granted key, see buildViewRow
 var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
 var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "";
@@ -8896,6 +9040,16 @@ function floodSuffix(ground, cond) {
 var weatherCanvas = document.getElementById("weather-particles");
 var weatherCtx = weatherCanvas && weatherCanvas.getContext && weatherCanvas.getContext("2d");
 var weatherKind = "", weatherFrame = null, weatherTime = 0, weatherStamp = 0;
+// THE WIND AND THE STORM (rome, 2026-09-28). The wind is an accumulated drift,
+// not a speed times the clock: a gust changes how fast it grows, and a flake
+// never jumps when the gust dies. The storm keeps its own next flash and the
+// thunder that follows it.
+var weatherWind = 0, weatherFlashAt = -99, weatherNextFlash = 0, weatherThunderAt = 0;
+var THUNDER_LINES = [
+  "The sky goes white for an instant, and the thunder comes after it, close.",
+  "Thunder breaks overhead and rolls away across the ground.",
+  "Lightning, somewhere near. You count, and the thunder comes before you reach three.",
+];
 var weatherMotion = typeof window !== "undefined" && window.matchMedia
   ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
 function runWeather() {
@@ -8912,7 +9066,10 @@ function runWeather() {
 }
 function setWeather(kind) {
   kind = kind === "rain" || kind === "snow" ? kind : "";
-  if (kind !== weatherKind) { weatherKind = kind; weatherTime = 0; weatherStamp = 0; }
+  if (kind !== weatherKind) {
+    weatherKind = kind; weatherTime = 0; weatherStamp = 0;
+    weatherWind = 0; weatherFlashAt = -99; weatherNextFlash = 0; weatherThunderAt = 0;
+  }
   runWeather();
 }
 function drawWeather(now) {
@@ -8920,7 +9077,8 @@ function drawWeather(now) {
   if (!weatherKind || viewMode !== "image" || document.hidden || weatherMotion.matches) { runWeather(); return; }
   // Thirty draws per second, capped resolution and density even on large Retina screens.
   if (weatherStamp && now - weatherStamp < 32) { weatherFrame = requestAnimationFrame(drawWeather); return; }
-  weatherTime += weatherStamp ? Math.min(.1, (now - weatherStamp) / 1000) : 0;
+  var dt = weatherStamp ? Math.min(.1, (now - weatherStamp) / 1000) : 0;
+  weatherTime += dt;
   weatherStamp = now;
   var box = sceneEl.getBoundingClientRect(), w = Math.round(box.width), h = Math.round(box.height);
   if (!w || !h) { weatherFrame = requestAnimationFrame(drawWeather); return; }
@@ -8930,6 +9088,25 @@ function drawWeather(now) {
   if (weatherCanvas.width !== rw || weatherCanvas.height !== rh) { weatherCanvas.width = rw; weatherCanvas.height = rh; }
   var ctx = weatherCtx, t = weatherTime, rain = weatherKind === "rain";
   ctx.setTransform(scale, 0, 0, scale, 0, 0); ctx.clearRect(0, 0, w, h);
+  // A GUST: long lulls and swells, never a steady blow. Snow leans with it.
+  var gust = Math.max(0, Math.sin(t * .45) * Math.sin(t * .17 + 1));
+  weatherWind += (24 + 150 * gust) * dt;
+  // LIGHTNING, rare: the whole picture lit twice in quick succession and then
+  // falling off, and the thunder a moment behind it. Only in rain.
+  if (rain) {
+    if (!weatherNextFlash) weatherNextFlash = t + 20 + Math.random() * 30;
+    if (t >= weatherNextFlash) {
+      weatherFlashAt = t; weatherNextFlash = t + 25 + Math.random() * 40;
+      weatherThunderAt = t + .7 + Math.random() * 1.1;
+    }
+    if (weatherThunderAt && t >= weatherThunderAt) {
+      weatherThunderAt = 0;
+      if (typeof print === "function") print(THUNDER_LINES[Math.floor(Math.random() * THUNDER_LINES.length)], "amb");
+    }
+    var f = t - weatherFlashAt, k = 0;
+    if (f < .09) k = .75; else if (f < .16) k = .1; else if (f < .24) k = .55; else if (f < .7) k = .55 * (1 - (f - .24) / .46);
+    if (k > 0) { ctx.fillStyle = "rgba(225,232,255," + (k * .55).toFixed(3) + ")"; ctx.fillRect(0, 0, w, h); }
+  }
   var count = Math.min(rain ? 170 : 115, Math.max(24, Math.round(w * h / (rain ? 6500 : 9500))));
   ctx.strokeStyle = "rgba(195,205,203,.33)"; ctx.lineWidth = 1.1;
   ctx.fillStyle = "rgba(235,231,210,.72)";
@@ -8940,10 +9117,22 @@ function drawWeather(now) {
       y = (i * 79.1 + t * (650 + i % 7 * 35)) % (h + 70) - 35;
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 8, y + 27); ctx.stroke();
     } else {
-      x = ((i * 131.3 + t * 24 + Math.sin(t + i) * 15) % (w + 80) + w + 80) % (w + 80) - 40;
+      x = ((i * 131.3 + weatherWind + Math.sin(t + i) * 15) % (w + 80) + w + 80) % (w + 80) - 40;
       y = (i * 89.1 + t * (24 + i % 35)) % (h + 60) - 30;
       ctx.beginPath(); ctx.arc(x, y, .8 + i % 3 * .65, 0, Math.PI * 2); ctx.fill();
     }
+  }
+  // GRIT on the gust: short streaks blown low across the ground in snow, only
+  // there while the wind is up.
+  if (!rain && gust > .05) {
+    ctx.strokeStyle = "rgba(225,228,235," + (.08 + .3 * gust).toFixed(3) + ")"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (var g = 0; g < 40; g++) {
+      var gx = ((g * 97.3 + weatherWind * 3.2) % (w + 40) + w + 40) % (w + 40) - 20;
+      var gy = h * (.72 + (g * 37 % 26) / 100);
+      ctx.moveTo(gx, gy); ctx.lineTo(gx + 4 + 6 * gust, gy);
+    }
+    ctx.stroke();
   }
   weatherFrame = requestAnimationFrame(drawWeather);
 }
@@ -8958,7 +9147,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   else if (sky !== undefined && sky !== null) lastCovered = sky === "in";
   // Remove the old sky immediately when stepping inside, even while its
   // replacement ground plate is downloading.
-  if (lastCovered && skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; }
+  if (lastCovered && skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; if (typeof skyDrift !== "undefined") skyDrift.show(""); }
   // HOW MUCH WATER IS OVER THIS ROOM, and cleared the same way place is:
   // walking off a flooded shoal onto a dry road has to put the sheet away, so
   // an absent field is zero rather than "leave it as it was".
@@ -9186,7 +9375,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       // find scenePainted still naming the hillside and put it up unloaded.
       sceneSeq++;
       scenePainted = terr ? "/room-bg/" + terr + ".webp" : "";
-      if (skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; }
+      if (skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; if (typeof skyDrift !== "undefined") skyDrift.show(""); }
       sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".webp?v=" + BG_V + ")" : "";
       sceneEl.style.backgroundSize = "100% 100%";   // see the layered path below
       // NO WEATHER INDOORS. The gatehouse is one baked plate lit by its own
@@ -9241,6 +9430,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       // from the last room would mirror a sky that was never asked to be.
       skyEl.style.transform = turn;
       fitSky();
+      if (typeof skyDrift !== "undefined") skyDrift.show(sky);
     }
     // No overlay on a layered room — the sky is real. The only thing that
     // changes is how the ground is lit, and that is a filter that respects the cut.
@@ -10705,6 +10895,7 @@ function fitPicture() {
   var bott = Math.max(0, Math.round(viewportBottom - baselineTop));
   document.body.style.setProperty("--botth", bott + "px");
   fitSky();
+  if (typeof skyDrift !== "undefined") skyDrift.refit();
   fitMobRow();                     // the row is measured against the box, so it follows
 }
 // WHAT THE WORLD SAYS EACH OF THEM IS DOING. A creature holds this until the
