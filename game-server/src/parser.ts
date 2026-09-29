@@ -349,6 +349,9 @@ export function parse(input: string): ParseResult | null {
   if (verb === "tell") return { verb, arg: rest }; // "<name> <words>" — the words are theirs, verbatim
   if (verb === "name") return { verb, arg: rest };
   if (verb === "carve") return { verb, arg: rest };
+  // ...and so does the gatehouse board: a notice goes up as you wrote it,
+  // capitals and all (rome, 2026-09-28).
+  if (verb === "post") return { verb, arg: rest };
 
   rest = rest.toLowerCase();
 

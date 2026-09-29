@@ -11364,6 +11364,20 @@ function setLogBig(on) {
 }
 setLogBig(logBig);
 if (logGrip) logGrip.onclick = function () { setLogBig(!logBig); };
+// THE BAND IS REDRAWN WHEN IT HAS FINISHED OPENING (rome, 2026-09-28: the
+// first time it was pulled open the prose sat half-drawn and stuck until he
+// scrolled it a hair). A scrolled box that grows can keep its old painted
+// tiles for the part it just uncovered, and the browser only redraws them on a
+// scroll - so the band gives itself that scroll, a pixel up and back to the
+// newest line, the moment the height has settled.
+if (typeof log !== "undefined" && log && log.addEventListener) {
+  log.addEventListener("transitionend", function (e) {
+    if (e.target !== log || e.propertyName !== "height") return;
+    var bottom = log.scrollHeight;
+    log.scrollTop = Math.max(0, bottom - log.clientHeight - 1);
+    requestAnimationFrame(function () { log.scrollTop = log.scrollHeight; });
+  });
+}
 
 // HOW HARD THE SCRIM PRESSES, per painting. The gradient below is weakest at
 // 45% height \u2014 which is exactly where the title and the line sit \u2014 and one
