@@ -11360,11 +11360,22 @@ function setLogBig(on) {
     logGrip.title = logBig ? "less of the log" : "more of the log";
   }
   try { localStorage.setItem("nomad_logbig", logBig ? "1" : "0"); } catch (e) {}
+  // THE NEWEST LINE STAYS ON THE FLOOR THE WHOLE WAY (rome, 2026-09-29). Set
+  // once, the scroll stayed where it was while the band shrank, so closing slid
+  // the last lines down out of sight and they jumped back when it stopped. So
+  // it is held at the bottom every frame of the move, both ways.
+  // A ResizeObserver (below) does the holding: it runs after each frame's
+  // layout and before its paint, so the line never drifts even a frame.
+  logPinUntil = Date.now() + 450;
   if (typeof log !== "undefined" && log) log.scrollTop = log.scrollHeight;
+}
+var logPinUntil = 0;
+if (typeof log !== "undefined" && log && typeof ResizeObserver === "function") {
+  new ResizeObserver(function () { if (Date.now() < logPinUntil) log.scrollTop = log.scrollHeight; }).observe(log);
 }
 setLogBig(logBig);
 if (logGrip) logGrip.onclick = function () { setLogBig(!logBig); };
-// THE BAND IS REDRAWN WHEN IT HAS FINISHED OPENING (rome, 2026-09-28: the
+// THE BAND IS REDRAWN WHEN IT HAS FINISHED OPENING - opening only (rome, 2026-09-28: the
 // first time it was pulled open the prose sat half-drawn and stuck until he
 // scrolled it a hair). A scrolled box that grows can keep its old painted
 // tiles for the part it just uncovered, and the browser only redraws them on a
@@ -11372,7 +11383,7 @@ if (logGrip) logGrip.onclick = function () { setLogBig(!logBig); };
 // newest line, the moment the height has settled.
 if (typeof log !== "undefined" && log && log.addEventListener) {
   log.addEventListener("transitionend", function (e) {
-    if (e.target !== log || e.propertyName !== "height") return;
+    if (e.target !== log || e.propertyName !== "height" || !logBig) return;
     var bottom = log.scrollHeight;
     log.scrollTop = Math.max(0, bottom - log.clientHeight - 1);
     requestAnimationFrame(function () { log.scrollTop = log.scrollHeight; });
