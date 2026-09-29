@@ -48,6 +48,8 @@ function liftRules(name) {
 const REGIONS = [
   { region: "crossing", rules: "CROSSING_RULES", files: (f) => f.startsWith("crossing") },
   { region: "road",     rules: "ROAD_RULES",     files: (f) => /road/.test(f) },
+  // ...and the wood (2026-09-29), whose table names every room it owns.
+  { region: "wood",     rules: "WOOD_RULES",     files: (f) => f.startsWith("the-wood") },
 ];
 
 // Every crossing room we can see statically, with its DESCRIPTION, because

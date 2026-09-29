@@ -6578,6 +6578,34 @@ export const ROAD_RULES: [string, RegExp][] = [
   // Dressed, kerbed, cambered, draining. Everything the road still is.
   ["the-kept-road", /.*/],
 ];
+// THE WOOD OWNS ITS GROUND TOO (rome, 2026-09-29), the third region to - and the
+// first whose table is a LIST rather than a set of guesses. Every one of its
+// rooms was sorted by hand onto seven grounds when the plates were drawn, so
+// each rule names its rooms outright and nothing is left to a word in a name:
+// the wood is full of names that lie about the ground ("The Moss Floor" is wet,
+// "The Sunken Ditch" is dry). The last rule is the catch-all, and it is the
+// plain wood, which is what anything new in here most likely is. The six rooms
+// with pictures of their own (the moon door and what is behind it, the two
+// bosses' rooms, the bounds house, the wolf earth) are ART_ROOMS and paint their
+// own plate over whatever this says.
+export const WOOD_RULES: [string, RegExp][] = [
+  // beneath the sunken wood: the dark under the root-ceiling. No sky and no weather, so it takes night and night-torch only
+  ["under-roots", /^the-(black-loam|buried-lane|clay-shelf|drip-line|flint-floor|last-light|low-sump|lower-ditch|old-course|still-pool|tree-fall|under-roots)$/],
+  // the wood that fell in, walled by raw earth banks
+  ["sunken", /^the-(bottom-of-it|buried-wall|cold-seep|earth-fall|fern-pit|green-dark|lost-stand|old-ditch|slip|sunken-wood|under-eaves|white-roots)$/],
+  // the moated manor gone to ruin (its Hall Floor has a picture of its own)
+  ["holding", /^the-(chapel-shell|dovecote|fish-house|gate-arch|icehouse|kitchen-range|solar|stable-range|well-court|wolf-pits)$/],
+  // where the wood gives out into gorse, sand and scrub
+  ["heath", /^the-(broken-ground|dry-heath|flint-scatter|gorse-brake|grey-scrub|heath-edge|pale-grass|rabbit-warren|sand-cut|stunted-oaks|thorn-waste|wind-gap)$/],
+  // alder and willow standing in water, the mire, and the ponds and ditches dug into it
+  ["wet", /^the-(alder-carr|black-alders|black-mud|black-pool|brown-water|drinking-pool|drowned-holly|drowned-roots|eel-ditch|far-mire|far-south-turning|fishponds|flooded-ride|frog-chorus|heronry|leaning-alders|low-mist|mire-edge|moat-bank|moss-floor|old-pond|osier-beds|quaking-ground|reed-break|rush-bed|sedge-flat|silted-pond|sodden-ground|south-ride|spring-head|standing-water|stew-pond|still-air|sunk-fence|wet-hollow|willow-break|willow-margin|withy-hut)$/],
+  // open grass inside the wood: clearings, lawns and the cut rides
+  ["glade", /^the-(deer-lawn|empty-ride|first-clearing|flood-meadow|long-glade|north-marches|north-ride|open-canopy|sunken-lawn|west-ride)$/],
+  // the plain wood - every stand, thicket, planted row and burnt patch, and the maze rooms that are meant to be unmemorable
+  ["wood", /^the-(ant-hills|ash-heap|ash-stand|badger-ground|birch-edge|blind-corner|boar-ground|boundary-oak|bracken-edge|bracken-sea|bramble-margin|broken-avenue|burnt-stand|charcoal-flat|charcoal-hut|charcoal-ring|close-dark|close-ground|crooked-stand|crow-roost|deer-fence|deer-path|dry-gully|eaves|edge-of-it|fallen-giant|fallen-wall|far-birches|far-hollow|far-north-turning|fox-earths|grey-thicket|high-holly|hollow-beeches|hollow-yew|holly-brake|holly-hedge|holly-maze|hornbeam-row|hunters-stand|keepers-approach|last-oaks|leaning-wood|lichen-wood|lightning-split|lime-kiln|listening-stand|mast-fall|nettle-glade|north-turning|old-burn|old-coppice|orchard-gone-wild|outer-scrub|park-pale|pine-dark|poachers-camp|pollard-row|same-tree|south-turning|stone-pile|sunken-ditch|swallowing|thin-birches|thin-soil|timber-stack|turned-ground|turning|turning-leaves|white-ground|wind-shorn-edge|windfall|yew-walk)$/],
+  // everything else in the wood is the wood
+  ["wood", /^/],
+];
 export const TERRAIN_RULES: [string, RegExp][] = [
   // WORD BOUNDARIES ARE NOT OPTIONAL HERE. Without them "race" caught every
   // TERRACE on the hill and called twenty-five flat rock shelves a mountain
@@ -6644,6 +6672,16 @@ export const TERRAIN_RULES: [string, RegExp][] = [
 // status frame beside the terrain, never instead of it, so a client with no
 // picture for the id goes on painting exactly what it painted before.
 export const ART_ROOMS = new Set<string>([
+  // ---- THE WOOD'S ROOMS OF THEIR OWN (2026-09-29). The black door in its wall
+  // of fused trees and the glade it opens on; the two bosses' rooms; the bounds
+  // house, which is the only roof in the wood; and the wolf earth under its root
+  // plate. Everything else in the wood stands on one of its seven grounds.
+  "the-birdless-acre",  // the moon door
+  "the-moon-glade",     // what is behind it
+  "the-heart-of-it",    // the Woodward
+  "the-hall-floor",     // the Keeper of the Holding
+  "the-bounds-house",
+  "the-wolf-earth",
   "the-last-shelter",   // a hole under a fallen block, with a slot of sky east
   "the-summit-gate",    // a gap in a rock wall with light coming through it
   "the-summit",         // the bowl, the ring of run stone, and the whole sky

@@ -19,7 +19,7 @@ import {
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
-  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES,} from "./zone-data";
+  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS,} from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
 // resting, banking, chatting, or reading the walls while something swings
@@ -137,8 +137,20 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // it until the world lets go of it. Three at most — a battlefield should read
   // as a battlefield, not fill the row.
   const dead: string[] = [];
+  // THE ONES THAT COME BACK ARE NOT NORMAL BODIES (rome, 2026-09-29). The hound
+  // and every boss are one of a kind, each in its own room, and when one is put
+  // down it is back in that room before long - so every kill left another body
+  // on the same spot, and the living one stood on a heap of itself. Their body
+  // lies there only while the room is empty of them, and only one of it.
+  const holds = (id: string) => SENTINELS.has(id) || !!world.mobTemplates.get(id)?.is_boss;
+  const posted = z.creaturesInRoom(session.roomId).some((c) => holds(c.templateId));
+  let heldBody = false;
   for (const tr of z.traces.get(session.roomId) ?? []) {
     if (dead.length >= 3 || !tr.id || !CORPSE_TRACES.has(tr.kind)) continue;
+    if (holds(tr.id)) {
+      if (posted || heldBody) continue;
+      heldBody = true;
+    }
     dead.push(tr.id);
   }
   for (const creature of z.creaturesInRoom(session.roomId)) {

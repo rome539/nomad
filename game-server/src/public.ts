@@ -7352,10 +7352,10 @@ var thrKnown = localStorage.getItem("nomad_name");
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
 var MOB_V  = "51";      // /mob/      strips and their eye layers
-var BG_V   = "39";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "40";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "7";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "8";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -7467,6 +7467,11 @@ var TERRAIN_PLATE = {
   reed: ["reed"], eyot: ["eyot"], "shore-road": ["shore-road"],
   works: ["works"],
   "sea-cave": ["sea-cave"],
+  // THE WOOD (2026-09-29). Named here AND in TERRAIN_SCENES, and the band is
+  // switched on in BANDS_WITH_PLATES - the three places the road's art once
+  // shipped and reached nobody because one of them was missed.
+  wood: ["wood"], glade: ["glade"], wet: ["wet"], sunken: ["sunken"],
+  heath: ["heath"], holding: ["holding"], "under-roots": ["under-roots"],
 };
 // THE GATEHOUSE KEEPS THE YEAR (rome, 2026-09-27). Four dressings of the same
 // room, painted over the same picture, each hung for a stretch of the real
@@ -7532,7 +7537,7 @@ var TERRAIN_NEAR = {
 // ...and on the road it is the road. ROAD_RULES ends in a catch-all so no road
 // room reaches this by having no terrain; it is here for the other caller, a
 // road gate whose plate has not been cut yet.
-var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-kept-road" };
+var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-kept-road", wood: "wood" };
 // WHICH BANDS OWN PICTURES AT ALL. Add a band here only once plates exist for
 // it — this is the one line that stops a region wearing another region's face.
 // AND THE CROSSING JOINS IT (2026-09-12). This one line is what the region's
@@ -7550,7 +7555,8 @@ var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-ke
 // reached nobody: terrain resolves to "" for any band not named here, so every
 // room on the road asked for no picture at all and got none. The art was live
 // on the edge for a ship and invisible in the game.
-var BANDS_WITH_PLATES = { mountain: 1, crossing: 1, road: 1 };
+// AND THE WOOD JOINS IT (2026-09-29), in the same ship as its plates.
+var BANDS_WITH_PLATES = { mountain: 1, crossing: 1, road: 1, wood: 1 };
 // THE FOURTEEN DOORS. A gate is the one room in its region that is not its
 // region: a specific built thing, with a keeper's shuttered hatch in the wall of
 // it, standing on whatever ground happens to be there. No terrain rule can see
@@ -7640,6 +7646,18 @@ var ROOM_PLATE = {
   // door buried at the foot of it - out under the whole sky, so it takes the
   // full six where the two interiors above take two.
   "the-deep-mark":    "day night night-torch fog rain snow",
+  // ---- THE WOOD'S ROOMS OF THEIR OWN (2026-09-29). The moon door, standing in a
+  // wall of trees grown into one another with no way round it; the glade behind
+  // it; the Woodward's Heart of It, which is the same wood gone subtly wrong; the
+  // Keeper's Hall Floor. All four are outdoors and take the full six.
+  "the-birdless-acre": "day night night-torch fog rain snow",
+  "the-moon-glade":    "day night night-torch fog rain snow",
+  "the-heart-of-it":   "day night night-torch fog rain snow",
+  "the-hall-floor":    "day night night-torch fog rain snow",
+  // ...and two with a roof over them - the counting house and the den under the
+  // root plate - which take three, and are SHELTERED below.
+  "the-bounds-house":  "day night night-torch",
+  "the-wolf-earth":    "day night night-torch",
   // ---- THE FORTRESS, 108 ROOMS ON 31 PLATES (2026-09-23). The Door is the
   // oldest region in the game and the last with no picture of itself. Its four
   // doors already had gate plates; everything behind them was painted as a kind
@@ -7994,6 +8012,9 @@ var PLATE_OF = {
 // outside. The sky layer is still drawn — that is the whole point of the slot.
 var SHELTERED = {
   "the-last-shelter": 1,
+  // The wood's two roofs (2026-09-29).
+  "the-bounds-house": 1,
+  "the-wolf-earth": 1,
   // ---- THE FORTRESS UNDERGROUND (2026-09-23). Not a roof with a slot in it
   // like the shelter above - no opening at all, and a great deal of stone. The
   // hour cannot reach these rooms, so they must take no hour correction: a
@@ -8245,6 +8266,17 @@ var TERRAIN_SCENES = {
   // and night-torch is the cave with one, and every other hour resolves to the
   // first of those - which is why the fallback above had to stop saying "day".
   "sea-cave":     "night night-torch",
+  // THE WOOD, SEVEN GROUNDS (2026-09-29). Six are out under the trees and take
+  // the full six. The seventh is underneath all of them - the dark under the
+  // root-ceiling at the bottom of the sunken wood - and like the sea cave it has
+  // no sky and no weather, so night is the dark and night-torch is your light.
+  wood:          "day night night-torch fog rain snow",
+  glade:         "day night night-torch fog rain snow",
+  wet:           "day night night-torch fog rain snow",
+  sunken:        "day night night-torch fog rain snow",
+  heath:         "day night night-torch fog rain snow",
+  holding:       "day night night-torch fog rain snow",
+  "under-roots": "night night-torch",
 };
 // AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
 // top of one, and the layer is what this replaces (rome, 2026-09-11).
