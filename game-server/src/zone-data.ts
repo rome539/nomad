@@ -6606,6 +6606,23 @@ export const WOOD_RULES: [string, RegExp][] = [
   // everything else in the wood is the wood
   ["wood", /^/],
 ];
+// THE DENS OWN THEIR GROUND (rome, 2026-09-30). Sixty rooms, the smallest region,
+// on three grounds of their own and one borrowed: the street (the hamlet plate,
+// "the-dens"), the fields, the common, and the wood's heath for the warren end,
+// which is the same country. Every room is named outright, as the wood's are. The
+// ten roofed rooms are ART_ROOMS with pictures of their own. The catch-all is the
+// street, the heart of the place.
+export const DEN_RULES: [string, RegExp][] = [
+  // the gorse and rabbit-warren end - the same country as the wood's heath, and it borrows that picture
+  ["heath", /^the-(broom-scrub|gorse-common|pillow-mounds|warren-bank)$/],
+  // the hamlet's farmland: assart, pasture, furlongs, hedges and sunk lanes
+  ["fields", /^the-(common-field|cow-pasture|dead-orchard|drift-lane|far-furlong|headland-baulk|hurdle-gate|old-assart|ridge-and-furrow|sunken-way|thorn-hedge|village-pound)$/],
+  // the wet waste south of the hamlet, with the squatters' row and the working yards
+  ["common", /^the-(bark-heap|drying-green|empty-toft|far-waste|fever-graves|hearth-stones|hurdle-yard|kiln-track|lodge-yard|marl-pit|marl-water|mill-dam|peelers-camp|scrub-end|shallow-well|squatters-row|thorn-corner|turf-cutting|waste-edge|withy-rows)$/],
+  // the street, and every yard, green and croft along it
+  ["the-dens", /^the-(burnt-croft|cart-turn|chapel-green|croft-backs|lane-head|mill-lane|north-croft|reeves-yard|smithy-yard|street|street-cross|street-foot|street-head|well-green)$/],
+  ["the-dens", /^/],
+];
 export const TERRAIN_RULES: [string, RegExp][] = [
   // WORD BOUNDARIES ARE NOT OPTIONAL HERE. Without them "race" caught every
   // TERRACE on the hill and called twenty-five flat rock shelves a mountain
@@ -6672,6 +6689,11 @@ export const TERRAIN_RULES: [string, RegExp][] = [
 // status frame beside the terrain, never instead of it, so a client with no
 // picture for the id goes on painting exactly what it painted before.
 export const ART_ROOMS = new Set<string>([
+  // ---- THE DENS' ROOFED ROOMS (2026-09-30). Indoors is the cheap part - three
+  // pictures each - so every roof in the hamlet and on the common has its own.
+  "the-smithy", "the-bare-chapel", "the-mill", "the-wheel-pit",
+  "the-reeves-house", "the-reeves-loft", "the-north-house",
+  "the-black-hut", "the-warreners-lodge", "the-lodge-loft",
   // ---- THE WOOD'S ROOMS OF THEIR OWN (2026-09-29). The black door in its wall
   // of fused trees and the glade it opens on; the two bosses' rooms; the bounds
   // house, which is the only roof in the wood; and the wolf earth under its root

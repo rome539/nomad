@@ -7352,10 +7352,10 @@ var thrKnown = localStorage.getItem("nomad_name");
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
 var MOB_V  = "51";      // /mob/      strips and their eye layers
-var BG_V   = "40";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "42";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "8";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "10";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -7472,6 +7472,9 @@ var TERRAIN_PLATE = {
   // shipped and reached nobody because one of them was missed.
   wood: ["wood"], glade: ["glade"], wet: ["wet"], sunken: ["sunken"],
   heath: ["heath"], holding: ["holding"], "under-roots": ["under-roots"],
+  // THE DENS (2026-09-30). Their warren end stands on "heath" above - the
+  // wood's picture, the same country.
+  "the-dens": ["the-dens"], fields: ["fields"], common: ["common"],
 };
 // THE GATEHOUSE KEEPS THE YEAR (rome, 2026-09-27). Four dressings of the same
 // room, painted over the same picture, each hung for a stretch of the real
@@ -7537,7 +7540,7 @@ var TERRAIN_NEAR = {
 // ...and on the road it is the road. ROAD_RULES ends in a catch-all so no road
 // room reaches this by having no terrain; it is here for the other caller, a
 // road gate whose plate has not been cut yet.
-var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-kept-road", wood: "wood" };
+var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-kept-road", wood: "wood", den: "the-dens" };
 // WHICH BANDS OWN PICTURES AT ALL. Add a band here only once plates exist for
 // it — this is the one line that stops a region wearing another region's face.
 // AND THE CROSSING JOINS IT (2026-09-12). This one line is what the region's
@@ -7556,7 +7559,8 @@ var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-ke
 // room on the road asked for no picture at all and got none. The art was live
 // on the edge for a ship and invisible in the game.
 // AND THE WOOD JOINS IT (2026-09-29), in the same ship as its plates.
-var BANDS_WITH_PLATES = { mountain: 1, crossing: 1, road: 1, wood: 1 };
+// ...AND THE DENS (2026-09-30), in the same ship as theirs.
+var BANDS_WITH_PLATES = { mountain: 1, crossing: 1, road: 1, wood: 1, den: 1 };
 // THE FOURTEEN DOORS. A gate is the one room in its region that is not its
 // region: a specific built thing, with a keeper's shuttered hatch in the wall of
 // it, standing on whatever ground happens to be there. No terrain rule can see
@@ -7658,6 +7662,20 @@ var ROOM_PLATE = {
   // root plate - which take three, and are SHELTERED below.
   "the-bounds-house":  "day night night-torch",
   "the-wolf-earth":    "day night night-torch",
+  // ---- THE DENS' ROOFED ROOMS (2026-09-30), three pictures each and all
+  // SHELTERED. The smithy's wind-eye and the lodge loft's slit window are keyed,
+  // so the real sky shows through them; the wheel pit's gaps in the mill floor
+  // above were painted over with dim light, because there is no sky under a mill.
+  "the-smithy":            "day night night-torch",
+  "the-bare-chapel":       "day night night-torch",
+  "the-mill":              "day night night-torch",
+  "the-wheel-pit":         "day night night-torch",
+  "the-reeves-house":      "day night night-torch",
+  "the-reeves-loft":       "day night night-torch",
+  "the-north-house":       "day night night-torch",
+  "the-black-hut":         "day night night-torch",
+  "the-warreners-lodge":   "day night night-torch",
+  "the-lodge-loft":        "day night night-torch",
   // ---- THE FORTRESS, 108 ROOMS ON 31 PLATES (2026-09-23). The Door is the
   // oldest region in the game and the last with no picture of itself. Its four
   // doors already had gate plates; everything behind them was painted as a kind
@@ -8015,6 +8033,17 @@ var SHELTERED = {
   // The wood's two roofs (2026-09-29).
   "the-bounds-house": 1,
   "the-wolf-earth": 1,
+  // ...and the dens' ten (2026-09-30).
+  "the-smithy": 1,
+  "the-bare-chapel": 1,
+  "the-mill": 1,
+  "the-wheel-pit": 1,
+  "the-reeves-house": 1,
+  "the-reeves-loft": 1,
+  "the-north-house": 1,
+  "the-black-hut": 1,
+  "the-warreners-lodge": 1,
+  "the-lodge-loft": 1,
   // ---- THE FORTRESS UNDERGROUND (2026-09-23). Not a roof with a slot in it
   // like the shelter above - no opening at all, and a great deal of stone. The
   // hour cannot reach these rooms, so they must take no hour correction: a
@@ -8277,6 +8306,10 @@ var TERRAIN_SCENES = {
   heath:         "day night night-torch fog rain snow",
   holding:       "day night night-torch fog rain snow",
   "under-roots": "night night-torch",
+  // THE DENS (2026-09-30): the hamlet's street, its fields and the common.
+  "the-dens":    "day night night-torch fog rain snow",
+  fields:        "day night night-torch fog rain snow",
+  common:        "day night night-torch fog rain snow",
 };
 // AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
 // top of one, and the layer is what this replaces (rome, 2026-09-11).
@@ -8567,6 +8600,12 @@ var MOB_LINE = {
   // thing DOWN toward that line and the error stopped hiding in the gap.
  "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the-kept-room": 65,
                  boulder: 64, glass: 70, snow: 64, "the-rib-cage": 66,
+                 // THE HOLDING (rome, 2026-09-29: the creatures looked huge against
+                 // it). The ruined walls stand close round the courtyard, so a
+                 // creature on the default line stood out among them at full size
+                 // and dwarfed the stone. Brought forward to the near paving, the
+                 // same fix the boulder field has.
+                 holding: 64,
                  // THE ALDER IS A BANK WITH WATER BEHIND IT (rome, 2026-09-09:
                  // the animals sit too high in it). Its near ground starts around
                  // 70% and the mire lies behind that, so at the default 55 only

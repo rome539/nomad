@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES } from "./zone-data";
+import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES, DEN_RULES } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -102,7 +102,8 @@ export function terrainOf(roomId: string, desc?: string, region?: string): strin
   // ...AND THE WOOD (2026-09-29), whose table names every room it owns.
   const rules = region === "crossing" ? CROSSING_RULES
     : region === "road" ? ROAD_RULES
-    : region === "wood" ? WOOD_RULES : TERRAIN_RULES;
+    : region === "wood" ? WOOD_RULES
+    : region === "den" ? DEN_RULES : TERRAIN_RULES;
   // THE NAME FIRST, BECAUSE A NAME IS A CLAIM. "The Warm Scree" says scree.
   for (const [name, re] of rules) if (re.test(roomId)) return name;
   // ...AND THEN WHAT THE ROOM ACTUALLY SAYS ABOUT ITSELF, because most names
