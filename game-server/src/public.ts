@@ -7352,10 +7352,10 @@ var thrKnown = localStorage.getItem("nomad_name");
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
 var MOB_V  = "51";      // /mob/      strips and their eye layers
-var BG_V   = "42";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "10";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "11";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -7708,6 +7708,36 @@ var ROOM_PLATE = {
   "the-bell-cote":          "day night night-torch fog rain snow",
   "the-leaning-spire":      "day night night-torch fog rain snow",
   "the-weepers-crown":      "day night night-torch fog rain snow",
+  // ---- THE OPEN GROUND'S SPURS (2026-09-30).
+  "the-siege-bank":         "day night night-torch fog rain snow",
+  "the-spoil-heap":         "day night night-torch fog rain snow",
+  "the-battery":            "day night night-torch fog rain snow",
+  "the-shot-pile":          "day night night-torch fog rain snow",
+  "the-forge-pit":          "day night night-torch fog rain snow",
+  "the-camp-ground":        "day night night-torch fog rain snow",
+  "the-suttlers-row":       "day night night-torch fog rain snow",
+  "the-horse-lines":        "day night night-torch fog rain snow",
+  "the-marshals-lodging":   "day night night-torch fog rain snow",
+  "the-sap-head":           "day night night-torch fog rain snow",
+  "the-mine-mouth":         "day night night-torch fog rain snow",
+  "the-village-street":     "day night night-torch fog rain snow",
+  "the-pound":              "day night night-torch fog rain snow",
+  "the-tithe-barn":         "day night night-torch fog rain snow",
+  "the-well-head":          "day night night-torch fog rain snow",
+  "the-church-shell":       "day night night-torch fog rain snow",
+  "the-churchyard":         "day night night-torch fog rain snow",
+  "the-bell-pit":           "day night night-torch fog rain snow",
+  "the-green":              "day night night-torch fog rain snow",
+  "the-village-smithy":     "day night night-torch fog rain snow",
+  "the-fish-stew":          "day night night-torch fog rain snow",
+  "the-orchard-rows":       "day night night-torch fog rain snow",
+  "the-cider-house":        "day night night-torch fog rain snow",
+  "the-gibbet-field":       "day night night-torch fog rain snow",
+  "the-crossroads-grave":   "day night night-torch fog rain snow",
+  "the-mine-gallery":       "day night night-torch",
+  "the-camouflet":          "day night night-torch",
+  "the-culver-house":       "day night night-torch",
+  "the-charnel":            "day night night-torch",
   "stair":                  "night",
   "crypt-steps":            "night",
   "weeper-hall":            "night",
@@ -7882,6 +7912,36 @@ var PLATE_OF = {
   "the-bell-cote":          "fort-overworks",
   "the-leaning-spire":      "fort-overworks",
   "the-weepers-crown":      "fort-overworks",
+  // ---- THE OPEN GROUND'S SPURS (2026-09-30). The siege lines are one new
+  // ground; the village is the rest of the burned village and takes its plate;
+  // the orchard's dry end and the gallows ground take the ring's waste, which
+  // already has the gibbet on its hill. The camouflet is the mine's far end.
+  "the-siege-bank":         "siege-lines",
+  "the-spoil-heap":         "siege-lines",
+  "the-battery":            "siege-lines",
+  "the-shot-pile":          "siege-lines",
+  "the-forge-pit":          "siege-lines",
+  "the-camp-ground":        "siege-lines",
+  "the-suttlers-row":       "siege-lines",
+  "the-horse-lines":        "siege-lines",
+  "the-marshals-lodging":   "siege-lines",
+  "the-sap-head":           "siege-lines",
+  "the-mine-mouth":         "siege-lines",
+  "the-village-street":     "the-burned-village",
+  "the-pound":              "the-burned-village",
+  "the-tithe-barn":         "the-burned-village",
+  "the-well-head":          "the-burned-village",
+  "the-church-shell":       "the-burned-village",
+  "the-churchyard":         "the-burned-village",
+  "the-bell-pit":           "the-burned-village",
+  "the-green":              "the-burned-village",
+  "the-village-smithy":     "the-burned-village",
+  "the-fish-stew":          "fort-waste",
+  "the-orchard-rows":       "fort-waste",
+  "the-cider-house":        "fort-waste",
+  "the-gibbet-field":       "fort-waste",
+  "the-crossroads-grave":   "fort-waste",
+  "the-camouflet":          "the-mine-gallery",
   "stair":                  "keep-passage",
   "crypt-steps":            "keep-passage",
   "weeper-hall":            "keep-passage",
@@ -8044,6 +8104,12 @@ var SHELTERED = {
   "the-black-hut": 1,
   "the-warreners-lodge": 1,
   "the-lodge-loft": 1,
+  // ...and the open ground's four roofs (2026-09-30): the mine, where the two
+  // galleries met, the dovecote and the bone shed.
+  "the-mine-gallery": 1,
+  "the-camouflet": 1,
+  "the-culver-house": 1,
+  "the-charnel": 1,
   // ---- THE FORTRESS UNDERGROUND (2026-09-23). Not a roof with a slot in it
   // like the shelter above - no opening at all, and a great deal of stone. The
   // hour cannot reach these rooms, so they must take no hour correction: a
@@ -10680,7 +10746,12 @@ var WINGBEAT_HZ_FAST = 8;   // ...except the ptarmigan, which whirrs
 var SWAY = 0.11;            // body sway while travelling, as a fraction of width
 var HOP = 0.16;             // how far a hare or the dancer leaves the ground, of its height
 var BOB = 0.024;            // and how much everything else nods as it walks
-var LIFT = 0.9;             // a flying bird rises about its own height
+var LIFT = 0.9;             // a flying drake rises about its own height
+// A BIRD CLIMBS TO THE SAME HEIGHT WHATEVER ITS SIZE (rome, 2026-09-30). Counted
+// in its own height, a ptarmigan or a chough barely cleared the grass while a
+// vulture went to the top of the picture. So a bird rises a share of the FRAME:
+// the 38% a vulture already climbed, which is as high as the frame allows.
+var BIRD_RISE = 38;
 var AIR_SHRINK = 0.25;      // and shrinks, because it is further away
 var BREATH = 0.003;         // the resting scale pulse: three parts in a thousand
 var TRAVEL_MS = 2600;       // how long a creature walks once it starts
@@ -11059,6 +11130,8 @@ function mobActs(f) {
   return acts;
 }
 function poseAt(a, now) {
+  var lift = (a.id === "the-drake" || a.id === "the-pale-drake" || !MOB_SPRITE[a.id]) ? LIFT
+    : Math.max(LIFT, BIRD_RISE / mobVh(a.id));
   var f = a.spec.f, t = a.t, x = 0, air = 0, s = 1, name = "idle";
   // WHICH OF ITS CALM POSES THIS TIME. Kept inside poseAt on purpose: the
   // driver test and the preview builder both lift this function whole by
@@ -11175,7 +11248,7 @@ function poseAt(a, now) {
          : f["move-a"] !== undefined ? (Math.floor(t * GAIT_HZ * 1.6) % 2 ? "move-a" : "move-b")
          : f.up !== undefined ? (Math.floor(t * WINGBEAT_HZ_FAST) % 2 ? "up" : "down") : "idle";
     x = -SWAY * Math.min(1, t / 1.2) * 1.5;
-    if (f.up !== undefined) air = LIFT * Math.min(1, t / 1.2);
+    if (f.up !== undefined) air = lift * Math.min(1, t / 1.2);
     s *= 1 - 0.08 * Math.min(1, t / 1.5);
   } else if (a.state === "reel") {
     // Rung, and not over it: the hit shudder, held rather than decaying out.
@@ -11224,27 +11297,27 @@ function poseAt(a, now) {
       // question, answered below.
       if (f.takeoff !== undefined && uf < 0.13) {
         name = "takeoff";
-        air = LIFT * (uf / 0.32);
+        air = lift * (uf / 0.32);
       } else if (f.glide === undefined || f.landing === undefined) {
-        name = beat; air = LIFT + Math.sin(t * 3) * 0.04;      // no arc drawn: just fly
+        name = beat; air = lift + Math.sin(t * 3) * 0.04;      // no arc drawn: just fly
       } else if (uf < 0.32) {
         name = beat;
-        air = LIFT * (uf / 0.32);
+        air = lift * (uf / 0.32);
       } else if (uf < (f.dive !== undefined ? 0.60 : 0.72)) {
-        name = "glide"; air = LIFT; x = Math.sin(t * 1.2) * SWAY * 0.6;
+        name = "glide"; air = lift; x = Math.sin(t * 1.2) * SWAY * 0.6;
       } else if (f.dive !== undefined && uf < 0.84) {
         // AND IT DOES NOT DRIFT DOWN. A thing that hunts from the air comes off
         // the glide in a stoop — wings back, head down, and fast — and puts them
         // out to land only at the end of it. Two frames the drakes carried and
         // never used, and between them they turn a flat circuit into a flight.
         name = "dive";
-        air = LIFT * (1 - (uf - 0.60) / 0.24 * 0.72);
+        air = lift * (1 - (uf - 0.60) / 0.24 * 0.72);
         x = Math.sin(t * 1.2) * SWAY * 0.22;
         s *= 1 - (uf - 0.60) / 0.24 * 0.05;
       } else {
         var d0 = f.dive !== undefined ? 0.84 : 0.72;
         name = "landing";
-        air = LIFT * (1 - (uf - d0) / (1 - d0)) * (f.dive !== undefined ? 0.28 : 1);
+        air = lift * (1 - (uf - d0) / (1 - d0)) * (f.dive !== undefined ? 0.28 : 1);
       }
     } else {
       // No gait and no wings. The rooted ones - the brooding vulture on its nest,
@@ -11272,7 +11345,7 @@ function poseAt(a, now) {
   }
   if (a.phase !== "hit") a.rot = 0;
   if (f[name] === undefined) name = "idle";
-  s *= 1 - AIR_SHRINK * Math.min(1, air / LIFT);
+  s *= 1 - AIR_SHRINK * Math.min(1, air / lift);
   return { k: f[name], x: x, air: air, s: s };
 }
 function runAnims() {
