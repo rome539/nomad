@@ -67,6 +67,7 @@ export interface Session {
   pvpTarget?: string | null; // pubkey of the wanderer this one has steel out against (transient — a deploy ends the exchange, never the grudge)
   linkdeadUntil?: number; // ms epoch a mid-fight disconnect holds the body in the world until; unset = normally connected (or normally gone)
   hobbled?: boolean; // a leg wound: you can still flee, but only after limping clear (a set delay), cured by rest
+  miredUntil?: number; // ms epoch the quicksand lets go of your leg (QUICKSAND_ROOMS); until then you cannot walk out
   limpingSince?: number; // ms epoch you started dragging your bad leg toward the exit; flee lands once HOBBLE_FLEE_MS passes
   markedUntil?: number; // MARKERS (the toll clerk): the road knows your face — earshot heeds you harder while this holds; scrubbed at a gate
   buying?: { wants: { itemId: string; cost: number }[]; paid: number; escrow: { row: string; from: string }[]; settling?: boolean }; // open cart at the keeper's hatch: wants = every thing named (duplicates allowed), paid against their summed cost; escrow = rows laid on the counter and where they live ('' pack | lockbox | vault) — nothing moves until he's square, then it all changes hands at once. settling = a settlement is mid-flight (the double-settle guard, 2026-08-20)

@@ -10760,10 +10760,9 @@ var AIR_SHRINK = 0.25;      // and shrinks, because it is further away
 var BREATH = 0.003;         // the resting scale pulse: three parts in a thousand
 var TRAVEL_MS = 2600;       // how long a creature walks once it starts
 var ROOTED = { "the-milker": 1, "the-butter-wife": 1 };   // they work in place
-// ...and one thing in the world is not drawn at all. See the note in paintMobs:
-// a creature whose entire design is that you cannot see it cannot be given a
-// picture without being ruined by it.
-var UNSEEN = { "the-quicksand": 1 };
+// ...and a creature that must never be drawn goes here. See the note in
+// paintMobs. Empty since the quicksand stopped being a creature (2026-09-30).
+var UNSEEN = {};
 // WHICH CREATURES SHIP A SECOND STRIP OF EYES. Every one is HOLLOW - the game's
 // own register of things with nothing inside - and every one was drawn with its
 // eyes in a flat key colour so the cutter could split them into their own layer.
@@ -10888,6 +10887,9 @@ function paintMobs(ids, doing, dead) {
     // So it paints nothing, and everything else about it is untouched - it is in
     // the room, in the chips, in the wire's state list, and it fights. The slot
     // is skipped rather than blanked so it does not take a gap in the row.
+    //
+    // (2026-09-30: the quicksand has since left the roster altogether - the flat
+    // itself takes your leg now - so UNSEEN is empty. The rule stays.)
     if (UNSEEN[id]) continue;
     var slot = order[k].idx, vh = mobVh(id), h = boxPct(vh);
     // NOTHING PUTS ITS FEET THROUGH THE PROSE (rome, 2026-09-08: the drake might
@@ -11134,7 +11136,9 @@ function mobActs(f) {
   return acts;
 }
 function poseAt(a, now) {
-  var lift = (a.id === "the-drake" || a.id === "the-pale-drake" || !MOB_SPRITE[a.id]) ? LIFT
+  // typeof-guarded: the strip audit lifts poseAt without the size table.
+  var lift = (a.id === "the-drake" || a.id === "the-pale-drake"
+    || typeof MOB_SPRITE === "undefined" || !MOB_SPRITE[a.id]) ? LIFT
     : Math.max(LIFT, BIRD_RISE / mobVh(a.id));
   var f = a.spec.f, t = a.t, x = 0, air = 0, s = 1, name = "idle";
   // WHICH OF ITS CALM POSES THIS TIME. Kept inside poseAt on purpose: the

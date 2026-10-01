@@ -17,6 +17,7 @@ import * as den from "./den";
 import { foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand } from "./zone-util";
 import { setItemAcquiredAt } from "./world";
 import {
+  QUICKSAND_ROOMS, QUICKSAND_GRIP_ODDS, HOBBLE_FLEE_MS,
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
   ROLL_EVERY_MIN_MS, ROLL_EVERY_MAX_MS, ROLL_FIRST_MIN_MS, ROLL_FIRST_MAX_MS,
   ROLL_GRACE_MS, ROLL_MISSED_MIN_MS, ROLL_MISSED_MAX_MS,
@@ -1141,6 +1142,31 @@ export function rainSoaksTorch(z: ZoneDO, session: Session): void {
 // sky hears where you moved (verbs.cmdGo hooks this on arrival). Throttled so
 // a sprint reads as one cry, not a siren.
 const crowSeen = new Map<string, number>();
+// THE QUICKSAND FLAT TAKES YOUR LEG (2026-09-30). The ground itself, not a
+// creature on it: walk onto the flat and the sand may have you to the knee.
+// Hobbled, and held for one round where you stand; after that you can haul
+// clear, and the bad leg goes with you until you rest. Nothing here to fight.
+export function quicksandTakes(z: ZoneDO, session: Session): void {
+  if (!QUICKSAND_ROOMS.has(session.roomId) || !chance(QUICKSAND_GRIP_ODDS)) return;
+  session.miredUntil = Date.now() + HOBBLE_FLEE_MS;
+  session.hobbled = true;
+  session.limpingSince = undefined;
+  z.send(session, "The ground goes out from under one foot and closes over it — the sand has your leg to the knee, and it does not mean to give it back.", "dmgin");
+  z.sendStatus(session); // light the 'hobbled' pill the instant the leg goes
+  z.roomFeed(session.roomId, `${session.name} sinks to the knee in the flat.`, session.pubkey, false);
+}
+// ...and while it has you, you are not walking anywhere. True = the step was
+// refused and the player was told.
+export function quicksandHolds(z: ZoneDO, session: Session): boolean {
+  if (!session.miredUntil) return false;
+  if (session.miredUntil <= Date.now() || !QUICKSAND_ROOMS.has(session.roomId)) {
+    session.miredUntil = undefined;
+    return false;
+  }
+  z.send(session, "You haul at your leg. The sand gives a little, and takes it back.", "dmgin");
+  return true;
+}
+
 export function crowsMark(z: ZoneDO, session: Session): void {
   if (phaseOf(z, "crows") !== "active" || !OUTDOOR_ROOMS.has(session.roomId)) return;
   const now = Date.now();

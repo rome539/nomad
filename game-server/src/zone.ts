@@ -3452,14 +3452,6 @@ export class ZoneDO implements DurableObject {
     }
     victim.hobbled = true;
     victim.limpingSince = undefined; // a fresh wound — the drag-clear clock starts on your next flee
-    // The quicksand holds by WEIGHT, not by tooth: the ground has your leg to
-    // the knee and does not mean to let it go. Same affliction, its own tell.
-    if (tmpl.id === "the-quicksand") {
-      this.send(victim, `The ground has your leg — it grips you to the knee and you have to haul clear of it. (rest to dry off, or run for it)`, "dmgin");
-      this.sendStatus(victim); // light the 'hobbled' HUD pill the instant the leg goes — same fix as stun/rest
-      this.actorFeed(victim, victim.roomId, this.feedProc(FEED_HOBBLE, tmpl.name, victim.name), "hobble");
-      return;
-    }
     this.send(victim, `${cap(tmpl.name)} rakes your leg out from under you — it won't carry you clean now. (rest to mend it)`, "dmgin");
     this.sendStatus(victim); // light the 'hobbled' HUD pill the instant the leg goes — same fix as stun/rest
     this.actorFeed(victim, victim.roomId, this.feedProc(FEED_HOBBLE, tmpl.name, victim.name), "hobble");

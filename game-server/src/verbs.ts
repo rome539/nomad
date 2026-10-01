@@ -977,6 +977,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const world = z.world!;
   const exit = (world.exits.get(session.roomId) ?? []).find((e) => e.dir === dir);
   if (!exit) return z.send(session, "There is no way " + dir + " from here.");
+  // The quicksand has your leg: no step anywhere until it lets go.
+  if (events.quicksandHolds(z, session)) return;
 
   // THE TIDE SHUTS THE LOW ROAD. The salting way into the mountain crosses
   // ground the sea still visits, and unlike the causeway there is no stone road
@@ -1393,6 +1395,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   events.tideSoaksTorch(z, session);
   // And while the crows hold the sky, every open-ground move is called out.
   events.crowsMark(z, session);
+  // And the quicksand flat may take a leg as you step onto it.
+  events.quicksandTakes(z, session);
   // The load can't move silent: worn plate clanks, loose pack-iron knocks, and
   // the odds it carries to the next rooms — and rouses everything with ears where
   // you land — SCALE with the load (rome, 2026-07-19). Cloth is dead quiet and

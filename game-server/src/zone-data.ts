@@ -1574,7 +1574,6 @@ export const STILL_SOUNDS: Record<string, string> = {
   "the-herd": "a man breathing through his nose, unhurried, from the place a man stands to watch a hillside",
   "the-milker": "two hands working at something, wet once and then not wet again",
   "a-fold-dog": "panting, close to the ground, and the small sound of a tail going",
-  "the-quicksand": "nothing at all, from a piece of ground exactly like every other piece of ground",
   "conger": "water sucking in and out of a hole in stone at a rate that is not the sea's",
   "old-conger": "water going in and out of a hole in the stone, slowly, and far too much of it",
   "grey-seal": "snoring, enormous, from something you would rather had not noticed you",
@@ -1959,8 +1958,7 @@ export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-surf
   // something that already passed, and the miller stands waist-deep in his own
   // ground floor. Every one is a drowned MAN. Left out they kept banking hunger
   // to the cap with no mouth to spend it — the same bug, four rooms over.
-  // (the-quicksand and the conger stay out on purpose: one is a place, the
-  // other is a living eel that eats.)
+  // (the conger stays out on purpose: it is a living eel that eats.)
   "the-drowned-ferryman", "the-pilot", "the-scaffold-hand", "the-refuge-man", "the-miller"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
 // THE WOOD'S OWN (rome, 2026-09-27): the woodward and the charcoal burner are
 // things of timber and char, not men, and a blade that opens a wound in them
@@ -4523,7 +4521,6 @@ export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "
   "the-pilot",             // the far stage, reading a line that is not there
   "the-refuge-man",        // the causeway's one dry hole, and he is in it
   "the-scaffold-hand",     // under the broken arch, arms up, dressing nothing
-  "the-quicksand",         // not a creature so much as a place with an opinion
   "conger", "old-conger",                // a mouth on the end of an arm, and the arm is in the pier
 ]);
 export const SEIZE_ODDS = 0.2;        // soft: a blow only sometimes takes hold
@@ -7867,13 +7864,15 @@ export const HOBBLE_ODDS = new Map<string, number>([
   ["pale-crawler", 0.08],
   ["three-hound", 0.10], // the sentinel drags you down by the leg
   ["two-hound", 0.08],   // the runt goes low too, with less weight behind it
-  // THE QUICKSAND (mig 191). It already seizes like a drowned thing; the hobble
-  // is the SECOND half of "it has hold of you to the knee" — the ground has
-  // your leg even after you wrench free of its pull, so you limp clear exposed
-  // (HOBBLE_FLEE_MS), then you're out. The standing law's model affliction:
-  // a flee timer, never a dice-block.
-  ["the-quicksand", 0.35],
 ]);
+// THE QUICKSAND IS GROUND, NOT A CREATURE (rome, 2026-09-30, mig 293). It was a
+// mob with hit points that you could kill, journal and count, which is exactly
+// what a piece of ground is not. Now the flat itself does it: walk onto it and
+// the sand may take your leg - hobbled, and held where you stand for one round
+// before you can haul clear. Nothing to fight, nothing to kill. Same odds the
+// creature's leg-take had.
+export const QUICKSAND_ROOMS = new Set(["the-quicksand-flat"]);
+export const QUICKSAND_GRIP_ODDS = 0.35;
 export const HOBBLE_FLEE_MS = 4000; // ~1 combat round of limping before you break away
 // The VITALS LOTTERY — the Tarkov headshot (ROADMAP: lethality keystone). A rare,
 // random killing hit that ignores hp AND gear; armor over the vitals only buys the
