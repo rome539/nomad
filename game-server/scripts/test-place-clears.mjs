@@ -29,8 +29,8 @@ ok(!!m, "the status frame still has a place field ahead of sea");
 const expr = (m ? m[1] : "").replace(/\s+/g, " ").trim();
 console.log("        " + expr);
 
-ok(/ART_KEYS\.has\(session\.pubkey\)/.test(expr),
-   "it is still gated on the art keys");
+ok(/seesArt\(session\.pubkey\)/.test(expr),
+   "it is still gated on who sees art");
 ok(/ART_ROOMS\.has\(session\.roomId\)\s*\?\s*session\.roomId/.test(expr),
    "an art room still reports its own id");
 // The whole point: the non-art-room arm must be a real value, not undefined.

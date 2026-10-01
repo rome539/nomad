@@ -33,7 +33,7 @@ const ROOMS = {
 };
 function skyFor(id, { night = false, raining = false, inside = false } = {}) {
   const ctx = {
-    ART_KEYS: { has: () => true },
+    seesArt: () => true,
     OUTDOOR_ROOMS: { has: (r) => !!ROOMS[r]?.outdoor },
     OUTDOOR_REGIONS: { has: (r) => ["out", "road", "wood", "mountain", "den", "crossing"].includes(r) },
     events: {
@@ -49,10 +49,10 @@ function skyFor(id, { night = false, raining = false, inside = false } = {}) {
       artSkyFor: null,
     },
   };
-  const fn = new Function("ART_KEYS", "OUTDOOR_ROOMS", "OUTDOOR_REGIONS", "events",
+  const fn = new Function("seesArt", "OUTDOOR_ROOMS", "OUTDOOR_REGIONS", "events",
     "isNight", "isBloodMoon", "isFullMoon", "eclipsePhase", "isDusk", "isDawn", "session", "self",
     body.replace(/\bthis\b/g, "self").replace(/!\./g, ".")   /* the TS non-null assertion is not JS */);
-  return fn(ctx.ART_KEYS, ctx.OUTDOOR_ROOMS, ctx.OUTDOOR_REGIONS, ctx.events, ctx.isNight,
+  return fn(ctx.seesArt, ctx.OUTDOOR_ROOMS, ctx.OUTDOOR_REGIONS, ctx.events, ctx.isNight,
     ctx.isBloodMoon, ctx.isFullMoon, ctx.eclipsePhase, ctx.isDusk, ctx.isDawn, ctx.session, ctx.self);
 }
 

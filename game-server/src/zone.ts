@@ -116,7 +116,7 @@ import {
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  SPAWN_QUARTERS, DARK_ROOMS, ART_KEYS, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -4768,7 +4768,7 @@ export class ZoneDO implements DurableObject {
     // each of them needing to remember: the hour, dusk and dawn opening and
     // closing, the moon, an eclipse, weather arriving or lifting.
     for (const s of this.sessions.values()) {
-      if (!ART_KEYS.has(s.pubkey)) continue;
+      if (!seesArt(s.pubkey)) continue;
       if (this.artSkyFor(s) !== s.artSky) this.sendStatus(s);
     }
     mark("creatures");
@@ -6179,7 +6179,7 @@ export class ZoneDO implements DurableObject {
   // for the world: the pose goes out the same tick as the line that tells it.
   public fxPose(roomId: string, templateId: string, pose: string): void {
     for (const s of this.sessions.values()) {
-      if (s.roomId !== roomId || !ART_KEYS.has(s.pubkey) || this.outOfWorld(s)) continue;
+      if (s.roomId !== roomId || !seesArt(s.pubkey) || this.outOfWorld(s)) continue;
       try { s.ws.send(JSON.stringify({ v: 0, t: "beat", posed: [templateId], pose })); } catch {}
     }
   }
@@ -6189,13 +6189,13 @@ export class ZoneDO implements DurableObject {
   // prose the same tick, and the picture should not lag the line.
   private fxOne(roomId: string, templateId: string, kind: "died" | "fed" | "struck" | "grazed"): void {
     for (const s of this.sessions.values()) {
-      if (s.roomId !== roomId || !ART_KEYS.has(s.pubkey) || this.outOfWorld(s)) continue;
+      if (s.roomId !== roomId || !seesArt(s.pubkey) || this.outOfWorld(s)) continue;
       try { s.ws.send(JSON.stringify({ v: 0, t: "beat", [kind]: [templateId] })); } catch {}
     }
   }
 
   private noteFx(pubkey: string, kind: "swung" | "struck", templateId: string): void {
-    if (!ART_KEYS.has(pubkey)) return;   // nobody without pictures needs this
+    if (!seesArt(pubkey)) return;   // nobody without pictures needs this
     let e = this.combatFx.get(pubkey);
     if (!e) { e = { swung: [], struck: [] }; this.combatFx.set(pubkey, e); }
     if (e[kind].indexOf(templateId) < 0) e[kind].push(templateId);
@@ -8159,8 +8159,8 @@ export class ZoneDO implements DurableObject {
           // Shut unless this key is on the art list: no band, no terrain, no sky,
           // and no `art` flag to unlock the toggle with. The picture set is
           // half-built, and half-built is not a thing to show the world.
-          art: ART_KEYS.has(session.pubkey) ? 1 : undefined,
-          band: ART_KEYS.has(session.pubkey) ? lore.mapRegionOf(this, session.roomId) : undefined,
+          art: seesArt(session.pubkey) ? 1 : undefined,
+          band: seesArt(session.pubkey) ? lore.mapRegionOf(this, session.roomId) : undefined,
           // BEHIND A DOOR IS ITS OWN GROUND. The gatehouse is not the room whose
           // id the session still carries — you are out of the world, in a small
           // warm room with the hatch shut — so it names itself rather than being
@@ -8170,7 +8170,7 @@ export class ZoneDO implements DurableObject {
           // terrain rule could ever tell one from the hillside it stands on.
           // So a gate names itself by id and the client keeps the mapping; a
           // gate with no plate cut yet falls back to its terrain like any room.
-          terrain: !ART_KEYS.has(session.pubkey) ? undefined
+          terrain: !seesArt(session.pubkey) ? undefined
             : this.outOfWorld(session) ? "gatehouse"
             : this.world!.entryRooms.has(session.roomId) ? "gate:" + session.roomId
             : terrainOf(session.roomId, room?.description, lore.mapRegionOf(this, session.roomId)),
@@ -8191,7 +8191,7 @@ export class ZoneDO implements DurableObject {
           // always happen; it went unseen because the mountain's art rooms sit
           // in a cluster and mostly hand off to each other. The Deep Mark is the
           // first one standing on a route out into rooms that have no plate.
-          place: !ART_KEYS.has(session.pubkey) ? undefined
+          place: !seesArt(session.pubkey) ? undefined
             : ART_ROOMS.has(session.roomId) ? session.roomId : "",
           // AND HOW MUCH WATER IS OVER THIS ROOM, 0-3. The tide is the one
           // thing on the crossing that changes a room without changing the
@@ -8201,7 +8201,7 @@ export class ZoneDO implements DurableObject {
           // the tide's phase, because a room three ranks under is not the same
           // picture as one just awash. Absent (and so nothing drawn) for any
           // room the sea does not reach, which is most of the world.
-          sea: ART_KEYS.has(session.pubkey) && events.seaUnder(this, session.roomId)
+          sea: seesArt(session.pubkey) && events.seaUnder(this, session.roomId)
             ? Math.max(1, events.seaLevel(this) - (SEA_ROOMS.get(session.roomId) ?? 1) + 1)
             : undefined,
           // Lighting and visible sky are separate: a roof can admit daylight.
@@ -8228,7 +8228,7 @@ export class ZoneDO implements DurableObject {
           // picture is of light falling from something you are holding.
           // 0 rather than absent when the key is on the art list: the client has
           // to be able to tell "not lit" from "this frame says nothing about it".
-          torch: !ART_KEYS.has(session.pubkey) ? undefined : this.carriesLight(session) ? 1 : 0,
+          torch: !seesArt(session.pubkey) ? undefined : this.carriesLight(session) ? 1 : 0,
           // WHICH SKY, WHEN AN HOUR OWNS MORE THAN ONE. Not a choice made here:
           // just the day count, handed over so the client can index its own
           // table with it. The server stays out of the art the way it does with
@@ -8238,7 +8238,7 @@ export class ZoneDO implements DurableObject {
           // get the SAME sky. One sky over the world is the claim the two-layer
           // scheme is built on, and a per-session roll would quietly break it:
           // two wanderers standing in one room, describing two different nights.
-          skyroll: !ART_KEYS.has(session.pubkey) ? undefined : worldDay(),
+          skyroll: !seesArt(session.pubkey) ? undefined : worldDay(),
           fx,
         }),
       );
@@ -8257,7 +8257,7 @@ export class ZoneDO implements DurableObject {
   // can change at once: the hour turning, dusk and dawn opening and closing,
   // the moon, an eclipse, weather arriving or lifting, and walking under a roof.
   public artSkyFor(session: Session): string | undefined {
-    if (!ART_KEYS.has(session.pubkey)) return undefined;
+    if (!seesArt(session.pubkey)) return undefined;
     if (this.outOfWorld(session)) return "in";
     const openSkyForArt = this.world!.entryRooms.has(session.roomId);
     // A ROOF IN OPEN COUNTRY IS NOT A FORTRESS INTERIOR (rome, 2026-09-20: the

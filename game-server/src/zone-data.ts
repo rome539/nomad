@@ -6437,6 +6437,12 @@ export const ART_KEYS = new Set<string>([
   "60a6ff7ee84bdfb55e85c7c2836c2c44931b592c88dbcf0ebf0eddb7405154ae",  // the bench key
   "4f355bdcb7cc0af728ef3cceb9615d90684bb5b2ca5f859ab0f0b704075871aa",  // Geartest, the fixed local probe
 ]);
+// OPEN TO EVERYONE (rome, 2026-10-01). Every room in the world has its picture
+// now, so the door is open: every wanderer is sent the pictures and gets the
+// view toggle. Every gate asks seesArt, so false here shuts it back down to
+// the keys above in one line.
+export const ART_FOR_ALL = true;
+export function seesArt(pubkey: string): boolean { return ART_FOR_ALL || ART_KEYS.has(pubkey); }
 
 // THE CROSSING'S OWN GROUND, READ BEFORE THE COMMON RULES AND ONLY THERE.
 //

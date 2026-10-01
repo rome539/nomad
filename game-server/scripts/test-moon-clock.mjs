@@ -15,7 +15,7 @@ try {
  const method=zone.match(/  public artSkyFor\(session: Session\): string \| undefined \{[\s\S]*?^  \}/m)[0];
  const {code}=await transform(method.replace('public artSkyFor','function artSkyFor'),{loader:'ts'});
  let now=0,weather='';
- const c={ART_KEYS:new Set(['synthetic']),OUTDOOR_ROOMS:new Set(['outside']),events:{weatherNow:()=>weather,snowed:()=>weather==='snow',foggy:()=>weather==='fog',raining:()=>weather==='rain',phaseOf:()=>''}};
+ const c={seesArt:(pk)=>pk==='synthetic',OUTDOOR_ROOMS:new Set(['outside']),events:{weatherNow:()=>weather,snowed:()=>weather==='snow',foggy:()=>weather==='fog',raining:()=>weather==='rain',phaseOf:()=>''}};
  for(const name of ['isNight','isFullMoon','isBloodMoon','isDawn','isDusk','eclipsePhase'])c[name]=()=>clock[name](now);
  vm.createContext(c);vm.runInContext(code,c);
  const z={outOfWorld:()=>false,world:{entryRooms:new Set()}},session={pubkey:'synthetic',roomId:'outside'};

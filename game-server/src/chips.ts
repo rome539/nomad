@@ -15,7 +15,7 @@ import * as dice from "./dice";
 import { chipName, nameMatches, shortName, isNight, isFullMoon } from "./zone-util";
 import { hasTrait } from "./world";
 import {
-  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM, ART_KEYS,
+  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM, seesArt,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
@@ -471,8 +471,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   const w = z.wayHome.get(session.roomId);
   const home = world.entryRooms.has(session.roomId) ? "here" : (w ? w.dir : "");
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: ART_KEYS.has(session.pubkey) ? seen : undefined,
-      dead: ART_KEYS.has(session.pubkey) && dead.length ? dead : undefined, doing: ART_KEYS.has(session.pubkey) && Object.keys(doing).length ? doing : undefined }));
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: seesArt(session.pubkey) ? seen : undefined,
+      dead: seesArt(session.pubkey) && dead.length ? dead : undefined, doing: seesArt(session.pubkey) && Object.keys(doing).length ? doing : undefined }));
   } catch {}
 }
 
