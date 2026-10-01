@@ -822,6 +822,9 @@ export const FIRE_REST_REGEN_PER_TICK = 2;
 
 // Simulation clocks.
 export const SIM_STEP_MS = 60_000; // catch-up granularity
+// Keep a cold login bounded even after weeks offline. Longer gaps use coarser
+// ecology steps; elapsed-time healing, hunger, expiry and rust still reach now.
+export const CATCHUP_MAX_STEPS = 60;
 export const CATCHUP_CAP_MS = 14 * 24 * 3_600_000;
 // THE BUBBLE (rome, 2026-07-19): the full per-beat simulation runs only within
 // this many rooms of someone's boots. Noise carries 1 room and nothing moves
