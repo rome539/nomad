@@ -6203,6 +6203,10 @@ var JTIER = { 1: "sighted", 2: "hunted", 3: "known cold" };
 function renderJournal(f) {
   jBody.textContent = "";
   var entries = f.entries || [];
+  // HOW MANY ARE WRITTEN DOWN, and never out of how many (rome, 2026-09-30):
+  // a total would tell you the size of the world's roster for free.
+  document.getElementById("jtitle").textContent = "Journal" + (entries.length
+    ? " \\u00b7 " + entries.length + (entries.length === 1 ? " creature" : " creatures") : "");
   if (!entries.length) {
     var em = document.createElement("div");
     em.className = "jempty";
