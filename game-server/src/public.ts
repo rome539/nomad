@@ -7359,7 +7359,7 @@ var MOB_V  = "51";      // /mob/      strips and their eye layers
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "11";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "12";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -9678,6 +9678,12 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
 //
 // Off under any hour correction (a tinted plate is a borrowed one, and the
 // effects were read off it as painted), in text view, and for reduced motion.
+// ...EXCEPT THE FULL MOON, THE ECLIPSE AND THE HOUR AFTER RAIN (rome,
+// 2026-10-03). Each stands on a plate painted for it - night for the first two,
+// day for the last - and only grades it lighter, darker or greyer; nothing is
+// borrowed, the flames are where they were painted, and a lantern that goes
+// out every full moon is a lantern that looks broken.
+var FX_UNDER_TINT = { moon: 1, eclipse: 1, "after-rain": 1 };
 var fxCanvas = document.getElementById("scene-fx");
 var sparkCanvas = document.getElementById("scene-sparks");
 var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");
@@ -9823,7 +9829,7 @@ function fxScene(scene, tint) {
       .then(function (j) { fxIndex = j || {}; fxScene(scenePainted, sceneEl ? sceneEl.className : ""); })
       .catch(function () { fxIndex = {}; });
   }
-  var entry = (name && !tint && fxIndex && fxIndex[name]) || null;
+  var entry = (name && (!tint || FX_UNDER_TINT[tint]) && fxIndex && fxIndex[name]) || null;
   if (!entry || stillness || viewMode !== "image" || !fxInit()) { fxStop(); return; }
   if (name === fxName && fxReady) { fxRun(); return; }
   fxName = name; fxEntry = entry; fxReady = false; fxEmbers.length = 0; fxDust.length = 0;
