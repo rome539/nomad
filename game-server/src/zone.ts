@@ -1330,7 +1330,7 @@ export class ZoneDO implements DurableObject {
     if (reconnecting) {
       if (!seamless) this.send(session, "— you take up the thread of the Door again —");
     } else {
-      this.send(session, `NOMAD — the Door. You are ${session.name}.`);
+      this.send(session, `NOMAD. You are ${session.name}.`);
       if (created) {
         this.send(
           session,

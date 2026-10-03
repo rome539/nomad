@@ -9161,7 +9161,8 @@ function grantArt() {
   artAllowed = true;
   buildViewRow();
   try { localStorage.setItem("nomad_art", "1"); } catch (e) {}
-  try { if (typeof print === "function") print("\u2014 pictures unlocked: settings \u203a view \u2014", "sys"); } catch (e) {}
+  // No announcement: since pictures opened to everyone (2026-10-01) there is
+  // nothing to unlock, and the toggle simply sits in settings \u203a view.
   applyView();   // and if pictures are what they wanted, they get them now
 }
 

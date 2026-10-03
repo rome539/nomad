@@ -48,6 +48,27 @@ const flag = (f) => argv.includes(f);
 const ONLY_MOUNTAIN = flag("--mountain");
 const CUT_ONLY = flag("--cut-only");
 const COPY = flag("--copy");
+// A LITTLE FROM EVERYWHERE (rome, 2026-10-02). The published page was the
+// mountain alone, cut while the mountain was the only country with pictures.
+// The whole world now has them, and the whole world does not fit at that size,
+// so --showcase offers a hand-picked handful from every region instead - a few
+// grounds, a door, the rooms worth seeing, the creatures that live there - and
+// carries EVERY sky, so the moving skies are all in it. Keep this list near the
+// old page's size (~40MB with --cut-only); the staging prints the total.
+const SHOWCASE = flag("--showcase");
+const SHOW = {
+  ground: ["scree", "snow", "corrie-floor", "beck", "ford", "marsh", "sea-cave", "the-kept-road",
+           "wood", "glade", "holding", "the-dens", "fields"],
+  gate: ["the-shieling", "the-ferry-house", "the-relay-house", "gate"],
+  room: ["the-summit", "the-dry-bones", "the-kept-room", "the-salt-pool", "the-birdless-acre",
+         "the-moon-glade", "the-heart-of-it", "the-mill", "the-causeway", "the-siege-bank",
+         "the-burned-village", "the-gods-pool"],
+  mob: ["hill-wolf", "cave-lion", "the-drake", "red-hind", "eagle-owl", "lynx", "snow-fox",
+        "grey-seal", "the-great-crab", "great-gull", "the-drowned-ferryman", "marsh-hound",
+        "the-toll-clerk", "footpad", "road-carrier", "the-woodward", "the-keeper-of-the-holding",
+        "wild-boar", "grey-wolf", "white-roe", "the-miller", "brood-rat",
+        "three-hound", "forgotten-king", "bone-knight", "the-baited-bear"],
+};
 // The mountain's four doors. The relay house is the east road's and goes.
 const MOUNTAIN_GATES = new Set(["the-shieling", "the-stell", "the-slabs", "the-shelter-crag"]);
 const WHOLE_PHOTOGRAPH = new Set(["fog", "rain", "snow"]);
@@ -161,6 +182,11 @@ const MOUNTAIN_MOBS = new Set(String.raw`a-fold-dog bone-breaker brooding-vultur
 cave-lion eagle-owl ermine eyrie-holder feral-goat gill-adder glutton hill-eagle hill-fox hill-wolf
 lynx mountain-chough mountain-hare ptarmigan red-hind scarp-raven snow-fox stone-adder the-drake
 the-herd the-milker wildcat`.split(/\s+/).filter(Boolean));
+if (SHOWCASE) {
+  const keep = new Set(SHOW.mob);
+  for (const id of Object.keys(SPRITE)) if (!keep.has(id)) delete SPRITE[id];
+  for (const id of Object.keys(ANIM))   if (!keep.has(id)) delete ANIM[id];
+}
 if (ONLY_MOUNTAIN) {
   for (const id of Object.keys(SPRITE)) if (!MOUNTAIN_MOBS.has(id)) delete SPRITE[id];
   for (const id of Object.keys(ANIM))   if (!MOUNTAIN_MOBS.has(id)) delete ANIM[id];
@@ -243,6 +269,20 @@ const depsFor = (body, self) => {
 };
 const SCENE_TABLES = depsFor(fn("paintScene"), "paintScene");
 const SCENE_DRIVER = fn("paintScene");
+// THE MOVING SKY, lifted whole. paintScene only calls skyDrift when it exists
+// ("typeof skyDrift !== 'undefined'"), so a page without it shows a still sky
+// and says nothing - which is how the published page went on missing it. The
+// block runs from SKY_DRIFT to the end of the skyDrift module, tables and all.
+const SKY_DRIFT_JS = (() => {
+  const a = src.indexOf("var SKY_DRIFT = ");
+  const m = src.indexOf("var skyDrift = (function", a);
+  const b = src.indexOf("})();", m);
+  if (a < 0 || m < 0 || b < 0) throw new Error("no skyDrift block");
+  // ...and unescaped the way the served page is: public.ts is one template
+  // literal, so its \\d is a \d by the time a browser sees it. Raw, the
+  // sky-name regex never matched a pooled sky and nothing drifted.
+  return src.slice(a, b + 5).replace(/\\\\/g, "\\");
+})();
 const WEATHER_STATE = src.slice(src.indexOf("var weatherCanvas ="), src.indexOf("function runWeather()"));
 // And its stylesheet, rule by rule, straight out of the served page: the tints,
 // the blood moon's masked multiply, the scrims. Anything whose selector names
@@ -415,7 +455,9 @@ var BARREN=${(() => {
   return JSON.stringify(out);
 })()};
 // What this build OFFERS. null means everything, which is the working preview.
-var ONLY_GATE=${ONLY_MOUNTAIN ? JSON.stringify([...MOUNTAIN_GATES]) : "null"};
+var ONLY_GATE=${ONLY_MOUNTAIN ? JSON.stringify([...MOUNTAIN_GATES]) : SHOWCASE ? JSON.stringify(SHOW.gate) : "null"};
+var ONLY_GROUND=${SHOWCASE ? JSON.stringify(SHOW.ground) : "null"};
+var ONLY_ROOM=${SHOWCASE ? JSON.stringify(SHOW.room) : "null"};
 var DROP_HOUR=${CUT_ONLY ? JSON.stringify([...WHOLE_PHOTOGRAPH]) : "null"};
 /* ---- the scene, lifted verbatim from public.ts ---- */
 ${SCENE_TABLES}
@@ -428,6 +470,8 @@ ${fn("drawWeather")}
 if (document.addEventListener) document.addEventListener("visibilitychange", runWeather);
 if (weatherMotion.addEventListener) weatherMotion.addEventListener("change", runWeather);
 ${SCENE_DRIVER}
+${SKY_DRIFT_JS}
+if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("resize", function(){ skyDrift.refit(); });
 /* ---- end lifted ---- */
 var SPRITE=MOB_SPRITE, ANIM=MOB_ANIM;   // the page's own shorthand
 // EXACTLY WHAT THE CLIENT DOES: two stacked backgrounds on ONE element, so a
@@ -507,6 +551,7 @@ function markHour(){
 // AND THE GROUNDS ARE THE ONES WITH PLATES, likewise read off the tables: a
 // ground that gets painted tomorrow appears here the day it is declared.
 Object.keys(TERRAIN_PLATE).sort().forEach(function(t){
+  if(ONLY_GROUND&&ONLY_GROUND.indexOf(t)<0) return;
   var o=document.createElement("option");o.value=t;o.textContent=t;o.selected=(t==="scree");gnd.appendChild(o);});
 Object.keys(GATE_PLATE).sort().forEach(function(g){
   if(ONLY_GATE&&ONLY_GATE.indexOf(g)<0) return;
@@ -527,6 +572,7 @@ Object.keys(GATE_PLATE).sort().forEach(function(g){
 // the list read as shuffled and a plate could not be found by looking for it.
 var plateSeen={}, plateAlias=(typeof PLATE_OF==="object"&&PLATE_OF)||{}, plateRows=[];
 Object.keys(ROOM_PLATE).forEach(function(r){
+  if(ONLY_ROOM&&ONLY_ROOM.indexOf(r)<0) return;
   var stem=plateAlias[r]||r;
   if(plateSeen[stem])return; plateSeen[stem]=1; plateRows.push([stem,r]);});
 plateRows.sort(function(a,b){return a[0]<b[0]?-1:1;}).forEach(function(x){
@@ -1058,18 +1104,27 @@ if (COPY) {
   // PLATE_OF too: a room may name a picture that belongs to another room, so the
   // file to stage is the STEM, not the id. Without this the staging asks for
   // the-bone-ground-day.webp, which has never existed and never will.
-  new Function("t", SCENE_TABLES + "\nt.terrain=TERRAIN_SCENES; t.gate=GATE_PLATE; t.room=ROOM_PLATE; t.sky=SKY_PAINTED; t.alias=(typeof PLATE_OF==='object'?PLATE_OF:{});")(tables);
+  new Function("t", SCENE_TABLES + "\nt.terrain=TERRAIN_SCENES; t.gate=GATE_PLATE; t.room=ROOM_PLATE; t.sky=SKY_PAINTED; t.alias=(typeof PLATE_OF==='object'?PLATE_OF:{}); t.tplate=TERRAIN_PLATE;")(tables);
   const drop = new Set(DROP_HOUR_LIST);
   const conds = (declared) => declared.split(/\s+/).filter((c) => c && !drop.has(c));
   const want = new Set(["mobs.html"]);
   for (const id of Object.keys(ANIM)) want.add("mob/" + id + ".webp");
-  for (const h of Object.keys(tables.sky)) want.add("sky/" + h + ".webp");
+  // EVERY SKY ON DISK, not one per hour: an hour is a POOL of pictures now (a
+  // second dusk, a mirrored dawn, the wide panoramas), and the page draws from
+  // the whole pool. Staging one file per hour left the rest as broken skies.
+  for (const f of fs.readdirSync(path.join(GAME, "public/sky"), { recursive: true }))
+    if (String(f).endsWith(".webp")) want.add("sky/" + String(f).split(path.sep).join("/"));
+  if (SHOWCASE) {
+    // a picked ground carries every plate in its list, since the page may paint any of them
+    for (const t of SHOW.ground) for (const p of (tables.tplate[t] || [])) for (const c of conds(tables.terrain[p] || "")) want.add("room-bg/" + p + "-" + c + ".webp");
+  } else
   for (const [t, decl] of Object.entries(tables.terrain)) for (const c of conds(decl)) want.add("room-bg/" + t + "-" + c + ".webp");
   for (const [g, decl] of Object.entries(tables.gate)) {
     if (ONLY_MOUNTAIN && !MOUNTAIN_GATES.has(g)) continue;
+    if (SHOWCASE && !SHOW.gate.includes(g)) continue;
     for (const c of conds(decl)) want.add("room-bg/gate-" + g + "-" + c + ".webp");
   }
-  for (const [r, decl] of Object.entries(tables.room)) for (const c of conds(decl)) want.add("room-bg/" + (tables.alias[r] || r) + "-" + c + ".webp");
+  for (const [r, decl] of Object.entries(tables.room)) if (!SHOWCASE || SHOW.room.includes(r)) for (const c of conds(decl)) want.add("room-bg/" + (tables.alias[r] || r) + "-" + c + ".webp");
 
   let n = 0, bytes = 0; const holes = [];
   for (const rel of [...want].sort()) {
