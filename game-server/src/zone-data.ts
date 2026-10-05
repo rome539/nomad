@@ -402,9 +402,9 @@ export const WOUNDED_FUMBLE_BONUS = 0.05;
 export const WOUNDED_DROP_ODDS = 0.3;
 // Auto-eat: when a fight drops you below this and you're carrying provisions,
 // a hand goes to the pack on its own — one reflexive bite so a distracted
-// wanderer doesn't bleed out mid-swing. Fires below the WOUNDED line (it's a
-// last resort, not a feeding trough) and, being a reflex, never staggers you.
-export const AUTO_EAT_FRACTION = 0.25;
+// wanderer doesn't bleed out mid-swing. Starts at the wounded threshold so
+// provisions help before health falls to the last quarter. Never staggers you.
+export const AUTO_EAT_FRACTION = WOUNDED_FRACTION;
 // Initiative: the first blow against something that hasn't marked you yet
 // lands heavy. (Getting jumped already costs you — this is the other edge.)
 export const AMBUSH_MULT = 1.5;

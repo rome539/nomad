@@ -40,6 +40,12 @@ by the silent simulation, which never fights. Order inside a combat round:
 Two attacks happen *outside* the beat, resolved on the spot: the **ambush**
 first strike (`attack` on an unaware creature) and **`throw`**.
 
+In PvP, an opening attack between two unengaged players also strikes
+immediately. Once either player is fighting, `attack` selects the target for
+the next round; repeating it or switching opponents grants no extra swing.
+An attack command while stunned does not clear the stun: the round consumes
+the lost swing.
+
 ## Your swing
 
 You **focus one foe** and auto-advance: the moment your target falls — or
@@ -353,6 +359,10 @@ Hp is world-state on both sides; there are no encounter resets.
 - **Players** have **60 max hp** (`PLAYER_MAX_HP`) and **no passive regen**:
   `rest` (1 hp/tick, interruptible, blocked in combat) or `eat`. Time is on the
   dungeon's side.
+- **Automatic food**: below **⅓ hp**, while in combat, each world tick can
+  consume one carried meal using the existing food priority. This reflex
+  creates no opening. It runs after attacks and bleeding, so it cannot rescue
+  an already-fatal hit; supplies still have to be carried.
 - **Death**: EVERYTHING carried scatters where you fall, sealed included — the
   seal is title, not armor; it cracks as it leaves your hands (mint voided),
   and the corpse run races whoever finds it first. **Only the lockbox and vault

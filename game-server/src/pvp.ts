@@ -54,16 +54,16 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
       ? `${other.name} is behind a barred door. It does not move for you.`
       : "You are behind your own bar. Lift it and step out if you want this.");
   }
-  // Rung senseless: the same debt tickPvp pays below, owed by the VERB too.
-  // Without this a stunned fighter could open on a wanderer by hand and keep
-  // the ambush blow — the one swing the daze is supposed to cost them.
+  // The round consumes the lost swing. A command cannot pay that debt early.
   if (session.stunned) {
-    session.stunned = false;
     z.send(session, "Your head still rings — the moment to swing slips past you.", "stun");
     z.sendStatus(session);
     return;
   }
-  const unaware = other.pvpTarget !== session.pubkey;
+  // Only an opening between unengaged fighters strikes immediately. Repeating
+  // attack or switching opponents during a fight selects the next round's
+  // target; it must not grant another swing outside the four-second beat.
+  const unaware = !z.inCombat(session) && !z.inCombat(other);
   session.pvpTarget = other.pubkey;
   if (!other.pvpTarget) other.pvpTarget = session.pubkey; // steel answers steel
   z.actorFeed(session, session.roomId,
@@ -75,7 +75,7 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
   // 171). Fires on the SWING, not the kill: the betrayal is drawing on your host
   // at all, and a failed murder must not be cheaper than a successful one.
   await den.bloodDrawn(z, session.roomId, session, other);
-  await swingAt(z, session, other, { body: true, ambush: unaware });
+  if (unaware) await swingAt(z, session, other, { body: true, ambush: true });
   // A heavy blunt opener was the whole beat (2026-08-20): the same cost the
   // PvE opener pays (zone.ts sets openedHeavy for a stun weapon's ambush) —
   // tickPvp consumes the flag and skips the next round's swings, so a skull-
