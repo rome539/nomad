@@ -1304,6 +1304,7 @@ export class ZoneDO implements DurableObject {
       session.linkdeadUntil = undefined;
     }
     this.sessions.set(pubkey, session);
+    this.refreshRoomCtx(session.roomId); // the room sees a nomad step in
     await lore.refreshStudied(this, session); // the sync chip builder can't read D1; prime the studied-cache so no redundant `study` chip shows before the first journal open
     this.lastCommandAt = Date.now(); // an arrival is activity — the world beats fast for fresh footsteps
     // buildSession never carries a dealId across — any deal this player was
@@ -1516,6 +1517,7 @@ export class ZoneDO implements DurableObject {
     this.actorFeed(session, session.roomId, `${session.name} fades from the world.`, "who");
     session.linkdeadUntil = undefined;
     this.sessions.delete(session.pubkey);
+    this.refreshRoomCtx(session.roomId); // ...and the nomad gone from the picture
     this.leftAt.set(session.pubkey, Date.now()); // so a quick return reads as a reconnect
     for (const c of this.creatures.values()) {
       if (c.target === session.pubkey) c.target = null;
@@ -1845,6 +1847,7 @@ export class ZoneDO implements DurableObject {
       );
       return;
     }
+    const folkRoom = session.roomId, folkBefore = chips.folkState(this, session); // what the room sees of you
     // Effort ends rest; watching and talking do not.
     const effort = cmd.verb === "go" || cmd.verb === "attack" || cmd.verb === "throw" || cmd.verb === "get" || cmd.verb === "drop" || cmd.verb === "burn";
     if (session.resting && effort) {
@@ -1864,6 +1867,9 @@ export class ZoneDO implements DurableObject {
       this.sendStatus(session);
     }
     await this.dispatch(session, cmd);
+    chips.noteEmote(session, cmd.verb);
+    // the room watches you sit, crouch, point, wave: redraw it when that changes
+    if (session.roomId === folkRoom && chips.folkState(this, session) !== folkBefore) this.refreshRoomCtx(folkRoom);
     this.syncCombatCtx();
   }
 
@@ -6655,7 +6661,7 @@ export class ZoneDO implements DurableObject {
     if (slayerName) this.roomFeed(fell, `${slayerName} stands over the body.`, victim.pubkey, false);
     this.roomSound(fell, "A scream, cut short, {dir}.");
     this.creatureNoise(fell);
-    this.addTrace(fell, { kind: "blood", at: Date.now(), label: victim.name });
+    this.addTrace(fell, { kind: "blood", at: Date.now(), label: victim.name, id: "nomad" }); // the picture lays a nomad there
 
     // A small chance the dark gives you back at your own door instead of a gate
     // (den.wakeAtDen sets the room and puts you behind it). Rolled AFTER

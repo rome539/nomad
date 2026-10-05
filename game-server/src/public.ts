@@ -4000,13 +4000,11 @@ function localCmd(text) {
   // stay in the pocket, the world handles the vanishing (linkdead linger).
   // Bare words only: the server owns "leave <thing>" (it's a drop).
   //
-  // INSIDE THE GATEHOUSE, 'exit'/'leave' are NOT quit — they are the server's
-  // own door-out verb (parser: out/exit/outside → leaveGatehouse), and the
-  // help says so ("out (exit) — back through the door, into the world").
-  // Intercepting them here used to hard-reload the page instead, wiping the
-  // scroll and re-triggering signer login (2026-08-20). They only mean quit
-  // while you are actually out in the world.
-  if (lower === "quit" || ((lower === "leave" || lower === "exit") && !inGatehouseNow)) {
+  // INSIDE THE GATEHOUSE, 'leave' is NOT quit — the server owns it there. But
+  // 'exit' IS quit everywhere now (rome, 2026-10-03): it logs you out from the
+  // gatehouse exactly as it does in the world, and 'out' is the word for the
+  // door back into the world (parser: out/outside -> leaveGatehouse).
+  if (lower === "quit" || lower === "exit" || (lower === "leave" && !inGatehouseNow)) {
     print("— you step back through the door —", "sys");
     setTimeout(function () { location.reload(); }, 400);
     return true;
@@ -7355,7 +7353,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "51";      // /mob/      strips and their eye layers
+var MOB_V  = "53";      // /mob/      strips and their eye layers
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -10226,6 +10224,11 @@ var MOB_SPRITE = {
   "masterless-dog": 9,        // 0.70
   "lead-dog": 10,             // 0.80
   "footpad": 28,              // 1.75  a man
+  // every other player. 32, not the 28 of the men beside it, because the raised
+  // sword and the torch make the strip taller than the body: at 32 the standing
+  // nomad comes out exactly the cutthroat's height (idle fills 0.92 of its box
+  // against his 0.97; measured, rome 2026-10-05).
+  "nomad": 32,
   "wayman": 28,               // 1.75
   "road-carrier": 30,         // 1.85  a tall figure, as the prose has it
   "the-miller": 28,           // 1.75
@@ -10445,6 +10448,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "nomad":   { n: 22, aspect: 1.079, f: {"idle":0,"move-a":1,"move-b":2,"windup":3,"attack":4,"guard":5,"crouch":6,"rest":7,"point":8,"wave":9,"beckon":10,"nod":11,"keen":12,"death":13,"torch-idle":14,"torch-move-a":15,"torch-move-b":16,"torch-windup":17,"torch-attack":18,"torch-guard":19,"torch-crouch":20,"torch-rest":21} },
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-woodward":                { n: 8, aspect: 1.014, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-sapper":                  { n: 8, aspect: 1.014, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -11148,6 +11152,27 @@ function poseAt(a, now) {
     || typeof MOB_SPRITE === "undefined" || !MOB_SPRITE[a.id]) ? LIFT
     : Math.max(LIFT, BIRD_RISE / mobVh(a.id));
   var f = a.spec.f, t = a.t, x = 0, air = 0, s = 1, name = "idle";
+  // THE NOMAD IS ANOTHER PLAYER, not a creature (2026-10-05): it never wanders
+  // and never idles through its own frames. It shows what that player is doing,
+  // as the server names it (chips.folkState): a held posture, a fight, or a
+  // gesture played once - "e-wave:<when>" - for a couple of seconds.
+  if (a.id === "nomad") {
+    var ns = a.state || "", nn = "idle", nair = 0;
+    var torch = ns.slice(-6) === "+torch";
+    if (torch) ns = ns.slice(0, -6);
+    if (ns.indexOf("e-") === 0) {
+      var ec = ns.indexOf(":"), ek = ns.slice(2, ec > 0 ? ec : ns.length);
+      if (a.t < 2.6) {
+        if (ek === "dance") { nn = Math.floor(a.t * GAIT_HZ * 1.4) % 2 ? "move-a" : "move-b"; nair = Math.abs(Math.sin(a.t * 6 * Math.PI)) * HOP * 0.5; }
+        else if (f[ek] !== undefined) nn = ek;
+      }
+    } else if (ns === "fight") {
+      var ph = a.t % 4; nn = ph < 0.7 ? "windup" : ph < 1.2 ? "attack" : "guard";
+    } else if (ns && f[ns] !== undefined) nn = ns;
+    // the torch version of the frame where the strip has one; a gesture has none
+    if (torch && f["torch-" + nn] !== undefined) nn = "torch-" + nn;
+    return { k: f[nn], x: 0, air: nair, s: 1 + Math.sin(a.t * 1.6) * BREATH };
+  }
   // WHICH OF ITS CALM POSES THIS TIME. Kept inside poseAt on purpose: the
   // driver test and the preview builder both lift this function whole by
   // brace-matching, so a helper beside it is invisible to them and the page

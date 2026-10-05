@@ -234,7 +234,9 @@ const VERB_ALIASES: Record<string, Verb> = {
   // The door in the wall. At a gate, 'in' is the gatehouse — the sanctuary, and
   // the only room in the world where other people can hear you and nothing else can.
   enter: "enter", in: "enter", inside: "enter", gatehouse: "enter",
-  exit: "exit", out: "exit", outside: "exit", // NOT 'leave' — that's already 'drop'
+  // NOT 'leave' — that's already 'drop' — and not 'exit' either: bare 'exit'
+  // is quit everywhere, the gatehouse included, and the client takes it first.
+  out: "exit", outside: "exit",
   // A quiet word, one to one, in the gatehouse. Nobody else in the room hears it.
   tell: "tell", whisper: "tell", quietly: "tell",
   // A wanderer-to-wanderer trade, not the keeper's hatch ("trade"/"barter" stay
@@ -484,7 +486,7 @@ export const HELP_TEXT = [
   "                    dark. Nothing in the dungeon can reach you there. In the",
   "                    gatehouse ANYTHING YOU TYPE IS SPOKEN ALOUD, unless it's a",
   "                    command — it is the one room where a wanderer can be heard.",
-  "  out               (exit) — back through the door, into the world.",
+  "  out               (outside) — back through the door, into the world.",
   "  settle            raise a den of your own on a holding. The ROOM is ground,",
   "                    not a seat — however many already live there, there is",
   "                    always room for another door, and yours is yours. It costs",

@@ -120,6 +120,19 @@
     actB.textContent = "event pose: " + x[1];
     mobBeat(null, null, null, null, null, [x[0]], x[1]);
   };
+  // THE NOMAD - another player - takes its state from the server, and there is
+  // no server here, so this picks it. Choosing it puts a nomad in the room; the
+  // torch button above also puts a lit torch in its hand. A gesture plays once
+  // each time it is chosen.
+  var nomadSel = mk("select", btnCss);
+  ["nomad: idle", "rest", "crouch", "guard", "point", "fight", "wave", "nod", "beckon", "keen", "dance", "dead"].forEach(function (v) {
+    var o = document.createElement("option"); o.value = v.indexOf("nomad:") === 0 ? "" : v; o.textContent = v; nomadSel.appendChild(o); });
+  var nomadAt = 0, NOMAD_ONCE = { wave: 1, nod: 1, beckon: 1, keen: 1, dance: 1 };
+  nomadSel.onchange = function () { nomadAt = Date.now(); if (ids.indexOf("nomad") < 0) ids.push("nomad"); paint(); };
+  function nomadState() {
+    var v = nomadSel.value, st = NOMAD_ONCE[v] ? "e-" + v + ":" + nomadAt : v;
+    return st + (torch ? "+torch" : "");
+  }
   var shown = mk("span", "color:#9a8b66");
   mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose");
   var ids = [];
@@ -151,7 +164,13 @@
       paintScene("mountain", h, v.slice(7), "preview-ground", torch, 0, "", 0, red);
     }
     fitPicture();
-    updateMobs(ids.slice(), null, []);
+    var dead = nomadSel.value === "dead" && ids.indexOf("nomad") >= 0;
+    // ...and never in the gatehouse: other players are drawn in the world only,
+    // the same as the game, where the gatehouse frame carries no figures at all.
+    var inside = gnd.value === "ground:gatehouse";
+    if (inside) dead = false;
+    var showIds = (dead || inside) ? ids.filter(function (x) { return x !== "nomad"; }) : ids.slice();
+    updateMobs(showIds, showIds.map(function (x) { return x === "nomad" ? nomadState() : ""; }), dead ? ["nomad"] : []);
     shown.textContent = ids.length ? "standing: " + ids.join(", ") : "nothing standing";
     try { localStorage.setItem(KEY, JSON.stringify({ g: gnd.value, h: hour.value, t: torch, ids: ids, f: feast.value })); } catch (e) {}
   }

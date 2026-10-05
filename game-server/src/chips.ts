@@ -24,6 +24,33 @@ import {
 // When steel is out, the chips narrow to the fight — in EVERY room. No
 // resting, banking, chatting, or reading the walls while something swings
 // at you; only what the fight allows (see "Combat narrows the world").
+// OTHER WANDERERS IN THE PICTURE (rome, 2026-10-05). Every player is drawn as
+// the one nomad, from public/mob/nomad.webp, standing in the room beside the
+// creatures. Each carries a state the client turns into a frame: held while it
+// lasts (rest, crouch, guard, point, a fight), or played once and let go (a
+// gesture, for EMOTE_MS). The state string changes whenever the picture should,
+// which is what tells the room to redraw.
+const EMOTE_MS = 3000;
+const EMOTE_FRAME: Record<string, string> = { wave: "wave", nod: "nod", brow: "nod", beckon: "beckon", keen: "keen", dance: "dance" };
+export function folkState(z: ZoneDO, s: Session): string {
+  // ...and "+torch" on the end while a lit torch is in the hand: the strip has
+  // a torch version of every everyday frame (torch-idle, torch-guard...).
+  return folkBase(z, s) + (z.carriesLight(s) ? "+torch" : "");
+}
+function folkBase(z: ZoneDO, s: Session): string {
+  // A posture beats a fading gesture: wave and then crouch, and the room sees
+  // the crouch at once rather than the last of the wave.
+  if (z.inCombat(s)) return "fight";
+  if (s.resting) return "rest";
+  if (s.pose === "crouch" || s.pose === "guard" || s.pose === "point") return s.pose;
+  if (s.emote && Date.now() - s.emote.at < EMOTE_MS) return "e-" + s.emote.k + ":" + s.emote.at;
+  return "";
+}
+export function noteEmote(s: Session, verb: string): void {
+  const k = EMOTE_FRAME[verb];
+  if (k) s.emote = { k, at: Date.now() };
+}
+
 export function sendCtx(z: ZoneDO, session: Session): void {
   const world = z.world;
   if (!world) return;
@@ -183,6 +210,14 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         : "";
       doing.push(state);
     }
+  }
+  // ...and the other wanderers standing here, after the creatures, in what is
+  // left of the four places.
+  for (const o of z.sessions.values()) {
+    if (seen.length >= 4) break;
+    if (o === session || o.roomId !== session.roomId || z.outOfWorld(o) || o.hp <= 0) continue;
+    seen.push("nomad");
+    doing.push(folkState(z, o));
   }
   // A throwable in hand and something to throw it at: offer the opener.
   if (creatureHere) {
@@ -489,7 +524,11 @@ export function refreshRoomCtx(z: ZoneDO, roomId: string): void {
 // what their chips were drawn for gets a fresh set. Runs after every
 // command and every tick — the chip lock holds in ALL rooms.
 export function syncCombatCtx(z: ZoneDO): void {
+  // The WHOLE room, not just the one whose fight began or ended: everyone else
+  // there is watching that nomad pick up a fighting stance or put it down.
+  const rooms = new Set<string>();
   for (const s of z.sessions.values()) {
-    if (!s.away && z.inCombat(s) !== s.ctxCombat) sendCtx(z, s);
+    if (!s.away && z.inCombat(s) !== s.ctxCombat) rooms.add(s.roomId);
   }
+  for (const r of rooms) refreshRoomCtx(z, r);
 }

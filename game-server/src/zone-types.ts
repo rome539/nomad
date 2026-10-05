@@ -31,6 +31,7 @@ export interface Session {
   // same triggers that end a rest. `poseAt` is what a POINTING hand is out
   // toward, in the player's own word, resolved against the world first.
   pose?: "guard" | "lean" | "crouch" | "point";
+  emote?: { k: string; at: number }; // the last gesture made, for the picture: others see the nomad wave, nod, keen (chips.folkState)
   poseAt?: string;
   // WHAT THE HAND IS ACTUALLY ON, as opposed to the word for it. `poseAt` is
   // prose — the player's own word, echoed back — and prose cannot be checked
