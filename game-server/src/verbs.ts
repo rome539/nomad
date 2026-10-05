@@ -21,6 +21,7 @@ import * as pvp from "./pvp";
 import * as lore from "./lore";
 import * as den from "./den";
 import * as detail from "./detail";
+import * as wanderer from "./wanderer";
 import {
   SURFACE_BANDS, SKY_ROOFED, SKY_UNDER, OUTDOOR_ROOMS,
   POSES, COURTESIES, WAVE_ARMED, WHISTLE_WAKE,
@@ -773,6 +774,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // and a probe falls through to the same neutral "Pitch dark" as everything else.
   const other = blind ? null : findPlayerIn(z, session.roomId, arg);
   if (other) return z.send(session, describePlayer(z, session, other), "study");
+  if (!blind && wanderer.named(z, session.roomId, arg)) return z.send(session, wanderer.LOOK_TEXT, "study");
   // Not in hand, not on the floor — maybe in the lockbox (rome, 2026-07-11:
   // look reaches into your own keeping too). Not mid-fight: nobody unlatches
   // a box with something trying to kill them.
@@ -1564,6 +1566,7 @@ function pointable(z: ZoneDO, session: Session, arg: string): { what: string; re
     if (s.pubkey === session.pubkey || s.roomId !== roomId || !z.reachable(s)) continue;
     if (nameMatches(s.name, arg)) return { what: s.name, ref: `p:${s.pubkey}` };
   }
+  if (wanderer.named(z, roomId, arg)) return { what: "the nomad", ref: "w:" };
   // Anything alive in the room, by its own name.
   for (const c of z.creatures.values()) {
     if (c.roomId !== roomId || c.hidden) continue;
@@ -1606,6 +1609,7 @@ export function pointStillThere(z: ZoneDO, session: Session): boolean {
     return z.outOfWorld(session) ? z.outOfWorld(s) : s.roomId === session.roomId && z.reachable(s);
   }
   if (kind === "g") return (z.ground.get(session.roomId) ?? []).includes(id);
+  if (kind === "w") return wanderer.isHere(z, session.roomId);
   return true;
 }
 

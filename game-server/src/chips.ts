@@ -9,6 +9,7 @@ import * as pvp from "./pvp";
 import * as gate from "./gate";
 import * as den from "./den";
 import * as works from "./works";
+import * as wanderer from "./wanderer";
 import * as ai from "./ai";
 import { BUILD_ID } from "./public";
 import * as dice from "./dice";
@@ -218,6 +219,11 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (o === session || o.roomId !== session.roomId || z.outOfWorld(o) || o.hp <= 0) continue;
     seen.push("nomad");
     doing.push(folkState(z, o));
+  }
+  // ...and the one that walks on its own (wanderer.ts), last of all.
+  if (seen.length < 4 && wanderer.isHere(z, session.roomId)) {
+    seen.push("nomad");
+    doing.push(wanderer.folkState(z));
   }
   // A throwable in hand and something to throw it at: offer the opener.
   if (creatureHere) {

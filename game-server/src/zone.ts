@@ -70,6 +70,7 @@ import * as trade from "./trade";
 import * as den from "./den";
 import * as dice from "./dice";
 import * as works from "./works";
+import * as wanderer from "./wanderer";
 import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
 import {
@@ -218,6 +219,7 @@ export class ZoneDO implements DurableObject {
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
   public arrivals = new Map<string, number>();
   public openDoors = new Set<string>();
+  public wanderer: wanderer.Wanderer | null = null; // the one other nomad (wanderer.ts)
   public doorCloseAt = new Map<string, number>(); // "roomId:dir" -> ms epoch the iron remembers its shape (the deep door's timer)
   // "itemId@roomId" -> ms it hit the floor. Fresh-fallen gear is safe from
   // scavengers a while (ai.scavengerScoops reads this): the kill site is hot,
@@ -2162,6 +2164,7 @@ export class ZoneDO implements DurableObject {
       // No beast by that name — but a wanderer's name reaches for steel too.
       const other = verbs.findPlayerIn(this, session.roomId, arg);
       if (other) return pvp.attackPlayer(this, session, other);
+      if (wanderer.named(this, session.roomId, arg)) return this.send(session, wanderer.UNTOUCHED_TEXT);
       return this.send(session, "Nothing by that name is here to fight.");
     }
     const tmpl = this.world!.mobTemplates.get(creature.templateId)!;
@@ -4863,6 +4866,9 @@ export class ZoneDO implements DurableObject {
     await events.tickEvents(this, now);
     mark("events");
 
+    // The other nomad takes its next step, or puts its hand out (wanderer.ts).
+    wanderer.tickWanderer(this, now);
+
     // The day/night world-clock flips: tell whoever's standing outside to
     // see it (same courtesy the weather events already extend on their own
     // onset/lift). Silent for anyone indoors — the deep/warrens/keep don't
@@ -7301,6 +7307,8 @@ export class ZoneDO implements DurableObject {
         lines.push(`${s.name} is here${poseClause}.${canReadStains ? pvp.bloodClause(this, s.pubkey) : ""}`);
       }
     }
+    const other = wanderer.roomLine(this, room.id);
+    if (other) lines.push(other);
     return lines.join("\n");
   }
 
