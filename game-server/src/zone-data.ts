@@ -4526,6 +4526,85 @@ export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "
   "the-scaffold-hand",     // under the broken arch, arms up, dressing nothing
   "conger", "old-conger",                // a mouth on the end of an arm, and the arm is in the pier
 ]);
+// WAYS OF FIGHTING (rome, 2026-10-05: "it all feels the same"). Every creature
+// ran one loop - roll, hit, run when low - so a boar and a wolf differed only in
+// their numbers. A style changes the fight by what is happening in it, never by
+// a round count (styles.ts). Ids, not families, so a style is a data change.
+//
+// CHARGERS come at you from a standstill: the first blow of a fight, and again
+// every time one breaks off and comes back, lands double. After it the animal is
+// blown for a beat and takes extra from everything. A spear set against it takes
+// the charge on the point instead.
+export const CHARGERS = new Set(["wild-boar", "old-boar", "red-stag", "old-billy", "feral-goat", "grey-seal", "bull-seal"]);
+export const CHARGE_MULT = 2;
+export const CHARGE_REST_MS = 20_000;   // this long without landing a blow and it is standing again: the next one is a charge
+export const BLOWN_MS = 5_000;          // one round: what you swing next lands on an animal that has nothing left
+export const BLOWN_TAKEN_MULT = 1.5;
+// HEAVIES are huge and fresh at the start: a landed blow can knock you down
+// (your next swing is lost). Every blow it lands tires it, and a tired one hits
+// softer and knocks nobody down. Rest puts it back to fresh.
+export const HEAVIES = new Set(["the-baited-bear", "cave-lion", "glutton", "the-old-glutton", "the-gaunt", "the-chain-breaker"]);
+export const HEAVY_KNOCK_ODDS = 0.3;    // while fresh; a guarded stance halves it, worn mass shrugs it like a stun
+export const HEAVY_TIRED_AT = 4;        // landed blows until it is blown
+export const HEAVY_TIRE_STEP = 0.1;     // each landed blow takes this off the next
+export const HEAVY_TIRED_FLOOR = 0.6;   // ...and it never falls below this
+export const HEAVY_REST_MS = 30_000;    // this long without a blow and it is fresh again
+// PACKS work together. The animals you are not swinging at come in from the
+// side and bite harder - while the lead one is alive to hold them to it. The lead
+// is a named lead where one is in the fight, else the biggest; kill it (or drive
+// it off) and the rest fight one at a time until the pack has had time to sort
+// itself out again.
+export const PACKS: Record<string, string> = {
+  "grey-wolf": "wolf", "dire-wolf": "wolf", "hill-wolf": "wolf", "lead-wolf": "wolf",
+  "masterless-dog": "dog", "a-fold-dog": "dog", "drove-dog": "dog", "lead-dog": "dog",
+  "the-last-dog": "dog", "marsh-hound": "dog", "a-lymer": "dog",
+  "grave-hyena": "hyena", "dire-hyena": "hyena",
+};
+export const PACK_LEADS = new Set(["lead-wolf", "lead-dog"]);
+export const PACK_FLANK_MULT = 1.4;
+export const PACK_LEADERLESS_MS = 10 * 60_000;
+// SWARMS are strength in numbers: every other one on you makes this one's bite
+// worse, so each one killed takes a piece of the rest with it.
+export const SWARMS = new Set(["rat", "fleet-rat", "brood-rat", "albino-rat", "wrack-crab", "devil-crab"]);
+export const SWARM_STEP = 0.25;         // per other swarm-mate on the same victim
+export const SWARM_MAX_OTHERS = 4;
+// STRIKERS are too quick for slow steel: a heavy weapon misses one far more than
+// a light one. When it bites you it is committed, and your next swing can't miss.
+export const STRIKERS = new Set(["gill-adder", "fen-viper", "stone-adder", "the-gravid-adder", "ford-eel", "silver-eel",
+  "ermine", "hill-fox", "snow-fox", "the-blue-fox", "the-raiding-fox", "wildcat", "the-tom", "the-dancer", "lynx", "otter", "dog-otter"]);
+export const STRIKER_DODGE = [0.4, 0.15, 0];  // by weapon speed 1 / 2 / 3+
+export const STRIKER_DODGE_BARE = 0.15;
+// FLIERS fight from the air: a swung blade reaches one only the round after it
+// comes down to strike. A throw or a long spear reaches it overhead. It comes
+// down when it sees an opening - more often on somebody hurt or off balance.
+// (Not the brooding vulture: it sits its nest, and was never drawn flying.)
+export const FLIERS = new Set(["gibbet-crow", "scarp-raven", "the-old-raven", "great-gull", "black-backed-gull", "hill-eagle",
+  "eagle-owl", "carrion-vulture", "great-vulture", "eyrie-holder", "bone-breaker", "the-bone-dropper"]);
+export const FLIER_DIVE_ODDS = 0.5;
+export const FLIER_DIVE_OPEN = 0.8;     // ...on a victim wounded or staggered
+// PINCHERS take an arm instead of dragging you under: the seize hold (you can't
+// run, and you tear loose the same way), and your blows are weak while it has you.
+export const PINCHERS = new Set(["the-great-crab", "the-great-devil-crab"]);
+export const PIN_ODDS = 0.2;
+export const PINNED_DMG_MULT = 0.6;
+// THE HOLLOW never run and feel nothing: an edge skates off bone, weight breaks
+// it. (The grave-flesh wights are still corpses: an edge finds them.)
+export const HOLLOW_EDGE_MULT = 0.7;
+export const HOLLOW_BLUNT_MULT = 1.3;
+// LURKERS go back into the dark if you lose your light, and come out of it again.
+export const LURKER_FADE_ODDS = 0.3;
+export const LURKER_DROP_MULT = 1.5;
+// CUTTHROATS fight dirty: a feint that leaves you open (staggered).
+export const CUTTHROATS = new Set(["cutpurse", "footpad", "cutthroat", "wayman", "strand-thief", "the-wrecker"]);
+export const FEINT_ODDS = 0.25;
+// FOLK fight the way you do: steady, then guarded once hurt, then reckless at
+// the end. A guard turns edge and point; weight goes through it.
+export const FOLK = new Set(["the-sapper", "the-bellfounder", "the-chainman", "road-carrier", "the-herd", "the-milker",
+  "the-one-who-stayed", "the-butter-wife", "charcoal-burner", "the-eel-cutter", "the-fowler", "the-reed-walker",
+  "the-salt-widow", "the-drove-master", "rag-and-bone"]);
+export const FOLK_GUARD_AT = 0.5;       // share of its health
+export const FOLK_RECKLESS_AT = 0.2;
+
 export const SEIZE_ODDS = 0.2;        // soft: a blow only sometimes takes hold
 export const SEIZE_BREAK_ODDS = 0.5;  // soft: about half the time you wrench loose each beat
 export const SEIZE_DMG_MULT = 1.25;   // it hits a little harder while it has you

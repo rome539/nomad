@@ -153,6 +153,13 @@ export interface Creature {
   fled?: number;        // rooms run in the CURRENT rout — reset when it gets clean away
   windAt?: number;      // how many it had in it this time (FLEE_WIND_MIN..MAX, rolled when the rout starts)
   windedUntil?: number; // ms until it has its breath back; until then it will not run, whatever it is
+  lastBlowAt?: number;  // styles.ts: when it last landed a blow (a charger charges from a standstill; a heavy rests back to fresh)
+  blownUntil?: number;  // styles.ts: a charger spent by its charge; takes extra until then
+  fatigue?: number;     // styles.ts: a heavy's landed blows this fight
+  leads?: boolean;      // styles.ts: the lead animal of the pack fighting in this room
+  openUntil?: number;   // styles.ts: a striker committed by its bite; your next swing can't miss it
+  dropping?: boolean;   // styles.ts: a lurker coming back out of the dark this round
+  folkStance?: "guarded" | "reckless"; // styles.ts: how a person is fighting now (unset = steady)
   boltAt?: number;      // a chased runner's next bolt: each room already given up pushes this out by BOLT_TIRE_MS, so the rout visibly slows before it ends
   huntFor?: string;     // the room it is walking to because its own ground has nothing left to eat (ai.huntGround)
   huntAt?: number;      // ms until that errand is worth recomputing (HUNT_RECHECK_MS)

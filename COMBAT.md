@@ -117,6 +117,33 @@ A creature below **25% hp** (`FLEE_BELOW`) tries to flee each tick at **50%**
 odds (bosses never flee). Fleeing clears its target; the wound and the grudge
 stay.
 
+## Ways of fighting — `styles.ts`
+
+Every creature used to run the one loop above, so a boar and a wolf differed
+only in their numbers. Now each kind of creature fights in its own way, on the
+same 4-second round. A style never runs on a round count: it reacts to the
+state of the fight (how many are on you, how tired it is, whether its lead is
+alive, what you are holding), the room text shows that state, and each one
+asks the player for something different. Sets and dials live in `zone-data.ts`
+next to the other combat constants; adding a creature to a style is one id.
+
+| style | creatures | what it does | the answer |
+|---|---|---|---|
+| **Charger** | boars, red stag, goats, seals | From a standstill (the first blow of a fight, or after `CHARGE_REST_MS` 20 s without landing one) it charges: **×2**. Then it is blown for one round and takes **×1.5**. The rush in as it enters a room *is* the charge. | Meet it with a **reach** weapon (no ×2) or guarded, then hit it while it's spent. |
+| **Heavy** | baited bear, cave lion, gluttons, the gaunt, chain-breaker | Fresh, a landed blow can **knock you down** (30%, halved guarded, worn mass shrugs it like a stun): your next swing is lost. Each blow it lands takes 10% off the next (floor 60%); after 4 it is blown — "its sides are heaving" — and knocks nobody down. 30 s without a blow and it is fresh. | Guarded while it's fresh, reckless once it tires. |
+| **Pack** | wolves, dogs, hyenas | With 2+ on you, the ones you are **not** swinging at bite **×1.4** from the side, while the lead lives (a lead wolf/dog if present, else the biggest; the look names it). Kill or drive off the lead and the flanking stops for 10 min — "the rest of them lose their shape". | Find the lead and kill it first. |
+| **Swarm** | rats, crabs | Each other swarm-mate on you adds **+25%** to every bite (up to 4). Thinning them weakens the rest — "the rest of them are less sure now". | Cut the numbers down fast; sweeping weapons. |
+| **Striker** | adders, vipers, eels, foxes, cats, otters, ermine, lynx | Dodges your swing by weapon speed: speed 1 **40%**, speed 2 **15%**, speed 3 never, bare hands 15%. When it bites you it is committed: for a round, nothing misses it. | A fast blade, or answer the bite at once. |
+| **Flier** | crows, ravens, gulls, eagles, owl, vultures | Overhead unless it dives. Each round it dives at **50%**, **80%** on someone wounded or staggered; otherwise it stays up and doesn't strike. Overhead, only a **reach** weapon or a **throw** reaches it. Drawn on its own flight frames. | Carry something to throw, or a spear. |
+| **Pincher** | the great crab, the great devil crab | A landed blow can take your arm (20%): the seize hold (no fleeing, break free the usual way), and your blows land at **×0.6** while it has you. | Break the hold first. |
+| **Hollow** | the hollow (not the grave-flesh wights) | An edge skates off bone: **×0.7**. Weight breaks it: **×1.3**. Never flees (as before). | Bring a mace. |
+| **Lurker** | pale crawler, pale stalker, the follower, something ahead, root-thing, cave lion | If nobody's light reaches you, it may slip back into the dark mid-fight (30%) — gone from the room and the picture, nothing to swing at — and comes out again next round at **×1.5**. | Keep a light. |
+| **Cutthroat** | cutpurse, footpad, cutthroat, wayman, strand thief, wrecker | A landed blow can be a feint (25%): you're staggered (the next hit on you +2). | Don't trade blows carelessly; kill it fast. |
+| **Folk with steel** | the named people of the roads | Steady; below half health **guarded** (deals and takes ×0.6, but a blunt weapon goes straight through the guard); below a fifth **reckless** (×1.5 both ways). Each change is said in the room. | Read the stance; bring weight against a guard. |
+
+Prey still just runs, and the bosses keep their own phases on top of any style.
+Tested in `scripts/test-styles.mjs` (`npm run test:styles`).
+
 ## Status effects — the threats that route around gear
 
 Armor and hp are the front door; these three are the windows. They're how the

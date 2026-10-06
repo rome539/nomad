@@ -21,6 +21,7 @@
     "test:reconnect": "node scripts/test-reconnect.mjs",
     "test:catchup": "node scripts/test-catchup.mjs",
     "test:combat": "node scripts/test-combat.mjs",
+    "test:styles": "node scripts/test-styles.mjs",
     "test:security": "node scripts/test-security.mjs",
     "test:security:runtime": "node scripts/test-security-runtime.mjs"
   },

@@ -10,6 +10,7 @@ import { hasTrait } from "./world";
 import { randInt, chance, uuid, pick } from "./rng";
 import { cap, isNight, isFullMoon, isBloodMoon, morphOf } from "./zone-util";
 import * as events from "./events";
+import * as styles from "./styles";
 import { underCover, MAP_QUARTERS } from "./detail";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, DRINKERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
@@ -489,6 +490,8 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     if (creature.stunned) return "reeling and dazed";
     if (creature.bleedTicks && creature.bleedTicks > 0) return "bleeding freely, dark spatter on the stone";
     if (creature.rouseAt && Date.now() < creature.rouseAt) return "winding up to spring, hackles high";
+    const way = styles.tell(z, creature, viewer);
+    if (way) return way;
     if (creature.target === viewer) return "fixed on you";
     if (creature.target) {
       const mark = [...z.sessions.values()].find((s) => s.pubkey === creature.target && !z.outOfWorld(s));

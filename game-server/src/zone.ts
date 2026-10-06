@@ -71,6 +71,7 @@ import * as den from "./den";
 import * as dice from "./dice";
 import * as works from "./works";
 import * as wanderer from "./wanderer";
+import * as styles from "./styles";
 import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
 import {
@@ -3975,6 +3976,10 @@ export class ZoneDO implements DurableObject {
             const tmpl = world.mobTemplates.get(creature.templateId)!;
             if (!creature.target) creature.target = session.pubkey;
             ai.addGrudge(this, creature, session.pubkey);
+            // Its own way of fighting (styles.ts): a striker too quick for slow
+            // steel, a bird overhead, a lurker gone back into the dark.
+            const how = styles.playerSwing(this, session, creature, tmpl, weapon, now);
+            if (how.miss) { this.send(session, how.miss, "dodge"); continue; }
             // Only the first cut has your shoulder behind it — follow-up swings
             // from fast steel carry the blade's edge alone (no body roll), so
             // speed multiplies the blade, never your whole arm. Slow heavy
@@ -4016,6 +4021,7 @@ export class ZoneDO implements DurableObject {
             const crushed = bluntVal > 0 && pierceVal === 0 && mobArm > 0; // the weight beat armor
             const opened = edgeVal > 0 && pierceVal === 0 && bluntVal === 0 && mobArm > 0; // the stagger bonus, edge's one-off
             dmg = Math.max(1, dmg - Math.max(0, mobArm - Math.max(pierceVal, bluntVal, edgeVal)));
+            dmg = Math.max(1, Math.round(dmg * how.mult)); // a spent charger, bone against an edge, a guard, a pinned arm
             creature.hp -= dmg;
             this.noteFx(session.pubkey, "struck", creature.templateId);   // it takes the recoil
             this.markHurt(creature, tmpl, session.pubkey);
@@ -4472,6 +4478,8 @@ export class ZoneDO implements DurableObject {
         // doesn't swing. This is the pack's whole trade, and until now only the
         // announcement of it was true (ai.holdsExit).
         if (ai.holdsExit(this, creature, victim)) continue;
+        // A bird that stays up, a lurker gone back into the dark (styles.ts).
+        if (styles.beforeAttack(this, creature, tmpl, victim, now)) continue;
         // The dogpile cap: if this player already has a full press on them this
         // tick, this one can't get a blow in — it snarls at the edge and waits.
         // (It keeps its target, so it steps up the moment a slot opens.)
@@ -4568,7 +4576,12 @@ export class ZoneDO implements DurableObject {
         // A drowned thing that already has hold of you drags harder.
         if (victim.seizedBy === creature.id) dmg = Math.round(dmg * SEIZE_DMG_MULT);
         if (cHurt) dmg = Math.max(1, Math.round(dmg * WOUNDED_DMG_MULT));
-        let flourish = ".";
+        // Its own way of fighting (styles.ts): a charge, a fresh heavy, a pack
+        // coming in from the side.
+        const way = styles.creatureBlow(this, creature, tmpl, victim, now);
+        dmg = Math.max(1, Math.round(dmg * way.mult));
+        if (way.line) this.send(victim, way.line, "dmgin");
+        let flourish = way.flourish ?? ".";
         if (chance(CRIT_CHANCE)) {
           dmg *= 2;
           flourish = pick(CRIT_FLOURISH);
@@ -4679,6 +4692,24 @@ export class ZoneDO implements DurableObject {
             this.send(victim, `${cap(tmpl.name)} lands like a falling stone — your skull rings and the room tilts.`, "stun");
             this.actorFeed(victim, victim.roomId, this.feedProc(FEED_STUN, tmpl.name, victim.name), "stun");
             this.sendStatus(victim); // light the stun pill the instant it lands — the flag was set but never pushed (rome, 2026-07-17)
+          }
+          // A great crab's claw takes an arm: the seize hold, weaker blows.
+          if (way.pin && !victim.seizedBy) {
+            victim.seizedBy = creature.id;
+            this.send(victim, `${cap(tmpl.name)} closes a claw on your arm and holds it. (break free: keep fighting)`, "seize");
+          }
+          // A cutthroat's feint: you bite on it and it is inside your guard.
+          if (way.feint && !victim.staggered) {
+            victim.staggered = true;
+            this.send(victim, `${cap(tmpl.name)} feints, you go for it, and it is inside your guard.`, "dmgin");
+          }
+          // A fresh heavy knocks you off your feet: the same lost swing as a
+          // stun, and worn mass plants you against it the same way.
+          if (way.knock && !victim.stunned && chance(1 - this.poiseOf(victim))) {
+            victim.stunned = true;
+            this.send(victim, `${cap(tmpl.name)} knocks you clean off your feet. You lose your next swing getting up.`, "stun");
+            this.actorFeed(victim, victim.roomId, `${cap(tmpl.name)} knocks ${victim.name} off their feet.`, "stun");
+            this.sendStatus(victim);
           }
           // Eating a blow thins the mail a hair (provisional gear only).
           if (worn) await this.wear(victim, worn.carried, worn.tmpl, ARMOR_WEAR);
@@ -6517,6 +6548,7 @@ export class ZoneDO implements DurableObject {
     dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
     dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
     victim.hp -= dmg;
+    styles.entryStrike(creature, Date.now()); // the rush in IS a charger's charge: it is spent, and the next round is no second one
     victim.pose = undefined; victim.poseAt = undefined; victim.poseRef = undefined; // a blow ends a posture; nobody keeps a hand out through this
     if (victim.resting) {
       victim.resting = false;

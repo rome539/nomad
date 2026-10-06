@@ -11093,6 +11093,7 @@ function applyState(doing) {
     var a = anims[i], st = (doing && doing[a.slot]) || "";
     if (a.phase === "death") continue;
     if (st === a.state) continue;
+    a.landing = a.state === "aloft";   // out of the sky: it comes down to strike (poseAt)
     a.state = st;
     a.asleep = st === "rest";
     a.t = 0;
@@ -11264,6 +11265,21 @@ function poseAt(a, now) {
     // ground, so the frame is whichever of the two this one was drawn with.
     name = a.eatAs || a.eat || "feed";   // whichever act the signal said this was
     x = Math.sin(t * 3.4) * SWAY * 0.10;
+  } else if (a.landing && t < 0.7) {
+    // ...AND COMES DOWN to strike: the stoop where it was drawn with one, then
+    // the landing, falling from the height it held.
+    name = f.dive !== undefined && t < 0.35 ? "dive" : f.landing !== undefined ? "landing" : (f.down !== undefined ? "down" : "idle");
+    air = lift * (1 - t / 0.7);
+  } else if (a.state === "aloft") {
+    // OVERHEAD (styles.ts, rome 2026-10-05). A bird in a fight that has gone up
+    // out of reach, on its own flight frames: off the ground, wings beating up
+    // to height, then held there on the glide with a few beats now and then,
+    // until it drops to strike.
+    var abeat = Math.floor(t * (a.id === "ptarmigan" ? WINGBEAT_HZ_FAST : WINGBEAT_HZ)) % 2 ? "up" : "down";
+    if (f.takeoff !== undefined && t < 0.25) { name = "takeoff"; air = lift * (t / 0.8); }
+    else if (t < 0.8 || f.glide === undefined) { name = f.up !== undefined ? abeat : a.watch; air = lift * Math.min(1, t / 0.8); }
+    else { name = (t % 3) < 0.6 ? abeat : "glide"; air = lift + Math.sin(t * 1.3) * 0.03; }
+    x = Math.sin(t * 0.9) * SWAY * 0.6;
   } else if (a.state === "hunt") {
     // IT HAS YOU. It does not wander, it does not cut to its calm pose - it
     // holds the alert it was drawn with and closes, slowly, on a breath that is

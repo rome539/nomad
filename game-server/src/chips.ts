@@ -20,7 +20,7 @@ import {
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
-  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS,} from "./zone-data";
+  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS, FLIERS,} from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
 // resting, banking, chatting, or reading the walls while something swings
@@ -185,8 +185,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // Torchlight reveals a waiting lurker — so it also gets its attack chip.
     // GLINTING gear does the same by daylight (2026-08-20): the polish leaves
     // it nowhere to hide.
-    if (LURKERS.has(creature.templateId) && creature.hidden && !creature.target
-      && !z.carriesLight(session) && !z.wearsTrait(session, "glinting")) continue;
+    // ...and one that went back into the dark mid-fight (styles.ts) is not
+    // drawn standing there: it only goes back when nobody has a light.
+    if (LURKERS.has(creature.templateId) && creature.hidden
+      && (creature.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))) continue;
     creatureHere = true;
     const tmpl = world.mobTemplates.get(creature.templateId)!;
     const label = chipName(tmpl.name);
@@ -201,7 +203,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
       const state =
           creature.windedUntil && now < creature.windedUntil ? "flee"
         : creature.fled ? "flee"
-        : creature.stunned || (creature.staggerUntil && now < creature.staggerUntil) ? "reel"
+        : FLIERS.has(creature.templateId) && ai.airborne(creature, now) ? "aloft"
+        : creature.stunned || (creature.staggerUntil && now < creature.staggerUntil) || (creature.blownUntil && now < creature.blownUntil) ? "reel"
         : creature.target === session.pubkey ? "hunt"
         : creature.target ? "fight"
         : creature.asleep ? "rest"
@@ -233,8 +236,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // Same filter as the attack-chip loop above: the throw chip must never
     // name a lurker still lying in wait (it was the one place that could).
     const firstMob = z.creaturesInRoom(session.roomId).find((c) =>
-      !(LURKERS.has(c.templateId) && c.hidden && !c.target
-        && !z.carriesLight(session) && !z.wearsTrait(session, "glinting")));
+      !(LURKERS.has(c.templateId) && c.hidden
+        && (c.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))));
     if (throwable && firstMob) {
       const mobT = world.mobTemplates.get(firstMob.templateId)!;
       suggest.push(`throw ${shortName(world.itemTemplates.get(throwable.itemId)!.name)} at ${chipName(mobT.name)}`);
