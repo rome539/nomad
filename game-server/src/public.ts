@@ -3675,7 +3675,7 @@ async function connect() {
       }
       paintWayHome();
       if (f.room) knownRooms[f.room] = 1;
-      hpEl.textContent = f.hp + "/" + f.max_hp + " hp \\u00b7 " + f.name;
+      hpEl.textContent = f.hp + "/" + f.max_hp + " hp \\u00b7 " + (f.fatigue || 0) + "/50 exh \\u00b7 " + f.name;
       // Remember the name for the threshold's greeting next visit.
       try { localStorage.setItem("nomad_name", f.name); } catch (e) {}
       hpEl.className = f.hp <= f.max_hp / 3 ? "hp-low" : "";

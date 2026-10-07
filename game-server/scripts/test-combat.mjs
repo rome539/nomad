@@ -13,7 +13,7 @@ try {
   const output = join(dir, 'combat.mjs');
   await build({
     stdin: {
-      contents: "export {ZoneDO} from './zone'; export {attackPlayer,tickPvp} from './pvp';",
+      contents: "export {ZoneDO} from './zone'; export {attackPlayer,tickPvp} from './pvp'; export {LINKDEAD_MS,TICK_MS} from './zone-data'; export * as E from './exhaustion';",
       resolveDir: root, loader: 'ts',
     },
     bundle: true, platform: 'node', format: 'esm', outfile: output, logLevel: 'silent',
@@ -22,7 +22,46 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, attackPlayer, tickPvp } = await import(pathToFileURL(output));
+  const { ZoneDO, attackPlayer, tickPvp, LINKDEAD_MS, TICK_MS, E } = await import(pathToFileURL(output));
+  {
+    for (const [weight,rounds] of [[0,50],[2,39],[6,27],[10,20],[15,16]]) {
+      const e=E.readExhaustion(undefined,0);
+      for(let i=1;i<=rounds;i++){E.exert(e,weight);if(i<rounds)assert.ok(e.units<1000);}
+      assert.equal(e.units,1000);
+    }
+    for (const [units,penalty] of [[0,0],[199,0],[200,2],[399,2],[400,4],[999,8],[1000,10]]) {
+      assert.equal(E.playerPenalty({units}),penalty);
+      assert.equal(E.playerDamage(12,{units}),12-penalty);
+      assert.equal(E.playerDamage(1,{units}),1);
+    }
+    const e={units:1000,at:0,mode:'rest'};
+    E.recover(e,4000,'combat');assert.equal(e.units,800);
+    E.recover(e,40000,'passive');assert.equal(e.units,800);
+    E.recover(e,50000);assert.equal(e.units,700);
+    E.recover(e,49000);E.recover(e,50000);assert.equal(e.units,700);
+    for (const mode of ['passive','rest','fire']) {
+      const split={units:1000,at:0,mode},whole={...split};
+      for(let ms=1;ms<=10000;ms++)E.recover(split,ms);
+      E.recover(whole,10000);
+      assert.equal(split.units,whole.units,'millisecond '+mode+' recovery must not accumulate rounding error');
+      assert.equal(E.playerPenalty(split),E.playerPenalty(whole));
+    }
+    for (const [id,p] of Object.entries(E.CREATURE_ENDURANCE)) {
+      const c={templateId:id};
+      for(let i=0;i<=p[0];i++){
+        E.creatureAttempt(c,i*4000);
+        const effort=c.exertion?.effort;
+        E.creatureAttempt(c,i*4000+1);assert.equal(c.exertion?.effort,effort);
+      }
+      assert.equal(E.creatureDamage(c,20),20-p[1],id);
+      const t=(p[0]+1)*4000;
+      E.recoverCreature(c,t,false);E.recoverCreature(c,t+p[2]*500,false);
+      if(p[0])assert.ok(Math.abs(c.exertion.effort-p[0]/2)<1e-8,id+' half recovery');
+      E.recoverCreature(c,t+p[2]*1000,false);E.creatureAttempt(c,t+p[2]*1000);
+      assert.equal(E.creatureDamage(c,20),20,id+' full recovery');
+    }
+    console.log('PASS: equipment rates, integer penalties, elapsed/mode accounting and every creature endurance profile.');
+  }
   // Midpoint body roll (4), no fumbles, crits, blocks, or random afflictions.
   Object.defineProperty(globalThis, 'crypto', { configurable: true, value: {
     getRandomValues(array) { array.fill(2147483648); return array; },
@@ -48,6 +87,15 @@ try {
     return { z, a, b, c };
   }
 
+  {
+    const {z,a,b}=fixture();
+    a.exhaustion={units:200,at:Date.now(),mode:'combat'};
+    await attackPlayer(z,a,b);assert.equal(b.hp,56,'PvP opener loses two damage after mitigation');
+    await tickPvp(z);assert.equal(b.hp,54,'normal PvP hit loses the same flat two');
+    a.exhaustion.units=1000;await tickPvp(z);assert.equal(b.hp,53,'exhausted hits retain one damage');
+    assert.equal(a.exhaustion.units,1000,'individual hits never add per-round effort');
+    console.log('PASS: PvP opening and follow-up damage, final floor, no per-hit effort.');
+  }
   {
     const { z, a, b } = fixture();
     await attackPlayer(z, a, b);
@@ -104,6 +152,80 @@ try {
     await tickPvp(z);
     assert.equal(b.hp, 45);
     console.log('PASS: heavy-weapon opening recovery is preserved.');
+  }
+  // Real server departure/expiry/alarm methods; no sockets or external writes.
+  {
+    const realNow = Date.now;
+    let now = 100000;
+    Date.now = () => now;
+    function departure() {
+      const { z, a, b } = fixture();
+      const saves = [], alarms = [];
+      z.trySavePlayer = async (...args) => saves.push(args);
+      z.persist = async () => {};
+      z.checkpointPlayers = async () => {};
+      z.noteCreaturesChanged = () => {};
+      z.state = { getWebSockets: () => [], storage: {
+        getAlarm: async () => null, setAlarm: async at => alarms.push(at),
+      } };
+      z.ensureAlarm = ZoneDO.prototype.ensureAlarm.bind(z);
+      return { z, a, b, saves, alarms };
+    }
+    try {
+      for (const kind of ['outgoing-pve', 'incoming-pve', 'outgoing-pvp', 'incoming-pvp']) {
+        const { z, a, b, saves, alarms } = departure();
+        if (kind === 'outgoing-pve') a.target = 'mob';
+        if (kind === 'incoming-pve') z.creatures.set('mob', { target: a.pubkey });
+        if (kind === 'outgoing-pvp') a.pvpTarget = b.pubkey;
+        if (kind === 'incoming-pvp') b.pvpTarget = a.pubkey;
+        await z.onLeave(a);
+        const deadline = a.linkdeadUntil;
+        assert.equal(deadline, now + LINKDEAD_MS, kind);
+        assert.equal(alarms[0], now + TICK_MS, 'last closed socket must not stop combat ticks');
+        now += 1000;
+        await z.onLeave(a); // close followed by error, or repeated callbacks
+        assert.equal(a.linkdeadUntil, deadline);
+        assert.ok(z.sessions.has(a.pubkey), 'duplicate disconnect cannot release early');
+        now = deadline - 1;
+        await z.releaseLinkdead(now);
+        assert.ok(z.sessions.has(a.pubkey));
+        now = deadline;
+        await z.releaseLinkdead(now);
+        assert.equal(z.sessions.has(a.pubkey), false, 'expired body must fade even while targeted');
+        assert.equal(a.linkdeadUntil, undefined, 'expiry must not restart the timer');
+        assert.equal(b.pvpTarget, null);
+        assert.ok([...z.creatures.values()].every(c => c.target !== a.pubkey));
+        assert.equal(saves.length, 2, 'initial and final state saved once each');
+        const alarmCount = alarms.length;
+        await z.ensureAlarm();
+        assert.equal(alarms.length, alarmCount, 'no further alarms for an empty disconnected world');
+      }
+      {
+        const { z, a } = departure();
+        a.target = 'mob'; await z.onLeave(a);
+        a.target = null; now += 1000;
+        await z.releaseLinkdead(now);
+        assert.equal(z.sessions.has(a.pubkey), false, 'combat ending releases before deadline');
+      }
+      {
+        const { z, a, saves } = departure();
+        await z.onLeave(a);
+        assert.equal(z.sessions.has(a.pubkey), false, 'safe departure remains immediate');
+        assert.equal(saves.length, 1);
+      }
+      {
+        const { z, a, saves } = departure();
+        a.target = 'mob'; await z.onLeave(a);
+        const deadline = a.linkdeadUntil;
+        const replacement = { ...a, linkdeadUntil: undefined };
+        z.sessions.set(a.pubkey, replacement);
+        await z.onLeave(a); // stale close belonging to the displaced socket
+        now = deadline; await z.releaseLinkdead(now);
+        assert.equal(z.sessions.get(a.pubkey), replacement);
+        assert.equal(saves.length, 1, 'stale disconnect must not overwrite the reconnected player');
+      }
+      console.log('PASS: PvE/PvP departure, duplicate close, fixed expiry, early release, reconnect isolation and last-socket alarms.');
+    } finally { Date.now = realNow; }
   }
 } finally {
   if (originalCrypto) Object.defineProperty(globalThis, 'crypto', originalCrypto);

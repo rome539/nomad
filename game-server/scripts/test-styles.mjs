@@ -16,7 +16,7 @@ let lit = true;
 try {
   const output = join(dir, 'styles.mjs');
   await build({
-    entryPoints: [join(root, 'styles.ts')], bundle: true, platform: 'node', format: 'esm',
+    stdin: {contents: "export * from './styles'; export * as E from './exhaustion';", resolveDir: root, loader: 'ts'}, bundle: true, platform: 'node', format: 'esm',
     outfile: output, logLevel: 'silent',
   });
   const S = await import(pathToFileURL(output));
@@ -78,13 +78,18 @@ try {
     roll = 0; // every knock-down roll comes up
     const mults = [], knocks = [];
     for (let i = 0; i < 6; i++) {
+      S.E.creatureAttempt(bear, now + i * 4000);
       const b = S.creatureBlow(z, bear, tmpl('the-baited-bear'), you('h'), now + i * 4000);
       mults.push(Math.round(b.mult * 10) / 10); knocks.push(b.knock);
     }
-    assert.deepEqual(mults, [1, 0.9, 0.8, 0.7, 0.6, 0.6], 'each blow it lands tires it, down to a floor');
+    assert.deepEqual(mults, [1, 1, 1, 1, 1, 1], 'old heavy percentage decay must not stack with raw exhaustion');
+    assert.equal(S.E.creatureDamage(bear, 20),17,'sixth attack uses five prior attempts: floor(5*5/8)=3 raw loss');
     assert.deepEqual(knocks, [true, true, true, true, false, false], 'only a fresh one knocks you down');
-    assert.equal(feed.filter((l) => l.includes('heaving')).length, 1, 'the room is told once when it tires');
     assert.ok(S.tell(z, bear, 'you').includes('heaving'), 'and the look shows it');
+    S.E.recoverCreature(bear,now+20000,false);
+    S.E.recoverCreature(bear,now+60000,false);
+    S.E.creatureAttempt(bear,now+60000);
+    assert.equal(S.E.creatureDamage(bear,20),20);
     const rested = S.creatureBlow(z, bear, tmpl('the-baited-bear'), you('h'), now + 60_000);
     assert.equal(rested.mult, 1, 'rested: fresh again');
     roll = 0xffffffff;

@@ -1,3 +1,4 @@
+import * as exhaustion from "./exhaustion";
 // WAYS OF FIGHTING (rome, 2026-10-05). The spine's creature round asks this file
 // how hard the blow it is about to land should be, and whether it knocks you
 // down; the player's round asks how much a blow lands on a creature that has
@@ -21,7 +22,7 @@ import {
   WEAKEST_HUNTERS, WEAKEST_SWITCH_GAP, TURNING_BOARS, BOAR_TURN_AT, BLUFFERS, BLUFF_HOLD_MS, BLUFF_LEAVE_ODDS, BLUFF_REARM_MS,
   STALKERS, STALK_STILL_MS, STALK_GIVEUP_MS, STALK_RANGE,
   CHARGERS, CHARGE_MULT, CHARGE_REST_MS, BLOWN_MS, BLOWN_TAKEN_MULT,
-  HEAVIES, HEAVY_KNOCK_ODDS, HEAVY_TIRED_AT, HEAVY_TIRE_STEP, HEAVY_TIRED_FLOOR, HEAVY_REST_MS,
+  HEAVIES, HEAVY_KNOCK_ODDS,
   PACKS, PACK_LEADS, PACK_FLANK_MULT, PACK_LEADERLESS_MS,
 } from "./zone-data";
 
@@ -45,14 +46,7 @@ export function creatureBlow(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
   }
 
   if (HEAVIES.has(id)) {
-    if (!creature.lastBlowAt || now - creature.lastBlowAt > HEAVY_REST_MS) creature.fatigue = 0;
-    const tired = creature.fatigue ?? 0;
-    out.mult *= Math.max(HEAVY_TIRED_FLOOR, 1 - tired * HEAVY_TIRE_STEP);
-    out.knock = tired < HEAVY_TIRED_AT && chance(HEAVY_KNOCK_ODDS * (victim.stance === "guarded" ? 0.5 : 1));
-    creature.fatigue = tired + 1;
-    if (creature.fatigue === HEAVY_TIRED_AT) {
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)}'s sides are heaving now. Its blows have gone heavy and slow.`, undefined, false);
-    }
+    out.knock = !exhaustion.heavyTired(creature) && chance(HEAVY_KNOCK_ODDS * (victim.stance === "guarded" ? 0.5 : 1));
   }
 
   if (PACKS[id] && victim.target !== creature.id && flanking(z, creature, victim, now)) {
@@ -236,10 +230,11 @@ export function entryStrike(creature: Creature, now: number): void {
 export function tell(z: ZoneDO, creature: Creature, viewer: string): string | null {
   const now = Date.now();
   if (creature.blownUntil && now < creature.blownUntil) return "spent from the charge, head low and wide open";
-  if (HEAVIES.has(creature.templateId) && creature.target && (creature.fatigue ?? 0) >= HEAVY_TIRED_AT
-      && creature.lastBlowAt && now - creature.lastBlowAt <= HEAVY_REST_MS) {
+  if (HEAVIES.has(creature.templateId) && creature.target && exhaustion.heavyTired(creature)) {
     return "sides heaving, its blows gone heavy and slow";
   }
+  const endurance = exhaustion.CREATURE_ENDURANCE[creature.templateId];
+  if (endurance?.[0] && (creature.exertion?.effort ?? 0) >= endurance[0]) return "exhausted, its attacks losing force";
   if (FLIERS.has(creature.templateId) && creature.target && airborne(creature, now)) return "wheeling overhead, out of reach";
   if (creature.bluffing === viewer) return "up close and blowing at you, slapping the ground: a warning";
   if (creature.stalks === viewer) return "low and still in the cover, watching you";

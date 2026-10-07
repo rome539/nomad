@@ -811,14 +811,14 @@ export const RATE_REFILL_PER_SEC = 2;
 // gatehouse (bench or hatch open at a gate: out of the world, mending).
 // Death wakes you whole: the price of dying is everything you carried,
 // not a hobbled morning.
-export const REST_REGEN_PER_TICK = 1;
+export const REST_REGEN_PER_TICK = 5;
 // Two kinds of rest (rome, 2026-07-16). The DUNGEON rest is the one above:
 // cold stone, one eye open, REST_REGEN_PER_TICK — and anything ends it. The
 // FIRE rest is a deliberate doze INSIDE the gatehouse (typed 'rest' by the
 // fire): warm, truly safe, and wounds close at double time. Standing shelter
 // (bench/hatch open at a gate, not dozing) stays the slow rate — the fire
 // rewards actually settling in, not just being indoors.
-export const FIRE_REST_REGEN_PER_TICK = 2;
+export const FIRE_REST_REGEN_PER_TICK = 10;
 
 // Simulation clocks.
 export const SIM_STEP_MS = 60_000; // catch-up granularity
@@ -4545,10 +4545,6 @@ export const BLOWN_TAKEN_MULT = 1.5;
 // softer and knocks nobody down. Rest puts it back to fresh.
 export const HEAVIES = new Set(["the-baited-bear", "cave-lion", "glutton", "the-old-glutton", "the-gaunt", "the-chain-breaker"]);
 export const HEAVY_KNOCK_ODDS = 0.3;    // while fresh; a guarded stance halves it, worn mass shrugs it like a stun
-export const HEAVY_TIRED_AT = 4;        // landed blows until it is blown
-export const HEAVY_TIRE_STEP = 0.1;     // each landed blow takes this off the next
-export const HEAVY_TIRED_FLOOR = 0.6;   // ...and it never falls below this
-export const HEAVY_REST_MS = 30_000;    // this long without a blow and it is fresh again
 // PACKS work together. The animals you are not swinging at come in from the
 // side and bite harder - while the lead one is alive to hold them to it. The lead
 // is a named lead where one is in the fight, else the biggest; kill it (or drive

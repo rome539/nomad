@@ -297,7 +297,7 @@ export async function loadWorld(db: D1Database, zone: string): Promise<World> {
 
 // ---- durable player records ----
 
-export const PLAYER_MAX_HP = 60;
+export const PLAYER_MAX_HP = 100;
 
 export interface PlayerRow {
   pubkey: string;
@@ -313,6 +313,7 @@ export interface PlayerRow {
   boss_kills: number;
   pvp_kills: number; // self-publishable only; the world's narration never names killers
   stance: string; // "reckless" | "steady" | "guarded" — persisted play-style
+  exhaustion?: string;
   keeper_told: string; // how far through each keeper's telling you are: "muster-clerk:4,the-roadwarden:9"
 }
 
@@ -426,7 +427,13 @@ export async function savePlayer(
   pubkey: string,
   roomId: string,
   hp: number,
+  exhaustion?: string,
 ): Promise<void> {
+  if (exhaustion !== undefined) {
+    await db.prepare("UPDATE players SET room_id = ?, hp = ?, last_seen = ?, exhaustion = ? WHERE pubkey = ?")
+      .bind(roomId, hp, nowSec(), exhaustion, pubkey).run();
+    return;
+  }
   await db
     .prepare("UPDATE players SET room_id = ?, hp = ?, last_seen = ? WHERE pubkey = ?")
     .bind(roomId, hp, nowSec(), pubkey)

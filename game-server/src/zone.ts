@@ -1,3 +1,4 @@
+import * as exhaustion from "./exhaustion";
 // One Durable Object per zone: the authoritative simulation — who's where,
 // creature state, what lies on which floor.
 //
@@ -840,6 +841,10 @@ export class ZoneDO implements DurableObject {
     if (!world) return;
     const now = Date.now();
     let t = Math.max(this.savedAt, now - CATCHUP_CAP_MS);
+    for (const c of this.creatures.values()) {
+      exhaustion.recoverCreature(c, this.savedAt, false);
+      exhaustion.recoverCreature(c, now, false);
+    }
     // Replaying every minute of a sleeping world made the first login exhaust
     // the DO's CPU budget. Reset then restored the same old save, so every
     // retry replayed the same gap and crashed again. Bound the number of world
@@ -1236,7 +1241,7 @@ export class ZoneDO implements DurableObject {
     // The first observer in a while collapses the elapsed time. "Observed" now
     // means a live socket, hibernated or not (getWebSockets) — while any socket
     // is parked the alarm keeps ticking the world, so it was never truly dark.
-    if (this.state.getWebSockets().length === 0) this.catchUp();
+    if (this.state.getWebSockets().length === 0 && this.sessions.size === 0) this.catchUp();
 
     const { row, created } = await getOrCreatePlayer(this.env.DB, pubkey, this.randomGate());
     const items = await loadInventory(this.env.DB, pubkey);
@@ -1293,6 +1298,13 @@ export class ZoneDO implements DurableObject {
     // Same for a displaced body (a second tab opened mid-fight): the wanderer
     // is still standing exactly where the old session left them.
     if (displaced) {
+      session.exhaustion = displaced.exhaustion;
+      session.healingDue = displaced.healingDue;
+      session.pvpTarget = displaced.pvpTarget;
+      session.nextThrowAt = displaced.nextThrowAt;
+      session.openedHeavy = displaced.openedHeavy;
+      session.staggered = displaced.staggered;
+      session.resting = displaced.resting;
       session.hp = displaced.hp;
       session.roomId = displaced.roomId;
       session.target = displaced.target;
@@ -1308,6 +1320,8 @@ export class ZoneDO implements DurableObject {
       session.linkdeadUntil = undefined;
     }
     this.sessions.set(pubkey, session);
+    this.syncExhaustion(session);
+    await this.checkpointBody(session);
     this.refreshRoomCtx(session.roomId); // the room sees a nomad step in
     await lore.refreshStudied(this, session); // the sync chip builder can't read D1; prime the studied-cache so no redundant `study` chip shows before the first journal open
     this.lastCommandAt = Date.now(); // an arrival is activity — the world beats fast for fresh footsteps
@@ -1448,13 +1462,68 @@ export class ZoneDO implements DurableObject {
   // room of his last good flush). The tick drains this, so a failure can never
   // outlive the beat that caused it.
   private dirtySaves = new Set<string>();
+  private bodiesLoaded = false;
+  private bodyJournal = new Map<string, ReturnType<ZoneDO["bodySnapshot"]>>();
 
-  private async trySavePlayer(pubkey: string, roomId: string, hp: number): Promise<void> {
+  public recoveryMode(s: Session): exhaustion.RecoveryMode {
+    if (this.inCombat(s)) return "combat";
+    if (this.outOfWorld(s)) return s.resting ? "fire" : "shelter";
+    return s.resting ? "rest" : "passive";
+  }
+
+  public syncExhaustion(s: Session, now = Date.now()): void {
+    const e = s.exhaustion ??= exhaustion.readExhaustion(undefined, now);
+    const nextMode = this.recoveryMode(s);
+    const healingRate = e.mode === "fire" ? FIRE_REST_REGEN_PER_TICK * 1000 / TICK_MS : (e.mode === "rest" || e.mode === "shelter") ? REST_REGEN_PER_TICK * 1000 / TICK_MS : 0;
+    s.healingDue = nextMode === "combat" ? 0 : (s.healingDue ?? 0) + Math.max(0, now - e.at) * healingRate / 1000;
+    exhaustion.recover(e, now, nextMode);
+    // A fight interrupts deliberate rest even when the first blow misses.
+    if (e.mode === "combat") s.resting = false;
+  }
+
+  private bodySnapshot(s: Session, offlineAt?: number) {
+    return {
+      pubkey: s.pubkey, hp: s.hp, roomId: s.roomId,
+      exhaustion: s.exhaustion, healingDue: s.healingDue, target: s.target, pvpTarget: s.pvpTarget,
+      resting: s.resting, away: s.away, linkdeadUntil: s.linkdeadUntil,
+      bleedTicks: s.bleedTicks, bleedDmg: s.bleedDmg, stunned: s.stunned,
+      nextThrowAt: s.nextThrowAt, staggered: s.staggered, openedHeavy: s.openedHeavy, hobbled: s.hobbled,
+      limpingSince: s.limpingSince, seizedBy: s.seizedBy,
+      savedAt: Date.now(), roundAt: this.lastCombatRound, offlineAt,
+    };
+  }
+
+  private async checkpointBody(s: Session, offlineAt?: number): Promise<void> {
+    const body = this.bodySnapshot(s, offlineAt);
+    await this.state.storage.put("body:" + s.pubkey, body);
+    this.bodyJournal.set(s.pubkey, body);
+  }
+
+  private async checkpointPlayers(): Promise<void> {
+    const now = Date.now();
+    for (const s of this.sessions.values()) this.syncExhaustion(s, now);
+    await Promise.all([...this.sessions.values()].map(s => this.checkpointBody(s)));
+    for (const c of this.creatures.values()) {
+      const engaged = !!c.target || !!c.holding || [...this.sessions.values()].some(s => s.target === c.id && s.roomId === c.roomId);
+      exhaustion.recoverCreature(c, now, engaged);
+      if (c.exertion && (c.exertion.fighting || c.exertion.effort > 0)) this.markSimDirty();
+    }
+  }
+
+
+  private async trySavePlayer(pubkey: string, roomId: string, hp: number, leaving?: Session): Promise<void> {
+    const s = leaving ?? this.sessions.get(pubkey);
+    if (s) await this.checkpointBody(s, leaving ? s.exhaustion?.at : undefined);
+    const fatigue = s?.exhaustion ? JSON.stringify(s.exhaustion) : undefined;
     // D1 overload is transient (it's a queue, not an outage), so a couple of
     // immediate retries close most of the window on their own.
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        await savePlayer(this.env.DB, pubkey, roomId, hp);
+        await savePlayer(this.env.DB, pubkey, roomId, hp, fatigue);
+        if (leaving) {
+          await this.state.storage.delete("body:" + pubkey);
+          this.bodyJournal.delete(pubkey);
+        }
         this.dirtySaves.delete(pubkey);
         return;
       } catch (e) {
@@ -1472,7 +1541,18 @@ export class ZoneDO implements DurableObject {
     if (!this.dirtySaves.size) return;
     for (const pubkey of [...this.dirtySaves]) {
       const s = this.sessions.get(pubkey);
-      if (!s) { this.dirtySaves.delete(pubkey); continue; } // gone; onLeave's own save is the last word
+      if (!s) {
+        const body = this.bodyJournal.get(pubkey);
+        if (body?.offlineAt !== undefined) {
+          try {
+            await savePlayer(this.env.DB, pubkey, body.roomId, body.hp, JSON.stringify(body.exhaustion));
+            await this.state.storage.delete("body:" + pubkey);
+            this.bodyJournal.delete(pubkey);
+            this.dirtySaves.delete(pubkey);
+          } catch {} // journal remains authoritative until D1 accepts it
+        }
+        continue;
+      }
       await this.trySavePlayer(pubkey, s.roomId, s.hp);
     }
   }
@@ -1489,9 +1569,11 @@ export class ZoneDO implements DurableObject {
     // killable — so pulling the plug is never an escape. With nothing hunting
     // you, the fade below is instant and free, same as ever. The tick lets the
     // body go when the fight ends or the window closes.
-    const fightLive = !!session.target
-      || [...this.creatures.values()].some((c) => c.target === session.pubkey);
-    if (fightLive && !session.linkdeadUntil) {
+    const fightLive = this.inCombat(session);
+    // A repeated close/error must neither release the body early nor renew its
+    // deadline. Keep an expired deadline until the fade below has consumed it.
+    if (fightLive && session.linkdeadUntil !== undefined && Date.now() < session.linkdeadUntil) return;
+    if (fightLive && session.linkdeadUntil === undefined) {
       session.linkdeadUntil = Date.now() + LINKDEAD_MS;
       this.leftAt.set(session.pubkey, Date.now()); // a return inside the window re-weaves
       // Their own beat, their own key (actorFeed) — though the client that would
@@ -1512,6 +1594,7 @@ export class ZoneDO implements DurableObject {
           await setItemCondition(this.env.DB, c.rowId, c.condition);
         }
       }
+      await this.ensureAlarm(); // the last socket may already be closed
       return;
     }
     // Their own beat, their own key (actorFeed) — and, as with the linkdead line
@@ -1519,6 +1602,12 @@ export class ZoneDO implements DurableObject {
     // hears it. Deliberate: a named logout broadcast tells the network exactly
     // when you stopped watching your own body. The room sees it; that's enough.
     this.actorFeed(session, session.roomId, `${session.name} fades from the world.`, "who");
+    const fadeAt = Math.min(Date.now(), session.linkdeadUntil ?? Date.now());
+    const e = session.exhaustion ??= exhaustion.readExhaustion(undefined, fadeAt);
+    if (e.mode === "combat") e.at = Math.min(e.at, fadeAt);
+    exhaustion.recover(e, fadeAt, "passive");
+    session.resting = false;
+    session.healingDue = 0;
     session.linkdeadUntil = undefined;
     this.sessions.delete(session.pubkey);
     this.refreshRoomCtx(session.roomId); // ...and the nomad gone from the picture
@@ -1526,8 +1615,13 @@ export class ZoneDO implements DurableObject {
     for (const c of this.creatures.values()) {
       if (c.target === session.pubkey) c.target = null;
     }
+    session.target = null;
+    session.pvpTarget = null;
+    for (const other of this.sessions.values()) {
+      if (other.pvpTarget === session.pubkey) other.pvpTarget = null;
+    }
     this.noteCreaturesChanged(); // targetedBy must not still hold a name that left
-    await this.trySavePlayer(session.pubkey, session.roomId, session.hp);
+    await this.trySavePlayer(session.pubkey, session.roomId, session.hp, session);
     // Flush the worn-down condition of any provisional gear (rust ticks live in
     // memory; D1 catches up here). Sealed gear is frozen, no need.
     for (const c of session.items) {
@@ -1535,7 +1629,17 @@ export class ZoneDO implements DurableObject {
         await setItemCondition(this.env.DB, c.rowId, c.condition);
       }
     }
+    await this.checkpointPlayers();
     await this.persist();
+  }
+
+  private async releaseLinkdead(now: number): Promise<void> {
+    for (const session of [...this.sessions.values()]) {
+      if (session.linkdeadUntil === undefined) continue;
+      if (!this.inCombat(session) || now >= session.linkdeadUntil) {
+        await this.onLeave(session);
+      }
+    }
   }
 
   // ---- hibernation: sockets that outlive the DO ----
@@ -1546,13 +1650,19 @@ export class ZoneDO implements DurableObject {
 
   // Build a Session from a player row, their D1 inventory, and a live socket.
   // Shared by a fresh connect and a post-wake rehydrate: everything here is
-  // either loaded from D1 or a safe transient default. A wake resets combat /
-  // rest / modal state, but NEVER hp, room, gear, stance, or tallies.
+  // loaded from D1 or a safe transient default. hydrateSessions overlays the
+  // body journal to preserve fatigue, recovery mode and an unfinished fight.
   private buildSession(ws: WebSocket, row: PlayerRow, items: CarriedItem[]): Session {
     const world = this.world!;
+    const pending = this.bodyJournal.get(row.pubkey);
+    if (pending?.offlineAt !== undefined) row = { ...row, hp: pending.hp, room_id: pending.roomId, exhaustion: JSON.stringify(pending.exhaustion) };
     const roomId = world.rooms.has(row.room_id) ? row.room_id : this.randomGate();
+    const fatigue = exhaustion.readExhaustion(row.exhaustion, Date.now());
+    if (fatigue.mode !== "combat") fatigue.mode = "passive";
+    exhaustion.recover(fatigue, Date.now());
     return {
       ws,
+      exhaustion: fatigue,
       sealedTell: this.wsAttachment(ws)?.sealedTell === true,
       pubkey: row.pubkey,
       name: row.name,
@@ -1602,7 +1712,11 @@ export class ZoneDO implements DurableObject {
   // only once per socket per cold wake.
   private async hydrateSessions(): Promise<void> {
     const sockets = this.state.getWebSockets();
-    if (sockets.length === 0) return;
+    if (!this.bodiesLoaded) {
+      const saved = await this.state.storage.list<ReturnType<ZoneDO["bodySnapshot"]>>({ prefix: "body:" });
+      for (const body of saved.values()) this.bodyJournal.set(body.pubkey, body);
+      this.bodiesLoaded = true;
+    }
     for (const ws of sockets) {
       const pubkey = this.wsPubkey(ws);
       if (!pubkey || this.sessions.has(pubkey)) continue;
@@ -1610,6 +1724,11 @@ export class ZoneDO implements DurableObject {
       const { row } = await getOrCreatePlayer(this.env.DB, pubkey, this.randomGate());
       const items = await loadInventory(this.env.DB, pubkey);
       const rebuilt = this.buildSession(ws, row, items);
+      const body = this.bodyJournal.get(pubkey);
+      if (body && body.offlineAt === undefined) {
+        Object.assign(rebuilt, body);
+        this.lastCombatRound = Math.max(this.lastCombatRound, body.roundAt);
+      }
       await this.loadWall(rebuilt.pubkey); // a hibernation rebuild must not read an empty wall
       // buildSession stamps lastActiveAt = now, which would read a long-parked
       // socket as JUST arrived and dodge the idle sweep across every eviction —
@@ -1626,6 +1745,25 @@ export class ZoneDO implements DurableObject {
       trade.forceCloseSwapUI(rebuilt);
       gate.forceCloseGateUI(rebuilt); // ...and the bench, the hatch, the forge and the board with it
     }
+    // Closed sockets are not returned after hibernation. Their journaled bodies
+    // still owe the same disconnect deadline; a restart cannot free them early.
+    for (const body of [...this.bodyJournal.values()]) {
+      if (this.sessions.has(body.pubkey)) continue;
+      if (!this.world) await this.init("door");
+      const { row } = await getOrCreatePlayer(this.env.DB, body.pubkey, this.randomGate());
+      const items = await loadInventory(this.env.DB, body.pubkey);
+      const absent = { send() {}, close() {} } as unknown as WebSocket;
+      const s = this.buildSession(absent, row, items);
+      Object.assign(s, body);
+      this.lastCombatRound = Math.max(this.lastCombatRound, body.roundAt);
+      if (body.offlineAt !== undefined) {
+        await this.trySavePlayer(s.pubkey, s.roomId, s.hp, s);
+        continue;
+      }
+      s.linkdeadUntil ??= body.savedAt + (body.exhaustion?.mode === "combat" || this.inCombat(s) ? LINKDEAD_MS : 0);
+      this.sessions.set(s.pubkey, s);
+    }
+    await this.releaseLinkdead(Date.now());
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
@@ -1664,7 +1802,12 @@ export class ZoneDO implements DurableObject {
       session = this.sessions.get(pubkey);
       if (!session || (session.ws !== ws && this.wsAttachment(session.ws)?.cid !== this.wsAttachment(ws)?.cid)) return;
       session.ws = ws; // a woken socket is a fresh object — keep the session on it
-      await this.onMessage(session, typeof message === "string" ? message : "");
+      for (const s of this.sessions.values()) this.syncExhaustion(s);
+      try {
+        await this.onMessage(session, typeof message === "string" ? message : "");
+      } finally {
+        await this.checkpointPlayers();
+      }
       // A command can open a fight while a quiet-length alarm is still
       // pending — pull the beat in (ensureAlarm re-arms early when hot).
       await this.ensureAlarm();
@@ -1688,6 +1831,7 @@ export class ZoneDO implements DurableObject {
   }
 
   private async handleWebSocketClose(ws: WebSocket): Promise<void> {
+    await this.hydrateSessions();
     const pubkey = this.wsPubkey(ws);
     if (pubkey) {
       const session = this.sessions.get(pubkey);
@@ -1710,6 +1854,7 @@ export class ZoneDO implements DurableObject {
   }
 
   private async handleWebSocketError(ws: WebSocket): Promise<void> {
+    await this.hydrateSessions();
     const pubkey = this.wsPubkey(ws);
     if (!pubkey) return;
     const session = this.sessions.get(pubkey);
@@ -2228,6 +2373,7 @@ export class ZoneDO implements DurableObject {
       // one-shots skeletons; unstacked, an ambush is strong, not a cannon.)
       // A point slips plate, a blunt weapon caves it: both ignore that much armor.
       dmg = Math.max(1, dmg - Math.max(0, ai.mobArmor(tmpl, creature) - this.armorIgnore(weapon)));
+      dmg = exhaustion.playerDamage(dmg, session.exhaustion);
       creature.hp -= dmg;
       this.fxStruck(creature.roomId, creature.templateId);   // and it is SEEN to take it
       // ...and the opener can find the throat like any other landed blow. The
@@ -2397,6 +2543,7 @@ export class ZoneDO implements DurableObject {
       this.armStrayDecay(session.roomId);
     }
 
+    dmg = exhaustion.playerDamage(dmg, session.exhaustion);
     creature.hp -= dmg;
     this.fxStruck(creature.roomId, creature.templateId);
     // A thrown point can find the heart too. Gated on the THROWN item, not on
@@ -3520,7 +3667,7 @@ export class ZoneDO implements DurableObject {
       // exact hole creatureFirstStrike was closed against this morning. Held
       // back, the arc simply misses that body this beat.
       if (!this.canLandBlow(other.pubkey)) continue;
-      const arc = Math.max(1, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) / 2));
+      const arc = exhaustion.creatureDamage(attacker, Math.max(1, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) / 2)));
       const arcWorn = Math.max(1, Math.round(arc * ARMOR_K / (this.equippedArmor(other) + ARMOR_K)));
       const arcDef = Math.max(1, Math.round(arcWorn * STANCE[other.stance].def));
       other.hp -= arcDef;
@@ -3873,6 +4020,12 @@ export class ZoneDO implements DurableObject {
     // aggro drift, atmosphere); only the exchange of swings waits for the beat.
     const combatRound = now - this.lastCombatRound >= COMBAT_ROUND_MS;
     if (combatRound) this.lastCombatRound = now;
+    for (const s of this.sessions.values()) this.syncExhaustion(s, now);
+    const fightingBodies = new Map([...this.sessions.values()].map(s => [s.pubkey, {
+      fighting: this.inCombat(s), deaths: s.deaths, weight: this.wornWeight(s),
+    }]));
+    for (const c of this.creatures.values()) exhaustion.recoverCreature(c, now,
+      !!c.target || !!c.holding || [...this.sessions.values()].some(s => s.target === c.id && s.roomId === c.roomId));
     // Fresh dogpile budget each tick: no player takes more than DOGPILE_CAP blows
     // in one tick, whether from swings in the fight or creatures storming the room.
     this.blowsThisTick.clear();
@@ -4034,6 +4187,7 @@ export class ZoneDO implements DurableObject {
             const opened = edgeVal > 0 && pierceVal === 0 && bluntVal === 0 && mobArm > 0; // the stagger bonus, edge's one-off
             dmg = Math.max(1, dmg - Math.max(0, mobArm - Math.max(pierceVal, bluntVal, edgeVal)));
             dmg = Math.max(1, Math.round(dmg * how.mult)); // a spent charger, bone against an edge, a guard, a pinned arm
+            dmg = exhaustion.playerDamage(dmg, session.exhaustion);
             creature.hp -= dmg;
             this.noteFx(session.pubkey, "struck", creature.templateId);   // it takes the recoil
             this.markHurt(creature, tmpl, session.pubkey);
@@ -4510,7 +4664,10 @@ export class ZoneDO implements DurableObject {
         // announcement of it was true (ai.holdsExit).
         if (ai.holdsExit(this, creature, victim)) continue;
         // A bird that stays up, a lurker gone back into the dark (styles.ts).
-        if (styles.beforeAttack(this, creature, tmpl, victim, now)) continue;
+        if (styles.beforeAttack(this, creature, tmpl, victim, now)) {
+          if (ai.airborne(creature, now)) exhaustion.creatureAttempt(creature, now);
+          continue;
+        }
         // The dogpile cap: if this player already has a full press on them this
         // tick, this one can't get a blow in — it snarls at the edge and waits.
         // (It keeps its target, so it steps up the moment a slot opens.)
@@ -4518,6 +4675,7 @@ export class ZoneDO implements DurableObject {
         // Quick feet: a light load adds to the foe's miss chance, scaling down
         // as the kit gets heavier (dodgeBonus) — real evasion in cloth, nothing
         // in plate. And a wounded creature fights diminished — softer blows.
+        exhaustion.creatureAttempt(creature, now);
         const dodge = this.dodgeBonus(victim);
         const quick = this.loadOf(victim) < 2; // light enough to read as nimble
         const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
@@ -4624,6 +4782,7 @@ export class ZoneDO implements DurableObject {
         }
         // Worn armor thins the blow — but never closes it; a hit always bites.
         // Then your stance: guarded soaks more, reckless leaves you open.
+        dmg = exhaustion.creatureDamage(creature, dmg);
         const worn = this.equippedItem(victim, "armor");
         dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
         dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
@@ -4851,6 +5010,14 @@ export class ZoneDO implements DurableObject {
       if (v && v.hp > 0 && chance(0.25)) this.send(v, "The press around you is too thick — only so many can reach you at once.");
     }
 
+    if (combatRound) for (const s of this.sessions.values()) {
+      const start = fightingBodies.get(s.pubkey);
+      if (start && start.deaths === s.deaths && (start.fighting || this.inCombat(s))) {
+        exhaustion.exert(s.exhaustion!, start.weight);
+        this.sendStatus(s);
+      }
+    }
+
     // Wounds weep between blows: armor-ignoring bleed, ticking down until it
     // clots. A cut that would drop you SOMETIMES kills outright (BLEED_KILL_ODDS);
     // otherwise you cling on at 1 hp — one beat to bind it or run, but the next
@@ -4906,15 +5073,7 @@ export class ZoneDO implements DurableObject {
 
     // A linkdead body lets go when its fight ends or the window closes — only
     // then does the normal fade run (creature targets cleared, state flushed).
-    for (const session of [...this.sessions.values()]) {
-      if (!session.linkdeadUntil) continue;
-      const fightLive = !!session.target
-        || [...this.creatures.values()].some((c) => c.target === session.pubkey);
-      if (!fightLive || now >= session.linkdeadUntil) {
-        session.linkdeadUntil = undefined;
-        await this.onLeave(session);
-      }
-    }
+    await this.releaseLinkdead(now);
 
     mark("recovery");
 
@@ -5349,6 +5508,9 @@ export class ZoneDO implements DurableObject {
       // Whole enough again: re-arm the wounded-swing tell so a later wounding
       // warns afresh (however you healed — rest, food, a bandage).
       if (session.woundedTold && session.hp >= session.maxHp * WOUNDED_FRACTION) session.woundedTold = false;
+      this.syncExhaustion(session, now);
+      const healingDue = session.healingDue ?? 0;
+      session.healingDue = 0;
       const sheltered = this.outOfWorld(session); // gatehouse/gate-crouch mends; trusts inGatehouse so a flag-drift still heals
       // Rest heals wherever you're still IN REACH — including the inventory modal
       // in the dungeon, where you're crouched in the open and can be hit (just
@@ -5356,6 +5518,11 @@ export class ZoneDO implements DurableObject {
       // world, and there the gatehouse mends you whether you meant to rest or not.
       // Off your feet and safe, the leg gets bound and braced — the hobble mends
       // (independent of hp, so a full-health limp still clears).
+      if (session.resting && !this.inCombat(session) && session.hp >= session.maxHp && !session.exhaustion?.units) {
+        session.resting = false;
+        this.send(session, "Your breath is steady and your wounds are closed. You rise.");
+        this.sendStatus(session);
+      }
       if ((session.resting || sheltered) && !this.inCombat(session) && session.hobbled) {
         session.hobbled = false;
         session.limpingSince = undefined;
@@ -5417,12 +5584,12 @@ export class ZoneDO implements DurableObject {
         // whole point of putting it on the ground people LIVE on. The gate's
         // fire is unreachable by it (the fever is the den band's own).
         const feverMult = events.fevered(this, session.roomId) ? FEVER_MEND_MULT : 1;
-        session.hp = Math.min(session.maxHp, session.hp + (byFire ? FIRE_REST_REGEN_PER_TICK : REST_REGEN_PER_TICK) * feverMult);
+        session.hp = Math.min(session.maxHp, Math.round((session.hp + healingDue * feverMult) * 100) / 100);
         this.sendStatus(session);
         if (session.hp >= session.maxHp) {
           // Fully healed: save it now so a restart can't revert a finished rest.
           await this.trySavePlayer(session.pubkey, session.roomId, session.hp);
-          if (session.resting) {
+          if (session.resting && !session.exhaustion?.units) {
             session.resting = false;
             this.send(session, byFire
               ? "You come out of the doze slow and easy, the fire low beside you. You are whole."
@@ -5564,6 +5731,8 @@ export class ZoneDO implements DurableObject {
     }
     this.pruneTraces(now);
     this.syncCombatCtx();
+    await this.checkpointPlayers();
+    for (const s of this.sessions.values()) if (s.exhaustion) this.sendStatus(s);
 
     // Batch the tick's disk flush: the sim ticked (creatures acted this beat),
     // but writing the delta every 2s is what runs up rows_written. Flush the
@@ -6569,6 +6738,7 @@ export class ZoneDO implements DurableObject {
       }
       return;
     }
+    exhaustion.creatureAttempt(creature, Date.now());
     const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
     let dmg = randInt(tmpl.dmg_min, tmpl.dmg_max) + (tmpl.is_boss ? (creature.phase ?? 0) * 3 : 0);
     if (ai.scavengerBold(this, creature)) dmg = Math.round(dmg * BOLD_DMG_MULT);
@@ -6579,6 +6749,7 @@ export class ZoneDO implements DurableObject {
     const atLength = weapon !== null && hasTrait(weapon.tmpl, "reach");
     if (!atLength) dmg = Math.round(dmg * AMBUSH_MULT);
     if (cHurt) dmg = Math.max(1, Math.round(dmg * WOUNDED_DMG_MULT));
+    dmg = exhaustion.creatureDamage(creature, dmg);
     const worn = this.equippedItem(victim, "armor");
     dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
     dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
@@ -6742,6 +6913,8 @@ export class ZoneDO implements DurableObject {
     const home = den.wakeAtDen(this, victim);
     if (!home) victim.roomId = this.randomGate();
     victim.hp = victim.maxHp;
+    victim.exhaustion = exhaustion.readExhaustion(undefined, Date.now());
+    victim.healingDue = 0;
     const fate =
       scattered.length > 0
         ? hadSealed
@@ -6828,7 +7001,7 @@ export class ZoneDO implements DurableObject {
       if (ev.phase !== "idle") return true;
     }
     for (const s of this.sessions.values()) {
-      if (s.target || s.pvpTarget || s.seizedBy || s.resting) return true;
+      if (s.target || s.pvpTarget || s.seizedBy || s.resting || (s.exhaustion?.units ?? 0) > 0 || (s.hp < s.maxHp && this.outOfWorld(s))) return true;
     }
     for (const c of this.creatures.values()) {
       if (c.target) return true;
@@ -6838,9 +7011,10 @@ export class ZoneDO implements DurableObject {
 
   public async ensureAlarm(): Promise<void> {
     // The tick runs while any socket is connected — hibernated or not; a parked
-    // socket is still a player in the world. A truly empty world (no sockets) is
-    // fast-forwarded by catchUp() when the next player arrives.
-    if (this.state.getWebSockets().length === 0) return;
+    // socket is still a player in the world. Disconnected combat bodies also
+    // need ticks until they fade, even after the last socket closes.
+    if (this.state.getWebSockets().length === 0
+        && ![...this.sessions.values()].some((s) => s.linkdeadUntil !== undefined)) return;
     // Two speeds (see IDLE_TICK_MS): every setAlarm is a billed row written,
     // so the 2s beat is for fights and fresh footsteps, not for a dungeon
     // holding its breath.
@@ -8214,6 +8388,9 @@ export class ZoneDO implements DurableObject {
           named: session.named ? 1 : 0,
           hp: session.hp,
           max_hp: session.maxHp,
+          fatigue: Math.floor((session.exhaustion?.units ?? 0) / 2) / 10,
+          fatigue_penalty: exhaustion.playerPenalty(session.exhaustion),
+          recovery: this.recoveryMode(session),
           // Inside, the HUD must say INSIDE. You are not at the Weeper's Arch —
           // you are behind its door, and the bar saying otherwise was the visible
           // face of a deeper lie: the world still had you standing in the gate room.

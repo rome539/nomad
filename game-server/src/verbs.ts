@@ -1,3 +1,4 @@
+import * as exhaustion from "./exhaustion";
 // The player's verbs, out of the spine. zone.ts keeps dispatch, transport, and
 // the tick/combat loop; everything a wanderer TYPES that isn't starting a fight
 // lands here (attack/throw stay with the spine — they're where fights begin).
@@ -1265,7 +1266,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // same jaws twice.
   if (guard && guardWasAwake) {
     const gt = world.mobTemplates.get(guard.templateId)!;
-    let bite = randInt(gt.dmg_min, gt.dmg_max);
+    exhaustion.creatureAttempt(guard, Date.now());
+    let bite = exhaustion.creatureDamage(guard, randInt(gt.dmg_min, gt.dmg_max));
     bite = Math.max(1, Math.round(bite * ARMOR_K / (z.equippedArmor(session) + ARMOR_K)));
     bite = Math.max(1, Math.round(bite * STANCE[session.stance].def));
     session.hp -= bite;
@@ -1293,7 +1295,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     );
     if (striker) {
       const stmpl = world.mobTemplates.get(striker.templateId)!;
-      let pdmg = randInt(stmpl.dmg_min, stmpl.dmg_max);
+      exhaustion.creatureAttempt(striker, Date.now());
+      let pdmg = exhaustion.creatureDamage(striker, randInt(stmpl.dmg_min, stmpl.dmg_max));
       pdmg = Math.max(1, Math.round(pdmg * ARMOR_K / (z.equippedArmor(session) + ARMOR_K))); // % mitigation, never immunity
       pdmg = Math.max(1, Math.round(pdmg * STANCE[session.stance].def));
       session.hp -= pdmg;
@@ -1316,6 +1319,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     let pdmg = randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) + (hw ? z.effDmg(hw) : 0);
     pdmg = Math.max(1, Math.round(pdmg * ARMOR_K / (z.equippedArmor(session) + ARMOR_K)));
     pdmg = Math.max(1, Math.round(pdmg * STANCE[session.stance].def));
+    pdmg = exhaustion.playerDamage(pdmg, hunter.exhaustion);
     session.hp -= pdmg;
     z.send(session, `${dragLine} — ${hunter.name} lands a parting cut for ${pdmg}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`, "dmgin");
     z.send(hunter, `You open ${session.name} as they break away — ${pdmg}.`, "dmgout");

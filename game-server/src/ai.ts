@@ -1,3 +1,4 @@
+import * as exhaustion from "./exhaustion";
 // Creature AI: how the dungeon's animals think between alarms — grudges and
 // memory, waking to noise, hunting and wandering, scavenging and breeding, the
 // boss's rage, and the migration that refills the world. Free functions over a
@@ -1621,7 +1622,8 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     // Same physics as every other blow: the prey's own armor soaks some of the
     // bite (flat, floored at 1 — the player-swing model). Before 2026-08-20 a
     // bone-knight being torn at took the raw roll whole.
-    victim.hp -= Math.max(1, randInt(tmpl.dmg_min, tmpl.dmg_max) - vt.armor);
+    exhaustion.creatureAttempt(creature, now);
+    victim.hp -= Math.max(1, exhaustion.creatureDamage(creature, randInt(tmpl.dmg_min, tmpl.dmg_max)) - vt.armor);
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt);
       creature.hunger = 0;
@@ -1683,7 +1685,8 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
       await creatureMoves(z, victim, now, "flee", false);
       return true;
     }
-    victim.hp -= Math.max(1, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) * PREY_WORRY_MULT) - vt.armor);
+    exhaustion.creatureAttempt(creature, now);
+    victim.hp -= Math.max(1, exhaustion.creatureDamage(creature, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) * PREY_WORRY_MULT)) - vt.armor);
     if (victim.hp > 0) return true;
     releaseHold(z, creature);
     preyFalls(z, victim, vt);
@@ -3637,9 +3640,9 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
     // individual on the same summit and it gets the arc, the breath and the air
     // or it is not a drake at all.
     if (!SUMMIT_BOSSES.has(creature.templateId)) return false;
-
     // ---- the breath lands ----
     if (creature.breathAt !== undefined && now >= creature.breathAt) {
+      exhaustion.creatureAttempt(creature, now);
       creature.breathAt = undefined;
       creature.nextBreathAt = now + DRAKE_BREATH_EVERY_MS;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} lets it go, and the whole bowl of the summit goes white.`);
@@ -3653,7 +3656,7 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
         // cap exists so a crowd cannot be executed by a press of bodies, and
         // this is one event from one animal that does not care how many of you
         // there are. The telegraph is the fairness, not the cap.
-        const raw = randInt(DRAKE_BREATH_MIN, DRAKE_BREATH_MAX);
+        const raw = exhaustion.creatureDamage(creature, randInt(DRAKE_BREATH_MIN, DRAKE_BREATH_MAX));
         const hurtDrake = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
         const dmg = Math.max(1, Math.round(
           Math.round(raw * ARMOR_K / (z.equippedArmor(s) + ARMOR_K))
@@ -3674,7 +3677,7 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
     // Sits above the air deliberately — without it the fall-through would let
     // the animal launch mid-draw, and (worse) take an ordinary swing while the
     // room had been told it was busy drawing.
-    if (creature.breathAt !== undefined) return true;
+    if (creature.breathAt !== undefined) { exhaustion.creatureAttempt(creature, now); return true; }
 
     // ---- the air ----
     // ORDER MATTERS HERE, and it is the one thing in this function that was
@@ -3685,13 +3688,14 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
     // state machine before it ever ran live. The air is the more exclusive
     // state, so the air is asked first, and it does not breathe from up there.
     if (creature.airborneUntil !== undefined && now < creature.airborneUntil) {
+      exhaustion.creatureAttempt(creature, now);
       // It is up. It takes somebody on the way through and there is nothing to
       // swing at — see the melee refusal in zone.ts, and the throw that still
       // reaches it, which is the whole answer to this window.
       const here = [...z.sessions.values()].filter((s) => s.roomId === creature.roomId && s.hp > 0 && z.reachable(s));
       if (!here.length) return true; // everyone left or died under it — it is circling an empty bowl
       const mark = here[randInt(0, here.length - 1)];
-      const raw = randInt(DRAKE_DIVE_MIN, DRAKE_DIVE_MAX);
+      const raw = exhaustion.creatureDamage(creature, randInt(DRAKE_DIVE_MIN, DRAKE_DIVE_MAX));
       // Same pipeline as the breath: armor, stance, and the wounded drake.
       const hurtDrake = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
       const dmg = Math.max(1, Math.round(
@@ -3704,6 +3708,7 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
       return true;
     }
     if (creature.airborneUntil !== undefined) {
+      exhaustion.creatureAttempt(creature, now);
       creature.airborneUntil = undefined;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} comes down on the rock hard enough to feel through your boots, and turns round.`);
       z.refreshRoomCtx(creature.roomId);
@@ -3714,6 +3719,7 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
       creature.nextAirAt = now + DRAKE_AIR_EVERY_MS;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} opens out and goes up, and takes the light with it. Nothing you are holding reaches it now.`);
       z.creatureNoise(creature.roomId);
+      exhaustion.creatureAttempt(creature, now);
       return true;
     }
 
@@ -3723,6 +3729,7 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
       creature.breathAt = now + DRAKE_WINDUP_MS;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} plants its feet, and draws a breath that goes on far too long. (the way out is west)`);
       z.creatureNoise(creature.roomId);
+      exhaustion.creatureAttempt(creature, now);
       return true;
     }
     return false;

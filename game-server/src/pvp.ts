@@ -1,3 +1,4 @@
+import * as exhaustion from "./exhaustion";
 // PvP — steel between wanderers. The law was written long before this file:
 // witnesses are the sound system, evidence is blood on the killer (never a
 // name on a wall), fresh keys are weak, and no dice ever punish the
@@ -244,6 +245,7 @@ async function swingAt(
   const effArmor = Math.max(0, z.equippedArmor(defender) - z.armorIgnore(weapon));
   dmg = Math.max(1, dmg - effArmor);
   dmg = Math.max(1, Math.round(dmg * STANCE[defender.stance].def));
+  dmg = exhaustion.playerDamage(dmg, attacker.exhaustion);
   defender.hp -= dmg;
   // The vitals lottery, wanderer against wanderer: VITALS_PVP, armor over
   // the vitals buying the odds down. Instant — the Tarkov headshot.

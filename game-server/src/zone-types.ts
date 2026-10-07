@@ -1,6 +1,7 @@
 // The ZoneDO's in-memory state shapes: a connected wanderer, the creatures that
 // hunt them, and everything the world persists between alarms. Pure type
 // declarations — no logic, no state.
+import type { Exhaustion, CreatureEffort } from "./exhaustion";
 import type { CarriedItem } from "./world";
 
 export type Stance = "reckless" | "steady" | "guarded";
@@ -14,6 +15,8 @@ export interface Session {
   roomId: string;
   hp: number;
   maxHp: number;
+  exhaustion?: Exhaustion;
+  healingDue?: number; // elapsed rest/shelter HP awaiting the weather/healing tick
   target: string | null; // creature id — the foe you initiated on
   stance: Stance; // how you fight: reckless / steady / guarded (persisted to D1)
   items: CarriedItem[]; // pack cache; D1 is truth. serial != null = gate-sealed
@@ -156,7 +159,8 @@ export interface Creature {
   windedUntil?: number; // ms until it has its breath back; until then it will not run, whatever it is
   lastBlowAt?: number;  // styles.ts: when it last landed a blow (a charger charges from a standstill; a heavy rests back to fresh)
   blownUntil?: number;  // styles.ts: a charger spent by its charge; takes extra until then
-  fatigue?: number;     // styles.ts: a heavy's landed blows this fight
+  exertion?: CreatureEffort; // durable species-specific effort and recovery clock
+  fatigue?: number;     // legacy save field, no longer used for combat
   leads?: boolean;      // styles.ts: the lead animal of the pack fighting in this room
   openUntil?: number;   // styles.ts: a striker committed by its bite; your next swing can't miss it
   dropping?: boolean;   // styles.ts: a lurker coming back out of the dark this round

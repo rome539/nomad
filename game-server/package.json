@@ -23,7 +23,8 @@
     "test:combat": "node scripts/test-combat.mjs",
     "test:styles": "node scripts/test-styles.mjs",
     "test:security": "node scripts/test-security.mjs",
-    "test:security:runtime": "node scripts/test-security-runtime.mjs"
+    "test:security:runtime": "node scripts/test-security-runtime.mjs",
+    "test:exhaustion": "node --disable-warning=ExperimentalWarning scripts/combat-balance/check.mjs"
   },
   "dependencies": {
     "nostr-tools": "2.24.1",
