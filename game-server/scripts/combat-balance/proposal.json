@@ -14191,5 +14191,43 @@
       "reconnect",
       "release privacy gate"
     ]
+  },
+  "foodHealingCorrection": {
+    "status": "Deployed; both live domains verified serving the accompanying client release.",
+    "rule": "Player food healing = round(template heal * 100 / 60), then existing spoilage and fever modifiers, capped at player maximum HP.",
+    "scope": "All 40 edible items, shared manual/automatic eating, and bounty board text/modal totals. Base template healing remains unchanged for creature feeding.",
+    "examples": {
+      "dried-meat": [
+        8,
+        13
+      ],
+      "smoked-haunch": [
+        12,
+        20
+      ],
+      "salt-fish": [
+        14,
+        23
+      ],
+      "roast-lamprey": [
+        25,
+        42
+      ]
+    },
+    "validation": [
+      "TypeScript passed",
+      "All 40 foods tested through real manual eating and auto-eat tick, including inventory removal and saved HP",
+      "HP cap, spoilage, keeping food, fever and bounty totals passed",
+      "Existing recovery/persistence checks and eight drake encounters passed"
+    ],
+    "release": {
+      "version": "0130e643-3037-4eec-ab87-861f410d828e",
+      "includes": [
+        "100-HP food healing",
+        "decoded room transitions and recent-image cache",
+        "torch-effect isolation and stale-load guards"
+      ],
+      "verification": "Privacy gate passed; deployment succeeded; nomadmud.com and www.nomadmud.com returned HTTP 200 with the new client markers. No database migration required."
+    }
   }
 }

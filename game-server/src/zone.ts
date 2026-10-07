@@ -2679,6 +2679,7 @@ export class ZoneDO implements DurableObject {
       this.send(session, `You saw through the rope, and it parts with a dry sound. The body comes down heavy, and the ground takes it the way ground takes everything. The cord is cut cleanly at one end — it would hold your weight today.${leavings}`, "gain");
       this.roomFeed(session.roomId, `${session.name} cuts the hanged man down from the gibbet, and the road sees it.`, session.pubkey, false);
       this.roomSound(session.roomId, "Rope parts {dir}, and something heavy comes down.");
+      this.refreshRoomCtx(session.roomId); // the one-use cut chip disappears for everyone here
       return;
     }
     // THE WETHER'S BELL (the depth audit, 2026-08-29). Its clapper is bound up

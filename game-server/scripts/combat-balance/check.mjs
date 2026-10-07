@@ -23,8 +23,8 @@ function random(){let t=rng=(rng+0x6D2B79F5)>>>0;t=Math.imul(t^t>>>15,t|1);t^=t+
 const cases=[];let lifecycleDone=false,fixtureId=0;
 try {
  const output=join(temp,'game.mjs');
- await build({stdin:{contents:"export {ZoneDO} from './zone'; export * as world from './world'; export * as verbs from './verbs'; export * as rules from './zone-data'; export * as E from './exhaustion';",resolveDir:join(root,'src'),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:output,logLevel:'silent',plugins:[{name:'worker-text',setup(b){b.onLoad({filter:/(?:nip46-bunker|(?:vault|nostr|qrcode)-bundle)\.js$/},async a=>({contents:await readFile(a.path,'utf8'),loader:'text'}));}}]});
- const {ZoneDO,world,verbs,rules:R,E}=await import(pathToFileURL(output));
+ await build({stdin:{contents:"export {ZoneDO} from './zone'; export * as world from './world'; export * as verbs from './verbs'; export * as gate from './gate'; export * as rules from './zone-data'; export * as E from './exhaustion';",resolveDir:join(root,'src'),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:output,logLevel:'silent',plugins:[{name:'worker-text',setup(b){b.onLoad({filter:/(?:nip46-bunker|(?:vault|nostr|qrcode)-bundle)\.js$/},async a=>({contents:await readFile(a.path,'utf8'),loader:'text'}));}}]});
+ const {ZoneDO,world,verbs,gate,rules:R,E}=await import(pathToFileURL(output));
  const seedPath=join(temp,'seed.sqlite'),seedDb=new DatabaseSync(seedPath);
  seedDb.exec(await readFile(join(root,'schema.sql'),'utf8'));
  for(const name of (await readdir(join(root,'migrations'))).filter(n=>n.endsWith('.sql')).sort())seedDb.exec(await readFile(join(root,'migrations',name),'utf8'));
@@ -103,6 +103,8 @@ try {
    const setup={equippedWeight,initialFatigueRate,roundsToFullWithoutRecovery:Math.ceil(50/initialFatigueRate),balance,mobMaxHp:drakeTemplate.max_hp,mobArmor:drakeTemplate.armor,mobDamage:[drakeTemplate.dmg_min,drakeTemplate.dmg_max],armor:z.equippedArmor(p),weaponDamage:z.effDmg(z.equippedItem(p,'weapon')),maxHp:p.maxHp,items:p.items.filter(i=>i.equipped).map(i=>({id:i.itemId,condition:i.condition}))};
    if (!lifecycleDone) {
     lifecycleDone=true;
+    await chipChecks({z,p,db,frames});
+    await foodChecks({z,p,db,drake,frames});
     await lifecycleChecks({z,p,ws,db,kv,state,env,world,ZoneDO,drake,command:async f=>{z.syncExhaustion(p);await f();await z.checkpointPlayers();}});
     return await run(arguments[0]); // an independent fresh world for encounter dice
    }
@@ -159,6 +161,129 @@ try {
    const rowOut={kitName,mobId,playerFatiguePoints,peakPlayerFatigue,roundsAtFullFatigue,naturalSpawn,prelitFixture,mobEffort:drake.exertion?.effort ?? 0,seed,stance,condition,policy,kit,supplies,setup,result,activeRounds,elapsedRounds,elapsedSeconds:(now-started)/1000,retreats,restingTicks,outcomeHp:result==='death'?0:p.hp,respawnHp:result==='death'?p.hp:null,mobHp:drake.hp,foodUsed:combatFrames.filter(f=>f.text?.startsWith('Your hand goes to the pack')).length,frames:frames.filter(f=>f.text).map(f=>({seconds:(f.at-started)/1000,text:f.text,cls:f.cls})),timeline};
    cases.push(rowOut);return rowOut;
   }finally{db.close();saved.close();}
+ }
+
+ async function chipChecks({z,p,db,frames}) {
+  const room=p.roomId,creatures=z.creatures,events=z.events;
+  z.creatures=new Map();z.noteCreaturesChanged();z.events=new Map();
+  let serial=0;
+  async function give(itemId,age=0){
+   const rowId='chip-check-'+(++serial);
+   db.prepare('INSERT INTO player_items (id,pubkey,item_id,equipped,condition,acquired_at) VALUES (?,?,?,0,100,?)').run(rowId,p.pubkey,itemId,Math.floor(now/1000)-age);
+   p.items=await world.loadInventory(z.env.DB,p.pubkey);return p.items.find(c=>c.rowId===rowId);
+  }
+  function current(){return frames.findLast(f=>f.t==='ctx').suggest;}
+  function before(chip){z.sendCtx(p);assert.ok(current().includes(chip),'fixture offers '+chip);}
+  async function act(verb,arg){
+   const first=frames.length;await z.dispatch(p,{verb,arg});
+   const ctx=frames.slice(first).findLast(f=>f.t==='ctx');
+   assert.ok(ctx,verb+' '+arg+' must send updated chips immediately');return ctx.suggest;
+  }
+  p.roomId=[...R.ALTAR_ROOMS][0];
+  await give(R.DEEP_HEART);await give(R.DEEP_HEART);
+  before('offer heart');
+  let chips=await act('offer','heart');
+  assert.ok(!chips.includes('offer heart'),'store disappears even with a second heart in hand');assert.ok(chips.includes('take heart'));
+  assert.ok(z.altarHearts.has(p.pubkey));
+  chips=await act('get','heart');
+  assert.ok(!chips.includes('take heart'));assert.ok(chips.includes('offer heart'));
+  // Normal storage uses the same inventory-derived chips.
+  chips=await act('stash','heart');
+  assert.ok(chips.includes('offer heart'),'remaining fresh heart remains actionable');
+  chips=await act('stash','heart');assert.ok(!chips.includes('offer heart'),'last stored heart removes offer');
+  chips=await act('unstash','heart');assert.ok(chips.includes('offer heart'));
+  chips=await act('burn','heart');assert.ok(!chips.includes('offer heart'),'burned heart removes offer');
+  await give(R.DEEP_HEART,R.HEART_FRESH_SEC+1);z.sendCtx(p);assert.ok(!current().includes('offer heart'),'spoiled heart never offered');
+  p.roomId=[...R.TOLL_STONES][0];p.markedUntil=now+60000;await give('toll-token');before('offer toll-token');
+  chips=await act('offer','toll-token');assert.ok(!chips.includes('offer toll-token'));assert.equal(p.markedUntil,undefined);
+  p.roomId=[...R.WHETSTONE_ROOMS][0];
+  const weapon=p.items.find(c=>c.equipped&&z.world.itemTemplates.get(c.itemId).slot==='weapon');
+  const condition=weapon.condition;weapon.condition=R.WHET_CAP-R.WHET_GAIN;
+  z.sendCtx(p);const repair=current().find(c=>c.startsWith('repair '));assert.ok(repair);
+  chips=await act('repair',repair.slice(7));assert.ok(!chips.includes(repair),'repair disappears at whetstone cap');
+  weapon.condition=condition;db.prepare('UPDATE player_items SET condition=? WHERE id=?').run(condition,weapon.rowId);
+  await give('dried-meat');z.sendCtx(p);const eat=current().find(c=>c.startsWith('eat '));assert.ok(eat);
+  chips=await act('burn','dried meat');assert.ok(!chips.includes(eat),'burning last food removes eat');
+  // Shared one-use room actions must refresh observers too.
+  p.roomId=R.GIBBET_ROOM;const cut=z.gibbetCut;z.gibbetCut=false;
+  const observer={...p,pubkey:'chip-observer',ws:{send:raw=>frames.push({...JSON.parse(raw),observer:true})}};
+  z.sessions.set(observer.pubkey,observer);before('cut gibbet');
+  const first=frames.length;chips=await act('unlock','gibbet');assert.ok(!chips.includes('cut gibbet'));
+  assert.ok(frames.slice(first).some(f=>f.observer&&f.t==='ctx'&&!f.suggest.includes('cut gibbet')),'gibbet clears for observers');
+  z.sessions.delete(observer.pubkey);z.gibbetCut=cut;
+  // Cached gate chips must also disappear when their last ingredient burns.
+  p.roomId=[...z.world.entryRooms][0];p.away=true;
+  await give('gull-egg');await give('rat-meat');
+  for(let i=0;i<R.SMELT_SCRAP_PER_IRON;i++)await give(R.SCRAP_ID);
+  await z.sendGateCtx(p);
+  const cook=current().find(c=>c.startsWith('cook ')),cure=current().find(c=>c.startsWith('cure '));
+  assert.ok(cook&&cure&&current().includes('smelt'));
+  chips=await act('burn','gull egg');assert.ok(!chips.includes(cook),'burn removes cached cook ingredient');
+  chips=await act('burn','rat meat');assert.ok(!chips.includes(cure),'burn removes cached cure ingredient');
+  chips=await act('burn',z.world.itemTemplates.get(R.SCRAP_ID).name.toLowerCase());assert.ok(!chips.includes('smelt'),'burn removes cached smelt affordability');
+  p.away=false;
+  // The existing room-light path already refreshes its one-use chip.
+  p.roomId='the-lantern-stump';const fire=z.groundTorch.get(p.roomId);z.groundTorch.delete(p.roomId);
+  await give(R.TORCH_ITEM);before('light stump');
+  chips=await act('light','stump');assert.ok(!chips.includes('light stump'));
+  if(fire===undefined)z.groundTorch.delete(p.roomId);else z.groundTorch.set(p.roomId,fire);
+  // Restore the original equipped inventory for the existing encounter checks.
+  db.prepare('DELETE FROM player_items WHERE pubkey=? AND equipped=0').run(p.pubkey);
+  p.items=await world.loadInventory(z.env.DB,p.pubkey);p.roomId=room;
+  z.creatures=creatures;z.noteCreaturesChanged();z.events=events;
+  console.log('PASS immediate chip refresh: altar offer/take, remaining hearts, stash/retrieve, burning heart/food, spoiled heart, toll payment, whetstone cap, shared gibbet, gate cooking/curing/smelting and stump lighting.');
+ }
+
+ async function foodChecks({z,p,db,drake,frames}) {
+  const foods=[...z.world.itemTemplates.values()].filter(t=>t.edible);
+  const expected={2:3,3:5,4:7,5:8,6:10,7:12,8:13,9:15,11:18,12:20,13:22,14:23,15:25,16:27,19:32,20:33,21:35,25:42};
+  const start=now,events=z.events,room=p.roomId,bounties=z.bounties;
+  z.events=new Map();
+  let foodId=0;
+  async function give(id,age=0){
+   const rowId='food-check-'+(++foodId);
+   db.prepare('INSERT INTO player_items (id,pubkey,item_id,equipped,condition,acquired_at) VALUES (?,?,?,0,100,?)').run(rowId,p.pubkey,id,Math.floor(now/1000)-age);
+   p.items=await world.loadInventory(z.env.DB,p.pubkey);
+   return p.items.find(c=>c.rowId===rowId);
+  }
+  function consumed(c){
+   assert.ok(!p.items.some(i=>i.rowId===c.rowId),'food removed from pack');
+   assert.equal(db.prepare('SELECT id FROM player_items WHERE id=?').get(c.rowId),undefined,'food removed from D1');
+  }
+  assert.equal(foods.length,40,'all existing edible items covered');
+  for(const t of foods){
+   const heal=expected[t.heal];assert.ok(heal,t.id+' has a reviewed healing value');
+   p.target=null;drake.target=null;p.hp=1;
+   const manual=await give(t.id);await verbs.cmdEat(z,p,'');
+   assert.equal(p.hp,1+heal,t.id+' manual healing');consumed(manual);
+   assert.equal(db.prepare('SELECT hp FROM players WHERE pubkey=?').get(p.pubkey).hp,p.hp,'manual healing saved');
+   p.hp=1;p.target=drake.id;drake.target=p.pubkey;
+   const auto=await give(t.id);
+   // A tick between attack rounds isolates the actual auto-eat path.
+   z.lastCombatRound=now;now+=R.TICK_MS;
+   await z.tick();
+   assert.equal(p.hp,1+heal,t.id+' automatic healing');consumed(auto);
+   assert.equal(db.prepare('SELECT hp FROM players WHERE pubkey=?').get(p.pubkey).hp,p.hp,'automatic healing saved');
+  }
+  p.target=null;drake.target=null;
+  for(const [id,age,hp,heal,fever] of [
+   ['roast-lamprey',0,90,10,false], // max HP cap
+   ['roast-lamprey',100000,1,21,false], // half of 42 when spoiled
+   ['dried-meat',100000,1,13,false], // preserved food stays full strength
+   ['roast-lamprey',0,1,15,true], // 42 * .35 rounded
+   ['roast-lamprey',100000,1,7,true], // spoilage before fever
+  ]){
+   p.roomId=fever?[...z.world.rooms.values()].find(r=>r.region==='den').id:room;
+   z.events=fever?new Map([['fever',{phase:'active',until:now+100000}]]):new Map();
+   p.hp=hp;const food=await give(id,age);await verbs.cmdEat(z,p,'');
+   assert.equal(p.hp,hp+heal,id+' cap/spoilage/fever');consumed(food);
+  }
+  z.bounties=[['otter-pelt','dried-meat',2]];
+  await gate.sendBounty(z,p);
+  assert.equal(frames.findLast(f=>f.t==='bounty').board[0].heal,26,'board rounds per meal, not per stack');
+  z.bounties=bounties;z.events=events;p.roomId=room;p.hp=100;now=start;
+  z.lastCombatRound=now;z.lastTickAt=0;p.exhaustion={units:0,at:now,mode:'passive'};
+  console.log('PASS: all 40 foods through manual and automatic eating, D1 saves/removal, HP cap, spoilage, preserved food, fever, bounty healing display.');
  }
 
  async function lifecycleChecks({z,p,ws,db,kv,state,env,world,ZoneDO,drake,command}) {

@@ -9,7 +9,7 @@ import type { CarriedItem, ItemTemplate } from "./world";
 import {
   setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
   journalLoad, mapInkLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
-  loadLeaderboard, leaderboardRank,
+  loadLeaderboard, leaderboardRank, playerFoodHeal,
   setItemLoreId, deedsBump, trait, hasTrait, parseTraits,
 } from "./world";
 import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState, isNight, isFullMoon, isBloodMoon } from "./zone-util";
@@ -1960,6 +1960,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
     z.send(session, "You take the still-cold heart from the stone — cold as the day it was cut, and cold enough to spend. The stone is bare again.", "gain");
     z.roomFeed(session.roomId, `${session.name} takes a heart from the altar, and the stone is bare again.`, session.pubkey, false);
     z.roomSound(session.roomId, "A faint chime sounds {dir}.");
+    z.sendCtx(session);
     return;
   }
   // A tide-drowned floor gives nothing to a standing reach — you go under
@@ -2226,6 +2227,7 @@ export async function cmdBurn(z: ZoneDO, session: Session, arg: string): Promise
   if (carried.serial !== null) await voidMint(z.env.DB, carried.serial);
   z.roomFeed(session.roomId, `${session.name} burns ${tmpl.name} down to nothing.`, session.pubkey, false);
   z.send(session, `You burn ${tmpl.name}. Nothing of it is left.`, "gain");
+  await z.sendGateCtx(session); // burning can remove eat/equip chips or cached gate ingredients
   z.markSimDirty();
 }
 
@@ -3201,7 +3203,8 @@ export async function consumeFood(z: ZoneDO,
   // min 1, so it's still desperation food). Cured/keeping food never spoils, so
   // it's exempt (same FOOD_KEEPS gate as the freshness prose).
   const spoiled = !FOOD_KEEPS.has(carried.itemId) && foodState(carried.acquiredAt, carried.itemId) === "spoiled";
-  let heal = spoiled ? Math.max(1, Math.round(tmpl.heal * FOOD_SPOIL_HEAL_MULT)) : tmpl.heal;
+  const foodHeal = playerFoodHeal(tmpl.heal);
+  let heal = spoiled ? Math.max(1, Math.round(foodHeal * FOOD_SPOIL_HEAL_MULT)) : foodHeal;
   // THE FEVER (2026-08-06): on that ground nothing mends, and food is not an
   // exception to it — the same fraction rest pays and a dressing pays.
   if (events.fevered(z, session.roomId)) heal = Math.max(1, Math.round(heal * FEVER_MEND_MULT));

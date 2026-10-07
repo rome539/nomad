@@ -8,6 +8,7 @@ import type { ZoneDO } from "./zone";
 import { MAX_BATCH_ROWS, SECRET_INPUT } from "./security";
 import type { Session } from "./zone-types";
 import type { Region } from "./world";
+import { playerFoodHeal } from "./world";
 import { provokeGrudges } from "./ai";
 import { type ForgeRecipe, type CarriedItem, parseTraits, insertLoot, loadContainer, voidMint, removeItemRow, setEquipped, setItemCondition, setContainer, withdrawContainer, mintClaim, setMintEvent, setItemLoreId, deedsCreate, deedsOwner, hasTrait, mapInkLoad, journalLoad } from "./world";
 import { isGameKeyConfigured, signLootEvent } from "./signing";
@@ -527,7 +528,7 @@ export async function sendBounty(z: ZoneDO, session: Session, note?: string): Pr
     const have = session.items.some((c) => c.itemId === trophyId)
       || keeping.some((c) => c.itemId === trophyId);
     const meals = count ?? 1;
-    return { id: trophyId, name: t.name, rarity: t.rarity, food: f.name, heal: f.heal * meals, meals, have, took: took.has(trophyId) };
+    return { id: trophyId, name: t.name, rarity: t.rarity, food: f.name, heal: playerFoodHeal(f.heal) * meals, meals, have, took: took.has(trophyId) };
   }).filter((b) => b !== null);
   const payload = { v: 0, t: "bounty", open: true, note: note ?? "", board };
   try { session.ws.send(JSON.stringify(payload)); } catch {}
@@ -827,7 +828,7 @@ export async function cmdBounty(z: ZoneDO, session: Session, arg: string): Promi
       ? " — paid"
       : session.items.some((c) => c.itemId === trophyId) ? " — you have one"
       : keeping.some((c) => c.itemId === trophyId) ? " — one in your keeping" : "";
-    return `  ${t.name} \u2192 ${pay} (mends ${f.heal * meals})${note}`;
+    return `  ${t.name} \u2192 ${pay} (mends ${playerFoodHeal(f.heal) * meals})${note}`;
   }), "The board reaches your keeping as well as your pack. 'bounty claim <trophy>' pays it in. ('out' steps you back into the world.)"];
   return z.send(session, lines.join("\n"));
 }
@@ -1005,6 +1006,7 @@ export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promis
     session.markedUntil = undefined;
     z.send(session, "You set the token down in the stone's hollow. The road takes it — and with it, its eye on you. You are unremarked again.", "gain");
     z.roomFeed(session.roomId, `${session.name} pays the toll, and the road lets them go.`, session.pubkey, false);
+    z.sendCtx(session);
     return;
   }
   // THE SHRINE KEEPS THE COLD (2026-09-01). In an altar room, `offer` is the
@@ -1051,6 +1053,7 @@ export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promis
     z.roomFeed(session.roomId, `${session.name} lays a heart on the altar, and the stone keeps it.`, session.pubkey, false);
     z.roomSound(session.roomId, "A faint chime sounds {dir}.");
     z.creatureNoise(session.roomId);
+    z.sendCtx(session); // replace offer heart with take heart immediately
     return;
   }
   const bar = fenceGuard(z, session);
@@ -1474,6 +1477,7 @@ export async function cmdRepair(z: ZoneDO, session: Session, arg: string): Promi
     z.roomFeed(session.roomId, `${session.name} works a piece over the stone, and the ring of it carries.`, session.pubkey, false);
     z.roomSound(session.roomId, "Steel sings on stone {dir}, over and over.");
     z.creatureNoise(session.roomId); // steel on stone is a dinner bell
+    z.sendCtx(session); // the named repair chip ends at the whetstone cap
     return;
   }
   const bar = z.benchGuard(session, "bench work");

@@ -251997,12 +251997,12 @@
       "Gate recovery test controls the shelter predicate; full browser interaction is not exercised."
     ],
     "sourceHashes": {
-      "zone.ts": "391743e7e63e87ce7d678e432c106d013038c3a492fd1dfeeb9b75d34162e642",
-      "world.ts": "d8770cfdb1e5457725769f223101221a167a1c49eeb8c9f90405c23745559bb1",
+      "zone.ts": "d3a840664b03ff3e9174c51cc9b83f1290870a9af489a968e751ed8d88ded7be",
+      "world.ts": "5dfde5928ee2b268a3f45cea4c4d6e4844e0723be6e8cae2535a733a82cbbd56",
       "exhaustion.ts": "6648d8adb06a22d734aa27fc76fb23aa75dcfdc6382fabc66d645d65769bff2c",
       "pvp.ts": "8c436ee2a093ebeab7ef2ff8710805d6b0baf713205a607b5479254f18f14a7c",
       "ai.ts": "82fa2a0223fbb07d0a71a1042eb71d1fe6503994f85c9aa2ea9674c403febcb6",
-      "verbs.ts": "a8ce46779acf0e4204d92eebb5c05c9a39f2ff2087d4262aab12a680f2e622be",
+      "verbs.ts": "c339efc387ca4440346ada6a0ea157ed32ac7ece3667af7f1de4860a8194770d",
       "styles.ts": "f776676ac405f6de5ba7104edbdfcb0dd0077ac173edf5021472d810490bf8b9"
     }
   },

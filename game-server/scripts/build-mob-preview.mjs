@@ -961,6 +961,7 @@ const mk = (id) => {
     style: { setProperty() {} },
     appendChild(c) { el.children.push(c); if (c.selected) el.value = c.value || c.textContent; },
     replaceChildren() { el.children.length = 0; },
+    remove() {}, setAttribute() {},
     querySelectorAll: () => [] };
   // innerHTML="" CLEARS CHILDREN, as it does in a browser. It did not here, and a
   // stub that keeps children a real DOM would have dropped reports rooms as
@@ -990,17 +991,21 @@ const doc = {
   // load, which is how this was found rather than shipped.
   addEventListener: (ev, fn) => { (heard[ev] = heard[ev] || []).push(fn); },
 };
-function FakeImage() { this.complete = true;
+// A loaded picture has a size: the client's readySceneImage treats a zero-width
+// image as one that failed, and holds the old ground rather than paint nothing.
+function FakeImage() { this.complete = true; this.naturalWidth = 1;
   Object.defineProperty(this, "src", { set() { this.onload && this.onload(); } }); }
 let ran = true, why = "";
 const probe = {};
 try {
   // The page hands back the three things a behaviour check needs. Appended here
   // rather than written into the page, so the shipped file carries no test hook.
-  new Function("document", "Image", "setInterval", "requestAnimationFrame", "probe",
+  // ...and a window that prefers reduced motion: the scene's dissolve (fadeScene)
+  // copies computed styles, which a stub has none of, and steps aside for it.
+  new Function("document", "Image", "setInterval", "requestAnimationFrame", "probe", "window",
     script + "\nprobe.driven=function(){return anims.indexOf(stageAnim)>=0};"
            + "\nprobe.scale=function(v){ sc.value=v; sc.onchange(); };")(
-    doc, FakeImage, () => 0, () => 0, probe);
+    doc, FakeImage, () => 0, () => 0, probe, { matchMedia: () => ({ matches: true }), addEventListener() {} });
 } catch (e) { ran = false; why = e.message; }
 // CHANGING THE SCALE MUST NOT ORPHAN THE STAGE ANIMAL. It did: build() resets
 // anims and the creature stayed on screen answering none of the action buttons.

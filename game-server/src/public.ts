@@ -254,7 +254,10 @@ export const PAGE = `<!doctype html>
   #thlist .thpager button { min-width: 0; padding: 3px 10px; font-size: 11px; }
   #thlist .thpager button:disabled { opacity: 0.35; cursor: default; }
   #thlist .thpager span { color: var(--dim); font-size: 11px; }
-  #bar .hp-low { color: var(--blood); }
+  #bar .vital-hp { color: var(--heal); }
+  #bar .vital-exh { color: var(--steel); }
+  #bar .vital-warn { color: var(--wear); }
+  #bar .vital-danger { color: var(--blood); }
   /* The bar must never lose its two doors: NOMAD (settings) and the name
      (keys). The room label is the one that gives — it shrinks and ellipsizes
      first (the log already says where you are); a marathon name ellipsizes
@@ -985,6 +988,8 @@ export const PAGE = `<!doctype html>
    * four lines cannot play. It is a strip, not a caption, and it scrolls.
    * ------------------------------------------------------------------ */
   #scene { display: none; }
+  #scene-fade { display: none; pointer-events: none; }
+  body[data-view="image"] #scene-fade { display: block; }
   /* FULL BLEED. The picture is not a panel with the text under it — it is the
      room, edge to edge, and everything else floats on top of it. Fixed rather
      than flexed so it fills the window whatever the log is doing, and z-indexed
@@ -2304,6 +2309,19 @@ var lastRoomName = ""; // the room the bar last named, for the chip-fold test
 var hpEl = document.getElementById("hp");
 var fxEl = document.getElementById("fx");
 var chipsEl = document.getElementById("chips");
+
+// Keep the two readings independent: low HP is dangerous, high exhaustion
+// is dangerous. Their numbers and labels remain readable without colour.
+function renderVitals(f) {
+  var fatigue = f.fatigue || 0;
+  var hp = document.createElement("span"), exh = document.createElement("span");
+  hp.className = "vital-hp" + (f.hp <= f.max_hp / 3 ? " vital-danger" : f.hp <= f.max_hp / 2 ? " vital-warn" : "");
+  exh.className = "vital-exh" + (fatigue >= 40 ? " vital-danger" : fatigue >= 20 ? " vital-warn" : "");
+  hp.textContent = f.hp + "/" + f.max_hp + " hp";
+  exh.textContent = fatigue + "/50 exh";
+  hpEl.className = "";
+  hpEl.replaceChildren(hp, document.createTextNode(" \\u00b7 "), exh, document.createTextNode(" \\u00b7 " + f.name));
+}
 
 // Glanceable status: the server names your active effects (bleeding, seized,
 // stunned, resting, hobbled...); we render each as a small colored tag next to
@@ -3675,10 +3693,9 @@ async function connect() {
       }
       paintWayHome();
       if (f.room) knownRooms[f.room] = 1;
-      hpEl.textContent = f.hp + "/" + f.max_hp + " hp \\u00b7 " + (f.fatigue || 0) + "/50 exh \\u00b7 " + f.name;
+      renderVitals(f);
       // Remember the name for the threshold's greeting next visit.
       try { localStorage.setItem("nomad_name", f.name); } catch (e) {}
-      hpEl.className = f.hp <= f.max_hp / 3 ? "hp-low" : "";
       renderFx(f.fx);
       dollPulse(f.hp, f.max_hp);
       lastName = f.name;
@@ -9306,14 +9323,81 @@ if (document.addEventListener) document.addEventListener("visibilitychange", run
 if (weatherMotion.addEventListener) weatherMotion.addEventListener("change", runWeather);
 
 
+// Keep a small decoded working set, sharing pending loads across status frames.
+// Failed requests are evicted so the next room/status update can retry them.
+function readySceneImage(url, done) {
+  if (!url) { done(true); return; }
+  var cache = readySceneImage.cache || (readySceneImage.cache = new Map());
+  var entry = cache.get(url);
+  if (entry) {
+    cache.delete(url); cache.set(url, entry);
+    if (entry.ready) done(true); else entry.wait.push(done);
+    return;
+  }
+  var img = new Image();
+  entry = { image: img, ready: false, wait: [done] };
+  cache.set(url, entry);
+  // Eight decoded plates/skies bound mobile memory; the browser retains its
+  // own compressed HTTP cache for older visits.
+  while (cache.size > 8) cache.delete(cache.keys().next().value);
+  var settled = false, decoding = false, timer = setTimeout(function () { finish(false); }, 15000);
+  function finish(ok) {
+    if (settled) return;
+    settled = true; clearTimeout(timer);
+    img.onload = img.onerror = null;
+    entry.ready = ok;
+    if (!ok && cache.get(url) === entry) cache.delete(url);
+    var listeners = entry.wait; entry.wait = [];
+    listeners.forEach(function (fn) { fn(ok); });
+  }
+  function decoded() {
+    if (settled || decoding) return;
+    decoding = true;
+    if (img.naturalWidth === 0) { finish(false); return; }
+    if (img.decode) img.decode().then(function () { finish(true); }, function () { finish(false); });
+    else finish(true);
+  }
+  img.onload = decoded;
+  img.onerror = function () { finish(false); };
+  img.decoding = "async";
+  img.src = url;
+  if (img.complete) decoded();
+}
+
+// Freeze only the departing scenery for a short dissolve. Controls and live
+// creatures stay interactive. Snapshot computed styles so the old hour/tint
+// stays with its own ground; there are no duplicate DOM IDs.
+function fadeScene() {
+  if (typeof document.createElement !== "function" || !scenePainted) return null;
+  var old = document.getElementById("scene-fade");
+  if (old) old.remove();
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
+  var cover = document.createElement("div");
+  cover.id = "scene-fade"; cover.setAttribute("aria-hidden", "true");
+  cover.style.cssText = "position:fixed;left:0;right:0;top:0;bottom:var(--botth);z-index:0;background:#16120c;overflow:hidden;pointer-events:none";
+  function copy(el, pseudo) {
+    var node = document.createElement("div"), css = getComputedStyle(el, pseudo || null);
+    for (var i = 0; i < css.length; i++) node.style.setProperty(css[i], css.getPropertyValue(css[i]));
+    node.style.transition = "none"; node.style.animation = "none";
+    node.style.pointerEvents = "none";
+    return node;
+  }
+  if (skyEl) cover.appendChild(copy(skyEl));
+  var ground = copy(sceneEl); ground.appendChild(copy(sceneEl, "::after"));
+  cover.appendChild(ground);
+  sceneEl.parentNode.insertBefore(cover, document.getElementById("mobs"));
+  return function () {
+    if (!cover.animate) { cover.remove(); return; }
+    var animation = cover.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: "ease-out" });
+    animation.onfinish = animation.oncancel = function () { cover.remove(); };
+  };
+}
+
 var lastCovered = false;
 function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered) {
   var previousRoom = lastRoomKey;
   if (covered !== undefined) lastCovered = !!covered;
   else if (sky !== undefined && sky !== null) lastCovered = sky === "in";
-  // Remove the old sky immediately when stepping inside, even while its
-  // replacement ground plate is downloading.
-  if (lastCovered && skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; if (typeof skyDrift !== "undefined") skyDrift.show(""); }
   // HOW MUCH WATER IS OVER THIS ROOM, and cleared the same way place is:
   // walking off a flooded shoal onto a dry road has to put the sheet away, so
   // an absent field is zero rather than "leave it as it was".
@@ -9360,6 +9444,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // creatures read this rather than lastTorch, so nothing ever blazes on a
   // hillside the picture left unlit.
   var scene = "", sky = "", tint = "", lit = false, turn = "", line = MOB_LINE_DEFAULT;
+  var singleLayer = false, singleClass = "";
   var seatAt = "";   // the picture's name, so a throne in it can seat its king (SEAT_ON)
   // WHAT HOUR THE CREATURES ARE STANDING IN, which is the sky outside everywhere
   // except under a roof, where it is whatever the plate was lit for.
@@ -9534,52 +9619,22 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       // survived every mountain ground and both crossing shores.
       if (indoors) mobHour = lit ? "" : tbase;
     } else {
-      // The old single-layer plates: sky baked in, wash on top, unchanged.
-      // It still claims the sequence and records what it left on screen, so the
-      // held-frame swap below cannot be fooled by a plate this branch painted:
-      // without these two lines, walking gatehouse -> hillside and back would
-      // find scenePainted still naming the hillside and put it up unloaded.
-      sceneSeq++;
-      scenePainted = terr ? "/room-bg/" + terr + ".webp" : "";
-      if (skyEl) { skyEl.style.backgroundImage = ""; skyEl.style.transform = ""; if (typeof skyDrift !== "undefined") skyDrift.show(""); }
-      sceneEl.style.backgroundImage = terr ? "url(/room-bg/" + terr + ".webp?v=" + BG_V + ")" : "";
-      sceneEl.style.backgroundSize = "100% 100%";   // see the layered path below
-      // NO WEATHER INDOORS. The gatehouse is one baked plate lit by its own
-      // fire, and washing it with the hour put rain on a room with a roof and
-      // dusk on a room with no window. Whatever is happening outside stops at
-      // the door (rome, 2026-09-08).
-      sceneEl.className = (kind === "gatehouse") ? "" : (SKY_KNOWN[lastSky] ? "sky-" + lastSky : "");
-      if (mobsEl) { mobsEl.className = ""; mobsEl.style.top = boxPct(MOB_LINE_DEFAULT); }
-      sceneEl.style.backgroundPosition = "center center";
-      // The gatehouse is the one single-layer plate with a fire in it; its
-      // hearth and candles burn like any other room's. Every other plate here
-      // has no entry in the effects index, which stops the layer.
-      if (typeof sceneFx !== "undefined") sceneFx.paint(terr ? "/room-bg/" + terr + ".webp" : "", "");
-      return;
+      // Baked-sky interiors use the same decoded handoff as layered rooms.
+      singleLayer = true;
+      scene = terr ? "/room-bg/" + terr + ".webp" : "";
+      singleClass = kind === "gatehouse" ? "" : (SKY_KNOWN[lastSky] ? "sky-" + lastSky : "");
+      sky = ""; mobHour = "";
     }
   }
-  // THE SKY MUST NOT ARRIVE BEFORE THE GROUND (rome, 2026-09-06). Both layers
-  // are assigned in the same breath, so this is not an ordering mistake — it is
-  // the CACHE. There are seven sky files for the entire world, so after the
-  // first minute of play every one of them is local and paints in the same
-  // frame it is asked for. There are eighty scenes averaging 2.7MB, one per
-  // ground per condition, so nearly every room you walk into is a fresh
-  // download. Set both at once and the sky lands instantly and the ground lands
-  // when it lands, and in between the player is looking at an empty sky over
-  // nothing, which reads as the world failing to load rather than as loading.
-  //
-  // So the swap WAITS for the ground. The room you are leaving stays on screen,
-  // whole, until the next one can be shown whole — a held frame reads as a
-  // pause, a skeleton reads as a fault, and the pause is shorter than it looks
-  // because the picture is decoded before it goes up rather than during. A
-  // sequence number makes walking fast safe: a slow plate that arrives after
-  // you have already left cannot paint over the room you are now in.
-  var url = "url(" + scene + "?v=" + BG_V + ")";
+  // Hold the complete old picture until BOTH new layers have decoded. Each
+  // request owns a sequence so rapid movement cannot show a late old room.
+  var url = scene ? "url(" + scene + "?v=" + BG_V + ")" : "";
   var mine = ++sceneSeq;
   if (lastCovered) { sky = ""; turn = ""; }
-  var precipitation = scene && !lastCovered && !SHELTERED[place] ? mobHour : "";
+  var precipitation = !singleLayer && scene && !lastCovered && !SHELTERED[place] ? mobHour : "";
   var put = function () {
-    if (mine !== sceneSeq) return;         // a newer room got here first
+    if (mine !== sceneSeq || viewMode !== "image") return;
+    var fade = scene !== scenePainted ? fadeScene() : null;
     sceneEl.style.backgroundImage = url;
     // CONTAIN, AND SET INLINE BECAUSE THE PAINT IS INLINE. The stylesheet says
     // contain; this line said cover on every repaint and an inline style wins,
@@ -9600,7 +9655,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     }
     // No overlay on a layered room — the sky is real. The only thing that
     // changes is how the ground is lit, and that is a filter that respects the cut.
-    sceneEl.className = tint ? "t-" + tint : "";
+    sceneEl.className = singleLayer ? singleClass : tint ? "t-" + tint : "";
     // WHAT IS STANDING THERE IS STANDING IN THE SAME LIGHT — but it does not
     // take the same class, and sharing one was the bug. The scene's tint is a
     // CORRECTION: it is only set when the ground is borrowed, because a plate
@@ -9635,23 +9690,15 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     scenePainted = scene;
     setWeather(precipitation);
     if (typeof sceneFx !== "undefined") sceneFx.paint(scene, tint);
+    if (fade) fade();
   };
-  // Already up: this is a light change on the same ground (the hour turning, a
-  // sky the scene is borrowed under). Nothing to fetch, so do not hold a frame.
-  if (scene === scenePainted) { put(); return; }
-  var pre = new Image();
-  // A plate that 404s or a connection that dies must not freeze the last room
-  // on screen forever — put it up regardless and let the layer be empty. Same
-  // handler both ways on purpose: the failure case and the success case want
-  // exactly the same thing to happen next.
-  pre.onload = put;
-  pre.onerror = put;
-  pre.src = scene + "?v=" + BG_V;
-  // A picture already in the browser's cache is complete the moment its src is
-  // set and may never fire a load event, which would hold the previous room up
-  // for good. Walking back the way you came is the common case, so this is the
-  // common path, not the edge.
-  if (pre.complete) put();
+  var waiting = 2, ready = true;
+  function loaded(ok) {
+    ready = ready && ok;
+    if (--waiting === 0 && ready) put();
+  }
+  readySceneImage(scene ? scene + "?v=" + BG_V : "", loaded);
+  readySceneImage(sky ? sky + "?v=" + SKY_V : "", loaded);
 }
 
 // ---- THE ROOM, ALIVE (rome, 2026-09-25) ------------------------------------
@@ -9686,7 +9733,7 @@ var fxCanvas = document.getElementById("scene-fx");
 var sparkCanvas = document.getElementById("scene-sparks");
 var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");
 var fxGl = null, fxProg = null, fxU = {}, fxIndex = null, fxIndexAsked = false;
-var fxName = "", fxEntry = null, fxFrame = null, fxStamp = 0, fxT = 0, fxReady = false;
+var fxName = "", fxEntry = null, fxFrame = null, fxStamp = 0, fxT = 0, fxReady = false, fxSeq = 0;
 var fxTex = {}, fxMobTex = {}, fxEmbers = [], fxDust = [];
 var FX_TORCHES = 24, FX_MOBS = 4;
 function fxInit() {
@@ -9829,12 +9876,16 @@ function fxScene(scene, tint) {
   }
   var entry = (name && (!tint || FX_UNDER_TINT[tint]) && fxIndex && fxIndex[name]) || null;
   if (!entry || stillness || viewMode !== "image" || !fxInit()) { fxStop(); return; }
-  if (name === fxName && fxReady) { fxRun(); return; }
+  if (name === fxName) { if (fxReady) fxRun(); return; }
+  // The new plate is on screen now. Hide and clear the old effects before
+  // fetching replacements; a paused canvas still displays its last frame.
+  fxStop();
+  var mine = fxSeq;
   fxName = name; fxEntry = entry; fxReady = false; fxEmbers.length = 0; fxDust.length = 0;
   var plateAt = scene + "?v=" + BG_V;
   var depthAt = "/room-fx/" + name + ".png?v=" + FX_V;
   Promise.all([fxLoad(plateAt), fxLoad(depthAt)]).then(function (im) {
-    if (fxName !== name) return;                 // walked on before it loaded
+    if (mine !== fxSeq) return;                 // includes leaving and returning to the same room
     if (fxTex.plate) fxGl.deleteTexture(fxTex.plate);
     if (fxTex.depth) fxGl.deleteTexture(fxTex.depth);
     fxTex.plate = fxUpload(0, im[0], false); fxTex.depth = fxUpload(1, im[1], true);
@@ -9851,19 +9902,27 @@ function fxScene(scene, tint) {
     if (t.length) for (var k = 0; k < 60; k++) fxDust.push({ x: Math.random(), y: .05 + Math.random() * .7,
       vx: (Math.random() - .5) * .008, vy: (Math.random() - .6) * .005, s: .6 + Math.random(), ph: Math.random() * 6.3 });
     fxReady = true; fxRun();
-  }).catch(function () { fxStop(); });
+  }).catch(function () { if (mine === fxSeq) fxStop(); });
 }
 function fxStop() {
+  fxSeq++;
   fxName = ""; fxEntry = null; fxReady = false;
   if (fxFrame !== null) cancelAnimationFrame(fxFrame);
   fxFrame = null; fxStamp = 0;
   if (fxCanvas) fxCanvas.style.display = "none";
   if (sparkCanvas) sparkCanvas.style.display = "none";
+  if (fxGl) { fxGl.clearColor(0, 0, 0, 0); fxGl.clear(fxGl.COLOR_BUFFER_BIT); }
+  if (sparkCtx) sparkCtx.clearRect(0, 0, sparkCanvas.width, sparkCanvas.height);
+  fxEmbers.length = 0; fxDust.length = 0;
 }
 function fxRun() {
-  if (!fxReady || document.hidden || viewMode !== "image" || stillness) { if (fxFrame !== null) cancelAnimationFrame(fxFrame); fxFrame = null; return; }
-  fxCanvas.style.display = "block";
-  if (sparkCanvas) sparkCanvas.style.display = (fxEntry && fxEntry.t) ? "block" : "none";
+  if (!fxReady || document.hidden || viewMode !== "image" || stillness) {
+    if (fxFrame !== null) cancelAnimationFrame(fxFrame);
+    fxFrame = null;
+    if (fxCanvas) fxCanvas.style.display = "none";
+    if (sparkCanvas) sparkCanvas.style.display = "none";
+    return;
+  }
   if (fxFrame === null) fxFrame = requestAnimationFrame(fxDraw);
 }
 // Each creature on the row, as the shader needs it: where it is in the picture,
@@ -9966,6 +10025,9 @@ function fxDraw(now) {
     }
     sparkCtx.globalCompositeOperation = "source-over";
   }
+  // Reveal only after drawing this room's first frame, never an old buffer.
+  fxCanvas.style.display = "block";
+  if (sparkCanvas) sparkCanvas.style.display = tl.length ? "block" : "none";
   fxFrame = requestAnimationFrame(fxDraw);
 }
 if (document.addEventListener) document.addEventListener("visibilitychange", fxRun);

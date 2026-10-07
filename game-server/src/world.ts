@@ -299,6 +299,13 @@ export async function loadWorld(db: D1Database, zone: string): Promise<World> {
 
 export const PLAYER_MAX_HP = 100;
 
+// Food templates were balanced for 60 player HP and are also eaten by mobs.
+// Scale player healing here so their food retains its share of a full bar
+// without increasing creature healing. Round each meal before other modifiers.
+export function playerFoodHeal(templateHeal: number): number {
+  return Math.round(templateHeal * PLAYER_MAX_HP / 60);
+}
+
 export interface PlayerRow {
   pubkey: string;
   name: string;
