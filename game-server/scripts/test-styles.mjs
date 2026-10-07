@@ -37,6 +37,12 @@ try {
       send: (_s, text) => feed.push(text),
       litFor: () => lit,
       refreshRoomCtx: () => {},
+      sessions: new Map(),
+      equippedArmor: (p) => p.armor ?? 0,
+      reachable: () => true,
+      outOfWorld: () => false,
+      roomDist: (a, b) => (a === b ? 0 : 1),
+      creatureFirstStrike: async (c, _t, v) => { v.hp -= 10; feed.push('FIRST STRIKE ' + c.id); },
     };
     return { z, feed };
   }
@@ -141,17 +147,47 @@ try {
     console.log('PASS: striker dodges slow steel and is open after it bites.');
   }
 
-  { // FLIER
+  { // BIRDS
+    T['hill-eagle'] = 34; T['gibbet-crow'] = 14; T['carrion-vulture'] = 40;
+    // a gull: in reach on every pass, wheels off only after you hit it, then comes round again
     const gull = { id: 'g', templateId: 'great-gull', roomId: 'r', hp: 28, target: 'you' };
     const { z } = world([gull]);
-    roll = 0.9 * 0xffffffff; // no dive
-    assert.equal(S.beforeAttack(z, gull, tmpl('great-gull'), you('g'), now), true, 'it stays up and does not strike');
-    assert.ok(S.playerSwing(z, you('g'), gull, tmpl('great-gull'), blade(2), now + 4000).miss, 'a sword cannot reach it up there');
-    assert.equal(S.playerSwing(z, you('g'), gull, tmpl('great-gull'), blade(1, { traitMap: new Map([['reach', 1]]) }), now + 4000).miss, undefined, 'a spear can');
     roll = 0;
-    assert.equal(S.beforeAttack(z, gull, tmpl('great-gull'), you('g'), now + 4000), false, 'it drops to strike');
-    assert.equal(S.playerSwing(z, you('g'), gull, tmpl('great-gull'), blade(2), now + 8000).miss, undefined, 'and is in reach after');
-    console.log('PASS: flier stays overhead until it dives; spears and dives reach it.');
+    assert.equal(S.beforeAttack(z, gull, tmpl('great-gull'), you('g'), now), false, 'a gull unhit keeps pressing');
+    assert.equal(S.beforeAttack(z, gull, tmpl('great-gull'), you('g'), now + 4000), false, '...and pressing');
+    gull.hp = 20; // you land one
+    assert.equal(S.beforeAttack(z, gull, tmpl('great-gull'), you('g'), now + 8000), true, 'hit, it wheels off');
+    assert.ok(S.playerSwing(z, you('g'), gull, tmpl('great-gull'), blade(2), now + 12000).miss, 'out of reach for that pass');
+    assert.equal(S.beforeAttack(z, gull, tmpl('great-gull'), you('g'), now + 12000), false, 'and comes round again');
+    assert.equal(S.playerSwing(z, you('g'), gull, tmpl('great-gull'), blade(2), now + 16000).miss, undefined, 'in reach on the pass');
+    // a crow: on foot; hit and hurt, it flaps up; it drops back when you are open
+    const crow = { id: 'c', templateId: 'gibbet-crow', roomId: 'r', hp: 14, target: 'you' };
+    const { z: zc } = world([crow]);
+    roll = 0.9 * 0xffffffff; // no lucky lifts
+    assert.equal(S.beforeAttack(zc, crow, tmpl('gibbet-crow'), you('c'), now), false, 'a crow fights on foot');
+    crow.hp = 5; // hit, and under half
+    assert.equal(S.beforeAttack(zc, crow, tmpl('gibbet-crow'), you('c'), now + 4000), true, 'hit and hurt, it flaps up');
+    const bleeding = { ...you('c'), hp: 10 };
+    roll = 0.5 * 0xffffffff;
+    assert.equal(S.beforeAttack(zc, crow, tmpl('gibbet-crow'), bleeding, now + 8000), false, 'and drops on you when you are open');
+    // an eagle: the one that fights from the air
+    const eagle = { id: 'e', templateId: 'hill-eagle', roomId: 'r', hp: 34, target: 'you' };
+    const { z: ze } = world([eagle]);
+    roll = 0;
+    assert.equal(S.beforeAttack(ze, eagle, tmpl('hill-eagle'), you('e'), now), false, 'it opens on the ground');
+    S.creatureBlow(ze, eagle, tmpl('hill-eagle'), you('e'), now);
+    assert.equal(S.beforeAttack(ze, eagle, tmpl('hill-eagle'), you('e'), now + 4000), true, 'it strikes, then climbs');
+    assert.ok(S.playerSwing(ze, you('e'), eagle, tmpl('hill-eagle'), blade(2), now + 8000).miss, 'a sword cannot reach it');
+    assert.equal(S.playerSwing(ze, you('e'), eagle, tmpl('hill-eagle'), blade(1, { traitMap: new Map([['reach', 1]]) }), now + 8000).miss, undefined, 'a spear can');
+    roll = 0;
+    assert.equal(S.beforeAttack(ze, eagle, tmpl('hill-eagle'), you('e'), now + 8000), false, 'it stoops');
+    // a vulture fights on the ground
+    const vul = { id: 'v', templateId: 'carrion-vulture', roomId: 'r', hp: 40, target: 'you' };
+    const { z: zv } = world([vul]);
+    vul.turnHp = 40; vul.hp = 10;
+    assert.equal(S.beforeAttack(zv, vul, tmpl('carrion-vulture'), you('v'), now), false, 'a vulture never takes to the air mid-fight');
+    roll = 0;
+    console.log('PASS: gulls pass and wheel, crows fight on foot and flap up, eagles fight from the air, vultures stay down.');
   }
 
   { // PINCHER
@@ -202,6 +238,101 @@ try {
     assert.equal(S.creatureBlow(z2, sapper, tmpl('the-sapper'), you('p'), now).mult, 1.5, 'nearly done: reckless');
     assert.equal(feed.length, 2, 'each change of stance is told once');
     console.log('PASS: cutthroats feint; folk go guarded, then reckless, and say so.');
+  }
+
+  { // WOLVES GO FOR THE WEAKEST
+    T['grey-wolf'] = 26;
+    const w = { id: 'w', templateId: 'grey-wolf', roomId: 'r', hp: 26, target: 'tank' };
+    const { z, feed } = world([w]);
+    const tank = { pubkey: 'tank', name: 'Tank', roomId: 'r', hp: 60, maxHp: 60, armor: 12, target: 'w' };
+    const hurt = { pubkey: 'hurt', name: 'Hurt', roomId: 'r', hp: 15, maxHp: 60, armor: 2, target: null };
+    z.sessions.set('tank', tank); z.sessions.set('hurt', hurt);
+    S.pickTarget(z, w, tmpl('grey-wolf'));
+    assert.equal(w.target, 'hurt', 'it leaves the armoured one for the bleeding one');
+    assert.ok(feed.some((l) => l.includes('You are the one it wants')));
+    hurt.hp = 58; hurt.armor = 11; // nearly as sound as the other: no flip-flop
+    S.pickTarget(z, w, tmpl('grey-wolf'));
+    assert.equal(w.target, 'hurt', 'it does not swap back for a hair of difference');
+    console.log('PASS: wolves go for the weakest, and do not flip-flop.');
+  }
+
+  { // A WOUNDED BOAR TURNS
+    const boar = { id: 'wb', templateId: 'wild-boar', roomId: 'r', hp: 34, target: 'you' };
+    const { z, feed } = world([boar]);
+    S.creatureBlow(z, boar, tmpl('wild-boar'), you('wb'), now); // the opening charge
+    boar.hp = 6;
+    S.beforeAttack(z, boar, tmpl('wild-boar'), you('wb'), now + 4000);
+    assert.ok(feed.some((l) => l.includes('does not run')), 'it turns');
+    assert.equal(S.creatureBlow(z, boar, tmpl('wild-boar'), you('wb'), now + 4000).mult, 2, 'and comes with one more charge');
+    S.beforeAttack(z, boar, tmpl('wild-boar'), you('wb'), now + 8000);
+    assert.equal(S.creatureBlow(z, boar, tmpl('wild-boar'), you('wb'), now + 8000).mult, 1, 'only once');
+    console.log('PASS: a wounded boar turns and charges again, once.');
+  }
+
+  { // THE BEAR BLUFFS
+    const mk = () => ({ id: 'b', templateId: 'the-baited-bear', roomId: 'r', hp: 76, target: 'you', grudges: [] });
+    // stand there: it usually lets you be
+    let bear = mk(); let w = world([bear]); let me = { ...you('b'), roomId: 'r' }; w.z.sessions.set('you', me);
+    w.z.world.mobTemplates.get('the-baited-bear').max_hp = 76;
+    assert.equal(S.beforeAttack(w.z, bear, tmpl('the-baited-bear'), me, now), true, 'the first rush stops short');
+    assert.equal(bear.target, null, 'it is not on you, so you are not swinging at it');
+    roll = 0; // the leave roll comes up
+    await S.tickHabits(w.z, now + 7000);
+    assert.equal(bear.target, null, 'it lets you be');
+    assert.ok(w.feed.some((l) => l.includes('lets you be')));
+    // stand there and it does not: it comes on
+    bear = mk(); w = world([bear]); me = { ...you('b'), roomId: 'r' }; w.z.sessions.set('you', me);
+    S.beforeAttack(w.z, bear, tmpl('the-baited-bear'), me, now);
+    roll = 0xffffffff;
+    await S.tickHabits(w.z, now + 7000);
+    assert.equal(bear.target, 'you', 'or it comes on for real');
+    // walk away: over
+    bear = mk(); w = world([bear]); me = { ...you('b'), roomId: 'r' }; w.z.sessions.set('you', me);
+    S.beforeAttack(w.z, bear, tmpl('the-baited-bear'), me, now);
+    me.roomId = 'elsewhere';
+    await S.tickHabits(w.z, now + 7000);
+    assert.equal(bear.bluffing, undefined); assert.equal(bear.target, null, 'backed off: it is over');
+    // the next rush inside ten minutes is no bluff
+    me.roomId = 'r'; bear.target = 'you';
+    assert.equal(S.beforeAttack(w.z, bear, tmpl('the-baited-bear'), me, now + 60_000), false, 'ignore the warning and the next is real');
+    roll = 0;
+    console.log('PASS: the bear bluffs; leave and it is over, stand and it usually goes, the second time is real.');
+  }
+
+  { // CATS STALK
+    T.lynx = 52;
+    const cat = { id: 'k', templateId: 'lynx', roomId: 'a', hp: 52, target: null, nextWanderAt: now + 999999 };
+    const { z, feed } = world([cat]);
+    const me = { ...you(), roomId: 'b', movedAt: now };
+    z.sessions.set('you', me);
+    S.stalksInstead(cat, me, now);
+    await S.tickHabits(z, now + 1000);
+    assert.equal(cat.walkingTo, 'b', 'it follows a room behind');
+    assert.ok(cat.nextWanderAt <= now + 1000, 'and keeps up');
+    cat.roomId = 'b';
+    await S.tickHabits(z, now + 3000);
+    assert.equal(cat.target, null, 'you are still moving: it waits');
+    await S.tickHabits(z, now + 9000);
+    assert.equal(cat.target, 'you', 'you stood still: it springs');
+    assert.ok(feed.some((l) => l.startsWith('FIRST STRIKE')), 'with a first strike');
+    console.log('PASS: cats follow a room behind and spring when you stand still.');
+  }
+
+  { // KNOCKED OUT OF THE AIR
+    const gull = { id: 'kg', templateId: 'great-gull', roomId: 'r', hp: 28, target: 'you', airborneUntil: now + 5000 };
+    const { z, feed } = world([gull]);
+    S.thrownAt(z, gull, tmpl('great-gull'), you('kg'), now);
+    assert.ok(gull.airborneUntil > now, 'one throw: it lurches but stays up');
+    S.thrownAt(z, gull, tmpl('great-gull'), you('kg'), now + 1000);
+    assert.equal(gull.airborneUntil, undefined, 'the second brings it down');
+    assert.equal(gull.stunned, true, 'dazed');
+    assert.ok(feed.some((l) => l.includes('out of the air')));
+    gull.turnHp = 0; gull.hp = -1; // even hit, it cannot get up
+    gull.hp = 20; gull.turnHp = 28;
+    roll = 0;
+    assert.equal(S.beforeAttack(z, gull, tmpl('great-gull'), you('kg'), now + 4000), false, 'grounded: it fights on the ground');
+    assert.equal(S.playerSwing(z, you('kg'), gull, tmpl('great-gull'), blade(2), now + 4000).miss, undefined, 'and a blade reaches it');
+    console.log('PASS: two throws knock a bird out of the air, and it stays down a while.');
   }
 } finally {
   if (originalCrypto) Object.defineProperty(globalThis, 'crypto', originalCrypto);

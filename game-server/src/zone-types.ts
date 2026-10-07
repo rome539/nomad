@@ -40,6 +40,7 @@ export interface Session {
   // fixture the room is made of), so there is nothing to check.
   poseRef?: string;
   away: boolean; // out of the world, untouchable (bench modal, or the keeper's hatch)
+  movedAt?: number; // when this wanderer last walked into a room (a stalking cat springs on whoever stands still)
   trading?: boolean; // which away it is: true = the keeper's hatch (modal or typed)
   forging?: boolean; // which away it is: true = the gatehouse forge (modal or typed)
   bountying?: boolean; // which away it is: true = the keeper's bounty board (modal or typed)
@@ -160,6 +161,18 @@ export interface Creature {
   openUntil?: number;   // styles.ts: a striker committed by its bite; your next swing can't miss it
   dropping?: boolean;   // styles.ts: a lurker coming back out of the dark this round
   folkStance?: "guarded" | "reckless"; // styles.ts: how a person is fighting now (unset = steady)
+  turnHp?: number;      // styles.ts: its health at the start of its last turn, so a bird knows it was hit since
+  waitsOn?: string;     // a waiting vulture (ai.vulturesWait): the pubkey of the hurt wanderer it is following
+  waitSettled?: boolean; // ...and whether it has come down beside them yet
+  turned?: boolean;     // styles.ts: a wounded boar that has already turned on you
+  bluffing?: string;    // styles.ts: the bear's warning rush, at this pubkey...
+  bluffUntil?: number;  // ...until it decides
+  bluffHp?: number;     // ...and its health when it began (struck since = a fight)
+  bluffedAt?: number;   // ...and when it last bluffed (the next one within BLUFF_REARM_MS is real)
+  stalks?: string;      // styles.ts: a cat following this pubkey a room behind
+  stalkSince?: number;
+  skyHits?: number;     // styles.ts: throws that have landed on this bird while it was up
+  groundedUntil?: number; // ...and, knocked out of the air, when it can fly again
   boltAt?: number;      // a chased runner's next bolt: each room already given up pushes this out by BOLT_TIRE_MS, so the rout visibly slows before it ends
   huntFor?: string;     // the room it is walking to because its own ground has nothing left to eat (ai.huntGround)
   huntAt?: number;      // ms until that errand is worth recomputing (HUNT_RECHECK_MS)

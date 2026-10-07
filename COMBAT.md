@@ -134,12 +134,25 @@ next to the other combat constants; adding a creature to a style is one id.
 | **Pack** | wolves, dogs, hyenas | With 2+ on you, the ones you are **not** swinging at bite **×1.4** from the side, while the lead lives (a lead wolf/dog if present, else the biggest; the look names it). Kill or drive off the lead and the flanking stops for 10 min — "the rest of them lose their shape". | Find the lead and kill it first. |
 | **Swarm** | rats, crabs | Each other swarm-mate on you adds **+25%** to every bite (up to 4). Thinning them weakens the rest — "the rest of them are less sure now". | Cut the numbers down fast; sweeping weapons. |
 | **Striker** | adders, vipers, eels, foxes, cats, otters, ermine, lynx | Dodges your swing by weapon speed: speed 1 **40%**, speed 2 **15%**, speed 3 never, bare hands 15%. When it bites you it is committed: for a round, nothing misses it. | A fast blade, or answer the bite at once. |
-| **Flier** | crows, ravens, gulls, eagles, owl, vultures | Overhead unless it dives. Each round it dives at **50%**, **80%** on someone wounded or staggered; otherwise it stays up and doesn't strike. Overhead, only a **reach** weapon or a **throw** reaches it. Drawn on its own flight frames. | Carry something to throw, or a spear. |
+| **Birds** | gulls (mobbers), crows and ravens (ground), eagle, owl, eyrie holder, bone-breakers (hunters) | Each kind goes up for a reason. **Gulls** press pass after pass, in reach every pass; hit one and it wheels off for a round (60%) and comes round again. **Crows** fight on foot; hit, they flap up (40%, always once under half health) and drop back each round (40%, 80% on someone wounded or off balance). **Hunters** fight from the air: after a strike they climb out of reach (70%) and stoop again (50%, 80% on someone open). Vultures fight on the ground and only fly to flee. While a bird is up, only a **reach** weapon or a **throw** finds it, and **two throws that land while it is up knock it out of the air**: it comes down hard, dazed (loses its next turn), and cannot fly again for 20 s. Drawn on its own flight frames. | Hit a gull on the pass; a spear or something to throw for the hunters. |
 | **Pincher** | the great crab, the great devil crab | A landed blow can take your arm (20%): the seize hold (no fleeing, break free the usual way), and your blows land at **×0.6** while it has you. | Break the hold first. |
 | **Hollow** | the hollow (not the grave-flesh wights) | An edge skates off bone: **×0.7**. Weight breaks it: **×1.3**. Never flees (as before). | Bring a mace. |
 | **Lurker** | pale crawler, pale stalker, the follower, something ahead, root-thing, cave lion | If nobody's light reaches you, it may slip back into the dark mid-fight (30%) — gone from the room and the picture, nothing to swing at — and comes out again next round at **×1.5**. | Keep a light. |
 | **Cutthroat** | cutpurse, footpad, cutthroat, wayman, strand thief, wrecker | A landed blow can be a feint (25%): you're staggered (the next hit on you +2). | Don't trade blows carelessly; kill it fast. |
 | **Folk with steel** | the named people of the roads | Steady; below half health **guarded** (deals and takes ×0.6, but a blunt weapon goes straight through the guard); below a fifth **reckless** (×1.5 both ways). Each change is said in the room. | Read the stance; bring weight against a guard. |
+
+Three bird habits ride alongside the styles:
+
+- **Crows remember faces.** Strike a crow or raven and every other crow and raven in the world holds the grudge — the next one you walk in on comes for you on sight (for its normal 2 h memory). The ones nearby still rise at once.
+- **Vultures wait.** Badly hurt (under ⅓), any carrion or great vulture within 4 rooms walks to you, settles a little way off and watches — it never attacks for it. Die and they are first at the body; mend past half and they lose interest.
+- **The owl hunts in silence.** At night the eagle owl comes and goes without a sound, and when it hunts there is no wind-up: it opens with the first strike.
+
+And four animals fight the way they do in life:
+
+- **Wolves go for the weakest.** Each round a wolf looks over everyone in the room and goes for the most hurt or least armoured (health share + armour/40), switching only when somebody is clearly weaker (0.15) — the strong one cannot just stand in front.
+- **A wounded boar turns.** Boars never flee. Below a quarter of its health a boar turns and drops its head: its next blow is one more charge.
+- **The bear bluffs.** A baited bear at full health, with no grudge against you, opens with a rush that stops short — a warning, no blow, and it is not in your fight (the round does not swing at it). Walk away and it is over; stand there without swinging and it lets you be (60%) or comes on; swing and it is a fight. The next rush within 10 minutes is real.
+- **Cats stalk.** A lynx or wildcat that means to hunt you — or that you walk out on mid-fight — follows a room behind without a sound and springs with a first strike once you stand still for 8 seconds. It gives up after 5 minutes or 5 rooms.
 
 Prey still just runs, and the bosses keep their own phases on top of any style.
 Tested in `scripts/test-styles.mjs` (`npm run test:styles`).

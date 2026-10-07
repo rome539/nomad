@@ -22,6 +22,7 @@ import * as lore from "./lore";
 import * as den from "./den";
 import * as detail from "./detail";
 import * as wanderer from "./wanderer";
+import * as styles from "./styles";
 import {
   SURFACE_BANDS, SKY_ROOFED, SKY_UNDER, OUTDOOR_ROOMS,
   POSES, COURTESIES, WAVE_ARMED, WHISTLE_WAKE,
@@ -1345,11 +1346,15 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   session.staggered = false; // the opening closes behind you
   session.buying = undefined; // walk off mid-trade and the keeper sweeps it back
   for (const c of z.creatures.values()) {
-    if (c.target === session.pubkey && c.roomId === session.roomId) c.target = null;
+    if (c.target === session.pubkey && c.roomId === session.roomId) {
+      styles.lostPrey(z, c, session, Date.now()); // a cat does not let you go: it follows (styles.ts)
+      c.target = null;
+    }
   }
 
   const from = session.roomId;
   session.roomId = exit.to_room;
+  session.movedAt = Date.now();
   z.addTrace(session.roomId, { kind: "passage", at: Date.now() });
   // Standing in your own doorway IS the upkeep (mig 162). No rent, no chore —
   // walking home is the whole of it, and it writes at most once an hour.

@@ -4574,14 +4574,72 @@ export const STRIKERS = new Set(["gill-adder", "fen-viper", "stone-adder", "the-
   "ermine", "hill-fox", "snow-fox", "the-blue-fox", "the-raiding-fox", "wildcat", "the-tom", "the-dancer", "lynx", "otter", "dog-otter"]);
 export const STRIKER_DODGE = [0.4, 0.15, 0];  // by weapon speed 1 / 2 / 3+
 export const STRIKER_DODGE_BARE = 0.15;
-// FLIERS fight from the air: a swung blade reaches one only the round after it
-// comes down to strike. A throw or a long spear reaches it overhead. It comes
-// down when it sees an opening - more often on somebody hurt or off balance.
-// (Not the brooding vulture: it sits its nest, and was never drawn flying.)
-export const FLIERS = new Set(["gibbet-crow", "scarp-raven", "the-old-raven", "great-gull", "black-backed-gull", "hill-eagle",
-  "eagle-owl", "carrion-vulture", "great-vulture", "eyrie-holder", "bone-breaker", "the-bone-dropper"]);
-export const FLIER_DIVE_ODDS = 0.5;
+// BIRDS fight the way their kind does (rome, 2026-10-06: "what would make sense
+// for a simulation"). One dice roll for every bird made a gull as hard to reach
+// as an eagle. Each kind goes up for a reason and comes down for one:
+//   mobber - gulls. Pass after pass, low and fast, in reach on every pass. Lands
+//            a hit on it and it wheels off on the wind for a round, then comes
+//            round again.
+//   ground - crows and ravens. They fight on foot, hopping and pecking. Hit or
+//            hurt, they flap up out of reach, and drop back when you're open.
+//   hunter - the eagle, the owl, the eyrie holder, the bone-breakers. The only
+//            ones that fight from the air: up most of the time, stooping when
+//            they see an opening.
+// Vultures are not here: heavy birds fight on the ground and only fly to get
+// away, which the ordinary flee already does. (Nor the brooding vulture: she
+// sits her nest, and was never drawn flying.)
+// While a bird is up, only a reach weapon or a throw finds it.
+export const FLIER_KIND: Record<string, "mobber" | "ground" | "hunter"> = {
+  "great-gull": "mobber", "black-backed-gull": "mobber",
+  "gibbet-crow": "ground", "scarp-raven": "ground", "the-old-raven": "ground",
+  "hill-eagle": "hunter", "eagle-owl": "hunter", "eyrie-holder": "hunter", "bone-breaker": "hunter", "the-bone-dropper": "hunter",
+};
+export const FLIERS = new Set(Object.keys(FLIER_KIND));
+export const MOBBER_WHEEL_ODDS = 0.6;   // a gull you just hit wheels off for a round
+export const GROUND_LIFT_ODDS = 0.4;    // a crow you just hit flaps up (always, once it is under half its health)
+export const GROUND_DROP_ODDS = 0.4;    // ...and drops back each round, 0.8 on someone wounded or off balance
+export const FLIER_DIVE_ODDS = 0.5;     // a hunter overhead stoops
 export const FLIER_DIVE_OPEN = 0.8;     // ...on a victim wounded or staggered
+export const HUNTER_CLIMB_ODDS = 0.7;   // ...and after a strike, climbs back out of reach
+// KNOCKED OUT OF THE AIR (rome, 2026-10-06). Throws that land on a bird while it
+// is up add up: the second one brings it down hard. It is dazed (loses its next
+// turn) and cannot get back up for a while - down where a blade reaches it.
+export const FLIER_DOWN_HITS = 2;
+export const FLIER_GROUNDED_MS = 20_000;
+// THE VULTURES WAIT (rome, 2026-10-06). Somebody badly hurt within a few rooms
+// draws them: they come and settle a little way off and watch, and they do not
+// attack. If you die, they are first at the body; if you mend past half, they
+// lose interest. Vultures circling means you are in trouble.
+export const WAITING_VULTURES = new Set(["carrion-vulture", "great-vulture"]);
+export const VULTURE_SMELL_ROOMS = 4;      // how far off the blood draws them
+export const VULTURE_LOSE_AT = 0.5;        // mended past this share of health, they go
+export const VULTURE_CHECK_MS = 10_000;
+// THE OWL HUNTS IN SILENCE (rome, 2026-10-06). At night it comes and goes
+// without a sound, and when it hunts there is no wind-up: the first thing you
+// know of it is the strike.
+export const SILENT_HUNTERS = new Set(["eagle-owl"]);
+// ANIMALS AS THEY ARE (rome, 2026-10-06), in styles.ts:
+// WOLVES GO FOR THE WEAKEST. A wolf tests the herd: of everyone standing in the
+// room it goes for the most hurt or the least armoured, and changes its mind
+// when somebody is clearly weaker than the one it has.
+export const WEAKEST_HUNTERS = new Set(["grey-wolf", "dire-wolf", "hill-wolf", "lead-wolf"]);
+export const WEAKEST_SWITCH_GAP = 0.15;   // how much weaker somebody must be before it changes target
+// A WOUNDED BOAR TURNS. Hunters fear a hurt boar more than a fresh one: it does
+// not run, and once badly hurt it comes at you with one more charge.
+export const TURNING_BOARS = new Set(["wild-boar", "old-boar"]);
+export const BOAR_TURN_AT = 0.25;
+// THE BEAR BLUFFS. Its first rush stops short. Leave and it is over; stand
+// there without swinging and it usually lets you be; swing and it is a fight.
+export const BLUFFERS = new Set(["the-baited-bear"]);
+export const BLUFF_HOLD_MS = 6_000;       // how long it stands blowing at you before it decides
+export const BLUFF_LEAVE_ODDS = 0.6;
+export const BLUFF_REARM_MS = 10 * 60_000; // ignore the warning and the next one is no bluff
+// CATS STALK. A lynx or wildcat that means to have you follows a room behind,
+// without a sound, and springs when you stand still.
+export const STALKERS = new Set(["lynx", "wildcat"]);
+export const STALK_STILL_MS = 8_000;
+export const STALK_GIVEUP_MS = 5 * 60_000;
+export const STALK_RANGE = 5;
 // PINCHERS take an arm instead of dragging you under: the seize hold (you can't
 // run, and you tear loose the same way), and your blows are weak while it has you.
 export const PINCHERS = new Set(["the-great-crab", "the-great-devil-crab"]);

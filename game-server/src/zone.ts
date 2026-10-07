@@ -75,6 +75,7 @@ import * as styles from "./styles";
 import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
 import {
+  TURNING_BOARS,
   TICK_MS, TICK_SIM_FLUSH_MS, TICK_SLOW_LOG_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   GROUND_ROOTED,
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, FLOOR_RUST_PER_HOUR, FLOOR_RUST_STEP_MS, materialDamp, MATERIAL_STONE, MATERIAL_BONE, MATERIAL_WOOD, MATERIAL_HIDE, MATERIAL_CLOTH, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
@@ -2146,6 +2147,13 @@ export class ZoneDO implements DurableObject {
         roused++;
       }
     }
+    // AND EVERY CROW KNOWS YOUR FACE (rome, 2026-10-06). Real crows do this:
+    // fight one and the rest of them learn who you are. Every other crow in the
+    // world holds the grudge now, so the next one you walk in on comes for you
+    // on sight (provokeGrudges), for as long as a crow remembers (FORGET_MS).
+    for (const other of this.creatures.values()) {
+      if (other.id !== struck.id && CROWS.has(other.templateId)) ai.addGrudge(this, other, session.pubkey);
+    }
     if (roused > 0) {
       this.send(session, "A murder of crows turns on you as one — every wing in earshot is coming.", "dmgin");
       this.roomFeed(session.roomId, `${session.name} strikes a crow — and the whole murder takes it up.`, session.pubkey, false);
@@ -2411,6 +2419,8 @@ export class ZoneDO implements DurableObject {
         this.send(session, `${cap(tmpl.name)} reels, stunned.`, "stun");
         this.roomFeed(session.roomId, `${cap(tmpl.name)} staggers where it stands.`, session.pubkey, false); // local: mob reaction
       }
+      // A bird hit while it is up: enough of these knock it out of the air (styles.ts).
+      styles.thrownAt(this, creature, tmpl, session, Date.now());
       if (tmpl.is_boss) ai.bossPhase(this, creature, tmpl, session);
     } else {
       // Where the thing you threw ended up is still news, so the landing is
@@ -3974,6 +3984,8 @@ export class ZoneDO implements DurableObject {
           for (const creature of targets) {
             if (!alive(creature)) continue;
             const tmpl = world.mobTemplates.get(creature.templateId)!;
+            // A bear still to give its warning is not in your fight yet (styles.ts).
+            if (styles.bluffPending(this, creature, tmpl, session.pubkey, now)) continue;
             if (!creature.target) creature.target = session.pubkey;
             ai.addGrudge(this, creature, session.pubkey);
             // Its own way of fighting (styles.ts): a striker too quick for slow
@@ -4279,7 +4291,16 @@ export class ZoneDO implements DurableObject {
         if (!prey) {
           creature.rouseAt = undefined; // no one to hunt — the hunger settles back
         } else if (creature.rouseAt === undefined) {
-          if (chance(STARVE_HUNTS_ODDS * nightHuntMult(creature.templateId, creature.roomId, now) * ai.moonHuntMult(this, creature, now))) {
+          const springs = chance(STARVE_HUNTS_ODDS * nightHuntMult(creature.templateId, creature.roomId, now) * ai.moonHuntMult(this, creature, now));
+          if (springs && styles.stalksInstead(creature, prey, now)) {
+            // a cat stalks rather than winding up (styles.ts)
+          } else if (springs && ai.hushed(creature)) {
+            // The owl at night gives no warning at all: the strike is the first
+            // you know of it (SILENT_HUNTERS).
+            creature.target = prey.pubkey;
+            if (!prey.target) prey.target = creature.id;
+            await this.creatureFirstStrike(creature, tmpl, prey);
+          } else if (springs) {
             creature.rouseAt = now + DIRE_ROUSE_MS;
             // A LURKER should have been foiled by your light — a lit room or a
             // torch in hand spoils its ambush (ai.wakeListeners). Naming that the
@@ -4311,7 +4332,14 @@ export class ZoneDO implements DurableObject {
         if (!prey) {
           creature.rouseAt = undefined; // healed up, left, or died — the interest settles
         } else if (creature.rouseAt === undefined) {
-          if (chance(WOUNDED_PREY_ODDS * nightHuntMult(creature.templateId, creature.roomId, now) * ai.moonHuntMult(this, creature, now))) {
+          const springs = chance(WOUNDED_PREY_ODDS * nightHuntMult(creature.templateId, creature.roomId, now) * ai.moonHuntMult(this, creature, now));
+          if (springs && styles.stalksInstead(creature, prey, now)) {
+            // a cat stalks rather than winding up (styles.ts)
+          } else if (springs && ai.hushed(creature)) {
+            creature.target = prey.pubkey; // the owl, silent (as above)
+            if (!prey.target) prey.target = creature.id;
+            await this.creatureFirstStrike(creature, tmpl, prey);
+          } else if (springs) {
             creature.rouseAt = now + DIRE_ROUSE_MS;
             const lurker = LURKERS.has(creature.templateId);
             if (lurker) creature.hidden = false;
@@ -4387,6 +4415,8 @@ export class ZoneDO implements DurableObject {
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} turns toward ${prey.name}.`, prey.pubkey, false);
         }
       }
+      // A wolf goes for the weakest in the room (styles.ts).
+      styles.pickTarget(this, creature, tmpl);
       if (creature.target) {
         const victim = this.sessions.get(creature.target);
         // The ferryman holds his prey ON THE ROPE across rooms — the drag's
@@ -4399,6 +4429,7 @@ export class ZoneDO implements DurableObject {
         // lapses like any other lost prey. The ferryman's rope-hold is the one
         // reach that outlives a room change, so only it skips the room check.
         if (!victim || !this.reachable(victim) || (victim.roomId !== creature.roomId && !onRope)) {
+          styles.lostPrey(this, creature, victim, now); // a cat follows instead of losing you
           creature.target = null;
           creature.rouseAt = undefined; // lost its prey — a dire-hyena winds up fresh next time
           continue;
@@ -4449,7 +4480,7 @@ export class ZoneDO implements DurableObject {
         const wantsFlee = !creature.traits?.includes("maneater") && !creature.traits?.includes("hind-mother") && (
           ai.dreadsFire(this, creature, victim)
           || RUNNERS.has(tmpl.id)
-          || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !HOARDERS.has(tmpl.id) && creature.hp < fleeAt && chance(FLEE_CHANCE)));
+          || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !HOARDERS.has(tmpl.id) && !TURNING_BOARS.has(tmpl.id) && creature.hp < fleeAt && chance(FLEE_CHANCE)));
         // A BLOWN ANIMAL CANNOT RUN, whatever it wants. It has spent the rout
         // it had in it (ai.creatureMoves), so the roll it just won is worth
         // nothing and it fights where it stands — which is the whole point of
@@ -4899,6 +4930,10 @@ export class ZoneDO implements DurableObject {
 
     // The other nomad takes its next step, or puts its hand out (wanderer.ts).
     wanderer.tickWanderer(this, now);
+    // The vultures come to wait on whoever is badly hurt (ai.vulturesWait).
+    ai.vulturesWait(this, now);
+    // The bear decides about its warning; the cats follow and spring (styles.ts).
+    await styles.tickHabits(this, now);
 
     // The day/night world-clock flips: tell whoever's standing outside to
     // see it (same courtesy the weather events already extend on their own
@@ -5264,7 +5299,7 @@ export class ZoneDO implements DurableObject {
           // Only when the crouch is what held it — `hunted` also lands here, and
           // a deer that just ate something is not being calmed by anybody.
           ai.crouchHolds(this, creature); // it holds, and now and then it says so
-        } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && (!AGGRESSIVE.has(creature.templateId) || ai.walksAnyway(creature)) && !ROOTED.has(creature.templateId)) {
+        } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !tmpl.is_boss && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && (!AGGRESSIVE.has(creature.templateId) || ai.walksAnyway(creature)) && !ROOTED.has(creature.templateId) && !ai.waitingHere(this, creature)) {
           // Mid-wind-up (rouseAt) it holds its ground — a thing that's telegraphed
           // a lunge doesn't stroll off before it commits (keeps the thief's rob,
           // the meal-guard's spring, and the starve-lunge from fizzling out).

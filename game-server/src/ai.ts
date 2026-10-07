@@ -38,6 +38,7 @@ import {
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
+  WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
@@ -490,6 +491,10 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     if (creature.stunned) return "reeling and dazed";
     if (creature.bleedTicks && creature.bleedTicks > 0) return "bleeding freely, dark spatter on the stone";
     if (creature.rouseAt && Date.now() < creature.rouseAt) return "winding up to spring, hackles high";
+    if (creature.waitsOn && creature.waitSettled && !creature.target) {
+      return creature.waitsOn === viewer ? "settled a little way off, watching you, waiting"
+        : "settled a little way off, watching somebody who is bleeding";
+    }
     const way = styles.tell(z, creature, viewer);
     if (way) return way;
     if (creature.target === viewer) return "fixed on you";
@@ -1352,12 +1357,14 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // player both stay local now. The fight itself is on the player's own key;
       // the mob's footwork is room-only detail (rome, 2026-07-15).
       void fledFrom;
-      z.roomFeed(from, outLine, undefined, false);
+      // The owl at night comes and goes without a sound (SILENT_HUNTERS).
+      const hush = hushed(creature);
+      if (!hush) z.roomFeed(from, outLine, undefined, false);
       const inLine = mode !== "flee" ? "creeps in."
         : runner ? "skitters in, already looking for the next way out."
         : hurt ? hurt.in_ : pick(fleeFam.in_).replace("{ground}", groundWord(z.regionOf(creature.roomId), creature.roomId));
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`, undefined, false);
-      z.roomSound(
+      if (!hush) z.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`, undefined, false);
+      if (!hush) z.roomSound(
         creature.roomId,
         mode === "flee"
           ? (runner ? "Something small scrabbles away {dir}, fast." : HOLLOW.has(tmpl.id) ? "Something clatters away {dir}, broken." : "Something crashes away {dir}, wounded.")
@@ -1396,7 +1403,8 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // only thing that strikes on arrival here.
       for (const s of z.sessions.values()) {
         if (s.roomId === creature.roomId && z.reachable(s) && !creature.target
-            && remembers(z, creature, s.pubkey, now)) {
+            && remembers(z, creature, s.pubkey, now)
+            && !styles.stalking(creature)) { // a stalking cat waits for you to stand still (styles.ts)
           creature.target = s.pubkey;
           z.send(s, `${cap(tmpl.name)} remembers you — and comes for you.`);
           // It gets the jump only if there is room to reach the player at all —
@@ -4123,3 +4131,64 @@ export function lurkersIn(z: ZoneDO, roomId: string, exceptId: string): number {
     }
     return n;
   }
+
+// THE OWL HUNTS IN SILENCE: at night, no footfall, no wind-up.
+export function hushed(creature: Creature): boolean {
+  return (SILENT_HUNTERS.has(creature.templateId) && isNight()) || styles.stalking(creature);
+}
+
+// THE VULTURES WAIT (WAITING_VULTURES). Somebody badly hurt within a few rooms
+// draws them; they walk in, settle a little way off and watch. They never
+// attack for it - they are waiting, which is worse. Mend past half and they
+// go; die, and they are first at the body, because the scavenger's own meal
+// rules take over from there.
+const vultureCheck = new WeakMap<ZoneDO, number>();
+export function vulturesWait(z: ZoneDO, now: number): void {
+  if ((vultureCheck.get(z) ?? 0) > now) return;
+  vultureCheck.set(z, now + VULTURE_CHECK_MS);
+  const hurt = [...z.sessions.values()].filter((s) => s.hp > 0 && s.hp < s.maxHp * WOUNDED_FRACTION && z.reachable(s) && !z.outOfWorld(s));
+  for (const c of z.creatures.values()) {
+    if (!WAITING_VULTURES.has(c.templateId) || c.target || c.asleep || c.aloft !== undefined) continue;
+    if (c.waitsOn) {
+      const s = z.sessions.get(c.waitsOn);
+      if (!s || s.hp <= 0 || s.hp >= s.maxHp * VULTURE_LOSE_AT || z.outOfWorld(s) || !z.reachable(s)
+          || z.roomDist(c.roomId, s.roomId) > VULTURE_SMELL_ROOMS * 2) {
+        const lost = c.waitSettled && s && s.hp > 0 && s.roomId === c.roomId;
+        c.waitsOn = undefined; c.waitSettled = undefined; c.walkingTo = undefined;
+        if (lost) {
+          const t = z.world!.mobTemplates.get(c.templateId)!;
+          z.roomFeed(c.roomId, `${cap(t.name)} loses interest in you.`, undefined, false);
+          c.nextWanderAt = now; // and walks off on its next step
+        }
+        continue;
+      }
+    } else {
+      const s = hurt.find((p) => z.roomDist(c.roomId, p.roomId) <= VULTURE_SMELL_ROOMS);
+      if (!s) continue;
+      c.waitsOn = s.pubkey;
+    }
+    const s = z.sessions.get(c.waitsOn)!;
+    if (c.roomId === s.roomId) {
+      c.walkingTo = undefined;
+      if (!c.waitSettled) {
+        c.waitSettled = true;
+        const t = z.world!.mobTemplates.get(c.templateId)!;
+        z.send(s, `${cap(t.name)} comes down a little way off and settles. It does not come at you. It is waiting.`);
+        z.roomFeed(c.roomId, `${cap(t.name)} comes down near ${s.name} and settles to wait.`, s.pubkey, false);
+        z.refreshRoomCtx(c.roomId);
+      }
+    } else {
+      c.waitSettled = false;
+      c.walkingTo = s.roomId;
+      c.nextWanderAt = Math.min(c.nextWanderAt, now); // it goes now, not on its idle clock
+    }
+  }
+}
+
+// A vulture beside the one it is waiting on does not wander off.
+export function waitingHere(z: ZoneDO, c: Creature): boolean {
+  if (styles.holdsHere(z, c)) return true;
+  if (!c.waitsOn) return false;
+  const s = z.sessions.get(c.waitsOn);
+  return !!s && s.roomId === c.roomId;
+}
