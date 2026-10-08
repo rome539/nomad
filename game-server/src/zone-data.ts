@@ -8241,12 +8241,15 @@ export const MATERIAL_BONE = new Set([
   "bone-barred-visor", "marrow-crown", "wolf-skull-helm", "antler-braced-cap",
   "coral-crown", "limpet-scaled-cap",
   "knights-kite-shield",
+  "horn-plated-cap", "drake-scale-shield", "pale-scale-mantle", "glutton-skull-helm",
+  "crab-shell-casque", "shell-plate", "shell-cracker", "the-filed-edge", "cast-antler-crown",
 ]);
 export const MATERIAL_WOOD = new Set([
   "lopped-stave", "quarterstaff", "masons-mallet", "splintered-cudgel",
   "studded-maul", "the-long-crossing",
   "battered-buckler", "coppice-hurdle", "lashed-plank-shield",
   "tail-board-targe", "bog-pearl-targe", "iron-bound-shield",
+  "longbrand", "pine-brand", "tar-brand",
 ]);
 export const MATERIAL_HIDE = new Set([
   "boiled-cuirass", "cutters-jerkin", "thick-hide-jack", "white-hide-coat",
@@ -8263,6 +8266,9 @@ export const MATERIAL_HIDE = new Set([
   "white-hide-mantle", "wolfskin-cloak", "harness-leathers", "long-hunger-shroud",
   "wardens-watch-mantle", "strapped-baldric",
   "tusk-studded-targe",
+  "bristle-hide-jack", "shadow-treads", "rat-mantle", "hill-wolf-jerkin",
+  "adder-skin-boots", "glutton-hide-coat", "lion-pelt-cloak", "white-rat-mantle",
+  "lead-wolf-ruff", "white-hide-targe", "the-white-roe",
 ]);
 export const MATERIAL_CLOTH = new Set([
   // wet wool and linen go faster than tanned hide, which is why cloth sits
@@ -8273,14 +8279,16 @@ export const MATERIAL_CLOTH = new Set([
   "felt-soled-boots", "moss-lined-boots",
   "drowned-divers-shroud", "grave-shroud", "keepers-wrap", "moth-eaten-mantle",
   "oilskin-cape", "reed-thatch-cape", "still-water-shroud", "tattered-cloak",
+  "shepherds-mantle", "fleece-lined-jack", "oilskin-jack", "carriers-jack",
+  "cargo-coat", "storm-cloak", "hill-mantle",
 ]);
 // ...and everything not named above is steel or iron, which is the great
 // majority of the armoury and the honest default for a fortress. A piece that
 // falls through by mistake therefore rusts, which is the SAFE way to be wrong:
 // it decays like the plate it is sitting next to instead of quietly becoming
-// the one permanent item in the game. The load-time audit in zone.ts names
-// anything unclassified so a new piece cannot rot in the wrong direction
-// unnoticed.
+// the one permanent item in the game. The load-time audit in zone.ts checks
+// listed IDs exist; it cannot detect omitted nonmetal gear. New gear needs
+// an explicit material review alongside its template.
 export const MATERIAL_DAMP: Record<string, number> = {
   steel: 1,     // the baseline the old law applied to everything it touched
   cloth: 0.6,   // wet wool and linen rot, and quicker than leather does

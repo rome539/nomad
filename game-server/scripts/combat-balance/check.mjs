@@ -103,8 +103,10 @@ try {
    const setup={equippedWeight,initialFatigueRate,roundsToFullWithoutRecovery:Math.ceil(50/initialFatigueRate),balance,mobMaxHp:drakeTemplate.max_hp,mobArmor:drakeTemplate.armor,mobDamage:[drakeTemplate.dmg_min,drakeTemplate.dmg_max],armor:z.equippedArmor(p),weaponDamage:z.effDmg(z.equippedItem(p,'weapon')),maxHp:p.maxHp,items:p.items.filter(i=>i.equipped).map(i=>({id:i.itemId,condition:i.condition}))};
    if (!lifecycleDone) {
     lifecycleDone=true;
+    await equipmentChecks({z,p,db,frames});
     await chipChecks({z,p,db,frames});
     await foodChecks({z,p,db,drake,frames});
+    await walkingChecks({z,p,ws,state,env,kv,command:async f=>{z.syncExhaustion(p);await f();await z.checkpointPlayers();}});
     await lifecycleChecks({z,p,ws,db,kv,state,env,world,ZoneDO,drake,command:async f=>{z.syncExhaustion(p);await f();await z.checkpointPlayers();}});
     return await run(arguments[0]); // an independent fresh world for encounter dice
    }
@@ -284,6 +286,129 @@ try {
   z.bounties=bounties;z.events=events;p.roomId=room;p.hp=100;now=start;
   z.lastCombatRound=now;z.lastTickAt=0;p.exhaustion={units:0,at:now,mode:'passive'};
   console.log('PASS: all 40 foods through manual and automatic eating, D1 saves/removal, HP cap, spoilage, preserved food, fever, bounty healing display.');
+ }
+
+ async function equipmentChecks({z,p,db,frames}) {
+  const original={items:p.items,room:p.roomId,creatures:z.creatures,events:z.events,start:now};
+  const carried=(id,roll='')=>({rowId:'equipment-review-'+id,itemId:id,equipped:true,condition:100,serial:null,rolledMap:world.parseTraits(roll)});
+  try {
+   let checked=0;
+   for(const t of z.world.itemTemplates.values()) {
+    if(!t.slot)continue;
+    for(const roll of ['', 'balanced', 'cumbersome', 'balanced,cumbersome']) {
+     const c=carried(t.id,roll);p.items=[c];
+     const has=tag=>(t.traitMap.get(tag)??0)>0||(c.rolledMap.get(tag)??0)>0;
+     const expected=Math.max(0,t.weight-Number(has('balanced'))+Number(has('cumbersome')));
+     assert.equal(z.wornWeight(p),expected,t.id+' effective load');
+     assert.equal(z.wornArmorWeight(p),['armor','helm','feet','cloak'].includes(t.slot)?expected:0,t.id+' armor subtotal');
+     c.condition=1;assert.equal(z.wornWeight(p),expected,'damage does not lighten equipment');
+     c.equipped=false;assert.equal(z.wornWeight(p),0);assert.equal(z.wornArmorWeight(p),0);
+    }
+    checked++;
+   }
+   for(const [id,weight] of [['sappers-pick',3],['woodwards-axe',4],['bearwards-chain',4],['the-long-crossing',4]])assert.equal(z.world.itemTemplates.get(id).weight,weight,'preserved specialist weight');
+   p.items=['poleaxe','barbed-warplate','marrow-crown','pale-tread','chain-lined-mantle'].map(id=>carried(id,'balanced'));
+   assert.equal(z.wornWeight(p),5);assert.equal(z.wornArmorWeight(p),3);
+   assert.equal(z.wornWeight(p)-z.wornArmorWeight(p),2,'held weight cannot go negative');
+   assert.equal(z.equippedArmor(p),11);assert.equal(equippedFatigueRate(z.wornWeight(p)),1.75);
+   // A template's balanced trait is not doubled by a duplicate instance trait.
+   p.items=[carried('the-carriers-mile','balanced')];assert.equal(z.wornWeight(p),0);
+   p.items[0].rolledMap=world.parseTraits('cumbersome');assert.equal(z.wornWeight(p),1);
+
+   const materials=proposal.equipmentWeightReview.materialFindings.recommendedClassification;
+   assert.equal(Object.values(materials).flat().length,30);
+   const registered=new Set();
+   for(const set of [R.MATERIAL_STONE,R.MATERIAL_BONE,R.MATERIAL_WOOD,R.MATERIAL_HIDE,R.MATERIAL_CLOTH])for(const id of set){
+    assert.ok(z.world.itemTemplates.get(id)?.slot,id+' registered material exists');
+    assert.ok(!registered.has(id),id+' has one material');registered.add(id);
+   }
+   for(const [material,ids]of Object.entries(materials))for(const id of ids)assert.equal(R.materialOf(id),material,id+' material');
+   assert.equal(R.materialOf('warden-plate'),'steel');assert.equal(R.materialOf('hammerstone'),'stone');
+   // Exercise the actual carried-damp tick, including steel and stone controls.
+   z.creatures=new Map();z.noteCreaturesChanged();z.events=new Map();
+   p.roomId='the-first-milestone';p.target=null;p.pvpTarget=null;p.resting=false;p.hp=100;
+   p.items=[...Object.values(materials).flat(),'warden-plate','hammerstone'].map(id=>({...carried(id),equipped:false}));
+   for(const c of p.items)db.prepare('INSERT INTO player_items (id,pubkey,item_id,equipped,condition,acquired_at) VALUES (?,?,?,0,100,?)').run(c.rowId,p.pubkey,c.itemId,Math.floor(now/1000));
+   z.lastTickAt=now;z.lastCombatRound=now;now+=R.TICK_MS;await z.tick();
+   for(const c of p.items)assert.ok(Math.abs(c.condition-(100-R.RUST_PER_TICK*R.materialDamp(c.itemId)))<1e-9,c.itemId+' actual deterioration');
+
+   // Balanced weight-zero armor must not mask the sound of a held weapon.
+   const exit=z.world.exits.get(p.roomId).find(e=>!e.key_item&&(z.world.exits.get(e.to_room)||[]).some(b=>b.to_room===p.roomId&&!b.key_item));
+   assert.ok(exit);
+   p.items=[carried('mail-hauberk','balanced'),carried('warden-maul')];
+   for(const [roll,text]of [['balanced','The gear in your hands knocks'],['cumbersome','Your armor rings']]) {
+    p.items[0].rolledMap=world.parseTraits(roll);let heard=false;
+    for(let attempt=0;attempt<64&&!heard;attempt++) {
+     p.roomId=exit.room_id;p.loudSelfAt=0;now+=R.TICK_MS;
+     const from=frames.length;await verbs.cmdGo(z,p,exit.dir);
+     assert.equal(p.roomId,exit.to_room);
+     const messages=frames.slice(from).filter(f=>f.cls==='amb'&&typeof f.text==='string');
+     assert.ok(!messages.some(f=>f.text.startsWith(roll==='balanced'?'Your armor rings':'The gear in your hands knocks')),'noise names the effective load');
+     heard=messages.some(f=>f.text.startsWith(text));
+    }
+    assert.ok(heard,'production movement emitted '+text);
+   }
+   console.log(`PASS: ${checked} equipment templates, trait/condition load, specialist weights, 30 material corrections, actual damp tick and movement-noise messages.`);
+  } finally {
+   db.prepare("DELETE FROM player_items WHERE pubkey=? AND id LIKE 'equipment-review-%'").run(p.pubkey);
+   p.items=original.items;p.roomId=original.room;p.loudSelfAt=undefined;p.exhaustion=E.readExhaustion(undefined,original.start);
+   now=original.start;z.creatures=original.creatures;z.events=original.events;z.noteCreaturesChanged();z.lastTickAt=0;z.lastCombatRound=now;
+  }
+ }
+
+ async function walkingChecks({z,p,ws,state,env,kv,command}) {
+  // Use production accumulation/recovery at the actual lighter/heavier weights.
+  for(const weight of [0,4,10,15]) {
+   const e=E.readExhaustion(undefined,now),start=now;
+   for(let step=1;step<=400;step++) {
+    E.walk(e,weight,start+step*1000);
+    assert.equal(e.units,Math.min(1000,Math.round(step*(20+3*weight)/10*100)/100));
+    if(weight===4&&step===51)assert.equal(e.units,163.2,'lighter summit journey: 8.16 EXH');
+    if(weight===10&&step===51)assert.equal(e.units,255,'heavier summit journey: 12.75 EXH');
+   }
+   const saved=E.readExhaustion(JSON.stringify(e),e.at);
+   E.recover(saved,e.at+3000);assert.equal(saved.units,e.units,'reconnect cannot erase the walking pause');
+   E.recover(saved,e.at+6000);assert.equal(saved.units,e.units-20,'only time after the four-second pause recovers');
+   const offline=E.readExhaustion(JSON.stringify(e),e.at+15000);
+   E.recover(offline,e.at+15000);assert.equal(offline.units,e.units-110,'idle/offline elapsed recovery splits at the pause deadline');
+   const resting=E.readExhaustion(JSON.stringify(e),e.at);
+   E.recover(resting,e.at,'rest');E.recover(resting,e.at+2000);assert.equal(resting.units,e.units-100,'deliberate rest bypasses the walking pause');
+  }
+  assert.equal(E.readExhaustion('{"units":10,"at":0,"mode":"passive"}',0).walkingUntil,undefined,'old saves remain valid');
+  const original={room:p.roomId,creatures:z.creatures,events:z.events,items:p.items,start:now};
+  try {
+   z.creatures=new Map();z.noteCreaturesChanged();z.events=new Map();
+   p.roomId='the-first-milestone';p.hp=100;p.resting=false;p.target=null;p.pvpTarget=null;
+   p.exhaustion=E.readExhaustion(undefined,now);
+   const outward=(z.world.exits.get(p.roomId)||[]).find(e=>!e.key_item&&(z.world.exits.get(e.to_room)||[]).some(back=>back.to_room===p.roomId&&!back.key_item));
+   assert.ok(outward,'real two-way walking route');
+   const back=z.world.exits.get(outward.to_room).find(e=>e.to_room===p.roomId);
+   const weight=z.wornWeight(p);
+   // Spare iron must not enter walking cost, even when it changes other burden rules.
+   p.items=[...p.items,...Array.from({length:10},(_,i)=>({...p.items[0],rowId:'walking-pack-'+i,equipped:false}))];
+   for(let step=1;step<=20;step++) {
+    now+=1000;
+    await command(()=>verbs.cmdGo(z,p,step%2?outward.dir:back.dir));
+    assert.equal(p.roomId,step%2?outward.to_room:outward.room_id,'successful normal movement');
+    assert.equal(p.exhaustion.units,Math.round(step*(20+3*weight)/10*100)/100,'one walking charge per successful room, no pack cost');
+   }
+   const before=structuredClone(p.exhaustion);
+   await command(()=>verbs.cmdGo(z,p,'nowhere'));
+   assert.deepEqual(p.exhaustion,before,'failed movement neither charges nor renews the pause');
+   const until=p.exhaustion.walkingUntil;
+   ws.serializeAttachment({pubkey:p.pubkey,la:now});
+   const rebuilt=new ZoneDO({...state,getWebSockets:()=>[ws]},env);await rebuilt.init('door');await rebuilt.hydrateSessions();
+   const restored=rebuilt.sessions.get(p.pubkey);assert.equal(restored.exhaustion.walkingUntil,until);
+   now+=6000;rebuilt.syncExhaustion(restored);assert.equal(restored.exhaustion.units,before.units-20,'parked socket preserves walking recovery deadline');
+   // Rest begins immediately, regardless of the movement pause still pending.
+   E.walk(p.exhaustion,weight,now);await command(()=>verbs.cmdRest(z,p));
+   const restStart=p.exhaustion.units;now+=1000;z.syncExhaustion(p);
+   assert.equal(p.exhaustion.units,Math.max(0,restStart-50));
+  } finally {
+   now=original.start;p.roomId=original.room;p.items=original.items;p.resting=false;p.exhaustion=E.readExhaustion(undefined,now);p.healingDue=0;
+   z.creatures=original.creatures;z.events=original.events;z.noteCreaturesChanged();z.bodyJournal.clear();kv.clear();z.lastCombatRound=now;z.lastTickAt=0;
+  }
+  console.log('PASS: actual walking commands, equipped-only costs, blocked movement, precision/cap, immediate rest, idle/offline recovery and persisted walking deadline.');
  }
 
  async function lifecycleChecks({z,p,ws,db,kv,state,env,world,ZoneDO,drake,command}) {

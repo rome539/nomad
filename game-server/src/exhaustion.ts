@@ -1,14 +1,19 @@
-// Fatigue is stored in twentieths: equipped weight adds exact integer units.
+// Fatigue is stored in twentieths; walking adds tenths of combat's effort.
 // Recovery uses elapsed milliseconds; changing modes never replays old time.
 export type RecoveryMode = "combat" | "passive" | "rest" | "shelter" | "fire";
-export interface Exhaustion { units: number; at: number; mode: RecoveryMode }
+export interface Exhaustion { units: number; at: number; mode: RecoveryMode; walkingUntil?: number }
 export const FATIGUE_CAP = 1000;
+export const WALK_RECOVERY_DELAY_MS = 4000;
 const RATE: Record<RecoveryMode, number> = { combat: 0, passive: 10, rest: 50, shelter: 50, fire: 100 };
 export function readExhaustion(raw: string | undefined, now: number): Exhaustion {
   try {
     const e = JSON.parse(raw ?? "null");
-    if (e && Number.isFinite(e.units) && Number.isFinite(e.at) && Object.hasOwn(RATE, e.mode))
-      return { units: Math.max(0, Math.min(FATIGUE_CAP, e.units)), at: e.at, mode: e.mode };
+    if (e && Number.isFinite(e.units) && Number.isFinite(e.at) && Object.hasOwn(RATE, e.mode)) {
+      const state: Exhaustion = { units: Math.max(0, Math.min(FATIGUE_CAP, e.units)), at: e.at, mode: e.mode };
+      if (Number.isFinite(e.walkingUntil) && e.walkingUntil > e.at)
+        state.walkingUntil = Math.min(e.walkingUntil, e.at + WALK_RECOVERY_DELAY_MS);
+      return state;
+    }
   } catch {}
   return { units: 0, at: now, mode: "passive" };
 }
@@ -16,17 +21,29 @@ export function recover(e: Exhaustion, now: number, nextMode: RecoveryMode = e.m
   const at = Math.max(e.at, now);
   // All rates are whole hundredths of a unit per millisecond. Quantize at
   // that precision so many short intervals cannot drift across a damage step.
-  e.units = Math.max(0, Math.round((e.units - (at - e.at) * RATE[e.mode] / 1000) * 100) / 100);
+  // Only passive recovery waits for footsteps to stop. Split elapsed time at
+  // the deadline so idle ticks and reconnects cannot recover the walking span.
+  const from = e.mode === "passive" ? Math.max(e.at, Math.min(at, e.walkingUntil ?? e.at)) : e.at;
+  e.units = Math.max(0, Math.round((e.units - (at - from) * RATE[e.mode] / 1000) * 100) / 100);
   e.at = at;
   e.mode = nextMode;
+  if ((e.walkingUntil ?? 0) <= at || nextMode === "rest" || nextMode === "shelter" || nextMode === "fire")
+    delete e.walkingUntil;
 }
 export function exert(e: Exhaustion, weight: number): void {
   e.units = Math.min(FATIGUE_CAP, e.units + 20 + 3 * Math.max(0, weight));
 }
+export function walk(e: Exhaustion, weight: number, now: number): void {
+  recover(e, now);
+  e.units = Math.min(FATIGUE_CAP, Math.round((e.units + (20 + 3 * Math.max(0, weight)) / 10) * 100) / 100);
+  e.walkingUntil = e.at + WALK_RECOVERY_DELAY_MS;
+}
 export function playerPenalty(e?: Exhaustion): number { return 2 * Math.floor((e?.units ?? 0) / 200); }
 export function playerDamage(damage: number, e?: Exhaustion): number { return Math.max(1, damage - playerPenalty(e)); }
 export function recoveryRemaining(e: Exhaustion): number | null {
-  return RATE[e.mode] ? e.units / RATE[e.mode] : null;
+  if (!RATE[e.mode]) return null;
+  const wait = e.units && e.mode === "passive" ? Math.max(0, (e.walkingUntil ?? e.at) - e.at) / 1000 : 0;
+  return wait + e.units / RATE[e.mode];
 }
 
 // Explicit identities, including runners (whose existing wind clock is retained)

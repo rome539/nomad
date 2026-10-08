@@ -9,14 +9,16 @@ let id = 0, strokes = 0, flakes = 0;
 const ctx = {clearRect(){},fillRect(){},setTransform(){},beginPath(){},moveTo(){},lineTo(){},stroke(){strokes++},arc(){},fill(){flakes++}};
 const canvas = {style:{},width:0,height:0,getContext:()=>ctx};
 const motion = {matches:false,addEventListener:(_,fn)=>listeners.motion=fn};
-const env = {document:{hidden:false,getElementById:()=>canvas,addEventListener:(name,fn)=>listeners[name]=fn},
+const env = {performance:{now:()=>1},document:{hidden:false,getElementById:()=>canvas,addEventListener:(name,fn)=>listeners[name]=fn},
  window:{matchMedia:()=>motion},viewMode:'image',sceneEl:{getBoundingClientRect:()=>({left:0,top:0,width:1920,height:900})},
  requestAnimationFrame:fn=>{queued.set(++id,fn);return id},cancelAnimationFrame:n=>queued.delete(n)};
 vm.createContext(env);vm.runInContext(code,env);
 function step(t){const pending=[...queued.values()];queued.clear();pending.forEach(fn=>fn(t));}
-env.setWeather('rain');step(100);step(150);assert(strokes>0);assert.equal(canvas.width,1280);
+env.setWeather('rain');assert(strokes>0,'first rain frame is synchronous');step(100);step(150);assert.equal(canvas.width,1280);
 const elapsed=env.weatherTime;env.setWeather('rain');step(200);assert(env.weatherTime>elapsed);assert.equal(queued.size,1);
-env.setWeather('snow');step(250);assert(flakes>0);
+env.weatherFlashAt=env.weatherTime;env.weatherThunderAt=env.weatherTime+1;
+env.setWeather('snow');assert(flakes>0,'rain is replaced by snow before the next animation frame');
+assert.equal(env.weatherFlashAt,-99);assert.equal(env.weatherThunderAt,0);assert.equal(queued.size,1);step(250);
 for(const weather of ['day','fog','after-rain','in','']){env.setWeather(weather);assert.equal(queued.size,0);assert.equal(canvas.style.display,'none');}
 env.setWeather('rain');motion.matches=true;listeners.motion();assert.equal(queued.size,0);
 motion.matches=false;listeners.motion();assert.equal(queued.size,1);

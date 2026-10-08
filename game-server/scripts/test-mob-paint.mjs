@@ -18,7 +18,7 @@ const made=[];
 // dataset is part of the stub because the paint uses it: each sprite carries its
 // width as a share of the picture box, which is what fitMobRow measures the row
 // with now that the style holds a calc() no parseFloat can read.
-const el=()=>({style:{},dataset:{},className:"",appendChild(){},children:[],
+const el=()=>({style:{setProperty(k,v){this[k]=v}},dataset:{},className:"",appendChild(){},children:[],
   set _c(v){}, getBoundingClientRect:()=>({width:50})});
 const mobsEl={firstChild:null,removeChild(){},children:made,
   appendChild(e){made.push(e)},style:{}};
@@ -94,6 +94,13 @@ t("...and ordinary fog leaves them cold",
 made.length=0; ctx.setSky("blood"); ctx.paintMobs(["hill-wolf"], null, null);
 w = made.find(e=>e.className==="mob");
 t("a living creature gets no eyes on the red night", w && w.style.backgroundImage.indexOf(".eyes.webp")<0);
+
+for (const sky of ['day','blood','fog']) {
+  bust();ctx.setSky(sky);ctx.paintMobs([],null,['the-tide-warden']);
+  const corpse=made.find(e=>e.className==='mob dead');
+  t(sky+': Hollow corpse uses the black-eye overlay',corpse?.dataset.death==='1' && corpse.style['--mob-eyes'].includes('the-tide-warden.eyes.webp'));
+  t(sky+': corpse base has no blood-moon red overlay',!corpse.style.backgroundImage.includes('.eyes.webp'));
+}
 
 // AND THE SKY IS PART OF THE CACHE KEY. paintMobs skips its work when the row is
 // unchanged, and the row IS unchanged when only the moon turns - so without the

@@ -241506,7 +241506,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-drake",
-        "playerFatiguePoints": 25,
+        "playerFatiguePoints": 25.25,
         "peakPlayerFatigue": 30,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -241575,7 +241575,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-drake",
-        "playerFatiguePoints": 22.5,
+        "playerFatiguePoints": 22.75,
         "peakPlayerFatigue": 40,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -241644,7 +241644,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-drake",
-        "playerFatiguePoints": 20,
+        "playerFatiguePoints": 20.25,
         "peakPlayerFatigue": 47.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -241713,8 +241713,8 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-drake",
-        "playerFatiguePoints": 30,
-        "peakPlayerFatigue": 30,
+        "playerFatiguePoints": 30.25,
+        "peakPlayerFatigue": 30.25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": false,
@@ -241782,8 +241782,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-drake",
-        "playerFatiguePoints": 22.5,
-        "peakPlayerFatigue": 32.5,
+        "playerFatiguePoints": 22.75,
+        "peakPlayerFatigue": 32.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -241851,7 +241851,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-drake",
-        "playerFatiguePoints": 20,
+        "playerFatiguePoints": 20.25,
         "peakPlayerFatigue": 50,
         "roundsAtFullFatigue": 2,
         "naturalSpawn": true,
@@ -241920,8 +241920,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-drake",
-        "playerFatiguePoints": 17.5,
-        "peakPlayerFatigue": 47.5,
+        "playerFatiguePoints": 17.75,
+        "peakPlayerFatigue": 47.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -241989,8 +241989,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-drake",
-        "playerFatiguePoints": 17.5,
-        "peakPlayerFatigue": 45,
+        "playerFatiguePoints": 17.75,
+        "peakPlayerFatigue": 45.25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": false,
@@ -242058,8 +242058,8 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-pale-drake",
-        "playerFatiguePoints": 32.5,
-        "peakPlayerFatigue": 32.5,
+        "playerFatiguePoints": 32.75,
+        "peakPlayerFatigue": 32.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": false,
@@ -242127,7 +242127,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-pale-drake",
-        "playerFatiguePoints": 32.5,
+        "playerFatiguePoints": 32.75,
         "peakPlayerFatigue": 35,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -242196,7 +242196,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-pale-drake",
-        "playerFatiguePoints": 20,
+        "playerFatiguePoints": 20.25,
         "peakPlayerFatigue": 35,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -242265,8 +242265,8 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-pale-drake",
-        "playerFatiguePoints": 37.5,
-        "peakPlayerFatigue": 37.5,
+        "playerFatiguePoints": 37.75,
+        "peakPlayerFatigue": 37.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -242334,8 +242334,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-pale-drake",
-        "playerFatiguePoints": 2.5,
-        "peakPlayerFatigue": 40,
+        "playerFatiguePoints": 2.75,
+        "peakPlayerFatigue": 40.25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": false,
@@ -242403,8 +242403,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-pale-drake",
-        "playerFatiguePoints": 5,
-        "peakPlayerFatigue": 42.5,
+        "playerFatiguePoints": 5.25,
+        "peakPlayerFatigue": 42.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": false,
@@ -242472,8 +242472,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-pale-drake",
-        "playerFatiguePoints": 20,
-        "peakPlayerFatigue": 45,
+        "playerFatiguePoints": 20.25,
+        "peakPlayerFatigue": 45.25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": false,
@@ -242541,8 +242541,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-pale-drake",
-        "playerFatiguePoints": 30,
-        "peakPlayerFatigue": 40,
+        "playerFatiguePoints": 30.25,
+        "peakPlayerFatigue": 40.25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -242886,8 +242886,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "three-hound",
-        "playerFatiguePoints": 37.5,
-        "peakPlayerFatigue": 37.5,
+        "playerFatiguePoints": 37.75,
+        "peakPlayerFatigue": 37.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -242955,7 +242955,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "three-hound",
-        "playerFatiguePoints": 12.5,
+        "playerFatiguePoints": 12.75,
         "peakPlayerFatigue": 42.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -243024,7 +243024,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "three-hound",
-        "playerFatiguePoints": 20,
+        "playerFatiguePoints": 20.25,
         "peakPlayerFatigue": 35,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -243093,7 +243093,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "three-hound",
-        "playerFatiguePoints": 15,
+        "playerFatiguePoints": 15.25,
         "peakPlayerFatigue": 50,
         "roundsAtFullFatigue": 3,
         "naturalSpawn": true,
@@ -244542,7 +244542,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-baited-bear",
-        "playerFatiguePoints": 32.5,
+        "playerFatiguePoints": 32.75,
         "peakPlayerFatigue": 37.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -244749,7 +244749,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-baited-bear",
-        "playerFatiguePoints": 25,
+        "playerFatiguePoints": 25.25,
         "peakPlayerFatigue": 47.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -244887,7 +244887,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-chain-breaker",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 27.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -245094,8 +245094,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-chain-breaker",
-        "playerFatiguePoints": 47.5,
-        "peakPlayerFatigue": 47.5,
+        "playerFatiguePoints": 47.75,
+        "peakPlayerFatigue": 47.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -245163,7 +245163,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-chain-breaker",
-        "playerFatiguePoints": 25,
+        "playerFatiguePoints": 25.25,
         "peakPlayerFatigue": 40,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -245232,7 +245232,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-chain-breaker",
-        "playerFatiguePoints": 17.5,
+        "playerFatiguePoints": 17.75,
         "peakPlayerFatigue": 50,
         "roundsAtFullFatigue": 2,
         "naturalSpawn": false,
@@ -245301,7 +245301,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-chain-breaker",
-        "playerFatiguePoints": 20,
+        "playerFatiguePoints": 20.25,
         "peakPlayerFatigue": 50,
         "roundsAtFullFatigue": 4,
         "naturalSpawn": false,
@@ -245646,7 +245646,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "cave-lion",
-        "playerFatiguePoints": 22.5,
+        "playerFatiguePoints": 22.75,
         "peakPlayerFatigue": 50,
         "roundsAtFullFatigue": 8,
         "naturalSpawn": true,
@@ -245715,7 +245715,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "cave-lion",
-        "playerFatiguePoints": 15,
+        "playerFatiguePoints": 15.25,
         "peakPlayerFatigue": 50,
         "roundsAtFullFatigue": 8,
         "naturalSpawn": true,
@@ -245784,7 +245784,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "cave-lion",
-        "playerFatiguePoints": 22.5,
+        "playerFatiguePoints": 22.75,
         "peakPlayerFatigue": 50,
         "roundsAtFullFatigue": 13,
         "naturalSpawn": true,
@@ -245853,7 +245853,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "cave-lion",
-        "playerFatiguePoints": 20,
+        "playerFatiguePoints": 20.25,
         "peakPlayerFatigue": 50,
         "roundsAtFullFatigue": 9,
         "naturalSpawn": true,
@@ -246750,7 +246750,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-old-glutton",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 50,
         "roundsAtFullFatigue": 7,
         "naturalSpawn": true,
@@ -247647,7 +247647,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-great-crab",
-        "playerFatiguePoints": 2.5,
+        "playerFatiguePoints": 2.75,
         "peakPlayerFatigue": 27.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -247785,7 +247785,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-great-crab",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -247854,7 +247854,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-great-crab",
-        "playerFatiguePoints": 12.5,
+        "playerFatiguePoints": 12.75,
         "peakPlayerFatigue": 27.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -247923,8 +247923,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-great-crab",
-        "playerFatiguePoints": 10,
-        "peakPlayerFatigue": 27.5,
+        "playerFatiguePoints": 10.25,
+        "peakPlayerFatigue": 27.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": true,
@@ -247992,7 +247992,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-great-crab",
-        "playerFatiguePoints": 7.5,
+        "playerFatiguePoints": 7.75,
         "peakPlayerFatigue": 37.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -248061,7 +248061,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-great-crab",
-        "playerFatiguePoints": 17.5,
+        "playerFatiguePoints": 17.75,
         "peakPlayerFatigue": 22.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -248199,7 +248199,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-great-devil-crab",
-        "playerFatiguePoints": 7.5,
+        "playerFatiguePoints": 7.75,
         "peakPlayerFatigue": 25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -248268,7 +248268,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-great-devil-crab",
-        "playerFatiguePoints": 2.5,
+        "playerFatiguePoints": 2.75,
         "peakPlayerFatigue": 35,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -248337,7 +248337,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-great-devil-crab",
-        "playerFatiguePoints": 10,
+        "playerFatiguePoints": 10.25,
         "peakPlayerFatigue": 25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -248406,8 +248406,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-great-devil-crab",
-        "playerFatiguePoints": 2.5,
-        "peakPlayerFatigue": 30,
+        "playerFatiguePoints": 2.75,
+        "peakPlayerFatigue": 30.25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": true,
@@ -248475,8 +248475,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-great-devil-crab",
-        "playerFatiguePoints": 20,
-        "peakPlayerFatigue": 27.5,
+        "playerFatiguePoints": 20.25,
+        "peakPlayerFatigue": 27.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": true,
@@ -248544,7 +248544,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-great-devil-crab",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 37.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -248613,7 +248613,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-great-devil-crab",
-        "playerFatiguePoints": 2.5,
+        "playerFatiguePoints": 2.75,
         "peakPlayerFatigue": 25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -248682,7 +248682,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "forgotten-king",
-        "playerFatiguePoints": 10,
+        "playerFatiguePoints": 10.25,
         "peakPlayerFatigue": 27.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -248751,7 +248751,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "forgotten-king",
-        "playerFatiguePoints": 15,
+        "playerFatiguePoints": 15.25,
         "peakPlayerFatigue": 32.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -248820,7 +248820,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "forgotten-king",
-        "playerFatiguePoints": 7.5,
+        "playerFatiguePoints": 7.75,
         "peakPlayerFatigue": 40,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -248889,7 +248889,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "forgotten-king",
-        "playerFatiguePoints": 2.5,
+        "playerFatiguePoints": 2.75,
         "peakPlayerFatigue": 32.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -248958,7 +248958,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "forgotten-king",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 32.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -249027,7 +249027,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "forgotten-king",
-        "playerFatiguePoints": 7.5,
+        "playerFatiguePoints": 7.75,
         "peakPlayerFatigue": 35,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -249096,7 +249096,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "forgotten-king",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 37.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -249165,7 +249165,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "forgotten-king",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 32.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249234,7 +249234,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "drowned-god",
-        "playerFatiguePoints": 7.5,
+        "playerFatiguePoints": 7.75,
         "peakPlayerFatigue": 35,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249303,7 +249303,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "drowned-god",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 32.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249372,7 +249372,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "drowned-god",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 35,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249441,7 +249441,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "drowned-god",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 30,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249510,7 +249510,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "drowned-god",
-        "playerFatiguePoints": 30,
+        "playerFatiguePoints": 30.25,
         "peakPlayerFatigue": 32.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249579,7 +249579,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "drowned-god",
-        "playerFatiguePoints": 20,
+        "playerFatiguePoints": 20.25,
         "peakPlayerFatigue": 27.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249648,7 +249648,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "drowned-god",
-        "playerFatiguePoints": 17.5,
+        "playerFatiguePoints": 17.75,
         "peakPlayerFatigue": 40,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249717,7 +249717,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "drowned-god",
-        "playerFatiguePoints": 15,
+        "playerFatiguePoints": 15.25,
         "peakPlayerFatigue": 32.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249786,7 +249786,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "marrow-king",
-        "playerFatiguePoints": 15,
+        "playerFatiguePoints": 15.25,
         "peakPlayerFatigue": 35,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249855,7 +249855,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "marrow-king",
-        "playerFatiguePoints": 12.5,
+        "playerFatiguePoints": 12.75,
         "peakPlayerFatigue": 37.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249924,7 +249924,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "marrow-king",
-        "playerFatiguePoints": 12.5,
+        "playerFatiguePoints": 12.75,
         "peakPlayerFatigue": 45,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -249993,7 +249993,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "marrow-king",
-        "playerFatiguePoints": 15,
+        "playerFatiguePoints": 15.25,
         "peakPlayerFatigue": 35,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -250062,8 +250062,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "marrow-king",
-        "playerFatiguePoints": 7.5,
-        "peakPlayerFatigue": 40,
+        "playerFatiguePoints": 7.75,
+        "peakPlayerFatigue": 40.25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": false,
@@ -250131,8 +250131,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "marrow-king",
-        "playerFatiguePoints": 5,
-        "peakPlayerFatigue": 37.5,
+        "playerFatiguePoints": 5.25,
+        "peakPlayerFatigue": 37.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
         "prelitFixture": false,
@@ -250200,7 +250200,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "marrow-king",
-        "playerFatiguePoints": 7.5,
+        "playerFatiguePoints": 7.75,
         "peakPlayerFatigue": 42.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": false,
@@ -250269,7 +250269,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "marrow-king",
-        "playerFatiguePoints": 12.5,
+        "playerFatiguePoints": 12.75,
         "peakPlayerFatigue": 37.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -250338,7 +250338,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-drowned-ferryman",
-        "playerFatiguePoints": 7.5,
+        "playerFatiguePoints": 7.75,
         "peakPlayerFatigue": 27.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -250407,7 +250407,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-drowned-ferryman",
-        "playerFatiguePoints": 20,
+        "playerFatiguePoints": 20.25,
         "peakPlayerFatigue": 25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -250476,8 +250476,8 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-drowned-ferryman",
-        "playerFatiguePoints": 27.5,
-        "peakPlayerFatigue": 27.5,
+        "playerFatiguePoints": 27.75,
+        "peakPlayerFatigue": 27.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -250545,7 +250545,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-drowned-ferryman",
-        "playerFatiguePoints": 17.5,
+        "playerFatiguePoints": 17.75,
         "peakPlayerFatigue": 25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -250614,7 +250614,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-drowned-ferryman",
-        "playerFatiguePoints": 10,
+        "playerFatiguePoints": 10.25,
         "peakPlayerFatigue": 27.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -250683,8 +250683,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-drowned-ferryman",
-        "playerFatiguePoints": 2.5,
-        "peakPlayerFatigue": 30,
+        "playerFatiguePoints": 2.75,
+        "peakPlayerFatigue": 30.25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -250752,7 +250752,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-drowned-ferryman",
-        "playerFatiguePoints": 15,
+        "playerFatiguePoints": 15.25,
         "peakPlayerFatigue": 30,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -250821,8 +250821,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-drowned-ferryman",
-        "playerFatiguePoints": 2.5,
-        "peakPlayerFatigue": 25,
+        "playerFatiguePoints": 2.75,
+        "peakPlayerFatigue": 25.25,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -250959,7 +250959,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-keeper-of-the-holding",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 40,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251028,7 +251028,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-keeper-of-the-holding",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 37.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251097,7 +251097,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-keeper-of-the-holding",
-        "playerFatiguePoints": 2.5,
+        "playerFatiguePoints": 2.75,
         "peakPlayerFatigue": 45,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251166,7 +251166,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-keeper-of-the-holding",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 47.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251235,7 +251235,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-keeper-of-the-holding",
-        "playerFatiguePoints": 30,
+        "playerFatiguePoints": 30.25,
         "peakPlayerFatigue": 42.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251304,7 +251304,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-keeper-of-the-holding",
-        "playerFatiguePoints": 2.5,
+        "playerFatiguePoints": 2.75,
         "peakPlayerFatigue": 40,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251373,8 +251373,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-keeper-of-the-holding",
-        "playerFatiguePoints": 5,
-        "peakPlayerFatigue": 37.5,
+        "playerFatiguePoints": 5.25,
+        "peakPlayerFatigue": 37.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -251442,7 +251442,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-woodward",
-        "playerFatiguePoints": 12.5,
+        "playerFatiguePoints": 12.75,
         "peakPlayerFatigue": 42.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251511,7 +251511,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-woodward",
-        "playerFatiguePoints": 7.5,
+        "playerFatiguePoints": 7.75,
         "peakPlayerFatigue": 42.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251580,7 +251580,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-woodward",
-        "playerFatiguePoints": 2.5,
+        "playerFatiguePoints": 2.75,
         "peakPlayerFatigue": 47.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251649,7 +251649,7 @@
       {
         "kitName": "poleaxe",
         "mobId": "the-woodward",
-        "playerFatiguePoints": 2.5,
+        "playerFatiguePoints": 2.75,
         "peakPlayerFatigue": 42.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251718,7 +251718,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-woodward",
-        "playerFatiguePoints": 10,
+        "playerFatiguePoints": 10.25,
         "peakPlayerFatigue": 45,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251787,8 +251787,8 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-woodward",
-        "playerFatiguePoints": 10,
-        "peakPlayerFatigue": 42.5,
+        "playerFatiguePoints": 10.25,
+        "peakPlayerFatigue": 42.75,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
         "prelitFixture": false,
@@ -251856,7 +251856,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-woodward",
-        "playerFatiguePoints": 5,
+        "playerFatiguePoints": 5.25,
         "peakPlayerFatigue": 40,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251925,7 +251925,7 @@
       {
         "kitName": "the-long-crossing",
         "mobId": "the-woodward",
-        "playerFatiguePoints": 22.5,
+        "playerFatiguePoints": 22.75,
         "peakPlayerFatigue": 37.5,
         "roundsAtFullFatigue": 0,
         "naturalSpawn": true,
@@ -251997,12 +251997,12 @@
       "Gate recovery test controls the shelter predicate; full browser interaction is not exercised."
     ],
     "sourceHashes": {
-      "zone.ts": "d3a840664b03ff3e9174c51cc9b83f1290870a9af489a968e751ed8d88ded7be",
+      "zone.ts": "506cdd077a7c9ad54f73bc8fc55d22681dcdcfc33b15a149aa613f8a19c734c4",
       "world.ts": "5dfde5928ee2b268a3f45cea4c4d6e4844e0723be6e8cae2535a733a82cbbd56",
-      "exhaustion.ts": "6648d8adb06a22d734aa27fc76fb23aa75dcfdc6382fabc66d645d65769bff2c",
+      "exhaustion.ts": "216254e603470a6d76fdffedbe3454cbc593bfb044c1dca92eeb0e295392871e",
       "pvp.ts": "8c436ee2a093ebeab7ef2ff8710805d6b0baf713205a607b5479254f18f14a7c",
       "ai.ts": "82fa2a0223fbb07d0a71a1042eb71d1fe6503994f85c9aa2ea9674c403febcb6",
-      "verbs.ts": "c339efc387ca4440346ada6a0ea157ed32ac7ece3667af7f1de4860a8194770d",
+      "verbs.ts": "1eb6c606777561ef91167db82c772b79aff830d11e5abc462529d80d9233de16",
       "styles.ts": "f776676ac405f6de5ba7104edbdfcb0dd0077ac173edf5021472d810490bf8b9"
     }
   },

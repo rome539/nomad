@@ -1359,6 +1359,10 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const from = session.roomId;
   session.roomId = exit.to_room;
   session.movedAt = Date.now();
+  // Charge only a completed step, after every blocked-exit/failed-flight check.
+  // The same equipped weight as combat includes balanced/cumbersome, never pack.
+  z.syncExhaustion(session, session.movedAt);
+  exhaustion.walk(session.exhaustion!, z.wornWeight(session), session.movedAt);
   z.addTrace(session.roomId, { kind: "passage", at: Date.now() });
   // Standing in your own doorway IS the upkeep (mig 162). No rent, no chore —
   // walking home is the whole of it, and it writes at most once an hour.

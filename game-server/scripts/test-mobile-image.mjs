@@ -11,11 +11,13 @@ const {default:puppeteer}=await import(requireCapture.resolve('puppeteer-core'))
 const root=fileURLToPath(new URL('..',import.meta.url));
 const {code}=await transform(fs.readFileSync(root+'/src/public.ts','utf8'),{loader:'ts',format:'esm'});
 const {PAGE}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
-const hook=`window.demo={grantArt,setView,setLogBig,fitPicture,paintScene,updateMobs,renderChips,view:()=>viewMode,painted:()=>scenePainted,cacheSize:()=>readySceneImage.cache?.size||0,
- fxState:()=>({name:fxName,ready:fxReady,seq:fxSeq}),
+const hook=`window.demo={grantArt,setView,setLogBig,fitPicture,paintScene,updateMobs,renderChips,skyDrift,weatherState:()=>({kind:weatherKind,flash:weatherFlashAt,thunder:weatherThunderAt}),view:()=>viewMode,painted:()=>scenePainted,cacheSize:()=>readySceneImage.cache?.size||0,
+ fxState:()=>({name:fxName,ready:fxReady,seq:fxSeq,mist:fxGl&&fxGl.getUniform(fxProg,fxU.mistOn),wet:fxGl&&fxGl.getUniform(fxProg,fxU.wetOn)}),
+ evictImage:path=>readySceneImage.cache.delete(path+'?v='+BG_V),
+ mobBeat,stepAnims,
  controlFx:()=>{
   const load=fxLoad;window.fxStops=new Map();
-  window.holdFx=key=>{const h={calls:0};h.promise=new Promise((resolve,reject)=>{h.release=resolve;h.fail=reject;});fxStops.set(key,h);return h;};
+  window.holdFx=key=>{if(fxPrepare.cache)fxPrepare.cache.delete(key.split("/").pop().split(".")[0]);const h={calls:0};h.promise=new Promise((resolve,reject)=>{h.release=resolve;h.fail=reject;});fxStops.set(key,h);return h;};
   fxLoad=src=>{const found=[...fxStops].find(([key])=>src.includes(key));if(!found)return load(src);const h=found[1];h.calls++;return h.promise.then(()=>load(src));};
  }
 };`;
@@ -135,40 +137,114 @@ try{
  assert.equal(await page.$('#scene-fade'),null,'reduced motion skips dissolve');
  assert(await page.evaluate(()=>demo.cacheSize()<=8),'decoded cache is bounded');
  console.log('PASS decoded ground/sky handoff, dissolve cleanup, rapid movement, failure retry, gatehouse, cache and reduced motion');
- // Start from real painted flames, then stall the next room's depth map.
+ // Animated mist and wet-floor reflections must commit with their image,
+ // even when the effect map is slower than the room artwork.
  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
- await page.evaluate(()=>{demo.controlFx();demo.paintScene('upper','in','','torch-start',false,1,'undercroft',0,0,true);});
- await page.waitForFunction(()=>demo.fxState().ready&&document.getElementById('scene-sparks').style.display==='block');
- await page.evaluate(()=>{holdFx('/room-fx/snow-night-torch.png');demo.paintScene('mountain','night','snow','torch-next',true,1,'',0,0,false);});
+ await page.evaluate(()=>{demo.controlFx();demo.paintScene('mountain','night','gully','fx-outside',true,1,'',0,0,false);});
+ await page.waitForFunction(()=>demo.fxState().ready&&demo.painted()==='/room-bg/gully-night-torch.webp');
+ assert.equal(await page.evaluate(()=>demo.fxState().mist),0);
+ await page.evaluate(()=>{holdFx('/room-fx/undercroft-night.png');demo.paintScene('upper','in','','mist-next',false,1,'undercroft',0,0,true);});
+ await page.waitForFunction(()=>fxStops.get('/room-fx/undercroft-night.png').calls===1);
+ assert.equal(await page.evaluate(()=>demo.painted()),'/room-bg/gully-night-torch.webp','room image waits for animated mist assets');
+ assert.equal(await page.evaluate(()=>demo.fxState().name),'gully-night-torch','old effects stay with the held old image');
+ await page.evaluate(()=>demo.paintScene('upper','in','','mist-next',false,1,'undercroft',0,0,true));
+ assert.equal(await page.evaluate(()=>fxStops.get('/room-fx/undercroft-night.png').calls),1,'status updates share pending animation load');
+ await page.evaluate(()=>fxStops.get('/room-fx/undercroft-night.png').release());
+ await page.waitForFunction(()=>demo.painted()==='/room-bg/undercroft-night.webp');
+ const mist=await page.evaluate(()=>({...demo.fxState(),display:document.getElementById('scene-fx').style.display}));
+ assert.equal(mist.name,'undercroft-night');assert.equal(mist.ready,true);
+ assert.equal(mist.mist,1);assert.equal(mist.wet,1);assert.equal(mist.display,'block','first animated frame exists when room image commits');
+ // No-mist room: old animated mist never hangs over the new image.
+ await page.evaluate(()=>demo.paintScene('mountain','day','scree','mist-gone',false,1,'',0,0,false));
+ await page.waitForFunction(()=>demo.painted()==='/room-bg/scree-day.webp');
+ assert.equal(await page.$eval('#scene-fx',e=>e.style.display),'none');
+ assert.equal(await page.$eval('#scene-sparks',e=>e.style.display),'none');
+ // A failed previous request cannot disable the current room's effects.
+ await page.evaluate(()=>{holdFx('/room-fx/snow-night-torch.png');demo.paintScene('mountain','night','snow','old-fx',true,1,'',0,0,false);});
  await page.waitForFunction(()=>fxStops.get('/room-fx/snow-night-torch.png').calls===1);
- assert.equal(await page.$eval('#scene-fx',e=>e.style.display),'none','old flame canvas hidden while next effects load');
- assert.equal(await page.$eval('#scene-sparks',e=>e.style.display),'none','old embers hidden while next effects load');
- const pendingSeq=await page.evaluate(()=>demo.fxState().seq);
- await page.evaluate(()=>demo.paintScene('mountain','night','snow','torch-next',true,1,'',0,0,false));
- assert.equal(await page.evaluate(()=>demo.fxState().seq),pendingSeq,'status updates share one effects load');
- assert.equal(await page.evaluate(()=>fxStops.get('/room-fx/snow-night-torch.png').calls),1);
- // The old failed request cannot stop the newer room's effects.
- await page.evaluate(()=>demo.paintScene('mountain','night','gully','torch-current',true,1,'',0,0,false));
- await page.waitForFunction(()=>demo.fxState().name==='gully-night-torch'&&demo.fxState().ready&&document.getElementById('scene-fx').style.display==='block');
+ await page.evaluate(()=>demo.paintScene('upper','in','','current-mist',false,1,'undercroft',0,0,true));
+ await page.waitForFunction(()=>demo.painted()==='/room-bg/undercroft-night.webp');
  await page.evaluate(()=>fxStops.get('/room-fx/snow-night-torch.png').fail(Error('old room failed')));
  await new Promise(r=>setTimeout(r,50));
- assert.equal(await page.evaluate(()=>demo.fxState().name),'gully-night-torch');
- assert.equal(await page.evaluate(()=>demo.fxState().ready),true);
- // Leave and return to the same plate: an older success with the SAME name
- // must not be accepted as the current load.
+ assert.equal(await page.evaluate(()=>demo.fxState().name),'undercroft-night');
+ assert.equal(await page.evaluate(()=>demo.fxState().mist),1);
+ // Leave and return while two generations of the same mist map are pending.
  await page.evaluate(()=>{window.oldFx=holdFx('/room-fx/snow-night-torch.png');demo.paintScene('mountain','night','snow','visit-one',true,1,'',0,0,false);});
  await page.waitForFunction(()=>oldFx.calls===1);
- await page.evaluate(()=>demo.paintScene('mountain','night','gully','between-visits',true,1,'',0,0,false));
- await page.waitForFunction(()=>demo.fxState().name==='gully-night-torch'&&demo.fxState().ready);
+ await page.evaluate(()=>demo.paintScene('upper','in','','between-visits',false,1,'undercroft',0,0,true));
  await page.evaluate(()=>{window.newFx=holdFx('/room-fx/snow-night-torch.png');demo.paintScene('mountain','night','snow','visit-two',true,1,'',0,0,false);});
  await page.waitForFunction(()=>newFx.calls===1);
  await page.evaluate(()=>oldFx.release());await page.waitForNetworkIdle();
- assert.equal(await page.evaluate(()=>demo.fxState().ready),false,'earlier same-room effects cannot become current');
- assert.equal(await page.$eval('#scene-fx',e=>e.style.display),'none');
+ assert.equal(await page.evaluate(()=>demo.painted()),'/room-bg/undercroft-night.webp','obsolete same-room load cannot commit any layer');
  await page.evaluate(()=>newFx.release());
- await page.waitForFunction(()=>demo.fxState().ready&&document.getElementById('scene-fx').style.display==='block');
+ await page.waitForFunction(()=>demo.painted()==='/room-bg/snow-night-torch.webp');
+ assert.equal(await page.evaluate(()=>demo.fxState().name),'snow-night-torch');
+ assert.equal(await page.evaluate(()=>demo.fxState().mist),0);assert.equal(await page.evaluate(()=>demo.fxState().wet),0);
  assert.equal(await page.$eval('#scene-sparks',e=>e.style.display),'none','hand torch does not inherit wall embers');
- console.log('PASS old torch/ember buffers hidden, shared pending FX, stale failure and same-room stale success ignored');
+ console.log('PASS animated mist/reflections prepared before image swap; first frame commits together; obsolete successes/failures cannot transfer effects');
+ // No animation frame may expose the previous sky's tiles or stars.
+ const skySwap=await page.evaluate(()=>{
+  const cv=document.getElementById('sky-stars'),ctx=cv.getContext('2d');
+  let clears=0;const clear=ctx.clearRect;ctx.clearRect=function(...args){clears++;return clear.apply(this,args);};
+  demo.skyDrift.show('/sky/night.webp');clears=0;
+  demo.skyDrift.show('/sky/moon.webp');
+  const result={tiles:[...document.querySelectorAll('#sky-drift > i')].map(e=>e.style.backgroundImage),clears,stars:cv.style.display};
+  demo.skyDrift.show('/sky/day.webp');result.dayStars=cv.style.display;
+  demo.skyDrift.show('');result.hidden=document.getElementById('sky-drift').style.display;
+  ctx.clearRect=clear;return result;
+ });
+ assert(skySwap.tiles.every(s=>s.includes('/sky/moon.webp')),'moving sky tiles switch synchronously');
+ assert(skySwap.clears>0,'old star pixels replaced synchronously');assert.equal(skySwap.stars,'block');
+ assert.equal(skySwap.dayStars,'none');assert.equal(skySwap.hidden,'none');
+ // Keep outdoor weather with a delayed outdoor image, then remove it at the
+ // exact indoor commit. A stale rainy request cannot restart it indoors.
+ await page.evaluate(()=>demo.paintScene('mountain','rain','scree','wet-outside',false,1,'',0,0,false));
+ await page.waitForFunction(()=>demo.weatherState().kind==='rain'&&document.getElementById('weather-particles').style.display==='block');
+ const wetScene=await page.evaluate(()=>demo.painted());
+ await page.evaluate(()=>{
+  decodeStops.clear();
+  demo.evictImage('/room-bg/gatehouse.webp');
+  holdDecode('/room-bg/gatehouse.webp');
+  demo.paintScene('mountain','day','gatehouse','dry-inside',false,1,'',0,0,true);
+ });
+ await page.waitForFunction(()=>decodeStops.get('/room-bg/gatehouse.webp').reached);
+ assert.equal(await page.evaluate(()=>demo.painted()),wetScene);
+ assert.equal(await page.evaluate(()=>demo.weatherState().kind),'rain','rain stays with old outdoor image while indoor image loads');
+ assert.equal(await page.$eval('#weather-particles',e=>e.style.display),'block');
+ await page.evaluate(()=>decodeStops.get('/room-bg/gatehouse.webp').release());
+ await page.waitForFunction(()=>demo.painted()==='/room-bg/gatehouse.webp');
+ assert.equal(await page.$eval('#weather-particles',e=>e.style.display),'none');
+ assert.equal(await page.evaluate(()=>demo.weatherState().thunder),0);
+ await page.evaluate(()=>{holdDecode('/room-bg/gully-rain.webp');demo.paintScene('mountain','rain','gully','stale-rain',false,1,'',0,0,false);});
+ await page.waitForFunction(()=>decodeStops.get('/room-bg/gully-rain.webp').reached);
+ await page.evaluate(()=>demo.paintScene('mountain','day','gatehouse','still-inside',false,1,'',0,0,true));
+ await page.evaluate(()=>decodeStops.get('/room-bg/gully-rain.webp').release());
+ await page.waitForNetworkIdle();
+ assert.equal(await page.evaluate(()=>demo.painted()),'/room-bg/gatehouse.webp');
+ assert.equal(await page.$eval('#weather-particles',e=>e.style.display),'none');
+ console.log('PASS synchronous moving sky/star swap, delayed indoor weather handoff and obsolete rain request');
+ // The death pose and persisted corpse use the same eye pixels in black,
+ // including when the living creature had the blood-moon overlay.
+ for(const red of [0,1]) {
+  await page.evaluate(red=>{
+   demo.paintScene('mountain','day','scree','eye-test',false,1,'',0,red,false);
+   demo.updateMobs(['the-tide-warden'],null,[]);
+  },red);
+  await page.waitForFunction(()=>document.querySelector('#mobs .mob:not(.dead)')?.dataset.id==='the-tide-warden');
+  const dying=await page.evaluate(()=>{
+   demo.mobBeat(null,null,['the-tide-warden']);demo.stepAnims();
+   const el=document.querySelector('#mobs .mob'),p=getComputedStyle(el,'::after');
+   return {dead:el.dataset.death,filter:p.filter,image:p.backgroundImage,pos:p.backgroundPositionX,basePos:el.style.backgroundPositionX,size:p.backgroundSize,baseSize:el.style.backgroundSize};
+  });
+  assert.equal(dying.dead,'1');assert.equal(dying.filter,'brightness(0)');
+  assert(dying.image.includes('the-tide-warden.eyes.webp'));
+  assert.equal(dying.pos,dying.basePos.split(',')[0].trim());
+  assert.equal(dying.size,dying.baseSize.split(',')[0].trim());
+  await page.evaluate(()=>demo.updateMobs([],null,['the-tide-warden']));
+  await page.waitForFunction(()=>document.querySelector('#mobs .mob.dead')?.dataset.death==='1');
+  assert.equal(await page.$eval('#mobs .dead',e=>getComputedStyle(e,'::after').filter),'brightness(0)');
+ }
+ console.log('PASS Hollow death animation and corpse black eyes in ordinary light and blood moon, aligned with the death frame');
  assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
  console.log('PASS real touch switch, local art loads, current creatures/corpses restored, empty room, preference and grant');
 }finally{await browser.close()}

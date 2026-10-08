@@ -4,6 +4,7 @@
 // instance as `z`; behavior is identical to when they were methods — only the
 // seam moved. `import type` for ZoneDO keeps this a compile-time reference, so
 // there's no runtime import cycle.
+import { handleLoadout } from "./loadouts";
 import type { ZoneDO } from "./zone";
 import { MAX_BATCH_ROWS, SECRET_INPUT } from "./security";
 import type { Session } from "./zone-types";
@@ -1605,6 +1606,9 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     }
     if (!session.away) return; // every other action needs the bench already open
     if (action === "close") return leaveBench(z, session);
+    if (typeof action === "string" && action.startsWith("loadout-")) {
+      return sendBench(z, session, await handleLoadout(z, session, frame));
+    }
 
     // A stack action arrives as ALL its rows in ONE frame. The client used to
     // fan a message per row, and those handlers interleaved at the D1 awaits
@@ -1900,6 +1904,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
       const gear = z.isGear(c.itemId);
       return {
         row: c.rowId,
+        description: t?.description ?? "",
         name: z.displayName(c), // carries its rolled adjective, if any (099)
         rarity: t?.rarity ?? "common",
         slot: t?.slot ?? "",
@@ -1953,6 +1958,8 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
     const shelfRest = shelf ? z.slotsUsed(shelf.held.filter((c) => !z.isGear(c.itemId)), "lockbox") : 0;
     const payload = {
       v: 0, t: "bench", open: true, note: note ?? "",
+      inGatehouse: z.inGatehouse.has(session.pubkey) && world.entryRooms.has(session.roomId),
+      loadouts: await z.savedLoadouts(session.pubkey),
       sheet: z.sheetFor(session), // the paperdoll: gear worn + the combat math it adds up to
       atGate: world.entryRooms.has(session.roomId), // vault + seal only shown at a gate
       // The shelf's own accounting is unlike every other column's, because its

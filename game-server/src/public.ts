@@ -25,7 +25,7 @@ export const PAGE = `<!doctype html>
 <link rel="icon" type="image/png" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#16120c">
+<meta name="theme-color" content="#101113">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="NOMAD">
 <meta property="og:title" content="NOMAD">
@@ -40,11 +40,11 @@ export const PAGE = `<!doctype html>
 <meta name="twitter:image" content="https://nomadmud.com/og.jpg?v=4">
 <style>
   :root {
-    --bg: #16120c;
-    --panel: #1e1912;
-    --cream: #ede3cc;
-    --dim: #9a8b66;
-    --gold: #d8a94e;
+    --bg: #101113;
+    --panel: #181a1d;
+    --cream: #e7e8ea;
+    --dim: #959aa3;
+    --gold: #d1bc86;
     /* Wear's own amber. NOT --gold: gold is the theme's ACCENT and each theme
        repaints it (green on moss, blue on abyss), which made a battered piece
        read as good news. Tuned per theme like --heal and --blood, for the same
@@ -52,7 +52,7 @@ export const PAGE = `<!doctype html>
        ground it is shown against. */
     --wear: #d8a94e;
     --blood: #c96f5a;
-    --bone: #c9bda3;
+    --bone: #b6bbc3;
     --steel: #a4bec0;
     --heal: #8faa6b;
     --omen: #b195c9;
@@ -85,9 +85,9 @@ export const PAGE = `<!doctype html>
     --stone: #d3d6d8;
     --name-s: 55%; /* key-coloured names: saturation/lightness, reset per theme from its ground (applyThemeColors) */
     --name-l: 70%;
-    --border: #3a3020;
-    --border2: #4a3c22;
-    --line: #2c2418;
+    --border: #303338;
+    --border2: #42464d;
+    --line: #292c31;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scrollbar-color: var(--border) var(--bg); scrollbar-width: thin; }
@@ -255,7 +255,7 @@ export const PAGE = `<!doctype html>
   #thlist .thpager button:disabled { opacity: 0.35; cursor: default; }
   #thlist .thpager span { color: var(--dim); font-size: 11px; }
   #bar .vital-hp { color: var(--heal); }
-  #bar .vital-exh { color: var(--steel); }
+  #bar .vital-sta { color: var(--steel); }
   #bar .vital-warn { color: var(--wear); }
   #bar .vital-danger { color: var(--blood); }
   /* The bar must never lose its two doors: NOMAD (settings) and the name
@@ -579,6 +579,10 @@ export const PAGE = `<!doctype html>
     border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px;
   }
   #twant .wname { color: var(--gold); font-weight: 600; }
+  #twant details { flex: 1 1 100%; min-width: 0; }
+  #twant summary { cursor: pointer; padding: 5px 0; }
+  #twant details .wrow { display: flex; margin-top: 6px; }
+  #twant details .wrow button { margin-left: auto; }
   /* one cart line: the thing named, plus a small \\u2715 to take one copy back */
   #twant .wrow {
     display: inline-flex; align-items: center; gap: 4px; color: var(--cream);
@@ -1324,6 +1328,7 @@ export const PAGE = `<!doctype html>
      pose, not moving — and that says it without making it a ghost. So there is
      no rule here at all now, and the absence is the decision. */
   #mobs .mob {
+    position: relative;
     background-repeat: no-repeat;
     background-position-y: center;
     /* An <img> may give width to fit a crowded row (see min-width above); a strip
@@ -1331,6 +1336,14 @@ export const PAGE = `<!doctype html>
        taking any of it stretches the picture instead of scaling it. */
     flex: 0 0 auto;
   }
+  /* Reuse the eye strip's exact alpha and frame alignment, with its colour out. */
+  #mobs .mob::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: var(--mob-eyes, none);
+    background-size: inherit; background-position: inherit;
+    background-repeat: no-repeat; filter: brightness(0); opacity: 0;
+  }
+  #mobs .mob[data-death="1"]::after { opacity: 1; }
   #scene.sky-day   { --scrim: transparent; }
   #scene.sky-dawn  { --scrim: linear-gradient(rgba(84,104,148,.20), rgba(198,168,118,.10)); }
   #scene.sky-dusk  { --scrim: linear-gradient(rgba(58,38,28,.20), rgba(188,108,48,.14)); }
@@ -1663,7 +1676,7 @@ export const PAGE = `<!doctype html>
     position: fixed; inset: 0; z-index: 9000;
     /* starts as plain darkness; the picked scene painting is set by script
        only after it has decoded, so nothing flashes between backdrops */
-    background-color: #16120c;
+    background-color: var(--bg);
     background-size: cover; background-position: center; background-repeat: no-repeat;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; text-align: center; padding: 24px; padding-bottom: 18vh; transition: opacity .9s ease;
@@ -1769,7 +1782,34 @@ export const PAGE = `<!doctype html>
     display: flex; flex-direction: column; gap: 10px; min-height: 0;
   }
   .modal-tap-blocked { outline: 1px solid var(--gold); outline-offset: 2px; }
+  /* Keep tools in reach while the contents scroll. */
+  :is(#bench, #trade, #forge) .bhead, #mapm .lhead {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  }
+  :is(#bench, #trade, #forge) .bhead > div, #mapm .lhead > div { display: contents; }
+  :is(#bsub, #tsub, #fsub, #mapsub) { grid-column: 1 / -1; grid-row: 2; max-width: none; }
+  :is(#bclose, #tclose, #fclose, #mapclose) { grid-column: 2; grid-row: 1; }
+  .list-tools { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .list-tools input[type="search"] {
+    flex: 1 1 160px; width: 0; min-width: 0; padding: 8px 10px; border: 1px solid var(--border2);
+    border-radius: 5px; background: var(--bg); color: var(--cream); font: inherit; font-size: 16px;
+  }
+  .list-tools label { color: var(--bone); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .list-sections { display: none; flex: 0 0 auto; gap: 6px; overflow-x: auto; }
+  .list-sections button {
+    flex: 1 0 auto; padding: 8px 10px; background: transparent; color: var(--bone);
+    border: 1px solid var(--border2); border-radius: 5px; font: inherit; font-size: 12px;
+  }
+  .list-sections button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); background: var(--bg); }
+  :is(#bench, #trade, #forge) .list-filtered { display: none !important; }
+  .list-empty { color: var(--dim); font-size: 12px; padding: 12px 0; }
+  :is(#bench, #trade, #forge, #mapm):focus { outline: none; }
+  :is(#bench, #trade, #forge, #mapm) :is(button, input, canvas, summary):focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  #mapctl button { width: auto; min-width: 40px; height: 40px; padding: 0 10px; font-size: 13px; }
+  #maphint { max-width: calc(100% - 20px); padding: 4px 6px; background: var(--bg); border-radius: 3px; }
   @media (max-width: 680px), (max-height: 500px) and (pointer: coarse) {
+    .list-sections { display: flex; }
+    :is(#bench, #trade, #forge) .bcol.section-hidden { display: none; }
     #trade, #swap, #bounty, #forge, #mapm, #jrnl, #reckm {
       padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
         env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
@@ -1826,8 +1866,8 @@ export const PAGE = `<!doctype html>
     --design-arch: 30px 30px 0 0;
   }
   body[data-atmosphere="door"] {
-    --design-ink: #141311; --design-rule: #777063; --design-pale: #ded6c4;
-    --design-page: #191713; --design-inset: #1d1b17; --design-accent: #a69a82;
+    --design-ink: var(--panel); --design-rule: var(--border2); --design-pale: var(--cream);
+    --design-page: var(--bg); --design-inset: #202226; --design-accent: var(--gold);
   }
   body[data-atmosphere="bone"] {
     --design-ink: #efe8d8; --design-rule: #998464; --design-pale: #33291e;
@@ -2050,6 +2090,65 @@ export const PAGE = `<!doctype html>
     body.command-focus #inputline { transform: translateY(calc(-1 * var(--keyboard-cover, 0px))); z-index: 3; }
   }
 
+
+
+:is(#bench,#trade,#forge) .bbox{width:min(860px,96vw);padding:16px 18px 0;gap:10px;border-radius:6px}
+:is(#bench,#trade,#forge) .bhead{display:flex;align-items:center;gap:8px}
+:is(#bench,#trade,#forge) .bhead>div{display:contents}
+:is(#btitle,#ttitle,#ftitle){font:600 16px/1.3 ui-monospace,monospace;letter-spacing:0;color:var(--cream);flex:1}
+:is(#bsub,#tsub,#fsub){display:none}
+:is(#bclose,#tclose,#fclose,#bgear){padding:6px 10px;font:12px ui-monospace,monospace;border:1px solid var(--border);border-radius:3px;min-height:32px;background:none;color:var(--bone)}
+#bench #bgear{display:block;width:auto}#bench #bdoll.on{display:none}#bench.showgear #bdoll.on{display:flex}
+:is(#bench,#trade,#forge) .list-sections{display:flex;gap:16px;border-bottom:1px solid var(--line)}
+:is(#bench,#trade,#forge) .list-sections button{flex:0 0 auto;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:8px 0;color:var(--dim);font:12px ui-monospace,monospace}
+:is(#bench,#trade,#forge) .list-sections button[aria-pressed=true]{border-bottom-color:var(--gold);color:var(--cream)}
+:is(#bench,#trade,#forge) .list-sections button[hidden]{display:none}
+:is(#bench,#trade,#forge) .list-tools input[type=search]{font:13px ui-monospace,monospace;padding:7px 9px;border-radius:3px;border-color:var(--border)}
+:is(#bench,#trade,#forge) .bcols{display:flex;flex-direction:column;gap:0}
+:is(#bench,#trade,#forge) .bcol{padding:0;border:0;border-radius:0;gap:0;min-height:0}
+:is(#bench,#trade,#forge) .bcol.section-hidden{display:none!important}
+:is(#bench,#trade,#forge) .bcolh{position:static;font:11px ui-monospace,monospace;letter-spacing:0;text-transform:none;padding:5px 0 9px;color:var(--dim);border-bottom:1px solid var(--line)}
+:is(#bench,#trade,#forge) .tsech{font:10px ui-monospace,monospace;letter-spacing:.05em;color:var(--dim);padding:10px 0 4px;border:0}
+:is(#bench,#trade,#forge) .mud-row{display:grid!important;grid-template-columns:22px minmax(0,1fr) 24px 72px;align-items:center;gap:8px!important;padding:7px 4px!important;min-height:34px;font:12px/1.4 ui-monospace,monospace;border:0!important;border-radius:0;cursor:pointer}
+:is(#bench,#trade,#forge) .mud-row .nm{font:inherit!important;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+:is(#bench,#trade,#forge) .mud-row:hover{background:#ffffff04}
+:is(#bench,#trade,#forge) .mud-row.chosen{background:#ffffff08;box-shadow:inset 2px 0 var(--gold)}
+.mud-index,.mud-qty,.mud-state{color:var(--dim);font-size:10px;font-variant-numeric:tabular-nums}.mud-qty,.mud-state{text-align:right}.mud-state.equipped{color:var(--heal)}
+:is(#bench,#trade,#forge) .mud-row.list-filtered{display:none!important}.mud-search{display:none!important}
+.mud-reader{border-top:1px solid var(--border);padding:12px 0;flex:0 0 auto;max-height:42%;overflow-y:auto;font:12px/1.5 ui-monospace,monospace;color:var(--dim)}
+.mud-reader>.bitem,.mud-reader>.trow{display:block!important;padding:0!important;border:0!important}.mud-reader .nm{font-size:12px;color:var(--cream)}.mud-reader .nm .tag,.mud-reader .nm .stat{font-size:11px;color:var(--bone)}
+.mud-reader .nm .cond{color:var(--dim)}.mud-reader .nm .worn{color:var(--heal)}
+.mud-reader .acts,.mud-reader .risks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding:0;border:0}
+.mud-reader button{background:none;border:1px solid var(--border);border-radius:3px;padding:6px 10px;min-height:32px;color:var(--bone);font:12px ui-monospace,monospace;cursor:pointer}
+.mud-reader button:hover{border-color:var(--gold);color:var(--gold)}.mud-reader button.arm{color:var(--blood);border-color:var(--blood)}.mud-reader button:disabled{opacity:.4;cursor:default}
+.mud-reader .cost,.mud-reader .quiet{font-size:11px;margin-top:5px}.mud-reader .takes{font-size:11px}.mud-reader .tag-atk{color:var(--blood)}.mud-reader .tag-def{color:var(--steel)}
+#twant{font-size:11px;padding:7px 9px;background:var(--bg);border-radius:3px}#fhave{font-size:11px;padding:0;border:0}
+@media(max-width:680px){:is(#bench,#trade,#forge) .bbox{width:100%;height:100%;max-height:none;border-radius:0;padding:12px 12px 0}:is(#bench,#trade,#forge) .list-tools input[type=search]{font-size:16px}:is(#bench,#trade,#forge) .mud-row{gap:6px!important;grid-template-columns:18px minmax(0,1fr) 20px 58px;font-size:12px}.mud-state{font-size:10px}.mud-reader{max-height:44%}}
+
+:is(#bench,#trade,#forge) .mud-reader .nm{display:block;float:none;width:auto;font:12px/1.5 ui-monospace,monospace;text-align:left;white-space:normal;overflow-wrap:anywhere}
+:is(#bench,#trade,#forge) .mud-reader .mud-stats{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:2px 8px;margin-top:4px;font:11px/1.5 ui-monospace,monospace;text-align:left}
+:is(#bench,#trade,#forge) .mud-reader .mud-stats .st-atk{color:var(--blood);font-weight:600}
+:is(#bench,#trade,#forge) .mud-reader .mud-stats .st-def{color:var(--steel);font-weight:600}
+:is(#bench,#trade,#forge) .mud-reader .mud-stats .st-gain{color:var(--gold);font-weight:600}
+:is(#bench,#trade,#forge) .mud-reader .mud-stats .st-dim{color:var(--dim)}
+:is(#bench,#trade,#forge) .mud-reader .acts{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:8px;margin-top:8px}
+:is(#bench,#trade,#forge) .mud-reader .mud-cost{float:none;margin:0;padding:0;font:12px/1.5 ui-monospace,monospace;color:var(--gold);flex:0 1 auto;max-width:100%;overflow-wrap:anywhere}
+:is(#bench,#trade,#forge) .mud-reader .acts button{margin:0;float:none;flex:0 0 auto;padding:6px 10px;font:12px ui-monospace,monospace;min-height:32px}
+
+:is(#bench,#trade,#forge) .mud-reader .mud-description{margin:8px 0 0;color:var(--bone);font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.mud-description[hidden]{display:none!important}
+
+
+#bench .list-sections .loadout-opener{margin-left:auto;color:var(--gold)}
+#bench .loadout-tools{flex:0 0 auto;display:flex;flex-direction:column;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+#bench .loadout-tools[hidden]{display:none!important}
+#bench .loadout-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#bench .loadout-line input,#bench .loadout-line select{flex:1 1 140px;min-width:0;width:0;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--cream);padding:7px 8px;font:13px ui-monospace,monospace;height:34px}
+#bench .loadout-line button{background:none;border:1px solid var(--border);border-radius:3px;padding:7px 9px;color:var(--bone);font:12px ui-monospace,monospace;min-height:34px;cursor:pointer}
+#bench .loadout-line button:disabled{opacity:.4;cursor:default}#bench .loadout-line .loadout-equip{color:var(--gold)}
+#bench .loadout-summary{font:11px/1.4 ui-monospace,monospace;color:var(--dim)}
+@media(max-width:680px){#bench .loadout-line input,#bench .loadout-line select{font-size:16px}#bench .list-sections{gap:12px}}
+
 </style>
 </head>
 <body>
@@ -2136,7 +2235,7 @@ export const PAGE = `<!doctype html>
     <div id="drtext"></div>
     <div id="dracts"></div>
   </div>
-  <div id="bench">
+  <div id="bench" role="dialog" aria-modal="true" aria-labelledby="btitle">
     <div class="bbox">
       <div class="bhead">
         <div>
@@ -2167,7 +2266,7 @@ export const PAGE = `<!doctype html>
       </div>
     </div>
   </div>
-  <div id="trade">
+  <div id="trade" role="dialog" aria-modal="true" aria-labelledby="ttitle">
     <div class="bbox">
       <div class="bhead">
         <div>
@@ -2221,7 +2320,7 @@ export const PAGE = `<!doctype html>
       </div>
     </div>
   </div>
-  <div id="forge">
+  <div id="forge" role="dialog" aria-modal="true" aria-labelledby="ftitle">
     <div class="bbox">
       <div class="bhead">
         <div>
@@ -2240,7 +2339,7 @@ export const PAGE = `<!doctype html>
       </div>
     </div>
   </div>
-  <div id="mapm">
+  <div id="mapm" role="dialog" aria-modal="true" aria-labelledby="maptitle">
     <div class="lbox">
       <div class="lhead">
         <div>
@@ -2251,12 +2350,13 @@ export const PAGE = `<!doctype html>
       </div>
       <div id="mapbody">
         <div id="mapwrap">
-          <canvas id="mapcv"></canvas>
+          <canvas id="mapcv" tabindex="0" aria-label="Room map. Arrow keys pan; plus and minus zoom; Home centers on you."></canvas>
           <div id="maphint"></div>
           <div id="mapctl">
             <button id="mapzin" title="zoom in" aria-label="zoom in">+</button>
             <button id="mapzout" title="zoom out" aria-label="zoom out">−</button>
-            <button id="mapzhere" title="center on you" aria-label="center on you">⌖</button>
+            <button id="mapzhere" title="center on you" aria-label="center on you">You</button>
+            <button id="mapzfit" title="show the whole chart">Fit chart</button>
           </div>
         </div>
       </div>
@@ -2310,17 +2410,18 @@ var hpEl = document.getElementById("hp");
 var fxEl = document.getElementById("fx");
 var chipsEl = document.getElementById("chips");
 
-// Keep the two readings independent: low HP is dangerous, high exhaustion
-// is dangerous. Their numbers and labels remain readable without colour.
+// Both readings show reserves: low HP or stamina is dangerous. The server
+// still tracks fatigue; only its presentation counts down from full stamina.
 function renderVitals(f) {
-  var fatigue = f.fatigue || 0;
-  var hp = document.createElement("span"), exh = document.createElement("span");
+  var stamina = 50 - Math.round(Math.max(0, Math.min(50, f.fatigue || 0)));
+  var hp = document.createElement("span"), sta = document.createElement("span");
   hp.className = "vital-hp" + (f.hp <= f.max_hp / 3 ? " vital-danger" : f.hp <= f.max_hp / 2 ? " vital-warn" : "");
-  exh.className = "vital-exh" + (fatigue >= 40 ? " vital-danger" : fatigue >= 20 ? " vital-warn" : "");
+  sta.className = "vital-sta" + (stamina <= 10 ? " vital-danger" : stamina <= 30 ? " vital-warn" : "");
   hp.textContent = f.hp + "/" + f.max_hp + " hp";
-  exh.textContent = fatigue + "/50 exh";
+  sta.textContent = stamina + "/50 sta";
+  sta.title = "Stamina";
   hpEl.className = "";
-  hpEl.replaceChildren(hp, document.createTextNode(" \\u00b7 "), exh, document.createTextNode(" \\u00b7 " + f.name));
+  hpEl.replaceChildren(hp, document.createTextNode(" \\u00b7 "), sta, document.createTextNode(" \\u00b7 " + f.name));
 }
 
 // Glanceable status: the server names your active effects (bleeding, seized,
@@ -4619,6 +4720,107 @@ function installModalTapGuard(root, settleNewButtons) {
 document.querySelectorAll(MODAL_SURFACES).forEach(function (root) { installModalTapGuard(root); });
 installModalTapGuard(chipsEl, false);
 
+// Search and section selection are local reading state, retained across server
+// updates. Never rebuild the toolbar while the player is typing into it.
+var listViews = {};
+function installListView(id, sections, placeholder) {
+  var root = document.getElementById(id), tools = document.createElement("div");
+  tools.className = "list-tools";
+  var search = document.createElement("input");
+  search.type = "search"; search.placeholder = placeholder; search.setAttribute("aria-label", placeholder);
+  search.autocomplete = "off"; search.spellcheck = false; tools.appendChild(search);
+  var ready = null;
+  if (id === "forge") {
+    var label = document.createElement("label"); ready = document.createElement("input"); ready.type = "checkbox";
+    label.appendChild(ready); label.appendChild(document.createTextNode("Can forge")); tools.appendChild(label);
+  }
+  var nav = document.createElement("div"); nav.className = "list-sections"; nav.setAttribute("aria-label", "Sections");
+  var view = { root: root, search: search, ready: ready, sections: sections, selected: sections[0][0], buttons: [] };
+  listViews[id] = view;
+  sections.forEach(function (section) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = section[1];
+    b.setAttribute("aria-controls", section[0]);
+    b.addEventListener("click", function () {
+      view.selected = section[0]; refreshListView(id); root.querySelector(".bbody, .modalbody").scrollTop = 0;
+    });
+    nav.appendChild(b); view.buttons.push(b);
+  });
+  var head = root.querySelector(".bhead"); head.after(tools); tools.after(nav);
+  function filter() {
+    refreshListView(id);
+    root.querySelectorAll(".bbody, .modalbody, .bcol").forEach(function (el) { el.scrollTop = 0; });
+  }
+  search.addEventListener("input", filter);
+  if (ready) ready.addEventListener("change", filter);
+}
+function refreshListView(id) {
+  var v = listViews[id]; if (!v) return;
+  var available = v.sections.filter(function (s) { return document.getElementById(s[0]).style.display !== "none"; });
+  if (!available.some(function (s) { return s[0] === v.selected; }) && available.length) v.selected = available[0][0];
+  var query = v.search.value.trim().toLocaleLowerCase();
+  v.sections.forEach(function (section, index) {
+    var col = document.getElementById(section[0]), button = v.buttons[index];
+    button.hidden = col.style.display === "none";
+    button.setAttribute("aria-pressed", String(section[0] === v.selected));
+    col.classList.toggle("section-hidden", section[0] !== v.selected);
+    var rows = Array.from(col.querySelectorAll(".bitem, .trow")), count = 0;
+    rows.forEach(function (row) {
+      var text = Array.from(row.querySelectorAll(".nm, .tags")).map(function (e) { return e.textContent; }).join(" ").toLocaleLowerCase();
+      var shown = text.indexOf(query) !== -1 && !(v.ready && v.ready.checked && section[0] === "frecipes" && row.dataset.canForge !== "true");
+      row.classList.toggle("list-filtered", !shown); if (shown) count++;
+    });
+    button.textContent = section[1] + (query ? " (" + count + ")" : "");
+    // Hide category headings that would otherwise label an empty search result.
+    col.querySelectorAll(".tsech").forEach(function (heading) {
+      var next = heading.nextElementSibling, any = false;
+      while (next && !next.classList.contains("tsech")) {
+        if (next.matches(".bitem, .trow") && !next.classList.contains("list-filtered")) any = true;
+        next = next.nextElementSibling;
+      }
+      heading.classList.toggle("list-filtered", !any);
+    });
+    var empty = col.querySelector(".list-empty");
+    if (!empty) { empty = document.createElement("div"); empty.className = "list-empty"; col.appendChild(empty); }
+    empty.textContent = query ? "No matching items here." : "Nothing you can forge with these materials.";
+    empty.hidden = !rows.length || count > 0;
+  });
+}
+function keepListPosition(id) {
+  var root = document.getElementById(id), opened = root.classList.contains("open");
+  var positions = Array.from(root.querySelectorAll(".bbody, .modalbody, .bcol")).map(function (el) { return [el, opened ? el.scrollTop : 0]; });
+  return function () { refreshListView(id); positions.forEach(function (p) { p[0].scrollTop = p[1]; }); };
+}
+installListView("bench", [["bpack", "Pack"], ["block", "Lockbox"], ["bvault", "Vault"], ["bshelf", "Shelf"]], "Find in your kit");
+installListView("trade", [["tstock", "Keeper's stock"], ["tgoods", "Your goods"]], "Find stock or goods");
+installListView("forge", [["frecipes", "Recipes"], ["fread", "Inspect & mend"]], "Find gear or recipes");
+
+// Focus stays inside these dialogs; Escape uses the existing close command so
+// leaving the gatehouse still reaches the server. Focus the dialog on entry,
+// not its exit button; Tab gives controls their normal visible keyboard focus.
+[["bench", "bclose"], ["trade", "tclose"], ["forge", "fclose"], ["mapm", "mapclose"]].forEach(function (entry) {
+  var root = document.getElementById(entry[0]), close = document.getElementById(entry[1]), wasOpen = false, prior = null;
+  root.tabIndex = -1;
+  new MutationObserver(function () {
+    var open = root.classList.contains("open");
+    if (open && !wasOpen) { prior = document.activeElement; root.focus({ preventScroll: true }); }
+    if (!open && wasOpen && root.contains(document.activeElement)) {
+      if (prior && prior.isConnected && prior !== cmd) prior.focus({ preventScroll: true });
+      else document.activeElement.blur();
+    }
+    wasOpen = open;
+  }).observe(root, { attributes: true, attributeFilter: ["class"] });
+  root.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close.click(); }
+    if (e.key !== "Tab") return;
+    var controls = Array.from(root.querySelectorAll("button:not(:disabled), input:not(:disabled), summary, [tabindex='0']")).filter(function (el) { return el.getClientRects().length; });
+    var first = controls[0], last = controls[controls.length - 1];
+    if (!first) { e.preventDefault(); return; }
+    if (document.activeElement === root) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+});
+
 // ---- the gatehouse bench: sort your pack, out of the world's reach ----
 var benchEl = document.getElementById("bench");
 var bpack = document.getElementById("bpack");
@@ -4924,6 +5126,7 @@ function renderDoll(sheet) {
 }
 
 function renderBench(state) {
+  var restorePosition = keepListPosition("bench");
   // Dismiss the command keyboard only on entry, never during item updates.
   if (!benchEl.classList.contains("open")) {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -4969,6 +5172,7 @@ function renderBench(state) {
     bshelf.textContent = "";
   }
   benchEl.classList.add("open");
+  restorePosition();
 }
 
 // ---- the keeper's hatch: trade out of the world's reach ----
@@ -5167,6 +5371,7 @@ function fillTradeCol(el, title, items, place, gone) {
 // keeper cracks seals when a deal closes.)
 var TRADE_TABS = [["pack", "pockets"], ["lockbox", "lockbox"], ["vault", "vault"]];
 function renderGoods() {
+  var restorePosition = keepListPosition("trade");
   tgoods.textContent = "";
   var h = document.createElement("div");
   h.className = "bcolh";
@@ -5185,21 +5390,25 @@ function renderGoods() {
   tgoods.appendChild(tabs);
   var items = (tradeState && tradeState.goods && tradeState.goods[tradeTab]) || [];
   renderItemList(tgoods, items, "goods");
+  restorePosition();
 }
 
 function renderTrade(state) {
+  var restorePosition = keepListPosition("trade");
   tradeState = state;
   // The cart: a list of wants (buy the same thing twice and it lists twice),
   // paid against their summed cost. Truthy only while something's on the counter
   // \\u2014 that's what unlocks the offer buttons.
   tradeWant = (state.want && state.want.items && state.want.items.length) ? state.want : null;
   setNote(tnote, state.note);
+  var counterOpen = !!(twant.querySelector("details") && twant.querySelector("details").open);
   twant.textContent = "";
   if (tradeWant) {
-    var lbl = document.createElement("span");
+    var counter = document.createElement("details"); counter.open = counterOpen;
+    var lbl = document.createElement("summary");
     lbl.className = "wname";
-    lbl.textContent = "On the counter:";
-    twant.appendChild(lbl);
+    lbl.textContent = "On the counter: " + tradeWant.items.length + (tradeWant.items.length === 1 ? " item" : " items");
+    counter.appendChild(lbl); twant.appendChild(counter);
     // Collapse duplicate wants into "name (x2)" rows, but remember one real
     // index per kind so 'remove' can pull a single copy back.
     var order = [];
@@ -5218,9 +5427,10 @@ function renderTrade(state) {
       rm.type = "button";
       rm.textContent = "\\u2715"; // pull one copy back off the counter
       rm.title = "take one back";
+      rm.setAttribute("aria-label", "Take back " + w.name);
       rm.addEventListener("click", function () { tradeSend("unbuy", String(w.idx)); });
       row.appendChild(rm);
-      twant.appendChild(row);
+      counter.appendChild(row);
     });
     var prog = document.createElement("span");
     prog.className = "wprog";
@@ -5240,6 +5450,7 @@ function renderTrade(state) {
   fillTradeCol(tstock, "His stock", state.stock || [], "stock", state.gone || []);
   renderGoods();
   tradeEl.classList.add("open");
+  restorePosition();
 }
 
 // ---- a deal with another wanderer: item for item, no keeper, no coin ----
@@ -5415,6 +5626,7 @@ function closeForge() { forgeEl.classList.remove("open"); hideModalChat(); }
 function forgeItemNode(it) {
   var wrap = document.createElement("div");
   wrap.className = "bitem";
+  wrap.dataset.canForge = String(!!it.can);
   var nm = document.createElement("div");
   nm.className = "nm";
   // The bench only ever makes gear, so every recipe name wears its tier.
@@ -5548,6 +5760,7 @@ function forgeSheetNode(it) {
 }
 var lastRead = [];
 function paintRead(read) {
+  var restorePosition = keepListPosition("forge");
   lastRead = read || [];
   freadEl.textContent = "";
   var h = document.createElement("div");
@@ -5559,12 +5772,15 @@ function paintRead(read) {
     e.className = "bempty";
     e.textContent = "\\u2014 nothing on you the vice could hold \\u2014";
     freadEl.appendChild(e);
+    restorePosition();
     return;
   }
   lastRead.forEach(function (it) { freadEl.appendChild(forgeSheetNode(it)); });
+  restorePosition();
 }
 
 function renderForge(state) {
+  var restorePosition = keepListPosition("forge");
   setNote(fnote, state.note);
   fhave.textContent = "";
   var lbl = document.createElement("span");
@@ -5599,7 +5815,91 @@ function renderForge(state) {
   paintRead(state.read);
   if (state.sfx) sndOne(state.sfx);
   forgeEl.classList.add("open");
+  restorePosition();
 }
+
+// Compact item lists share one selected-item reading and action area.
+
+var mudRecords={bench:[],trade:[],forge:[]},mudSelected={bench:'',trade:'',forge:''};
+function mudReader(type){var root=document.getElementById(type),reader=root.querySelector('.mud-reader');if(!reader){reader=document.createElement('div');reader.className='mud-reader';reader.setAttribute('aria-live','polite');root.querySelector('.bbox').appendChild(reader)}reader.replaceChildren();var record=mudRecords[type].find(function(r){return r.key===mudSelected[type]&&r.row.isConnected&&!r.row.closest('.section-hidden')&&!r.row.classList.contains('list-filtered')});if(record){reader.appendChild(record.source);}else{reader.textContent='Select an item to inspect or manage it.'}mudRecords[type].forEach(function(r){r.row.classList.toggle('chosen',r===record);r.row.setAttribute('aria-pressed',String(r===record))})}
+function mudDetailSource(type,it,place,source){
+ var nm=source.querySelector('.nm');
+ // All three readers use the same stat tokens and alignment, not shelf-row CSS.
+ nm.querySelectorAll('.tag,.stat').forEach(function(n){n.remove()});
+ if(type==='trade'){var old=source.querySelector('.tags');if(old)old.remove()}
+ if(type==='forge'&&place==='recipe'){var rarity=nm.querySelector('.rar');if(rarity)rarity.remove()}
+ if(it.stat){var stats=document.createElement('div');stats.className='mud-stats';it.stat.split(', ').forEach(function(t){var token=document.createElement('span');token.className=statTokenClass(t);token.textContent=t;stats.appendChild(token)});nm.after(stats)}
+ var acts=source.querySelector('.acts');
+ if(type==='bench'&&it.description){
+  var description=document.createElement('p');description.className='mud-description';description.id='mud-description-'+place+'-'+it.row;description.hidden=true;description.textContent=it.description;
+  var look=document.createElement('button');look.type='button';look.textContent='Look';look.setAttribute('aria-expanded','false');look.setAttribute('aria-controls',description.id);
+  look.addEventListener('click',function(){description.hidden=!description.hidden;look.setAttribute('aria-expanded',String(!description.hidden));look.textContent=description.hidden?'Look':'Hide description'});
+  acts.prepend(look);source.insertBefore(description,acts);
+ }
+ if(type==='trade'){acts=document.createElement('div');acts.className='acts';var buy=source.querySelector('button'),cost=source.querySelector('.tcost');if(cost){cost.className='mud-cost';cost.textContent='Cost: '+it.cost;acts.appendChild(cost)}acts.appendChild(buy);source.appendChild(acts)}
+ if(type==='forge'&&place==='recipe'){var cost=source.querySelector('.cost');if(cost){cost.className='mud-cost';cost.textContent='Materials: '+cost.textContent;acts.prepend(cost)}}
+}
+function mudRow(type,it,place,source){
+ mudDetailSource(type,it,place,source);
+ var risks=source.querySelector('.risks'),acts=source.querySelector('.acts');if(risks&&acts){Array.from(risks.children).forEach(function(b){acts.appendChild(b)});risks.remove()}
+ var row=document.createElement('div');row.className=(type==='trade'?'trow':'bitem')+' mud-row';row.tabIndex=0;row.setAttribute('role','button');if(type==='forge')row.dataset.canForge=String(!!it.can);
+ var name=document.createElement('span');name.className='nm';var realName=source.querySelector('.nm>span');name.appendChild(realName?realName.cloneNode(true):document.createTextNode(it.name));
+ var idx=document.createElement('span');idx.className='mud-index';
+ var qty=document.createElement('span');qty.className='mud-qty';qty.textContent=it.n>1?'×'+it.n:'';
+ var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?'equipped':it.sealed?'sealed':it.condWord==='sound'?'':it.condWord||''):type==='trade'?(it.cost==null?'':String(it.cost)):place==='recipe'?it.scrap+' iron':it.cond;
+ if(it.equipped)state.classList.add('equipped');
+ var search=document.createElement('span');search.className='tags mud-search';search.textContent=source.querySelector('.nm').textContent+' '+(it.stat||'');
+ row.append(idx,name,qty,state,search);var record={row:row,source:source,key:place+':'+String(it.row??it.id)};mudRecords[type].push(record);
+ row.setAttribute('aria-label',it.name+(state.textContent?', '+state.textContent:''));function choose(){mudSelected[type]=record.key;mudReader(type)}row.onclick=choose;row.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();choose()}};return row;
+}
+var originalBenchItem=benchItemNode;benchItemNode=function(it,place){return mudRow('bench',it,place,originalBenchItem(it,place))};
+var originalTradeItem=tradeItemNode;tradeItemNode=function(it,place){return mudRow('trade',it,place,originalTradeItem(it,place))};
+var originalForgeItem=forgeItemNode;forgeItemNode=function(it){return mudRow('forge',it,'recipe',originalForgeItem(it))};
+var originalForgeSheet=forgeSheetNode;forgeSheetNode=function(it){return mudRow('forge',it,'read',originalForgeSheet(it))};
+function mudRefresh(type){
+ [['bench','Inventory','btitle','bclose'],['trade','Barter','ttitle','tclose'],['forge','Forge','ftitle','fclose']].forEach(function(x){var root=document.getElementById(x[0]);document.getElementById(x[2]).textContent=x[1];document.getElementById(x[3]).textContent='Close';var nav=root.querySelector('.list-sections'),tools=root.querySelector('.list-tools');root.querySelector('.bhead').after(nav);nav.after(tools)});
+ var gear=document.getElementById('bgear');document.querySelector('#bench .bhead').insertBefore(gear,document.getElementById('bclose'));gear.textContent='Stats';
+ var root=document.getElementById(type);root.querySelectorAll('.bcol').forEach(function(c){c.querySelectorAll('.mud-row').forEach(function(r,i){r.querySelector('.mud-index').textContent=String(i+1).padStart(2,'0')})});
+ if(type==='trade'&&!tradeWant)document.getElementById('twant').textContent='Choose goods. Offer items to match their value.';
+ mudReader(type);
+}
+var listRenderBench=renderBench;renderBench=function(state){mudRecords.bench=[];listRenderBench(state);mudRefresh('bench')};
+var listRenderTrade=renderTrade;renderTrade=function(state){mudRecords.trade=[];listRenderTrade(state);mudRefresh('trade')};
+var listRenderForge=renderForge;renderForge=function(state){mudRecords.forge=[];listRenderForge(state);mudRefresh('forge')};
+// Secondary list updates (storage tabs, inspection and keeper goods) use the same reading area.
+var mudOldRefresh=refreshListView;refreshListView=function(id){mudOldRefresh(id);mudRecords[id]=mudRecords[id].filter(function(r){return r.row.isConnected});mudReader(id)};
+document.getElementById('bgear').addEventListener('click',function(){this.textContent='Stats'});
+
+// Presets and equipment changes are authoritative server state.
+var loadoutSlots=['weapon','shield','helm','armor','cloak','feet'];
+var loadoutSets=[],loadoutChosen='',loadoutsOpen=false,loadoutState={};
+function loadoutNotice(text){document.getElementById('bnote').textContent=text}
+function loadoutSend(action,id,name){
+ if(ws&&ws.readyState===1)ws.send(JSON.stringify({v:0,t:'bench',action:'loadout-'+action,id:id,name:name}));
+ else loadoutNotice('Reconnect before changing loadouts.');
+}
+function renderLoadouts(){
+ var root=document.getElementById('bench'),nav=root.querySelector('.list-sections'),button=nav.querySelector('.loadout-opener');
+ if(!button){button=document.createElement('button');button.type='button';button.className='loadout-opener';button.textContent='Loadouts';button.setAttribute('aria-controls','bench-loadouts');button.onclick=function(){loadoutsOpen=!loadoutsOpen;renderLoadouts()};nav.appendChild(button)}
+ button.hidden=!loadoutState.inGatehouse;button.setAttribute('aria-expanded',String(loadoutsOpen));
+ var panel=document.getElementById('bench-loadouts');if(!panel){panel=document.createElement('div');panel.id='bench-loadouts';panel.className='loadout-tools';root.querySelector('.list-tools').after(panel)}
+ panel.hidden=!loadoutsOpen||!loadoutState.inGatehouse;if(panel.hidden)return;
+ var previousName=panel.querySelector('input')?.value||'';panel.replaceChildren();
+ if(loadoutSets.length){
+  var line=document.createElement('div');line.className='loadout-line';var select=document.createElement('select');select.setAttribute('aria-label','Saved loadout');
+  loadoutSets.forEach(function(set){var option=document.createElement('option');option.value=set.id;option.textContent=set.name;select.appendChild(option)});
+  if(!loadoutSets.some(function(s){return s.id===loadoutChosen}))loadoutChosen=loadoutSets[0].id;select.value=loadoutChosen;select.onchange=function(){loadoutChosen=select.value;renderLoadouts()};line.appendChild(select);
+  var chosen=loadoutSets.find(function(s){return s.id===loadoutChosen});
+  [['Equip',function(){loadoutSend('equip',chosen.id)}],['Update',function(){loadoutSend('update',chosen.id)}],['Delete',function(){loadoutSend('delete',chosen.id)}]].forEach(function(pair){var b=document.createElement('button');b.type='button';b.textContent=pair[0];if(pair[0]==='Equip')b.className='loadout-equip';b.onclick=pair[1];line.appendChild(b)});panel.appendChild(line);
+  var summary=document.createElement('div');summary.className='loadout-summary';summary.textContent=loadoutSlots.map(function(slot){var item=chosen.slots[slot];return item?item.name:null}).filter(Boolean).join(' · ')||'No equipment saved.';panel.appendChild(summary);
+ }
+ var saveLine=document.createElement('div');saveLine.className='loadout-line';var input=document.createElement('input');input.type='text';input.placeholder='New loadout name';input.setAttribute('aria-label','New loadout name');input.maxLength=32;input.value=previousName;
+ var save=document.createElement('button');save.type='button';save.textContent='Save current';save.disabled=!input.value.trim();input.oninput=function(){save.disabled=!input.value.trim()};
+ function create(){var name=input.value.trim();if(!name)return;loadoutSend('save',null,name);input.value='';save.disabled=true}
+
+ save.onclick=create;input.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();create()}};saveLine.append(input,save);panel.appendChild(saveLine);
+}
+var loadoutRenderBench=renderBench;renderBench=function(state){loadoutState=state;loadoutSets=state.loadouts||[];loadoutRenderBench(state);renderLoadouts()};
 
 // ---- the map modal: a chart you carry (true, or half a lie) ----
 var mapEl = document.getElementById("mapm");
@@ -6121,8 +6421,28 @@ function drawMap() {
     }
   }
 }
-function mapZoom(f) { mapCam.scale = Math.max(0.4, Math.min(2.6, mapCam.scale * f)); drawMap(); }
+function mapZoom(f, clientX, clientY) {
+  var before = mapCam.scale, after = Math.max(0.03, Math.min(2.6, before * f));
+  if (mapWrap && typeof clientX === "number") {
+    var rect = mapWrap.getBoundingClientRect(), x = clientX - rect.left - rect.width / 2, y = clientY - rect.top - rect.height / 2;
+    mapCam.cx += x / MAP_CELL * (1 / before - 1 / after);
+    mapCam.cy += y / MAP_CELL * (1 / before - 1 / after);
+  }
+  mapCam.scale = after; drawMap();
+}
+function mapFitChart() {
+  if (!mapGraph || !mapWrap) return;
+  var points = Object.values(mapGraph.placed).filter(function (p) { return isFinite(p.x) && isFinite(p.y); });
+  if (!points.length) return;
+  var xs = points.map(function (p) { return p.x; }), ys = points.map(function (p) { return p.y; });
+  var left = Math.min.apply(null, xs), right = Math.max.apply(null, xs), top = Math.min.apply(null, ys), bottom = Math.max.apply(null, ys);
+  var rect = mapWrap.getBoundingClientRect();
+  mapCam.cx = (left + right) / 2; mapCam.cy = (top + bottom) / 2;
+  mapCam.scale = Math.max(0.03, Math.min(1.4, (rect.width - 48) / ((right - left + 1) * MAP_CELL), (rect.height - 120) / ((bottom - top + 1) * MAP_CELL)));
+  drawMap();
+}
 function mapCenterHere() {
+  mapCam.scale = Math.max(0.8, mapCam.scale);
   if (mapGraph && mapGraph.placed[mapGraph.here]) { var p = mapGraph.placed[mapGraph.here]; mapCam.cx = p.x; mapCam.cy = p.y; }
   else if (mapGraph) {
     // YOU ARE NOT ON THIS SHEET. The wall chart holds only what you carved, so
@@ -6147,19 +6467,44 @@ function mapCenterHere() {
 function wireMap() {
   if (mapWired) return; mapWired = true;
   mapCv = document.getElementById("mapcv"); mapCtx = mapCv.getContext("2d"); mapWrap = document.getElementById("mapwrap");
-  var dragging = false, lx = 0, ly = 0;
-  mapCv.addEventListener("pointerdown", function (e) { dragging = true; lx = e.clientX; ly = e.clientY; mapWrap.classList.add("drag"); try { mapCv.setPointerCapture(e.pointerId); } catch (_) {} });
-  mapCv.addEventListener("pointermove", function (e) {
-    if (!dragging) return;
-    mapCam.cx -= (e.clientX - lx) / (MAP_CELL * mapCam.scale); mapCam.cy -= (e.clientY - ly) / (MAP_CELL * mapCam.scale);
-    lx = e.clientX; ly = e.clientY; drawMap();
+  var pointers = new Map();
+  mapCv.addEventListener("pointerdown", function (e) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); mapWrap.classList.add("drag");
+    try { mapCv.setPointerCapture(e.pointerId); } catch (_) {}
   });
-  function end() { dragging = false; mapWrap.classList.remove("drag"); }
-  mapCv.addEventListener("pointerup", end); mapCv.addEventListener("pointercancel", end);
-  mapCv.addEventListener("wheel", function (e) { e.preventDefault(); mapZoom(e.deltaY < 0 ? 1.12 : 1 / 1.12); }, { passive: false });
+  mapCv.addEventListener("pointermove", function (e) {
+    var old = pointers.get(e.pointerId); if (!old) return;
+    var before = Array.from(pointers.values()); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    var after = Array.from(pointers.values());
+    if (after.length === 2) {
+      var oldDistance = Math.hypot(before[0].x - before[1].x, before[0].y - before[1].y);
+      var distance = Math.hypot(after[0].x - after[1].x, after[0].y - after[1].y);
+      var x = (before[0].x + before[1].x) / 2, y = (before[0].y + before[1].y) / 2;
+      if (oldDistance > 0 && distance > 0) mapZoom(distance / oldDistance, x, y);
+      mapCam.cx -= ((after[0].x + after[1].x) / 2 - x) / (MAP_CELL * mapCam.scale);
+      mapCam.cy -= ((after[0].y + after[1].y) / 2 - y) / (MAP_CELL * mapCam.scale);
+    } else if (after.length === 1) {
+      mapCam.cx -= (e.clientX - old.x) / (MAP_CELL * mapCam.scale); mapCam.cy -= (e.clientY - old.y) / (MAP_CELL * mapCam.scale);
+    }
+    drawMap();
+  });
+  function end(e) { pointers.delete(e.pointerId); if (!pointers.size) mapWrap.classList.remove("drag"); }
+  mapCv.addEventListener("pointerup", end); mapCv.addEventListener("pointercancel", end); mapCv.addEventListener("lostpointercapture", end);
+  mapCv.addEventListener("wheel", function (e) { e.preventDefault(); mapZoom(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX, e.clientY); }, { passive: false });
+  mapCv.addEventListener("keydown", function (e) {
+    var steps = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    if (steps[e.key]) { mapCam.cx += steps[e.key][0] / mapCam.scale; mapCam.cy += steps[e.key][1] / mapCam.scale; drawMap(); }
+    else if (e.key === "+" || e.key === "=") mapZoom(1.25);
+    else if (e.key === "-") mapZoom(1 / 1.25);
+    else if (e.key === "Home") mapCenterHere();
+    else return;
+    e.preventDefault();
+  });
   document.getElementById("mapzin").addEventListener("click", function () { mapZoom(1.25); });
   document.getElementById("mapzout").addEventListener("click", function () { mapZoom(1 / 1.25); });
   document.getElementById("mapzhere").addEventListener("click", mapCenterHere);
+  document.getElementById("mapzfit").addEventListener("click", mapFitChart);
   window.addEventListener("resize", function () { if (mapEl.classList.contains("open")) mapResize(); });
   // ...and the creature row re-fits, or a window dragged narrower leaves the
   // room standing at the size it was when you last walked into it. It goes
@@ -6189,7 +6534,7 @@ function renderMap(f) {
   document.getElementById("maphint").textContent = wall
     ? "true, as far as it goes \\u00b7 the deep is not on it \\u00b7 drag to pan"
     : detailed
-      ? "drag to pan \\u00b7 scroll to zoom"
+      ? "drag to pan \\u00b7 pinch or scroll to zoom"
       : "an unreliable copy \\u00b7 drag to pan";
   // A true map is knowledge kept: its rooms light gold on the HUD hereafter.
   if (detailed && Array.isArray(f.reveal)) {
@@ -6881,7 +7226,7 @@ var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
 // lighter, so a voice can never be mistaken for a wound. On the light 'bone'
 // ground it inverts to a deep wine-rose.
 var THEMES = {
-  door:  { stone: "#d3d6d8", bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", wear: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
+  door:  { stone: "#d3d6d8", bg: "#101113", panel: "#181a1d", cream: "#e7e8ea", dim: "#959aa3", gold: "#d1bc86", wear: "#d8a94e", blood: "#c96f5a", bone: "#b6bbc3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#303338", border2: "#42464d", line: "#292c31" },
   bone:  { stone: "#6f7378", bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", wear: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", voice: "#a5325f", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
   moss:  { stone: "#d3d6d8", bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", wear: "#d8a94e", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", voice: "#eb9cba", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
   abyss: { stone: "#d3d6d8", bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", wear: "#d8a94e", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", voice: "#e79cbc", border: "#243049", border2: "#2f4160", line: "#171f33" },
@@ -9080,9 +9425,14 @@ var skyDrift = (function () {
   }
   function run() {
     if (!active() || !build()) { stop(); return; }
+    // Replace tiles and star pixels before revealing a changed or resumed sky.
+    if (!geo || frame === null) {
+      if (frame !== null) cancelAnimationFrame(frame);
+      stamp = 0;
+      tick(performance.now());
+    }
     layer.style.display = "block";
     if (starCv) starCv.style.display = SKY_STARS[name] ? "block" : "none";
-    if (frame === null) frame = requestAnimationFrame(tick);
   }
   // The sky picture the room just put up, as its url, or "" for none.
   function show(url) {
@@ -9244,12 +9594,18 @@ function runWeather() {
     if (weatherCtx) weatherCtx.clearRect(0, 0, weatherCanvas.width, weatherCanvas.height);
     return;
   }
-  weatherCanvas.style.display = "block";
-  if (weatherFrame === null) weatherFrame = requestAnimationFrame(drawWeather);
+  if (weatherFrame === null) {
+    weatherStamp = 0;
+    drawWeather(performance.now());
+  }
 }
 function setWeather(kind) {
   kind = kind === "rain" || kind === "snow" ? kind : "";
   if (kind !== weatherKind) {
+    if (weatherFrame !== null) cancelAnimationFrame(weatherFrame);
+    weatherFrame = null;
+    if (weatherCanvas) weatherCanvas.style.display = "none";
+    if (weatherCtx) weatherCtx.clearRect(0, 0, weatherCanvas.width, weatherCanvas.height);
     weatherKind = kind; weatherTime = 0; weatherStamp = 0;
     weatherWind = 0; weatherFlashAt = -99; weatherNextFlash = 0; weatherThunderAt = 0;
   }
@@ -9317,6 +9673,7 @@ function drawWeather(now) {
     }
     ctx.stroke();
   }
+  weatherCanvas.style.display = "block";
   weatherFrame = requestAnimationFrame(drawWeather);
 }
 if (document.addEventListener) document.addEventListener("visibilitychange", runWeather);
@@ -9374,7 +9731,7 @@ function fadeScene() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
   var cover = document.createElement("div");
   cover.id = "scene-fade"; cover.setAttribute("aria-hidden", "true");
-  cover.style.cssText = "position:fixed;left:0;right:0;top:0;bottom:var(--botth);z-index:0;background:#16120c;overflow:hidden;pointer-events:none";
+  cover.style.cssText = "position:fixed;left:0;right:0;top:0;bottom:var(--botth);z-index:0;background:var(--bg);overflow:hidden;pointer-events:none";
   function copy(el, pseudo) {
     var node = document.createElement("div"), css = getComputedStyle(el, pseudo || null);
     for (var i = 0; i < css.length; i++) node.style.setProperty(css[i], css.getPropertyValue(css[i]));
@@ -9395,7 +9752,6 @@ function fadeScene() {
 
 var lastCovered = false;
 function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered) {
-  var previousRoom = lastRoomKey;
   if (covered !== undefined) lastCovered = !!covered;
   else if (sky !== undefined && sky !== null) lastCovered = sky === "in";
   // HOW MUCH WATER IS OVER THIS ROOM, and cleared the same way place is:
@@ -9415,7 +9771,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   if (roll !== undefined && roll !== null) skyRoll = roll;
   if (terrain !== undefined && terrain !== null) lastTerrain = terrain;
   if (!sceneEl || viewMode !== "image") { setWeather(""); if (typeof sceneFx !== "undefined") sceneFx.stop(); return; }
-  if (lastCovered || lastRoomKey !== previousRoom || lastSky !== weatherKind) setWeather("");
+  // Weather stays with the visible room until put() commits its replacement.
   // Terrain first, band second: the room's own ground beats its region's.
   // ROOM ART ONLY. The threshold's paintings were never room art: they are oil,
   // painterly, and each one is a specific somewhere — so a beam walk over open
@@ -9626,7 +9982,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       sky = ""; mobHour = "";
     }
   }
-  // Hold the complete old picture until BOTH new layers have decoded. Each
+  // Hold the old picture until the new ground, sky and effects are ready. Each
   // request owns a sequence so rapid movement cannot show a late old room.
   var url = scene ? "url(" + scene + "?v=" + BG_V + ")" : "";
   var mine = ++sceneSeq;
@@ -9689,16 +10045,21 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     sceneEl.style.backgroundPosition = "center center";
     scenePainted = scene;
     setWeather(precipitation);
-    if (typeof sceneFx !== "undefined") sceneFx.paint(scene, tint);
+    if (typeof sceneFx !== "undefined") sceneFx.paint(scene, tint, preparedFx);
     if (fade) fade();
   };
-  var waiting = 2, ready = true;
+  var waiting = 3, ready = true, preparedFx = null;
   function loaded(ok) {
     ready = ready && ok;
     if (--waiting === 0 && ready) put();
   }
   readySceneImage(scene ? scene + "?v=" + BG_V : "", loaded);
   readySceneImage(sky ? sky + "?v=" + SKY_V : "", loaded);
+  // The mist, reflections, shadows and flames belong to the same picture.
+  // Prepare their maps alongside the ground and sky, before any layer swaps.
+  if (typeof sceneFx !== "undefined" && sceneFx.prepare) {
+    sceneFx.prepare(scene, tint, function (data) { preparedFx = data; loaded(true); });
+  } else loaded(true);
 }
 
 // ---- THE ROOM, ALIVE (rome, 2026-09-25) ------------------------------------
@@ -9860,32 +10221,65 @@ function fxUpload(unit, img, linear) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
   return tx;
 }
-function fxLoad(src) { return new Promise(function (ok, no) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = no; i.src = src; }); }
-// Called with every plate that goes up. The index is fetched once, the first
-// time a picture is shown; until it lands nothing is drawn, which is the same
-// as the rooms were before this existed.
-function fxScene(scene, tint) {
-  // The plate's own name: "/room-bg/undercroft-night.webp" is "undercroft-night".
+function fxLoad(src) { return new Promise(function (ok, no) {
+  var i = new Image();
+  i.onload = function () { if (i.decode) i.decode().then(function () { ok(i); }, no); else ok(i); };
+  i.onerror = no; i.src = src;
+}); }
+// Preload without touching the currently visible animation. Even a failed or
+// obsolete request can only return data; paintScene owns the eventual swap.
+function fxPrepare(scene, tint, done) {
   var parts = scene ? scene.split("/") : [];
   var name = parts[1] === "room-bg" && parts[2] ? parts[2].slice(0, parts[2].lastIndexOf(".")) : "";
-  if (name && !fxIndexAsked) {
-    fxIndexAsked = true;
-    fetch("/room-fx/fx.json?v=" + FX_V).then(function (r) { return r.ok ? r.json() : {}; })
-      .then(function (j) { fxIndex = j || {}; fxScene(scenePainted, sceneEl ? sceneEl.className : ""); })
-      .catch(function () { fxIndex = {}; });
+  if (!name || stillness || viewMode !== "image" || (tint && !FX_UNDER_TINT[tint])) { done(null); return; }
+  if (!fxIndex) {
+    if (!fxPrepare.index) {
+      fxIndexAsked = true;
+      fxPrepare.index = new Promise(function (resolve) {
+        var timer = setTimeout(function () { resolve({}); }, 5000);
+        fetch("/room-fx/fx.json?v=" + FX_V).then(function (r) { return r.ok ? r.json() : {}; })
+          .then(function (j) { clearTimeout(timer); resolve(j || {}); })
+          .catch(function () { clearTimeout(timer); resolve({}); });
+      }).then(function (j) { fxIndex = j; });
+    }
+    fxPrepare.index.then(function () { fxPrepare(scene, tint, done); });
+    return;
   }
-  var entry = (name && (!tint || FX_UNDER_TINT[tint]) && fxIndex && fxIndex[name]) || null;
-  if (!entry || stillness || viewMode !== "image" || !fxInit()) { fxStop(); return; }
-  if (name === fxName) { if (fxReady) fxRun(); return; }
-  // The new plate is on screen now. Hide and clear the old effects before
-  // fetching replacements; a paused canvas still displays its last frame.
+  var entry = fxIndex[name];
+  if (!entry) { done(null); return; }
+  var cache = fxPrepare.cache || (fxPrepare.cache = new Map());
+  var pending = cache.get(name);
+  if (pending) {
+    cache.delete(name); cache.set(name, pending);
+    if (pending.ready) done(pending.data); else pending.wait.push(done);
+    return;
+  }
+  pending = { ready: false, data: null, wait: [done] };
+  cache.set(name, pending);
+  // Three recent effect sets; the browser still caches older downloads.
+  while (cache.size > 3) cache.delete(cache.keys().next().value);
+  var settled = false, timer = setTimeout(function () { finish(null); }, 15000);
+  function finish(data) {
+    if (settled) return;
+    settled = true; clearTimeout(timer);
+    pending.ready = true; pending.data = data;
+    if (!data && cache.get(name) === pending) cache.delete(name);
+    var listeners = pending.wait; pending.wait = [];
+    listeners.forEach(function (fn) { fn(data); });
+  }
+  Promise.all([fxLoad(scene + "?v=" + BG_V), fxLoad("/room-fx/" + name + ".png?v=" + FX_V)])
+    .then(function (images) { finish({ name: name, entry: entry, images: images }); })
+    .catch(function () { finish(null); });
+}
+// Commit only prepared assets, synchronously with their room image. No network
+// callback is allowed to replace the visible effects after this point.
+function fxScene(scene, tint, prepared) {
+  if (!prepared || stillness || viewMode !== "image" || !fxInit()) { fxStop(); return; }
+  var name = prepared.name, entry = prepared.entry, im = prepared.images;
+  if (name === fxName && fxReady) { fxRun(); return; }
   fxStop();
-  var mine = fxSeq;
-  fxName = name; fxEntry = entry; fxReady = false; fxEmbers.length = 0; fxDust.length = 0;
-  var plateAt = scene + "?v=" + BG_V;
-  var depthAt = "/room-fx/" + name + ".png?v=" + FX_V;
-  Promise.all([fxLoad(plateAt), fxLoad(depthAt)]).then(function (im) {
-    if (mine !== fxSeq) return;                 // includes leaving and returning to the same room
+  fxName = name; fxEntry = entry;
+  try {
     if (fxTex.plate) fxGl.deleteTexture(fxTex.plate);
     if (fxTex.depth) fxGl.deleteTexture(fxTex.depth);
     fxTex.plate = fxUpload(0, im[0], false); fxTex.depth = fxUpload(1, im[1], true);
@@ -9901,8 +10295,9 @@ function fxScene(scene, tint) {
     fxGl.uniform1f(fxU.handOn, entry.hand ? 1 : 0);
     if (t.length) for (var k = 0; k < 60; k++) fxDust.push({ x: Math.random(), y: .05 + Math.random() * .7,
       vx: (Math.random() - .5) * .008, vy: (Math.random() - .6) * .005, s: .6 + Math.random(), ph: Math.random() * 6.3 });
-    fxReady = true; fxRun();
-  }).catch(function () { if (mine === fxSeq) fxStop(); });
+    fxReady = true;
+    fxDraw(performance.now()); // first mist/flame/reflection frame is part of this commit
+  } catch (e) { fxStop(); }
 }
 function fxStop() {
   fxSeq++;
@@ -10034,7 +10429,7 @@ if (document.addEventListener) document.addEventListener("visibilitychange", fxR
 // THE ONE WAY IN. paintScene reaches these through this and only this, and
 // checks it exists first: the page paints its first room before this part of
 // the module has run, and the tests lift paintScene on its own without it.
-var sceneFx = { paint: fxScene, stop: fxStop };
+var sceneFx = { prepare: fxPrepare, paint: fxScene, stop: fxStop };
 
 // Put on screen whatever is currently both wanted and permitted. Saves nothing,
 // so it is safe to call on load, on the grant, and on every reconnect.
@@ -10839,8 +11234,8 @@ var UNSEEN = {};
 // WHICH CREATURES SHIP A SECOND STRIP OF EYES. Every one is HOLLOW - the game's
 // own register of things with nothing inside - and every one was drawn with its
 // eyes in a flat key colour so the cutter could split them into their own layer.
-// On any night but a red one this table is not read at all: the cold eyes are
-// simply part of the picture, which is what they should be.
+// Alive, these eyes turn red with the blood moon. On the death frame the same
+// eye shapes are overlaid in black, whatever the weather or moon.
 var MOB_EYES = {
   "the-drowned-ferryman": 1, "the-fowler": 1, "the-eel-cutter": 1, "the-pilot": 1,
   "the-drover": 1, "the-tide-warden": 1, "the-refuge-man": 1, "the-bridge-mason": 1,
@@ -10925,6 +11320,10 @@ function paintMobs(ids, doing, dead) {
     bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + MOB_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
+    if (MOB_EYES[bid]) {
+      bel.style.setProperty("--mob-eyes", "url(/mob/" + bid + ".eyes.webp?v=" + MOB_V + ")");
+      bel.dataset.death = "1";
+    }
     // The same rule as the living, applied once: a body never animates, so this
     // is the only place it can be said. Without it a dead drake lies with its
     // hindquarters under the prose.
@@ -11007,6 +11406,7 @@ function paintMobs(ids, doing, dead) {
     // its own scale and its own frame stepping kept in sync with this one, and
     // would drift by a subpixel the moment any of the three disagreed.
     var redEyes = lastRed && MOB_EYES[id];
+    if (MOB_EYES[id]) el.style.setProperty("--mob-eyes", "url(/mob/" + id + ".eyes.webp?v=" + MOB_V + ")");
     el.style.backgroundImage = (redEyes ? "url(/mob/" + id + ".eyes.webp?v=" + MOB_V + "), " : "")
       + "url(/mob/" + id + ".webp?v=" + MOB_V + ")";
     el.style.backgroundSize = redEyes
@@ -11581,6 +11981,7 @@ function stepAnims() {
     var seat = p.k === a.spec.f["keep-the-seat"] && anims.length === 1 && mobsEl.children.length === 1
       && typeof SEAT_ON !== "undefined" && mobsEl.dataset ? SEAT_ON[mobsEl.dataset.seat || ""] || null : null;
     a.el.style.backgroundPositionX = (p.k * 100 / (a.spec.n - 1)) + "%";
+    if (a.el.dataset) a.el.dataset.death = p.k === a.spec.f.death ? "1" : "";
     a.el.style.transform = "translate(" + (p.x * 100).toFixed(1) + "%,"
       + (-(p.air + (a.lift || 0) + (seat ? seat.up : 0)) * 100).toFixed(1) + "%)"
       + " rotate(" + ((a.rot || 0) * 57.3).toFixed(2) + "deg) scale(" + (p.s * (seat ? seat.s : 1)).toFixed(3) + ")";

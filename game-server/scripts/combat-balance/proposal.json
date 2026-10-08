@@ -25,7 +25,14 @@
       "Run regression and real multiplayer checks before rollout."
     ]
   },
-  "status": "Deployed and live; migration 294 applied and production verified.",
+  "walkingExtension": {
+    "status": "Accepted walking rate implemented locally; not deployed.",
+    "formula": "EXH per successful room move = (1 + 0.15 * effective equipped weight) / 10. Uses combat's wornWeight, including balanced/cumbersome; pack excluded.",
+    "recovery": "Implementation default: passive recovery pauses until 4 seconds after the last successful move. Deliberate rest and gatehouse recovery bypass the pause. Deadline persists with exhaustion across reconnects/restarts; elapsed recovery counts only time beyond it.",
+    "examples": "Weight-4 poleaxe/light armor kit: 0.16 EXH per move; weight-10 poleaxe/warplate kit: 0.25. Over the 51-move Shelter Crag-to-summit route without recovery: 8.16 versus 12.75 EXH.",
+    "validation": "Production movement commands, failed exits, pack exclusion, fractional accumulation and cap, immediate resting, elapsed idle/offline recovery, parked-socket deadline persistence and eight drake encounters passed. Four-second combat rounds and existing damage/recovery rates unchanged."
+  },
+  "status": "Base combat/exhaustion deployed and live; migration 294 applied. Walking extension remains local.",
   "roundMs": 4000,
   "playerMaxHp": 100,
   "fatigueCap": 50,
@@ -14228,6 +14235,4864 @@
         "torch-effect isolation and stale-load guards"
       ],
       "verification": "Privacy gate passed; deployment succeeded; nomadmud.com and www.nomadmud.com returned HTTP 200 with the new client markers. No database migration required."
+    }
+  },
+  "equipmentWeightReview": {
+    "date": "2026-10-08",
+    "status": "Review complete. Follow-up material and noise fixes implemented locally; specialist weights and balanced rules retained. The 21 proposed template-weight changes remain recommendations. No deployment.",
+    "scope": {
+      "equipableTemplates": 214,
+      "oldFormulaExceptions": 33,
+      "recommendedWeightChanges": 21,
+      "weightsRetained": 193,
+      "materialCorrectionsIdentified": 30,
+      "dataSource": "schema.sql plus all local migrations, with production ZoneDO methods; not a live database or live inventory survey."
+    },
+    "conclusion": "Effective equipped-weight arithmetic is correct. Some template weights are stale after weapon nerfs; others charge inconsistent utility premiums. Do not reapply migration 096 wholesale: retain 14 justified exceptions.",
+    "weightMeaning": "Existing abstract mobility cost, not kilograms. It also grants poise. Physical realism alone cannot assign these numbers.",
+    "recommendations": [
+      {
+        "id": "hammerstone",
+        "current": 1,
+        "proposed": 2,
+        "basis": "history-gap",
+        "reason": "Migration 096 skipped the then-unslotted hammerstone; 122 made it wieldable without bringing its weight into the damage-plus-stun tier. Recommend 2 for damage 3/stun .12."
+      },
+      {
+        "id": "masons-mallet",
+        "current": 4,
+        "proposed": 2,
+        "basis": "stale-after-nerf",
+        "reason": "206 lowered damage/stun to 4/.20 but retained weight 4. Forged warmaul has the same attack stats at weight 2; wood already has a separate deterioration benefit."
+      },
+      {
+        "id": "oyster-knife",
+        "current": 2,
+        "proposed": 1,
+        "basis": "stale-after-nerf",
+        "reason": "206 lowered damage 5 to 3 and bleed to 1 without lowering weight. Speed 2 damage 3 knives already exist at weight 1."
+      },
+      {
+        "id": "two-headed-maul",
+        "current": 3,
+        "proposed": 2,
+        "basis": "stale-after-cleave-removal",
+        "reason": "275 removed its second target. Damage 4/stun .12 now matches warden maul at weight 2."
+      },
+      {
+        "id": "paired-cleavers",
+        "current": 2,
+        "proposed": 1,
+        "basis": "stale-after-cleave-removal",
+        "reason": "275 removed cleave. Now damage 3/speed 2/bleed 1, the same attack profile as oyster knife; recommend both at 1."
+      },
+      {
+        "id": "boar-spear",
+        "current": 2,
+        "proposed": 1,
+        "basis": "stale-after-cleave-removal",
+        "reason": "275 removed cleave. Pitted spear has the same damage and piercing, plus reach and bleed, at weight 1."
+      },
+      {
+        "id": "reaping-blade",
+        "current": 2,
+        "proposed": 1,
+        "basis": "stale-after-cleave-removal",
+        "reason": "275 removed cleave. Graveblade offers the same damage 4/bleed 2 plus wicked at weight 1."
+      },
+      {
+        "id": "short-spear",
+        "current": 2,
+        "proposed": 1,
+        "basis": "balance-choice",
+        "reason": "Damage 1/speed 2 with reach and pierce. Retain weight 1 for its utility rather than the old formula 0; weight 2 is excessive beside the stronger pitted spear at 1."
+      },
+      {
+        "id": "greatblade",
+        "current": 3,
+        "proposed": 2,
+        "basis": "balance-choice",
+        "reason": "Same damage 5/bleed 2 as notched greatsword at 2, but greatblade also requires both hands. Recommend 2; do not silently change hand restrictions."
+      },
+      {
+        "id": "pedlars-coat",
+        "current": 1,
+        "proposed": 0,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Armor 1 cloak normally costs 0. Pocketed on carriers jack/cargo plate does not add weight above the protection tier."
+      },
+      {
+        "id": "mirror-bright-helm",
+        "current": 1,
+        "proposed": 0,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Armor 1 helm normally costs 0. Glinting body armor follows its protection tier without a surcharge."
+      },
+      {
+        "id": "nail-studded-jack",
+        "current": 2,
+        "proposed": 1,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Armor 2 normally costs 1. Higher-tier bristle-hide jack and barbed warplate already include spikes at their normal protection weight."
+      },
+      {
+        "id": "wool-lined-cap",
+        "current": 1,
+        "proposed": 0,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Armor 1 helm normally costs 0. Fleeced body/cloak peers follow their protection weight; quilted coif can also roll fleeced without gaining weight."
+      },
+      {
+        "id": "nail-studded-cap",
+        "current": 1,
+        "proposed": 0,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Armor 1 normally costs 0. Spiked does not consistently add weight on comparable body gear."
+      },
+      {
+        "id": "cargo-coat",
+        "current": 2,
+        "proposed": 1,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Armor 2 cloak normally costs 1. Watertight and pocketed do not individually raise body protection-tier weights."
+      },
+      {
+        "id": "storm-cloak",
+        "current": 2,
+        "proposed": 1,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Armor 2 cloak normally costs 1. Compare other two-trait cloaks at 1; recommend dropping the additional utility charge."
+      },
+      {
+        "id": "bright-spiked-helm",
+        "current": 2,
+        "proposed": 0,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Armor 1 currently costs as much as armor 3. Recommend protection-tier 0; this is a deliberate balance proposal, not an arithmetic bug."
+      },
+      {
+        "id": "hill-mantle",
+        "current": 2,
+        "proposed": 1,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Same armor 2/fleeced/hooded as lead-wolf ruff and lion-pelt cloak at weight 1. Those rewards still differ in source, rarity and material."
+      },
+      {
+        "id": "rat-mantle",
+        "current": 1,
+        "proposed": 0,
+        "basis": "inconsistent-utility-premium",
+        "reason": "Armor 1/quiet matches drowned-divers shroud at weight 0."
+      },
+      {
+        "id": "mirror-targe",
+        "current": 2,
+        "proposed": 1,
+        "basis": "inconsistent-shield-premium",
+        "reason": "Block .15 without wall is a medium shield profile. Recommend 1; glinting has no consistent extra-weight rule elsewhere."
+      },
+      {
+        "id": "nail-studded-targe",
+        "current": 2,
+        "proposed": 1,
+        "basis": "inconsistent-shield-premium",
+        "reason": "Block .15 without wall is a medium shield profile. Bristling/tusk-studded targes already provide reflection at weight 1."
+      }
+    ],
+    "retainedExceptions": [
+      {
+        "id": "halberd",
+        "weight": 2,
+        "reason": "Retains reach and two-target cleave; preserve extra weight 2."
+      },
+      {
+        "id": "woodwards-axe",
+        "weight": 4,
+        "reason": "Damage 5, bleed 2 and stun .20 remain a strong hybrid even after losing cleave; preserve 4."
+      },
+      {
+        "id": "sappers-pick",
+        "weight": 3,
+        "reason": "Damage 4, bleed 2 and stun .18 combine two offensive mechanisms; preserve 3."
+      },
+      {
+        "id": "bearwards-chain",
+        "weight": 4,
+        "reason": "Reach, tripping and stun .24 justify a specialist heavy control weapon at 4."
+      },
+      {
+        "id": "the-long-crossing",
+        "weight": 4,
+        "reason": "Explicitly authored at 4 in 217; reach, weighted armor penetration and stun .20 on a sixteen-foot haft."
+      },
+      {
+        "id": "kindling-hatchet",
+        "weight": 1,
+        "reason": "Speed 2 and bleed on a small axe justify a modest weight 1 exception."
+      },
+      {
+        "id": "polehammer",
+        "weight": 3,
+        "reason": "Reach and stun .15 justify 3 beside short blunt weapons at 2."
+      },
+      {
+        "id": "grave-glaive",
+        "weight": 2,
+        "reason": "Reach plus wicked/bleed on damage 4 justifies 2."
+      },
+      {
+        "id": "pine-brand",
+        "weight": 1,
+        "reason": "Fast burning weapon; keep 1."
+      },
+      {
+        "id": "stiletto",
+        "weight": 1,
+        "reason": "Three swings per round justify 1 despite low damage per swing."
+      },
+      {
+        "id": "riding-mace",
+        "weight": 2,
+        "reason": "Two swings with stun justify 2 despite low damage per swing."
+      },
+      {
+        "id": "the-harvest",
+        "weight": 3,
+        "reason": "Three-target sweep, reach and keen justify 3."
+      },
+      {
+        "id": "shell-cracker",
+        "weight": 2,
+        "reason": "284 explicitly authored damage 5/weight 2 as a boss reward. Preserve its mobility discount rather than automatically charging the old blunt premium."
+      },
+      {
+        "id": "adder-skin-boots",
+        "weight": 0,
+        "reason": "264 explicitly authored armor 2/weight 0/quiet as a crafting reward. Preserve the exception."
+      }
+    ],
+    "materialFindings": {
+      "confirmedDefaultSteelCount": 30,
+      "recommendedClassification": {
+        "wood": [
+          "longbrand",
+          "pine-brand",
+          "tar-brand"
+        ],
+        "cloth": [
+          "shepherds-mantle",
+          "fleece-lined-jack",
+          "oilskin-jack",
+          "carriers-jack",
+          "cargo-coat",
+          "storm-cloak",
+          "hill-mantle"
+        ],
+        "hide": [
+          "bristle-hide-jack",
+          "shadow-treads",
+          "rat-mantle",
+          "hill-wolf-jerkin",
+          "adder-skin-boots",
+          "glutton-hide-coat",
+          "lion-pelt-cloak",
+          "white-rat-mantle",
+          "lead-wolf-ruff",
+          "white-hide-targe",
+          "the-white-roe"
+        ],
+        "bone": [
+          "horn-plated-cap",
+          "drake-scale-shield",
+          "pale-scale-mantle",
+          "glutton-skull-helm",
+          "crab-shell-casque",
+          "shell-plate",
+          "shell-cracker",
+          "the-filed-edge",
+          "cast-antler-crown"
+        ]
+      },
+      "evidence": "Current item descriptions explicitly identify wood, fabric, hide, horn, scale, bone or shell. materialOf defaults every unregistered ID to steel. Bone category explicitly includes shell/chitin; classification follows the part doing the work.",
+      "effect": "Damp multiplier is currently 1; recommended wood .5, cloth .6, hide .4, bone .15. Material is independent of worn weight. These proposed categories all remain eligible for greased/pitted, so this review does not claim a changed trait pool for them.",
+      "needsAuthoredMaterialDecision": [
+        "pedlars-coat",
+        "wool-lined-cap",
+        "nail-studded-jack",
+        "knotted-lash"
+      ],
+      "auditGap": "zone.ts load audit checks listed IDs exist; it never detects an omitted nonmetal item defaulting to steel."
+    },
+    "additionalFindings": [
+      {
+        "issue": "Noise flavor mixes raw armor weight with effective total weight.",
+        "evidence": "wornArmorWeight ignores balanced/cumbersome while wornWeight includes them; heavy all-balanced fixture has armorWeight 7 and total 5, producing heldWt -2.",
+        "impact": "Incorrect movement-noise wording; actual exhaustion/noise probability still uses the correct effective weight.",
+        "recommendation": "Use the same effective per-piece calculation for the armor subtotal."
+      },
+      {
+        "issue": "Balanced gear can substantially compress the light/heavy distinction.",
+        "evidence": "Heavy armor-11 kit: weight 10 normally, 5 with balanced on all five pieces; combat rate 2.5 becomes 1.75. A six-piece balanced kit can have armor 8 at weight 0.",
+        "impact": "A real permitted edge case, not a typical drop or a new regression. Poise falls along with weight.",
+        "recommendation": "Keep current trait rules for this correction; flag the extreme for separate playtesting instead of silently weakening balanced."
+      },
+      {
+        "issue": "Old load documentation and audit script are stale.",
+        "evidence": "zone-data.ts still mentions maxima 7 and 13; legal base kit reaches 15, with six cumbersome rolls 21. scripts/balance-audit.mjs still models an old binary weight-0 dodge bonus.",
+        "recommendation": "Correct comments and retire or update the stale audit before using it for balance decisions. This review uses actual production methods."
+      },
+      {
+        "issue": "Some weapon descriptions no longer match traits.",
+        "evidence": "Two-headed maul and boar spear descriptions still promise crowd attacks after 275 removes their cleave; notched greatsword description says two-handed but its template lacks that restriction.",
+        "recommendation": "Reconcile text separately; do not silently restore cleave or add a hand restriction during weight correction."
+      }
+    ],
+    "runtimeValidation": {
+      "assertionsPassed": 2568,
+      "matrix": "214 items x four balanced/cumbersome states x equipped pristine, equipped damaged, unequipped checks. Template and rolled traits use production parsing and wornWeight.",
+      "pack": "Exhaustion excludes pack contents; existing dodge/noise/retreat load still adds loose gear above three.",
+      "kitMetrics": [
+        {
+          "name": "light",
+          "kit": [
+            "poleaxe",
+            "thick-hide-jack",
+            "quilted-coif",
+            "eel-hide-treads",
+            "drowned-divers-shroud"
+          ],
+          "roll": "",
+          "current": {
+            "weight": 4,
+            "armor": 5,
+            "combatExh": 1.6,
+            "walkingExh": 0.16,
+            "fullCombatRounds": 32,
+            "dodgeBonus": 0.10384615384615384,
+            "poise": 0.48,
+            "noise": 0.3,
+            "parting": 0.24,
+            "armorWeight": 1
+          },
+          "proposed": {
+            "weight": 4,
+            "armor": 5,
+            "combatExh": 1.6,
+            "walkingExh": 0.16,
+            "fullCombatRounds": 32,
+            "dodgeBonus": 0.10384615384615384,
+            "poise": 0.48,
+            "noise": 0.3,
+            "parting": 0.24,
+            "armorWeight": 1
+          }
+        },
+        {
+          "name": "heavy",
+          "kit": [
+            "poleaxe",
+            "barbed-warplate",
+            "marrow-crown",
+            "pale-tread",
+            "chain-lined-mantle"
+          ],
+          "roll": "",
+          "current": {
+            "weight": 10,
+            "armor": 11,
+            "combatExh": 2.5,
+            "walkingExh": 0.25,
+            "fullCombatRounds": 20,
+            "dodgeBonus": 0.03461538461538461,
+            "poise": 0.75,
+            "noise": 0.6599999999999999,
+            "parting": 0.6,
+            "armorWeight": 7
+          },
+          "proposed": {
+            "weight": 10,
+            "armor": 11,
+            "combatExh": 2.5,
+            "walkingExh": 0.25,
+            "fullCombatRounds": 20,
+            "dodgeBonus": 0.03461538461538461,
+            "poise": 0.75,
+            "noise": 0.6599999999999999,
+            "parting": 0.6,
+            "armorWeight": 7
+          }
+        },
+        {
+          "name": "heavy",
+          "kit": [
+            "poleaxe",
+            "barbed-warplate",
+            "marrow-crown",
+            "pale-tread",
+            "chain-lined-mantle"
+          ],
+          "roll": "balanced",
+          "current": {
+            "weight": 5,
+            "armor": 11,
+            "combatExh": 1.75,
+            "walkingExh": 0.175,
+            "fullCombatRounds": 29,
+            "dodgeBonus": 0.09230769230769231,
+            "poise": 0.6,
+            "noise": 0.36,
+            "parting": 0.3,
+            "armorWeight": 7
+          },
+          "proposed": {
+            "weight": 5,
+            "armor": 11,
+            "combatExh": 1.75,
+            "walkingExh": 0.175,
+            "fullCombatRounds": 29,
+            "dodgeBonus": 0.09230769230769231,
+            "poise": 0.6,
+            "noise": 0.36,
+            "parting": 0.3,
+            "armorWeight": 7
+          }
+        },
+        {
+          "name": "heavy",
+          "kit": [
+            "poleaxe",
+            "barbed-warplate",
+            "marrow-crown",
+            "pale-tread",
+            "chain-lined-mantle"
+          ],
+          "roll": "cumbersome",
+          "current": {
+            "weight": 15,
+            "armor": 11,
+            "combatExh": 3.25,
+            "walkingExh": 0.32499999999999996,
+            "fullCombatRounds": 16,
+            "dodgeBonus": 0,
+            "poise": 0.75,
+            "noise": 0.85,
+            "parting": 0.8,
+            "armorWeight": 7
+          },
+          "proposed": {
+            "weight": 15,
+            "armor": 11,
+            "combatExh": 3.25,
+            "walkingExh": 0.32499999999999996,
+            "fullCombatRounds": 16,
+            "dodgeBonus": 0,
+            "poise": 0.75,
+            "noise": 0.85,
+            "parting": 0.8,
+            "armorWeight": 7
+          }
+        },
+        {
+          "name": "mallet",
+          "kit": [
+            "masons-mallet",
+            "riveted-warplate",
+            "padded-greathelm",
+            "shadow-treads",
+            "sentinels-mantle",
+            "warden-tower-shield"
+          ],
+          "roll": "",
+          "current": {
+            "weight": 12,
+            "armor": 10,
+            "combatExh": 2.8,
+            "walkingExh": 0.28,
+            "fullCombatRounds": 18,
+            "dodgeBonus": 0.01153846153846153,
+            "poise": 0.75,
+            "noise": 0.78,
+            "parting": 0.72,
+            "armorWeight": 6
+          },
+          "proposed": {
+            "weight": 10,
+            "armor": 10,
+            "combatExh": 2.5,
+            "walkingExh": 0.25,
+            "fullCombatRounds": 20,
+            "dodgeBonus": 0.03461538461538461,
+            "poise": 0.75,
+            "noise": 0.6599999999999999,
+            "parting": 0.6,
+            "armorWeight": 6
+          }
+        },
+        {
+          "name": "spearUtility",
+          "kit": [
+            "short-spear",
+            "nail-studded-jack",
+            "wool-lined-cap",
+            "worn-boots",
+            "storm-cloak",
+            "mirror-targe"
+          ],
+          "roll": "",
+          "current": {
+            "weight": 9,
+            "armor": 6,
+            "combatExh": 2.3499999999999996,
+            "walkingExh": 0.23500000000000001,
+            "fullCombatRounds": 22,
+            "dodgeBonus": 0.046153846153846156,
+            "poise": 0.75,
+            "noise": 0.6000000000000001,
+            "parting": 0.54,
+            "armorWeight": 5
+          },
+          "proposed": {
+            "weight": 4,
+            "armor": 6,
+            "combatExh": 1.6,
+            "walkingExh": 0.16,
+            "fullCombatRounds": 32,
+            "dodgeBonus": 0.10384615384615384,
+            "poise": 0.48,
+            "noise": 0.3,
+            "parting": 0.24,
+            "armorWeight": 2
+          }
+        },
+        {
+          "name": "cleaverUtility",
+          "kit": [
+            "paired-cleavers",
+            "mail-hauberk",
+            "bright-spiked-helm",
+            "shadow-treads",
+            "cargo-coat",
+            "nail-studded-targe"
+          ],
+          "roll": "",
+          "current": {
+            "weight": 10,
+            "armor": 7,
+            "combatExh": 2.5,
+            "walkingExh": 0.25,
+            "fullCombatRounds": 20,
+            "dodgeBonus": 0.03461538461538461,
+            "poise": 0.75,
+            "noise": 0.6599999999999999,
+            "parting": 0.6,
+            "armorWeight": 6
+          },
+          "proposed": {
+            "weight": 5,
+            "armor": 7,
+            "combatExh": 1.75,
+            "walkingExh": 0.175,
+            "fullCombatRounds": 29,
+            "dodgeBonus": 0.09230769230769231,
+            "poise": 0.6,
+            "noise": 0.36,
+            "parting": 0.3,
+            "armorWeight": 3
+          }
+        },
+        {
+          "name": "balancedEdge",
+          "kit": [
+            "graveblade",
+            "mail-hauberk",
+            "warden-greathelm",
+            "adder-skin-boots",
+            "sentinels-mantle",
+            "knights-kite-shield"
+          ],
+          "roll": "balanced",
+          "current": {
+            "weight": 0,
+            "armor": 8,
+            "combatExh": 1,
+            "walkingExh": 0.1,
+            "fullCombatRounds": 50,
+            "dodgeBonus": 0.15,
+            "poise": 0,
+            "noise": 0.06,
+            "parting": 0,
+            "armorWeight": 3
+          },
+          "proposed": {
+            "weight": 0,
+            "armor": 8,
+            "combatExh": 1,
+            "walkingExh": 0.1,
+            "fullCombatRounds": 50,
+            "dodgeBonus": 0.15,
+            "poise": 0,
+            "noise": 0.06,
+            "parting": 0,
+            "armorWeight": 3
+          }
+        }
+      ]
+    },
+    "encounterValidation": {
+      "total": 192,
+      "current": 96,
+      "candidate": 96,
+      "seeds": [
+        80013,
+        80014,
+        80015,
+        80016
+      ],
+      "method": "Temporary copies of existing production-module combat harness. Only candidate fixture item-template weights changed in memory. Actual equip commands, creature armor, exhaustion, retreat and rest logic retained. Existing unrelated lifecycle checks skipped in these paired runs.",
+      "controlUnchanged": true,
+      "limitations": [
+        "Four seeds per kit/mob are diagnostics, not win-rate or optimal-equipment claims.",
+        "Single revealed opponent in its habitat, prelit if needed, guarded stance, pristine equipment, no food. Retreat at half HP and rest before returning.",
+        "Creature flight ends the scenario; round ranges include flights/deaths and must not all be called kill times.",
+        "Different dodge/poise can change random-call paths even with paired initial seeds. Lower weight does not guarantee a shorter individual fight.",
+        "Walking extension is present locally in both arms. No multiplayer/group balance inference."
+      ],
+      "comparisons": [
+        {
+          "mob": "the-drake",
+          "weapon": "poleaxe",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              22,
+              27
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              22,
+              27
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "the-drake",
+          "weapon": "masons-mallet",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              94,
+              119
+            ],
+            "retreatRange": [
+              5,
+              6
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              97,
+              116
+            ],
+            "retreatRange": [
+              5,
+              6
+            ]
+          }
+        },
+        {
+          "mob": "the-drake",
+          "weapon": "short-spear",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              63,
+              65
+            ],
+            "retreatRange": [
+              4,
+              5
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              59,
+              66
+            ],
+            "retreatRange": [
+              3,
+              6
+            ]
+          }
+        },
+        {
+          "mob": "the-drake",
+          "weapon": "paired-cleavers",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              42,
+              47
+            ],
+            "retreatRange": [
+              1,
+              3
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              43,
+              45
+            ],
+            "retreatRange": [
+              2,
+              3
+            ]
+          }
+        },
+        {
+          "mob": "three-hound",
+          "weapon": "poleaxe",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              9,
+              11
+            ],
+            "retreatRange": [
+              0,
+              0
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              9,
+              11
+            ],
+            "retreatRange": [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "mob": "three-hound",
+          "weapon": "masons-mallet",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              32,
+              46
+            ],
+            "retreatRange": [
+              1,
+              2
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              32,
+              46
+            ],
+            "retreatRange": [
+              1,
+              2
+            ]
+          }
+        },
+        {
+          "mob": "three-hound",
+          "weapon": "short-spear",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              25,
+              31
+            ],
+            "retreatRange": [
+              1,
+              2
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              25,
+              26
+            ],
+            "retreatRange": [
+              1,
+              2
+            ]
+          }
+        },
+        {
+          "mob": "three-hound",
+          "weapon": "paired-cleavers",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              16,
+              19
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              16,
+              19
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "the-baited-bear",
+          "weapon": "poleaxe",
+          "current": {
+            "outcomes": {
+              "creature-fled": 2,
+              "kill": 2
+            },
+            "activeRoundRange": [
+              8,
+              11
+            ],
+            "retreatRange": [
+              0,
+              0
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "creature-fled": 2,
+              "kill": 2
+            },
+            "activeRoundRange": [
+              8,
+              11
+            ],
+            "retreatRange": [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "mob": "the-baited-bear",
+          "weapon": "masons-mallet",
+          "current": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              18,
+              45
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              32,
+              56
+            ],
+            "retreatRange": [
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "the-baited-bear",
+          "weapon": "short-spear",
+          "current": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              11,
+              28
+            ],
+            "retreatRange": [
+              0,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              14,
+              17
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "the-baited-bear",
+          "weapon": "paired-cleavers",
+          "current": {
+            "outcomes": {
+              "kill": 3,
+              "creature-fled": 1
+            },
+            "activeRoundRange": [
+              19,
+              20
+            ],
+            "retreatRange": [
+              0,
+              0
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "creature-fled": 2,
+              "kill": 2
+            },
+            "activeRoundRange": [
+              15,
+              20
+            ],
+            "retreatRange": [
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "the-chain-breaker",
+          "weapon": "poleaxe",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              13,
+              16
+            ],
+            "retreatRange": [
+              0,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              13,
+              16
+            ],
+            "retreatRange": [
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "the-chain-breaker",
+          "weapon": "masons-mallet",
+          "current": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              14,
+              54
+            ],
+            "retreatRange": [
+              1,
+              2
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              36,
+              61
+            ],
+            "retreatRange": [
+              1,
+              2
+            ]
+          }
+        },
+        {
+          "mob": "the-chain-breaker",
+          "weapon": "short-spear",
+          "current": {
+            "outcomes": {
+              "creature-fled": 3,
+              "kill": 1
+            },
+            "activeRoundRange": [
+              21,
+              38
+            ],
+            "retreatRange": [
+              1,
+              2
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              15,
+              33
+            ],
+            "retreatRange": [
+              1,
+              2
+            ]
+          }
+        },
+        {
+          "mob": "the-chain-breaker",
+          "weapon": "paired-cleavers",
+          "current": {
+            "outcomes": {
+              "kill": 1,
+              "creature-fled": 3
+            },
+            "activeRoundRange": [
+              20,
+              24
+            ],
+            "retreatRange": [
+              0,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 2,
+              "creature-fled": 2
+            },
+            "activeRoundRange": [
+              19,
+              24
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "cave-lion",
+          "weapon": "poleaxe",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              12,
+              16
+            ],
+            "retreatRange": [
+              0,
+              0
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              12,
+              16
+            ],
+            "retreatRange": [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "mob": "cave-lion",
+          "weapon": "masons-mallet",
+          "current": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              46,
+              70
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              41,
+              59
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "cave-lion",
+          "weapon": "short-spear",
+          "current": {
+            "outcomes": {
+              "creature-fled": 4
+            },
+            "activeRoundRange": [
+              30,
+              35
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "creature-fled": 2,
+              "kill": 2
+            },
+            "activeRoundRange": [
+              30,
+              36
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "cave-lion",
+          "weapon": "paired-cleavers",
+          "current": {
+            "outcomes": {
+              "creature-fled": 3,
+              "death": 1
+            },
+            "activeRoundRange": [
+              1,
+              25
+            ],
+            "retreatRange": [
+              0,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 1,
+              "creature-fled": 2,
+              "death": 1
+            },
+            "activeRoundRange": [
+              1,
+              24
+            ],
+            "retreatRange": [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "mob": "forgotten-king",
+          "weapon": "poleaxe",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              14,
+              19
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              14,
+              19
+            ],
+            "retreatRange": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "mob": "forgotten-king",
+          "weapon": "masons-mallet",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              36,
+              51
+            ],
+            "retreatRange": [
+              2,
+              2
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              37,
+              49
+            ],
+            "retreatRange": [
+              2,
+              2
+            ]
+          }
+        },
+        {
+          "mob": "forgotten-king",
+          "weapon": "short-spear",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              40,
+              43
+            ],
+            "retreatRange": [
+              2,
+              3
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              38,
+              41
+            ],
+            "retreatRange": [
+              2,
+              3
+            ]
+          }
+        },
+        {
+          "mob": "forgotten-king",
+          "weapon": "paired-cleavers",
+          "current": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              41,
+              49
+            ],
+            "retreatRange": [
+              2,
+              3
+            ]
+          },
+          "candidate": {
+            "outcomes": {
+              "kill": 4
+            },
+            "activeRoundRange": [
+              35,
+              44
+            ],
+            "retreatRange": [
+              2,
+              3
+            ]
+          }
+        }
+      ],
+      "sourceHashes": {
+        "zone.ts": "d3a840664b03ff3e9174c51cc9b83f1290870a9af489a968e751ed8d88ded7be",
+        "zone-data.ts": "4341296e91ead3ad2d7dd99c81970d08e71b9f8d7d731e1ce7c6000e3b71d2fe",
+        "world.ts": "5dfde5928ee2b268a3f45cea4c4d6e4844e0723be6e8cae2535a733a82cbbd56",
+        "exhaustion.ts": "216254e603470a6d76fdffedbe3454cbc593bfb044c1dca92eeb0e295392871e",
+        "verbs.ts": "1eb6c606777561ef91167db82c772b79aff830d11e5abc462529d80d9233de16"
+      }
+    },
+    "itemLedger": [
+      {
+        "id": "sharpened-rib",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 1,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "bone"
+      },
+      {
+        "id": "bone-shiv",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "bone"
+      },
+      {
+        "id": "fleshing-knife",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "widow-maker",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 3,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "rusted-sword",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "chipped-falchion",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "graveblade",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "wicked",
+        "materialNow": "steel"
+      },
+      {
+        "id": "notched-greatsword",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "headsman-sword",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 6,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 3,
+        "block": 0,
+        "traits": "wicked",
+        "materialNow": "steel"
+      },
+      {
+        "id": "rust-eaten-cleaver",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "headtaker-axe",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "reaver-glaive",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 2,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "splintered-cudgel",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.06,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "wood"
+      },
+      {
+        "id": "warden-maul",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.12,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "flanged-mace",
+        "slot": "weapon",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.18,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "loose-rock",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 1,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.08,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "stone"
+      },
+      {
+        "id": "throwing-shard",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "stone"
+      },
+      {
+        "id": "rag-vest",
+        "slot": "armor",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "scavenger-coat",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "boiled-cuirass",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "padded-jerkin",
+        "slot": "armor",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "mail-hauberk",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "mailward",
+        "materialNow": "steel"
+      },
+      {
+        "id": "warden-plate",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "deadplate-harness",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded",
+        "materialNow": "steel"
+      },
+      {
+        "id": "leather-cap",
+        "slot": "helm",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "rusted-sallet",
+        "slot": "helm",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "warden-greathelm",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "worn-boots",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "ironshod-boots",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "tattered-cloak",
+        "slot": "cloak",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "hyena-mantle",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "battered-buckler",
+        "slot": "shield",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.1,
+        "traits": "",
+        "materialNow": "wood"
+      },
+      {
+        "id": "iron-bound-shield",
+        "slot": "shield",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.15,
+        "traits": "",
+        "materialNow": "wood"
+      },
+      {
+        "id": "warden-tower-shield",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.25,
+        "traits": "wall",
+        "materialNow": "steel"
+      },
+      {
+        "id": "coral-crown",
+        "slot": "helm",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "bone"
+      },
+      {
+        "id": "marrow-scepter",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.2,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "bone"
+      },
+      {
+        "id": "rusty-billhook",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "studded-maul",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.1,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "wood"
+      },
+      {
+        "id": "hide-cloak",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "plated-greaves",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "warden-sabatons",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "gravestone-shield",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.3,
+        "traits": "wall",
+        "materialNow": "stone"
+      },
+      {
+        "id": "chitin-harness",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "bone"
+      },
+      {
+        "id": "quarterstaff",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 1,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "reach",
+        "materialNow": "wood"
+      },
+      {
+        "id": "pitted-spear",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "reach,pierce:1,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "horsemans-pick",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "pierce:2,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "sword-breaker",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0.1,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "crow-beak-pick",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "pierce:3,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "war-pike",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "reach,two-handed,pierce:2,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "abyssal-harpoon",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 6,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 3,
+        "block": 0,
+        "traits": "reach,two-handed,pierce:2,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "kings-guard-blade",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0.15,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "quilted-coif",
+        "slot": "helm",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "thick-hide-jack",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide",
+        "materialNow": "hide"
+      },
+      {
+        "id": "felt-soled-boots",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "strapped-baldric",
+        "slot": "cloak",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "strapped",
+        "materialNow": "hide"
+      },
+      {
+        "id": "spiked-buckler",
+        "slot": "shield",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.1,
+        "traits": "thorns:1",
+        "materialNow": "steel"
+      },
+      {
+        "id": "eel-skin-cloak",
+        "slot": "cloak",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "slick",
+        "materialNow": "hide"
+      },
+      {
+        "id": "riveted-cuirass",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded",
+        "materialNow": "steel"
+      },
+      {
+        "id": "grave-shroud",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "sentinels-mantle",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide",
+        "materialNow": "hide"
+      },
+      {
+        "id": "pale-hide-hood",
+        "slot": "helm",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "hide"
+      },
+      {
+        "id": "crawlers-hooks",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 3,
+        "block": 0,
+        "traits": "",
+        "materialNow": "bone"
+      },
+      {
+        "id": "gaff-hook",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "reach",
+        "materialNow": "steel"
+      },
+      {
+        "id": "knights-kite-shield",
+        "slot": "shield",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.2,
+        "traits": "",
+        "materialNow": "bone"
+      },
+      {
+        "id": "kelp-woven-mail",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "slick",
+        "materialNow": "steel"
+      },
+      {
+        "id": "shade-wrapped-greaves",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "steel"
+      },
+      {
+        "id": "crown-guard-pavise",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.28,
+        "traits": "wall,thorns:2",
+        "materialNow": "steel"
+      },
+      {
+        "id": "abyssal-scale-coat",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "slick",
+        "materialNow": "bone"
+      },
+      {
+        "id": "rusted-pick",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 1,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "pierce:2,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "man-catcher",
+        "slot": "shield",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "mancatcher",
+        "materialNow": "steel"
+      },
+      {
+        "id": "parrying-dagger",
+        "slot": "shield",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.1,
+        "traits": "riposte:2",
+        "materialNow": "steel"
+      },
+      {
+        "id": "hammerstone",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 2,
+        "decision": "change-proposed",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.12,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "stone"
+      },
+      {
+        "id": "riveted-coif",
+        "slot": "helm",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "mailward",
+        "materialNow": "steel"
+      },
+      {
+        "id": "padded-greathelm",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded",
+        "materialNow": "steel"
+      },
+      {
+        "id": "shroud-hood",
+        "slot": "helm",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "bone-barred-visor",
+        "slot": "helm",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide",
+        "materialNow": "bone"
+      },
+      {
+        "id": "watchmans-kettle-helm",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "cracked-leather-shoes",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "hobnailed-boots",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "eel-hide-treads",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "slick",
+        "materialNow": "hide"
+      },
+      {
+        "id": "shadow-step-boots",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "hide"
+      },
+      {
+        "id": "moth-eaten-mantle",
+        "slot": "cloak",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "chain-lined-mantle",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "mailward",
+        "materialNow": "steel"
+      },
+      {
+        "id": "drowned-divers-shroud",
+        "slot": "cloak",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "wardens-watch-mantle",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "lashed-plank-shield",
+        "slot": "shield",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.08,
+        "traits": "",
+        "materialNow": "wood"
+      },
+      {
+        "id": "watchmans-boots",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "longbrand",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 0,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "burning",
+        "materialNow": "steel"
+      },
+      {
+        "id": "smiths-cleaver",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "riveted-warplate",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "forged-warmaul",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.2,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "forged-warspike",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "pierce:2,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "smiths-ruin",
+        "slot": "weapon",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.1,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "smiths-greatplate",
+        "slot": "armor",
+        "weight": 4,
+        "recommendedWeight": 4,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 5,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "bristling-targe",
+        "slot": "shield",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.12,
+        "traits": "thorns:2",
+        "materialNow": "steel"
+      },
+      {
+        "id": "forged-main-gauche",
+        "slot": "shield",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.12,
+        "traits": "riposte:3",
+        "materialNow": "steel"
+      },
+      {
+        "id": "smiths-aegis",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.3,
+        "traits": "wall,thorns:2",
+        "materialNow": "steel"
+      },
+      {
+        "id": "marrow-crown",
+        "slot": "helm",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide,padded",
+        "materialNow": "bone"
+      },
+      {
+        "id": "still-water-shroud",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "slick,quiet",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "the-attainder",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "pierce:3,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "last-watch",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide,strapped",
+        "materialNow": "steel"
+      },
+      {
+        "id": "captains-wall",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.3,
+        "traits": "wall,riposte:2",
+        "materialNow": "steel"
+      },
+      {
+        "id": "houndsbane",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "reach,two-handed,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "long-hunger-shroud",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide,slick",
+        "materialNow": "hide"
+      },
+      {
+        "id": "hulks-iron",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "mailward,padded",
+        "materialNow": "steel"
+      },
+      {
+        "id": "pale-tread",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet,slick",
+        "materialNow": "hide"
+      },
+      {
+        "id": "poleaxe",
+        "slot": "weapon",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 6,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.12,
+        "bleed": 3,
+        "block": 0,
+        "traits": "reach,two-handed",
+        "materialNow": "steel"
+      },
+      {
+        "id": "halberd",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain-exception",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 2,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "reach,two-handed",
+        "materialNow": "steel"
+      },
+      {
+        "id": "two-headed-maul",
+        "slot": "weapon",
+        "weight": 3,
+        "recommendedWeight": 2,
+        "decision": "change-proposed",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.12,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "hookbill-cleaver",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 6,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 3,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "lashed-warcoat",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "strapped",
+        "materialNow": "steel"
+      },
+      {
+        "id": "barbed-round-shield",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.28,
+        "traits": "wall,riposte:1",
+        "materialNow": "steel"
+      },
+      {
+        "id": "burners-billhook",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "woodwards-axe",
+        "slot": "weapon",
+        "weight": 4,
+        "recommendedWeight": 4,
+        "decision": "retain-exception",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.2,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "wolfskin-cloak",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "hooded",
+        "materialNow": "hide"
+      },
+      {
+        "id": "tusk-goad",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "pierce:1,piercing",
+        "materialNow": "bone"
+      },
+      {
+        "id": "moss-packed-jerkin",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "staunched",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "white-hide-coat",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide",
+        "materialNow": "hide"
+      },
+      {
+        "id": "wolf-skull-helm",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded",
+        "materialNow": "bone"
+      },
+      {
+        "id": "woodwards-coat",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide,strapped",
+        "materialNow": "hide"
+      },
+      {
+        "id": "keepers-wrap",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "staunched,hooded",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "hide-wound-boots",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "hide"
+      },
+      {
+        "id": "moss-lined-boots",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "staunched",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "white-hide-boots",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "hide"
+      },
+      {
+        "id": "tusk-studded-targe",
+        "slot": "shield",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.12,
+        "traits": "thorns:1",
+        "materialNow": "hide"
+      },
+      {
+        "id": "bog-pearl-targe",
+        "slot": "shield",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.2,
+        "traits": "",
+        "materialNow": "wood"
+      },
+      {
+        "id": "wolfskin-hood",
+        "slot": "helm",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "hooded",
+        "materialNow": "hide"
+      },
+      {
+        "id": "moss-packed-cap",
+        "slot": "helm",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "staunched",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "white-hide-mantle",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide",
+        "materialNow": "hide"
+      },
+      {
+        "id": "tusk-sewn-brigandine",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "strapped",
+        "materialNow": "bone"
+      },
+      {
+        "id": "lopped-stave",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 2,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "reach",
+        "materialNow": "wood"
+      },
+      {
+        "id": "skull-headed-maul",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.1,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "bone"
+      },
+      {
+        "id": "burners-hatchet",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "keen",
+        "materialNow": "steel"
+      },
+      {
+        "id": "the-hedge-bill",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 3,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "two-handed,keen,wicked",
+        "materialNow": "steel"
+      },
+      {
+        "id": "bounds-hood",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet,staunched",
+        "materialNow": "hide"
+      },
+      {
+        "id": "coppice-treads",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet,staunched",
+        "materialNow": "hide"
+      },
+      {
+        "id": "masons-mallet",
+        "slot": "weapon",
+        "weight": 4,
+        "recommendedWeight": 2,
+        "decision": "change-proposed",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.2,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "wood"
+      },
+      {
+        "id": "oyster-knife",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 3,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "fowlers-hood",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "cutters-jerkin",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "hide"
+      },
+      {
+        "id": "sappers-pick",
+        "slot": "weapon",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain-exception",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.18,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "bearwards-chain",
+        "slot": "weapon",
+        "weight": 4,
+        "recommendedWeight": 4,
+        "decision": "retain-exception",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.24,
+        "bleed": 0,
+        "block": 0,
+        "traits": "reach,tripping",
+        "materialNow": "steel"
+      },
+      {
+        "id": "the-last-bear",
+        "slot": "helm",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded,strapped",
+        "materialNow": "hide"
+      },
+      {
+        "id": "the-long-crossing",
+        "slot": "weapon",
+        "weight": 4,
+        "recommendedWeight": 4,
+        "decision": "retain-exception",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.2,
+        "bleed": 0,
+        "block": 0,
+        "traits": "reach,two-handed,weighted",
+        "materialNow": "wood"
+      },
+      {
+        "id": "the-carriers-mile",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "balanced,tempered",
+        "materialNow": "hide"
+      },
+      {
+        "id": "the-tenor-bell",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded,tempered",
+        "materialNow": "steel"
+      },
+      {
+        "id": "drovers-frock",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "staunched",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "harness-leathers",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "strapped",
+        "materialNow": "hide"
+      },
+      {
+        "id": "tail-board-targe",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.25,
+        "traits": "wall",
+        "materialNow": "wood"
+      },
+      {
+        "id": "cork-lined-jack",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "reed-thatch-cape",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "hooded",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "oilskin-cape",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "slick,watertight",
+        "materialNow": "cloth"
+      },
+      {
+        "id": "limpet-scaled-cap",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "mailward",
+        "materialNow": "bone"
+      },
+      {
+        "id": "coppice-hurdle",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.2,
+        "traits": "wall,thorns:1",
+        "materialNow": "wood"
+      },
+      {
+        "id": "antler-braced-cap",
+        "slot": "helm",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "padded",
+        "materialNow": "bone"
+      },
+      {
+        "id": "sappers-treads",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "hide"
+      },
+      {
+        "id": "kindling-hatchet",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain-exception",
+        "damage": 2,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "knotted-lash",
+        "slot": "weapon",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain",
+        "damage": 1,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "reach,tripping",
+        "materialNow": "steel"
+      },
+      {
+        "id": "pedlars-coat",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 0,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "pocketed",
+        "materialNow": "steel"
+      },
+      {
+        "id": "mirror-bright-helm",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 0,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "glinting",
+        "materialNow": "steel"
+      },
+      {
+        "id": "nail-studded-jack",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "spiked:1",
+        "materialNow": "steel"
+      },
+      {
+        "id": "shepherds-mantle",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced",
+        "materialNow": "steel"
+      },
+      {
+        "id": "wool-lined-cap",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 0,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced",
+        "materialNow": "steel"
+      },
+      {
+        "id": "fleece-lined-jack",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced",
+        "materialNow": "steel"
+      },
+      {
+        "id": "short-spear",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 1,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "reach,pierce:1,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "polehammer",
+        "slot": "weapon",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain-exception",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.15,
+        "bleed": 0,
+        "block": 0,
+        "traits": "reach",
+        "materialNow": "steel"
+      },
+      {
+        "id": "paired-cleavers",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 3,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "grave-glaive",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain-exception",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "reach,wicked",
+        "materialNow": "steel"
+      },
+      {
+        "id": "pine-brand",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain-exception",
+        "damage": 2,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "burning",
+        "materialNow": "steel"
+      },
+      {
+        "id": "lash-flail",
+        "slot": "weapon",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 3,
+        "stun": 0.2,
+        "bleed": 0,
+        "block": 0,
+        "traits": "two-handed,tripping",
+        "materialNow": "steel"
+      },
+      {
+        "id": "oilskin-jack",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "watertight",
+        "materialNow": "steel"
+      },
+      {
+        "id": "carriers-jack",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "pocketed",
+        "materialNow": "steel"
+      },
+      {
+        "id": "mirror-bright-jack",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "glinting",
+        "materialNow": "steel"
+      },
+      {
+        "id": "nail-studded-cap",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 0,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "spiked:1",
+        "materialNow": "steel"
+      },
+      {
+        "id": "mirror-targe",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.15,
+        "traits": "glinting",
+        "materialNow": "steel"
+      },
+      {
+        "id": "boar-spear",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 3,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "pierce:1,piercing",
+        "materialNow": "steel"
+      },
+      {
+        "id": "greatblade",
+        "slot": "weapon",
+        "weight": 3,
+        "recommendedWeight": 2,
+        "decision": "change-proposed",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "two-handed",
+        "materialNow": "steel"
+      },
+      {
+        "id": "stiletto",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain-exception",
+        "damage": 2,
+        "armor": 0,
+        "speed": 3,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 1,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "tar-brand",
+        "slot": "weapon",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "burning",
+        "materialNow": "steel"
+      },
+      {
+        "id": "reaping-blade",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 4,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "riding-mace",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain-exception",
+        "damage": 2,
+        "armor": 0,
+        "speed": 2,
+        "sweep": 1,
+        "stun": 0.1,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "cargo-coat",
+        "slot": "cloak",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "watertight,pocketed",
+        "materialNow": "steel"
+      },
+      {
+        "id": "bristle-hide-jack",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide,spiked:1",
+        "materialNow": "steel"
+      },
+      {
+        "id": "storm-cloak",
+        "slot": "cloak",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced,watertight",
+        "materialNow": "steel"
+      },
+      {
+        "id": "bright-spiked-helm",
+        "slot": "helm",
+        "weight": 2,
+        "recommendedWeight": 0,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "glinting,spiked:1",
+        "materialNow": "steel"
+      },
+      {
+        "id": "shadow-treads",
+        "slot": "feet",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet,slick",
+        "materialNow": "steel"
+      },
+      {
+        "id": "hill-mantle",
+        "slot": "cloak",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "hooded,fleeced",
+        "materialNow": "steel"
+      },
+      {
+        "id": "nail-studded-targe",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 1,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.15,
+        "traits": "spiked:1",
+        "materialNow": "steel"
+      },
+      {
+        "id": "iron-man-catcher",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.12,
+        "traits": "mancatcher",
+        "materialNow": "steel"
+      },
+      {
+        "id": "riposte-buckler",
+        "slot": "shield",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.15,
+        "traits": "riposte:2",
+        "materialNow": "steel"
+      },
+      {
+        "id": "rat-mantle",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 0,
+        "decision": "change-proposed",
+        "damage": 0,
+        "armor": 1,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "steel"
+      },
+      {
+        "id": "tarred-cuirass",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "watertight",
+        "materialNow": "steel"
+      },
+      {
+        "id": "winter-cuirass",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced",
+        "materialNow": "steel"
+      },
+      {
+        "id": "cargo-plate",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "pocketed",
+        "materialNow": "steel"
+      },
+      {
+        "id": "barbed-warplate",
+        "slot": "armor",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 4,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "spiked:2",
+        "materialNow": "steel"
+      },
+      {
+        "id": "mirror-plate",
+        "slot": "armor",
+        "weight": 4,
+        "recommendedWeight": 4,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 5,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "glinting",
+        "materialNow": "steel"
+      },
+      {
+        "id": "horn-plated-cap",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "hill-wolf-jerkin",
+        "slot": "armor",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced",
+        "materialNow": "steel"
+      },
+      {
+        "id": "adder-skin-boots",
+        "slot": "feet",
+        "weight": 0,
+        "recommendedWeight": 0,
+        "decision": "retain-exception",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet",
+        "materialNow": "steel"
+      },
+      {
+        "id": "glutton-hide-coat",
+        "slot": "armor",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide",
+        "materialNow": "steel"
+      },
+      {
+        "id": "lion-pelt-cloak",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced,hooded",
+        "materialNow": "steel"
+      },
+      {
+        "id": "drake-scale-shield",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.3,
+        "traits": "wall,thorns:1",
+        "materialNow": "steel"
+      },
+      {
+        "id": "pale-scale-mantle",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced,wardhide",
+        "materialNow": "steel"
+      },
+      {
+        "id": "white-rat-mantle",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "quiet,slick",
+        "materialNow": "steel"
+      },
+      {
+        "id": "lead-wolf-ruff",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced,hooded",
+        "materialNow": "steel"
+      },
+      {
+        "id": "glutton-skull-helm",
+        "slot": "helm",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "fleeced,padded",
+        "materialNow": "steel"
+      },
+      {
+        "id": "the-harvest",
+        "slot": "weapon",
+        "weight": 3,
+        "recommendedWeight": 3,
+        "decision": "retain-exception",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 3,
+        "stun": 0,
+        "bleed": 2,
+        "block": 0,
+        "traits": "two-handed,reach,keen",
+        "materialNow": "steel"
+      },
+      {
+        "id": "crab-shell-casque",
+        "slot": "helm",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "shell-plate",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.3,
+        "traits": "wall,thorns:1",
+        "materialNow": "steel"
+      },
+      {
+        "id": "shell-cracker",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain-exception",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0.18,
+        "bleed": 0,
+        "block": 0,
+        "traits": "",
+        "materialNow": "steel"
+      },
+      {
+        "id": "the-filed-edge",
+        "slot": "weapon",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 5,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 3,
+        "block": 0,
+        "traits": "reach,keen",
+        "materialNow": "steel"
+      },
+      {
+        "id": "cast-antler-crown",
+        "slot": "helm",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 3,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide",
+        "materialNow": "steel"
+      },
+      {
+        "id": "white-hide-targe",
+        "slot": "shield",
+        "weight": 2,
+        "recommendedWeight": 2,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 0,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0.28,
+        "traits": "wall",
+        "materialNow": "steel"
+      },
+      {
+        "id": "the-white-roe",
+        "slot": "cloak",
+        "weight": 1,
+        "recommendedWeight": 1,
+        "decision": "retain",
+        "damage": 0,
+        "armor": 2,
+        "speed": 1,
+        "sweep": 1,
+        "stun": 0,
+        "bleed": 0,
+        "block": 0,
+        "traits": "wardhide,quiet",
+        "materialNow": "steel"
+      }
+    ],
+    "implementedFollowup": {
+      "status": "Implemented locally, not deployed.",
+      "preservedWeaponWeights": {
+        "sappers-pick": 3,
+        "woodwards-axe": 4,
+        "bearwards-chain": 4,
+        "the-long-crossing": 4
+      },
+      "materialCorrections": {
+        "count": 30,
+        "wood": 3,
+        "cloth": 7,
+        "hide": 11,
+        "boneShellScale": 9,
+        "effect": "Existing and new items use the correct material for future carried-damp deterioration. Previously lost condition is not restored. No database migration required."
+      },
+      "noiseCorrection": "wornWeight and wornArmorWeight now share effectiveWeight, including template/rolled balanced and cumbersome. The heavy all-balanced kit has total 5, armor 3, held 2; previously armor was 7 and held -2.",
+      "balancedDecision": "Retain the existing -1 effective weight per balanced piece. Template and instance traits do not double-count; cumbersome cancels balanced. Weight-10/armor-11 heavy kit becomes weight 5/armor 11, combat EXH 2.5 to 1.75, full exhaustion after 20 to 29 continuous rounds, weight-based poise .75 to .60. A fully balanced kit is an earned advantage, not the ordinary heavy-kit baseline.",
+      "balancedLootStudy": {
+        "seed": 81731,
+        "results": [
+          {
+            "id": "poleaxe",
+            "draws": 200000,
+            "balanced": 4982,
+            "netBalanced": 4783,
+            "netPercent": 2.3915
+          },
+          {
+            "id": "barbed-warplate",
+            "draws": 200000,
+            "balanced": 4233,
+            "netBalanced": 4082,
+            "netPercent": 2.041
+          },
+          {
+            "id": "marrow-crown",
+            "draws": 200000,
+            "balanced": 8540,
+            "netBalanced": 8279,
+            "netPercent": 4.1395
+          },
+          {
+            "id": "pale-tread",
+            "draws": 200000,
+            "balanced": 11410,
+            "netBalanced": 10964,
+            "netPercent": 5.482
+          },
+          {
+            "id": "chain-lined-mantle",
+            "draws": 200000,
+            "balanced": 4334,
+            "netBalanced": 4161,
+            "netPercent": 2.0805
+          }
+        ],
+        "method": "One million seeded calls to production ZoneDO.rollTraits, 200,000 per piece; net balanced excludes a simultaneous cumbersome roll. Frequencies describe a fresh copy of each specified template, not its world drop rate or a player acquisition time."
+      },
+      "validation": [
+        "TypeScript typecheck passed.",
+        "214 equipable templates checked under plain, balanced, cumbersome and opposing traits; pristine/damaged/unequipped behavior checked.",
+        "All nonmetal registry entries checked for existing IDs and conflicting classifications.",
+        "All 30 corrected materials plus steel/stone controls exercised through an actual carried-damp tick.",
+        "Actual room movement checked for held-gear wording when balanced armor has zero weight, and armor wording with cumbersome armor.",
+        "Existing food, walking, rest/gate/passive recovery, reconnect, death, persistence and PvP effort checks passed.",
+        "48 production encounters across drake, three-hound, baited bear, chain-breaker, cave lion and Forgotten King; all 134 creature profiles validated."
+      ],
+      "historicalEvidence": "Earlier itemLedger materialNow values, kitMetrics armorWeight subtotals, and additionalFindings document the pre-fix review snapshot. This follow-up records their corrected state."
     }
   }
 }

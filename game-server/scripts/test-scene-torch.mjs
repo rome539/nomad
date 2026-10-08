@@ -49,7 +49,9 @@ const fnSrc = (n) => {
   return null;
 };
 const depsFor = (body, self) => {
-  const tables = [], fns = [], seen = new Set(self ? [self] : []);
+  // Weather has its own lifecycle test and is stubbed below; do not recurse
+  // through its renderer into unrelated log/audio dependencies.
+  const tables = [], fns = [], seen = new Set(['setWeather', ...(self ? [self] : [])]);
   const walk = (code) => {
     const bare = code.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
     // ANY SHOUTED NAME, not only an indexed one. This matched NAME[...] alone,

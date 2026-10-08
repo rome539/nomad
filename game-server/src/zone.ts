@@ -331,6 +331,14 @@ export class ZoneDO implements DurableObject {
     public env: Env,
   ) {}
 
+  public async savedLoadouts(pubkey: string): Promise<import("./loadouts").Loadout[]> {
+    return await this.state.storage.get<import("./loadouts").Loadout[]>("loadouts:" + pubkey) ?? [];
+  }
+
+  public async saveLoadouts(pubkey: string, sets: import("./loadouts").Loadout[]): Promise<void> {
+    await this.state.storage.put("loadouts:" + pubkey, sets);
+  }
+
   // You wake at a random SPAWN, so no death sends you back to a route you
   // already know cold. Spawns are not the same thing as gates any more (mig
   // 126): a gatehouse far out on a road is somewhere to bank, not somewhere the
@@ -7877,16 +7885,15 @@ export class ZoneDO implements DurableObject {
   // clean flight); a heavy blade costs you your footwork same as heavy plate.
   public wornWeight(session: Session): number {
     let total = 0;
-    // A balanced weapon shaves a point off its own weight — the load law only,
-    // damage untouched (099-weapon).
-    for (const g of this.equippedAll(session)) {
-      // A balanced piece shaves a point off its own weight; an ill-hung one adds
-      // one. This single line is the whole load law, so both reach dodge, the
-      // movement-noise roll, the parting cut and entry stealth at once.
-      const swing = (this.itemRolled(g, "balanced") ? 1 : 0) - (this.itemRolled(g, "cumbersome") ? 1 : 0);
-      total += Math.max(0, g.tmpl.weight - swing);
-    }
+    for (const g of this.equippedAll(session)) total += this.effectiveWeight(g);
     return total;
+  }
+
+  // Use the same per-piece load for exhaustion, mobility and noise flavor.
+  // Template and rolled traits each count once; opposing traits cancel.
+  private effectiveWeight(g: { carried: CarriedItem; tmpl: ItemTemplate }): number {
+    const swing = (this.itemRolled(g, "balanced") ? 1 : 0) - (this.itemRolled(g, "cumbersome") ? 1 : 0);
+    return Math.max(0, g.tmpl.weight - swing);
   }
 
   // Just the ARMOR the body wears (helm/body/cloak/feet) — NOT the weapon and
@@ -7895,7 +7902,7 @@ export class ZoneDO implements DurableObject {
   // rock and shield in your hands knock" — the sound has to match what's heavy.
   public wornArmorWeight(session: Session): number {
     let total = 0;
-    for (const g of this.equippedAll(session)) if (ARMOR_SLOTS.has(g.tmpl.slot)) total += g.tmpl.weight;
+    for (const g of this.equippedAll(session)) if (ARMOR_SLOTS.has(g.tmpl.slot)) total += this.effectiveWeight(g);
     return total;
   }
 
