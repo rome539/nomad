@@ -74,6 +74,23 @@ try {
         },id);
         assert(end.bottom<=end.edge+1&&end.close>=0,`${id}: last content or close unreachable`);
       } else if(result.cols.length) assert.equal(new Set(result.cols).size,result.cols.length,`${id}: desktop columns`);
+      if(id==='bench' && state.atGate) {
+        await page.$eval('#bench [aria-controls=bvault]',e=>e.click());
+        const fullVault={...state,vault:items,vaultUsed:37,vaultCap:50};
+        await page.evaluate(s=>renderBench(s),fullVault);
+        const capacity=await page.evaluate(()=>{
+          const root=document.getElementById('bench'),count=root.querySelector('.bench-capacity');
+          root.querySelectorAll('.bbody,.bcol').forEach(el=>{el.scrollTop=el.scrollHeight});
+          const r=count.getBoundingClientRect(),box=root.querySelector('.bbox').getBoundingClientRect();
+          return {text:count.textContent,visible:r.top>=box.top&&r.bottom<=box.bottom&&!count.closest('.bbody')};
+        });
+        assert.match(capacity.text,/37\/50/,'vault uses server capacity, not visible row count');
+        assert(capacity.visible,'vault capacity stays outside the scroller');
+        await page.evaluate(s=>renderBench({...s,vaultUsed:38}),fullVault);
+        assert.match(await page.$eval('#bench .bench-capacity',e=>e.textContent),/38\/50/,'capacity updates after storage changes');
+        await page.$eval('#bench [aria-controls=bpack]',e=>e.click());
+        await page.evaluate(s=>renderBench(s),state);
+      }
       if(process.env.MODAL_SCREENSHOTS && width===390 && height===844) {
         fs.mkdirSync(process.env.MODAL_SCREENSHOTS,{recursive:true});
         await page.evaluate(id=>{document.querySelector('#'+id+' .bbody, #'+id+' .modalbody').scrollTop=0},id);

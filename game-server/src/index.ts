@@ -118,8 +118,8 @@ export default {
           description: "a shared dungeon, alive whether or not anyone is watching",
           start_url: "/",
           display: "standalone",
-          background_color: "#101113",
-          theme_color: "#101113",
+          background_color: "#16120c",
+          theme_color: "#16120c",
           icons: [
             { src: "/apple-touch-icon.png?v=3", sizes: "180x180", type: "image/png" },
             { src: "/icon-512.png?v=3", sizes: "512x512", type: "image/png" },

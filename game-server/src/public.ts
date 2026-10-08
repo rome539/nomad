@@ -25,7 +25,7 @@ export const PAGE = `<!doctype html>
 <link rel="icon" type="image/png" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#101113">
+<meta name="theme-color" content="#16120c">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="NOMAD">
 <meta property="og:title" content="NOMAD">
@@ -40,11 +40,11 @@ export const PAGE = `<!doctype html>
 <meta name="twitter:image" content="https://nomadmud.com/og.jpg?v=4">
 <style>
   :root {
-    --bg: #101113;
-    --panel: #181a1d;
-    --cream: #e7e8ea;
-    --dim: #959aa3;
-    --gold: #d1bc86;
+    --bg: #16120c;
+    --panel: #1e1912;
+    --cream: #ede3cc;
+    --dim: #9a8b66;
+    --gold: #d8a94e;
     /* Wear's own amber. NOT --gold: gold is the theme's ACCENT and each theme
        repaints it (green on moss, blue on abyss), which made a battered piece
        read as good news. Tuned per theme like --heal and --blood, for the same
@@ -52,7 +52,7 @@ export const PAGE = `<!doctype html>
        ground it is shown against. */
     --wear: #d8a94e;
     --blood: #c96f5a;
-    --bone: #b6bbc3;
+    --bone: #c9bda3;
     --steel: #a4bec0;
     --heal: #8faa6b;
     --omen: #b195c9;
@@ -85,9 +85,9 @@ export const PAGE = `<!doctype html>
     --stone: #d3d6d8;
     --name-s: 55%; /* key-coloured names: saturation/lightness, reset per theme from its ground (applyThemeColors) */
     --name-l: 70%;
-    --border: #303338;
-    --border2: #42464d;
-    --line: #292c31;
+    --border: #3a3020;
+    --border2: #4a3c22;
+    --line: #2c2418;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scrollbar-color: var(--border) var(--bg); scrollbar-width: thin; }
@@ -2108,12 +2108,14 @@ export const PAGE = `<!doctype html>
 :is(#bench,#trade,#forge) .bcol{padding:0;border:0;border-radius:0;gap:0;min-height:0}
 :is(#bench,#trade,#forge) .bcol.section-hidden{display:none!important}
 :is(#bench,#trade,#forge) .bcolh{position:static;font:11px ui-monospace,monospace;letter-spacing:0;text-transform:none;padding:5px 0 9px;color:var(--dim);border-bottom:1px solid var(--line)}
+#bench .bcol > .bcolh{display:none}
+#bench .bench-capacity{flex:0 0 auto;margin:0;min-width:0}
 :is(#bench,#trade,#forge) .tsech{font:10px ui-monospace,monospace;letter-spacing:.05em;color:var(--dim);padding:10px 0 4px;border:0}
-:is(#bench,#trade,#forge) .mud-row{display:grid!important;grid-template-columns:22px minmax(0,1fr) 24px 72px;align-items:center;gap:8px!important;padding:7px 4px!important;min-height:34px;font:12px/1.4 ui-monospace,monospace;border:0!important;border-radius:0;cursor:pointer}
+:is(#bench,#trade,#forge) .mud-row{display:grid!important;grid-template-columns:minmax(0,1fr) 24px 72px;align-items:center;gap:8px!important;padding:7px 4px!important;min-height:34px;font:12px/1.4 ui-monospace,monospace;border:0!important;border-radius:0;cursor:pointer}
 :is(#bench,#trade,#forge) .mud-row .nm{font:inherit!important;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 :is(#bench,#trade,#forge) .mud-row:hover{background:#ffffff04}
 :is(#bench,#trade,#forge) .mud-row.chosen{background:#ffffff08;box-shadow:inset 2px 0 var(--gold)}
-.mud-index,.mud-qty,.mud-state{color:var(--dim);font-size:10px;font-variant-numeric:tabular-nums}.mud-qty,.mud-state{text-align:right}.mud-state.equipped{color:var(--heal)}
+.mud-qty,.mud-state{color:var(--dim);font-size:10px;font-variant-numeric:tabular-nums}.mud-qty,.mud-state{text-align:right}.mud-state.equipped{color:var(--heal)}
 :is(#bench,#trade,#forge) .mud-row.list-filtered{display:none!important}.mud-search{display:none!important}
 .mud-reader{border-top:1px solid var(--border);padding:12px 0;flex:0 0 auto;max-height:42%;overflow-y:auto;font:12px/1.5 ui-monospace,monospace;color:var(--dim)}
 .mud-reader>.bitem,.mud-reader>.trow{display:block!important;padding:0!important;border:0!important}.mud-reader .nm{font-size:12px;color:var(--cream)}.mud-reader .nm .tag,.mud-reader .nm .stat{font-size:11px;color:var(--bone)}
@@ -2123,7 +2125,7 @@ export const PAGE = `<!doctype html>
 .mud-reader button:hover{border-color:var(--gold);color:var(--gold)}.mud-reader button.arm{color:var(--blood);border-color:var(--blood)}.mud-reader button:disabled{opacity:.4;cursor:default}
 .mud-reader .cost,.mud-reader .quiet{font-size:11px;margin-top:5px}.mud-reader .takes{font-size:11px}.mud-reader .tag-atk{color:var(--blood)}.mud-reader .tag-def{color:var(--steel)}
 #twant{font-size:11px;padding:7px 9px;background:var(--bg);border-radius:3px}#fhave{font-size:11px;padding:0;border:0}
-@media(max-width:680px){:is(#bench,#trade,#forge) .bbox{width:100%;height:100%;max-height:none;border-radius:0;padding:12px 12px 0}:is(#bench,#trade,#forge) .list-tools input[type=search]{font-size:16px}:is(#bench,#trade,#forge) .mud-row{gap:6px!important;grid-template-columns:18px minmax(0,1fr) 20px 58px;font-size:12px}.mud-state{font-size:10px}.mud-reader{max-height:44%}}
+@media(max-width:680px){:is(#bench,#trade,#forge) .bbox{width:100%;height:100%;max-height:none;border-radius:0;padding:12px 12px 0}:is(#bench,#trade,#forge) .list-tools input[type=search]{font-size:16px}:is(#bench,#trade,#forge) .mud-row{gap:6px!important;grid-template-columns:minmax(0,1fr) 20px 58px;font-size:12px}.mud-state{font-size:10px}.mud-reader{max-height:44%}}
 
 :is(#bench,#trade,#forge) .mud-reader .nm{display:block;float:none;width:auto;font:12px/1.5 ui-monospace,monospace;text-align:left;white-space:normal;overflow-wrap:anywhere}
 :is(#bench,#trade,#forge) .mud-reader .mud-stats{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:2px 8px;margin-top:4px;font:11px/1.5 ui-monospace,monospace;text-align:left}
@@ -4784,6 +4786,18 @@ function refreshListView(id) {
     empty.textContent = query ? "No matching items here." : "Nothing you can forge with these materials.";
     empty.hidden = !rows.length || count > 0;
   });
+  if (id === "bench") {
+    // Keep the selected store's server-provided capacity outside the item scroller.
+    var source = document.getElementById(v.selected).querySelector(".bcolh");
+    var capacity = v.root.querySelector(".bench-capacity");
+    if (!capacity) {
+      capacity = document.createElement("div"); capacity.className = "bcolh bench-capacity";
+      v.root.querySelector(".bbody").before(capacity);
+    }
+    capacity.replaceChildren();
+    if (source) Array.from(source.children).forEach(function (child) { capacity.appendChild(child.cloneNode(true)); });
+    capacity.hidden = !source;
+  }
 }
 function keepListPosition(id) {
   var root = document.getElementById(id), opened = root.classList.contains("open");
@@ -5008,15 +5022,15 @@ function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, food
     var e = document.createElement("div"); e.className = "bempty"; e.textContent = "\\u2014 empty \\u2014";
     el.appendChild(e); return;
   }
-  // Two columns split themselves in two, for the same reason: the thing that
-  // costs you nothing shouldn't bury the thing that does.
-  //   PACK  \\u2014 what rides your body vs what rides your back.
+  // Separate equipped gear, loose items and food so each is easy to find.
+  //   PACK  \\u2014 equipped gear, pack items, then food.
   //   VAULT \\u2014 the sealed wealth that eats the 50 slots, and below it the
   //           trophies and sundries that ride free.
   var secs = null;
   if (place === "pack") {
     secs = [["ON YOU", items.filter(function (it) { return it.equipped; })],
-            ["IN THE PACK", items.filter(function (it) { return !it.equipped; })]];
+            ["IN THE PACK", items.filter(function (it) { return !it.equipped && !it.food; })],
+            ["FOOD", items.filter(function (it) { return !it.equipped && it.food; })]];
   } else if (place === "vault") {
     secs = [["BANKED", items.filter(function (it) { return !it.trophy && !it.key && !it.food; })],
             ["KEYS", items.filter(function (it) { return it.key; })],
@@ -5844,12 +5858,11 @@ function mudRow(type,it,place,source){
  var risks=source.querySelector('.risks'),acts=source.querySelector('.acts');if(risks&&acts){Array.from(risks.children).forEach(function(b){acts.appendChild(b)});risks.remove()}
  var row=document.createElement('div');row.className=(type==='trade'?'trow':'bitem')+' mud-row';row.tabIndex=0;row.setAttribute('role','button');if(type==='forge')row.dataset.canForge=String(!!it.can);
  var name=document.createElement('span');name.className='nm';var realName=source.querySelector('.nm>span');name.appendChild(realName?realName.cloneNode(true):document.createTextNode(it.name));
- var idx=document.createElement('span');idx.className='mud-index';
  var qty=document.createElement('span');qty.className='mud-qty';qty.textContent=it.n>1?'×'+it.n:'';
  var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?'equipped':it.sealed?'sealed':it.condWord==='sound'?'':it.condWord||''):type==='trade'?(it.cost==null?'':String(it.cost)):place==='recipe'?it.scrap+' iron':it.cond;
  if(it.equipped)state.classList.add('equipped');
  var search=document.createElement('span');search.className='tags mud-search';search.textContent=source.querySelector('.nm').textContent+' '+(it.stat||'');
- row.append(idx,name,qty,state,search);var record={row:row,source:source,key:place+':'+String(it.row??it.id)};mudRecords[type].push(record);
+ row.append(name,qty,state,search);var record={row:row,source:source,key:place+':'+String(it.row??it.id)};mudRecords[type].push(record);
  row.setAttribute('aria-label',it.name+(state.textContent?', '+state.textContent:''));function choose(){mudSelected[type]=record.key;mudReader(type)}row.onclick=choose;row.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();choose()}};return row;
 }
 var originalBenchItem=benchItemNode;benchItemNode=function(it,place){return mudRow('bench',it,place,originalBenchItem(it,place))};
@@ -5859,7 +5872,6 @@ var originalForgeSheet=forgeSheetNode;forgeSheetNode=function(it){return mudRow(
 function mudRefresh(type){
  [['bench','Inventory','btitle','bclose'],['trade','Barter','ttitle','tclose'],['forge','Forge','ftitle','fclose']].forEach(function(x){var root=document.getElementById(x[0]);document.getElementById(x[2]).textContent=x[1];document.getElementById(x[3]).textContent='Close';var nav=root.querySelector('.list-sections'),tools=root.querySelector('.list-tools');root.querySelector('.bhead').after(nav);nav.after(tools)});
  var gear=document.getElementById('bgear');document.querySelector('#bench .bhead').insertBefore(gear,document.getElementById('bclose'));gear.textContent='Stats';
- var root=document.getElementById(type);root.querySelectorAll('.bcol').forEach(function(c){c.querySelectorAll('.mud-row').forEach(function(r,i){r.querySelector('.mud-index').textContent=String(i+1).padStart(2,'0')})});
  if(type==='trade'&&!tradeWant)document.getElementById('twant').textContent='Choose goods. Offer items to match their value.';
  mudReader(type);
 }
@@ -7209,9 +7221,9 @@ chipbtn.addEventListener("click", function () {
 });
 
 // ---- themes: the Door in different lights ----
-// Five local presets, one row in settings; the relays add the rest below.
+// Six local presets, one row in settings; the relays add the rest below.
 var THEME_VARS = ["bg", "panel", "cream", "dim", "gold", "wear", "blood", "bone", "steel", "heal", "omen", "voice", "stone", "border", "border2", "line"];
-var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
+var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember", "charcoal"];
 // 'heal' is the mending-green (eat/bandage/rest chips): a distinct hue that must
 // stay legible on each ground, so — like blood/steel — it's tuned per theme
 // (bright on the dark grounds, dark on the light 'bone', kept off the acid gold
@@ -7226,7 +7238,8 @@ var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember"];
 // lighter, so a voice can never be mistaken for a wound. On the light 'bone'
 // ground it inverts to a deep wine-rose.
 var THEMES = {
-  door:  { stone: "#d3d6d8", bg: "#101113", panel: "#181a1d", cream: "#e7e8ea", dim: "#959aa3", gold: "#d1bc86", wear: "#d8a94e", blood: "#c96f5a", bone: "#b6bbc3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#303338", border2: "#42464d", line: "#292c31" },
+  door:  { stone: "#d3d6d8", bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", wear: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
+  charcoal: { stone: "#d3d6d8", bg: "#101113", panel: "#181a1d", cream: "#e7e8ea", dim: "#959aa3", gold: "#d1bc86", wear: "#d8a94e", blood: "#c96f5a", bone: "#b6bbc3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#303338", border2: "#42464d", line: "#292c31" },
   bone:  { stone: "#6f7378", bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", wear: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", voice: "#a5325f", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
   moss:  { stone: "#d3d6d8", bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", wear: "#d8a94e", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", voice: "#eb9cba", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
   abyss: { stone: "#d3d6d8", bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", wear: "#d8a94e", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", voice: "#e79cbc", border: "#243049", border2: "#2f4160", line: "#171f33" },
