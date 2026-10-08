@@ -2092,6 +2092,8 @@ export const PAGE = `<!doctype html>
 
 
 
+</style>
+<style id="compact-modal-style">
 :is(#bench,#trade,#forge) .bbox{width:min(860px,96vw);padding:16px 18px 0;gap:10px;border-radius:6px}
 :is(#bench,#trade,#forge) .bhead{display:flex;align-items:center;gap:8px}
 :is(#bench,#trade,#forge) .bhead>div{display:contents}
@@ -2141,6 +2143,13 @@ export const PAGE = `<!doctype html>
 .mud-description[hidden]{display:none!important}
 
 
+</style>
+<style>
+body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classic"] .mud-reader{display:none!important}
+#bench .mud-description{margin:8px 0;color:var(--bone);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+#bench .mud-description[hidden]{display:none!important}
+#bench .list-tools .loadout-opener{background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--gold);padding:7px 10px;font:inherit;cursor:pointer}
+#bench .list-tools .loadout-opener[hidden]{display:none}
 #bench .list-sections .loadout-opener{margin-left:auto;color:var(--gold)}
 #bench .loadout-tools{flex:0 0 auto;display:flex;flex-direction:column;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
 #bench .loadout-tools[hidden]{display:none!important}
@@ -2192,6 +2201,7 @@ export const PAGE = `<!doctype html>
     <div class="setrow"><span>ornate borders</span><button id="ornatebtn" type="button" role="switch" aria-label="Ornate borders" aria-checked="false">off</button></div>
     <div class="setrow"><span>nostr themes</span><button id="thbrowse">browse</button></div>
     <div id="thlist"></div>
+    <div class="setrow"><span>modal layout</span><button id="modallayoutbtn" type="button" aria-label="Modal layout: Compact">Compact</button></div>
     <div class="setrow"><span>command chips</span><button id="chipbtn">on</button></div>
     <div class="setrow"><span>source</span><a class="abtn" href="https://github.com/rome539/nomad" target="_blank" rel="noopener">github &#8599;</a></div>
   </div>
@@ -5832,10 +5842,41 @@ function renderForge(state) {
   restorePosition();
 }
 
+// Both layouts use the same server frames and original item/action builders.
+var modalLayout='compact',modalStates={};
+try { if(localStorage.getItem('nomad_modal_layout')==='classic')modalLayout='classic'; } catch(_) {}
+function syncModalLayout(){
+ document.body.dataset.modalLayout=modalLayout;
+ document.getElementById('compact-modal-style').disabled=modalLayout==='classic';
+ var button=document.getElementById('modallayoutbtn');
+ button.textContent=modalLayout==='classic'?'Classic':'Compact';
+ button.setAttribute('aria-label','Modal layout: '+button.textContent);
+}
+syncModalLayout();
+document.getElementById('modallayoutbtn').addEventListener('click',function(){
+ modalLayout=modalLayout==='compact'?'classic':'compact';
+ try { localStorage.setItem('nomad_modal_layout',modalLayout); } catch(_) {}
+ syncModalLayout();
+ // Repaint only open panels from their latest authoritative snapshot. Switching
+ // presentation never sends an open/close command or changes the player's stance.
+ if(benchEl.classList.contains('open')&&modalStates.bench)renderBench(modalStates.bench);
+ if(tradeEl.classList.contains('open')&&modalStates.trade)renderTrade(modalStates.trade);
+ if(forgeEl.classList.contains('open')&&modalStates.forge)renderForge(modalStates.forge);
+});
+function addItemDescription(it,place,source){
+ var acts=source.querySelector('.acts');
+ if(it.description){
+  var description=document.createElement('p');description.className='mud-description';description.id='mud-description-'+place+'-'+it.row;description.hidden=true;description.textContent=it.description;
+  var look=document.createElement('button');look.type='button';look.textContent='Look';look.setAttribute('aria-expanded','false');look.setAttribute('aria-controls',description.id);
+  look.addEventListener('click',function(){description.hidden=!description.hidden;look.setAttribute('aria-expanded',String(!description.hidden));look.textContent=description.hidden?'Look':'Hide description'});
+  acts.prepend(look);source.insertBefore(description,acts);
+ }
+}
+
 // Compact item lists share one selected-item reading and action area.
 
 var mudRecords={bench:[],trade:[],forge:[]},mudSelected={bench:'',trade:'',forge:''};
-function mudReader(type){var root=document.getElementById(type),reader=root.querySelector('.mud-reader');if(!reader){reader=document.createElement('div');reader.className='mud-reader';reader.setAttribute('aria-live','polite');root.querySelector('.bbox').appendChild(reader)}reader.replaceChildren();var record=mudRecords[type].find(function(r){return r.key===mudSelected[type]&&r.row.isConnected&&!r.row.closest('.section-hidden')&&!r.row.classList.contains('list-filtered')});if(record){reader.appendChild(record.source);}else{reader.textContent='Select an item to inspect or manage it.'}mudRecords[type].forEach(function(r){r.row.classList.toggle('chosen',r===record);r.row.setAttribute('aria-pressed',String(r===record))})}
+function mudReader(type){if(modalLayout==='classic')return;var root=document.getElementById(type),reader=root.querySelector('.mud-reader');if(!reader){reader=document.createElement('div');reader.className='mud-reader';reader.setAttribute('aria-live','polite');root.querySelector('.bbox').appendChild(reader)}reader.replaceChildren();var record=mudRecords[type].find(function(r){return r.key===mudSelected[type]&&r.row.isConnected&&!r.row.closest('.section-hidden')&&!r.row.classList.contains('list-filtered')});if(record){reader.appendChild(record.source);}else{reader.textContent='Select an item to inspect or manage it.'}mudRecords[type].forEach(function(r){r.row.classList.toggle('chosen',r===record);r.row.setAttribute('aria-pressed',String(r===record))})}
 function mudDetailSource(type,it,place,source){
  var nm=source.querySelector('.nm');
  // All three readers use the same stat tokens and alignment, not shelf-row CSS.
@@ -5844,12 +5885,6 @@ function mudDetailSource(type,it,place,source){
  if(type==='forge'&&place==='recipe'){var rarity=nm.querySelector('.rar');if(rarity)rarity.remove()}
  if(it.stat){var stats=document.createElement('div');stats.className='mud-stats';it.stat.split(', ').forEach(function(t){var token=document.createElement('span');token.className=statTokenClass(t);token.textContent=t;stats.appendChild(token)});nm.after(stats)}
  var acts=source.querySelector('.acts');
- if(type==='bench'&&it.description){
-  var description=document.createElement('p');description.className='mud-description';description.id='mud-description-'+place+'-'+it.row;description.hidden=true;description.textContent=it.description;
-  var look=document.createElement('button');look.type='button';look.textContent='Look';look.setAttribute('aria-expanded','false');look.setAttribute('aria-controls',description.id);
-  look.addEventListener('click',function(){description.hidden=!description.hidden;look.setAttribute('aria-expanded',String(!description.hidden));look.textContent=description.hidden?'Look':'Hide description'});
-  acts.prepend(look);source.insertBefore(description,acts);
- }
  if(type==='trade'){acts=document.createElement('div');acts.className='acts';var buy=source.querySelector('button'),cost=source.querySelector('.tcost');if(cost){cost.className='mud-cost';cost.textContent='Cost: '+it.cost;acts.appendChild(cost)}acts.appendChild(buy);source.appendChild(acts)}
  if(type==='forge'&&place==='recipe'){var cost=source.querySelector('.cost');if(cost){cost.className='mud-cost';cost.textContent='Materials: '+cost.textContent;acts.prepend(cost)}}
 }
@@ -5865,22 +5900,27 @@ function mudRow(type,it,place,source){
  row.append(name,qty,state,search);var record={row:row,source:source,key:place+':'+String(it.row??it.id)};mudRecords[type].push(record);
  row.setAttribute('aria-label',it.name+(state.textContent?', '+state.textContent:''));function choose(){mudSelected[type]=record.key;mudReader(type)}row.onclick=choose;row.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();choose()}};return row;
 }
-var originalBenchItem=benchItemNode;benchItemNode=function(it,place){return mudRow('bench',it,place,originalBenchItem(it,place))};
-var originalTradeItem=tradeItemNode;tradeItemNode=function(it,place){return mudRow('trade',it,place,originalTradeItem(it,place))};
-var originalForgeItem=forgeItemNode;forgeItemNode=function(it){return mudRow('forge',it,'recipe',originalForgeItem(it))};
-var originalForgeSheet=forgeSheetNode;forgeSheetNode=function(it){return mudRow('forge',it,'read',originalForgeSheet(it))};
+var originalBenchItem=benchItemNode;benchItemNode=function(it,place){var source=originalBenchItem(it,place);addItemDescription(it,place,source);return modalLayout==='classic'?source:mudRow('bench',it,place,source)};
+var originalTradeItem=tradeItemNode;tradeItemNode=function(it,place){var source=originalTradeItem(it,place);return modalLayout==='classic'?source:mudRow('trade',it,place,source)};
+var originalForgeItem=forgeItemNode;forgeItemNode=function(it){var source=originalForgeItem(it);return modalLayout==='classic'?source:mudRow('forge',it,'recipe',source)};
+var originalForgeSheet=forgeSheetNode;forgeSheetNode=function(it){var source=originalForgeSheet(it);return modalLayout==='classic'?source:mudRow('forge',it,'read',source)};
 function mudRefresh(type){
+ if(modalLayout==='classic'){
+  ['bench','trade','forge'].forEach(function(id){var root=document.getElementById(id),tools=root.querySelector('.list-tools');root.querySelector('.bhead').after(tools);tools.after(root.querySelector('.list-sections'))});
+  var gear=document.getElementById('bgear');document.getElementById('bdoll').before(gear);gear.textContent=benchEl.classList.contains('showgear')?'Hide equipment & stats':'Show equipment & stats';
+  return;
+ }
  [['bench','Inventory','btitle','bclose'],['trade','Barter','ttitle','tclose'],['forge','Forge','ftitle','fclose']].forEach(function(x){var root=document.getElementById(x[0]);document.getElementById(x[2]).textContent=x[1];document.getElementById(x[3]).textContent='Close';var nav=root.querySelector('.list-sections'),tools=root.querySelector('.list-tools');root.querySelector('.bhead').after(nav);nav.after(tools)});
  var gear=document.getElementById('bgear');document.querySelector('#bench .bhead').insertBefore(gear,document.getElementById('bclose'));gear.textContent='Stats';
  if(type==='trade'&&!tradeWant)document.getElementById('twant').textContent='Choose goods. Offer items to match their value.';
  mudReader(type);
 }
-var listRenderBench=renderBench;renderBench=function(state){mudRecords.bench=[];listRenderBench(state);mudRefresh('bench')};
-var listRenderTrade=renderTrade;renderTrade=function(state){mudRecords.trade=[];listRenderTrade(state);mudRefresh('trade')};
-var listRenderForge=renderForge;renderForge=function(state){mudRecords.forge=[];listRenderForge(state);mudRefresh('forge')};
+var listRenderBench=renderBench;renderBench=function(state){modalStates.bench=state;mudRecords.bench=[];listRenderBench(state);mudRefresh('bench')};
+var listRenderTrade=renderTrade;renderTrade=function(state){modalStates.trade=state;mudRecords.trade=[];listRenderTrade(state);mudRefresh('trade')};
+var listRenderForge=renderForge;renderForge=function(state){modalStates.forge=state;mudRecords.forge=[];listRenderForge(state);mudRefresh('forge')};
 // Secondary list updates (storage tabs, inspection and keeper goods) use the same reading area.
 var mudOldRefresh=refreshListView;refreshListView=function(id){mudOldRefresh(id);mudRecords[id]=mudRecords[id].filter(function(r){return r.row.isConnected});mudReader(id)};
-document.getElementById('bgear').addEventListener('click',function(){this.textContent='Stats'});
+document.getElementById('bgear').addEventListener('click',function(){if(modalLayout!=='classic')this.textContent='Stats'});
 
 // Presets and equipment changes are authoritative server state.
 var loadoutSlots=['weapon','shield','helm','armor','cloak','feet'];
@@ -5891,8 +5931,9 @@ function loadoutSend(action,id,name){
  else loadoutNotice('Reconnect before changing loadouts.');
 }
 function renderLoadouts(){
- var root=document.getElementById('bench'),nav=root.querySelector('.list-sections'),button=nav.querySelector('.loadout-opener');
+ var root=document.getElementById('bench'),nav=root.querySelector('.list-sections'),button=root.querySelector('.loadout-opener');
  if(!button){button=document.createElement('button');button.type='button';button.className='loadout-opener';button.textContent='Loadouts';button.setAttribute('aria-controls','bench-loadouts');button.onclick=function(){loadoutsOpen=!loadoutsOpen;renderLoadouts()};nav.appendChild(button)}
+ (modalLayout==='classic'?root.querySelector('.list-tools'):nav).appendChild(button);
  button.hidden=!loadoutState.inGatehouse;button.setAttribute('aria-expanded',String(loadoutsOpen));
  var panel=document.getElementById('bench-loadouts');if(!panel){panel=document.createElement('div');panel.id='bench-loadouts';panel.className='loadout-tools';root.querySelector('.list-tools').after(panel)}
  panel.hidden=!loadoutsOpen||!loadoutState.inGatehouse;if(panel.hidden)return;

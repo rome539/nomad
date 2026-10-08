@@ -275,4 +275,45 @@ try {
   }
   assert.deepEqual(errors,[]);
   console.log('PASS map fit, recenter, keyboard, pinch and empty chart');
+  // Classic uses the original item builders/columns; switching is presentation only.
+  await page.evaluate(()=>{closeMap();document.getElementById('modallayoutbtn').click()});
+  assert.equal(await page.evaluate(()=>document.body.dataset.modalLayout),'classic');
+  for(const [width,height] of [[390,844],[320,568],[1280,800]]) {
+    await page.setViewport({width,height,isMobile:width<680,hasTouch:width<680,deviceScaleFactor:1});
+    await page.setContent(fixture);
+    await page.$eval('#modallayoutbtn',e=>e.click());
+    for(const [id,render,state] of cases.filter(c=>['bench','trade','forge'].includes(c[0]))) {
+      await page.evaluate(({id,render,state})=>{
+        document.querySelectorAll(MODAL_SURFACES).forEach(e=>e.classList.remove('open'));
+        window[render](state);
+      },{id,render,state});
+      const result=await page.evaluate(id=>{
+        const root=document.getElementById(id),box=root.querySelector('.bbox'),r=box.getBoundingClientRect();
+        const cols=[...root.querySelectorAll('.bcol')].filter(c=>getComputedStyle(c).display!=='none');
+        return {right:r.right,bottom:r.bottom,overflow:box.scrollWidth>box.clientWidth+1,
+          rows:root.querySelectorAll('.mud-row').length,cols:cols.length,actions:root.querySelectorAll('.bcol button').length};
+      },id);
+      assert(!result.overflow&&result.right<=width+1&&result.bottom<=height+1,`${id} classic ${width}: ${JSON.stringify(result)}`);
+      assert.equal(result.rows,0,'classic uses per-item content');assert(result.actions>0,'classic has inline actions');
+      if(width>=680)assert(result.cols>=2,'classic desktop restores multiple columns');
+    }
+  }
+  await page.evaluate(s=>{
+    closeForge();renderBench({...s,atGate:true,inGatehouse:true,loadouts:[],pack:s.pack.map(it=>({...it,description:'A real description.'}))});
+    listViews.bench.selected='bpack';refreshListView('bench');sent=[];
+  },bench);
+  await page.$eval('#bpack .acts button',e=>e.click());
+  assert.equal(await page.$eval('#bpack .mud-description',e=>e.hidden),false,'classic retains Look');
+  await page.$eval('#bpack .acts button:nth-child(2)',e=>e.click());
+  assert.equal(await page.evaluate(()=>sent.at(-1).action),'equip','classic uses the same equipment command');
+  assert(await page.$eval('#bench .list-tools .loadout-opener',e=>e.getClientRects().length>0),'classic keeps loadouts accessible');
+  const count=await page.evaluate(()=>sent.length);
+  await page.$eval('#modallayoutbtn',e=>e.click());
+  assert.equal(await page.evaluate(()=>sent.length),count,'layout change sends no gameplay commands');
+  assert(await page.$eval('#bench',e=>e.classList.contains('open')),'switch keeps inventory open');
+  assert(await page.$$eval('#bpack .mud-row',els=>els.length>0),'switch rebuilds compact rows');
+  assert.equal(await page.evaluate(()=>document.body.dataset.modalLayout),'compact');
+  assert.deepEqual(errors,[]);
+  console.log('PASS classic desktop/mobile layouts, inline actions, descriptions/loadouts and live layout switching');
+
 } finally {await browser.close();}

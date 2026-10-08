@@ -1737,6 +1737,12 @@ export class ZoneDO implements DurableObject {
         Object.assign(rebuilt, body);
         this.lastCombatRound = Math.max(this.lastCombatRound, body.roundAt);
       }
+      // Wake dismisses all gate panels below. The body journal carries `away`,
+      // but no modal stance: restoring it alone leaves an invisible lockbox
+      // blocking commands and even reopening inventory. Only actual gatehouse
+      // membership survives that dismissal; its player returns to the text room.
+      rebuilt.away = this.inGatehouse.has(pubkey) && this.world!.entryRooms.has(rebuilt.roomId);
+      rebuilt.stepText = rebuilt.away;
       await this.loadWall(rebuilt.pubkey); // a hibernation rebuild must not read an empty wall
       // buildSession stamps lastActiveAt = now, which would read a long-parked
       // socket as JUST arrived and dodge the idle sweep across every eviction —
