@@ -2201,7 +2201,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div class="setrow"><span>ornate borders</span><button id="ornatebtn" type="button" role="switch" aria-label="Ornate borders" aria-checked="false">off</button></div>
     <div class="setrow"><span>nostr themes</span><button id="thbrowse">browse</button></div>
     <div id="thlist"></div>
-    <div class="setrow"><span>modal layout</span><button id="modallayoutbtn" type="button" aria-label="Modal layout: Compact">Compact</button></div>
+    <div class="setrow"><span>inventory &amp; shop layout</span><button id="modallayoutbtn" type="button" aria-label="Inventory &amp; shop layout: Compact">Compact</button></div>
     <div class="setrow"><span>command chips</span><button id="chipbtn">on</button></div>
     <div class="setrow"><span>source</span><a class="abtn" href="https://github.com/rome539/nomad" target="_blank" rel="noopener">github &#8599;</a></div>
   </div>
@@ -5850,7 +5850,7 @@ function syncModalLayout(){
  document.getElementById('compact-modal-style').disabled=modalLayout==='classic';
  var button=document.getElementById('modallayoutbtn');
  button.textContent=modalLayout==='classic'?'Classic':'Compact';
- button.setAttribute('aria-label','Modal layout: '+button.textContent);
+ button.setAttribute('aria-label','Inventory & shop layout: '+button.textContent);
 }
 syncModalLayout();
 document.getElementById('modallayoutbtn').addEventListener('click',function(){
