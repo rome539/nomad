@@ -20,7 +20,7 @@ const made=[];
 // with now that the style holds a calc() no parseFloat can read.
 const el=()=>({style:{setProperty(k,v){this[k]=v}},dataset:{},className:"",appendChild(){},children:[],
   set _c(v){}, getBoundingClientRect:()=>({width:50})});
-const mobsEl={firstChild:null,removeChild(){},children:made,
+const mobsEl={dataset:{},firstChild:null,removeChild(){},children:made,
   appendChild(e){made.push(e)},style:{}};
 const ctx={};
 const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+fn("mobVh")+"\n"+fn("boxPct")+"\n"+fn("picBoxPx")+"\n"
@@ -151,8 +151,8 @@ t("the drake is lifted", drake.lift>0, drake.lift.toFixed(4));
 made.length=0;
 ctx.paintMobs([], null, ["the-drake"]);
 const bigBody=made.find(e=>e.className==="mob dead");
-t("a dead one is lifted the same way", !!bigBody && /translateY\(-\d/.test(bigBody.style.transform||""),
-  bigBody && bigBody.style.transform);
+t("a dead one stays on the foreground floor", !!bigBody && parseFloat(bigBody.style.top) + parseFloat(bigBody.style.height) >= 850 * .42,
+  bigBody && bigBody.style.top);
 
 // THE HEAP (rome, 2026-09-08). Three wolves in a den are three sprites and were
 // one key in a map of states, so the first one to wake spoke for all of them and

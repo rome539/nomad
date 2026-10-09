@@ -11,7 +11,7 @@ const {default:puppeteer}=await import(requireCapture.resolve('puppeteer-core'))
 const root=fileURLToPath(new URL('..',import.meta.url));
 const {code}=await transform(fs.readFileSync(root+'/src/public.ts','utf8'),{loader:'ts',format:'esm'});
 const {PAGE}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
-const hook=`window.demo={setTheme, palettes:THEMES, contrastRatio, renderBench, renderTrade, renderForge, renderMap,
+const hook=`window.demo={fitMobRow,setTheme, palettes:THEMES, contrastRatio, renderBench, renderTrade, renderForge, renderMap,
  themeOptions:(design,ornate)=>{doorAtmosphere=design;ornateBorders=ornate;syncDoorAtmosphere();},
  grantArt,setView,setLogBig,fitPicture,paintScene,updateMobs,renderChips,skyDrift,weatherState:()=>({kind:weatherKind,flash:weatherFlashAt,thunder:weatherThunderAt}),view:()=>viewMode,painted:()=>scenePainted,cacheSize:()=>readySceneImage.cache?.size||0,
  fxState:()=>({name:fxName,ready:fxReady,seq:fxSeq,mist:fxGl&&fxGl.getUniform(fxProg,fxU.mistOn),wet:fxGl&&fxGl.getUniform(fxProg,fxU.wetOn)}),
@@ -325,6 +325,44 @@ try{
   assert.equal(await page.$eval('#mobs .dead',e=>getComputedStyle(e,'::after').filter),'brightness(0)');
  }
  console.log('PASS Hollow death animation and corpse black eyes in ordinary light and blood moon, aligned with the death frame');
+ // Reproduce the reported wall overlap: four living creatures and three bodies
+ // on the shared crypt passage. Bodies must not shrink or displace the living.
+ await page.evaluate(()=>{demo.setTheme('charcoal');demo.setLogBig(false);demo.setView('image');demo.paintScene('upper','in','','ossuary',false,1,'ossuary',0,0,false);});
+ await page.waitForFunction(()=>demo.painted()==='/room-bg/keep-passage-night.webp');
+ for(const [width,height] of [[2672,1260],[1280,800],[390,844],[844,390]]) {
+  await page.setViewport({width,height,isMobile:true,hasTouch:true});
+  await page.evaluate(()=>{demo.fitPicture();demo.updateMobs(['dire-hyena','warden','skeleton','pale-crawler'],null,[]);});
+  const livingLayout=()=>page.$$eval('#mobs .mob:not(.dead)',els=>els.map(e=>({id:e.dataset.id,left:e.style.left,top:e.style.top,width:e.style.width,height:e.style.height})));
+  const beforeBodies=await livingLayout();
+  const livingScale=await page.$eval('#mobs',e=>e.style.transform);
+  await page.evaluate(()=>demo.updateMobs(['dire-hyena','warden','skeleton','pale-crawler'],null,['skeleton','skeleton','skeleton']));
+  assert.deepEqual(await livingLayout(),beforeBodies,'adding corpses must not shrink or move living mobs');
+  assert.equal(await page.$eval('#mobs',e=>e.style.transform),livingScale,'bodies cannot change creature scale');
+  await page.evaluate(()=>new Promise(requestAnimationFrame));
+  const floor=await page.evaluate(()=>{
+   const scene=document.getElementById('scene').getBoundingClientRect(),row=document.getElementById('mobs');
+   return {height:scene.height,width:innerWidth,rects:[...row.children].map(e=>({dead:e.classList.contains('dead'),...e.getBoundingClientRect().toJSON()})),transform:row.style.transform};
+  });
+  assert.equal(floor.rects.length,7,'every living creature and corpse remains visible');
+  for(const r of floor.rects) {
+   assert(r.left>=width*.14-2&&r.right<=width*.86+2,'sprite stays between passage walls: '+JSON.stringify(r));
+   assert(r.bottom>=floor.height*.76-3&&r.bottom<=floor.height*.94+3,'feet stay on the foreground floor: '+JSON.stringify({r,height:floor.height}));
+  }
+  await page.evaluate(()=>demo.updateMobs(['dire-hyena','warden','skeleton','pale-crawler','dire-hyena','warden','skeleton','pale-crawler'],null,[]));
+  assert.equal(await page.$eval('#mobs',e=>e.style.transform),livingScale,'more living mobs add ranks, never shrink the whole group');
+  assert(await page.$$eval('#mobs .mob',els=>new Set(els.map(e=>Math.round(parseFloat(e.style.top)+parseFloat(e.dataset.h)/100*document.getElementById('scene').getBoundingClientRect().height/2))).size)>1,'larger crowds stagger onto more floor ranks at '+width+'x'+height+': '+JSON.stringify(await livingLayout()));
+  await page.evaluate(()=>demo.updateMobs(['dire-hyena','warden','skeleton','pale-crawler'],null,['skeleton','skeleton','skeleton']));
+  await page.evaluate(()=>{for(let i=0;i<10;i++)demo.fitMobRow()});
+  assert.equal(await page.$eval('#mobs',e=>e.style.transform),floor.transform,'repeated fitting cannot compound the scale');
+  if(process.env.CROWD_SCREENSHOTS) {
+   await page.waitForNetworkIdle();
+   await page.screenshot({path:process.env.CROWD_SCREENSHOTS+'/passage-'+width+'.png'});
+  }
+ }
+ await page.evaluate(()=>demo.paintScene('mountain','day','scree','open-ground',false,1,'',0,0,false));
+ await page.waitForFunction(()=>demo.painted()==='/room-bg/scree-day.webp');
+ assert.deepEqual(await page.$eval('#mobs',e=>[e.dataset.floorLeft,e.dataset.floorRight]),['4','96'],'moving outdoors resets passage bounds');
+ console.log('PASS crowds stagger at normal sizes; corpses cannot shrink or displace the living; floor bounds, resize and room transitions');
  assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
  console.log('PASS real touch switch, local art loads, current creatures/corpses restored, empty room, preference and grant');
 }finally{await browser.close()}

@@ -9079,6 +9079,9 @@ var SKY_TURN = { x: "scaleX(-1)", y: "scaleY(-1)", xy: "scale(-1, -1)" };
 // height — 21% for the largest thing in the game, which is what caps this at 72
 // rather than 80: at 80 a stag's feet go off the bottom of the frame.
 var MOB_LINE_DEFAULT = 55;
+// Horizontal floor limits at the standing line, measured on the shared plate.
+// Its alcove walls intrude into the outer edges of every room using this image.
+var MOB_FLOOR = { "keep-passage": [14, 86] };
 // The Back Wall's scree begins at 62% and the Kept Room's floor at 65%, both
 // well below the 55% camera lock — at the default a small creature stands with
 // its feet in the rock face or in the far wall. Same fault the corries had.
@@ -9878,6 +9881,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // creatures read this rather than lastTorch, so nothing ever blazes on a
   // hillside the picture left unlit.
   var scene = "", sky = "", tint = "", lit = false, turn = "", line = MOB_LINE_DEFAULT;
+  var floor = [4, 96];
   var singleLayer = false, singleClass = "";
   var seatAt = "";   // the picture's name, so a throne in it can seat its king (SEAT_ON)
   // WHAT HOUR THE CREATURES ARE STANDING IN, which is the sky outside everywhere
@@ -9914,6 +9918,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     var pwant = (lastTorch && darkEnough && phave.indexOf(" night-torch ") >= 0) ? "night-torch" : pbase;
     // The picture, which may belong to another room (PLATE_OF).
     var stem = PLATE_OF[place] || place;
+    if (typeof MOB_FLOOR !== "undefined" && MOB_FLOOR[stem]) floor = MOB_FLOOR[stem];
     scene = "/room-bg/" + stem + "-" + pwant + ".webp";
     if (KEYED[pwant]) {
       var pp = skyPick(SKY_PAINTED[slot] ? slot : pbase);
@@ -10113,7 +10118,13 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       // never only when it differs: a line left over from the room behind you
       // would put the next room's animals wherever the last one's stood.
       mobsEl.style.top = boxPct(line);
-      if (mobsEl.dataset) mobsEl.dataset.seat = seatAt;
+      if (mobsEl.dataset) {
+        mobsEl.dataset.seat = seatAt;
+        mobsEl.dataset.floorLine = String(line);
+        mobsEl.dataset.floorLeft = String(floor[0]);
+        mobsEl.dataset.floorRight = String(floor[1]);
+      }
+      fitMobRow();
     }
     // ...and centred rather than pinned at 55%. The 55% only ever meant
     // anything while the picture overflowed its box; contained, it does not
@@ -11394,6 +11405,7 @@ function paintMobs(ids, doing, dead) {
     bel.className = "mob dead";
     bel.style.height = boxPct(bvh);
     bel.style.width = boxPct(bvh * bspec.aspect);
+    bel.dataset.h = bvh.toFixed(2);
     bel.dataset.w = (bvh * bspec.aspect).toFixed(2);   // fitMobRow reads this, not the style
     bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + MOB_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
@@ -11459,6 +11471,8 @@ function paintMobs(ids, doing, dead) {
       im.src = "/mob/" + id + ".webp?v=" + MOB_V;
       im.alt = "";
       im.style.height = h;
+      im.dataset.h = vh.toFixed(2);
+      im.onload = fitMobRow;
       mobsEl.appendChild(im);
       continue;
     }
@@ -11467,6 +11481,7 @@ function paintMobs(ids, doing, dead) {
     el.className = "mob";
     el.dataset.id = id;   // the room's effects read it to throw this creature's shadow
     el.style.height = h;
+    if (lift) el.style.transform = "translateY(" + (-lift * 100).toFixed(1) + "%)";
     // WIDTH IS STATED, NOT DERIVED. A strip window only shows one clean frame
     // while its box is exactly one frame's shape: background-size is n*100% wide,
     // so if anything moves the width — flex shrinking it, an aspect-ratio the
@@ -11474,6 +11489,7 @@ function paintMobs(ids, doing, dead) {
     // row stretches. So the width is computed here from the same height the table
     // gave, and the element is told not to flex at all.
     el.style.width = boxPct(vh * spec.aspect);
+    el.dataset.h = vh.toFixed(2);
     el.dataset.w = (vh * spec.aspect).toFixed(2);
     // TWO LAYERS ON ONE ELEMENT, and they must be one element rather than two.
     // A hollow thing is drawn with cold pale eyes, and on a blood moon the game
@@ -11556,29 +11572,74 @@ function paintMobs(ids, doing, dead) {
   fitMobRow();
   runAnims();
 }
-// A crowded room stands further off. Worked out from the sizes rather than
-// measured off the DOM: a centred flex line that overflows reports its width
-// unreliably, and these numbers are known exactly.
+// Keep normal creature sizes. Fit more creatures by staggering ranks on the
+// floor; corpses have their own foreground positions and never consume a
+// living creature's space. Only a single sprite too wide for the viewport
+// requires scaling. Phones reserve two readable columns for groups rather
+// than shrinking them further with every extra arrival.
 function fitMobRow() {
   if (!mobsEl) return;
-  // THE WIDTHS ARE ON THE ELEMENTS, NOT IN THEIR STYLE. They used to be plain
-  // vh strings this could parse; they are calc() against the picture box now,
-  // and parseFloat("calc(...)") is NaN - which would silently fall through to
-  // getBoundingClientRect and measure a row that is already scaled, compounding
-  // the scale a little more on every repaint. Each sprite carries its width as
-  // a share of the box in dataset.w, which is the same number the style was
-  // built from and cannot drift from it.
-  var picth = picBoxPx(), vw = window.innerWidth / 100, need = 0, n = 0;
+  var picth = picBoxPx(), width = window.innerWidth, rowH = picth * MAN_VH / 100;
+  var living = [], bodies = [], widest = 0;
   for (var i = 0; i < mobsEl.children.length; i++) {
-    var c = mobsEl.children[i];
-    var w = parseFloat(c.dataset.w || "0");
-    need += w ? w / 100 * picth : c.getBoundingClientRect().width;
-    n++;
+    var c = mobsEl.children[i], h = Number(c.dataset.h || MAN_VH) * picth / 100;
+    var w = Number(c.dataset.w || 0) * picth / 100;
+    if (!w) w = c.naturalWidth && c.naturalHeight ? h * c.naturalWidth / c.naturalHeight : h;
+    var dead = c.className === "mob dead";
+    (dead ? bodies : living).push({ el: c, w: w, h: h });
+    if (!dead) widest = Math.max(widest, w);
   }
-  if (!n) return;
-  need += (n - 1) * 3 * vw + 8 * vw;          // the gap and the padding, same as the CSS
-  var k = Math.min(1, (window.innerWidth - 8 * vw) / Math.max(1, need - 8 * vw));
-  mobsEl.style.transform = "translateY(-50%)" + (k < 1 ? " scale(" + k.toFixed(3) + ")" : "");
+  if (!living.length && !bodies.length) return;
+  if (!widest) bodies.forEach(function (b) { widest = Math.max(widest, b.w); });
+  // Crowds stay in the central floor area, instead of filling the screen edges.
+  var left = Math.max(14, Number(mobsEl.dataset.floorLeft || 4)) / 100 * width;
+  var right = Math.min(86, Number(mobsEl.dataset.floorRight || 96)) / 100 * width;
+  var span = right - left;
+  var columns = width < 680 && living.length > 1 ? 2 : 1;
+  var scale = Math.min(1, (span - (columns - 1) * Math.min(width * .025, 22)) / (columns * widest * 1.12));
+  var gap = Math.min(width * .025, 22) / scale;
+  var available = span / scale;
+  var foot = picth * (Number(mobsEl.dataset.floorLine || 55) + MAN_VH / 2) / 100;
+  var forward = Math.max(0, Math.min(picth * .16, picth * .94 - foot));
+  mobsEl.style.height = rowH + "px";
+  mobsEl.style.transformOrigin = "50% 100%";
+  mobsEl.style.transform = "translateY(-50%) scale(" + scale.toFixed(6) + ")";
+  function placeGroup(group, dead) {
+    var ranks = [], rank = [], used = 0;
+    group.forEach(function (item) {
+      // A large corpse cannot resize the living. Its own frame can fit locally.
+      item.fit = Math.min(1, available / (item.w * 1.12));
+      var w = item.w * item.fit * 1.12;
+      if (rank.length && (rank.length >= 4 || used + gap + w > available)) { ranks.push(rank); rank = []; used = 0; }
+      rank.push(item); used += (rank.length > 1 ? gap : 0) + w;
+    });
+    if (rank.length) ranks.push(rank);
+    ranks.forEach(function (items, r) {
+      var total = (items.length - 1) * gap;
+      items.forEach(function (item) { total += item.w * item.fit * 1.12; });
+      var x = width / 2 - total / 2;
+      var depth = dead ? forward * (.85 + .15 * r / Math.max(1, ranks.length - 1))
+        : forward * .65 * r / Math.max(1, ranks.length - 1);
+      items.forEach(function (item) {
+        var el = item.el;
+        el.style.position = "absolute";
+        el.style.left = (x + item.w * item.fit * .06) + "px";
+        el.style.top = ((rowH - item.h) / 2 + depth / scale) + "px";
+        el.style.zIndex = String(dead ? r : 10 + r);
+        // Only static corpses need this separate size adjustment; animation
+        // transforms remain owned by stepAnims on every living creature.
+        if (dead) {
+          el.style.width = (item.w * item.fit) + "px";
+          el.style.height = (item.h * item.fit) + "px";
+          el.style.top = (rowH - item.h * item.fit + depth / scale) + "px";
+          el.style.transform = "none";
+        }
+        x += item.w * item.fit * 1.12 + gap;
+      });
+    });
+  }
+  placeGroup(bodies, true);
+  placeGroup(living, false);
 }
 // THE PICTURE BOX, IN PIXELS. Read from the scene element itself rather than
 // recomputed from --logh: the dial can be moved by a media query or the grip,
