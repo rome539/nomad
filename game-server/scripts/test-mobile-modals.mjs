@@ -315,5 +315,38 @@ try {
   assert.equal(await page.evaluate(()=>document.body.dataset.modalLayout),'compact');
   assert.deepEqual(errors,[]);
   console.log('PASS classic desktop/mobile layouts, inline actions, descriptions/loadouts and live layout switching');
+  // Every palette needs a real ornament mask: a missing mask paints the entire
+  // panel in translucent gold instead of drawing just its border details.
+  const palettes=Function('return ('+PAGE.slice(PAGE.indexOf('var THEMES = {')+13,PAGE.indexOf('\n};',PAGE.indexOf('var THEMES = {'))+2)+')')();
+  const masksByTheme=new Map();
+  for(const layout of ['compact','classic']) {
+    for(const [theme,colors] of [...Object.entries(palettes),['custom',palettes.charcoal]]) {
+      for(const design of [false,true]) {
+        await page.evaluate(({layout,theme,colors,design,state})=>{
+          if(modalLayout!==layout)document.getElementById('modallayoutbtn').click();
+          Object.entries(colors).forEach(([key,value])=>document.documentElement.style.setProperty('--'+key,value));
+          document.body.dataset.ornate=theme;document.body.dataset.atmosphere=design?theme:'';
+          document.getElementById('room').textContent='The Gatehouse';
+          renderBench({...state,atGate:true});
+        },{layout,theme,colors,design,state:bench});
+        const paint=await page.evaluate(()=>{
+          const box=document.querySelector('#bench .bbox');
+          return {mask:getComputedStyle(box,'::after').maskImage,roomMask:getComputedStyle(document.getElementById('roomframe'),'::before').maskImage,bg:getComputedStyle(box).backgroundColor};
+        });
+        assert(paint.mask.includes('data:image/svg+xml'),`${theme}/${layout}/design=${design}: missing panel ornament mask (${paint.mask})`);
+        assert(paint.roomMask.includes('data:image/svg+xml'),`${theme}: missing room ornament mask`);
+        masksByTheme.set(theme,paint.roomMask);
+        if(theme==='charcoal')assert.equal(paint.bg,'rgb(24, 26, 29)','Charcoal keeps its dark panel with theme design enabled');
+        if(process.env.MODAL_SCREENSHOTS&&theme==='charcoal'&&design)await page.screenshot({path:process.env.MODAL_SCREENSHOTS+'/charcoal-'+layout+'.png'});
+      }
+    }
+  }
+  assert.equal(new Set(masksByTheme.values()).size,masksByTheme.size,'every theme has a distinct ornament, including Charcoal');
+  await page.evaluate(()=>{document.body.dataset.ornate='future-theme'});
+  assert.match(await page.$eval('#bench .bbox',e=>getComputedStyle(e,'::after').maskImage),/gradient/,'unknown themes receive a transparent mask, never a solid overlay');
+  await page.evaluate(()=>{document.body.dataset.ornate='';document.body.dataset.atmosphere=''});
+  assert.equal(await page.$eval('#bench .bbox',e=>getComputedStyle(e,'::after').content),'none','ornaments can still be disabled');
+  console.log('PASS all palette ornament masks, both layouts, theme design on/off, Charcoal background and safe unknown-theme fallback');
+
 
 } finally {await browser.close();}

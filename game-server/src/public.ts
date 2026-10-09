@@ -2016,6 +2016,8 @@ export const PAGE = `<!doctype html>
     body[data-ornate]:where(:not([data-ornate=""])) #roomframe:not(:has(#room:empty))::before,
     body[data-ornate]:where(:not([data-ornate=""])) #roomframe:not(:has(#room:empty))::after { width: 12px; height: 12px; flex-basis: 12px; }
   }
+  /* A theme without a border shape must paint nothing, not an unmasked gold panel. */
+  body[data-ornate]:where(:not([data-ornate=""])) { --ornament: linear-gradient(transparent, transparent); }
   /* Decorative overlays never participate in layout or intercept taps. */
   body[data-ornate]:where(:not([data-ornate=""])) :is(.bbox, .lbox, .vbox, .signer-connect) { position: relative; }
   body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::after {
@@ -2036,6 +2038,8 @@ export const PAGE = `<!doctype html>
   body[data-ornate="moss"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Cpath%20d%3D%22M5%2025L25%205M8%2022V14M8%2022H16M15%2015V6M15%2015H24M22%208V3M22%208H27%22%2F%3E%3C%2Fsvg%3E"); }
   body[data-ornate="abyss"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Cpath%20d%3D%22M15%202L28%2015L15%2028L2%2015ZM15%208L22%2015L15%2022L8%2015ZM15%202V8M28%2015H22M15%2028V22M2%2015H8%22%2F%3E%3C%2Fsvg%3E"); }
   body[data-ornate="ember"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Ccircle%20cx%3D%2215%22%20cy%3D%2215%22%20r%3D%229%22%2F%3E%3Ccircle%20cx%3D%2215%22%20cy%3D%2215%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M15%202V6M24%2015H28M15%2024V28M2%2015H6%22%2F%3E%3C%2Fsvg%3E"); }
+  /* Three staggered charcoal sticks, drawn for the small border and room-title marks. */
+  body[data-ornate="charcoal"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22bevel%22%3E%3Cpath%20d%3D%22M3%2019L8%207L12%206L7%2020ZM11%2024L18%205L22%204L15%2025ZM21%2023L25%2013L28%2012L25%2024Z%22%2F%3E%3C%2Fsvg%3E"); }
   body[data-ornate="custom"] { --ornament: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2030%2030%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%3E%3Cpath%20d%3D%22M4%2012V4H12M18%204H26V12M26%2018V26H18M12%2026H4V18%22%2F%3E%3C%2Fsvg%3E"); }
   body[data-ornate="door"] :is(.bbox, .lbox, .vbox)::after {
     mask-image: var(--ornament), var(--ornament), var(--ornament), var(--ornament), var(--ornament);
@@ -2196,13 +2200,13 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <span class="lbl">SETTINGS</span>
     <div class="setrow"><span>what is NOMAD</span><button id="aboutbtn">read</button></div>
     <div class="setrow"><span>sound</span><button id="sndbtn">off</button></div>
+    <div class="setrow"><span>command chips</span><button id="chipbtn">on</button></div>
+    <div class="setrow"><span>inventory &amp; shop layout</span><button id="modallayoutbtn" type="button" aria-label="Inventory &amp; shop layout: Compact">Compact</button></div>
     <div class="setrow"><span>theme</span><button id="thbtn">door</button></div>
-    <div class="setrow" id="dooratmorow"><span>theme design</span><button id="dooratmobtn" type="button" role="switch" aria-label="Enhanced theme design" aria-checked="false">off</button></div>
-    <div class="setrow"><span>ornate borders</span><button id="ornatebtn" type="button" role="switch" aria-label="Ornate borders" aria-checked="false">off</button></div>
     <div class="setrow"><span>nostr themes</span><button id="thbrowse">browse</button></div>
     <div id="thlist"></div>
-    <div class="setrow"><span>inventory &amp; shop layout</span><button id="modallayoutbtn" type="button" aria-label="Inventory &amp; shop layout: Compact">Compact</button></div>
-    <div class="setrow"><span>command chips</span><button id="chipbtn">on</button></div>
+    <div class="setrow" id="dooratmorow"><span>theme design</span><button id="dooratmobtn" type="button" role="switch" aria-label="Enhanced theme design" aria-checked="false">off</button></div>
+    <div class="setrow"><span>ornate borders</span><button id="ornatebtn" type="button" role="switch" aria-label="Ornate borders" aria-checked="false">off</button></div>
     <div class="setrow"><span>source</span><a class="abtn" href="https://github.com/rome539/nomad" target="_blank" rel="noopener">github &#8599;</a></div>
   </div>
   <div id="idpanel">
@@ -9543,7 +9547,7 @@ var viewRow = null;
 function buildViewRow() {
   if (viewRow) return;
   var panel = document.getElementById("setpanel");
-  var anchor = document.getElementById("chipbtn");
+  var anchor = document.getElementById("aboutbtn");
   if (!panel) return;
   viewRow = document.createElement("div");
   viewRow.className = "setrow";
