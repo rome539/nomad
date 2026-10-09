@@ -2062,6 +2062,51 @@ export const PAGE = `<!doctype html>
     mask-size: 14px 14px, 14px 14px, 14px 14px, 14px 14px, 22px 22px;
     mask-position: left top, right top, left bottom, right bottom, center top;
   }
+  /* Ornate artwork shares the saved border switch. A background keeps the
+     floral engraving anchored to the visible log while its text scrolls. */
+  body[data-ornate]:where(:not([data-ornate=""])) #log {
+    background-image: url("/ornate/floral-v1.svg");
+    background-size: 100% 100%;
+    background-position: center bottom;
+    background-repeat: no-repeat;
+  }
+  body[data-ornate]:where(:not([data-ornate=""]))[data-view="image"][data-log="big"] #log {
+    background-image: url("/ornate/floral-v1.svg"), linear-gradient(to bottom,
+      color-mix(in srgb, var(--bg) 0%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 82%, transparent) 5%,
+      color-mix(in srgb, var(--bg) 96%, transparent) 14%,
+      color-mix(in srgb, var(--bg) 99%, transparent) 100%);
+  }
+  body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect) {
+    isolation: isolate;
+  }
+  body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: inherit;
+    background: url("/ornate/gate-v1.svg") right -54px bottom -42px / auto 86% no-repeat,
+      url("/ornate/windows-v1.svg") left -72px bottom 80px / auto 88% no-repeat;
+    opacity: .25;
+    mask-image: linear-gradient(to bottom, transparent, black 25%);
+  }
+  body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel)::before {
+    background: url("/ornate/gate-v1.svg") right -95px bottom -32px / auto 80% no-repeat;
+    opacity: .16;
+    mask-image: linear-gradient(to bottom, transparent 10%, black);
+  }
+  body[data-ornate]:where(:not([data-ornate=""]))[data-theme-tone="light"] :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before {
+    filter: brightness(.25);
+    opacity: .15;
+  }
+  @media (max-width:680px) {
+    body[data-ornate]:where(:not([data-ornate=""])) :is(.bbox, .lbox, .vbox, .signer-connect)::before {
+      background-position: right -125px bottom -25px, left -190px bottom 50px;
+      opacity: .14;
+    }
+  }
   /* The first walk owns the log until the player finishes or skips it. */
   body[data-tutorial="on"] #log > :not(.guide-step) { display: none; }
   body[data-tutorial="on"] :is(#scene, #sky, #mobs, #loggrip, #chips) { display: none; }
@@ -2220,7 +2265,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div class="setrow"><span>inventory &amp; shop layout</span><button id="modallayoutbtn" type="button" aria-label="Inventory &amp; shop layout: Compact">Compact</button></div>
     <div class="setrow"><span>theme</span><button id="thbtn">door</button></div>
     <div class="setrow" id="dooratmorow"><span>theme design</span><button id="dooratmobtn" type="button" role="switch" aria-label="Enhanced theme design" aria-checked="false">off</button></div>
-    <div class="setrow"><span>ornate borders</span><button id="ornatebtn" type="button" role="switch" aria-label="Ornate borders" aria-checked="false">off</button></div>
+    <div class="setrow"><span>ornate artwork</span><button id="ornatebtn" type="button" role="switch" aria-label="Ornate artwork" aria-checked="false">off</button></div>
     <div class="setrow"><span>nostr themes</span><button id="thbrowse">browse</button></div>
     <div id="thlist"></div>
     <div class="setrow"><span>source</span><a class="abtn" href="https://github.com/rome539/nomad" target="_blank" rel="noopener">github &#8599;</a></div>

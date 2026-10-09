@@ -35,11 +35,27 @@ try{
   if(['/world','/world.json','/manifest.json'].includes(u.pathname))return r.respond({contentType:'application/json',body:'{}'});
   const files={'/nostr.js':'src/nostr-bundle.js','/qrcode.js':'src/qrcode-bundle.js'};
   const f=path.join(root,files[u.pathname]||'public'+u.pathname);
-  if(fs.existsSync(f)&&fs.statSync(f).isFile())return r.respond({contentType:f.endsWith('.js')?'application/javascript':f.endsWith('.webp')?'image/webp':'application/octet-stream',body:fs.readFileSync(f)});
+  if(fs.existsSync(f)&&fs.statSync(f).isFile())return r.respond({contentType:f.endsWith('.js')?'application/javascript':f.endsWith('.webp')?'image/webp':f.endsWith('.svg')?'image/svg+xml':'application/octet-stream',body:fs.readFileSync(f)});
   missing.push(u.pathname);r.respond({status:404,body:''});
  });
  await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});await page.goto('http://nomad.test');
  await page.waitForFunction(()=>window.demo);
+ // The existing ornate switch controls both engravings and keeps its saved preference.
+ for(const enabled of [false,true]) {
+  await page.$eval('#ornatebtn',e=>e.click());
+  assert.equal(await page.evaluate(()=>localStorage.getItem('nomad_ornate_borders')),enabled?'on':'off');
+  await page.reload();await page.waitForFunction(()=>window.demo);
+  const art=await page.evaluate(()=>({
+   checked:document.getElementById('ornatebtn').getAttribute('aria-checked'),
+   log:getComputedStyle(document.getElementById('log')).backgroundImage,
+   panel:getComputedStyle(document.querySelector('#bench .bbox'),'::before').backgroundImage
+  }));
+  assert.equal(art.checked,String(enabled));
+  assert.equal(art.log.includes('/ornate/floral-v1.svg'),enabled);
+  assert.equal(art.panel.includes('/ornate/gate-v1.svg'),enabled);
+  assert.equal(art.panel.includes('/ornate/windows-v1.svg'),enabled);
+ }
+ console.log('PASS ornate artwork switch and reload persistence');
  // Access remains server-granted; a saved preference alone cannot enable art.
  assert.equal(await page.$('#viewbtn'),null);
  await page.evaluate(()=>{document.getElementById('threshold').remove();demo.grantArt();demo.renderChips(['go north','go west','attack hill-wolf','inventory','map'],true);demo.paintScene('mountain','day','hillside','The hillside',false,1,'',0,0);demo.updateMobs(['hill-wolf'],null,['red-hind']);});
@@ -75,6 +91,7 @@ try{
    },{design,ornate});
    const paint=await page.$eval('#log',e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,image:s.backgroundImage,shadow:s.textShadow, tone:document.body.dataset.themeTone, bgVar:s.getPropertyValue('--bg'), pageVar:s.getPropertyValue('--design-page'), view:document.body.dataset.view, big:document.body.dataset.log,opacity:s.opacity,ink:[...e.children].map(child=>{const c=getComputedStyle(child);return {opacity:c.opacity,color:c.color,shadow:c.textShadow}})}});
    assert.match(paint.image,/linear-gradient\(/,'Bone retains the shared reading-panel fade');
+   assert.equal(paint.image.includes('/ornate/floral-v1.svg'),ornate,'artwork follows ornate independently of theme design');
    assert.match(paint.image,/\/ 0\) 0%/,'panel edge remains transparent');
    assert.match(paint.image,/\/ 0.99\) 100%/,'panel retains the original fade stops');
    assert.equal(paint.opacity,'1','the panel must not fade its lettering');
