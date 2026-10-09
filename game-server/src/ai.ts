@@ -1,3 +1,4 @@
+import { hpLabel } from "./util";
 import * as exhaustion from "./exhaustion";
 // Creature AI: how the dungeon's animals think between alarms — grudges and
 // memory, waking to noise, hunting and wandering, scavenging and breeding, the
@@ -3662,7 +3663,7 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
           Math.round(raw * ARMOR_K / (z.equippedArmor(s) + ARMOR_K))
           * STANCE[s.stance].def * (hurtDrake ? WOUNDED_DMG_MULT : 1)));
         s.hp -= dmg;
-        z.send(s, `The heat comes over you for ${dmg}. There was nowhere in this room to be. [${Math.max(0, s.hp)}/${s.maxHp} hp]`, "dmgin big");
+        z.send(s, `The heat comes over you for ${dmg}. There was nowhere in this room to be. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin big");
         z.sendStatus(s);
         if (s.hp <= 0) await z.onPlayerDeath(s, tmpl);
       }
@@ -3702,7 +3703,7 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
         Math.round(raw * ARMOR_K / (z.equippedArmor(mark) + ARMOR_K))
         * STANCE[mark.stance].def * (hurtDrake ? WOUNDED_DMG_MULT : 1)));
       mark.hp -= dmg;
-      z.send(mark, `It comes through low and you are on the ground before you hear it, for ${dmg}. [${Math.max(0, mark.hp)}/${mark.maxHp} hp]`, "dmgin big");
+      z.send(mark, `It comes through low and you are on the ground before you hear it, for ${dmg}. [${hpLabel(mark.hp, mark.maxHp)}]`, "dmgin big");
       z.sendStatus(mark);
       if (mark.hp <= 0) await z.onPlayerDeath(mark, tmpl);
       return true;

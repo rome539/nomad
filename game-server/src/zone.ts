@@ -1,3 +1,4 @@
+import { hpLabel, wholeHp } from "./util";
 import * as exhaustion from "./exhaustion";
 // One Durable Object per zone: the authoritative simulation — who's where,
 // creature state, what lies on which floor.
@@ -3686,7 +3687,7 @@ export class ZoneDO implements DurableObject {
       const arcWorn = Math.max(1, Math.round(arc * ARMOR_K / (this.equippedArmor(other) + ARMOR_K)));
       const arcDef = Math.max(1, Math.round(arcWorn * STANCE[other.stance].def));
       other.hp -= arcDef;
-      this.send(other, `${cap(tmpl.name)} swings on through — the arc of the blow catches you for ${arcDef}. [${Math.max(0, other.hp)}/${other.maxHp} hp]`, "dmgin");
+      this.send(other, `${cap(tmpl.name)} swings on through — the arc of the blow catches you for ${arcDef}. [${hpLabel(other.hp, other.maxHp)}]`, "dmgin");
       this.sendStatus(other);
       if (other.hp <= 0) {
         // Awaited (2026-08-20), like every other death path: a detached death
@@ -4830,7 +4831,7 @@ export class ZoneDO implements DurableObject {
           this.actorFeed(victim, victim.roomId, this.feedProc(FEED_REST_CAUGHT, tmpl.name, victim.name), "fight");
         }
         if (victim.hp > 0) {
-          this.send(victim, `${cap(tmpl.name)} ${this.creatureHit(tmpl.id)} for ${dmg}${flourish} [${victim.hp}/${victim.maxHp} hp]`, flourish === "." ? "dmgin" : "dmgin big");
+          this.send(victim, `${cap(tmpl.name)} ${this.creatureHit(tmpl.id)} for ${dmg}${flourish} [${hpLabel(victim.hp, victim.maxHp)}]`, flourish === "." ? "dmgin" : "dmgin big");
           if (drowned) this.send(victim, `${cap(tmpl.name)} drags you under — black water fills your lungs for ${drowned}. (break free, or drown)`, "dmgin big");
           // light-snuffing: a landed blow puts your flame out (mob trait lottery).
           if (creature.traits?.includes("light-snuffing") && victim.litSource === "torch" && this.carriesLight(victim)) {
@@ -5054,7 +5055,7 @@ export class ZoneDO implements DurableObject {
       // total is the most-read number in the game and it must never show that.
       session.hp = Math.max(1, Math.round((session.hp - bd) * 100) / 100);
       if (session.bleedTicks <= 0) { session.bleedTicks = 0; session.bleedDmg = 0; }
-      this.send(session, `Your wound bleeds — ${bd}.${session.bleedTicks ? "" : " It clots."} [${session.hp}/${session.maxHp} hp]`, "dmgin");
+      this.send(session, `Your wound bleeds — ${bd}.${session.bleedTicks ? "" : " It clots."} [${hpLabel(session.hp, session.maxHp)}]`, "dmgin");
       this.sendStatus(session);
     }
 
@@ -5078,7 +5079,7 @@ export class ZoneDO implements DurableObject {
       if (!food) continue;
       const { before, tmpl } = await verbs.consumeFood(this, session, food);
       this.send(session, session.hp > before
-        ? `Your hand goes to the pack on its own — you tear into ${tmpl.name}. [${session.hp}/${session.maxHp} hp]`
+        ? `Your hand goes to the pack on its own — you tear into ${tmpl.name}. [${hpLabel(session.hp, session.maxHp)}]`
         : `Your hand goes to the pack on its own — you tear into ${tmpl.name}.`, "gain");
       this.roomFeed(session.roomId, `${session.name} snatches a bite mid-fight.`, session.pubkey, false);
       this.sendStatus(session);
@@ -6778,8 +6779,8 @@ export class ZoneDO implements DurableObject {
     if (!quiet) this.combatNoise(victim.roomId); // a listener's reflex smack makes no din that draws the room
     if (victim.hp > 0) {
       this.send(victim, atLength
-        ? `${cap(tmpl.name)} rushes you — but it meets ${weapon!.tmpl.name} held at length, and the worst of the charge dies on the point. A first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`
-        : `${cap(tmpl.name)} is on you before you're set — a first blow for ${dmg}. [${victim.hp}/${victim.maxHp} hp]`, "dmgin big");
+        ? `${cap(tmpl.name)} rushes you — but it meets ${weapon!.tmpl.name} held at length, and the worst of the charge dies on the point. A first blow for ${dmg}. [${hpLabel(victim.hp, victim.maxHp)}]`
+        : `${cap(tmpl.name)} is on you before you're set — a first blow for ${dmg}. [${hpLabel(victim.hp, victim.maxHp)}]`, "dmgin big");
       this.sendStatus(victim);
       this.openWound(victim, tmpl, creature); // an ambush by something with claws cuts deep
       this.maybeHobble(victim, tmpl); // and it can take the leg out from under you
@@ -8225,7 +8226,7 @@ export class ZoneDO implements DurableObject {
     if (this.wearsTrait(session, "thorns")) traits.push("thorns (blocks bite back)");
     if (t && hasTrait(t, "reach")) traits.push("reach (blunts the rush; still finds what's off the ground)");
     return {
-      hp: session.hp, maxHp: session.maxHp, stance: session.stance,
+      hp: wholeHp(session.hp), maxHp: wholeHp(session.maxHp), stance: session.stance,
       slots,
       atk: {
         name: t?.name ?? "your bare hands",
@@ -8400,8 +8401,8 @@ export class ZoneDO implements DurableObject {
           t: "status",
           name: session.name,
           named: session.named ? 1 : 0,
-          hp: session.hp,
-          max_hp: session.maxHp,
+          hp: wholeHp(session.hp),
+          max_hp: wholeHp(session.maxHp),
           fatigue: Math.floor((session.exhaustion?.units ?? 0) / 2) / 10,
           fatigue_penalty: exhaustion.playerPenalty(session.exhaustion),
           recovery: this.recoveryMode(session),

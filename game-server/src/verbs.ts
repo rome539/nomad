@@ -1,3 +1,4 @@
+import { hpLabel } from "./util";
 import * as exhaustion from "./exhaustion";
 // The player's verbs, out of the spine. zone.ts keeps dispatch, transport, and
 // the tick/combat loop; everything a wanderer TYPES that isn't starting a fight
@@ -963,7 +964,7 @@ export function cmdSheet(z: ZoneDO, session: Session): void {
 export function selfExamine(z: ZoneDO, session: Session): string {
   const f = session.hp / session.maxHp;
   const state = f >= 1 ? "whole and unhurt" : f > 0.66 ? "bruised but sound" : f > 0.33 ? "badly hurt" : "at the very edge of it";
-  const parts: string[] = [`You take stock of yourself: ${state}. [${session.hp}/${session.maxHp} hp]`];
+  const parts: string[] = [`You take stock of yourself: ${state}. [${hpLabel(session.hp, session.maxHp)}]`];
   if (session.bleedTicks && session.bleedTicks > 0) parts.push("Blood runs from a gash that hasn't clotted.");
   if (session.hobbled) parts.push("One leg is a bad wound — you'd limp if you had to run.");
   if (session.stunned) parts.push("Your head still rings; the next moment won't quite be yours.");
@@ -1271,7 +1272,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     bite = Math.max(1, Math.round(bite * ARMOR_K / (z.equippedArmor(session) + ARMOR_K)));
     bite = Math.max(1, Math.round(bite * STANCE[session.stance].def));
     session.hp -= bite;
-    z.send(session, `${cap(gt.name)} holds its post — and one head snaps out as you pass, jaws closing for ${bite}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`, "dmgin");
+    z.send(session, `${cap(gt.name)} holds its post — and one head snaps out as you pass, jaws closing for ${bite}. [${hpLabel(session.hp, session.maxHp)}]`, "dmgin");
     z.roomFeed(session.roomId, `${cap(gt.name)} snaps at ${session.name} as they pass.`, session.pubkey, false);
     if (session.hp <= 0) {
       await z.onPlayerDeath(session, gt);
@@ -1300,7 +1301,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
       pdmg = Math.max(1, Math.round(pdmg * ARMOR_K / (z.equippedArmor(session) + ARMOR_K))); // % mitigation, never immunity
       pdmg = Math.max(1, Math.round(pdmg * STANCE[session.stance].def));
       session.hp -= pdmg;
-      z.send(session, `${dragLine} — ${stmpl.name} lands a parting blow for ${pdmg}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`);
+      z.send(session, `${dragLine} — ${stmpl.name} lands a parting blow for ${pdmg}. [${hpLabel(session.hp, session.maxHp)}]`);
       if (session.hp <= 0) {
         await z.onPlayerDeath(session, stmpl);
         return;
@@ -1321,7 +1322,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     pdmg = Math.max(1, Math.round(pdmg * STANCE[session.stance].def));
     pdmg = exhaustion.playerDamage(pdmg, hunter.exhaustion);
     session.hp -= pdmg;
-    z.send(session, `${dragLine} — ${hunter.name} lands a parting cut for ${pdmg}. [${Math.max(0, session.hp)}/${session.maxHp} hp]`, "dmgin");
+    z.send(session, `${dragLine} — ${hunter.name} lands a parting cut for ${pdmg}. [${hpLabel(session.hp, session.maxHp)}]`, "dmgin");
     z.send(hunter, `You open ${session.name} as they break away — ${pdmg}.`, "dmgout");
     if (session.hp <= 0) {
       await pvp.pvpKill(z, hunter, session);
@@ -3281,14 +3282,14 @@ export async function cmdEat(z: ZoneDO, session: Session, arg: string): Promise<
               "It barely helps — half of it is rot.",
               "Your stomach turns, but a little strength comes back.",
               "Foul going down, and it gives back little for it.",
-            ])} [${session.hp}/${session.maxHp} hp]`
+            ])} [${hpLabel(session.hp, session.maxHp)}]`
           : `You eat ${tmpl.name}. ${pick([
               "Warmth comes back to you.",
               "It sits like a coal in your belly, and some of the grey lifts.",
               "It is barely food, but your hands steady.",
               "Strength trickles back into your limbs.",
               "The gnawing eases, and you feel a little less like dying.",
-            ])} [${session.hp}/${session.maxHp} hp]`)
+            ])} [${hpLabel(session.hp, session.maxHp)}]`)
       : `You eat ${tmpl.name}.`)
     + (gulped ? " You bolt it down with one eye on your foe — an opening." : ""),
     "gain",
@@ -3416,7 +3417,7 @@ export async function applyBandage(z: ZoneDO, session: Session, carried: Carried
   z.send(session, (auto
     ? `Your hands move on their own — you bind the wound with ${tmpl.name}.`
     : `You bind your wounds with ${tmpl.name}.`)
-    + (session.hp > before ? ` The bleeding stops. [${session.hp}/${session.maxHp} hp]` : " The bleeding stops."), "gain");
+    + (session.hp > before ? ` The bleeding stops. [${hpLabel(session.hp, session.maxHp)}]` : " The bleeding stops."), "gain");
   z.roomFeed(session.roomId, `${session.name} binds a wound.`, session.pubkey, false);
   z.sendStatus(session);
   z.sendCtx(session);

@@ -1,3 +1,13 @@
+// Presentation only: keep fractional recovery in the simulation. Never show
+// full health early, or show a living player as dead below one hit point.
+export function wholeHp(hp: number): number {
+  return hp > 0 ? Math.max(1, Math.floor(hp)) : 0;
+}
+
+export function hpLabel(hp: number, maxHp: number): string {
+  return `${wholeHp(hp)}/${wholeHp(maxHp)} hp`;
+}
+
 export function nowSec(): number {
   return Math.floor(Date.now() / 1000);
 }

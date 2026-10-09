@@ -2442,6 +2442,9 @@ var hpEl = document.getElementById("hp");
 var fxEl = document.getElementById("fx");
 var chipsEl = document.getElementById("chips");
 
+// Mirror util.wholeHp for older servers and live inventory updates.
+function wholeHp(hp) { return hp > 0 ? Math.max(1, Math.floor(hp)) : 0; }
+
 // Both readings show reserves: low HP or stamina is dangerous. The server
 // still tracks fatigue; only its presentation counts down from full stamina.
 function renderVitals(f) {
@@ -2449,7 +2452,7 @@ function renderVitals(f) {
   var hp = document.createElement("span"), sta = document.createElement("span");
   hp.className = "vital-hp" + (f.hp <= f.max_hp / 3 ? " vital-danger" : f.hp <= f.max_hp / 2 ? " vital-warn" : "");
   sta.className = "vital-sta" + (stamina <= 10 ? " vital-danger" : stamina <= 30 ? " vital-warn" : "");
-  hp.textContent = f.hp + "/" + f.max_hp + " hp";
+  hp.textContent = wholeHp(f.hp) + "/" + wholeHp(f.max_hp) + " hp";
   sta.textContent = stamina + "/50 sta";
   sta.title = "Stamina";
   hpEl.className = "";
@@ -5099,7 +5102,7 @@ function dollPulse(hp, maxHp) {
 }
 
 function dollStanceText() {
-  return dollSheet.stance + " \\u00b7 " + dollSheet.hp + "/" + dollSheet.maxHp + " hp"
+  return dollSheet.stance + " \\u00b7 " + wholeHp(dollSheet.hp) + "/" + wholeHp(dollSheet.maxHp) + " hp"
     + (dollSheet.lit ? " \\u00b7 a torch burns in your grip" : "");
 }
 

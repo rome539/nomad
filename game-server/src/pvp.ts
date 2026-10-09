@@ -1,3 +1,4 @@
+import { hpLabel } from "./util";
 import * as exhaustion from "./exhaustion";
 // PvP — steel between wanderers. The law was written long before this file:
 // witnesses are the sound system, evidence is blood on the killer (never a
@@ -193,7 +194,7 @@ async function swingAt(
         await pvpKill(z, defender, attacker);
         return;
       }
-      z.send(attacker, `You drive yourself onto the spike — ${spike} back. [${attacker.hp}/${attacker.maxHp} hp]`, "dmgin");
+      z.send(attacker, `You drive yourself onto the spike — ${spike} back. [${hpLabel(attacker.hp, attacker.maxHp)}]`, "dmgin");
       z.sendStatus(attacker);
     }
     // The parrying blade answers down the line of the turn — and unlike the
@@ -271,7 +272,7 @@ async function swingAt(
         await pvpKill(z, defender, attacker);
         return;
       }
-      z.send(attacker, `The spikes of ${defender.name}'s armor bite into you — ${spikes} back. [${attacker.hp}/${attacker.maxHp} hp]`, "dmgin");
+      z.send(attacker, `The spikes of ${defender.name}'s armor bite into you — ${spikes} back. [${hpLabel(attacker.hp, attacker.maxHp)}]`, "dmgin");
       z.sendStatus(attacker);
     }
   }
@@ -312,7 +313,7 @@ async function swingAt(
   const critVic = flourish !== "." ? " — it catches you square" : "";
   const openVic = staggerHit ? " — you were caught open" : "";
   z.send(attacker, `${z.playerHit(weapon, defender.name)} for ${dmg}${flourish === "." ? "" : flourish}${openAtk}. (${conditionOf(defender)})`, big ? "dmgout big" : "dmgout");
-  z.send(defender, `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${realAmbush ? " — you never saw it coming" : critVic}${openVic}. [${defender.hp}/${defender.maxHp} hp]`, big ? "dmgin big" : "dmgin");
+  z.send(defender, `${attacker.name} ${weapon ? `opens you with ${weapon.tmpl.name}` : "clouts you"} for ${dmg}${realAmbush ? " — you never saw it coming" : critVic}${openVic}. [${hpLabel(defender.hp, defender.maxHp)}]`, big ? "dmgin big" : "dmgin");
   z.sendStatus(defender);
   z.combatNoise(attacker.roomId);
   // A duel is rare and worth watching turn: the crowd sees the heavy blows land

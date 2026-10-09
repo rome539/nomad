@@ -4,7 +4,7 @@
 // nditem-compatible (kind 1573 family) for District bazaar interop later.
 import { finalizeEvent, getPublicKey, type Event } from "nostr-tools";
 import type { Env } from "./env";
-import { hexToBytes, nowSec } from "./util";
+import { hexToBytes, nowSec, wholeHp } from "./util";
 
 const LOOT_KIND = 1573;
 const SHEET_KIND = 31573;
@@ -147,8 +147,8 @@ export function signSheetEvent(
       // killer's own mouth, never the world's.
       content: JSON.stringify({
         name: p.name,
-        hp: p.hp,
-        max_hp: p.maxHp,
+        hp: wholeHp(p.hp),
+        max_hp: wholeHp(p.maxHp),
         zone: p.zone,
         born: p.born,
         kills: p.kills,

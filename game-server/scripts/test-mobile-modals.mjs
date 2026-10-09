@@ -15,7 +15,8 @@ const mapJS = PAGE.slice(PAGE.indexOf('// ---- the map modal:'), PAGE.indexOf('/
 const focusJS = PAGE.slice(PAGE.indexOf('document.body.addEventListener("click"'), PAGE.indexOf('// The keys panel:'));
 assert(modalJS.includes('renderForge') && focusJS.includes('MODAL_SURFACES'));
 const fixture = PAGE.replace(' autofocus', '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '') + `<script>
-var cmd = document.getElementById('cmd'), chipsEl = document.getElementById('chips');
+var cmd = document.getElementById('cmd'), chipsEl = document.getElementById('chips'), hpEl = document.getElementById('hp');
+${PAGE.slice(PAGE.indexOf('function wholeHp('), PAGE.indexOf('// Glanceable status:'))}
 ${PAGE.slice(PAGE.indexOf('function phoneControls()'), PAGE.indexOf('function submitCommand()'))}
 var sent = [], ws = {readyState:1, send:function(m){sent.push(JSON.parse(m))}};
 function hideModalChat(){} function setNote(e,t){e.textContent=t || ''} function print(){}
@@ -46,6 +47,20 @@ const browser = await puppeteer.launch({executablePath:process.env.CHROME_PATH |
 try {
   const page = await browser.newPage();
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+  await page.setContent(fixture);
+  for(const [hp,expected] of [[61.75,61],[99.99,99],[100,100],[0.25,1],[0,0],[-2,0]]) {
+    const readings=await page.evaluate(({state,hp})=>{
+      renderVitals({hp,max_hp:100,fatigue:0,name:'Wanderer'});
+      renderBench({...state,atGate:true,sheet:{...state.sheet,hp,maxHp:100}});
+      const initial=dollHpVal.textContent;
+      dollPulse(hp,100);
+      return {hud:hpEl.querySelector('.vital-hp').textContent,initial,live:dollHpVal.textContent};
+    },{state:bench,hp});
+    assert.equal(readings.hud,expected+'/100 hp');
+    assert(readings.initial.includes(expected+'/100 hp'));assert.equal(readings.live,readings.initial);
+  }
+  console.log('PASS whole HP in HUD, inventory and live updates, including near-full and near-death values');
+
   for (const [width,height,touch] of [[390,844,true],[390,664,true],[844,390,true],[320,568,true],[1280,800,false]]) {
     await page.setViewport({width,height,isMobile:touch,hasTouch:touch,deviceScaleFactor:1});
     await page.setContent(fixture);

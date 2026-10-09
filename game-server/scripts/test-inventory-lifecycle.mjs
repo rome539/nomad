@@ -10,8 +10,8 @@ const root=fileURLToPath(new URL('../',import.meta.url)),temp=await mkdtemp(join
 const db=new DatabaseSync(':memory:'),saved=new DatabaseSync(':memory:');
 try {
  const output=join(temp,'game.mjs');
- await build({stdin:{contents:"export {ZoneDO} from './zone'; export * as world from './world'; export * as gate from './gate'; export {handleLoadout} from './loadouts';",resolveDir:join(root,'src'),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:output,logLevel:'silent',plugins:[{name:'worker-text',setup(b){b.onLoad({filter:/(?:nip46-bunker|(?:vault|nostr|qrcode)-bundle)\.js$/},async a=>({contents:await readFile(a.path,'utf8'),loader:'text'}));}}]});
- const {ZoneDO,world,gate,handleLoadout}=await import(pathToFileURL(output));
+ await build({stdin:{contents:"export {ZoneDO} from './zone'; export * as world from './world'; export * as gate from './gate'; export {handleLoadout} from './loadouts'; export {selfExamine} from './verbs';",resolveDir:join(root,'src'),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:output,logLevel:'silent',plugins:[{name:'worker-text',setup(b){b.onLoad({filter:/(?:nip46-bunker|(?:vault|nostr|qrcode)-bundle)\.js$/},async a=>({contents:await readFile(a.path,'utf8'),loader:'text'}));}}]});
+ const {ZoneDO,world,gate,handleLoadout,selfExamine}=await import(pathToFileURL(output));
  db.exec(await readFile(join(root,'schema.sql'),'utf8'));
  for(const name of (await readdir(join(root,'migrations'))).filter(n=>n.endsWith('.sql')).sort())db.exec(await readFile(join(root,'migrations',name),'utf8'));
  const statement=(query,args=[])=>({bind:(...values)=>statement(query,values),all:async()=>({results:db.prepare(query).all(...args)}),first:async col=>{const r=db.prepare(query).get(...args);return col?r?.[col]??null:r??null;},run:async()=>({success:true,meta:db.prepare(query).run(...args)})});
@@ -24,6 +24,18 @@ try {
  const ws={send:raw=>frames.push(JSON.parse(raw)),serializeAttachment(v){attachment=v},deserializeAttachment(){return attachment},close(){}};
  const {row}=await world.getOrCreatePlayer(env.DB,pk,outside);
  const p=z.buildSession(ws,row,[]);z.sessions.set(pk,p);
+ for(const [hp,expected] of [[61.75,61],[99.99,99],[100,100],[0.25,1],[0,0],[-2,0]]) {
+  p.hp=hp;p.maxHp=100;frames.length=0;z.sendStatus(p);
+  const status=frames.find(f=>f.t==='status');assert(status);
+  assert.equal(status.hp,expected);assert.equal(status.max_hp,100);
+  assert.equal(z.sheetFor(p).hp,expected);
+  assert(selfExamine(z,p).includes('['+expected+'/100 hp]'));
+  assert.equal(p.hp,hp,'formatting must not change combat or recovery state');
+ }
+ p.hp=61.75;await z.checkpointBody(p);
+ assert.equal(z.bodySnapshot(p).hp,61.75,'restart persistence retains accrued fractional healing');
+ console.log('PASS whole HP in status, inventory sheet and self-examine without changing recovery or persistence');
+
  // Reproduce the exact failure: bench open, journal saved, DO replaced while
  // its WebSocket remains connected, then a world command from the main screen.
  await gate.handleBench(z,p,{action:'open'});

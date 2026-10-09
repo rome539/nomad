@@ -1,3 +1,4 @@
+import { hpLabel } from "./util";
 // Room events — the world's weather. The law, for every event this file will
 // ever hold: TELEGRAPH -> ACTIVE -> AFTERMATH, nothing hits a player the world
 // didn't announce; an active event is a bundle of toggles on rules that
@@ -1746,13 +1747,13 @@ async function tickSpate(z: ZoneDO, now: number): Promise<void> {
           step = stepDown(s.roomId);
         }
         const where = z.world!.rooms.get(s.roomId)?.name ?? "somewhere lower";
-        z.send(s, `The water takes your feet and you go with it — ${first.dir} and down, fast, over stone, until it lets you go at ${where}. [${s.hp}/${s.maxHp} hp]`, "dmgin");
+        z.send(s, `The water takes your feet and you go with it — ${first.dir} and down, fast, over stone, until it lets you go at ${where}. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin");
         z.roomFeed(from, `${s.name} is taken off their feet and swept ${first.dir}.`, s.pubkey, false);
         z.roomFeed(s.roomId, `${s.name} comes down the beck and fetches up here, streaming.`, s.pubkey, false);
         z.send(s, z.describeRoom(s));
         z.sendCtx(s);
       } else {
-        z.send(s, `The beck drives against your legs, cold enough to take the breath, and does not let up. [${s.hp}/${s.maxHp} hp]`, "dmgin");
+        z.send(s, `The beck drives against your legs, cold enough to take the breath, and does not let up. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin");
       }
       z.sendStatus(s);
     }
@@ -2081,9 +2082,9 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
       }
       await wetRations(z, s);
       z.send(s, pick([
-        `The rain has the ford up — brown water to the knee, running, and pushing at you. [${s.hp}/${s.maxHp} hp]`,
-        `The ford is a river under this rain, and every step is a guess. [${s.hp}/${s.maxHp} hp]`,
-        `Cold water over the gravel, deeper than the name allows. [${s.hp}/${s.maxHp} hp]`,
+        `The rain has the ford up — brown water to the knee, running, and pushing at you. [${hpLabel(s.hp, s.maxHp)}]`,
+        `The ford is a river under this rain, and every step is a guess. [${hpLabel(s.hp, s.maxHp)}]`,
+        `Cold water over the gravel, deeper than the name allows. [${hpLabel(s.hp, s.maxHp)}]`,
       ]), "dmgin");
       z.sendStatus(s);
     }
@@ -2098,7 +2099,7 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
         z.sendStatus(s);
       }
       await wetRations(z, s);
-      z.send(s, `The fen's channels are up — water to the knee, and every short way is drowned under it. [${s.hp}/${s.maxHp} hp]`, "dmgin");
+      z.send(s, `The fen's channels are up — water to the knee, and every short way is drowned under it. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin");
     }
   }
   if (now < st.until) return;
@@ -2338,7 +2339,7 @@ async function tickBoil(z: ZoneDO, now: number): Promise<void> {
         await z.onPlayerDeath(s, z.world!.mobTemplates.get("rat") ?? null);
         continue;
       }
-      z.send(s, `The river of rats breaks around your legs, biting as it goes. [${s.hp}/${s.maxHp} hp]`, "dmgin");
+      z.send(s, `The river of rats breaks around your legs, biting as it goes. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin");
       z.sendStatus(s);
     }
   }
@@ -3513,9 +3514,9 @@ async function tickSea(z: ZoneDO, now: number): Promise<void> {
       tideSoaksTorch(z, s);
       await wetRations(z, s); // the flood gets into the pack, one ration a beat — unless the pack is watertight
       z.send(s, pick([
-        `The water is over the road here and pushing, steady and cold, and you cannot see your own feet. [${s.hp}/${s.maxHp} hp]`,
-        `Sea to the thigh, and moving, and the stone under it is exactly as wide as it was and no help at all. [${s.hp}/${s.maxHp} hp]`,
-        `Cold gets in under everything and stays there. The road is somewhere below this. [${s.hp}/${s.maxHp} hp]`,
+        `The water is over the road here and pushing, steady and cold, and you cannot see your own feet. [${hpLabel(s.hp, s.maxHp)}]`,
+        `Sea to the thigh, and moving, and the stone under it is exactly as wide as it was and no help at all. [${hpLabel(s.hp, s.maxHp)}]`,
+        `Cold gets in under everything and stays there. The road is somewhere below this. [${hpLabel(s.hp, s.maxHp)}]`,
       ]), "dmgin");
       z.sendStatus(s);
     }
