@@ -1419,12 +1419,10 @@ export const PAGE = `<!doctype html>
   body[data-view="image"][data-log="big"] #loggrip {
     transform: translateY(calc(var(--logh) - 62vh));
   }
-  /* Dark ink needs a solid page, including when the log covers room art. */
+  /* Keep the shared panel fade; dark lettering only needs the glow removed. */
   body[data-theme-tone="light"][data-view="image"][data-log="big"] #log {
-    background: var(--design-page, var(--bg));
     text-shadow: none;
   }
-  body[data-theme-tone="light"][data-view="image"] #loggrip { background: var(--bg); }
   body[data-theme-tone="light"] #log :is(.echo, .fumble, .tell) { opacity: 1; }
   body[data-theme-tone="light"] #thr-reck { background: var(--panel); }
   body[data-theme-tone="light"] #reckbody .rrk2 { color: var(--steel); }

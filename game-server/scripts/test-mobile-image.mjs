@@ -65,17 +65,20 @@ try{
   console.log('PASS image scene/sprites, expanded log and rotation',width,height);
  }
  // Keep the same mobile emulation while resizing so Chrome retains the granted session.
- // Light themes must remain opaque and crisp when the reading panel covers art.
+ // Light-theme lettering stays solid and crisp while the panel keeps its shared faded edge.
  for(const [width,height] of [[390,844],[1280,800]]) {
   await page.setViewport({width,height,isMobile:true,hasTouch:true});
   for(const design of [false,true]) for(const ornate of [false,true]) {
    await page.evaluate(({design,ornate})=>{
     demo.setTheme('bone');demo.themeOptions(design,ornate);demo.setLogBig(true);
-    document.getElementById('log').innerHTML='<div class="head">The hillside</div><div>The wind moves through the grass.</div><div class="say">A wanderer speaks.</div><div class="dmgin">The wolf strikes you.</div><div class="dmgout">You strike back.</div><div class="r-uncommon">a riding mace</div><div class="r-legendary">a legendary blade</div>';
+    document.getElementById('log').innerHTML='<div class="head">The hillside</div><div>The wind moves through the grass.</div><div class="say">A wanderer speaks.</div><div class="dmgin">The wolf strikes you.</div><div class="dmgout">You strike back.</div><div class="r-uncommon">a riding mace</div><div class="r-legendary">a legendary blade</div><div class="echo">look</div><div class="tell">A quiet word.</div><div class="fumble">You miss.</div>';
    },{design,ornate});
-   const paint=await page.$eval('#log',e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,image:s.backgroundImage,shadow:s.textShadow, tone:document.body.dataset.themeTone, bgVar:s.getPropertyValue('--bg'), pageVar:s.getPropertyValue('--design-page'), view:document.body.dataset.view, big:document.body.dataset.log}});
-   assert.equal(paint.image,'none','Bone expanded reading panel must not fade into the scene');
-   assert.equal(paint.bg,'rgb(233, 225, 205)',JSON.stringify({design,ornate,paint}));
+   const paint=await page.$eval('#log',e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,image:s.backgroundImage,shadow:s.textShadow, tone:document.body.dataset.themeTone, bgVar:s.getPropertyValue('--bg'), pageVar:s.getPropertyValue('--design-page'), view:document.body.dataset.view, big:document.body.dataset.log,opacity:s.opacity,ink:[...e.children].map(child=>{const c=getComputedStyle(child);return {opacity:c.opacity,color:c.color,shadow:c.textShadow}})}});
+   assert.match(paint.image,/linear-gradient\(/,'Bone retains the shared reading-panel fade');
+   assert.match(paint.image,/\/ 0\) 0%/,'panel edge remains transparent');
+   assert.match(paint.image,/\/ 0.99\) 100%/,'panel retains the original fade stops');
+   assert.equal(paint.opacity,'1','the panel must not fade its lettering');
+   for(const ink of paint.ink){assert.equal(ink.opacity,'1');assert.match(ink.color,/^rgb\(/,'lettering is opaque');assert.equal(ink.shadow,'none');}
    assert.equal(paint.shadow,'none','Bone text must not inherit the dark-theme glow');
   }
  }
@@ -130,14 +133,15 @@ try{
  });
  assert.equal(await page.$eval('#log',e=>getComputedStyle(e).textShadow),'none');
  await page.evaluate(()=>{demo.setTheme('paper',{...demo.palettes.bone});demo.setView('image');demo.setLogBig(true);});
- assert.equal(await page.$eval('#log',e=>getComputedStyle(e).backgroundImage),'none','custom light theme gets the same protection');
+ assert.match(await page.$eval('#log',e=>getComputedStyle(e).backgroundImage),/gradient/,'custom light theme retains the panel fade');
+ assert.equal(await page.$eval('#log',e=>getComputedStyle(e).textShadow),'none','custom light lettering has no glow');
  await page.evaluate(()=>{demo.setTheme('bone');demo.themeOptions(true,true);});
  if(process.env.THEME_SCREENSHOTS)await page.screenshot({path:process.env.THEME_SCREENSHOTS+'/bone-reading.png'});
  await page.evaluate(()=>{demo.setTheme('door');demo.themeOptions(false,true);});
  assert.match(await page.$eval('#log',e=>getComputedStyle(e).backgroundImage),/gradient/,'dark-theme reading appearance preserved');
  assert.equal(await page.evaluate(()=>document.documentElement.style.getPropertyValue('--tide')),'#6f93c9','switching back restores dark map blue');
  console.log('PASS Bone text/gear/name/map contrast, inventory/barter/forge/map in both layouts and viewport sizes, custom light themes and switching back to dark');
- console.log('PASS opaque Bone expanded text, no text shadow, desktop/mobile and design/ornaments on/off');
+ console.log('PASS solid Bone lettering without glow, shared transparent panel edge, desktop/mobile and design/ornaments on/off');
  await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
  await page.evaluate(()=>demo.setLogBig(false));await new Promise(r=>setTimeout(r,500));
  await page.tap('#brand');await page.tap('#viewbtn');
