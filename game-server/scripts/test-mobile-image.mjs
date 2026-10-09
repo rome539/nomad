@@ -11,7 +11,9 @@ const {default:puppeteer}=await import(requireCapture.resolve('puppeteer-core'))
 const root=fileURLToPath(new URL('..',import.meta.url));
 const {code}=await transform(fs.readFileSync(root+'/src/public.ts','utf8'),{loader:'ts',format:'esm'});
 const {PAGE}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
-const hook=`window.demo={grantArt,setView,setLogBig,fitPicture,paintScene,updateMobs,renderChips,skyDrift,weatherState:()=>({kind:weatherKind,flash:weatherFlashAt,thunder:weatherThunderAt}),view:()=>viewMode,painted:()=>scenePainted,cacheSize:()=>readySceneImage.cache?.size||0,
+const hook=`window.demo={setTheme, palettes:THEMES, contrastRatio, renderBench, renderTrade, renderForge, renderMap,
+ themeOptions:(design,ornate)=>{doorAtmosphere=design;ornateBorders=ornate;syncDoorAtmosphere();},
+ grantArt,setView,setLogBig,fitPicture,paintScene,updateMobs,renderChips,skyDrift,weatherState:()=>({kind:weatherKind,flash:weatherFlashAt,thunder:weatherThunderAt}),view:()=>viewMode,painted:()=>scenePainted,cacheSize:()=>readySceneImage.cache?.size||0,
  fxState:()=>({name:fxName,ready:fxReady,seq:fxSeq,mist:fxGl&&fxGl.getUniform(fxProg,fxU.mistOn),wet:fxGl&&fxGl.getUniform(fxProg,fxU.wetOn)}),
  evictImage:path=>readySceneImage.cache.delete(path+'?v='+BG_V),
  mobBeat,stepAnims,
@@ -62,6 +64,80 @@ try{
   }
   console.log('PASS image scene/sprites, expanded log and rotation',width,height);
  }
+ // Keep the same mobile emulation while resizing so Chrome retains the granted session.
+ // Light themes must remain opaque and crisp when the reading panel covers art.
+ for(const [width,height] of [[390,844],[1280,800]]) {
+  await page.setViewport({width,height,isMobile:true,hasTouch:true});
+  for(const design of [false,true]) for(const ornate of [false,true]) {
+   await page.evaluate(({design,ornate})=>{
+    demo.setTheme('bone');demo.themeOptions(design,ornate);demo.setLogBig(true);
+    document.getElementById('log').innerHTML='<div class="head">The hillside</div><div>The wind moves through the grass.</div><div class="say">A wanderer speaks.</div><div class="dmgin">The wolf strikes you.</div><div class="dmgout">You strike back.</div><div class="r-uncommon">a riding mace</div><div class="r-legendary">a legendary blade</div>';
+   },{design,ornate});
+   const paint=await page.$eval('#log',e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,image:s.backgroundImage,shadow:s.textShadow, tone:document.body.dataset.themeTone, bgVar:s.getPropertyValue('--bg'), pageVar:s.getPropertyValue('--design-page'), view:document.body.dataset.view, big:document.body.dataset.log}});
+   assert.equal(paint.image,'none','Bone expanded reading panel must not fade into the scene');
+   assert.equal(paint.bg,'rgb(233, 225, 205)',JSON.stringify({design,ornate,paint}));
+   assert.equal(paint.shadow,'none','Bone text must not inherit the dark-theme glow');
+  }
+ }
+ // Audit actual computed light-theme text and the real panel renderers.
+ const audit=await page.evaluate(()=>{
+  demo.setTheme('bone');demo.themeOptions(false,false);
+  const root=getComputedStyle(document.documentElement),bg=root.getPropertyValue('--bg').trim(),panel=root.getPropertyValue('--panel').trim();
+  const ratios={};
+  for(const key of ['cream','dim','gold','wear','blood','bone','steel','heal','omen','voice','stone','tide']) {
+   ratios[key]=Math.min(demo.contrastRatio(root.getPropertyValue('--'+key).trim(),bg),demo.contrastRatio(root.getPropertyValue('--'+key).trim(),panel));
+  }
+  function hex(color){return '#'+color.match(/[\d.]+/g).slice(0,3).map(n=>Math.round(Number(n)).toString(16).padStart(2,'0')).join('');}
+  const sample=document.createElement('span');document.getElementById('log').appendChild(sample);
+  for(const tier of ['common','uncommon','rare','epic','legendary']) {
+   sample.className='r-'+tier;ratios[tier]=demo.contrastRatio(hex(getComputedStyle(sample).color),bg);
+  }
+  sample.className='';
+  ratios.names=Infinity;
+  for(let hue=0;hue<360;hue++) {
+   sample.style.color='hsl('+hue+', var(--name-s), var(--name-l))';
+   ratios.names=Math.min(ratios.names,demo.contrastRatio(hex(getComputedStyle(sample).color),bg));
+  }
+  sample.remove();return ratios;
+ });
+ for(const [role,ratio] of Object.entries(audit))assert(ratio>=4.5,role+' light-theme contrast '+ratio.toFixed(2));
+ const gear={row:'1',id:'1',itemId:'mace',name:'a riding mace',slot:'weapon',rarity:'uncommon',stat:'+2 dmg',cost:12,cond:100,can:true,scrap:2};
+ for(const [width,height] of [[390,844],[1280,800]]) {
+  await page.setViewport({width,height,isMobile:true,hasTouch:true});
+  for(const layout of ['compact','classic']) for(const design of [false,true]) {
+   await page.evaluate(({layout,design})=>{
+    if(document.body.dataset.modalLayout!==layout)document.getElementById('modallayoutbtn').click();
+    demo.themeOptions(design,true);
+   },{layout,design});
+   for(const [id,renderer,state] of [
+    ['bench','renderBench',{atGate:true,pack:[gear],lockbox:[],vault:[],packCap:20,lockboxCap:8,vaultCap:50}],
+    ['trade','renderTrade',{stock:[gear],goods:{pack:[gear]}}],
+    ['forge','renderForge',{scrap:20,recipes:[gear],read:[]}],
+    ['mapm','renderMap',{detailed:true,here:'r0',regions:[{key:'crossing',rooms:Array.from({length:4},(_,i)=>({id:'r'+i,name:'Crossing '+i,x:i,y:0,here:i===0,exits:i<3?[{dir:'east',to:'r'+(i+1)}]:[]}))}]}]
+   ]) {
+    await page.evaluate(({renderer,state})=>{document.querySelectorAll('#bench,#trade,#forge,#mapm').forEach(e=>e.classList.remove('open'));demo[renderer](state);},{renderer,state});
+    const surface=await page.$eval('#'+id+' .bbox, #'+id+' .lbox',e=>{
+     const s=getComputedStyle(e),r=e.getBoundingClientRect();return {bg:s.backgroundColor,color:s.color,shadow:s.textShadow,inBounds:r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1};
+    });
+    assert.equal(surface.bg,'rgb(239, 232, 216)',id+' Bone panel');assert.equal(surface.shadow,'none');assert(surface.inBounds,id+' fits screen');
+    if(process.env.THEME_SCREENSHOTS&&width===1280&&layout==='compact'&&design)await page.screenshot({path:process.env.THEME_SCREENSHOTS+'/bone-'+id+'.png'});
+   }
+  }
+ }
+ await page.evaluate(()=>{
+  document.querySelectorAll('#bench,#trade,#forge,#mapm').forEach(e=>e.classList.remove('open'));
+  demo.themeOptions(false,false);demo.setTheme('bone');demo.setView('text');
+ });
+ assert.equal(await page.$eval('#log',e=>getComputedStyle(e).textShadow),'none');
+ await page.evaluate(()=>{demo.setTheme('paper',{...demo.palettes.bone});demo.setView('image');demo.setLogBig(true);});
+ assert.equal(await page.$eval('#log',e=>getComputedStyle(e).backgroundImage),'none','custom light theme gets the same protection');
+ await page.evaluate(()=>{demo.setTheme('bone');demo.themeOptions(true,true);});
+ if(process.env.THEME_SCREENSHOTS)await page.screenshot({path:process.env.THEME_SCREENSHOTS+'/bone-reading.png'});
+ await page.evaluate(()=>{demo.setTheme('door');demo.themeOptions(false,true);});
+ assert.match(await page.$eval('#log',e=>getComputedStyle(e).backgroundImage),/gradient/,'dark-theme reading appearance preserved');
+ assert.equal(await page.evaluate(()=>document.documentElement.style.getPropertyValue('--tide')),'#6f93c9','switching back restores dark map blue');
+ console.log('PASS Bone text/gear/name/map contrast, inventory/barter/forge/map in both layouts and viewport sizes, custom light themes and switching back to dark');
+ console.log('PASS opaque Bone expanded text, no text shadow, desktop/mobile and design/ornaments on/off');
  await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
  await page.evaluate(()=>demo.setLogBig(false));await new Promise(r=>setTimeout(r,500));
  await page.tap('#brand');await page.tap('#viewbtn');

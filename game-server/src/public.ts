@@ -1419,6 +1419,24 @@ export const PAGE = `<!doctype html>
   body[data-view="image"][data-log="big"] #loggrip {
     transform: translateY(calc(var(--logh) - 62vh));
   }
+  /* Dark ink needs a solid page, including when the log covers room art. */
+  body[data-theme-tone="light"][data-view="image"][data-log="big"] #log {
+    background: var(--design-page, var(--bg));
+    text-shadow: none;
+  }
+  body[data-theme-tone="light"][data-view="image"] #loggrip { background: var(--bg); }
+  body[data-theme-tone="light"] #log :is(.echo, .fumble, .tell) { opacity: 1; }
+  body[data-theme-tone="light"] #thr-reck { background: var(--panel); }
+  body[data-theme-tone="light"] #reckbody .rrk2 { color: var(--steel); }
+  body[data-theme-tone="light"] #reckbody .rrk3 { color: var(--gold); }
+  body[data-theme-tone="light"] :is(#bench, #trade, #forge, #swap) :is(.bitem, .trow, .tsech),
+  body[data-theme-tone="light"] #bounty .byrow { border-bottom-color: var(--line); }
+  body[data-theme-tone="light"] :is(#bench, #trade, #forge) .mud-row:hover {
+    background: color-mix(in srgb, var(--cream) 5%, transparent);
+  }
+  body[data-theme-tone="light"] :is(#bench, #trade, #forge) .mud-row.chosen {
+    background: color-mix(in srgb, var(--cream) 9%, transparent);
+  }
   /* On a short window the picture yields first, never the words - the rule has
      not changed, only where it is written: one dial moves both halves. */
   @media (max-height: 620px) {
@@ -2203,10 +2221,10 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div class="setrow"><span>command chips</span><button id="chipbtn">on</button></div>
     <div class="setrow"><span>inventory &amp; shop layout</span><button id="modallayoutbtn" type="button" aria-label="Inventory &amp; shop layout: Compact">Compact</button></div>
     <div class="setrow"><span>theme</span><button id="thbtn">door</button></div>
-    <div class="setrow"><span>nostr themes</span><button id="thbrowse">browse</button></div>
-    <div id="thlist"></div>
     <div class="setrow" id="dooratmorow"><span>theme design</span><button id="dooratmobtn" type="button" role="switch" aria-label="Enhanced theme design" aria-checked="false">off</button></div>
     <div class="setrow"><span>ornate borders</span><button id="ornatebtn" type="button" role="switch" aria-label="Ornate borders" aria-checked="false">off</button></div>
+    <div class="setrow"><span>nostr themes</span><button id="thbrowse">browse</button></div>
+    <div id="thlist"></div>
     <div class="setrow"><span>source</span><a class="abtn" href="https://github.com/rome539/nomad" target="_blank" rel="noopener">github &#8599;</a></div>
   </div>
   <div id="idpanel">
@@ -7285,7 +7303,7 @@ var THEME_ORDER = ["door", "bone", "moss", "abyss", "ember", "charcoal"];
 var THEMES = {
   door:  { stone: "#d3d6d8", bg: "#16120c", panel: "#1e1912", cream: "#ede3cc", dim: "#9a8b66", gold: "#d8a94e", wear: "#d8a94e", blood: "#c96f5a", bone: "#c9bda3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#3a3020", border2: "#4a3c22", line: "#2c2418" },
   charcoal: { stone: "#d3d6d8", bg: "#101113", panel: "#181a1d", cream: "#e7e8ea", dim: "#959aa3", gold: "#d1bc86", wear: "#d8a94e", blood: "#c96f5a", bone: "#b6bbc3", steel: "#a4bec0", heal: "#8faa6b", omen: "#b195c9", voice: "#e79ab6", border: "#303338", border2: "#42464d", line: "#292c31" },
-  bone:  { stone: "#6f7378", bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#7c6f52", gold: "#8a6414", wear: "#8a6414", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", voice: "#a5325f", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
+  bone:  { stone: "#606468", bg: "#e9e1cd", panel: "#efe8d8", cream: "#2c2418", dim: "#6e6247", gold: "#805b12", wear: "#805b12", blood: "#a33c2a", bone: "#57503e", steel: "#3f6470", heal: "#4c6b2c", omen: "#6b4291", voice: "#a5325f", border: "#c6b791", border2: "#a8996f", line: "#d6cbaa" },
   moss:  { stone: "#d3d6d8", bg: "#0a100a", panel: "#111a11", cream: "#cfe3c4", dim: "#6f8a63", gold: "#93d45f", wear: "#d8a94e", blood: "#d4785f", bone: "#a8bf9a", steel: "#9cc2b8", heal: "#5fbf8a", omen: "#c0a3dc", voice: "#eb9cba", border: "#2a3a22", border2: "#39512c", line: "#1c2a16" },
   abyss: { stone: "#d3d6d8", bg: "#0a0d14", panel: "#111624", cream: "#ccd9e8", dim: "#6e82a0", gold: "#7fb4e0", wear: "#d8a94e", blood: "#d06a5a", bone: "#a4b4c8", steel: "#9fc2dc", heal: "#7fc48a", omen: "#b6a2e2", voice: "#e79cbc", border: "#243049", border2: "#2f4160", line: "#171f33" },
   ember: { stone: "#d3d6d8", bg: "#150b07", panel: "#1e110b", cream: "#ecd8c2", dim: "#a37c5e", gold: "#e8873c", wear: "#e8a24c", blood: "#e0563a", bone: "#c8a88e", steel: "#a6b4c4", heal: "#9cba63", omen: "#c9a2c4", voice: "#f2a4c1", border: "#46291a", border2: "#5c3722", line: "#331e12" },
@@ -7315,15 +7333,16 @@ function applyThemeColors(c) {
   // any world the wearer has chosen. hsl() re-resolves these live, so names
   // recolour the instant the theme changes, with no re-render.
   var lightGround = hexLum(c && c.bg) > 0.5;
+  document.body.dataset.themeTone = lightGround ? "light" : "dark";
+  document.documentElement.style.colorScheme = lightGround ? "light" : "dark";
+  document.documentElement.style.setProperty("--tide", lightGround ? "#426595" : "#6f93c9");
   document.documentElement.style.setProperty("--name-s", lightGround ? "62%" : "55%");
-  document.documentElement.style.setProperty("--name-l", lightGround ? "36%" : "70%");
-  // Rarity rides the same adaptive lightness as names, but a touch deeper on
-  // light grounds — the mid-hues (uncommon, legendary) wash out at 36% against
-  // a pale page, where the name hues don't (they're darker to start). This is
-  // the one place rarity differs from names: it wants legibility on the floor
-  // more than it wants to pop, so it dips a little lower in the light.
+  document.documentElement.style.setProperty("--name-l", lightGround ? "24%" : "70%");
+  // Rarity adapts to the ground like names. Green and gold need deeper ink
+  // on light themes, both on the pale page and
+  // the slightly darker equipment inset; their hues still identify the tier.
   document.documentElement.style.setProperty("--rar-s", lightGround ? "66%" : "58%");
-  document.documentElement.style.setProperty("--rar-l", lightGround ? "30%" : "68%");
+  document.documentElement.style.setProperty("--rar-l", lightGround ? "25%" : "68%");
   if (!okColor(c.wear)) document.documentElement.style.setProperty("--wear", ensureContrast("#d8a94e", c.bg, 3.5));
   if (!okColor(c.stone)) document.documentElement.style.setProperty("--stone", lightGround ? "#6f7378" : "#d3d6d8");
   applyThemeFont(c && c._font);
