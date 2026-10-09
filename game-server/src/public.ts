@@ -12057,12 +12057,17 @@ var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
 // A body stays where it fell for a beat before the room repaints without it.
 var mobHold = 0, mobPending = null, mobPendingRest = null, mobPendingDead = null;
 function mobBeat(swung, struck, died, fed, grazed, posed, pose) {
+  // Each entry reports ONE death, not every creature with that template.
+  // Consume it once so killing one rat cannot make a whole group fall.
+  var deaths = died ? died.slice() : [];
   for (var i = 0; i < anims.length; i++) {
     var a = anims[i];
+    var deathAt = deaths.indexOf(a.id);
     // Dying outranks everything: a thing that took the last blow is not also
     // recoiling from it. Only a creature with the pose drawn goes down on
     // screen - the rest simply stop being there, the way they always have.
-    if (died && died.indexOf(a.id) >= 0 && a.spec.f.death !== undefined && a.phase !== "death") {
+    if (deathAt >= 0 && a.spec.f.death !== undefined && a.phase !== "death") {
+      deaths.splice(deathAt, 1);
       a.phase = "death"; a.t = 0; a.asleep = false;
       mobHold = Date.now() + DEATH_S * 1000;
     } else if (a.phase === "death") continue;

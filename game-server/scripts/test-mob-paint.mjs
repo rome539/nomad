@@ -36,13 +36,25 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +'ctx.setSky=function(s){ lastSky=s; lastRed = (s==="blood")?1:0; };\n'
   +'ctx.setRed=function(r){ lastRed = r?1:0; };\n'
   +'function runAnims(){}\n'
-  +fn("paintMobs")+"\n"+fn("applyState")+"\n"+fn("fitMobRow")+"\n"
+  +fn("paintMobs")+"\n"+fn("applyState")+"\n"+fn("fitMobRow")+"\n"+fn("mobBeat")+"\n"
   +"mobsEl = _stub;   // the lifted block declares its own, which the stub must win\n"
-  +"ctx.clearAnims=function(){ anims.length=0; }; ctx.paintMobs=paintMobs; ctx.made=()=>made; ctx.anims=()=>anims; ctx.mobVh=mobVh;";
+  +"ctx.clearAnims=function(){ anims.length=0; mobHold=0; lastMobs=''; }; ctx.paintMobs=paintMobs; ctx.mobBeat=mobBeat; ctx.made=()=>made; ctx.anims=()=>anims; ctx.mobVh=mobVh;";
 new Function("ctx","_stub","document","window",code)(ctx,mobsEl,
   {createElement:()=>el(), getElementById:()=>null}   /* no #scene: picBoxPx falls back to the window, its text-mode path */,{innerWidth:1512,innerHeight:850});
 
 let fail=0; const t=(n,c,e)=>{console.log((c?"  ok   ":"  FAIL ")+n+(e?"   "+e:""));if(!c)fail++;};
+
+// The horseman's pick sends died:['rat'] for ONE kill. Identical sprites
+// must not all fall when one member of the group dies.
+ctx.paintMobs(['rat','rat','rat'],null,[]);
+ctx.mobBeat(null,null,['rat']);
+t('one rat death drops one of three rats',ctx.anims().filter(a=>a.phase==='death').length===1);
+ctx.mobBeat(null,null,['rat']);
+t('a second rat death drops one more rat',ctx.anims().filter(a=>a.phase==='death').length===2);
+ctx.clearAnims();made.length=0;ctx.paintMobs(['rat','rat','rat'],null,[]);
+ctx.mobBeat(null,null,['rat','rat']);
+t('two rat deaths in one event drop exactly two rats',ctx.anims().filter(a=>a.phase==='death').length===2);
+ctx.clearAnims();made.length=0;
 
 ctx.paintMobs(["hill-wolf"], null, ["red-hind"]);
 t("a corpse gets its own element", made.length===2, made.length+" elements");

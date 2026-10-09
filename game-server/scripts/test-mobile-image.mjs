@@ -325,12 +325,39 @@ try{
   assert.equal(await page.$eval('#mobs .dead',e=>getComputedStyle(e,'::after').filter),'brightness(0)');
  }
  console.log('PASS Hollow death animation and corpse black eyes in ordinary light and blood moon, aligned with the death frame');
+ // One opening kill with the horseman's pick sends died:['rat'], then a
+ // context with two living rats and one body. Only one sprite may fall.
+ const ratDeaths=await page.evaluate(()=>{
+  demo.updateMobs(['rat','rat','rat'],null,[]);
+  demo.mobBeat(null,['rat'],null);
+  demo.mobBeat(null,null,['rat']);demo.stepAnims();
+  const fallen=document.querySelectorAll('#mobs .mob[data-death="1"]').length;
+  demo.updateMobs(['rat','rat'],null,['rat']);
+  return fallen;
+ });
+ assert.equal(ratDeaths,1,'one kill must not drop all three rats');
+ await page.waitForFunction(()=>document.querySelectorAll('#mobs .mob.dead').length===1&&document.querySelectorAll('#mobs .mob:not(.dead)').length===2);
+ assert.equal(await page.$$eval('#mobs .mob:not(.dead)',els=>els.filter(e=>e.dataset.death==='1').length),0);
+ console.log('PASS one rat kill drops one sprite and leaves two living rats after the death frame');
  // Reproduce the reported wall overlap: four living creatures and three bodies
  // on the shared crypt passage. Bodies must not shrink or displace the living.
  await page.evaluate(()=>{demo.setTheme('charcoal');demo.setLogBig(false);demo.setView('image');demo.paintScene('upper','in','','ossuary',false,1,'ossuary',0,0,false);});
  await page.waitForFunction(()=>demo.painted()==='/room-bg/keep-passage-night.webp');
  for(const [width,height] of [[2672,1260],[1280,800],[390,844],[844,390]]) {
   await page.setViewport({width,height,isMobile:true,hasTouch:true});
+  // Rotation updates the CSS picture box asynchronously. Compare corpse/no-
+  // corpse geometry only once that box has settled at the new viewport size.
+  await page.evaluate(()=>new Promise(resolve=>{
+   var prior='',steady=0;
+   function settle(){
+    demo.fitPicture();
+    var box=document.getElementById('scene').getBoundingClientRect();
+    var next=window.innerWidth+':'+window.innerHeight+':'+box.width+':'+box.height;
+    steady=next===prior?steady+1:0;prior=next;
+    if(steady>=20)resolve();else requestAnimationFrame(settle);
+   }
+   requestAnimationFrame(settle);
+  }));
   await page.evaluate(()=>{demo.fitPicture();demo.updateMobs(['dire-hyena','warden','skeleton','pale-crawler'],null,[]);});
   const livingLayout=()=>page.$$eval('#mobs .mob:not(.dead)',els=>els.map(e=>({id:e.dataset.id,left:e.style.left,top:e.style.top,width:e.style.width,height:e.style.height})));
   const beforeBodies=await livingLayout();
