@@ -1495,6 +1495,15 @@ export class ZoneDO implements DurableObject {
       pubkey: s.pubkey, hp: s.hp, roomId: s.roomId,
       exhaustion: s.exhaustion, healingDue: s.healingDue, target: s.target, pvpTarget: s.pvpTarget,
       resting: s.resting, away: s.away, linkdeadUntil: s.linkdeadUntil,
+      // A parked WebSocket keeps its browser panels through hibernation. Keep
+      // their command state alongside the body so waking does not dismiss them
+      // or leave their buttons talking to a forgotten stance. Fresh connections
+      // still start with closed panels; hydrateSessions alone restores this.
+      gateUI: offlineAt === undefined ? structuredClone({
+        away: s.away, stepText: s.stepText, sorting: s.sorting,
+        trading: s.trading, forging: s.forging, bountying: s.bountying,
+        buying: s.buying,
+      }) : undefined,
       bleedTicks: s.bleedTicks, bleedDmg: s.bleedDmg, stunned: s.stunned,
       nextThrowAt: s.nextThrowAt, staggered: s.staggered, openedHeavy: s.openedHeavy, hobbled: s.hobbled,
       limpingSince: s.limpingSince, seizedBy: s.seizedBy,
@@ -1738,12 +1747,15 @@ export class ZoneDO implements DurableObject {
         Object.assign(rebuilt, body);
         this.lastCombatRound = Math.max(this.lastCombatRound, body.roundAt);
       }
-      // Wake dismisses all gate panels below. The body journal carries `away`,
-      // but no modal stance: restoring it alone leaves an invisible lockbox
-      // blocking commands and even reopening inventory. Only actual gatehouse
-      // membership survives that dismissal; its player returns to the text room.
-      rebuilt.away = this.inGatehouse.has(pubkey) && this.world!.entryRooms.has(rebuilt.roomId);
-      rebuilt.stepText = rebuilt.away;
+      const gateUI = body?.offlineAt === undefined ? body?.gateUI : undefined;
+      if (gateUI) {
+        Object.assign(rebuilt, structuredClone(gateUI));
+      } else {
+        // Older journals have no panel state. Dismiss that stale UI and clear
+        // its crouch together, so the old invisible-lockbox trap stays fixed.
+        rebuilt.away = this.inGatehouse.has(pubkey) && this.world!.entryRooms.has(rebuilt.roomId);
+        rebuilt.stepText = rebuilt.away;
+      }
       await this.loadWall(rebuilt.pubkey); // a hibernation rebuild must not read an empty wall
       // buildSession stamps lastActiveAt = now, which would read a long-parked
       // socket as JUST arrived and dodge the idle sweep across every eviction —
@@ -1758,7 +1770,7 @@ export class ZoneDO implements DurableObject {
       // buttons. Force it closed so a reweave never strands someone unable
       // to wave off a trade that no longer exists server-side.
       trade.forceCloseSwapUI(rebuilt);
-      gate.forceCloseGateUI(rebuilt); // ...and the bench, the hatch, the forge and the board with it
+      if (!gateUI) gate.forceCloseGateUI(rebuilt);
     }
     // Closed sockets are not returned after hibernation. Their journaled bodies
     // still owe the same disconnect deadline; a restart cannot free them early.
