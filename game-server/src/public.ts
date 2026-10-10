@@ -7430,11 +7430,13 @@ function syncDoorAtmosphere() {
   document.body.dataset.ornate = ornateBorders ? doorAtmosphereAvailable : "";
   var ornateButton = document.getElementById("ornatebtn");
   ornateButton.textContent = ornateBorders ? "on" : "off";
+  ornateButton.classList.toggle("on", ornateBorders);
   ornateButton.setAttribute("aria-checked", String(ornateBorders));
   document.body.dataset.atmosphere = doorAtmosphere ? doorAtmosphereAvailable : "";
   document.getElementById("dooratmorow").hidden = !doorAtmosphereAvailable;
   var button = document.getElementById("dooratmobtn");
   button.textContent = doorAtmosphere ? "on" : "off";
+  button.classList.toggle("on", doorAtmosphere);
   button.setAttribute("aria-checked", String(doorAtmosphere));
 }
 document.getElementById("ornatebtn").addEventListener("click", function () {
