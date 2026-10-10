@@ -2090,6 +2090,14 @@ export const PAGE = `<!doctype html>
   body[data-artwork="sun"][data-ornate] #log::before { inset: 15% 3% 4% 60%; }
   body[data-artwork="sun"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect)::before { inset: 35% 5% 5% 40%; }
   body[data-artwork="sun"][data-ornate] :is(#setpanel,#idpanel)::before { inset: 55% 15% 5%; opacity: .1; }
+  /* Anchor engraving to the end of the scrollable text, never the scrollport. */
+  body[data-ornate]:where(:not([data-ornate=""])) #log::before {
+    top: var(--log-art-top, 0px); bottom: auto; height: var(--log-art-height, 62vh);
+  }
+  body[data-artwork="sun"][data-ornate]:where(:not([data-ornate=""])) #log::before {
+    top: calc(var(--log-art-top, 0px) + var(--log-art-height, 62vh) * .15);
+    height: calc(var(--log-art-height, 62vh) * .81); bottom: auto;
+  }
   /* The first walk owns the log until the player finishes or skips it. */
   body[data-tutorial="on"] #log > :not(.guide-step) { display: none; }
   body[data-tutorial="on"] :is(#scene, #sky, #mobs, #loggrip, #chips) { display: none; }
@@ -2463,6 +2471,20 @@ var GOOGLE_CLIENT_ID = "__GOOGLE_CLIENT_ID__";
 var GOOGLE_PICKER_KEY = "__GOOGLE_PICKER_KEY__";
 
 var log = document.getElementById("log");
+// Keep the artwork attached to the same content edge as the newest text.
+// Its scale uses the expanded reading area, so closing the band only crops it.
+function syncLogArtwork() {
+  var height = Math.max(log.clientHeight, Math.ceil(window.innerHeight * .62));
+  var last = log.lastElementChild;
+  var end = log.clientHeight;
+  if (last) end = Math.max(end, last.offsetTop + last.offsetHeight + 14);
+  log.style.setProperty("--log-art-height", height + "px");
+  log.style.setProperty("--log-art-top", (end - height) + "px");
+}
+new MutationObserver(syncLogArtwork).observe(log, { childList: true, subtree: true, characterData: true });
+new ResizeObserver(syncLogArtwork).observe(log);
+window.addEventListener("resize", syncLogArtwork);
+
 var cmd = document.getElementById("cmd");
 var roomEl = document.getElementById("room");
 var lastRoomName = ""; // the room the bar last named, for the chip-fold test
