@@ -2065,38 +2065,31 @@ export const PAGE = `<!doctype html>
     mask-size: 14px 14px, 14px 14px, 14px 14px, 14px 14px, 22px 22px;
     mask-position: left top, right top, left bottom, right bottom, center top;
   }
-  /* Artwork choice is independent of theme colors and the ornate on/off switch. */
-  body { --art-log: url("/ornate/floral-background-v2.svg"); --art-panel: url("/ornate/architecture-v2.svg"); --art-size: cover; }
-  body[data-artwork="dragons"] { --art-log: url("/ornate/dragons-background-v2.svg"); --art-panel: url("/ornate/dragons-v2.svg"); }
-  body[data-artwork="feathers"] { --art-log: url("/ornate/feathers-background-v2.svg"); --art-panel: url("/ornate/feathers-v2.svg"); }
-  body[data-artwork="celestial"] { --art-log: url("/ornate/celestial-background-v2.svg"); --art-panel: url("/ornate/celestial-panel-v2.svg"); }
-  body[data-artwork="sun"] { --art-log: url("/ornate/sun-background-v2.svg"); --art-panel: url("/ornate/sun-v2.svg"); }
-  body[data-artwork="dragons"] { --art-size: contain; }
-  body[data-artwork="sun"] { --art-size: auto 85%; }
-  body[data-ornate]:where(:not([data-ornate=""])) #log {
-    background-image: var(--art-log);
-    background-size: var(--art-size);
-    background-position: right bottom;
-    background-repeat: no-repeat;
+  /* The approved artwork preview uses tinted masks, not tiled backgrounds. */
+  body { --art-log: url("/ornate/floral-v2.svg"); --art-panel: url("/ornate/architecture-v2.svg"); }
+  body[data-artwork="dragons"] { --art-log: url("/ornate/dragons-v2.svg"); --art-panel: url("/ornate/dragons-v2.svg"); }
+  body[data-artwork="feathers"] { --art-log: url("/ornate/feathers-v2.svg"); --art-panel: url("/ornate/feathers-v2.svg"); }
+  body[data-artwork="celestial"] { --art-log: url("/ornate/celestial-v2.svg"); --art-panel: url("/ornate/celestial-panel-v2.svg"); }
+  body[data-artwork="sun"] { --art-log: url("/ornate/sun-v2.svg"); --art-panel: url("/ornate/sun-v2.svg"); }
+  body[data-ornate]:where(:not([data-ornate=""])) #log { isolation: isolate; position: relative; }
+  body[data-view="image"] #log { transition: none; }
+  body[data-ornate]:where(:not([data-ornate=""])) :is(#log, #setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before {
+    content: ""; position: absolute; inset: 16px; pointer-events: none; z-index: -1;
+    opacity: .1; background: linear-gradient(to bottom, transparent, var(--gold) 28%, var(--gold));
+    mask: var(--art-panel) center bottom / 100% 100% no-repeat;
   }
-  body[data-ornate]:where(:not([data-ornate=""]))[data-view="image"][data-log="big"] #log {
-    background-image: var(--art-log), linear-gradient(to bottom,
-      color-mix(in srgb, var(--bg) 0%, transparent) 0%,
-      color-mix(in srgb, var(--bg) 82%, transparent) 5%,
-      color-mix(in srgb, var(--bg) 96%, transparent) 14%,
-      color-mix(in srgb, var(--bg) 99%, transparent) 100%);
-    background-size: var(--art-size), 100% 100%;
-  }
+  body[data-ornate]:where(:not([data-ornate=""])) #log::before { z-index: 0; mask-image: var(--art-log); }
+  body[data-ornate]:where(:not([data-ornate=""])) #log > :is(div,br) { position: relative; z-index: 1; }
   body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect) { isolation: isolate; }
-  body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before {
-    content: ""; position: absolute; inset: 16px; z-index: -1; pointer-events: none;
-    border-radius: inherit; background: var(--gold); opacity: .1;
-    mask: var(--art-panel) center bottom / contain no-repeat;
-  }
-  body[data-artwork="floral"][data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel)::before { mask-size: auto 72%; mask-position: right bottom; }
-  body[data-artwork="sun"][data-ornate]:where(:not([data-ornate=""])) :is(.bbox, .lbox, .vbox, .signer-connect)::before { inset: 35% 5% 5% 40%; }
-  body[data-artwork="sun"][data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel)::before { inset: 55% 15% 5%; }
-  body[data-artwork="celestial"][data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before { inset: 0; mask-size: cover; opacity: .07; }
+  body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel)::before { inset: 18px; mask-size: 100% auto; mask-position: center; opacity: .06; background: var(--gold); }
+  body[data-artwork="floral"] #log::before, body[data-artwork="feathers"] #log::before, body[data-artwork="celestial"] #log::before { inset: 0; mask-size: cover; mask-position: center; }
+  body[data-artwork="floral"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { inset: 16px; background: var(--gold); mask-size: 100% auto; mask-position: center bottom; opacity: .1; }
+  body[data-artwork="floral"][data-ornate] :is(#setpanel,#idpanel)::before { mask-size: auto 72%; mask-position: right bottom; }
+  body[data-artwork="celestial"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { inset: 0; mask-size: cover; mask-position: center; opacity: .07; }
+  body[data-artwork="sun"][data-ornate] :is(#log,.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { mask-size: contain; mask-position: right bottom; }
+  body[data-artwork="sun"][data-ornate] #log::before { inset: 15% 3% 4% 60%; }
+  body[data-artwork="sun"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect)::before { inset: 35% 5% 5% 40%; }
+  body[data-artwork="sun"][data-ornate] :is(#setpanel,#idpanel)::before { inset: 55% 15% 5%; opacity: .1; }
   /* The first walk owns the log until the player finishes or skips it. */
   body[data-tutorial="on"] #log > :not(.guide-step) { display: none; }
   body[data-tutorial="on"] :is(#scene, #sky, #mobs, #loggrip, #chips) { display: none; }
