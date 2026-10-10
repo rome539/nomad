@@ -11745,42 +11745,96 @@ function fitMobRow() {
   mobsEl.style.height = rowH + "px";
   mobsEl.style.transformOrigin = "50% 100%";
   mobsEl.style.transform = "translateY(-50%) scale(" + scale.toFixed(6) + ")";
-  function placeGroup(group, dead) {
+  // THE LIVING FIRST, AND NOBODY STANDS ON ANYBODY (rome, 2026-10-10: a
+  // skeleton stood straight in front of a warden, on a dead rat). Every rank
+  // used to be centred on its own, so a short front rank landed dead in front
+  // of the middle of the rank behind, and the bodies, centred too, lay under
+  // the feet of whoever stood in the middle. Now the living are set out first,
+  // each front rank in the gaps of the one behind it, and the dead go where
+  // nobody is standing.
+  function slotW(item) { return item.w * item.fit * 1.12; }
+  function ranksOf(group) {
     var ranks = [], rank = [], used = 0;
     group.forEach(function (item) {
       // A large corpse cannot resize the living. Its own frame can fit locally.
       item.fit = Math.min(1, available / (item.w * 1.12));
-      var w = item.w * item.fit * 1.12;
+      var w = slotW(item);
       if (rank.length && (rank.length >= 4 || used + gap + w > available)) { ranks.push(rank); rank = []; used = 0; }
       rank.push(item); used += (rank.length > 1 ? gap : 0) + w;
     });
     if (rank.length) ranks.push(rank);
-    ranks.forEach(function (items, r) {
-      var total = (items.length - 1) * gap;
-      items.forEach(function (item) { total += item.w * item.fit * 1.12; });
-      var x = width / 2 - total / 2;
-      var depth = dead ? forward * (.85 + .15 * r / Math.max(1, ranks.length - 1))
-        : forward * .65 * r / Math.max(1, ranks.length - 1);
-      items.forEach(function (item) {
-        var el = item.el;
-        el.style.position = "absolute";
-        el.style.left = (x + item.w * item.fit * .06) + "px";
-        el.style.top = ((rowH - item.h) / 2 + depth / scale) + "px";
-        el.style.zIndex = String(dead ? r : 10 + r);
-        // Only static corpses need this separate size adjustment; animation
-        // transforms remain owned by stepAnims on every living creature.
-        if (dead) {
-          el.style.width = (item.w * item.fit) + "px";
-          el.style.height = (item.h * item.fit) + "px";
-          el.style.top = (rowH - item.h * item.fit + depth / scale) + "px";
-          el.style.transform = "none";
-        }
-        x += item.w * item.fit * 1.12 + gap;
-      });
-    });
+    return ranks;
   }
-  placeGroup(bodies, true);
-  placeGroup(living, false);
+  function put(item, x, depth, dead, z) {
+    var el = item.el;
+    el.style.position = "absolute";
+    el.style.left = (x + item.w * item.fit * .06) + "px";
+    el.style.top = ((rowH - item.h) / 2 + depth / scale) + "px";
+    el.style.zIndex = String(z);
+    // Only static corpses need this separate size adjustment; animation
+    // transforms remain owned by stepAnims on every living creature.
+    if (dead) {
+      el.style.width = (item.w * item.fit) + "px";
+      el.style.height = (item.h * item.fit) + "px";
+      el.style.top = (rowH - item.h * item.fit + depth / scale) + "px";
+      el.style.transform = "none";
+    }
+  }
+  var taken = [];   // [left, right] of every living creature's slot
+  var floorL = width / 2 - available / 2, floorR = width / 2 + available / 2;
+  var lranks = ranksOf(living), behind = null;
+  lranks.forEach(function (items, r) {
+    var depth = forward * .65 * r / Math.max(1, lranks.length - 1);
+    var total = (items.length - 1) * gap;
+    items.forEach(function (item) { total += slotW(item); });
+    var xs = [], x = width / 2 - total / 2;
+    items.forEach(function (item) { xs.push(x); x += slotW(item) + gap; });
+    // A front rank stands in the gaps of the rank behind it: centre on the
+    // middles between the creatures there, nearest the middle of the floor.
+    if (behind && behind.length > 1 && items.length < behind.length) {
+      var mids = [];
+      for (var b = 0; b + 1 < behind.length; b++) mids.push((behind[b].c + behind[b + 1].c) / 2);
+      mids.sort(function (a, c) { return Math.abs(a - width / 2) - Math.abs(c - width / 2); });
+      var pick = mids.slice(0, items.length).sort(function (a, c) { return a - c; });
+      items.forEach(function (item, k) { xs[k] = pick[k] - slotW(item) / 2; });
+    } else if (behind && items.length >= behind.length) {
+      // As wide as the rank behind: half a slot over, so nobody is hidden.
+      var half = (slotW(items[0]) + gap) / 2;
+      xs = xs.map(function (v) { return v + half; });
+    }
+    // ...and a rank moved into the gaps or half a slot over still stands
+    // between the walls: slid back inside the floor as a whole if it sticks out.
+    var lo = Infinity, hi = -Infinity;
+    items.forEach(function (item, k) { lo = Math.min(lo, xs[k]); hi = Math.max(hi, xs[k] + slotW(item)); });
+    var slide = lo < floorL ? floorL - lo : hi > floorR ? floorR - hi : 0;
+    if (slide) xs = xs.map(function (v) { return v + slide; });
+    var placedRank = [];
+    items.forEach(function (item, k) {
+      put(item, xs[k], depth, false, 10 + r);
+      // Where it actually stands: the frame is drawn with room around the
+      // animal, so only the middle of the slot is feet on the floor.
+      taken.push([xs[k] + slotW(item) * .3, xs[k] + slotW(item) * .7]);
+      placedRank.push({ c: xs[k] + slotW(item) / 2 });
+    });
+    behind = placedRank;
+  });
+  // The dead lie where nobody is standing. Every spot along the floor is
+  // tried, and the body goes to the clear one nearest the middle - or, on a
+  // floor too crowded for a clear one, wherever it covers the least of anybody.
+  taken.sort(function (a, b) { return a[0] - b[0]; });
+  bodies.forEach(function (item, i) {
+    item.fit = Math.min(1, available / (item.w * 1.12));
+    var w = slotW(item), lie = item.w * item.fit * .85, centre = width / 2, best = null, bestCost = Infinity;
+    for (var x0 = floorL; x0 <= floorR - w + .5; x0 += 6) {
+      var a = x0 + (w - lie) / 2, z = a + lie, cover = 0;
+      for (var t = 0; t < taken.length; t++) cover += Math.max(0, Math.min(z, taken[t][1]) - Math.max(a, taken[t][0]));
+      var cost = cover * 1000 + Math.abs(x0 + w / 2 - centre);
+      if (cost < bestCost) { bestCost = cost; best = x0; }
+    }
+    if (best === null) best = centre - w / 2;
+    put(item, best, forward * .9, true, i);
+    taken.push([best + (w - lie) / 2, best + (w + lie) / 2]);
+  });
 }
 // THE PICTURE BOX, IN PIXELS. Read from the scene element itself rather than
 // recomputed from --logh: the dial can be moved by a media query or the grip,
