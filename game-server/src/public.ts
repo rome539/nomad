@@ -2065,51 +2065,38 @@ export const PAGE = `<!doctype html>
     mask-size: 14px 14px, 14px 14px, 14px 14px, 14px 14px, 22px 22px;
     mask-position: left top, right top, left bottom, right bottom, center top;
   }
-  /* Ornate artwork shares the saved border switch. A background keeps the
-     floral engraving anchored to the visible log while its text scrolls. */
+  /* Artwork choice is independent of theme colors and the ornate on/off switch. */
+  body { --art-log: url("/ornate/floral-background-v2.svg"); --art-panel: url("/ornate/architecture-v2.svg"); --art-size: cover; }
+  body[data-artwork="dragons"] { --art-log: url("/ornate/dragons-background-v2.svg"); --art-panel: url("/ornate/dragons-v2.svg"); }
+  body[data-artwork="feathers"] { --art-log: url("/ornate/feathers-background-v2.svg"); --art-panel: url("/ornate/feathers-v2.svg"); }
+  body[data-artwork="celestial"] { --art-log: url("/ornate/celestial-background-v2.svg"); --art-panel: url("/ornate/celestial-panel-v2.svg"); }
+  body[data-artwork="sun"] { --art-log: url("/ornate/sun-background-v2.svg"); --art-panel: url("/ornate/sun-v2.svg"); }
+  body[data-artwork="dragons"] { --art-size: contain; }
+  body[data-artwork="sun"] { --art-size: auto 85%; }
   body[data-ornate]:where(:not([data-ornate=""])) #log {
-    background-image: url("/ornate/floral-v1.svg");
-    background-size: 100% 100%;
-    background-position: center bottom;
+    background-image: var(--art-log);
+    background-size: var(--art-size);
+    background-position: right bottom;
     background-repeat: no-repeat;
   }
   body[data-ornate]:where(:not([data-ornate=""]))[data-view="image"][data-log="big"] #log {
-    background-image: url("/ornate/floral-v1.svg"), linear-gradient(to bottom,
+    background-image: var(--art-log), linear-gradient(to bottom,
       color-mix(in srgb, var(--bg) 0%, transparent) 0%,
       color-mix(in srgb, var(--bg) 82%, transparent) 5%,
       color-mix(in srgb, var(--bg) 96%, transparent) 14%,
       color-mix(in srgb, var(--bg) 99%, transparent) 100%);
+    background-size: var(--art-size), 100% 100%;
   }
-  body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect) {
-    isolation: isolate;
-  }
+  body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect) { isolation: isolate; }
   body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    border-radius: inherit;
-    background: url("/ornate/gate-v1.svg") right -54px bottom -42px / auto 86% no-repeat,
-      url("/ornate/windows-v1.svg") left -72px bottom 80px / auto 88% no-repeat;
-    opacity: .25;
-    mask-image: linear-gradient(to bottom, transparent, black 25%);
+    content: ""; position: absolute; inset: 16px; z-index: -1; pointer-events: none;
+    border-radius: inherit; background: var(--gold); opacity: .1;
+    mask: var(--art-panel) center bottom / contain no-repeat;
   }
-  body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel)::before {
-    background: url("/ornate/gate-v1.svg") right -95px bottom -32px / auto 80% no-repeat;
-    opacity: .16;
-    mask-image: linear-gradient(to bottom, transparent 10%, black);
-  }
-  body[data-ornate]:where(:not([data-ornate=""]))[data-theme-tone="light"] :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before {
-    filter: brightness(.25);
-    opacity: .15;
-  }
-  @media (max-width:680px) {
-    body[data-ornate]:where(:not([data-ornate=""])) :is(.bbox, .lbox, .vbox, .signer-connect)::before {
-      background-position: right -125px bottom -25px, left -190px bottom 50px;
-      opacity: .14;
-    }
-  }
+  body[data-artwork="floral"][data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel)::before { mask-size: auto 72%; mask-position: right bottom; }
+  body[data-artwork="sun"][data-ornate]:where(:not([data-ornate=""])) :is(.bbox, .lbox, .vbox, .signer-connect)::before { inset: 35% 5% 5% 40%; }
+  body[data-artwork="sun"][data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel)::before { inset: 55% 15% 5%; }
+  body[data-artwork="celestial"][data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before { inset: 0; mask-size: cover; opacity: .07; }
   /* The first walk owns the log until the player finishes or skips it. */
   body[data-tutorial="on"] #log > :not(.guide-step) { display: none; }
   body[data-tutorial="on"] :is(#scene, #sky, #mobs, #loggrip, #chips) { display: none; }
@@ -2268,7 +2255,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div class="setrow"><span>inventory &amp; shop layout</span><button id="modallayoutbtn" type="button" aria-label="Inventory &amp; shop layout: Compact">Compact</button></div>
     <div class="setrow"><span>theme</span><button id="thbtn">door</button></div>
     <div class="setrow" id="dooratmorow"><span>theme design</span><button id="dooratmobtn" type="button" role="switch" aria-label="Enhanced theme design" aria-checked="false">off</button></div>
-    <div class="setrow"><span>ornate artwork</span><button id="ornatebtn" type="button" role="switch" aria-label="Ornate artwork" aria-checked="false">off</button></div>
+    <div class="setrow"><span>ornate artwork</span><button id="ornatebtn" type="button" aria-label="Ornate artwork: off">off</button></div>
     <div class="setrow"><span>nostr themes</span><button id="thbrowse">browse</button></div>
     <div id="thlist"></div>
     <div class="setrow"><span>source</span><a class="abtn" href="https://github.com/rome539/nomad" target="_blank" rel="noopener">github &#8599;</a></div>
@@ -7520,12 +7507,17 @@ function applyThemeFont(f) {
 var doorAtmosphere = (localStorage.getItem("nomad_theme_design") || localStorage.getItem("nomad_door_atmosphere")) === "on";
 var doorAtmosphereAvailable = "";
 var ornateBorders = localStorage.getItem("nomad_ornate_borders") !== "off";
+var artworkStyles = ["floral", "dragons", "feathers", "celestial", "sun"];
+var artworkStyle = localStorage.getItem("nomad_artwork_style") || "floral";
+if (artworkStyles.indexOf(artworkStyle) < 0) artworkStyle = "floral";
 function syncDoorAtmosphere() {
+  document.body.dataset.artwork = artworkStyle;
   document.body.dataset.ornate = ornateBorders ? doorAtmosphereAvailable : "";
   var ornateButton = document.getElementById("ornatebtn");
-  ornateButton.textContent = ornateBorders ? "on" : "off";
+  ornateButton.textContent = ornateBorders ? String(artworkStyles.indexOf(artworkStyle) + 1) : "off";
+  ornateButton.setAttribute("aria-label", "Ornate artwork: " + (ornateBorders ? ornateButton.textContent + " of 5, " + artworkStyle : "off"));
   ornateButton.classList.toggle("on", ornateBorders);
-  ornateButton.setAttribute("aria-checked", String(ornateBorders));
+
   document.body.dataset.atmosphere = doorAtmosphere ? doorAtmosphereAvailable : "";
   document.getElementById("dooratmorow").hidden = !doorAtmosphereAvailable;
   var button = document.getElementById("dooratmobtn");
@@ -7534,7 +7526,15 @@ function syncDoorAtmosphere() {
   button.setAttribute("aria-checked", String(doorAtmosphere));
 }
 document.getElementById("ornatebtn").addEventListener("click", function () {
-  ornateBorders = !ornateBorders;
+  if (!ornateBorders) {
+    ornateBorders = true;
+    artworkStyle = artworkStyles[0];
+  } else {
+    var next = artworkStyles.indexOf(artworkStyle) + 1;
+    if (next === artworkStyles.length) ornateBorders = false;
+    else artworkStyle = artworkStyles[next];
+  }
+  localStorage.setItem("nomad_artwork_style", artworkStyle);
   localStorage.setItem("nomad_ornate_borders", ornateBorders ? "on" : "off");
   syncDoorAtmosphere();
 });
