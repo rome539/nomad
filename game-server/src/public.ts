@@ -1367,6 +1367,9 @@ export const PAGE = `<!doctype html>
      picture (rome, 2026-09-15): it holds a fixed share of the window, the plate
      holds the rest, and a long fight scrolls inside it instead of creeping up
      over the room. */
+  /* The band is the dial plus whatever the chips would have taken, when they
+     are off (--chipfill, measured by renderChips; 0 while they are on). */
+  body[data-view="image"] { --logband: calc(var(--logh) + var(--chipfill, 0px)); }
   body[data-view="image"] #log {
     position: relative;
     z-index: 1;
@@ -1378,7 +1381,7 @@ export const PAGE = `<!doctype html>
        max-height lets the band shrink to its content and the picture would then
        stretch to a height the sprites were not measured against. */
     flex: none;
-    height: var(--logh);
+    height: var(--logband);
     min-height: 0;
     transition: height .22s ease;
     /* Opaque now, and built from --bg so a repainted theme repaints this too.
@@ -1406,7 +1409,7 @@ export const PAGE = `<!doctype html>
        below it moves and the extra height goes upward, over the plate. z-index
        1 is on the base rule and the scene is 0, so it paints over the room. */
     height: 62vh;
-    margin-top: calc(var(--logh) - 62vh);
+    margin-top: calc(var(--logband) - 62vh);
     /* Over a picture again, so the veil comes back for this state only. */
     background: linear-gradient(to bottom,
       color-mix(in srgb, var(--bg) 0%, transparent) 0%,
@@ -1417,7 +1420,7 @@ export const PAGE = `<!doctype html>
     text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(0,0,0,.8);
   }
   body[data-view="image"][data-log="big"] #loggrip {
-    transform: translateY(calc(var(--logh) - 62vh));
+    transform: translateY(calc(var(--logband) - 62vh));
   }
   /* Keep the shared panel fade; dark lettering only needs the glow removed. */
   body[data-theme-tone="light"][data-view="image"][data-log="big"] #log {
@@ -2150,8 +2153,8 @@ export const PAGE = `<!doctype html>
     body.command-focus #phone-done { display: block; }
     #log { overscroll-behavior-y: contain; }
     body[data-view="image"] { --logh: min(calc(var(--play-height, 100dvh) * .25), 180px); }
-    body[data-view="image"][data-log="big"] #log { height: min(55dvh, calc(var(--play-height, 100dvh) - 220px)); margin-top: calc(var(--logh) - min(55dvh, calc(var(--play-height, 100dvh) - 220px))); }
-    body[data-view="image"][data-log="big"] #loggrip { transform: translateY(calc(var(--logh) - min(55dvh, calc(var(--play-height, 100dvh) - 220px)))); }
+    body[data-view="image"][data-log="big"] #log { height: min(55dvh, calc(var(--play-height, 100dvh) - 220px)); margin-top: calc(var(--logband) - min(55dvh, calc(var(--play-height, 100dvh) - 220px))); }
+    body[data-view="image"][data-log="big"] #loggrip { transform: translateY(calc(var(--logband) - min(55dvh, calc(var(--play-height, 100dvh) - 220px)))); }
     body.command-focus #inputline { transform: translateY(calc(-1 * var(--keyboard-cover, 0px))); z-index: 3; }
   }
 
@@ -4680,7 +4683,8 @@ function renderChips(suggest, combat) {
   var actionScroll = previousActions && chipScrollRoom === lastRoomName && !(lastCombat && !wasFighting) ? previousActions.scrollTop : 0;
   chipScrollRoom = lastRoomName;
   chipsEl.textContent = "";
-  if (!chipsOn) return; // the quiet terminal: no training wheels
+  // The quiet terminal (chips off) still lays the tray out, measures it and
+  // empties it again below: its height goes to the log (--chipfill).
   // The identity lives behind the name button top right — no keys chip, no
   // nostr words in a stranger's face (rome, 2026-07-11).
   var all = suggest;
@@ -4732,6 +4736,22 @@ function renderChips(suggest, combat) {
     });
     actionTray.appendChild(more);
   }
+  // CHIPS OFF KEEPS THE SAME FLOOR (rome, 2026-10-10). Turning the chips off
+  // took their tray out of the bottom stack, so the text band got shorter and
+  // the picture grew into the gap. The tray is measured as it would stand and
+  // emptied, and the log takes its height instead: the band is the same size
+  // with the chips on or off, it just holds words where the chips were.
+  if (!chipsOn) {
+    var fill = chipsEl.offsetHeight;
+    chipsEl.textContent = "";
+    document.body.style.setProperty("--chipfill", fill + "px");
+    requestAnimationFrame(function () {
+      fitPicture();
+      if (followLive) log.scrollTop = log.scrollHeight;
+    });
+    return;
+  }
+  document.body.style.setProperty("--chipfill", "0px");
   actionTray.scrollTop = actionScroll;
   var settledScroll = log.scrollTop;
   requestAnimationFrame(function () {
@@ -6147,6 +6167,12 @@ var MAP_BANDS = [
 // anchor for each rides on the frame (lore.worldGrid) so a caption never moves
 // when you find a new room. The 'gate' region is deliberately absent: the three
 // fortress doors stand on its open ground, and would caption inside a caption.
+// The regions themselves, as against the quarters inside them. Zoomed far out
+// these are the only names on the paper (rome, 2026-10-10: the map should name
+// the regions on far zoom), so they hold a readable size there and the quarters
+// wait until you come in close enough to tell them apart.
+var MAP_MAJOR_REGIONS = { sky: 1, out: 1, upper: 1, warrens: 1, deep: 1, road: 1, wood: 1, den: 1, mountain: 1, crossing: 1 };
+var MAP_FAR_SCALE = 0.35;
 var MAP_REGION_LABELS = {
   sky: "THE OVERWORKS",
   out: "THE OPEN GROUND",
@@ -6322,7 +6348,7 @@ function buildMapGraph(f) {
         var nd = nodes[order[ah]], nr = nd.region;
         if (nr === ba.region || nd.q === ba.region || (ba.region === "out" && nr === "gate")) anyHere = true;
       }
-      if (anyHere) labels.push({ x: ba.x, y: ba.y, text: text });
+      if (anyHere) labels.push({ x: ba.x, y: ba.y, text: text, major: MAP_MAJOR_REGIONS[ba.region] ? 1 : 0 });
     }
   } else {
     // A CRUDE COPY ONLY. Pieces packed into rows and each stratum centred — the
@@ -6354,7 +6380,7 @@ function buildMapGraph(f) {
       }
       var shiftX = -Math.round((bx0 + bx1) / 2);
       for (var bs = 0; bs < bandIds.length; bs++) placed[bandIds[bs]].x += shiftX;
-      labels.push({ x: bx0 + shiftX - 0.35, y: bandY - 1.05, text: MAP_BANDS[bi].label });
+      labels.push({ x: bx0 + shiftX - 0.35, y: bandY - 1.05, text: MAP_BANDS[bi].label, major: 1 });
       bandY = by1 + 3.4;
     }
   }
@@ -6419,8 +6445,13 @@ function drawMap() {
   ctx.setLineDash([]); ctx.globalAlpha = 1;
   // stratum names, set faint above each layer of the cutaway
   if (g.labels) {
-    ctx.fillStyle = dim; ctx.globalAlpha = 0.65;
-    ctx.font = ((11 * s) | 0) + "px ui-monospace, monospace";
+    // Scaled with the paper up close; held at a readable size once the paper is
+    // small, where the region names are the only names left on it.
+    // (s carries the screen's pixel density; the zoom alone decides "far", and a
+    // fixed size is in CSS pixels, so it is multiplied up the same way.)
+    var far = mapCam.scale < MAP_FAR_SCALE;
+    ctx.fillStyle = far ? bone : dim; ctx.globalAlpha = far ? 0.85 : 0.65;
+    ctx.font = ((far ? 13 * mapDpr : Math.max(10 * mapDpr, 11 * s)) | 0) + "px ui-monospace, monospace";
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
     // TWO CAPTIONS ON THE SAME GROUND (rome, 2026-08-31: THE OPEN GROUND and
     // THE EAST ROAD printed through each other). The anchors are the server's
@@ -6436,8 +6467,9 @@ function drawMap() {
     // on one already placed steps down a line and tries again. First come keeps
     // its place, so the label that has always been there does not move when a
     // new one appears beside it.
-    var lrects = [], lh = 13 * s;
+    var lrects = [], lh = far ? 15 * mapDpr : Math.max(12 * mapDpr, 13 * s);
     for (var lb = 0; lb < g.labels.length; lb++) {
+      if (far && !g.labels[lb].major) continue;
       var ltx = g.labels[lb].text.split("").join("\\u2009");
       var lpx = sx(g.labels[lb].x), lpy = sy(g.labels[lb].y), lpw = ctx.measureText(ltx).width;
       for (var lg = 0; lg < 8; lg++) {
@@ -6653,7 +6685,7 @@ function renderMap(f) {
       ? "Set down true, hall by hall \\u2014 as far as this copy's carriers have walked."
       : "Copied from half a memory. Some of it is right. Trust it at your peril.";
   document.getElementById("maphint").textContent = wall
-    ? "true, as far as it goes \\u00b7 the deep is not on it \\u00b7 drag to pan"
+    ? "drag to pan \\u00b7 pinch or scroll to zoom"
     : detailed
       ? "drag to pan \\u00b7 pinch or scroll to zoom"
       : "an unreliable copy \\u00b7 drag to pan";
