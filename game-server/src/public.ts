@@ -6171,7 +6171,7 @@ var MAP_BANDS = [
 // these are the only names on the paper (rome, 2026-10-10: the map should name
 // the regions on far zoom), so they hold a readable size there and the quarters
 // wait until you come in close enough to tell them apart.
-var MAP_MAJOR_REGIONS = { sky: 1, out: 1, upper: 1, warrens: 1, deep: 1, road: 1, wood: 1, den: 1, mountain: 1, crossing: 1 };
+var MAP_MAJOR_REGIONS = { sky: 1, out: 1, upper: 1, warrens: 1, deep: 1, road: 1, eastroad: 1, wood: 1, den: 1, mountain: 1, crossing: 1 };
 var MAP_FAR_SCALE = 0.35;
 var MAP_REGION_LABELS = {
   sky: "THE OVERWORKS",
@@ -6343,12 +6343,23 @@ function buildMapGraph(f) {
       // A wood quarter's caption is satisfied by having walked a room OF THAT
       // QUARTER, not by having walked the wood — otherwise one step past the
       // Eaves would print all seven names across ground you have never seen.
-      var anyHere = false;
-      for (var ah = 0; ah < order.length && !anyHere; ah++) {
-        var nd = nodes[order[ah]], nr = nd.region;
+      var anyHere = false, sumX = 0, sumY = 0, own = 0, bareX = 0, bareY = 0, bare = 0;
+      for (var ah = 0; ah < order.length; ah++) {
+        var nd = nodes[order[ah]], nr = nd.region, pl = placed[order[ah]];
         if (nr === ba.region || nd.q === ba.region || (ba.region === "out" && nr === "gate")) anyHere = true;
+        // The far view sets the name on the middle of the region's own rooms
+        // (not the doors, which stand in every region at once)...
+        if ((nr === ba.region || nd.q === ba.region) && pl) {
+          sumX += pl.x; sumY += pl.y; own++;
+          // ...and where part of a region carries a quarter of its own name,
+          // on the part that does not (rome, 2026-10-10: THE WEST ROAD sat over
+          // the fortress, because the east road is the same region and the
+          // middle of both roads is the gate between them).
+          if (nr === ba.region && !nd.q) { bareX += pl.x; bareY += pl.y; bare++; }
+        }
       }
-      if (anyHere) labels.push({ x: ba.x, y: ba.y, text: text, major: MAP_MAJOR_REGIONS[ba.region] ? 1 : 0 });
+      if (anyHere) labels.push({ x: ba.x, y: ba.y, text: text, major: MAP_MAJOR_REGIONS[ba.region] ? 1 : 0,
+        cx: bare ? bareX / bare : own ? sumX / own : ba.x, cy: bare ? bareY / bare : own ? sumY / own : ba.y, n: own });
     }
   } else {
     // A CRUDE COPY ONLY. Pieces packed into rows and each stratum centred — the
@@ -6468,8 +6479,7 @@ function drawMap() {
     // its place, so the label that has always been there does not move when a
     // new one appears beside it.
     var lrects = [], lh = far ? 15 * mapDpr : Math.max(12 * mapDpr, 13 * s);
-    for (var lb = 0; lb < g.labels.length; lb++) {
-      if (far && !g.labels[lb].major) continue;
+    for (var lb = 0; lb < g.labels.length && !far; lb++) {
       var ltx = g.labels[lb].text.split("").join("\\u2009");
       var lpx = sx(g.labels[lb].x), lpy = sy(g.labels[lb].y), lpw = ctx.measureText(ltx).width;
       for (var lg = 0; lg < 8; lg++) {
@@ -6572,6 +6582,58 @@ function drawMap() {
       ctx.fillText(mapFitLabel(ctx, nd.name, maxW), cx, cy);
       ctx.restore();
     }
+  }
+  // ...and the far names go on LAST, over the rooms: drawn before them, as the
+  // close captions are, the rooms painted straight over the top.
+  if (g.labels && mapCam.scale < MAP_FAR_SCALE) {
+    var far = true, lrects = [], lh = 14 * mapDpr;
+    ctx.fillStyle = bone; ctx.globalAlpha = 0.9;
+    ctx.font = ((12 * mapDpr) | 0) + "px ui-monospace, monospace";
+    ctx.textBaseline = "middle";
+    // FAR OUT, EACH NAME ON ITS OWN GROUND (rome, 2026-10-10, on names run into
+    // each other and set off to the side of what they name). Centred on the
+    // middle of the region's walked rooms, the biggest region placed first, and
+    // a name that would land on one already placed is left off until you come
+    // in closer - two names printed through each other name neither. A dark
+    // edge keeps each one legible over the lines it sits on.
+    {
+      var farLabels = g.labels.filter(function (l) { return l.major; })
+        .sort(function (a, b) { return (b.n || 0) - (a.n || 0); });
+      ctx.textAlign = "center";
+      ctx.lineJoin = "round"; ctx.lineWidth = 3 * mapDpr; ctx.strokeStyle = mapCssVar("--bg");
+      for (var fl = 0; fl < farLabels.length; fl++) {
+        // Plain spacing out here: the spread-out letters of the close captions
+        // are twice the width, and at this size the world is a few hundred
+        // pixels across - wide names knocked whole regions off the paper.
+        var ft = farLabels[fl].text;
+        var fw = ctx.measureText(ft).width, fx = sx(farLabels[fl].cx), fy0 = sy(farLabels[fl].cy);
+        // A name that would land on one already set tries a line or two above
+        // and below its own ground before it is left off.
+        var fr = null, fy = fy0, tries = [0, -1, 1, -2, 2];
+        for (var ft2 = 0; ft2 < tries.length && !fr; ft2++) {
+          var y2 = fy0 + tries[ft2] * lh * 1.15;
+          var cand = { x: fx - fw / 2 - 4 * mapDpr, y: y2 - lh / 2, w: fw + 8 * mapDpr, h: lh };
+          var hit = false;
+          for (var fq = 0; fq < lrects.length && !hit; fq++) {
+            var o2 = lrects[fq];
+            hit = cand.x < o2.x + o2.w && cand.x + cand.w > o2.x && cand.y < o2.y + o2.h && cand.y + cand.h > o2.y;
+          }
+          if (!hit) { fr = cand; fy = y2; }
+        }
+        if (!fr) continue;
+        lrects.push(fr);
+        // A dark plate under the name: far out it sits on top of the very
+        // rooms it names, and a thin outline was not enough to lift it off them.
+        var fillWas = ctx.fillStyle, alphaWas = ctx.globalAlpha;
+        ctx.fillStyle = mapCssVar("--bg"); ctx.globalAlpha = 0.82;
+        mapRoundRect(ctx, fr.x, fr.y - 2 * mapDpr, fr.w, fr.h + 4 * mapDpr, 4 * mapDpr); ctx.fill();
+        ctx.fillStyle = fillWas; ctx.globalAlpha = alphaWas;
+        ctx.strokeText(ft, fx, fy);
+        ctx.fillText(ft, fx, fy);
+      }
+      ctx.textAlign = "left";
+    }
+    ctx.globalAlpha = 1;
   }
 }
 function mapZoom(f, clientX, clientY) {
