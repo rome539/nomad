@@ -1771,6 +1771,14 @@ export class ZoneDO implements DurableObject {
       // to wave off a trade that no longer exists server-side.
       trade.forceCloseSwapUI(rebuilt);
       if (!gateUI) gate.forceCloseGateUI(rebuilt);
+      // TELL THE PAGE WHAT BUILD IT IS TALKING TO, NOW (rome, 2026-10-11: the
+      // update notice came twenty minutes after a deploy). The socket survives a
+      // deploy, so the open page never reconnects; it only compares builds when a
+      // room frame arrives, and someone sitting still in the gatehouse gets none
+      // until something moves them. A wake is exactly when the build may have
+      // changed, so every live page gets its frame on the spot. It is the
+      // ordinary room frame, so a page from before this change reads it too.
+      this.sendCtx(rebuilt);
     }
     // Closed sockets are not returned after hibernation. Their journaled bodies
     // still owe the same disconnect deadline; a restart cannot free them early.
