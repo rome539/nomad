@@ -6713,7 +6713,7 @@ function wireMap() {
   // ...and once the band has finished growing or shrinking. Guarded on the
   // property because the band also transitions other things, and a measurement
   // per animated property is a measurement three times too many.
-  var logForFit = document.getElementById("log");
+  var logForFit = document.getElementById("logbox");
   if (logForFit) logForFit.addEventListener("transitionend", function (e) {
     if (e.propertyName === "height") fitPicture();
   });
@@ -11855,7 +11855,7 @@ function fitPicture() {
   // Measure the collapsed footprint even when the log overlays the room.
   // Freezing this measurement while expanded left portrait dimensions in
   // place after rotation, collapsing the landscape scene and its sprites.
-  var top = document.getElementById("loggrip"), lg = document.getElementById("log");
+  var top = document.getElementById("loggrip"), lg = document.getElementById("logbox");
   // Its own height, which the CSS needs to pull it out of the flow. offsetHeight
   // is the border box, so neither the margin nor the transform doing the moving
   // changes it, and this cannot chase itself.
