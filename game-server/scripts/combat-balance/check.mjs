@@ -12,6 +12,9 @@ import {build} from 'esbuild';
 
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
+// Recovery per second, matching exhaustion.ts RATE (rome, 2026-10-11).
+const RP=10, RR=17, RF=25;
+const near=(a,b,msg)=>assert(Math.abs(a-b)<0.05,(msg||'')+' expected '+b+' got '+a);
 const proposal=JSON.parse(await readFile(new URL('./proposal.json',import.meta.url),'utf8'));
 const playerMaxHp=100,balance='production';
 const drakeDamage=proposal.creatureDamageCandidates.find(x=>x.id==='the-drake').candidate;
@@ -368,11 +371,11 @@ try {
    }
    const saved=E.readExhaustion(JSON.stringify(e),e.at);
    E.recover(saved,e.at+3000);assert.equal(saved.units,e.units,'reconnect cannot erase the walking pause');
-   E.recover(saved,e.at+6000);assert.equal(saved.units,e.units-20,'only time after the four-second pause recovers');
+   E.recover(saved,e.at+6000);near(saved.units,Math.max(0,e.units-2*RP),'only time after the four-second pause recovers');
    const offline=E.readExhaustion(JSON.stringify(e),e.at+15000);
-   E.recover(offline,e.at+15000);assert.equal(offline.units,e.units-110,'idle/offline elapsed recovery splits at the pause deadline');
+   E.recover(offline,e.at+15000);near(offline.units,Math.max(0,e.units-11*RP),'idle/offline elapsed recovery splits at the pause deadline');
    const resting=E.readExhaustion(JSON.stringify(e),e.at);
-   E.recover(resting,e.at,'rest');E.recover(resting,e.at+2000);assert.equal(resting.units,e.units-100,'deliberate rest bypasses the walking pause');
+   E.recover(resting,e.at,'rest');E.recover(resting,e.at+2000);near(resting.units,Math.max(0,e.units-2*RR),'deliberate rest bypasses the walking pause');
   }
   assert.equal(E.readExhaustion('{"units":10,"at":0,"mode":"passive"}',0).walkingUntil,undefined,'old saves remain valid');
   const original={room:p.roomId,creatures:z.creatures,events:z.events,items:p.items,start:now};
@@ -399,11 +402,11 @@ try {
    ws.serializeAttachment({pubkey:p.pubkey,la:now});
    const rebuilt=new ZoneDO({...state,getWebSockets:()=>[ws]},env);await rebuilt.init('door');await rebuilt.hydrateSessions();
    const restored=rebuilt.sessions.get(p.pubkey);assert.equal(restored.exhaustion.walkingUntil,until);
-   now+=6000;rebuilt.syncExhaustion(restored);assert.equal(restored.exhaustion.units,before.units-20,'parked socket preserves walking recovery deadline');
+   now+=6000;rebuilt.syncExhaustion(restored);near(restored.exhaustion.units,before.units-2*RP,'parked socket preserves walking recovery deadline');
    // Rest begins immediately, regardless of the movement pause still pending.
    E.walk(p.exhaustion,weight,now);await command(()=>verbs.cmdRest(z,p));
    const restStart=p.exhaustion.units;now+=1000;z.syncExhaustion(p);
-   assert.equal(p.exhaustion.units,Math.max(0,restStart-50));
+   near(p.exhaustion.units,Math.max(0,restStart-RR),'rest begins immediately');
   } finally {
    now=original.start;p.roomId=original.room;p.items=original.items;p.resting=false;p.exhaustion=E.readExhaustion(undefined,now);p.healingDue=0;
    z.creatures=original.creatures;z.events=original.events;z.noteCreaturesChanged();z.bodyJournal.clear();kv.clear();z.lastCombatRound=now;z.lastTickAt=0;
@@ -417,23 +420,25 @@ try {
   p.hp=1;p.exhaustion={units:1000,at:now,mode:'passive'};
   await command(()=>verbs.cmdRest(z,p));
   for(let i=0;i<10;i++){now+=2000;await z.tick();}
-  assert.equal(p.exhaustion.units,0,'ordinary rest clears fatigue in 20 seconds');
-  assert.equal(p.hp,51,'ordinary rest heals 50 HP in 20 seconds');
+  near(p.exhaustion.units,1000-20*RR,'ordinary rest clears a third of fatigue in 20 seconds');
+  // rome 2026-10-11: rest heals a whole body in a minute, the fire in forty seconds.
+  assert(Math.abs(p.hp-(1+100/3))<0.5,'ordinary rest heals a third of the body in 20 seconds: '+p.hp);
   assert.equal(p.resting,true,'wounds keep rest active');
-  for(let i=0;i<10;i++){now+=2000;await z.tick();}
-  assert.equal(p.hp,100,'ordinary rest heals to full within 40 seconds');
+  for(let i=0;i<20;i++){now+=2000;await z.tick();}
+  assert.equal(p.hp,100,'ordinary rest heals to full within a minute');
+  assert.equal(p.exhaustion.units,0,'ordinary rest clears fatigue within a minute');
   p.hp=100;p.exhaustion={units:1000,at:now,mode:'passive'};
   await command(()=>verbs.cmdRest(z,p));
   now+=2000;await z.tick();assert.equal(p.resting,true,'full HP does not end fatigue recovery');
-  now+=18000;await z.tick();assert.equal(p.exhaustion.units,0);assert.equal(p.resting,false);
+  now+=58000;await z.tick();assert.equal(p.exhaustion.units,0);assert.equal(p.resting,false);
   p.exhaustion={units:1000,at:now,mode:'passive'};
   for(let i=0;i<6;i++){now+=15000;await z.tick();}
-  assert.equal(p.exhaustion.units,100,'idle cadence recovers 45 fatigue in 90 seconds');
+  near(p.exhaustion.units,1000-90*RP,'idle cadence recovers 90 seconds of fatigue');
   now+=10000;await z.tick();assert.equal(p.exhaustion.units,0,'passive recovery takes 100 seconds');
   const weather=new Map(z.events);
   z.events.set('cold',{phase:'active',until:now+100000});z.events.set('wind',{phase:'active',until:now+100000});z.events.set('rain',{phase:'active',until:now+100000});
   p.hp=50;p.resting=true;p.exhaustion={units:1000,at:now,mode:'rest'};
-  now+=20000;await z.tick();
+  now+=60000;await z.tick();
   assert.equal(p.exhaustion.units,0,'weather cannot block fatigue recovery');
   z.events=weather;p.resting=false;p.healingDue=0;
   // Four engaged attackers still charge one player round; the fourth creature
@@ -458,11 +463,12 @@ try {
   p.pvpTarget=null;p.hp=100;p.target=null;p.staggered=false;p.openedHeavy=false;p.bleedTicks=0;p.bleedDmg=0;
   // Gatehouse follows existing outOfWorld predicate; use its production flags.
   const originalOut=z.outOfWorld.bind(z);z.outOfWorld=()=>true;
-  for(const [mode,seconds] of [['shelter',20],['fire',10]]){
+  for(const [mode,seconds] of [['shelter',60],['fire',40]]){
    p.hp=1;p.resting=mode==='fire';p.exhaustion={units:1000,at:now,mode};
    now+=seconds*1000;await z.tick();
    assert.equal(p.exhaustion.units,0,mode+' fatigue duration');
-   assert.equal(p.hp,51,mode+' HP heals at corresponding rate');
+   const healed=mode==='fire'?seconds*100/40:seconds*100/60;
+   assert(Math.abs(p.hp-Math.min(100,1+healed))<0.5,mode+' HP heals at corresponding rate: '+p.hp);
   }
   z.outOfWorld=originalOut;
   // Checkpoint is authoritative even if D1 has not flushed. Restore a parked
@@ -472,8 +478,8 @@ try {
   const rebuilt=new ZoneDO({...state,getWebSockets:()=>[ws]},env);await rebuilt.init('door');
   await rebuilt.hydrateSessions();
   const r=rebuilt.sessions.get(p.pubkey);assert.equal(r.hp,80);assert.equal(r.exhaustion.units,800);assert.equal(r.resting,true);
-  now+=4000;rebuilt.syncExhaustion(r);assert.equal(r.exhaustion.units,600);
-  rebuilt.syncExhaustion(r);assert.equal(r.exhaustion.units,600,'wake cannot replay elapsed recovery');
+  now+=4000;rebuilt.syncExhaustion(r);near(r.exhaustion.units,800-4*RR);
+  const once=r.exhaustion.units;rebuilt.syncExhaustion(r);assert.equal(r.exhaustion.units,once,'wake cannot replay elapsed recovery');
   // A live fight never gets offline recovery. Journal restores target, body,
   // and the exact original disconnect deadline after a cold restart.
   p.hp=70;p.resting=false;p.target=drake.id;p.exhaustion={units:1000,at:now,mode:'combat'};

@@ -1974,7 +1974,6 @@ export const PAGE = `<!doctype html>
     background: color-mix(in srgb, var(--design-rule) 44%, transparent);
   }
   body[data-atmosphere]:where(:not([data-atmosphere=""])) #bench .bcol {
-    background: var(--design-page);
     border: 1px solid var(--design-rule);
     border-radius: var(--design-arch);
     padding-top: 14px;

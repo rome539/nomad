@@ -4,7 +4,14 @@ export type RecoveryMode = "combat" | "passive" | "rest" | "shelter" | "fire";
 export interface Exhaustion { units: number; at: number; mode: RecoveryMode; walkingUntil?: number }
 export const FATIGUE_CAP = 1000;
 export const WALK_RECOVERY_DELAY_MS = 4000;
-const RATE: Record<RecoveryMode, number> = { combat: 0, passive: 10, rest: 50, shelter: 50, fire: 100 };
+// Units back per second (rome, 2026-10-11: slower, at about the pace health
+// mends). From full: resting or sheltered 17/s - just under a minute - by the
+// fire 25/s, forty seconds; on your feet 10/s, a hundred seconds, as it always
+// was. Nothing comes back in a fight. Whole
+// units per second are whole THOUSANDTHS per millisecond, and recover()
+// quantizes at thousandths, so many short syncs land exactly where one long
+// one does (test-combat checks it).
+const RATE: Record<RecoveryMode, number> = { combat: 0, passive: 10, rest: 17, shelter: 17, fire: 25 };
 export function readExhaustion(raw: string | undefined, now: number): Exhaustion {
   try {
     const e = JSON.parse(raw ?? "null");
@@ -19,12 +26,12 @@ export function readExhaustion(raw: string | undefined, now: number): Exhaustion
 }
 export function recover(e: Exhaustion, now: number, nextMode: RecoveryMode = e.mode): void {
   const at = Math.max(e.at, now);
-  // All rates are whole hundredths of a unit per millisecond. Quantize at
-  // that precision so many short intervals cannot drift across a damage step.
+  // Quantize at thousandths so many short intervals cannot drift across a
+  // damage step (see RATE).
   // Only passive recovery waits for footsteps to stop. Split elapsed time at
   // the deadline so idle ticks and reconnects cannot recover the walking span.
   const from = e.mode === "passive" ? Math.max(e.at, Math.min(at, e.walkingUntil ?? e.at)) : e.at;
-  e.units = Math.max(0, Math.round((e.units - (at - from) * RATE[e.mode] / 1000) * 100) / 100);
+  e.units = Math.max(0, Math.round((e.units - (at - from) * RATE[e.mode] / 1000) * 1000) / 1000);
   e.at = at;
   e.mode = nextMode;
   if ((e.walkingUntil ?? 0) <= at || nextMode === "rest" || nextMode === "shelter" || nextMode === "fire")

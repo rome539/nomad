@@ -35,10 +35,11 @@ try {
       assert.equal(E.playerDamage(1,{units}),1);
     }
     const e={units:1000,at:0,mode:'rest'};
-    E.recover(e,4000,'combat');assert.equal(e.units,800);
-    E.recover(e,40000,'passive');assert.equal(e.units,800);
-    E.recover(e,50000);assert.equal(e.units,700);
-    E.recover(e,49000);E.recover(e,50000);assert.equal(e.units,700);
+    // rest 17/s, passive 10/s (rome, 2026-10-11).
+    E.recover(e,4000,'combat');assert.equal(e.units,932);
+    E.recover(e,40000,'passive');assert.equal(e.units,932);
+    E.recover(e,50000);assert.equal(e.units,832);
+    E.recover(e,49000);E.recover(e,50000);assert.equal(e.units,832);
     for (const mode of ['passive','rest','fire']) {
       const split={units:1000,at:0,mode},whole={...split};
       for(let ms=1;ms<=10000;ms++)E.recover(split,ms);

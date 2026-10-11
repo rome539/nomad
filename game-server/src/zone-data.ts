@@ -811,14 +811,19 @@ export const RATE_REFILL_PER_SEC = 2;
 // gatehouse (bench or hatch open at a gate: out of the world, mending).
 // Death wakes you whole: the price of dying is everything you carried,
 // not a hobbled morning.
-export const REST_REGEN_PER_TICK = 5;
+// THE PACE IS SET IN TIME, NOT IN POINTS (rome, 2026-10-11: resting healed far
+// too fast at 5 a tick - empty to full in 40 seconds). Resting takes a whole
+// body from nothing to full in one minute; the fire, below, in forty seconds.
+// Written as health over beats so it holds if PLAYER_MAX_HP moves again
+// (100 over 30 beats of TICK_MS = 2s; healing is fractional, hp rounds).
+export const REST_REGEN_PER_TICK = 100 / 30;
 // Two kinds of rest (rome, 2026-07-16). The DUNGEON rest is the one above:
 // cold stone, one eye open, REST_REGEN_PER_TICK — and anything ends it. The
 // FIRE rest is a deliberate doze INSIDE the gatehouse (typed 'rest' by the
-// fire): warm, truly safe, and wounds close at double time. Standing shelter
+// fire): warm, truly safe, and wounds close faster. Standing shelter
 // (bench/hatch open at a gate, not dozing) stays the slow rate — the fire
 // rewards actually settling in, not just being indoors.
-export const FIRE_REST_REGEN_PER_TICK = 10;
+export const FIRE_REST_REGEN_PER_TICK = 100 / 20; // full in forty seconds by the fire
 
 // Simulation clocks.
 export const SIM_STEP_MS = 60_000; // catch-up granularity
