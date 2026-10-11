@@ -976,11 +976,8 @@ export const PAGE = `<!doctype html>
     outline: none;
   }
   #idpanel input:focus { border-color: var(--gold); }
-  #log {
-    flex: 1;
-    overflow-y: auto;
-    padding: 14px;
-  }
+  #logbox { flex: 1; min-height: 0; position: relative; overflow: hidden; isolation: isolate; }
+  #log { position: relative; z-index: 1; height: 100%; overflow-y: auto; padding: 14px; box-sizing: border-box; }
 
   /* ------------------------------------------------------------------ *
    * THE SCENE. Two ways to be in this world: READ it, or LOOK at it.
@@ -1370,7 +1367,7 @@ export const PAGE = `<!doctype html>
   /* The band is the dial plus whatever the chips would have taken, when they
      are off (--chipfill, measured by renderChips; 0 while they are on). */
   body[data-view="image"] { --logband: calc(var(--logh) + var(--chipfill, 0px)); }
-  body[data-view="image"] #log {
+  body[data-view="image"] #logbox {
     position: relative;
     z-index: 1;
     /* ...and NOT here: see the grip above. */
@@ -1402,7 +1399,7 @@ export const PAGE = `<!doctype html>
      is kept so the prose still rises out of the image instead of arriving as a
      panel with a border, but it reaches full ground within a tenth of the
      column so nothing you are actually reading sits on stone. */
-  body[data-view="image"][data-log="big"] #log {
+  body[data-view="image"][data-log="big"] #logbox {
     /* TALLER ON SCREEN, THE SAME SIZE IN THE COLUMN. A flex item's outer size is
        its height plus its margins, so 62vh of band with (--logh - 62vh) of
        negative margin still occupies exactly --logh of the column: nothing
@@ -1423,7 +1420,7 @@ export const PAGE = `<!doctype html>
     transform: translateY(calc(var(--logband) - 62vh));
   }
   /* Keep the shared panel fade; dark lettering only needs the glow removed. */
-  body[data-theme-tone="light"][data-view="image"][data-log="big"] #log {
+  body[data-theme-tone="light"][data-view="image"][data-log="big"] #logbox {
     text-shadow: none;
   }
   body[data-theme-tone="light"] #log :is(.echo, .fumble, .tell) { opacity: 1; }
@@ -1946,7 +1943,7 @@ export const PAGE = `<!doctype html>
     background-image: none;
     box-shadow: none;
   }
-  body[data-atmosphere]:where(:not([data-atmosphere=""])) #log {
+  body[data-atmosphere]:where(:not([data-atmosphere=""])) #logbox {
     background: var(--design-page);
     scrollbar-color: var(--design-rule) var(--design-page);
   }
@@ -2071,37 +2068,34 @@ export const PAGE = `<!doctype html>
   body[data-artwork="feathers"] { --art-log: url("/ornate/feathers-v2.svg"); --art-panel: url("/ornate/feathers-v2.svg"); }
   body[data-artwork="celestial"] { --art-log: url("/ornate/celestial-v2.svg"); --art-panel: url("/ornate/celestial-panel-v2.svg"); }
   body[data-artwork="sun"] { --art-log: url("/ornate/sun-v2.svg"); --art-panel: url("/ornate/sun-v2.svg"); }
-  body[data-ornate]:where(:not([data-ornate=""])) #log { isolation: isolate; position: relative; }
-  body[data-view="image"] #log { transition: none; }
-  body[data-ornate]:where(:not([data-ornate=""])) :is(#log, #setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before {
+  body[data-ornate]:where(:not([data-ornate=""])) #logbox { isolation: isolate; position: relative; }
+  body[data-view="image"] #logbox { transition: none; }
+  body[data-ornate]:where(:not([data-ornate=""])) :is(#logbox, #setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect)::before {
     content: ""; position: absolute; inset: 16px; pointer-events: none; z-index: -1;
     opacity: .1; background: linear-gradient(to bottom, transparent, var(--gold) 28%, var(--gold));
     mask: var(--art-panel) center bottom / 100% 100% no-repeat;
   }
-  body[data-ornate]:where(:not([data-ornate=""])) #log::before { z-index: 0; mask-image: var(--art-log); }
-  body[data-ornate]:where(:not([data-ornate=""])) #log > :is(div,br) { position: relative; z-index: 1; }
+  body[data-ornate]:where(:not([data-ornate=""])) #logbox::before { z-index: 0; mask-image: var(--art-log); }
   body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel, .bbox, .lbox, .vbox, .signer-connect) { isolation: isolate; }
   body[data-ornate]:where(:not([data-ornate=""])) :is(#setpanel, #idpanel)::before { inset: 18px; mask-size: 100% auto; mask-position: center; opacity: .06; background: var(--gold); }
-  body[data-artwork="floral"] #log::before, body[data-artwork="feathers"] #log::before, body[data-artwork="celestial"] #log::before { inset: 0; mask-size: cover; mask-position: center; }
+  body[data-artwork="floral"] #logbox::before, body[data-artwork="feathers"] #logbox::before, body[data-artwork="celestial"] #logbox::before { inset: 0; mask-size: cover; mask-position: center; }
   body[data-artwork="floral"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { inset: 16px; background: var(--gold); mask-size: 100% auto; mask-position: center bottom; opacity: .1; }
   body[data-artwork="floral"][data-ornate] :is(#setpanel,#idpanel)::before { mask-size: auto 72%; mask-position: right bottom; }
   body[data-artwork="celestial"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { inset: 0; mask-size: cover; mask-position: center; opacity: .07; }
-  body[data-artwork="sun"][data-ornate] :is(#log,.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { mask-size: contain; mask-position: right bottom; }
-  body[data-artwork="sun"][data-ornate] #log::before { inset: 15% 3% 4% 60%; }
+  body[data-artwork="sun"][data-ornate] :is(#logbox,.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { mask-size: contain; mask-position: right bottom; }
+  body[data-artwork="sun"][data-ornate] #logbox::before { inset: 15% 3% 4% 60%; }
   body[data-artwork="sun"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect)::before { inset: 35% 5% 5% 40%; }
   body[data-artwork="sun"][data-ornate] :is(#setpanel,#idpanel)::before { inset: 55% 15% 5%; opacity: .1; }
-  /* Anchor engraving to the end of the scrollable text, never the scrollport. */
-  body[data-ornate]:where(:not([data-ornate=""])) #log::before {
-    top: var(--log-art-top, 0px); bottom: auto; height: var(--log-art-height, 62vh);
+  body[data-ornate]:where(:not([data-ornate=""])) #logbox::before {
+    top: auto; bottom: 0; height: max(100%, 62vh);
   }
-  body[data-artwork="sun"][data-ornate]:where(:not([data-ornate=""])) #log::before {
-    top: calc(var(--log-art-top, 0px) + var(--log-art-height, 62vh) * .15);
-    height: calc(var(--log-art-height, 62vh) * .81); bottom: auto;
+  body[data-artwork="sun"][data-ornate]:where(:not([data-ornate=""])) #logbox::before {
+    top: auto; bottom: 4%; height: max(81%, 50.22vh);
   }
   /* The first walk owns the log until the player finishes or skips it. */
   body[data-tutorial="on"] #log > :not(.guide-step) { display: none; }
   body[data-tutorial="on"] :is(#scene, #sky, #mobs, #loggrip, #chips) { display: none; }
-  body[data-tutorial="on"] #log {
+  body[data-tutorial="on"] #logbox {
     flex: 1 1 auto !important;
     height: auto !important;
     min-height: 0;
@@ -2141,7 +2135,7 @@ export const PAGE = `<!doctype html>
     body.command-focus #phone-done { display: block; }
     #log { overscroll-behavior-y: contain; }
     body[data-view="image"] { --logh: min(calc(var(--play-height, 100dvh) * .25), 180px); }
-    body[data-view="image"][data-log="big"] #log { height: min(55dvh, calc(var(--play-height, 100dvh) - 220px)); margin-top: calc(var(--logband) - min(55dvh, calc(var(--play-height, 100dvh) - 220px))); }
+    body[data-view="image"][data-log="big"] #logbox { height: min(55dvh, calc(var(--play-height, 100dvh) - 220px)); margin-top: calc(var(--logband) - min(55dvh, calc(var(--play-height, 100dvh) - 220px))); }
     body[data-view="image"][data-log="big"] #loggrip { transform: translateY(calc(var(--logband) - min(55dvh, calc(var(--play-height, 100dvh) - 220px)))); }
     body.command-focus #inputline { transform: translateY(calc(-1 * var(--keyboard-cover, 0px))); z-index: 3; }
   }
@@ -2449,7 +2443,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
   <div id="mobs" aria-hidden="true"></div>
   <canvas id="weather-particles" aria-hidden="true"></canvas>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
-  <div id="log"></div>
+  <div id="logbox"><div id="log"></div></div>
   <div id="chips"></div>
   <div id="inputline">
     <span class="prompt">&#9656;</span>
@@ -2471,19 +2465,6 @@ var GOOGLE_CLIENT_ID = "__GOOGLE_CLIENT_ID__";
 var GOOGLE_PICKER_KEY = "__GOOGLE_PICKER_KEY__";
 
 var log = document.getElementById("log");
-// Keep the artwork attached to the same content edge as the newest text.
-// Its scale uses the expanded reading area, so closing the band only crops it.
-function syncLogArtwork() {
-  var height = Math.max(log.clientHeight, Math.ceil(window.innerHeight * .62));
-  var last = log.lastElementChild;
-  var end = log.clientHeight;
-  if (last) end = Math.max(end, last.offsetTop + last.offsetHeight + 14);
-  log.style.setProperty("--log-art-height", height + "px");
-  log.style.setProperty("--log-art-top", (end - height) + "px");
-}
-new MutationObserver(syncLogArtwork).observe(log, { childList: true, subtree: true, characterData: true });
-new ResizeObserver(syncLogArtwork).observe(log);
-window.addEventListener("resize", syncLogArtwork);
 
 var cmd = document.getElementById("cmd");
 var roomEl = document.getElementById("room");
