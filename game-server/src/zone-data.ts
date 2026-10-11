@@ -896,6 +896,17 @@ export const MEAL_ITEM = 50;    // a dropped meal off the stones
 export const MEAL_CORPSE = 75;  // a whole body, and it still isn't a kill
 // (a kill zeroes it outright — see worryPrey/predation)
 
+// SCRAPS HAVE TO BE FOUND (rome, 2026-10-11: you should be able to meet a hungry
+// animal, at least among the floor-eaters like rats). The floor - gnawed ground,
+// a picked-over bone yard - was always stocked, so a rat crossed HUNGRY_AT and
+// fed on the same beat and was never seen hungry at all. Now finding a mouthful
+// is a chance that grows with time spent looking: on average this long. At the
+// 0.5/min climb a rat waits ~15 min (+7.5 hunger) for a 25-point meal, so it
+// settles around 40-60 and spends about a third of its life restless, without
+// ever ratcheting toward starving. Food actually lying there (a dropped meal, a
+// body) is still eaten on sight.
+export const FORAGE_FIND_MS = 15 * 60_000;
+
 export const STARVING_AT = 85; // past mere hunger: the end of the rope, where a predator with no easier meal eyes a lone delver as meat
 export const WANDER_MIN_MS = 45_000;
 export const WANDER_MAX_MS = 150_000;
@@ -3022,7 +3033,13 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
   // name. Two still go dry: the snow fox and hill wolf on the top tier, eleven
   // rooms from the shoulder stone, which is meant to be the last water there.
   "the-standing-water", "the-drinking-pool", "the-cold-seep",
-  "the-lower-beck", "the-gully-head", "the-black-runnel"]);
+  "the-lower-beck", "the-gully-head", "the-black-runnel",
+  // The scarp's goats and ravens: trenches cut in the moor and floored with water.
+  "the-peat-cuttings",
+  // The crossing's third fresh water: a stream runs in the bottom of the creek
+  // at low water, and the marsh hounds were fifteen rooms and more from the
+  // other two.
+  "the-creek-mouth"]);
 // WHO DRINKS. Was the scavengers alone, which left the wood's waters — the
 // Black Pool, the Brown Water, the Drinking Pool, eleven wet rooms of fen —
 // as ambush ground with nothing to ambush. Prey drinks too, and now the two
@@ -3052,6 +3069,13 @@ export const DRINKERS = new Set([
   "roe-deer", "white-roe", "wild-boar", "old-boar",             // the wood's game
   "the-baited-bear", "the-chain-breaker",                       // the beck is the one place on the east road you can count on meeting it
   "masterless-dog", "lead-dog",                                 // the road's strays
+  // EVERYTHING ELSE WITH A THROAT (rome, 2026-10-11). The list had grown by
+  // region and left whole kinds dry: the goats, the small hunters, the working
+  // dogs, the cat, and every bird. Not the drowned, the dead or the folk, and
+  // not what lives in the water already — eel, seal, crab, otter, heron.
+  "feral-goat", "hill-fox", "wildcat", "ermine", "cave-lion",
+  "drove-dog", "marsh-hound", "a-fold-dog",
+  "scarp-raven", "gibbet-crow", "ptarmigan", "hill-eagle", "eagle-owl", "mountain-chough",
 ]);
 // HOW FAR AN ANIMAL WILL WALK FOR A DRINK (rome, 2026-08-22). Its own radius,
 // NOT TERRITORY_RADIUS, which the thirst lookup used to borrow: three rooms is
@@ -3066,7 +3090,10 @@ export const DRINKERS = new Set([
 // A run is ~1 room every 3-10s once it sets out, so ten rooms is a minute or
 // two of purposeful movement — and thirst only comes every 2-4 hours, so this
 // is a rare errand, not a migration.
-export const THIRST_RADIUS = 10;
+// TWELVE (rome, 2026-10-11): the top tier's fox, wolf, ravens, choughs and owl
+// all sat eleven or twelve rooms from the shoulder stone, and nothing up there
+// has water in it to add. Two more rooms of walk reaches every one of them.
+export const THIRST_RADIUS = 12;
 
 
 export const THIRST_MIN_MS = 2 * 3_600_000;
@@ -4418,6 +4445,37 @@ export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes 
 // an old boar (8 beats, ~49%); a roe deer usually does not (4.6 beats, ~32%).
 export const PREY_BREAK_ODDS = 0.08;  // per beat the held thing tries the grip
 export const PREY_WORRY_MULT = 1.0;   // damage per beat while held (a grip is not a fresh charge)
+// MOST HUNTS FAIL (rome, 2026-10-11: make hunting grounded). Once hunter and
+// prey shared a room the hunter all but always ate - 60 to 100% across every
+// pair - so nothing that hunts was hungry for long. In the field a wolf pack
+// lands perhaps one chase in five, a big cat one in four, a fox pouncing
+// on voles one in three, an owl nearer half. This is the chance the rush
+// connects at all; a miss sends the prey running into the next room and leaves
+// the hunter blown for HUNT_REST_MIN..MAX minutes before it tries again.
+// Anything asleep is twice as easy to take. Unlisted hunters use the default.
+export const HUNT_SUCCESS_DEFAULT = 0.3;
+export const HUNT_SUCCESS: Record<string, number> = {
+  // pack runners: a long chase, and the quarry usually outlasts it
+  "grey-wolf": 0.2, "dire-wolf": 0.2, "hill-wolf": 0.2, "lead-wolf": 0.2,
+  "masterless-dog": 0.15, "lead-dog": 0.15, "drove-dog": 0.15, "marsh-hound": 0.2,
+  "three-hound": 0.2, "a-lymer": 0.2, "the-drove-master": 0.15,
+  "grave-hyena": 0.3, "dire-hyena": 0.3,
+  // stalk-and-rush cats: everything rides on the first bound
+  "lynx": 0.25, "wildcat": 0.3, "the-tom": 0.3, "cave-lion": 0.25,
+  // pouncers and small killers
+  "hill-fox": 0.3, "snow-fox": 0.3, "ermine": 0.35,
+  // from the air
+  "hill-eagle": 0.25, "eagle-owl": 0.45, "great-gull": 0.3, "black-backed-gull": 0.3,
+  // from the water and the reeds
+  "otter": 0.4, "dog-otter": 0.4, "grey-seal": 0.4, "bull-seal": 0.4,
+  "conger": 0.4, "old-conger": 0.4, "bittern": 0.4,
+  // ambushers that wait for it to come to them
+  "stone-adder": 0.5, "pale-crawler": 0.45, "pale-stalker": 0.45, "albino-rat": 0.35,
+  // the big and the slow: they win the fight but rarely the chase
+  "the-baited-bear": 0.15, "the-chain-breaker": 0.15, "glutton": 0.2, "old-boar": 0.15,
+};
+export const HUNT_REST_MIN = 2;
+export const HUNT_REST_MAX = 6;
 export const HOLD_LINES = [
   "{a} has {b} down and by the throat, and is not letting go.",
   "{a} has hold of {b}. The two of them are a single thrashing shape on the ground.",

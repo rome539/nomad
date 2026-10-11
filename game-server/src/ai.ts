@@ -26,7 +26,7 @@ import {
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
-  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, HUNGER_MAX,
+  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
@@ -1499,6 +1499,14 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     // graze), and the mud after a good rain brings up more than the ground
     // usually gives. Carrion is carrion whatever the sky does.
     if ((grazeHere && !events.coldBites(z, creature.roomId)) || carrionEater) {
+      // SCRAPS HAVE TO BE FOUND (FORAGE_FIND_MS). The odds grow with the time
+      // spent looking since the last try, so a 2s beat and an hour of catch-up
+      // ask the same question at their own scale. The first hungry beat only
+      // starts the search.
+      const from = creature.forageFrom;
+      creature.forageFrom = at;
+      if (from === undefined || from > at || Math.random() >= 1 - Math.exp(-(at - from) / FORAGE_FIND_MS)) return;
+      creature.forageFrom = undefined;
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       // The edge off, and no more. This is the food web's FLOOR — a mouthful of
       // ground, or a picked-over bone yard — and zeroing on it bought the animal
@@ -1600,6 +1608,7 @@ function preyHere(z: ZoneDO, creature: Creature): Set<string> | null {
 export async function predation(z: ZoneDO, creature: Creature, now: number): Promise<boolean> {
     const prey = preyHere(z, creature);
     if (!prey || creature.stunned || creature.bleedTicks) return false;
+    if ((creature.huntRestUntil ?? 0) > now) return false; // still blown from the last rush that missed
     const world = z.world!;
     const hungry = creature.hunger >= HUNGRY_AT;
     const traces = z.traces.get(creature.roomId);
@@ -1618,6 +1627,19 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     if (!victim) return false;
     const tmpl = world.mobTemplates.get(creature.templateId)!;
     const vt = world.mobTemplates.get(victim.templateId)!;
+    // MOST HUNTS FAIL (HUNT_SUCCESS). The rush is the whole of it: a miss and the
+    // prey is gone into the next room, and the hunter has spent its wind.
+    const odds = (HUNT_SUCCESS[creature.templateId] ?? HUNT_SUCCESS_DEFAULT) * (victim.asleep ? 2 : 1);
+    if (!chance(Math.min(0.9, odds))) {
+      exhaustion.creatureAttempt(creature, now);
+      creature.huntRestUntil = now + randInt(HUNT_REST_MIN, HUNT_REST_MAX) * 60_000;
+      victim.asleep = false;
+      victim.sleepUntil = undefined;
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} goes for ${vt.name}, and misses, and ${vt.name} is gone.`, undefined, false);
+      z.roomSound(creature.roomId, "Something breaks cover {dir}, and something else goes after it, and stops.");
+      await creatureMoves(z, victim, now, "flee", false);
+      return true;
+    }
     victim.asleep = false; // teeth wake anything
     victim.sleepUntil = undefined;
     // Same physics as every other blow: the prey's own armor soaks some of the
@@ -2339,7 +2361,9 @@ export function waters(z: ZoneDO, creature: Creature, now: number): void {
         const wallows = creature.templateId === "wild-boar" || creature.templateId === "old-boar";
         z.roomFeed(creature.roomId, wallows
           ? `${cap(tmpl.name)} walks straight into the shallows and lies down in it, and the water goes brown around it.`
-          : `${cap(tmpl.name)} lowers its muzzle to the water and drinks, long and unhurried.`, undefined, false);
+          : BEAKS.has(creature.templateId)
+            ? `${cap(tmpl.name)} dips its beak to the water, then tips its head back to swallow.`
+            : `${cap(tmpl.name)} lowers its muzzle to the water and drinks, long and unhurried.`, undefined, false);
       }
       return;
     }

@@ -149,6 +149,8 @@ export interface Creature {
   asleep?: boolean; // warm blood only: dozing — skips its whole act loop; wakes to entry/noise rolls (the wakeListeners law), a blow, or its own clock
   sleepUntil?: number; // when the doze ends on its own
   thirstAt?: number; // hyenas: when the next watering run calls
+  forageFrom?: number; // when it last went looking for scraps on the floor (see FORAGE_FIND_MS)
+  huntRestUntil?: number; // blown after a rush that missed (see HUNT_SUCCESS)
   wateringTo?: string; // hyenas: the water room it's padding toward (wander steers by roomDist)
   walkingTo?: string;  // this thing is GOING somewhere far off: every wander step closes the distance (roomDist), and it stops when it arrives. The watering run's wire, generalised — a hyena walks to water, a carrier walks a road, and whatever the Crossing puts on the water will walk it too.
   avoids?: { roomId: string; until: number }[]; // place-fear: rooms this one steers around (a rat's bad memory, a thief's warning)
