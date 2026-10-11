@@ -11807,9 +11807,9 @@ function fitMobRow() {
     var placedRank = [];
     items.forEach(function (item, k) {
       put(item, xs[k], depth, false, 10 + r);
-      // Where it actually stands: the frame is drawn with room around the
-      // animal, so only the middle of the slot is feet on the floor.
-      taken.push([xs[k] + slotW(item) * .3, xs[k] + slotW(item) * .7]);
+      // Where it actually stands: nearly the whole drawn frame - a sword arm,
+      // a tail, a lantern all read as the creature when a body lies under them.
+      taken.push([xs[k] + slotW(item) * .12, xs[k] + slotW(item) * .88]);
       placedRank.push({ c: xs[k] + slotW(item) / 2 });
     });
     behind = placedRank;
@@ -11817,19 +11817,27 @@ function fitMobRow() {
   // The dead lie where nobody is standing. Every spot along the floor is
   // tried, and the body goes to the clear one nearest the middle - or, on a
   // floor too crowded for a clear one, wherever it covers the least of anybody.
-  taken.sort(function (a, b) { return a[0] - b[0]; });
+  // THE DEAD MAY PILE, THE LIVING MAY NOT STAND ON THEM (rome, 2026-10-11: a rat
+  // was still standing on a dead skeleton). Bodies used to avoid each other as
+  // hard as they avoided the living, so on a full floor the last body had
+  // nowhere left but under somebody's feet. A body over a body is a heap and
+  // reads fine; a body under the living never does. And the dead are not held
+  // to the crowd's middle: they lie out to the room's own walls.
+  var deadL = width / 2 - (Number(mobsEl.dataset.floorRight || 96) - Number(mobsEl.dataset.floorLeft || 4)) / 100 * width / scale / 2;
+  var deadR = width - deadL, laid = [];
   bodies.forEach(function (item, i) {
     item.fit = Math.min(1, available / (item.w * 1.12));
     var w = slotW(item), lie = item.w * item.fit * .85, centre = width / 2, best = null, bestCost = Infinity;
-    for (var x0 = floorL; x0 <= floorR - w + .5; x0 += 6) {
-      var a = x0 + (w - lie) / 2, z = a + lie, cover = 0;
+    for (var x0 = deadL; x0 <= deadR - w + .5; x0 += 6) {
+      var a = x0 + (w - lie) / 2, z = a + lie, cover = 0, heap = 0;
       for (var t = 0; t < taken.length; t++) cover += Math.max(0, Math.min(z, taken[t][1]) - Math.max(a, taken[t][0]));
-      var cost = cover * 1000 + Math.abs(x0 + w / 2 - centre);
+      for (var u = 0; u < laid.length; u++) heap += Math.max(0, Math.min(z, laid[u][1]) - Math.max(a, laid[u][0]));
+      var cost = cover * 1000 + heap * 4 + Math.abs(x0 + w / 2 - centre);
       if (cost < bestCost) { bestCost = cost; best = x0; }
     }
     if (best === null) best = centre - w / 2;
     put(item, best, forward * .9, true, i);
-    taken.push([best + (w - lie) / 2, best + (w + lie) / 2]);
+    laid.push([best + (w - lie) / 2, best + (w + lie) / 2]);
   });
 }
 // THE PICTURE BOX, IN PIXELS. Read from the scene element itself rather than
