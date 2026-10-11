@@ -2064,7 +2064,7 @@ export const PAGE = `<!doctype html>
   /* The approved artwork preview uses tinted masks, not tiled backgrounds. */
   body { --art-log: url("/ornate/floral-v2.svg"); --art-panel: url("/ornate/architecture-v2.svg"); }
   body[data-artwork="dragons"] { --art-log: url("/ornate/dragons-v2.svg"); --art-panel: url("/ornate/dragons-v2.svg"); }
-  body[data-artwork="feathers"] { --art-log: url("/ornate/feathers-v2.svg"); --art-panel: url("/ornate/feathers-v2.svg"); }
+  body[data-artwork="feathers"] { --art-log: url("/ornate/feathers-v2.svg"); --art-panel: url("/ornate/crow-panel-v1.svg"); }
   body[data-artwork="celestial"] { --art-log: url("/ornate/celestial-v2.svg"); --art-panel: url("/ornate/celestial-panel-v2.svg"); }
   body[data-artwork="sun"] { --art-log: url("/ornate/sun-v2.svg"); --art-panel: url("/ornate/sun-v2.svg"); }
   body[data-ornate]:where(:not([data-ornate=""])) #logbox { isolation: isolate; position: relative; }
@@ -2080,6 +2080,7 @@ export const PAGE = `<!doctype html>
   body[data-artwork="floral"] #logbox::before, body[data-artwork="feathers"] #logbox::before, body[data-artwork="celestial"] #logbox::before { inset: 0; mask-size: cover; mask-position: center; }
   body[data-artwork="floral"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { inset: 16px; background: var(--gold); mask-size: 100% auto; mask-position: center bottom; opacity: .1; }
   body[data-artwork="floral"][data-ornate] :is(#setpanel,#idpanel)::before { mask-size: auto 72%; mask-position: right bottom; }
+  body[data-artwork="feathers"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { inset: 34% 5% 8% 45%; mask-size: contain; mask-position: right bottom; background: var(--gold); opacity: .1; }
   body[data-artwork="celestial"][data-ornate] :is(.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { inset: 0; mask-size: cover; mask-position: center; opacity: .07; }
   body[data-artwork="sun"][data-ornate] :is(#logbox,.bbox,.lbox,.vbox,.signer-connect,#setpanel,#idpanel)::before { mask-size: contain; mask-position: right bottom; }
   body[data-artwork="sun"][data-ornate] #logbox::before { inset: 15% 3% 4% 60%; }
