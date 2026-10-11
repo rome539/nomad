@@ -3012,7 +3012,17 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
   // TIER FIVE (mig 235). A hollow in the top of one boulder that holds rain, and
   // it is the last drinkable water on the mountain. Every mouth on the territory
   // comes to this one stone.
-  "the-shoulder-stone"]);
+  "the-shoulder-stone",
+  // THE WOOD'S OWN WATER, AND THE BURN (rome, 2026-10-11: every drinker
+  // should have water near where it lives). Measured against the live world:
+  // 41 of 221 drinking bodies had no hole inside THIRST_RADIUS — the roe and
+  // grey wolves of the far wood, the boar ground, and the deer and hares of the
+  // mountain's lower corries. These rooms already are water in their own
+  // words; they were just never on the list. The Drinking Pool says so in its
+  // name. Two still go dry: the snow fox and hill wolf on the top tier, eleven
+  // rooms from the shoulder stone, which is meant to be the last water there.
+  "the-standing-water", "the-drinking-pool", "the-cold-seep",
+  "the-lower-beck", "the-gully-head", "the-black-runnel"]);
 // WHO DRINKS. Was the scavengers alone, which left the wood's waters — the
 // Black Pool, the Brown Water, the Drinking Pool, eleven wet rooms of fen —
 // as ambush ground with nothing to ambush. Prey drinks too, and now the two
