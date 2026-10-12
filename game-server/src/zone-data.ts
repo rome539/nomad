@@ -1414,6 +1414,9 @@ export const TRACE_LIFE_MS: Record<string, number> = {
   // still weathers within a day. Nothing a stranger scratches here scars the
   // world for good; graffiti self-erases, same spine as guest pruning.
   carve: 24 * 3_600_000,
+  // Prints in the snow (clues.ts): an hour, which the snow's own halving makes
+  // half that - long enough to follow, short enough that fresh means fresh.
+  track: 60 * 60_000,
 };
 export const TRACE_CAP = 12; // per room; oldest non-carving forgotten first
 export const CARVE_CAP = 5; // wall space is finite
@@ -4474,6 +4477,82 @@ export const HUNT_SUCCESS: Record<string, number> = {
   // the big and the slow: they win the fight but rarely the chase
   "the-baited-bear": 0.15, "the-chain-breaker": 0.15, "glutton": 0.2, "old-boar": 0.15,
 };
+// THE HOUR CHANGES WHO CATCHES WHAT (rome, 2026-10-12). Night, or a room with
+// no light in it, is the night hunters' ground: the NOCTURNAL list lands half
+// again as often in the dark. The owl is built for it and blinks in the sun, so
+// it is half as good by day. And the ones that hunt by sight from high up -
+// eagles, gulls - lose most of it once they cannot see: half in the dark.
+export const DARK_HUNT_MULT = 1.5;
+export const DAY_BLIND_HUNTERS = new Set(["eagle-owl"]);
+export const DAY_BLIND_MULT = 0.5;
+export const SIGHT_HUNTERS = new Set(["hill-eagle", "great-gull", "black-backed-gull"]);
+export const SIGHT_DARK_MULT = 0.5;
+// THE ANIMAL PATHS (paths.ts, mig 295): what the way looks like when something
+// takes it, by the ground it is on. "Goes north through the undergrowth, where
+// there is no path."
+export const BEAST_PATH_GROUND: Record<string, { through: string; outOf: string }> = {
+  wood: { through: "through the undergrowth", outOf: "of the undergrowth" },
+  mountain: { through: "over the broken rock", outOf: "from among the rocks" },
+  road: { through: "through the scrub", outOf: "of the scrub" },
+  out: { through: "through the rubble", outOf: "of the rubble" },
+  den: { through: "through the brambles", outOf: "of the brambles" },
+};
+// ---- THE WORLD'S CLUES (clues.ts; rome, 2026-10-12) ----
+// TRACKS IN THE SNOW: what each animal's prints look like. Written as a tracker
+// would read them - the shape of the foot and the gait - never the name; telling
+// a fox's line from a cat's round pads is the skill.
+export const TRACK_PRINTS: Record<string, string> = {
+  "mountain-hare": "long hind feet set ahead of the small front ones, in bounds",
+  "snow-hare": "long hind feet set ahead of the small front ones, in bounds",
+  "snow-fox": "small, neat prints set one in front of the other, in a straight line",
+  "hill-fox": "small, neat prints set one in front of the other, in a straight line",
+  "the-blue-fox": "small, neat prints set one in front of the other, in a straight line",
+  "hill-wolf": "big four-toed pads with the claws showing, several sets, one stepping in another",
+  "lead-wolf": "big four-toed pads with the claws showing, wider than the rest",
+  "lynx": "big round pads with no claws showing, wide apart, unhurried",
+  "wildcat": "small round pads with no claws showing, placed with care",
+  "glutton": "broad five-toed prints with long claws, loping in pairs",
+  "the-old-glutton": "broad five-toed prints with long claws, loping in pairs, deep",
+  "ermine": "tiny prints in pairs, bounding, then gone into a crack",
+  "feral-goat": "split hooves, sharp and small, picking the steep way",
+  "red-hind": "split hooves, long and narrow, sunk deep",
+  "red-stag": "split hooves, long and narrow, sunk deep and wide apart",
+  "ptarmigan": "small three-toed bird feet, wandering",
+  "mountain-chough": "three-toed bird feet that hop, then stop where it took off",
+  "scarp-raven": "big three-toed bird feet that walk, then stop where it took off",
+  "carrion-vulture": "huge three-toed bird feet that shuffle, then stop where it took off",
+  "cave-lion": "great round pads with no claws showing, the size of a spread hand",
+};
+export const TRACK_PRINT_DEFAULT = "prints too scuffed to read";
+// THE BAD WATER: the waters the animals come to most, one fouled at a time,
+// turning over on this clock. Diving brings up what is in it and the water is
+// clean again until the next turn.
+export const FOUL_WATERS = ["the-drinking-pool", "the-standing-water", "the-cold-seep", "the-millpond",
+  "the-hatchpool", "the-cattle-drink", "the-peat-cuttings", "the-upper-lochan", "the-high-tarn",
+  "the-lower-beck", "the-black-runnel", "the-shallow-ford", "the-open-water", "the-mill-dam"];
+export const FOUL_ROTATE_MS = 6 * 3_600_000;
+// A drowned wanderer, a long time under, still in what they wore.
+export const FOUL_LOOT: { item: string; weight: number }[] = [
+  { item: "mail-hauberk", weight: 3 }, { item: "watchmans-boots", weight: 3 }, { item: "wolfskin-cloak", weight: 3 },
+  { item: "iron-bound-shield", weight: 3 }, { item: "riveted-coif", weight: 3 },
+  { item: "boiled-cuirass", weight: 2 }, { item: "oilskin-cape", weight: 2 }, { item: "plated-greaves", weight: 2 },
+  { item: "warden-greathelm", weight: 2 },
+  { item: "flanged-mace", weight: 1 },
+];
+// CROWS OVER THE DEAD: how far off they can be seen (map squares), how long a
+// death stays worth coming down for, and how big it has to be to bring them.
+export const CROWS_DEAD_RANGE = 6;
+export const CROWS_DEAD_FRESH_MS = 45 * 60_000;
+export const CROWS_DEAD_MIN_HP = 10;
+// THE GREAT RING (keys.ts, mig 297): which locks a keyholder's ring opens, and
+// the chance that any lock it opens took its last key.
+export const RING_KEY = "ring-of-keys";
+export const RING_OPENS = new Set(["strongbox-key", "wardens-key", "clerks-key"]);
+export const RING_LAST_KEY_ODDS = 0.35;
+// The drowned wanderer in the bad water had a key on them, sometimes (clues.ts).
+export const FOUL_KEY_ODDS = 0.25;
+// ...and a tin in a coat pocket, sometimes.
+export const FOUL_TIN_ODDS = 0.125;
 export const HUNT_REST_MIN = 2;
 export const HUNT_REST_MAX = 6;
 export const HOLD_LINES = [

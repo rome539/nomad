@@ -65,6 +65,9 @@ import * as simstore from "./simstore";
 import * as light from "./light";
 import * as lore from "./lore";
 import * as chips from "./chips";
+import * as paths from "./paths";
+import * as clues from "./clues";
+import * as keys from "./keys";
 import * as events from "./events";
 import * as verbs from "./verbs";
 import * as pvp from "./pvp";
@@ -100,7 +103,7 @@ import {
   HOLLOW, BLOODLESS, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
-  MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES,
+  RING_KEY, RING_LAST_KEY_ODDS, MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES,
   BELL_DOOR_KEY, BELL_DOOR_SHUT, BELL_DOOR_TREMBLE, BELL_DOOR_OPEN,
   TIDE_SILT_COURSES, TIDE_PRY_MS, TIDE_DIGGING_TOOLS, tideSiltLine, TIDE_PRY_WET, TIDE_PRY_SETTLE, TIDE_PRY_TOOL_HINT, TIDE_PRY_MAKING, TIDE_PRY_OPEN,
   HABIT_ODDS, HABIT_COOLDOWN_MS, HABITS, HABIT_SKY, HABIT_NIGHT, HABIT_FIRE, HABIT_DEEP, HABIT_GRAVES, QUIRK_ODDS, QUIRK_COOLDOWN_MS, TREASURE_QUIRKS,
@@ -306,6 +309,8 @@ export class ZoneDO implements DurableObject {
   public ringAt = 0;
   public walked = new Map<string, Set<string>>();   // rooms each player has crossed — the wall's evidence (walkedOf)
   private wallLoaded = new Set<string>();          // pubkeys whose marks have been read up out of D1 this wake
+  public knownPaths = new Map<string, Set<string>>(); // the animal paths each wanderer has seen used (paths.ts)
+  public pathsLoaded = new Set<string>();              // ...read up out of D1 this wake
   // The gatehouse board, oldest first. The only place a player's words outlive
   // the session they were said in (zone-data BOARD_*).
   public board: { name: string; words: string; at: number }[] = [];
@@ -1301,6 +1306,7 @@ export class ZoneDO implements DurableObject {
     // Read this wanderer's chart up out of D1 before anything can ask for it
     // (mig 210). Cached for the wake, so a rebuild costs nothing.
     await this.loadWall(session.pubkey);
+    await paths.loadKnownPaths(this, session.pubkey);
     // Step back into the still-standing body: everything the fight did to it
     // while the eyes were empty carries over. buildSession's D1 read would
     // otherwise revert hp/wounds to the last flush — a free heal for loggers.
@@ -1757,6 +1763,7 @@ export class ZoneDO implements DurableObject {
         rebuilt.stepText = rebuilt.away;
       }
       await this.loadWall(rebuilt.pubkey); // a hibernation rebuild must not read an empty wall
+      await paths.loadKnownPaths(this, rebuilt.pubkey);
       // buildSession stamps lastActiveAt = now, which would read a long-parked
       // socket as JUST arrived and dodge the idle sweep across every eviction —
       // the true stamp rides the socket.
@@ -2814,7 +2821,7 @@ export class ZoneDO implements DurableObject {
     // about. The same ranking runs inside a name match, so 'unlock strongbox'
     // with a spent one and a full one beside it reaches for the full one.
     const rank = (c: Cache) =>
-      (this.cacheLocked(c) ? 2 : 0) + (session.items.some((i) => i.itemId === c.keyItem) ? 1 : 0);
+      (this.cacheLocked(c) ? 2 : 0) + (keys.keyFor(session, c.keyItem) ? 1 : 0);
     const best = (pool: Cache[]) =>
       pool.reduce((a, b) => (rank(b) > rank(a) ? b : a), pool[0]);
     const named = arg ? here.filter((c) => nameMatches(c.name, arg)) : [];
@@ -2831,7 +2838,7 @@ export class ZoneDO implements DurableObject {
     if (working !== undefined && Date.now() - working < 30_000) {
       return this.send(session, "That latch is already being worked — hold on.");
     }
-    const key = session.items.find((c) => c.itemId === cache.keyItem);
+    const key = keys.keyFor(session, cache.keyItem); // its own key first, else a great ring (keys.ts)
     // AN UNKEYED PRIZE BOX opens to the hand: the door was the lock (see
     // DOOR_PRIZE_BOXES), so there is nothing here to force and nothing to
     // spend. The refill clock starts BEFORE the grant awaits below, exactly
@@ -2909,10 +2916,19 @@ export class ZoneDO implements DurableObject {
       // reads cacheLocked() on entry and turns away instead of re-opening the
       // same box.
       this.cacheSpent.set(cache.id, Date.now() + cache.refillSecs * 1000);
-      session.items.splice(session.items.indexOf(key), 1);
-      await removeItemRow(this.env.DB, key.rowId);
+      // A GREAT RING gives up one key to the lock, and might have had only the
+      // one left. The ring itself goes only when that was its last.
+      const ring = key.itemId === RING_KEY;
+      const lastOnRing = ring && chance(RING_LAST_KEY_ODDS);
+      if (!ring || lastOnRing) {
+        session.items.splice(session.items.indexOf(key), 1);
+        await removeItemRow(this.env.DB, key.rowId);
+      }
       this.placeCache(cache); // looted: it will refill somewhere new in its tier (hidden here until then)
-      this.send(session, `You work ${keyT?.name ?? "the key"} into the lock. It gives with a groan, and ${cache.name} swings open.`, "unlock");
+      if (ring) this.send(session, lastOnRing
+        ? `You try the keys on the ring one after another until one turns, and it stays in the lock. It was the last one. ${cap(cache.name)} swings open, and you let the empty ring fall.`
+        : `You try the keys on the ring one after another until one turns, and it stays in the lock. ${cap(cache.name)} swings open.`, "unlock");
+      else this.send(session, `You work ${keyT?.name ?? "the key"} into the lock. It gives with a groan, and ${cache.name} swings open.`, "unlock");
       this.roomFeed(session.roomId, `${session.name} forces ${cache.name} open.`, session.pubkey, false);
     }
     // Now and then the box is a lie: forced open on nothing. The key's already
@@ -3417,7 +3433,7 @@ export class ZoneDO implements DurableObject {
   private keyIds: Set<string> | null = null;
   public isKey(itemId: string): boolean {
     if (!this.keyIds) {
-      this.keyIds = new Set<string>([DEEP_HEART]);
+      this.keyIds = new Set<string>([DEEP_HEART, RING_KEY]);
       for (const c of this.world!.caches) {
         if (c.keyItem) this.keyIds.add(c.keyItem);
       }
@@ -5923,6 +5939,11 @@ export class ZoneDO implements DurableObject {
       const i = list.findIndex((t) => t.kind === "passage");
       if (i !== -1) list.splice(i, 1);
     }
+    if (trace.kind === "track") {
+      // One set of prints per kind of animal per room, the freshest (clues.ts).
+      const i = list.findIndex((t) => t.kind === "track" && t.id === trace.id);
+      if (i !== -1) list.splice(i, 1);
+    }
     if (trace.kind === "drip") {
       // One trail per room, refreshed — a bleeder pacing a room doesn't stack
       // twelve trails and shove the older story out of the cap.
@@ -5992,6 +6013,8 @@ export class ZoneDO implements DurableObject {
       } else if (t.kind === "rest") {
         if (age < 3_600_000) lines.push(pick(REST_TRACE[region] ?? REST_TRACE.upper!));
         else lines.push("Someone rested here, a while back.");
+      } else if (t.kind === "track") {
+        lines.push(clues.trackLine(t, age));
       } else if (t.kind === "passage") {
         // Dust holds a print in the dungeon; out under the sky the ground does.
         const track = region === "upper" || region === "deep" || region === "gate" ? "the dust" : "the ground";
@@ -6688,7 +6711,9 @@ export class ZoneDO implements DurableObject {
     // A rare key off the dead — the elites and the King carry the keys to the
     // locked caches. Straight to hand; spend it on a strongbox.
     for (const mk of this.world!.mobKeys) {
-      if (mk.templateId !== tmpl.id || !chance(mk.chance)) continue;
+      // The great ring is not rolled here: it was decided when it first jingled.
+      if (mk.templateId !== tmpl.id) continue;
+      if (mk.keyItem === RING_KEY ? !keys.carriesRing(this, creature) : !chance(mk.chance)) continue;
       const kt = this.world!.itemTemplates.get(mk.keyItem);
       if (!kt) continue;
       if (await this.grantItem(killer, kt.id)) {
@@ -7421,8 +7446,10 @@ export class ZoneDO implements DurableObject {
     // is a trap; a line that shows you which ways are shut is a DECISION. You
     // can see the shape of what they have done to the room before you commit.
     const heldWays = ai.heldExits(this, session);
+    // ...and the animal paths this wanderer has seen used, named for what they are.
+    const known = paths.knownPathsHere(this, session).map((e) => `${e.dir} (animal path)`);
     lines.push(exits.length
-      ? `Exits: ${exits.map((e) => heldWays.has(e.dir) ? `${e.dir} (held)` : e.dir).join(", ")}.`
+      ? `Exits: ${[...exits.map((e) => heldWays.has(e.dir) ? `${e.dir} (held)` : e.dir), ...known].join(", ")}.`
       : "There is no way out.");
     if (heldWays.size) {
       lines.push(heldWays.size === 1
@@ -7431,6 +7458,15 @@ export class ZoneDO implements DurableObject {
     }
 
     lines.push(...this.traceLines(room.id, Date.now()));
+    // Crows coming down over a death somewhere in sight (clues.ts).
+    const crows = clues.crowsLine(this, room.id);
+    if (crows) lines.push(crows);
+    // A great ring of keys is heard before it is seen, and it is never still (keys.ts).
+    for (const c of this.creaturesInRoom(room.id)) {
+      if (c.hidden || !keys.carriesRing(this, c)) continue;
+      const name = world.mobTemplates.get(c.templateId)?.name.replace(/^(a|an|the)\s+/i, "") ?? "it";
+      lines.push(`Keys clink at the ${name}'s belt every time it shifts - a great ring of them.`);
+    }
 
     // THE WORKS (works.ts). Boards over the door, and the keeper is not behind
     // it — this REPLACES his line rather than sitting beside it, or the room

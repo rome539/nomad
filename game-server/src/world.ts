@@ -3,6 +3,9 @@
 import { nowSec } from "./util";
 import { uniqueName } from "./names";
 
+// An exit only the animals use (mig 295). See World.beastPaths and paths.ts.
+export const BEAST_PATH_KEY = "beast-path";
+
 export interface Room {
   id: string;
   zone: string;
@@ -167,6 +170,11 @@ export interface World {
   safeRooms: Set<string>; // hideaways no creature will follow you into
   rooms: Map<string, Room>;
   exits: Map<string, Exit[]>; // room_id -> exits
+  // THE ANIMAL PATHS (mig 295): keyed BEAST_PATH_KEY, and kept OUT of `exits` so
+  // nothing that lists, draws or pathfinds over exits can ever see one. Only
+  // paths.ts reads these: animals walk them, and a wanderer who has watched one
+  // used may follow.
+  beastPaths: Map<string, Exit[]>;
   mobTemplates: Map<string, MobTemplate>;
   mobSpawns: MobSpawn[];
   itemTemplates: Map<string, ItemTemplate>;
@@ -252,11 +260,13 @@ export async function loadWorld(db: D1Database, zone: string): Promise<World> {
   for (const i of items) i.barter = i.barter ?? 0;
 
   const exits = new Map<string, Exit[]>();
+  const beastPaths = new Map<string, Exit[]>();
   for (const e of allExits) {
     if (!roomIds.has(e.room_id)) continue;
-    const list = exits.get(e.room_id) ?? [];
+    const into = e.key_item === BEAST_PATH_KEY ? beastPaths : exits;
+    const list = into.get(e.room_id) ?? [];
     list.push(e);
-    exits.set(e.room_id, list);
+    into.set(e.room_id, list);
   }
 
   const gates = rooms.filter((r) => r.is_entry === 1);
@@ -283,6 +293,7 @@ export async function loadWorld(db: D1Database, zone: string): Promise<World> {
     safeRooms: new Set(rooms.filter((r) => r.is_safe === 1).map((r) => r.id)),
     rooms: new Map(rooms.map((r) => [r.id, r])),
     exits,
+    beastPaths,
     mobTemplates: new Map(templates.map((t) => [t.id, t])),
     mobSpawns: allSpawns.filter((s) => roomIds.has(s.room_id)),
     itemTemplates: new Map(items.map((i) => [i.id, i])),

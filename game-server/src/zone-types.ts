@@ -151,6 +151,9 @@ export interface Creature {
   thirstAt?: number; // hyenas: when the next watering run calls
   forageFrom?: number; // when it last went looking for scraps on the floor (see FORAGE_FIND_MS)
   huntRestUntil?: number; // blown after a rush that missed (see HUNT_SUCCESS)
+  refusedWater?: string; // a water it came to, smelled, and would not drink (clues.ts) - it goes elsewhere next time
+  ring?: boolean;        // carries a great ring of keys, and jingles (keys.ts)
+  ringRolled?: boolean;  // ...decided once, the first time it mattered
   wateringTo?: string; // hyenas: the water room it's padding toward (wander steers by roomDist)
   walkingTo?: string;  // this thing is GOING somewhere far off: every wander step closes the distance (roomDist), and it stops when it arrives. The watering run's wire, generalised — a hyena walks to water, a carrier walks a road, and whatever the Crossing puts on the water will walk it too.
   avoids?: { roomId: string; until: number }[]; // place-fear: rooms this one steers around (a rat's bad memory, a thief's warning)
@@ -219,7 +222,9 @@ export interface Trace {
   // "blood" is a death's pooled stain; "drip" is the walking kind — a thing
   // (player or creature) that crossed this room with an open wound. The drip
   // is the huntable trail: scavengers drift toward it, and so can you.
-  kind: "blood" | "drip" | "remains" | "scraps" | "rest" | "passage" | "carve";
+  kind: "blood" | "drip" | "remains" | "scraps" | "rest" | "passage" | "carve" | "track";
+  // A track's heading: which way the thing that made it went (clues.ts).
+  dir?: string;
   at: number;
   label?: string;
   // WHICH CREATURE'S BODY THIS IS. `label` is its name, for prose; this is its

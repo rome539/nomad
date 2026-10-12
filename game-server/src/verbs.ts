@@ -7,6 +7,10 @@ import * as exhaustion from "./exhaustion";
 import type { ZoneDO } from "./zone";
 import type { Session, Stance, GroundInstance, Creature } from "./zone-types";
 import type { CarriedItem, ItemTemplate } from "./world";
+import { BEAST_PATH_KEY } from "./world";
+import * as paths from "./paths";
+import * as clues from "./clues";
+import * as keys from "./keys";
 import {
   setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
   journalLoad, mapInkLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
@@ -37,7 +41,7 @@ import {
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, MOB_WEAKGRIP_MULT, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
   RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS, EEL_RUN_FISH_MULT, EEL_RUN_FLOOD_MULT, SNOW_NOISE_MULT,
-  RIDDLE_DOOR_KEY, MOON_DOOR_KEY, TIDE_DOOR_KEY, BELL_DOOR_KEY, RIDDLE_ROTATE_MS, RIDDLES, RIDDLE_ASK, RIDDLE_OPEN_LINE, RIDDLE_WRONG, RIDDLE_MOCK, RIDDLE_MOCK_AFTER, RIDDLE_WINDOW_MS,
+  FOUL_KEY_ODDS, FOUL_TIN_ODDS, RIDDLE_DOOR_KEY, MOON_DOOR_KEY, TIDE_DOOR_KEY, BELL_DOOR_KEY, RIDDLE_ROTATE_MS, RIDDLES, RIDDLE_ASK, RIDDLE_OPEN_LINE, RIDDLE_WRONG, RIDDLE_MOCK, RIDDLE_MOCK_AFTER, RIDDLE_WINDOW_MS,
   tideSiltLine, RING_CD_MS,
   DREAM_ODDS, DREAMS,
   WRECK_DIVE_ROOMS, WRECK_DIVE_CATCHES, WRECK_DIVE_REST_MS, WRECK_LOOT,
@@ -726,9 +730,10 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
       // A prize box: the door was the lock, so there is no lock to read.
       return z.send(session, `${cacheHere.description} There is no lock on it — the door that guards this room is the only lock it has.`);
     }
-    const hasKey = session.items.some((c) => c.itemId === cacheHere.keyItem);
+    const hasKey = keys.keyFor(session, cacheHere.keyItem);
+    const fits = hasKey && hasKey.itemId !== cacheHere.keyItem ? world.itemTemplates.get(hasKey.itemId) : keyT;
     return z.send(session, `${cacheHere.description} It is locked.`
-      + (keyT ? (hasKey ? ` ${cap(keyT.name)} in your pack fits that lock.` : ` The lock wants ${keyT.name}.`) : ""));
+      + (keyT ? (hasKey ? ` ${cap(fits?.name ?? keyT.name)} in your pack fits that lock.` : ` The lock wants ${keyT.name}.`) : ""));
   }
 
   // Items get a real inspection (rome, 2026-07-11): the prose, then what the
@@ -980,7 +985,8 @@ export function selfExamine(z: ZoneDO, session: Session): string {
 export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<void> {
   if (!dir) return z.send(session, "Go where? (north, south, east, west, up, down)");
   const world = z.world!;
-  const exit = (world.exits.get(session.roomId) ?? []).find((e) => e.dir === dir);
+  // An animal path is a way only to someone who has watched it used (paths.ts).
+  const exit = (world.exits.get(session.roomId) ?? []).find((e) => e.dir === dir) ?? paths.knownPath(z, session, dir);
   if (!exit) return z.send(session, "There is no way " + dir + " from here.");
   // The quicksand has your leg: no step anywhere until it lets go.
   if (events.quicksandHolds(z, session)) return;
@@ -1146,6 +1152,9 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
       // be worked out, not read off a refusal.
       return z.send(session, "The hatch overhead will not move. It has no lock to force and no latch to turn, and it does not answer to any hand.", "dmgin");
     }
+  } else if (exit.key_item === BEAST_PATH_KEY) {
+    // A KNOWN ANIMAL PATH: no door, no key. It was only found here because you
+    // have seen it used; walk on.
   } else if (exit.key_item && exit.key_item !== DEEP_HEART && !z.openDoors.has(doorKey)) {
     if (!session.items.some((c) => c.itemId === exit.key_item)) {
       const key = world.itemTemplates.get(exit.key_item);
@@ -3087,6 +3096,33 @@ export async function cmdDive(z: ZoneDO, session: Session, arg: string): Promise
       return;
     }
     await z.grantItem(session, item, { kept: true });
+    return;
+  }
+  // THE BAD WATER (clues.ts): the one the animals will not drink from has a
+  // drowned wanderer in it, still in what they wore.
+  const foul = clues.diveFoul(z, session.roomId);
+  if (foul) {
+    const t = world.itemTemplates.get(foul);
+    z.roomFeed(session.roomId, `${session.name} fills their lungs and goes under.`, session.pubkey, false);
+    z.creatureNoise(session.roomId);
+    z.send(session, `You go under, and the bottom is soft, and your hands find cloth in it - and under the cloth, what is left of a wanderer who went in a long time ago and never came out. You work ${t?.name ?? "something"} loose and come up, and the water is cleaner for it.`, "gain");
+    z.roomFeed(session.roomId, `${session.name} comes up out of the water with something, streaming.`, session.pubkey, false);
+    if (!z.packRoom(session, foul)) {
+      z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), foul]);
+      z.send(session, "Your pack is full, so it lies at your feet, dripping.");
+      z.refreshRoomCtx(session.roomId);
+      return;
+    }
+    await z.grantItem(session, foul, { kept: false });
+    // ...and sometimes a key, still on its cord round what is left of the neck.
+    if (chance(FOUL_KEY_ODDS)) {
+      const kt = world.itemTemplates.get("strongbox-key");
+      if (kt && await z.grantItem(session, kt.id)) z.send(session, `There is ${kt.name} on a cord round what is left of the neck. You take that too.`, "gain");
+    }
+    if (chance(FOUL_TIN_ODDS)) {
+      const tin = world.itemTemplates.get("dry-cigarettes");
+      if (tin && await z.grantItem(session, tin.id, { kept: true })) z.send(session, `In what is left of a coat pocket: ${tin.name}, sealed, and dry still.`, "gain");
+    }
     return;
   }
   if (!events.tideFlooded(z, session.roomId)) {

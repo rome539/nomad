@@ -1,0 +1,89 @@
+# THE ANIMAL PATHS (rome, 2026-10-12). Ways only the animals use. Every exit
+# here is keyed beast-path: the engine keeps these out of the ordinary exit
+# lists entirely, so no exits line, chip, map, compass or pathfinder ever sees
+# one. Animals walk them; a wanderer learns one only by being in the room when
+# an animal goes through it, and from then on may walk it too.
+#
+# Each pair sat side by side on the map with no way between, and ten or more
+# steps the long way round, and the animals that use it live within four rooms.
+!region wood
+
+## the-deer-lawn | attachment: the roe's way down to the water
+!existing
+> north the-drip-line key:beast-path
+
+## the-drip-line | attachment: the roe's way down to the water
+!existing
+> south the-deer-lawn key:beast-path
+
+## the-black-pool | attachment: the game path the poachers camped beside
+!existing
+> south the-poachers-camp key:beast-path
+
+## the-poachers-camp | attachment: the game path the poachers camped beside
+!existing
+> north the-black-pool key:beast-path
+
+## the-old-pond | attachment: the grey wolves' own run home
+!existing
+> south the-wolf-earth key:beast-path
+
+## the-wolf-earth | attachment: the grey wolves' own run home
+!existing
+> north the-old-pond key:beast-path
+
+## the-hollow-yew | attachment: deer and boar down to the sump
+!existing
+> south the-low-sump key:beast-path
+
+## the-low-sump | attachment: deer and boar down to the sump
+!existing
+> north the-hollow-yew key:beast-path
+
+## the-fish-house | attachment: a roe track out onto the heath
+!existing
+> west the-heath-edge key:beast-path
+
+## the-heath-edge | attachment: a roe track out onto the heath
+!existing
+> east the-fish-house key:beast-path
+
+## the-fallen-avenue | attachment: the otters' slide to the race
+!existing
+> south the-tail-race key:beast-path
+
+## the-tail-race | attachment: the otters' slide to the race
+!existing
+> north the-fallen-avenue key:beast-path
+
+## the-drove-green | attachment: a goat track behind the kiln
+!existing
+> south the-road-kiln key:beast-path
+
+## the-road-kiln | attachment: a goat track behind the kiln
+!existing
+> north the-drove-green key:beast-path
+
+## the-last-tooth | attachment: a hare run across the rock
+!existing
+> east the-lower-warm key:beast-path
+
+## the-lower-warm | attachment: a hare run across the rock
+!existing
+> west the-last-tooth key:beast-path
+
+## the-shelf-under | attachment: the lynx's line between the shelves
+!existing
+> south the-south-shelf key:beast-path
+
+## the-south-shelf | attachment: the lynx's line between the shelves
+!existing
+> north the-shelf-under key:beast-path
+
+## the-rib-gap | attachment: a goat track up the rib
+!existing
+> north the-spur-head key:beast-path
+
+## the-spur-head | attachment: a goat track up the rib
+!existing
+> south the-rib-gap key:beast-path

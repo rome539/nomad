@@ -8,7 +8,10 @@ import type { ZoneDO } from "./zone";
 import { shelteredInDen } from "./den";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
-import { hasTrait } from "./world";
+import { hasTrait, BEAST_PATH_KEY } from "./world";
+import * as paths from "./paths";
+import * as clues from "./clues";
+import * as keys from "./keys";
 import { randInt, chance, uuid, pick } from "./rng";
 import { cap, isNight, isFullMoon, isBloodMoon, morphOf } from "./zone-util";
 import * as events from "./events";
@@ -26,7 +29,7 @@ import {
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
-  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX,
+  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
@@ -1137,6 +1140,9 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       });
       if (drier.length) exits = drier;
     }
+    // THE ANIMAL PATHS (paths.ts): an animal knows its own ways, and takes one as
+    // readily as any other way out - walking, or bolting into cover.
+    if (paths.walksPaths(tmpl.id)) exits = [...exits, ...paths.pathsFrom(z, creature.roomId)];
     if (exits.length === 0) return;
 
     let exit = exits[randInt(0, exits.length - 1)];
@@ -1213,6 +1219,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     const fledFrom = mode === "flee" ? creature.target : null;
     creature.roomId = exit.to_room;
     z.noteCreaturesChanged(); // the room index must not remember where it stood
+    clues.leaveTracks(z, creature, from, exit.dir, now); // under snow, it leaves prints going this way
     // A wounded thing on the move drips where it walks — a fled survivor bleeds
     // a line straight to wherever it holes up, and anyone (or anything) can
     // read the stones and follow. Same law as the player's trail (verbs.cmdGo).
@@ -1361,15 +1368,21 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       void fledFrom;
       // The owl at night comes and goes without a sound (SILENT_HUNTERS).
       const hush = hushed(creature);
-      if (!hush) z.roomFeed(from, outLine, undefined, false);
+      // Through an animal path, the line says so - and whoever saw it has seen the way.
+      const viaPath = !hush && exit.key_item === BEAST_PATH_KEY ? paths.animalTookPath(z, creature, from, exit) : null;
+      // A GREAT RING OF KEYS is never quiet (keys.ts): it is in every line it walks.
+      const ring = !hush && keys.carriesRing(z, creature);
+      const jingle = (line: string) => ring ? line.replace(/\.$/, ", keys clinking at its belt.") : line;
+      if (!hush) z.roomFeed(from, jingle(viaPath?.out ?? outLine), undefined, false);
       const inLine = mode !== "flee" ? "creeps in."
         : runner ? "skitters in, already looking for the next way out."
         : hurt ? hurt.in_ : pick(fleeFam.in_).replace("{ground}", groundWord(z.regionOf(creature.roomId), creature.roomId));
-      if (!hush) z.roomFeed(creature.roomId, `${cap(tmpl.name)} ${inLine}`, undefined, false);
+      if (!hush) z.roomFeed(creature.roomId, jingle(viaPath?.in_ ?? `${cap(tmpl.name)} ${inLine}`), undefined, false);
       if (!hush) z.roomSound(
         creature.roomId,
         mode === "flee"
           ? (runner ? "Something small scrabbles away {dir}, fast." : HOLLOW.has(tmpl.id) ? "Something clatters away {dir}, broken." : "Something crashes away {dir}, wounded.")
+          : ring ? "Keys clink {dir} - a great many of them, on one ring, coming or going."
           : (MOVE_SOUNDS[tmpl.id] ?? "Something moves {dir}."),
         from,
       );
@@ -1629,7 +1642,12 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     const vt = world.mobTemplates.get(victim.templateId)!;
     // MOST HUNTS FAIL (HUNT_SUCCESS). The rush is the whole of it: a miss and the
     // prey is gone into the next room, and the hunter has spent its wind.
-    const odds = (HUNT_SUCCESS[creature.templateId] ?? HUNT_SUCCESS_DEFAULT) * (victim.asleep ? 2 : 1);
+    // ...and the hour decides how often (DARK_HUNT_MULT and its neighbours).
+    const dark = isNight(now) || z.isDark(creature.roomId);
+    const hour = dark
+      ? (NOCTURNAL.has(creature.templateId) ? DARK_HUNT_MULT : SIGHT_HUNTERS.has(creature.templateId) ? SIGHT_DARK_MULT : 1)
+      : (DAY_BLIND_HUNTERS.has(creature.templateId) ? DAY_BLIND_MULT : 1);
+    const odds = (HUNT_SUCCESS[creature.templateId] ?? HUNT_SUCCESS_DEFAULT) * (victim.asleep ? 2 : 1) * hour;
     if (!chance(Math.min(0.9, odds))) {
       exhaustion.creatureAttempt(creature, now);
       creature.huntRestUntil = now + randInt(HUNT_REST_MIN, HUNT_REST_MAX) * 60_000;
@@ -2356,6 +2374,16 @@ export function waters(z: ZoneDO, creature: Creature, now: number): void {
       if (creature.roomId === creature.wateringTo) {
         const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
         creature.wateringTo = undefined;
+        // THE BAD WATER (clues.ts): it comes all this way, smells what is in it,
+        // and will not drink. It tries another water before long.
+        if (clues.refusesWater(z, creature, creature.roomId)) {
+          creature.thirstAt = now + randInt(10, 30) * 60_000;
+          z.roomFeed(creature.roomId, BEAKS.has(creature.templateId)
+            ? `${cap(tmpl.name)} comes down to the water's edge, tips its head at it, and lifts away without drinking.`
+            : `${cap(tmpl.name)} comes to the water and lowers its head - then stops, and backs away from it without drinking.`, undefined, false);
+          return;
+        }
+        creature.refusedWater = undefined;
         creature.thirstAt = now + randInt(THIRST_MIN_MS, THIRST_MAX_MS);
         // A boar at water is not drinking politely, it is getting in.
         const wallows = creature.templateId === "wild-boar" || creature.templateId === "old-boar";
@@ -2384,7 +2412,7 @@ export function waters(z: ZoneDO, creature: Creature, now: number): void {
     // 34 tiny ones; at 10 each covers a few hundred rooms, and this runs on the
     // single thread the whole zone shares.
     const near = z.nearby(home, THIRST_RADIUS);
-    const dest = [...WATER_ROOMS].find((r) => z.world!.rooms.has(r) && near.has(r));
+    const dest = [...WATER_ROOMS].find((r) => z.world!.rooms.has(r) && near.has(r) && r !== creature.refusedWater);
     if (!dest) {
       creature.thirstAt = now + randInt(THIRST_MIN_MS, THIRST_MAX_MS);
       return;

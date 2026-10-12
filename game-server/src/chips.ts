@@ -11,6 +11,8 @@ import * as den from "./den";
 import * as works from "./works";
 import * as wanderer from "./wanderer";
 import * as ai from "./ai";
+import * as paths from "./paths";
+import * as keys from "./keys";
 import { BUILD_ID } from "./public";
 import * as dice from "./dice";
 import { chipName, nameMatches, shortName, isNight, isFullMoon } from "./zone-util";
@@ -261,6 +263,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // never takes the last one, so this can never leave you with no exit chips).
   const shutWays = ai.heldExits(z, session);
   for (const e of exitsHere) if (!shutWays.has(e.dir)) suggest.push(`go ${e.dir}`);
+  // An animal path this wanderer has seen used is a way like any other, to them.
+  for (const e of paths.knownPathsHere(z, session)) suggest.push(`go ${e.dir}`);
   // Combat-legal at the cost of an opening: stoop for a fallen weapon, eat,
   // or swap your steel (armor on/off is refused mid-fight, so no armor chip).
   // A tide-drowned floor offers no get chips (cmdGet refuses them) — the
@@ -344,7 +348,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   if (!fighting) {
     for (const cache of world.caches) {
       if (z.cacheRoomId(cache) !== session.roomId || !z.cacheLocked(cache)) continue;
-      if (session.items.some((c) => c.itemId === cache.keyItem)) suggest.push(`unlock ${shortName(cache.name)}`);
+      if (keys.keyFor(session, cache.keyItem)) suggest.push(`unlock ${shortName(cache.name)}`);
     }
   }
 
