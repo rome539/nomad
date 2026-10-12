@@ -396,9 +396,11 @@ Hp is world-state on both sides; there are no encounter resets.
   *and* them. A half-killed warden met an hour later is genuinely diminished.
 - **Creatures** heal 1 hp/min, only out of combat (rats and scavengers also
   heal by eating). Failed boss attempts are inherited by the next challenger.
-- **Players** have **60 max hp** (`PLAYER_MAX_HP`) and **no passive regen**:
-  `rest` (1 hp/tick, interruptible, blocked in combat) or `eat`. Time is on the
-  dungeon's side.
+- **Players** have **100 max hp** (`PLAYER_MAX_HP`) and **no passive regen**:
+  `rest` (`REST_REGEN_PER_TICK` 100/30 — nothing to whole in one minute;
+  interruptible, blocked in combat), by a fire `FIRE_REST_REGEN_PER_TICK` 100/20
+  (forty seconds), the gatehouse at a rest's pace, or `eat` (food heals scale to
+  the bigger body, `playerFoodHeal`). Time is on the dungeon's side.
 - **Automatic food**: below **⅓ hp**, while in combat, each world tick can
   consume one carried meal using the existing food priority. This reflex
   creates no opening. It runs after attacks and bleeding, so it cannot rescue
@@ -410,6 +412,29 @@ Hp is world-state on both sides; there are no encounter resets.
   never the gate you'd expect, so no death hands you back a route you knew cold.
   One law for every killer, world or (later) player: the gate containers
   protect; nothing else does.
+
+## Exhaustion — `exhaustion.ts`
+
+Fatigue is a second pool beside hp, stored in units to a cap of **1000** and
+shown to the player as remaining stamina out of **50** (`sta`, 20 units each).
+
+- **Spending it.** Every round of attacking costs **4 + 0.6 × worn weight**
+  units (`swingCost`, rome 2026-10-12: a minute of fighting before you tire —
+  even the heaviest set, 15, takes fifteen rounds to the first −2; light kit
+  over two minutes). Walking a room costs **(20 + 3 × worn weight) / 10**
+  (`walk`), its own charge. Heavy kit is paid for on every swing, not just in
+  noise.
+- **What it costs you.** **−2 damage per 200 units** spent (`playerPenalty`),
+  never below 1 — fully spent is −10 on every blow.
+- **Getting it back** (`RATE`, units per second): **none in combat**; on your
+  feet **10/s** (a hundred seconds from empty, starting 4 s after you stop
+  walking); resting or sheltered **17/s** (just under a minute); by a fire
+  **25/s** (forty seconds). Recovery quantizes at thousandths so split syncs
+  land where one long one does.
+- **Creatures tire too** (`CREATURE_ENDURANCE`): per kind, the attempts to full
+  exhaustion, the most raw damage it can lose, and its recovery time. The dead
+  and the constructed are `[0,0,0,0]` and never tire; runners keep their own
+  wind clock.
 
 ## Keeping — the two containers
 

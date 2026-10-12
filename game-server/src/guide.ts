@@ -142,6 +142,8 @@ export const GUIDE_PAGE = `<!doctype html>
     you pick a fight and it keeps happening until someone stops.</li>
     <li><b>Weight is noise.</b> The safest kit and the quietest kit are opposites,
     and things hunt by sound.</li>
+    <li><b>Every swing tires you.</b> The heavier your kit, the more each one costs,
+    tired arms hit softer, and nothing comes back while you are still fighting.</li>
     <li><b>Bleeding ignores armour entirely.</b> Carry dressings.</li>
     <li><b>The dark is really dark.</b> A torch is fire — it frightens most things,
     burns out, and dies in rain. A lantern lasts and frightens nothing.</li>
@@ -248,6 +250,17 @@ export const GUIDE_PAGE = `<!doctype html>
   for being quiet — which is the other half of why weight matters.</p>
   <p>Leaving is a decision like any other, and it is made on the beat too. Walk out
   and whatever you were fighting may well come after you.</p>
+  <h3>Your wind</h3>
+  <p>Beside your health is your <strong>stamina</strong> (<code>sta</code>), and a
+  fight spends it. <strong>Every swing costs some</strong>, and the more you are
+  wearing and holding, the more each one costs — a long fight wears you down,
+  a short one hardly does. Walking costs a little too.</p>
+  <div class="law"><b>Tired arms hit softer.</b> The lower your stamina, the less
+  every blow does — and <b>none of it comes back while you are fighting</b>. A long
+  fight in heavy kit is a fight you are slowly losing even when you are winning it.</div>
+  <p>It comes back once the fighting stops: slowly on your feet, faster sitting
+  down to rest or in the gatehouse, fastest by a fire. The things you fight tire
+  too — some of them quickly — and the dead and the made things never do.</p>
 </section>
 
 <section id="armour">
@@ -296,9 +309,14 @@ export const GUIDE_PAGE = `<!doctype html>
     problem.</li>
     <li><b>Stunned</b> costs you the moment you needed.</li>
   </ul>
-  <p>Healing is food, dressings and <span class="mend">rest</span>. Resting works
-  anywhere, and anywhere is not always wise: it takes time, and time is when
-  things arrive.</p>
+  <p>Healing is food, dressings and <span class="mend">rest</span>. Nothing closes
+  on its own while you walk. Resting takes you from nothing to whole in about a
+  minute, and gets your wind back with it; by a fire it is quicker, and the
+  gatehouse heals you at a rest's pace. Resting works anywhere, and anywhere is
+  not always wise: it takes time, any effort ends it, and time is when things
+  arrive.</p>
+  <p>In a fight, a meal you are carrying goes down on its own once you are badly
+  hurt — but only one at a time, and only if you brought it.</p>
   <p>Certain gear is made against all this — some of it stops a wound opening at
   all, and some makes one you already have clot sooner. Read what a piece says
   about itself; it will tell you which.</p>

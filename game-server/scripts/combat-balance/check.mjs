@@ -18,7 +18,7 @@ const near=(a,b,msg)=>assert(Math.abs(a-b)<0.05,(msg||'')+' expected '+b+' got '
 const proposal=JSON.parse(await readFile(new URL('./proposal.json',import.meta.url),'utf8'));
 const playerMaxHp=100,balance='production';
 const drakeDamage=proposal.creatureDamageCandidates.find(x=>x.id==='the-drake').candidate;
-const equippedFatigueRate=weight=>(20+3*weight)/20;
+const equippedFatigueRate=weight=>(4+0.6*weight)/20; // a swing, in stamina points (exhaustion.swingCost)
 const temp=await mkdtemp(join(tmpdir(),'nomad-runtime-combat-'));
 const realNow=Date.now,originalCrypto=Object.getOwnPropertyDescriptor(globalThis,'crypto'),nativeCrypto=globalThis.crypto;
 let now=1_800_000_000_000,rng=1,serial=0;
@@ -313,7 +313,7 @@ try {
    p.items=['poleaxe','barbed-warplate','marrow-crown','pale-tread','chain-lined-mantle'].map(id=>carried(id,'balanced'));
    assert.equal(z.wornWeight(p),5);assert.equal(z.wornArmorWeight(p),3);
    assert.equal(z.wornWeight(p)-z.wornArmorWeight(p),2,'held weight cannot go negative');
-   assert.equal(z.equippedArmor(p),11);assert.equal(equippedFatigueRate(z.wornWeight(p)),1.75);
+   assert.equal(z.equippedArmor(p),11);assert.equal(equippedFatigueRate(z.wornWeight(p)),0.35);
    // A template's balanced trait is not doubled by a duplicate instance trait.
    p.items=[carried('the-carriers-mile','balanced')];assert.equal(z.wornWeight(p),0);
    p.items[0].rolledMap=world.parseTraits('cumbersome');assert.equal(z.wornWeight(p),1);
@@ -447,7 +447,7 @@ try {
   z.creatures=new Map(rats.map(c=>[c.id,c]));z.noteCreaturesChanged();
   p.hp=100;p.stunned=true;p.target=rats[0].id;p.exhaustion={units:0,at:now,mode:'combat'};
   now+=4000;await z.tick();
-  assert.equal(p.exhaustion.units,20+3*z.wornWeight(p),'dogpile charges a single player round even when stunned');
+  assert.equal(p.exhaustion.units,E.swingCost(z.wornWeight(p)),'dogpile charges a single player round even when stunned');
   assert.equal(rats.filter(c=>c.exertion?.effort>0).length,3,'only creatures allowed to attempt spend effort');
   z.creatures=new Map();z.noteCreaturesChanged();p.target=null;p.stunned=false;p.bleedTicks=0;p.bleedDmg=0;
   // The two PvP bodies use the same once-per-round clock as PvE.
@@ -456,7 +456,7 @@ try {
   z.sessions.set(q.pubkey,q);p.pvpTarget=q.pubkey;q.pvpTarget=p.pubkey;
   p.hp=100;p.exhaustion={units:0,at:now,mode:'combat'};q.exhaustion={units:0,at:now,mode:'combat'};
   now+=4000;await z.tick();
-  assert.equal(p.exhaustion.units,20+3*z.wornWeight(p));assert.equal(q.exhaustion.units,20);
+  assert.equal(p.exhaustion.units,E.swingCost(z.wornWeight(p)));assert.equal(q.exhaustion.units,E.swingCost(0));
   q.exhaustion.units=1000;await z.onPlayerDeath(q,null);
   assert.equal(q.hp,100);assert.equal(q.exhaustion.units,0,'death restores the body');
   z.sessions.delete(q.pubkey);kv.delete('body:'+q.pubkey);z.bodyJournal.delete(q.pubkey);

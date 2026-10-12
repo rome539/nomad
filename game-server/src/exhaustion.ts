@@ -37,8 +37,19 @@ export function recover(e: Exhaustion, now: number, nextMode: RecoveryMode = e.m
   if ((e.walkingUntil ?? 0) <= at || nextMode === "rest" || nextMode === "shelter" || nextMode === "fire")
     delete e.walkingUntil;
 }
+// WHAT A SWING COSTS (rome, 2026-10-12: a minute of full fighting before you
+// tire). Charged once a round. Was 20 + 3 per pound worn, which had heavy kit
+// (10-12 of the 15 a full set can weigh) feeling its first -2 inside half a
+// minute. Now 4 + 0.6 per pound: even the heaviest set (15) takes fifteen
+// rounds - a minute - to reach the first -2, and a light kit (3) over two
+// minutes. Walking is not a swing and keeps its own charge below.
+export const SWING_BASE = 4;
+export const SWING_PER_WEIGHT = 0.6;
+export function swingCost(weight: number): number {
+  return Math.round((SWING_BASE + SWING_PER_WEIGHT * Math.max(0, weight)) * 1000) / 1000;
+}
 export function exert(e: Exhaustion, weight: number): void {
-  e.units = Math.min(FATIGUE_CAP, e.units + 20 + 3 * Math.max(0, weight));
+  e.units = Math.min(FATIGUE_CAP, Math.round((e.units + swingCost(weight)) * 1000) / 1000);
 }
 export function walk(e: Exhaustion, weight: number, now: number): void {
   recover(e, now);

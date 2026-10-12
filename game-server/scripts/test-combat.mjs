@@ -24,7 +24,8 @@ try {
   });
   const { ZoneDO, attackPlayer, tickPvp, LINKDEAD_MS, TICK_MS, E } = await import(pathToFileURL(output));
   {
-    for (const [weight,rounds] of [[0,50],[2,39],[6,27],[10,20],[15,16]]) {
+    // rounds to empty at 4 + 0.6 per pound (rome, 2026-10-12)
+    for (const [weight,rounds] of [[0,250],[2,193],[6,132],[10,100],[13,85],[15,77]]) {
       const e=E.readExhaustion(undefined,0);
       for(let i=1;i<=rounds;i++){E.exert(e,weight);if(i<rounds)assert.ok(e.units<1000);}
       assert.equal(e.units,1000);
