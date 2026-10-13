@@ -4541,20 +4541,32 @@ var lastCombat = false;
 // picture reached a real player. The page now carries the id of the build it
 // came from and the room frame carries the world's; a mismatch shows a notice.
 //
-// A new build is a notice, never a forced navigation during play.
+// THE PAGE REWEAVES ITSELF ONTO THE NEW BUILD AGAIN (rome, 2026-10-13). For a
+// while this only printed a notice and left the refresh to the player, and an
+// update could land with nothing visible happening at all. It reloads now, as
+// it did before - but NOT mid-fight: a reload costs a round, so it waits for
+// the fight to end, which is seconds away at most.
 var staleBuild = false;
 function checkBuild(world) {
   if (!BUILD || BUILD.charAt(0) === "_" || world === BUILD) return;  // unstamped in dev
   if (staleBuild) return;
   staleBuild = true;
+  // ONCE. If something is serving a page the world disagrees with, reloading in
+  // a loop makes it worse and hides the cause, so a second attempt inside the
+  // minute says so and leaves the page alone.
+  var last = 0;
+  try { last = +(sessionStorage.getItem("nomad_reloaded") || 0); } catch (e) {}
+  if (Date.now() - last < 60000) {
+    if (!buildNoticeShown) { buildNoticeShown = true; print("\u2014 a game update is available; refresh the page when you are ready \u2014", "sys"); }
+    return;
+  }
   maybeReload();
 }
 function maybeReload() {
-  // Deploys must never throw a connected player back to the threshold.
-  // Keep the current session; the player chooses when to refresh the page.
-  if (!staleBuild || buildNoticeShown) return;
-  buildNoticeShown = true;
-  print("— a game update is available; refresh the page when you are ready —", "sys");
+  if (!staleBuild || lastCombat || buildNoticeShown) return;
+  try { sessionStorage.setItem("nomad_reloaded", String(Date.now())); } catch (e) {}
+  print("\u2014 the game has been updated; reweaving \u2014", "sys");
+  location.reload();
 }
 var buildNoticeShown = false;
 // ...AND THE PAGE ASKS, once a minute and whenever it comes back into view
@@ -4695,7 +4707,7 @@ function renderChips(suggest, combat) {
   lastSuggest = suggest;
   var wasFighting = lastCombat;
   lastCombat = !!combat;
-  if (wasFighting && !lastCombat) maybeReload();   // idempotent update notice; never navigates
+  if (wasFighting && !lastCombat) maybeReload();   // the fight is over: take the update now
   var followLive = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
   var previousActions = chipsEl.querySelector(".chip-actions");
   var actionScroll = previousActions && chipScrollRoom === lastRoomName && !(lastCombat && !wasFighting) ? previousActions.scrollTop : 0;
