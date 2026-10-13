@@ -1883,7 +1883,9 @@ export const PAGE = `<!doctype html>
   }
   body[data-atmosphere="door"] {
     --design-ink: var(--panel); --design-rule: var(--border2); --design-pale: var(--cream);
-    --design-page: var(--bg); --design-inset: #202226; --design-accent: var(--gold);
+    /* The inset is the door's own brown, a step darker - it was #202226, a cold
+       blue-grey that turned the stats box blue in a warm theme (rome, 2026-10-13). */
+    --design-page: var(--bg); --design-inset: #17130d; --design-accent: var(--gold);
   }
   body[data-atmosphere="bone"] {
     --design-ink: #efe8d8; --design-rule: #998464; --design-pale: #33291e;
@@ -1973,12 +1975,16 @@ export const PAGE = `<!doctype html>
     height: 1px;
     background: color-mix(in srgb, var(--design-rule) 44%, transparent);
   }
+  /* THE ROOM UNDER THE ARCH BELONGS TO THE HEADING (rome, 2026-10-13). It was
+     padding on the column, and a sticky heading stops at the padding, not the
+     edge - so the list scrolled up through a 14px band above "your pack" and
+     the header looked broken. The heading carries the space itself now. */
   body[data-atmosphere]:where(:not([data-atmosphere=""])) #bench .bcol {
     border: 1px solid var(--design-rule);
     border-radius: var(--design-arch);
-    padding-top: 14px;
   }
   body[data-atmosphere]:where(:not([data-atmosphere=""])) #bench .bcolh {
+    padding-top: 24px;
     justify-content: center;
     text-align: center;
     font-family: var(--design-font);
