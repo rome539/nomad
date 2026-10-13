@@ -12846,6 +12846,12 @@ function crossThreshold() {
   // Start before connecting so new players never see a burst of welcome text.
 }
 thrEnter.addEventListener("click", crossThreshold);
+// A PAGE THAT RELOADED ITSELF ONTO AN UPDATE WALKS STRAIGHT BACK IN (rome,
+// 2026-10-13: the update logged him out). A reload lands on the threshold, and
+// nothing connects until it is crossed - so the self-reload put a player back
+// at the door mid-session. That is the one reload that crosses on its own; the
+// player already crossed it once, seconds ago.
+if (rewoven) crossThreshold();
 
 // THE FIRST WALK: five lessons with readable scrollback in the log — where this game's
 // teaching belongs — each one explaining a real system, each advancing only
