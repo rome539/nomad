@@ -3723,6 +3723,20 @@ export const DREAMS: Record<string, string[]> = {
 // box out of BOTH laws at once, so the box walks out of the sealed room it is
 // the whole point of and can come up empty when you finally reach it.
 export const DOOR_PRIZE_BOXES = new Set(["reliquary", "box-kept", "box-glade", "box-cave", "box-armory"]);
+// WHAT EACH CHEST LOOKS LIKE IN THE PICTURE (rome, 2026-10-13): a wooden chest
+// or an iron strongbox, each drawn shut and sprung. A cache missing from this
+// table is part of the place itself - a niche, a cavity, a pit, a cache under a
+// stone - and draws nothing: a box on the floor would give it away.
+export const CACHE_ART: Record<string, "chest" | "box"> = {
+  "box-armory": "chest", "box-bounds": "chest", "box-burner": "chest", "box-cave": "chest",
+  "box-pans": "chest", "box-farnoust": "chest", "box-lodge": "chest", "box-mill": "chest",
+  "box-solar": "chest", "box-sutlers": "chest", "box-bothy": "chest", "box-chapel": "chest",
+  "shieling-kist": "chest",
+  "box-bone": "box", "box-kept": "box", "box-tide": "box", "box-tollshell": "box",
+  "carts-strongbox": "box", "stell-strongbox": "box", "box-icehouse": "box", "box-noust": "box",
+  "slabs-locker": "box", "box-shelter": "box", "box-abyss": "box", "box-deep": "box",
+  "box-glade": "box", "box-relic": "box", "reliquary": "box",
+};
 // THE BURNER LOOKS UP. He is the one thing in the wood that is not hostile and
 // not a shopkeeper, and until now he ignored a person walking into his clearing
 // completely. He is not going to talk to you. He is going to notice you, and go

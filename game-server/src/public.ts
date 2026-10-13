@@ -3833,6 +3833,7 @@ async function connect() {
     if (stallWatch) { clearTimeout(stallWatch); stallWatch = null; }
     if (frayTimer) { clearTimeout(frayTimer); frayTimer = null; }
     if (frayTold) { print("— the thread holds; you are back —", "sys"); frayTold = false; }
+    if (rewoven) { rewoven = false; print("\u2014 the world reweaves: a new build has landed \u2014", "sys"); }
     clearInterval(hbTimer);
     clearTimeout(pongTimer); pongTimer = null;
     probeWire = function () {
@@ -3899,7 +3900,7 @@ async function connect() {
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
-      updateMobs(f.mobs, f.doing, f.dead, f.loose);
+      updateMobs(f.mobs, f.doing, f.dead, f.loose, f.chests);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
@@ -4570,9 +4571,14 @@ function checkBuild(world) {
   }
   maybeReload();
 }
+// A reload clears the log, so the line said on the way out is never seen. The
+// page that comes back says it instead, once, when its wire opens - the visible
+// reweave (rome, 2026-10-13: an update landed and nothing showed at all).
+var rewoven = false;
+try { rewoven = sessionStorage.getItem("nomad_rewoven") === "1"; sessionStorage.removeItem("nomad_rewoven"); } catch (e) {}
 function maybeReload() {
   if (!staleBuild || lastCombat || buildNoticeShown) return;
-  try { sessionStorage.setItem("nomad_reloaded", String(Date.now())); } catch (e) {}
+  try { sessionStorage.setItem("nomad_reloaded", String(Date.now())); sessionStorage.setItem("nomad_rewoven", "1"); } catch (e) {}
   print("\u2014 the game has been updated; reweaving \u2014", "sys");
   location.reload();
 }
@@ -7986,7 +7992,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
 var MOB_V  = "53";      // /mob/      strips and their eye layers
-var LOOT_V = "1";       // /loot/     the four bags for what lies on the floor
+var LOOT_V = "1";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -11562,12 +11568,19 @@ var LOOT_BAGS = [{ at: 10, name: "spilled", vh: 24, aspect: 1.241 },
   { at: 3,  name: "medium",  vh: 19, aspect: 1.431 },
   { at: 1,  name: "small",   vh: 14, aspect: 1.144 }];
 var mobLoose = 0;
+// THE CHESTS, drawn the same way (rome, 2026-10-13): the server names each one
+// standing here, wood or iron, shut or sprung. One scale for all four so the
+// lid of an open one adds height and the chest itself stays the same size.
+var CHEST_ART = { "chest-shut": { vh: 16.0, aspect: 1.616 }, "chest-open": { vh: 22.6, aspect: 1.168 },
+  "box-shut": { vh: 15.7, aspect: 1.402 }, "box-open": { vh: 22.1, aspect: 0.992 } };
+var mobChests = [];
 function lootBag(n) {
   for (var i = 0; i < LOOT_BAGS.length; i++) if (n >= LOOT_BAGS[i].at) return LOOT_BAGS[i];
   return null;
 }
-function updateMobs(ids, doing, dead, loose) {
+function updateMobs(ids, doing, dead, loose, chests) {
   mobLoose = Number(loose) || 0;
+  mobChests = Array.isArray(chests) ? chests.filter(function (c) { return CHEST_ART[c]; }) : [];
   lastMobFrame = { ids: ids || [], doing: doing || null, dead: dead || [] };
   paintMobs(lastMobFrame.ids, lastMobFrame.doing, lastMobFrame.dead);
 }
@@ -11596,7 +11609,8 @@ function paintMobs(ids, doing, dead) {
   // you would walk into the next room and find their eyes lit, having watched
   // them stay cold through the moment the sky went over.
   var bag = viewMode === "image" ? lootBag(mobLoose) : null;
-  var key = bodies.join(",") + "|" + (bag ? "bag:" + bag.name + "|" : "") + (lastRed ? "R|" : "")
+  var chestsHere = viewMode === "image" ? mobChests : [];
+  var key = bodies.join(",") + "|" + (bag ? "bag:" + bag.name + "|" : "") + (chestsHere.length ? "ch:" + chestsHere.join(",") + "|" : "") + (lastRed ? "R|" : "")
     + list.map(function (e) { return e.id; }).join(",");
   // Sleep is NOT part of the key: a creature bedding down must not reflow the
   // row, which would throw away every animation running in it. It is applied
@@ -11645,18 +11659,21 @@ function paintMobs(ids, doing, dead) {
     if (blift) bel.style.transform = "translateY(" + (-blift * 100).toFixed(1) + "%)";
     mobsEl.appendChild(bel);
   }
-  // The bag lies with the bodies: the same floor, the same rule about the living.
-  if (bag) {
-    var gel = document.createElement("div");
+  // The bag and the chests lie with the bodies: the same floor, the same rule
+  // about the living.
+  var things = chestsHere.map(function (c) { return { name: c, vh: CHEST_ART[c].vh, aspect: CHEST_ART[c].aspect }; });
+  if (bag) things.push(bag);
+  for (var g0 = 0; g0 < things.length; g0++) {
+    var thing = things[g0], gel = document.createElement("div");
     gel.className = "mob dead";
-    gel.dataset.loot = bag.name;
-    gel.style.height = boxPct(bag.vh);
-    gel.style.width = boxPct(bag.vh * bag.aspect);
-    gel.dataset.h = bag.vh.toFixed(2);
-    gel.dataset.w = (bag.vh * bag.aspect).toFixed(2);
-    gel.style.backgroundImage = "url(/loot/" + bag.name + ".webp?v=" + LOOT_V + ")";
+    gel.dataset.loot = thing.name;
+    gel.style.height = boxPct(thing.vh);
+    gel.style.width = boxPct(thing.vh * thing.aspect);
+    gel.dataset.h = thing.vh.toFixed(2);
+    gel.dataset.w = (thing.vh * thing.aspect).toFixed(2);
+    gel.style.backgroundImage = "url(/loot/" + thing.name + ".webp?v=" + LOOT_V + ")";
     gel.style.backgroundSize = "100% 100%";
-    var glift = (bag.vh - MAN_VH) / 2 / bag.vh;
+    var glift = (thing.vh - MAN_VH) / 2 / thing.vh;
     if (glift) gel.style.transform = "translateY(" + (-glift * 100).toFixed(1) + "%)";
     mobsEl.appendChild(gel);
   }

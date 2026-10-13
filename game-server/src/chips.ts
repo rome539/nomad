@@ -22,7 +22,7 @@ import {
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
-  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS, FLIERS,} from "./zone-data";
+  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS, FLIERS, CACHE_ART,} from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
 // resting, banking, chatting, or reading the walls while something swings
@@ -533,8 +533,21 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     }
     loose += (z.groundInstances.get(session.roomId) ?? []).filter((i) => world.itemTemplates.has(i.itemId)).length;
   }
+  // AND THE CHESTS STANDING HERE (rome, 2026-10-13), by the same law as 'look':
+  // nothing in the dark, and a looted roaming chest is not here at all - it has
+  // gone to wait for its refill somewhere else. Shut while locked, sprung after.
+  const chests: string[] = [];
+  if (seesArt(session.pubkey) && z.litFor(session)) {
+    for (const cache of world.caches) {
+      const art = CACHE_ART[cache.id];
+      if (!art || z.cacheRoomId(cache) !== session.roomId) continue;
+      const locked = z.cacheLocked(cache);
+      if (!locked && z.cacheRoams(cache)) continue;
+      chests.push(art + (locked ? "-shut" : "-open"));
+    }
+  }
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: seesArt(session.pubkey) ? seen : undefined, loose: loose || undefined,
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: seesArt(session.pubkey) ? seen : undefined, loose: loose || undefined, chests: chests.length ? chests : undefined,
       dead: seesArt(session.pubkey) && dead.length ? dead : undefined, doing: seesArt(session.pubkey) && Object.keys(doing).length ? doing : undefined }));
   } catch {}
 }
