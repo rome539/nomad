@@ -99,7 +99,7 @@ roll dmg_min–dmg_max                    from mob_templates
 + 3 × phase, boss only
 × 1.25 if it already has you SEIZED      (a drowned thing drags harder)
 × 0.75 if the creature is wounded (< ⅓ hp)
-miss chance 5%  (+5% if your worn weight is 0 — quick feet)
+miss chance 5%  (+ up to 15% quick feet, falling to 0 at 30 kg worn)
 × 2 on a crit (5%)
 + 2 if you were staggered (consumes it)
 × ARMOR_K / (your armor + ARMOR_K)       curved mitigation, K=10, floored at 1
@@ -249,11 +249,26 @@ they don't.
 
 ## Mobility — armor weight
 
-- **Weight 0 worn (or nothing)**: foes miss you +5% ("you slip aside"), and
-  you flee clean.
-- **Weight ≥ 1** (mail, warden's plate): full soak, but leaving a fight has a
-  **40%** chance of one parting blow on the way out (armor and stance still
-  apply to it; it can kill you).
+Every piece weighs what the real thing weighs, in kilograms (mig 299, rome
+2026-10-12): a sword 1, a greatsword 3, a buckler 1, a tower shield 8, a mail
+hauberk 10, full plate 16. Kits run ~2 kg (sword and rag vest) to ~34 (plate
+and a wall shield), 41 at the very most. One number, `loadOf` = worn kg + 3 kg
+for each loose piece past the pack's free 3, and everything reaches full effect
+at **30 kg**:
+
+- **Dodge**: +15% on a foe's miss bare, falling to nothing at 30 kg.
+- **Noise** moving: 6% + 2.6% a kilo, cap 85%.
+- **Parting blow** leaving a fight: 2.7% a kilo, cap 80%.
+- **Poise** (resists stun/knockdown/seize, worn kg only): 2.5% a kilo, cap 75%.
+- Under **6 kg** a foe's miss reads as your footwork; at **15 kg** and up your
+  own armor is what rings. Balanced pieces carry 3 kg lighter, cumbersome 3
+  heavier.
+
+Weight buys armour (mig 300, rome 2026-10-12): body armour under 6 kg keeps
+its tier armour, heavier pieces gain +1 at 6 kg, +2 at 9, +3 at 12, +4 at 15
+and up (mail hauberk 4, warplate 7, smith's greatplate 9). A full epic heavy
+kit is armour 16 (62% of each blow turned) against a light epic kit's 11 (52%).
+The epic shields block by weight too: targe 22% up to the headstone's 32%.
 
 ## Gear
 
@@ -418,14 +433,15 @@ Hp is world-state on both sides; there are no encounter resets.
 Fatigue is a second pool beside hp, stored in units to a cap of **1000** and
 shown to the player as remaining stamina out of **50** (`sta`, 20 units each).
 
-- **Spending it.** Every round of attacking costs **4 + 0.6 × worn weight**
-  units (`swingCost`, rome 2026-10-12: a minute of fighting before you tire —
-  even the heaviest set, 15, takes fifteen rounds to the first −2; light kit
-  over two minutes). Walking a room costs **(20 + 3 × worn weight) / 10**
-  (`walk`), its own charge. Heavy kit is paid for on every swing, not just in
-  noise.
-- **What it costs you.** **−2 damage per 200 units** spent (`playerPenalty`),
-  never below 1 — fully spent is −10 on every blow.
+- **Spending it.** Every round of attacking costs **16 + 0.4 × worn kg**
+  units (`swingCost`, rome 2026-10-12: everyone is spent inside about four
+  minutes of fighting, bare hands included — the heaviest kit, 41 kg, in about
+  two, plate and shield, 34, in a little over two, a light epic kit, 8, in
+  three and a half).
+  Walking a room costs **(20 + 1.1 × worn kg) / 10** (`walk`).
+- **What it costs you.** Three steps (`playerPenalty`, rome 2026-10-12):
+  **−3** once a quarter is spent (250 units), **−6** at half, **−9** for the
+  last quarter — taken off the finished blow, after armor, never below 1.
 - **Getting it back** (`RATE`, units per second): **none in combat**; on your
   feet **10/s** (a hundred seconds from empty, starting 4 s after you stop
   walking); resting or sheltered **17/s** (just under a minute); by a fire

@@ -18,7 +18,7 @@ const near=(a,b,msg)=>assert(Math.abs(a-b)<0.05,(msg||'')+' expected '+b+' got '
 const proposal=JSON.parse(await readFile(new URL('./proposal.json',import.meta.url),'utf8'));
 const playerMaxHp=100,balance='production';
 const drakeDamage=proposal.creatureDamageCandidates.find(x=>x.id==='the-drake').candidate;
-const equippedFatigueRate=weight=>(4+0.6*weight)/20; // a swing, in stamina points (exhaustion.swingCost)
+const equippedFatigueRate=weight=>(16+0.4*weight)/20; // a swing, in stamina points (exhaustion.swingCost)
 const temp=await mkdtemp(join(tmpdir(),'nomad-runtime-combat-'));
 const realNow=Date.now,originalCrypto=Object.getOwnPropertyDescriptor(globalThis,'crypto'),nativeCrypto=globalThis.crypto;
 let now=1_800_000_000_000,rng=1,serial=0;
@@ -98,8 +98,8 @@ try {
     assert.equal(equippedFatigueRate(z.wornWeight(p)),equippedFatigueRate(equippedWeight));
     assert.ok(z.loadOf(p)>loadBefore,'Probe must actually increase existing pack burden');p.items=items;
     const weapon=z.equippedItem(p,'weapon'),oldMap=weapon.carried.rolledMap,oldCondition=weapon.carried.condition;
-    weapon.carried.rolledMap=new Map([['balanced',1]]);assert.equal(z.wornWeight(p),equippedWeight-1);
-    weapon.carried.rolledMap=new Map([['cumbersome',1]]);assert.equal(z.wornWeight(p),equippedWeight+1);
+    weapon.carried.rolledMap=new Map([['balanced',1]]);assert.equal(z.wornWeight(p),equippedWeight-R.BALANCE_KG);
+    weapon.carried.rolledMap=new Map([['cumbersome',1]]);assert.equal(z.wornWeight(p),equippedWeight+R.BALANCE_KG);
     weapon.carried.rolledMap=new Map([['balanced',1],['cumbersome',1]]);assert.equal(z.wornWeight(p),equippedWeight);
     weapon.carried.rolledMap=oldMap;weapon.carried.condition=1;assert.equal(z.wornWeight(p),equippedWeight,'Worn-down gear does not lose weight');weapon.carried.condition=oldCondition;
    }
@@ -301,7 +301,7 @@ try {
     for(const roll of ['', 'balanced', 'cumbersome', 'balanced,cumbersome']) {
      const c=carried(t.id,roll);p.items=[c];
      const has=tag=>(t.traitMap.get(tag)??0)>0||(c.rolledMap.get(tag)??0)>0;
-     const expected=Math.max(0,t.weight-Number(has('balanced'))+Number(has('cumbersome')));
+     const expected=Math.max(0,t.weight-R.BALANCE_KG*(Number(has('balanced'))-Number(has('cumbersome'))));
      assert.equal(z.wornWeight(p),expected,t.id+' effective load');
      assert.equal(z.wornArmorWeight(p),['armor','helm','feet','cloak'].includes(t.slot)?expected:0,t.id+' armor subtotal');
      c.condition=1;assert.equal(z.wornWeight(p),expected,'damage does not lighten equipment');
@@ -309,11 +309,12 @@ try {
     }
     checked++;
    }
-   for(const [id,weight] of [['sappers-pick',3],['woodwards-axe',4],['bearwards-chain',4],['the-long-crossing',4]])assert.equal(z.world.itemTemplates.get(id).weight,weight,'preserved specialist weight');
+   for(const [id,weight] of [['sappers-pick',3],['woodwards-axe',3],['bearwards-chain',4],['the-long-crossing',4]])assert.equal(z.world.itemTemplates.get(id).weight,weight,'preserved specialist weight');
    p.items=['poleaxe','barbed-warplate','marrow-crown','pale-tread','chain-lined-mantle'].map(id=>carried(id,'balanced'));
-   assert.equal(z.wornWeight(p),5);assert.equal(z.wornArmorWeight(p),3);
-   assert.equal(z.wornWeight(p)-z.wornArmorWeight(p),2,'held weight cannot go negative');
-   assert.equal(z.equippedArmor(p),11);assert.equal(equippedFatigueRate(z.wornWeight(p)),0.35);
+   // kg, each 3 lighter balanced: poleaxe 3->0, warplate 13->10, crown 2->0, tread 1->0 (not -2), mantle 5->2
+   assert.equal(z.wornWeight(p),12);assert.equal(z.wornArmorWeight(p),12);
+   assert.equal(z.wornWeight(p)-z.wornArmorWeight(p),0,'held weight cannot go negative');
+   assert.equal(z.equippedArmor(p),14);assert.equal(equippedFatigueRate(z.wornWeight(p)),1.04); // warplate 7 (mig 300) + crown 3 + tread 2 + mantle 2
    // A template's balanced trait is not doubled by a duplicate instance trait.
    p.items=[carried('the-carriers-mile','balanced')];assert.equal(z.wornWeight(p),0);
    p.items[0].rolledMap=world.parseTraits('cumbersome');assert.equal(z.wornWeight(p),1);
@@ -338,7 +339,7 @@ try {
    // Balanced weight-zero armor must not mask the sound of a held weapon.
    const exit=z.world.exits.get(p.roomId).find(e=>!e.key_item&&(z.world.exits.get(e.to_room)||[]).some(b=>b.to_room===p.roomId&&!b.key_item));
    assert.ok(exit);
-   p.items=[carried('mail-hauberk','balanced'),carried('warden-maul')];
+   p.items=[carried('rag-vest','balanced'),carried('warden-maul')];
    for(const [roll,text]of [['balanced','The gear in your hands knocks'],['cumbersome','Your armor rings']]) {
     p.items[0].rolledMap=world.parseTraits(roll);let heard=false;
     for(let attempt=0;attempt<64&&!heard;attempt++) {
@@ -361,13 +362,13 @@ try {
 
  async function walkingChecks({z,p,ws,state,env,kv,command}) {
   // Use production accumulation/recovery at the actual lighter/heavier weights.
-  for(const weight of [0,4,10,15]) {
+  for(const weight of [0,8,22,41]) {
    const e=E.readExhaustion(undefined,now),start=now;
    for(let step=1;step<=400;step++) {
     E.walk(e,weight,start+step*1000);
-    assert.equal(e.units,Math.min(1000,Math.round(step*(20+3*weight)/10*100)/100));
-    if(weight===4&&step===51)assert.equal(e.units,163.2,'lighter summit journey: 8.16 EXH');
-    if(weight===10&&step===51)assert.equal(e.units,255,'heavier summit journey: 12.75 EXH');
+    assert.equal(e.units,Math.min(1000,Math.round(step*(20+1.1*weight)/10*100)/100));
+    if(weight===8&&step===51)assert.equal(e.units,146.88,'lighter summit journey (8 kg)');
+    if(weight===22&&step===51)assert.equal(e.units,225.42,'heavier summit journey (22 kg)');
    }
    const saved=E.readExhaustion(JSON.stringify(e),e.at);
    E.recover(saved,e.at+3000);assert.equal(saved.units,e.units,'reconnect cannot erase the walking pause');
@@ -393,7 +394,7 @@ try {
     now+=1000;
     await command(()=>verbs.cmdGo(z,p,step%2?outward.dir:back.dir));
     assert.equal(p.roomId,step%2?outward.to_room:outward.room_id,'successful normal movement');
-    assert.equal(p.exhaustion.units,Math.round(step*(20+3*weight)/10*100)/100,'one walking charge per successful room, no pack cost');
+    assert.equal(p.exhaustion.units,Math.round(step*(20+1.1*weight)/10*100)/100,'one walking charge per successful room, no pack cost');
    }
    const before=structuredClone(p.exhaustion);
    await command(()=>verbs.cmdGo(z,p,'nowhere'));

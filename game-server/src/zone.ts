@@ -85,7 +85,7 @@ import {
   GROUND_ROOTED,
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, FLOOR_RUST_PER_HOUR, FLOOR_RUST_STEP_MS, materialDamp, MATERIAL_STONE, MATERIAL_BONE, MATERIAL_WOOD, MATERIAL_HIDE, MATERIAL_CLOTH, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
-  THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON,
+  THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON, LOOSE_IRON_KG, QUICK_LOAD, BALANCE_KG,
   STANCE, RECKLESS_MISS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, PADDED_STUN_MULT, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   TRIP_ODDS, TRIP_HOLD_MS, POCKETED_BONUS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
@@ -3272,7 +3272,7 @@ export class ZoneDO implements DurableObject {
     if (t.stun > 0) bits.push(`${Math.round(t.stun * 100)}% stun`);
     if (t.block > 0) bits.push(`${Math.round(t.block * 100)}% block`);
     if (t.armor > 0) bits.push(`${t.armor} armor`);
-    if (t.weight > 0) bits.push("heavy");
+    if (t.weight > 0) bits.push(`${t.weight} kg`);
     // The shield's drag is a NUMBER, not a tag, so it belongs here — and it is
     // the cost half of the block figure directly above it.
     if (t.slot === "shield" && t.block > SHIELD_DRAG_FREE) {
@@ -3290,8 +3290,8 @@ export class ZoneDO implements DurableObject {
     if (t.bleed > 0) bits.push(`bleeds ${t.bleed}`);
     if (t.stun > 0) bits.push(`${Math.round(t.stun * 100)}% stun`);
     if (t.block > 0) bits.push(`${Math.round(t.block * 100)}% block`);
-    if (t.armor > 0) bits.push(`${t.armor} armor, ${t.weight > 0 ? "heavy" : "light"}`);
-    else if (t.weight > 0) bits.push("heavy"); // weighted weapon/shield: costs your footwork
+    if (t.armor > 0) bits.push(`${t.armor} armor`);
+    if (t.weight > 0) bits.push(`${t.weight} kg`); // every kilo costs footwork and wind
     // Gear traits (045): a one-word tag so the piece teaches its own trick.
     if (hasTrait(t, "reach")) bits.push("reach");
     const pierce = trait(t, "pierce");
@@ -4729,7 +4729,7 @@ export class ZoneDO implements DurableObject {
         // in plate. And a wounded creature fights diminished — softer blows.
         exhaustion.creatureAttempt(creature, now);
         const dodge = this.dodgeBonus(victim);
-        const quick = this.loadOf(victim) < 2; // light enough to read as nimble
+        const quick = this.loadOf(victim) < QUICK_LOAD; // light enough to read as nimble
         const cHurt = creature.hp < tmpl.max_hp * WOUNDED_FRACTION;
         if (chance(FUMBLE_CHANCE + dodge + (cHurt ? WOUNDED_FUMBLE_BONUS : 0))) {
           if (!quick) {
@@ -7955,7 +7955,7 @@ export class ZoneDO implements DurableObject {
   // Use the same per-piece load for exhaustion, mobility and noise flavor.
   // Template and rolled traits each count once; opposing traits cancel.
   private effectiveWeight(g: { carried: CarriedItem; tmpl: ItemTemplate }): number {
-    const swing = (this.itemRolled(g, "balanced") ? 1 : 0) - (this.itemRolled(g, "cumbersome") ? 1 : 0);
+    const swing = (this.itemRolled(g, "balanced") ? BALANCE_KG : 0) - (this.itemRolled(g, "cumbersome") ? BALANCE_KG : 0);
     return Math.max(0, g.tmpl.weight - swing);
   }
 
@@ -7997,7 +7997,7 @@ export class ZoneDO implements DurableObject {
   // + loose pack-iron past its free allowance. Dodge, noise, and the parting-cut
   // all read this — light is quick/quiet/free-to-leave, heavy is none of those.
   public loadOf(session: Session): number {
-    return this.wornWeight(session) + Math.max(0, this.looseIron(session) - BURDEN_FREE_IRON);
+    return this.wornWeight(session) + Math.max(0, this.looseIron(session) - BURDEN_FREE_IRON) * LOOSE_IRON_KG;
   }
   // Poise rides WORN mass alone (a loaded pack doesn't help you keep your feet):
   // the fraction (0..POISE_CAP) a control effect is reduced by. Combined with the

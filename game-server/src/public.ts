@@ -5209,7 +5209,7 @@ function renderDoll(sheet) {
   dstats.appendChild(dollLine("attack", atk));
   var def = "armor " + f.armor + " \\u2014 turns " + f.mitigate + "% of a blow";
   if (f.block > 0) def += " \\u00b7 blocks " + f.block + "%";
-  if (f.weight > 0) def += " \\u00b7 weight " + f.weight + " (drags at flight)";
+  if (f.weight > 0) def += " \\u00b7 " + f.weight + " kg on you (drags at flight)";
   dstats.appendChild(dollLine("defence", def));
   dollSheet = sheet;
   var stanceLine = dollLine("stance", dollStanceText());

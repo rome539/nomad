@@ -434,19 +434,24 @@ export const WEAPON_WEAR_HOLLOW = 0.5;
 // weight ~6, a full HEAVY build ≈ armor 12 / weight 11-13 (tanky, loud, trapped),
 // naked 0. So the curves span load 0..13. Armor costs weight — you armor up by
 // paying mobility, and a genuinely light kit stays squishy (rome, 2026-07-19).
-export const DODGE_MAX = 0.15;        // quick-foot bonus to a foe's miss at zero load (naked ≈ this + FUMBLE_CHANCE 5% ≈ 20%; a light build ~2 ≈ 17%)...
-export const DODGE_ZERO_AT = 13;      // ...falling linearly to nothing at the maximal heavy load (base 5% only in full plate)
+// IN KILOGRAMS (rome, 2026-10-12): every piece now weighs what the real thing
+// weighs — a mail hauberk 10, full plate 16, a tower shield 8, a sword 1. Kits
+// run ~2 kg (sword and rag vest) to ~34 (plate and a wall shield), 41 at the
+// very most, so dodge, noise, the parting cut and poise all reach their full
+// effect at 30 kg, where the heavy kits sit.
+export const DODGE_MAX = 0.15;        // quick-foot bonus to a foe's miss at zero load (naked ≈ this + FUMBLE_CHANCE 5% ≈ 20%; a light epic kit, 8 kg ≈ 16%)...
+export const DODGE_ZERO_AT = 30;      // ...falling linearly to nothing at a full heavy kit (base 5% only in full plate)
 export const NOISE_FLOOR = 0.06;      // even bare feet knock a stone loose now and then — naked is rare-but-not-silent, not dead quiet
-export const NOISE_PER_WEIGHT = 0.06; // ...plus this per point of load: a room-change leaks sound to the neighbors AND rouses the room (0.06 + 13×0.06 ≈ cap)
+export const NOISE_PER_WEIGHT = 0.026; // ...plus this per kilo of load: a room-change leaks sound to the neighbors AND rouses the room (0.06 + 30×0.026 ≈ cap)
 export const NOISE_CAP = 0.85;
 // At or above this load your kit is the thing making the racket — the mover hears
 // their own noise ("your armor rings on the stone") and a woken sleeper blames
 // the armor, not just "the sound of you" (rome, 2026-07-19: the noise the load
 // law makes should be legible from the INSIDE, not only to the neighbors).
-// ~6 is medium-and-up (light ≈3 stays quiet-flavored); the noise ROLL is separate.
-export const NOISY_LOAD = 6;
+// 15 kg is mail-and-up (a light kit, under 10, stays quiet-flavored); the noise ROLL is separate.
+export const NOISY_LOAD = 15;
 export const LOUD_SELF_COOLDOWN_MS = 15_000; // ...but tell the noisemaker at most this often, so continuous marching isn't a line every step
-export const PARTING_PER_WEIGHT = 0.06; // odds/point-of-load the fight bills you one blow as you flee it (13×0.06 ≈ cap)
+export const PARTING_PER_WEIGHT = 0.027; // odds per kilo of load the fight bills you one blow as you flee it (30×0.027 ≈ cap)
 export const PARTING_CAP = 0.80;
 export const ENTRY_STEALTH_MIN = 0.25;  // the lightest tread still wakes a sleeper this fraction of the full WAKE_ENTER roll
 // POISE: worn MASS keeps your feet — it reduces the odds a control effect (stun
@@ -454,13 +459,16 @@ export const ENTRY_STEALTH_MIN = 0.25;  // the lightest tread still wakes a slee
 // plant you). Combined with the resist traits (PADDED stun / WARDHIDE hobble /
 // SLICK seize) STRONGEST-WINS, never stacked — so heavy gets broad poise from
 // mass, while a LIGHT build buys back a specific resist by slotting its trait.
-export const POISE_PER_WEIGHT = 0.12; // CC-resist fraction per point of worn weight...
+export const POISE_PER_WEIGHT = 0.025; // CC-resist fraction per kilo of worn weight (30×0.025 = cap)...
 export const POISE_CAP = 0.75;        // ...capped here — never full immunity
 // The pack's iron is the OTHER half of the load. Loose gear past BURDEN_FREE_IRON
 // counts into loadOf (dodge/noise/parting all feel it); `drop` is the valve —
 // shed the iron mid-chase and you're the naked sprinter again. Your life or your
 // haul: nobody gets to be rich, armed, AND silent.
 export const BURDEN_FREE_IRON = 3;  // loose gear pieces the pack carries quiet before it counts as load
+export const LOOSE_IRON_KG = 3;     // ...and each piece past that counts this many kilos of load
+export const QUICK_LOAD = 6;        // under this many kilos a delver reads as nimble: a foe's miss is your footwork, not its stumble
+export const BALANCE_KG = 3;        // a balanced piece carries this many kilos lighter, a cumbersome one this many heavier
 
 // Fighting stance: trade offense for defense. `atk` scales the damage you deal,
 // `def` scales the damage you take (after armor). Reckless is a glass edge;

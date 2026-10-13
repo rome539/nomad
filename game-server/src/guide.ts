@@ -253,8 +253,7 @@ export const GUIDE_PAGE = `<!doctype html>
   <h3>Your wind</h3>
   <p>Beside your health is your <strong>stamina</strong> (<code>sta</code>), and a
   fight spends it. <strong>Every swing costs some</strong>, and the more you are
-  wearing and holding, the more each one costs — a long fight wears you down,
-  a short one hardly does. Walking costs a little too.</p>
+  wearing and holding, the more each one costs. Walking costs a little too.</p>
   <div class="law"><b>Tired arms hit softer.</b> The lower your stamina, the less
   every blow does — and <b>none of it comes back while you are fighting</b>. A long
   fight in heavy kit is a fight you are slowly losing even when you are winning it.</div>

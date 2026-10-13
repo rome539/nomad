@@ -24,13 +24,13 @@ try {
   });
   const { ZoneDO, attackPlayer, tickPvp, LINKDEAD_MS, TICK_MS, E } = await import(pathToFileURL(output));
   {
-    // rounds to empty at 4 + 0.6 per pound (rome, 2026-10-12)
-    for (const [weight,rounds] of [[0,250],[2,193],[6,132],[10,100],[13,85],[15,77]]) {
+    // rounds to empty at 16 + 0.4 a kilo (rome, 2026-10-12)
+    for (const [weight,rounds] of [[0,63],[2,60],[8,53],[22,41],[34,34],[41,31]]) {
       const e=E.readExhaustion(undefined,0);
       for(let i=1;i<=rounds;i++){E.exert(e,weight);if(i<rounds)assert.ok(e.units<1000);}
       assert.equal(e.units,1000);
     }
-    for (const [units,penalty] of [[0,0],[199,0],[200,2],[399,2],[400,4],[999,8],[1000,10]]) {
+    for (const [units,penalty] of [[0,0],[249,0],[250,3],[499,3],[500,6],[749,6],[750,9],[1000,9]]) {
       assert.equal(E.playerPenalty({units}),penalty);
       assert.equal(E.playerDamage(12,{units}),12-penalty);
       assert.equal(E.playerDamage(1,{units}),1);
@@ -91,10 +91,10 @@ try {
 
   {
     const {z,a,b}=fixture();
-    a.exhaustion={units:200,at:Date.now(),mode:'combat'};
-    await attackPlayer(z,a,b);assert.equal(b.hp,56,'PvP opener loses two damage after mitigation');
-    await tickPvp(z);assert.equal(b.hp,54,'normal PvP hit loses the same flat two');
-    a.exhaustion.units=1000;await tickPvp(z);assert.equal(b.hp,53,'exhausted hits retain one damage');
+    a.exhaustion={units:250,at:Date.now(),mode:'combat'};
+    await attackPlayer(z,a,b);assert.equal(b.hp,57,'PvP opener loses three damage after mitigation');
+    await tickPvp(z);assert.equal(b.hp,56,'normal PvP hit loses the same flat three');
+    a.exhaustion.units=1000;await tickPvp(z);assert.equal(b.hp,55,'exhausted hits retain one damage');
     assert.equal(a.exhaustion.units,1000,'individual hits never add per-round effort');
     console.log('PASS: PvP opening and follow-up damage, final floor, no per-hit effort.');
   }
