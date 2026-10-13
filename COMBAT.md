@@ -442,10 +442,11 @@ shown to the player as remaining stamina out of **50** (`sta`, 20 units each).
 - **What it costs you.** Three steps (`playerPenalty`, rome 2026-10-12):
   **−3** once a quarter is spent (250 units), **−6** at half, **−9** for the
   last quarter — taken off the finished blow, after armor, never below 1.
-- **Getting it back** (`RATE`, units per second): **none in combat**; on your
-  feet **10/s** (a hundred seconds from empty, starting 4 s after you stop
-  walking); resting or sheltered **17/s** (just under a minute); by a fire
-  **25/s** (forty seconds). Recovery quantizes at thousandths so split syncs
+- **Getting it back** (`RATE`, units per second): **none in combat**, and
+  standing about, none for **15 s** after your last step or after the fight
+  ends (rome 2026-10-12: you catch your breath first), then **10/s** (a
+  hundred seconds from empty). Resting skips the wait: resting or sheltered
+  **17/s** (just under a minute); by a fire **25/s** (forty seconds). Recovery quantizes at thousandths so split syncs
   land where one long one does.
 - **Creatures tire too** (`CREATURE_ENDURANCE`): per kind, the attempts to full
   exhaustion, the most raw damage it can lose, and its recovery time. The dead

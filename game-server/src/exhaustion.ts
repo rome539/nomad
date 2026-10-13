@@ -3,7 +3,11 @@
 export type RecoveryMode = "combat" | "passive" | "rest" | "shelter" | "fire";
 export interface Exhaustion { units: number; at: number; mode: RecoveryMode; walkingUntil?: number }
 export const FATIGUE_CAP = 1000;
-export const WALK_RECOVERY_DELAY_MS = 4000;
+// CATCHING YOUR BREATH (rome, 2026-10-12): on your feet nothing comes back
+// until you have stood still and out of a fight this long - after your last
+// step, or after the fight ends. Sitting down to rest, the gatehouse and the
+// fire skip it: rest is how you get your wind back. (Was 4 s, walking only.)
+export const WALK_RECOVERY_DELAY_MS = 15_000;
 // Units back per second (rome, 2026-10-11: slower, at about the pace health
 // mends). From full: resting or sheltered 17/s - just under a minute - by the
 // fire 25/s, forty seconds; on your feet 10/s, a hundred seconds, as it always
@@ -28,10 +32,12 @@ export function recover(e: Exhaustion, now: number, nextMode: RecoveryMode = e.m
   const at = Math.max(e.at, now);
   // Quantize at thousandths so many short intervals cannot drift across a
   // damage step (see RATE).
-  // Only passive recovery waits for footsteps to stop. Split elapsed time at
-  // the deadline so idle ticks and reconnects cannot recover the walking span.
+  // Standing recovery waits out the breath; rest does not. Split elapsed time
+  // at the deadline so idle ticks and reconnects cannot recover the waiting span.
   const from = e.mode === "passive" ? Math.max(e.at, Math.min(at, e.walkingUntil ?? e.at)) : e.at;
   e.units = Math.max(0, Math.round((e.units - (at - from) * RATE[e.mode] / 1000) * 1000) / 1000);
+  // A fight just ended: the breath starts now.
+  if (e.mode === "combat" && nextMode !== "combat") e.walkingUntil = at + WALK_RECOVERY_DELAY_MS;
   e.at = at;
   e.mode = nextMode;
   if ((e.walkingUntil ?? 0) <= at || nextMode === "rest" || nextMode === "shelter" || nextMode === "fire")

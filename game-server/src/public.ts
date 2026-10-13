@@ -3871,7 +3871,7 @@ async function connect() {
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
-      updateMobs(f.mobs, f.doing, f.dead);
+      updateMobs(f.mobs, f.doing, f.dead, f.loose);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
@@ -7931,6 +7931,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
 var MOB_V  = "53";      // /mob/      strips and their eye layers
+var LOOT_V = "1";       // /loot/     the four bags for what lies on the floor
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -10549,19 +10550,23 @@ function fxRun() {
 // Each creature on the row, as the shader needs it: where it is in the picture,
 // which frame of its strip it is showing, and the strip itself. Bodies throw no
 // shadow; only four are drawn, which is more than a torch lights anyway.
+// THE FLOOR BAG THROWS ONE (rome, 2026-10-12): it is a thing standing on the
+// ground in your light like any animal, so it goes in after the living - one
+// picture, one frame, keyed apart from the creatures by "loot:".
 function fxMobs(box) {
   var gl = fxGl, out = [];
   if (!mobsEl) return out;
-  var els = mobsEl.querySelectorAll(".mob:not(.dead)");
+  var els = [].slice.call(mobsEl.querySelectorAll(".mob:not(.dead)")).concat([].slice.call(mobsEl.querySelectorAll(".mob[data-loot]")));
   for (var i = 0; i < els.length && out.length < FX_MOBS; i++) {
-    var el = els[i], id = el.dataset.id, spec = id && MOB_ANIM[id];
+    var el = els[i], loot = el.dataset.loot, id = loot ? "loot:" + loot : el.dataset.id;
+    var spec = loot ? { n: 1 } : id && MOB_ANIM[id];
     if (!spec) continue;
     var tx = fxMobTex[id];
     if (tx === undefined) {
       fxMobTex[id] = null;                       // asked for; drawn once it lands
-      (function (mid) {
-        fxLoad("/mob/" + mid + ".webp?v=" + MOB_V).then(function (im) { fxMobTex[mid] = fxUpload(6, im, false); });
-      })(id);
+      (function (mid, url) {
+        fxLoad(url).then(function (im) { fxMobTex[mid] = fxUpload(6, im, false); });
+      })(id, loot ? "/loot/" + loot + ".webp?v=" + LOOT_V : "/mob/" + id + ".webp?v=" + MOB_V);
       continue;
     }
     if (!tx) continue;
@@ -11492,7 +11497,22 @@ var ACT_MS = 190;        // and how fast the thing it does actually happens
 var ACT_ODDS = 0.06;     // per idle beat: roughly once every half-minute
 var mobsEl = document.getElementById("mobs");
 var lastMobs = "";
-function updateMobs(ids, doing, dead) {
+// WHAT IS LYING ON THE FLOOR, AS ONE BAG (rome, 2026-10-12). The server sends a
+// count of the loose items here; the picture draws one bag for all of them,
+// bigger the more there is, and lays it on the floor where the bodies go - out
+// from under anything standing. Heights are shares of the picture, like a
+// creature's (a man is MAN_VH); aspect is the drawing's own width over height.
+var LOOT_BAGS = [{ at: 10, name: "spilled", vh: 24, aspect: 1.241 },
+  { at: 6,  name: "sack",    vh: 26, aspect: 0.951 },
+  { at: 3,  name: "medium",  vh: 19, aspect: 1.431 },
+  { at: 1,  name: "small",   vh: 14, aspect: 1.144 }];
+var mobLoose = 0;
+function lootBag(n) {
+  for (var i = 0; i < LOOT_BAGS.length; i++) if (n >= LOOT_BAGS[i].at) return LOOT_BAGS[i];
+  return null;
+}
+function updateMobs(ids, doing, dead, loose) {
+  mobLoose = Number(loose) || 0;
   lastMobFrame = { ids: ids || [], doing: doing || null, dead: dead || [] };
   paintMobs(lastMobFrame.ids, lastMobFrame.doing, lastMobFrame.dead);
 }
@@ -11520,7 +11540,8 @@ function paintMobs(ids, doing, dead) {
   // the things in front of you until something else happened to reflow the row -
   // you would walk into the next room and find their eyes lit, having watched
   // them stay cold through the moment the sky went over.
-  var key = bodies.join(",") + "|" + (lastRed ? "R|" : "")
+  var bag = viewMode === "image" ? lootBag(mobLoose) : null;
+  var key = bodies.join(",") + "|" + (bag ? "bag:" + bag.name + "|" : "") + (lastRed ? "R|" : "")
     + list.map(function (e) { return e.id; }).join(",");
   // Sleep is NOT part of the key: a creature bedding down must not reflow the
   // row, which would throw away every animation running in it. It is applied
@@ -11568,6 +11589,21 @@ function paintMobs(ids, doing, dead) {
     var blift = (bvh - MAN_VH) / 2 / bvh;
     if (blift) bel.style.transform = "translateY(" + (-blift * 100).toFixed(1) + "%)";
     mobsEl.appendChild(bel);
+  }
+  // The bag lies with the bodies: the same floor, the same rule about the living.
+  if (bag) {
+    var gel = document.createElement("div");
+    gel.className = "mob dead";
+    gel.dataset.loot = bag.name;
+    gel.style.height = boxPct(bag.vh);
+    gel.style.width = boxPct(bag.vh * bag.aspect);
+    gel.dataset.h = bag.vh.toFixed(2);
+    gel.dataset.w = (bag.vh * bag.aspect).toFixed(2);
+    gel.style.backgroundImage = "url(/loot/" + bag.name + ".webp?v=" + LOOT_V + ")";
+    gel.style.backgroundSize = "100% 100%";
+    var glift = (bag.vh - MAN_VH) / 2 / bag.vh;
+    if (glift) gel.style.transform = "translateY(" + (-glift * 100).toFixed(1) + "%)";
+    mobsEl.appendChild(gel);
   }
   for (var k = 0; k < order.length; k++) {
     var id = order[k].id;

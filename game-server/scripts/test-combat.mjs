@@ -39,8 +39,9 @@ try {
     // rest 17/s, passive 10/s (rome, 2026-10-11).
     E.recover(e,4000,'combat');assert.equal(e.units,932);
     E.recover(e,40000,'passive');assert.equal(e.units,932);
-    E.recover(e,50000);assert.equal(e.units,832);
-    E.recover(e,49000);E.recover(e,50000);assert.equal(e.units,832);
+    E.recover(e,55000);assert.equal(e.units,932,'fifteen seconds to catch your breath after a fight');
+    E.recover(e,65000);assert.equal(e.units,832);
+    E.recover(e,64000);E.recover(e,65000);assert.equal(e.units,832);
     for (const mode of ['passive','rest','fire']) {
       const split={units:1000,at:0,mode},whole={...split};
       for(let ms=1;ms<=10000;ms++)E.recover(split,ms);

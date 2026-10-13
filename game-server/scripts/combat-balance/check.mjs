@@ -14,6 +14,7 @@ import {build} from 'esbuild';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 // Recovery per second, matching exhaustion.ts RATE (rome, 2026-10-11).
 const RP=10, RR=17, RF=25;
+const BR=15000; // exhaustion.WALK_RECOVERY_DELAY_MS, the breath before anything comes back
 const near=(a,b,msg)=>assert(Math.abs(a-b)<0.05,(msg||'')+' expected '+b+' got '+a);
 const proposal=JSON.parse(await readFile(new URL('./proposal.json',import.meta.url),'utf8'));
 const playerMaxHp=100,balance='production';
@@ -372,13 +373,20 @@ try {
    }
    const saved=E.readExhaustion(JSON.stringify(e),e.at);
    E.recover(saved,e.at+3000);assert.equal(saved.units,e.units,'reconnect cannot erase the walking pause');
-   E.recover(saved,e.at+6000);near(saved.units,Math.max(0,e.units-2*RP),'only time after the four-second pause recovers');
-   const offline=E.readExhaustion(JSON.stringify(e),e.at+15000);
-   E.recover(offline,e.at+15000);near(offline.units,Math.max(0,e.units-11*RP),'idle/offline elapsed recovery splits at the pause deadline');
+   E.recover(saved,e.at+BR+2000);near(saved.units,Math.max(0,e.units-2*RP),'only time after the breath recovers');
+   const offline=E.readExhaustion(JSON.stringify(e),e.at+BR+11000);
+   E.recover(offline,e.at+BR+11000);near(offline.units,Math.max(0,e.units-11*RP),'idle/offline elapsed recovery splits at the pause deadline');
    const resting=E.readExhaustion(JSON.stringify(e),e.at);
-   E.recover(resting,e.at,'rest');E.recover(resting,e.at+2000);near(resting.units,Math.max(0,e.units-2*RR),'deliberate rest bypasses the walking pause');
+   E.recover(resting,e.at,'rest');E.recover(resting,e.at+2000);near(resting.units,Math.max(0,e.units-2*RR),'deliberate rest skips the breath');
   }
   assert.equal(E.readExhaustion('{"units":10,"at":0,"mode":"passive"}',0).walkingUntil,undefined,'old saves remain valid');
+  {
+   // The end of a fight starts the breath: nothing back until it is caught.
+   const f=E.readExhaustion('{"units":500,"at":0,"mode":"combat"}',0);
+   E.recover(f,1000,'passive');assert.equal(f.walkingUntil,1000+BR,'fight end starts the breath');
+   E.recover(f,1000+BR);assert.equal(f.units,500,'nothing back while catching breath');
+   E.recover(f,2000+BR);near(f.units,500-RP,'recovery after the breath');
+  }
   const original={room:p.roomId,creatures:z.creatures,events:z.events,items:p.items,start:now};
   try {
    z.creatures=new Map();z.noteCreaturesChanged();z.events=new Map();
@@ -403,8 +411,8 @@ try {
    ws.serializeAttachment({pubkey:p.pubkey,la:now});
    const rebuilt=new ZoneDO({...state,getWebSockets:()=>[ws]},env);await rebuilt.init('door');await rebuilt.hydrateSessions();
    const restored=rebuilt.sessions.get(p.pubkey);assert.equal(restored.exhaustion.walkingUntil,until);
-   now+=6000;rebuilt.syncExhaustion(restored);near(restored.exhaustion.units,before.units-2*RP,'parked socket preserves walking recovery deadline');
-   // Rest begins immediately, regardless of the movement pause still pending.
+   now+=BR+2000;rebuilt.syncExhaustion(restored);near(restored.exhaustion.units,before.units-2*RP,'parked socket preserves walking recovery deadline');
+   // Rest begins immediately, regardless of the breath still pending.
    E.walk(p.exhaustion,weight,now);await command(()=>verbs.cmdRest(z,p));
    const restStart=p.exhaustion.units;now+=1000;z.syncExhaustion(p);
    near(p.exhaustion.units,Math.max(0,restStart-RR),'rest begins immediately');
@@ -490,7 +498,7 @@ try {
   const held=restarted.sessions.get(p.pubkey);assert.ok(held);assert.equal(held.linkdeadUntil,deadline);assert.equal(held.exhaustion.units,1000);
   now=deadline;await restarted.releaseLinkdead(now);assert.ok(!restarted.sessions.has(p.pubkey));
   const row=await world.getOrCreatePlayer(env.DB,p.pubkey,originalRoom);
-  now+=100000;const offline=restarted.buildSession(ws,row.row,[]);
+  now+=BR+100000;const offline=restarted.buildSession(ws,row.row,[]); // the breath, then 100 s at 10/s
   assert.equal(offline.exhaustion.units,0,'offline starts only when body fades');assert.equal(offline.hp,70,'offline never heals HP');
   // D1 failure leaves a durable explicit offline snapshot, even though the
   // session is gone. A subsequent wake drains it rather than losing fatigue.

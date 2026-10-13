@@ -45,6 +45,8 @@ game-server/public/room-fx/
 # painted with its sky cut out and one of these drawn behind it, so without them
 # the whole set has a hole where the weather goes. KEEP A COPY.
 game-server/public/sky/
+# ...and the four floor bags (public.ts LOOT_BAGS), cut from the loot-bags sheet.
+game-server/public/loot/
 
 # THE WORKBENCH. Generated art in progress — frame sets, per-creature working
 # directories, the image-gen scratch — 88MB of it and growing every session. Same

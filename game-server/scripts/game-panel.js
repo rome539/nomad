@@ -134,8 +134,11 @@
     return st + (torch ? "+torch" : "");
   }
   var shown = mk("span", "color:#9a8b66");
-  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose");
+  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  B floor bag");
   var ids = [];
+  // B steps through the floor bags: nothing, then the first count of each.
+  // ?bag=1..4 opens on that bag.
+  var LOOSE_STEPS = [0, 1, 3, 6, 10], loose = Math.max(0, Math.min(4, Number(new URLSearchParams(location.search).get("bag")) || 0));
   addB.onclick = function () { ids.push(who.value); paint(); };
   clrB.onclick = function () { ids = []; paint(); };
   who.onchange = function () { ids = [who.value]; paint(); };
@@ -170,7 +173,7 @@
     var inside = gnd.value === "ground:gatehouse";
     if (inside) dead = false;
     var showIds = (dead || inside) ? ids.filter(function (x) { return x !== "nomad"; }) : ids.slice();
-    updateMobs(showIds, showIds.map(function (x) { return x === "nomad" ? nomadState() : ""; }), dead ? ["nomad"] : []);
+    updateMobs(showIds, showIds.map(function (x) { return x === "nomad" ? nomadState() : ""; }), dead ? ["nomad"] : [], LOOSE_STEPS[loose]);
     shown.textContent = ids.length ? "standing: " + ids.join(", ") : "nothing standing";
     try { localStorage.setItem(KEY, JSON.stringify({ g: gnd.value, h: hour.value, t: torch, ids: ids, f: feast.value })); } catch (e) {}
   }
@@ -203,6 +206,7 @@
     else if (k === "[") { step(who, -1); ids = [who.value]; paint(); }
     else if (k === "t" || k === "T") { torchB.onclick(); }
     else if (k === "p" || k === "P") { actB.onclick(); }
+    else if (k === "b" || k === "B") { loose = (loose + 1) % LOOSE_STEPS.length; paint(); }
     else hit = false;
     if (hit) { e.preventDefault(); e.stopPropagation(); }
   }, true);

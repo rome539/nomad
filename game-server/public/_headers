@@ -48,6 +48,8 @@
   Cache-Control: public, max-age=31536000, immutable
 /mob/*
   Cache-Control: public, max-age=31536000, immutable
+/loot/*
+  Cache-Control: public, max-age=31536000, immutable
 
 # Versioned UI engravings; change the filename when revising an asset.
 /ornate/*

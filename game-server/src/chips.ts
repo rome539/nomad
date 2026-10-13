@@ -518,8 +518,23 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // dismissed its tutorial.
   const w = z.wayHome.get(session.roomId);
   const home = world.entryRooms.has(session.roomId) ? "here" : (w ? w.dir : "");
+  // HOW MUCH IS LYING ON THE FLOOR (rome, 2026-10-12): the picture draws a bag
+  // for it, bigger the more there is. Counted by the same rule as the get chips:
+  // loose items and instanced ones, never what hangs curing on the racks, and
+  // nothing under a flooding tide.
+  let loose = 0;
+  if (seesArt(session.pubkey) && !events.tideFlooded(z, session.roomId)) {
+    const curing = z.curingCount(session.roomId);
+    const shown: Record<string, number> = {};
+    for (const itemId of z.ground.get(session.roomId) ?? []) {
+      if (!world.itemTemplates.has(itemId)) continue;
+      shown[itemId] = (shown[itemId] ?? 0) + 1;
+      if (shown[itemId] > (curing[itemId] ?? 0)) loose++;
+    }
+    loose += (z.groundInstances.get(session.roomId) ?? []).filter((i) => world.itemTemplates.has(i.itemId)).length;
+  }
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: seesArt(session.pubkey) ? seen : undefined,
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: seesArt(session.pubkey) ? seen : undefined, loose: loose || undefined,
       dead: seesArt(session.pubkey) && dead.length ? dead : undefined, doing: seesArt(session.pubkey) && Object.keys(doing).length ? doing : undefined }));
   } catch {}
 }
