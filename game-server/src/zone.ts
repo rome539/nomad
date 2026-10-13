@@ -1,4 +1,5 @@
 import { hpLabel, wholeHp } from "./util";
+import { BUILD_ID } from "./public";
 import * as exhaustion from "./exhaustion";
 // One Durable Object per zone: the authoritative simulation — who's where,
 // creature state, what lies on which floor.
@@ -532,6 +533,9 @@ export class ZoneDO implements DurableObject {
 
   private async init(zone: string): Promise<World> {
     if (this.world) return this.world;
+    // One line per cold start, with the build it woke on, so a deploy can be
+    // watched landing in the logs (rome, 2026-10-13: updates stopped showing).
+    console.log("world wakes", zone, "build", BUILD_ID, "sockets", this.state.getWebSockets().length);
     const world = await loadWorld(this.env.DB, zone);
     this.world = world;
     this.spawnKeptMemo = undefined; // the world's spawn rows just changed under it (reset + reload takes this path too)

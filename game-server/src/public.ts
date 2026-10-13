@@ -431,6 +431,20 @@ export const PAGE = `<!doctype html>
     flex: 0 0 auto; white-space: nowrap;
   }
   #bclose:hover { color: var(--gold); border-color: var(--gold); }
+  /* STATS IS A BUTTON IN CLASSIC TOO (rome, 2026-10-13), as it is in compact:
+     it sits beside Close and the equipment-and-stats box stays folded until it
+     is pressed. Classic used to show the box always on a wide screen and put a
+     full-width "show" bar over it on a narrow one. */
+  body[data-modal-layout="classic"] #bench #bgear {
+    display: block; width: auto; margin-left: auto; text-align: center;
+    background: transparent; border: 1px solid var(--border2); border-radius: 5px;
+    color: var(--cream); font: inherit; font-size: 13px; padding: 7px 14px; cursor: pointer;
+    flex: 0 0 auto; white-space: nowrap;
+  }
+  body[data-modal-layout="classic"] #bench #bgear:hover { color: var(--gold); border-color: var(--gold); }
+  body[data-modal-layout="classic"] #bench #bgear[hidden] { display: none; }
+  body[data-modal-layout="classic"] #bench #bdoll.on { display: none; }
+  body[data-modal-layout="classic"] #bench.showgear #bdoll.on { display: flex; }
   #bnote { flex: 0 0 auto; color: var(--blood); font-size: 12.5px; }
   #bnote:empty { display: none; }
   /* The paperdoll: your figure, what it wears, and the math it adds up to. */
@@ -4543,6 +4557,21 @@ function maybeReload() {
   print("— a game update is available; refresh the page when you are ready —", "sys");
 }
 var buildNoticeShown = false;
+// ...AND THE PAGE ASKS, once a minute and whenever it comes back into view
+// (rome, 2026-10-13). Waiting for the world's room frame was not enough: that
+// only comes after the world restarts, and an update landed with no notice at
+// all. /build answers from the Worker, which has the new build the moment the
+// deploy finishes.
+function askBuild() {
+  if (staleBuild || !BUILD || BUILD.charAt(0) === "_") return;
+  try {
+    fetch("/build", { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; })
+      .then(function (b) { b = (b || "").trim(); if (/^[a-z0-9]{1,16}$/.test(b)) checkBuild(b); })
+      .catch(function () {});
+  } catch (e) {}
+}
+setInterval(askBuild, 60000);
+document.addEventListener("visibilitychange", function () { if (!document.hidden) askBuild(); });
 // What each chip slot held on the previous render, so a slot whose command
 // changed under the cursor can refuse the click that was already on its way.
 var prevChipCmds = [];
@@ -5984,7 +6013,7 @@ var originalForgeSheet=forgeSheetNode;forgeSheetNode=function(it){var source=ori
 function mudRefresh(type){
  if(modalLayout==='classic'){
   ['bench','trade','forge'].forEach(function(id){var root=document.getElementById(id),tools=root.querySelector('.list-tools');root.querySelector('.bhead').after(tools);tools.after(root.querySelector('.list-sections'))});
-  var gear=document.getElementById('bgear');document.getElementById('bdoll').before(gear);gear.textContent=benchEl.classList.contains('showgear')?'Hide equipment & stats':'Show equipment & stats';
+  var gear=document.getElementById('bgear');document.querySelector('#bench .bhead').insertBefore(gear,document.getElementById('bclose'));gear.textContent='Stats';
   return;
  }
  [['bench','Inventory','btitle','bclose'],['trade','Barter','ttitle','tclose'],['forge','Forge','ftitle','fclose']].forEach(function(x){var root=document.getElementById(x[0]);document.getElementById(x[2]).textContent=x[1];document.getElementById(x[3]).textContent='Close';var nav=root.querySelector('.list-sections'),tools=root.querySelector('.list-tools');root.querySelector('.bhead').after(nav);nav.after(tools)});
@@ -5997,7 +6026,7 @@ var listRenderTrade=renderTrade;renderTrade=function(state){modalStates.trade=st
 var listRenderForge=renderForge;renderForge=function(state){modalStates.forge=state;mudRecords.forge=[];listRenderForge(state);mudRefresh('forge')};
 // Secondary list updates (storage tabs, inspection and keeper goods) use the same reading area.
 var mudOldRefresh=refreshListView;refreshListView=function(id){mudOldRefresh(id);mudRecords[id]=mudRecords[id].filter(function(r){return r.row.isConnected});mudReader(id)};
-document.getElementById('bgear').addEventListener('click',function(){if(modalLayout!=='classic')this.textContent='Stats'});
+document.getElementById('bgear').addEventListener('click',function(){this.textContent='Stats'});
 
 // Presets and equipment changes are authoritative server state.
 var loadoutSlots=['weapon','shield','helm','armor','cloak','feet'];

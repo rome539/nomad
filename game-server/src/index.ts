@@ -66,6 +66,13 @@ export default {
       }
       // HOW IT WORKS. `help` is the command reference; this is the document —
       // the shape of every rule, and deliberately not one constant of it.
+      // THE BUILD, ASKED FOR DIRECTLY (rome, 2026-10-13: an update landed and the
+      // open page never said so). The room frame carries the world's build, but
+      // only once the world has restarted and sent one; the Worker serves the new
+      // build the instant a deploy lands, so the page asks here as well.
+      if (m === "GET" && pathname === "/build") {
+        return new Response(BUILD_ID, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
+      }
       if (m === "GET" && (pathname === "/guide" || pathname === "/wiki")) {
         return new Response(GUIDE_PAGE, {
           headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" },
