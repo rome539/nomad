@@ -435,13 +435,12 @@ export const PAGE = `<!doctype html>
      it sits beside Close and the equipment-and-stats box stays folded until it
      is pressed. Classic used to show the box always on a wide screen and put a
      full-width "show" bar over it on a narrow one. */
-  body[data-modal-layout="classic"] #bench #bgear {
-    display: block; width: auto; margin-left: auto; text-align: center;
-    background: transparent; border: 1px solid var(--border2); border-radius: 5px;
-    color: var(--cream); font: inherit; font-size: 13px; padding: 7px 14px; cursor: pointer;
-    flex: 0 0 auto; white-space: nowrap;
-  }
-  body[data-modal-layout="classic"] #bench #bgear:hover { color: var(--gold); border-color: var(--gold); }
+  /* Where it sits, said loudly: on Close's own line, just to its left. How it
+     LOOKS is said quietly further down (after the narrow-screen rules), so a
+     theme design can square its corners the way it squares Close's. */
+  body[data-modal-layout="classic"] #bench .bhead { grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 8px; }
+  body[data-modal-layout="classic"] #bench #bgear { display: block; grid-column: 2; grid-row: 1; width: auto; }
+  body[data-modal-layout="classic"] #bench #bclose { grid-column: 3; }
   body[data-modal-layout="classic"] #bench #bgear[hidden] { display: none; }
   body[data-modal-layout="classic"] #bench #bdoll.on { display: none; }
   body[data-modal-layout="classic"] #bench.showgear #bdoll.on { display: flex; }
@@ -1819,6 +1818,14 @@ export const PAGE = `<!doctype html>
   :is(#bench, #trade, #forge) .bhead > div, #mapm .lhead > div { display: contents; }
   :is(#bsub, #tsub, #fsub, #mapsub) { grid-column: 1 / -1; grid-row: 2; max-width: none; }
   :is(#bclose, #tclose, #fclose, #mapclose) { grid-column: 2; grid-row: 1; }
+  /* Classic Stats wears Close's clothes, at Close's weight - one id - so the
+     theme designs' button rule reshapes it exactly as it reshapes Close. */
+  :where(body[data-modal-layout="classic"]) #bgear {
+    background: transparent; border: 1px solid var(--border2); border-radius: 5px;
+    color: var(--cream); font: inherit; font-size: 13px; padding: 7px 14px; cursor: pointer;
+    white-space: nowrap; text-align: center;
+  }
+  :where(body[data-modal-layout="classic"]) #bgear:hover { color: var(--gold); border-color: var(--gold); }
   .list-tools { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .list-tools input[type="search"] {
     flex: 1 1 160px; width: 0; min-width: 0; padding: 8px 10px; border: 1px solid var(--border2);
@@ -2170,6 +2177,7 @@ export const PAGE = `<!doctype html>
 :is(#btitle,#ttitle,#ftitle){font:600 16px/1.3 ui-monospace,monospace;letter-spacing:0;color:var(--cream);flex:1}
 :is(#bsub,#tsub,#fsub){display:none}
 :is(#bclose,#tclose,#fclose,#bgear){padding:6px 10px;font:12px ui-monospace,monospace;border:1px solid var(--border);border-radius:3px;min-height:32px;background:none;color:var(--bone)}
+#bgear:hover{color:var(--gold);border-color:var(--gold)}
 #bench #bgear{display:block;width:auto}#bench #bdoll.on{display:none}#bench.showgear #bdoll.on{display:flex}
 :is(#bench,#trade,#forge) .list-sections{display:flex;gap:16px;border-bottom:1px solid var(--line)}
 :is(#bench,#trade,#forge) .list-sections button{flex:0 0 auto;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:8px 0;color:var(--dim);font:12px ui-monospace,monospace}
