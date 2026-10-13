@@ -3911,7 +3911,10 @@ async function connect() {
       paintWayHome();
       renderChips(f.suggest, f.combat);
       updateGuideExits();
-      if (f.build) checkBuild(f.build);
+      // The world's own build is NOT asked here any more (rome, 2026-10-13): the
+      // world can still be on the last build for a while after a deploy, and a
+      // page that had just reloaded onto the new one read that as a mismatch,
+      // gave up on reloading, and never reweaved again. /build decides alone.
     } else if (f.t === "beat") {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
