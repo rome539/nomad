@@ -3833,7 +3833,6 @@ async function connect() {
     if (stallWatch) { clearTimeout(stallWatch); stallWatch = null; }
     if (frayTimer) { clearTimeout(frayTimer); frayTimer = null; }
     if (frayTold) { print("— the thread holds; you are back —", "sys"); frayTold = false; }
-    if (rewoven) { rewoven = false; print("\u2014 the world reweaves: a new build has landed \u2014", "sys"); }
     clearInterval(hbTimer);
     clearTimeout(pongTimer); pongTimer = null;
     probeWire = function () {
@@ -4553,39 +4552,16 @@ var lastCombat = false;
 // picture reached a real player. The page now carries the id of the build it
 // came from and the room frame carries the world's; a mismatch shows a notice.
 //
-// THE PAGE REWEAVES ITSELF ONTO THE NEW BUILD AGAIN (rome, 2026-10-13). For a
-// while this only printed a notice and left the refresh to the player, and an
-// update could land with nothing visible happening at all. It reloads now, as
-// it did before - but NOT mid-fight: a reload costs a round, so it waits for
-// the fight to end, which is seconds away at most.
+// THE PAGE NEVER RELOADS ITSELF (rome, 2026-10-13). A self-reload put players
+// back through the door on every deploy. The update is SEEN instead: the
+// reweave line lands in the log, once, and the refresh is the player's to take.
 var staleBuild = false;
 function checkBuild(world) {
   if (!BUILD || BUILD.charAt(0) === "_" || world === BUILD) return;  // unstamped in dev
   if (staleBuild) return;
   staleBuild = true;
-  // ONCE. If something is serving a page the world disagrees with, reloading in
-  // a loop makes it worse and hides the cause, so a second attempt inside the
-  // minute says so and leaves the page alone.
-  var last = 0;
-  try { last = +(sessionStorage.getItem("nomad_reloaded") || 0); } catch (e) {}
-  if (Date.now() - last < 60000) {
-    if (!buildNoticeShown) { buildNoticeShown = true; print("\u2014 a game update is available; refresh the page when you are ready \u2014", "sys"); }
-    return;
-  }
-  maybeReload();
+  print("\u2014 the world reweaves: a new build has landed. Refresh the page to see it \u2014", "sys");
 }
-// A reload clears the log, so the line said on the way out is never seen. The
-// page that comes back says it instead, once, when its wire opens - the visible
-// reweave (rome, 2026-10-13: an update landed and nothing showed at all).
-var rewoven = false;
-try { rewoven = sessionStorage.getItem("nomad_rewoven") === "1"; sessionStorage.removeItem("nomad_rewoven"); } catch (e) {}
-function maybeReload() {
-  if (!staleBuild || lastCombat || buildNoticeShown) return;
-  try { sessionStorage.setItem("nomad_reloaded", String(Date.now())); sessionStorage.setItem("nomad_rewoven", "1"); } catch (e) {}
-  print("\u2014 the game has been updated; reweaving \u2014", "sys");
-  location.reload();
-}
-var buildNoticeShown = false;
 // ...AND THE PAGE ASKS, once a minute and whenever it comes back into view
 // (rome, 2026-10-13). Waiting for the world's room frame was not enough: that
 // only comes after the world restarts, and an update landed with no notice at
@@ -4724,7 +4700,6 @@ function renderChips(suggest, combat) {
   lastSuggest = suggest;
   var wasFighting = lastCombat;
   lastCombat = !!combat;
-  if (wasFighting && !lastCombat) maybeReload();   // the fight is over: take the update now
   var followLive = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
   var previousActions = chipsEl.querySelector(".chip-actions");
   var actionScroll = previousActions && chipScrollRoom === lastRoomName && !(lastCombat && !wasFighting) ? previousActions.scrollTop : 0;
@@ -12849,12 +12824,6 @@ function crossThreshold() {
   // Start before connecting so new players never see a burst of welcome text.
 }
 thrEnter.addEventListener("click", crossThreshold);
-// A PAGE THAT RELOADED ITSELF ONTO AN UPDATE WALKS STRAIGHT BACK IN (rome,
-// 2026-10-13: the update logged him out). A reload lands on the threshold, and
-// nothing connects until it is crossed - so the self-reload put a player back
-// at the door mid-session. That is the one reload that crosses on its own; the
-// player already crossed it once, seconds ago.
-if (rewoven) crossThreshold();
 
 // THE FIRST WALK: five lessons with readable scrollback in the log — where this game's
 // teaching belongs — each one explaining a real system, each advancing only
