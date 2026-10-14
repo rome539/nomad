@@ -3736,6 +3736,7 @@ export const CACHE_ART: Record<string, "chest" | "box"> = {
   "carts-strongbox": "box", "stell-strongbox": "box", "box-icehouse": "box", "box-noust": "box",
   "slabs-locker": "box", "box-shelter": "box", "box-abyss": "box", "box-deep": "box",
   "box-glade": "box", "box-relic": "box", "reliquary": "box",
+  "box-crack": "box", // the bricked-up niche: a chest like any other (rome, 2026-10-14)
 };
 // THE BURNER LOOKS UP. He is the one thing in the wood that is not hostile and
 // not a shopkeeper, and until now he ignored a person walking into his clearing

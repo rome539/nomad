@@ -2630,7 +2630,8 @@ var SND = {
     f.frequency.setValueAtTime(o.freq || 300, t);
     if (o.sweep) f.frequency.exponentialRampToValueAtTime(Math.max(o.sweep, 20), t + o.dur);
     var g = actx.createGain();
-    g.gain.setValueAtTime(o.gain || 0.3, t);
+    if (o.atk) { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(o.gain || 0.3, t + o.atk); }
+    else g.gain.setValueAtTime(o.gain || 0.3, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + (o.dur || 0.1));
     src.connect(f); f.connect(g); g.connect(aout());
     src.start(t, Math.random());
@@ -2901,6 +2902,15 @@ function scapeBrown() {
   var b = actx.createBuffer(1, actx.sampleRate * 4, actx.sampleRate);
   var d = b.getChannelData(0), last = 0;
   for (var i = 0; i < d.length; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
+  // A SEAMLESS LOOP (rome, 2026-10-14: the fire popped the speakers). Brown
+  // noise wanders, so the last sample sat nowhere near the first and the
+  // loop jumped every four seconds - nearly twice the largest step anywhere
+  // else in it, which a speaker plays as a pop. Lean the whole buffer so its
+  // two ends meet, then take out its average so it sits on zero.
+  var n = d.length, drift = (d[n - 1] - d[0]) / (n - 1), mean = 0;
+  for (var j = 0; j < n; j++) { d[j] -= drift * j; mean += d[j]; }
+  mean /= n;
+  for (var q = 0; q < n; q++) d[q] -= mean;
   actx.__bn = b;
   return b;
 }
@@ -2930,9 +2940,9 @@ function scapeBuild() {
   scape = {
     rain: scapeLoop(SND._noise(), [scapeFilter("highpass", 900), scapeFilter("lowpass", 7000)]),
     wind: scapeLoop(scapeBrown(), [scapeFilter("bandpass", 420, 0.9), scapeFilter("lowpass", 2400)]),
-    surf: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 520)]),
+    surf: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 520), scapeFilter("highpass", 35)]),
     run: scapeLoop(SND._noise(), [scapeFilter("bandpass", 1100, 0.6), scapeFilter("lowpass", 3000)]),
-    roar: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 240)]),
+    roar: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 240), scapeFilter("highpass", 40)]),
     hum: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 170), scapeFilter("highpass", 35)]),
     gust: 0.4, gustTo: 0.4, surfPhase: 0, timers: [],
   };
@@ -2990,8 +3000,8 @@ function scapeDrips() {
   if (a && a.rain) {
     var t = actx.currentTime + 0.01;
     SND._burst(t, a.roof
-      ? { type: "bandpass", freq: 500 + Math.random() * 700, q: 3, dur: 0.05, gain: (0.04 + Math.random() * 0.05) * SCAPE_VOL }
-      : { type: "bandpass", freq: 2200 + Math.random() * 3000, q: 4, dur: 0.03, gain: (0.03 + Math.random() * 0.05) * SCAPE_VOL });
+      ? { type: "bandpass", freq: 500 + Math.random() * 700, q: 3, dur: 0.05, gain: (0.04 + Math.random() * 0.05) * SCAPE_VOL, atk: 0.002 }
+      : { type: "bandpass", freq: 2200 + Math.random() * 3000, q: 4, dur: 0.03, gain: (0.03 + Math.random() * 0.05) * SCAPE_VOL, atk: 0.002 });
   }
   scapeEvery(a && a.rain === 2 ? 40 : 90, a && a.rain === 2 ? 160 : 320, scapeDrips);
 }
@@ -3001,7 +3011,7 @@ function scapeCrackle() {
   if (a && a.fire) {
     var t = actx.currentTime + 0.01, n = Math.random() < 0.25 ? 2 + Math.floor(Math.random() * 3) : 1;
     for (var i = 0; i < n; i++) SND._burst(t + i * (0.015 + Math.random() * 0.04),
-      { type: "highpass", freq: 1500 + Math.random() * 3000, dur: 0.012 + Math.random() * 0.02, gain: (0.03 + Math.random() * 0.09) * SCAPE_VOL });
+      { type: "highpass", freq: 1500 + Math.random() * 3000, dur: 0.014 + Math.random() * 0.02, gain: (0.03 + Math.random() * 0.09) * SCAPE_VOL, atk: 0.002 });
   }
   scapeEvery(60, 420, scapeCrackle);
 }
