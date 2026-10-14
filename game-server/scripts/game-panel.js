@@ -147,6 +147,50 @@
   atkB.onclick = function () { liveAgain(); mobBeat(ids.slice(), null, null); };
   var dieB = mk("button", btnCss, "death");
   dieB.onclick = function () { liveAgain(); mobBeat(null, null, ids.slice()); };
+  // THE SOUND: one button (or S) steps off, half, full, as the game's setting
+  // does. At full, whatever room and sky are on screen play what a player
+  // standing there hears - the preview server runs the world's own sound
+  // rules against the room table (/amb) every time either changes.
+  var sndB = mk("button", btnCss, "sound: off");
+  function sndLabel() { sndB.textContent = "sound: " + ["off", "half", "full"][soundLevel]; }
+  // ...and the same answer says whether this place has a ROOF, which the game's
+  // status frame would have told the picture: a roofed room draws no rain.
+  var ambSeen = {};
+  var BAND_OF = { "The Mountain": "mountain", "The Crossing": "crossing", "The Road": "road", "The Wood": "wood", "The Dens": "den" };
+  function soundHere() {
+    var key = gnd.value + "|" + hour.value, first = !ambSeen[key];
+    var band = BAND_OF[groundAt[gnd.value.slice(7)]] || "";
+    fetch("/amb?sel=" + encodeURIComponent(gnd.value) + "&sky=" + encodeURIComponent(hour.value) + "&band=" + band)
+      .then(function (r) { return r.json(); }).then(function (a) {
+        ambSeen[key] = a;
+        if (soundOn) scapeSet(a);
+        if (first && a.covered) paint();
+      }).catch(function () {});
+  }
+  sndB.onclick = function () {
+    if (window.__RealAudio) window.AudioContext = window.__RealAudio; // the preview starts silent; this is the one way in
+    // ...but the preview never walks through the door, so the door's music
+    // would start on the next click. Shut it and keep it shut.
+    document.removeEventListener("pointerdown", thrMusicStart, true);
+    document.removeEventListener("keydown", thrMusicStart, true);
+    thrMusicStop();
+    setSound((soundLevel + 1) % 3); sndLabel(); soundHere();
+  };
+  // The preview starts silent whatever was remembered from last time: a page
+  // that says "on" with no sound behind it turns OFF on the first S.
+  soundLevel = 0; soundOn = false; renderSnd();
+  sndLabel();
+  // For the probe: silence the cave bed so a layer can be measured alone.
+  window.__sndBedOff = function () { stopAmb(); };
+  window.__scapeNow = function () { return scapeAmb; };
+  // A meter for the probe: how loud the whole mix is right now, 0..1.
+  window.__sndLevel = function () {
+    if (!actx || !amaster) return -1;
+    if (!amaster.__an) { amaster.__an = actx.createAnalyser(); amaster.__an.fftSize = 2048; amaster.connect(amaster.__an); }
+    var d = new Float32Array(2048); amaster.__an.getFloatTimeDomainData(d);
+    var sum = 0; for (var i = 0; i < d.length; i++) sum += d[i] * d[i];
+    return Math.sqrt(sum / d.length);
+  };
   // THE NOMAD - another player - takes its state from the server, and there is
   // no server here, so this picks it. Choosing it puts a nomad in the room; the
   // torch button above also puts a lit torch in its hand. A gesture plays once
@@ -161,7 +205,7 @@
     return st + (torch ? "+torch" : "");
   }
   var shown = mk("span", "color:#9a8b66");
-  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  F frames  B floor bag  C chest  L lightning");
+  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  F frames  B floor bag  C chest  L lightning  S sound");
   var ids = [];
   // B steps through the floor bags: nothing, then the first count of each.
   // ?bag=1..4 opens on that bag.
@@ -186,16 +230,23 @@
 
   function paint() {
     var v = gnd.value, h = hour.value;
+    soundHere();
     // THE RED NIGHT IS A FLAG, NOT A SKY. The server sends it beside the sky on
     // every frame, and it is what lights the hollow's eyes - so choosing the
     // blood sky here has to raise it too, and every other hour has to lower it.
     var red = h === "blood" ? 1 : 0;
     if (typeof FEAST_FORCE !== "undefined") FEAST_FORCE = feast.value;
+    // UNDER A ROOF, the sky the game would send: none at all ("in") for a
+    // sealed room, and only the hour - never the weather - for the road's
+    // roofed rooms, which see out but are not rained on (zone.ts artSkyFor).
+    var seen = ambSeen[v + "|" + h], covered = seen && seen.covered ? true : undefined;
+    var roofSky = !covered ? h : seen.band !== "road" ? "in"
+      : (h === "rain" || h === "snow" || h === "fog" || h === "after-rain") ? "day" : h;
     if (v.indexOf("room:") === 0) {
       var r = v.slice(5);
-      paintScene("upper", h, "", r, torch, 0, r, 0, red);
+      paintScene("upper", roofSky, "", r, torch, 0, r, 0, red, covered);
     } else if (v.indexOf("gate:") === 0) {
-      paintScene("mountain", h, v, "preview-gate", torch, 0, "", 0, red);
+      paintScene("mountain", roofSky, v, "preview-gate", torch, 0, "", 0, red, covered);
     } else {
       paintScene("mountain", h, v.slice(7), "preview-ground", torch, 0, "", 0, red);
     }
@@ -246,6 +297,7 @@
     else if (k === "b" || k === "B") { loose = (loose + 1) % LOOSE_STEPS.length; paint(); }
     else if (k === "c" || k === "C") { chest = (chest + 1) % CHEST_STEPS.length; paint(); }
     else if (k === "l" || k === "L") { lightningBolt(false); }
+    else if (k === "s" || k === "S") { sndB.onclick(); }
     else hit = false;
     if (hit) { e.preventDefault(); e.stopPropagation(); }
   }, true);

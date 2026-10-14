@@ -2603,7 +2603,14 @@ function classify(s) {
 var actx = null;
 var amaster = null;
 var ambNodes = null;
-var soundOn = localStorage.getItem("nomad_sound") === "1";
+// THREE LEVELS (rome, 2026-10-13): 0 off, 1 HALF - the game's voices and the
+// cave bed, which is all sound was before - and 2 FULL, which adds the place
+// itself (the soundscape below: weather, water, hearth, timber, the heart,
+// the ground under a step, the thunder). A saved "1" from before is half, so
+// nobody's game changed under them.
+var soundLevel = Math.max(0, Math.min(2, +(localStorage.getItem("nomad_sound") || 0) || 0));
+var soundOn = soundLevel > 0;
+function soundFull() { return soundLevel === 2; }
 function aout() { return amaster; }
 var SND = {
   _noise: function () {
@@ -2640,9 +2647,35 @@ var SND = {
     os.connect(g); g.connect(aout());
     os.start(t); os.stop(t + (o.dur || 0.3) + 0.05);
   },
+  // THE STEP KNOWS WHAT IT LANDED IN. The room's own frame (and with it the
+  // ground) arrives a beat behind the heading that plays this, so the step
+  // waits that beat and then reads it.
   step: function (t) {
-    this._burst(t, { freq: 220, dur: 0.09, gain: 0.5 });
-    this._tone(t, { f0: 58, f1: 36, dur: 0.1, gain: 0.55 });
+    var self = this, wait = Math.max(0, (t - actx.currentTime) * 1000) + 90;
+    setTimeout(function () { if (actx) self._stepOn(actx.currentTime + 0.01, soundFull() ? sndGround : ""); }, wait);
+  },
+  _stepOn: function (t, ground) {
+    var k = SCAPE_VOL; // the plain step below is not new, and keeps its level
+    if (ground === "mud") {
+      // a sucking squelch: the foot going in, then coming out
+      this._burst(t, { type: "bandpass", freq: 420, sweep: 140, q: 2, dur: 0.16, gain: 0.5 * k });
+      this._tone(t + 0.1, { f0: 180, f1: 90, dur: 0.08, gain: 0.08 * k });
+    } else if (ground === "snow") {
+      // the crunch: a handful of tiny bright cracks packed into one step
+      for (var i = 0; i < 5; i++) this._burst(t + i * 0.016, { type: "bandpass", freq: 2500 + Math.random() * 2500, q: 2, dur: 0.02, gain: (0.12 + Math.random() * 0.1) * k });
+      this._tone(t, { f0: 50, f1: 34, dur: 0.08, gain: 0.25 * k });
+    } else if (ground === "scree") {
+      // loose stone shifting: the step, and the rattle of what it moved
+      this._burst(t, { freq: 260, dur: 0.07, gain: 0.35 * k });
+      for (var j = 0; j < 4; j++) this._burst(t + 0.03 + Math.random() * 0.18, { type: "bandpass", freq: 1400 + Math.random() * 1800, q: 6, dur: 0.025, gain: (0.08 + Math.random() * 0.12) * k });
+    } else if (ground === "wet") {
+      // a wade: water pushed aside
+      this._burst(t, { type: "bandpass", freq: 1600, sweep: 500, q: 1.2, dur: 0.28, gain: 0.35 * k });
+      this._burst(t + 0.05, { type: "highpass", freq: 3000, dur: 0.12, gain: 0.08 * k });
+    } else {
+      this._burst(t, { freq: 220, dur: 0.09, gain: 0.5 });
+      this._tone(t, { f0: 58, f1: 36, dur: 0.1, gain: 0.55 });
+    }
   },
   boom: function (t) {
     this._tone(t, { f0: 64, f1: 28, dur: 0.9, gain: 0.9 });
@@ -2845,6 +2878,252 @@ function stopAmb() {
   // beat as the fade is exactly the hard cut this is here to avoid.
   setTimeout(function () {
     for (var j = 0; j < dying.srcs.length; j++) { try { dying.srcs[j].stop(); } catch (e) {} }
+  }, AMB_FADE * 1000 + 60);
+}
+// ---- THE PLACE MAKES ITS OWN NOISE (rome, 2026-10-13) ----
+// Rain, wind, water, a hearth, timber that creaks, a heart that speeds up
+// near the end, and the ground under a footstep. The world decides what this
+// place sounds like (sound.ts, the amb field on every status frame); this
+// only plays it. Each layer is a long-lived chain whose gain glides toward a
+// target, so a change of room or weather is a crossfade and never a cut, and
+// every layer rests at zero rather than stopping (see fadeGain on pops).
+var scape = null;          // the live layers, built on first need
+var scapeAmb = null;       // the last soundscape the world sent
+var scapeHpFrac = 1;       // health as a fraction, for the heartbeat
+var sndGround = "";        // what the next footstep lands in
+var SCAPE_GLIDE = 1.2;     // seconds a layer takes to settle on a new level
+// EVERY NEW SOUND AT 70% (rome, 2026-10-13): the whole place came down by
+// the same 30% the ford in the rain was first brought down by. The heartbeat
+// is not part of the place and keeps its own level.
+var SCAPE_VOL = 0.7;
+function scapeBrown() {
+  if (actx.__bn) return actx.__bn;
+  var b = actx.createBuffer(1, actx.sampleRate * 4, actx.sampleRate);
+  var d = b.getChannelData(0), last = 0;
+  for (var i = 0; i < d.length; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
+  actx.__bn = b;
+  return b;
+}
+function scapeLoop(buf, chain) {
+  var src = actx.createBufferSource();
+  src.buffer = buf; src.loop = true;
+  var g = actx.createGain(); g.gain.value = 0;
+  var head = src;
+  for (var i = 0; i < chain.length; i++) { head.connect(chain[i]); head = chain[i]; }
+  head.connect(g); g.connect(aout());
+  src.start(0, Math.random() * 2);
+  return { src: src, gain: g, chain: chain };
+}
+function scapeFilter(type, freq, q) {
+  var f = actx.createBiquadFilter();
+  f.type = type; f.frequency.value = freq; f.Q.value = q || 0.7;
+  return f;
+}
+function scapeTo(param, v, glide) {
+  var t = actx.currentTime;
+  param.cancelScheduledValues(t);
+  param.setValueAtTime(param.value, t);
+  param.setTargetAtTime(v, t, glide || SCAPE_GLIDE / 3);
+}
+function scapeBuild() {
+  if (scape || !actx) return;
+  scape = {
+    rain: scapeLoop(SND._noise(), [scapeFilter("highpass", 900), scapeFilter("lowpass", 7000)]),
+    wind: scapeLoop(scapeBrown(), [scapeFilter("bandpass", 420, 0.9), scapeFilter("lowpass", 2400)]),
+    surf: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 520)]),
+    run: scapeLoop(SND._noise(), [scapeFilter("bandpass", 1100, 0.6), scapeFilter("lowpass", 3000)]),
+    roar: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 240)]),
+    hum: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 170), scapeFilter("highpass", 35)]),
+    gust: 0.4, gustTo: 0.4, surfPhase: 0, timers: [],
+  };
+  // ONE SLOW CLOCK for everything that breathes: the wind's gusts, the surf's
+  // swell, the run of the water. Four times a second is plenty for levels
+  // that glide over a second or more.
+  scape.timers.push(setInterval(scapeBreathe, 250));
+  scapeDrips(); scapeCrackle(); scapeCreak(); scapeDrop(); scapeHeart();
+}
+function scapeBreathe() {
+  if (!scape || !scapeAmb) return;
+  var a = scapeAmb;
+  // THE WIND IS NEVER STEADY: a random walk toward a new gust every few seconds.
+  if (Math.random() < 0.08) scape.gustTo = Math.random();
+  scape.gust += (scape.gustTo - scape.gust) * 0.12;
+  var windBase = [0, 0.15, 0.28, 0.63][a.wind] || 0;   // band-passed brown noise is quiet; these are measured, not guessed
+  // under a roof the gale is a moan through the walls, not air on your face
+  scapeTo(scape.wind.gain.gain, windBase * (0.3 + 0.9 * scape.gust) * SCAPE_VOL);
+  scapeTo(scape.wind.chain[0].frequency, 260 + (a.wind >= 3 ? 700 : 380) * scape.gust);
+  scapeTo(scape.wind.chain[1].frequency, a.shut ? 600 : 2400);
+  // THE SEA COMES IN AND GOES OUT: a swell every nine seconds or so.
+  scape.surfPhase += 0.25 / (8 + Math.random() * 3);
+  var swell = 0.35 + 0.65 * Math.pow(Math.max(0, Math.sin(scape.surfPhase * Math.PI * 2)), 2);
+  scapeTo(scape.surf.gain.gain, a.water === "surf" ? (a.loud ? 0.32 : 0.18) * swell * SCAPE_VOL : 0, 0.5);
+  scapeTo(scape.run.gain.gain, a.water === "run" ? (a.loud ? 0.20 : 0.11) * SCAPE_VOL * (0.85 + 0.3 * Math.random()) : 0, 0.3);
+}
+function scapeApply() {
+  if (!scape || !scapeAmb) return;
+  var a = scapeAmb;
+  // RAIN ON YOU is bright and close; RAIN ON A ROOF is the same storm through
+  // timber and thatch - lower, softer, and nearer the drum than the hiss.
+  scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * (a.roof ? 0.95 : 1) * SCAPE_VOL);
+  scapeTo(scape.rain.chain[0].frequency, a.roof ? 180 : 900);
+  scapeTo(scape.rain.chain[1].frequency, a.roof ? 1100 : 7000);
+  scapeTo(scape.roar.gain.gain, a.fire ? 0.05 * SCAPE_VOL : 0);
+  // UNDER STONE: the low pressure of a buried room, never silence
+  scapeTo(scape.hum.gain.gain, a.hollow ? 0.11 * SCAPE_VOL : 0);
+  sndGround = a.ground || "";
+  scapeBreathe();
+}
+// A SCHEDULER THAT RE-ARMS ITSELF, each one-shot layer on its own random gap.
+function scapeEvery(min, max, fn) {
+  if (!scape) return;
+  var id = setTimeout(function () {
+    var i = scape ? scape.timers.indexOf(id) : -1;
+    if (i >= 0) scape.timers.splice(i, 1);
+    if (!scape) return;
+    try { fn(); } catch (e) {}
+  }, min + Math.random() * (max - min));
+  scape.timers.push(id);
+}
+// Drops on the near ground, or taps on the roof above you.
+function scapeDrips() {
+  var a = scapeAmb;
+  if (a && a.rain) {
+    var t = actx.currentTime + 0.01;
+    SND._burst(t, a.roof
+      ? { type: "bandpass", freq: 500 + Math.random() * 700, q: 3, dur: 0.05, gain: (0.04 + Math.random() * 0.05) * SCAPE_VOL }
+      : { type: "bandpass", freq: 2200 + Math.random() * 3000, q: 4, dur: 0.03, gain: (0.03 + Math.random() * 0.05) * SCAPE_VOL });
+  }
+  scapeEvery(a && a.rain === 2 ? 40 : 90, a && a.rain === 2 ? 160 : 320, scapeDrips);
+}
+// The hearth: a low roar under it and a crackle on top, never in rhythm.
+function scapeCrackle() {
+  var a = scapeAmb;
+  if (a && a.fire) {
+    var t = actx.currentTime + 0.01, n = Math.random() < 0.25 ? 2 + Math.floor(Math.random() * 3) : 1;
+    for (var i = 0; i < n; i++) SND._burst(t + i * (0.015 + Math.random() * 0.04),
+      { type: "highpass", freq: 1500 + Math.random() * 3000, dur: 0.012 + Math.random() * 0.02, gain: (0.03 + Math.random() * 0.09) * SCAPE_VOL });
+  }
+  scapeEvery(60, 420, scapeCrackle);
+}
+// TIMBER TALKING: a stick-slip groan - a low reed of a tone, dragged unevenly
+// up or down a few semitones, through a narrow wooden resonance.
+function scapeCreak() {
+  var a = scapeAmb;
+  if (a && a.creak) {
+    var t = actx.currentTime + 0.02, dur = 0.5 + Math.random() * 1.2;
+    var f0 = 70 + Math.random() * 90, f1 = f0 * (0.75 + Math.random() * 0.6);
+    var o = actx.createOscillator(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.linearRampToValueAtTime(f1, t + dur);
+    var bp = scapeFilter("bandpass", 600 + Math.random() * 900, 7);
+    var g = actx.createGain(); g.gain.setValueAtTime(0, t);
+    // the stick-slip: amplitude in uneven little catches, not one smooth swell
+    var steps = Math.round(dur * 22), peak = (0.05 + Math.random() * 0.05) * SCAPE_VOL;
+    for (var i = 1; i <= steps; i++) {
+      var env = Math.sin(Math.PI * i / steps);
+      g.gain.linearRampToValueAtTime(peak * env * (0.45 + Math.random() * 0.55), t + dur * i / steps);
+    }
+    g.gain.linearRampToValueAtTime(0, t + dur + 0.05);
+    o.connect(bp); bp.connect(g); g.connect(aout());
+    o.start(t); o.stop(t + dur + 0.1);
+  }
+  var windy = a && a.wind >= 3;
+  scapeEvery(windy ? 2500 : 5000, windy ? 8000 : 16000, scapeCreak);
+}
+// Water finding its way down in the dark: one note, and the hall giving it back.
+function scapeDrop() {
+  var a = scapeAmb, wet = a && a.water === "drip";
+  // a wet room drips near and often; a dry buried one, far off and seldom
+  if (a && (wet || (a.hollow && Math.random() < 0.35))) {
+    var t = actx.currentTime + 0.01, f = 900 + Math.random() * 1500, far = wet ? 1 : 0.4;
+    var d = actx.createDelay(1); d.delayTime.value = 0.21 + Math.random() * 0.12;
+    var fb = actx.createGain(); fb.gain.value = 0.35;
+    var o = actx.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.6, t + 0.06);
+    var g = actx.createGain(); g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.07 * SCAPE_VOL * far, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0005, t + 0.14);
+    o.connect(g); g.connect(aout()); g.connect(d); d.connect(fb); fb.connect(d); d.connect(aout());
+    o.start(t); o.stop(t + 0.2);
+    setTimeout(function () { try { fb.disconnect(); d.disconnect(); } catch (e) {} }, 2500);
+  }
+  scapeEvery(1200, 6000, scapeDrop);
+}
+// NEAR THE END THE HEART IS HEARD. Below a quarter of your health it comes in
+// under everything, and it quickens as the number falls.
+function scapeHeart() {
+  var gap = 1000;
+  if (scapeHpFrac > 0 && scapeHpFrac < 0.25) {
+    var t = actx.currentTime + 0.01, k = 1 - scapeHpFrac / 0.25;
+    var vol = 0.25 + 0.3 * k;
+    SND._tone(t, { f0: 62, f1: 38, dur: 0.14, gain: vol });
+    SND._tone(t + 0.2, { f0: 55, f1: 34, dur: 0.12, gain: vol * 0.7 });
+    gap = 1000 - 420 * k;
+  }
+  scapeEvery(gap, gap, scapeHeart);
+}
+// THE STORM'S VOICE: a long low roll a moment after the flash, every bolt its
+// own size. A bolt that came down on YOU has no delay and no distance in it.
+function scapeThunder(hit, delay) {
+  if (!soundOn || !actx || !soundFull()) return;
+  var t = actx.currentTime + (hit ? 0.01 : delay);
+  if (hit) {
+    // the same crack and boom as ever, at the place's 70%
+    try {
+      SND._burst(t, { type: "bandpass", freq: 1900, q: 9, dur: 0.07, gain: 0.5 * SCAPE_VOL });
+      SND._tone(t + 0.02, { type: "square", f0: 640, f1: 180, dur: 0.3, gain: 0.08 * SCAPE_VOL });
+      SND._tone(t + 0.02, { f0: 64, f1: 28, dur: 0.9, gain: 0.9 * SCAPE_VOL });
+      SND._burst(t + 0.02, { freq: 140, dur: 0.35, gain: 0.5 * SCAPE_VOL });
+    } catch (e) {}
+    return;
+  }
+  var src = actx.createBufferSource(); src.buffer = scapeBrown();
+  var lp = scapeFilter("lowpass", 160 + Math.random() * 140);
+  var g = actx.createGain(), dur = 2.5 + Math.random() * 3, peak = (0.35 + Math.random() * 0.4) * SCAPE_VOL;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + 0.08 + Math.random() * 0.25);
+  // and it ROLLS: a few swells on the way down, not one clean decay
+  var at = t + 0.4, lvl = peak;
+  while (at < t + dur) { lvl *= 0.55 + Math.random() * 0.3; g.gain.exponentialRampToValueAtTime(Math.max(lvl * (0.6 + Math.random() * 0.8), 0.001), at); at += 0.25 + Math.random() * 0.6; }
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(lp); lp.connect(g); g.connect(aout());
+  src.start(t, Math.random() * 2); src.stop(t + dur + 0.1);
+}
+// The world's facts arrive here; the layers follow.
+var scapeRaw = null;       // the world's soundscape as sent, before the picture's shelter is laid on it
+function scapeSet(amb) {
+  if (!amb || typeof amb !== "object") return;
+  scapeRaw = amb;
+  scapeAmb = {
+    rain: +amb.rain || 0, roof: +amb.roof || 0, shut: +amb.shut || 0, wind: Math.max(0, Math.min(3, +amb.wind || 0)),
+    creak: +amb.creak || 0, fire: +amb.fire || 0, loud: +amb.loud || 0, hollow: +amb.hollow || 0,
+    water: amb.water === "surf" || amb.water === "run" || amb.water === "drip" ? amb.water : "",
+    ground: amb.ground === "mud" || amb.ground === "snow" || amb.ground === "scree" || amb.ground === "wet" ? amb.ground : "",
+  };
+  // A SHELTERED PICTURE IS A ROOF TO THE EAR TOO (rome, 2026-10-13). The world
+  // counts the Last Shelter, the Bounds House and the dens' buildings as open
+  // ground on purpose - the night and the cold reach them - and only the
+  // picture keeps the weather out (SHELTERED, below). The sound follows the
+  // picture: rain on the roof, a dry floor, and out of the wind.
+  if (typeof SHELTERED !== "undefined" && SHELTERED[lastPlace]) {
+    var a = scapeAmb;
+    a.shut = 1; a.roof = a.rain ? 1 : 0;
+    a.wind = 0;
+    if (a.ground === "mud" || a.ground === "snow") a.ground = "";
+  }
+  sndGround = scapeAmb.ground;
+  if (soundOn && actx && soundFull()) { scapeBuild(); scapeApply(); }
+}
+function scapeHp(hp, max) { if (max > 0) scapeHpFrac = Math.max(0, hp) / max; }
+function scapeStart() { if (!actx || !soundFull()) return; scapeBuild(); scapeApply(); }
+function scapeStop() {
+  if (!scape) return;
+  var dying = scape;
+  scape = null;
+  for (var i = 0; i < dying.timers.length; i++) { clearTimeout(dying.timers[i]); clearInterval(dying.timers[i]); }
+  ["rain", "wind", "surf", "run", "roar", "hum"].forEach(function (k) { fadeGain(actx, dying[k].gain.gain, 0, AMB_FADE); });
+  setTimeout(function () {
+    ["rain", "wind", "surf", "run", "roar", "hum"].forEach(function (k) { try { dying[k].src.stop(); } catch (e) {} });
   }, AMB_FADE * 1000 + 60);
 }
 function sndInit() {
@@ -3918,6 +4197,8 @@ async function connect() {
       try { localStorage.setItem("nomad_name", f.name); } catch (e) {}
       renderFx(f.fx);
       dollPulse(f.hp, f.max_hp);
+      scapeHp(f.hp, f.max_hp);
+      scapeSet(f.amb);
       lastName = f.name;
       lastNamed = !!f.named;
       maybeAdoptProfileName(f);
@@ -7437,18 +7718,25 @@ var brand = document.getElementById("brand");
 var setpanel = document.getElementById("setpanel");
 var sndbtn = document.getElementById("sndbtn");
 function renderSnd() {
-  sndbtn.textContent = soundOn ? "on" : "off";
+  sndbtn.textContent = ["off", "half", "full"][soundLevel];
   sndbtn.className = soundOn ? "on" : "";
 }
 function setSound(on) {
-  soundOn = on;
-  localStorage.setItem("nomad_sound", on ? "1" : "0");
+  // a level 0-2; true/false still mean full/off for any caller that asks for "on"
+  soundLevel = on === true ? 2 : on === false ? 0 : Math.max(0, Math.min(2, +on || 0));
+  soundOn = soundLevel > 0;
+  localStorage.setItem("nomad_sound", String(soundLevel));
   renderSnd();
-  if (on) {
+  if (soundOn) {
     sndInit();
-    if (actx) { startAmb(); playSounds(["chime"]); }
+    if (actx) {
+      startAmb();
+      if (soundFull()) scapeStart(); else scapeStop();
+      playSounds(["chime"]);
+    }
   } else {
     stopAmb();
+    scapeStop();
   }
 }
 renderSnd();
@@ -7456,7 +7744,7 @@ brand.addEventListener("click", function () {
   idpanel.classList.remove("open");
   setpanel.classList.toggle("open");
 });
-sndbtn.addEventListener("click", function () { setSound(!soundOn); });
+sndbtn.addEventListener("click", function () { setSound((soundLevel + 1) % 3); }); // off, half, full, and round
 
 // Command chips: the tappable hints above the prompt. Veterans type; the
 // toggle remembers, and flipping it back repaints the last set instantly.
@@ -7923,7 +8211,7 @@ if (soundOn) {
     document.removeEventListener("pointerdown", armSnd);
     document.removeEventListener("keydown", armSnd);
     sndInit();
-    if (actx) startAmb();
+    if (actx) { startAmb(); scapeStart(); }
   };
   document.addEventListener("pointerdown", armSnd);
   document.addEventListener("keydown", armSnd);
@@ -7998,7 +8286,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
 var MOB_V  = "54";      // /mob/      strips and their eye layers
-var LOOT_V = "1";       // /loot/     the four floor bags and the four chests
+var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
@@ -9886,9 +10174,11 @@ function lightningBolt(hit) {
     clearTimeout(boltTimer);
     boltTimer = setTimeout(function () { document.body.classList.remove("bolt"); }, dur * 1000 + 100);
   }
+  var delay = 0.7 + Math.random() * 1.1;
+  scapeThunder(hit, delay);
   if (!hit) setTimeout(function () {
     print(THUNDER_LINES[Math.floor(Math.random() * THUNDER_LINES.length)], "amb");
-  }, 700 + Math.random() * 1100);
+  }, delay * 1000);
 }
 function runWeather() {
   var active = weatherCtx && weatherKind && viewMode === "image" && !document.hidden && !weatherMotion.matches;
@@ -10050,7 +10340,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   if (roomKey) lastRoomKey = roomKey;
   // Cleared as well as set: walking out of a singular room and into ordinary
   // ground must stop naming the room, or the summit follows you down the hill.
-  if (place !== undefined) lastPlace = place || "";
+  if (place !== undefined) { lastPlace = place || ""; if (scapeRaw) scapeSet(scapeRaw); }
   if (band) lastBand = band;
   if (sky) lastSky = sky;
   if (red !== undefined && red !== null) lastRed = red ? 1 : 0;
@@ -11572,10 +11862,10 @@ var lastMobs = "";
 // bigger the more there is, and lays it on the floor where the bodies go - out
 // from under anything standing. Heights are shares of the picture, like a
 // creature's (a man is MAN_VH); aspect is the drawing's own width over height.
-var LOOT_BAGS = [{ at: 10, name: "spilled", vh: 24, aspect: 1.241 },
-  { at: 6,  name: "sack",    vh: 26, aspect: 0.951 },
-  { at: 3,  name: "medium",  vh: 19, aspect: 1.431 },
-  { at: 1,  name: "small",   vh: 14, aspect: 1.144 }];
+var LOOT_BAGS = [{ at: 10, name: "spilled", vh: 24, aspect: 1.177 },
+  { at: 6,  name: "sack",    vh: 26, aspect: 0.977 },
+  { at: 3,  name: "medium",  vh: 19, aspect: 1.361 },
+  { at: 1,  name: "small",   vh: 14, aspect: 1.055 }];
 var mobLoose = 0;
 // THE CHESTS, drawn the same way (rome, 2026-10-13): the server names each one
 // standing here, wood or iron, shut or sprung. One scale for all four so the
@@ -12845,7 +13135,7 @@ function crossThreshold() {
   if (crossed) return;
   crossed = true;
   thrMusicStop();
-  if (localStorage.getItem("nomad_sound") === null) setSound(true);
+  if (localStorage.getItem("nomad_sound") === null) setSound(1); // a first crossing starts at half, as sound always started
   threshold.classList.add("gone");
   setTimeout(function () { threshold.remove(); }, 1000);
   if (guideFresh) guideStart();

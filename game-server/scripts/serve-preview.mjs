@@ -138,9 +138,11 @@ async function gameHtml(src) {
   // every relay - which then fail here and retry, forever, which is the lag.
   // This runs BEFORE the client: no AudioContext exists, so every sound bails
   // at its own try/catch; and a WebSocket is a line that never opens and never
-  // closes, so there is no close for a reconnect loop to fire on.
+  // closes, so there is no close for a reconnect loop to fire on. The real
+  // AudioContext is kept aside, and the panel's sound switch hands it back.
   const QUIET = "<script>(function(){"
     + "function NoAudio(){throw new Error('silent preview');}"
+    + "window.__RealAudio=window.AudioContext||window.webkitAudioContext;"
     + "window.AudioContext=NoAudio;window.webkitAudioContext=NoAudio;"
     + "function DeadSocket(){this.readyState=0;this.bufferedAmount=0;}"
     + "DeadSocket.prototype.send=function(){};DeadSocket.prototype.close=function(){};"
@@ -181,8 +183,69 @@ async function serveGameAsset(rel, res, from, full) {
   return true;
 }
 
+// WHAT A PLACE SOUNDS LIKE, for the game preview's sound (rome, 2026-10-13:
+// change the room or the weather and hear it, no other button). This runs the
+// world's own rules in src/sound.ts against the local room table, so the
+// preview plays what a player standing there hears - not a copy of the rules.
+// A "ground" is a picture shared by many rooms, so it plays the soundscape
+// most of those rooms have. Rebuilt whenever the rules change on disk.
+const SOUND_SRC = ["src/sound.ts", "src/zone-data.ts", "src/zone-util.ts"].map((f) => path.join(GAME, f));
+let soundCache = { at: -1, mod: null, rooms: null, grounds: null };
+async function soundWorld() {
+  const at = Math.max(...SOUND_SRC.map(mtime));
+  if (soundCache.at === at) return soundCache;
+  const { build } = await import("esbuild");
+  const out = await build({
+    stdin: { contents: 'export * from "./src/sound"; export { terrainOf } from "./src/zone-util";', resolveDir: GAME, loader: "ts" },
+    bundle: true, format: "esm", platform: "node", write: false, logLevel: "silent",
+  });
+  const mod = await import("data:text/javascript;base64," + Buffer.from(out.outputFiles[0].text).toString("base64") + "#" + at);
+  const { DatabaseSync } = await import("node:sqlite"); // node 22
+  const dir = path.join(GAME, ".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
+  const db = new DatabaseSync(path.join(dir, fs.readdirSync(dir).find((x) => /^[a-f0-9]{64}\.sqlite$/.test(x))), { readOnly: true });
+  const dry = { rain: 0, windUp: false, snow: false, mud: false, seaUp: false, runUp: false };
+  const rooms = new Map(), byGround = new Map();
+  for (const r of db.prepare("select id, region, is_entry, description from rooms").all()) {
+    const place = mod.placeOfRow(r);
+    rooms.set(r.id, place);
+    const t = mod.terrainOf(r.id, r.description, place.band);
+    const key = JSON.stringify(mod.soundscapeOf(place, dry));
+    const g = byGround.get(t) ?? new Map();
+    const hit = g.get(key) ?? { n: 0, place };
+    hit.n++; g.set(key, hit); byGround.set(t, g);
+  }
+  db.close();
+  const grounds = new Map();
+  for (const [t, g] of byGround) grounds.set(t, [...g.values()].sort((a, b) => b.n - a.n)[0].place);
+  soundCache = { at, mod, rooms, grounds };
+  return soundCache;
+}
+
 const missed = new Set();
 http.createServer(async (req, res) => {
+  if ((req.url || "").startsWith("/amb?")) {
+    try {
+      const q = new URL(req.url, "http://x").searchParams, sel = q.get("sel") || "", sky = q.get("sky") || "";
+      const w = await soundWorld();
+      const [kind, id] = [sel.slice(0, sel.indexOf(":")), sel.slice(sel.indexOf(":") + 1)];
+      // A ground picture no room is classified as (mountainside is the
+      // mountain's fallback) plays plain open ground of the band it is shown in.
+      const band = q.get("band") || "";
+      const place = kind === "ground" && id === "gatehouse" ? { roomId: "", band: "gate", open: false, inside: true }
+        : kind === "ground" ? (w.grounds.get(id) || (band ? { roomId: "", band, open: true, inside: false } : null))
+        : w.rooms.get(id);
+      const amb = place ? w.mod.soundscapeOf(place, {
+        rain: sky === "rain" ? 1 : 0, windUp: false, snow: sky === "snow", mud: sky === "after-rain", seaUp: false, runUp: false,
+      }) : {};
+      // ...and, for the preview's picture only, whether the world has a roof
+      // over it and which band it is in - what the game's own status frame says.
+      if (place) Object.assign(amb, { covered: !place.open || place.inside, band: place.band });
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }).end(JSON.stringify(amb));
+    } catch (e) {
+      res.writeHead(500, { "content-type": "text/plain; charset=utf-8" }).end(String(e.stack || e.message));
+    }
+    return;
+  }
   let rel = decodeURIComponent((req.url || "/").split("?")[0]);
   if (rel === "/game" || rel === "/game.html") {
     const src = new URL(req.url, "http://x").searchParams.get("src") === "local" ? "local" : "prod";

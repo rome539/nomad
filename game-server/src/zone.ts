@@ -65,6 +65,7 @@ import * as ai from "./ai";
 import * as simstore from "./simstore";
 import * as light from "./light";
 import * as lore from "./lore";
+import { soundscapeFor, soundKey } from "./sound";
 import * as chips from "./chips";
 import * as paths from "./paths";
 import * as clues from "./clues";
@@ -5057,6 +5058,10 @@ export class ZoneDO implements DurableObject {
       if (!seesArt(s.pubkey)) continue;
       if (this.artSkyFor(s) !== s.artSky) this.sendStatus(s);
     }
+    // ...and the soundscape the same way: the rain is heard arriving.
+    for (const s of this.sessions.values()) {
+      if (soundKey(soundscapeFor(this, s)) !== s.ambKey) this.sendStatus(s);
+    }
     mark("creatures");
 
     // Surrounded but shielded by the crush: a single line so the player reads
@@ -8546,6 +8551,8 @@ export class ZoneDO implements DurableObject {
             : undefined,
           // Lighting and visible sky are separate: a roof can admit daylight.
           sky: (session.artSky = this.artSkyFor(session)),
+          // What the place sounds like, for the page's own synth (sound.ts).
+          amb: (() => { const a = soundscapeFor(this, session); session.ambKey = soundKey(a); return a; })(),
           // Light through a doorway can follow the hour without exposing sky.
           covered: this.outOfWorld(session) || !OUTDOOR_ROOMS.has(session.roomId),
           // THE RED NIGHT IS NOT A SKY SLOT. `sky` above picks which photograph

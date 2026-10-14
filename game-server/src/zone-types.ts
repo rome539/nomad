@@ -69,6 +69,7 @@ export interface Session {
   // been SENT, so the tick can notice the hour turning under someone standing
   // still and push them a frame. Undefined until the first status frame.
   artSky?: string;
+  ambKey?: string; // ...and the last soundscape (sound.ts), for the same reason
   pvpTarget?: string | null; // pubkey of the wanderer this one has steel out against (transient — a deploy ends the exchange, never the grudge)
   linkdeadUntil?: number; // ms epoch a mid-fight disconnect holds the body in the world until; unset = normally connected (or normally gone)
   hobbled?: boolean; // a leg wound: you can still flee, but only after limping clear (a set delay), cured by rest
