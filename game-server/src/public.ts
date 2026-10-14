@@ -3016,7 +3016,7 @@ function scapeCrackle() {
       // low with a 6 ms onset, at the old level
       { type: "bandpass", freq: 900 + Math.random() * 1400, q: 1.2, dur: 0.05 + Math.random() * 0.04, gain: (0.06 + Math.random() * 0.12) * SCAPE_VOL, atk: 0.006 });
   }
-  scapeEvery(60, 420, scapeCrackle);
+  scapeEvery(180, 1260, scapeCrackle); // three times slower than at first (rome, 2026-10-14)
 }
 // TIMBER TALKING: a stick-slip groan - a low reed of a tone, dragged unevenly
 // up or down a few semitones, through a narrow wooden resonance.
