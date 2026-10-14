@@ -120,6 +120,33 @@
     actB.textContent = "event pose: " + x[1];
     mobBeat(null, null, null, null, null, [x[0]], x[1]);
   };
+  // EVERY FRAME, ON DEMAND (rome, 2026-10-13). With no server there is no
+  // fight, so nothing here ever swung or fell. A plays the attack the wire would
+  // send, X the death, and F freezes the row and steps every creature on it
+  // through its strip one frame at a time, naming the frame. Any other key lets
+  // it move again.
+  var frameAt = -1;
+  var frameB = mk("button", btnCss, "frames");
+  function liveAgain() { if (frameAt >= 0) { frameAt = -1; stillness = false; frameB.textContent = "frames"; lastMobs = "x"; paint(); } }
+  function stepFrame() {
+    var els = mobsEl ? mobsEl.querySelectorAll(".mob:not(.dead)") : [];
+    if (!els.length) return;
+    stillness = true; frameAt++;
+    var label = "";
+    for (var i = 0; i < els.length; i++) {
+      var id = els[i].dataset.id, spec = MOB_ANIM[id];
+      if (!spec) continue;
+      var k = frameAt % spec.n;
+      els[i].style.backgroundPositionX = (spec.n > 1 ? k * 100 / (spec.n - 1) : 0) + "%";
+      if (!label) for (var p in spec.f) if (spec.f[p] === k) { label = p + " (" + (k + 1) + "/" + spec.n + ")"; break; }
+    }
+    frameB.textContent = "frame: " + (label || frameAt);
+  }
+  frameB.onclick = stepFrame;
+  var atkB = mk("button", btnCss, "attack");
+  atkB.onclick = function () { liveAgain(); mobBeat(ids.slice(), null, null); };
+  var dieB = mk("button", btnCss, "death");
+  dieB.onclick = function () { liveAgain(); mobBeat(null, null, ids.slice()); };
   // THE NOMAD - another player - takes its state from the server, and there is
   // no server here, so this picks it. Choosing it puts a nomad in the room; the
   // torch button above also puts a lit torch in its hand. A gesture plays once
@@ -134,7 +161,7 @@
     return st + (torch ? "+torch" : "");
   }
   var shown = mk("span", "color:#9a8b66");
-  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  B floor bag  C chest");
+  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  F frames  B floor bag  C chest");
   var ids = [];
   // B steps through the floor bags: nothing, then the first count of each.
   // ?bag=1..4 opens on that bag.
@@ -151,6 +178,9 @@
   var KEY = "gp-state";
   try { var st = JSON.parse(localStorage.getItem(KEY) || "{}");
     if (st.f) feast.value = st.f; if (st.g) gnd.value = st.g; if (st.h) hour.value = st.h; if (st.t) torch = 1; if (st.ids) ids = st.ids; } catch (e) {}
+  // ?mob=<id> opens with that creature standing alone.
+  var askMob = new URLSearchParams(location.search).get("mob");
+  if (askMob && MOB_ANIM[askMob]) { who.value = askMob; ids = [askMob]; }
   if (!ids.length) ids = [who.value];
   if (torch) { torchB.textContent = "torch: on"; torchB.style.color = "#d8a94e"; }
 
@@ -201,6 +231,7 @@
   window.addEventListener("keydown", function (e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     var k = e.key, hit = true;
+    if (k !== "f" && k !== "F") liveAgain();
     if (k === "ArrowRight") { step(gnd, 1); paint(); }
     else if (k === "ArrowLeft") { step(gnd, -1); paint(); }
     else if (k === "ArrowDown") { step(hour, 1); paint(); }
@@ -209,6 +240,9 @@
     else if (k === "[") { step(who, -1); ids = [who.value]; paint(); }
     else if (k === "t" || k === "T") { torchB.onclick(); }
     else if (k === "p" || k === "P") { actB.onclick(); }
+    else if (k === "a" || k === "A") { atkB.onclick(); }
+    else if (k === "x" || k === "X") { dieB.onclick(); }
+    else if (k === "f" || k === "F") { stepFrame(); }
     else if (k === "b" || k === "B") { loose = (loose + 1) % LOOSE_STEPS.length; paint(); }
     else if (k === "c" || k === "C") { chest = (chest + 1) % CHEST_STEPS.length; paint(); }
     else hit = false;

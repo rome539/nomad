@@ -217,12 +217,19 @@ const DRIVER = [block("NOT_AN_IDLE"), block("EVENT_POSES"), fn("mobActs"), fn("p
 const lift = (n) => {
   const i = src.search(new RegExp("^var " + n + " = ", "m"));
   if (i < 0) throw new Error("no var " + n);
-  const nl = src.indexOf("\n", i), brace = src.indexOf("{", i);
+  // A table opens with { or [ on its own line; match whichever it opens with.
+  // (Only { was understood, so a list spread over lines - THUNDER_LINES - was
+  // lifted as its first line alone and took the whole page down with it.)
+  const nl = src.indexOf("\n", i), eq = src.indexOf("=", i);
+  const head = src.slice(eq + 1, nl).trimStart();
+  const open = head[0] === "[" ? "[" : head[0] === "{" ? "{" : "";
+  const close = open === "[" ? "]" : "}";
+  const brace = open ? src.indexOf(open, eq) : -1;
   if (brace < 0 || brace > nl) return src.slice(i, nl);              // a one-liner
   let d = 0;
   for (let k = brace; k < src.length; k++) {
-    if (src[k] === "{") d++;
-    else if (src[k] === "}" && --d === 0) return src.slice(i, src.indexOf(";", k) + 1);
+    if (src[k] === open) d++;
+    else if (src[k] === close && --d === 0) return src.slice(i, src.indexOf(";", k) + 1);
   }
   throw new Error("unclosed " + n);
 };
@@ -265,7 +272,10 @@ const depsFor = (body, self) => {
     }
   };
   walk(body);
-  return tables.concat(fns).join("\n");
+  // The client is one template literal, so its source spells every backslash
+  // twice. Lifted code that carries a regex (the log's classify, reached now
+  // through the thunder line) has to be read as the page reads it.
+  return tables.concat(fns).join("\n").replace(/\\\\/g, "\\");
 };
 const SCENE_TABLES = depsFor(fn("paintScene"), "paintScene");
 const SCENE_DRIVER = fn("paintScene");
@@ -350,7 +360,8 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
  .seg button:last-child{border-right:0}
  .seg button.on{background:#3a2f1c;color:#f0d089}
  kbd{background:#241e15;border:1px solid #3a3020;border-radius:3px;padding:0 4px;font:inherit;font-size:10px;color:#9a8b66}
- #grid{display:flex;flex-wrap:wrap;gap:6px;padding:18px;align-items:flex-end}
+ /* The roster under the stage is hidden (rome, 2026-10-13): pick a creature in the bar. */
+ #grid{display:none}
  .cell{border:1px solid #2c2418;background:#100d09;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:150px}
  .stage{height:300px;display:flex;align-items:center;justify-content:center}
  .mob{background-repeat:no-repeat;background-position-y:center;image-rendering:pixelated;
@@ -962,6 +973,9 @@ const mk = (id) => {
     appendChild(c) { el.children.push(c); if (c.selected) el.value = c.value || c.textContent; },
     replaceChildren() { el.children.length = 0; },
     remove() {}, setAttribute() {},
+    // The lifted scene code now measures its boxes (the sky drift, the weather).
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 800, right: 1280, bottom: 800 }),
+    getContext: () => null,
     querySelectorAll: () => [] };
   // innerHTML="" CLEARS CHILDREN, as it does in a browser. It did not here, and a
   // stub that keeps children a real DOM would have dropped reports rooms as

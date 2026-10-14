@@ -29,6 +29,8 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +block("ROOTED")+"\n"
   +grab("MOB_EYES")+"\n"
   +'var viewMode="image", lastMobs="", anims=[], animTimer=null, stillness=false, MOB_V="13";\n'
+  // The floor bag and the chests ride the same paint (2026-10-12/13).
+  +grab("CHEST_ART")+"\n"+'var LOOT_BAGS=[], mobLoose=0, mobChests=[], LOOT_V="1";\n'+fn("lootBag")+"\n"
   +'var lastSky="day", lastRed=0;\n'
   // setSky now sets BOTH, because the tests were written when one value carried
   // both facts. setRed below is what a blood moon behind weather looks like: the

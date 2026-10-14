@@ -7994,7 +7994,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "53";      // /mob/      strips and their eye layers
+var MOB_V  = "54";      // /mob/      strips and their eye layers
 var LOOT_V = "1";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -11216,8 +11216,8 @@ var MOB_ANIM = {
   "gibbet-crow":                 { n: 8, aspect: 1.254, f: {"idle":0,"watch":1,"up":2,"glide":3,"landing":4,"feed":5,"attack":6,"death":7,"down":3} },
   "dire-wolf":                   { n: 8, aspect: 1.102, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "charcoal-burner":             { n: 8, aspect: 1, f: {"idle":0,"lay-the-wood":1,"feel-the-turf":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "warden-surface":   { n: 8, aspect: 0.93, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "warden":           { n: 8, aspect: 0.93, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "warden-surface":   { n: 8, aspect: 0.967, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "warden":           { n: 8, aspect: 0.967, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "cutthroat":   { n: 8, aspect: 1.026, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "cutpurse":   { n: 8, aspect: 1.243, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "dire-hyena":   { n: 8, aspect: 1.063, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
