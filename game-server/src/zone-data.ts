@@ -7666,6 +7666,20 @@ export const RAIN_SETTLED_MIN_MS = 20 * 60_000; // set in for the afternoon
 export const RAIN_SETTLED_MAX_MS = 40 * 60_000;
 export const RAIN_AFTERMATH_MS = 15 * 60_000; // mud: deep tracks, quick forage
 export const RAIN_SETTLED_AFTERMATH_MULT = 1.6; // a long soaking leaves the ground wrong for longer
+// LIGHTNING (rome, 2026-10-13). The storm throws a bolt every so often while
+// the rain is on, and the WORLD times it - every player whose picture is the
+// rain sees the same flash at the same moment. Very rarely the bolt finds
+// someone standing under the open sky. Steel worn or held draws it (the odds
+// climb per kilo) and carries it through you (the burn climbs per kilo): a
+// wanderer in hide and wool is thrown down and left alive, a knight in plate
+// is not. Nothing but steel is ever lethal here - with none on you, the bolt
+// leaves you at 1.
+export const LIGHTNING_GAP_MIN_MS = 25_000;
+export const LIGHTNING_GAP_MAX_MS = 65_000;
+export const LIGHTNING_STRIKE_ODDS = 1 / 2000;   // per bolt, per player under the open rain
+export const LIGHTNING_STEEL_ODDS_PER_KG = 0.1;  // 15 kg of plate = 2.5x the odds
+export const LIGHTNING_BURN = 30;                // what the bolt does with no steel on you (never kills)
+export const LIGHTNING_STEEL_BURN_PER_KG = 5;    // ...and each kilo of steel adds this, uncapped
 export const RAIN_NOISE_MASK = 0.5; // odds an outdoor sound simply drowns in the rain
 // The bell (keep, SCHEDULED): one warning note, then the ringing — and while
 // it rings the keep hears EVERYTHING (quiet gear included; a bell outshouts

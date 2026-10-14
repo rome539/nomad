@@ -7973,6 +7973,13 @@ export class ZoneDO implements DurableObject {
     return total;
   }
 
+  // The steel on you, worn and in hand - what a lightning bolt looks for.
+  public wornSteelWeight(session: Session): number {
+    let total = 0;
+    for (const g of this.equippedAll(session)) if (materialOf(g.tmpl.id) === "steel") total += this.effectiveWeight(g);
+    return total;
+  }
+
   // Fighting from behind a shield drags every blow you deal, in PROPORTION to how
   // much it guards: a buckler's-worth of block is free, everything above it costs
   // offense on a smooth slope (SHIELD_DRAG_FREE / SHIELD_DRAG_PER_BLOCK). Off the

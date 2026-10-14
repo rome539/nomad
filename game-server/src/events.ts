@@ -22,7 +22,9 @@ import {
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
   ROLL_EVERY_MIN_MS, ROLL_EVERY_MAX_MS, ROLL_FIRST_MIN_MS, ROLL_FIRST_MAX_MS,
   ROLL_GRACE_MS, ROLL_MISSED_MIN_MS, ROLL_MISSED_MAX_MS,
-  RAIN_TELEGRAPH_MS, RAIN_AFTERMATH_MS, RAIN_SETTLED_ODDS, RAIN_SETTLED_AFTERMATH_MULT,
+  RAIN_TELEGRAPH_MS, RAIN_AFTERMATH_MS,
+  LIGHTNING_GAP_MIN_MS, LIGHTNING_GAP_MAX_MS, LIGHTNING_STRIKE_ODDS, LIGHTNING_STEEL_ODDS_PER_KG,
+  LIGHTNING_BURN, LIGHTNING_STEEL_BURN_PER_KG, RAIN_SETTLED_ODDS, RAIN_SETTLED_AFTERMATH_MULT,
   RAIN_SHOWER_MIN_MS, RAIN_SHOWER_MAX_MS, RAIN_SETTLED_MIN_MS, RAIN_SETTLED_MAX_MS,
   BELL_HOURS_UTC, BELL_JITTER_MS, BELL_GRACE_MS,
   BELL_TELEGRAPH_MS, BELL_ACTIVE_MS, BELL_AFTERMATH_MS, BELL_AFTERMATH_WAKE_MULT,
@@ -2057,6 +2059,44 @@ function tickRoll(z: ZoneDO, now: number): void {
   z.events.set(picked, ev);
 }
 
+// LIGHTNING (see zone-data). When the next bolt is due is held per world, in
+// memory: a restart mid-storm just rolls a fresh gap, which nobody can tell.
+const nextBolt = new WeakMap<ZoneDO, number>();
+async function tickLightning(z: ZoneDO, now: number): Promise<void> {
+  const due = nextBolt.get(z);
+  if (due === undefined) { nextBolt.set(z, now + randInt(LIGHTNING_GAP_MIN_MS, LIGHTNING_GAP_MAX_MS)); return; }
+  if (now < due) return;
+  nextBolt.set(z, now + randInt(LIGHTNING_GAP_MIN_MS, LIGHTNING_GAP_MAX_MS));
+  for (const s of [...z.sessions.values()]) {
+    if (z.outOfWorld(s) || z.artSkyFor(s) !== "rain") continue;
+    // Only the open sky can strike you; a roofed doorway that LOOKS out on the
+    // storm still sees the flash.
+    let hit = false;
+    if (s.hp > 0 && raining(z, s.roomId)) {
+      const steel = z.wornSteelWeight(s);
+      hit = chance(LIGHTNING_STRIKE_ODDS * (1 + steel * LIGHTNING_STEEL_ODDS_PER_KG));
+      if (hit) {
+        try { s.ws.send(JSON.stringify({ v: 0, t: "bolt", hit: true })); } catch {}
+        z.roomFeed(s.roomId, `Lightning comes down on ${s.name}, and the crack of it is the loudest thing you have ever heard.`, s.pubkey, false);
+        const burn = LIGHTNING_BURN + Math.round(steel * LIGHTNING_STEEL_BURN_PER_KG);
+        if (steel > 0 && s.hp - burn <= 0) {
+          s.hp = 0;
+          z.send(s, "The world goes white. The bolt comes down through the steel on you, and there is nothing left to feel it.", "death big");
+          await z.onPlayerDeath(s, null);
+          continue;
+        }
+        s.hp = Math.max(1, s.hp - burn);
+        z.send(s, steel > 0
+          ? `The world goes white and the steel on you burns. You are on your back in the mud with no memory of falling, your ears ringing, and the rain still coming down. [${hpLabel(s.hp, s.maxHp)}]`
+          : `The world goes white. You are on your back in the mud with no memory of falling, every hair on you standing, the rain coming down into your open eyes. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin big");
+        z.sendStatus(s);
+        continue;
+      }
+    }
+    try { s.ws.send(JSON.stringify({ v: 0, t: "bolt" })); } catch {}
+  }
+}
+
 async function tickRain(z: ZoneDO, now: number): Promise<void> {
   let st = z.events.get("rain");
   if (!st) {
@@ -2102,6 +2142,7 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
       z.send(s, `The fen's channels are up — water to the knee, and every short way is drowned under it. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin");
     }
   }
+  if (st.phase === "active") await tickLightning(z, now); else nextBolt.delete(z);
   if (now < st.until) return;
   switch (st.phase) {
     case "idle": {

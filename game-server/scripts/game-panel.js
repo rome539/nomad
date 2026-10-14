@@ -161,7 +161,7 @@
     return st + (torch ? "+torch" : "");
   }
   var shown = mk("span", "color:#9a8b66");
-  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  F frames  B floor bag  C chest");
+  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  F frames  B floor bag  C chest  L lightning");
   var ids = [];
   // B steps through the floor bags: nothing, then the first count of each.
   // ?bag=1..4 opens on that bag.
@@ -245,6 +245,7 @@
     else if (k === "f" || k === "F") { stepFrame(); }
     else if (k === "b" || k === "B") { loose = (loose + 1) % LOOSE_STEPS.length; paint(); }
     else if (k === "c" || k === "C") { chest = (chest + 1) % CHEST_STEPS.length; paint(); }
+    else if (k === "l" || k === "L") { lightningBolt(false); }
     else hit = false;
     if (hit) { e.preventDefault(); e.stopPropagation(); }
   }, true);

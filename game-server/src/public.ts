@@ -1156,6 +1156,31 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #scene.t-fog   { filter: brightness(.92) saturate(.45) contrast(.86); }
   body[data-view="image"] #scene.t-rain  { filter: brightness(.74) saturate(.80) contrast(1.04); }
   body[data-view="image"] #scene.t-snow  { filter: brightness(1.04) saturate(.55); }
+  /* LIGHTNING LIGHTS THE PLATE ITSELF (rome, 2026-10-13): the picture, its sky
+     and every creature in it blaze and fall back, twice, the way a real flash
+     does. The last keyframe is left out on purpose, so each layer settles back
+     onto whatever filter its own sky already gives it. */
+  /* NO TWO BOLTS ALIKE: one clean flash, the double, or a stuttering triple,
+     each over its own length (lightningBolt picks both). */
+  @keyframes bolt-flash-1 {
+    0%   { filter: brightness(2.8) saturate(.30) contrast(1.15); }
+    20%  { filter: brightness(2.0) saturate(.40) contrast(1.10); }
+  }
+  @keyframes bolt-flash-2 {
+    0%   { filter: brightness(2.6) saturate(.30) contrast(1.15); }
+    12%  { filter: brightness(1.0) saturate(.70) contrast(1.05); }
+    22%  { filter: brightness(2.2) saturate(.35) contrast(1.12); }
+    34%  { filter: brightness(1.9) saturate(.40) contrast(1.10); }
+  }
+  @keyframes bolt-flash-3 {
+    0%   { filter: brightness(2.2) saturate(.35) contrast(1.12); }
+    8%   { filter: brightness(1.0) saturate(.70) contrast(1.05); }
+    15%  { filter: brightness(2.7) saturate(.30) contrast(1.15); }
+    22%  { filter: brightness(1.1) saturate(.65) contrast(1.05); }
+    30%  { filter: brightness(2.4) saturate(.32) contrast(1.13); }
+    42%  { filter: brightness(1.8) saturate(.42) contrast(1.10); }
+  }
+  body.bolt[data-view="image"] #scene, body.bolt[data-view="image"] #sky, body.bolt[data-view="image"] #mobs { animation: var(--bolt-name, bolt-flash-2) var(--bolt-dur, .8s) ease-out; }
   /* UNREACHABLE AS OF 2026-09-09 and kept on purpose: the blood moon is in
      NO_GROUND_TINT now, so nothing ever sets t-blood on the scene. Left standing
      because this is the rule you would switch back on, and a deleted one is a
@@ -3918,6 +3943,8 @@ async function connect() {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
       mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose);
+    } else if (f.t === "bolt") {
+      lightningBolt(!!f.hit);
     } else if (f.t === "bench") {
       if (f.open) { renderBench(f); } else closeBench();
     } else if (f.t === "trade") {
@@ -9834,9 +9861,9 @@ var weatherCtx = weatherCanvas && weatherCanvas.getContext && weatherCanvas.getC
 var weatherKind = "", weatherFrame = null, weatherTime = 0, weatherStamp = 0;
 // THE WIND AND THE STORM (rome, 2026-09-28). The wind is an accumulated drift,
 // not a speed times the clock: a gust changes how fast it grows, and a flake
-// never jumps when the gust dies. The storm keeps its own next flash and the
-// thunder that follows it.
-var weatherWind = 0, weatherFlashAt = -99, weatherNextFlash = 0, weatherThunderAt = 0;
+// never jumps when the gust dies. The lightning is the world's, not the page's:
+// see lightningBolt.
+var weatherWind = 0;
 var THUNDER_LINES = [
   "The sky goes white for an instant, and the thunder comes after it, close.",
   "Thunder breaks overhead and rolls away across the ground.",
@@ -9844,6 +9871,25 @@ var THUNDER_LINES = [
 ];
 var weatherMotion = typeof window !== "undefined" && window.matchMedia
   ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
+// A BOLT, timed by the world so everyone under the same storm sees it at once.
+// The plate flashes; the thunder line follows a moment behind. A bolt that hit
+// YOU carries its own words from the server, and no count before the thunder.
+var boltTimer = null;
+function lightningBolt(hit) {
+  if (viewMode === "image" && !weatherMotion.matches && !document.hidden) {
+    var dur = .4 + Math.random() * 1.2;  // 0.4 to 1.6 seconds
+    document.body.classList.remove("bolt");
+    document.body.style.setProperty("--bolt-name", "bolt-flash-" + (1 + Math.floor(Math.random() * 3)));
+    document.body.style.setProperty("--bolt-dur", dur.toFixed(2) + "s");
+    void document.body.offsetWidth;
+    document.body.classList.add("bolt");
+    clearTimeout(boltTimer);
+    boltTimer = setTimeout(function () { document.body.classList.remove("bolt"); }, dur * 1000 + 100);
+  }
+  if (!hit) setTimeout(function () {
+    print(THUNDER_LINES[Math.floor(Math.random() * THUNDER_LINES.length)], "amb");
+  }, 700 + Math.random() * 1100);
+}
 function runWeather() {
   var active = weatherCtx && weatherKind && viewMode === "image" && !document.hidden && !weatherMotion.matches;
   if (!active) {
@@ -9866,7 +9912,7 @@ function setWeather(kind) {
     if (weatherCanvas) weatherCanvas.style.display = "none";
     if (weatherCtx) weatherCtx.clearRect(0, 0, weatherCanvas.width, weatherCanvas.height);
     weatherKind = kind; weatherTime = 0; weatherStamp = 0;
-    weatherWind = 0; weatherFlashAt = -99; weatherNextFlash = 0; weatherThunderAt = 0;
+    weatherWind = 0;
   }
   runWeather();
 }
@@ -9889,22 +9935,6 @@ function drawWeather(now) {
   // A GUST: long lulls and swells, never a steady blow. Snow leans with it.
   var gust = Math.max(0, Math.sin(t * .45) * Math.sin(t * .17 + 1));
   weatherWind += (24 + 150 * gust) * dt;
-  // LIGHTNING, rare: the whole picture lit twice in quick succession and then
-  // falling off, and the thunder a moment behind it. Only in rain.
-  if (rain) {
-    if (!weatherNextFlash) weatherNextFlash = t + 20 + Math.random() * 30;
-    if (t >= weatherNextFlash) {
-      weatherFlashAt = t; weatherNextFlash = t + 25 + Math.random() * 40;
-      weatherThunderAt = t + .7 + Math.random() * 1.1;
-    }
-    if (weatherThunderAt && t >= weatherThunderAt) {
-      weatherThunderAt = 0;
-      if (typeof print === "function") print(THUNDER_LINES[Math.floor(Math.random() * THUNDER_LINES.length)], "amb");
-    }
-    var f = t - weatherFlashAt, k = 0;
-    if (f < .09) k = .75; else if (f < .16) k = .1; else if (f < .24) k = .55; else if (f < .7) k = .55 * (1 - (f - .24) / .46);
-    if (k > 0) { ctx.fillStyle = "rgba(225,232,255," + (k * .55).toFixed(3) + ")"; ctx.fillRect(0, 0, w, h); }
-  }
   var count = Math.min(rain ? 170 : 115, Math.max(24, Math.round(w * h / (rain ? 6500 : 9500))));
   ctx.strokeStyle = "rgba(195,205,203,.33)"; ctx.lineWidth = 1.1;
   ctx.fillStyle = "rgba(235,231,210,.72)";
