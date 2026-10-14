@@ -5399,9 +5399,10 @@ function benchItemNode(it, place) {
     // because it is the same act — putting a thing down somewhere it keeps.
     if (benchAtDen) btn("\\u2192 shelf", "stow");
     // The vault and the seal are the gate's business — only offered at a gate.
-    // Sealed wealth and raw fungibles both bank in the vault; only unsealed gear
-    // needs the seal first (trophies and the like carry no title to seal).
-    if (benchAtGate) { if (it.sealed || it.stack) btn("\\u2192 vault", "vault"); else btn("seal", "seal"); }
+    // Everything can go to the vault now: unsealed gear is sealed on the way in
+    // (rome, 2026-10-14). The seal stays on its own for sealing what you keep
+    // carrying (trophies and the like carry no title to seal).
+    if (benchAtGate) { btn("\\u2192 vault", "vault"); if (!it.sealed && !it.stack) btn("seal", "seal"); }
     // So are the vice and the hammer: mend the wear, or break gear to scrap —
     // sealed or not (the vice cracks the seal itself now, so sealed steel has
     // the same options as bare). The repair gate is 'fix' not 'slot' so the
@@ -5422,10 +5423,10 @@ function benchItemNode(it, place) {
     btn1("\\u2192 pack", "take");
     // From the lockbox at a gate you can also seal a piece in place or send it
     // straight to the vault, no round-trip through the pack. (Same rule as the
-    // pack: sealed wealth and raw fungibles vault; unsealed gear needs a seal.)
+    // pack: anything vaults, and unsealed gear is sealed on the way in.)
     if (place === "lockbox" && benchAtGate) {
-      if (it.sealed || it.stack) btn("\\u2192 vault", "vault");
-      else btn("seal", "seal");
+      btn("\\u2192 vault", "vault");
+      if (!it.sealed && !it.stack) btn("seal", "seal");
     }
   }
   armBtn("burn", "burn");

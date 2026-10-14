@@ -1813,11 +1813,14 @@ export async function benchStore(z: ZoneDO, session: Session, row: string, key: 
       }
     }
     if (!carried) return "You aren't carrying that.";
-    // The vault banks sealed wealth — and raw fungibles, which carry no title
-    // to seal in the first place. It's unsealed GEAR the vault turns away.
-    if (cfg.sealedOnly && carried.serial === null && !z.stackable(carried.itemId, carried.serial, carried.journalId)) return cfg.needSeal;
     const held = await loadContainer(z.env.DB, session.pubkey, cfg.container);
     if (!z.hasRoom(held, carried.itemId, cfg.cap, cfg.container as "lockbox" | "vault")) return cfg.full;
+    // THE VAULT SEALS WHAT GOES INTO IT (rome, 2026-10-14). It banks sealed
+    // wealth and raw fungibles; unsealed gear used to be turned away with "seal
+    // it first", which was one more button for the same act. Moving it in IS
+    // sealing it now - after the room check, so nothing is sealed and then
+    // refused for a full vault.
+    if (cfg.sealedOnly && carried.serial === null && !z.stackable(carried.itemId, carried.serial, carried.journalId)) await sealOne(z, session, carried);
     if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
     if (fromContainer === "") { // came off the body
       // Guarded splice (2026-08-20): the container reads above awaited D1, so
@@ -1991,7 +1994,6 @@ export function storeCfg(z: ZoneDO, key: "lockbox" | "vault") {
         empty: "The vault stands open around nothing.",
         header: "The vault holds",
         full: `The vault is full. It holds ${VAULT_CAP} sealed things, and asks no more. (Trophies and the like cost it nothing.)`,
-        needSeal: "The vault won't bank raw gear — seal it at the gate first, or drop it in your lockbox.",
         put: (n: string) => `You lay ${n} in the vault. The iron door swings shut over it.`,
         feed: "swings the vault door, and seals it again.",
         takeEmpty: "Draw what out? ('vault' alone shows what it holds.)",
@@ -2004,8 +2006,7 @@ export function storeCfg(z: ZoneDO, key: "lockbox" | "vault") {
       absent: "Your lockbox is set into the gatehouse wall. It is not here.",
       empty: "Your lockbox is bolted shut around nothing.",
       header: "Your lockbox holds",
-      full: `Your lockbox is full. It holds ${LOCKBOX_CAP} things and holds them well. (The vault takes more, if it's sealed.)`,
-      needSeal: "",
+      full: `Your lockbox is full. It holds ${LOCKBOX_CAP} things and holds them well. (The vault takes more, and seals what it takes.)`,
       put: (n: string) => `You drop ${n} in the iron box, and it clicks shut. Whatever happens to you, this is beyond it.`,
       feed: "opens an iron lockbox, and closes it.",
       takeEmpty: "Take what out? ('stash' alone shows the box.)",
@@ -2074,9 +2075,12 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
       if (found) { carried = found; fromContainer = true; }
     }
     if (!carried) return z.send(session, "You carry nothing like that.");
-    // Sealed wealth or raw fungibles bank in the vault; only unsealed gear is turned away.
-    if (cfg.sealedOnly && carried.serial === null && !z.stackable(carried.itemId, carried.serial, carried.journalId)) return z.send(session, cfg.needSeal);
     if (!z.hasRoom(held, carried.itemId, cfg.cap, cfg.container as "lockbox" | "vault")) return z.send(session, cfg.full);
+    // ...and typed, the same: the vault seals unsealed gear on the way in.
+    if (cfg.sealedOnly && carried.serial === null && !z.stackable(carried.itemId, carried.serial, carried.journalId)) {
+      const serial = await sealOne(z, session, carried);
+      z.send(session, `The gate's seal goes on it first — #${serial}.`);
+    }
     const tmpl = world.itemTemplates.get(carried.itemId)!;
     // Flush its worn condition before it leaves the body, so the box/vault
     // holds the true value; setContainer clears the equipped flag.

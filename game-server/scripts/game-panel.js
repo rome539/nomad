@@ -183,6 +183,7 @@
   // For the probe: silence the cave bed so a layer can be measured alone.
   window.__sndBedOff = function () { stopAmb(); };
   window.__scapeNow = function () { return scapeAmb; };
+  window.__fxCast = function () { return fxMobs(sceneEl.getBoundingClientRect()).map(function (m) { return m.rect.map(function (v) { return +v.toFixed(3); }); }); };
   window.__sndLR = function () {
     if (!actx || !amaster) return null;
     if (!amaster.__lr) {
