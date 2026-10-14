@@ -101,6 +101,7 @@ export interface Soundscape {
   wind: number;    // 0 still air .. 3 a gale
   creak: number;   // 1 = timber around you that talks
   fire: number;    // 1 = a hearth in the room
+  fireSide: number; // where that hearth is heard, -1 left .. 1 right
   water: string;   // "" | "surf" | "run" | "drip"
   loud: number;    // 1 = that water is up (the sea over the road, the ford in spate)
   ground: string;  // what a footstep lands in: "" | "mud" | "snow" | "scree" | "wet"
@@ -155,6 +156,9 @@ export function soundscapeOf(p: Place, w: Weather): Soundscape {
     wind,
     creak: inside || CREAK_ROOMS.has(roomId) || (open && band === "wood" && wind >= 2) ? 1 : 0,
     fire: inside || FIRE_ROOMS.has(roomId) ? 1 : 0,
+    // the gatehouse hearth is on the LEFT of its picture, so it is heard there
+    // (rome, 2026-10-14); a fire with no picture to place it by sits centred
+    fireSide: inside ? -0.6 : 0,
     water,
     loud: seaUp || runUp || (falls && !inside) ? 1 : 0,
     ground: inside ? ""
@@ -198,5 +202,5 @@ export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
 
 // One short string per soundscape, so the tick can tell a change with a compare.
 export function soundKey(a: Soundscape): string {
-  return `${a.rain}${a.roof}${a.shut}${a.wind}${a.creak}${a.fire}${a.water}${a.loud}${a.ground}${a.hollow}`;
+  return `${a.rain}${a.roof}${a.shut}${a.wind}${a.creak}${a.fire}${a.fireSide}${a.water}${a.loud}${a.ground}${a.hollow}`;
 }

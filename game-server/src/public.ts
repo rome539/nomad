@@ -2633,7 +2633,7 @@ var SND = {
     if (o.atk) { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(o.gain || 0.3, t + o.atk); }
     else g.gain.setValueAtTime(o.gain || 0.3, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + (o.dur || 0.1));
-    src.connect(f); f.connect(g); g.connect(aout());
+    src.connect(f); f.connect(g); g.connect(o.out || aout());
     src.start(t, Math.random());
     src.stop(t + (o.dur || 0.1) + 0.05);
   },
@@ -2914,13 +2914,13 @@ function scapeBrown() {
   actx.__bn = b;
   return b;
 }
-function scapeLoop(buf, chain) {
+function scapeLoop(buf, chain, out) {
   var src = actx.createBufferSource();
   src.buffer = buf; src.loop = true;
   var g = actx.createGain(); g.gain.value = 0;
   var head = src;
   for (var i = 0; i < chain.length; i++) { head.connect(chain[i]); head = chain[i]; }
-  head.connect(g); g.connect(aout());
+  head.connect(g); g.connect(out || aout());
   src.start(0, Math.random() * 2);
   return { src: src, gain: g, chain: chain };
 }
@@ -2937,12 +2937,17 @@ function scapeTo(param, v, glide) {
 }
 function scapeBuild() {
   if (scape || !actx) return;
+  // THE HEARTH HAS A PLACE IN THE ROOM: its roar and its crackle go through one
+  // panner, set from where the world says the fire is (fireSide).
+  var firePan = actx.createStereoPanner ? actx.createStereoPanner() : actx.createGain();
+  firePan.connect(aout());
   scape = {
+    firePan: firePan,
     rain: scapeLoop(SND._noise(), [scapeFilter("highpass", 900), scapeFilter("lowpass", 7000)]),
     wind: scapeLoop(scapeBrown(), [scapeFilter("bandpass", 420, 0.9), scapeFilter("lowpass", 2400)]),
     surf: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 520), scapeFilter("highpass", 35)]),
     run: scapeLoop(SND._noise(), [scapeFilter("bandpass", 1100, 0.6), scapeFilter("lowpass", 3000)]),
-    roar: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 240), scapeFilter("highpass", 40)]),
+    roar: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 240), scapeFilter("highpass", 40)], firePan),
     hum: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 170), scapeFilter("highpass", 35)]),
     gust: 0.4, gustTo: 0.4, surfPhase: 0, timers: [],
   };
@@ -2978,6 +2983,7 @@ function scapeApply() {
   scapeTo(scape.rain.chain[0].frequency, a.roof ? 180 : 900);
   scapeTo(scape.rain.chain[1].frequency, a.roof ? 1100 : 7000);
   scapeTo(scape.roar.gain.gain, a.fire ? 0.12 * SCAPE_VOL : 0);
+  if (scape.firePan.pan) scapeTo(scape.firePan.pan, a.fireSide, 0.2);
   // UNDER STONE: the low pressure of a buried room, never silence
   scapeTo(scape.hum.gain.gain, a.hollow ? 0.11 * SCAPE_VOL : 0);
   sndGround = a.ground || "";
@@ -3014,7 +3020,7 @@ function scapeCrackle() {
       // soft snaps, not clicks (rome, 2026-10-14: the sharp ones popped the
       // speakers, and a third of the level was too quiet to hear): band-passed
       // low with a 6 ms onset, at the old level
-      { type: "bandpass", freq: 900 + Math.random() * 1400, q: 1.2, dur: 0.05 + Math.random() * 0.04, gain: (0.06 + Math.random() * 0.12) * SCAPE_VOL, atk: 0.006 });
+      { type: "bandpass", freq: 900 + Math.random() * 1400, q: 1.2, dur: 0.05 + Math.random() * 0.04, gain: (0.06 + Math.random() * 0.12) * SCAPE_VOL, atk: 0.006, out: scape.firePan });
   }
   scapeEvery(180, 1260, scapeCrackle); // three times slower than at first (rome, 2026-10-14)
 }
@@ -3109,7 +3115,7 @@ function scapeSet(amb) {
   scapeRaw = amb;
   scapeAmb = {
     rain: +amb.rain || 0, roof: +amb.roof || 0, shut: +amb.shut || 0, wind: Math.max(0, Math.min(3, +amb.wind || 0)),
-    creak: +amb.creak || 0, fire: +amb.fire || 0, loud: +amb.loud || 0, hollow: +amb.hollow || 0,
+    creak: +amb.creak || 0, fire: +amb.fire || 0, fireSide: Math.max(-1, Math.min(1, +amb.fireSide || 0)), loud: +amb.loud || 0, hollow: +amb.hollow || 0,
     water: amb.water === "surf" || amb.water === "run" || amb.water === "drip" ? amb.water : "",
     ground: amb.ground === "mud" || amb.ground === "snow" || amb.ground === "scree" || amb.ground === "wet" ? amb.ground : "",
   };

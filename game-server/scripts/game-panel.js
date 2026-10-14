@@ -183,6 +183,17 @@
   // For the probe: silence the cave bed so a layer can be measured alone.
   window.__sndBedOff = function () { stopAmb(); };
   window.__scapeNow = function () { return scapeAmb; };
+  window.__sndLR = function () {
+    if (!actx || !amaster) return null;
+    if (!amaster.__lr) {
+      var sp = actx.createChannelSplitter(2), l = actx.createAnalyser(), r = actx.createAnalyser();
+      l.fftSize = r.fftSize = 2048; amaster.connect(sp); sp.connect(l, 0); sp.connect(r, 1); amaster.__lr = [l, r];
+    }
+    return amaster.__lr.map(function (an) {
+      var d = new Float32Array(2048); an.getFloatTimeDomainData(d);
+      var s = 0; for (var i = 0; i < d.length; i++) s += d[i] * d[i]; return Math.sqrt(s / d.length);
+    });
+  };
   // A meter for the probe: how loud the whole mix is right now, 0..1.
   window.__sndLevel = function () {
     if (!actx || !amaster) return -1;
