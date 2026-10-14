@@ -4555,6 +4555,7 @@ var lastCombat = false;
 // THE PAGE NEVER RELOADS ITSELF (rome, 2026-10-13). A self-reload put players
 // back through the door on every deploy. The update is SEEN instead: the
 // reweave line lands in the log, once, and the refresh is the player's to take.
+// The socket is never touched by this: the player stays where they stand.
 var staleBuild = false;
 function checkBuild(world) {
   if (!BUILD || BUILD.charAt(0) === "_" || world === BUILD) return;  // unstamped in dev
