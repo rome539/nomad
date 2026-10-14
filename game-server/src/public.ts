@@ -3011,7 +3011,9 @@ function scapeCrackle() {
   if (a && a.fire) {
     var t = actx.currentTime + 0.01, n = Math.random() < 0.25 ? 2 + Math.floor(Math.random() * 3) : 1;
     for (var i = 0; i < n; i++) SND._burst(t + i * (0.015 + Math.random() * 0.04),
-      { type: "highpass", freq: 1500 + Math.random() * 3000, dur: 0.014 + Math.random() * 0.02, gain: (0.03 + Math.random() * 0.09) * SCAPE_VOL, atk: 0.002 });
+      // soft snaps, not clicks (rome, 2026-10-14: still popping the speakers):
+      // band-passed low, a slow 8 ms onset and a third of the old level
+      { type: "bandpass", freq: 900 + Math.random() * 1400, q: 1.2, dur: 0.05 + Math.random() * 0.04, gain: (0.01 + Math.random() * 0.03) * SCAPE_VOL, atk: 0.008 });
   }
   scapeEvery(60, 420, scapeCrackle);
 }
