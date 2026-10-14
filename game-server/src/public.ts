@@ -2977,7 +2977,7 @@ function scapeApply() {
   scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * (a.roof ? 0.95 : 1) * SCAPE_VOL);
   scapeTo(scape.rain.chain[0].frequency, a.roof ? 180 : 900);
   scapeTo(scape.rain.chain[1].frequency, a.roof ? 1100 : 7000);
-  scapeTo(scape.roar.gain.gain, a.fire ? 0.05 * SCAPE_VOL : 0);
+  scapeTo(scape.roar.gain.gain, a.fire ? 0.12 * SCAPE_VOL : 0);
   // UNDER STONE: the low pressure of a buried room, never silence
   scapeTo(scape.hum.gain.gain, a.hollow ? 0.11 * SCAPE_VOL : 0);
   sndGround = a.ground || "";
@@ -3011,9 +3011,10 @@ function scapeCrackle() {
   if (a && a.fire) {
     var t = actx.currentTime + 0.01, n = Math.random() < 0.25 ? 2 + Math.floor(Math.random() * 3) : 1;
     for (var i = 0; i < n; i++) SND._burst(t + i * (0.015 + Math.random() * 0.04),
-      // soft snaps, not clicks (rome, 2026-10-14: still popping the speakers):
-      // band-passed low, a slow 8 ms onset and a third of the old level
-      { type: "bandpass", freq: 900 + Math.random() * 1400, q: 1.2, dur: 0.05 + Math.random() * 0.04, gain: (0.01 + Math.random() * 0.03) * SCAPE_VOL, atk: 0.008 });
+      // soft snaps, not clicks (rome, 2026-10-14: the sharp ones popped the
+      // speakers, and a third of the level was too quiet to hear): band-passed
+      // low with a 6 ms onset, at the old level
+      { type: "bandpass", freq: 900 + Math.random() * 1400, q: 1.2, dur: 0.05 + Math.random() * 0.04, gain: (0.06 + Math.random() * 0.12) * SCAPE_VOL, atk: 0.006 });
   }
   scapeEvery(60, 420, scapeCrackle);
 }
