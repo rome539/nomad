@@ -4872,7 +4872,9 @@ async function connect() {
       mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose);
       mobCalls(f.died); // the round's voices, at the swings mobBeat just set
     } else if (f.t === "bolt") {
-      lightningBolt(!!f.hit, !!f.inside);
+      lightningBolt(!!f.hit, false);
+    } else if (f.t === "thunder") {
+      lightningBolt(false, true); // under a roof: the sound only, never the flash
     } else if (f.t === "bench") {
       if (f.open) { renderBench(f); } else closeBench();
     } else if (f.t === "trade") {

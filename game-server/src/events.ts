@@ -2074,7 +2074,9 @@ async function tickLightning(z: ZoneDO, now: number): Promise<void> {
       // sound, through the walls. Not underground: the keep, the deep and the
       // warrens are too far down for weather of any kind.
       if (phaseOf(z, "rain") === "active" && SURFACE_BANDS.has(z.bandOf(s.roomId))) {
-        try { s.ws.send(JSON.stringify({ v: 0, t: "bolt", inside: true })); } catch {}
+        // Its own frame, never a "bolt": a page still on the build before this
+        // one knows "bolt" only as a flash, and flashed every roofed room.
+        try { s.ws.send(JSON.stringify({ v: 0, t: "thunder" })); } catch {}
       }
       continue;
     }
