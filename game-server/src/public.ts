@@ -3558,14 +3558,32 @@ function mobCalls(died) {
     mobVoice(a.id, 1, a.el, at); last = at; said++;
   }
 }
+// WHAT CAME IN WHILE YOU STOOD HERE. Every ctx frame lists the creatures in
+// your room; one that is in this list and was not in the last, in the SAME
+// room, has just walked in (or shown itself) - and calls. Walking into a room
+// full of them is you arriving, not them, and is silent.
+var mobsBefore = null, mobsRoom = "";
+// The frame names its own room (rid), so a frame that lands before the new
+// room's name never reads a whole room as newcomers.
+function mobsCameIn(ids, rid) {
+  ids = ids || [];
+  var was = mobsBefore, same = !!rid && mobsRoom === rid;
+  mobsBefore = ids.slice(); mobsRoom = rid || "";
+  if (!was || !same) return;
+  var left = was.slice(), fresh = [];
+  ids.forEach(function (id) { var k = left.indexOf(id); if (k >= 0) left.splice(k, 1); else fresh.push(id); });
+  if (!fresh.length) return;
+  var all = mobsEl ? mobsEl.querySelectorAll('.mob[data-id="' + fresh[0] + '"]') : [];
+  mobArrive(fresh, all.length ? all[all.length - 1] : null);
+}
 // A GROUP COMING IN is one call, from whichever of them leads, not one each.
 // el, when given, is the figure that just came in, so it is heard from there.
 function mobArrive(ids, el) {
   for (var i = 0; i < ids.length; i++) if (VOICE_OF[ids[i]]) { mobVoice(ids[i], 0, el); return; }
 }
-// CREATURE SOUND IS STILL BEING HEARD BEFORE IT IS PLAYED. Off in the game until
-// it is signed off; the preview turns it on.
-var CREATURE_SOUND = false;
+// CREATURE SOUND, on (rome, 2026-10-15). One switch for every creature, next-
+// room, idle and far-off sound in the game.
+var CREATURE_SOUND = true;
 
 // THROUGH THE WALL. A noise from the next room comes from the way it came - an
 // exit east is heard on the right - and muffled, the way a wall or a slope
@@ -4827,6 +4845,7 @@ async function connect() {
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
       updateMobs(f.mobs, f.doing, f.dead, f.loose, f.chests);
+      mobsCameIn(f.mobs, f.rid);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
@@ -4845,6 +4864,7 @@ async function connect() {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
       mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose);
+      mobCalls(f.died); // the round's voices, at the swings mobBeat just set
     } else if (f.t === "bolt") {
       lightningBolt(!!f.hit);
     } else if (f.t === "bench") {

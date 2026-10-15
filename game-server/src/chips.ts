@@ -547,7 +547,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     }
   }
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, mobs: seesArt(session.pubkey) ? seen : undefined, loose: loose || undefined, chests: chests.length ? chests : undefined,
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, rid: session.roomId, mobs: seesArt(session.pubkey) ? seen : undefined, loose: loose || undefined, chests: chests.length ? chests : undefined,
       dead: seesArt(session.pubkey) && dead.length ? dead : undefined, doing: seesArt(session.pubkey) && Object.keys(doing).length ? doing : undefined }));
   } catch {}
 }

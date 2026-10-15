@@ -223,6 +223,7 @@
     mobVoice = function (id, m, el, w) { window.__voxLog.push([id, m, +(w || 0).toFixed(2), +mobPan(id, el).toFixed(2)]); real(id, m, el, w); }; };
   window.__heard = function (f) { heardSound(f); };
   window.__idle = function () { return mobIdle(); };
+  window.__cameIn = function (ids, rid) { updateMobs(ids, null, [], 0, []); mobsCameIn(ids, rid); };
   window.__hit = function () { SND.hit(actx.currentTime + 0.01); };
   window.__fxCast = function () { return fxMobs(sceneEl.getBoundingClientRect()).map(function (m) { return m.rect.map(function (v) { return +v.toFixed(3); }); }); };
   window.__sndLR = function () {
