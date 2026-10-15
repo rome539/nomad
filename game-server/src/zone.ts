@@ -139,6 +139,16 @@ import {
 import { PrivateMessages } from "./private-messages";
 import { EventQueue, MAX_FRAME_BYTES, MAX_COMMAND_CHARS, MAX_BATCH_ROWS, SECRET_INPUT } from "./security";
 
+// One line of something heard next door, as the wire carries it. The noise's
+// own kind and maker ride along when the line has them, with the way it came.
+function heardFrame(room: string, text: string, cls: string | undefined,
+  snd: { mob?: string; act: string } | undefined, dir: string): string {
+  const f: Record<string, unknown> = { v: 0, kind: 24913, room, text };
+  if (cls) f.cls = cls;
+  if (snd) { f.act = snd.act; f.dir = dir; if (snd.mob) f.mob = snd.mob; }
+  return JSON.stringify(f);
+}
+
 export class ZoneDO implements DurableObject {
   private readonly eventQueue = new EventQueue();
   private readonly privateMessages = new PrivateMessages();
@@ -5194,12 +5204,12 @@ export class ZoneDO implements DurableObject {
         if (sang.has(c.roomId) || !chance(MOON_HOWL_ODDS)) continue;
         sang.add(c.roomId);
         this.roomFeed(c.roomId, "It puts its head back and howls at the white of it — long, and not at anything.", undefined, false, "evt");
-        this.roomSound(c.roomId, "A howl goes up {dir}, and hangs.");
+        this.roomSound(c.roomId, "A howl goes up {dir}, and hangs.", undefined, undefined, false, { mob: c.templateId, act: "call" });
       }
       if (sang.size) {
         this.roomFeedBands(SURFACE_BANDS, sang.size > 2
           ? "The howling starts somewhere west and is answered, and answered again, until the whole wood is at it."
-          : "Somewhere out under the moon, something howls, and is answered.", "evt");
+          : "Somewhere out under the moon, something howls, and is answered.", "evt", true, "howl");
       }
     }
     // THE LAST WATCHMAN CALLS THE HOUR. He has walked the high circuit since
@@ -5209,7 +5219,7 @@ export class ZoneDO implements DurableObject {
     // above), and this one is a man's, and worse for it.
     if (this.lastNightPhase !== undefined && this.lastNightPhase !== nightNow && nightNow) {
       const watch = [...this.creatures.values()].find((c) => c.templateId === "last-watchman" && !c.target);
-      if (watch) this.roomFeedBands(FORTRESS_BANDS, pick(WATCH_CALLS), "evt");
+      if (watch) this.roomFeedBands(FORTRESS_BANDS, pick(WATCH_CALLS), "evt", true, "watch");
     }
     this.lastNightPhase = nightNow;
 
@@ -5356,7 +5366,7 @@ export class ZoneDO implements DurableObject {
       if (now < at) continue;
       this.doorCloseAt.delete(key);
       if (!this.openDoors.delete(key)) continue;
-      this.roomFeedBands(FORTRESS_BANDS, "Deep below, iron grinds slowly shut. The dark has taken back its door.");
+      this.roomFeedBands(FORTRESS_BANDS, "Deep below, iron grinds slowly shut. The dark has taken back its door.", undefined, true, "grind");
     }
 
     // Bodies and appetites advance by WALL-CLOCK elapsed, not the nominal
@@ -6674,9 +6684,9 @@ export class ZoneDO implements DurableObject {
       if (band === "mountain") {
         this.roomFeedBands(MOUNTAIN_HEARD_BANDS, `High up, something stops — a sound the mountain has always made ends, and the quiet that comes after it is a different quiet: ${tmpl.name} has fallen.`);
       } else if (SURFACE_BANDS.has(band)) {
-        this.roomFeedBands(SURFACE_BANDS, `Somewhere out under the trees, a cry goes up and is not answered: ${tmpl.name} has fallen.`);
+        this.roomFeedBands(SURFACE_BANDS, `Somewhere out under the trees, a cry goes up and is not answered: ${tmpl.name} has fallen.`, undefined, true, "fall");
       } else {
-        this.roomFeedBands(FORTRESS_BANDS, `A cry rolls through the stone: ${tmpl.name} has fallen.`);
+        this.roomFeedBands(FORTRESS_BANDS, `A cry rolls through the stone: ${tmpl.name} has fallen.`, undefined, true, "fall");
       }
     }
     ai.scheduleArrivals(this, Date.now());
@@ -8683,7 +8693,12 @@ export class ZoneDO implements DurableObject {
   // roaring is the only thing that sets it: masking a stag's bellow behind the
   // noise of stags bellowing would be circular, and worse, it would mute the
   // creatureNoise pull that makes the wolves a consequence instead of a script.
-  public roomSound(sourceRoomId: string, template: string, excludeRoomId?: string, cls?: string, loud = false): void {
+  // snd, when given, says what made the noise and what kind of noise it was, so
+  // the client can play it as well as print it - from the way it came, through
+  // the wall. Only lines that name a creature or a plain kind of noise carry it;
+  // the rest stay words alone.
+  public roomSound(sourceRoomId: string, template: string, excludeRoomId?: string, cls?: string, loud = false,
+    snd?: { mob?: string; act: "move" | "flee" | "feed" | "fight" | "call" }): void {
     const world = this.world;
     if (!world) return;
     // A downpour eats sound made under it — half of what happens in the rain
@@ -8714,7 +8729,7 @@ export class ZoneDO implements DurableObject {
       // color next door too, so it never reads as one more thing scraping in
       // the dark. (Everything else that carries — claws, water, bone — has no
       // class and stays the world's grey.)
-      const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: rid, text: line, cls } : { v: 0, kind: 24913, room: rid, text: line });
+      const frame = heardFrame(rid, line, cls, snd, toward.dir);
       for (const s of this.sessions.values()) {
         if (s.roomId !== rid || heard.has(s.pubkey)) continue;
         // Behind the door, you hear the gatehouse and nothing else. I'd left this
@@ -8739,7 +8754,7 @@ export class ZoneDO implements DurableObject {
           );
           if (!toward) continue;
           const line = template.replace("{dir}", dirPhrase(toward.dir));
-          const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: rid, text: line, cls } : { v: 0, kind: 24913, room: rid, text: line });
+          const frame = heardFrame(rid, line, cls, snd, toward.dir);
           for (const s of this.sessions.values()) {
             if (s.roomId !== rid || heard.has(s.pubkey)) continue;
             if (this.outOfWorld(s)) continue;
@@ -8757,7 +8772,7 @@ export class ZoneDO implements DurableObject {
     const now = Date.now();
     if ((this.combatNoiseAt.get(roomId) ?? 0) + COMBAT_NOISE_EVERY_MS > now) return;
     this.combatNoiseAt.set(roomId, now);
-    this.roomSound(roomId, "The sounds of a fight echo {dir}.");
+    this.roomSound(roomId, "The sounds of a fight echo {dir}.", undefined, undefined, false, { act: "fight" });
     // A fight in the room is almost unmissable — sleepers here roll the noise
     // odds and mostly come awake (the same WAKE_NOISE law the bones obey).
     for (const c of this.creaturesInRoom(roomId)) {
@@ -8959,8 +8974,13 @@ export class ZoneDO implements DurableObject {
   // local noise and genuinely stops at the door (a rat below, a bench closing),
   // and wrong for this one, which is regional news. The flag stays, inverted,
   // for anything that truly must not reach through: pass false for it.
-  public roomFeedBands(bands: Set<string>, text: string, cls?: string, carries = true): void {
-    const frame = JSON.stringify(cls ? { v: 0, kind: 24913, room: "*", text, cls } : { v: 0, kind: 24913, room: "*", text });
+  // far, when given, names the sound the line describes - a bell, a roar, a
+  // cry - so the client can play it as well as print it, a long way off.
+  public roomFeedBands(bands: Set<string>, text: string, cls?: string, carries = true, far?: string): void {
+    const f: Record<string, unknown> = { v: 0, kind: 24913, room: "*", text };
+    if (cls) f.cls = cls;
+    if (far) f.far = far;
+    const frame = JSON.stringify(f);
     for (const s of this.sessions.values()) {
       if (!bands.has(this.bandOf(s.roomId))) continue;
       // BEHIND THE DOOR, not merely stepped-out: outOfWorld() is also true for

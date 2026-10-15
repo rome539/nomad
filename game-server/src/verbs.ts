@@ -1878,7 +1878,7 @@ export function cmdShout(z: ZoneDO, session: Session, msg: string): void {
   if (session.roomId === CROW_ROOST) {
     events.chargeCrows(z);
     z.send(session, "The roost comes apart in a black cloud — a hundred birds up at once, shouting back at you. The wood is marked now, or it will be soon.", "evt");
-    z.roomFeedBands(new Set([z.bandOf(session.roomId)]), "A voice goes up under the crow roost, and the roost answers — the sky fills with black birds.", "evt");
+    z.roomFeedBands(new Set([z.bandOf(session.roomId)]), "A voice goes up under the crow roost, and the roost answers — the sky fills with black birds.", "evt", true, "crows");
   }
 }
 
@@ -1907,7 +1907,7 @@ export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
     z.ringAt = now + RING_CD_MS;
     z.send(session, "You put your shoulder into the buoy's bell. It goes once — a long, wet, iron note — and it keeps going in the air after you let go. Everything for a mile hears it.", "unlock");
     z.roomFeed(session.roomId, `${session.name} rings the bell-buoy, and the note goes out over the water and keeps going.`, session.pubkey, false);
-    z.roomFeedBands(new Set(["crossing"]), "A bell rings once, out on the water — wet and carrying, and everything that hears it lifts its head.", "evt");
+    z.roomFeedBands(new Set(["crossing"]), "A bell rings once, out on the water — wet and carrying, and everything that hears it lifts its head.", "evt", true, "bell");
     z.roomSound(session.roomId, "A bell goes {dir}, once, and the note hangs in the air.");
     z.creatureNoise(session.roomId);
     return;
@@ -1932,7 +1932,7 @@ export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
     z.ringAt = now + RING_CD_MS;
     z.send(session, "You swing the cast clapper and it finds its note at once — true, and long, and it is still ringing in the air after your arm is still. It was cast to be heard.", "unlock");
     z.roomFeed(session.roomId, `${session.name} rings a clapper of bell-metal, and the note goes out over everything.`, session.pubkey, false);
-    z.roomFeedBands(new Set([z.bandOf(session.roomId)]), "A bell rings, true and long, and carries over everything.", "evt");
+    z.roomFeedBands(new Set([z.bandOf(session.roomId)]), "A bell rings, true and long, and carries over everything.", "evt", true, "bell");
     z.roomSound(session.roomId, "A bell goes {dir}, true as a struck stone, and carries.");
     z.creatureNoise(session.roomId);
     return;

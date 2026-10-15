@@ -137,6 +137,7 @@ export interface Creature {
   bleedTicks?: number; // ticks of open wound left (armor-ignoring); refreshed by fast hits
   bleedDmg?: number; // damage the current wound bleeds each tick
   hidden?: boolean; // LURKER: unseen in the room until it strikes
+  joinedOpenly?: boolean; // ...but this one walked into a fight in plain view, so the picture draws it (the strike stays hidden)
   rises?: number; // REVENANT: times it has already got back up (see RISE_LIMIT)
   home?: string; // its den: territory anchors here (backfilled for old saves)
   risen?: boolean; // corpse-wake: pulled up for the window only — drops where it stands when the window closes

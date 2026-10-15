@@ -113,6 +113,7 @@ export function beforeAttack(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
     }
     if (!z.litFor(victim) && chance(LURKER_FADE_ODDS)) {
       creature.hidden = true;
+      creature.joinedOpenly = false; // back in the dark: no longer the one that walked in
       z.send(victim, `${cap(tmpl.name)} is not in front of you any more. Somewhere in the dark, it waits.`, "dmgin");
       z.refreshRoomCtx(creature.roomId); // gone from the picture
       return true;

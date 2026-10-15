@@ -189,7 +189,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // it nowhere to hide.
     // ...and one that went back into the dark mid-fight (styles.ts) is not
     // drawn standing there: it only goes back when nobody has a light.
-    if (LURKERS.has(creature.templateId) && creature.hidden
+    if (LURKERS.has(creature.templateId) && creature.hidden && !creature.joinedOpenly
       && (creature.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))) continue;
     creatureHere = true;
     const tmpl = world.mobTemplates.get(creature.templateId)!;

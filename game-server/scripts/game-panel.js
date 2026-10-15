@@ -112,6 +112,7 @@
   var actB = mk("button", btnCss, "event pose");
   var actN = 0;
   actB.onclick = function () {
+    revive();
     var todo = [];
     ids.forEach(function (id) { var fr = (MOB_ANIM[id] || {}).f || {};
       EVENT_POSES.forEach(function (p) { if (fr[p] !== undefined) todo.push([id, p]); }); });
@@ -128,7 +129,19 @@
   var frameAt = -1;
   var frameB = mk("button", btnCss, "frames");
   function liveAgain() { if (frameAt >= 0) { frameAt = -1; stillness = false; frameB.textContent = "frames"; lastMobs = "x"; paint(); } }
+  // THE DEAD GET UP AGAIN. In the game a corpse stays down; here the next
+  // thing asked of the row - attack, death again, a pose, a call, the frames -
+  // stands everyone back up first, the same as clearing and adding them.
+  function revive() {
+    var down = anims.some(function (a) { return a.phase === "death"; }) || (mobsEl && mobsEl.querySelector(".mob.dead"));
+    if (!down) return;
+    // ...and at once: a death holds the row still for its fall, which would
+    // swallow the rebuild until the fall was over.
+    mobHold = 0; mobPending = null;
+    var keep = ids.slice(); ids = []; paint(); ids = keep; paint();
+  }
   function stepFrame() {
+    if (frameAt < 0) revive();
     var els = mobsEl ? mobsEl.querySelectorAll(".mob:not(.dead)") : [];
     if (!els.length) return;
     stillness = true; frameAt++;
@@ -144,9 +157,9 @@
   }
   frameB.onclick = stepFrame;
   var atkB = mk("button", btnCss, "attack");
-  atkB.onclick = function () { liveAgain(); mobBeat(ids.slice(), null, null); };
+  atkB.onclick = function () { liveAgain(); revive(); mobBeat(ids.slice(), null, null); mobCalls(null); };
   var dieB = mk("button", btnCss, "death");
-  dieB.onclick = function () { liveAgain(); mobBeat(null, null, ids.slice()); };
+  dieB.onclick = function () { liveAgain(); revive(); mobBeat(null, null, ids.slice()); mobCalls(ids.slice()); };
   // THE SOUND: one button (or S) steps off, half, full, as the game's setting
   // does. At full, whatever room and sky are on screen play what a player
   // standing there hears - the preview server runs the world's own sound
@@ -176,6 +189,24 @@
     thrMusicStop();
     setSound((soundLevel + 1) % 3); sndLabel(); soundHere();
   };
+  // Creature sound is off in the game until it is signed off; here it is on.
+  CREATURE_SOUND = true;
+  // THE NEXT ROOM, BY HAND. With no server there is no next room, so N plays
+  // what the wire would send about the creature picked: it going by, its call,
+  // it feeding, a fight, it bolting - each from a different side.
+  var HEARD = [["move", "east"], ["call", "west"], ["feed", "north"], ["fight", "southeast"], ["flee", "northwest"]], heardN = 0;
+  var heardL = mk("span", "color:#9a8b66");
+  function heardNext() {
+    var x = HEARD[heardN++ % HEARD.length];
+    heardSound({ act: x[0], dir: x[1], mob: who.value });
+    heardL.textContent = "next room: " + who.value + " " + x[0] + " from the " + x[1];
+  }
+  // THE WORLD'S NEWS, BY HAND: W plays each far sound in turn - the bell, the
+  // roar, the cry when something great falls.
+  var FAR_NAMES = Object.keys(FAR), farN = 0;
+  function farNext() { var n = FAR_NAMES[farN++ % FAR_NAMES.length]; farSound(n); heardL.textContent = "far off: " + n; }
+  function fallNow() { var n = sndFor("A cry rolls through the stone: the Drowned God has fallen.", "feed"); if (n) playSounds([n]); farSound("fall"); heardL.textContent = inGatehouseNow ? "a great thing has fallen - not heard in the gatehouse" : "a great thing has fallen"; }
+  function idleNow() { var id = mobIdle(); heardL.textContent = id ? "idle: " + id : "idle: nothing here makes one"; }
   // The preview starts silent whatever was remembered from last time: a page
   // that says "on" with no sound behind it turns OFF on the first S.
   soundLevel = 0; soundOn = false; renderSnd();
@@ -183,6 +214,16 @@
   // For the probe: silence the cave bed so a layer can be measured alone.
   window.__sndBedOff = function () { stopAmb(); };
   window.__scapeNow = function () { return scapeAmb; };
+  // For the probe: speak one creature call, or the plain hit to measure it against.
+  window.__voice = function (id, m) { mobVoice(id, m); };
+  window.__calls = function () { return anims.filter(function (a) { return a.phase === "attack" || a.phase === "death"; }).map(function (a) { return a.id + ":" + a.phase + ":" + a.t.toFixed(2); }); };
+  // For the probe: record every creature call - who, which call, how long it
+  // waits, and where it pans - as it is made.
+  window.__voxSpy = function () { var real = mobVoice; window.__voxLog = [];
+    mobVoice = function (id, m, el, w) { window.__voxLog.push([id, m, +(w || 0).toFixed(2), +mobPan(id, el).toFixed(2)]); real(id, m, el, w); }; };
+  window.__heard = function (f) { heardSound(f); };
+  window.__idle = function () { return mobIdle(); };
+  window.__hit = function () { SND.hit(actx.currentTime + 0.01); };
   window.__fxCast = function () { return fxMobs(sceneEl.getBoundingClientRect()).map(function (m) { return m.rect.map(function (v) { return +v.toFixed(3); }); }); };
   window.__sndLR = function () {
     if (!actx || !amaster) return null;
@@ -217,7 +258,7 @@
     return st + (torch ? "+torch" : "");
   }
   var shown = mk("span", "color:#9a8b66");
-  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  F frames  B floor bag  C chest  L lightning  S sound");
+  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  V call  N next room  I idle  W world  K king falls  F frames  B floor bag  C chest  L lightning  S sound");
   var ids = [];
   // B steps through the floor bags: nothing, then the first count of each.
   // ?bag=1..4 opens on that bag.
@@ -225,9 +266,13 @@
   var CHEST_STEPS = ["", "chest-shut", "chest-open", "box-shut", "box-open"];
   var chest = Math.max(0, Math.min(4, Number(new URLSearchParams(location.search).get("chest")) || 0));
   var LOOSE_STEPS = [0, 1, 3, 6, 10], loose = Math.max(0, Math.min(4, Number(new URLSearchParams(location.search).get("bag")) || 0));
-  addB.onclick = function () { ids.push(who.value); paint(); };
+  addB.onclick = function () { ids.push(who.value); paint(); setTimeout(function () { var all = mobsEl.querySelectorAll('.mob[data-id="' + who.value + '"]'); mobArrive([who.value], all[all.length - 1]); }, 60); };
   clrB.onclick = function () { ids = []; paint(); };
-  who.onchange = function () { ids = [who.value]; paint(); };
+  who.onchange = function () { ids = [who.value]; paint(); arrive(); };
+  // A creature that is put in the room speaks as it comes in - the call it
+  // will make in the game when it walks into yours. After the paint, so the
+  // voice comes from where it stands.
+  function arrive() { revive(); setTimeout(function () { mobArrive(ids); }, 60); }
 
   // Remember the last pick so a reload - or flipping PROD/LOCAL - lands on the
   // same room with the same animals in it, which is what makes a comparison.
@@ -267,6 +312,9 @@
     // ...and never in the gatehouse: other players are drawn in the world only,
     // the same as the game, where the gatehouse frame carries no figures at all.
     var inside = gnd.value === "ground:gatehouse";
+    // ...and the sound knows it, as it would from the server in the game - so a
+    // king falling (K) is heard out in the world and not by the fire.
+    inGatehouseNow = inside;
     if (inside) dead = false;
     var showIds = (dead || inside) ? ids.filter(function (x) { return x !== "nomad"; }) : ids.slice();
     updateMobs(showIds, showIds.map(function (x) { return x === "nomad" ? nomadState() : ""; }), dead ? ["nomad"] : [], LOOSE_STEPS[loose], CHEST_STEPS[chest] ? [CHEST_STEPS[chest]] : []);
@@ -285,8 +333,8 @@
   gNext.onclick = function () { step(gnd, 1); paint(); };
   hPrev.onclick = function () { step(hour, -1); paint(); };
   hNext.onclick = function () { step(hour, 1); paint(); };
-  wPrev.onclick = function () { step(who, -1); ids = [who.value]; paint(); };
-  wNext.onclick = function () { step(who, 1); ids = [who.value]; paint(); };
+  wPrev.onclick = function () { step(who, -1); ids = [who.value]; paint(); arrive(); };
+  wNext.onclick = function () { step(who, 1); ids = [who.value]; paint(); arrive(); };
 
   // CAPTURE PHASE, so the client's own command line - which has focus, and
   // uses the arrows for its history - never sees these keys. Nothing is typed
@@ -299,8 +347,13 @@
     else if (k === "ArrowLeft") { step(gnd, -1); paint(); }
     else if (k === "ArrowDown") { step(hour, 1); paint(); }
     else if (k === "ArrowUp") { step(hour, -1); paint(); }
-    else if (k === "]") { step(who, 1); ids = [who.value]; paint(); }
-    else if (k === "[") { step(who, -1); ids = [who.value]; paint(); }
+    else if (k === "]") { step(who, 1); ids = [who.value]; paint(); arrive(); }
+    else if (k === "[") { step(who, -1); ids = [who.value]; paint(); arrive(); }
+    else if (k === "v" || k === "V") { arrive(); }
+    else if (k === "n" || k === "N") { heardNext(); }
+    else if (k === "i" || k === "I") { idleNow(); }
+    else if (k === "w" || k === "W") { farNext(); }
+    else if (k === "k" || k === "K") { fallNow(); }
     else if (k === "t" || k === "T") { torchB.onclick(); }
     else if (k === "p" || k === "P") { actB.onclick(); }
     else if (k === "a" || k === "A") { atkB.onclick(); }

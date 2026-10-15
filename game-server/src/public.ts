@@ -3155,10 +3155,612 @@ function sndInit() {
   if (actx.state === "suspended") { try { actx.resume(); } catch (e) {} }
 }
 // One event, one voice — same casting as the trailer.
+// CREATURE VOICES. One voice per kind of animal, not per creature: every sprite
+// id is filed under a family below, and the family carries three calls - 0 as
+// it comes into the room, 1 as it attacks, 2 as it dies. Everything is made
+// here, like the rest of the game's sound; there are no audio files. A voice
+// comes from where the creature stands in the picture (mobPan). Things with no
+// voice of their own get what they would actually make: the eels and the
+// followers are water and footsteps, the hollow wardens are their armour.
+var VOICE_FAMILY = {
+  dog: "masterless-dog lead-dog drove-dog a-fold-dog marsh-hound a-lymer two-hound three-hound the-last-dog",
+  wolf: "grey-wolf dire-wolf hill-wolf lead-wolf",
+  fox: "hill-fox snow-fox the-blue-fox the-raiding-fox",
+  hyena: "dire-hyena grave-hyena",
+  rat: "rat fleet-rat brood-rat albino-rat",
+  gull: "great-gull black-backed-gull oystercatcher mountain-chough ptarmigan",
+  crow: "gibbet-crow scarp-raven the-old-raven grey-heron",
+  eagle: "hill-eagle eyrie-holder",
+  vulture: "brooding-vulture carrion-vulture great-vulture bone-breaker the-bone-dropper",
+  owl: "eagle-owl",
+  bittern: "bittern",
+  adder: "fen-viper gill-adder stone-adder the-gravid-adder",
+  eel: "silver-eel ford-eel conger old-conger",
+  crab: "wrack-crab devil-crab the-great-crab the-great-devil-crab",
+  seal: "grey-seal bull-seal",
+  weasel: "otter dog-otter ermine the-dancer glutton the-old-glutton",
+  boar: "wild-boar old-boar",
+  deer: "roe-deer white-roe red-hind red-stag",
+  goat: "feral-goat old-billy",
+  cat: "lynx wildcat the-tom",
+  beast: "cave-lion the-baited-bear the-chain-breaker",
+  hare: "mountain-hare snow-hare",
+  man: "cutthroat cutpurse footpad wayman strand-thief the-wrecker charcoal-burner the-chainman",
+  shade: "the-woodward the-keeper-of-the-holding the-sapper the-bellfounder the-toll-clerk the-miller the-drove-master the-drover the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-eel-cutter the-bridge-mason the-fowler the-butter-wife the-milker the-herd the-one-who-stayed road-carrier",
+  armour: "warden warden-surface warden-captain the-long-warden last-watchman bone-knight",
+  bone: "skeleton twice-dead thrice-dead rag-and-bone",
+  cantor: "marrow-cantor",
+  king: "forgotten-king marrow-king",
+  drowned: "the-drowned drowned-hulk drowned-god the-drowned-ferryman the-mire-walker",
+  pale: "pale-crawler pale-stalker the-gaunt",
+  steps: "the-follower something-ahead the-reed-walker",
+  root: "root-thing verdigris-thing",
+  drake: "the-drake the-pale-drake"
+};
+var VOICE_OF = {};
+Object.keys(VOICE_FAMILY).forEach(function (f) { VOICE_FAMILY[f].split(" ").forEach(function (id) { VOICE_OF[id] = f; }); });
+// THE BIGGER THE BODY, THE LOWER THE VOICE. A family shares one voice, but the
+// three-hound is not a fold dog and the stag is not a roe: each creature is
+// pitched against the middle-sized member of its family by how big it is drawn
+// (MOB_SPRITE), square-rooted so a body twice the height sounds about a third
+// lower, and kept within 0.7-1.4. A few are drawn crouched or kneeling and are
+// not small at all, so they are set by hand; the women speak higher.
+var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3, "the-butter-wife": 1.3, "the-salt-widow": 1.3 };
+var VOICE_PITCH = null;
+// Worked out on first use: MOB_SPRITE is further down the page than this.
+function voicePitch(id) {
+  if (!VOICE_PITCH) {
+    VOICE_PITCH = {};
+    Object.keys(VOICE_FAMILY).forEach(function (f) {
+      var ids = VOICE_FAMILY[f].split(" "), hs = ids.map(function (x) { return MOB_SPRITE[x]; }).filter(Boolean).sort(function (a, b) { return a - b; });
+      var mid = hs[Math.floor(hs.length / 2)];
+      ids.forEach(function (x) {
+        VOICE_PITCH[x] = VOICE_PITCH_SET[x] !== undefined ? VOICE_PITCH_SET[x]
+          : (MOB_SPRITE[x] && mid) ? Math.max(0.7, Math.min(1.4, Math.sqrt(mid / MOB_SPRITE[x]))) : 1;
+      });
+    });
+  }
+  return VOICE_PITCH[id] || 1;
+}
+// Speak as one creature: every pitch set while fn runs is that creature's.
+function asVoice(id, fn) {
+  VOX.pitch = voicePitch(id);
+  try { fn(); } finally { VOX.pitch = 1; }
+}
+
+var VOX = {
+  pitch: 1, // set by asVoice for the creature speaking
+  // The creature's own channel: a panner into the master, so a whole call sits
+  // on one side of the picture.
+  out: function (pan) {
+    var p = actx.createStereoPanner ? actx.createStereoPanner() : actx.createGain();
+    if (p.pan) p.pan.value = Math.max(-1, Math.min(1, pan || 0));
+    p.connect(aout());
+    setTimeout(function () { try { p.disconnect(); } catch (e) {} }, 6000);
+    return p;
+  },
+  // A throat: a buzzing source (o.w) bent along o.f = [[sec, hz], ...], breath
+  // mixed in (o.n), shaken by o.r = [hz, depth] for a growl and o.vib for a
+  // waver, shaped by formants o.fm = [[hz, q], ...], o.d long, o.g loud.
+  voc: function (t, o, out) {
+    var d = o.d || 0.3, g = (o.g || 1) * 0.5 * SCAPE_VOL, a = o.a || 0.02, f = o.f || [[0, 200]], P = this.pitch, B = Math.sqrt(P);
+    var os = actx.createOscillator();
+    os.type = o.w || "sawtooth";
+    os.frequency.setValueAtTime(f[0][1] * P, t);
+    for (var i = 1; i < f.length; i++) os.frequency.exponentialRampToValueAtTime(Math.max(f[i][1] * P, 20), t + f[i][0]);
+    var stops = [os];
+    if (o.vib) {
+      var vl = actx.createOscillator(), vg = actx.createGain();
+      vl.frequency.value = o.vib[0]; vg.gain.value = o.vib[1] * P;
+      vl.connect(vg); vg.connect(os.frequency); stops.push(vl);
+    }
+    var mix = actx.createGain();
+    if (o.r) {
+      var am = actx.createGain(), rl = actx.createOscillator(), rg = actx.createGain();
+      am.gain.value = 1 - o.r[1] / 2;
+      rl.type = "square"; rl.frequency.value = o.r[0]; rg.gain.value = o.r[1] / 2;
+      rl.connect(rg); rg.connect(am.gain); os.connect(am); am.connect(mix); stops.push(rl);
+    } else os.connect(mix);
+    if (o.n) {
+      var ns = actx.createBufferSource(), ng = actx.createGain();
+      ns.buffer = SND._noise(); ng.gain.value = o.n;
+      ns.connect(ng); ng.connect(mix); ns.start(t, Math.random()); ns.stop(t + d + 0.1);
+    }
+    var env = actx.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.linearRampToValueAtTime(g, t + a);
+    env.gain.setValueAtTime(g, t + Math.max(a, d * 0.6));
+    env.gain.exponentialRampToValueAtTime(0.0005, t + d);
+    if (o.fm) {
+      for (var j = 0; j < o.fm.length; j++) {
+        var bp = actx.createBiquadFilter();
+        bp.type = "bandpass"; bp.frequency.value = o.fm[j][0] * B; bp.Q.value = o.fm[j][1];
+        var bg = actx.createGain(); bg.gain.value = o.fm[j][1] * 0.6 / (j + 1);
+        mix.connect(bp); bp.connect(bg); bg.connect(env);
+      }
+    } else mix.connect(env);
+    env.connect(out);
+    for (var k = 0; k < stops.length; k++) { stops[k].start(t); stops[k].stop(t + d + 0.1); }
+  },
+  // Breath with no voice in it: a hiss, a sigh, a whoosh.
+  hiss: function (t, o, out) {
+    SND._burst(t, { type: o.type || "highpass", freq: (o.f || 3500) * Math.sqrt(this.pitch), sweep: o.sw, q: o.q || 0.8, dur: o.d || 0.6,
+      gain: (o.g || 0.3) * SCAPE_VOL, atk: o.a || 0.05, out: out });
+  },
+  // Little hard sounds in a run: claws, clicks, bones, a rattle. o.f is the
+  // pitch band, o.gap the spacing, o.slow how much each gap grows.
+  clicks: function (t, o, out) {
+    var at = t, gap = o.gap || 0.05;
+    for (var i = 0; i < (o.k || 8); i++) {
+      SND._burst(at, { type: "bandpass", freq: o.f * Math.sqrt(this.pitch) * (0.8 + Math.random() * 0.4), q: Math.min(o.q || 5, 3), dur: Math.max(o.d || 0.02, 0.025),
+        gain: (o.g || 0.25) * 8 * SCAPE_VOL * (0.6 + Math.random() * 0.4), atk: 0.001, out: out });
+      at += gap * (0.6 + Math.random() * 0.8); gap *= (o.slow || 1);
+    }
+  },
+  // A pure blip: a squeak, a bubble, a stamp.
+  blip: function (t, f0, f1, d, g, out, w) {
+    var os = actx.createOscillator(), e = actx.createGain();
+    os.type = w || "sine";
+    os.frequency.setValueAtTime(f0 * this.pitch, t); os.frequency.exponentialRampToValueAtTime(Math.max(f1 * this.pitch, 20), t + d);
+    e.gain.setValueAtTime(0.0001, t); e.gain.linearRampToValueAtTime(g * SCAPE_VOL, t + 0.005);
+    e.gain.exponentialRampToValueAtTime(0.0005, t + d);
+    os.connect(e); e.connect(out); os.start(t); os.stop(t + d + 0.05);
+  },
+  bubbles: function (t, k, span, out) {
+    for (var i = 0; i < k; i++) { var f = 250 + Math.random() * 450; this.blip(t + Math.random() * span, f, f * 2.2, 0.04 + Math.random() * 0.05, 0.4, out); }
+  },
+  splash: function (t, g, out) { SND._burst(t, { freq: 1600, sweep: 200, dur: 0.45, gain: g * 2.5 * SCAPE_VOL, atk: 0.005, out: out }); },
+  step: function (t, g, out) {
+    SND._burst(t, { freq: 420, q: 1, dur: 0.09, gain: g * SCAPE_VOL, atk: 0.004, out: out });
+    this.blip(t, 90, 55, 0.08, g * 0.8, out);
+  },
+  ring: function (t, g, out) {
+    var fs = [1310, 1873, 2650, 3420];
+    for (var i = 0; i < fs.length; i++) this.blip(t, fs[i], fs[i] * 0.99, 0.5 + Math.random() * 0.3, g / (i + 1.5), out);
+    SND._burst(t, { type: "bandpass", freq: 2600, q: 6, dur: 0.06, gain: g * SCAPE_VOL, atk: 0.001, out: out });
+  }
+};
+
+// THE CALLS. Each family is three calls, m = 0 arrive, 1 attack, 2 death.
+var VOICES = {
+  dog: function (t, m, o) {
+    var bark = function (at, hi) { VOX.voc(at, { f: [[0, 380 * hi], [0.1, 290 * hi]], d: 0.13, fm: [[700, 4], [1600, 5]], n: 0.5, g: 0.85, a: 0.008 }, o); };
+    if (m === 0) { bark(t, 1); bark(t + 0.3, 1.05); }
+    else if (m === 1) { VOX.voc(t, { f: [[0, 150], [0.5, 175]], d: 0.6, r: [48, 0.9], fm: [[500, 3], [1300, 4]], n: 0.6, g: 1.1, a: 0.06 }, o); bark(t + 0.62, 1.2); }
+    else { VOX.voc(t, { f: [[0, 950], [0.2, 620]], d: 0.22, fm: [[1200, 3], [2600, 4]], g: 1, a: 0.005 }, o);
+      VOX.voc(t + 0.32, { w: "triangle", f: [[0, 720], [0.9, 420]], d: 0.9, vib: [6, 15], fm: [[900, 3]], g: 0.8 }, o); }
+  },
+  wolf: function (t, m, o) {
+    if (m === 0) VOX.voc(t, { w: "triangle", f: [[0, 330], [0.4, 520], [1.6, 470], [2.2, 360]], d: 2.2, vib: [5, 8], fm: [[600, 2], [1100, 3]], n: 0.12, g: 0.6, a: 0.25 }, o);
+    else if (m === 1) { VOX.voc(t, { f: [[0, 105], [0.6, 120]], d: 0.75, r: [38, 0.95], fm: [[400, 3], [1000, 4]], n: 0.6, g: 1.2, a: 0.08 }, o);
+      VOX.clicks(t + 0.72, { f: 2200, k: 2, gap: 0.04, g: 0.5, q: 3 }, o); }
+    else { VOX.voc(t, { f: [[0, 800], [0.25, 520]], d: 0.25, fm: [[1000, 3], [2200, 4]], g: 1, a: 0.005 }, o);
+      VOX.voc(t + 0.35, { w: "triangle", f: [[0, 520], [1.4, 260]], d: 1.4, vib: [5, 12], fm: [[700, 3]], g: 0.8 }, o); }
+  },
+  fox: function (t, m, o) {
+    if (m === 0) VOX.voc(t, { f: [[0, 700], [0.15, 1100], [0.6, 780]], d: 0.6, r: [70, 0.6], fm: [[1500, 3], [2800, 4]], n: 0.3, g: 1, a: 0.02 }, o);
+    else if (m === 1) { for (var i = 0; i < 6; i++) VOX.voc(t + i * 0.075, { f: [[0, 520], [0.05, 460]], d: 0.055, r: [90, 0.7], fm: [[1100, 3], [2200, 4]], n: 0.4, g: 1.2, a: 0.004 }, o); }
+    else VOX.voc(t, { f: [[0, 1100], [0.9, 420]], d: 0.95, r: [60, 0.5], fm: [[1400, 3], [2600, 4]], n: 0.3, g: 1, a: 0.01 }, o);
+  },
+  hyena: function (t, m, o) {
+    if (m === 0) { VOX.voc(t, { w: "triangle", f: [[0, 240], [0.7, 720]], d: 0.8, fm: [[800, 2]], g: 1.2, a: 0.1 }, o);
+      VOX.voc(t + 1.0, { w: "triangle", f: [[0, 260], [0.7, 760]], d: 0.8, fm: [[800, 2]], g: 1.2, a: 0.1 }, o); }
+    else if (m === 1) { for (var i = 0; i < 7; i++) VOX.voc(t + i * 0.11, { f: [[0, 640 - i * 15], [0.07, 520 - i * 15]], d: 0.08, fm: [[1000, 3], [2300, 4]], n: 0.3, g: 1, a: 0.005 }, o); }
+    else VOX.voc(t, { f: [[0, 420], [1.3, 140]], d: 1.4, r: [25, 0.5], fm: [[700, 3], [1300, 4]], n: 0.3, g: 1, a: 0.05 }, o);
+  },
+  rat: function (t, m, o) {
+    if (m === 0) { for (var i = 0; i < 3; i++) VOX.blip(t + i * 0.13 + Math.random() * 0.04, 3000, 3700, 0.05, 0.7, o, "triangle"); VOX.clicks(t + 0.45, { f: 3200, k: 6, gap: 0.04, g: 0.18 }, o); }
+    else if (m === 1) VOX.voc(t, { f: [[0, 2600], [0.25, 3100]], d: 0.28, r: [90, 0.7], fm: [[3000, 3]], n: 0.3, g: 0.8, a: 0.005 }, o);
+    else VOX.voc(t, { w: "triangle", f: [[0, 3300], [0.45, 1500]], d: 0.45, fm: [[2600, 2]], g: 0.6, a: 0.005 }, o);
+  },
+  gull: function (t, m, o) {
+    var kek = function (at, f) { VOX.voc(at, { f: [[0, f], [0.06, f * 0.9]], d: 0.07, fm: [[2000, 4], [3200, 5]], n: 0.2, g: 1, a: 0.004 }, o); };
+    if (m === 0) { VOX.voc(t, { f: [[0, 1300], [0.08, 1500], [0.4, 820]], d: 0.45, fm: [[1800, 4], [3200, 5]], n: 0.2, g: 0.75, a: 0.01 }, o); kek(t + 0.58, 1300); kek(t + 0.72, 1300); }
+    else if (m === 1) { for (var i = 0; i < 4; i++) kek(t + i * 0.1, 1450); SND._burst(t, { freq: 900, sweep: 300, dur: 0.3, gain: 0.12 * SCAPE_VOL, atk: 0.02, out: o }); }
+    else VOX.voc(t, { f: [[0, 1500], [0.8, 600]], d: 0.85, fm: [[1800, 4], [3000, 5]], n: 0.25, g: 0.7, a: 0.01 }, o);
+  },
+  crow: function (t, m, o) {
+    var caw = function (at, lo, g) { VOX.voc(at, { f: [[0, 620 * lo], [0.25, 510 * lo]], d: 0.28, r: [85, 0.8], fm: [[1100, 4], [2300, 5]], n: 0.7, g: g, a: 0.01 }, o); };
+    var flap = function (at) { for (var i = 0; i < 3; i++) SND._burst(at + i * 0.13, { freq: 500, sweep: 180, dur: 0.1, gain: 0.14 * SCAPE_VOL, atk: 0.02, out: o }); };
+    if (m === 0) { caw(t, 1, 1); caw(t + 0.38, 1, 1); caw(t + 0.76, 0.97, 1); }
+    else if (m === 1) { flap(t); caw(t + 0.35, 1.1, 1.3); }
+    else { caw(t, 0.95, 1); VOX.voc(t + 0.3, { f: [[0, 520], [0.6, 300]], d: 0.6, r: [70, 0.8], fm: [[1000, 4], [2100, 5]], n: 0.7, g: 0.8 }, o); flap(t + 0.2); }
+  },
+  eagle: function (t, m, o) {
+    if (m === 0) VOX.voc(t, { f: [[0, 2000], [0.1, 2400], [0.8, 1700]], d: 0.9, r: [60, 0.4], fm: [[2400, 3], [4000, 4]], n: 0.3, g: 0.7, a: 0.02 }, o);
+    else if (m === 1) { SND._burst(t, { freq: 1200, sweep: 200, dur: 0.45, gain: 0.2 * SCAPE_VOL, atk: 0.1, out: o });
+      VOX.voc(t + 0.3, { f: [[0, 2500], [0.3, 2100]], d: 0.35, r: [70, 0.5], fm: [[2600, 3], [4200, 4]], n: 0.3, g: 0.75, a: 0.01 }, o); }
+    else VOX.voc(t, { f: [[0, 2200], [1.0, 900]], d: 1.0, r: [50, 0.4], fm: [[2000, 3], [3600, 4]], n: 0.3, g: 0.65, a: 0.02 }, o);
+  },
+  vulture: function (t, m, o) {
+    if (m === 0) { VOX.hiss(t, { type: "bandpass", f: 2500, q: 1.2, d: 0.7, g: 0.8, a: 0.15 }, o); VOX.voc(t + 0.75, { f: [[0, 180], [0.2, 150]], d: 0.22, r: [30, 0.8], fm: [[500, 3]], n: 0.4, g: 1.5 }, o); }
+    else if (m === 1) { SND._burst(t, { freq: 900, sweep: 200, dur: 0.5, gain: 0.5 * SCAPE_VOL, atk: 0.12, out: o }); VOX.hiss(t + 0.3, { type: "bandpass", f: 3000, q: 1.5, d: 0.35, g: 1.0, a: 0.01 }, o); }
+    else { VOX.hiss(t, { type: "bandpass", f: 2200, sw: 600, q: 1.2, d: 1.4, g: 0.8, a: 0.05 }, o); VOX.clicks(t + 0.4, { f: 1200, k: 5, gap: 0.08, slow: 1.3, g: 0.2 }, o); }
+  },
+  owl: function (t, m, o) {
+    if (m === 0) { VOX.voc(t, { w: "sine", f: [[0, 370], [0.25, 360]], d: 0.28, g: 0.6, a: 0.04 }, o); VOX.voc(t + 0.5, { w: "sine", f: [[0, 360], [0.6, 330]], d: 0.7, vib: [6, 6], g: 0.6, a: 0.06 }, o); }
+    else if (m === 1) { VOX.hiss(t, { type: "bandpass", f: 3000, q: 1, d: 0.5, g: 0.4, a: 0.01 }, o); VOX.voc(t + 0.05, { f: [[0, 1300], [0.4, 1000]], d: 0.4, r: [80, 0.5], fm: [[1600, 3]], n: 0.4, g: 0.8 }, o); }
+    else VOX.voc(t, { w: "sine", f: [[0, 360], [1.2, 200]], d: 1.2, vib: [5, 8], g: 0.55, a: 0.05 }, o);
+  },
+  bittern: function (t, m, o) {
+    var boom = function (at, f) { VOX.blip(at, 300, 260, 0.08, 0.15, o); VOX.voc(at + 0.12, { w: "sine", f: [[0, f], [0.5, f * 0.95]], d: 0.55, g: 0.6, a: 0.12 }, o); };
+    if (m === 0) { boom(t, 120); boom(t + 0.9, 118); boom(t + 1.8, 116); }
+    else if (m === 1) VOX.voc(t, { f: [[0, 420], [0.3, 360]], d: 0.32, r: [50, 0.8], fm: [[900, 4], [1900, 5]], n: 0.6, g: 1.1, a: 0.01 }, o);
+    else VOX.voc(t, { w: "sine", f: [[0, 130], [1.3, 70]], d: 1.4, g: 0.6, a: 0.1 }, o);
+  },
+  adder: function (t, m, o) {
+    if (m === 0) VOX.hiss(t, { f: 3500, d: 1.2, g: 0.3, a: 0.3 }, o);
+    else if (m === 1) VOX.hiss(t, { f: 3000, d: 0.35, g: 0.5, a: 0.008 }, o);
+    else VOX.hiss(t, { f: 3200, sw: 1500, d: 2.0, g: 0.25, a: 0.05 }, o);
+  },
+  eel: function (t, m, o) {
+    if (m === 0) { VOX.splash(t, 0.3, o); VOX.bubbles(t + 0.2, 6, 0.8, o); }
+    else if (m === 1) { VOX.splash(t, 0.4, o); VOX.splash(t + 0.22, 0.35, o); VOX.clicks(t + 0.3, { f: 1800, k: 1, g: 0.5, q: 3 }, o); }
+    else { VOX.splash(t, 0.25, o); VOX.bubbles(t + 0.3, 10, 2.0, o); }
+  },
+  crab: function (t, m, o) {
+    if (m === 0) VOX.clicks(t, { f: 3000, k: 10, gap: 0.08, q: 6, d: 0.015, g: 0.3 }, o);
+    else if (m === 1) { VOX.clicks(t, { f: 1800, k: 2, gap: 0.09, q: 4, d: 0.03, g: 0.7 }, o); SND._burst(t + 0.2, { type: "bandpass", freq: 2500, q: 2, dur: 0.2, gain: 0.15 * SCAPE_VOL, atk: 0.01, out: o }); }
+    else VOX.clicks(t, { f: 2600, k: 12, gap: 0.05, slow: 1.25, q: 6, d: 0.015, g: 0.3 }, o);
+  },
+  seal: function (t, m, o) {
+    var arf = function (at, f) { VOX.voc(at, { f: [[0, f], [0.2, f * 0.78]], d: 0.25, r: [40, 0.6], fm: [[600, 3], [1200, 4]], n: 0.4, g: 1.1, a: 0.01 }, o); };
+    if (m === 0) { arf(t, 260); arf(t + 0.4, 250); }
+    else if (m === 1) VOX.voc(t, { f: [[0, 120], [0.4, 140], [0.8, 110]], d: 0.85, r: [35, 0.9], fm: [[400, 2], [900, 3]], n: 0.6, g: 1.3, a: 0.05 }, o);
+    else VOX.voc(t, { f: [[0, 300], [1.2, 140]], d: 1.25, r: [30, 0.4], fm: [[600, 3], [1100, 4]], n: 0.3, g: 1, a: 0.08 }, o);
+  },
+  weasel: function (t, m, o) {
+    if (m === 0) { for (var i = 0; i < 8; i++) VOX.blip(t + i * 0.055, 2200 + Math.random() * 600, 2600, 0.03, 0.6, o, "triangle"); }
+    else if (m === 1) VOX.voc(t, { f: [[0, 1700], [0.3, 2100]], d: 0.32, r: [80, 0.7], fm: [[2000, 3]], n: 0.4, g: 0.8, a: 0.005 }, o);
+    else VOX.voc(t, { w: "triangle", f: [[0, 2400], [0.5, 1100]], d: 0.5, fm: [[1800, 2]], g: 0.6, a: 0.005 }, o);
+  },
+  boar: function (t, m, o) {
+    var grunt = function (at) { VOX.voc(at, { f: [[0, 125], [0.15, 100]], d: 0.16, r: [30, 0.9], fm: [[400, 3], [900, 4]], n: 0.5, g: 1.3, a: 0.01 }, o); };
+    if (m === 0) { grunt(t); grunt(t + 0.35); grunt(t + 0.7); }
+    else if (m === 1) VOX.voc(t, { f: [[0, 900], [0.2, 1400], [0.5, 1200]], d: 0.5, r: [60, 0.5], fm: [[1600, 3], [2800, 4]], n: 0.4, g: 0.85, a: 0.01 }, o);
+    else VOX.voc(t, { f: [[0, 1300], [1.2, 500]], d: 1.2, r: [50, 0.6], fm: [[1400, 3], [2500, 4]], n: 0.4, g: 0.8, a: 0.01 }, o);
+  },
+  deer: function (t, m, o) {
+    var bark = function (at) { VOX.voc(at, { f: [[0, 420], [0.12, 340]], d: 0.15, fm: [[900, 3], [1900, 4]], n: 0.6, g: 1.1, a: 0.005 }, o); };
+    if (m === 0) { bark(t); bark(t + 0.7); }
+    else if (m === 1) { SND._burst(t, { freq: 1200, dur: 0.25, gain: 0.25 * SCAPE_VOL, atk: 0.01, out: o }); VOX.blip(t + 0.3, 80, 50, 0.12, 0.6, o); VOX.blip(t + 0.45, 80, 50, 0.12, 0.6, o); }
+    else VOX.voc(t, { f: [[0, 620], [0.8, 300]], d: 0.85, vib: [7, 25], fm: [[900, 3], [2000, 4]], n: 0.2, g: 1, a: 0.02 }, o);
+  },
+  goat: function (t, m, o) {
+    if (m === 0) VOX.voc(t, { f: [[0, 520], [0.6, 470]], d: 0.65, r: [7, 0.8], vib: [7, 30], fm: [[900, 3], [2000, 4]], n: 0.15, g: 1.1, a: 0.03 }, o);
+    else if (m === 1) { SND._burst(t, { freq: 1000, dur: 0.2, gain: 0.25 * SCAPE_VOL, atk: 0.01, out: o }); VOX.clicks(t + 0.25, { f: 900, k: 2, gap: 0.03, q: 3, d: 0.05, g: 0.8 }, o); VOX.blip(t + 0.25, 300, 200, 0.2, 0.4, o); }
+    else VOX.voc(t, { f: [[0, 560], [1.0, 280]], d: 1.0, r: [7, 0.7], vib: [6, 30], fm: [[900, 3], [1900, 4]], n: 0.15, g: 1, a: 0.03 }, o);
+  },
+  cat: function (t, m, o) {
+    if (m === 0) VOX.voc(t, { f: [[0, 300], [0.6, 520], [1.3, 340]], d: 1.3, vib: [5, 10], fm: [[800, 3], [1600, 4]], n: 0.1, g: 1, a: 0.1 }, o);
+    else if (m === 1) { VOX.hiss(t, { type: "bandpass", f: 3200, q: 0.9, d: 0.45, g: 1.0, a: 0.01 }, o); SND._burst(t + 0.42, { type: "bandpass", freq: 2000, q: 1, dur: 0.06, gain: 0.5 * SCAPE_VOL, atk: 0.002, out: o }); }
+    else VOX.voc(t, { f: [[0, 600], [1.1, 240]], d: 1.1, vib: [5, 15], r: [40, 0.3], fm: [[900, 3], [1700, 4]], n: 0.2, g: 1, a: 0.02 }, o);
+  },
+  beast: function (t, m, o) {
+    if (m === 0) VOX.voc(t, { f: [[0, 85], [1.2, 80]], d: 1.2, r: [28, 0.9], fm: [[300, 2], [700, 3]], n: 0.6, g: 1.8, a: 0.2 }, o);
+    else if (m === 1) VOX.voc(t, { f: [[0, 140], [0.3, 185], [1.1, 110]], d: 1.2, r: [35, 0.8], fm: [[500, 2], [1100, 3]], n: 0.7, g: 1.9, a: 0.06 }, o);
+    else VOX.voc(t, { f: [[0, 140], [1.6, 60]], d: 1.7, r: [24, 0.7], fm: [[400, 2], [800, 3]], n: 0.5, g: 1.7, a: 0.05 }, o);
+  },
+  hare: function (t, m, o) {
+    if (m === 0) { VOX.blip(t, 80, 50, 0.1, 0.5, o); VOX.blip(t + 0.18, 80, 50, 0.1, 0.5, o); }
+    else if (m === 1) { VOX.blip(t, 80, 50, 0.1, 0.5, o); VOX.voc(t + 0.15, { f: [[0, 1500], [0.2, 1700]], d: 0.2, fm: [[2000, 3]], g: 0.9, a: 0.005 }, o); }
+    else VOX.voc(t, { f: [[0, 1400], [0.3, 1800], [0.9, 1100]], d: 0.9, r: [50, 0.4], fm: [[2000, 3], [3200, 4]], n: 0.2, g: 0.75, a: 0.01 }, o);
+  },
+  man: function (t, m, o) {
+    if (m === 0) VOX.voc(t, { f: [[0, 135], [0.3, 115]], d: 0.32, fm: [[600, 4], [1100, 5]], n: 0.3, g: 1, a: 0.04 }, o);
+    else if (m === 1) VOX.voc(t, { f: [[0, 210], [0.25, 170]], d: 0.3, fm: [[750, 4], [1250, 5], [2600, 6]], n: 0.4, g: 1.3, a: 0.01 }, o);
+    else VOX.voc(t, { f: [[0, 170], [1.2, 90]], d: 1.3, r: [20, 0.3], fm: [[550, 4], [900, 5]], n: 0.3, g: 1.1, a: 0.04 }, o);
+  },
+  shade: function (t, m, o) {
+    if (m === 0) { VOX.hiss(t, { type: "bandpass", f: 900, q: 2, d: 1.5, g: 0.22, a: 0.6 }, o); VOX.voc(t + 0.2, { w: "sine", f: [[0, 220], [1.2, 200]], d: 1.3, vib: [4, 3], g: 0.5, a: 0.5 }, o); }
+    else if (m === 1) { VOX.hiss(t, { type: "bandpass", f: 1500, q: 1.5, d: 0.5, g: 0.35, a: 0.03 }, o); VOX.voc(t, { f: [[0, 160], [0.4, 140]], d: 0.45, r: [25, 0.5], fm: [[600, 4], [1000, 5]], n: 0.6, g: 0.9, a: 0.03 }, o); }
+    else VOX.hiss(t, { type: "bandpass", f: 1300, sw: 300, q: 2, d: 2.2, g: 1.7, a: 0.2 }, o);
+  },
+  armour: function (t, m, o) {
+    if (m === 0) { VOX.step(t, 0.5, o); VOX.ring(t, 0.25, o); VOX.step(t + 0.6, 0.5, o); VOX.ring(t + 0.6, 0.25, o); }
+    else if (m === 1) { SND._burst(t, { freq: 800, sweep: 200, dur: 0.3, gain: 0.2 * SCAPE_VOL, atk: 0.08, out: o }); VOX.ring(t + 0.28, 0.3, o); }
+    else { for (var i = 0; i < 5; i++) VOX.ring(t + i * (0.12 + i * 0.03), 0.07 * (1 - i * 0.12), o); VOX.blip(t + 0.8, 90, 40, 0.3, 0.3, o); }
+  },
+  bone: function (t, m, o) {
+    if (m === 0) VOX.clicks(t, { f: 1300, k: 10, gap: 0.045, q: 5, d: 0.02, g: 0.35 }, o);
+    else if (m === 1) { VOX.clicks(t, { f: 1300, k: 6, gap: 0.035, q: 5, d: 0.02, g: 0.35 }, o); VOX.clicks(t + 0.28, { f: 900, k: 1, q: 3, d: 0.05, g: 0.8 }, o); }
+    else { VOX.clicks(t, { f: 1200, k: 22, gap: 0.025, slow: 1.12, q: 5, d: 0.025, g: 0.2 }, o); VOX.blip(t + 0.9, 90, 45, 0.25, 0.6, o); }
+  },
+  cantor: function (t, m, o) {
+    if (m === 0) { VOX.voc(t, { w: "triangle", f: [[0, 220], [1.8, 218]], d: 1.9, vib: [5, 4], fm: [[700, 6], [1150, 7]], g: 1, a: 0.4 }, o);
+      VOX.voc(t + 0.3, { w: "triangle", f: [[0, 330], [1.5, 327]], d: 1.6, vib: [5, 5], fm: [[700, 6], [1150, 7]], g: 0.6, a: 0.4 }, o); }
+    else if (m === 1) VOX.voc(t, { f: [[0, 440], [0.6, 470]], d: 0.65, r: [11, 0.4], fm: [[900, 5], [2400, 6]], n: 0.2, g: 0.75, a: 0.04 }, o);
+    else { VOX.voc(t, { w: "triangle", f: [[0, 220], [2.0, 110]], d: 2.0, vib: [5, 6], fm: [[700, 6], [1150, 7]], g: 1.4, a: 0.1 }, o); VOX.clicks(t + 1.6, { f: 1200, k: 12, gap: 0.03, slow: 1.1, g: 0.3 }, o); }
+  },
+  king: function (t, m, o) {
+    if (m === 0) VOX.voc(t, { f: [[0, 72], [1.8, 66]], d: 1.9, r: [12, 0.3], fm: [[350, 4], [700, 5]], n: 0.3, g: 1.5, a: 0.4 }, o);
+    else if (m === 1) VOX.voc(t, { f: [[0, 95], [0.4, 110], [1.0, 75]], d: 1.0, r: [30, 0.7], fm: [[400, 3], [900, 4]], n: 0.5, g: 1.5, a: 0.05 }, o);
+    else { VOX.hiss(t, { type: "bandpass", f: 700, sw: 250, q: 2, d: 2.5, g: 2.2, a: 0.3 }, o); VOX.clicks(t + 1.2, { f: 1100, k: 16, gap: 0.03, slow: 1.12, g: 0.35 }, o); }
+  },
+  drowned: function (t, m, o) {
+    if (m === 0) { VOX.bubbles(t, 10, 1.2, o); VOX.voc(t + 0.2, { f: [[0, 90], [1.0, 80]], d: 1.0, r: [14, 0.6], fm: [[300, 3]], n: 0.3, g: 1, a: 0.2 }, o); }
+    else if (m === 1) { VOX.voc(t, { f: [[0, 120], [0.6, 105]], d: 0.65, r: [25, 0.8], fm: [[400, 2], [800, 3]], n: 0.8, g: 1.3, a: 0.03 }, o); VOX.bubbles(t + 0.1, 6, 0.6, o); }
+    else { VOX.voc(t, { f: [[0, 130], [1.5, 60]], d: 1.5, r: [12, 0.6], fm: [[300, 3]], n: 0.4, g: 1.1, a: 0.05 }, o); VOX.bubbles(t + 0.5, 12, 2.5, o); }
+  },
+  pale: function (t, m, o) {
+    if (m === 0) { VOX.clicks(t, { f: 4000, k: 12, gap: 0.028, q: 8, d: 0.012, g: 0.3 }, o); VOX.hiss(t + 0.35, { type: "bandpass", f: 1800, q: 1.5, d: 0.9, g: 0.18, a: 0.3 }, o); }
+    else if (m === 1) VOX.voc(t, { f: [[0, 1800], [0.3, 2600]], d: 0.4, r: [120, 0.8], fm: [[2600, 4], [4200, 5]], n: 0.5, g: 0.75, a: 0.01 }, o);
+    else { VOX.clicks(t, { f: 3800, k: 14, gap: 0.03, slow: 1.18, q: 8, d: 0.012, g: 0.3 }, o); VOX.hiss(t, { type: "bandpass", f: 1800, sw: 500, q: 1.5, d: 1.6, g: 0.2, a: 0.05 }, o); }
+  },
+  steps: function (t, m, o) {
+    if (m === 0) { VOX.step(t, 0.55, o); VOX.step(t + 0.5, 0.55, o); VOX.step(t + 1.0, 0.55, o); }
+    else if (m === 1) { VOX.step(t, 0.45, o); VOX.step(t + 0.18, 0.5, o); VOX.hiss(t + 0.3, { type: "bandpass", f: 1200, q: 1.5, d: 0.4, g: 0.3, a: 0.02 }, o); }
+    else { VOX.step(t, 0.45, o); VOX.blip(t + 0.3, 80, 40, 0.3, 0.35, o); }
+  },
+  root: function (t, m, o) {
+    var creak = function (at, d, f) { VOX.voc(at, { f: [[0, f], [d, f * 1.25]], d: d, r: [18, 0.95], fm: [[500, 6], [1200, 8]], g: 1.4, a: 0.1 }, o); };
+    var crumble = function (at) { SND._burst(at, { freq: 300, dur: 0.6, gain: 0.4 * SCAPE_VOL, atk: 0.05, out: o }); };
+    if (m === 0) { creak(t, 1.2, 60); crumble(t + 0.5); }
+    else if (m === 1) { VOX.clicks(t, { f: 1800, k: 2, gap: 0.04, q: 3, d: 0.05, g: 0.8 }, o); creak(t + 0.1, 0.6, 75); }
+    else { creak(t, 2.0, 70); crumble(t + 1.0); crumble(t + 1.5); }
+  },
+  drake: function (t, m, o) {
+    var wing = function (at) { SND._burst(at, { freq: 400, sweep: 120, dur: 0.4, gain: 0.3 * SCAPE_VOL, atk: 0.15, out: o }); };
+    if (m === 0) { wing(t); wing(t + 0.55); VOX.voc(t + 0.9, { f: [[0, 60], [0.5, 90], [2.0, 55]], d: 2.2, r: [22, 0.9], fm: [[250, 1.5], [600, 2]], n: 0.9, g: 2.0, a: 0.3 }, o); }
+    else if (m === 1) VOX.voc(t, { f: [[0, 100], [0.4, 150], [1.5, 80]], d: 1.5, r: [26, 0.9], fm: [[300, 1.5], [800, 2]], n: 0.9, g: 2.0, a: 0.05 }, o);
+    else { VOX.voc(t, { f: [[0, 120], [3.0, 40]], d: 3.0, r: [18, 0.8], fm: [[250, 1.5], [600, 2]], n: 0.8, g: 2.0, a: 0.1 }, o); wing(t + 1.5); }
+  }
+};
+// Where in the picture a creature stands, as a pan: -1 hard left, 1 hard right,
+// kept off the very edges so nothing sounds as if it is inside one ear. Taken
+// from the creature's own figure when there is one, so three wolves in a row
+// are three places, not one.
+function mobPan(id, el) {
+  if (!el && mobsEl) el = mobsEl.querySelector('.mob[data-id="' + id + '"]');
+  if (!el || !sceneEl) return 0;
+  var r = el.getBoundingClientRect(), b = sceneEl.getBoundingClientRect();
+  if (!b.width) return 0;
+  return Math.max(-0.8, Math.min(0.8, ((r.left + r.width / 2 - b.left) / b.width * 2 - 1) * 0.8));
+}
+// Speak: m 0 comes in, 1 attacks, 2 dies, wait seconds from now. Full sound
+// only, like the other world sounds that are new.
+function mobVoice(id, m, el, wait) {
+  if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx) return;
+  var fam = VOICE_OF[id], v = fam && VOICES[fam];
+  if (!v) return;
+  try { asVoice(id, function () { v(actx.currentTime + 0.02 + (wait || 0), m, VOX.out(mobPan(id, el))); }); } catch (e) {}
+}
+// A CROWDED ROUND. The wire reports a whole round in one message, and a room
+// can hold a pack. Every creature calling at once is one loud blur, so:
+//   - deaths always speak, each one, a little apart;
+//   - attacks fill what is left of CALLS_PER_ROUND, and each one is spoken AT
+//     ITS OWN SWING - mobBeat has already spread the blows across STAGGER_S,
+//     and the voice waits for the frame it belongs to;
+//   - the rest swing in silence. Their hit sound still plays, so nothing that
+//     happened goes unheard.
+// Call this straight after mobBeat, which is what sets the swings.
+var CALLS_PER_ROUND = 2, CALL_GAP_S = 0.25;
+function mobCalls(died) {
+  if (!soundOn || !soundFull() || !actx) return;
+  var said = 0, used = [];
+  (died || []).forEach(function (id) {
+    var a = anims.filter(function (x) { return x.id === id && x.phase === "death" && used.indexOf(x) < 0; })[0];
+    if (a) used.push(a);
+    mobVoice(id, 2, a && a.el, said * 0.35); said++;
+  });
+  // Earliest swing first. Two blows can land within a breath of each other by
+  // chance, and two snarls that close are the blur again, so the next voice
+  // goes to the next swing at least CALL_GAP_S on - or, if every swing left is
+  // too close, waits that long after the last one.
+  var swings = anims.filter(function (a) { return a.phase === "attack" && a.t <= 0 && VOICE_OF[a.id]; })
+    .sort(function (x, y) { return y.t - x.t; });
+  var last = -1;
+  while (said < CALLS_PER_ROUND && swings.length) {
+    var k = 0;
+    while (k < swings.length && last >= 0 && -swings[k].t < last + CALL_GAP_S) k++;
+    var a = swings.splice(k < swings.length ? k : 0, 1)[0];
+    var at = last < 0 ? -a.t : Math.max(-a.t, last + CALL_GAP_S);
+    mobVoice(a.id, 1, a.el, at); last = at; said++;
+  }
+}
+// A GROUP COMING IN is one call, from whichever of them leads, not one each.
+// el, when given, is the figure that just came in, so it is heard from there.
+function mobArrive(ids, el) {
+  for (var i = 0; i < ids.length; i++) if (VOICE_OF[ids[i]]) { mobVoice(ids[i], 0, el); return; }
+}
+// CREATURE SOUND IS STILL BEING HEARD BEFORE IT IS PLAYED. Off in the game until
+// it is signed off; the preview turns it on.
+var CREATURE_SOUND = false;
+
+// THROUGH THE WALL. A noise from the next room comes from the way it came - an
+// exit east is heard on the right - and muffled, the way a wall or a slope
+// takes the top off a sound.
+function heardPan(dir) {
+  dir = dir || "";
+  var side = dir.indexOf("east") >= 0 ? 1 : dir.indexOf("west") >= 0 ? -1 : 0;
+  return side * (dir === "east" || dir === "west" ? 0.7 : 0.45);
+}
+VOX.wall = function (pan) {
+  var lp = actx.createBiquadFilter(), g = actx.createGain();
+  lp.type = "lowpass"; lp.frequency.value = 1500; lp.Q.value = 0.5;
+  g.gain.value = 0.7;
+  lp.connect(g); g.connect(this.out(pan));
+  setTimeout(function () { try { lp.disconnect(); g.disconnect(); } catch (e) {} }, 6000);
+  return lp;
+};
+// HOW A THING SOUNDS GOING BY. Each line about a creature moving next door says
+// what it moved like - padding, a splash, wingbeats, a chain - and this is that
+// sound, never its call: a howl where the line says padding would be a lie.
+var MOVE_STYLE = {
+  dog: "pad", wolf: "pad", fox: "pad", hyena: "pad", cat: "pad",
+  deer: "hoof", goat: "hoof", beast: "heavy", boar: "heavy",
+  rat: "scurry", weasel: "scurry", hare: "scurry",
+  gull: "wings", crow: "wings", eagle: "wings", vulture: "wings", owl: "wings", bittern: "boom",
+  adder: "slither", eel: "water", seal: "water", drowned: "water", crab: "crab",
+  armour: "clank", bone: "rattle", cantor: "rattle", king: "rattle", root: "creak", pale: "click",
+  man: "boots", shade: "boots", steps: "boots", drake: "bigwings"
+};
+// ...and the few whose line is about something else entirely. The lion makes
+// no sound of its own: what carries is the birds leaving. The bear is its chain.
+var MOVE_STYLE_OF = { "cave-lion": "birds", "the-baited-bear": "chain" };
+var MOVES = {
+  pad: function (t, o, n, gap) { for (var i = 0; i < n; i++) SND._burst(t + i * gap, { freq: 380, q: 1, dur: 0.09, gain: 1.4 * SCAPE_VOL, atk: 0.01, out: o }); },
+  hoof: function (t, o, n, gap) { for (var i = 0; i < n; i++) VOX.clicks(t + i * gap, { f: 900, k: 1, q: 2, d: 0.04, g: 0.9 }, o); },
+  heavy: function (t, o, n, gap) { for (var i = 0; i < n; i++) { SND._burst(t + i * gap * 1.4, { freq: 250, q: 1, dur: 0.14, gain: 0.5 * SCAPE_VOL, atk: 0.01, out: o }); VOX.blip(t + i * gap * 1.4, 70, 40, 0.15, 0.6, o); } },
+  scurry: function (t, o, n, gap) { VOX.clicks(t, { f: 2200, k: n * 3, gap: gap / 3, q: 2, d: 0.025, g: 0.5 }, o); },
+  wings: function (t, o, n, gap) { for (var i = 0; i < 3; i++) SND._burst(t + i * 0.16, { freq: 600, sweep: 200, dur: 0.14, gain: 1.3 * SCAPE_VOL, atk: 0.03, out: o }); },
+  bigwings: function (t, o, n, gap) { for (var i = 0; i < 3; i++) SND._burst(t + i * 0.55, { freq: 350, sweep: 100, dur: 0.45, gain: 0.7 * SCAPE_VOL, atk: 0.15, out: o }); },
+  birds: function (t, o) { for (var i = 0; i < 14; i++) SND._burst(t + Math.random() * 0.8, { freq: 700 + Math.random() * 500, sweep: 250, dur: 0.1, gain: 0.25 * SCAPE_VOL, atk: 0.02, out: o }); },
+  boom: function (t, o) { VOX.voc(t, { w: "sine", f: [[0, 120], [0.5, 114]], d: 0.55, g: 0.9, a: 0.12 }, o); },
+  slither: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 900, q: 1, d: 1.2, g: 1.4, a: 0.3 }, o); },
+  water: function (t, o, n, gap) { for (var i = 0; i < Math.max(2, n - 1); i++) VOX.splash(t + i * gap * 1.5, 0.35, o); },
+  crab: function (t, o, n, gap) { VOX.clicks(t, { f: 2600, k: n * 2, gap: gap / 2, q: 3, d: 0.025, g: 0.6 }, o); },
+  clank: function (t, o, n, gap) { for (var i = 0; i < n; i++) { VOX.step(t + i * gap * 1.3, 0.5, o); VOX.ring(t + i * gap * 1.3, 0.12, o); } },
+  rattle: function (t, o, n) { VOX.clicks(t, { f: 1300, k: n * 3, gap: 0.05, q: 3, d: 0.03, g: 0.6 }, o); },
+  creak: function (t, o) { VOX.voc(t, { f: [[0, 60], [1.2, 75]], d: 1.2, r: [18, 0.95], fm: [[500, 6], [1200, 8]], g: 1.6, a: 0.1 }, o); },
+  click: function (t, o, n) { VOX.clicks(t, { f: 3500, k: n * 4, gap: 0.03, q: 3, d: 0.025, g: 0.6 }, o); },
+  boots: function (t, o, n, gap) { for (var i = 0; i < n; i++) VOX.step(t + i * gap * 1.4, 0.6, o); },
+  chain: function (t, o) { VOX.clicks(t, { f: 1800, k: 12, gap: 0.08, q: 3, d: 0.03, g: 0.25 }, o); MOVES.heavy(t, o, 3, 0.4); }
+};
+// What a line next door sounds like. act is the wire's kind of noise: a
+// creature going by (move), bolting (flee), eating (feed), a fight, or the
+// creature's own call. Everything through the wall.
+function heardSound(f) {
+  if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx) return;
+  VOX.pitch = f.mob ? voicePitch(f.mob) : 1;
+  try {
+    var t = actx.currentTime + 0.05, o = VOX.wall(heardPan(f.dir));
+    var fam = f.mob && VOICE_OF[f.mob];
+    if (f.act === "move" || f.act === "flee") {
+      var style = MOVE_STYLE_OF[f.mob] || MOVE_STYLE[fam] || "boots", fast = f.act === "flee";
+      MOVES[style](t, o, fast ? 6 : 4, fast ? 0.14 : 0.3);
+    } else if (f.act === "feed") {
+      for (var i = 0; i < 5; i++) SND._burst(t + i * 0.22 + Math.random() * 0.1, { freq: 700, sweep: 250, q: 1, dur: 0.2, gain: 1.3 * SCAPE_VOL, atk: 0.02, out: o });
+      VOX.clicks(t + 0.3, { f: 1100, k: 3, gap: 0.3, q: 2, d: 0.03, g: 0.8 }, o);
+    } else if (f.act === "fight") {
+      for (var j = 0; j < 4; j++) { var at = t + j * 0.35 + Math.random() * 0.15;
+        SND._burst(at, { type: "bandpass", freq: 420, q: 1.5, dur: 0.16, gain: 0.5 * SCAPE_VOL, out: o }); VOX.blip(at, 120, 60, 0.18, 0.5, o); }
+      if (fam) VOICES[fam](t + 0.4, 1, o);
+    } else if (f.act === "call" && fam) VOICES[fam](t, 0, o);
+  } catch (e) {}
+  VOX.pitch = 1;
+}
+
+// IDLE. Now and then one creature standing in the room with you makes a small
+// sound of its own - a huff, a scratch, a shift of armour. One at a time, and
+// quieter than anything it does when it moves on you. Nothing hidden is drawn,
+// so nothing hidden is ever heard; the ones whose whole nature is silence
+// never make one.
+var IDLE_SILENT = { "cave-lion": 1, "the-follower": 1, "something-ahead": 1, "the-reed-walker": 1 };
+var IDLE = {
+  dog: function (t, o) { SND._burst(t, { freq: 900, sweep: 300, dur: 0.2, gain: 1.0 * SCAPE_VOL, atk: 0.02, out: o }); },
+  wolf: function (t, o) { SND._burst(t, { freq: 700, sweep: 250, dur: 0.25, gain: 1.0 * SCAPE_VOL, atk: 0.03, out: o }); VOX.voc(t + 0.3, { f: [[0, 95], [0.5, 100]], d: 0.5, r: [38, 0.9], fm: [[400, 3]], n: 0.5, g: 0.9, a: 0.1 }, o); },
+  fox: function (t, o) { for (var i = 0; i < 3; i++) SND._burst(t + i * 0.12, { type: "bandpass", freq: 2500, q: 2, dur: 0.07, gain: 0.9 * SCAPE_VOL, atk: 0.01, out: o }); },
+  hyena: function (t, o) { for (var i = 0; i < 3; i++) VOX.voc(t + i * 0.13, { f: [[0, 520], [0.07, 450]], d: 0.08, fm: [[1000, 3]], n: 0.3, g: 0.45, a: 0.005 }, o); },
+  rat: function (t, o) { VOX.clicks(t, { f: 2800, k: 6, gap: 0.04, q: 3, g: 0.08 }, o); VOX.blip(t + 0.35, 3200, 3600, 0.04, 0.3, o, "triangle"); },
+  gull: function (t, o) { VOX.voc(t, { f: [[0, 1200], [0.06, 1100]], d: 0.07, fm: [[1800, 4]], n: 0.2, g: 0.45, a: 0.004 }, o); },
+  crow: function (t, o) { VOX.voc(t, { f: [[0, 560], [0.2, 500]], d: 0.22, r: [85, 0.8], fm: [[1100, 4]], n: 0.7, g: 0.45, a: 0.01 }, o); },
+  eagle: function (t, o) { for (var i = 0; i < 3; i++) VOX.voc(t + i * 0.1, { f: [[0, 2200], [0.06, 2000]], d: 0.07, fm: [[2400, 3]], g: 0.35, a: 0.004 }, o); },
+  vulture: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 2200, q: 1.2, d: 0.5, g: 0.35, a: 0.1 }, o); },
+  owl: function (t, o) { VOX.voc(t, { w: "sine", f: [[0, 360], [0.3, 350]], d: 0.35, g: 0.35, a: 0.05 }, o); },
+  bittern: function (t, o) { VOX.blip(t, 300, 250, 0.12, 0.8, o); },
+  adder: function (t, o) { VOX.hiss(t, { f: 3500, d: 0.5, g: 0.15, a: 0.15 }, o); },
+  eel: function (t, o) { VOX.bubbles(t, 4, 0.5, o); },
+  crab: function (t, o) { VOX.clicks(t, { f: 3000, k: 4, gap: 0.1, q: 3, d: 0.03, g: 0.45 }, o); },
+  seal: function (t, o) { VOX.voc(t, { f: [[0, 160], [0.25, 140]], d: 0.3, r: [35, 0.7], fm: [[500, 3]], n: 0.4, g: 0.5, a: 0.03 }, o); },
+  weasel: function (t, o) { for (var i = 0; i < 4; i++) VOX.blip(t + i * 0.05, 2300, 2600, 0.04, 0.8, o, "triangle"); },
+  boar: function (t, o) { VOX.voc(t, { f: [[0, 115], [0.15, 100]], d: 0.16, r: [30, 0.9], fm: [[400, 3]], n: 0.5, g: 0.6, a: 0.01 }, o); },
+  deer: function (t, o) { SND._burst(t, { freq: 1100, dur: 0.22, gain: 0.9 * SCAPE_VOL, atk: 0.01, out: o }); },
+  goat: function (t, o) { VOX.voc(t, { f: [[0, 500], [0.3, 470]], d: 0.3, r: [7, 0.8], fm: [[900, 3]], n: 0.15, g: 0.45, a: 0.03 }, o); },
+  cat: function (t, o) { VOX.voc(t, { f: [[0, 90], [0.8, 95]], d: 0.8, r: [24, 0.95], fm: [[300, 2]], n: 0.4, g: 1.0, a: 0.15 }, o); },
+  beast: function (t, o) { VOX.voc(t, { f: [[0, 75], [0.8, 70]], d: 0.8, r: [26, 0.9], fm: [[300, 2]], n: 0.6, g: 1.6, a: 0.15 }, o); },
+  hare: function (t, o) { VOX.blip(t, 80, 50, 0.1, 0.3, o); },
+  man: function (t, o) { SND._burst(t, { type: "bandpass", freq: 900, q: 1.2, dur: 0.18, gain: 0.9 * SCAPE_VOL, atk: 0.01, out: o }); },
+  shade: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 900, q: 2, d: 1.0, g: 0.8, a: 0.4 }, o); },
+  armour: function (t, o) { VOX.ring(t, 0.15, o); },
+  bone: function (t, o) { VOX.clicks(t, { f: 1300, k: 4, gap: 0.05, q: 3, d: 0.03, g: 0.45 }, o); },
+  cantor: function (t, o) { VOX.voc(t, { w: "triangle", f: [[0, 220], [1.0, 219]], d: 1.0, vib: [5, 3], fm: [[700, 6]], g: 0.7, a: 0.3 }, o); },
+  king: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 500, q: 2, d: 1.2, g: 1.1, a: 0.4 }, o); },
+  drowned: function (t, o) { VOX.bubbles(t, 5, 0.8, o); },
+  pale: function (t, o) { VOX.clicks(t, { f: 3800, k: 6, gap: 0.03, q: 3, d: 0.025, g: 0.4 }, o); },
+  root: function (t, o) { VOX.voc(t, { f: [[0, 55], [0.6, 62]], d: 0.6, r: [16, 0.95], fm: [[500, 6]], g: 0.8, a: 0.1 }, o); },
+  drake: function (t, o) { VOX.voc(t, { f: [[0, 55], [1.2, 50]], d: 1.2, r: [20, 0.9], fm: [[250, 1.5]], n: 0.8, g: 0.8, a: 0.3 }, o); }
+};
+var IDLE_MIN_S = 20, IDLE_MAX_S = 60, idleNext = 0;
+// One small sound from one creature standing here, now. Returns its id.
+function mobIdle() {
+  if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx) return "";
+  var can = anims.filter(function (a) {
+    return (a.phase === "idle" || !a.phase) && !a.asleep && !IDLE_SILENT[a.id] && IDLE[VOICE_OF[a.id]];
+  });
+  if (!can.length) return "";
+  var a = can[Math.floor(Math.random() * can.length)];
+  try { asVoice(a.id, function () { IDLE[VOICE_OF[a.id]](actx.currentTime + 0.02, VOX.out(mobPan(a.id, a.el))); }); } catch (e) {}
+  return a.id;
+}
+setInterval(function () {
+  if (!CREATURE_SOUND) return;
+  var now = Date.now();
+  if (!idleNext) idleNext = now + (IDLE_MIN_S + Math.random() * (IDLE_MAX_S - IDLE_MIN_S)) * 1000;
+  if (now < idleNext) return;
+  idleNext = 0;
+  mobIdle();
+}, 1000);
+// A LONG WAY OFF. The world's own news - a bell on the fortress, a roar on the
+// mountain, a cry when something great dies - comes from no side at all, with
+// the top taken off it and the stone throwing it back once.
+VOX.far = function () {
+  var lp = actx.createBiquadFilter(), g = actx.createGain(), dl = actx.createDelay(1), fb = actx.createGain();
+  lp.type = "lowpass"; lp.frequency.value = 650; lp.Q.value = 0.5;
+  g.gain.value = 0.55; dl.delayTime.value = 0.21; fb.gain.value = 0.32;
+  var out = this.out(0);
+  lp.connect(g); g.connect(out); g.connect(dl); dl.connect(fb); fb.connect(dl); fb.connect(out);
+  setTimeout(function () { try { lp.disconnect(); g.disconnect(); dl.disconnect(); fb.disconnect(); } catch (e) {} }, 7000);
+  return lp;
+};
+var FAR = {
+  cry: function (t, o) { VOX.voc(t, { f: [[0, 480], [0.4, 700], [1.6, 340]], d: 1.7, fm: [[800, 4], [1400, 5]], n: 0.3, g: 1.2, a: 0.1 }, o); },
+  // ...and a great thing's death is not a man's cry: low, huge, and long.
+  fallcry: function (t, o) { VOX.voc(t, { f: [[0, 150], [0.6, 210], [2.2, 95]], d: 2.4, r: [14, 0.35], fm: [[450, 4], [800, 5]], n: 0.35, g: 1.5, a: 0.25 }, o); },
+  howl: function (t, o) { VOICES.wolf(t, 0, o); VOICES.wolf(t + 1.3, 0, o); },
+  watch: function (t, o) { VOX.voc(t, { f: [[0, 185], [1.0, 178]], d: 1.1, fm: [[700, 4], [1200, 5]], n: 0.2, g: 1.2, a: 0.1 }, o);
+    VOX.voc(t + 1.3, { f: [[0, 200], [0.8, 165]], d: 0.9, fm: [[650, 4], [1100, 5]], n: 0.2, g: 1.1, a: 0.1 }, o); },
+  grind: function (t, o) { VOX.voc(t, { f: [[0, 42], [2.0, 38]], d: 2.0, r: [9, 0.9], fm: [[300, 3], [700, 4]], n: 0.7, g: 1.6, a: 0.2 }, o); VOX.blip(t + 1.9, 60, 30, 0.6, 0.8, o); },
+  thud: function (t, o) { VOX.blip(t, 60, 30, 0.7, 1.0, o); SND._burst(t, { freq: 200, dur: 0.8, gain: 0.5 * SCAPE_VOL, atk: 0.02, out: o }); },
+  roar: function (t, o) { VOICES.drake(t, 1, o); },
+  boom: function (t, o) { VOICES.king(t, 0, o); },
+  stag: function (t, o) { VOX.voc(t, { f: [[0, 140], [0.6, 175], [1.4, 120]], d: 1.5, r: [30, 0.9], fm: [[400, 2], [900, 3]], n: 0.6, g: 1.5, a: 0.1 }, o);
+    VOX.voc(t + 1.9, { f: [[0, 130], [0.6, 160], [1.2, 115]], d: 1.3, r: [30, 0.9], fm: [[400, 2], [900, 3]], n: 0.6, g: 1.1, a: 0.1 }, o); },
+  wings: function (t, o) { MOVES.bigwings(t, o); },
+  scree: function (t, o) { VOX.clicks(t, { f: 900, k: 30, gap: 0.05, slow: 1.04, q: 2, d: 0.03, g: 0.25 }, o); SND._burst(t, { freq: 180, dur: 2.2, gain: 0.5 * SCAPE_VOL, atk: 0.3, out: o }); },
+  pigeon: function (t, o) { for (var i = 0; i < 7; i++) SND._burst(t + i * 0.09, { freq: 900, sweep: 300, dur: 0.07, gain: 0.45 * SCAPE_VOL, atk: 0.01, out: o }); },
+  dogs: function (t, o) { for (var i = 0; i < 4; i++) VOICES.dog(t + i * 0.45 + Math.random() * 0.2, 0, o); },
+  bell: function (t, o) { var fs = [196, 392, 466, 587, 784];
+    for (var i = 0; i < fs.length; i++) VOX.blip(t, fs[i], fs[i] * 0.998, 3.2 - i * 0.4, 0.6 / (i + 1), o); },
+  bells: function (t, o) { for (var i = 0; i < 4; i++) FAR.bell(t + i * 1.1, o); },
+  scratch: function (t, o) { VOX.clicks(t, { f: 2400, k: 40, gap: 0.04, q: 2, d: 0.02, g: 0.12 }, o); },
+  song: function (t, o) { VOICES.cantor(t, 0, o); },
+  drum: function (t, o) { for (var i = 0; i < 8; i++) VOX.blip(t + i * 0.26, 70, 45, 0.2, 0.9, o); },
+  // A great thing falling: the same cry, kept apart so the gatehouse can stay out of it.
+  fall: function (t, o) { FAR.fallcry(t, o); },
+  crows: function (t, o) { for (var i = 0; i < 6; i++) VOICES.crow(t + Math.random() * 1.4, 0, o); MOVES.birds(t, o); },
+  hooves: function (t, o) { for (var i = 0; i < 14; i++) VOX.clicks(t + i * 0.12 + Math.random() * 0.05, { f: 800, k: 1, q: 2, d: 0.04, g: 0.9 }, o); },
+  patter: function (t, o) { VOX.clicks(t, { f: 1600, k: 50, gap: 0.04, q: 2, d: 0.02, g: 0.3 }, o); },
+  birds: function (t, o) { MOVES.birds(t, o); MOVES.birds(t + 0.4, o); },
+  dig: function (t, o) { for (var i = 0; i < 5; i++) { VOX.blip(t + i * 0.6, 70, 40, 0.25, 0.8, o); SND._burst(t + i * 0.6, { freq: 300, dur: 0.5, gain: 0.5 * SCAPE_VOL, atk: 0.02, out: o }); } },
+  drip: function (t, o) { for (var i = 0; i < 6; i++) { var f = 900 + Math.random() * 700; VOX.blip(t + i * 0.45 + Math.random() * 0.2, f, f * 1.6, 0.06, 0.6, o); } },
+  water: function (t, o) { SND._burst(t, { freq: 900, sweep: 300, dur: 3.0, gain: 0.6 * SCAPE_VOL, atk: 0.8, out: o }); VOX.bubbles(t + 0.5, 12, 2.0, o); }
+};
+function farSound(name) {
+  if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx || !FAR[name]) return;
+  // The gatehouse hears the region's news - a bell, a roar - but not a boss dying.
+  if (name === "fall" && inGatehouseNow) return;
+  try { FAR[name](actx.currentTime + 0.05, VOX.far()); } catch (e) {}
+}
 function sndFor(line, c) {
   if (line.indexOf("grinds open") >= 0 || line.indexOf("grinds shut") >= 0 || line.indexOf("Iron grinds") >= 0) return "grind";
   if (/squink/i.test(line)) return "squink";
-  if (line.indexOf("has fallen to") >= 0) return "swell";
+  // A GREAT THING FALLING. The line used to read "has fallen to" someone, and
+  // was reworded to end on the fall itself - which left the swell listening for
+  // words nothing sends any more, and every boss dying in silence.
+  // ...but not by the fire: a boss dying is the world's news, and the gatehouse
+  // reads it without hearing it (rome, 2026-10-15).
+  if (line.indexOf("has fallen to") >= 0 || line.indexOf(" has fallen.") >= 0) return inGatehouseNow ? null : "swell";
   if (line.indexOf("across the counter") >= 0) return "clink";
   // The vitals kill wins over any other tag it rides with (kill/dmgout/dmgin):
   // the rarest strike gets the rarest voice, and it must never fall back to a
@@ -4186,7 +4788,7 @@ async function connect() {
     // deeds, sounds through walls) and the ambient weather stay out of the
     // lesson text. Other output stays in history, hidden by tutorial mode.
     if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls, f.who, f.sp); }
-    else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed", f.who, f.sp); }
+    else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed", f.who, f.sp); if (f.act) heardSound(f); if (f.far) farSound(f.far); }
     else if (f.t === "status") {
       // A real room change is the only thing that should re-fold the chips
       // (rome, 2026-07-26): keyed on the suggest LIST before, so a mob simply
@@ -8310,7 +8912,7 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "12";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "13";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -8911,7 +9513,6 @@ var PLATE_OF = {
   "well":                   "keep-store",
   "barracks":               "keep-quarters",
   "guardroom":              "keep-quarters",
-  "kennels":                "keep-quarters",
   "warden-post":            "keep-quarters",
   "cells":                  "keep-holes",
   "debtors-pit":            "keep-holes",
@@ -9778,6 +10379,7 @@ var MOB_LINE = {
   "keep-passage": 55,
   "keep-store": 55,
   "keep-quarters": 55,
+  "kennels": 55,       // its own plate since 2026-10-14 (it was the barracks)
   "keep-holes": 55,
   "keep-letters": 55,
   "keep-worship": 55,
@@ -10587,7 +11189,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // request owns a sequence so rapid movement cannot show a late old room.
   var url = scene ? "url(" + scene + "?v=" + BG_V + ")" : "";
   var mine = ++sceneSeq;
-  if (lastCovered) { sky = ""; turn = ""; }
+  // ...EXCEPT THROUGH A SHELTERED PLATE'S OWN OPENING (rome, 2026-10-14: the
+  // dens' windows showed nothing). A roof stops the sky everywhere but the slot
+  // or window the plate was cut with - that opening is why it is in SHELTERED.
+  if (lastCovered && !SHELTERED[place]) { sky = ""; turn = ""; }
   var precipitation = !singleLayer && scene && !lastCovered && !SHELTERED[place] ? mobHour : "";
   var put = function () {
     if (mine !== sceneSeq || viewMode !== "image") return;
