@@ -362,7 +362,8 @@
     else if (k === "f" || k === "F") { stepFrame(); }
     else if (k === "b" || k === "B") { loose = (loose + 1) % LOOSE_STEPS.length; paint(); }
     else if (k === "c" || k === "C") { chest = (chest + 1) % CHEST_STEPS.length; paint(); }
-    else if (k === "l" || k === "L") { lightningBolt(false); }
+    // Under a roof (or by the gatehouse fire) the bolt is thunder through the walls only.
+    else if (k === "l" || k === "L") { var seenL = ambSeen[gnd.value + "|" + hour.value]; lightningBolt(false, gnd.value === "ground:gatehouse" || !!(seenL && seenL.covered)); }
     else if (k === "s" || k === "S") { sndB.onclick(); }
     else hit = false;
     if (hit) { e.preventDefault(); e.stopPropagation(); }

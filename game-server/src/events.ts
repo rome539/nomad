@@ -2068,7 +2068,16 @@ async function tickLightning(z: ZoneDO, now: number): Promise<void> {
   if (now < due) return;
   nextBolt.set(z, now + randInt(LIGHTNING_GAP_MIN_MS, LIGHTNING_GAP_MAX_MS));
   for (const s of [...z.sessions.values()]) {
-    if (z.outOfWorld(s) || z.artSkyFor(s) !== "rain") continue;
+    if (z.outOfWorld(s) || z.artSkyFor(s) !== "rain") {
+      // UNDER A ROOF THE THUNDER STILL REACHES YOU (rome, 2026-10-15): a house,
+      // a shelter, the gatehouse by its fire. No flash and no strike - only the
+      // sound, through the walls. Not underground: the keep, the deep and the
+      // warrens are too far down for weather of any kind.
+      if (phaseOf(z, "rain") === "active" && SURFACE_BANDS.has(z.bandOf(s.roomId))) {
+        try { s.ws.send(JSON.stringify({ v: 0, t: "bolt", inside: true })); } catch {}
+      }
+      continue;
+    }
     // Only the open sky can strike you; a roofed doorway that LOOKS out on the
     // storm still sees the flash.
     let hit = false;

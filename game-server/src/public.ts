@@ -3083,7 +3083,7 @@ function scapeHeart() {
 }
 // THE STORM'S VOICE: a long low roll a moment after the flash, every bolt its
 // own size. A bolt that came down on YOU has no delay and no distance in it.
-function scapeThunder(hit, delay) {
+function scapeThunder(hit, delay, inside) {
   if (!soundOn || !actx || !soundFull()) return;
   var t = actx.currentTime + (hit ? 0.01 : delay);
   if (hit) {
@@ -3097,8 +3097,9 @@ function scapeThunder(hit, delay) {
     return;
   }
   var src = actx.createBufferSource(); src.buffer = scapeBrown();
-  var lp = scapeFilter("lowpass", 160 + Math.random() * 140);
-  var g = actx.createGain(), dur = 2.5 + Math.random() * 3, peak = (0.35 + Math.random() * 0.4) * SCAPE_VOL;
+  // Through a roof it is lower and softer: the walls take the top off it.
+  var lp = scapeFilter("lowpass", inside ? 90 + Math.random() * 50 : 160 + Math.random() * 140);
+  var g = actx.createGain(), dur = 2.5 + Math.random() * 3, peak = (0.35 + Math.random() * 0.4) * SCAPE_VOL * (inside ? 0.6 : 1);
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(peak, t + 0.08 + Math.random() * 0.25);
   // and it ROLLS: a few swells on the way down, not one clean decay
@@ -3699,16 +3700,20 @@ var IDLE = {
   root: function (t, o) { VOX.voc(t, { f: [[0, 55], [0.6, 62]], d: 0.6, r: [16, 0.95], fm: [[500, 6]], g: 0.8, a: 0.1 }, o); },
   drake: function (t, o) { VOX.voc(t, { f: [[0, 55], [1.2, 50]], d: 1.2, r: [20, 0.9], fm: [[250, 1.5]], n: 0.8, g: 0.8, a: 0.3 }, o); }
 };
-var IDLE_MIN_S = 20, IDLE_MAX_S = 60, idleNext = 0;
-// One small sound from one creature standing here, now. Returns its id.
+// A room with something in it is never silent for long (rome, 2026-10-15).
+var IDLE_MIN_S = 8, IDLE_MAX_S = 20, idleNext = 0;
+// One small sound from one creature standing here, now. Returns its id. Taken
+// from the picture when it is up (so a sleeper stays quiet and the sound comes
+// from where it stands), and from the room's own list when you play in words.
+// Never in a fight: then the fight is the only thing worth hearing.
 function mobIdle() {
-  if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx) return "";
-  var can = anims.filter(function (a) {
-    return (a.phase === "idle" || !a.phase) && !a.asleep && !IDLE_SILENT[a.id] && IDLE[VOICE_OF[a.id]];
-  });
+  if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx || lastCombat) return "";
+  var can = anims.length
+    ? anims.filter(function (a) { return (a.phase === "idle" || !a.phase) && !a.asleep && !IDLE_SILENT[a.id] && IDLE[VOICE_OF[a.id]]; })
+    : (mobsBefore || []).filter(function (id) { return !IDLE_SILENT[id] && IDLE[VOICE_OF[id]]; }).map(function (id) { return { id: id, el: null }; });
   if (!can.length) return "";
   var a = can[Math.floor(Math.random() * can.length)];
-  try { asVoice(a.id, function () { IDLE[VOICE_OF[a.id]](actx.currentTime + 0.02, VOX.out(mobPan(a.id, a.el))); }); } catch (e) {}
+  try { asVoice(a.id, function () { IDLE[VOICE_OF[a.id]](actx.currentTime + 0.02, VOX.out(a.el ? mobPan(a.id, a.el) : 0)); }); } catch (e) {}
   return a.id;
 }
 setInterval(function () {
@@ -3716,8 +3721,9 @@ setInterval(function () {
   var now = Date.now();
   if (!idleNext) idleNext = now + (IDLE_MIN_S + Math.random() * (IDLE_MAX_S - IDLE_MIN_S)) * 1000;
   if (now < idleNext) return;
-  idleNext = 0;
-  mobIdle();
+  // Its turn waits for a creature that is free to make it - one mid-stroll or
+  // mid-swing is tried again a second later, not skipped until the next turn.
+  if (mobIdle()) idleNext = 0;
 }, 1000);
 // A LONG WAY OFF. The world's own news - a bell on the fortress, a roar on the
 // mountain, a cry when something great dies - comes from no side at all, with
@@ -4866,7 +4872,7 @@ async function connect() {
       mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose);
       mobCalls(f.died); // the round's voices, at the swings mobBeat just set
     } else if (f.t === "bolt") {
-      lightningBolt(!!f.hit);
+      lightningBolt(!!f.hit, !!f.inside);
     } else if (f.t === "bench") {
       if (f.open) { renderBench(f); } else closeBench();
     } else if (f.t === "trade") {
@@ -10794,6 +10800,11 @@ var weatherKind = "", weatherFrame = null, weatherTime = 0, weatherStamp = 0;
 // never jumps when the gust dies. The lightning is the world's, not the page's:
 // see lightningBolt.
 var weatherWind = 0;
+var THUNDER_IN_LINES = [
+  "Thunder, somewhere outside, comes through the walls as a long low roll.",
+  "The roof takes the thunder and gives it back muffled, and the rain goes on.",
+  "Thunder rolls over, outside, and the walls hum with it.",
+];
 var THUNDER_LINES = [
   "The sky goes white for an instant, and the thunder comes after it, close.",
   "Thunder breaks overhead and rolls away across the ground.",
@@ -10805,8 +10816,8 @@ var weatherMotion = typeof window !== "undefined" && window.matchMedia
 // The plate flashes; the thunder line follows a moment behind. A bolt that hit
 // YOU carries its own words from the server, and no count before the thunder.
 var boltTimer = null;
-function lightningBolt(hit) {
-  if (viewMode === "image" && !weatherMotion.matches && !document.hidden) {
+function lightningBolt(hit, inside) {
+  if (!inside && viewMode === "image" && !weatherMotion.matches && !document.hidden) {
     var dur = .4 + Math.random() * 1.2;  // 0.4 to 1.6 seconds
     document.body.classList.remove("bolt");
     document.body.style.setProperty("--bolt-name", "bolt-flash-" + (1 + Math.floor(Math.random() * 3)));
@@ -10817,9 +10828,10 @@ function lightningBolt(hit) {
     boltTimer = setTimeout(function () { document.body.classList.remove("bolt"); }, dur * 1000 + 100);
   }
   var delay = 0.7 + Math.random() * 1.1;
-  scapeThunder(hit, delay);
+  scapeThunder(hit, delay, inside);
   if (!hit) setTimeout(function () {
-    print(THUNDER_LINES[Math.floor(Math.random() * THUNDER_LINES.length)], "amb");
+    var lines = inside ? THUNDER_IN_LINES : THUNDER_LINES;
+    print(lines[Math.floor(Math.random() * lines.length)], "amb");
   }, delay * 1000);
 }
 function runWeather() {
