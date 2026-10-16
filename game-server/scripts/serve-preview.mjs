@@ -236,6 +236,9 @@ http.createServer(async (req, res) => {
         : w.rooms.get(id);
       const amb = place ? w.mod.soundscapeOf(place, {
         rain: sky === "rain" ? 1 : 0, windUp: false, snow: sky === "snow", mud: sky === "after-rain", seaUp: false, runUp: false,
+        // the hour the picture shows, and the weather it shows, for the small life
+        hour: ["night", "moon", "blood", "wet-night"].includes(sky) ? "night" : ["dusk", "dawn", "wet-dusk", "wet-dawn"].includes(sky) ? "low" : "day",
+        fog: sky === "fog", cold: sky === "snow",
       }) : {};
       // ...and, for the preview's picture only, whether the world has a roof
       // over it and which band it is in - what the game's own status frame says.

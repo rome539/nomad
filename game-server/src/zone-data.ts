@@ -7718,8 +7718,37 @@ export const LIGHTNING_BURST_MIN_MS = 4_000;
 export const LIGHTNING_BURST_MAX_MS = 15_000;
 export const LIGHTNING_LULL_MIN_MS = 60_000;      // ...or the storm goes quiet
 export const LIGHTNING_LULL_MAX_MS = 6 * 60_000;
-export const LIGHTNING_STRIKE_ODDS = 1 / 2000;   // per bolt, per player under the open rain
-export const LIGHTNING_STEEL_ODDS_PER_KG = 0.1;  // 15 kg of plate = 2.5x the odds
+// THE STORM IS A THING IN THE WORLD (rome, 2026-10-16). With rain lasting a
+// day, a bolt on every rain was a day of lightning, flashing for everyone under
+// any rain at once. Now a thunderstorm is its own cell, born inside the rain:
+// showers breed them and long settled rain hardly ever does. It sits over one
+// ground, builds (thunder only), peaks (the bolts), fades, and moves to the
+// raining ground next door. Every bolt comes down in a real room of that
+// ground, and what you see and hear of it is how far away you are from it.
+export const STORM_SHOWER_ODDS = 0.2;      // per rain step, under a shower
+export const STORM_SETTLED_ODDS = 0.005;   // ...under settled rain: about one in two days of it
+export const STORM_BUILD_MIN_MS = 10 * 60_000;
+export const STORM_BUILD_MAX_MS = 20 * 60_000;
+export const STORM_PEAK_MIN_MS = 15 * 60_000;
+export const STORM_PEAK_MAX_MS = 60 * 60_000;
+export const STORM_FADE_MIN_MS = 10 * 60_000;
+export const STORM_FADE_MAX_MS = 30 * 60_000;
+export const STORM_RAINLESS_FADE_MS = 5 * 60_000; // the rain under it stopped: it goes quickly
+export const STORM_MOVE_ODDS = 0.3;        // per rain step, to a raining ground next door
+export const STORM_RUMBLE_MIN_MS = 60_000; // while it builds: thunder, and nothing seen
+export const STORM_RUMBLE_MAX_MS = 3 * 60_000;
+// THE BOLT LANDS IN A ROOM. Everyone out under the storm's own ground carries
+// these odds a bolt - whatever the size of the ground - and steel worn draws it
+// (the odds climb per kilo). If it takes someone, that is where it came down;
+// if not, it comes down in some open room of that ground, pulled toward steel.
+// Anywhere but the storm's ground, the odds are none.
+export const LIGHTNING_STRIKE_ODDS = 1 / 2000;
+// ...AND WHAT IT LANDS AMONG RUNS (rome, 2026-10-16). Anything alive and free
+// to move in the room it comes down in wakes and gets out, and keeps off that
+// room a while. Not what is fighting, not what holds a post or its ground or
+// its water, not the dead that walk, and not the great things.
+export const LIGHTNING_SPOOK_MS = 20 * 60_000;
+export const LIGHTNING_STEEL_ODDS_PER_KG = 0.1;  // 15 kg of plate = 2.5x the pull
 export const LIGHTNING_BURN = 30;                // what the bolt does with no steel on you (never kills)
 export const LIGHTNING_STEEL_BURN_PER_KG = 5;    // ...and each kilo of steel adds this, uncapped
 export const RAIN_NOISE_MASK = 0.5; // odds an outdoor sound simply drowns in the rain

@@ -194,6 +194,7 @@
   // THE NEXT ROOM, BY HAND. With no server there is no next room, so N plays
   // what the wire would send about the creature picked: it going by, its call,
   // it feeding, a fight, it bolting - each from a different side.
+  var boltN = 0;
   var HEARD = [["move", "east"], ["call", "west"], ["feed", "north"], ["fight", "southeast"], ["flee", "northwest"]], heardN = 0;
   var heardL = mk("span", "color:#9a8b66");
   function heardNext() {
@@ -367,7 +368,13 @@
     else if (k === "b" || k === "B") { loose = (loose + 1) % LOOSE_STEPS.length; paint(); }
     else if (k === "c" || k === "C") { chest = (chest + 1) % CHEST_STEPS.length; paint(); }
     // Under a roof (or by the gatehouse fire) the bolt is thunder through the walls only.
-    else if (k === "l" || k === "L") { var seenL = ambSeen[gnd.value + "|" + hour.value]; lightningBolt(false, gnd.value === "ground:gatehouse" || !!(seenL && seenL.covered)); }
+    // L steps through how far the bolt is: your own room, your ground, the next
+    // ground over, and a storm too far off to see (the storm has a place).
+    else if (k === "l" || k === "L") {
+      var seenL = ambSeen[gnd.value + "|" + hour.value], roofL = gnd.value === "ground:gatehouse" || !!(seenL && seenL.covered), nL = boltN++ % 4;
+      if (nL === 3) thunderFar(); else lightningBolt(false, roofL, roofL && nL === 0 ? 1 : nL);
+      heardL.textContent = "lightning: " + ["in this room", "on this ground", "the next ground over", "far off - only thunder"][nL] + (roofL && nL < 3 ? ", under a roof" : "");
+    }
     else if (k === "s" || k === "S") { sndB.onclick(); }
     else hit = false;
     if (hit) { e.preventDefault(); e.stopPropagation(); }

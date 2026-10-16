@@ -24,6 +24,9 @@ import {
   ROLL_GRACE_MS, ROLL_MISSED_MIN_MS, ROLL_MISSED_MAX_MS, SKY_ROLL_MIN_MS, SKY_ROLL_MAX_MS,
   RAIN_TELEGRAPH_MS, RAIN_AFTERMATH_MS,
   LIGHTNING_BURST_ODDS, LIGHTNING_BURST_MIN_MS, LIGHTNING_BURST_MAX_MS, LIGHTNING_LULL_MIN_MS, LIGHTNING_LULL_MAX_MS, LIGHTNING_STRIKE_ODDS, LIGHTNING_STEEL_ODDS_PER_KG,
+  STORM_SHOWER_ODDS, STORM_SETTLED_ODDS, STORM_BUILD_MIN_MS, STORM_BUILD_MAX_MS, STORM_PEAK_MIN_MS, STORM_PEAK_MAX_MS,
+  LIGHTNING_SPOOK_MS, ROOTED, GUARDIANS,
+  STORM_FADE_MIN_MS, STORM_FADE_MAX_MS, STORM_RAINLESS_FADE_MS, STORM_MOVE_ODDS, STORM_RUMBLE_MIN_MS, STORM_RUMBLE_MAX_MS,
   LIGHTNING_BURN, LIGHTNING_STEEL_BURN_PER_KG, RAIN_SETTLED_ODDS, RAIN_SETTLED_AFTERMATH_MULT, RAIN_AFTER_SHARE, RAIN_AFTER_MAX_MS, REGION_LABELS,
   WX_GROW_ODDS, WX_SPREAD_ODDS, WX_RETREAT_ODDS, WX_WORLDWIDE_ODDS,
   RAIN_STEP_MS, RAIN_SHOWER_END_ODDS, RAIN_SETS_IN_ODDS, RAIN_SETTLED_END_ODDS,
@@ -1355,8 +1358,12 @@ export function wxMove(z: ZoneDO, id: string, st: EventState): void {
       return;
     }
   }
-  if (st.bands.length > 1 && chance(WX_RETREAT_ODDS)) {
-    const b = st.bands[Math.floor(Math.random() * st.bands.length)];
+  // ...and never off the ground a live storm is over: the storm keeps its rain.
+  const storm = z.events.get("storm");
+  const keep = id === "rain" && storm && (storm.phase === "telegraph" || storm.phase === "active") ? storm.bands?.[0] : undefined;
+  const can = st.bands.filter((x) => x !== keep);
+  if (st.bands.length > 1 && can.length && chance(WX_RETREAT_ODDS)) {
+    const b = can[Math.floor(Math.random() * can.length)];
     feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === b, WX_LEAVE[id]);
     if (id === "rain") rainLeaves(z, st, b, Date.now());
     st.bands = st.bands.filter((x) => x !== b);
@@ -2279,56 +2286,231 @@ function weatherHolds(z: ZoneDO, id: string, st: EventState, now: number, endOdd
   return true;
 }
 
+// ---- THE STORM (see zone-data: STORM_*) ----
+// One cell at a time, over one ground (bands[0]). Its phases are its life:
+// telegraph = building (thunder only), active = the peak (the bolts),
+// aftermath = fading (the bolts few and far between). moveAt is when it next
+// rolls to drift. When the next bolt or rumble is due is held per world in
+// memory: a restart mid-storm just rolls a fresh gap, which nobody can tell.
 const nextBolt = new WeakMap<ZoneDO, number>();
-// How long until the next bolt: close behind this one, or a long lull.
-function boltGap(): number {
-  return chance(LIGHTNING_BURST_ODDS)
+// How long until the next bolt: close behind this one, or a long lull. Fading,
+// it is only ever the lull.
+function boltGap(fading = false): number {
+  return !fading && chance(LIGHTNING_BURST_ODDS)
     ? randInt(LIGHTNING_BURST_MIN_MS, LIGHTNING_BURST_MAX_MS)
     : randInt(LIGHTNING_LULL_MIN_MS, LIGHTNING_LULL_MAX_MS);
 }
-async function tickLightning(z: ZoneDO, now: number): Promise<void> {
+// Is the rain over this ground right now?
+function rainOn(z: ZoneDO, band: string): boolean {
+  const r = z.events.get("rain");
+  return !!r && r.phase === "active" && (!r.bands || r.bands.includes(band));
+}
+// How many grounds away each ground is from this one, along the open ground.
+function groundsFrom(z: ZoneDO, band: string): Map<string, number> {
+  const { next } = weatherGrounds(z);
+  const dist = new Map<string, number>([[band, 0]]);
+  const queue = [band];
+  for (let i = 0; i < queue.length; i++) {
+    for (const b of next.get(queue[i]) ?? []) {
+      if (dist.has(b)) continue;
+      dist.set(b, dist.get(queue[i])! + 1);
+      queue.push(b);
+    }
+  }
+  return dist;
+}
+// The open rooms of a ground, the places a bolt can come down. The map does not move.
+const openOf = new WeakMap<ZoneDO, Map<string, string[]>>();
+function openRooms(z: ZoneDO, band: string): string[] {
+  let m = openOf.get(z);
+  if (!m) {
+    m = new Map();
+    for (const roomId of OUTDOOR_ROOMS) {
+      if (!z.world!.rooms.has(roomId)) continue;
+      const b = z.bandOf(roomId);
+      if (!m.has(b)) m.set(b, []);
+      m.get(b)!.push(roomId);
+    }
+    openOf.set(z, m);
+  }
+  return m.get(band) ?? [];
+}
+// Under the open sky (the picture may still roof it: the page decides the flash).
+function underSky(z: ZoneDO, s: Session): boolean {
+  return !z.outOfWorld(s) && OUTDOOR_ROOMS.has(s.roomId);
+}
+// A STORM IS BORN, now and then, out of the rain over one of its grounds.
+function stormMaybe(z: ZoneDO, rain: EventState, now: number): void {
+  if (phaseOf(z, "storm") !== "idle") return;
+  if (!chance(rain.data === "settled" ? STORM_SETTLED_ODDS : STORM_SHOWER_ODDS)) return;
+  const wet = (rain.bands ?? weatherGrounds(z).bands).filter((b) => openRooms(z, b).length);
+  if (!wet.length) return;
+  const band = wet[Math.floor(Math.random() * wet.length)];
+  z.events.set("storm", { phase: "telegraph", until: now + randInt(STORM_BUILD_MIN_MS, STORM_BUILD_MAX_MS), bands: [band], moveAt: now + RAIN_STEP_MS });
+  nextBolt.set(z, now + randInt(15_000, 60_000));
+  stormSays(z, band, "The air under the rain goes close and heavy, and somewhere up in the cloud the thunder starts to mutter.");
+}
+// A storm's own lines go to the open ground it is over.
+function stormSays(z: ZoneDO, band: string, line: string): void {
+  feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === band, line);
+}
+async function tickStorm(z: ZoneDO, now: number): Promise<void> {
+  const st = z.events.get("storm");
+  if (!st || st.phase === "idle" || !st.bands?.length) { nextBolt.delete(z); return; }
+  let band = st.bands[0];
+  // THE RAIN UNDER IT STOPS, and so does it - quickly, not on its own clock.
+  if (!rainOn(z, band) && st.phase !== "aftermath") {
+    st.phase = "aftermath";
+    st.until = Math.min(st.until, now + STORM_RAINLESS_FADE_MS);
+    stormSays(z, band, "The thunder draws off with the rain, and comes less often, and longer after each flash.");
+  }
+  // IT MOVES, now and then, onto raining ground next door.
+  if (now >= (st.moveAt ?? 0)) {
+    st.moveAt = now + RAIN_STEP_MS;
+    const near = [...(weatherGrounds(z).next.get(band) ?? [])].filter((b) => rainOn(z, b) && openRooms(z, b).length);
+    if (near.length && chance(STORM_MOVE_ODDS)) {
+      const to = near[Math.floor(Math.random() * near.length)];
+      stormSays(z, band, "The thunder moves off toward somewhere else, and each flash comes a longer count before it.");
+      st.bands = [to];
+      band = to;
+      stormSays(z, band, "Thunder comes on from somewhere else, nearer with every roll, and the light under the rain starts to jump.");
+    }
+  }
+  if (now >= st.until) {
+    switch (st.phase) {
+      case "telegraph":
+        st.phase = "active";
+        st.until = now + randInt(STORM_PEAK_MIN_MS, STORM_PEAK_MAX_MS);
+        nextBolt.set(z, now + randInt(2000, 10_000));
+        stormSays(z, band, "The storm breaks overhead: the sky goes white, and white again, and the thunder is right on top of it.");
+        break;
+      case "active":
+        st.phase = "aftermath";
+        st.until = now + randInt(STORM_FADE_MIN_MS, STORM_FADE_MAX_MS);
+        stormSays(z, band, "The thunder draws off, and comes less often, and longer after each flash.");
+        break;
+      default:
+        stormSays(z, band, "The last of the thunder grumbles away to nothing, and there is only the sound of the water.");
+        z.events.set("storm", { phase: "idle", until: NEVER });
+        nextBolt.delete(z);
+        return;
+    }
+  }
   const due = nextBolt.get(z);
-  if (due === undefined) { nextBolt.set(z, now + boltGap()); return; }
+  if (due === undefined) { nextBolt.set(z, now + (st.phase === "telegraph" ? randInt(STORM_RUMBLE_MIN_MS, STORM_RUMBLE_MAX_MS) : boltGap(st.phase === "aftermath"))); return; }
   if (now < due) return;
-  nextBolt.set(z, now + boltGap());
+  if (st.phase === "telegraph") {
+    nextBolt.set(z, now + randInt(STORM_RUMBLE_MIN_MS, STORM_RUMBLE_MAX_MS));
+    stormRumble(z, band);
+    return;
+  }
+  nextBolt.set(z, now + boltGap(st.phase === "aftermath"));
+  await stormBolt(z, band);
+}
+// THE BOLT SCATTERS WHAT IT LANDS AMONG (LIGHTNING_SPOOK_MS): woken, off
+// within seconds by the same legs any fright uses, and shy of the room after.
+function lightningSpooks(z: ZoneDO, roomId: string, now: number): void {
+  for (const c of z.creatures.values()) {
+    if (c.roomId !== roomId || c.target) continue;
+    const id = c.templateId;
+    if (SENTINELS.has(id) || ROOTED.has(id) || DROWNERS.has(id) || GUARDIANS.has(id) || BROODERS.has(id) || HOLLOW.has(id)) continue;
+    if (z.world!.mobTemplates.get(id)?.is_boss) continue;
+    c.asleep = false;
+    c.sleepUntil = undefined;
+    c.eyeing = undefined;
+    c.eyeingAt = undefined;
+    c.avoids = [
+      ...(c.avoids ?? []).filter((a) => a.until > now && a.roomId !== roomId),
+      { roomId, until: now + LIGHTNING_SPOOK_MS },
+    ];
+    c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(1000, 4000));
+  }
+}
+// THUNDER WITH NOTHING SEEN: the storm building, heard out to two grounds away.
+function stormRumble(z: ZoneDO, band: string): void {
+  const dist = groundsFrom(z, band);
+  for (const s of z.sessions.values()) {
+    const d = dist.get(z.bandOf(s.roomId));
+    if (d === undefined || d > 2 || !underSky(z, s)) continue;
+    try { s.ws.send(JSON.stringify({ v: 0, t: "rumble" })); } catch {}
+  }
+}
+// A BOLT COMES DOWN in one open room of the storm's ground. d on the frame is
+// how far you are from it: 0 the same room, 1 the same ground, 2 the ground
+// next door (a dim flicker, the thunder long after); two grounds off it is a
+// "rumble" and nothing seen. Under a roof it is the thunder alone, out to the
+// next ground, with the same d.
+async function stormBolt(z: ZoneDO, band: string): Promise<void> {
+  const rooms = openRooms(z, band);
+  if (!rooms.length) return;
+  // WHO IT TAKES, if anyone: everyone out under this ground carries the odds,
+  // and steel worn draws it. Whoever it takes is where it came down.
+  const pull = new Map<string, number>();
+  let struck: Session | null = null;
+  for (const s of z.sessions.values()) {
+    if (s.hp <= 0 || !underSky(z, s) || z.bandOf(s.roomId) !== band) continue;
+    const draw = 1 + z.wornSteelWeight(s) * LIGHTNING_STEEL_ODDS_PER_KG;
+    pull.set(s.roomId, (pull.get(s.roomId) ?? 0) + draw - 1);
+    if (!struck && chance(LIGHTNING_STRIKE_ODDS * draw)) struck = s;
+  }
+  // ...and if no one, WHERE IT COMES DOWN: any open room of the ground, pulled
+  // toward the steel standing in one.
+  let at = struck ? struck.roomId : rooms[rooms.length - 1];
+  if (!struck) {
+    let total = rooms.length;
+    for (const w of pull.values()) total += w;
+    let roll = Math.random() * total;
+    for (const r of rooms) { roll -= 1 + (pull.get(r) ?? 0); if (roll <= 0) { at = r; break; } }
+  }
+  lightningSpooks(z, at, Date.now());
+  const dist = groundsFrom(z, band);
+  let saidHere = false;
   for (const s of [...z.sessions.values()]) {
-    if (z.outOfWorld(s) || z.artSkyFor(s) !== "rain") {
-      // UNDER A ROOF THE THUNDER STILL REACHES YOU (rome, 2026-10-15): a house,
-      // a shelter, the gatehouse by its fire. No flash and no strike - only the
-      // sound, through the walls. Not underground: the keep, the deep and the
+    const d = dist.get(z.bandOf(s.roomId));
+    if (d === undefined) continue; // off the open ground altogether: under the hill
+    if (!underSky(z, s)) {
+      // UNDER A ROOF THE THUNDER STILL REACHES YOU, out to the next ground: no
+      // flash and no strike. Not underground: the keep, the deep and the
       // warrens are too far down for weather of any kind.
-      if (phaseOf(z, "rain") === "active" && SURFACE_BANDS.has(z.bandOf(s.roomId)) && wxCovers(z, "rain", s.roomId)) {
-        // Its own frame, never a "bolt": a page still on the build before this
-        // one knows "bolt" only as a flash, and flashed every roofed room.
-        try { s.ws.send(JSON.stringify({ v: 0, t: "thunder" })); } catch {}
+      if (d <= 1 && SURFACE_BANDS.has(z.bandOf(s.roomId))) {
+        try { s.ws.send(JSON.stringify({ v: 0, t: "thunder", d: d + 1 })); } catch {}
       }
       continue;
     }
-    // Only the open sky can strike you; a roofed doorway that LOOKS out on the
-    // storm still sees the flash.
-    let hit = false;
-    if (s.hp > 0 && raining(z, s.roomId)) {
+    if (d >= 2) {
+      if (d === 2) { try { s.ws.send(JSON.stringify({ v: 0, t: "rumble" })); } catch {} }
+      continue;
+    }
+    if (s.roomId !== at) { try { s.ws.send(JSON.stringify({ v: 0, t: "bolt", d: d === 0 ? 1 : 2 })); } catch {} continue; }
+    // IT CAME DOWN WHERE YOU STAND, and on you.
+    if (s === struck) {
       const steel = z.wornSteelWeight(s);
-      hit = chance(LIGHTNING_STRIKE_ODDS * (1 + steel * LIGHTNING_STEEL_ODDS_PER_KG));
-      if (hit) {
-        try { s.ws.send(JSON.stringify({ v: 0, t: "bolt", hit: true })); } catch {}
-        z.roomFeed(s.roomId, `Lightning comes down on ${s.name}, and the crack of it is the loudest thing you have ever heard.`, s.pubkey, false);
-        const burn = LIGHTNING_BURN + Math.round(steel * LIGHTNING_STEEL_BURN_PER_KG);
-        if (steel > 0 && s.hp - burn <= 0) {
-          s.hp = 0;
-          z.send(s, "The world goes white. The bolt comes down through the steel on you, and there is nothing left to feel it.", "death big");
-          await z.onPlayerDeath(s, null);
-          continue;
-        }
-        s.hp = Math.max(1, s.hp - burn);
-        z.send(s, steel > 0
-          ? `The world goes white and the steel on you burns. You are on your back in the mud with no memory of falling, your ears ringing, and the rain still coming down. [${hpLabel(s.hp, s.maxHp)}]`
-          : `The world goes white. You are on your back in the mud with no memory of falling, every hair on you standing, the rain coming down into your open eyes. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin big");
-        z.sendStatus(s);
+      try { s.ws.send(JSON.stringify({ v: 0, t: "bolt", hit: true, d: 0 })); } catch {}
+      z.roomFeed(s.roomId, `Lightning comes down on ${s.name}, and the crack of it is the loudest thing you have ever heard.`, s.pubkey, false);
+      saidHere = true;
+      const burn = LIGHTNING_BURN + Math.round(steel * LIGHTNING_STEEL_BURN_PER_KG);
+      if (steel > 0 && s.hp - burn <= 0) {
+        s.hp = 0;
+        z.send(s, "The world goes white. The bolt comes down through the steel on you, and there is nothing left to feel it.", "death big");
+        await z.onPlayerDeath(s, null);
         continue;
       }
+      s.hp = Math.max(1, s.hp - burn);
+      z.send(s, steel > 0
+        ? `The world goes white and the steel on you burns. You are on your back in the mud with no memory of falling, your ears ringing, and the rain still coming down. [${hpLabel(s.hp, s.maxHp)}]`
+        : `The world goes white. You are on your back in the mud with no memory of falling, every hair on you standing, the rain coming down into your open eyes. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin big");
+      z.sendStatus(s);
+      continue;
     }
-    try { s.ws.send(JSON.stringify({ v: 0, t: "bolt" })); } catch {}
+    try { s.ws.send(JSON.stringify({ v: 0, t: "bolt", d: 0 })); } catch {}
+  }
+  // A bolt down in your own room is news, said once to everyone standing there.
+  if (!saidHere && [...z.sessions.values()].some((s) => s.roomId === at && underSky(z, s))) {
+    z.roomFeed(at, pick([
+      "Lightning comes down a stone's throw from you, and the crack of it is inside your head before the light has gone.",
+      "The bolt comes down right here - white, and the smell of it, and the ground jumping under your feet.",
+      "Lightning strikes so close the thunder and the flash are one thing, and your ears ring with it.",
+    ]), undefined, false, "evt");
   }
 }
 
@@ -2377,7 +2559,7 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
       z.send(s, `The fen's channels are up — water to the knee, and every short way is drowned under it. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin");
     }
   }
-  if (st.phase === "active") await tickLightning(z, now); else nextBolt.delete(z);
+  await tickStorm(z, now);
   if (now < st.until) return;
   switch (st.phase) {
     case "idle": {
@@ -2408,6 +2590,7 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
         ? "The rain arrives all at once and does not ease — a steady, vertical, settled downpour with no end in the look of it."
         : "The sky opens. Rain comes down in earnest, loud on stone and thorn.");
       for (const s of z.sessions.values()) rainSoaksTorch(z, s);
+      stormMaybe(z, st, now); // a shower breaking is the likeliest moment for one
       // Fresh water wakes the still pools: the surface waters forget every
       // angler at once (the storm bite is real, not just faster misses).
       for (const roomId of FISHING_SURFACE) z.fishStock.delete(roomId);
@@ -2416,13 +2599,17 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
     case "active": {
       // DOES IT STOP? Rolled every step, at the odds of the rain it is.
       const setIn = st.data === "settled";
-      if (!chance(setIn ? RAIN_SETTLED_END_ODDS : RAIN_SHOWER_END_ODDS)) {
+      // A STORM BRINGS ITS OWN DOWNPOUR: while it is building or at its height
+      // the rain under it does not stop. It is the storm fading that lets it.
+      const stormHolds = ["telegraph", "active"].includes(phaseOf(z, "storm"));
+      if (stormHolds || !chance(setIn ? RAIN_SETTLED_END_ODDS : RAIN_SHOWER_END_ODDS)) {
         if (!setIn && chance(RAIN_SETS_IN_ODDS)) {
           st.data = "settled";
           feedWeather(z, "rain", "The shower does not pass. The sky behind it is the same flat grey all the way back, and the rain settles in to stay.");
         }
         st.until = now + RAIN_STEP_MS;
         wxMove(z, "rain", st);
+        stormMaybe(z, st, now);
         break;
       }
       const settled = st.data === "settled";

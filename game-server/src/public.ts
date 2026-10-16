@@ -1188,6 +1188,13 @@ export const PAGE = `<!doctype html>
     30%  { filter: brightness(2.4) saturate(.32) contrast(1.13); }
     42%  { filter: brightness(1.8) saturate(.42) contrast(1.10); }
   }
+  /* ...AND A BOLT ON THE NEXT GROUND OVER is a dim flicker low in the sky,
+     not the plate going white (the storm has a place, 2026-10-16). */
+  @keyframes bolt-flicker {
+    0%   { filter: brightness(1.35) saturate(.70) contrast(1.04); }
+    18%  { filter: brightness(1.05) saturate(.85) contrast(1.02); }
+    30%  { filter: brightness(1.25) saturate(.75) contrast(1.03); }
+  }
   body.bolt[data-view="image"] #scene, body.bolt[data-view="image"] #sky, body.bolt[data-view="image"] #mobs { animation: var(--bolt-name, bolt-flash-2) var(--bolt-dur, .8s) ease-out; }
   /* UNREACHABLE AS OF 2026-09-09 and kept on purpose: the blood moon is in
      NO_GROUND_TINT now, so nothing ever sets t-blood on the scene. Left standing
@@ -2962,8 +2969,14 @@ function scapeBuild() {
   // panner, set from where the world says the fire is (fireSide).
   var firePan = actx.createStereoPanner ? actx.createStereoPanner() : actx.createGain();
   firePan.connect(aout());
+  // THE SMALL LIFE has a bus of its own, so behind walls the whole of it goes
+  // low and faint together (scapeApply).
+  var life = actx.createGain(), lifeLp = scapeFilter("lowpass", 14000);
+  life.connect(lifeLp); lifeLp.connect(aout());
   scape = {
-    firePan: firePan,
+    firePan: firePan, life: life, lifeLp: lifeLp,
+    // the fen's midges: a thin cloud of a hum, two narrow throats on one band of noise
+    midge: scapeLoop(SND._noise(), [scapeFilter("bandpass", 610, 22), scapeFilter("bandpass", 610, 22)], life),
     rain: scapeLoop(SND._noise(), [scapeFilter("highpass", 900), scapeFilter("lowpass", 7000)]),
     wind: scapeLoop(scapeBrown(), [scapeFilter("bandpass", 420, 0.9), scapeFilter("lowpass", 2400)]),
     surf: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 520), scapeFilter("highpass", 35)]),
@@ -2979,7 +2992,7 @@ function scapeBuild() {
   // swell, the run of the water. Four times a second is plenty for levels
   // that glide over a second or more.
   scape.timers.push(setInterval(scapeBreathe, 250));
-  scapeDrips(); scapeCrackle(); scapeCreak(); scapeDrop(); scapeHeart();
+  scapeDrips(); scapeCrackle(); scapeCreak(); scapeDrop(); scapeHeart(); scapeSongs(); scapeNight();
 }
 function scapeBreathe() {
   if (!scape || !scapeAmb) return;
@@ -2988,10 +3001,17 @@ function scapeBreathe() {
   if (Math.random() < 0.08) scape.gustTo = Math.random();
   scape.gust += (scape.gustTo - scape.gust) * 0.12;
   var windBase = [0, 0.15, 0.28, 0.63][a.wind] || 0;   // band-passed brown noise is quiet; these are measured, not guessed
+  // ...and under the open sky it sat on top of everything (rome, 2026-10-16):
+  // 30% down out there. Through the walls it is already the moan it should be.
+  if (!a.shut) windBase *= 0.7;
   // under a roof the gale is a moan through the walls, not air on your face
   scapeTo(scape.wind.gain.gain, windBase * (0.3 + 0.9 * scape.gust) * SCAPE_VOL);
   scapeTo(scape.wind.chain[0].frequency, 260 + (a.wind >= 3 ? 700 : 380) * scape.gust);
   scapeTo(scape.wind.chain[1].frequency, a.shut ? 600 : 2400);
+  // the midges rise and thin as the cloud of them moves about
+  var la = lifeNow();
+  scapeTo(scape.midge.gain.gain, la && la.life === "fen" && la.hour === "day" && !la.rain && !la.cold
+    ? 0.05 * (0.35 + 0.65 * Math.random()) * lifeVol(la) : 0, 0.8);
   // THE SEA COMES IN AND GOES OUT: a swell every nine seconds or so.
   scape.surfPhase += 0.25 / (8 + Math.random() * 3);
   var swell = 0.35 + 0.65 * Math.pow(Math.max(0, Math.sin(scape.surfPhase * Math.PI * 2)), 2);
@@ -3014,6 +3034,8 @@ function scapeApply() {
   if (scape.firePan.pan) scapeTo(scape.firePan.pan, a.fireSide, 0.2);
   // UNDER STONE: the low pressure of a buried room, never silence
   scapeTo(scape.hum.gain.gain, a.hollow ? 0.11 * SCAPE_VOL : 0);
+  scapeTo(scape.life.gain, a.shut ? 0.35 : 1);
+  scapeTo(scape.lifeLp.frequency, a.shut ? 1200 : 14000);
   sndGround = a.ground || "";
   scapeBreathe();
 }
@@ -3109,10 +3131,161 @@ function scapeHeart() {
   }
   scapeEvery(gap, gap, scapeHeart);
 }
+// ---- THE SMALL LIFE (rome, 2026-10-16) ----
+// What sings, chirps and croaks in a place without ever being met: songbirds
+// and a nightjar in the wood, a lark and crickets on the open ground, reed
+// warblers, midges and frogs in the fen. None of it is on the roster - the
+// owl, the gulls, the crows and the bittern are heard as themselves - so this
+// never answers for a creature you could walk up to. The world says where
+// (life), when (hour) and what the weather is; this decides who is calling.
+// Rain stops the birds and the crickets and brings the frogs up; the cold
+// stops anything with six legs; fog takes all of it down; a gale drowns it.
+function lifeNow() {
+  var a = scapeAmb;
+  return a && a.life && a.wind < 3 ? a : null;
+}
+function lifeVol(a) { return SCAPE_VOL * (a.fog ? 0.5 : 1); }
+function lifeOut(pan) {
+  if (!actx.createStereoPanner) return scape.life;
+  var p = actx.createStereoPanner(); p.pan.value = pan; p.connect(scape.life);
+  return p;
+}
+function lifeEnv(t, g, dur, atk) {
+  var e = actx.createGain(); e.gain.setValueAtTime(0.0001, t);
+  e.gain.exponentialRampToValueAtTime(g, t + atk);
+  e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  return e;
+}
+// One sung note: a sine glided from f0 to f1, with a bird's flutter on it if asked.
+function lifeNote(t, f0, f1, dur, g, pan, wob) {
+  var o = actx.createOscillator(); o.type = "sine";
+  o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  if (wob) {
+    var m = actx.createOscillator(), mg = actx.createGain();
+    m.frequency.value = wob; mg.gain.value = f0 * 0.04;
+    m.connect(mg); mg.connect(o.frequency); m.start(t); m.stop(t + dur + 0.02);
+  }
+  var e = lifeEnv(t, g, dur, Math.min(0.012, dur * 0.3));
+  o.connect(e); e.connect(lifeOut(pan));
+  o.start(t); o.stop(t + dur + 0.02);
+}
+// A rough note: a buzz through a narrow throat, for the warblers' chatter.
+function lifeRasp(t, f, dur, g, pan) {
+  var o = actx.createOscillator(); o.type = "sawtooth"; o.frequency.setValueAtTime(f / 3, t);
+  o.frequency.linearRampToValueAtTime(f / 3 * 1.1, t + dur);
+  var bp = scapeFilter("bandpass", f, 6), e = lifeEnv(t, g, dur, 0.006);
+  o.connect(bp); bp.connect(e); e.connect(lifeOut(pan));
+  o.start(t); o.stop(t + dur + 0.02);
+}
+// A pulsed tone: a carrier through a band, chopped by a fast pulse - the frog's
+// purr and the nightjar's churr are both this, an octave apart in every way.
+function lifePulse(t, f0, f1, band, q, rate, dur, g, pan, fade) {
+  var o = actx.createOscillator(); o.type = "sawtooth";
+  o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f1, t + dur);
+  var bp = scapeFilter("bandpass", band, q);
+  var am = actx.createGain(); am.gain.value = 0.5;
+  var lfo = actx.createOscillator(), lg = actx.createGain();
+  lfo.type = "square"; lfo.frequency.value = rate; lg.gain.value = 0.5;
+  lfo.connect(lg); lg.connect(am.gain);
+  var e = actx.createGain(); e.gain.setValueAtTime(0.0001, t);
+  e.gain.exponentialRampToValueAtTime(g, t + fade);
+  e.gain.setValueAtTime(g, t + dur - fade);
+  e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(bp); bp.connect(am); am.connect(e); e.connect(lifeOut(pan));
+  o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
+}
+// THE WOOD'S SONGBIRDS: three ways of singing, none of them a creature you meet.
+function lifeSong(v) {
+  var t = actx.currentTime + 0.02, pan = Math.random() * 1.6 - 0.8, g = 0.03 * v * (0.4 + Math.random() * 0.6), kind = Math.random();
+  if (kind < 0.35) {
+    // the wren: a long run of quick notes, loud for its size
+    var n = 14 + Math.floor(Math.random() * 16), base = 3800 + Math.random() * 900;
+    for (var i = 0; i < n; i++) { var f = base * (0.85 + Math.random() * 0.3); lifeNote(t + i * 0.055, f, f * (0.9 + Math.random() * 0.25), 0.04, g, pan, 0); }
+  } else if (kind < 0.7) {
+    // the robin: slow and thin, falling and rising, no two notes alike
+    var n2 = 5 + Math.floor(Math.random() * 6), at = t;
+    for (var j = 0; j < n2; j++) {
+      var f0 = 2600 + Math.random() * 3000, d = 0.08 + Math.random() * 0.18;
+      lifeNote(at, f0, f0 * (0.6 + Math.random() * 0.9), d, g * 0.8, pan, 30 + Math.random() * 40);
+      at += d + 0.03 + Math.random() * 0.12;
+    }
+  } else {
+    // the thrush: a phrase, and the same phrase again
+    var motif = [], m = 3 + Math.floor(Math.random() * 3), at2 = t;
+    for (var k = 0; k < m; k++) motif.push([1800 + Math.random() * 2200, 0.07 + Math.random() * 0.1]);
+    for (var r = 0; r < 2; r++) {
+      for (var q = 0; q < motif.length; q++) { lifeNote(at2, motif[q][0], motif[q][0] * 1.15, motif[q][1], g, pan, 0); at2 += motif[q][1] + 0.04; }
+      at2 += 0.25;
+    }
+  }
+}
+// THE LARK, high over the open ground: a long unbroken warble, small with height.
+function lifeLark(v) {
+  var t = actx.currentTime + 0.02, pan = Math.random() * 0.6 - 0.3, end = t + 3 + Math.random() * 4, at = t, g = 0.014 * v;
+  while (at < end) {
+    var f = 2800 + Math.random() * 1800, d = 0.03 + Math.random() * 0.07;
+    lifeNote(at, f, f * (0.8 + Math.random() * 0.45), d, g * (0.6 + Math.random() * 0.4), pan, 0);
+    at += d + Math.random() * 0.03;
+  }
+}
+// THE REED WARBLERS: chatter in the reeds, each note said once to three times.
+function lifeWarbler(v) {
+  var t = actx.currentTime + 0.02, pan = Math.random() * 1.6 - 0.8, n = 8 + Math.floor(Math.random() * 14), at = t, g = 0.15 * v * (0.5 + Math.random() * 0.5);
+  var notes = [1700 + Math.random() * 600, 2900 + Math.random() * 800, 2200 + Math.random() * 500];
+  for (var i = 0; i < n; i++) {
+    var f = notes[Math.floor(Math.random() * notes.length)], reps = 1 + Math.floor(Math.random() * 3);
+    for (var r = 0; r < reps; r++) { lifeRasp(at, f, 0.05, g, pan); at += 0.07; }
+    at += 0.03;
+  }
+}
+// THE CRICKETS: three of them, each on its own pitch and in its own place.
+var CRICKETS = [[4300, -0.6], [4700, 0.15], [5100, 0.7]];
+function lifeCricket(v) {
+  var c = CRICKETS[Math.floor(Math.random() * CRICKETS.length)], t = actx.currentTime + 0.01, g = 0.018 * v;
+  for (var i = 0; i < 3; i++) lifeNote(t + i * 0.03, c[0], c[0] * 0.98, 0.018, g, c[1], 0);
+}
+// THE FROGS: a low purr each, from all round the water. Rain brings them up.
+function lifeFrog(a, v) {
+  var dur = 0.25 + Math.random() * 0.4, f = 110 + Math.random() * 90;
+  lifePulse(actx.currentTime + 0.01, f, f * 1.08, 450 + Math.random() * 250, 2.5, 14 + Math.random() * 10, dur,
+    0.06 * v * (a.rain ? 1.4 : 1) * (0.4 + Math.random() * 0.6), Math.random() * 1.8 - 0.9, 0.04);
+}
+// THE NIGHTJAR: the wood's night bird that is not an owl - a long dry churr,
+// dropping and lifting a little as it turns its head.
+function lifeChurr(v) {
+  var f = 900 * (0.9 + Math.random() * 0.2);
+  lifePulse(actx.currentTime + 0.02, f, f * (0.85 + Math.random() * 0.3), 1500, 3, 32 + Math.random() * 8, 3 + Math.random() * 6,
+    0.06 * v * (0.5 + Math.random() * 0.5), Math.random() * 1.4 - 0.7, 0.3);
+}
+// Two clocks, checked about once a second so a walk from the wood into the fen
+// changes who is calling at once; each voice comes on its own odds.
+function scapeSongs() {
+  var a = lifeNow();
+  if (a && !a.rain) {
+    var odds = a.fog ? 0.5 : 1, v = lifeVol(a);
+    if (a.life === "wood" && a.hour !== "night") { if (Math.random() < (a.hour === "low" ? 0.45 : 0.2) * odds) lifeSong(v); }   // busiest at dawn and dusk
+    else if (a.life === "fen" && a.hour === "day") { if (Math.random() < 0.15 * odds) lifeWarbler(v); }
+    else if (a.life === "open" && a.hour === "day") { if (Math.random() < 0.08 * odds) lifeLark(v); }
+  }
+  scapeEvery(900, 1500, scapeSongs);
+}
+function scapeNight() {
+  var a = lifeNow(), lo = 900, hi = 1500;
+  if (a && a.hour !== "day") {
+    var v = lifeVol(a), slow = a.fog ? 1.6 : 1;
+    if (a.life === "open" && !a.rain && !a.cold) { lifeCricket(v); lo = 150 * slow; hi = 450 * slow; }
+    else if (a.life === "fen") { lifeFrog(a, v); lo = (a.rain ? 120 : 250) * slow; hi = (a.rain ? 500 : 900) * slow; }
+    else if (a.life === "wood" && a.hour === "night" && !a.rain && Math.random() < 0.05 / slow) lifeChurr(v);
+  }
+  scapeEvery(lo, hi, scapeNight);
+}
 // THE STORM'S VOICE: a long low roll a moment after the flash, every bolt its
 // own size. A bolt that came down on YOU has no delay and no distance in it.
-function scapeThunder(hit, delay, inside) {
+// far: 1 your own ground, 2 the next one over, 3 a storm too far to see.
+function scapeThunder(hit, delay, inside, far) {
   if (!soundOn || !actx || !soundFull()) return;
+  far = far === 2 || far === 3 ? far : 1;
   var t = actx.currentTime + (hit ? 0.01 : delay);
   if (hit) {
     // the same crack and boom as ever, at the place's 70%
@@ -3127,8 +3300,10 @@ function scapeThunder(hit, delay, inside) {
   var src = actx.createBufferSource(); src.buffer = scapeBrown();
   src.loop = true; // a roll can outlast the four-second buffer; its envelope owns the ending
   // Through a roof it is lower and softer: the walls take the top off it.
-  var lp = scapeFilter("lowpass", inside ? 90 + Math.random() * 50 : 160 + Math.random() * 140);
-  var g = actx.createGain(), dur = 2.5 + Math.random() * 3, peak = (0.35 + Math.random() * 0.4) * SCAPE_VOL * (inside ? 0.6 : 1);
+  // ...and the farther it is, the lower and softer and longer it rolls.
+  var lp = scapeFilter("lowpass", (inside ? 90 + Math.random() * 50 : 160 + Math.random() * 140) * (far === 3 ? 0.5 : far === 2 ? 0.7 : 1));
+  var g = actx.createGain(), dur = (2.5 + Math.random() * 3) * (far === 1 ? 1 : 1.5),
+    peak = (0.35 + Math.random() * 0.4) * SCAPE_VOL * (inside ? 0.6 : 1) * (far === 3 ? 0.3 : far === 2 ? 0.55 : 1);
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(peak, t + 0.08 + Math.random() * 0.25);
   // and it ROLLS: a few swells on the way down, not one clean decay
@@ -3149,6 +3324,9 @@ function scapeSet(amb) {
     creak: +amb.creak || 0, fire: +amb.fire || 0, fireSide: Math.max(-1, Math.min(1, +amb.fireSide || 0)), loud: +amb.loud || 0, hollow: +amb.hollow || 0,
     water: ["surf", "run", "drip", "falls", "lap", "cave"].indexOf(amb.water) >= 0 ? amb.water : "",
     ground: ["mud", "snow", "scree", "wet", "wood", "leaves", "grass", "quiet"].indexOf(amb.ground) >= 0 ? amb.ground : "",
+    life: ["wood", "open", "fen"].indexOf(amb.life) >= 0 ? amb.life : "",
+    hour: amb.hour === "low" || amb.hour === "night" ? amb.hour : "day",
+    fog: +amb.fog || 0, cold: +amb.cold || 0,
   };
   // A SHELTERED PICTURE IS A ROOF TO THE EAR TOO (rome, 2026-10-13). The world
   // counts the Last Shelter, the Bounds House and the dens' buildings as open
@@ -3171,9 +3349,9 @@ function scapeStop() {
   var dying = scape;
   scape = null;
   for (var i = 0; i < dying.timers.length; i++) { clearTimeout(dying.timers[i]); clearInterval(dying.timers[i]); }
-  ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap"].forEach(function (k) { fadeGain(actx, dying[k].gain.gain, 0, AMB_FADE); });
+  ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap", "midge"].forEach(function (k) { fadeGain(actx, dying[k].gain.gain, 0, AMB_FADE); });
   setTimeout(function () {
-    ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap"].forEach(function (k) { try { dying[k].src.stop(); } catch (e) {} });
+    ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap", "midge"].forEach(function (k) { try { dying[k].src.stop(); } catch (e) {} });
   }, AMB_FADE * 1000 + 60);
 }
 function sndInit() {
@@ -5264,9 +5442,11 @@ async function connect() {
       mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose);
       mobCalls(f.died, f.swung); // the round's voices, at the swings mobBeat just set
     } else if (f.t === "bolt") {
-      lightningBolt(!!f.hit, false);
+      lightningBolt(!!f.hit, false, f.d);
     } else if (f.t === "thunder") {
-      lightningBolt(false, true); // under a roof: the sound only, never the flash
+      lightningBolt(false, true, f.d); // under a roof: the sound only, never the flash
+    } else if (f.t === "rumble") {
+      thunderFar(); // a storm too far off to see, or one still building
     } else if (f.t === "bench") {
       if (f.open) { renderBench(f); } else closeBench();
     } else if (f.t === "trade") {
@@ -6269,10 +6449,35 @@ function refreshListView(id) {
     capacity.hidden = !source;
   }
 }
+// THE LIST STAYS WHERE YOU LEFT IT (rome, 2026-10-16). Every move redraws
+// the window, and the scroll was put back - but near the bottom a list one row
+// shorter cannot scroll as far, so the browser pulled the whole thing down a
+// row under your thumb, every time, which is right where kit gets sorted. A
+// blank of the missing height is held at the foot instead, so every row left
+// stays exactly where it was. It is taken away again on the next redraw and
+// worked out afresh, and a window opening fresh starts at the top.
+function holdScroll(root) {
+  var opened = root.classList.contains("open");
+  var at = Array.from(root.querySelectorAll(".bbody, .modalbody, .bcol")).map(function (el) { return [el, opened ? el.scrollTop : 0]; });
+  root.querySelectorAll(".scroll-hold").forEach(function (h) { h.remove(); });
+  return function () {
+    at.forEach(function (p) {
+      var el = p[0], top = p[1];
+      if (!el.isConnected || !el.clientHeight) return;
+      el.scrollTop = top;
+      var short = top - el.scrollTop;
+      if (short < 1) return;
+      var gap = document.createElement("div");
+      gap.className = "scroll-hold"; gap.setAttribute("aria-hidden", "true");
+      gap.style.cssText = "flex:none;height:" + Math.ceil(short) + "px";
+      el.appendChild(gap);
+      el.scrollTop = top;
+    });
+  };
+}
 function keepListPosition(id) {
-  var root = document.getElementById(id), opened = root.classList.contains("open");
-  var positions = Array.from(root.querySelectorAll(".bbody, .modalbody, .bcol")).map(function (el) { return [el, opened ? el.scrollTop : 0]; });
-  return function () { refreshListView(id); positions.forEach(function (p) { p[0].scrollTop = p[1]; }); };
+  var restore = holdScroll(document.getElementById(id));
+  return function () { refreshListView(id); restore(); };
 }
 installListView("bench", [["bpack", "Pack"], ["block", "Lockbox"], ["bvault", "Vault"], ["bshelf", "Shelf"]], "Find in your kit");
 installListView("trade", [["tstock", "Keeper's stock"], ["tgoods", "Your goods"]], "Find stock or goods");
@@ -6696,6 +6901,7 @@ function bountySend(action, row) {
 }
 function closeBounty() { bountyEl.classList.remove("open"); hideModalChat(); }
 function renderBounty(state) {
+  var restorePosition = holdScroll(bountyEl);
   setNote(bynote, state.note);
   byboard.textContent = "";
   if (!state.board || !state.board.length) {
@@ -6738,6 +6944,7 @@ function renderBounty(state) {
     byboard.appendChild(row);
   });
   bountyEl.classList.add("open");
+  restorePosition();
 }
 
 // A stat token wears the chip colours: red bites, steel guards, gold gains,
@@ -7072,6 +7279,7 @@ function swapSideNode(label, confirmed) {
 }
 
 function renderSwap(state) {
+  var restorePosition = holdScroll(swapEl);
   dealreqEl.classList.remove("open");
   setNote(swnote, state.note);
   var partner = state.partner || "your partner";
@@ -7092,6 +7300,7 @@ function renderSwap(state) {
   shake.addEventListener("click", function () { swapSend(state.yourConfirm ? "unconfirm" : "confirm"); });
   swconfirm.appendChild(shake);
   swapEl.classList.add("open");
+  restorePosition();
 }
 
 // ---- the gatehouse forge: what the bench can make from what you carry ----
@@ -11228,30 +11437,53 @@ var THUNDER_LINES = [
   "Thunder breaks overhead and rolls away across the ground.",
   "Lightning, somewhere near. You count, and the thunder comes before you reach three.",
 ];
+// The storm over the next ground: a flicker low down, and a long count.
+var THUNDER_NEAR_LINES = [
+  "Lightning flickers low in the sky off over the next ground, and the thunder comes a long count after it.",
+  "Somewhere off, the cloud lights from inside, and a while later the thunder reaches you, rolling.",
+  "A flicker on the edge of the sky. You count to ten before the thunder comes.",
+];
+// Too far to see, or still gathering: only the sound.
+var THUNDER_FAR_LINES = [
+  "Thunder grumbles a long way off.",
+  "Somewhere far away the thunder goes on, low, like something moving furniture.",
+  "A long roll of thunder, very distant.",
+];
 var weatherMotion = typeof window !== "undefined" && window.matchMedia
   ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
 // A BOLT, timed by the world so everyone under the same storm sees it at once.
 // The plate flashes; the thunder line follows a moment behind. A bolt that hit
 // YOU carries its own words from the server, and no count before the thunder.
 var boltTimer = null;
-function lightningBolt(hit, inside) {
+// HOW FAR, d (the storm has a place, 2026-10-16): 0 it came down in your own
+// room - the crack and the light together; 1 on your ground - the flash, the
+// thunder a count of one to four; 2 on the ground next door - a dim flicker,
+// the thunder six to fifteen seconds on. A page that is sent no d is talking to
+// a world from before, and gets the near bolt it always got.
+function lightningBolt(hit, inside, d) {
+  d = d === 0 || d === 2 ? d : 1;
   if (!inside && viewMode === "image" && !weatherMotion.matches && !document.hidden) {
-    var dur = .4 + Math.random() * 1.2;  // 0.4 to 1.6 seconds
+    var dur = d === 2 ? .5 + Math.random() * .6 : .4 + Math.random() * 1.2;  // 0.4 to 1.6 seconds
     document.body.classList.remove("bolt");
-    document.body.style.setProperty("--bolt-name", "bolt-flash-" + (1 + Math.floor(Math.random() * 3)));
+    document.body.style.setProperty("--bolt-name", d === 2 ? "bolt-flicker" : "bolt-flash-" + (1 + Math.floor(Math.random() * 3)));
     document.body.style.setProperty("--bolt-dur", dur.toFixed(2) + "s");
     void document.body.offsetWidth;
     document.body.classList.add("bolt");
     clearTimeout(boltTimer);
     boltTimer = setTimeout(function () { document.body.classList.remove("bolt"); }, dur * 1000 + 100);
   }
-  var delay = 0.7 + Math.random() * 1.1;
-  scapeThunder(hit, delay, inside);
+  var delay = d === 0 ? 0 : d === 2 ? 6 + Math.random() * 9 : 1 + Math.random() * 3;
+  scapeThunder(hit || (d === 0 && !inside), delay, inside, d);
   // The words are flavour, not news (rome, 2026-10-15): dim, like the rest of it.
-  if (!hit) setTimeout(function () {
-    var lines = inside ? THUNDER_IN_LINES : THUNDER_LINES;
+  // A bolt in your own room is news, and the world says that one itself.
+  if (!hit && !(d === 0 && !inside)) setTimeout(function () {
+    var lines = inside ? THUNDER_IN_LINES : d === 2 ? THUNDER_NEAR_LINES : THUNDER_LINES;
     print(lines[Math.floor(Math.random() * lines.length)], "dim");
   }, delay * 1000);
+}
+function thunderFar() {
+  scapeThunder(false, 0.05, false, 3);
+  print(THUNDER_FAR_LINES[Math.floor(Math.random() * THUNDER_FAR_LINES.length)], "dim");
 }
 function runWeather() {
   var active = weatherCtx && weatherKind && viewMode === "image" && !document.hidden && !weatherMotion.matches;

@@ -15,6 +15,7 @@ import {
 } from "./zone-data";
 import * as events from "./events";
 import * as lore from "./lore";
+import { isNight, isDusk, isDawn } from "./zone-util";
 
 // THE PLACES THAT CREAK: built of timber, and saying so. Picked from the room
 // ids and the prose (hulls, piers, lofts, huts, gibbets, scaffolds). A stand
@@ -119,6 +120,15 @@ export interface Soundscape {
   loud: number;    // 1 = that water is up (the sea over the road, the ford in spate)
   ground: string;  // what a footstep lands in: "" | "mud" | "snow" | "scree" | "wet"
   hollow: number;  // 1 = under stone: the low tone of a buried room
+  // THE SMALL LIFE OF A PLACE (rome, 2026-10-16): the things that sing and
+  // chirp and croak that you never meet - songbirds, a lark, crickets, frogs.
+  // Nothing in it is a creature on the roster: the owl, the gulls, the crows,
+  // the bittern and the rest are heard as themselves (VOICES), so the shore
+  // and the mountain get nothing here, and the deep keeps its silence.
+  life: string;    // "" | "wood" | "open" | "fen"
+  hour: string;    // "day" | "low" (dusk and dawn) | "night"
+  fog: number;     // 1 = fog over this ground: everything that sings is quieter
+  cold: number;    // 1 = the cold snap here: nothing with six legs calls
 }
 
 // THE PLACE AND ITS WEATHER, as plain facts. Split from the world on purpose:
@@ -139,6 +149,9 @@ export interface Weather {
   mud: boolean;    // the ground is mud after rain
   seaUp: boolean;  // the sea is over this room
   runUp: boolean;  // this ford, beck or fen is in spate
+  hour?: string;   // "day" | "low" | "night" - the world's clock
+  fog?: boolean;   // fog lies here
+  cold?: boolean;  // the cold snap is on this ground
 }
 
 export function soundscapeOf(p: Place, w: Weather): Soundscape {
@@ -193,6 +206,16 @@ export function soundscapeOf(p: Place, w: Weather): Soundscape {
       : GRASS_FLOOR_ROOMS.has(roomId) ? "grass"
       : "",
     hollow: !inside && (HOLLOW_ROOMS.has(roomId) || (!open && (sunless || band === "upper"))) ? 1 : 0,
+    // A hut in the wood still hears the wood, through its walls (shut); a room
+    // cut into stone hears none of it.
+    life: inside || sunless || buried ? ""
+      : FEN_ROOMS.has(roomId) ? "fen"
+      : band === "wood" ? "wood"
+      : band === "road" || band === "out" || band === "den" || band === "gate" ? "open"
+      : "",
+    hour: w.hour === "low" || w.hour === "night" ? w.hour : "day",
+    fog: w.fog ? 1 : 0,
+    cold: w.cold ? 1 : 0,
   };
 }
 
@@ -223,10 +246,13 @@ export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
       mud: events.muddy(z, roomId),
       seaUp: events.seaUnder(z, roomId),
       runUp: events.fordUp(z, roomId) || events.spated(z, roomId) || events.fenUp(z, roomId),
+      hour: isNight() ? "night" : isDusk() || isDawn() ? "low" : "day",
+      fog: events.wxPhase(z, "fog", roomId) === "active",
+      cold: events.wxPhase(z, "cold", roomId) === "active",
     });
 }
 
 // One short string per soundscape, so the tick can tell a change with a compare.
 export function soundKey(a: Soundscape): string {
-  return `${a.leaves}${a.rain}${a.roof}${a.shut}${a.wind}${a.creak}${a.fire}${a.fireSide}${a.water}${a.loud}${a.ground}${a.hollow}`;
+  return `${a.leaves}${a.rain}${a.roof}${a.shut}${a.wind}${a.creak}${a.fire}${a.fireSide}${a.water}${a.loud}${a.ground}${a.hollow}${a.life}${a.hour}${a.fog}${a.cold}`;
 }
