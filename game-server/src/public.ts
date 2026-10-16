@@ -6087,11 +6087,15 @@ var lastCombat = false;
 // back through the door on every deploy. The update is SEEN instead: the
 // reweave line lands in the log, once, and the refresh is the player's to take.
 // The socket is never touched by this: the player stays where they stand.
-var staleBuild = false;
+// ONCE FOR EACH BUILD, NOT ONCE FOR THE PAGE (rome, 2026-10-16). It used to go
+// quiet for good after its first line, so a page left open across two deploys
+// said nothing about the second one - the lantern landed and nobody was told.
+// It keeps asking now, and says it again only when the build is a new one.
+var seenBuild = "";
 function checkBuild(world) {
   if (!BUILD || BUILD.charAt(0) === "_" || world === BUILD) return;  // unstamped in dev
-  if (staleBuild) return;
-  staleBuild = true;
+  if (world === seenBuild) return;
+  seenBuild = world;
   print("\u2014 the world reweaves: a new build has landed. Refresh the page to see it \u2014", "sys");
 }
 // ...AND THE PAGE ASKS, once a minute and whenever it comes back into view
@@ -6100,7 +6104,7 @@ function checkBuild(world) {
 // all. /build answers from the Worker, which has the new build the moment the
 // deploy finishes.
 function askBuild() {
-  if (staleBuild || !BUILD || BUILD.charAt(0) === "_") return;
+  if (!BUILD || BUILD.charAt(0) === "_") return;
   try {
     fetch("/build", { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; })
       .then(function (b) { b = (b || "").trim(); if (/^[a-z0-9]{1,16}$/.test(b)) checkBuild(b); })

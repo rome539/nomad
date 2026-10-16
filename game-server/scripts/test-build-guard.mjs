@@ -9,7 +9,7 @@ vm.runInNewContext(transformSync(fs.readFileSync(new URL('../src/public.ts', imp
 const js = module.exports.PAGE.split('<script type="module">')[1].split('</script>')[0];
 const ast = parse(js, { ecmaVersion: 'latest', sourceType: 'module' });
 const fn = name => { const n = ast.body.find(n => n.type === 'FunctionDeclaration' && n.id.name === name); return js.slice(n.start, n.end); };
-const ctx = vm.createContext({ BUILD: 'old', staleBuild: false, lines: [], reloads: 0 });
+const ctx = vm.createContext({ BUILD: 'old', seenBuild: '', lines: [], reloads: 0 });
 ctx.print = t => ctx.lines.push(t);
 ctx.location = { reload() { ctx.reloads++; } };
 vm.runInContext(fn('checkBuild'), ctx);
@@ -18,5 +18,9 @@ ctx.checkBuild('new'); ctx.checkBuild('new');
 assert.equal(ctx.reloads, 0);
 assert.equal(ctx.lines.length, 1);
 assert.match(ctx.lines[0], /reweaves.*Refresh the page/);
+// ...and a page still open when ANOTHER build lands says so again, once.
+ctx.checkBuild('newer'); ctx.checkBuild('newer');
+assert.equal(ctx.lines.length, 2);
+assert.equal(ctx.reloads, 0);
 assert.ok(!js.includes('location.reload();\n}\nvar') && !/maybeReload|nomad_rewoven/.test(js));
-console.log('PASS: a new build says it reweaves, once, asks for a refresh, and never reloads the page.');
+console.log('PASS: each new build says it reweaves, once, asks for a refresh, and never reloads the page.');
