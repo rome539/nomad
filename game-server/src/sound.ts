@@ -52,7 +52,7 @@ export const RUN_ROOMS = new Set<string>([
   "the-drain-mouth", "the-culvert", "the-beck-mouth", "the-trap-line", "the-mill-leat", "the-drowned-mill",
   "the-tail-race", "the-osier-island", "the-hatchpool", "the-plank-crossing", "the-gill-pot", "the-rowan-gill",
   "the-shepherds-ford", "the-beck-head", "the-beck-lane", "the-otter-holt", "the-flood-mead", "the-spring-line",
-  "the-beck-stair", "the-well-house",
+  "the-beck-stair", "the-well-house", "the-spring-head",
   // the dens' mill
   "the-mill-dam", "the-mill", "the-wheel-pit",
   // the mountain's burns
@@ -61,6 +61,8 @@ export const RUN_ROOMS = new Set<string>([
   "the-water-notch", "the-valley-mouth", "the-far-shore-high", "the-valley-head", "the-braided-flats", "the-till",
   "the-step-in-the-floor", "the-blue-wall", "the-lower-fan", "the-moulin", "the-beck-fork", "the-water-lip",
   "the-melt-runnel", "the-melt-run",
+  // the crossing's inland drainage
+  "the-drain-cut", "the-outfall",
   // the deep's moving water
   "the-eel-run",
 ]);
@@ -69,8 +71,18 @@ export const FALLS_ROOMS = new Set<string>([
   "the-force", "the-lower-force", "the-upper-force", "the-dam-walk", "the-hanging-wood", "the-gill-narrows",
   "the-gill-foot", "the-stepping-stones", "the-resurgence", "the-weir",
 ]);
-// The sea, beyond the crossing (where every open room is on the tide already).
+// Standing pools and inland gravel do not make breaking surf or river hiss.
+export const QUIET_WATER_ROOMS = new Set<string>([
+  "the-flashes", "the-wet-carr", "the-burn-flats", "the-peat-cuts",
+]);
+// The sea, beyond the crossing.
 export const SHORE_ROOMS = new Set<string>(["the-burn-mouth", "the-cobble-bank"]);
+// Surfaces and water are explicit where the prose distinguishes them.
+export const WOOD_FLOOR_ROOMS = new Set<string>(["the-plank-bridge", "the-rope-bridge", "the-plank-crossing", "the-first-pier", "the-second-pier", "the-third-pier", "the-fourth-pier"]);
+export const LEAF_FLOOR_ROOMS = new Set<string>(["the-holly-brake", "the-close-dark", "the-turned-ground", "the-heart-of-it", "the-sunken-ditch", "the-deer-fence", "the-crooked-stand"]);
+export const GRASS_FLOOR_ROOMS = new Set<string>(["the-first-clearing"]);
+export const LAP_ROOMS = new Set<string>(["the-open-water", "the-salt-pool", "the-wet-hollow"]);
+export const CAVE_SURF_ROOMS = new Set<string>(["the-sea-cave", "the-blowhole"]);
 // Water in the dark: dripping, standing, sweating out of the walls.
 export const DRIP_ROOMS = new Set<string>([
   "sewer", "weeper-hall", "scullery", "well",
@@ -78,7 +90,7 @@ export const DRIP_ROOMS = new Set<string>([
   "drowned-barracks", "leech-pools", "tide-vault", "the-cistern", "drowned-court", "the-tide-gate",
   "the-under-weir", "the-breathing-hall", "the-tide-throat", "the-silt-chapel", "the-still-cradle",
   "the-sluice-walk", "the-chain-well", "the-flooded-cloister", "the-sunk-bell", "the-silt-bank",
-  "the-drowned-kitchens", "the-cold-pantry", "the-lock-keepers-room", "the-sluice-gear", "the-flood-mark",
+  "the-drowned-kitchens", "the-sluice-gear",
   "the-choir-drain", "the-drain-run", "the-kings-stair", "the-waiting-hall", "the-gods-pool",
   "the-dripping-gallery", "the-sewer-slip", "pocket-of-air", "the-long-swallow", "the-sump",
   // the crossing's sea cave: the tide is in there, but what you hear inside
@@ -95,6 +107,7 @@ export const HOLLOW_ROOMS = new Set<string>(["the-kept-room", "the-mine-gallery"
 export const FIRE_ROOMS = new Set<string>(["the-shieling"]);
 
 export interface Soundscape {
+  leaves: number;  // wind moving a wooded canopy
   rain: number;    // 0 none, 1 a shower, 2 settled rain
   roof: number;    // 1 = the rain is on a roof over you, not on you
   shut: number;    // 1 = walls around you: the wind is heard through them
@@ -102,7 +115,7 @@ export interface Soundscape {
   creak: number;   // 1 = timber around you that talks
   fire: number;    // 1 = a hearth in the room
   fireSide: number; // where that hearth is heard, -1 left .. 1 right
-  water: string;   // "" | "surf" | "run" | "drip"
+  water: string;   // "" | "surf" | "run" | "drip" | "falls" | "lap" | "cave"
   loud: number;    // 1 = that water is up (the sea over the road, the ford in spate)
   ground: string;  // what a footstep lands in: "" | "mud" | "snow" | "scree" | "wet"
   hollow: number;  // 1 = under stone: the low tone of a buried room
@@ -119,6 +132,7 @@ export interface Place {
   inside: boolean; // behind the gatehouse door
 }
 export interface Weather {
+  dripsStopped?: boolean; // the deep drawing breath
   rain: number;    // 0 none, 1 a shower, 2 settled - the world's, before any roof
   windUp: boolean; // the wind event is blowing
   snow: boolean;   // snow lies here
@@ -130,26 +144,33 @@ export interface Weather {
 export function soundscapeOf(p: Place, w: Weather): Soundscape {
   const { roomId, band, open, inside } = p;
   const sunless = band === "deep" || band === "warrens";
+  const buried = !inside && !open && (sunless || band === "upper" || HOLLOW_ROOMS.has(roomId));
   // no rain is heard through solid rock: the deep, the warrens, and a room cut
   // into the hill (an open hole like the Last Shelter still hears it)
-  const rain = sunless || (!open && HOLLOW_ROOMS.has(roomId)) ? 0 : w.rain;
+  const rain = sunless || buried ? 0 : w.rain;
   let wind = 0;
   if (open) {
     wind = band === "mountain" || band === "sky" ? 2 : 1;
     if (w.windUp) wind = 3;
     else if (rain || w.snow) wind = Math.min(3, wind + 1);
-  } else if (!sunless && w.windUp) {
+  } else if (!sunless && !buried && w.windUp) {
     wind = 1; // a gale outside is still heard through the walls
   }
   const seaUp = !inside && w.seaUp;
   const runUp = !inside && w.runUp;
   const falls = FALLS_ROOMS.has(roomId);
   const water = inside ? ""
-    : DRIP_ROOMS.has(roomId) ? "drip"
+    : LAP_ROOMS.has(roomId) ? "lap"
+    : CAVE_SURF_ROOMS.has(roomId) ? "cave"
+    : QUIET_WATER_ROOMS.has(roomId) ? ""
+    : DRIP_ROOMS.has(roomId) ? (w.dripsStopped ? "" : "drip")
+    : falls ? "falls"
+    : RUN_ROOMS.has(roomId) ? "run"
     : SEA_ROOMS.has(roomId) || SHORE_ROOMS.has(roomId) || (open && band === "crossing") ? "surf"
-    : falls || RUN_ROOMS.has(roomId) || SPATE_ROOMS.has(roomId) || ROAD_FORDS.has(roomId) || FEN_ROOMS.has(roomId) ? "run"
+    : SPATE_ROOMS.has(roomId) || ROAD_FORDS.has(roomId) || FEN_ROOMS.has(roomId) ? "run"
     : "";
   return {
+    leaves: !inside && open && band === "wood" ? 1 : 0,
     rain,
     roof: rain && !open ? 1 : 0,
     shut: open ? 0 : 1,
@@ -165,7 +186,11 @@ export function soundscapeOf(p: Place, w: Weather): Soundscape {
       : seaUp || runUp ? "wet"
       : w.snow ? "snow"
       : SCREE_ROOMS.has(roomId) ? "scree"
-      : w.mud || (rain && open) ? "mud"
+      : WOOD_FLOOR_ROOMS.has(roomId) ? "wood"
+      : w.mud || (rain && open) || roomId === "the-black-mud" ? "mud"
+      : roomId === "the-white-ground" ? "quiet"
+      : LEAF_FLOOR_ROOMS.has(roomId) ? "leaves"
+      : GRASS_FLOOR_ROOMS.has(roomId) ? "grass"
       : "",
     hollow: !inside && (HOLLOW_ROOMS.has(roomId) || (!open && (sunless || band === "upper"))) ? 1 : 0,
   };
@@ -191,8 +216,9 @@ export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
   return soundscapeOf(
     { roomId, band: lore.mapRegionOf(z, roomId), open: !inside && OUTDOOR_ROOMS.has(roomId), inside },
     {
-      rain: rainState?.phase !== "active" ? 0 : rainState.data === "settled" ? 2 : 1,
-      windUp: events.phaseOf(z, "wind") === "active",
+      dripsStopped: !inside && events.deepRoom(z, roomId) && ["telegraph", "active"].includes(events.phaseOf(z, "exhale")),
+      rain: rainState?.phase !== "active" || !events.wxCovers(z, "rain", roomId) ? 0 : rainState.data === "settled" ? 2 : 1,
+      windUp: events.wxPhase(z, "wind", roomId) === "active",
       snow: events.snowed(z, roomId),
       mud: events.muddy(z, roomId),
       seaUp: events.seaUnder(z, roomId),
@@ -202,5 +228,5 @@ export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
 
 // One short string per soundscape, so the tick can tell a change with a compare.
 export function soundKey(a: Soundscape): string {
-  return `${a.rain}${a.roof}${a.shut}${a.wind}${a.creak}${a.fire}${a.fireSide}${a.water}${a.loud}${a.ground}${a.hollow}`;
+  return `${a.leaves}${a.rain}${a.roof}${a.shut}${a.wind}${a.creak}${a.fire}${a.fireSide}${a.water}${a.loud}${a.ground}${a.hollow}`;
 }

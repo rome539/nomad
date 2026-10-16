@@ -157,7 +157,7 @@
   }
   frameB.onclick = stepFrame;
   var atkB = mk("button", btnCss, "attack");
-  atkB.onclick = function () { liveAgain(); revive(); mobBeat(ids.slice(), null, null); mobCalls(null); };
+  atkB.onclick = function () { liveAgain(); revive(); mobBeat(ids.slice(), null, null); mobCalls(null, ids.slice()); };
   var dieB = mk("button", btnCss, "death");
   dieB.onclick = function () { liveAgain(); revive(); mobBeat(null, null, ids.slice()); mobCalls(ids.slice()); };
   // THE SOUND: one button (or S) steps off, half, full, as the game's setting
@@ -223,7 +223,7 @@
     mobVoice = function (id, m, el, w) { window.__voxLog.push([id, m, +(w || 0).toFixed(2), +mobPan(id, el).toFixed(2)]); real(id, m, el, w); }; };
   window.__heard = function (f) { heardSound(f); };
   window.__idle = function () { return mobIdle(); };
-  window.__cameIn = function (ids, rid) { updateMobs(ids, null, [], 0, []); mobsCameIn(ids, rid); };
+  window.__cameIn = function (ids, rid, doing) { updateMobs(ids, doing, [], 0, []); mobsCameIn(ids, rid, doing); };
   window.__hit = function () { SND.hit(actx.currentTime + 0.01); };
   window.__fxCast = function () { return fxMobs(sceneEl.getBoundingClientRect()).map(function (m) { return m.rect.map(function (v) { return +v.toFixed(3); }); }); };
   window.__sndLR = function () {

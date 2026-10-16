@@ -2942,7 +2942,7 @@ export class ZoneDO implements DurableObject {
       this.placeCache(cache); // looted: it will refill somewhere new in its tier (hidden here until then)
       if (ring) this.send(session, lastOnRing
         ? `You try the keys on the ring one after another until one turns, and it stays in the lock. It was the last one. ${cap(cache.name)} swings open, and you let the empty ring fall.`
-        : `You try the keys on the ring one after another until one turns, and it stays in the lock. ${cap(cache.name)} swings open.`, "unlock");
+        : `You try the keys on the ring one after another until one turns, and it stays in the lock. ${cap(cache.name)} swings open.`, lastOnRing ? "unlock sfx-lastkey" : "unlock sfx-keyunlock");
       else this.send(session, `You work ${keyT?.name ?? "the key"} into the lock. It gives with a groan, and ${cache.name} swings open.`, "unlock");
       this.roomFeed(session.roomId, `${session.name} forces ${cache.name} open.`, session.pubkey, false);
     }
@@ -6680,13 +6680,15 @@ export class ZoneDO implements DurableObject {
       // doors — including three at the bottom of a fortress on the far side of
       // the world. It falls on the hill that kept it, in the hill's own words,
       // to the hill (MOUNTAIN_HEARD_BANDS, the same reach as its roar).
+      // THE GATEHOUSE DOES NOT HEAR A BOSS (rome, 2026-10-15): not its fall and
+      // not its call. carries=false stops each line at the door.
       const band = this.regionOf(creature.roomId);
       if (band === "mountain") {
-        this.roomFeedBands(MOUNTAIN_HEARD_BANDS, `High up, something stops — a sound the mountain has always made ends, and the quiet that comes after it is a different quiet: ${tmpl.name} has fallen.`);
+        this.roomFeedBands(MOUNTAIN_HEARD_BANDS, `High up, something stops — a sound the mountain has always made ends, and the quiet that comes after it is a different quiet: ${tmpl.name} has fallen.`, undefined, false);
       } else if (SURFACE_BANDS.has(band)) {
-        this.roomFeedBands(SURFACE_BANDS, `Somewhere out under the trees, a cry goes up and is not answered: ${tmpl.name} has fallen.`, undefined, true, "fall");
+        this.roomFeedBands(SURFACE_BANDS, `Somewhere out under the trees, a cry goes up and is not answered: ${tmpl.name} has fallen.`, undefined, false, "fall");
       } else {
-        this.roomFeedBands(FORTRESS_BANDS, `A cry rolls through the stone: ${tmpl.name} has fallen.`, undefined, true, "fall");
+        this.roomFeedBands(FORTRESS_BANDS, `A cry rolls through the stone: ${tmpl.name} has fallen.`, undefined, false, "fall");
       }
     }
     ai.scheduleArrivals(this, Date.now());
@@ -7319,7 +7321,7 @@ export class ZoneDO implements DurableObject {
     // a phase already announced to this session; resets naturally once the
     // phase moves past telegraph/active (idle, aftermath).
     if (OUTDOOR_ROOMS.has(room.id)) {
-      const phase = events.phaseOf(this, "rain");
+      const phase = events.wxPhase(this, "rain", room.id); // walking out from under it counts as it ending
       if (phase !== session.rainPhaseSeen) {
         const line = events.rainAnnounceLine(phase);
         if (line) this.send(session, line, "evt");
@@ -8427,10 +8429,11 @@ export class ZoneDO implements DurableObject {
   // kill, fumble, death, gain — with "big" for the loud ones) so the client
   // colors combat by MEANING, not by matching prose. This is what lets the
   // dialogue vary freely without the coloring ever falling out of step.
-  public send(session: Session, text: string, cls?: string, speaker?: { name: string; pk: string }): void {
+  public send(session: Session, text: string, cls?: string, speaker?: { name: string; pk: string }, sounds?: { mob?: string; act: string; dir: string }[]): void {
     try {
       const frame: Record<string, unknown> = { v: 0, kind: 24912, text };
       if (cls) frame.cls = cls;
+      if (sounds?.length) frame.sounds = sounds;
       // A speech line can name its speaker: the client paints that name in the
       // speaker's own key-colour (bitchat-style), so voices read apart.
       if (speaker) { frame.who = speaker.name; frame.sp = speaker.pk; }
@@ -8665,7 +8668,7 @@ export class ZoneDO implements DurableObject {
     // THE HOUR AFTER THE RAIN. Last in the chain on purpose: it only
     // ever replaces plain day. Dusk and dawn already carry a colour of
     // their own, and a wet night is still a night.
-    : events.phaseOf(this, "rain") === "aftermath" ? "after-rain"
+    : events.wxPhase(this, "rain", session.roomId) === "aftermath" ? "after-rain"
     : "day";
   }
 
@@ -8698,7 +8701,7 @@ export class ZoneDO implements DurableObject {
   // the wall. Only lines that name a creature or a plain kind of noise carry it;
   // the rest stay words alone.
   public roomSound(sourceRoomId: string, template: string, excludeRoomId?: string, cls?: string, loud = false,
-    snd?: { mob?: string; act: "move" | "flee" | "feed" | "fight" | "call" }): void {
+    snd?: { mob?: string; act: "pipe" | "idle" | "footstep" | "rustle" | "wings" | "bigwings" | "metal" | "impact" | "murmur" | "scream" | "move" | "flee" | "feed" | "fight" | "call" | "keys" | "whistle" | "bell" | "wetbell" | "rubble" | "stoneshift" | "scurry" }): void {
     const world = this.world;
     if (!world) return;
     // A downpour eats sound made under it — half of what happens in the rain

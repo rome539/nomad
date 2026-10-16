@@ -1634,12 +1634,16 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     };
     // The first thing to SAY wins the note (the pack-full stop, most often); the
     // successful moves are silent — the settled counts are the confirmation.
+    const carriedState = () => JSON.stringify(session.items.map(c => [c.rowId, !!c.equipped]));
+    const beforeSound = carriedState();
     let note: string | undefined;
     for (const row of rows) {
       const n = await one(row);
       if (n !== undefined && note === undefined) note = n;
     }
-    return sendBench(z, session, note);
+    const cue = beforeSound !== carriedState()
+      ? (["stash", "vault", "take"].includes(action) ? "box" : ["equip", "remove", "drop", "stow", "fetch"].includes(action) ? "handle" : "") : "";
+    return sendBench(z, session, note, cue);
   }
 
   // Manage what you're wearing/wielding, right from the bench (always safe here,
@@ -1891,7 +1895,7 @@ const sortKit = (arr: any[]): any[] => arr.sort((a, b) =>
   || String(a.name).localeCompare(String(b.name))
   || (a.serial ?? 0) - (b.serial ?? 0));
 
-export async function sendBench(z: ZoneDO, session: Session, note?: string): Promise<void> {
+export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?: string): Promise<void> {
     const world = z.world!;
     const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
     const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
@@ -1953,7 +1957,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string): Pro
     const shelf = await den.shelfHere(z, session);
     const shelfRest = shelf ? z.slotsUsed(shelf.held.filter((c) => !z.isGear(c.itemId)), "lockbox") : 0;
     const payload = {
-      v: 0, t: "bench", open: true, note: note ?? "",
+      v: 0, t: "bench", open: true, note: note ?? "", sfx: sfx ?? "",
       inGatehouse: z.inGatehouse.has(session.pubkey) && world.entryRooms.has(session.roomId),
       loadouts: await z.savedLoadouts(session.pubkey),
       sheet: z.sheetFor(session), // the paperdoll: gear worn + the combat math it adds up to
@@ -2090,7 +2094,7 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
       session.items.splice(session.items.indexOf(carried), 1);
     }
     await setContainer(z.env.DB, carried.rowId, cfg.container);
-    z.send(session, cfg.put(tmpl.name));
+    z.send(session, cfg.put(tmpl.name), "sfx-box");
     // Banking at a gate happens behind the door (gatehouse); a mid-dungeon lockbox
     // crouch happens in the open. The witnesses follow: gatehouse folk, or the room.
     if (z.outOfWorld(session)) gatehouseFeed(z, `${session.name} ${cfg.feed}`, session.pubkey);
@@ -2198,7 +2202,7 @@ export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key:
     if (!z.packRoom(session, entry.itemId)) return z.send(session, `Your pack is full (${z.packCap(session)} slots). Make room first.`);
     if (!await withdrawContainer(z.env.DB, entry.rowId, session.pubkey, cfg.container)) return z.send(session, "That item has already moved.");
     session.items.push(entry);
-    z.send(session, cfg.take(tmpl.name));
+    z.send(session, cfg.take(tmpl.name), "gain sfx-box");
     z.sendCtx(session);
   }
 // ============================================================================
@@ -2734,8 +2738,8 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     // Nothing sleeps in here, so there is nothing to wake — wakeListeners would
     // refuse it anyway (its first line returns on `away`). It is a noise by a
     // fire, and everybody looks up.
-    z.send(session, "You put two fingers to your teeth and whistle, and it is far too loud for the room.");
-    gatehouseFeed(z, `${session.name} whistles — far too loud for the room.`, session.pubkey);
+    z.send(session, "You put two fingers to your teeth and whistle, and it is far too loud for the room.", "sfx-whistle");
+    gatehouseFeed(z, `${session.name} whistles — far too loud for the room.`, session.pubkey, "sfx-whistle");
     return;
   }
   if (v === "dance") {
@@ -2786,11 +2790,13 @@ export function gatehouseAmbient(z: ZoneDO, avoid?: string, roomId?: string): st
   // the fire and the bench belong to every gatehouse; the turf roof to one.
     const amBand = (roomId ? z.world!.rooms.get(roomId)?.region ?? "" : "") as Region;
   pool.push(...(GATEHOUSE_BAND_AMBIENCE[amBand] ?? []));
-  const rain = events.phaseOf(z, "rain");
+  // The weather on THIS door's ground, now that weather has a place.
+  const wx = (id: string) => roomId ? events.wxPhase(z, id, roomId) : events.phaseOf(z, id);
+  const rain = wx("rain");
   if (rain === "active") pool.push(...GATEHOUSE_RAIN);
   else if (rain === "aftermath") pool.push(...GATEHOUSE_AFTER_RAIN);
-  if (events.phaseOf(z, "fog") === "active") pool.push(...GATEHOUSE_FOG);
-  if (events.phaseOf(z, "cold") === "active") pool.push(...GATEHOUSE_COLD);
+  if (wx("fog") === "active") pool.push(...GATEHOUSE_FOG);
+  if (wx("cold") === "active") pool.push(...GATEHOUSE_COLD);
   if (events.phaseOf(z, "crows") === "active") pool.push(...GATEHOUSE_CROWS);
   // THE CHALK, from the side of the hatch it is chalked ON. See wantedItem: the
   // one arc whose entire subject is this room's own furniture was the one arc

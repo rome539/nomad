@@ -51,7 +51,7 @@ const fnSrc = (n) => {
 const depsFor = (body, self) => {
   // Weather has its own lifecycle test and is stubbed below; do not recurse
   // through its renderer into unrelated log/audio dependencies.
-  const tables = [], fns = [], seen = new Set(['setWeather', 'fitMobRow', ...(self ? [self] : [])]);
+  const tables = [], fns = [], seen = new Set(['setWeather', 'fitMobRow', 'scapeSet', ...(self ? [self] : [])]);
   const walk = (code) => {
     const bare = code.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
     // ANY SHOUTED NAME, not only an indexed one. This matched NAME[...] alone,
@@ -90,6 +90,7 @@ const code = [
   'var viewMode = "image";',
   'var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "", lastTorch = false, skyRoll = 0;',
   'var lastSea = 0, lastCovered = false, weatherKind = "";',
+  'var scapeRaw = null;', // audio has its own lifecycle checks in test-world-sound.mjs
   'function setWeather(kind) { weatherKind = kind; }',
   'function fitMobRow() {}', // geometry is covered by test-mobile-image.mjs
   'var scenePainted = "", sceneSeq = 0;',

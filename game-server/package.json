@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "predeploy": "npm run check:privacy",
+    "predeploy": "npm run check:privacy && npm run check:assets",
     "check:privacy": "node scripts/check-privacy.mjs",
     "typecheck": "tsc --noEmit",
     "check:served": "node scripts/check-served.mjs",
@@ -22,9 +22,11 @@
     "test:catchup": "node scripts/test-catchup.mjs",
     "test:combat": "node scripts/test-combat.mjs",
     "test:styles": "node scripts/test-styles.mjs",
+    "test:sound": "node scripts/test-world-sound.mjs",
     "test:security": "node scripts/test-security.mjs",
     "test:security:runtime": "node scripts/test-security-runtime.mjs",
-    "test:exhaustion": "node --disable-warning=ExperimentalWarning scripts/combat-balance/check.mjs"
+    "test:exhaustion": "node --disable-warning=ExperimentalWarning scripts/combat-balance/check.mjs",
+    "check:assets": "node scripts/check-deploy-assets.mjs"
   },
   "dependencies": {
     "nostr-tools": "2.24.1",

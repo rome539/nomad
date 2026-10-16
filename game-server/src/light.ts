@@ -228,7 +228,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litUntil = Date.now() + LANTERN_BURN_MS;
     session.litSource = "lantern";
     session.torchWarned = false;
-    z.send(session, `You slide the shutter and touch flame to the wick — a low, steady light settles around you. Nothing flinches from it.${guardNote(z, session, "the lantern")}`, "gain");
+    z.send(session, `You slide the shutter and touch flame to the wick — a low, steady light settles around you. Nothing flinches from it.${guardNote(z, session, "the lantern")}`, "gain sfx-ignite");
     z.roomFeed(session.roomId, `${session.name} raises a hooded lantern; a patient light spreads.`, session.pubkey, false);
   } else if (isBrand) {
     // The brand stays in your hand, burning — a weapon that is also a fire.
@@ -238,7 +238,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litSource = "brand";
     session.litRow = light.rowId; // THIS brand burns, not whichever one is first in the pack
     session.torchWarned = false;
-    z.send(session, `You touch a spark to the seal and ${z.world!.itemTemplates.get(light.itemId)?.name ?? "the brand"} takes it slow — a fat, even flame that means to stay${coldMult < 1 ? ", though the cold pinches even this one" : ""}. The fire is in your hand, and whatever cannot face it will run.`, "gain");
+    z.send(session, `You touch a spark to the seal and ${z.world!.itemTemplates.get(light.itemId)?.name ?? "the brand"} takes it slow — a fat, even flame that means to stay${coldMult < 1 ? ", though the cold pinches even this one" : ""}. The fire is in your hand, and whatever cannot face it will run.`, "gain sfx-ignite");
     z.roomFeed(session.roomId, `${session.name} kindles ${z.world!.itemTemplates.get(light.itemId)?.name ?? "a brand"}; its light is steadier than any torch has a right to be.`, session.pubkey, false);
   } else {
     session.items.splice(session.items.indexOf(light), 1);
@@ -249,7 +249,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.litSource = "torch";
     session.torchWarned = false;
     if (hoodedFlame) z.send(session, "You turn your back to the rain and hunch the hood over your hands — the wet stays off just long enough.");
-    z.send(session, `You touch a spark to the pitch and the torch catches — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.${guardNote(z, session, "the flame")}`, "gain");
+    z.send(session, `You touch a spark to the pitch and the torch catches — a low, guttering light pushes the dark back${coldMult < 1 ? ", pinched small by the cold" : ""}.${guardNote(z, session, "the flame")}`, "gain sfx-ignite");
     z.roomFeed(session.roomId, `${session.name} kindles a torch; the light throws long shadows.`, session.pubkey, false);
   }
   z.sendStatus(session);

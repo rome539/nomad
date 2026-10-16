@@ -243,6 +243,7 @@ export interface EventState {
   phase: "idle" | "telegraph" | "active" | "aftermath";
   until: number; // ms epoch this phase ends
   data?: string; // event-specific payload (the keeper's want: which item he's asking after)
+  bands?: string[]; // WEATHER ONLY: the grounds it is over right now (none = the old all-over weather)
 }
 
 export interface RotEntry {

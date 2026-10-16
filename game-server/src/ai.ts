@@ -1260,7 +1260,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     }
     // Mimic: a false footstep where no one stands.
     if (creature.traits?.includes("mimic") && chance(0.05)) {
-      z.roomSound(creature.roomId, "A footstep falls {dir} — and no one is there to have made it.");
+      z.roomSound(creature.roomId, "A footstep falls {dir} — and no one is there to have made it.", undefined, undefined, false, { mob: creature.templateId, act: "footstep" });
     }
     // Beyond its territory a creature travels with purpose — the walk in from
     // a dark mouth (or back from a rout) is minutes, not an afternoon.
@@ -1292,7 +1292,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         creature.fled = 0;
         creature.windAt = undefined;
         z.roomFeed(creature.roomId, `${cap(tmpl.name)} pulls up short, sides going, and turns to face the way it came. It has nothing left to run on.`, undefined, false);
-        z.roomSound(creature.roomId, "Something stops running, somewhere {dir}.");
+        z.roomSound(creature.roomId, "Something stops running, somewhere {dir}.", undefined, undefined, false, { mob: creature.templateId, act: "scurry" });
       }
     } else {
       // It walked instead of bolting, so the rout is over and it got clean
@@ -1384,7 +1384,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
           ? (runner ? "Something small scrabbles away {dir}, fast." : HOLLOW.has(tmpl.id) ? "Something clatters away {dir}, broken." : "Something crashes away {dir}, wounded.")
           : ring ? "Keys clink {dir} - a great many of them, on one ring, coming or going."
           : (MOVE_SOUNDS[tmpl.id] ?? "Something moves {dir}."),
-        from, undefined, false, { mob: tmpl.id, act: mode === "flee" ? "flee" : "move" },
+        from, undefined, false, { mob: tmpl.id, act: ring && mode !== "flee" ? "keys" : mode === "flee" ? "flee" : "move" },
       );
       z.refreshRoomCtx(from);
       z.refreshRoomCtx(creature.roomId);
@@ -1660,7 +1660,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       victim.asleep = false;
       victim.sleepUntil = undefined;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} goes for ${vt.name}, and misses, and ${vt.name} is gone.`, undefined, false);
-      z.roomSound(creature.roomId, "Something breaks cover {dir}, and something else goes after it, and stops.");
+      z.roomSound(creature.roomId, "Something breaks cover {dir}, and something else goes after it, and stops.", undefined, undefined, false, { mob: creature.templateId, act: "scurry" });
       await creatureMoves(z, victim, now, "flee", false);
       return true;
     }
@@ -2100,7 +2100,7 @@ export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
     z.noteCreaturesChanged();
     const mtmpl = z.world!.mobTemplates.get(mother.templateId)!;
     z.roomFeed(mother.roomId, `${cap(mtmpl.name)} shudders, and a fresh pup squirms free.`, undefined, false);
-    z.roomSound(mother.roomId, "A wet, squealing sound {dir}.");
+    z.roomSound(mother.roomId, "A wet, squealing sound {dir}.", undefined, undefined, false, { mob: mother.templateId, act: "call" });
     z.refreshRoomCtx(mother.roomId);
   }
 
@@ -2311,7 +2311,7 @@ export function deadRemembers(z: ZoneDO, creature: Creature, now: number): void 
         `The ${beast} breathes a name into the dark. No one by it is here to answer, and it does not seem to expect one.`,
       ]), undefined, false);
     }
-    z.roomSound(creature.roomId, "A dry voice shapes a word {dir}, and lets it go.");
+    z.roomSound(creature.roomId, "A dry voice shapes a word {dir}, and lets it go.", undefined, undefined, false, { mob: creature.templateId, act: "murmur" });
   }
 
   // ---- the small lives (rome, 2026-07-13): sleep, thirst, and fear ----
@@ -2655,7 +2655,7 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
     if (!playerPresent(z, creature.roomId)) return;
     if (!chance(BONE_DROP_ODDS)) return;
     z.roomFeed(creature.roomId, pick(BONE_DROP_LINES), undefined, false, "amb");
-    z.roomSound(creature.roomId, BONE_DROP_SOUND);
+    z.roomSound(creature.roomId, BONE_DROP_SOUND, undefined, undefined, false, { act: "impact" });
   }
 
   // THE GHOST-FLOCK. The summer people tend a flock that is not there, and the
@@ -2749,7 +2749,7 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
     creature.danceUntil = now + SUMMER_DANCE_MS;
     creature.nextWanderAt = Math.max(creature.nextWanderAt, creature.danceUntil);
     z.roomFeed(creature.roomId, pick(SUMMER_DANCE_BEGIN_LINES).replace("{a}", cap(tmpl.name)), undefined, false, "evt");
-    z.roomSound(creature.roomId, pick(SUMMER_DANCE_SOUNDS));
+    z.roomSound(creature.roomId, pick(SUMMER_DANCE_SOUNDS), undefined, undefined, false, { act: "pipe" });
     let dog = false;
     for (const c of z.creatures.values()) {
       if (c.id === creature.id || c.roomId !== creature.roomId || c.asleep) continue;
@@ -2870,7 +2870,7 @@ export function packCall(z: ZoneDO, creature: Creature, now: number): void {
   // room he fled for a while. The dead tell no one — kill him clean and the
   // network learns nothing (and your shroud-hood odds stay honest).
 export function thiefWhistle(z: ZoneDO, roomId: string, now: number, runner: Creature): void {
-    z.roomSound(roomId, "A sharp two-note whistle, quick and low, {dir}.");
+    z.roomSound(roomId, "A sharp two-note whistle, quick and low, {dir}.", undefined, undefined, false, { mob: runner.templateId, act: "whistle" });
     for (const c of z.creatures.values()) {
       if (c.id === runner.id || !THIEVES.has(c.templateId)) continue;
       c.avoids = [
@@ -3056,7 +3056,7 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
       creature.eyeingAt = now + SCOOP_NOSE_MS;
       z.roomSound(creature.roomId, hoarder
         ? "Something stops {dir}, and a load of hanging metal stops with it — one beat late."
-        : "Something snuffles over dropped metal {dir}, unhurried.");
+        : "Something snuffles over dropped metal {dir}, unhurried.", undefined, undefined, false, { mob: creature.templateId, act: "idle" });
       return;
     }
     if (now < creature.eyeingAt) return;
@@ -3082,7 +3082,7 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
       : `${cap(tmpl.name)} snatches up ${g.name} and drags it off into the dark.`, undefined, false);
     z.roomSound(creature.roomId, hoarder
       ? "Something is added to a great deal of something else {dir}, and the whole load resettles."
-      : "Metal scrapes over stone {dir}, dragged away.");
+      : "Metal scrapes over stone {dir}, dragged away.", undefined, undefined, false, { mob: creature.templateId, act: "metal" });
     z.refreshRoomCtx(creature.roomId);
   }
 
@@ -3147,7 +3147,7 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     const g = z.world!.itemTemplates.get(targetId);
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
     if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} alights, snatches up ${g.name}, and bears it away toward its nest.`, undefined, false);
-    z.roomSound(creature.roomId, "A wingbeat, {dir}, and something small being carried.");
+    z.roomSound(creature.roomId, "A wingbeat, {dir}, and something small being carried.", undefined, undefined, false, { mob: creature.templateId, act: "wings" });
     z.refreshRoomCtx(creature.roomId);
   }
 
@@ -3193,7 +3193,7 @@ export function hoarderSheds(z: ZoneDO, creature: Creature): void {
     }
     z.roomSound(creature.roomId, atDen
       ? "Something is set down {dir}, onto a heap of other things."
-      : "Something falls and rings on stone {dir}, and whatever dropped it walks on.");
+      : "Something falls and rings on stone {dir}, and whatever dropped it walks on.", undefined, undefined, false, { mob: creature.templateId, act: "metal" });
     z.refreshRoomCtx(creature.roomId);
   }
 
@@ -3634,7 +3634,7 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         }
       } else if (!silent) {
         z.roomFeed(roomId, `${cap(tmpl.name)} creeps out of the dark.`, undefined, false);
-        z.roomSound(roomId, "Something stirs {dir}.");
+        z.roomSound(roomId, "Something stirs {dir}.", undefined, undefined, false, { act: "rustle" });
         z.refreshRoomCtx(roomId);
       }
     }
@@ -3680,7 +3680,7 @@ export function surfaceDeepKin(z: ZoneDO, now: number): boolean {
     c.target = null;
     c.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
     z.roomFeed(dest, `${cap(tmpl.name)} drags itself up out of a black crack in the floor, streaming filth — something that belongs to the deep, thrown up into the light. Cut the heart from it while it's cold.`);
-    z.roomSound(dest, "Something scrabbles up out of the dark {dir}, wet and wrong.");
+    z.roomSound(dest, "Something scrabbles up out of the dark {dir}, wet and wrong.", undefined, undefined, false, { act: "scurry" });
     z.refreshRoomCtx(dest);
     return true;
   }
@@ -3706,7 +3706,7 @@ export async function drakeBeat(z: ZoneDO, creature: Creature, tmpl: MobTemplate
       creature.breathAt = undefined;
       creature.nextBreathAt = now + DRAKE_BREATH_EVERY_MS;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} lets it go, and the whole bowl of the summit goes white.`);
-      z.roomSound(creature.roomId, "A sound like a sail taking wind, very large, {dir}.");
+      z.roomSound(creature.roomId, "A sound like a sail taking wind, very large, {dir}.", undefined, undefined, false, { mob: creature.templateId, act: "bigwings" });
       for (const s of [...z.sessions.values()]) {
         if (s.roomId !== creature.roomId || s.hp <= 0 || !z.reachable(s)) continue;
         // ARMOR THINS IT AND NOTHING STOPS IT. Heat, not a curse — so the same
@@ -3965,7 +3965,7 @@ function drakeStoops(z: ZoneDO, creature: Creature, band: string): boolean {
   const vt = world.mobTemplates.get(victim.templateId)!;
   const roomId = victim.roomId;
   z.roomFeed(roomId, `The whole room goes dark at once — and ${vt.name} is simply not there any more. Something enormous is already climbing away east with it, and it never touched the ground.`);
-  z.roomSound(roomId, "Something screams once {dir}, a long way up, and is cut off.");
+  z.roomSound(roomId, "Something screams once {dir}, a long way up, and is cut off.", undefined, undefined, false, { act: "scream" });
   skySight(z, band, "Something screams a long way off, high up, and stops before it should.", roomId);
   preyFalls(z, victim, vt);
   creature.prey = vt.name;
@@ -4018,7 +4018,7 @@ export function bossRouse(z: ZoneDO, creature: Creature, tmpl: MobTemplate): voi
   if (!SUMMIT_BOSSES.has(creature.templateId) || !chance(BOSS_ROUSE_ODDS)) return;
   z.roomFeed(creature.roomId, `${cap(tmpl.name)} answers — and the sound of it comes off the rock on every side at once.`);
   z.roomSound(creature.roomId, "Something enormous is roaring {dir}, and it is not a warning.", undefined, undefined, false, { mob: creature.templateId, act: "call" });
-  z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Far up the mountain something roars, long and level, and does not stop when it should — and then the sound of it comes back off the crags a second time. Somebody is fighting the thing at the top.", undefined, true, "roar");
+  z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "Far up the mountain something roars, long and level, and does not stop when it should — and then the sound of it comes back off the crags a second time. Somebody is fighting the thing at the top.", undefined, false, "roar"); // a boss line: never by the gatehouse fire
   z.creatureNoise(creature.roomId);
 }
 
@@ -4093,11 +4093,11 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
     if (newPhase === 1) {
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} rises from the throne. The dark rises with him.`);
       z.send(foe, `${cap(tmpl.name)} rises from the throne. The dark rises with him.`);
-      z.roomSound(creature.roomId, "Stone scrapes {dir}; something vast has stood up.");
+      z.roomSound(creature.roomId, "Stone scrapes {dir}; something vast has stood up.", undefined, undefined, false, { mob: creature.templateId, act: "stoneshift" });
       z.fxPose(creature.roomId, creature.templateId, "stand-from-the-throne");
       z.creatureNoise(creature.roomId);
     } else {
-      z.roomFeedBands(FORTRESS_BANDS, `A voice rolls through the stone: ${cap(tmpl.name)} calls — and the dark answers.`, undefined, true, "boom");
+      z.roomFeedBands(FORTRESS_BANDS, `A voice rolls through the stone: ${cap(tmpl.name)} calls — and the dark answers.`, undefined, false, "boom"); // a boss line: never by the gatehouse fire
       z.fxPose(creature.roomId, creature.templateId, "call-the-dark");
       const summoned: Creature = {
         id: uuid(),

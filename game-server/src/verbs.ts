@@ -1800,12 +1800,12 @@ export function cmdBeckon(z: ZoneDO, session: Session, arg: string): void {
 // answers it. Nothing warns you what is asleep in here before you do it.
 export async function cmdWhistle(z: ZoneDO, session: Session): Promise<void> {
   if (z.inCombat(session)) return z.send(session, "You have not the breath for it.");
-  z.send(session, "You put two fingers to your teeth and whistle — one hard note, and it goes a long way.");
-  z.roomFeed(session.roomId, `${session.name} whistles — one hard note, and it goes a long way.`, session.pubkey, false);
+  z.send(session, "You put two fingers to your teeth and whistle — one hard note, and it goes a long way.", "sfx-whistle");
+  z.roomFeed(session.roomId, `${session.name} whistles — one hard note, and it goes a long way.`, session.pubkey, false, "sfx-whistle");
   // It carries through the wall, like the hyena's laugh: a signal you can set
   // for somebody a room away, and a thing that gives you away to whoever else
   // is listening. Both at once, which is the trade.
-  z.roomSound(session.roomId, "A whistle carries {dir} — one hard note, and human.");
+  z.roomSound(session.roomId, "A whistle carries {dir} — one hard note, and human.", undefined, undefined, false, { act: "whistle" });
   await ai.wakeListeners(z, session, session.roomId, WHISTLE_WAKE, "comes awake at the whistle and turns on you!", true);
 }
 
@@ -1905,10 +1905,10 @@ export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
   // The buoy's own bell answers for the buoy — a mile hears it.
   if (atBuoy && (!arg || named)) {
     z.ringAt = now + RING_CD_MS;
-    z.send(session, "You put your shoulder into the buoy's bell. It goes once — a long, wet, iron note — and it keeps going in the air after you let go. Everything for a mile hears it.", "unlock");
-    z.roomFeed(session.roomId, `${session.name} rings the bell-buoy, and the note goes out over the water and keeps going.`, session.pubkey, false);
+    z.send(session, "You put your shoulder into the buoy's bell. It goes once — a long, wet, iron note — and it keeps going in the air after you let go. Everything for a mile hears it.", "unlock sfx-bell");
+    z.roomFeed(session.roomId, `${session.name} rings the bell-buoy, and the note goes out over the water and keeps going.`, session.pubkey, false, "sfx-bell");
     z.roomFeedBands(new Set(["crossing"]), "A bell rings once, out on the water — wet and carrying, and everything that hears it lifts its head.", "evt", true, "bell");
-    z.roomSound(session.roomId, "A bell goes {dir}, once, and the note hangs in the air.");
+    z.roomSound(session.roomId, "A bell goes {dir}, once, and the note hangs in the air.", undefined, undefined, false, { act: "bell" });
     z.creatureNoise(session.roomId);
     return;
   }
@@ -1930,10 +1930,10 @@ export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
   }
   if (clapper) {
     z.ringAt = now + RING_CD_MS;
-    z.send(session, "You swing the cast clapper and it finds its note at once — true, and long, and it is still ringing in the air after your arm is still. It was cast to be heard.", "unlock");
-    z.roomFeed(session.roomId, `${session.name} rings a clapper of bell-metal, and the note goes out over everything.`, session.pubkey, false);
+    z.send(session, "You swing the cast clapper and it finds its note at once — true, and long, and it is still ringing in the air after your arm is still. It was cast to be heard.", "unlock sfx-bell");
+    z.roomFeed(session.roomId, `${session.name} rings a clapper of bell-metal, and the note goes out over everything.`, session.pubkey, false, "sfx-bell");
     z.roomFeedBands(new Set([z.bandOf(session.roomId)]), "A bell rings, true and long, and carries over everything.", "evt", true, "bell");
-    z.roomSound(session.roomId, "A bell goes {dir}, true as a struck stone, and carries.");
+    z.roomSound(session.roomId, "A bell goes {dir}, true as a struck stone, and carries.", undefined, undefined, false, { act: "bell" });
     z.creatureNoise(session.roomId);
     return;
   }
@@ -1941,9 +1941,9 @@ export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
     z.ringAt = now + RING_CD_MS;
     z.send(session, drowned
       ? "You ring the drowned bell. It rings wet — the note comes out through the green of it — and it is louder than any hand-bell has a right to be."
-      : "You ring the wether's bell. It is flat and plain, the note of a flock finding its way in cloud — but it is its own note again, and it carries.", "unlock");
-    z.roomFeed(session.roomId, `${session.name} rings ${drowned ? "a drowned bell" : "a wether's bell"}, and everything in earshot lifts its head.`, session.pubkey, false);
-    z.roomSound(session.roomId, "A bell rings {dir} — small, and close.");
+      : "You ring the wether's bell. It is flat and plain, the note of a flock finding its way in cloud — but it is its own note again, and it carries.", drowned ? "unlock sfx-wetbell" : "unlock sfx-bell");
+    z.roomFeed(session.roomId, `${session.name} rings ${drowned ? "a drowned bell" : "a wether's bell"}, and everything in earshot lifts its head.`, session.pubkey, false, drowned ? "sfx-wetbell" : "sfx-bell");
+    z.roomSound(session.roomId, "A bell rings {dir} — small, and close.", undefined, undefined, false, { act: drowned ? "wetbell" : "bell" });
     z.creatureNoise(session.roomId);
     return;
   }
@@ -2129,7 +2129,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   const nowLoud = !wasBurdened && z.burdened(session)
     ? " The pack takes it with a clank — too much loose iron now to slip a blow, and it won't ride quiet."
     : "";
-  z.send(session, `You take ${z.gearName(tmpl.id)}.` + readied + stooped + nowLoud);
+  z.send(session, `You take ${z.gearName(tmpl.id)}.` + readied + stooped + nowLoud, "sfx-handle");
   // What is on it, on the way up. Only for gear the world laid down and nobody
   // watched arrive, and never for an engraved piece — that one has a real
   // ledger, and `look` reads it. Same voice the keeper speaks in, because it is
@@ -2178,7 +2178,7 @@ export async function cmdDrop(z: ZoneDO, session: Session, arg: string): Promise
   const left = session.items.filter((c) => c.itemId === carried.itemId && !c.equipped).length;
   const tn = z.world!.itemTemplates.get(carried.itemId)!.name;
   const tail = left > 0 ? ` (You still carry ${left === 1 ? "one more" : left + " more"} ${tn.replace(/^(a|an|the)\s+/i, "")}.)` : "";
-  z.send(session, msg + tail);
+  z.send(session, msg + tail, "sfx-handle");
   z.markSimDirty();
   await z.ensureAlarm();
 }
@@ -2341,7 +2341,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
     ? `You take ${z.gearName(tmpl.id)} in hand${current ? `, setting aside ${z.gearName(current.tmpl.id)}` : ""}.`
     : `You pull on ${tmpl.name}${current ? `, shrugging off ${current.tmpl.name}` : ""}.`)
     + wallNote
-    + (fighting ? " Your eyes leave the fight for a heartbeat — an opening." : ""));
+    + (fighting ? " Your eyes leave the fight for a heartbeat — an opening." : ""), "sfx-handle");
   z.sendCtx(session); // your loadout changed — refresh the chips (the equip chip was going stale)
 }
 
@@ -2373,7 +2373,7 @@ export async function cmdRemove(z: ZoneDO, session: Session, arg: string): Promi
   await setEquipped(z.env.DB, carried.rowId, false);
   if (fighting) session.staggered = true;
   z.send(session, (tmpl.slot === "weapon" ? `You lower ${z.gearName(tmpl.id)}.` : `You take off ${z.gearName(tmpl.id)}.`)
-    + (fighting ? " An opening." : ""));
+    + (fighting ? " An opening." : ""), "sfx-handle");
   z.sendCtx(session); // loadout changed — refresh the chips
 }
 
@@ -2860,13 +2860,14 @@ const LISTEN_DIRS: Record<string, string> = {
   w: "west", west: "west", u: "up", up: "up", d: "down", down: "down",
 };
 
-function heardIn(z: ZoneDO, roomId: string): string {
+type ListenCue = { mob?: string; act: string; dir: string };
+function heardIn(z: ZoneDO, roomId: string, cues?: ListenCue[], dir = ""): string {
   const world = z.world!;
   // A fight drowns everything else in the room.
   const fighting =
     [...z.creatures.values()].some((c) => c.roomId === roomId && c.target) ||
     [...z.sessions.values()].some((s) => s.roomId === roomId && !z.outOfWorld(s) && z.inCombat(s));
-  if (fighting) return "the sounds of a fight — blows landing, and breathing that breaks";
+  if (fighting) { cues?.push({ act: "fight", dir }); return "the sounds of a fight — blows landing, and breathing that breaks"; }
   // The loudest standing thing: a bespoke voice if it has one, else its
   // family's register. More than one audible and the ear can tell.
   const audible = [...z.creatures.values()].filter(
@@ -2883,6 +2884,7 @@ function heardIn(z: ZoneDO, roomId: string): string {
         : HOLLOW.has(c.templateId) ? "the dry click and resettle of old bone"
         : THIEVES.has(c.templateId) ? "a boot placed carefully, then stillness"
         : `slow animal breathing, and claws shifting on ${groundWord(z.regionOf(roomId), roomId)}`);
+    if (!/^(nothing|no sound)/i.test(voice)) cues?.push({ mob: c.templateId, act: c.asleep ? "breathing" : "idle", dir });
     parts.push(voice + (audible.length > 1 ? " — and it is not alone" : ""));
   }
   // People never hide under the beasts: stillness leaks sound (shifting,
@@ -2893,6 +2895,7 @@ function heardIn(z: ZoneDO, roomId: string): string {
     // A full pack betrays its owner even standing still — loose iron can't
     // hold its breath. The other half of the burden law: the fat run is loud.
     const heavy = folk.some((s) => z.burdened(s));
+    if (!audible.length) cues?.push({ act: heavy ? "metal" : "breathing", dir });
     parts.push(folk.length > 1
       ? "more than one set of human lungs, all keeping still" + (heavy ? " — and the soft clink of loose iron among them" : "")
       : folk[0].resting
@@ -3014,6 +3017,7 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
       : `${cap(ground)} all around. Nothing comes through.`);
   }
   const quiet = events.quieted(z, session.roomId);
+  const cues: ListenCue[] = [];
   const lines = [quiet
     ? "You go still. There is nothing to listen past — the wood is holding its breath with you."
     : "You go still and give the dark your ear."];
@@ -3025,7 +3029,7 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
       && !(e.key_item === MOON_DOOR_KEY && isNight() && isFullMoon() && !isBloodMoon())
       && !(e.key_item === TIDE_DOOR_KEY && events.seaLevel(z) === 0 && z.tideSilt <= 0)
       && !(e.key_item === BELL_DOOR_KEY && events.bellOpen(z));
-    lines.push(`${cap(dirPhrase(e.dir))}: ${sealed ? "cold iron, and nothing through it" : heardIn(z, e.to_room)}.`);
+    lines.push(`${cap(dirPhrase(e.dir))}: ${sealed ? "cold iron, and nothing through it" : heardIn(z, e.to_room, cues, e.dir)}.`);
     // IN THE QUIET, SOUND CARRIES A ROOM FURTHER (2026-08-06). The silence is
     // not safety, it is a better microphone — and it points BOTH ways: what you
     // can hear two rooms out can hear you (ai.ts, QUIET_HEED_MULT).
@@ -3037,7 +3041,7 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
       lines.push(`  ...and past that, ${dirPhrase(f.dir)} again: ${beyond}, faint.`);
     }
   }
-  z.send(session, lines.join("\n"), "study");
+  z.send(session, lines.join("\n"), "study", undefined, cues.slice(0, 4));
 }
 
 // ---- dive: the tide's other half ----
@@ -3328,7 +3332,7 @@ export async function cmdEat(z: ZoneDO, session: Session, arg: string): Promise<
             ])} [${hpLabel(session.hp, session.maxHp)}]`)
       : `You eat ${tmpl.name}.`)
     + (gulped ? " You bolt it down with one eye on your foe — an opening." : ""),
-    "gain",
+    "gain sfx-eat",
   );
   z.roomFeed(session.roomId, `${session.name} eats ${tmpl.name}.`, session.pubkey, false);
   z.sendStatus(session);
@@ -3453,7 +3457,7 @@ export async function applyBandage(z: ZoneDO, session: Session, carried: Carried
   z.send(session, (auto
     ? `Your hands move on their own — you bind the wound with ${tmpl.name}.`
     : `You bind your wounds with ${tmpl.name}.`)
-    + (session.hp > before ? ` The bleeding stops. [${hpLabel(session.hp, session.maxHp)}]` : " The bleeding stops."), "gain");
+    + (session.hp > before ? ` The bleeding stops. [${hpLabel(session.hp, session.maxHp)}]` : " The bleeding stops."), "gain sfx-bandage");
   z.roomFeed(session.roomId, `${session.name} binds a wound.`, session.pubkey, false);
   z.sendStatus(session);
   z.sendCtx(session);

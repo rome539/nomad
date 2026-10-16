@@ -341,8 +341,8 @@ async function openingCast(z: ZoneDO, session: Session, game: DiceGame): Promise
   const sum = cast.reduce((n, d) => n + d, 0);
   game.total.set(session.pubkey, sum);
   game.rolls.set(session.pubkey, cast);
-  z.send(session, `You cast: ${cast.join(", ")} — ${sum}. ('roll' for another, 'stand' to hold it. Over ${DICE_BUST} and you are out.)`, "evt");
-  benchFeed(z, game, session, `${session.name} opens on ${sum}.`, "amb");
+  z.send(session, `You cast: ${cast.join(", ")} — ${sum}. ('roll' for another, 'stand' to hold it. Over ${DICE_BUST} and you are out.)`, "evt sfx-dice");
+  benchFeed(z, game, session, `${session.name} opens on ${sum}.`, "amb sfx-dice");
 }
 
 export async function cmdRoll(z: ZoneDO, session: Session): Promise<void> {
@@ -357,12 +357,12 @@ export async function cmdRoll(z: ZoneDO, session: Session): Promise<void> {
   if (total > DICE_BUST) {
     game.bust.add(session.pubkey);
     game.done.add(session.pubkey);
-    z.send(session, `You throw a ${d}. ${total} — over the line. You're out.`, "dmgin big");
-    benchFeed(z, game, session, `${session.name} throws a ${d} and busts at ${total}.`, "evt");
+    z.send(session, `You throw a ${d}. ${total} — over the line. You're out.`, "dmgin big sfx-dice");
+    benchFeed(z, game, session, `${session.name} throws a ${d} and busts at ${total}.`, "evt sfx-dice");
     return advance(z, game);
   }
-  z.send(session, `You throw a ${d}. ${total}.`, "evt");
-  benchFeed(z, game, session, `${session.name} throws a ${d}: ${total}.`, "amb");
+  z.send(session, `You throw a ${d}. ${total}.`, "evt sfx-dice");
+  benchFeed(z, game, session, `${session.name} throws a ${d}: ${total}.`, "amb sfx-dice");
 }
 
 export async function cmdStand(z: ZoneDO, session: Session): Promise<void> {
@@ -373,7 +373,7 @@ export async function cmdStand(z: ZoneDO, session: Session): Promise<void> {
   const total = game.total.get(session.pubkey) ?? 0;
   if (!total) return z.send(session, "You haven't thrown yet.");
   game.done.add(session.pubkey);
-  z.send(session, `You set the bones down at ${total}.`, "evt");
+  z.send(session, `You set the bones down at ${total}.`, "evt sfx-handle");
   benchFeed(z, game, session, `${session.name} stands at ${total}.`, "evt");
   return advance(z, game);
 }

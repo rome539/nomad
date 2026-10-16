@@ -250,7 +250,9 @@ const fnSrc = (n) => {
   return null;
 };
 const depsFor = (body, self) => {
-  const tables = [], fns = [], seen = new Set(self ? [self] : []);
+  // The sprite preview has no audio context. Keep paintScene's optional
+  // soundscape refresh out of its dependency tree.
+  const tables = [], fns = [], seen = new Set(['scapeSet', ...(self ? [self] : [])]);
   const walk = (code) => {
     const bare = code.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
     // ANY SHOUTED NAME, not only an indexed one. This matched NAME[...] alone,
@@ -474,7 +476,7 @@ var DROP_HOUR=${CUT_ONLY ? JSON.stringify([...WHOLE_PHOTOGRAPH]) : "null"};
 ${SCENE_TABLES}
 var sceneEl=document.getElementById("scene"), skyEl=document.getElementById("sky"),
     mobsEl=document.getElementById("mobs"), viewMode="image",
-    lastBand="", lastSky="", lastTerrain="", lastRoomKey="", lastPlace="", lastTorch=false, skyRoll=0,
+    lastBand="", lastSky="", lastTerrain="", lastRoomKey="", lastPlace="", lastTorch=false, skyRoll=0, scapeRaw=null,
     lastSea=0, scenePainted="", sceneSeq=0;
 ${WEATHER_STATE}
 ${fn("drawWeather")}

@@ -2624,6 +2624,7 @@ var SND = {
   _burst: function (t, o) {
     var src = actx.createBufferSource();
     src.buffer = this._noise();
+    src.loop = true; // long hisses must reach their envelope's end, even with a random offset
     var f = actx.createBiquadFilter();
     f.type = o.type || "lowpass";
     f.Q.value = o.q || 1;
@@ -2653,11 +2654,19 @@ var SND = {
   // waits that beat and then reads it.
   step: function (t) {
     var self = this, wait = Math.max(0, (t - actx.currentTime) * 1000) + 90;
-    setTimeout(function () { if (actx) self._stepOn(actx.currentTime + 0.01, soundFull() ? sndGround : ""); }, wait);
+    setTimeout(function () { if (actx && soundOn) self._stepOn(actx.currentTime + 0.01, soundFull() ? sndGround : ""); }, wait);
   },
   _stepOn: function (t, ground) {
+    if (ground === "quiet") return;
     var k = SCAPE_VOL; // the plain step below is not new, and keeps its level
-    if (ground === "mud") {
+    if (ground === "wood") {
+      this._burst(t, { type: "bandpass", freq: 310, q: 1.4, dur: 0.1, gain: 0.25 * k, atk: 0.004 });
+      this._tone(t, { f0: 155, f1: 125, dur: 0.11, gain: 0.12 * k });
+    } else if (ground === "leaves" || ground === "grass") {
+      var leaf = ground === "leaves";
+      this._burst(t, { type: "bandpass", freq: leaf ? 2400 : 950, q: 0.7, dur: leaf ? 0.2 : 0.12, gain: (leaf ? 0.23 : 0.13) * k, atk: 0.025 });
+      this._tone(t, { f0: 55, f1: 38, dur: 0.08, gain: 0.12 * k });
+    } else if (ground === "mud") {
       // a sucking squelch: the foot going in, then coming out
       this._burst(t, { type: "bandpass", freq: 420, sweep: 140, q: 2, dur: 0.16, gain: 0.5 * k });
       this._tone(t + 0.1, { f0: 180, f1: 90, dur: 0.08, gain: 0.08 * k });
@@ -2850,6 +2859,7 @@ function fadeGain(ctx, param, to, secs) {
   } catch (e) {}
 }
 function startAmb() {
+  if (soundFull()) { stopAmb(); return; } // Full sound uses the actual place, including its stone hum.
   if (ambNodes || !actx) return;
   var src = actx.createBufferSource();
   src.buffer = SND._noise(); src.loop = true;
@@ -2946,6 +2956,9 @@ function scapeBuild() {
     rain: scapeLoop(SND._noise(), [scapeFilter("highpass", 900), scapeFilter("lowpass", 7000)]),
     wind: scapeLoop(scapeBrown(), [scapeFilter("bandpass", 420, 0.9), scapeFilter("lowpass", 2400)]),
     surf: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 520), scapeFilter("highpass", 35)]),
+    leaves: scapeLoop(SND._noise(), [scapeFilter("highpass", 1400), scapeFilter("lowpass", 5500)]),
+    falls: scapeLoop(scapeBrown(), [scapeFilter("highpass", 65), scapeFilter("lowpass", 1800)]),
+    lap: scapeLoop(scapeBrown(), [scapeFilter("highpass", 160), scapeFilter("lowpass", 1100)]),
     run: scapeLoop(SND._noise(), [scapeFilter("bandpass", 1100, 0.6), scapeFilter("lowpass", 3000)]),
     roar: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 240), scapeFilter("highpass", 40)], firePan),
     hum: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 170), scapeFilter("highpass", 35)]),
@@ -2971,7 +2984,11 @@ function scapeBreathe() {
   // THE SEA COMES IN AND GOES OUT: a swell every nine seconds or so.
   scape.surfPhase += 0.25 / (8 + Math.random() * 3);
   var swell = 0.35 + 0.65 * Math.pow(Math.max(0, Math.sin(scape.surfPhase * Math.PI * 2)), 2);
-  scapeTo(scape.surf.gain.gain, a.water === "surf" ? (a.loud ? 0.32 : 0.18) * swell * SCAPE_VOL : 0, 0.5);
+  scapeTo(scape.surf.gain.gain, (a.water === "surf" || a.water === "cave") ? (a.water === "cave" ? 0.08 : a.loud ? 0.32 : 0.18) * swell * SCAPE_VOL : 0, 0.5);
+  scapeTo(scape.surf.chain[0].frequency, a.water === "cave" ? 220 : 520);
+  scapeTo(scape.leaves.gain.gain, a.leaves ? (0.008 + 0.025 * a.wind) * (0.25 + scape.gust) * SCAPE_VOL : 0);
+  scapeTo(scape.falls.gain.gain, a.water === "falls" ? 0.34 * SCAPE_VOL * (0.94 + scape.gust * 0.06) : 0);
+  scapeTo(scape.lap.gain.gain, a.water === "lap" ? 0.055 * SCAPE_VOL * (0.25 + Math.pow(Math.sin(scape.surfPhase * Math.PI * 7), 2) * 0.75) : 0);
   scapeTo(scape.run.gain.gain, a.water === "run" ? (a.loud ? 0.20 : 0.11) * SCAPE_VOL * (0.85 + 0.3 * Math.random()) : 0, 0.3);
 }
 function scapeApply() {
@@ -3051,10 +3068,10 @@ function scapeCreak() {
 }
 // Water finding its way down in the dark: one note, and the hall giving it back.
 function scapeDrop() {
-  var a = scapeAmb, wet = a && a.water === "drip";
-  // a wet room drips near and often; a dry buried one, far off and seldom
-  if (a && (wet || (a.hollow && Math.random() < 0.35))) {
-    var t = actx.currentTime + 0.01, f = 900 + Math.random() * 1500, far = wet ? 1 : 0.4;
+  var a = scapeAmb, wet = a && (a.water === "drip" || a.water === "cave");
+  // Hollow stone is not evidence of water. Only authored wet rooms drip.
+  if (wet) {
+    var t = actx.currentTime + 0.01, f = 900 + Math.random() * 1500, far = 1;
     var d = actx.createDelay(1); d.delayTime.value = 0.21 + Math.random() * 0.12;
     var fb = actx.createGain(); fb.gain.value = 0.35;
     var o = actx.createOscillator(); o.type = "sine";
@@ -3097,6 +3114,7 @@ function scapeThunder(hit, delay, inside) {
     return;
   }
   var src = actx.createBufferSource(); src.buffer = scapeBrown();
+  src.loop = true; // a roll can outlast the four-second buffer; its envelope owns the ending
   // Through a roof it is lower and softer: the walls take the top off it.
   var lp = scapeFilter("lowpass", inside ? 90 + Math.random() * 50 : 160 + Math.random() * 140);
   var g = actx.createGain(), dur = 2.5 + Math.random() * 3, peak = (0.35 + Math.random() * 0.4) * SCAPE_VOL * (inside ? 0.6 : 1);
@@ -3115,10 +3133,11 @@ function scapeSet(amb) {
   if (!amb || typeof amb !== "object") return;
   scapeRaw = amb;
   scapeAmb = {
+    leaves: amb.leaves ? 1 : 0,
     rain: +amb.rain || 0, roof: +amb.roof || 0, shut: +amb.shut || 0, wind: Math.max(0, Math.min(3, +amb.wind || 0)),
     creak: +amb.creak || 0, fire: +amb.fire || 0, fireSide: Math.max(-1, Math.min(1, +amb.fireSide || 0)), loud: +amb.loud || 0, hollow: +amb.hollow || 0,
-    water: amb.water === "surf" || amb.water === "run" || amb.water === "drip" ? amb.water : "",
-    ground: amb.ground === "mud" || amb.ground === "snow" || amb.ground === "scree" || amb.ground === "wet" ? amb.ground : "",
+    water: ["surf", "run", "drip", "falls", "lap", "cave"].indexOf(amb.water) >= 0 ? amb.water : "",
+    ground: ["mud", "snow", "scree", "wet", "wood", "leaves", "grass", "quiet"].indexOf(amb.ground) >= 0 ? amb.ground : "",
   };
   // A SHELTERED PICTURE IS A ROOF TO THE EAR TOO (rome, 2026-10-13). The world
   // counts the Last Shelter, the Bounds House and the dens' buildings as open
@@ -3128,7 +3147,7 @@ function scapeSet(amb) {
   if (typeof SHELTERED !== "undefined" && SHELTERED[lastPlace]) {
     var a = scapeAmb;
     a.shut = 1; a.roof = a.rain ? 1 : 0;
-    a.wind = 0;
+    a.wind = 0; a.leaves = 0;
     if (a.ground === "mud" || a.ground === "snow") a.ground = "";
   }
   sndGround = scapeAmb.ground;
@@ -3141,18 +3160,19 @@ function scapeStop() {
   var dying = scape;
   scape = null;
   for (var i = 0; i < dying.timers.length; i++) { clearTimeout(dying.timers[i]); clearInterval(dying.timers[i]); }
-  ["rain", "wind", "surf", "run", "roar", "hum"].forEach(function (k) { fadeGain(actx, dying[k].gain.gain, 0, AMB_FADE); });
+  ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap"].forEach(function (k) { fadeGain(actx, dying[k].gain.gain, 0, AMB_FADE); });
   setTimeout(function () {
-    ["rain", "wind", "surf", "run", "roar", "hum"].forEach(function (k) { try { dying[k].src.stop(); } catch (e) {} });
+    ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap"].forEach(function (k) { try { dying[k].src.stop(); } catch (e) {} });
   }, AMB_FADE * 1000 + 60);
 }
 function sndInit() {
   if (!actx) {
     try { actx = new AudioContext(); } catch (e) { return; }
     amaster = actx.createGain();
-    amaster.gain.value = 0.5;
+    amaster.gain.value = 0;
     amaster.connect(actx.destination);
   }
+  fadeGain(actx, amaster.gain, soundOn ? 0.5 : 0, AMB_FADE);
   if (actx.state === "suspended") { try { actx.resume(); } catch (e) {} }
 }
 // One event, one voice — same casting as the trailer.
@@ -3164,36 +3184,61 @@ function sndInit() {
 // voice of their own get what they would actually make: the eels and the
 // followers are water and footsteps, the hollow wardens are their armour.
 var VOICE_FAMILY = {
-  dog: "masterless-dog lead-dog drove-dog a-fold-dog marsh-hound a-lymer two-hound three-hound the-last-dog",
+  dog: "masterless-dog lead-dog drove-dog a-fold-dog marsh-hound a-lymer the-last-dog the-drove-master",
+  twohound: "two-hound",
+  threehound: "three-hound",
   wolf: "grey-wolf dire-wolf hill-wolf lead-wolf",
   fox: "hill-fox snow-fox the-blue-fox the-raiding-fox",
-  hyena: "dire-hyena grave-hyena",
+  hyena: "grave-hyena",
+  direhyena: "dire-hyena",
   rat: "rat fleet-rat brood-rat albino-rat",
-  gull: "great-gull black-backed-gull oystercatcher mountain-chough ptarmigan",
-  crow: "gibbet-crow scarp-raven the-old-raven grey-heron",
+  gull: "great-gull black-backed-gull",
+  oystercatcher: "oystercatcher",
+  chough: "mountain-chough",
+  ptarmigan: "ptarmigan",
+  heron: "grey-heron",
+  crow: "gibbet-crow scarp-raven the-old-raven",
   eagle: "hill-eagle eyrie-holder",
   vulture: "brooding-vulture carrion-vulture great-vulture bone-breaker the-bone-dropper",
   owl: "eagle-owl",
   bittern: "bittern",
   adder: "fen-viper gill-adder stone-adder the-gravid-adder",
   eel: "silver-eel ford-eel conger old-conger",
-  crab: "wrack-crab devil-crab the-great-crab the-great-devil-crab",
+  crab: "wrack-crab devil-crab",
+  greatcrab: "the-great-crab",
+  greatdevilcrab: "the-great-devil-crab",
   seal: "grey-seal bull-seal",
-  weasel: "otter dog-otter ermine the-dancer glutton the-old-glutton",
+  stoat: "ermine the-dancer",
+  otter: "otter dog-otter",
+  badger: "glutton the-old-glutton",
   boar: "wild-boar old-boar",
   deer: "roe-deer white-roe red-hind red-stag",
   goat: "feral-goat old-billy",
   cat: "lynx wildcat the-tom",
-  beast: "cave-lion the-baited-bear the-chain-breaker",
+  beast: "cave-lion",
+  bear: "the-baited-bear the-chain-breaker",
   hare: "mountain-hare snow-hare",
-  man: "cutthroat cutpurse footpad wayman strand-thief the-wrecker charcoal-burner the-chainman",
-  shade: "the-woodward the-keeper-of-the-holding the-sapper the-bellfounder the-toll-clerk the-miller the-drove-master the-drover the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-eel-cutter the-bridge-mason the-fowler the-butter-wife the-milker the-herd the-one-who-stayed road-carrier",
-  armour: "warden warden-surface warden-captain the-long-warden last-watchman bone-knight",
+  human: "cutthroat cutpurse footpad wayman strand-thief the-wrecker the-chainman the-sapper the-bellfounder the-butter-wife the-milker the-herd the-one-who-stayed road-carrier",
+  mason: "the-bridge-mason",
+  drover: "the-drover",
+  eelcutter: "the-eel-cutter",
+  fowler: "the-fowler",
+  hollowworker: "the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-toll-clerk",
+  boneknight: "bone-knight",
+  hulk: "drowned-hulk",
+  drownedgod: "drowned-god",
+  stalker: "pale-stalker",
+  gaunt: "the-gaunt",
+  // The shipped forest sprites supersede their older human-worded descriptions.
+  woodward: "the-woodward",
+  burner: "charcoal-burner",
+  holdingkeeper: "the-keeper-of-the-holding",
+  armour: "warden warden-surface warden-captain the-long-warden last-watchman",
   bone: "skeleton twice-dead thrice-dead rag-and-bone",
   cantor: "marrow-cantor",
   king: "forgotten-king marrow-king",
-  drowned: "the-drowned drowned-hulk drowned-god the-drowned-ferryman the-mire-walker",
-  pale: "pale-crawler pale-stalker the-gaunt",
+  drowned: "the-miller the-drowned the-drowned-ferryman the-mire-walker",
+  pale: "pale-crawler",
   steps: "the-follower something-ahead the-reed-walker",
   root: "root-thing verdigris-thing",
   drake: "the-drake the-pale-drake"
@@ -3201,7 +3246,7 @@ var VOICE_FAMILY = {
 var VOICE_OF = {};
 Object.keys(VOICE_FAMILY).forEach(function (f) { VOICE_FAMILY[f].split(" ").forEach(function (id) { VOICE_OF[id] = f; }); });
 // THE BIGGER THE BODY, THE LOWER THE VOICE. A family shares one voice, but the
-// three-hound is not a fold dog and the stag is not a roe: each creature is
+// lead dog is not a fold dog: each creature is
 // pitched against the middle-sized member of its family by how big it is drawn
 // (MOB_SPRITE), square-rooted so a body twice the height sounds about a third
 // lower, and kept within 0.7-1.4. A few are drawn crouched or kneeling and are
@@ -3233,10 +3278,10 @@ var VOX = {
   pitch: 1, // set by asVoice for the creature speaking
   // The creature's own channel: a panner into the master, so a whole call sits
   // on one side of the picture.
-  out: function (pan) {
+  out: function (pan, destination) {
     var p = actx.createStereoPanner ? actx.createStereoPanner() : actx.createGain();
     if (p.pan) p.pan.value = Math.max(-1, Math.min(1, pan || 0));
-    p.connect(aout());
+    p.connect(destination || aout());
     setTimeout(function () { try { p.disconnect(); } catch (e) {} }, 6000);
     return p;
   },
@@ -3264,7 +3309,7 @@ var VOX = {
     } else os.connect(mix);
     if (o.n) {
       var ns = actx.createBufferSource(), ng = actx.createGain();
-      ns.buffer = SND._noise(); ng.gain.value = o.n;
+      ns.buffer = SND._noise(); ns.loop = true; ng.gain.value = o.n;
       ns.connect(ng); ng.connect(mix); ns.start(t, Math.random()); ns.stop(t + d + 0.1);
     }
     var env = actx.createGain();
@@ -3275,7 +3320,8 @@ var VOX = {
     if (o.fm) {
       for (var j = 0; j < o.fm.length; j++) {
         var bp = actx.createBiquadFilter();
-        bp.type = "bandpass"; bp.frequency.value = o.fm[j][0] * B; bp.Q.value = o.fm[j][1];
+        bp.type = "bandpass"; bp.frequency.setValueAtTime(o.fm[j][0] * B, t); bp.Q.value = o.fm[j][1];
+        if (o.fm[j][2]) bp.frequency.exponentialRampToValueAtTime(o.fm[j][2] * B, t + d);
         var bg = actx.createGain(); bg.gain.value = o.fm[j][1] * 0.6 / (j + 1);
         mix.connect(bp); bp.connect(bg); bg.connect(env);
       }
@@ -3315,15 +3361,188 @@ var VOX = {
     SND._burst(t, { freq: 420, q: 1, dur: 0.09, gain: g * SCAPE_VOL, atk: 0.004, out: out });
     this.blip(t, 90, 55, 0.08, g * 0.8, out);
   },
+  // A small piece of iron hitting another: dry contact, brief inharmonic
+  // resonance. No descending pitch, sustained bell tail or regular beat.
+  keyContact: function (t, strength, out) {
+    var f = 1600 + Math.random() * 900;
+    SND._burst(t, { type: "highpass", freq: 2400, q: 0.7, dur: 0.018, gain: 0.13 * strength * SCAPE_VOL, atk: 0.0015, out: out });
+    var ratios = [1, 1.73, 2.61, 3.79];
+    for (var i = 0; i < ratios.length; i++) {
+      var hz = f * ratios[i], dur = (0.035 + Math.random() * 0.04) / (1 + i * 0.2);
+      this.blip(t, hz, hz, dur, 0.07 * strength / (i + 1), out);
+    }
+  },
+  // Damped iron plates: broadband contact, low body and a short scrape.
+  // No tuned bell partials or long ringing tail.
   ring: function (t, g, out) {
-    var fs = [1310, 1873, 2650, 3420];
-    for (var i = 0; i < fs.length; i++) this.blip(t, fs[i], fs[i] * 0.99, 0.5 + Math.random() * 0.3, g / (i + 1.5), out);
-    SND._burst(t, { type: "bandpass", freq: 2600, q: 6, dur: 0.06, gain: g * SCAPE_VOL, atk: 0.001, out: out });
+    this.hiss(t, { type: "bandpass", f: 720, q: 0.8, d: 0.065, g: g * 1.8, a: 0.002 }, out);
+    this.hiss(t + 0.025, { type: "highpass", f: 1700, d: 0.13, g: g * 0.6, a: 0.01 }, out);
+    this.blip(t, 165, 110, 0.075, g * 0.7, out, "triangle");
   }
 };
 
 // THE CALLS. Each family is three calls, m = 0 arrive, 1 attack, 2 death.
+// Physical actions are explicitly tagged by their successful server branches.
+// The same recipes accept a wall-filtered output for nearby witnessed sounds.
+var ACTION_SOUNDS = {
+  pipe: function (t, o) { [620, 745, 690, 620].forEach(function (f, i) { VOX.voc(t + i * .28, { w: "sine", f: [[0, f], [.2, f * .985]], d: .23, n: .08, g: .2, a: .035 }, o); }); },
+  scream: function (t, o) { VOX.voc(t, { f: [[0, 850], [.14, 1200], [.3, 650]], d: .32, fm: [[1600, 1.5]], n: .7, g: .45, a: .01 }, o); },
+  footstep: function (t, o) { VOX.step(t, .55, o); },
+  rustle: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 900, d: .55, g: .3, a: .08 }, o); },
+  wings: function (t, o) { MOVES.wings(t, o, 3, .2); },
+  bigwings: function (t, o) { MOVES.bigwings(t, o, 3, .5); },
+  metal: function (t, o) { VOX.ring(t, .4, o); VOX.ring(t + .21, .2, o); },
+  impact: function (t, o) { VOX.step(t, .7, o); VOX.clicks(t + .08, { f: 850, k: 4, gap: .07, q: .8, d: .04, g: .13 }, o); },
+  murmur: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 1000, d: .8, g: .3, a: .15 }, o); VOX.voc(t + .1, { w: "triangle", f: [[0, 110], [.25, 135], [.6, 85]], d: .65, fm: [[650, 1.2]], n: 1.2, g: .2, a: .08 }, o); },
+  breathing: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 550, d: .85, g: .25, a: .25 }, o); },
+  rubble: function (t, o) { SND._burst(t, { freq: 450, sweep: 120, dur: 1.6, gain: 0.3 * SCAPE_VOL, atk: 0.08, out: o }); VOX.clicks(t + 0.15, { f: 850, k: 14, gap: 0.045, slow: 1.08, q: 1.2, d: 0.055, g: 0.13 }, o); },
+  stoneshift: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 380, q: 1.4, d: 1.1, g: 0.4, a: 0.15 }, o); VOX.clicks(t + 0.25, { f: 550, k: 4, gap: 0.14, q: 1.1, d: 0.08, g: 0.1 }, o); },
+  scurry: function (t, o) { MOVES.scurry(t, o, 6, 0.12); },
+
+  keys: function (t, o) {
+    // Two bunches of contacts as the ring swings, then loose keys settling.
+    var clusters = [0, 0.19, 0.43];
+    for (var j = 0; j < clusters.length; j++) {
+      for (var i = 0; i < (j === 2 ? 3 : 5); i++) {
+        var at = t + clusters[j] + i * 0.014 + Math.random() * 0.025;
+        VOX.keyContact(at, (0.6 + Math.random() * 0.4) * (j === 2 ? 0.4 : 1), o);
+      }
+    }
+  },
+  whistle: function (t, o) { VOX.voc(t, { w: "sine", f: [[0, 1700], [0.07, 2400], [0.4, 2250], [0.5, 1800]], d: 0.55, g: 0.22, a: 0.035 }, o); },
+  bell: function (t, o) { [540, 1123, 1587].forEach(function (f, i) { VOX.blip(t, f, f * 0.998, 1.8 - i * 0.3, 0.16 / (i + 1), o); }); },
+  wetbell: function (t, o) { [270, 553, 791].forEach(function (f, i) { VOX.blip(t, f, f * 0.98, 1.4 - i * 0.2, 0.17 / (i + 1), o); }); },
+  dice: function (t, o) { VOX.clicks(t, { f: 1100, k: 7, gap: 0.035, slow: 1.3, q: 1.2, d: 0.035, g: 0.09 }, o); },
+  handle: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 850, q: 0.7, d: 0.3, g: 0.18, a: 0.035 }, o); VOX.blip(t + 0.18, 110, 60, 0.09, 0.12, o); },
+  eat: function (t, o) { for (var i = 0; i < 3; i++) VOX.hiss(t + i * 0.14, { type: "bandpass", f: 650, q: 0.8, d: 0.09, g: 0.12, a: 0.025 }, o); },
+  bandage: function (t, o) { for (var i = 0; i < 2; i++) VOX.hiss(t + i * 0.25, { type: "bandpass", f: 1900, q: 0.7, d: 0.22, g: 0.13, a: 0.045 }, o); },
+  ignite: function (t, o) { VOX.clicks(t, { f: 2600, k: 2, gap: 0.12, q: 1, d: 0.035, g: 0.07 }, o); VOX.hiss(t + 0.2, { type: "bandpass", f: 750, sw: 400, q: 0.7, d: 0.5, g: 0.22, a: 0.1 }, o); }
+};
+Object.keys(ACTION_SOUNDS).forEach(function (name) {
+  SND[name] = function (t) {
+    ACTION_SOUNDS[name](t, aout());
+    if (name === "eat" || name === "bandage" || name === "ignite") SND.chime(t + 0.55);
+  };
+});
+SND.keyunlock = function (t) { ACTION_SOUNDS.keys(t, aout()); SND.latch(t + 0.65); };
+SND.lastkey = function (t) { SND.keyunlock(t); VOX.keyContact(t + 1, 0.7, aout()); VOX.keyContact(t + 1.09, 0.25, aout()); };
+SND.box = function (t) { ACTION_SOUNDS.handle(t, aout()); SND.latch(t + 0.3); };
+
+// Separate throats share a body and an output position, not one pitch-shifted bark.
+function houndHeads(t, m, o, heads) {
+  for (var i = 0; i < heads; i++) {
+    var at = t + i * 0.13, base = (heads === 3 ? 125 : 190) * (1 + i * 0.23);
+    VOX.voc(at, { f: m === 2 ? [[0, base * 3], [0.24, base * 2], [1.1, base * 0.65]] : m === 1 ? [[0, base], [0.2, base * 1.5], [0.8, base * 0.9]] : [[0, base * 2], [0.12, base * 1.4], [0.4, base]], d: m === 2 ? 1.2 : m === 1 ? 0.9 : 0.45, r: [32 + i * 9, 0.75], fm: [[500 + i * 110, 3], [1150 + i * 180, 3]], n: 0.45, g: 1.25 / heads, a: 0.018 }, o);
+  }
+}
+function greatCrabVoice(t, m, o, paired) {
+  // Shell grinding against rock; a cart-sized claw closes with weight.
+  VOX.hiss(t, { type: "bandpass", f: 460, q: 1.3, d: m === 2 ? 1.1 : 0.6, g: 0.45, a: 0.08 }, o);
+  var n = m === 2 ? 5 : paired ? 2 : 1;
+  for (var i = 0; i < n; i++) {
+    var at = t + 0.18 + i * (m === 2 ? 0.19 + i * 0.025 : 0.23);
+    VOX.clicks(at, { f: m === 1 ? 650 : 850, k: 1, q: 1.4, d: 0.09, g: m === 1 ? 0.35 : 0.2 }, o);
+    VOX.blip(at, 95, 38, 0.24, m === 1 ? 0.5 : 0.3, o);
+  }
+}
 var VOICES = {
+  direhyena: function (t, m, o) {
+    if (m === 0) {
+      // A hoarse solitary bark, followed by a low warning rumble.
+      VOX.voc(t, { f: [[0, 170], [.07, 260], [.21, 110]], d: .25, fm: [[460, 1.6], [1100, 2]], n: .9, g: .7, a: .006 }, o);
+      VOX.voc(t + .35, { f: [[0, 90], [.3, 105], [.8, 65]], d: .85, fm: [[330, 1.5, 240], [820, 1.4, 620]], n: .8, g: .5, a: .12 }, o);
+    } else if (m === 1) {
+      // One close, compressed jaw-lunge. No bark-and-rumble introduction.
+      VOX.hiss(t, { type: "lowpass", f: 1100, sw: 300, d: .22, g: .7, a: .003 }, o);
+      VOX.voc(t + .015, { f: [[0, 115], [.05, 190], [.22, 75]], d: .26, fm: [[370, 1.4, 230], [900, 1.5, 580]], n: 1, g: .7, a: .006 }, o);
+    } else VOX.voc(t, { f: [[0, 330], [.17, 420], [1, 80]], d: 1.1, fm: [[580, 1.4, 300], [1300, 1.2, 700]], n: .8, g: .65, a: .035 }, o);
+  },
+  boneknight: function (t, m, o) {
+    VOX.hiss(t, { type: "bandpass", f: 1100, d: m === 2 ? .8 : .25, g: .25, a: .02 }, o);
+    VOX.clicks(t + .08, { f: 800, k: m === 2 ? 9 : 3, gap: .09, slow: 1.12, q: .8, d: .045, g: .13 }, o);
+    VOX.ring(t + (m === 1 ? .25 : .1), .3, o);
+    if (m === 2) VOX.step(t + .5, .65, o);
+  },
+  mason: function (t, m, o) {
+    // An empty worker, still dressing stone. The mallet supplies his voice.
+    for (var i = 0; i < (m === 0 ? 3 : m === 1 ? 1 : 4); i++) {
+      var at = t + i * (m === 2 ? .19 + i * .03 : .24);
+      VOX.clicks(at, { f: 630, k: 1, q: .8, d: .065, g: .2 }, o);
+      VOX.blip(at, 135, 75, .09, .22, o, "triangle");
+    }
+    if (m === 2) VOX.hiss(t + .3, { type: "bandpass", f: 350, d: .8, g: .4 }, o);
+  },
+  drover: function (t, m, o) {
+    VOX.hiss(t, { type: "bandpass", f: 750, sw: 350, d: m === 2 ? 1.2 : .65, g: .3, a: .14 }, o);
+    // A worn-out word to absent stock, mostly air, with no living grunt.
+    VOX.voc(t + .12, { w: "triangle", f: [[0, 105], [.25, 125], [.6, 85]], d: .65, fm: [[480, 1.1]], n: 1.4, g: .22, a: .12 }, o);
+    VOX.clicks(t + .45, { f: 650, k: m === 2 ? 3 : 1, q: .8, d: .05, g: .12 }, o);
+  },
+  eelcutter: function (t, m, o) {
+    VOX.hiss(t, { type: "bandpass", f: 340, sw: 140, d: m === 2 ? 1 : .5, g: .4, a: .08 }, o);
+    VOX.voc(t + .15, { f: [[0, 65], [.22, 95], [.4, 60]], d: .45, r: [19, .7], fm: [[620, 1.2]], n: .7, g: .22, a: .07 }, o);
+  },
+  fowler: function (t, m, o) {
+    VOX.hiss(t, { type: "highpass", f: 1800, d: m === 2 ? 1 : .55, g: .3, a: .08 }, o);
+    VOX.hiss(t + .15, { type: "bandpass", f: 480, sw: 180, d: .45, g: .3, a: .06 }, o);
+    if (m !== 0) VOX.step(t + .3, .45, o);
+  },
+  hollowworker: function (t, m, o) {
+    VOX.hiss(t, { type: "bandpass", f: 560, sw: 260, d: m === 2 ? 1.1 : .6, g: .3, a: .12 }, o);
+    VOX.clicks(t + .15, { f: 650, k: m === 2 ? 6 : 2, gap: .16, q: .8, d: .05, g: .1 }, o);
+  },
+  hulk: function (t, m, o) {
+    // Mass displacing water and a compressed, choking exhale.
+    VOX.hiss(t, { type: "lowpass", f: 470, sw: 160, d: m === 2 ? 1.8 : .9, g: .65, a: .2 }, o);
+    VOX.voc(t + .15, { f: [[0, 80], [.22, 105], [.8, 52]], d: .9, r: [17, .6], fm: [[270, 1.5], [570, 1.2]], n: 1.1, g: .55, a: .12 }, o);
+  },
+  drownedgod: function (t, m, o) {
+    // The flooded dark leans in: broad water pressure, not lungs or bubbles.
+    var d = m === 2 ? 2.8 : m === 1 ? 1.25 : 2;
+    VOX.hiss(t, { type: "lowpass", f: 230, sw: 80, d: d, g: .85, a: m === 1 ? .08 : .4 }, o);
+    VOX.hiss(t + .18, { type: "bandpass", f: 510, sw: 170, q: .6, d: d, g: .45, a: .3 }, o);
+    VOX.blip(t + .1, 52, 34, d, .22, o);
+  },
+  stalker: function (t, m, o) {
+    // Nothing advertises the ambush. Contact has weight, without a hard skeleton.
+    if (m === 0) return;
+    VOX.hiss(t, { type: "lowpass", f: 390, sw: 120, d: m === 2 ? 1.4 : .5, g: .65, a: .025 }, o);
+    VOX.blip(t + .04, 85, 38, .18, .3, o);
+  },
+  gaunt: function (t, m, o) {
+    VOX.hiss(t, { type: "bandpass", f: 1700, sw: 650, d: m === 2 ? 1.4 : .8, g: .45, a: .08 }, o);
+    VOX.voc(t + .1, { f: [[0, 180], [.2, m === 1 ? 370 : 230], [.7, 120]], d: .8, fm: [[900, 1.5]], n: 1.2, g: .3, a: .07 }, o);
+  },
+  woodward: function (t, m, o) {
+    // Bark, roots and a hollow wooden body under the coat.
+    VOX.voc(t, { f: [[0, 58], [0.25, m === 1 ? 92 : 65], [m === 2 ? 1.3 : 0.7, 43]], d: m === 2 ? 1.4 : 0.8, r: [17, 0.8], fm: [[280, 2], [670, 3]], n: 0.3, g: 0.8, a: 0.1 }, o);
+    VOX.clicks(t + 0.2, { f: 550, k: m === 2 ? 8 : 3, gap: 0.12, slow: 1.1, q: 1.5, d: 0.06, g: 0.12 }, o);
+  },
+  burner: function (t, m, o) {
+    // A charred long muzzle: abrasive exhalation and brittle body sounds.
+    VOX.hiss(t, { type: "bandpass", f: 850, sw: m === 2 ? 240 : 550, q: 1.2, d: m === 2 ? 1.3 : 0.55, g: m === 1 ? 0.65 : 0.4, a: 0.05 }, o);
+    VOX.clicks(t + 0.15, { f: 1400, k: m === 2 ? 7 : 3, gap: 0.1, slow: 1.1, q: 1.5, d: 0.035, g: 0.1 }, o);
+  },
+  holdingkeeper: function (t, m, o) {
+    // The narrow pale head breathes; the keys carry the metallic detail.
+    VOX.voc(t, { w: "triangle", f: [[0, 310], [0.15, m === 1 ? 470 : 330], [m === 2 ? 1 : 0.5, 190]], d: m === 2 ? 1.1 : 0.6, fm: [[1100, 2], [2100, 2]], n: 0.8, g: 0.45, a: 0.08 }, o);
+    VOX.keyContact(t + 0.25, 0.4, o);
+  },
+  twohound: function (t, m, o) { houndHeads(t, m, o, 2); },
+  threehound: function (t, m, o) { houndHeads(t, m, o, 3); },
+  greatcrab: function (t, m, o) { greatCrabVoice(t, m, o, false); },
+  greatdevilcrab: function (t, m, o) { greatCrabVoice(t, m, o, true); },
+  badger: function (t, m, o) {
+    if (m === 0) {
+      VOX.hiss(t, { type: "bandpass", f: 480, q: 0.8, d: 0.3, g: 0.35, a: 0.04 }, o);
+      VOX.voc(t + 0.3, { f: [[0, 145], [0.3, 115]], d: 0.35, r: [37, 0.8], fm: [[460, 2], [950, 2]], n: 0.65, g: 0.8, a: 0.04 }, o);
+    } else VOX.voc(t, { f: m === 1 ? [[0, 180], [0.12, 310], [0.55, 150]] : [[0, 310], [0.8, 90]], d: m === 1 ? 0.6 : 0.9, r: [46, 0.8], fm: [[650, 2], [1400, 2]], n: 0.65, g: 0.9, a: 0.02 }, o);
+  },
+  otter: function (t, m, o) {
+    if (m === 0) {
+      for (var i = 0; i < 2; i++) VOX.voc(t + i * 0.3, { w: "sine", f: [[0, 1500], [0.07, 2200], [0.2, 1700]], d: 0.23, g: 0.4, a: 0.025 }, o);
+    } else VOX.voc(t, { f: m === 1 ? [[0, 700], [0.12, 1000], [0.35, 650]] : [[0, 1700], [0.6, 700]], d: m === 1 ? 0.4 : 0.65, r: [65, 0.5], fm: [[1200, 2], [2200, 2]], n: 0.3, g: 0.65, a: 0.018 }, o);
+  },
   dog: function (t, m, o) {
     var bark = function (at, hi) { VOX.voc(at, { f: [[0, 380 * hi], [0.1, 290 * hi]], d: 0.13, fm: [[700, 4], [1600, 5]], n: 0.5, g: 0.85, a: 0.008 }, o); };
     if (m === 0) { bark(t, 1); bark(t + 0.3, 1.05); }
@@ -3332,7 +3551,13 @@ var VOICES = {
       VOX.voc(t + 0.32, { w: "triangle", f: [[0, 720], [0.9, 420]], d: 0.9, vib: [6, 15], fm: [[900, 3]], g: 0.8 }, o); }
   },
   wolf: function (t, m, o) {
-    if (m === 0) VOX.voc(t, { w: "triangle", f: [[0, 330], [0.4, 520], [1.6, 470], [2.2, 360]], d: 2.2, vib: [5, 8], fm: [[600, 2], [1100, 3]], n: 0.12, g: 0.6, a: 0.25 }, o);
+    if (m === 0) {
+      // Breath into an open vowel that narrows through the held howl.
+      // Small irregular pitch turns replace the continuous siren/vibrato.
+      VOX.hiss(t, { type: "bandpass", f: 650, d: .3, g: .12, a: .12 }, o);
+      VOX.voc(t + .16, { w: "triangle", f: [[0, 280], [.22, 390], [.58, 465], [1.1, 456], [1.55, 470], [2.1, 442], [2.75, 380], [3.1, 300]], d: 3.2, fm: [[820, 1.3, 460], [1450, 1.2, 880]], n: .055, g: .8, a: .28 }, o);
+      VOX.hiss(t + 2.65, { type: "bandpass", f: 620, sw: 320, d: .65, g: .1, a: .18 }, o);
+    }
     else if (m === 1) { VOX.voc(t, { f: [[0, 105], [0.6, 120]], d: 0.75, r: [38, 0.95], fm: [[400, 3], [1000, 4]], n: 0.6, g: 1.2, a: 0.08 }, o);
       VOX.clicks(t + 0.72, { f: 2200, k: 2, gap: 0.04, g: 0.5, q: 3 }, o); }
     else { VOX.voc(t, { f: [[0, 800], [0.25, 520]], d: 0.25, fm: [[1000, 3], [2200, 4]], g: 1, a: 0.005 }, o);
@@ -3344,10 +3569,15 @@ var VOICES = {
     else VOX.voc(t, { f: [[0, 1100], [0.9, 420]], d: 0.95, r: [60, 0.5], fm: [[1400, 3], [2600, 4]], n: 0.3, g: 1, a: 0.01 }, o);
   },
   hyena: function (t, m, o) {
-    if (m === 0) { VOX.voc(t, { w: "triangle", f: [[0, 240], [0.7, 720]], d: 0.8, fm: [[800, 2]], g: 1.2, a: 0.1 }, o);
-      VOX.voc(t + 1.0, { w: "triangle", f: [[0, 260], [0.7, 760]], d: 0.8, fm: [[800, 2]], g: 1.2, a: 0.1 }, o); }
-    else if (m === 1) { for (var i = 0; i < 7; i++) VOX.voc(t + i * 0.11, { f: [[0, 640 - i * 15], [0.07, 520 - i * 15]], d: 0.08, fm: [[1000, 3], [2300, 4]], n: 0.3, g: 1, a: 0.005 }, o); }
-    else VOX.voc(t, { f: [[0, 420], [1.3, 140]], d: 1.4, r: [25, 0.5], fm: [[700, 3], [1300, 4]], n: 0.3, g: 1, a: 0.05 }, o);
+    // Grave pack: uneven, broken laughing, not two clean ascending whistles.
+    if (m === 0) {
+      [0, .14, .33, .44, .72].forEach(function (at, i) {
+        VOX.voc(t + at, { f: [[0, 420 + i * 37], [.04, 650 - i * 25], [.12, 350]], d: .14, r: [47, .45], fm: [[850, 1.6], [1700, 1.8]], n: .65, g: .6, a: .008 }, o);
+      });
+    } else if (m === 1) {
+      VOX.hiss(t, { type: "bandpass", f: 1300, sw: 500, d: .32, g: .5, a: .006 }, o);
+      VOX.voc(t + .025, { f: [[0, 180], [.06, 285], [.34, 125]], d: .39, fm: [[550, 1.7, 350], [1400, 1.4, 900]], n: .9, g: .65, a: .008 }, o);
+    } else VOX.voc(t, { f: [[0, 510], [.25, 680], [1, 170]], d: 1.1, fm: [[720, 2], [1500, 2]], n: .7, g: .8, a: .02 }, o);
   },
   rat: function (t, m, o) {
     if (m === 0) { for (var i = 0; i < 3; i++) VOX.blip(t + i * 0.13 + Math.random() * 0.04, 3000, 3700, 0.05, 0.7, o, "triangle"); VOX.clicks(t + 0.45, { f: 3200, k: 6, gap: 0.04, g: 0.18 }, o); }
@@ -3366,6 +3596,25 @@ var VOICES = {
     if (m === 0) { caw(t, 1, 1); caw(t + 0.38, 1, 1); caw(t + 0.76, 0.97, 1); }
     else if (m === 1) { flap(t); caw(t + 0.35, 1.1, 1.3); }
     else { caw(t, 0.95, 1); VOX.voc(t + 0.3, { f: [[0, 520], [0.6, 300]], d: 0.6, r: [70, 0.8], fm: [[1000, 4], [2100, 5]], n: 0.7, g: 0.8 }, o); flap(t + 0.2); }
+  },
+  // These birds have explicit sounds in their descriptions. Give each its
+  // own articulation, not a gull call shifted to fit the sprite's height.
+  oystercatcher: function (t, m, o) {
+    var n = m === 1 ? 6 : m === 2 ? 2 : 4;
+    for (var i = 0; i < n; i++) VOX.voc(t + i * 0.16, { w: "triangle", f: [[0, 1900], [0.035, 2600], [0.11, m === 2 ? 1300 : 2200]], d: 0.13, fm: [[2400, 2], [3800, 2]], n: 0.08, g: 0.6, a: 0.008 }, o);
+  },
+  chough: function (t, m, o) {
+    var n = m === 2 ? 1 : 2;
+    for (var i = 0; i < n; i++) VOX.voc(t + i * 0.48, { f: [[0, 1050], [0.08, 1800], [0.28, m === 2 ? 650 : 1350]], d: 0.32, fm: [[1700, 2], [2900, 3]], n: 0.22, vib: [18, 55], g: m === 1 ? 0.8 : 0.6, a: 0.015 }, o);
+  },
+  ptarmigan: function (t, m, o) {
+    // A coarse rattling throat, distinct from the hard clicks of bones.
+    var n = m === 1 ? 8 : m === 2 ? 4 : 6;
+    for (var i = 0; i < n; i++) VOX.voc(t + i * (m === 2 ? 0.12 : 0.075), { f: [[0, 380 - i * 15], [0.05, 250]], d: 0.065, r: [48, 0.8], fm: [[750, 2], [1600, 2]], n: 0.7, g: 0.6, a: 0.008 }, o);
+  },
+  heron: function (t, m, o) {
+    // One long tearing rasp where the crow gives three separated caws.
+    VOX.voc(t, { f: [[0, 260], [0.12, 380], [m === 2 ? 0.85 : 0.55, m === 2 ? 120 : 230]], d: m === 2 ? 0.9 : 0.62, r: [43, 0.85], fm: [[700, 2], [1500, 2]], n: 1.1, g: m === 1 ? 1 : 0.75, a: 0.025 }, o);
   },
   eagle: function (t, m, o) {
     if (m === 0) VOX.voc(t, { f: [[0, 2000], [0.1, 2400], [0.8, 1700]], d: 0.9, r: [60, 0.4], fm: [[2400, 3], [4000, 4]], n: 0.3, g: 0.7, a: 0.02 }, o);
@@ -3410,16 +3659,25 @@ var VOICES = {
     else if (m === 1) VOX.voc(t, { f: [[0, 120], [0.4, 140], [0.8, 110]], d: 0.85, r: [35, 0.9], fm: [[400, 2], [900, 3]], n: 0.6, g: 1.3, a: 0.05 }, o);
     else VOX.voc(t, { f: [[0, 300], [1.2, 140]], d: 1.25, r: [30, 0.4], fm: [[600, 3], [1100, 4]], n: 0.3, g: 1, a: 0.08 }, o);
   },
-  weasel: function (t, m, o) {
+  stoat: function (t, m, o) {
     if (m === 0) { for (var i = 0; i < 8; i++) VOX.blip(t + i * 0.055, 2200 + Math.random() * 600, 2600, 0.03, 0.6, o, "triangle"); }
     else if (m === 1) VOX.voc(t, { f: [[0, 1700], [0.3, 2100]], d: 0.32, r: [80, 0.7], fm: [[2000, 3]], n: 0.4, g: 0.8, a: 0.005 }, o);
     else VOX.voc(t, { w: "triangle", f: [[0, 2400], [0.5, 1100]], d: 0.5, fm: [[1800, 2]], g: 0.6, a: 0.005 }, o);
   },
   boar: function (t, m, o) {
-    var grunt = function (at) { VOX.voc(at, { f: [[0, 125], [0.15, 100]], d: 0.16, r: [30, 0.9], fm: [[400, 3], [900, 4]], n: 0.5, g: 1.3, a: 0.01 }, o); };
-    if (m === 0) { grunt(t); grunt(t + 0.35); grunt(t + 0.7); }
-    else if (m === 1) VOX.voc(t, { f: [[0, 900], [0.2, 1400], [0.5, 1200]], d: 0.5, r: [60, 0.5], fm: [[1600, 3], [2800, 4]], n: 0.4, g: 0.85, a: 0.01 }, o);
-    else VOX.voc(t, { f: [[0, 1300], [1.2, 500]], d: 1.2, r: [50, 0.6], fm: [[1400, 3], [2500, 4]], n: 0.4, g: 0.8, a: 0.01 }, o);
+    // Short nasal grunts and snuffling; the charge expels air sharply.
+    if (m === 0) {
+      [0, .31, .76].forEach(function (at, i) {
+        VOX.voc(t + at, { f: [[0, 85], [.045, 115 + i * 7], [.16, 72]], d: .19, fm: [[320, 1.6, 240], [1050, 1.3, 780]], n: .45, g: .55, a: .008 }, o);
+        VOX.hiss(t + at + .1, { type: "bandpass", f: 1350, sw: 650, d: .12, g: .22, a: .012 }, o);
+      });
+    } else if (m === 1) {
+      VOX.hiss(t, { type: "bandpass", f: 1050, sw: 380, d: .23, g: .65, a: .004 }, o);
+      VOX.voc(t + .025, { f: [[0, 140], [.055, 240], [.24, 95]], d: .28, fm: [[480, 1.4, 290], [1250, 1.3, 850]], n: .8, g: .65, a: .006 }, o);
+    } else {
+      VOX.voc(t, { f: [[0, 550], [.08, 920], [.32, 780], [.7, 290]], d: .75, fm: [[1200, 1.3, 700], [2200, 1.1, 1400]], n: .65, g: .5, a: .015 }, o);
+      VOX.hiss(t + .5, { type: "bandpass", f: 650, sw: 280, d: .45, g: .3, a: .1 }, o);
+    }
   },
   deer: function (t, m, o) {
     var bark = function (at) { VOX.voc(at, { f: [[0, 420], [0.12, 340]], d: 0.15, fm: [[900, 3], [1900, 4]], n: 0.6, g: 1.1, a: 0.005 }, o); };
@@ -3438,24 +3696,46 @@ var VOICES = {
     else VOX.voc(t, { f: [[0, 600], [1.1, 240]], d: 1.1, vib: [5, 15], r: [40, 0.3], fm: [[900, 3], [1700, 4]], n: 0.2, g: 1, a: 0.02 }, o);
   },
   beast: function (t, m, o) {
-    if (m === 0) VOX.voc(t, { f: [[0, 85], [1.2, 80]], d: 1.2, r: [28, 0.9], fm: [[300, 2], [700, 3]], n: 0.6, g: 1.8, a: 0.2 }, o);
-    else if (m === 1) VOX.voc(t, { f: [[0, 140], [0.3, 185], [1.1, 110]], d: 1.2, r: [35, 0.8], fm: [[500, 2], [1100, 3]], n: 0.7, g: 1.9, a: 0.06 }, o);
-    else VOX.voc(t, { f: [[0, 140], [1.6, 60]], d: 1.7, r: [24, 0.7], fm: [[400, 2], [800, 3]], n: 0.5, g: 1.7, a: 0.05 }, o);
+    if (m === 0) { IDLE.beast(t, o); return; }
+    // A close explosive exhale under the lunge, followed by a chest snarl.
+    VOX.hiss(t, { type: "bandpass", f: 580, sw: 280, d: m === 1 ? .24 : .9, g: .65, a: .012 }, o);
+    VOX.voc(t + .08, { f: m === 1 ? [[0, 78], [.13, 126], [.55, 68]] : [[0, 85], [.7, 42]], d: m === 1 ? .6 : .85, r: [32, .55], fm: [[360, 1.5], [780, 1.8]], n: .8, g: .65, a: .02 }, o);
+    if (m === 2) VOX.step(t + .65, .7, o);
+  },
+  bear: function (t, m, o) {
+    // Air carries the weight; a short throat catches inside the breath.
+    if (m === 0) {
+      [0, .48, .87].forEach(function (at, i) {
+        VOX.hiss(t + at, { type: "bandpass", f: 420, sw: 190, q: .7, d: i === 2 ? .4 : .23, g: .48, a: .018 }, o);
+        VOX.voc(t + at + .025, { w: "triangle", f: [[0, 96], [.06, 125], [.21, 65]], d: .24, fm: [[280, 1.3, 200], [650, 1.1, 430]], n: .8, g: .6, a: .014 }, o);
+      });
+    } else if (m === 1) {
+      VOX.hiss(t, { type: "lowpass", f: 850, sw: 240, d: .55, g: .8, a: .008 }, o);
+      VOX.voc(t + .025, { f: [[0, 95], [.07, 160], [.23, 115], [.6, 72]], d: .65, fm: [[380, 1.1, 240], [760, 1.2, 480]], n: .9, g: .65, a: .015 }, o);
+      VOX.hiss(t + .55, { type: "bandpass", f: 420, d: .3, g: .28, a: .04 }, o);
+    } else {
+      VOX.voc(t, { w: "triangle", f: [[0, 125], [.2, 145], [.85, 55]], d: .95, fm: [[340, 1.3, 180], [720, 1.1, 400]], n: .8, g: .65, a: .045 }, o);
+      VOX.hiss(t + .3, { type: "lowpass", f: 540, sw: 140, d: 1.1, g: .5, a: .18 }, o);
+    }
   },
   hare: function (t, m, o) {
-    if (m === 0) { VOX.blip(t, 80, 50, 0.1, 0.5, o); VOX.blip(t + 0.18, 80, 50, 0.1, 0.5, o); }
-    else if (m === 1) { VOX.blip(t, 80, 50, 0.1, 0.5, o); VOX.voc(t + 0.15, { f: [[0, 1500], [0.2, 1700]], d: 0.2, fm: [[2000, 3]], g: 0.9, a: 0.005 }, o); }
-    else VOX.voc(t, { f: [[0, 1400], [0.3, 1800], [0.9, 1100]], d: 0.9, r: [50, 0.4], fm: [[2000, 3], [3200, 4]], n: 0.2, g: 0.75, a: 0.01 }, o);
+    if (m === 0) {
+      [0, .21].forEach(function (at) { VOX.voc(t + at, { w: "triangle", f: [[0, 720], [.05, 900], [.12, 660]], d: .15, fm: [[1300, 1.2]], n: .6, g: .3, a: .012 }, o); });
+    } else VOX.voc(t, { f: [[0, 1450], [.14, 1850], [m === 2 ? .8 : .3, 1050]], d: m === 2 ? .85 : .35, fm: [[2000, 1.5], [3100, 1.2]], n: .45, g: .55, a: .012 }, o);
   },
-  man: function (t, m, o) {
-    if (m === 0) VOX.voc(t, { f: [[0, 135], [0.3, 115]], d: 0.32, fm: [[600, 4], [1100, 5]], n: 0.3, g: 1, a: 0.04 }, o);
-    else if (m === 1) VOX.voc(t, { f: [[0, 210], [0.25, 170]], d: 0.3, fm: [[750, 4], [1250, 5], [2600, 6]], n: 0.4, g: 1.3, a: 0.01 }, o);
-    else VOX.voc(t, { f: [[0, 170], [1.2, 90]], d: 1.3, r: [20, 0.3], fm: [[550, 4], [900, 5]], n: 0.3, g: 1.1, a: 0.04 }, o);
-  },
-  shade: function (t, m, o) {
-    if (m === 0) { VOX.hiss(t, { type: "bandpass", f: 900, q: 2, d: 1.5, g: 0.22, a: 0.6 }, o); VOX.voc(t + 0.2, { w: "sine", f: [[0, 220], [1.2, 200]], d: 1.3, vib: [4, 3], g: 0.5, a: 0.5 }, o); }
-    else if (m === 1) { VOX.hiss(t, { type: "bandpass", f: 1500, q: 1.5, d: 0.5, g: 0.35, a: 0.03 }, o); VOX.voc(t, { f: [[0, 160], [0.4, 140]], d: 0.45, r: [25, 0.5], fm: [[600, 4], [1000, 5]], n: 0.6, g: 0.9, a: 0.03 }, o); }
-    else VOX.hiss(t, { type: "bandpass", f: 1300, sw: 300, q: 2, d: 2.2, g: 1.7, a: 0.2 }, o);
+  human: function (t, m, o) {
+    // A person draws breath and exhales with effort. No monster tremolo,
+    // piercing fixed vowel, or pitched shout on every swing.
+    if (m === 0) {
+      VOX.hiss(t, { type: "bandpass", f: 900, sw: 500, d: .34, g: .16, a: .08 }, o);
+      VOX.voc(t + .12, { w: "triangle", f: [[0, 128], [.15, 112]], d: .2, fm: [[460, 1.1, 350], [1150, .9, 900]], n: .25, g: .25, a: .04 }, o);
+    } else if (m === 1) {
+      VOX.hiss(t, { type: "bandpass", f: 1500, sw: 650, d: .17, g: .36, a: .005 }, o);
+      VOX.voc(t + .018, { w: "triangle", f: [[0, 145], [.045, 175], [.16, 115]], d: .19, fm: [[620, 1.2, 380], [1250, 1.1, 960]], n: .4, g: .45, a: .012 }, o);
+    } else {
+      VOX.voc(t, { w: "triangle", f: [[0, 160], [.16, 135], [.55, 95]], d: .62, fm: [[550, 1.2, 320], [1100, 1, 800]], n: .4, g: .4, a: .035 }, o);
+      VOX.hiss(t + .3, { type: "bandpass", f: 850, sw: 350, d: .7, g: .2, a: .12 }, o);
+    }
   },
   armour: function (t, m, o) {
     if (m === 0) { VOX.step(t, 0.5, o); VOX.ring(t, 0.25, o); VOX.step(t + 0.6, 0.5, o); VOX.ring(t + 0.6, 0.25, o); }
@@ -3484,9 +3764,9 @@ var VOICES = {
     else { VOX.voc(t, { f: [[0, 130], [1.5, 60]], d: 1.5, r: [12, 0.6], fm: [[300, 3]], n: 0.4, g: 1.1, a: 0.05 }, o); VOX.bubbles(t + 0.5, 12, 2.5, o); }
   },
   pale: function (t, m, o) {
-    if (m === 0) { VOX.clicks(t, { f: 4000, k: 12, gap: 0.028, q: 8, d: 0.012, g: 0.3 }, o); VOX.hiss(t + 0.35, { type: "bandpass", f: 1800, q: 1.5, d: 0.9, g: 0.18, a: 0.3 }, o); }
-    else if (m === 1) VOX.voc(t, { f: [[0, 1800], [0.3, 2600]], d: 0.4, r: [120, 0.8], fm: [[2600, 4], [4200, 5]], n: 0.5, g: 0.75, a: 0.01 }, o);
-    else { VOX.clicks(t, { f: 3800, k: 14, gap: 0.03, slow: 1.18, q: 8, d: 0.012, g: 0.3 }, o); VOX.hiss(t, { type: "bandpass", f: 1800, sw: 500, q: 1.5, d: 1.6, g: 0.2, a: 0.05 }, o); }
+    // Boneless contact: soft wet drag and suction, never claws or insect chatter.
+    VOX.hiss(t, { type: "bandpass", f: m === 1 ? 680 : 420, sw: 170, q: .65, d: m === 2 ? 1.2 : .65, g: m === 1 ? .65 : .32, a: .08 }, o);
+    VOX.hiss(t + .25, { type: "lowpass", f: 260, d: .35, g: .35, a: .12 }, o);
   },
   steps: function (t, m, o) {
     if (m === 0) { VOX.step(t, 0.55, o); VOX.step(t + 0.5, 0.55, o); VOX.step(t + 1.0, 0.55, o); }
@@ -3501,10 +3781,13 @@ var VOICES = {
     else { creak(t, 2.0, 70); crumble(t + 1.0); crumble(t + 1.5); }
   },
   drake: function (t, m, o) {
-    var wing = function (at) { SND._burst(at, { freq: 400, sweep: 120, dur: 0.4, gain: 0.3 * SCAPE_VOL, atk: 0.15, out: o }); };
-    if (m === 0) { wing(t); wing(t + 0.55); VOX.voc(t + 0.9, { f: [[0, 60], [0.5, 90], [2.0, 55]], d: 2.2, r: [22, 0.9], fm: [[250, 1.5], [600, 2]], n: 0.9, g: 2.0, a: 0.3 }, o); }
-    else if (m === 1) VOX.voc(t, { f: [[0, 100], [0.4, 150], [1.5, 80]], d: 1.5, r: [26, 0.9], fm: [[300, 1.5], [800, 2]], n: 0.9, g: 2.0, a: 0.05 }, o);
-    else { VOX.voc(t, { f: [[0, 120], [3.0, 40]], d: 3.0, r: [18, 0.8], fm: [[250, 1.5], [600, 2]], n: 0.8, g: 2.0, a: 0.1 }, o); wing(t + 1.5); }
+    // Inhale, torn chest resonance and a ragged upper throat, not one bass buzz.
+    var d = m === 2 ? 2.5 : m === 1 ? 1.25 : 1.8;
+    VOX.hiss(t, { type: "bandpass", f: 470, sw: 850, d: .38, g: .4, a: .2 }, o);
+    VOX.voc(t + .3, { f: [[0, 68], [.16, m === 1 ? 135 : 95], [d * .55, 76], [d, 38]], d: d, r: [31, .5], fm: [[310, 1.3], [710, 1.6]], n: .75, g: .95, a: .07 }, o);
+    VOX.voc(t + .43, { f: [[0, 190], [.22, 260], [d - .15, 90]], d: d - .1, r: [53, .35], fm: [[950, 1.4], [1800, 1.2]], n: .85, g: .3, a: .08 }, o);
+    VOX.hiss(t + .6, { type: "lowpass", f: 600, sw: 200, d: d, g: .5, a: .15 }, o);
+    if (m === 2) { VOX.step(t + 2, 1, o); VOX.hiss(t + 2.05, { type: "lowpass", f: 420, d: .8, g: .6, a: .05 }, o); }
   }
 };
 // Where in the picture a creature stands, as a pan: -1 hard left, 1 hard right,
@@ -3536,7 +3819,7 @@ function mobVoice(id, m, el, wait) {
 //     happened goes unheard.
 // Call this straight after mobBeat, which is what sets the swings.
 var CALLS_PER_ROUND = 2, CALL_GAP_S = 0.25;
-function mobCalls(died) {
+function mobCalls(died, swung) {
   if (!soundOn || !soundFull() || !actx) return;
   var said = 0, used = [];
   (died || []).forEach(function (id) {
@@ -3548,7 +3831,14 @@ function mobCalls(died) {
   // chance, and two snarls that close are the blur again, so the next voice
   // goes to the next swing at least CALL_GAP_S on - or, if every swing left is
   // too close, waits that long after the last one.
-  var swings = anims.filter(function (a) { return a.phase === "attack" && a.t <= 0 && VOICE_OF[a.id]; })
+  // The beat is the authority, not a lingering animation. Text mode has no
+  // sprites, and a feed/pose beat must not repeat a previous attack's voice.
+  var picked = [];
+  var swings = (swung || []).filter(function (id) { return VOICE_OF[id]; }).map(function (id) {
+    var a = anims.filter(function (x) { return x.id === id && x.phase === "attack" && x.t <= 0 && picked.indexOf(x) < 0; })[0];
+    if (a) { picked.push(a); return a; }
+    return { id: id, el: null, t: -Math.random() * STAGGER_S };
+  })
     .sort(function (x, y) { return y.t - x.t; });
   var last = -1;
   while (said < CALLS_PER_ROUND && swings.length) {
@@ -3563,13 +3853,14 @@ function mobCalls(died) {
 // your room; one that is in this list and was not in the last, in the SAME
 // room, has just walked in (or shown itself) - and calls. Walking into a room
 // full of them is you arriving, not them, and is silent.
-var mobsBefore = null, mobsRoom = "";
+var mobsBefore = null, mobsRoom = "", mobsDoing = [];
 // The frame names its own room (rid), so a frame that lands before the new
 // room's name never reads a whole room as newcomers.
-function mobsCameIn(ids, rid) {
+function mobsCameIn(ids, rid, doing) {
   ids = ids || [];
   var was = mobsBefore, same = !!rid && mobsRoom === rid;
   mobsBefore = ids.slice(); mobsRoom = rid || "";
+  mobsDoing = Array.isArray(doing) ? doing.slice() : [];
   if (!was || !same) return;
   var left = was.slice(), fresh = [];
   ids.forEach(function (id) { var k = left.indexOf(id); if (k >= 0) left.splice(k, 1); else fresh.push(id); });
@@ -3594,11 +3885,11 @@ function heardPan(dir) {
   var side = dir.indexOf("east") >= 0 ? 1 : dir.indexOf("west") >= 0 ? -1 : 0;
   return side * (dir === "east" || dir === "west" ? 0.7 : 0.45);
 }
-VOX.wall = function (pan) {
+VOX.wall = function (pan, destination) {
   var lp = actx.createBiquadFilter(), g = actx.createGain();
   lp.type = "lowpass"; lp.frequency.value = 1500; lp.Q.value = 0.5;
   g.gain.value = 0.7;
-  lp.connect(g); g.connect(this.out(pan));
+  lp.connect(g); g.connect(this.out(pan, destination));
   setTimeout(function () { try { lp.disconnect(); g.disconnect(); } catch (e) {} }, 6000);
   return lp;
 };
@@ -3606,18 +3897,61 @@ VOX.wall = function (pan) {
 // what it moved like - padding, a splash, wingbeats, a chain - and this is that
 // sound, never its call: a howl where the line says padding would be a lie.
 var MOVE_STYLE = {
-  dog: "pad", wolf: "pad", fox: "pad", hyena: "pad", cat: "pad",
-  deer: "hoof", goat: "hoof", beast: "heavy", boar: "heavy",
-  rat: "scurry", weasel: "scurry", hare: "scurry",
-  gull: "wings", crow: "wings", eagle: "wings", vulture: "wings", owl: "wings", bittern: "boom",
-  adder: "slither", eel: "water", seal: "water", drowned: "water", crab: "crab",
-  armour: "clank", bone: "rattle", cantor: "rattle", king: "rattle", root: "creak", pale: "click",
-  man: "boots", shade: "boots", steps: "boots", drake: "bigwings"
+  direhyena: "pad", boneknight: "mailmarch", mason: "mason", drover: "drover", eelcutter: "eelcutter", fowler: "fowler", hollowworker: "boots", hulk: "water", drownedgod: "water", stalker: "slither", gaunt: "boots",
+  dog: "pad", twohound: "heavy", threehound: "heavy", badger: "pad", otter: "water", wolf: "pad", fox: "pad", hyena: "pad", cat: "pad",
+  deer: "hoof", goat: "hoof", beast: "heavy", bear: "heavy", boar: "heavy",
+  rat: "scurry", stoat: "scurry", hare: "scurry",
+  gull: "wings", oystercatcher: "wings", chough: "wings", ptarmigan: "wings", heron: "wings", crow: "wings", eagle: "wings", vulture: "wings", owl: "wings", bittern: "boom",
+  adder: "slither", eel: "water", seal: "water", drowned: "water", crab: "crab", greatcrab: "shell", greatdevilcrab: "shell",
+  armour: "heavyboots", bone: "rattle", cantor: "rattle", king: "rattle", root: "creak", pale: "slither",
+  human: "boots", woodward: "creak", burner: "boots", holdingkeeper: "keys", steps: "boots", drake: "bigwings"
 };
 // ...and the few whose line is about something else entirely. The lion makes
 // no sound of its own: what carries is the birds leaving. The bear is its chain.
-var MOVE_STYLE_OF = { "cave-lion": "birds", "the-baited-bear": "chain" };
+var MOVE_STYLE_OF = {
+  "cave-lion": "birds", "the-baited-bear": "chain",
+  "warden": "heavyboots", "warden-captain": "captainmarch",
+  "last-watchman": "watchmarch", "warden-surface": "plategrind",
+  "the-long-warden": "platemarch", "bone-knight": "mailmarch"
+};
+// Boots are broadband heel/sole contacts, not pitched bass blips. The metal
+// travels between the steps: weight transfers, then a joint rubs or mail drags.
+function armourTread(t, o, weight) {
+  SND._burst(t, { type: "lowpass", freq: 560, sweep: 180, q: .7, dur: .13, gain: .48 * weight * SCAPE_VOL, atk: .003, out: o });
+  SND._burst(t + .035, { type: "bandpass", freq: 970, q: .7, dur: .055, gain: .18 * weight * SCAPE_VOL, atk: .004, out: o });
+}
+function armourTravel(t, o, n, gap, kind) {
+  var stride = gap * (kind === "watch" ? 2.5 : kind === "heavy" || kind === "captain" ? 2.3 : 1.95);
+  for (var i = 0; i < n; i++) {
+    var at = t + i * stride, weight = (kind === "heavy" || kind === "captain" ? 1.25 : .75) * (i % 2 ? .88 : 1);
+    if (kind !== "grind") armourTread(at, o, weight);
+    if (kind === "heavy") continue;
+    if (kind === "watch") {
+      // Old leather flexes softly after a measured boot; no plate clang.
+      VOX.hiss(at + .09, { type: "bandpass", f: 440, sw: 650, q: 1.1, d: .12, g: .07, a: .025 }, o);
+      continue;
+    }
+    if (kind === "mail") {
+      // Many small, damped contacts rubbing together, with a dry bone knock.
+      VOX.hiss(at + .08, { type: "bandpass", f: 1450, sw: 700, q: .7, d: stride * .62, g: .25, a: .04 }, o);
+      VOX.clicks(at + .1, { f: 1900, k: 5, gap: .023, q: .7, d: .027, g: .025 }, o);
+      VOX.clicks(at + stride * .65, { f: 680, k: 1, q: .7, d: .035, g: .055 }, o);
+      continue;
+    }
+    // Broad plate friction, broken by a brief low contact. No oscillator,
+    // bell tail, or identical chime on each step. Captain's tread dominates.
+    var g = kind === "captain" ? .1 : kind === "grind" ? .36 : .25;
+    VOX.hiss(at + .065, { type: "bandpass", f: 650 + (i % 2) * 170, sw: 300, q: .85, d: stride * .7, g: g, a: .045 }, o);
+    VOX.hiss(at + stride * .55, { type: "bandpass", f: 1050, sw: 520, q: .7, d: .065, g: g * .65, a: .003 }, o);
+  }
+}
 var MOVES = {
+  mason: function (t, o) { VOICES.mason(t, 0, o); VOICES.mason(t + 1.2, 0, o); },
+  drover: function (t, o) { VOICES.drover(t, 0, o); MOVES.water(t + .2, o, 3, .5); },
+  eelcutter: function (t, o) { VOICES.eelcutter(t, 0, o); VOICES.eelcutter(t + .7, 0, o); },
+  fowler: function (t, o) { VOICES.fowler(t, 0, o); },
+  keys: function (t, o, n, gap) { for (var i = 0; i < n; i++) { VOX.step(t + i * gap, 0.3, o); VOX.keyContact(t + i * gap + 0.08, 0.35, o); } },
+  shell: function (t, o, n, gap) { for (var i = 0; i < n; i++) { VOX.clicks(t + i * gap * 1.6, { f: 700, k: 1, q: 1.4, d: 0.08, g: 0.18 }, o); VOX.blip(t + i * gap * 1.6, 80, 35, 0.18, 0.22, o); } },
   pad: function (t, o, n, gap) { for (var i = 0; i < n; i++) SND._burst(t + i * gap, { freq: 380, q: 1, dur: 0.09, gain: 1.4 * SCAPE_VOL, atk: 0.01, out: o }); },
   hoof: function (t, o, n, gap) { for (var i = 0; i < n; i++) VOX.clicks(t + i * gap, { f: 900, k: 1, q: 2, d: 0.04, g: 0.9 }, o); },
   heavy: function (t, o, n, gap) { for (var i = 0; i < n; i++) { SND._burst(t + i * gap * 1.4, { freq: 250, q: 1, dur: 0.14, gain: 0.5 * SCAPE_VOL, atk: 0.01, out: o }); VOX.blip(t + i * gap * 1.4, 70, 40, 0.15, 0.6, o); } },
@@ -3629,7 +3963,12 @@ var MOVES = {
   slither: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 900, q: 1, d: 1.2, g: 1.4, a: 0.3 }, o); },
   water: function (t, o, n, gap) { for (var i = 0; i < Math.max(2, n - 1); i++) VOX.splash(t + i * gap * 1.5, 0.35, o); },
   crab: function (t, o, n, gap) { VOX.clicks(t, { f: 2600, k: n * 2, gap: gap / 2, q: 3, d: 0.025, g: 0.6 }, o); },
-  clank: function (t, o, n, gap) { for (var i = 0; i < n; i++) { VOX.step(t + i * gap * 1.3, 0.5, o); VOX.ring(t + i * gap * 1.3, 0.12, o); } },
+  heavyboots: function (t, o, n, gap) { armourTravel(t, o, n, gap, "heavy"); },
+  captainmarch: function (t, o, n, gap) { armourTravel(t, o, n, gap, "captain"); },
+  watchmarch: function (t, o, n, gap) { armourTravel(t, o, n, gap, "watch"); },
+  plategrind: function (t, o, n, gap) { armourTravel(t, o, n, gap, "grind"); },
+  platemarch: function (t, o, n, gap) { armourTravel(t, o, n, gap, "plate"); },
+  mailmarch: function (t, o, n, gap) { armourTravel(t, o, n, gap, "mail"); },
   rattle: function (t, o, n) { VOX.clicks(t, { f: 1300, k: n * 3, gap: 0.05, q: 3, d: 0.03, g: 0.6 }, o); },
   creak: function (t, o) { VOX.voc(t, { f: [[0, 60], [1.2, 75]], d: 1.2, r: [18, 0.95], fm: [[500, 6], [1200, 8]], g: 1.6, a: 0.1 }, o); },
   click: function (t, o, n) { VOX.clicks(t, { f: 3500, k: n * 4, gap: 0.03, q: 3, d: 0.025, g: 0.6 }, o); },
@@ -3639,15 +3978,20 @@ var MOVES = {
 // What a line next door sounds like. act is the wire's kind of noise: a
 // creature going by (move), bolting (flee), eating (feed), a fight, or the
 // creature's own call. Everything through the wall.
-function heardSound(f) {
+function heardSound(f, delay, destination) {
   if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx) return;
   VOX.pitch = f.mob ? voicePitch(f.mob) : 1;
   try {
-    var t = actx.currentTime + 0.05, o = VOX.wall(heardPan(f.dir));
+    var t = actx.currentTime + 0.05 + (delay || 0), o = VOX.wall(heardPan(f.dir), destination);
     var fam = f.mob && VOICE_OF[f.mob];
-    if (f.act === "move" || f.act === "flee") {
+    if (ACTION_SOUNDS[f.act]) { ACTION_SOUNDS[f.act](t, o); }
+    else if (f.act === "move" || f.act === "flee") {
       var style = MOVE_STYLE_OF[f.mob] || MOVE_STYLE[fam] || "boots", fast = f.act === "flee";
       MOVES[style](t, o, fast ? 6 : 4, fast ? 0.14 : 0.3);
+    } else if (f.act === "idle" && fam && IDLE[fam] && !IDLE_SILENT[f.mob]) {
+      IDLE[fam](t, o);
+    } else if (f.act === "feed" && (fam === "hulk" || fam === "drowned" || fam === "drownedgod")) {
+      MOVES.water(t, o, 3, .4);
     } else if (f.act === "feed") {
       for (var i = 0; i < 5; i++) SND._burst(t + i * 0.22 + Math.random() * 0.1, { freq: 700, sweep: 250, q: 1, dur: 0.2, gain: 1.3 * SCAPE_VOL, atk: 0.02, out: o });
       VOX.clicks(t + 0.3, { f: 1100, k: 3, gap: 0.3, q: 2, d: 0.03, g: 0.8 }, o);
@@ -3665,14 +4009,31 @@ function heardSound(f) {
 // quieter than anything it does when it moves on you. Nothing hidden is drawn,
 // so nothing hidden is ever heard; the ones whose whole nature is silence
 // never make one.
-var IDLE_SILENT = { "cave-lion": 1, "the-follower": 1, "something-ahead": 1, "the-reed-walker": 1 };
+var IDLE_SILENT = { "pale-stalker": 1, "pale-crawler": 1, "the-follower": 1, "something-ahead": 1, "the-reed-walker": 1 };
+function houndBreath(t, o, heads) {
+  for (var i = 0; i < heads; i++) VOX.voc(t + i * 0.17, { f: [[0, 90 + i * 22], [0.4, 100 + i * 18]], d: 0.45, r: [28 + i * 6, 0.6], fm: [[400 + i * 80, 2]], n: 0.5, g: 0.5 / heads, a: 0.08 }, o);
+}
 var IDLE = {
+  woodward: function (t, o) { VOX.voc(t, { f: [[0, 55], [0.6, 62]], d: 0.65, r: [16, 0.7], fm: [[330, 2], [700, 2]], g: 0.35, a: 0.15 }, o); },
+  burner: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 700, q: 1.2, d: 0.6, g: 0.2, a: 0.15 }, o); },
+  holdingkeeper: function (t, o) { VOX.keyContact(t, 0.35, o); VOX.hiss(t + 0.1, { type: "bandpass", f: 1300, q: 1, d: 0.5, g: 0.15, a: 0.12 }, o); },
+  twohound: function (t, o) { houndBreath(t, o, 2); },
+  threehound: function (t, o) { houndBreath(t, o, 3); },
+  greatcrab: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 460, q: 1.3, d: 0.45, g: 0.2, a: 0.08 }, o); },
+  greatdevilcrab: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 400, q: 1.3, d: 0.55, g: 0.2, a: 0.08 }, o); VOX.clicks(t + 0.35, { f: 650, k: 2, gap: 0.23, q: 1.4, d: 0.07, g: 0.12 }, o); },
+  badger: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 480, q: 0.8, d: 0.3, g: 0.25, a: 0.04 }, o); },
+  otter: function (t, o) { VOX.voc(t, { w: "sine", f: [[0, 1600], [0.07, 2100], [0.15, 1700]], d: 0.18, g: 0.25, a: 0.025 }, o); },
   dog: function (t, o) { SND._burst(t, { freq: 900, sweep: 300, dur: 0.2, gain: 1.0 * SCAPE_VOL, atk: 0.02, out: o }); },
   wolf: function (t, o) { SND._burst(t, { freq: 700, sweep: 250, dur: 0.25, gain: 1.0 * SCAPE_VOL, atk: 0.03, out: o }); VOX.voc(t + 0.3, { f: [[0, 95], [0.5, 100]], d: 0.5, r: [38, 0.9], fm: [[400, 3]], n: 0.5, g: 0.9, a: 0.1 }, o); },
   fox: function (t, o) { for (var i = 0; i < 3; i++) SND._burst(t + i * 0.12, { type: "bandpass", freq: 2500, q: 2, dur: 0.07, gain: 0.9 * SCAPE_VOL, atk: 0.01, out: o }); },
   hyena: function (t, o) { for (var i = 0; i < 3; i++) VOX.voc(t + i * 0.13, { f: [[0, 520], [0.07, 450]], d: 0.08, fm: [[1000, 3]], n: 0.3, g: 0.45, a: 0.005 }, o); },
   rat: function (t, o) { VOX.clicks(t, { f: 2800, k: 6, gap: 0.04, q: 3, g: 0.08 }, o); VOX.blip(t + 0.35, 3200, 3600, 0.04, 0.3, o, "triangle"); },
   gull: function (t, o) { VOX.voc(t, { f: [[0, 1200], [0.06, 1100]], d: 0.07, fm: [[1800, 4]], n: 0.2, g: 0.45, a: 0.004 }, o); },
+  oystercatcher: function (t, o) { VOX.blip(t, 2100, 2500, 0.1, 0.3, o, "triangle"); },
+  chough: function (t, o) { VOX.voc(t, { f: [[0, 1200], [0.08, 1600], [0.18, 1300]], d: 0.2, fm: [[1700, 2]], n: 0.2, g: 0.35, a: 0.015 }, o); },
+  ptarmigan: function (t, o) { VOX.voc(t, { f: [[0, 320], [0.16, 260]], d: 0.18, r: [42, 0.8], fm: [[750, 2]], n: 0.6, g: 0.35, a: 0.015 }, o); },
+  heron: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 700, q: 0.8, d: 0.3, g: 0.25, a: 0.04 }, o); },
+  bear: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 410, sw: 220, d: .5, g: .3, a: .08 }, o); },
   crow: function (t, o) { VOX.voc(t, { f: [[0, 560], [0.2, 500]], d: 0.22, r: [85, 0.8], fm: [[1100, 4]], n: 0.7, g: 0.45, a: 0.01 }, o); },
   eagle: function (t, o) { for (var i = 0; i < 3; i++) VOX.voc(t + i * 0.1, { f: [[0, 2200], [0.06, 2000]], d: 0.07, fm: [[2400, 3]], g: 0.35, a: 0.004 }, o); },
   vulture: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 2200, q: 1.2, d: 0.5, g: 0.35, a: 0.1 }, o); },
@@ -3682,24 +4043,38 @@ var IDLE = {
   eel: function (t, o) { VOX.bubbles(t, 4, 0.5, o); },
   crab: function (t, o) { VOX.clicks(t, { f: 3000, k: 4, gap: 0.1, q: 3, d: 0.03, g: 0.45 }, o); },
   seal: function (t, o) { VOX.voc(t, { f: [[0, 160], [0.25, 140]], d: 0.3, r: [35, 0.7], fm: [[500, 3]], n: 0.4, g: 0.5, a: 0.03 }, o); },
-  weasel: function (t, o) { for (var i = 0; i < 4; i++) VOX.blip(t + i * 0.05, 2300, 2600, 0.04, 0.8, o, "triangle"); },
-  boar: function (t, o) { VOX.voc(t, { f: [[0, 115], [0.15, 100]], d: 0.16, r: [30, 0.9], fm: [[400, 3]], n: 0.5, g: 0.6, a: 0.01 }, o); },
+  stoat: function (t, o) { for (var i = 0; i < 4; i++) VOX.blip(t + i * 0.05, 2300, 2600, 0.04, 0.8, o, "triangle"); },
+  boar: function (t, o) { VOX.voc(t, { f: [[0, 80], [.04, 105], [.15, 68]], d: .18, fm: [[320, 1.4, 240], [1000, 1.1, 750]], n: .5, g: .3, a: .015 }, o); VOX.hiss(t + .17, { type: "bandpass", f: 950, d: .16, g: .15, a: .04 }, o); },
   deer: function (t, o) { SND._burst(t, { freq: 1100, dur: 0.22, gain: 0.9 * SCAPE_VOL, atk: 0.01, out: o }); },
   goat: function (t, o) { VOX.voc(t, { f: [[0, 500], [0.3, 470]], d: 0.3, r: [7, 0.8], fm: [[900, 3]], n: 0.15, g: 0.45, a: 0.03 }, o); },
   cat: function (t, o) { VOX.voc(t, { f: [[0, 90], [0.8, 95]], d: 0.8, r: [24, 0.95], fm: [[300, 2]], n: 0.4, g: 1.0, a: 0.15 }, o); },
-  beast: function (t, o) { VOX.voc(t, { f: [[0, 75], [0.8, 70]], d: 0.8, r: [26, 0.9], fm: [[300, 2]], n: 0.6, g: 1.6, a: 0.15 }, o); },
-  hare: function (t, o) { VOX.blip(t, 80, 50, 0.1, 0.3, o); },
-  man: function (t, o) { SND._burst(t, { type: "bandpass", freq: 900, q: 1.2, dur: 0.18, gain: 0.9 * SCAPE_VOL, atk: 0.01, out: o }); },
-  shade: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 900, q: 2, d: 1.0, g: 0.8, a: 0.4 }, o); },
+  beast: function (t, o) {
+    VOX.hiss(t, { type: "bandpass", f: 340, sw: 220, d: .9, g: .35, a: .2 }, o);
+  },
+  hare: function (t, o) {
+    VOX.hiss(t, { type: "bandpass", f: 1500, d: .12, g: .18, a: .015 }, o);
+    VOX.voc(t + .15, { w: "triangle", f: [[0, 760], [.09, 650]], d: .12, fm: [[1200, 1.1]], n: .5, g: .18, a: .02 }, o);
+  },
+  human: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 700, sw: 450, d: .45, g: .12, a: .14 }, o); },
   armour: function (t, o) { VOX.ring(t, 0.15, o); },
   bone: function (t, o) { VOX.clicks(t, { f: 1300, k: 4, gap: 0.05, q: 3, d: 0.03, g: 0.45 }, o); },
   cantor: function (t, o) { VOX.voc(t, { w: "triangle", f: [[0, 220], [1.0, 219]], d: 1.0, vib: [5, 3], fm: [[700, 6]], g: 0.7, a: 0.3 }, o); },
   king: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 500, q: 2, d: 1.2, g: 1.1, a: 0.4 }, o); },
   drowned: function (t, o) { VOX.bubbles(t, 5, 0.8, o); },
-  pale: function (t, o) { VOX.clicks(t, { f: 3800, k: 6, gap: 0.03, q: 3, d: 0.025, g: 0.4 }, o); },
+  pale: function (t, o) {
+    VOX.hiss(t, { type: "lowpass", f: 300, d: .5, g: .15, a: .15 }, o);
+  },
   root: function (t, o) { VOX.voc(t, { f: [[0, 55], [0.6, 62]], d: 0.6, r: [16, 0.95], fm: [[500, 6]], g: 0.8, a: 0.1 }, o); },
   drake: function (t, o) { VOX.voc(t, { f: [[0, 55], [1.2, 50]], d: 1.2, r: [20, 0.9], fm: [[250, 1.5]], n: 0.8, g: 0.8, a: 0.3 }, o); }
 };
+// Quiet versions retain each body's material, not a shared human breath.
+["direhyena", "boneknight", "mason", "drover", "eelcutter", "fowler", "hollowworker", "hulk", "drownedgod", "gaunt"].forEach(function (family) {
+  IDLE[family] = function (t, o) {
+    var g = actx.createGain(); g.gain.value = .4; g.connect(o);
+    VOICES[family](t, 0, g);
+    setTimeout(function () { g.disconnect(); }, 5000);
+  };
+});
 // A room with something in it is never silent for long (rome, 2026-10-15).
 var IDLE_MIN_S = 8, IDLE_MAX_S = 20, idleNext = 0;
 // One small sound from one creature standing here, now. Returns its id. Taken
@@ -3707,10 +4082,10 @@ var IDLE_MIN_S = 8, IDLE_MAX_S = 20, idleNext = 0;
 // from where it stands), and from the room's own list when you play in words.
 // Never in a fight: then the fight is the only thing worth hearing.
 function mobIdle() {
-  if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx || lastCombat) return "";
+  if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx || lastCombat || inGatehouseNow) return "";
   var can = anims.length
-    ? anims.filter(function (a) { return (a.phase === "idle" || !a.phase) && !a.asleep && !IDLE_SILENT[a.id] && IDLE[VOICE_OF[a.id]]; })
-    : (mobsBefore || []).filter(function (id) { return !IDLE_SILENT[id] && IDLE[VOICE_OF[id]]; }).map(function (id) { return { id: id, el: null }; });
+    ? anims.filter(function (a) { return (a.phase === "idle" || !a.phase) && !a.asleep && !/^(rest|fight|hunt|flee|aloft|reel)$/.test(a.state || "") && !IDLE_SILENT[a.id] && IDLE[VOICE_OF[a.id]]; })
+    : (mobsBefore || []).filter(function (id, i) { return !/^(rest|fight|hunt|flee|aloft|reel)$/.test(mobsDoing[i] || "") && !IDLE_SILENT[id] && IDLE[VOICE_OF[id]]; }).map(function (id) { return { id: id, el: null }; });
   if (!can.length) return "";
   var a = can[Math.floor(Math.random() * can.length)];
   try { asVoice(a.id, function () { IDLE[VOICE_OF[a.id]](actx.currentTime + 0.02, VOX.out(a.el ? mobPan(a.id, a.el) : 0)); }); } catch (e) {}
@@ -3777,6 +4152,11 @@ function farSound(name) {
   try { FAR[name](actx.currentTime + 0.05, VOX.far()); } catch (e) {}
 }
 function sndFor(line, c) {
+  var action = /(?:^| )sfx-([a-z]+)(?: |$)/.exec(c);
+  if (action && SND[action[1]]) return action[1];
+  // Room descriptions and local arrivals disclose an actual carried ring.
+  // Nearby sound frames use their direction and wall filter instead.
+  if (/^Keys clink at the |keys clinking at its belt/.test(line)) return "keys";
   if (line.indexOf("grinds open") >= 0 || line.indexOf("grinds shut") >= 0 || line.indexOf("Iron grinds") >= 0) return "grind";
   if (/squink/i.test(line)) return "squink";
   // A GREAT THING FALLING. The line used to read "has fallen to" someone, and
@@ -3811,6 +4191,7 @@ function sndFor(line, c) {
 // A combat round can print several lines at once; stagger their voices a
 // hair and let at most four speak, biggest first.
 var SND_RANK = {
+  rubble: 5, stoneshift: 4, scurry: 2, keys: 3, keyunlock: 4, lastkey: 4, whistle: 3, bell: 3, wetbell: 3, dice: 3, handle: 2, box: 3, eat: 3, bandage: 3, ignite: 3,
   vital: 10, death: 9, swell: 8, boom: 7, grind: 6, forge: 6, grab: 5, crit: 5, hit: 4, crack: 4,
   clang: 4, latch: 4, chime: 3, squink: 3, thud: 3, page: 3, unfurl: 3, clink: 3,
   step: 2, whiff: 2, scratch: 2, tick: 1,
@@ -3960,7 +4341,7 @@ function modalChatPush(text, cls, who, pk) {
   }, 14000);
 }
 
-function print(text, cls, who, pk) {
+function print(text, cls, who, pk, voiced) {
   // Explicit classes (sys/feed/echo) keep the whole block; everything else is
   // split per line so each event wears its own color.
   var lines = cls ? [text] : String(text).split("\\n");
@@ -3980,7 +4361,7 @@ function print(text, cls, who, pk) {
     log.appendChild(div);
     // A person spoke or moved while you're in a modal: float it over the top.
     if (c === "say" || c === "tell" || c === "who") modalChatPush(lines[i], c, who, pk);
-    if (soundOn && actx && cls !== "sys" && cls !== "echo") {
+    if (!voiced && soundOn && actx && cls !== "sys" && cls !== "echo") {
       var s = sndFor(plain, c || "");
       if (s) sounds.push(s);
     }
@@ -4811,8 +5192,8 @@ async function connect() {
     // During the first walk the world holds its tongue: the feed (others'
     // deeds, sounds through walls) and the ambient weather stay out of the
     // lesson text. Other output stays in history, hidden by tutorial mode.
-    if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls, f.who, f.sp); }
-    else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed", f.who, f.sp); if (f.act) heardSound(f); if (f.far) farSound(f.far); }
+    if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls, f.who, f.sp, !!(f.sounds && f.sounds.length)); if (Array.isArray(f.sounds)) f.sounds.slice(0, 4).forEach(function (cue, i) { heardSound(cue, i * .8); }); }
+    else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed", f.who, f.sp, !!(f.act || f.far)); if (f.act) heardSound(f); if (f.far) farSound(f.far); }
     else if (f.t === "status") {
       // A real room change is the only thing that should re-fold the chips
       // (rome, 2026-07-26): keyed on the suggest LIST before, so a mob simply
@@ -4851,7 +5232,7 @@ async function connect() {
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
       updateMobs(f.mobs, f.doing, f.dead, f.loose, f.chests);
-      mobsCameIn(f.mobs, f.rid);
+      mobsCameIn(f.mobs, f.rid, f.doing);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
       doorIsDen = f.door === "den"; // ...and on den ground the door is a house's
       // WHICH WAY THE DOOR IS, for the first walk only (see chips.sendCtx). The
@@ -4870,7 +5251,7 @@ async function connect() {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
       mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose);
-      mobCalls(f.died); // the round's voices, at the swings mobBeat just set
+      mobCalls(f.died, f.swung); // the round's voices, at the swings mobBeat just set
     } else if (f.t === "bolt") {
       lightningBolt(!!f.hit, false);
     } else if (f.t === "thunder") {
@@ -6228,6 +6609,7 @@ function renderBench(state) {
   document.getElementById("bgear").hidden = !state.sheet;
   benchAtGate = !!state.atGate;
   benchAtDen = !!state.den;
+  if (state.sfx) sndOne(state.sfx);
   // At a gate you truly step out of the world; in the dungeon you only crouch to
   // dig through your lockbox — still in the open, still in reach. Say so plainly.
   document.getElementById("btitle").textContent = benchAtGate ? "The gatehouse bench" : benchAtDen ? "Under your own roof" : "Your lockbox";
@@ -8371,25 +8753,32 @@ function renderSnd() {
   sndbtn.textContent = ["off", "half", "full"][soundLevel];
   sndbtn.className = soundOn ? "on" : "";
 }
-function setSound(on) {
+function setSound(on, external) {
   // a level 0-2; true/false still mean full/off for any caller that asks for "on"
   soundLevel = on === true ? 2 : on === false ? 0 : Math.max(0, Math.min(2, +on || 0));
   soundOn = soundLevel > 0;
-  localStorage.setItem("nomad_sound", String(soundLevel));
+  if (!external) localStorage.setItem("nomad_sound", String(soundLevel));
   renderSnd();
   if (soundOn) {
     sndInit();
     if (actx) {
       startAmb();
       if (soundFull()) scapeStart(); else scapeStop();
-      playSounds(["chime"]);
+      if (!external) playSounds(["chime"]);
     }
   } else {
+    // Fade every voice, including one-shots and delayed thunder already
+    // scheduled on the audio clock. Stopping the beds alone does not mute them.
+    thrMusicStop(true);
+    if (actx) fadeGain(actx, amaster.gain, 0, 0.04);
     stopAmb();
     scapeStop();
   }
 }
 renderSnd();
+window.addEventListener("storage", function (e) {
+  if (e.key === "nomad_sound") setSound(e.newValue === null ? 0 : +e.newValue, true);
+});
 brand.addEventListener("click", function () {
   idpanel.classList.remove("open");
   setpanel.classList.toggle("open");
@@ -10831,9 +11220,10 @@ function lightningBolt(hit, inside) {
   }
   var delay = 0.7 + Math.random() * 1.1;
   scapeThunder(hit, delay, inside);
+  // The words are flavour, not news (rome, 2026-10-15): dim, like the rest of it.
   if (!hit) setTimeout(function () {
     var lines = inside ? THUNDER_IN_LINES : THUNDER_LINES;
-    print(lines[Math.floor(Math.random() * lines.length)], "amb");
+    print(lines[Math.floor(Math.random() * lines.length)], "dim");
   }, delay * 1000);
 }
 function runWeather() {
@@ -13503,7 +13893,7 @@ if (thrKnown && stored) thrEnter.textContent = "enter as " + thrKnown;
 // thrOut is the LAST node before the speakers and NOTHING modulates it — see
 // thrMusicStart for why that matters. thrMaster carries the LFO; thrOut is the
 // only handle that can actually reach silence.
-var thrCtx = null, thrMaster = null, thrOut = null, thrTimers = [];
+var thrCtx = null, thrMaster = null, thrOut = null, thrTimers = [], thrFading = [];
 var THR_STEPS = [110, 116.54, 110, 98]; // A, B-flat (the rub), A, G — and around again
 function thrMusicStart() {
   if (thrCtx || crossed) return;
@@ -13598,12 +13988,26 @@ function thrMusicStart() {
   playStep();
   thrTimers.push(setTimeout(playToll, 6000));
 }
-function thrMusicStop() {
+function thrMusicStop(immediate) {
+  // A crossing hands its context to a long fade. Keep those outputs reachable
+  // so OFF also silences music that has already left thrCtx.
+  if (immediate) {
+    for (var j = 0; j < thrFading.length; j++) {
+      var fading = thrFading[j];
+      fadeGain(fading.ctx, fading.out && fading.out.gain, 0, 0.04);
+    }
+  }
   if (!thrCtx) return;
   for (var i = 0; i < thrTimers.length; i++) clearTimeout(thrTimers[i]);
   thrTimers = [];
   var c = thrCtx, m = thrMaster, out = thrOut, t = c.currentTime;
   thrCtx = null; thrMaster = null; thrOut = null;
+  var tail = { ctx: c, out: out }; thrFading.push(tail);
+  if (immediate) {
+    fadeGain(c, out && out.gain, 0, 0.04);
+    setTimeout(function () { try { c.close(); } catch (e) {} var i = thrFading.indexOf(tail); if (i >= 0) thrFading.splice(i, 1); }, 80);
+    return;
+  }
   try {
     m.gain.cancelScheduledValues(t);
     m.gain.setValueAtTime(Math.max(m.gain.value, 0.0001), t);
@@ -13621,7 +14025,7 @@ function thrMusicStop() {
       out.gain.linearRampToValueAtTime(0, t + 7);
     }
   } catch (e) {}
-  setTimeout(function () { try { c.close(); } catch (e) {} }, 7500);
+  setTimeout(function () { try { c.close(); } catch (e) {} var i = thrFading.indexOf(tail); if (i >= 0) thrFading.splice(i, 1); }, 7500);
 }
 document.addEventListener("pointerdown", thrMusicStart, true);
 document.addEventListener("keydown", thrMusicStart, true);
@@ -13640,6 +14044,7 @@ document.addEventListener("keydown", thrMusicStart, true);
 // pagehide, not beforeunload: it fires for the bfcache and for tab-close on
 // mobile Safari, which beforeunload does not.
 function hushAudio() {
+  thrMusicStop(true);
   fadeGain(actx, amaster && amaster.gain, 0, 0.04);
   // thrOut, NOT thrMaster: the master has the tremor LFO summed into its gain
   // and can never actually reach zero.

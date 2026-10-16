@@ -21,11 +21,12 @@ import {
   QUICKSAND_ROOMS, QUICKSAND_GRIP_ODDS, HOBBLE_FLEE_MS,
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
   ROLL_EVERY_MIN_MS, ROLL_EVERY_MAX_MS, ROLL_FIRST_MIN_MS, ROLL_FIRST_MAX_MS,
-  ROLL_GRACE_MS, ROLL_MISSED_MIN_MS, ROLL_MISSED_MAX_MS,
+  ROLL_GRACE_MS, ROLL_MISSED_MIN_MS, ROLL_MISSED_MAX_MS, SKY_ROLL_MIN_MS, SKY_ROLL_MAX_MS,
   RAIN_TELEGRAPH_MS, RAIN_AFTERMATH_MS,
-  LIGHTNING_GAP_MIN_MS, LIGHTNING_GAP_MAX_MS, LIGHTNING_STRIKE_ODDS, LIGHTNING_STEEL_ODDS_PER_KG,
+  LIGHTNING_BURST_ODDS, LIGHTNING_BURST_MIN_MS, LIGHTNING_BURST_MAX_MS, LIGHTNING_LULL_MIN_MS, LIGHTNING_LULL_MAX_MS, LIGHTNING_STRIKE_ODDS, LIGHTNING_STEEL_ODDS_PER_KG,
   LIGHTNING_BURN, LIGHTNING_STEEL_BURN_PER_KG, RAIN_SETTLED_ODDS, RAIN_SETTLED_AFTERMATH_MULT,
-  RAIN_SHOWER_MIN_MS, RAIN_SHOWER_MAX_MS, RAIN_SETTLED_MIN_MS, RAIN_SETTLED_MAX_MS,
+  WX_GROW_ODDS, WX_SPREAD_ODDS, WX_RETREAT_ODDS, WX_WORLDWIDE_ODDS,
+  RAIN_STEP_MS, RAIN_SHOWER_END_ODDS, RAIN_SETS_IN_ODDS, RAIN_SETTLED_END_ODDS,
   BELL_HOURS_UTC, BELL_JITTER_MS, BELL_GRACE_MS,
   BELL_TELEGRAPH_MS, BELL_ACTIVE_MS, BELL_AFTERMATH_MS, BELL_AFTERMATH_WAKE_MULT,
   BOIL_TELEGRAPH_MS, BOIL_STEP_MS, BOIL_AFTERMATH_MS, BOIL_BITE,
@@ -38,9 +39,9 @@ import {
   CROWS_TELEGRAPH_MS, CROWS_ACTIVE_MS, CROWS_AFTERMATH_MS, CROWS_THROTTLE_MS,
   EXHALE_TELEGRAPH_MS, EXHALE_ACTIVE_MS, EXHALE_AFTERMATH_MS,
   SONG_TELEGRAPH_MS, SONG_ACTIVE_MS, SONG_AFTERMATH_MS, SONG_AFTER_WAKE_MULT,
-  FOG_TELEGRAPH_MS, FOG_ACTIVE_MIN_MS, FOG_ACTIVE_MAX_MS, FOG_AFTERMATH_MS, FOG_WAKE_MULT,
-  COLD_TELEGRAPH_MS, COLD_ACTIVE_MIN_MS, COLD_ACTIVE_MAX_MS, COLD_AFTERMATH_MS, COLD_TORCH_MULT,
-  WIND_TELEGRAPH_MS, WIND_ACTIVE_MIN_MS, WIND_ACTIVE_MAX_MS, WIND_AFTERMATH_MS, WIND_HEED_MULT,
+  FOG_TELEGRAPH_MS, FOG_END_ODDS, WEATHER_STEP_MS, FOG_AFTERMATH_MS, FOG_WAKE_MULT,
+  COLD_TELEGRAPH_MS, COLD_END_ODDS, COLD_AFTERMATH_MS, COLD_TORCH_MULT,
+  WIND_TELEGRAPH_MS, WIND_END_ODDS, WIND_AFTERMATH_MS, WIND_HEED_MULT,
   WIND_TORCH_GUTTER_ODDS, WIND_SEA_CHOP_MULT, WIND_CHILL_TORCH_MULT, WIND_CHILL_REST_SKIP,
   BREACH_PAIRS, BREACH_TELEGRAPH_MS, BREACH_ACTIVE_MS, BREACH_AFTERMATH_MS,
   SEA_ROOMS, SEA_INSTRUMENTS, TIDE_SHUT, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_HEARD_BANDS, ROAD_HEARD_BANDS, SEA_BITE, SEA_STATES,
@@ -65,7 +66,7 @@ import {
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
   BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED,
-  CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_ACTIVE_MIN_MS, CLOUDDOWN_ACTIVE_MAX_MS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
+  CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_END_ODDS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
   SCREEFALL_TELEGRAPH_MS, SCREEFALL_ACTIVE_MIN_MS, SCREEFALL_ACTIVE_MAX_MS, SCREEFALL_AFTERMATH_MS, SCREEFALL_BITE, SCREEFALL_ODDS, SCREE_ROOMS, SCREE_AMBIENT,
@@ -98,8 +99,9 @@ const NEVER = 9_000_000_000_000_000;
 // each other. The bell and the tide keep their own locks, as before.
 const ANY = "*";
 const POOL: [string, number, string][] = [
-  // the sky, on everything out of doors at once
-  ["rain", 3, ANY], ["fog", 2, ANY], ["cold", 2, ANY], ["wind", 2, ANY], ["crows", 2, ANY],
+  // the crows, on everything out of doors at once (the weather has its own roll
+  // now - SKY, below)
+  ["crows", 2, ANY],
   // the fortress's own
   ["boil", 2, "warrens"], ["wake", 2, "warrens"],
   ["exhale", 2, "deep"], ["song", 2, "deep"],
@@ -131,6 +133,15 @@ const POOL: [string, number, string][] = [
   // restoring it is uncommenting this ticket.
 ];
 
+// THE WEATHER IS ITS OWN ROLL (rome, 2026-10-15). It used to sit in POOL on
+// "*", which made it block every band and every band block it - harmless while
+// a rain lasted minutes, and a frozen world once it could last a day. So the
+// sky rolls apart from the world's events: one weather at a time, on a die of
+// its own, and a wet day still has the rut, the sea and the warrens going on
+// underneath it. "clear" is a ticket too - the roll that brings no weather.
+const SKY: [string, number][] = [["rain", 3], ["fog", 2], ["cold", 2], ["wind", 2], ["clear", 5]];
+const SKY_ARCS = new Set(SKY.map(([id]) => id).filter((id) => id !== "clear"));
+
 // Which grounds are busy right now, so the roll can skip them. An arc on ANY
 // blocks every band and is blocked by every band, because that is what weather
 // falling on the whole open sky actually means.
@@ -150,10 +161,26 @@ export function phaseOf(z: ZoneDO, id: string): EventState["phase"] {
   return z.events.get(id)?.phase ?? "idle";
 }
 
+// ---- WEATHER HAS A PLACE (rome, 2026-10-15) ----
+// Rain, fog, the cold and the wind no longer fall on the whole map at once. Each
+// is over some of the outdoor grounds - one, or a few that touch - and it moves:
+// every step it may spread to a ground next door or pull back off one. Two
+// weathers can be on at once on different grounds; never two on the same one.
+// Everything that asks "is it raining" asks it of a room, and the answer is the
+// weather's phase only if that room's ground is under it.
+export function wxCovers(z: ZoneDO, id: string, roomId: string): boolean {
+  const st = z.events.get(id);
+  if (!st || st.phase === "idle") return false;
+  return !st.bands || st.bands.includes(z.bandOf(roomId)); // no list: begun before weather had a place
+}
+export function wxPhase(z: ZoneDO, id: string, roomId: string): EventState["phase"] {
+  return wxCovers(z, id, roomId) ? phaseOf(z, id) : "idle";
+}
+
 // Is the rain ON this room right now? (Active phase only — the toggles hang
 // off this: torch-drowning, sound-masking, bold scavengers.)
 export function raining(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "rain") === "active" && OUTDOOR_ROOMS.has(roomId);
+  return wxPhase(z, "rain", roomId) === "active" && OUTDOOR_ROOMS.has(roomId);
 }
 
 // The violet announcement line for a rain phase — same text tickRain
@@ -170,20 +197,20 @@ export function rainAnnounceLine(phase: EventState["phase"]): string | undefined
 // The sky is turning or already open — the window where the open ground's
 // beasts head for cover (telegraph included: they feel it before you do).
 export function rainDrives(z: ZoneDO, roomId: string): boolean {
-  const p = phaseOf(z, "rain");
+  const p = wxPhase(z, "rain", roomId);
   return (p === "telegraph" || p === "active") && OUTDOOR_ROOMS.has(roomId);
 }
 
 // Mud underfoot: the aftermath, when a fresh print cuts deeper and stays.
 export function muddy(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "rain") === "aftermath" && OUTDOOR_ROOMS.has(roomId);
+  return wxPhase(z, "rain", roomId) === "aftermath" && OUTDOOR_ROOMS.has(roomId);
 }
 
 // A road ford under settled rain: the low crossing is up and running, and it
 // costs to wade. Bite-not-block — you can still cross, it just bills you.
 export function fordUp(z: ZoneDO, roomId: string): boolean {
   const r = z.events.get("rain");
-  return r?.phase === "active" && r.data === "settled" && ROAD_FORDS.has(roomId);
+  return r?.phase === "active" && r.data === "settled" && ROAD_FORDS.has(roomId) && wxCovers(z, "rain", roomId);
 }
 
 // The keep's interior: where the bell is law. "Upper" region, under a roof,
@@ -300,7 +327,7 @@ export function songWakeMult(z: ZoneDO, creature: { roomId: string; templateId: 
 
 // Is the fog on this room? (Outdoors only — it pools on the open ground.)
 export function foggy(z: ZoneDO, roomId: string): boolean {
-  return (phaseOf(z, "fog") === "active" && OUTDOOR_ROOMS.has(roomId))
+  return (wxPhase(z, "fog", roomId) === "active" && OUTDOOR_ROOMS.has(roomId))
     // THE CLOUD-DOWN is the mountain's own fog (8a): the cloud base descends and
     // the high tiers white-out. It rides this same chain — spot odds down both
     // ways, unreadable shapes — at altitude instead of under a canopy.
@@ -352,7 +379,8 @@ export function fogTell(z: ZoneDO, roomId: string): string | null {
 // the open ground and the deep. (The keep's halls and the warrens' earth
 // stay livable — cover is the answer, and the map already says where.)
 export function coldBites(z: ZoneDO, roomId: string): boolean {
-  return (phaseOf(z, "cold") === "active" && (OUTDOOR_ROOMS.has(roomId) || deepRoom(z, roomId)))
+  // The deep is cold whenever the cold is on anywhere: it is under all of it.
+  return (phaseOf(z, "cold") === "active" && ((OUTDOOR_ROOMS.has(roomId) && wxCovers(z, "cold", roomId)) || deepRoom(z, roomId)))
     // THE SNOW KEEPS THE COLD (5d): the season outlasts the weather that made
     // it, so the mountain's cold tax holds while the snow lies.
     || (z.snowUntil > Date.now() && z.world!.rooms.get(roomId)?.region === "mountain");
@@ -376,15 +404,15 @@ export function snowed(z: ZoneDO, roomId: string): boolean {
 // fog keeps its cloud-down branch, and the rain is the rain.
 export function weatherNow(z: ZoneDO, roomId: string): "snow" | "fog" | "rain" | "" {
   if (snowed(z, roomId)) return "snow";
-  if (phaseOf(z, "fog") === "active"
+  if (wxPhase(z, "fog", roomId) === "active"
     || (phaseOf(z, "clouddown") === "active" && z.world!.rooms.get(roomId)?.region === "mountain")) return "fog";
-  if (phaseOf(z, "rain") === "active") return "rain";
+  if (wxPhase(z, "rain", roomId) === "active") return "rain";
   return "";
 }
 
 // THE ICE (5a): cold freezes the still fishing waters solid.
 export function frozen(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "cold") === "active" && FISHING_SURFACE.has(roomId);
+  return wxPhase(z, "cold", roomId) === "active" && FISHING_SURFACE.has(roomId);
 }
 
 // THE FEN WATER TABLE (5b): the fen's channels flood by rank, reading the
@@ -396,7 +424,7 @@ export function fenUp(z: ZoneDO, roomId: string): boolean {
 
 // The wind is up on this room (outdoors only — it pools on the open ground).
 export function windy(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "wind") === "active" && OUTDOOR_ROOMS.has(roomId);
+  return wxPhase(z, "wind", roomId) === "active" && OUTDOOR_ROOMS.has(roomId);
 }
 
 // The cold's window (telegraph included): the living head for cover — their
@@ -405,7 +433,7 @@ export function windy(z: ZoneDO, roomId: string): boolean {
 export function coldDrives(z: ZoneDO, creature: { roomId: string; templateId: string }): boolean {
   const p = phaseOf(z, "cold");
   return (p === "telegraph" || p === "active") && !HOLLOW.has(creature.templateId)
-    && (OUTDOOR_ROOMS.has(creature.roomId) || deepRoom(z, creature.roomId));
+    && ((OUTDOOR_ROOMS.has(creature.roomId) && wxCovers(z, "cold", creature.roomId)) || deepRoom(z, creature.roomId));
 }
 
 // A torch lit while the cold bites burns half as long (light.cmdLight reads
@@ -762,22 +790,22 @@ export function skyClause(z: ZoneDO, roomId: string): string {
   if (wrackIn(z, roomId)) return " The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
   if (frozen(z, roomId)) return pick(ICE_LINES);
   if (fenUp(z, roomId)) return FEN_UP_LINE;
-  switch (phaseOf(z, "rain")) {
+  switch (wxPhase(z, "rain", roomId)) {
     case "telegraph": return " The light has gone iron-grey, and the air smells of coming rain.";
     case "active": return " Rain hammers the open ground.";
     case "aftermath": return " The ground is churned to mud, still dripping.";
   }
-  switch (phaseOf(z, "fog")) {
+  switch (wxPhase(z, "fog", roomId)) {
     case "telegraph": return " A milky haze is creeping up from the low ground.";
     case "active": return " Fog stands thick on the open ground. Everything past arm's reach is a rumor.";
     case "aftermath": return " The fog is thinning to rags.";
   }
-  switch (phaseOf(z, "cold")) {
+  switch (wxPhase(z, "cold", roomId)) {
     case "telegraph": return " The air is going glass-clear and bitter.";
     case "active": return " The cold has settled in hard. Nothing living wants to be out in it.";
     case "aftermath": return " The worst of the cold is lifting.";
   }
-  switch (phaseOf(z, "wind")) {
+  switch (wxPhase(z, "wind", roomId)) {
     case "telegraph": return " The wind is getting up, and every loose thing is starting to talk.";
     case "active": return " The wind is up and it never lets off. Nothing you carry is quiet, and no open flame is safe out in it.";
     case "aftermath": return " The wind drops, and the open ground settles back to its own noise.";
@@ -816,11 +844,11 @@ function skyVeil(z: ZoneDO, roomId: string): string | null {
   const mountain = z.world!.rooms.get(roomId)?.region === "mountain";
   if (mountain && phaseOf(z, "clouddown") === "active") return SKY_VEILED.cloud!;
   if (mountain && z.snowUntil > Date.now()) return SKY_VEILED.snow!;
-  const fog = phaseOf(z, "fog");
+  const fog = wxPhase(z, "fog", roomId);
   if (fog === "active") return SKY_VEILED.fog!;
   // Thinning to rags: you get that something is up there and not which thing.
   if (fog === "aftermath") return SKY_VEILED.rags!;
-  if (phaseOf(z, "rain") === "active") return SKY_VEILED.rain!;
+  if (wxPhase(z, "rain", roomId) === "active") return SKY_VEILED.rain!;
   // ...AND THE ORDINARY CLOUD, with no arc behind it (rome, 2026-08-31). Most
   // nights the lid is simply shut, because that is what the lid does. lidOpen is
   // a function of the clock and not a die, so asking again gets the same answer
@@ -942,22 +970,22 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   if (wrackIn(z, roomId)) return "The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
   if (frozen(z, roomId)) return pick(ICE_LINES).trimStart();
   if (fenUp(z, roomId)) return FEN_UP_LINE.trimStart();
-  switch (phaseOf(z, "rain")) {
+  switch (wxPhase(z, "rain", roomId)) {
     case "telegraph": return "The sky has gone iron-grey, and the air smells of coming rain.";
     case "active": return "Rain hammers down out of a sky the colour of iron, and the open ground is already giving way under it.";
     case "aftermath": return "The rain has stopped, but the sky is still low and grey, and the ground under it is churned to mud.";
   }
-  switch (phaseOf(z, "fog")) {
+  switch (wxPhase(z, "fog", roomId)) {
     case "telegraph": return "A milky haze is creeping up from the low ground, and the sky is going soft at its edges.";
     case "active": return "Fog stands thick over the open ground, and the sky is gone behind it — everything past arm's reach is a rumour.";
     case "aftermath": return "The fog is thinning to rags, and the grey sky is coming back through it.";
   }
-  switch (phaseOf(z, "cold")) {
+  switch (wxPhase(z, "cold", roomId)) {
     case "telegraph": return "The sky has gone glass-clear and bitter, and the cold is not even fully here yet.";
     case "active": return "The cold has settled in hard under a pale, flat sky, and nothing living wants to be out under it.";
     case "aftermath": return "The worst of the cold is lifting, and the sky no longer looks like it is waiting to bite.";
   }
-  switch (phaseOf(z, "wind")) {
+  switch (wxPhase(z, "wind", roomId)) {
     case "telegraph": return "The wind is getting up, and the grey lid is beginning to move — it is not as still as it pretends.";
     case "active": return "The wind is up and it never lets off. The sky streams with it, grey and hurrying, and nothing you carry is quiet.";
     case "aftermath": return "The wind drops, and the sky settles back into its usual grey stillness.";
@@ -1117,12 +1145,12 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
   }
   if (!OUTDOOR_ROOMS.has(roomId)) return null;
   if (region === "crossing" && eelRunOn(z, roomId)) return pick(EEL_RUN_AMBIENT);
-  const p = phaseOf(z, "rain");
+  const p = wxPhase(z, "rain", roomId);
   if (p === "active") return pick(RAIN_AMBIENT);
   if (p === "aftermath") return pick(MUD_AMBIENT);
-  if (phaseOf(z, "fog") === "active") return pick(FOG_AMBIENT);
-  if (phaseOf(z, "cold") === "active") return pick(COLD_AMBIENT);
-  if (phaseOf(z, "wind") === "active") return pick(WIND_AMBIENT);
+  if (wxPhase(z, "fog", roomId) === "active") return pick(FOG_AMBIENT);
+  if (wxPhase(z, "cold", roomId) === "active") return pick(COLD_AMBIENT);
+  if (wxPhase(z, "wind", roomId) === "active") return pick(WIND_AMBIENT);
   if (LIGHTS_ROOMS.has(roomId) && phaseOf(z, "lights") === "active") return pick(LIGHTS_AMBIENT);
   if (phaseOf(z, "crows") === "active") return pick(CROWS_AMBIENT);
   return null;
@@ -1189,6 +1217,100 @@ export function crowsMark(z: ZoneDO, session: Session): void {
 function feedOutdoors(z: ZoneDO, line: string): void {
   feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId), line);
 }
+// ...and a weather's own lines go only to the open ground it is over.
+function feedWeather(z: ZoneDO, id: string, line: string): void {
+  feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && wxCovers(z, id, roomId), line);
+}
+
+// THE GROUNDS WEATHER FALLS ON, and which of them touch: every band with open
+// ground in it, joined wherever an exit runs from one band's open ground to
+// another's. Worked out once per world - the map does not move.
+const wxMap = new WeakMap<ZoneDO, { bands: string[]; next: Map<string, Set<string>> }>();
+export function weatherGrounds(z: ZoneDO): { bands: string[]; next: Map<string, Set<string>> } {
+  const had = wxMap.get(z);
+  if (had) return had;
+  const next = new Map<string, Set<string>>();
+  for (const roomId of OUTDOOR_ROOMS) {
+    if (!z.world!.rooms.has(roomId)) continue;
+    const a = z.bandOf(roomId);
+    if (!next.has(a)) next.set(a, new Set());
+    for (const e of z.world!.exits.get(roomId) ?? []) {
+      if (!OUTDOOR_ROOMS.has(e.to_room) || !z.world!.rooms.has(e.to_room)) continue;
+      const b = z.bandOf(e.to_room);
+      if (b === a) continue;
+      next.get(a)!.add(b);
+      if (!next.has(b)) next.set(b, new Set());
+      next.get(b)!.add(a);
+    }
+  }
+  const built = { bands: [...next.keys()], next };
+  wxMap.set(z, built);
+  return built;
+}
+// Grounds no weather is over right now (the one being moved may count its own).
+function wxFree(z: ZoneDO, except?: string): Set<string> {
+  const free = new Set(weatherGrounds(z).bands);
+  for (const id of SKY_ARCS) {
+    if (id === except) continue;
+    const st = z.events.get(id);
+    if (!st || st.phase === "idle") continue;
+    if (!st.bands) return new Set(); // an all-over weather from before: nothing is free
+    for (const b of st.bands) free.delete(b);
+  }
+  return free;
+}
+// Where a new weather lands: one free ground, and from it, now and then, the
+// free grounds next to it - so it is sometimes one place and sometimes a spread
+// of them, and only rarely the whole map.
+export function wxPlace(z: ZoneDO): string[] {
+  const free = [...wxFree(z)];
+  if (!free.length) return [];
+  // ...AND NOW AND THEN, ALL OF IT (rome, 2026-10-15): a weather big enough to
+  // lie over every ground at once - when nothing else is anywhere to stop it.
+  if (free.length === weatherGrounds(z).bands.length && chance(WX_WORLDWIDE_ODDS)) return free;
+  const { next } = weatherGrounds(z);
+  const placed = [free[Math.floor(Math.random() * free.length)]];
+  for (let i = 0; i < placed.length; i++) {
+    for (const b of next.get(placed[i]) ?? []) {
+      if (free.includes(b) && !placed.includes(b) && chance(WX_GROW_ODDS)) placed.push(b);
+    }
+  }
+  return placed;
+}
+const WX_ARRIVE: Record<string, string> = {
+  rain: "The rain reaches here from somewhere else, and in a moment it is coming down on everything.",
+  fog: "Fog drifts in from somewhere else and settles, low and white, and the far side of everything goes.",
+  cold: "The cold reaches here on a clear, hard air, and your breath starts to show.",
+  wind: "The wind reaches here, and every loose thing starts to talk.",
+};
+const WX_LEAVE: Record<string, string> = {
+  rain: "The rain moves off somewhere else, and everything here is left dripping.",
+  fog: "The fog drifts off, and the far side of things comes back.",
+  cold: "The worst of the cold moves off, and the air here eases.",
+  wind: "The wind moves off, and everything here settles back to its own noise.",
+};
+// A WEATHER MOVES. Each step it holds, it may reach a ground next door or pull
+// back off one of its own - never its last: that is the weather ending, and the
+// step's own roll decides that.
+export function wxMove(z: ZoneDO, id: string, st: EventState): void {
+  if (!st.bands) return;
+  const { next } = weatherGrounds(z);
+  if (chance(WX_SPREAD_ODDS)) {
+    const free = wxFree(z, id), near: string[] = [];
+    for (const b of st.bands) for (const n of next.get(b) ?? []) if (free.has(n) && !st.bands.includes(n) && !near.includes(n)) near.push(n);
+    if (near.length) {
+      const b = near[Math.floor(Math.random() * near.length)];
+      st.bands.push(b);
+      feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === b, WX_ARRIVE[id]);
+      return;
+    }
+  }
+  if (st.bands.length > 1 && chance(WX_RETREAT_ODDS)) {
+    const b = st.bands[Math.floor(Math.random() * st.bands.length)];
+    feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === b, WX_LEAVE[id]);
+    st.bands = st.bands.filter((x) => x !== b);
+  }
+}
 
 // THE SKY SPEAKS TO THE WATCHERS TOO. Weather can't be a band — "outdoors" cuts
 // across every region there is — so it goes out per-room like any local news,
@@ -1214,6 +1336,7 @@ function feedWhere(z: ZoneDO, inRoom: (roomId: string) => boolean, line: string)
 
 export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   tickRoll(z, now);
+  tickSkyRoll(z, now);
   await tickRain(z, now);
   await tickBell(z, now);
   await tickBoil(z, now);
@@ -1503,11 +1626,12 @@ async function tickClouddown(z: ZoneDO, now: number): Promise<void> {
     }
     case "telegraph": {
       st.phase = "active";
-      st.until = now + randInt(CLOUDDOWN_ACTIVE_MIN_MS, CLOUDDOWN_ACTIVE_MAX_MS);
+      st.until = now + WEATHER_STEP_MS; // no set length: weatherHolds rolls each step
       z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "The cloud lies down over the mountain, and the hill stops being a place you can see.", "evt");
       break;
     }
     case "active": {
+      if (!chance(CLOUDDOWN_END_ODDS)) { st.until = now + WEATHER_STEP_MS; break; }
       st.phase = "aftermath";
       st.until = now + CLOUDDOWN_AFTERMATH_MS;
       z.roomFeedBands(MOUNTAIN_HEARD_BANDS, "The cloud lifts back up the hill, and the mountain comes back room by room.", "evt");
@@ -2059,21 +2183,69 @@ function tickRoll(z: ZoneDO, now: number): void {
   z.events.set(picked, ev);
 }
 
+// ---- the sky's roll ----
+// Every SKY_ROLL_MIN..MAX it looks up and draws a weather that is not already on
+// (or "clear", and the dry spell goes on), and places it on open ground. The bell and the tide do not stop the
+// weather - nothing in the keep stops the rain. Slept past, it lands mid-cycle
+// like the world's roll, never on login.
+function tickSkyRoll(z: ZoneDO, now: number): void {
+  let st = z.events.get("skyroll");
+  if (!st) {
+    st = { phase: "idle", until: now + randInt(ROLL_FIRST_MIN_MS, ROLL_FIRST_MAX_MS) };
+    z.events.set("skyroll", st);
+  }
+  if (now < st.until) return;
+  if (now - st.until > ROLL_GRACE_MS) {
+    st.until = now + randInt(ROLL_MISSED_MIN_MS, ROLL_MISSED_MAX_MS);
+    return;
+  }
+  st.until = now + randInt(SKY_ROLL_MIN_MS, SKY_ROLL_MAX_MS);
+  // Any weather not already on can be drawn, onto ground no other weather is
+  // over: rain on the mountain and fog on the crossing, but never both on one.
+  const draw = SKY.filter(([id]) => id === "clear" || phaseOf(z, id) === "idle");
+  const total = draw.reduce((sum, [, w]) => sum + w, 0);
+  let n = randInt(1, total), picked = draw[0][0];
+  for (const [id, w] of draw) { n -= w; if (n <= 0) { picked = id; break; } }
+  if (picked === "clear") return;
+  const bands = wxPlace(z);
+  if (!bands.length) return; // every ground already has its weather
+  const ev = z.events.get(picked) ?? { phase: "idle" as const, until: 0 };
+  ev.phase = "idle";
+  ev.until = now; // its ticker fires the telegraph this very tick
+  ev.bands = bands;
+  z.events.set(picked, ev);
+}
+
 // LIGHTNING (see zone-data). When the next bolt is due is held per world, in
 // memory: a restart mid-storm just rolls a fresh gap, which nobody can tell.
+// STILL HERE? The weather that has no set length rolls this every step: if it
+// holds, it books the next roll and the caller stays where it is.
+function weatherHolds(z: ZoneDO, id: string, st: EventState, now: number, endOdds: number): boolean {
+  if (chance(endOdds)) return false;
+  st.until = now + WEATHER_STEP_MS;
+  wxMove(z, id, st);
+  return true;
+}
+
 const nextBolt = new WeakMap<ZoneDO, number>();
+// How long until the next bolt: close behind this one, or a long lull.
+function boltGap(): number {
+  return chance(LIGHTNING_BURST_ODDS)
+    ? randInt(LIGHTNING_BURST_MIN_MS, LIGHTNING_BURST_MAX_MS)
+    : randInt(LIGHTNING_LULL_MIN_MS, LIGHTNING_LULL_MAX_MS);
+}
 async function tickLightning(z: ZoneDO, now: number): Promise<void> {
   const due = nextBolt.get(z);
-  if (due === undefined) { nextBolt.set(z, now + randInt(LIGHTNING_GAP_MIN_MS, LIGHTNING_GAP_MAX_MS)); return; }
+  if (due === undefined) { nextBolt.set(z, now + boltGap()); return; }
   if (now < due) return;
-  nextBolt.set(z, now + randInt(LIGHTNING_GAP_MIN_MS, LIGHTNING_GAP_MAX_MS));
+  nextBolt.set(z, now + boltGap());
   for (const s of [...z.sessions.values()]) {
     if (z.outOfWorld(s) || z.artSkyFor(s) !== "rain") {
       // UNDER A ROOF THE THUNDER STILL REACHES YOU (rome, 2026-10-15): a house,
       // a shelter, the gatehouse by its fire. No flash and no strike - only the
       // sound, through the walls. Not underground: the keep, the deep and the
       // warrens are too far down for weather of any kind.
-      if (phaseOf(z, "rain") === "active" && SURFACE_BANDS.has(z.bandOf(s.roomId))) {
+      if (phaseOf(z, "rain") === "active" && SURFACE_BANDS.has(z.bandOf(s.roomId)) && wxCovers(z, "rain", s.roomId)) {
         // Its own frame, never a "bolt": a page still on the build before this
         // one knows "bolt" only as a flash, and flashed every roofed room.
         try { s.ws.send(JSON.stringify({ v: 0, t: "thunder" })); } catch {}
@@ -2164,13 +2336,13 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
       // you plan around. The sky tells you which, and you get to act on it.
       const settled = chance(RAIN_SETTLED_ODDS);
       st.data = settled ? "settled" : "shower";
-      feedOutdoors(z, settled
+      feedWeather(z, "rain", settled
         ? "The whole sky goes one flat colour, edge to edge, and the light dies with it. This is not a shower coming."
         : "The light goes iron-grey. The air smells of rain coming.");
       // The beasts feel it first: everything under the open sky stirs now —
       // their run for cover IS the telegraph (see rainDrives in ai.ts).
       for (const c of z.creatures.values()) {
-        if (OUTDOOR_ROOMS.has(c.roomId)) {
+        if (OUTDOOR_ROOMS.has(c.roomId) && wxCovers(z, "rain", c.roomId)) {
           c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(2000, 12_000));
         }
       }
@@ -2179,10 +2351,8 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
     case "telegraph": {
       st.phase = "active";
       const settled = st.data === "settled";
-      st.until = now + (settled
-        ? randInt(RAIN_SETTLED_MIN_MS, RAIN_SETTLED_MAX_MS)
-        : randInt(RAIN_SHOWER_MIN_MS, RAIN_SHOWER_MAX_MS));
-      feedOutdoors(z, settled
+      st.until = now + RAIN_STEP_MS; // no length: each step it rolls whether it stops
+      feedWeather(z, "rain", settled
         ? "The rain arrives all at once and does not ease — a steady, vertical, settled downpour with no end in the look of it."
         : "The sky opens. Rain comes down in earnest, loud on stone and thorn.");
       for (const s of z.sessions.values()) rainSoaksTorch(z, s);
@@ -2192,17 +2362,30 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
       break;
     }
     case "active": {
+      // DOES IT STOP? Rolled every step, at the odds of the rain it is.
+      const setIn = st.data === "settled";
+      if (!chance(setIn ? RAIN_SETTLED_END_ODDS : RAIN_SHOWER_END_ODDS)) {
+        if (!setIn && chance(RAIN_SETS_IN_ODDS)) {
+          st.data = "settled";
+          feedWeather(z, "rain", "The shower does not pass. The sky behind it is the same flat grey all the way back, and the rain settles in to stay.");
+        }
+        st.until = now + RAIN_STEP_MS;
+        wxMove(z, "rain", st);
+        break;
+      }
       const settled = st.data === "settled";
       // A settled rain loads the die (BIAS, not trigger — the law at the top of
       // this file): it banks water, so the next road roll draws the beck, and it
       // soaks the graves, so the next den roll draws the fever.
-      if (settled) { chargeBand(z, "road", "spate"); chargeBand(z, "den", "fever"); }
+      // ...where it fell: the road's beck and the dens' graves only fill if it was over them.
+      if (settled && (!st.bands || st.bands.includes("road"))) chargeBand(z, "road", "spate");
+      if (settled && (!st.bands || st.bands.includes("den"))) chargeBand(z, "den", "fever");
       st.phase = "aftermath";
       // A long soaking leaves the ground wrong for longer — the mud outlasts
       // the weather that made it, and by more when there was more of it.
       st.until = now + Math.round(RAIN_AFTERMATH_MS * (settled ? RAIN_SETTLED_AFTERMATH_MULT : 1));
       st.data = undefined; // the kind belonged to that storm; the next one rolls its own
-      feedOutdoors(z, settled
+      feedWeather(z, "rain", settled
         ? "The rain thins at last, and stops, and the quiet after it is enormous. Everything underfoot has turned to mud, and it will be mud for a long while."
         : "The rain slackens, and stops. What blood and tracks the ground held have run off into the mud.");
       // The wash: the open ground forgets — blood, remains, camps, passage —
@@ -2554,7 +2737,7 @@ async function tickWake(z: ZoneDO, now: number): Promise<void> {
           z.roomFeed(roomId, beacon.label
             ? `Where ${beacon.label} fell, the floor gives — and something older pulls itself up through it, dry and wrong.`
             : "The floor gives, and something long-buried pulls itself up through it, dry and wrong.", undefined, false, "evt");
-          z.roomSound(roomId, "Stone shifts {dir}, and something drags itself over it.");
+          z.roomSound(roomId, "Stone shifts {dir}, and something drags itself over it.", undefined, undefined, false, { act: "stoneshift" });
           z.refreshRoomCtx(roomId);
           risen++;
         }
@@ -2835,19 +3018,20 @@ async function tickFog(z: ZoneDO, now: number): Promise<void> {
     case "idle": {
       st.phase = "telegraph";
       st.until = now + FOG_TELEGRAPH_MS;
-      feedOutdoors(z, "A milky haze creeps up from the low ground, and the far walls lose their edges.");
+      feedWeather(z, "fog", "A milky haze creeps up from the low ground, and the far walls lose their edges.");
       break;
     }
     case "telegraph": {
       st.phase = "active";
-      st.until = now + randInt(FOG_ACTIVE_MIN_MS, FOG_ACTIVE_MAX_MS);
-      feedOutdoors(z, "The fog closes in. Everything past arm's reach is a rumor now.");
+      st.until = now + WEATHER_STEP_MS; // no set length: weatherHolds rolls each step
+      feedWeather(z, "fog", "The fog closes in. Everything past arm's reach is a rumor now.");
       break;
     }
     case "active": {
+      if (weatherHolds(z, "fog", st, now, FOG_END_ODDS)) break;
       st.phase = "aftermath";
       st.until = now + FOG_AFTERMATH_MS;
-      feedOutdoors(z, "The fog thins to rags, and the open ground comes back — along with everything that was moving through it.");
+      feedWeather(z, "fog", "The fog thins to rags, and the open ground comes back — along with everything that was moving through it.");
       break;
     }
     case "aftermath": {
@@ -2891,7 +3075,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
     }
   }
   if (now < st.until) return;
-  const inCold = (roomId: string) => OUTDOOR_ROOMS.has(roomId) || deepRoom(z, roomId);
+  const inCold = (roomId: string) => (OUTDOOR_ROOMS.has(roomId) && wxCovers(z, "cold", roomId)) || deepRoom(z, roomId);
   switch (st.phase) {
     case "idle": {
       st.phase = "telegraph";
@@ -2908,7 +3092,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
     }
     case "telegraph": {
       st.phase = "active";
-      st.until = now + randInt(COLD_ACTIVE_MIN_MS, COLD_ACTIVE_MAX_MS);
+      st.until = now + WEATHER_STEP_MS; // no set length: weatherHolds rolls each step
       feedSky(z, inCold, "The cold settles in hard. Flames pinch small, and everything living goes to ground.");
       // THE MOUNTAIN GAINS ITS SEASON (5d): the cold stamps the snow, and the
       // snow outlasts the cold — persisted, so the hill holds its winter after
@@ -2924,6 +3108,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
       break;
     }
     case "active": {
+      if (weatherHolds(z, "cold", st, now, COLD_END_ODDS)) break;
       st.phase = "aftermath";
       st.until = now + COLD_AFTERMATH_MS;
       feedSky(z, inCold, "The bitter edge goes out of the air, slowly, like something unclenching.");
@@ -2966,19 +3151,20 @@ async function tickWind(z: ZoneDO, now: number): Promise<void> {
     case "idle": {
       st.phase = "telegraph";
       st.until = now + WIND_TELEGRAPH_MS;
-      feedOutdoors(z, "The wind is getting up — loose things begin to talk, and the air has a bite in it that wasn't there.");
+      feedWeather(z, "wind", "The wind is getting up — loose things begin to talk, and the air has a bite in it that wasn't there.");
       break;
     }
     case "telegraph": {
       st.phase = "active";
-      st.until = now + randInt(WIND_ACTIVE_MIN_MS, WIND_ACTIVE_MAX_MS);
-      feedOutdoors(z, "The wind is up and it means to stay up. Every sound carries further than it should, and no open flame is safe out in it.");
+      st.until = now + WEATHER_STEP_MS; // no set length: weatherHolds rolls each step
+      feedWeather(z, "wind", "The wind is up and it means to stay up. Every sound carries further than it should, and no open flame is safe out in it.");
       break;
     }
     case "active": {
+      if (weatherHolds(z, "wind", st, now, WIND_END_ODDS)) break;
       st.phase = "aftermath";
       st.until = now + WIND_AFTERMATH_MS;
-      feedOutdoors(z, "The wind drops as suddenly as it came up, and the open ground is loud with its own stillness again.");
+      feedWeather(z, "wind", "The wind drops as suddenly as it came up, and the open ground is loud with its own stillness again.");
       break;
     }
     case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
@@ -3103,7 +3289,7 @@ async function tickGloam(z: ZoneDO, now: number): Promise<void> {
       st.until = now + GLOAM_TELEGRAPH_MS;
       z.roomFeed(st.data, "The light in this room is going wrong — thin and brown, like water with something in it.", undefined, false, "evt");
       z.roomFeedBands(GLOAM_HEARD_BANDS, "Somewhere in the halls the light has gone out of a room — not snuffed, taken — and it has not come back on.", "evt");
-      z.roomSound(st.data, "From {dir}, small quick feet — everything little is leaving a room at once.");
+      z.roomSound(st.data, "From {dir}, small quick feet — everything little is leaving a room at once.", undefined, undefined, false, { act: "scurry" });
       break;
     }
     case "telegraph": {
@@ -3157,8 +3343,8 @@ async function tickBreach(z: ZoneDO, now: number): Promise<void> {
       st.phase = "telegraph";
       st.until = now + BREACH_TELEGRAPH_MS;
       for (const roomId of [p.a, p.b]) {
-        z.roomFeed(roomId, "The wall lets out a long, grinding groan. Dust sifts from the joints in the stone.", undefined, false, "evt");
-        z.roomSound(roomId, "Stone grinds against stone {dir}, complaining.");
+        z.roomFeed(roomId, "The wall lets out a long, grinding groan. Dust sifts from the joints in the stone.", undefined, false, "evt sfx-stoneshift");
+        z.roomSound(roomId, "Stone grinds against stone {dir}, complaining.", undefined, undefined, false, { act: "stoneshift" });
       }
       break;
     }
@@ -3170,8 +3356,8 @@ async function tickBreach(z: ZoneDO, now: number): Promise<void> {
       breachExitOpen(z, p.a, p.aDir, p.b);
       breachExitOpen(z, p.b, p.bDir, p.a);
       for (const [roomId, dir] of [[p.a, p.aDir], [p.b, p.bDir]] as const) {
-        z.roomFeed(roomId, `The wall GIVES — stone comes down in a roar, and when the dust thins a ragged passage stands open ${dir}, where no passage was.`, undefined, false, "evt");
-        z.roomSound(roomId, "Somewhere {dir}, a wall comes down in a long roar of stone.");
+        z.roomFeed(roomId, `The wall GIVES — stone comes down in a roar, and when the dust thins a ragged passage stands open ${dir}, where no passage was.`, undefined, false, "evt sfx-rubble");
+        z.roomSound(roomId, "Somewhere {dir}, a wall comes down in a long roar of stone.", undefined, undefined, false, { act: "rubble" });
         z.refreshRoomCtx(roomId);
       }
       break;
@@ -3385,7 +3571,7 @@ async function floodLevel(z: ZoneDO, rank: number, now: number): Promise<void> {
 //                           that would be perfectly safe on a good one.
 //
 // The surge is also the DURATION the tide alone could not give. Settled rain
-// runs 20-40 minutes against the tide's 15, from an existing arc with an
+// runs for hours against the tide's 15, from an existing arc with an
 // existing telegraph, instead of another constant of mine arguing with the
 // world's clock.
 //
@@ -3397,7 +3583,8 @@ function seaSurge(z: ZoneDO): number {
   const r = z.events.get("rain");
   // The kind is cleared when the rain breaks (tickRain drops st.data going into
   // aftermath), so the surge is the standing-rain window and nothing after it.
-  return r?.phase === "active" && r.data === "settled" ? 1 : 0;
+  // ...and only rain that is over the crossing fills the crossing.
+  return r?.phase === "active" && r.data === "settled" && (!r.bands || r.bands.includes("crossing")) ? 1 : 0;
 }
 
 // Sea level maps off the deep's rank: the surface stands one level higher than

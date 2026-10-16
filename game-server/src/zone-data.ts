@@ -3363,8 +3363,7 @@ export const BLOOD_MOON_WAKE_TELLS = [
 // (foggy() reads it), so the bite is spot odds down both ways and unreadable
 // shapes, at altitude instead of under a canopy.
 export const CLOUDDOWN_TELEGRAPH_MS = 90_000;
-export const CLOUDDOWN_ACTIVE_MIN_MS = 6 * 60_000;
-export const CLOUDDOWN_ACTIVE_MAX_MS = 12 * 60_000;
+export const CLOUDDOWN_END_ODDS = 0.25; // per WEATHER_STEP_MS: half lift in 30 min, one in thirty sits 2h
 export const CLOUDDOWN_AFTERMATH_MS = 90_000;
 export const CLOUDDOWN_AMBIENT = [
   "The cloud sits on the slope like a thing that lives here and has simply come lower.",
@@ -7641,6 +7640,9 @@ export const ROLL_FIRST_MAX_MS = 60 * 60_000;
 export const ROLL_GRACE_MS = 10 * 60_000; // a roll slept past by more than this happened unobserved
 export const ROLL_MISSED_MIN_MS = 15 * 60_000; // ...and the next one lands mid-cycle, not instantly-on-login
 export const ROLL_MISSED_MAX_MS = 1 * 3_600_000;
+// The sky's own roll (events.tickSkyRoll): every 2-4h, while no weather is on.
+export const SKY_ROLL_MIN_MS = 2 * 3_600_000;
+export const SKY_ROLL_MAX_MS = 4 * 3_600_000;
 // Rain (the room-events opener, 067): telegraph -> active -> aftermath.
 export const RAIN_TELEGRAPH_MS = 2 * 60_000; // the iron-grey light before the first drops
 // RAIN COMES IN TWO KINDS (rome, 2026-08-08: "is it always the same length? we
@@ -7661,10 +7663,33 @@ export const RAIN_TELEGRAPH_MS = 2 * 60_000; // the iron-grey light before the f
 // bolder for the noise. Mean lands ~11 min, close to the old 10, so this
 // changes the SHAPE of rain without making the world much wetter.
 export const RAIN_SETTLED_ODDS = 0.25;
-export const RAIN_SHOWER_MIN_MS = 3 * 60_000;   // a passing shower
-export const RAIN_SHOWER_MAX_MS = 7 * 60_000;
-export const RAIN_SETTLED_MIN_MS = 20 * 60_000; // set in for the afternoon
-export const RAIN_SETTLED_MAX_MS = 40 * 60_000;
+// RAIN WITH NO SET LENGTH (rome, 2026-10-15: longer rain, so a wet day makes
+// you play it differently). Nothing times a rain out any more. Every
+// RAIN_STEP_MS the sky rolls whether it stops, and the odds are the rain's own:
+// a shower usually blows over within the half hour; settled rain hardly ever
+// lets go, so it can sit over the world all afternoon, all night, or a day and
+// more. A shower that does not pass can thicken and set in.
+//   shower:  half end at each step   -> most are gone in 10-30 min
+//   settled: 1.5% end at each step   -> half last 7.7h, a third pass 12h,
+//                                        one in nine is still falling at 24h
+export const RAIN_STEP_MS = 10 * 60_000;
+// THE REST OF THE WEATHER WORKS THE SAME WAY (rome, 2026-10-15). Fog, the cold,
+// the wind and the mountain's cloud have no set length either: every
+// WEATHER_STEP_MS each rolls whether it ends, at its own *_END_ODDS.
+export const WEATHER_STEP_MS = 10 * 60_000;
+// ...and where it is (events.wxPlace / wxMove). A new weather lands on one open
+// ground and takes each free ground next to it at WX_GROW_ODDS, so it is mostly
+// one or two places and only rarely the whole map. Every step it holds it may
+// spread to a ground next door, or pull back off one of its own.
+export const WX_GROW_ODDS = 0.35;
+export const WX_SPREAD_ODDS = 0.2;
+export const WX_RETREAT_ODDS = 0.2;
+// One new weather in ten, when no other weather is on anywhere, covers every
+// ground at once - and then moves and breaks up like any other.
+export const WX_WORLDWIDE_ODDS = 0.1;
+export const RAIN_SHOWER_END_ODDS = 0.5;
+export const RAIN_SETS_IN_ODDS = 0.08;          // a shower that does not pass
+export const RAIN_SETTLED_END_ODDS = 0.015;
 export const RAIN_AFTERMATH_MS = 15 * 60_000; // mud: deep tracks, quick forage
 export const RAIN_SETTLED_AFTERMATH_MULT = 1.6; // a long soaking leaves the ground wrong for longer
 // LIGHTNING (rome, 2026-10-13). The storm throws a bolt every so often while
@@ -7675,8 +7700,14 @@ export const RAIN_SETTLED_AFTERMATH_MULT = 1.6; // a long soaking leaves the gro
 // wanderer in hide and wool is thrown down and left alive, a knight in plate
 // is not. Nothing but steel is ever lethal here - with none on you, the bolt
 // leaves you at 1.
-export const LIGHTNING_GAP_MIN_MS = 25_000;
-export const LIGHTNING_GAP_MAX_MS = 65_000;
+// A STORM IS NOT A CLOCK (rome, 2026-10-15). After each bolt the next is either
+// close behind it - a run of them, seconds apart - or a long way off, minutes
+// of rain with nothing in it. Never a steady one-a-minute.
+export const LIGHTNING_BURST_ODDS = 0.4;          // the next bolt follows close
+export const LIGHTNING_BURST_MIN_MS = 4_000;
+export const LIGHTNING_BURST_MAX_MS = 15_000;
+export const LIGHTNING_LULL_MIN_MS = 60_000;      // ...or the storm goes quiet
+export const LIGHTNING_LULL_MAX_MS = 6 * 60_000;
 export const LIGHTNING_STRIKE_ODDS = 1 / 2000;   // per bolt, per player under the open rain
 export const LIGHTNING_STEEL_ODDS_PER_KG = 0.1;  // 15 kg of plate = 2.5x the odds
 export const LIGHTNING_BURN = 30;                // what the bolt does with no steel on you (never kills)
@@ -7862,8 +7893,7 @@ export const LIGHTS_STEP_MAX_MS = 90_000;
 // unreadable — every shape in the fog keeps its secrets). Scavengers hunt in
 // it. Unlike rain, the traces STAY: the stalker's weather.
 export const FOG_TELEGRAPH_MS = 90_000; // the air goes milky from the fen up
-export const FOG_ACTIVE_MIN_MS = 10 * 60_000;
-export const FOG_ACTIVE_MAX_MS = 15 * 60_000;
+export const FOG_END_ODDS = 0.15;       // per WEATHER_STEP_MS: half lift within 50 min, one in twenty sits 3h
 export const FOG_AFTERMATH_MS = 2 * 60_000;
 export const FOG_WAKE_MULT = 0.5; // the fog swallows half of what would spot you
 // Cold snap (outdoors + deep): clear and bitter. Torches burn double-fast
@@ -7873,8 +7903,7 @@ export const FOG_WAKE_MULT = 0.5; // the fog swallows half of what would spot yo
 // feels it. A quiet, safe-looking window that taxes your supplies; the free
 // tell is which silhouettes are still moving.
 export const COLD_TELEGRAPH_MS = 90_000;
-export const COLD_ACTIVE_MIN_MS = 10 * 60_000;
-export const COLD_ACTIVE_MAX_MS = 15 * 60_000;
+export const COLD_END_ODDS = 0.025;     // per WEATHER_STEP_MS: half last 4.7h, one in forty freezes a day
 export const COLD_AFTERMATH_MS = 3 * 60_000;
 export const COLD_TORCH_MULT = 0.5; // a torch lit (or caught) in the cold burns half as long
 export const COLD_REST_SKIP = 0.5; // odds a resting tick heals nothing in the cold
@@ -7899,8 +7928,7 @@ export const COLD_HUNGER_MULT = 2;
 // rides in with is worse than the cold alone. The lantern is the answer, as it
 // always is.
 export const WIND_TELEGRAPH_MS = 60_000;
-export const WIND_ACTIVE_MIN_MS = 10 * 60_000;
-export const WIND_ACTIVE_MAX_MS = 18 * 60_000;
+export const WIND_END_ODDS = 0.1;       // per WEATHER_STEP_MS: half blow out in 70 min, one in seven goes 3h
 export const WIND_AFTERMATH_MS = 4 * 60_000;
 export const WIND_HEED_MULT = 1.6;        // creatures heed noise harder — sound carries in the wind
 // PER BEAT, AND THE BEAT IS TICK_MS = 2s — which is what makes this number
