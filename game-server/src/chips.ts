@@ -15,10 +15,11 @@ import * as paths from "./paths";
 import * as keys from "./keys";
 import { BUILD_ID } from "./public";
 import * as dice from "./dice";
+import * as light from "./light";
 import { chipName, nameMatches, shortName, isNight, isFullMoon } from "./zone-util";
 import { hasTrait } from "./world";
 import {
-  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM, seesArt,
+  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM, LANTERN_FAT_MS, LANTERN_WELL_MS, FAT_ITEM, seesArt,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
@@ -341,8 +342,12 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // thing that spends the rare flame while common sticks sit in the pack.
     // Any burning weapon offers the chip, not just the longbrand (2026-08-20).
     else if (session.items.some((c) => hasTrait(world.itemTemplates.get(c.itemId), "burning"))) suggest.push("light brand");
-    if (session.items.some((c) => c.itemId === LANTERN_ITEM && c.condition > 0)) suggest.push("light lantern");
+    // ...only a lantern that will actually catch: sound enough, and fat in its well.
+    if (session.items.some((c) => c.itemId === LANTERN_ITEM && c.condition > 0 && light.wellOf(session, c) > 0)) suggest.push("light lantern");
   }
+  // FAT FOR THE WELL, when you have a lump and the well has room for it.
+  if (!fighting && session.items.some((c) => c.itemId === FAT_ITEM)
+    && session.items.some((c) => c.itemId === LANTERN_ITEM && light.wellOf(session, c) + LANTERN_FAT_MS <= LANTERN_WELL_MS)) suggest.push("fill lantern");
 
   // A locked cache here that you hold the key to: one chip opens it.
   if (!fighting) {

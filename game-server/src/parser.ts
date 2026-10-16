@@ -40,6 +40,8 @@ export type Verb =
   | "feed"
   | "bandage"
   | "light"
+  | "fill"
+  | "douse"
   | "carve"
   | "claim"
   | "stash"
@@ -194,6 +196,9 @@ const VERB_ALIASES: Record<string, Verb> = {
   feed: "feed", // feed <thing> <food> — a raven for a barter
   bandage: "bandage", bind: "bandage", dress: "bandage", bandages: "bandage",
   light: "light", kindle: "light", ignite: "light", torch: "light", lantern: "light",
+  // THE LANTERN'S WELL (2026-10-16): fat goes in, and the shutter comes down.
+  fill: "fill", refill: "fill", refuel: "fill",
+  douse: "douse", snuff: "douse", shutter: "douse", extinguish: "douse", quench: "douse",
   carve: "carve", scratch: "carve", etch: "carve", inscribe: "carve", write: "carve",
   // The gatehouse board. `board` is bare-only in there (GATEHOUSE_NOARG), so
   // "board up the door" stays a sentence; post/tear take arguments and must

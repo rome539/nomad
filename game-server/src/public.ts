@@ -5633,6 +5633,8 @@ var GATEHOUSE_CMDS = {
   // verb read as speech here and its echo was swallowed. The server has always
   // carved it; only the local echo was wrong.
   carve: 1, scratch: 1, etch: 1, inscribe: 1,
+  // the lantern's well (2026-10-16): fat goes in by the fire as well as out in the dark
+  fill: 1, refill: 1, refuel: 1,
 };
 // No-argument commands (aliases). Mirrors the server's GATEHOUSE_NOARG: bare
 // they command, but with words after them they were a sentence. Kept in sync so

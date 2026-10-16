@@ -1,20 +1,62 @@
 // Fire and light, out of the spine (zone.ts stays tick/combat + transport).
 // A torch is spent into the flame at once and burns TORCH_BURN_MS — an OPEN
 // flame, so the fire-fear wakes to it (ai.carriesFire reads the same litUntil).
-// A hooded lantern stays in the pack while it burns (LANTERN_BURN_MS, three
-// torches' worth), pays LANTERN_WEAR condition per lighting (five burns, the
-// last burn spends the lantern itself), and its shuttered flame is TAME — the
-// fire-fear sleeps through it. Either way the light lives in the shield hand:
+// A hooded lantern stays in the pack while it burns the fat in its well (one
+// lump, LANTERN_FAT_MS, a torch three times over; three lumps to a full well),
+// pays LANTERN_WEAR in tin and pane per lighting, is shuttered with what is
+// left still in it, and its flame is TAME — the fire-fear sleeps through it. Either way the light lives in the shield hand:
 // light, or guard — not both.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import * as events from "./events";
 import { underCover } from "./detail";
-import { setItemCondition, removeItemRow, hasTrait } from "./world";
+import { setItemCondition, setItemFuel, removeItemRow, hasTrait } from "./world";
+import type { CarriedItem } from "./world";
 import {
-  TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_BURN_MS, LANTERN_WEAR, BEACON_ROOM,
+  TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_FAT_MS, LANTERN_WELL_MS, LANTERN_WEAR, FAT_ITEM, BEACON_ROOM,
   brandBurnMs,
 } from "./zone-data";
+
+// ---- THE LANTERN'S WELL (rome, 2026-10-16; zone-data LANTERN_*) ----
+// Lighting it moves the fat out of the well and into the flame (litUntil);
+// shuttering it puts whatever is left back. So a lantern that leaves your hands
+// alight - dropped, traded, stashed - takes only what was really still in it,
+// and fat is never counted twice.
+// A lantern on the floor keeps its fat beside its wear, under this key.
+export function fuelKey(roomId: string): string {
+  return `${LANTERN_ITEM}#fuel@${roomId}`;
+}
+// The lantern that is burning in your hand right now, if one is.
+function litLantern(session: Session): CarriedItem | undefined {
+  if (session.litSource !== "lantern" || !session.litUntil) return undefined;
+  return session.items.find((c) => c.rowId === session.litRow) ?? session.items.find((c) => c.itemId === LANTERN_ITEM);
+}
+// How much is in this lantern's well, burning or not, in ms.
+// The burning one is known by its row, so this holds even for a lantern that
+// has just left the pack (the drop asks after it once it is already out).
+export function wellOf(session: Session, c: CarriedItem): number {
+  const burning = session.litSource === "lantern" && !!session.litUntil
+    && (session.litRow ? session.litRow === c.rowId : c === litLantern(session));
+  if (burning) return Math.max(0, session.litUntil! - Date.now());
+  return c.fuel ?? 0;
+}
+// THE SHUTTER COMES DOWN: what the flame had not burned goes back into the well.
+// Call it before clearing a lantern's light; it leaves the clearing to you.
+export function saveWell(z: ZoneDO, session: Session): void {
+  const c = litLantern(session);
+  if (!c) return;
+  c.fuel = Math.max(0, session.litUntil! - Date.now());
+  setItemFuel(z.env.DB, c.rowId, c.fuel).catch(() => {});
+}
+// The well, said as a lantern-carrier would say it.
+export function wellWords(ms: number): string {
+  const lumps = ms / LANTERN_FAT_MS;
+  return ms <= 0 ? "The well is dry."
+    : lumps >= 2.75 ? "The well is full of fat."
+    : lumps >= 1.75 ? "The well is two parts full."
+    : lumps >= 0.75 ? "There is a lump's worth of fat in the well."
+    : "There is a scrape of fat left in the bottom of the well.";
+}
 
 // A kindled light throws light until it gutters (litUntil). Read everywhere the
 // dark matters: seeing a lightless room, and waking the fire-fear.
@@ -155,7 +197,10 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     return z.send(session, "You have nothing to light.");
   }
   if (wantLantern && light.condition <= 0) {
-    return z.send(session, "The wick is burnt to nothing and the pane is cracked through — this lantern is done.");
+    return z.send(session, "The pane is cracked through and the tin has sprung at the seams — it will not hold a flame until it has been mended.");
+  }
+  if (wantLantern && wellOf(session, light) <= 0) {
+    return z.send(session, "You open the shutter on a dry well. There is nothing in it to burn.");
   }
   // Under open rain a torch won't catch — the storm is the lantern's argument
   // (its shuttered flame doesn't care; see events.ts). UNLESS you are wearing
@@ -221,13 +266,16 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     if (refusal) return z.send(session, refusal);
   }
   if (wantLantern) {
-    // The oil is committed the moment the wick takes — the wear lands now, and
-    // the burnout tick spends the lantern itself when the last of it is gone.
-    light.condition -= LANTERN_WEAR;
+    // The wear lands as the wick takes; the fat leaves the well for the flame,
+    // and whatever the flame has not burned goes back when it is shuttered.
+    light.condition = Math.max(0, light.condition - LANTERN_WEAR);
     await setItemCondition(z.env.DB, light.rowId, light.condition);
-    session.litUntil = Date.now() + LANTERN_BURN_MS;
+    session.litUntil = Date.now() + (light.fuel ?? 0);
     session.litSource = "lantern";
+    session.litRow = light.rowId; // THIS lantern burns, not whichever one is first in the pack
     session.torchWarned = false;
+    light.fuel = 0;
+    await setItemFuel(z.env.DB, light.rowId, 0);
     z.send(session, `You slide the shutter and touch flame to the wick — a low, steady light settles around you. Nothing flinches from it.${guardNote(z, session, "the lantern")}`, "gain sfx-ignite");
     z.roomFeed(session.roomId, `${session.name} raises a hooded lantern; a patient light spreads.`, session.pubkey, false);
   } else if (isBrand) {
@@ -258,13 +306,13 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
 
 // A shield or a two-handed weapon takes the hand the light is in — equipping
 // one snuffs the flame (the reverse of cmdLight). A snuffed lantern goes back
-// in the pack unlit; the burn it was on is spent (the wear landed at lighting —
-// oil doesn't pour back into the wick). A burning BRAND is untouched by all of
+// in the pack unlit, with whatever fat it had not burned still in its well. A burning BRAND is untouched by all of
 // this (2026-08-20): the flame lives in the weapon hand, and swapping steel
 // just leaves it burning in the pack until it burns down.
 export function snuffForHand(z: ZoneDO, session: Session): void {
   if (session.litSource === "brand") return;
   const wasLantern = session.litSource === "lantern";
+  saveWell(z, session); // the shutter keeps what it had not burned
   session.litUntil = undefined;
   session.litSource = undefined; session.litRow = undefined;
   session.torchWarned = false;
@@ -274,16 +322,62 @@ export function snuffForHand(z: ZoneDO, session: Session): void {
     : `The torch gutters out — no hand left to hold it${dark}.`);
 }
 
+// FILL THE WELL: one lump of fat from the pack, when there is room for a whole
+// one. It can be done with the flame burning - the fat goes straight to it.
+export async function cmdFill(z: ZoneDO, session: Session, arg = ""): Promise<void> {
+  if (arg && !/lantern|lamp|well/i.test(arg)) return z.send(session, "There is nothing to fill that with.");
+  const lit = litLantern(session);
+  const lantern = lit ?? session.items.find((c) => c.itemId === LANTERN_ITEM);
+  if (!lantern) return z.send(session, "You carry no lantern.");
+  if (z.inCombat(session)) return z.send(session, "Not with something trying to kill you.");
+  const fat = session.items.find((c) => c.itemId === FAT_ITEM);
+  if (!fat) return z.send(session, `You have no fat to put in it. ${wellWords(wellOf(session, lantern))}`);
+  if (wellOf(session, lantern) + LANTERN_FAT_MS > LANTERN_WELL_MS) return z.send(session, `There is no room in the well for another lump. ${wellWords(wellOf(session, lantern))}`);
+  session.items.splice(session.items.indexOf(fat), 1);
+  await removeItemRow(z.env.DB, fat.rowId);
+  if (lantern === lit) {
+    session.litUntil! += LANTERN_FAT_MS;
+    session.torchWarned = false;
+  } else {
+    lantern.fuel = (lantern.fuel ?? 0) + LANTERN_FAT_MS;
+    await setItemFuel(z.env.DB, lantern.rowId, lantern.fuel);
+  }
+  z.send(session, `You work a lump of fat down into the lantern's well and wipe your fingers on your leg. ${wellWords(wellOf(session, lantern))}`, "gain");
+  z.sendStatus(session);
+}
+
+// SHUTTER IT: a lantern goes dark and keeps what it had not burned. A torch
+// is ground out against the stone, and that is the end of that torch. A brand
+// burns until it is done.
+export async function cmdDouse(z: ZoneDO, session: Session): Promise<void> {
+  if (!carriesLight(session)) return z.send(session, "You have no light burning.");
+  if (session.litSource === "brand") return z.send(session, "The pitch is in it to the core. It will burn until it is done.");
+  const wasLantern = session.litSource === "lantern";
+  const left = wasLantern ? litLantern(session) : undefined;
+  saveWell(z, session);
+  session.litUntil = undefined;
+  session.litSource = undefined; session.litRow = undefined;
+  session.torchWarned = false;
+  const dark = !z.outOfWorld(session) && !z.litFor(session);
+  z.send(session, (wasLantern
+    ? `You slide the shutter closed and the light is gone${dark ? " — the dark closes in" : ""}. ${wellWords(left ? left.fuel ?? 0 : 0)}`
+    : `You grind the torch out against the stone${dark ? ", and the dark closes in" : ""}. What is left of it is no good to anyone.`) + guardBack(z, session));
+  z.roomFeed(session.roomId, wasLantern ? `${session.name} shutters a lantern.` : `${session.name} grinds out a torch.`, session.pubkey, false);
+  z.sendStatus(session);
+  if (dark) z.send(session, z.describeRoom(session, false));
+}
+
 // The tick's upkeep: lights burn down. A warning when the flame runs low, then
 // it dies — and if you're standing in a lightless room, the dark closes over
 // you again. A burning lantern must also still be IN THE PACK (dropped, sold,
-// stolen — the flame doesn't follow you); and a lantern's last burn spends it.
+// stolen — the flame doesn't follow you). A lantern burns its well dry and goes
+// out; the lantern itself is never spent by it.
 export async function tickLights(z: ZoneDO, now: number): Promise<void> {
   for (const session of z.sessions.values()) {
     if (!session.litUntil) continue;
     const lantern = session.litSource === "lantern";
     const brand = session.litSource === "brand";
-    const held = lantern ? session.items.find((c) => c.itemId === LANTERN_ITEM) : undefined;
+    const held = lantern ? litLantern(session) : undefined;
     // The row that was actually lit — a pack can hold two brands now, and the
     // burnout must spend the one in the fire, not the first one it trips over.
     const heldBrand = brand
@@ -315,13 +409,9 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
       const inDark = !z.outOfWorld(session) && !z.litFor(session); // somebody else's flame still counts
       if (lantern) {
         z.send(session, (inDark
-          ? "The lantern's flame shrinks to a bead and drowns in its own oil — and the dark closes over you completely."
-          : "The lantern's flame shrinks to a bead and drowns. The pane goes dark.") + guardBack(z, session), "dmgin");
-        if (held && held.condition <= 0) {
-          session.items.splice(session.items.indexOf(held), 1);
-          await removeItemRow(z.env.DB, held.rowId);
-          z.send(session, "That was the last of it: the wick is ash, and the cracked tin comes apart in your hands.");
-        }
+          ? "The lantern's flame shrinks to a bead as the last of the fat goes, and drowns — and the dark closes over you completely."
+          : "The lantern's flame shrinks to a bead as the last of the fat goes, and drowns. The pane goes dark.") + guardBack(z, session), "dmgin");
+        if (held) { held.fuel = 0; await setItemFuel(z.env.DB, held.rowId, 0); }
       } else if (brand) {
         // A brand burns down to the fist and is gone — the weapon and
         // the flame were the same thing, and the pitch has had its argument.
@@ -342,7 +432,7 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
     } else if (left <= 90_000 && !session.torchWarned) {
       session.torchWarned = true;
       z.send(session, lantern
-        ? "The lantern's light thins — the oil of this burn is nearly spent."
+        ? "The lantern's light thins — the fat in the well is nearly gone."
         : brand
         ? "The brand's flame is eating down toward the hand — not long now."
         : "Your torch burns low, the flame guttering — not long now.", "dmgin");

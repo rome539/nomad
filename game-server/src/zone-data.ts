@@ -8026,15 +8026,33 @@ export const CROWS_AFTERMATH_MS = 60_000;
 export const CROWS_THROTTLE_MS = 15_000; // one cry per mover per this window
 export const TORCH_ITEM = "torch";
 export const TORCH_BURN_MS = 10 * 60_000; // a lit torch throws light this long, then gutters out (the run's clock)
-// The hooded lantern (065): the explorer's light. It burns three times a torch
-// and isn't spent on lighting — but a shutter and a horn pane make it a TAME
-// flame: it never wakes the fire-fear (ai.carriesFire skips it). Torch = short,
-// aggressive, a weapon against the timid; lantern = long, patient, and the
-// dark's things don't flinch. Each lighting costs LANTERN_WEAR condition, so a
-// fresh lantern holds five burns; the last burn spends the lantern itself.
+// The hooded lantern (065): the explorer's light. A shutter and a horn pane make
+// it a TAME flame: it never wakes the fire-fear (ai.carriesFire skips it). Torch
+// = short, aggressive, a weapon against the timid; lantern = long, patient, and
+// the dark's things don't flinch.
+// IT BURNS FAT, FROM A WELL (rome, 2026-10-16). It used to be its own fuel - its
+// condition was the oil, five burns and the last one took it apart. Now it has
+// a well that holds three lumps of fat (`fill lantern`, one lump a time). It
+// burns the well down only while it is lit; shutter it (`douse`) and what is
+// left stays in it. Lighting it wears the tin and the pane (LANTERN_WEAR), and
+// a lantern worn to nothing will not hold a flame until the bench mends it with
+// forge iron - it is never destroyed.
 export const LANTERN_ITEM = "hooded-lantern";
-export const LANTERN_BURN_MS = 30 * 60_000;
-export const LANTERN_WEAR = 20;
+export const LANTERN_FAT_MS = 30 * 60_000;      // what one lump of fat burns for
+export const LANTERN_WELL_MS = 3 * LANTERN_FAT_MS; // the well holds three
+export const LANTERN_WEAR = 5;                  // per lighting: twenty lightings to a mend
+export const LANTERN_MEND_IRON = 1;             // bars of forge iron the bench wants for it
+export const FAT_ITEM = "fat";
+// WHAT GIVES FAT (on top of what each already drops): the deep's crawler, the
+// steady supply, comes back every seventy seconds; the seals and the boars
+// carry more of it and are further to go for.
+export const FAT_DROPS: Record<string, number> = {
+  "pale-crawler": 0.15,
+  "grey-seal": 0.25,
+  "bull-seal": 0.35,
+  "wild-boar": 0.2,
+  "old-boar": 0.3,
+};
 // The longbrand (088): the rare torch — the hammerstone's pattern on fire.
 // Garrison-made for the night watch: heartwood dipped and dipped again until
 // the pitch sealed, it burns BRAND_BURN_MS — two and a half torches on one

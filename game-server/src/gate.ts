@@ -17,7 +17,7 @@ import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight } from "./zone-util";
-import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, THROW_TOUGH, DEEP_HEART,
+import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
@@ -198,7 +198,7 @@ export async function leaveForge(z: ZoneDO, session: Session): Promise<void> {
 // no chances. Everything
 // here is derived at read time from the same tables the sim uses, so the sheet
 // cannot drift from the rules — there is no second copy of any of it.
-function benchSheet(z: ZoneDO, c: CarriedItem, where: string, scrap: number): Record<string, unknown> | null {
+function benchSheet(z: ZoneDO, c: CarriedItem, where: string, scrap: number, iron: number): Record<string, unknown> | null {
   const t = z.world!.itemTemplates.get(c.itemId);
   if (!t || !z.isGear(c.itemId)) return null;
   // ONE FACT LINE, then at most three short ones. The first cut of this stacked
@@ -241,7 +241,7 @@ function benchSheet(z: ZoneDO, c: CarriedItem, where: string, scrap: number): Re
     cond: word, sealed: c.serial !== null,
     tags, stat: z.itemNumbers(t), own,
     damp: burns
-      ? "What it has left is oil and wick, not condition. The bench refills it."
+      ? "It burns fat from its well; the wear is in the tin and the horn pane, and the bench mends that with forge iron."
       : MATERIAL_READ[materialOf(t.id)] ?? "",
     // ...spoken as the player would ever see them. These are internal tag
     // names — padded, wardhide, staunched — and the game has always shown the
@@ -251,11 +251,14 @@ function benchSheet(z: ZoneDO, c: CarriedItem, where: string, scrap: number): Re
     // NOTHING MENDS STONE (rome, 2026-07-11): what a hammerstone spends on a
     // latch is spent for good, and repairCore refuses it. Offering the mend
     // here and having the vice turn it down is a button that lies.
-    mend: c.condition >= 100 || THROW_TOUGH.has(c.itemId) ? "" : `${REPAIR_COST[t.rarity] ?? 1} scrap`,
+    // The lantern is mended in forge iron, not scrap (rome, 2026-10-16).
+    mend: c.condition >= 100 || THROW_TOUGH.has(c.itemId) ? ""
+      : c.itemId === LANTERN_ITEM ? `${LANTERN_MEND_IRON} iron` : `${REPAIR_COST[t.rarity] ?? 1} scrap`,
     // ...and whether you can pay it, so the button is honest before it is
     // pressed rather than refusing afterwards. Counted the way cmdRepair
     // spends: across pack and keeping both.
-    canMend: c.condition < 100 && !THROW_TOUGH.has(c.itemId) && scrap >= (REPAIR_COST[t.rarity] ?? 1),
+    canMend: c.condition < 100 && !THROW_TOUGH.has(c.itemId)
+      && (c.itemId === LANTERN_ITEM ? iron >= LANTERN_MEND_IRON : scrap >= (REPAIR_COST[t.rarity] ?? 1)),
   };
 }
 
@@ -291,9 +294,9 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
   // piece the vice can reach is a piece the sheet can read. Ordered pack first:
   // what is on you is what you are about to have to rely on.
   const read = [
-    ...pools[0].map((c) => benchSheet(z, c, "pack", scrapRaw)),
-    ...pools[1].map((c) => benchSheet(z, c, "lockbox", scrapRaw)),
-    ...pools[2].map((c) => benchSheet(z, c, "vault", scrapRaw)),
+    ...pools[0].map((c) => benchSheet(z, c, "pack", scrapRaw, scrap)),
+    ...pools[1].map((c) => benchSheet(z, c, "lockbox", scrapRaw, scrap)),
+    ...pools[2].map((c) => benchSheet(z, c, "vault", scrapRaw, scrap)),
   ].filter((s) => s !== null);
   const payload = { v: 0, t: "forge", open: true, note: note ?? "", sfx: sfx ?? "", scrap, scrapRaw, recipes, read };
   try { session.ws.send(JSON.stringify(payload)); } catch {}
@@ -1425,10 +1428,10 @@ export async function cmdSmelt(z: ZoneDO, session: Session, arg: string): Promis
 // Mend a worn piece with scrap iron. Shared with the bench modal.
 export async function repairCore(z: ZoneDO, session: Session, carried: CarriedItem): Promise<string> {
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
-  // The lantern is the one slotless mend (rome, 2026-07-11): its wear isn't
-  // dents, it's spent oil and burnt wick — the forge refills it. Everything
-  // else slotless has nothing to mend. (A lantern burnt to NOTHING is gone —
-  // the last burn takes it apart; you maintain it, or you lose it.)
+  // The lantern is the one slotless mend (rome, 2026-07-11). Its fuel is fat
+  // in its well now (rome, 2026-10-16), so what the bench mends is the lantern
+  // itself - the sprung tin and the cracked pane - and it wants forge iron for
+  // it, not scrap. Worn to nothing it will not light, but it is never gone.
   const lantern = carried.itemId === LANTERN_ITEM;
   // The stone is the anti-lantern: it wears like gear and NOTHING mends it
   // (rome, 2026-07-11) — every latch it beats open is spent for good.
@@ -1437,8 +1440,17 @@ export async function repairCore(z: ZoneDO, session: Session, carried: CarriedIt
   // Sealed gear wears now (slowly) — so it can be mended now too. The seal is
   // title, not condition: hammering the wear out doesn't touch the serial.
   if (carried.condition >= 100) return lantern
-    ? "The well is full and the wick is fresh — this lantern wants nothing."
+    ? "The tin is tight and the pane is clear — this lantern wants nothing."
     : `${cap(tmpl.name)} is sound already.`;
+  if (lantern) {
+    const iron = z.countLooseIn(await z.gatePools(session), IRON_ID);
+    if (iron < LANTERN_MEND_IRON) return `The mend wants ${LANTERN_MEND_IRON} bar${LANTERN_MEND_IRON === 1 ? "" : "s"} of forge iron; you have ${iron} between pack and keeping.`;
+    await z.takeLooseAcross(session, IRON_ID, LANTERN_MEND_IRON);
+    carried.condition = 100;
+    await setItemCondition(z.env.DB, carried.rowId, 100);
+    return "You beat the sprung tin back true, set a new horn pane in the door and seat the wick. Sound again"
+      + ((carried.fuel ?? 0) > 0 ? "." : " — though it will want fat before it gives you any light.");
+  }
   const cost = REPAIR_COST[tmpl.rarity] ?? 1;
   // The vice reaches the pack AND the gate's keeping (lockbox + vault), same as
   // the forge — and scrap counts whether or not a stray seal is on it.
@@ -1447,9 +1459,7 @@ export async function repairCore(z: ZoneDO, session: Session, carried: CarriedIt
   await z.takeLooseAcross(session, SCRAP_ID, cost);
   carried.condition = 100;
   await setItemCondition(z.env.DB, carried.rowId, 100);
-  return lantern
-    ? "You trim a fresh wick, fill the oil-well, and rub the horn pane clear. Five good burns in it again."
-    : `You hammer the wear out of ${tmpl.name} and file it true. Sound again.`;
+  return `You hammer the wear out of ${tmpl.name} and file it true. Sound again.`;
 }
 
 export async function cmdRepair(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -2540,6 +2550,8 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // If ANY word follows the verb as typed, it's speech.
   const rawTail = text.trim().split(/\s+/).slice(1).join(" ");
   if (GATEHOUSE_NOARG.has(v) && rawTail !== "") return gatehouseSay(z, session, text);
+  // "fill me in" is a man talking; "fill lantern" is a man with fat and a lantern.
+  if (v === "fill" && !/^(lantern|lamp|well)?$/i.test(cmd.arg.trim()) && !/lantern|lamp/i.test(cmd.arg)) return gatehouseSay(z, session, text);
   if (v === "enter") return z.send(session, "You're already inside.");
   if (v === "look") {
     const target = cmd.arg.trim();

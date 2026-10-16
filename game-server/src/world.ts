@@ -475,22 +475,27 @@ export interface CarriedItem {
   // for most gear. Parsed once into rolledMap; combat reads both (wearsTrait).
   rolledTraits?: string;
   rolledMap?: Map<string, number>;
+  fuel?: number; // the hooded lantern only (mig 301): ms of fat in its well
 }
 
 // Carried = on the body (container ''). What sits in the lockbox or the vault
 // is loaded separately and never scatters.
 export async function loadInventory(db: D1Database, pubkey: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id, lore_id, acquired_at, rolled_traits FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id, lore_id, acquired_at, rolled_traits, fuel FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
     .bind(pubkey)
-    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits) }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string; fuel: number | null }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits), fuel: r.fuel || undefined }));
 }
 
 // Persist a gear instance's worn-down condition (rounded to the D1 integer).
 // Called lazily — on leave, on seal, and when something breaks — not per tick.
 export async function setItemCondition(db: D1Database, rowId: string, condition: number): Promise<void> {
   await db.prepare("UPDATE player_items SET condition = ? WHERE id = ?").bind(Math.max(0, Math.round(condition)), rowId).run();
+}
+// What is in a lantern's well, in ms of burning (mig 301).
+export async function setItemFuel(db: D1Database, rowId: string, fuel: number): Promise<void> {
+  await db.prepare("UPDATE player_items SET fuel = ? WHERE id = ?").bind(Math.max(0, Math.round(fuel)), rowId).run();
 }
 
 // Rewrite a row's acquired_at (unix seconds). One caller today: the flood
@@ -511,10 +516,10 @@ export async function setEquipped(db: D1Database, rowId: string, equipped: boole
 // anything that happens to the body that owns it. Condition is preserved.
 export async function loadContainer(db: D1Database, pubkey: string, container: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id, acquired_at, rolled_traits, container_at FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id, acquired_at, rolled_traits, container_at, fuel FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
     .bind(pubkey, container)
-    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string; container_at: number | null }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, containerAt: r.container_at ?? undefined, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits) }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string; container_at: number | null; fuel: number | null }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, containerAt: r.container_at ?? undefined, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits), fuel: r.fuel || undefined }));
 }
 
 // Move a pack instance into a gate container, or back onto the body (''). The

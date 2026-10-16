@@ -15,7 +15,7 @@ import {
   setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
   journalLoad, mapInkLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
   loadLeaderboard, leaderboardRank, playerFoodHeal,
-  setItemLoreId, deedsBump, trait, hasTrait, parseTraits,
+  setItemLoreId, setItemFuel, deedsBump, trait, hasTrait, parseTraits,
 } from "./world";
 import { cap, dirPhrase, nameMatches, rollGearCondition, heartWord, heartProse, foodWord, foodProse, foodState, isNight, isFullMoon, isBloodMoon } from "./zone-util";
 import { chance, randInt, uuid, pick } from "./rng";
@@ -55,6 +55,7 @@ import {
   SMOKEHOUSE_ROOM, SMOKEHOUSE_ROOMS, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS, COOK_RECIPES,
   MILESTONES,
   groundWord, carveMedium, footfall, HEARD_EMPTY,
+  LANTERN_ITEM, LANTERN_FAT_MS,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor, worksBar } from "./gate";
 
@@ -758,7 +759,8 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     const floorRoll = z.rolledTell(groundItem, parseTraits(z.groundRolled.get(`${groundItem}@${session.roomId}`)));
     // Say WHERE it is, so a floor piece never reads the same as the twin on your
     // body — 'look' checks the floor first, so this is the one at your feet.
-    return z.send(session, t.description + z.itemStat(t) + floorRoll + wearClause(z, cond) + ` It lies here on ${groundWord(z.regionOf(session.roomId), session.roomId)}.` + floorLedger + floorHeart);
+    const floorWell = groundItem === LANTERN_ITEM ? " " + light.wellWords(z.groundCond.get(light.fuelKey(session.roomId)) ?? 0) : "";
+    return z.send(session, t.description + z.itemStat(t) + floorRoll + wearClause(z, cond) + floorWell + ` It lies here on ${groundWord(z.regionOf(session.roomId), session.roomId)}.` + floorLedger + floorHeart);
   }
   const carried = z.findCarried(session, arg);
   if (carried) {
@@ -770,7 +772,8 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
       : " It's in your pack.";
     return z.send(
       session,
-      t.description + z.itemStat(t) + z.rolledTell(carried.itemId, carried.rolledMap) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined) + where
+      t.description + z.itemStat(t) + z.rolledTell(carried.itemId, carried.rolledMap) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
+        + (carried.itemId === LANTERN_ITEM ? " " + light.wellWords(light.wellOf(session, carried)) : "") + where
         + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
         + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : "")
         + agedProse(carried.itemId, !!t.edible, carried.acquiredAt),
@@ -2058,7 +2061,15 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   const heartAt = itemId === DEEP_HEART ? z.groundHeart.get(condKey) : undefined;
   z.groundHeart.delete(condKey);
   const acquiredAt = heartAt ?? Math.floor(Date.now() / 1000);
-  const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, loreId, acquiredAt, rolledTraits: rolled || undefined, rolledMap: parseTraits(rolled) };
+  // A lantern's well rides the stones beside its wear. One the world laid
+  // here, that nobody saw set down, has whatever was left in it: up to a lump.
+  let fuel: number | undefined;
+  if (itemId === LANTERN_ITEM) {
+    const fk = light.fuelKey(session.roomId);
+    fuel = worldLaid ? Math.floor(Math.random() * LANTERN_FAT_MS) : z.groundCond.get(fk) ?? 0;
+    z.groundCond.delete(fk);
+  }
+  const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, loreId, acquiredAt, rolledTraits: rolled || undefined, rolledMap: parseTraits(rolled), fuel: fuel || undefined };
   const wasBurdened = z.burdened(session); // read before the pack takes it — the crossing gets a line
   session.items.push(carried);
   // A regrowing spawn (the shrine's key, a gate's rock) keeps exactly ONE
@@ -2099,6 +2110,7 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   }
   await insertLoot(z.env.DB, rowId, session.pubkey, itemId, null, condition, acquiredAt, rolled);
   if (loreId) await setItemLoreId(z.env.DB, rowId, loreId);
+  if (fuel) await setItemFuel(z.env.DB, rowId, fuel);
   // A plain journal off the stones is a book that lost its name (a hyena's
   // haul, an old full-pack spill at the counter): give it a fresh one on the
   // way in, or no hand will ever open it.
@@ -2205,6 +2217,7 @@ export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedI
     z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), itemId]);
     z.stampFresh(session.roomId, itemId);
     if (z.isGear(itemId)) z.groundCond.set(`${itemId}@${session.roomId}`, carried.condition); // gear (and the stone) keeps its wear on the floor
+    if (itemId === LANTERN_ITEM) z.groundCond.set(light.fuelKey(session.roomId), light.wellOf(session, carried)); // ...and a lantern its fat
     if (carried.loreId) z.groundLore.set(`${itemId}@${session.roomId}`, carried.loreId); // the engraving stays in the steel, wherever it lies
     // A heart keeps its hour on the stones. Setting it down does not make it
     // fresh again — the rot follows it to the floor and back into any hand.
@@ -2287,6 +2300,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
     // raise the shield, trading the light for the guard.
     if (tmpl.slot === "shield" && z.carriesLight(session)) {
       const wasLantern = session.litSource === "lantern";
+      light.saveWell(z, session); // the shutter keeps what it had not burned
       session.litUntil = undefined;
       session.litSource = undefined; session.litRow = undefined;
       session.torchWarned = false;

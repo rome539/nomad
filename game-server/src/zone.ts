@@ -41,7 +41,7 @@ import {
   clearCarriedInventory,
   voidMint,
   deedsBump,
-  setItemJournalId,
+  setItemJournalId, setItemFuel,
   journalBumpKill, journalTraitAdd, journalLoad,
   type World,
   type MobTemplate,
@@ -129,7 +129,7 @@ import {
   SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
-  LANTERN_ITEM, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
+  LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT,
   MARKERS, MARK_MS, MARK_HEED_MULT, MARK_CALL_ODDS, SWEEPERS,
   FERRY_DRAG_ROOM, FERRY_DRAG_ODDS, FERRY_DRAG_MAX, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, RAVEN_NEST_ROOMS, RAVEN_SCOOPERS,
@@ -2137,6 +2137,8 @@ export class ZoneDO implements DurableObject {
       case "feed": return verbs.cmdFeed(this, session, cmd.arg);
       case "bandage": return verbs.cmdBandage(this, session, cmd.arg);
       case "light": return light.cmdLight(this, session, cmd.arg);
+      case "fill": return light.cmdFill(this, session, cmd.arg);
+      case "douse": return light.cmdDouse(this, session);
       case "sheet": return verbs.cmdSheet(this, session);
       case "leaderboard": return verbs.cmdLeaderboard(this, session);
       case "carve": return verbs.cmdCarve(this, session, cmd.arg);
@@ -3341,7 +3343,7 @@ export class ZoneDO implements DurableObject {
   // Is this a plain carryable (food, trophy, key) that can safely stack, or gear
   // that must be listed on its own (its wear and slot differ per instance)?
   // The lantern is slotless (it lights like a torch, it doesn't equip) but it
-  // IS gear: its condition meters the burns left, so each one lists alone.
+  // IS gear: it wears with every lighting and has its own well, so each lists alone.
   // The hammerstone is the same shape: its condition meters the latches left
   // in it (STONE_WEAR per smash) — and unlike the lantern, NOTHING refills it.
   public isGear(itemId: string): boolean {
@@ -3596,7 +3598,7 @@ export class ZoneDO implements DurableObject {
   // Mint one item into the pack, if there's room. Returns the row, or null when
   // the pack is full (the caller decides: refuse, or spill to the ground). The
   // single doorway for loot onto the body — cap enforcement lives here.
-  public async grantItem(session: Session, itemId: string, opts?: { condition?: number; kept?: boolean; journalId?: string; rolledTraits?: string }): Promise<CarriedItem | null> {
+  public async grantItem(session: Session, itemId: string, opts?: { condition?: number; kept?: boolean; journalId?: string; rolledTraits?: string; fuel?: number }): Promise<CarriedItem | null> {
     if (!this.packRoom(session, itemId)) return null;
     const rowId = uuid();
     // Gear arrives already used — pristine is rare. `kept` gear (a sealed coffer's)
@@ -3608,9 +3610,13 @@ export class ZoneDO implements DurableObject {
     // that keeps quest/gift grants and keeper stock plain unless told otherwise.
     const rolledTraits = opts?.rolledTraits ?? "";
     const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, journalId: opts?.journalId, acquiredAt: Math.floor(Date.now() / 1000), rolledTraits: rolledTraits || undefined, rolledMap: parseTraits(rolledTraits) };
+    // A lantern that comes from a box, a body or the keeper has a lump of fat in
+    // its well - enough to find out what it is for.
+    if (itemId === LANTERN_ITEM) carried.fuel = opts?.fuel ?? LANTERN_FAT_MS;
     session.items.push(carried);
     await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null, carried.condition, carried.acquiredAt, rolledTraits);
     if (opts?.journalId) await setItemJournalId(this.env.DB, rowId, opts.journalId);
+    if (carried.fuel) await setItemFuel(this.env.DB, rowId, carried.fuel);
     return carried;
   }
 
@@ -6732,6 +6738,22 @@ export class ZoneDO implements DurableObject {
       }
     }
 
+    // FAT, for the lantern's well (zone-data FAT_DROPS), on top of the rest.
+    const fatOdds = FAT_DROPS[tmpl.id];
+    if (fatOdds && chance(fatOdds)) {
+      const ft = this.world!.itemTemplates.get(FAT_ITEM);
+      if (ft) {
+        if (await this.grantItem(killer, ft.id)) {
+          this.send(killer, `You cut ${ft.name} from ${tmpl.name}.`);
+        } else {
+          this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), ft.id]);
+          this.stampFresh(creature.roomId, ft.id);
+          this.send(killer, `${cap(ft.name)} could be cut from ${tmpl.name} — your pack is full, so it lies here.`);
+        }
+        this.sendCtx(killer);
+      }
+    }
+
     // A rare key off the dead — the elites and the King carry the keys to the
     // locked caches. Straight to hand; spend it on a strongbox.
     for (const mk of this.world!.mobKeys) {
@@ -6903,6 +6925,7 @@ export class ZoneDO implements DurableObject {
     // back breath, not fire, so the flame stays behind with everything else you
     // were carrying. A lantern's light just goes out (it isn't shared this way).
     const fallenFlame = (victim.litSource === "torch" && victim.litUntil && Date.now() < victim.litUntil) ? victim.litUntil : 0;
+    light.saveWell(this, victim); // a lantern falls shuttered, with what it had not burned
     victim.litUntil = undefined; victim.litSource = undefined; victim.litRow = undefined; victim.torchWarned = undefined;
     victim.buying = undefined; // death ends any open trade; the counter clears
     trade.cancelDealForSession(this, victim); // and any open deal with another wanderer
@@ -6949,6 +6972,7 @@ export class ZoneDO implements DurableObject {
         }
         if (c.serial !== null) await voidMint(this.env.DB, c.serial);
         if (this.isGear(c.itemId)) this.groundCond.set(`${c.itemId}@${fell}`, c.condition); // the spill keeps its wear
+        if (c.itemId === LANTERN_ITEM) this.groundCond.set(light.fuelKey(fell), c.fuel ?? 0); // ...and a lantern its fat
         if (c.rolledTraits) this.groundRolled.set(`${c.itemId}@${fell}`, c.rolledTraits); // and whatever it rolled — the looter inherits the roll (099)
         // The scar: an engraved piece writes its owner's death into the ledger,
         // and the mark rides the stones for whoever takes it up next. Your gear
