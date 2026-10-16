@@ -1700,9 +1700,37 @@ export async function benchRemove(z: ZoneDO, session: Session, row: string): Pro
   // vault hand things back to the pack first); the cores do the real checks.
 export async function benchSalvage(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
     const carried = session.items.find((c) => c.rowId === row);
-    if (!carried) return "You aren't carrying that.";
-    return salvageCore(z, session, carried);
+    if (carried) return salvageCore(z, session, carried);
+    // THE VICE REACHES THE KEEPING TOO (rome, 2026-10-16), as the mend and the
+    // burn already did: a piece in the lockbox or the vault is broken down where
+    // it rests, and its scrap goes back into that same box - the forge and the
+    // brazier both reach it there.
+    for (const key of ["lockbox", "vault"] as const) {
+      const held = (await loadContainer(z.env.DB, session.pubkey, key)).find((c) => c.rowId === row);
+      if (held) return salvageBoxed(z, session, held, key);
+    }
+    return "You aren't carrying that.";
   }
+async function salvageBoxed(z: ZoneDO, session: Session, carried: CarriedItem, key: "lockbox" | "vault"): Promise<string> {
+  const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
+  if (tmpl.id === "loose-rock" || tmpl.id === "hammerstone") return "It's a rock.";
+  if (NO_SALVAGE.has(tmpl.id)) return `The vice can make nothing of ${tmpl.name} — it's more rust than metal, not worth the pulling.`;
+  if (tmpl.slot === "") return `There's no salvage in ${tmpl.name}.`;
+  // Out of the box FIRST, and only if it was still there: a double frame finds
+  // the row gone the second time and pays nothing.
+  const gone = await z.env.DB.prepare("DELETE FROM player_items WHERE id = ? AND pubkey = ? AND container = ?").bind(carried.rowId, session.pubkey, key).run();
+  if (gone.meta.changes !== 1) return "That has already gone from the box.";
+  const wasSealed = carried.serial !== null;
+  if (wasSealed) await voidMint(z.env.DB, carried.serial!);
+  const yieldN = SALVAGE_YIELD[tmpl.rarity] ?? 1;
+  for (let i = 0; i < yieldN; i++) {
+    const id = uuid();
+    await insertLoot(z.env.DB, id, session.pubkey, SCRAP_ID, null);
+    await setContainer(z.env.DB, id, key);
+  }
+  const box = key === "vault" ? "the vault" : "the lockbox";
+  return `You lift ${tmpl.name} out of ${box}, crank it into the vice and break it down.${wasSealed ? " The gate's seal cracks as it goes in." : ""} ${yieldN === 1 ? "A handful" : yieldN + " handfuls"} of scrap iron go back into ${box}.`;
+}
 
 export async function benchRepair(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
     // The mend button sits on every column the bench shows (pack, lockbox,

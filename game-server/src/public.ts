@@ -657,6 +657,15 @@ export const PAGE = `<!doctype html>
     margin: 12px 0 2px; padding-bottom: 3px; border-bottom: 1px solid rgba(255,255,255,0.07);
   }
   #trade .tsech:first-of-type { margin-top: 6px; }
+  /* WHAT YOU HAVE ON FOLDS AWAY (rome, 2026-10-16): the worn gear's heading is a
+     button, shut by default, so a piece you are wearing is not one stray click
+     from the box or the vault. */
+  #bench button.tsech.fold {
+    display: block; width: 100%; text-align: left; background: none; border: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07); font-family: inherit; cursor: pointer; color: var(--dim);
+  }
+  #bench button.tsech.fold:hover, #bench button.tsech.fold:focus-visible { color: var(--gold); }
+  #bench .bcol .bitem.fold-shut { display: none !important; }
   #trade .trow {
     display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px;
     padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
@@ -3637,9 +3646,13 @@ function greatCrabVoice(t, m, o, paired) {
 var VOICES = {
   direhyena: function (t, m, o) {
     if (m === 0) {
-      // A hoarse solitary bark, followed by a low warning rumble.
-      VOX.voc(t, { f: [[0, 170], [.07, 260], [.21, 110]], d: .25, fm: [[460, 1.6], [1100, 2]], n: .9, g: .7, a: .006 }, o);
-      VOX.voc(t + .35, { f: [[0, 90], [.3, 105], [.8, 65]], d: .85, fm: [[330, 1.5, 240], [820, 1.4, 620]], n: .8, g: .5, a: .12 }, o);
+      // IT IS A HYENA, AND IT LAUGHS (rome, 2026-10-16): the grave hyena's broken
+      // laugh, heavier - lower, slower, rougher, one whoop more - and it ends
+      // in a low chuckle where the small one just stops.
+      [0, .18, .41, .55, .87, 1.02].forEach(function (at, i) {
+        VOX.voc(t + at, { f: [[0, 300 + i * 26], [.05, 470 - i * 18], [.15, 240]], d: .17, r: [38, .5], fm: [[620, 1.6], [1300, 1.8]], n: .8, g: .65, a: .01 }, o);
+      });
+      VOX.voc(t + 1.3, { f: [[0, 120], [.25, 135], [.6, 85]], d: .6, r: [24, .5], fm: [[330, 1.5, 240], [820, 1.4, 620]], n: .8, g: .45, a: .04 }, o);
     } else if (m === 1) {
       // One close, compressed jaw-lunge. No bark-and-rumble introduction.
       VOX.hiss(t, { type: "lowpass", f: 1100, sw: 300, d: .22, g: .7, a: .003 }, o);
@@ -6661,6 +6674,9 @@ function benchItemNode(it, place) {
       btn("\\u2192 vault", "vault");
       if (!it.sealed && !it.stack) btn("seal", "seal");
     }
+    // The vice reaches the keeping too (rome, 2026-10-16): the box's steel can be
+    // broken down where it rests, the same scrap button as the pack's.
+    if (benchAtGate && it.fix && it.slot && (place === "lockbox" || place === "vault")) armBtn("scrap", "salvage", "scrap");
   }
   armBtn("burn", "burn");
   // Confirm before dropping THIS one to the floor — a single row, never the "dropped both" ambiguity
@@ -6675,6 +6691,10 @@ function benchItemNode(it, place) {
   return wrap;
 }
 
+// Whether the EQUIPPED section is left open: a per-viewer convenience, shut
+// unless they opened it.
+function eqOpen() { try { return localStorage.getItem("nomad_eq_open") === "1"; } catch (e) { return false; } }
+function setEqOpen(o) { try { localStorage.setItem("nomad_eq_open", o ? "1" : "0"); } catch (e) {} }
 function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, foodCap) {
   el.textContent = "";
   var h = document.createElement("div");
@@ -6710,7 +6730,7 @@ function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, food
   //           trophies and sundries that ride free.
   var secs = null;
   if (place === "pack") {
-    secs = [["ON YOU", items.filter(function (it) { return it.equipped; })],
+    secs = [["EQUIPPED", items.filter(function (it) { return it.equipped; })],
             ["IN THE PACK", items.filter(function (it) { return !it.equipped && !it.food; })],
             ["FOOD", items.filter(function (it) { return !it.equipped && it.food; })]];
   } else if (place === "vault") {
@@ -6721,12 +6741,30 @@ function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, food
   }
   // Only bother sectioning when more than one section actually has anything in
   // it — a vault holding nothing but rat tails wants no headers over it.
-  if (secs && secs.filter(function (s) { return s[1].length; }).length > 1) {
+  // ...except that what you have on always gets its own folding heading.
+  var worn = place === "pack" && secs[0][1].length > 0;
+  if (secs && (worn || secs.filter(function (s) { return s[1].length; }).length > 1)) {
     secs.forEach(function (s) {
       if (!s[1].length) return;
-      var hd = document.createElement("div"); hd.className = "tsech"; hd.textContent = s[0];
+      var fold = place === "pack" && s[0] === "EQUIPPED", rowsOf = [], open = fold ? eqOpen() : true;
+      var hd;
+      if (fold) {
+        hd = document.createElement("button"); hd.type = "button"; hd.className = "tsech fold";
+        var label = function () { hd.textContent = (open ? "\u25be " : "\u25b8 ") + "EQUIPPED (" + s[1].length + ")"; hd.setAttribute("aria-expanded", String(open)); };
+        label();
+        hd.addEventListener("click", function () {
+          open = !open; setEqOpen(open); label();
+          rowsOf.forEach(function (r) { r.classList.toggle("fold-shut", !open); });
+        });
+      } else {
+        hd = document.createElement("div"); hd.className = "tsech"; hd.textContent = s[0];
+      }
       el.appendChild(hd);
-      s[1].forEach(function (it) { el.appendChild(benchItemNode(it, place)); });
+      s[1].forEach(function (it) {
+        var node = benchItemNode(it, place);
+        if (fold) { rowsOf.push(node); if (!open) node.classList.add("fold-shut"); }
+        el.appendChild(node);
+      });
     });
     return;
   }
