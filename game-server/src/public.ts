@@ -9255,17 +9255,21 @@ aboutbtn.addEventListener("click", function () {
   ].join("\\n"));
 });
 // Sound remembered on from last visit: the context needs one real gesture
-// before the browser lets it speak — arm the first click or key.
-if (soundOn) {
-  var armSnd = function () {
-    document.removeEventListener("pointerdown", armSnd);
-    document.removeEventListener("keydown", armSnd);
-    sndInit();
-    if (actx) { startAmb(); scapeStart(); }
-  };
-  document.addEventListener("pointerdown", armSnd);
-  document.addEventListener("keydown", armSnd);
+// before the browser lets it speak. A touch's pointerdown is NOT one - only its
+// end is - so the old one-shot arm on pointerdown made a context that stayed
+// suspended forever, and the game was silent unless an earlier tap had already
+// counted (the door's music was the tell: rome, 2026-10-16). Every touch, click
+// and key keeps waking it until it is actually running.
+var SND_WAKE = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
+function wakeSnd() {
+  if (!soundOn) return;
+  var fresh = !actx;
+  sndInit();
+  if (!actx) return;
+  if (fresh) { startAmb(); scapeStart(); }
+  if (actx.state === "running") SND_WAKE.forEach(function (k) { document.removeEventListener(k, wakeSnd); });
 }
+SND_WAKE.forEach(function (k) { document.addEventListener(k, wakeSnd); });
 // The trailer's typing clicks, live: each printable key taps the highpass.
 cmd.addEventListener("keydown", function (e) {
   if (soundOn && actx && e.key && e.key.length === 1) {
@@ -12989,6 +12993,19 @@ function paintMobs(ids, doing, dead) {
   // to the sprites already standing there instead.
   if (key === lastMobs) { applyState(doing); return; }
   lastMobs = key;
+  // WHERE EACH ONE WENT DOWN, read before the row is torn up. The wire names a
+  // death by kind only, so with two hyenas the body was laid in whatever gap
+  // was nearest the middle - often the spot the one still alive had stood in,
+  // and the living one seemed to drop dead too (rome, 2026-10-16). A body
+  // already lying keeps its place; a fresh one lies as near where it fell as
+  // the living leave room for (fitMobRow).
+  var fell = {};
+  for (var c0 = mobsEl.firstChild; c0; c0 = c0.nextSibling)
+    if (c0.className === "mob dead" && c0.dataset && c0.dataset.id)
+      (fell[c0.dataset.id] = fell[c0.dataset.id] || []).push(parseFloat(c0.style.left) + c0.offsetWidth / 2);
+  for (var a0 = 0; a0 < anims.length; a0++)
+    if (anims[a0].phase === "death")
+      (fell[anims[a0].id] = fell[anims[a0].id] || []).push(parseFloat(anims[a0].el.style.left) + anims[a0].el.offsetWidth / 2);
   while (mobsEl.firstChild) mobsEl.removeChild(mobsEl.firstChild);
   // Biggest toward the centre, so a hare is never lost behind a hind.
   list.sort(function (a, b) { return MOB_SPRITE[b.id] - MOB_SPRITE[a.id]; });
@@ -13006,6 +13023,9 @@ function paintMobs(ids, doing, dead) {
     bel.style.width = boxPct(bvh * bspec.aspect);
     bel.dataset.h = bvh.toFixed(2);
     bel.dataset.w = (bvh * bspec.aspect).toFixed(2);   // fitMobRow reads this, not the style
+    bel.dataset.id = bid;
+    var at = fell[bid] && fell[bid].shift();
+    if (at === at && at !== undefined) bel.dataset.fell = String(at);   // not NaN: it was laid out
     bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + MOB_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
@@ -13307,7 +13327,8 @@ function fitMobRow() {
   var deadR = width - deadL, laid = [];
   bodies.forEach(function (item, i) {
     item.fit = Math.min(1, available / (item.w * 1.12));
-    var w = slotW(item), lie = item.w * item.fit * .85, centre = width / 2, best = null, bestCost = Infinity;
+    var fellAt = item.el.dataset ? parseFloat(item.el.dataset.fell) : NaN;
+    var w = slotW(item), lie = item.w * item.fit * .85, centre = fellAt === fellAt ? fellAt : width / 2, best = null, bestCost = Infinity;
     for (var x0 = deadL; x0 <= deadR - w + .5; x0 += 6) {
       var a = x0 + (w - lie) / 2, z = a + lie, cover = 0, heap = 0;
       for (var t = 0; t < taken.length; t++) cover += Math.max(0, Math.min(z, taken[t][1]) - Math.max(a, taken[t][0]));
