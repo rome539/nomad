@@ -7462,6 +7462,9 @@ export const SKY_VEILED: Record<string, string> = {
   // AND THE ORDINARY ONE, which is most of the time and has no arc behind it at
   // all. This is the sky's default state, not an event; nothing announces it
   // beginning and nothing announces it ending.
+  // THE CLOUD THE RAIN LEFT, and the cloud over the rain next door: grey from
+  // edge to edge, the same sky the picture shows.
+  grey: "Nothing of it. The cloud the rain brought is still lying over everything, low and grey from edge to edge, and nothing shows through.",
   lid: "The lid is closed over the whole of it, the way it usually is. Somewhere behind that, something is doing what it does, and you will have to take it on trust tonight.",
 };
 // Predators hunt harder after dark: a straight multiplier on the two
@@ -7691,6 +7694,13 @@ export const RAIN_SHOWER_END_ODDS = 0.5;
 export const RAIN_SETS_IN_ODDS = 0.08;          // a shower that does not pass
 export const RAIN_SETTLED_END_ODDS = 0.015;
 export const RAIN_AFTERMATH_MS = 15 * 60_000; // mud: deep tracks, quick forage
+// THE WET AFTER IS AS LONG AS THE RAIN EARNED (rome, 2026-10-15). Each ground
+// it fell on stays wet - mud underfoot, the grey cloud it left over it, day or
+// night - for a quarter of the time the rain sat there, never less than the
+// plain aftermath and never more than three hours. A shower is gone in a
+// quarter of an hour; a day of rain leaves the evening grey.
+export const RAIN_AFTER_SHARE = 0.25;
+export const RAIN_AFTER_MAX_MS = 3 * 3_600_000;
 export const RAIN_SETTLED_AFTERMATH_MULT = 1.6; // a long soaking leaves the ground wrong for longer
 // LIGHTNING (rome, 2026-10-13). The storm throws a bolt every so often while
 // the rain is on, and the WORLD times it - every player whose picture is the

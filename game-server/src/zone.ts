@@ -2227,7 +2227,10 @@ export class ZoneDO implements DurableObject {
     // dark, up there the same as on the road and the open ground. The full moon
     // still lights it, a lit torch still answers it, and the eclipse above still
     // takes the day itself.
-    if (!OUTDOOR_ROOMS.has(roomId) || !isNight() || isFullMoon()) return false;
+    // ...and the full moon lights the ground only where it can get through: under
+    // the rain's grey - falling, just gone, or over the ground next door - the
+    // moon is behind the cloud the picture shows, and the night is a night.
+    if (!OUTDOOR_ROOMS.has(roomId) || !isNight() || (isFullMoon() && !events.wetSky(this, roomId))) return false;
     if (NIGHT_LIT.has(roomId)) return false;
     // A HOUSE WITH SOMEBODY IN IT HAS A FIRE IN IT. The only hearths still lit on
     // this ground are the ones wanderers moved into, so the settlement lights up
@@ -8650,6 +8653,7 @@ export class ZoneDO implements DurableObject {
     // painted, and then this is one word.
     const roofed = !OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt
       && this.world!.rooms.get(session.roomId)?.region === "road";
+    const wet = events.wxPhase(this, "rain", session.roomId) === "aftermath" || !!events.rainNearby(this, session.roomId);
     return (!OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt && !roofed) ? "in"
     : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId))) ? "snow"
     : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId))) ? "fog"
@@ -8658,17 +8662,19 @@ export class ZoneDO implements DurableObject {
     // so the one night in the calendar the whole world changes colour —
     // red eyes in the hollow ones, the full-moon door shut — looked
     // exactly like every other night in the picture.
-    : isNight() ? (isBloodMoon() ? "blood" : isFullMoon() ? "moon" : "night")
+    // ...AND UNDER THE RAIN'S GREY it is the after-rain cloud at any hour
+    // (rome, 2026-10-15): darkened for the night, warmed for the low hours.
+    // Only the blood moon and the eclipse, set pieces of their own, come
+    // through it.
+    : isNight() ? (isBloodMoon() ? "blood" : wet ? "wet-night" : isFullMoon() ? "moon" : "night")
     // TOTALITY IS ITS OWN SKY. eclipsePhase has been in this file for
     // months and never once reached the picture: the one midday the sun
     // goes out looked like every other midday.
     : eclipsePhase() === "active" ? "eclipse"
-    : isDusk() ? "dusk"
-    : isDawn() ? "dawn"
-    // THE HOUR AFTER THE RAIN. Last in the chain on purpose: it only
-    // ever replaces plain day. Dusk and dawn already carry a colour of
-    // their own, and a wet night is still a night.
-    : events.wxPhase(this, "rain", session.roomId) === "aftermath" ? "after-rain"
+    : isDusk() ? (wet ? "wet-dusk" : "dusk")
+    : isDawn() ? (wet ? "wet-dawn" : "dawn")
+    // THE HOUR AFTER THE RAIN, and the rain next door: the grey by day.
+    : wet ? "after-rain"
     : "day";
   }
 

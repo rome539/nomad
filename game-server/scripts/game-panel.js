@@ -76,7 +76,7 @@
   var hPrev = mk("button", stepCss, "\u2039");
   var hour = mk("select", btnCss);
   var hNext = mk("button", stepCss, "\u203a");
-  ["day", "dawn", "dusk", "night", "moon", "blood", "eclipse", "fog", "rain", "snow", "after-rain"].forEach(function (h) {
+  ["day", "dawn", "dusk", "night", "moon", "blood", "eclipse", "fog", "rain", "snow", "after-rain", "wet-dawn", "wet-dusk", "wet-night"].forEach(function (h) {
     var o = document.createElement("option"); o.value = h; o.textContent = h; hour.appendChild(o); });
 
   // THE SKY AT 20x. At the game's pace a screen of sky takes four minutes to go
@@ -259,7 +259,7 @@
     return st + (torch ? "+torch" : "");
   }
   var shown = mk("span", "color:#9a8b66");
-  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  V call  N next room  I idle  W world  K king falls  F frames  B floor bag  C chest  L lightning  S sound");
+  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  V call  N next room  I idle  W world  K king falls  R sky version  F frames  B floor bag  C chest  L lightning  S sound");
   var ids = [];
   // B steps through the floor bags: nothing, then the first count of each.
   // ?bag=1..4 opens on that bag.
@@ -286,6 +286,7 @@
   if (!ids.length) ids = [who.value];
   if (torch) { torchB.textContent = "torch: on"; torchB.style.color = "#d8a94e"; }
 
+  var skyRollN = 0;
   function paint() {
     var v = gnd.value, h = hour.value;
     soundHere();
@@ -302,11 +303,11 @@
       : (h === "rain" || h === "snow" || h === "fog" || h === "after-rain") ? "day" : h;
     if (v.indexOf("room:") === 0) {
       var r = v.slice(5);
-      paintScene("upper", roofSky, "", r, torch, 0, r, 0, red, covered);
+      paintScene("upper", roofSky, "", r, torch, skyRollN, r, 0, red, covered);
     } else if (v.indexOf("gate:") === 0) {
-      paintScene("mountain", roofSky, v, "preview-gate", torch, 0, "", 0, red, covered);
+      paintScene("mountain", roofSky, v, "preview-gate", torch, skyRollN, "", 0, red, covered);
     } else {
-      paintScene("mountain", h, v.slice(7), "preview-ground", torch, 0, "", 0, red);
+      paintScene("mountain", h, v.slice(7), "preview-ground", torch, skyRollN, "", 0, red);
     }
     fitPicture();
     var dead = nomadSel.value === "dead" && ids.indexOf("nomad") >= 0;
@@ -354,6 +355,9 @@
     else if (k === "n" || k === "N") { heardNext(); }
     else if (k === "i" || k === "I") { idleNow(); }
     else if (k === "w" || k === "W") { farNext(); }
+    // R: the next version of this hour's sky. The game turns its sky over on
+    // the server's roll; with no server here every hour sat on one version.
+    else if (k === "r" || k === "R") { skyRollN++; paint(); heardL.textContent = "sky roll " + skyRollN + " - keep pressing R to see every version"; }
     else if (k === "k" || k === "K") { fallNow(); }
     else if (k === "t" || k === "T") { torchB.onclick(); }
     else if (k === "p" || k === "P") { actB.onclick(); }

@@ -1116,6 +1116,14 @@ export const PAGE = `<!doctype html>
   }
   /* THE MOVING SKY: see skyDrift. Over the still sky, inside the same box. */
   #sky-drift { position: absolute; left: 0; top: 0; display: none; will-change: transform; }
+  /* THE RAIN'S GREY AT THE OTHER HOURS: one picture, graded. Night takes it
+     down to a low dark lid; dusk and dawn take it most of the way there -
+     the same cold grey, with no warmth in it (rome, 2026-10-15). The drifting copy inside #sky takes the same grade with it. */
+  /* sepia then a turn to blue: the grey takes the night sky's own deep blue, so
+     the cloud reads as night cloud and not a dimmed noon. */
+  body[data-view="image"] #sky[data-sky="wet-night"] { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.25) contrast(1.08); }
+  body[data-view="image"] #sky[data-sky="wet-dusk"]  { filter: brightness(.40) saturate(.60) contrast(1.04); }
+  body[data-view="image"] #sky[data-sky="wet-dawn"]  { filter: brightness(.44) saturate(.60) contrast(1.04); }
   #sky-drift > i { position: absolute; display: block; background-size: 100% 100%; background-repeat: no-repeat; }
   #sky-stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
   /* AGREEING THE GROUND WITH THE SKY. A borrowed scene is the right place under
@@ -1288,6 +1296,9 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #mobs.t-dawn img, body[data-view="image"] #mobs.t-dawn .mob { filter: brightness(.44) saturate(.80) sepia(.16) hue-rotate(-6deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-dusk img, body[data-view="image"] #mobs.t-dusk .mob { filter: brightness(.42) saturate(.95) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-night img, body[data-view="image"] #mobs.t-night .mob { filter: brightness(.26) saturate(.70) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-wet-night img, body[data-view="image"] #mobs.t-wet-night .mob { filter: brightness(.24) saturate(.60) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-wet-dusk img, body[data-view="image"] #mobs.t-wet-dusk .mob { filter: brightness(.32) saturate(.62) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-wet-dawn img, body[data-view="image"] #mobs.t-wet-dawn .mob { filter: brightness(.34) saturate(.62) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   /* A CARRIED FLAME INVERTS THE RULE ABOVE. Every other hour a creature is
      DARKER than the ground it stands on, because open ground faces the sky and
      a creature stands edge-on to it. A torch is the opposite kind of light: it
@@ -10240,7 +10251,7 @@ var SHELTERED = {
 // roof that distinction stops mattering: overcast is overcast, and a hole with
 // a slot in it is dim under any of the four. It is also the only one whose slot
 // sky was already right, so it costs nothing but the darkening.
-var WEATHER_FROM_INSIDE = { rain: 1, fog: 1, snow: 1, "after-rain": 1 };
+var WEATHER_FROM_INSIDE = { rain: 1, fog: 1, snow: 1, "after-rain": 1, "wet-night": 1, "wet-dusk": 1, "wet-dawn": 1 };
 var GATE_PLATE = {
   "the-relay-house":  "day night night-torch fog rain snow",
   "the-shieling":     "day night night-torch fog rain snow",
@@ -10377,6 +10388,10 @@ var SKY_PAINTED = {
   // so — and the picture went straight back to a blue midday. This is the one
   // sky that exists for a phase rather than an hour.
   "after-rain": 1,
+  // ...AND THE SAME GREY AT THE OTHER HOURS (rome, 2026-10-15): the after-rain
+  // cloud, darkened for the night and nearly as dark for the low hours (#sky's own
+  // data-sky rules) - no new picture, the same sky the rain left.
+  "wet-night": 1, "wet-dusk": 1, "wet-dawn": 1,
   // fog, rain and snow need none: those scenes carry their own sky, because
   // weather you can see the far hills through is weather in the SCENE.
 };
@@ -10399,6 +10414,7 @@ var SKY_BASE = {
   // The ground it borrows is the DAY ground, not the rain ground: the rain
   // plates have rain falling in them, and it has stopped.
   "after-rain": "day",
+  "wet-night": "night", "wet-dusk": "night", "wet-dawn": "night",
   // TOTALITY IS A DARK SCENE, not a daylit one under a strange sky. It sits
   // at midday, so the day ground was the obvious answer and the obvious
   // answer was wrong: the light goes out, and bright noon stone under a
@@ -10450,7 +10466,7 @@ var KEYED = { day: 1, night: 1, "night-torch": 1 };
 // Six hours, and the four that are missing are missing for a reason: plain day
 // has nothing to show, and fog, rain and snow are whole photographs that carry
 // their own light and were never shot with a flame in them.
-var TORCH_HOURS = { night: 1, moon: 1, blood: 1, eclipse: 1, dusk: 1, dawn: 1 };
+var TORCH_HOURS = { night: 1, moon: 1, blood: 1, eclipse: 1, dusk: 1, dawn: 1, "wet-night": 1, "wet-dusk": 1, "wet-dawn": 1 };
 // AND WHICH BORROWED GROUNDS WANT NO CORRECTION AT ALL (rome, 2026-09-08).
 // The hour tint exists for a ground lit for the WRONG light — a noon hillside
 // standing in after dark. Dusk and dawn are not that any more: since they moved
@@ -10470,7 +10486,9 @@ var TORCH_HOURS = { night: 1, moon: 1, blood: 1, eclipse: 1, dusk: 1, dawn: 1 };
 // a photograph is the one thing this table exists to stop. Its ground is the
 // night plate, which is already the right dark ground, and the sky behind it is
 // doing the work — same argument that moved dusk and dawn.
-var NO_GROUND_TINT = { dawn: 1, dusk: 1, blood: 1 };
+// The wet low hours and the wet night stand on the night plate, which is the
+// right ground for them as it is; the grey is all in the sky.
+var NO_GROUND_TINT = { dawn: 1, dusk: 1, blood: 1, "wet-night": 1, "wet-dusk": 1, "wet-dawn": 1 };
 // MORE THAN ONE SKY FOR AN HOUR. An hour listed here owns a POOL, and which one
 // is up is decided by the world-day count the server sends — so the sky changes
 // from one day to the next and never from one room to the next. A sky picked per
@@ -10565,6 +10583,11 @@ var SKY_POOL = {
   // One file, four arrangements. It never borrows and is never borrowed — an
   // aftermath sky over a midday is the one swap that would still be a lie.
   "after-rain": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
+  // The night one is shown turned over (rome, 2026-10-15): darkened, its
+  // heavy cloud reads right along the horizon. Still mirrored for variety.
+  "wet-night": ["after-rain/y", "after-rain/xy"],
+  "wet-dusk": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
+  "wet-dawn": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
   // THE THREE CALENDAR SKIES GET THE MIRROR AND NOTHING ELSE (rome, 2026-09-09).
   // They were left out of turning entirely, and only because nobody had asked.
   //
@@ -10876,7 +10899,7 @@ function skyPick(hour) {
   return cut < 0 ? { file: e, turn: "" }
                  : { file: e.slice(0, cut), turn: SKY_TURN[e.slice(cut + 1)] || "" };
 }
-var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, blood:1, eclipse:1, fog:1, rain:1, snow:1, "in":1, "after-rain":1 };
+var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, blood:1, eclipse:1, fog:1, rain:1, snow:1, "in":1, "after-rain":1, "wet-night":1, "wet-dusk":1, "wet-dawn":1 };
 var sceneEl = document.getElementById("scene");
 var skyEl = document.getElementById("sky");
 // EVERY SKY AT THE SAME SIZE (rome, 2026-09-28). One scale for all of them:
@@ -11632,6 +11655,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     sceneEl.style.setProperty("--sceneimg", url);
     if (skyEl) {
       skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + SKY_V + ")" : "";
+      skyEl.setAttribute("data-sky", lastSky || ""); // the wet hours grade the same grey picture
       skyEl.style.backgroundPosition = "center 55%";
       // Set every time, cleared when there is no turn: a transform left behind
       // from the last room would mirror a sky that was never asked to be.

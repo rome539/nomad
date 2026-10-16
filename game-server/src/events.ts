@@ -24,7 +24,7 @@ import {
   ROLL_GRACE_MS, ROLL_MISSED_MIN_MS, ROLL_MISSED_MAX_MS, SKY_ROLL_MIN_MS, SKY_ROLL_MAX_MS,
   RAIN_TELEGRAPH_MS, RAIN_AFTERMATH_MS,
   LIGHTNING_BURST_ODDS, LIGHTNING_BURST_MIN_MS, LIGHTNING_BURST_MAX_MS, LIGHTNING_LULL_MIN_MS, LIGHTNING_LULL_MAX_MS, LIGHTNING_STRIKE_ODDS, LIGHTNING_STEEL_ODDS_PER_KG,
-  LIGHTNING_BURN, LIGHTNING_STEEL_BURN_PER_KG, RAIN_SETTLED_ODDS, RAIN_SETTLED_AFTERMATH_MULT,
+  LIGHTNING_BURN, LIGHTNING_STEEL_BURN_PER_KG, RAIN_SETTLED_ODDS, RAIN_SETTLED_AFTERMATH_MULT, RAIN_AFTER_SHARE, RAIN_AFTER_MAX_MS, REGION_LABELS,
   WX_GROW_ODDS, WX_SPREAD_ODDS, WX_RETREAT_ODDS, WX_WORLDWIDE_ODDS,
   RAIN_STEP_MS, RAIN_SHOWER_END_ODDS, RAIN_SETS_IN_ODDS, RAIN_SETTLED_END_ODDS,
   BELL_HOURS_UTC, BELL_JITTER_MS, BELL_GRACE_MS,
@@ -174,7 +174,49 @@ export function wxCovers(z: ZoneDO, id: string, roomId: string): boolean {
   return !st.bands || st.bands.includes(z.bandOf(roomId)); // no list: begun before weather had a place
 }
 export function wxPhase(z: ZoneDO, id: string, roomId: string): EventState["phase"] {
+  // THE RAIN'S AFTER BELONGS TO EACH GROUND, not to the storm: every ground it
+  // left keeps its own wet spell (afterRain), as long as the rain sat over it.
+  if (id === "rain") {
+    const p = phaseOf(z, "rain");
+    if ((p === "telegraph" || p === "active") && wxCovers(z, "rain", roomId)) return p;
+    return afterRain(z, roomId) ? "aftermath" : "idle";
+  }
   return wxCovers(z, id, roomId) ? phaseOf(z, id) : "idle";
+}
+const AFTER_PREFIX = "after:";
+// Is this ground still wet from a rain that has moved off or stopped?
+export function afterRain(z: ZoneDO, roomId: string): boolean {
+  const e = z.events.get(AFTER_PREFIX + z.bandOf(roomId));
+  return !!e && e.until > Date.now();
+}
+// The rain leaves a ground: it stays wet for a share of the time it was rained on.
+function rainLeaves(z: ZoneDO, st: EventState, band: string, now: number): void {
+  const sat = now - (st.since?.[band] ?? now);
+  const floor = Math.round(RAIN_AFTERMATH_MS * (st.data === "settled" ? RAIN_SETTLED_AFTERMATH_MULT : 1));
+  const keep = Math.min(RAIN_AFTER_MAX_MS, Math.max(floor, Math.round(sat * RAIN_AFTER_SHARE)));
+  const had = z.events.get(AFTER_PREFIX + band);
+  z.events.set(AFTER_PREFIX + band, { phase: "aftermath", until: Math.max(had?.until ?? 0, now + keep) });
+  if (st.since) delete st.since[band];
+}
+// RAIN NEXT DOOR: the ground beside one it is raining on, and dry itself. The
+// cloud over the rain is the sky here too - grey, and the rain under it in
+// plain sight. Returns that ground, or "".
+export function rainNearby(z: ZoneDO, roomId: string): string {
+  if (!OUTDOOR_ROOMS.has(roomId) || phaseOf(z, "rain") !== "active" || wxCovers(z, "rain", roomId)) return "";
+  const st = z.events.get("rain");
+  if (!st?.bands) return "";
+  for (const b of weatherGrounds(z).next.get(z.bandOf(roomId)) ?? []) if (st.bands.includes(b)) return b;
+  return "";
+}
+// Is the sky over this room the rain's grey - falling, just gone, or over the
+// ground next door? Under it the full moon does not light the ground.
+export function wetSky(z: ZoneDO, roomId: string): boolean {
+  return wxPhase(z, "rain", roomId) !== "idle" || !!rainNearby(z, roomId);
+}
+// "The Crossing" -> "the Crossing", for the middle of a sentence.
+function groundName(band: string): string {
+  const l = REGION_LABELS[band] ?? "nearby";
+  return l.startsWith("The ") ? "the " + l.slice(4) : l;
 }
 
 // Is the rain ON this room right now? (Active phase only — the toggles hang
@@ -790,6 +832,8 @@ export function skyClause(z: ZoneDO, roomId: string): string {
   if (wrackIn(z, roomId)) return " The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
   if (frozen(z, roomId)) return pick(ICE_LINES);
   if (fenUp(z, roomId)) return FEN_UP_LINE;
+  const nearRain = rainNearby(z, roomId);
+  if (nearRain) return ` The sky is low and grey toward ${groundName(nearRain)}, and it is raining there.`;
   switch (wxPhase(z, "rain", roomId)) {
     case "telegraph": return " The light has gone iron-grey, and the air smells of coming rain.";
     case "active": return " Rain hammers the open ground.";
@@ -849,6 +893,9 @@ function skyVeil(z: ZoneDO, roomId: string): string | null {
   // Thinning to rags: you get that something is up there and not which thing.
   if (fog === "aftermath") return SKY_VEILED.rags!;
   if (wxPhase(z, "rain", roomId) === "active") return SKY_VEILED.rain!;
+  // The grey the rain left, and the grey over the rain next door: the picture
+  // shows a shut sky, so the words do too.
+  if (wxPhase(z, "rain", roomId) === "aftermath" || rainNearby(z, roomId)) return SKY_VEILED.grey!;
   // ...AND THE ORDINARY CLOUD, with no arc behind it (rome, 2026-08-31). Most
   // nights the lid is simply shut, because that is what the lid does. lidOpen is
   // a function of the clock and not a die, so asking again gets the same answer
@@ -970,6 +1017,8 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   if (wrackIn(z, roomId)) return "The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
   if (frozen(z, roomId)) return pick(ICE_LINES).trimStart();
   if (fenUp(z, roomId)) return FEN_UP_LINE.trimStart();
+  const nearRain = rainNearby(z, roomId);
+  if (nearRain) return `Low grey cloud stands over ${groundName(nearRain)}, and the rain is coming down under it. Here the sky is only grey, and holding.`;
   switch (wxPhase(z, "rain", roomId)) {
     case "telegraph": return "The sky has gone iron-grey, and the air smells of coming rain.";
     case "active": return "Rain hammers down out of a sky the colour of iron, and the open ground is already giving way under it.";
@@ -1301,6 +1350,7 @@ export function wxMove(z: ZoneDO, id: string, st: EventState): void {
     if (near.length) {
       const b = near[Math.floor(Math.random() * near.length)];
       st.bands.push(b);
+      if (id === "rain") (st.since ??= {})[b] = Date.now();
       feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === b, WX_ARRIVE[id]);
       return;
     }
@@ -1308,6 +1358,7 @@ export function wxMove(z: ZoneDO, id: string, st: EventState): void {
   if (st.bands.length > 1 && chance(WX_RETREAT_ODDS)) {
     const b = st.bands[Math.floor(Math.random() * st.bands.length)];
     feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === b, WX_LEAVE[id]);
+    if (id === "rain") rainLeaves(z, st, b, Date.now());
     st.bands = st.bands.filter((x) => x !== b);
   }
 }
@@ -2213,6 +2264,7 @@ function tickSkyRoll(z: ZoneDO, now: number): void {
   ev.phase = "idle";
   ev.until = now; // its ticker fires the telegraph this very tick
   ev.bands = bands;
+  if (picked === "rain") ev.since = Object.fromEntries(bands.map((b) => [b, now + RAIN_TELEGRAPH_MS]));
   z.events.set(picked, ev);
 }
 
@@ -2382,8 +2434,12 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
       if (settled && (!st.bands || st.bands.includes("den"))) chargeBand(z, "den", "fever");
       st.phase = "aftermath";
       // A long soaking leaves the ground wrong for longer — the mud outlasts
-      // the weather that made it, and by more when there was more of it.
-      st.until = now + Math.round(RAIN_AFTERMATH_MS * (settled ? RAIN_SETTLED_AFTERMATH_MULT : 1));
+      // the weather that made it, and by more when there was more of it: each
+      // ground it was over keeps its own wet spell (rainLeaves), and the storm's
+      // own aftermath runs until the longest of them is dry.
+      const wet = st.bands ?? weatherGrounds(z).bands;
+      for (const b of wet) rainLeaves(z, st, b, now);
+      st.until = Math.max(now + RAIN_AFTERMATH_MS, ...wet.map((b) => z.events.get(AFTER_PREFIX + b)?.until ?? 0));
       st.data = undefined; // the kind belonged to that storm; the next one rolls its own
       feedWeather(z, "rain", settled
         ? "The rain thins at last, and stops, and the quiet after it is enormous. Everything underfoot has turned to mud, and it will be mud for a long while."
