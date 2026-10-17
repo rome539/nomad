@@ -1624,9 +1624,28 @@ function preyHere(z: ZoneDO, creature: Creature): Set<string> | null {
   return set.size ? set : null;
 }
 
+// A STRAY IS ANYBODY'S (rome, 2026-10-17, after an otter turned up in the
+// deep). The prey lists are each ground's own food web, so an animal standing
+// off its ground - a migrant partway through its walk, or one that slipped
+// through a door left open - is on no list where it stands, and nothing there
+// would ever take it. Any hunter of that ground may, when it outranks it.
+// Off its ground means another band than its home, or the other side of the
+// deep door from it. Bosses and the hollow are no one's meal.
+function huntsStrays(templateId: string): boolean {
+  return hungers(templateId) && (PREYS_ON.has(templateId) || PACK_PREY.has(templateId) || STARVE_HUNTERS.has(templateId));
+}
+function strayFor(z: ZoneDO, hunter: Creature, c: Creature): boolean {
+  if (!c.home || c.id === hunter.id || HOLLOW.has(c.templateId)) return false;
+  if (z.regionOf(c.roomId) === z.regionOf(c.home) && DEEP_ROOMS.has(c.roomId) === DEEP_ROOMS.has(c.home)) return false;
+  const world = z.world!;
+  const vt = world.mobTemplates.get(c.templateId), ht = world.mobTemplates.get(hunter.templateId);
+  return !!vt && !!ht && !vt.is_boss && vt.level < ht.level;
+}
+
 export async function predation(z: ZoneDO, creature: Creature, now: number): Promise<boolean> {
     const prey = preyHere(z, creature);
-    if (!prey || creature.stunned || creature.bleedTicks) return false;
+    const strays = huntsStrays(creature.templateId);
+    if ((!prey && !strays) || creature.stunned || creature.bleedTicks) return false;
     if ((creature.huntRestUntil ?? 0) > now) return false; // still blown from the last rush that missed
     const world = z.world!;
     const hungry = creature.hunger >= HUNGRY_AT;
@@ -1639,7 +1658,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     // A target in the room; prefer one not already busy with a player (the easy meal).
     let victim: Creature | null = null;
     for (const c of z.creaturesInRoom(creature.roomId)) {
-      if (c.id === creature.id || !prey.has(c.templateId)) continue;
+      if (c.id === creature.id || !(prey?.has(c.templateId) || (strays && strayFor(z, creature, c)))) continue;
       victim = c;
       if (!c.target) break;
     }
