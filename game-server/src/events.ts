@@ -200,6 +200,14 @@ function rainLeaves(z: ZoneDO, st: EventState, band: string, now: number): void 
   const had = z.events.get(AFTER_PREFIX + band);
   z.events.set(AFTER_PREFIX + band, { phase: "aftermath", until: Math.max(had?.until ?? 0, now + keep) });
   if (st.since) delete st.since[band];
+  // A settled rain loads the die (BIAS, not trigger - the law at the top of
+  // this file) on the ground it fell on: it banks water, so the road's next roll
+  // draws the beck, and it soaks the graves, so the dens' next draws the fever.
+  // Charged as it LEAVES that ground, whether it stops there or moves on: it
+  // used to charge only where it happened to be when it stopped, and a rain
+  // that sat all day on the road and then drifted off left the beck dry.
+  if (st.data === "settled" && band === "road") chargeBand(z, "road", "spate");
+  if (st.data === "settled" && band === "den") chargeBand(z, "den", "fever");
 }
 // RAIN NEXT DOOR: the ground beside one it is raining on, and dry itself. The
 // cloud over the rain is the sky here too - grey, and the rain under it in
@@ -2645,12 +2653,8 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
         break;
       }
       const settled = st.data === "settled";
-      // A settled rain loads the die (BIAS, not trigger — the law at the top of
-      // this file): it banks water, so the next road roll draws the beck, and it
-      // soaks the graves, so the next den roll draws the fever.
-      // ...where it fell: the road's beck and the dens' graves only fill if it was over them.
-      if (settled && (!st.bands || st.bands.includes("road"))) chargeBand(z, "road", "spate");
-      if (settled && (!st.bands || st.bands.includes("den"))) chargeBand(z, "den", "fever");
+      // (The settled rain's charges - the beck, the fever - are laid by
+      // rainLeaves below, for each ground it was over.)
       st.phase = "aftermath";
       // A long soaking leaves the ground wrong for longer — the mud outlasts
       // the weather that made it, and by more when there was more of it: each
@@ -3324,6 +3328,17 @@ async function tickFog(z: ZoneDO, now: number): Promise<void> {
 // living den up — their retreat is the telegraph. The HOLLOW keep walking:
 // nothing in them feels it, and that's the free tell. A quiet, safe-LOOKING
 // window that taxes your supplies.
+// THE SNOW LIES WHERE THE COLD IS, AND FOR AS LONG. It was stamped once, as
+// the cold set in, to outlast it by SNOW_PERSIST_MS - which was right while a
+// cold had a length, and wrong once it rolled on step by step (rome,
+// 2026-10-15): the snow ran out fifty minutes into a cold that went on for
+// hours, the melt spoke into the frost, and every false melt charged the beck.
+// So it is renewed on every step the cold holds over the mountain, and a cold
+// somewhere else lays none there.
+function coldSnows(z: ZoneDO, st: EventState): void {
+  if (st.bands && !st.bands.includes("mountain")) return;
+  if (z.snowUntil < st.until + SNOW_PERSIST_MS) z.snowUntil = st.until + SNOW_PERSIST_MS;
+}
 async function tickCold(z: ZoneDO, now: number): Promise<void> {
   let st = z.events.get("cold");
   if (!st) {
@@ -3372,7 +3387,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
       // THE MOUNTAIN GAINS ITS SEASON (5d): the cold stamps the snow, and the
       // snow outlasts the cold — persisted, so the hill holds its winter after
       // the weather has moved on.
-      if (z.snowUntil < st.until + SNOW_PERSIST_MS) z.snowUntil = st.until + SNOW_PERSIST_MS;
+      coldSnows(z, st);
       // The first bite eats the flame: a burning torch out in it loses half
       // of whatever it had left. (The lantern's oil doesn't care.)
       for (const s of z.sessions.values()) {
@@ -3383,7 +3398,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
       break;
     }
     case "active": {
-      if (weatherHolds(z, "cold", st, now, COLD_END_ODDS)) break;
+      if (weatherHolds(z, "cold", st, now, COLD_END_ODDS)) { coldSnows(z, st); break; }
       st.phase = "aftermath";
       st.until = now + COLD_AFTERMATH_MS;
       feedSky(z, inCold, "The bitter edge goes out of the air, slowly, like something unclenching.");

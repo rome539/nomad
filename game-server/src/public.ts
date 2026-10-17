@@ -3036,7 +3036,8 @@ function scapeApply() {
   var a = scapeAmb;
   // RAIN ON YOU is bright and close; RAIN ON A ROOF is the same storm through
   // timber and thatch - lower, softer, and nearer the drum than the hiss.
-  scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * (a.roof ? 0.95 : 1) * SCAPE_VOL);
+  // 30% down, under the sky and under a roof alike (rome, 2026-10-17: a bit quieter, indoors and out)
+  scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * 0.7 * (a.roof ? 0.95 : 1) * SCAPE_VOL);
   scapeTo(scape.rain.chain[0].frequency, a.roof ? 180 : 900);
   scapeTo(scape.rain.chain[1].frequency, a.roof ? 1100 : 7000);
   scapeTo(scape.roar.gain.gain, a.fire ? 0.12 * SCAPE_VOL : 0);
@@ -3065,8 +3066,8 @@ function scapeDrips() {
   if (a && a.rain) {
     var t = actx.currentTime + 0.01;
     SND._burst(t, a.roof
-      ? { type: "bandpass", freq: 500 + Math.random() * 700, q: 3, dur: 0.05, gain: (0.04 + Math.random() * 0.05) * SCAPE_VOL, atk: 0.002 }
-      : { type: "bandpass", freq: 2200 + Math.random() * 3000, q: 4, dur: 0.03, gain: (0.03 + Math.random() * 0.05) * SCAPE_VOL, atk: 0.002 });
+      ? { type: "bandpass", freq: 500 + Math.random() * 700, q: 3, dur: 0.05, gain: (0.04 + Math.random() * 0.05) * 0.7 * SCAPE_VOL, atk: 0.002 }
+      : { type: "bandpass", freq: 2200 + Math.random() * 3000, q: 4, dur: 0.03, gain: (0.03 + Math.random() * 0.05) * 0.7 * SCAPE_VOL, atk: 0.002 });
   }
   scapeEvery(a && a.rain === 2 ? 40 : 90, a && a.rain === 2 ? 160 : 320, scapeDrips);
 }
@@ -3452,7 +3453,9 @@ Object.keys(VOICE_FAMILY).forEach(function (f) { VOICE_FAMILY[f].split(" ").forE
 // not small at all, so they are set by hand; the women speak higher.
 var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3, "the-butter-wife": 1.3, "the-salt-widow": 1.3,
   // The deer kept the pitch they had while the stags were in their family (their middle was the hind).
-  "roe-deer": 1.06, "white-roe": 1.18, "red-hind": 1 };
+  "roe-deer": 1.06, "white-roe": 1.18, "red-hind": 1,
+  // ...and the old glutton kept its own when the glutton went from 6 to 7 (the middle of the pair).
+  "the-old-glutton": 1 };
 var VOICE_PITCH = null;
 // Worked out on first use: MOB_SPRITE is further down the page than this.
 function voicePitch(id) {
@@ -9609,7 +9612,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "60";      // /mob/      strips and their eye layers
+var MOB_V  = "62";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -11546,6 +11549,92 @@ function thunderFar() {
   scapeThunder(false, 0.05, false, 3);
   print(THUNDER_FAR_LINES[Math.floor(Math.random() * THUNDER_FAR_LINES.length)], "dim");
 }
+// THE PLACE IN WORDS (rome, 2026-10-17: a player with no picture and no sound
+// should get the same world). The sound plays the place the whole time - the
+// rain on you or on the roof, the wind, the water, the hearth, the birds - and
+// the picture shows the weather falling. With both off, all of that was a line
+// when a weather arrived and silence after. So a reader gets it as words, dim
+// like the thunder, now and then: drawn from the same soundscape the world
+// sends (scapeAmb) and by the same rules the sound uses, so the words and the
+// sound never disagree about what is here. The small life keeps its own law:
+// nothing named is on the roster.
+var PLACE_WORDS = {
+  rainLight: ["Rain patters on the ground around you, light and steady.", "The rain keeps on, fine and cold, beading on everything you carry.", "Water runs off your hood and finds its way down your neck."],
+  rainHard: ["The rain comes down hard, loud on everything, and the ground has stopped taking it in.", "Rain hammers down. Every hollow in the ground is filling.", "You can barely hear yourself over the rain."],
+  rainRoof: ["Rain drums on the roof overhead.", "Somewhere a gutter has given up and is spilling over.", "The rain goes on outside, a steady hiss through the walls."],
+  windOpen: ["The wind leans on you, lets go, and leans again.", "A gust comes through hard enough to snatch at your pack.", "The wind pushes at your back and moans off over the ground."],
+  gale: ["The gale roars across the ground and drowns out everything else.", "The wind is so loud now you can only hear it.", "A blast of wind staggers you a step sideways."],
+  windShut: ["The wind moans around the walls.", "Something outside rattles in the wind and will not stop.", "A draught finds its way in under the door."],
+  leaves: ["The wind runs through the leaves overhead.", "Branches creak and toss above you.", "Dead leaves skitter past your feet."],
+  fog: ["The fog drips off everything and takes the sound out of the air.", "You cannot see far. The fog closes the world in around you.", "Shapes come and go at the edge of the fog and are nothing."],
+  cold: ["The cold has got into your fingers.", "Your breath smokes in front of you.", "The cold is the kind that makes your teeth ache."],
+  snow: ["Snow creaks under your feet when you shift your weight.", "Snow sifts down off something above and settles on your shoulders.", "Everything is muffled under the snow."],
+  surf: ["The sea breaks close by and drags back over the stones.", "A wave comes in, and goes out, and comes in.", "Spray hangs in the air from the breaking water."],
+  cave: ["The sea booms somewhere inside the rock.", "Water surges in the dark below and sucks back out.", "The rock around you shudders with each wave."],
+  run: ["Water runs quick over stones nearby.", "The stream talks to itself over the stones.", "Somewhere close, running water hurries past."],
+  falls: ["The falls roar steadily close by.", "Spray from the falls drifts over you.", "The water drops and thunders without a pause."],
+  lap: ["Water laps quietly at the edge.", "Something knocks gently against the water's edge, over and over.", "Small waves slap at the bank."],
+  drip: ["Water drips somewhere in the dark, one slow drop at a time.", "A drop falls and the stone gives it back.", "Somewhere water is finding its way down."],
+  fire: ["The fire cracks and settles.", "A log shifts in the hearth and sends up sparks.", "The fire pops, and the shadows jump with it."],
+  creak: ["Old timber creaks somewhere above you.", "A beam groans as the building settles.", "The boards creak under nothing you can see."],
+  hollow: ["The stone around you holds a low, buried quiet.", "There is a weight to the air down here, like pressure on the ears.", "The quiet here is the quiet of a great deal of rock."],
+  woodSong: ["A bird sings somewhere in the trees, and another answers it.", "A blackbird runs through its song and stops.", "Small birds chatter in the undergrowth and go quiet."],
+  woodNight: ["A nightjar churrs out in the dark, on and on.", "Something small moves in the leaf litter and stops.", "The wood ticks and settles in the dark."],
+  lark: ["A lark goes up somewhere overhead, singing the whole way.", "A skylark hangs high above the open ground, singing.", "Somewhere overhead a lark is still going."],
+  crickets: ["Crickets chirr in the grass all around.", "The crickets go quiet as you move, and start again behind you.", "The grass is loud with crickets."],
+  warbler: ["A reed warbler chatters in the reeds.", "Something small scolds you from the reeds.", "The reeds are full of small birds talking."],
+  midges: ["Midges hang in a cloud at head height.", "The midges have found you.", "A thin whine of midges follows you."],
+  frogs: ["Frogs croak in the wet ground, more of them the longer you listen.", "A frog plops into water somewhere near.", "The fen is loud with frogs."],
+  frogsRain: ["The rain has brought the frogs up, and the fen is full of them.", "Frogs call from every pool under the rain."]
+};
+function textOnly() { return viewMode !== "image" && !(soundOn && soundLevel > 0); }
+var placeLast = "";
+function placeWords() {
+  var a = scapeAmb;
+  if (!a) return null;
+  var pools = [];   // [weight, pool name]
+  var under = a.shut || a.roof;
+  if (a.rain) pools.push([3, under ? "rainRoof" : a.rain === 2 ? "rainHard" : "rainLight"]);
+  if (a.wind >= 3) pools.push([3, under ? "windShut" : "gale"]);
+  else if (a.wind >= 2) pools.push([2, under ? "windShut" : "windOpen"]);
+  if (a.leaves && a.wind >= 1 && !under) pools.push([1, "leaves"]);
+  if (a.fog && !under) pools.push([2, "fog"]);
+  if (a.cold) pools.push([1, "cold"]);
+  if (a.ground === "snow" && !under) pools.push([1, "snow"]);
+  if (a.water) pools.push([2, a.water]);
+  if (a.fire) pools.push([1, "fire"]);
+  if (a.creak) pools.push([1, "creak"]);
+  if (a.hollow && !a.water) pools.push([1, "hollow"]);
+  // the small life, by the rules scapeSongs and scapeNight play it by
+  var la = lifeNow();
+  if (la) {
+    if (la.life === "wood" && la.hour !== "night" && !la.rain) pools.push([2, "woodSong"]);
+    else if (la.life === "wood" && la.hour === "night" && !la.rain) pools.push([1, "woodNight"]);
+    else if (la.life === "open" && la.hour === "day" && !la.rain) pools.push([1, "lark"]);
+    else if (la.life === "open" && la.hour !== "day" && !la.rain && !la.cold) pools.push([2, "crickets"]);
+    else if (la.life === "fen" && la.hour === "day" && !la.rain) pools.push([1, "warbler"]);
+    else if (la.life === "fen" && la.hour !== "day") pools.push([2, la.rain ? "frogsRain" : "frogs"]);
+    if (la.life === "fen" && la.hour === "day" && !la.rain && !la.cold) pools.push([1, "midges"]);
+  }
+  if (!pools.length) return null;
+  var total = 0, i;
+  for (i = 0; i < pools.length; i++) total += pools[i][0];
+  var roll = Math.random() * total;
+  for (i = 0; i < pools.length; i++) { roll -= pools[i][0]; if (roll <= 0) break; }
+  // ...and never the same line twice running
+  var lines = PLACE_WORDS[pools[Math.min(i, pools.length - 1)][1]].filter(function (l) { return l !== placeLast; });
+  placeLast = lines[Math.floor(Math.random() * lines.length)];
+  return placeLast;
+}
+// Every minute and a half to three minutes, never in a fight, never to a page
+// nobody is looking at, and only to a reader with no picture and no sound.
+function placeTick() {
+  setTimeout(placeTick, 90000 + Math.random() * 90000);
+  if (!textOnly() || lastCombat || document.hidden) return;
+  var line = placeWords();
+  if (line) print(line, "dim");
+}
+setTimeout(placeTick, 45000 + Math.random() * 45000);
 function runWeather() {
   var active = weatherCtx && weatherKind && viewMode === "image" && !document.hidden && !weatherMotion.matches;
   if (!active) {
@@ -12592,7 +12681,7 @@ var MOB_SPRITE = {
   "mountain-hare": 6,      // 0.50  sitting up
   "snow-fox": 6,           // 0.50
   "hill-fox": 6,           // 0.50
-  "glutton": 6,            // 0.45  a wolverine is a badger's size, not a bear's
+  "glutton": 7,            // 0.45  a wolverine is a badger's size, not a bear's (7, not 6: the redrawn sheet draws it 6% smaller in its frame)
   "wildcat": 5,            // 0.40
   "mountain-chough": 5,    // 0.39
   "ptarmigan": 4,          // 0.33
@@ -12754,7 +12843,7 @@ var MOB_SPRITE = {
   "drowned-hulk": 40,      // "swollen VAST, filling the flooded dark where it stands"
   "rag-and-bone": 44,      // "about half again the size of" a man, and hung with its load
   "verdigris-thing": 30,   // "something man-shaped" under a century of crust
-  "pale-crawler": 6,      // low and long on all fours, under a wolf
+  "pale-crawler": 8,      // low and long on all fours, under a wolf (8, not 6: the redrawn sheet rears up in its recover pose, so its frame is taller and the body 13% smaller in it)
   "pale-stalker": 7,      // the bigger blood of the same thing
   "three-hound": 33,       // a heavy hound - taller than a wolf, three heads up
   "two-hound": 28,         // "a head short and without the bulk to make up the difference"
@@ -12894,7 +12983,7 @@ var MOB_ANIM = {
   "two-hound":   { n: 6, aspect: 1.287, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "three-hound":   { n: 6, aspect: 1.219, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "pale-stalker":   { n: 8, aspect: 1.528, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "pale-crawler":   { n: 8, aspect: 1.661, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "pale-crawler":   { n: 8, aspect: 1.324, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "verdigris-thing":   { n: 8, aspect: 1.041, f: {"idle":0,"lay-on-the-hand":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "rag-and-bone":   { n: 8, aspect: 0.978, f: {"idle":0,"take-it-up":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "drowned-god":   { n: 8, aspect: 0.991, f: {"idle":0,"keep-the-seat":1,"take-hold":2,"lift-you-clear":3,"alert":4,"attack":5,"recover":6,"death":7} },
@@ -12917,7 +13006,7 @@ var MOB_ANIM = {
   "the-drove-master":    { n: 8, aspect: 1.133, f: {"idle":0,"alert":1,"work-the-line":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-chain-breaker":   { n: 8, aspect: 1.107, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-baited-bear":     { n: 8, aspect: 1.284, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "roe-deer":            { n: 8, aspect: 1.028, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "roe-deer":            { n: 8, aspect: 1.113, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "road-carrier":        { n: 8, aspect: 0.939, f: {"idle":0,"check-the-satchel":1,"alert":2,"set-down-the-load":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat":                 { n: 8, aspect: 1.693, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "otter":               { n: 8, aspect: 1.618, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -12970,7 +13059,7 @@ var MOB_ANIM = {
   "eyrie-holder":         { n: 8, aspect: 1.149, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
   "feral-goat":           { n: 8, aspect: 1.075, f: {"idle":0,"graze":1,"move-a":2,"move-b":3,"attack":4,"death":5,"alert":6,"rest":7} },
   "gill-adder":           { n: 8, aspect: 1.342, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "glutton":              { n: 8, aspect: 1.234, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "glutton":              { n: 8, aspect: 1.172, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "great-vulture":        { n: 8, aspect: 1.091, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
   "hill-eagle":           { n: 8, aspect: 1.203, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
   "hill-fox":             { n: 8, aspect: 1.29, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -12981,8 +13070,8 @@ var MOB_ANIM = {
   "mountain-hare":        { n: 8, aspect: 1.048, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "old-billy":            { n: 8, aspect: 1.104, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "ptarmigan":            { n: 8, aspect: 1.207, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"graze":6,"up":7,"down":1} },
-  "red-hind":             { n: 8, aspect: 1.009, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "red-stag":             { n: 8, aspect: 1.074, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "red-hind":             { n: 8, aspect: 1.022, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "red-stag":             { n: 8, aspect: 1.042, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "scarp-raven":          { n: 8, aspect: 1.181, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
   "snow-fox":             { n: 8, aspect: 1.239, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "snow-hare":            { n: 8, aspect: 1.12, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
