@@ -3455,7 +3455,9 @@ var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3,
   // The deer kept the pitch they had while the stags were in their family (their middle was the hind).
   "roe-deer": 1.06, "white-roe": 1.18, "red-hind": 1,
   // ...and the old glutton kept its own when the glutton went from 6 to 7 (the middle of the pair).
-  "the-old-glutton": 1 };
+  "the-old-glutton": 1,
+  // ...and the warden captain kept his when his redraw took him from 34 to 37 (the armour family's middle is 30).
+  "warden-captain": 0.939 };
 var VOICE_PITCH = null;
 // Worked out on first use: MOB_SPRITE is further down the page than this.
 function voicePitch(id) {
@@ -9612,7 +9614,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "67";      // /mob/      strips and their eye layers
+var MOB_V  = "69";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -12831,11 +12833,11 @@ var MOB_SPRITE = {
   "bone-knight": 32,       // "a TALL skeleton", and it stands in mail
   "warden": 30,            // a man in plate, walking rounds
   "warden-surface": 30,    // the same warden, outdoors
-  "warden-captain": 34,    // "BIGGER than the wardens it once led"
+  "warden-captain": 37,    // "BIGGER than the wardens it once led"
   "last-watchman": 44,     // a watchman, dried inside his kit
   "twice-dead": 29,        // an old man of the barrow-dead
   "thrice-dead": 29,       // his elder, no bigger
-  "marrow-cantor": 33,     // "a TALL frame of fused bone"
+  "marrow-cantor": 37,     // "a TALL frame of fused bone"
   "forgotten-king": 52,    // crowned, and mostly seated - up from 31, rome 2026-09-26: the kings bigger
   "marrow-king": 42,       // the same frame, wound through with others (31 -> 42 with his brother)
   "drowned-god": 63,       // 46 -> 63 with the other kings; "IMMENSE" - sits chest-deep and the dark leans in with it
@@ -12993,9 +12995,9 @@ var MOB_ANIM = {
   "thrice-dead":   { n: 8, aspect: 1.003, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "twice-dead":   { n: 8, aspect: 1, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "last-watchman":   { n: 8, aspect: 1.284, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "warden-captain":   { n: 8, aspect: 1.061, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "warden-captain":   { n: 9, aspect: 1.103, f: {"idle":0,"hold-the-salute":1,"ground-the-maul":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "bone-knight":   { n: 8, aspect: 1.02, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "marrow-cantor":   { n: 8, aspect: 0.941, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "marrow-cantor":   { n: 9, aspect: 0.942, f: {"idle":0,"listen":1,"hold-the-note":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "skeleton":   { n: 8, aspect: 1.132, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "white-roe":           { n: 8, aspect: 1.037, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "wayman":              { n: 8, aspect: 0.957, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },

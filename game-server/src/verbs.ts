@@ -2546,6 +2546,41 @@ export function cmdWho(z: ZoneDO, session: Session): void {
 // respawns toward). Gated to a single pubkey in-game (Irongate) so it's a
 // typed command, not an HTTP endpoint that needs a token nobody wrote down.
 const CENSUS_PUBKEY = "acee4b2c6111c160a8eb3b68da327ea3242b41136cda46d376af762d768db612";
+// THE SKY'S OWN BOOKS, for the same one key as the census (rome, 2026-10-17:
+// to see the storm and the rain for himself rather than ask). Every weather the
+// world keeps - its phase, its kind, the grounds it is over and for how long, and
+// when it next rolls - plus the wet the rain left behind and the mountain's snow.
+// A weather that is on with no ground list is flagged: that is the old all-over
+// shape, and for a storm it means it can never end.
+export function cmdSkies(z: ZoneDO, session: Session): void {
+  if (session.pubkey !== CENSUS_PUBKEY) return z.send(session, "The sky keeps its own count.");
+  const now = Date.now();
+  const ago = (t: number) => {
+    const m = Math.round((now - t) / 60_000);
+    return m < 90 ? `${m}m` : `${(m / 60).toFixed(1)}h`;
+  };
+  const left = (t: number) => {
+    if (!isFinite(t) || t > now + 400 * 86_400_000) return "never";
+    const m = Math.round((t - now) / 60_000);
+    return m <= 0 ? "now" : m < 90 ? `in ${m}m` : `in ${(m / 60).toFixed(1)}h`;
+  };
+  const lines = ["The skies:"];
+  for (const id of ["rain", "storm", "fog", "cold", "wind", "clouddown"]) {
+    const st = z.events.get(id);
+    if (!st || st.phase === "idle") { lines.push(`  ${id} — idle`); continue; }
+    const where = !st.bands ? "EVERYWHERE (no ground list)"
+      : !st.bands.length ? "NO GROUND"
+      : st.bands.map((b) => st.since?.[b] ? `${b} (${ago(st.since[b])})` : b).join(", ");
+    lines.push(`  ${id} — ${st.phase}${st.data ? ` (${st.data})` : ""} over ${where}; next ${left(st.until)}`);
+    if (id === "storm" && !st.bands?.length) lines.push("    ! a storm with no ground never ends, and holds the rain under it");
+  }
+  const after = [...z.events.entries()].filter(([k, v]) => k.startsWith("after:") && v.until > now);
+  lines.push("", after.length ? "Wet after the rain:" : "Wet after the rain: none");
+  for (const [k, v] of after) lines.push(`  ${k.slice(6)} — dry ${left(v.until)}`);
+  lines.push("", z.snowUntil > now ? `Snow on the mountain: lies ${left(z.snowUntil)}` : "Snow on the mountain: none");
+  z.send(session, lines.join("\n"));
+}
+
 export function cmdCensus(z: ZoneDO, session: Session): void {
   if (session.pubkey !== CENSUS_PUBKEY) return z.send(session, "The deep keeps its own count.");
   const world = z.world!;
