@@ -637,6 +637,12 @@ export const CACHE_EMPTY_ODDS = 0.15;
 // right now, and nothing enters the pack. The roam was the chests' best trick
 // and their most invisible one; the word makes it legible, for a price.
 export const BOX_WORD = "box-word";
+// THE KEEPER'S SOUP (rome, 2026-10-17). Bought at the hatch and eaten there -
+// it never goes in the pack. The heat of it stays in you for a while, and while
+// it does the cold cannot steal your rest (zone.ts, the rest tick). He always
+// has the pot on, so it is a staple and never off the shelf.
+export const SOUP_ITEM = "keepers-soup";
+export const SOUP_WARM_MS = 30 * 60_000;
 // A sentinel chip: the client intercepts it and opens the keeping modal
 // (pack + lockbox, plus vault & seal at a gate) instead of sending it as a
 // command (see renderChips). It rides on the 'inventory' chip — tapping opens

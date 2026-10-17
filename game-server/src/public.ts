@@ -3457,7 +3457,10 @@ var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3,
   // ...and the old glutton kept its own when the glutton went from 6 to 7 (the middle of the pair).
   "the-old-glutton": 1,
   // ...and the warden captain kept his when his redraw took him from 34 to 37 (the armour family's middle is 30).
-  "warden-captain": 0.939 };
+  "warden-captain": 0.939,
+  // ...the one who stayed his, going 28 to 34 (the folk's middle is 28), and the
+  // root-thing its own when the verdigris thing went 30 to 40 and moved their middle.
+  "the-one-who-stayed": 1, "root-thing": 1.118, "verdigris-thing": 1 };
 var VOICE_PITCH = null;
 // Worked out on first use: MOB_SPRITE is further down the page than this.
 function voicePitch(id) {
@@ -9614,7 +9617,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "69";      // /mob/      strips and their eye layers
+var MOB_V  = "70";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -12757,7 +12760,7 @@ var MOB_SPRITE = {
   "the-baited-bear": 15,      // 1.20  on all fours, chained
   "the-chain-breaker": 17,    // 1.35  the bigger of the two, and the chain is off
   "the-old-raven": 7,         // 0.55
-  "the-one-who-stayed": 28,   // 1.75
+  "the-one-who-stayed": 34,   // 1.75
   "the-pale-drake": 44,       // 3.50  twice a standing man, same as the drake it is a variant of
   "the-raiding-fox": 6,       // 0.50
   "the-tom": 5,               // 0.40
@@ -12844,7 +12847,7 @@ var MOB_SPRITE = {
   "the-drowned": 30,       // a drowned man, bloated but a man
   "drowned-hulk": 40,      // "swollen VAST, filling the flooded dark where it stands"
   "rag-and-bone": 44,      // "about half again the size of" a man, and hung with its load
-  "verdigris-thing": 30,   // "something man-shaped" under a century of crust
+  "verdigris-thing": 40,   // "something man-shaped" under a century of crust
   "pale-crawler": 8,      // low and long on all fours
   "pale-stalker": 7,      // the bigger blood of the same thing
   "three-hound": 33,       // a heavy hound - taller than a wolf, three heads up
@@ -12975,8 +12978,8 @@ var MOB_ANIM = {
   "gibbet-crow":                 { n: 8, aspect: 1.254, f: {"idle":0,"watch":1,"up":2,"glide":3,"landing":4,"feed":5,"attack":6,"death":7,"down":3} },
   "dire-wolf":                   { n: 8, aspect: 1.102, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "charcoal-burner":             { n: 8, aspect: 1, f: {"idle":0,"lay-the-wood":1,"feel-the-turf":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "warden-surface":   { n: 8, aspect: 0.967, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "warden":           { n: 8, aspect: 0.967, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "warden-surface":   { n: 9, aspect: 1.017, f: {"idle":0,"hold-the-salute":1,"raise-the-lantern":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "warden":           { n: 9, aspect: 1.017, f: {"idle":0,"hold-the-salute":1,"raise-the-lantern":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "cutthroat":   { n: 8, aspect: 1.026, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "cutpurse":   { n: 8, aspect: 1.243, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "dire-hyena":   { n: 8, aspect: 1.063, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -12986,7 +12989,7 @@ var MOB_ANIM = {
   "three-hound":   { n: 6, aspect: 1.219, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "pale-stalker":   { n: 8, aspect: 1.638, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"lurk":6,"death":7} },
   "pale-crawler":   { n: 8, aspect: 1.533, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"lurk":6,"death":7} },
-  "verdigris-thing":   { n: 8, aspect: 1.041, f: {"idle":0,"lay-on-the-hand":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "verdigris-thing":   { n: 9, aspect: 1.036, f: {"idle":0,"lay-on-the-hand":1,"seek-the-metal":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "rag-and-bone":   { n: 8, aspect: 0.978, f: {"idle":0,"take-it-up":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "drowned-god":   { n: 8, aspect: 0.991, f: {"idle":0,"keep-the-seat":1,"take-hold":2,"lift-you-clear":3,"alert":4,"attack":5,"recover":6,"death":7} },
   "drowned-hulk":   { n: 8, aspect: 1.059, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
@@ -13089,7 +13092,7 @@ var MOB_ANIM = {
   "the-milker":           { n: 6, aspect: 1.167, f: {"idle":0,"work-pull":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-old-glutton":      { n: 8, aspect: 1.236, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-old-raven":        { n: 8, aspect: 1.165, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
-  "the-one-who-stayed":   { n: 6, aspect: 1.108, f: {"idle":0,"advance":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-one-who-stayed":   { n: 9, aspect: 1.055, f: {"idle":0,"advance":1,"look-down-the-hill":2,"tend-the-fire":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-pale-drake":       { n: 14, aspect: 1.523, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
   "the-raiding-fox":      { n: 8, aspect: 1.423, f: {"idle":0,"rest":1,"feed":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
   "the-tom":              { n: 8, aspect: 1.117, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -13232,7 +13235,8 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   // THE TEN REDRAWN (2026-10-17), named here before the sheets come back - a
   // second piece of their own work, so the idle has two things in it:
   "test-the-joint",     // the bridge mason, tapping a joint that closed two centuries ago
-  "set-the-link",       // the chainman, straightening a link with the toe of his boot
+  "mark-it-down",       // the chainman, writing the count down before he looks up
+  "coil-the-chain",     // ...and coiling the chain back over his shoulder to walk on
   "look-down-the-hill", // the one who stayed, watching the way the others went
   "tend-the-fire",      // ...and feeding the shieling fire
   "keep-pace",          // the reed walker, stopped when you stop

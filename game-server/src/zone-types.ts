@@ -60,6 +60,7 @@ export interface Session {
   gateCookName?: string;   // ...and the same for the brazier: chip-name of a raw catch that would cook (COOK_RECIPES)
   seizedBy?: string; // DROWNER creature id that has hold of you — can't flee till you break free
   draggedRooms?: number; // FERRYMAN: how many rooms he has already hauled you along the rope this grip — a hard cap on the drag (a fair window, not a one-way ticket)
+  warmUntil?: number; // ms epoch the keeper's soup keeps the cold off your rest until
   litUntil?: number; // ms epoch a kindled light burns until; while now < this you carry light (sees dark rooms; a torch also wakes fire-fear). Reset on wake — a rekindle is cheap.
   litSource?: "torch" | "lantern" | "brand"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack), a brand an open flame in the WEAPON hand (2026-08-20)
   litRow?: string; // WHICH row is alight, when litSource is "brand" (2026-08-20): more than one burning weapon can ride in a pack now, so the burnout must spend the one actually lit and not the first brand it finds

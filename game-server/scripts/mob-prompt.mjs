@@ -431,10 +431,10 @@ const LINES = {
   alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
 },
 "the-chainman": {
-  "set-the-link": "Bent over with the chain held slack in both hands, one boot out in front of him nudging a link straight with the toe, the way you settle a rope that must not snag",
-  "count-it-out": "Taking the surveyor's chain up link by link through both hands, head bent over it, counting - the slack coiled over one forearm and the rest hanging down to the ground",
-  attack: "A short heavy blow with the surveyor's chain: a doubled length of it swung down and round from one fist, the links whipping out at the end of it, the body turned in behind the swing",
-  sweep: "The surveyor's chain swung wide and flat across the body at full reach, the links paying out from the fist in a long arc, the free hand out for balance",
+  "count-it-out": "Head bent, counting the links of the small chain round his neck one by one between finger and thumb, lips moving",
+  "mark-it-down": "Head bent over a small notebook open in one hand, writing in it with a stub of pencil, the small chain hanging still round his neck - the count marked before he looks up",
+  attack: "A hard backhand blow with the small chain wrapped tight round his fist, pulled half off his neck for it, the body turned in behind the swing",
+  "coil-the-chain": "Settling the small chain back round his neck with both hands, straightening it on his chest, getting ready to walk on without a word",
 },
 "the-one-who-stayed": {
   "look-down-the-hill": "Standing still with one hand up shading his eyes and the stick held down along his leg, looking far off down the hill the way the others went",
@@ -1226,6 +1226,11 @@ THE WINGSPAN DECIDES THE SCALE OF EVERY CELL ON THIS SHEET. Find the pose with t
 DO NOT enlarge any pose to fill its cell. DO NOT let a wing, a tail, a foot or a bill touch or cross a cell edge in any cell, for any reason. If a wingspan will not fit, the bird is drawn TOO BIG - shrink the whole bird on every cell until it does. A wingtip that reaches the edge of its cell is not a tight crop, it is a severed wing: the rest of it lands in the next bird's cell and is lost.`;
 
 const CONSTANT = {
+  // THE CHAIN IS SMALL (rome, 2026-10-17: the generator kept getting the long
+  // chain wrong). Drawn short and worn round his neck, it stays one thing.
+  "the-chainman": `
+HIS CHAIN IS SMALL AND HANGS ROUND HIS NECK. A short, light iron surveyor's chain of small links, worn round his neck like a heavy necklace, the two ends hanging down his chest - in EVERY cell, the SAME small chain. It is never long, never looped over a shoulder, never trailing to the ground, never coiled in a heap and never crossing the frame. Ignore the description's chain over the shoulder: draw it round his neck. Where a pose has him handle it, he lifts a little of it in his fingers and it stays round his neck. Camera: eye-level three-quarter view, facing slightly toward the viewer's right.
+`,
   "pale-crawler": `
 IT HAS FOUR LEGS. "Boneless" in the description means soft and pale-skinned, NOT legless: this is NOT a slug, a worm, a grub, a leech or a snake, and it never moves on its belly. It is a low, long four-legged crawler built like a hairless salamander or a blind cave mole the size of a large dog: a heavy smooth eyeless head, rounded at the front, with a wide slit mouth of small pointed teeth; a thick pale body in loose folds of skin; a short tapering tail; and FOUR muscular limbs, two at the shoulders and two at the hips, each ending in a splayed hand of long pale clawed fingers that grip the ground. The body is carried clear of the ground on those four legs, elbows and knees bent out to the sides like a lizard's. Count the legs in every cell: FOUR, all of them drawn and attached, in every pose - standing, walking, feeding, striking, and lying dead. No eyes anywhere on the head. Camera: eye-level three-quarter view, facing slightly toward the viewer's right.
 `,

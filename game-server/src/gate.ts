@@ -23,7 +23,7 @@ import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOO
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP,
-  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, GATEHOUSE_ROOM, GATEHOUSE_BAND_AMBIENCE, DEEP_ROOMS, BOX_WORD, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
+  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, GATEHOUSE_ROOM, GATEHOUSE_BAND_AMBIENCE, DEEP_ROOMS, BOX_WORD, SOUP_ITEM, SOUP_WARM_MS, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
   GATEHOUSE_RAIN, GATEHOUSE_AFTER_RAIN, GATEHOUSE_FOG, GATEHOUSE_COLD, GATEHOUSE_CROWS, GATEHOUSE_NIGHT, GATEHOUSE_DAY,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
   POSES, COURTESIES, WAVE_ARMED, DANCE_ALONE, DANCE_ALONE_ROOM, KEEN_EMPTY_SELF, KEEN_EMPTY_ROOM, SING_SELF, SING_ROOM,
@@ -553,7 +553,7 @@ export function inStock(z: ZoneDO, itemId: string): boolean {
 // Everything else — gear and oddments — rotates in and out.
 export function fenceStaple(z: ZoneDO, itemId: string): boolean {
   const t = z.world!.itemTemplates.get(itemId);
-  return !!t && (!!t.edible || t.staunch > 0 || itemId === TORCH_ITEM || itemId === SCRAP_ID);
+  return !!t && (!!t.edible || t.staunch > 0 || itemId === TORCH_ITEM || itemId === SCRAP_ID || itemId === SOUP_ITEM);
 }
 
 // The shelf ROTATES (rome, 2026-07-20): the keeper doesn't stock his whole
@@ -931,6 +931,14 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     // when any is; a sprung one is still a mark worth walking toward — iron
     // rests, and the box refills where it hides). Spoken, not slid: nothing
     // enters the pack, so a full pack never spills a rumor on the floor.
+    // THE SOUP IS EATEN WHERE IT IS BOUGHT: ladled out, drunk at the hatch, and
+    // the warmth goes with you instead of a bowl into the pack.
+    if (bought.id === SOUP_ITEM) {
+      session.warmUntil = Date.now() + SOUP_WARM_MS;
+      z.send(session, "The keeper ladles a bowl out of the pot at the back and pushes it through the hatch. You drink it standing there, and the heat of it goes all the way down and stays.");
+      slid.push("a bowl of soup, eaten at the counter");
+      continue;
+    }
     if (bought.id === BOX_WORD) {
       const roamers = world.caches.filter((c) => z.cacheRoams(c));
       const lockedOnes = roamers.filter((c) => z.cacheLocked(c));

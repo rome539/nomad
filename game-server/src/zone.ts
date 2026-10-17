@@ -5641,7 +5641,9 @@ export class ZoneDO implements DurableObject {
         // the wind — the wayside shelter and the withy hut keep the cold and
         // the gale outside, and a rest under them closes as if it were fair.
         const restSkip = SHELTER_ROOMS.has(session.roomId) ? 0 : (inWind ? WIND_CHILL_REST_SKIP : COLD_REST_SKIP);
-        if (!byFire && !warmed && events.coldBites(this, session.roomId) && chance(restSkip * coldMult)) {
+        // ...and the keeper's soup is the same warmth from the inside, for a while.
+        const souped = (session.warmUntil ?? 0) > Date.now();
+        if (!byFire && !warmed && !souped && events.coldBites(this, session.roomId) && chance(restSkip * coldMult)) {
           // A silent tax is a lie: tell them, once in a while, why the rest is
           // closing nothing. (Throttled — not a line every skipped tick.)
           //
