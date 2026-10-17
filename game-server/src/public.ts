@@ -494,6 +494,7 @@ export const PAGE = `<!doctype html>
   #bench .bcolh .cnts { display: flex; gap: 8px; align-items: baseline; }
   #bench .bcolh .cnt { color: var(--dim); letter-spacing: 0; }
   #bench .bcolh .cnt.food { color: var(--voice); opacity: 0.85; text-transform: none; }
+  #bench .bcolh .cnt.other { display: none; text-transform: none; }
   #bench .bempty { color: var(--dim); font-size: 12px; font-style: italic; padding: 4px 0; }
   #bench .bitem { display: flex; flex-direction: column; gap: 4px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
   #bench .bitem:last-child { border-bottom: none; }
@@ -2223,6 +2224,7 @@ export const PAGE = `<!doctype html>
 
 </style>
 <style id="compact-modal-style">
+#bench .bcolh .cnt.other{display:inline}
 :is(#bench,#trade,#forge) .bbox{width:min(860px,96vw);padding:16px 18px 0;gap:10px;border-radius:6px}
 :is(#bench,#trade,#forge) .bhead{display:flex;align-items:center;gap:8px}
 :is(#bench,#trade,#forge) .bhead>div{display:contents}
@@ -6720,7 +6722,7 @@ function benchItemNode(it, place) {
 // unless they opened it.
 function eqOpen() { try { return localStorage.getItem("nomad_eq_open") === "1"; } catch (e) { return false; } }
 function setEqOpen(o) { try { localStorage.setItem("nomad_eq_open", o ? "1" : "0"); } catch (e) {} }
-function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, foodCap) {
+function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, foodCap, others) {
   el.textContent = "";
   var h = document.createElement("div");
   h.className = "bcolh";
@@ -6743,6 +6745,15 @@ function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, food
     f.textContent = "food " + (foodUsed || 0) + "/" + foodCap;
     right.appendChild(f);
   }
+  // THE OTHER STORES, ON THE PACK'S LINE (rome, 2026-10-17). Compact mode shows
+  // one store at a time, so the box and the vault you are not looking at said
+  // nothing about how full they were. Shown only in compact (the classic layout
+  // has every column up with its own count).
+  (others || []).forEach(function (o) {
+    var x = document.createElement("span"); x.className = "cnt other";
+    x.textContent = o[0] + " " + o[1] + (o[2] ? "/" + o[2] : "");
+    right.appendChild(x);
+  });
   h.appendChild(right);
   el.appendChild(h);
   if (!items.length) {
@@ -6909,7 +6920,10 @@ function renderBench(state) {
   benchEl.classList.toggle("nogate", !benchAtGate);
   benchEl.classList.toggle("hasden", benchAtDen);
   renderDoll(state.sheet);
-  fillBenchCol(bpack, "Your pack", state.pack || [], state.packCap || 0, "pack", state.packUsed, state.packFood, state.packFoodCap);
+  var storeUsed = function (items, used) { return typeof used === "number" ? used : (items || []).filter(function (it) { return !it.equipped; }).length; };
+  var others = [["lockbox", storeUsed(state.lockbox, state.lockboxUsed), state.lockboxCap]];
+  if (benchAtGate) others.push(["vault", storeUsed(state.vault, state.vaultUsed), state.vaultCap]);
+  fillBenchCol(bpack, "Your pack", state.pack || [], state.packCap || 0, "pack", state.packUsed, state.packFood, state.packFoodCap, others);
   fillBenchCol(block, "Lockbox", state.lockbox || [], state.lockboxCap, "lockbox", state.lockboxUsed);
   if (benchAtGate) {
     bvault.style.display = "";

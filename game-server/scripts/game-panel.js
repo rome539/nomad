@@ -285,6 +285,7 @@
   window.__idle = function () { return mobIdle(); };
   window.__cameIn = function (ids, rid, doing) { updateMobs(ids, doing, [], 0, []); mobsCameIn(ids, rid, doing); };
   window.__hit = function () { SND.hit(actx.currentTime + 0.01); };
+  window.__bench = function (state) { renderBench(state); }; // the kit modal, opened with a made-up state
   window.__fxCast = function () { return fxMobs(sceneEl.getBoundingClientRect()).map(function (m) { return m.rect.map(function (v) { return +v.toFixed(3); }); }); };
   window.__sndLR = function () {
     if (!actx || !amaster) return null;
