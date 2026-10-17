@@ -13227,6 +13227,18 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   "check-the-keys",     // the keeper of the holding, the ring it never puts down
   "rake-the-melt",      // the bellfounder, drawing the rake through metal long set
   "work-the-face",      // the sapper, a handful of chalk at a time, still going east
+  // THE TEN REDRAWN (2026-10-17), named here before the sheets come back - a
+  // second piece of their own work, so the idle has two things in it:
+  "test-the-joint",     // the bridge mason, tapping a joint that closed two centuries ago
+  "set-the-link",       // the chainman, straightening a link with the toe of his boot
+  "look-down-the-hill", // the one who stayed, watching the way the others went
+  "tend-the-fire",      // ...and feeding the shieling fire
+  "keep-pace",          // the reed walker, stopped when you stop
+  "hold-the-door",      // the refuge man, the door a hand's width open, listening
+  "seek-the-metal",     // the verdigris thing, turning toward what you are wearing
+  "raise-the-lantern",  // the warden, holding the dead lantern up to the dark
+  "ground-the-maul",    // the warden captain, at rest on a maul it cannot let go of
+  "hold-the-note",      // the marrow cantor, singing toward what it heard
   // AND THE TWO HYENAS ARE NOT THE SAME ANIMAL. They were given one list
   // between them, which is how the two dogs ended up the same dog. The code
   // separates them and always did: the dire hyena is the only member of

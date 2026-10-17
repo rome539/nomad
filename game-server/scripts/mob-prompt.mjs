@@ -177,16 +177,22 @@ const LINES = {
   recover: "Sword drawn back in and up, shield settling back onto the forearm, squaring up again behind it",
 },
 "warden-captain": {
+  "ground-the-maul": "Standing at rest, the head of the rusted maul grounded on the floor in front of it and both fused gauntlets stacked on the top of the haft, the tower shield hanging square at the side",
   attack: "The rusted maul swung through in both fused gauntlets, the head of it past the low point and the whole harness turned behind the weight of it, the tower shield carried through on the other arm. It has no free hand and never strikes with one",
   recover: "The maul hauled back up out of the swing, slow with its own weight, the shield coming back across the front",
+  "hold-the-salute": "Standing to attention and holding a salute: heels together, back straight, the rusted maul brought up upright in front of the helm in both fused gauntlets, its head high, the tower shield held square at the side",
+  sweep: "A shove with the tower shield: the worn rim driven straight out from the body at chest height, the shoulder behind it and the front foot planted, the maul held back low in the fused gauntlets",
 },
 "last-watchman": {
   attack: "A hard spear thrust, straight and level: both hands on the shaft, the point driven out past the front foot at chest height, the body behind it in a long lunge, the mantle thrown back off the shoulders. THE SPEAR IS LEVEL AND GOING FORWARD - it is not upright, it is not at the shoulder, and the fist is not doing the work",
   recover: "The spear hauled back in from the thrust, point coming up off the line, the front foot recovering under him and the body straightening back toward his post",
 },
 "warden": {
+  "raise-the-lantern": "Holding the unlit lantern up at full stretch to the height of the visor and turning it toward a dark corner, the empty gauntlet down at the side, the empty visor turned the way the lantern points",
   attack: "A straight armoured punch with the empty gauntlet, driven out from the shoulder past the front foot, the unlit lantern still hanging from the other hand and swinging with the movement. This one has no weapon, so the fist is correct",
   recover: "The punching arm drawn back in and down, the lantern settling, the body squaring up again",
+  "hold-the-salute": "Standing to attention and holding a salute: heels together, back straight, the empty gauntlet raised flat to the brow of the helm and held there, the unlit lantern hanging dead still from the other hand",
+  sweep: "A backhand blow with the empty gauntlet, swung flat across the body at full reach from the far side, the shoulder turned into it, the unlit lantern swinging wide on the other hand",
 },
 "warden-surface": {
   attack: "A straight armoured punch with the empty gauntlet, driven out from the shoulder past the front foot, the unlit lantern still hanging from the other hand and swinging with the movement. This one has no weapon, so the fist is correct",
@@ -249,6 +255,7 @@ const LINES = {
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-refuge-man": {
+  "hold-the-door": "Standing side-on, one flat hand held out at shoulder height as if holding a narrow door a hand's width open, the head turned to listen through the gap, still as a hare. No door is drawn - only the hand and the listening",
   idle: "Seen from behind: standing upright with both arms raised and both hands flat and open at shoulder height, palms forward, bracing against nothing - no wall is drawn. The entire back of him stripped: bare skull, shoulder blades and the whole line of the spine through a coat torn open down the back",
   "turn-from-the-wall": "Body rotating, one arm still up and back behind him with the hand flat and open, the other coming round with it, the whole and undamaged face beginning to come round toward the viewer",
   alert: "Turned fully round now, both arms down at his sides, squared up and facing, the intact face on the viewer and the stripped back hidden behind him",
@@ -259,6 +266,7 @@ const LINES = {
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-bridge-mason": {
+  "test-the-joint": "Standing close in at chest height, head cocked to one side, tapping lightly with the mallet in the bone fist at a joint in front of him and listening to it, the chisel hand flat beside the tap. No stone is drawn - only the tap, the cocked head and the flat hand",
   idle: "Standing three-quarters turned away, a heavy mallet hanging down in one bare-bone fist, the ruined head down and angled at something low in front of him. No stone and no stonework is drawn",
   "dress-the-stone": "Crouched low on one knee, the mallet raised in the bone fist and a chisel held out steady in the whole hand, both hands working together at about knee height in front of him. The mallet and the chisel are the only objects in the cell",
   alert: "Turned round from the work at last, the mallet coming UP in the bare-bone fist rather than down, the head levelled at the viewer",
@@ -269,6 +277,7 @@ const LINES = {
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-reed-walker": {
+  "keep-pace": "Stopped mid-stride and half turned, the head turned back over one shoulder toward the viewer, utterly still, the reed growing out of him gone still too - it stops when you stop",
   idle: "Standing still, reed stems rooted through the ribs and shoulders and rising well above the head so the outline reads as much reed as man, one bare shoulder clear, the face indistinct behind his own stems. No reed bed and no loose reed is drawn",
   "part-the-reed": "One arm out and sweeping across in front of him at chest height, body turning with it, the reed growing out of his own ribs bending with the movement",
   alert: "Stopped dead and square-on to the viewer, the reed growing out of his ribs no longer moving, the face still not quite clear behind it",
@@ -420,6 +429,29 @@ const LINES = {
   feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
   rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
   alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"the-chainman": {
+  "set-the-link": "Bent over with the chain held slack in both hands, one boot out in front of him nudging a link straight with the toe, the way you settle a rope that must not snag",
+  "count-it-out": "Taking the surveyor's chain up link by link through both hands, head bent over it, counting - the slack coiled over one forearm and the rest hanging down to the ground",
+  attack: "A short heavy blow with the surveyor's chain: a doubled length of it swung down and round from one fist, the links whipping out at the end of it, the body turned in behind the swing",
+  sweep: "The surveyor's chain swung wide and flat across the body at full reach, the links paying out from the fist in a long arc, the free hand out for balance",
+},
+"the-one-who-stayed": {
+  "look-down-the-hill": "Standing still with one hand up shading his eyes and the stick held down along his leg, looking far off down the hill the way the others went",
+  "tend-the-fire": "Crouched low on his heels, one arm out laying something small down in front of him, the other forearm on his knee, the face lit by nothing. No fire and no fuel is drawn - only the crouch and the reaching hand",
+  advance: "Stepping toward you with one open hand lifted in greeting, the head up and the eyes on you, as if he has known you all his life and has been waiting at this door for you to come back",
+},
+"twice-dead": {
+  listen: "Standing still with the skull lifted and turned a little to one side, listening, the hard brown hands hanging at its sides - waiting, unhurried, for whatever it heard",
+  rise: "Getting back up after being put down: one knee and one hand on the ground, the body hauling itself upright without hurry, the head still hanging - it does not stay down",
+},
+"verdigris-thing": {
+  "seek-the-metal": "Head lifted and turning slowly, one green-crusted hand half raised and open in front of it, the body leaning toward something it can feel rather than see - the metal you are wearing",
+  "lay-on-the-hand": "Reaching out and laying one open green-crusted hand flat on something at chest height in front of it, slowly, almost gently, the arm at full stretch and the body leaning after it. WHAT IT TOUCHES IS NOT DRAWN - only the reach and the flat hand",
+},
+"marrow-cantor": {
+  "hold-the-note": "Standing tall with the skull tipped back, the wired jaw wide open on a held note, the hollow chest swollen, the arms a little out from the sides. No sound is drawn - only the open jaw and the swelling chest",
+  listen: "Standing still and listening: the skull tilted a little to one side and lifted, the whole body stopped, the hands held still at its sides",
 },
 "something-ahead": {
   listen: "Stopped dead mid-step and listening: one foot lifted off the ground and held there, the body stooped forward, the long arms hanging loose, the head pushed forward and perfectly still - it stops when you stop",
@@ -1119,6 +1151,19 @@ const DECAY = {
   + "- WHERE SHE HAS CRACKED, SHE HAS CRACKED DRY. Splits across the shoulder and forearm, open and dark and dusty, with no wetness in them at all.",
 };
 
+// THE BARROW-WIGHT IS NOT ONE OF THE DROWNED. It shares their set and none of
+// their sea: it dried in the earth, so it gets no salt, no sodden coat and no
+// shift it is still working - only its own skin, its grave-rags and its patience.
+const LAND_DEAD = {
+  "twice-dead": {
+    decay: "- THE SKIN IS BROWN AND HARD AS HARNESS-LEATHER, shrunk tight over every bone so the whole frame shows through it - ribs, knuckles, the line of the jaw. Nothing soft is left in it to spill.\n"
+      + "- WHERE IT HAS SPLIT, IT HAS SPLIT DRY: dark, dusty cracks across the shoulders and the backs of the hands, with no wetness in them at all.",
+    cloth: "- What it was buried in hangs off it in dry brown grave-rags, earth-stained and stiff with age.",
+    skin: "\nTHE SKIN IS DRY, BROWN AND LEATHER-HARD, NOT ROTTEN AND NOT WET: an old body dried out in the barrow, not one decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.",
+    mood: "Unhurried and patient, not raging: it has been put down before and got back up, and it will come on again.",
+  },
+};
+
 // The shared half, which the widow does not get: she is the one the sea missed.
 const SALT_SKIN = `
 THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.`;
@@ -1291,12 +1336,12 @@ THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you c
 WHAT IS LEFT OF THIS ONE:
 - THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
 - THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
-${DECAY[id] || "- [NO DECAY SIGNATURE FOR THIS ONE - write one before generating, or it comes back as the same grey man as the others]"}
-${id === "the-salt-widow"
+${(LAND_DEAD[id] && LAND_DEAD[id].decay) || DECAY[id] || "- [NO DECAY SIGNATURE FOR THIS ONE - write one before generating, or it comes back as the same grey man as the others]"}
+${LAND_DEAD[id] ? LAND_DEAD[id].cloth : id === "the-salt-widow"
   ? "- THE COAT IS STIFF, PALE AND SALT-RIMED, standing away from the body in board-like folds rather than hanging wet."
-  : "- The clothing is sodden black through to the hem, salt-crusted, weed caught in it."}${inSet("GRAVE_FLESH") && id === "the-salt-widow" ? "" : SALT_SKIN}
+  : "- The clothing is sodden black through to the hem, salt-crusted, weed caught in it."}${LAND_DEAD[id] ? LAND_DEAD[id].skin : inSet("GRAVE_FLESH") && id === "the-salt-widow" ? "" : SALT_SKIN}
 
-No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. ${LAND_DEAD[id] ? LAND_DEAD[id].mood : "Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it."}
 ${EYE_BLOCK}
 ${HELD}` : `
 THIS IS NOT A LIVING PERSON. There is nothing inside it. Draw old dry remains held together and still moving: bone and hardened leather-dry tissue, no wet flesh and no blood anywhere. No aura, no mist, no supernatural effect of any kind.
@@ -1338,12 +1383,16 @@ const worked = () => inSet("HOLLOW") || PEOPLE.has(id);
 // LURKER spends that cell on what it does before it strikes - waiting unseen in
 // the dark. Anything else has to be given a pose list without it. Sheets already
 // drawn keep what they have.
-if (!worked() && poses.includes("recover")) {
+// NO NEW SHEET GETS A RECOVER FRAME AT ALL (rome, 2026-10-17, restated: the
+// settle after a blow is not drawn again, for anything - people and the dead
+// included). A lurker spends that cell on its lurk; anything else is given a
+// pose list without it.
+if (poses.includes("recover")) {
   if (inSet("LURKERS") && !poses.includes("lurk")) {
-    console.error(`  RULED OUT: an animal draws no recover frame - ${id} is a lurker, so that cell is its lurk`);
+    console.error(`  RULED OUT: no recover frame - ${id} is a lurker, so that cell is its lurk`);
     poses = poses.map((p) => (p === "recover" ? "lurk" : p));
   } else {
-    console.error(`  RULED OUT: an animal draws no recover frame - give ${id} a pose list without it`);
+    console.error(`  RULED OUT: no recover frame on any new sheet - give ${id} a pose list without it`);
     process.exit(1);
   }
 }

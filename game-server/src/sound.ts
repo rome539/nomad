@@ -248,7 +248,9 @@ export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
       runUp: events.fordUp(z, roomId) || events.spated(z, roomId) || events.fenUp(z, roomId),
       hour: isNight() ? "night" : isDusk() || isDawn() ? "low" : "day",
       fog: events.wxPhase(z, "fog", roomId) === "active",
-      cold: events.wxPhase(z, "cold", roomId) === "active",
+      // where the cold actually bites (events.coldBites): open ground under it,
+      // the deep beneath all of it, the mountain under its snow - never a roof
+      cold: !inside && events.coldBites(z, roomId),
     });
 }
 
