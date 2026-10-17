@@ -4306,8 +4306,8 @@ var IDLE_MIN_S = 8, IDLE_MAX_S = 20, idleNext = 0;
 function mobIdle() {
   if (!CREATURE_SOUND || !soundOn || !soundFull() || !actx || lastCombat || inGatehouseNow) return "";
   var can = anims.length
-    ? anims.filter(function (a) { return (a.phase === "idle" || !a.phase) && !a.asleep && !/^(rest|fight|hunt|flee|aloft|reel)$/.test(a.state || "") && !IDLE_SILENT[a.id] && IDLE[VOICE_OF[a.id]]; })
-    : (mobsBefore || []).filter(function (id, i) { return !/^(rest|fight|hunt|flee|aloft|reel)$/.test(mobsDoing[i] || "") && !IDLE_SILENT[id] && IDLE[VOICE_OF[id]]; }).map(function (id) { return { id: id, el: null }; });
+    ? anims.filter(function (a) { return (a.phase === "idle" || !a.phase) && !a.asleep && !/^(rest|fight|hunt|flee|aloft|reel|lurk|lurk-lit)$/.test(a.state || "") && !IDLE_SILENT[a.id] && IDLE[VOICE_OF[a.id]]; })
+    : (mobsBefore || []).filter(function (id, i) { return !/^(rest|fight|hunt|flee|aloft|reel|lurk|lurk-lit)$/.test(mobsDoing[i] || "") && !IDLE_SILENT[id] && IDLE[VOICE_OF[id]]; }).map(function (id) { return { id: id, el: null }; });
   if (!can.length) return "";
   var a = can[Math.floor(Math.random() * can.length)];
   try { asVoice(a.id, function () { IDLE[VOICE_OF[a.id]](actx.currentTime + 0.02, VOX.out(a.el ? mobPan(a.id, a.el) : 0)); }); } catch (e) {}
@@ -5472,8 +5472,8 @@ async function connect() {
     } else if (f.t === "beat") {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
-      mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose);
-      mobCalls(f.died, f.swung); // the round's voices, at the swings mobBeat just set
+      mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose, f.one);
+      mobCalls(f.died, (f.swung || []).concat(f.one || [])); // the round's voices, at the swings mobBeat just set
     } else if (f.t === "bolt") {
       lightningBolt(!!f.hit, false, f.d);
     } else if (f.t === "thunder") {
@@ -9612,7 +9612,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "62";      // /mob/      strips and their eye layers
+var MOB_V  = "66";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -12843,7 +12843,7 @@ var MOB_SPRITE = {
   "drowned-hulk": 40,      // "swollen VAST, filling the flooded dark where it stands"
   "rag-and-bone": 44,      // "about half again the size of" a man, and hung with its load
   "verdigris-thing": 30,   // "something man-shaped" under a century of crust
-  "pale-crawler": 8,      // low and long on all fours, under a wolf (8, not 6: the redrawn sheet rears up in its recover pose, so its frame is taller and the body 13% smaller in it)
+  "pale-crawler": 8,      // low and long on all fours
   "pale-stalker": 7,      // the bigger blood of the same thing
   "three-hound": 33,       // a heavy hound - taller than a wolf, three heads up
   "two-hound": 28,         // "a head short and without the bulk to make up the difference"
@@ -12963,10 +12963,10 @@ var MOB_ANIM = {
   "the-sapper":                  { n: 8, aspect: 1.014, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-keeper-of-the-holding":   { n: 8, aspect: 1.007, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-gaunt":                   { n: 8, aspect: 1.005, f: {"idle":0,"alert":1,"cast-about":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
-  "the-follower":                { n: 8, aspect: 1.038, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-follower":                { n: 9, aspect: 1.158, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
   "the-chainman":                { n: 8, aspect: 0.964, f: {"idle":0,"count-it-out":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-bellfounder":             { n: 8, aspect: 0.988, f: {"idle":0,"rake-the-melt":1,"watch":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "something-ahead":             { n: 8, aspect: 1.118, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "something-ahead":             { n: 9, aspect: 1.103, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
   "root-thing":                  { n: 8, aspect: 1.035, f: {"idle":0,"alert":1,"listen":2,"shift-the-weight":3,"feed":4,"attack":5,"sweep":6,"death":7} },
   "old-boar":                    { n: 8, aspect: 1.294, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "grey-wolf":                   { n: 8, aspect: 1.107, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -12982,8 +12982,8 @@ var MOB_ANIM = {
   "forgotten-king":   { n: 8, aspect: 1.03, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "two-hound":   { n: 6, aspect: 1.287, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "three-hound":   { n: 6, aspect: 1.219, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
-  "pale-stalker":   { n: 8, aspect: 1.528, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "pale-crawler":   { n: 8, aspect: 1.324, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "pale-stalker":   { n: 8, aspect: 1.638, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"lurk":6,"death":7} },
+  "pale-crawler":   { n: 8, aspect: 1.533, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"lurk":6,"death":7} },
   "verdigris-thing":   { n: 8, aspect: 1.041, f: {"idle":0,"lay-on-the-hand":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "rag-and-bone":   { n: 8, aspect: 0.978, f: {"idle":0,"take-it-up":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "drowned-god":   { n: 8, aspect: 0.991, f: {"idle":0,"keep-the-seat":1,"take-hold":2,"lift-you-clear":3,"alert":4,"attack":5,"recover":6,"death":7} },
@@ -13065,7 +13065,7 @@ var MOB_ANIM = {
   "hill-fox":             { n: 8, aspect: 1.29, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "hill-wolf":            { n: 8, aspect: 1.136, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "lead-wolf":            { n: 8, aspect: 1.152, f: {"idle":0,"rest":1,"hold-ground":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "lynx":                 { n: 8, aspect: 1.16, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "lynx":                 { n: 9, aspect: 1.128, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
   "mountain-chough":      { n: 8, aspect: 1.258, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
   "mountain-hare":        { n: 8, aspect: 1.048, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "old-billy":            { n: 8, aspect: 1.104, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -13950,6 +13950,11 @@ function poseAt(a, now) {
     // ground, so the frame is whichever of the two this one was drawn with.
     name = a.eatAs || a.eat || "feed";   // whichever act the signal said this was
     x = Math.sin(t * 3.4) * SWAY * 0.10;
+  } else if (a.state === "lurk" || a.state === "lurk-lit") {
+    // LYING IN WAIT: the lurk frame, and nothing moving but a breath too slow to
+    // be sure of. Faint in the dark (stepAnims), plain once a light finds it.
+    name = f.lurk !== undefined ? "lurk" : "idle";
+    s *= 1 + Math.sin(t * 0.6) * BREATH * 0.8;
   } else if (a.landing && t < 0.7) {
     // ...AND COMES DOWN to strike: the stoop where it was drawn with one, then
     // the landing, falling from the height it held.
@@ -14140,10 +14145,13 @@ var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
                    "recover", "idle"];
 // A body stays where it fell for a beat before the room repaints without it.
 var mobHold = 0, mobPending = null, mobPendingRest = null, mobPendingDead = null;
-function mobBeat(swung, struck, died, fed, grazed, posed, pose) {
+function mobBeat(swung, struck, died, fed, grazed, posed, pose, one) {
   // Each entry reports ONE death, not every creature with that template.
   // Consume it once so killing one rat cannot make a whole group fall.
   var deaths = died ? died.slice() : [];
+  // ...and ONE swing outside a round (the skeleton your noise woke lashing out
+  // once): the same consume-once, so a room of them does not all swing for it.
+  var ones = one ? one.slice() : [];
   for (var i = 0; i < anims.length; i++) {
     var a = anims[i];
     var deathAt = deaths.indexOf(a.id);
@@ -14155,6 +14163,11 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose) {
       a.phase = "death"; a.t = 0; a.asleep = false;
       mobHold = Date.now() + DEATH_S * 1000;
     } else if (a.phase === "death") continue;
+    else if (ones.indexOf(a.id) >= 0 && a.strike) {
+      ones.splice(ones.indexOf(a.id), 1);
+      a.phase = "attack"; a.t = 0;   // the opening blow, and back to what it was after
+      a.blow = (a.strikes && a.strikes.length > 1) ? a.strikes[Math.floor(Math.random() * a.strikes.length)] : a.strike;
+    }
     else if (swung && swung.indexOf(a.id) >= 0 && a.strike) {
       // NOT ALL AT ONCE. The wire reports a whole round in one message, so
       // without this every creature in a dogpile swings on the same frame.
@@ -14184,6 +14197,9 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose) {
     }
   }
 }
+// HOW MUCH OF A LURKER SHOWS WHILE IT WAITS IN THE DARK (rome, 2026-10-17:
+// slightly invisible). The dial: lower is harder to see.
+var LURK_FADE = 0.35;
 function stepAnims() {
   var now = Date.now();
   for (var i = 0; i < anims.length; i++) {
@@ -14209,6 +14225,8 @@ function stepAnims() {
     var seat = p.k === a.spec.f["keep-the-seat"] && anims.length === 1 && mobsEl.children.length === 1
       && typeof SEAT_ON !== "undefined" && mobsEl.dataset ? SEAT_ON[mobsEl.dataset.seat || ""] || null : null;
     a.el.style.backgroundPositionX = (p.k * 100 / (a.spec.n - 1)) + "%";
+    // the strike itself comes out of the dark whole
+    a.el.style.opacity = a.state === "lurk" && a.phase !== "attack" && a.phase !== "death" ? String(LURK_FADE) : "";
     if (a.el.dataset) a.el.dataset.death = p.k === a.spec.f.death ? "1" : "";
     a.el.style.transform = "translate(" + (p.x * 100).toFixed(1) + "%,"
       + (-(p.air + (a.lift || 0) + (seat ? seat.up : 0)) * 100).toFixed(1) + "%)"

@@ -196,8 +196,8 @@ const LINES = {
   idle: "Standing still in a coat sodden black to the hem, a notched stick held upright in one hand, facing along the way",
   "cut-the-stick": "Head down over the notched stick held up close to the chest, cutting a fresh notch into it with a small blade",
   alert: "The knife and the stick stopped dead mid-notch, both hands still on them, the ruined head come up off the tally and levelled straight at the viewer for the first time",
-  "move-a": "Walking stride A, at the full reach of the step, on the bare shin bones: one leg forward and the other back, the arms swinging opposite the legs",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, natural walking gait on the bare shin bones",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "A hard level swing of the notched stick from the shoulder, both hands on it",
   recover: "Coming down off the swing, the stick dropping back toward one hand, the body squaring up again",
   death: "Dead, collapsed limp on its side, no gore and no effects",
@@ -222,8 +222,8 @@ const LINES = {
   idle: "Standing very straight and still, a small brass plate held flat on the open palm at chest height, the ruined head down over it. The plate is the only object in the cell",
   "read-the-water": "One arm out straight and level, sighting along it at something far past the viewer's shoulder, the brass plate still held in the other hand",
   alert: "The brass plate lowered out of the sighting line and held forgotten at the hip, the bare-socketed head come round off the sighting line and levelled at the viewer",
-  "move-a": "Moving stride A, at the full reach of the movement, natural species-specific gait: on four legs, the legs on one diagonal reaching forward and the other two pushed back behind; on two legs, one leg forward and the other back with the arms swinging opposite; with no legs, the curves of the body thrown hard one way",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, natural species-specific gait",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "A short hard downward strike with the edge of the brass plate, the other arm out for balance",
   recover: "Drawing the brass plate back in to the chest after the strike, the other arm coming down",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -232,8 +232,8 @@ const LINES = {
   idle: "Standing at ease with a long stick across the worn grooves of both shoulders and both wrists hooked over it, coat tied at the waist, looking past you up the road",
   "drive-the-road": "Stick brought down into one hand and swung out low and wide to the side, the other arm out, moving something that is not there",
   alert: "The stick come down off the worn shoulder grooves into both hands across the body, head up, the easy working stance gone out of him entirely",
-  "move-a": "Moving stride A, at the full reach of the movement, natural species-specific gait: on four legs, the legs on one diagonal reaching forward and the other two pushed back behind; on two legs, one leg forward and the other back with the arms swinging opposite; with no legs, the curves of the body thrown hard one way",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, natural species-specific gait",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "A hard level swing of the long stick from the shoulder, arms staying below head height",
   recover: "The stick swinging back down to rest after the blow, the body coming back square",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -242,8 +242,8 @@ const LINES = {
   idle: "Standing stooped with a long punt pole held level across the body in both hands, a wicker eel trap hanging at his belt, back half turned, not looking up",
   "lift-the-trap": "Bent right down with both arms out and low in front of him, hauling a dripping wicker eel trap up on its line, the trap and the line hanging clear in his hands. No water and no boat is drawn",
   alert: "The head finally come up. The punt pole still held level and the body still turned away, and only the ruined face come round over the shoulder and fixed on the viewer",
-  "move-a": "Moving stride A, at the full reach of the movement, natural species-specific gait: on four legs, the legs on one diagonal reaching forward and the other two pushed back behind; on two legs, one leg forward and the other back with the arms swinging opposite; with no legs, the curves of the body thrown hard one way",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, natural species-specific gait",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "A hard two-handed forward jab with the punt pole, arms staying below head height",
   recover: "Drawing the punt pole back in after the jab, the body settling back into its stoop",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -252,8 +252,8 @@ const LINES = {
   idle: "Seen from behind: standing upright with both arms raised and both hands flat and open at shoulder height, palms forward, bracing against nothing - no wall is drawn. The entire back of him stripped: bare skull, shoulder blades and the whole line of the spine through a coat torn open down the back",
   "turn-from-the-wall": "Body rotating, one arm still up and back behind him with the hand flat and open, the other coming round with it, the whole and undamaged face beginning to come round toward the viewer",
   alert: "Turned fully round now, both arms down at his sides, squared up and facing, the intact face on the viewer and the stripped back hidden behind him",
-  "move-a": "Moving stride A, at the full reach of the movement, natural species-specific gait: on four legs, the legs on one diagonal reaching forward and the other two pushed back behind; on two legs, one leg forward and the other back with the arms swinging opposite; with no legs, the curves of the body thrown hard one way",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, natural species-specific gait",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "A close two-handed shove driving forward from the chest, shoulders behind it",
   recover: "Drawing both hands back in to the chest after the shove, the shoulders coming down",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -262,8 +262,8 @@ const LINES = {
   idle: "Standing three-quarters turned away, a heavy mallet hanging down in one bare-bone fist, the ruined head down and angled at something low in front of him. No stone and no stonework is drawn",
   "dress-the-stone": "Crouched low on one knee, the mallet raised in the bone fist and a chisel held out steady in the whole hand, both hands working together at about knee height in front of him. The mallet and the chisel are the only objects in the cell",
   alert: "Turned round from the work at last, the mallet coming UP in the bare-bone fist rather than down, the head levelled at the viewer",
-  "move-a": "Moving stride A, at the full reach of the movement, natural species-specific gait: on four legs, the legs on one diagonal reaching forward and the other two pushed back behind; on two legs, one leg forward and the other back with the arms swinging opposite; with no legs, the curves of the body thrown hard one way",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, natural species-specific gait",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "A hard mallet blow driven forward from the shoulder, both hands on the shaft",
   recover: "The mallet coming back down off the blow, the body returning to its working guard",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -272,8 +272,8 @@ const LINES = {
   idle: "Standing still, reed stems rooted through the ribs and shoulders and rising well above the head so the outline reads as much reed as man, one bare shoulder clear, the face indistinct behind his own stems. No reed bed and no loose reed is drawn",
   "part-the-reed": "One arm out and sweeping across in front of him at chest height, body turning with it, the reed growing out of his own ribs bending with the movement",
   alert: "Stopped dead and square-on to the viewer, the reed growing out of his ribs no longer moving, the face still not quite clear behind it",
-  "move-a": "Moving stride A, at the full reach of the movement, natural species-specific gait: on four legs, the legs on one diagonal reaching forward and the other two pushed back behind; on two legs, one leg forward and the other back with the arms swinging opposite; with no legs, the curves of the body thrown hard one way",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, natural species-specific gait",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "Coming out at full stretch with both arms forward and low, body committed",
   recover: "Drawing back after the lunge, arms coming in, his own reed settling back around him and the outline closing up again",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -291,8 +291,8 @@ const LINES = {
 "the-fowler": {
   idle: "Lying flat on his front in a hood of sacking and cut reed, face down, absolutely still, the exposed back of him bone-white, the long fowling pole under one hand and part-covered by cut sedge caught on his own sacking. No ground is drawn",
   "rise-from-the-turf": "Coming up onto one knee, the sacking hood falling back, the brown bog-tanned underside and its crust of root now showing, both hands closing on the long fowling pole",
-  "move-a": "Moving stride A, at the full reach of the movement, natural species-specific gait: on four legs, the legs on one diagonal reaching forward and the other two pushed back behind; on two legs, one leg forward and the other back with the arms swinging opposite; with no legs, the curves of the body thrown hard one way",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, natural species-specific gait",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "A hard forward thrust with the long fowling pole held in both hands, body low and driving",
   death: "Dead, lying limp on its side, no gore and no effects",
 },
@@ -320,8 +320,8 @@ const LINES = {
   idle: "Standing turned away from the viewer and bent forward from the waist, both arms straight down in front of him and sunk in to the forearm, hands out of sight below, shoulders working slightly. Swollen, heavy and patient. NOTHING he is reaching into is drawn - no water, no floor, no surface, no wheel",
   "work-the-water": "Bent lower still and further forward, both arms in past the elbow now, the whole back curved over the work and the head down between the shoulders. His hands and what they are on are below the cell's empty space and are NOT drawn",
   alert: "Come round to face the viewer for the first time, still bent, and BOTH HANDS ARE UP OUT OF IT AND CLOSED - he has kept hold of whatever it was. What is in his fists is NOT drawn; only the grip and the forearms streaming",
-  "move-a": "Wading stride A: one leg driven forward and down against a resistance that is not drawn, the body swung heavily after it, both arms out wide for balance",
-  "move-b": "Wading stride B, the exact MIRROR of stride A: the other leg now driven forward and the first one back, the body swung the other way, same direction, same size and the same place in the cell as A",
+  "move-a": "Wading contact pose A: one leg driven forward and down against a resistance that is not drawn, the body swung heavily after it, both arms out wide for balance",
+  "move-b": "Wading passing pose B: the other leg through, the body swung the other way, same direction and body size",
   attack: "Both closed fists driven down and forward together in one heavy swing from above the shoulder, the whole swollen weight behind it",
   recover: "The fists coming back in to the chest after the blow, the body settling back into its stoop",
   death: "Dead, collapsed face down and spread, both hands finally open and empty",
@@ -330,8 +330,8 @@ const LINES = {
   idle: "Standing very straight and still, a satchel hanging at the hip on a broad strap that crosses the chest, ONE HAND HELD OUT AT CHEST HEIGHT, PALM UP AND OPEN, held long enough that it has stopped being a gesture. The other arm hangs. Nothing is in the open palm",
   "shift-the-weight": "The free hand come across to take the weight of the satchel from underneath and lift it an inch, the head down toward it, the strap slack for a moment - and THE OUT-HELD HAND HAS NOT MOVED. It stays exactly where it was, palm up",
   alert: "The head come up off the satchel and levelled straight at the viewer, the satchel dropped back onto the strap, and the open palm still out, still waiting, now unmistakably meant for you",
-  "move-a": "Walking stride A, at the full reach of a slow even step: one leg forward and the other back, the satchel swinging - and the open palm STILL HELD OUT in front, carried along unchanged",
-  "move-b": "Walking stride B, the exact MIRROR of stride A: the leg that was forward is now back and the other forward. Same body height, same direction, same size and the same place in the cell as A, the palm still out",
+  "move-a": "Locomotion contact pose A, a slow even walk, the satchel swinging - and the open palm STILL HELD OUT in front, carried along unchanged",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size, the palm still out",
   attack: "The out-held hand finally closes and is driven straight forward in a grab at full reach, the other arm back",
   recover: "The hand opening again on the way back in and returning to exactly where it was, palm up at chest height",
   death: "Dead, lying limp on its side, the strap still across the chest, the hand open and empty at last",
@@ -340,8 +340,8 @@ const LINES = {
   idle: "Standing at rest in a long coat of overlapping plates worn the colour of dust, facing along the way it is going, weight even, entirely unhurried. It is not guarding this spot and does not look like it is",
   "turn-the-distance": "Stopped and turning on the spot, the body coming round through three-quarters to face back the way it came, one boot pivoting, the head already level and looking down the new direction. The end of a beat, done ten thousand times",
   alert: "Stopped square to the viewer and settled, the head come round and levelled, weight dropping back onto the rear foot - the first time it has been interested in a thing rather than a distance",
-  "move-a": "Walking stride A, at the full reach of a long even marching step: one leg forward and the other back, the coat of plates swinging heavily with it",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, a long even marching stride, the coat of plates swinging heavily with it",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "A hard straight-armed drive forward from the shoulder with the leading arm, the body stepping into it, the other arm braced back",
   recover: "The arm drawn back in and the shoulders squaring, the body settling back into its marching stance",
   death: "Dead, collapsed sideways, the plated coat splayed open, one arm folded under",
@@ -420,6 +420,13 @@ const LINES = {
   feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
   rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
   alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
+"something-ahead": {
+  listen: "Stopped dead mid-step and listening: one foot lifted off the ground and held there, the body stooped forward, the long arms hanging loose, the head pushed forward and perfectly still - it stops when you stop",
+  lurk: "Waiting unseen in the way ahead: standing dead still and upright, turned half away, the long arms hanging, the head bowed - so still it could be a post or a dead tree left standing on the path, something you would walk straight up to",
+},
+"the-follower": {
+  lurk: "Waiting unseen before it closes in: crouched right down and folded small, knees drawn up, the long arms wrapped round them, the head down, utterly still - something you would take for a shadow or a stump and walk past",
 },
 "marsh-hound": {
   feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
@@ -1174,6 +1181,9 @@ THE WINGSPAN DECIDES THE SCALE OF EVERY CELL ON THIS SHEET. Find the pose with t
 DO NOT enlarge any pose to fill its cell. DO NOT let a wing, a tail, a foot or a bill touch or cross a cell edge in any cell, for any reason. If a wingspan will not fit, the bird is drawn TOO BIG - shrink the whole bird on every cell until it does. A wingtip that reaches the edge of its cell is not a tight crop, it is a severed wing: the rest of it lands in the next bird's cell and is lost.`;
 
 const CONSTANT = {
+  "pale-crawler": `
+IT HAS FOUR LEGS. "Boneless" in the description means soft and pale-skinned, NOT legless: this is NOT a slug, a worm, a grub, a leech or a snake, and it never moves on its belly. It is a low, long four-legged crawler built like a hairless salamander or a blind cave mole the size of a large dog: a heavy smooth eyeless head, rounded at the front, with a wide slit mouth of small pointed teeth; a thick pale body in loose folds of skin; a short tapering tail; and FOUR muscular limbs, two at the shoulders and two at the hips, each ending in a splayed hand of long pale clawed fingers that grip the ground. The body is carried clear of the ground on those four legs, elbows and knees bent out to the sides like a lizard's. Count the legs in every cell: FOUR, all of them drawn and attached, in every pose - standing, walking, feeding, striking, and lying dead. No eyes anywhere on the head. Camera: eye-level three-quarter view, facing slightly toward the viewer's right.
+`,
   "wrack-crab": `
 THE SAME ANIMAL IN ALL EIGHT CELLS - COUNT IT EVERY TIME. One carapace. TWO claws. EIGHT walking legs, four down each side. TWO eyestalks. Never a ninth leg, never a third claw, never a limb growing out of the top or the back of the shell, never a leg that does not reach the body. Every leg is jointed the same way and comes off the shell's edge, not its surface.
 
@@ -1350,24 +1360,11 @@ Every pose is the BODY making the shape of what it is doing, alone in empty mage
 `;
 
 
-// THE TWO WALK CELLS ARE ONE LOOP (rome, 2026-10-17: the walks came back as
-// two frames that did not make a walk when played together). The client walks
-// a creature by showing move-a and move-b one after the other and nothing else.
-// They were asked for as a "contact" pose and a "passing" pose - two quarters
-// of a four-frame cycle - and played back and forth those read as a shuffle or
-// a hop, not a stride. Two frames make a walk only as the two opposite ends of
-// one stride, mirror images, with the body held still between them. Only for
-// a legged stride: a seal's haul, an eel's swim and a crab's scuttle are their
-// own two frames and keep their own words.
-const WALK_LOOP = `THE TWO WALKING CELLS ARE ONE LOOP. The game walks this creature by showing the two walking cells one after the other, over and over, with nothing in between. So they must be the two opposite ends of the SAME stride, each the mirror of the other: whatever reaches forward in one is pushed back in the other. NOT a step and a legs-together passing pose - played back and forth that reads as hopping on the spot. Draw both at the full reach of the step, and keep everything but the legs (and swinging arms, or a legless body's curves) identical between them: the same body, the same size, the same camera, the same height of the back and the head, and the same place in the cell, so that only what moves the body changes.
-
-`;
-
 // what each pose is, said the way the sheet needs it said
 const SAY = {
   idle: "Natural resting alert stance",
-  "move-a": "Moving stride A, at the full reach of the movement, natural species-specific gait: on four legs, the legs on one diagonal reaching forward and the other two pushed back behind; on two legs, one leg forward and the other back with the arms swinging opposite; with no legs, the curves of the body thrown hard one way",
-  "move-b": "Moving stride B, the exact MIRROR of stride A: everything that reaches forward in A is pushed back here and everything pushed back reaches forward (the arms swung the other way; a legless body curved the other way). Same body height, same head height, same direction, same size and the same place in the cell as A",
+  "move-a": "Locomotion contact pose A, natural species-specific gait",
+  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "Natural physical attack for the species, full body in frame",
   // AN ARMED THING ATTACKS WITH WHAT IT IS HOLDING. The line above is written
   // for an animal, and for a soldier it says nothing at all - so the sheets came
@@ -1431,7 +1428,7 @@ ${MAN}
 ${CONSTANT[id] || ""}
 ${WHAT_IT_IS}${worked() ? ALONE_WORKED : ALONE_ANIMAL}Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. ${CONTAIN} ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}.${flyer ? WINGSPAN : ""} Stable body proportions and markings. Feet aligned near the lower edge in ground poses${flyer ? "; body centred in the flight poses" : ""}.
 
-${poses.includes("move-a") && poses.includes("move-b") && /stride A/.test(WORDING["move-a"] || (LINES[id] && LINES[id]["move-a"]) || SAY["move-a"]) ? WALK_LOOP : ""}Reading order left to right, top row then bottom row:
+Reading order left to right, top row then bottom row:
 ${poses.map((p, i) => `${i + 1}. ${WORDING[p] || (LINES[id] && LINES[id][p]) || SAY[p] || p.replace(/-/g, " ")}`).join("\n")}
 
 No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human.${MANSHAPED[id] ? "" : " Do not make the animal a dragon hybrid."}`);

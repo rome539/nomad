@@ -190,8 +190,14 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // it nowhere to hide.
     // ...and one that went back into the dark mid-fight (styles.ts) is not
     // drawn standing there: it only goes back when nobody has a light.
-    if (LURKERS.has(creature.templateId) && creature.hidden && !creature.joinedOpenly
-      && (creature.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))) continue;
+    // ...but THE PICTURE HOLDS IT FAINTLY (rome, 2026-10-17): a lurker lying in
+    // wait is drawn in its lurk frame, barely there, the shape you might have
+    // imagined in the dark. Still no chip, no name, no line in the room text.
+    const lurking = LURKERS.has(creature.templateId) && creature.hidden && !creature.joinedOpenly;
+    if (lurking && (creature.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))) {
+      if (seen.length < 4) { seen.push(creature.templateId); doing.push("lurk"); }
+      continue;
+    }
     creatureHere = true;
     const tmpl = world.mobTemplates.get(creature.templateId)!;
     const label = chipName(tmpl.name);
@@ -203,8 +209,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
       // First true thing wins, worst first: a thing running is running whatever
       // else is true of it, and a thing that has YOU is the one you must read.
       const now = Date.now();
-      const state =
-          creature.windedUntil && now < creature.windedUntil ? "flee"
+      // caught by the light before it could spring: pressed into its crevice, plain to see
+      const state = lurking && !creature.target ? "lurk-lit"
+        : creature.windedUntil && now < creature.windedUntil ? "flee"
         : creature.fled ? "flee"
         : FLIERS.has(creature.templateId) && ai.airborne(creature, now) ? "aloft"
         : creature.stunned || (creature.staggerUntil && now < creature.staggerUntil) || (creature.blownUntil && now < creature.blownUntil) ? "reel"

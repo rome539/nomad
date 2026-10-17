@@ -128,7 +128,10 @@
   // it move again.
   var frameAt = -1;
   var frameB = mk("button", btnCss, "frames");
-  function liveAgain() { if (frameAt >= 0) { frameAt = -1; stillness = false; frameB.textContent = "frames"; lastMobs = "x"; paint(); } }
+  // ...and a way out of it: shown only while a frame is held, it lets the row move again
+  var frameOff = mk("button", btnCss + ";display:none", "frames off");
+  function liveAgain() { if (frameAt >= 0) { frameAt = -1; stillness = false; frameB.textContent = "frames"; frameOff.style.display = "none"; lastMobs = "x"; paint(); } }
+  frameOff.onclick = liveAgain;
   // THE DEAD GET UP AGAIN. In the game a corpse stays down; here the next
   // thing asked of the row - attack, death again, a pose, a call, the frames -
   // stands everyone back up first, the same as clearing and adding them.
@@ -144,7 +147,8 @@
     if (frameAt < 0) revive();
     var els = mobsEl ? mobsEl.querySelectorAll(".mob:not(.dead)") : [];
     if (!els.length) return;
-    stillness = true; frameAt++;
+    // ...and the timer stops with it, or its next tick paints over the frame
+    stillness = true; runAnims(); frameAt++;
     var label = "";
     for (var i = 0; i < els.length; i++) {
       var id = els[i].dataset.id, spec = MOB_ANIM[id];
@@ -154,6 +158,7 @@
       if (!label) for (var p in spec.f) if (spec.f[p] === k) { label = p + " (" + (k + 1) + "/" + spec.n + ")"; break; }
     }
     frameB.textContent = "frame: " + (label || frameAt);
+    frameOff.style.display = "";
   }
   frameB.onclick = stepFrame;
   // THE WALK, ON DEMAND (rome, 2026-10-16: to judge which strips' walking frames

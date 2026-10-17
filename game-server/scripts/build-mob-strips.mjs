@@ -82,8 +82,9 @@ const SAME_ART = { "warden": ["warden-surface"] };
 const BODY_SCALE = {
   "the-pilot": 0.933, "the-drove-master": 0.973, "wood-stag": 0.970,
   "the-old-glutton": 0.951, "snow-fox": 0.968, "lead-dog": 0.962,
-  "lynx": 0.910, "the-raiding-fox": 0.925,
-  "roe-deer": 0.898, "red-hind": 0.966,
+  "the-raiding-fox": 0.925,
+  "roe-deer": 0.898, "red-hind": 0.966, "pale-crawler": 0.981,
+  "lynx": 0.917, "pale-stalker": 0.974, "the-follower": 0.986,
 };
 
 const NOT_A_POSE = new Set(["sheet-order", "source", "combat-source", "flight-source",

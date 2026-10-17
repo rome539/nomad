@@ -6867,6 +6867,15 @@ export class ZoneDO implements DurableObject {
     dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
     dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
     victim.hp -= dmg;
+    // AN OPENING BLOW IS SEEN SWINGING (rome, 2026-10-17). The picture plays a
+    // creature's attack frames off the round's beat (noteFx), and this blow is
+    // in no round - the listener's reflex, the lurker out of the dark, the
+    // grudge-holder storming in, the loosed Gaunt all land before one starts.
+    // So it is told now, alone - as `one`, which the picture spends on ONE of
+    // that kind in the room, not every one of them standing there.
+    if (seesArt(victim.pubkey)) {
+      try { victim.ws.send(JSON.stringify({ v: 0, t: "beat", one: [creature.templateId] })); } catch {}
+    }
     styles.entryStrike(creature, Date.now()); // the rush in IS a charger's charge: it is spent, and the next round is no second one
     victim.pose = undefined; victim.poseAt = undefined; victim.poseRef = undefined; // a blow ends a posture; nobody keeps a hand out through this
     if (victim.resting) {
