@@ -156,6 +156,60 @@
     frameB.textContent = "frame: " + (label || frameAt);
   }
   frameB.onclick = stepFrame;
+  // THE WALK, ON DEMAND (rome, 2026-10-16: to judge which strips' walking frames
+  // need redrawing). G holds every creature on the row in its walk, the same
+  // walk a player sees, and puts its two gait frames side by side, large, in a
+  // card at the top right. It stays on while [ ] step through the roster, so
+  // the whole list can be walked one after another. A flier shows its wingbeat
+  // pair; a creature drawn with neither says so.
+  var walkOn = false, walkTimer = null, walkCard = null;
+  var walkB = mk("button", btnCss, "walk: off");
+  function gaitOf(id) {
+    var f = (MOB_ANIM[id] || {}).f || {};
+    if (f["move-a"] !== undefined && f["move-b"] !== undefined) return ["move-a", "move-b"];
+    if (f.up !== undefined && f.down !== undefined) return ["up", "down"];
+    return null;
+  }
+  function walkCardPaint() {
+    if (!walkCard) {
+      walkCard = document.createElement("div");
+      walkCard.style.cssText = "position:fixed;top:56px;right:12px;z-index:99998;padding:10px;background:rgba(11,9,6,.92);"
+        + "border:1px solid #3d3324;border-radius:2px;font:12px ui-monospace,Menlo,monospace;color:#c9bda3;display:flex;flex-direction:column;gap:6px";
+      document.body.appendChild(walkCard);
+    }
+    walkCard.replaceChildren();
+    var id = who.value, spec = MOB_ANIM[id], gait = gaitOf(id);
+    var head = document.createElement("div"); head.style.color = "#d8a94e";
+    head.textContent = id + (gait ? "" : " - no walking frames drawn");
+    walkCard.appendChild(head);
+    if (!spec || !gait) return;
+    var row = document.createElement("div"); row.style.cssText = "display:flex;gap:10px";
+    gait.forEach(function (name) {
+      var k = spec.f[name], H = 220;
+      var col = document.createElement("div"); col.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:4px";
+      var cell = document.createElement("div");
+      cell.style.cssText = "height:" + H + "px;width:" + Math.round(H * spec.aspect) + "px;background-color:#24201a;background-repeat:no-repeat;"
+        + "background-image:url(/mob/" + id + ".webp?v=" + MOB_V + ");background-size:" + (spec.n * 100) + "% 100%;"
+        + "background-position:" + (spec.n > 1 ? k * 100 / (spec.n - 1) : 0) + "% 0";
+      var lab = document.createElement("div"); lab.textContent = name + "  (cell " + (k + 1) + " of " + spec.n + ")";
+      col.appendChild(cell); col.appendChild(lab); row.appendChild(col);
+    });
+    walkCard.appendChild(row);
+  }
+  function walkHold() {
+    anims.forEach(function (a) {
+      a.asleep = false;
+      if (a.phase !== "travel" || a.t > TRAVEL_MS / 1000 - 0.2) { a.phase = "travel"; a.t = 0; }
+    });
+  }
+  function walkToggle() {
+    walkOn = !walkOn;
+    walkB.textContent = "walk: " + (walkOn ? "on" : "off");
+    clearInterval(walkTimer); walkTimer = null;
+    if (walkOn) { revive(); walkHold(); walkTimer = setInterval(walkHold, 100); walkCardPaint(); }
+    else if (walkCard) { walkCard.remove(); walkCard = null; }
+  }
+  walkB.onclick = walkToggle;
   var atkB = mk("button", btnCss, "attack");
   atkB.onclick = function () { liveAgain(); revive(); mobBeat(ids.slice(), null, null); mobCalls(null, ids.slice()); };
   var dieB = mk("button", btnCss, "death");
@@ -260,7 +314,7 @@
     return st + (torch ? "+torch" : "");
   }
   var shown = mk("span", "color:#9a8b66");
-  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  V call  N next room  I idle  W world  K king falls  R sky version  F frames  B floor bag  C chest  L lightning  S sound");
+  mk("span", "margin-left:auto;color:#6f5c42", "\u2190\u2192 room  \u2191\u2193 hour  [ ] creature  T torch  P event pose  A attack  X death  V call  N next room  I idle  W world  K king falls  R sky version  F frames  G walk  B floor bag  C chest  L lightning  S sound");
   var ids = [];
   // B steps through the floor bags: nothing, then the first count of each.
   // ?bag=1..4 opens on that bag.
@@ -270,7 +324,7 @@
   var LOOSE_STEPS = [0, 1, 3, 6, 10], loose = Math.max(0, Math.min(4, Number(new URLSearchParams(location.search).get("bag")) || 0));
   addB.onclick = function () { ids.push(who.value); paint(); setTimeout(function () { var all = mobsEl.querySelectorAll('.mob[data-id="' + who.value + '"]'); mobArrive([who.value], all[all.length - 1]); }, 60); };
   clrB.onclick = function () { ids = []; paint(); };
-  who.onchange = function () { ids = [who.value]; paint(); arrive(); };
+  who.onchange = function () { ids = [who.value]; paint(); arrive(); if (walkOn) walkCardPaint(); };
   // A creature that is put in the room speaks as it comes in - the call it
   // will make in the game when it walks into yours. After the paint, so the
   // voice comes from where it stands.
@@ -336,8 +390,8 @@
   gNext.onclick = function () { step(gnd, 1); paint(); };
   hPrev.onclick = function () { step(hour, -1); paint(); };
   hNext.onclick = function () { step(hour, 1); paint(); };
-  wPrev.onclick = function () { step(who, -1); ids = [who.value]; paint(); arrive(); };
-  wNext.onclick = function () { step(who, 1); ids = [who.value]; paint(); arrive(); };
+  wPrev.onclick = function () { step(who, -1); ids = [who.value]; paint(); arrive(); if (walkOn) walkCardPaint(); };
+  wNext.onclick = function () { step(who, 1); ids = [who.value]; paint(); arrive(); if (walkOn) walkCardPaint(); };
 
   // CAPTURE PHASE, so the client's own command line - which has focus, and
   // uses the arrows for its history - never sees these keys. Nothing is typed
@@ -350,8 +404,9 @@
     else if (k === "ArrowLeft") { step(gnd, -1); paint(); }
     else if (k === "ArrowDown") { step(hour, 1); paint(); }
     else if (k === "ArrowUp") { step(hour, -1); paint(); }
-    else if (k === "]") { step(who, 1); ids = [who.value]; paint(); arrive(); }
-    else if (k === "[") { step(who, -1); ids = [who.value]; paint(); arrive(); }
+    else if (k === "]") { step(who, 1); ids = [who.value]; paint(); arrive(); if (walkOn) walkCardPaint(); }
+    else if (k === "[") { step(who, -1); ids = [who.value]; paint(); arrive(); if (walkOn) walkCardPaint(); }
+    else if (k === "g" || k === "G") { walkToggle(); }
     else if (k === "v" || k === "V") { arrive(); }
     else if (k === "n" || k === "N") { heardNext(); }
     else if (k === "i" || k === "I") { idleNow(); }

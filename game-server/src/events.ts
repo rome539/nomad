@@ -42,7 +42,7 @@ import {
   CROWS_TELEGRAPH_MS, CROWS_ACTIVE_MS, CROWS_AFTERMATH_MS, CROWS_THROTTLE_MS,
   EXHALE_TELEGRAPH_MS, EXHALE_ACTIVE_MS, EXHALE_AFTERMATH_MS,
   SONG_TELEGRAPH_MS, SONG_ACTIVE_MS, SONG_AFTERMATH_MS, SONG_AFTER_WAKE_MULT,
-  FOG_TELEGRAPH_MS, FOG_END_ODDS, WEATHER_STEP_MS, FOG_AFTERMATH_MS, FOG_WAKE_MULT,
+  FOG_TELEGRAPH_MS, FOG_END_ODDS, WEATHER_STEP_MS, WEATHER_REPLAY_STEP_MS, FOG_AFTERMATH_MS, FOG_WAKE_MULT,
   COLD_TELEGRAPH_MS, COLD_END_ODDS, COLD_AFTERMATH_MS, COLD_TORCH_MULT,
   WIND_TELEGRAPH_MS, WIND_END_ODDS, WIND_AFTERMATH_MS, WIND_HEED_MULT,
   WIND_TORCH_GUTTER_ODDS, WIND_SEA_CHOP_MULT, WIND_CHILL_TORCH_MULT, WIND_CHILL_REST_SKIP,
@@ -1344,7 +1344,7 @@ const WX_LEAVE: Record<string, string> = {
 // A WEATHER MOVES. Each step it holds, it may reach a ground next door or pull
 // back off one of its own - never its last: that is the weather ending, and the
 // step's own roll decides that.
-export function wxMove(z: ZoneDO, id: string, st: EventState): void {
+export function wxMove(z: ZoneDO, id: string, st: EventState, now: number): void {
   if (!st.bands) return;
   const { next } = weatherGrounds(z);
   if (chance(WX_SPREAD_ODDS)) {
@@ -1353,7 +1353,7 @@ export function wxMove(z: ZoneDO, id: string, st: EventState): void {
     if (near.length) {
       const b = near[Math.floor(Math.random() * near.length)];
       st.bands.push(b);
-      if (id === "rain") (st.since ??= {})[b] = Date.now();
+      if (id === "rain") (st.since ??= {})[b] = now;
       feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === b, WX_ARRIVE[id]);
       return;
     }
@@ -1365,7 +1365,7 @@ export function wxMove(z: ZoneDO, id: string, st: EventState): void {
   if (st.bands.length > 1 && can.length && chance(WX_RETREAT_ODDS)) {
     const b = can[Math.floor(Math.random() * can.length)];
     feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === b, WX_LEAVE[id]);
-    if (id === "rain") rainLeaves(z, st, b, Date.now());
+    if (id === "rain") rainLeaves(z, st, b, now);
     st.bands = st.bands.filter((x) => x !== b);
   }
 }
@@ -1428,6 +1428,29 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   rutRoars(z, now);
 }
 
+// THE SKY WHILE NOBODY WAS OUT IN IT (see WEATHER_REPLAY_STEP_MS). Only the
+// weather: the sky's roll and the rain (its storm and its wet ground with it),
+// the fog, the cold, the wind and the mountain's cloud. Run by catchUp, so the
+// world is empty - nobody hears any of it - and z.replaying keeps the lines off
+// the watchers' feed, which would otherwise get a night of weather in a burst.
+export async function replayWeather(z: ZoneDO, from: number, to: number): Promise<void> {
+  z.replaying = true;
+  try {
+    for (let t = from + WEATHER_REPLAY_STEP_MS; ; t += WEATHER_REPLAY_STEP_MS) {
+      const at = Math.min(t, to);
+      tickSkyRoll(z, at);
+      await tickRain(z, at);
+      await tickFog(z, at);
+      await tickCold(z, at);
+      await tickWind(z, at);
+      await tickClouddown(z, at);
+      if (at >= to) break;
+    }
+  } finally {
+    z.replaying = false;
+  }
+}
+
 // ---- THE ECLIPSE'S VOICE ----
 // The eclipse itself is astronomy, not an arc: eclipsePhase() reads it straight
 // off the clock and nothing rolls for it. But that left it MUTE. It was read in
@@ -1471,16 +1494,25 @@ function rutRoars(z: ZoneDO, now: number): void {
   const st = z.events.get("rut");
   if (!st || st.phase !== "active") return;
   const seen = new Set<string>();
+  // THE WOOD'S OWN STAGS FIRST, which is what a rut is (rome, 2026-10-17: the
+  // stag was built for this arc and stood through it silent). They roar where
+  // they stand, in their own voice, so the noise has an animal at the end of it,
+  // and a room with a stag in it is his to speak for.
+  const roarers = [...z.creatures.values()]
+    .filter((c) => c.templateId === "wood-stag" && !c.asleep && z.world!.rooms.get(c.roomId)?.region === "wood");
   for (const id of held(st)) {
     const c = z.creatures.get(id);
-    if (!c || (c.templateId !== "roe-deer" && c.templateId !== "white-roe")) continue;
+    if (c && (c.templateId === "roe-deer" || c.templateId === "white-roe")) roarers.push(c);
+  }
+  for (const c of roarers) {
     if (seen.has(c.roomId)) continue; // one voice a room, however many stand in it
     seen.add(c.roomId);
     if ((z.rutRoarAt.get(c.roomId) ?? 0) + RUT_ROAR_EVERY_MS > now) continue;
     z.rutRoarAt.set(c.roomId, now);
     if (!chance(RUT_ROAR_ODDS)) continue;
     // `loud`: the roar is the din, so the din does not get to swallow it.
-    z.roomSound(c.roomId, pick(ROAR_LINES), undefined, undefined, true);
+    z.roomSound(c.roomId, pick(ROAR_LINES), undefined, undefined, true,
+      c.templateId === "wood-stag" ? { mob: c.templateId, act: "call" } : undefined);
     // It calls, and things come. The same pull a fight makes, from an animal
     // that is advertising itself on purpose — which is what a rut IS.
     z.creatureNoise(c.roomId, true);
@@ -2282,7 +2314,7 @@ function tickSkyRoll(z: ZoneDO, now: number): void {
 function weatherHolds(z: ZoneDO, id: string, st: EventState, now: number, endOdds: number): boolean {
   if (chance(endOdds)) return false;
   st.until = now + WEATHER_STEP_MS;
-  wxMove(z, id, st);
+  wxMove(z, id, st, now);
   return true;
 }
 
@@ -2405,7 +2437,7 @@ async function tickStorm(z: ZoneDO, now: number): Promise<void> {
     return;
   }
   nextBolt.set(z, now + boltGap(st.phase === "aftermath"));
-  await stormBolt(z, band);
+  await stormBolt(z, band, now);
 }
 // THE BOLT SCATTERS WHAT IT LANDS AMONG (LIGHTNING_SPOOK_MS): woken, off
 // within seconds by the same legs any fright uses, and shy of the room after.
@@ -2440,7 +2472,7 @@ function stormRumble(z: ZoneDO, band: string): void {
 // next door (a dim flicker, the thunder long after); two grounds off it is a
 // "rumble" and nothing seen. Under a roof it is the thunder alone, out to the
 // next ground, with the same d.
-async function stormBolt(z: ZoneDO, band: string): Promise<void> {
+async function stormBolt(z: ZoneDO, band: string, now: number): Promise<void> {
   const rooms = openRooms(z, band);
   if (!rooms.length) return;
   // WHO IT TAKES, if anyone: everyone out under this ground carries the odds,
@@ -2462,7 +2494,7 @@ async function stormBolt(z: ZoneDO, band: string): Promise<void> {
     let roll = Math.random() * total;
     for (const r of rooms) { roll -= 1 + (pull.get(r) ?? 0); if (roll <= 0) { at = r; break; } }
   }
-  lightningSpooks(z, at, Date.now());
+  lightningSpooks(z, at, now);
   const dist = groundsFrom(z, band);
   let saidHere = false;
   for (const s of [...z.sessions.values()]) {
@@ -2608,7 +2640,7 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
           feedWeather(z, "rain", "The shower does not pass. The sky behind it is the same flat grey all the way back, and the rain settles in to stay.");
         }
         st.until = now + RAIN_STEP_MS;
-        wxMove(z, "rain", st);
+        wxMove(z, "rain", st, now);
         stormMaybe(z, st, now);
         break;
       }

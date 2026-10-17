@@ -342,6 +342,7 @@ export class ZoneDO implements DurableObject {
   public fishStock = new Map<string, { left: number; at: number }>(); // per-water catch budget (verbs.cmdFish spends it; rain refreshes the surface)
   public nests = new Map<string, string[]>(); // corvid nests: nest roomId -> gear the raven carried home (ABSTRACT, off the floor — the only way in is feeding the bird)
   private savedAt = 0;
+  public replaying = false; // events.replayWeather is walking a gap: nothing it says goes to the relays
   private lastFlushAt = 0; // last time live sessions' hp/room were flushed to D1 (restart-durability)
 
   constructor(
@@ -1270,7 +1271,12 @@ export class ZoneDO implements DurableObject {
     // The first observer in a while collapses the elapsed time. "Observed" now
     // means a live socket, hibernated or not (getWebSockets) — while any socket
     // is parked the alarm keeps ticking the world, so it was never truly dark.
-    if (this.state.getWebSockets().length === 0 && this.sessions.size === 0) this.catchUp();
+    if (this.state.getWebSockets().length === 0 && this.sessions.size === 0) {
+      const now = Date.now(), from = Math.max(this.savedAt, now - CATCHUP_CAP_MS);
+      this.catchUp();
+      // ...and the sky, which catchUp never moved (see WEATHER_REPLAY_STEP_MS).
+      if (this.world && from < now) await events.replayWeather(this, from, now);
+    }
 
     const { row, created } = await getOrCreatePlayer(this.env.DB, pubkey, this.randomGate());
     const items = await loadInventory(this.env.DB, pubkey);
@@ -9103,7 +9109,7 @@ export class ZoneDO implements DurableObject {
   // impersonal, so one npub carrying them never looks like a firehose. A
   // wanderer's OWN deeds go out under the wanderer's key instead (actorFeed).
   private relayFeed(roomTag: string, text: string): void {
-    if (!this.world || !isGameKeyConfigured(this.env) || relayList(this.env).length === 0) return;
+    if (this.replaying || !this.world || !isGameKeyConfigured(this.env) || relayList(this.env).length === 0) return;
     try {
       // PLAIN TEXT LEAVES THIS BUILDING. The rarity marker is an agreement
       // between this server and its own client and NOTHING else; a relay copy

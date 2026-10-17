@@ -14,10 +14,10 @@ const db = new DatabaseSync(':memory:');
 const saved = new DatabaseSync(':memory:');
 try {
   await build({
-    stdin: { contents: "export {ZoneDO} from './zone'; export {CATCHUP_MAX_STEPS, SIM_STEP_MS, CATCHUP_CAP_MS} from './zone-data';", resolveDir: join(root, 'src'), loader: 'ts' },
+    stdin: { contents: "export {ZoneDO} from './zone'; export {replayWeather} from './events'; export {CATCHUP_MAX_STEPS, SIM_STEP_MS, CATCHUP_CAP_MS, RAIN_SETTLED_END_ODDS, WEATHER_STEP_MS} from './zone-data';", resolveDir: join(root, 'src'), loader: 'ts' },
     bundle: true, platform: 'node', format: 'esm', outfile: join(dir, 'zone.mjs'), logLevel: 'silent',
   });
-  const { ZoneDO, CATCHUP_MAX_STEPS, SIM_STEP_MS, CATCHUP_CAP_MS } = await import(pathToFileURL(join(dir, 'zone.mjs')));
+  const { ZoneDO, replayWeather, CATCHUP_MAX_STEPS, SIM_STEP_MS, CATCHUP_CAP_MS, RAIN_SETTLED_END_ODDS, WEATHER_STEP_MS } = await import(pathToFileURL(join(dir, 'zone.mjs')));
   db.exec(readFileSync(join(root, 'schema.sql'), 'utf8'));
   for (const file of readdirSync(join(root, 'migrations')).filter(f => f.endsWith('.sql')).sort()) {
     db.exec(readFileSync(join(root, 'migrations', file), 'utf8'));
@@ -76,6 +76,40 @@ try {
     restored.applyRot = () => assert.fail('A saved catch-up must not replay after restart');
     restored.catchUp();
     console.log('PASS: completed catch-up survives restart without replaying the gap.');
+
+    // THE SKY MOVES WHILE THE WORLD SLEEPS. A settled rain over the road and
+    // ten hours with nobody on: it should still be falling about as often as
+    // ten hours of its own rolls allow - never every time, which is what a
+    // sleeping world used to do.
+    const FAR = Number.MAX_SAFE_INTEGER, gap = 10 * 3_600_000, trials = 300;
+    // The real relay, asked to speak mid-replay, stops before it reads anything.
+    const relayFeed = ZoneDO.prototype.relayFeed;
+    relayFeed.call({ replaying: true, get world() { throw new Error('relayed during a replay'); } }, 'mudzone-door', 'x');
+    let heard = 0;
+    restored.relayFeed = function (tag, text) { if (this.replaying) heard++; return relayFeed.call(this, tag, text); };
+    let still = 0;
+    for (let i = 0; i < trials; i++) {
+      const from = now - gap;
+      restored.events.set('rain', { phase: 'active', until: from + WEATHER_STEP_MS, data: 'settled', bands: ['road'], since: { road: from } });
+      restored.events.set('storm', { phase: 'idle', until: FAR });
+      restored.events.set('skyroll', { phase: 'idle', until: FAR }); // no new weather: this rain alone
+      await replayWeather(restored, from, now);
+      assert.equal(restored.replaying, false);
+      if (restored.events.get('rain').phase === 'active') still++;
+    }
+    const expect = Math.pow(1 - RAIN_SETTLED_END_ODDS, gap / WEATHER_STEP_MS);
+    const share = still / trials;
+    assert.ok(share < 0.95, `the rain must end while nobody is on (${share})`);
+    assert.ok(Math.abs(share - expect) < 0.12, `still raining ${share}, its own odds say ${expect.toFixed(2)}`);
+    assert.ok(heard > 0, 'the replay does speak - the relay is what keeps it in');
+    console.log(`PASS: settled rain, 10h asleep: still falling ${Math.round(share * 100)}% (odds ${Math.round(expect * 100)}%); ${heard} lines held off the feed.`);
+    // ...and it starts weather too, over the longest gap, inside the budget.
+    restored.events.set('rain', { phase: 'idle', until: FAR });
+    restored.events.set('skyroll', { phase: 'idle', until: now - CATCHUP_CAP_MS + 60_000 });
+    const t0 = performance.now();
+    await replayWeather(restored, now - CATCHUP_CAP_MS, now);
+    assert.ok(restored.events.get('skyroll').until > now, 'the sky roll is booked past the gap');
+    console.log(`PASS: 14 days asleep: the sky rolled on through it, ${Math.round(performance.now() - t0)}ms.`);
   } finally { Date.now = realNow; }
 } finally {
   db.close(); saved.close(); rmSync(dir, { recursive: true, force: true });

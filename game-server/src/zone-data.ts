@@ -1182,7 +1182,7 @@ export const ECO_LINES = new Set([
   // from the road, so every line here breathes against the ones beside it.
   "ptarmigan", "mountain-hare", "red-hind", "red-stag",
   "hill-fox", "wildcat", "hill-eagle",
-  "roe-deer", "white-roe", "wild-boar", "old-boar",              // the wood's game
+  "roe-deer", "white-roe", "wild-boar", "old-boar", "wood-stag",              // the wood's game
   "the-baited-bear", "the-chain-breaker",                        // and the thing that eats the wood's game AND the wood
   "grey-wolf", "dire-wolf",                                      // and what eats it
   "grave-hyena", "dire-hyena",                                   // the fortress's own web
@@ -1667,7 +1667,7 @@ export const HUNT_RECHECK_MS = 60_000;
 // are bound to what made them, and the surface trip they get is SURFACERS, a
 // different rule with a different meaning.
 export const MIGRANTS = new Set<string>([
-  "roe-deer", "white-roe", "wild-boar", "old-boar",          // the game
+  "roe-deer", "white-roe", "wild-boar", "old-boar", "wood-stag", // the game
   "grey-wolf", "dire-wolf", "grave-hyena", "dire-hyena",     // what follows the game
   "masterless-dog", "lead-dog",                              // the pack
   // (the two- and three-hound were listed here and never could be. A SENTINEL
@@ -2554,7 +2554,7 @@ export const NAPPERS = new Set([
   "the-old-raven",
 
   "rat", "fleet-rat", "albino-rat", "cutpurse",  // the fortress's own dozers
-  "roe-deer", "white-roe", "wild-boar", "old-boar", // the wood's game, after dark
+  "roe-deer", "white-roe", "wild-boar", "old-boar", "wood-stag", // the wood's game, after dark
   "the-baited-bear", "the-chain-breaker", // it lies up where it stops; finding one asleep is the only good news about it
   "otter", "dog-otter", "feral-goat", "old-billy", "gill-adder",      // the east road: an adder in the one patch of sun is the whole animal
   "grey-seal", "bull-seal", "wrack-crab", "devil-crab", "oystercatcher", // the crossing: a hauled-out seal is ASLEEP, and that is the only time it is funny
@@ -2953,6 +2953,7 @@ export const REST_LINES: Record<string, string> = {
   "mountain-hare": "pressed flat in a form in the heather with its ears laid along its back, the shape of a stone until it is not",
   "red-hind": "bedded down in the long heather with its legs folded under it, chewing slowly at nothing",
   "red-stag": "bedded in the open with his antlers laid back along his flank, and he has picked the spot for the view",
+  "wood-stag": "bedded down in the bracken with only the points of his antlers showing above it",
   ermine: "curled into a crack in the wall too small to credit an animal in, white on white",
   "a-fold-dog": "curled nose-to-tail against the fold wall out of the wind, one ear still working",
   "hill-eagle": "hunched on the crag with its head sunk and its feathers out, twice the size it flies at",
@@ -3077,7 +3078,7 @@ export const DRINKERS = new Set([
   // THE MOUNTAIN, TIER ONE (mig 227). The burn is the only water on the hill.
   "red-hind", "red-stag", "mountain-hare",
   "grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf",        // what already drank
-  "roe-deer", "white-roe", "wild-boar", "old-boar",             // the wood's game
+  "roe-deer", "white-roe", "wild-boar", "old-boar", "wood-stag",             // the wood's game
   "the-baited-bear", "the-chain-breaker",                       // the beck is the one place on the east road you can count on meeting it
   "masterless-dog", "lead-dog",                                 // the road's strays
   // EVERYTHING ELSE WITH A THROAT (rome, 2026-10-11). The list had grown by
@@ -3153,7 +3154,7 @@ export const ALARM_CALLERS = new Set(["roe-deer", "white-roe",
   // takes a day to walk; six of these are spread across it, and the moment one
   // of them decides you are close, every living thing on the flats is told.
   "oystercatcher"]);
-export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "otter", "dog-otter", "feral-goat", "old-billy",
+export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wood-stag", "wild-boar", "old-boar", "otter", "dog-otter", "feral-goat", "old-billy",
   // THE MOUNTAIN (migs 227-233). The game up here takes a warning the same as
   // the game anywhere else, and on open snow with no cover it is worth more.
   "mountain-hare", "snow-hare", "red-hind", "red-stag",
@@ -4302,10 +4303,10 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // way the old boar and the dire hyena do. Note both halves of the animal —
   // this list is only what it CATCHES, and it is a GRAZER as well, so a bear
   // that finds nothing to run down still eats and never starves out of a band.
-  ["the-baited-bear", new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "feral-goat", "old-billy",
+  ["the-baited-bear", new Set(["roe-deer", "white-roe", "wild-boar", "wood-stag", "old-boar", "feral-goat", "old-billy",
     "drove-dog", "the-drove-master", "masterless-dog", "lead-dog", "grey-wolf", "grave-hyena",
     "rat", "fleet-rat", "otter", "dog-otter"])],
-  ["the-chain-breaker", new Set(["roe-deer", "white-roe", "wild-boar", "old-boar", "feral-goat", "old-billy",
+  ["the-chain-breaker", new Set(["roe-deer", "white-roe", "wild-boar", "wood-stag", "old-boar", "feral-goat", "old-billy",
     "drove-dog", "the-drove-master", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf", "grave-hyena", "dire-hyena",
     "rat", "fleet-rat", "otter", "dog-otter"])], // at 88hp the dire bloods stop being an argument it loses
   // A HYENA EATS MORE THAN RATS (rome, 2026-08-06: "we can just make heyans eat
@@ -4365,7 +4366,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // only feeds a wolf that has actually drifted onto the road, or a goat that
   // has drifted into the wood. Both are MIGRANTS, so both do happen.
   ["grey-wolf", new Set(["roe-deer", "white-roe", "feral-goat", "old-billy", "grave-hyena", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
-  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher", "feral-goat", "old-billy", "great-gull", "black-backed-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
+  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar", "wood-stag", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher", "feral-goat", "old-billy", "great-gull", "black-backed-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
   // THE STRAYS EAT SOMETHING NOW (2026-08-12). The west road's seven masterless
   // dogs had NO feeding route in the world at all — not grazers, not scavengers,
@@ -4432,7 +4433,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
 // boar's OWN prey list. Walk in on one wolf and a boar and you know how that
 // ends. Walk in on four wolves and a boar and you do not.
 export const PACK_PREY = new Map<string, Map<string, number>>([
-  ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3], ["grave-hyena", 2], ["feral-goat", 2], ["great-gull", 2]])], // one wolf yields a carcass to a hyena; two do not — and the goat and the gull are both a fair match for one wolf, which is what the pack is FOR
+  ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3], ["grave-hyena", 2], ["feral-goat", 2], ["great-gull", 2], ["wood-stag", 3]])], // one wolf yields a carcass to a hyena; two do not — and the goat and the gull are both a fair match for one wolf, which is what the pack is FOR
   ["dire-wolf", new Map([["old-boar", 2]])],
   ["grave-hyena", new Map([["roe-deer", 2], ["great-gull", 2]])],  // a lone hyena harries a roe; a pair brings it down — and the gull is the one shore animal it cannot bully alone
   ["dire-hyena", new Map([["grey-wolf", 2]])],  // ...and it takes two of them to push a wolf off a kill
@@ -4539,6 +4540,7 @@ export const TRACK_PRINTS: Record<string, string> = {
   "feral-goat": "split hooves, sharp and small, picking the steep way",
   "red-hind": "split hooves, long and narrow, sunk deep",
   "red-stag": "split hooves, long and narrow, sunk deep and wide apart",
+  "wood-stag": "split hooves, long and narrow, sunk deep and wide apart, and the bark frayed where he passed",
   "ptarmigan": "small three-toed bird feet, wandering",
   "mountain-chough": "three-toed bird feet that hop, then stop where it took off",
   "scarp-raven": "big three-toed bird feet that walk, then stop where it took off",
@@ -4709,7 +4711,7 @@ export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "
 // every time one breaks off and comes back, lands double. After it the animal is
 // blown for a beat and takes extra from everything. A spear set against it takes
 // the charge on the point instead.
-export const CHARGERS = new Set(["wild-boar", "old-boar", "red-stag", "old-billy", "feral-goat", "grey-seal", "bull-seal"]);
+export const CHARGERS = new Set(["wild-boar", "old-boar", "red-stag", "wood-stag", "old-billy", "feral-goat", "grey-seal", "bull-seal"]);
 export const CHARGE_MULT = 2;
 export const CHARGE_REST_MS = 20_000;   // this long without landing a blow and it is standing again: the next one is a charge
 export const BLOWN_MS = 5_000;          // one round: what you swing next lands on an animal that has nothing left
@@ -6294,7 +6296,7 @@ export const FEARS_FIRE = new Set([
   "feral-goat", "old-billy", "otter", "dog-otter", "grey-heron", "scarp-raven", // the east road's wild things
   "oystercatcher", "great-gull", "black-backed-gull", "bittern", "grey-seal", "bull-seal", "wrack-crab", "devil-crab", "fen-viper", "marsh-hound", "a-lymer", // the crossing's
   "gibbet-crow",                 // the open ground's
-  "roe-deer", "white-roe",       // the wood's food, and it survives by leaving
+  "roe-deer", "white-roe", "wood-stag", // the wood's food, and it survives by leaving (the stag by standing)
   "grey-wolf", "dire-wolf",      // the oldest reason there are campfires
   "wild-boar", "old-boar",
   "root-thing",                  // dry wood on the move: fire is what ends it
@@ -6512,7 +6514,7 @@ export const GRAZERS = new Set<string>([
   // deliberately NOT a FORAGE_REGION, because most of it is bare rock.
   "ptarmigan", "mountain-hare", "red-hind", "red-stag",
   "feral-goat", "old-billy",                                             // it eats what the scarp has, which is nothing much
-  "rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",   // VERMIN
+  "rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe", "wood-stag", // VERMIN (and the wood's stag, which grazes with the roe)
   "cutpurse", "cutthroat", "footpad", "wayman",               // THIEVES — they scavenge, not graze, but same floor
   "wild-boar", "old-boar",                                    // rooting, which is what a boar is FOR
   // THE SHORE AND THE BECK (mig 188/191). The crossing and the east road are
@@ -7680,6 +7682,14 @@ export const RAIN_STEP_MS = 10 * 60_000;
 // the wind and the mountain's cloud have no set length either: every
 // WEATHER_STEP_MS each rolls whether it ends, at its own *_END_ODDS.
 export const WEATHER_STEP_MS = 10 * 60_000;
+// THE WEATHER GOES ON WHILE THE WORLD SLEEPS (rome, 2026-10-17: rain over the
+// east road at night was still rain over it in the morning). With nobody on,
+// nothing ticks, and catchUp replays the creatures but never touched the sky -
+// so whatever was falling when the last wanderer left fell, unrolled, until the
+// next one came. events.replayWeather now walks the gap in these steps: half a
+// weather step, so every roll lands on its own step, and inside the sky roll's
+// ROLL_GRACE_MS, so a weather due while it slept still arrives.
+export const WEATHER_REPLAY_STEP_MS = 5 * 60_000;
 // ...and where it is (events.wxPlace / wxMove). A new weather lands on one open
 // ground and takes each free ground next to it at WX_GROW_ODDS, so it is mostly
 // one or two places and only rarely the whole map. Every step it holds it may
@@ -8242,6 +8252,7 @@ export const BLEED_ODDS = new Map<string, number>([
   ["snow-fox", 0.13],
   ["ermine", 0.15],              // a mustelid holds on, which is the whole difference
   ["red-stag", 0.15],            // a tine goes in; it is not a cutting animal
+  ["wood-stag", 0.15],
   ["carrion-vulture", 0.15],
   ["hill-wolf", 0.18],           // level with the grey wolf: wolves work the same wound over
   ["bone-breaker", 0.18],

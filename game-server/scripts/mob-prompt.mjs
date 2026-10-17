@@ -886,6 +886,27 @@ let poses = given.length ? given : REDRAW[id] ? REDRAW[id] : BIRD_SHEETS[id] ? B
   return p.slice(0, 8);
 })();
 
+// --- A REDRAW KEEPS THE SHEET'S ORDER (rome, 2026-10-16) --------------------
+// The order a sheet was drawn in is the order it is cut in, and it is NOT the
+// order the poses sit in the shipped strip: a strip gains poses at its end when
+// a sheet is topped up, so the pilot's strip reads idle, move-a, move-b,
+// attack, death, read-the-water... while his sheet was drawn with death last.
+// A redraw prompt was once built off the strip order and moved his death to
+// cell 5. So: hand this the same poses as a recorded sheet in another order and
+// the recorded order wins, out loud; and with no record, death goes last, as it
+// does on every sheet the game was built from.
+if (given.length) {
+  const recorded = REDRAW[id] || BIRD_SHEETS[id] || SLEEP_TOPUP[id] || CROSSING_POSES[id];
+  const same = recorded && recorded.length === poses.length && recorded.every((p) => poses.includes(p));
+  if (same && recorded.join(" ") !== poses.join(" ")) {
+    console.error(`  ORDER KEPT: ${id}'s sheet is recorded as [${recorded.join(" ")}] - using that, not [${poses.join(" ")}]`);
+    poses = recorded.slice();
+  } else if (!recorded && poses.includes("death") && poses[poses.length - 1] !== "death") {
+    console.error(`  ORDER KEPT: death moved to the last cell, where every sheet has it`);
+    poses = poses.filter((p) => p !== "death").concat("death");
+  }
+}
+
 // --- THE SHEET IS CHECKED AGAINST THE WORLD BEFORE IT IS PRINTED -----------
 // This runs on EVERY pose list, including a hand-written one out of the tables
 // above and one typed on the command line, because the hand-written ones are

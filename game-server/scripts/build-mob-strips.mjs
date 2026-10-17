@@ -74,6 +74,16 @@ const ALIAS = { "down": ["glide", "up"] };
 // Creatures that are one creature under two template ids — see the copy in the
 // write step. Keyed by the id that is DRAWN, listing the ids that take its art.
 const SAME_ART = { "warden": ["warden-surface"] };
+// REDRAWS HELD TO THE SIZE THEY SHIPPED AT (see the margin step). Each is
+// 1 / (new body / shipped body), measured as the square root of the ink area
+// over idle, move-a and move-b against the strip live before the redraw; the
+// wood stag is measured against the red stag, the same animal. Only ever below
+// 1: a margin can shrink an animal, and nothing here can grow one past its frame.
+const BODY_SCALE = {
+  "the-pilot": 0.933, "the-drove-master": 0.973, "wood-stag": 0.970,
+  "the-old-glutton": 0.951, "snow-fox": 0.968, "lead-dog": 0.962,
+  "lynx": 0.910, "the-raiding-fox": 0.925,
+};
 
 const NOT_A_POSE = new Set(["sheet-order", "source", "combat-source", "flight-source",
                             "ground-source", "approved-ground-source"]);
@@ -259,14 +269,21 @@ for (const [id, dir] of [...found].sort()) {
   // appears at the edge of the window. A few transparent pixels all round costs
   // nothing and makes that impossible.
   const gut = Math.max(4, Math.round(iw * 0.012));
-  const fw = iw + gut * 2, fh = ih + gut * 2;
+  // A REDRAWN SHEET KEEPS THE SIZE THE OLD ONE SHIPPED AT. The frame is what
+  // MOB_SPRITE sizes, and the frame is the union of the poses - so a new sheet
+  // whose animal fills more of its union draws a bigger animal at the same
+  // number. BODY_SCALE shrinks the animal inside a wider transparent margin,
+  // centred, until its body measures what the shipped strip's did.
+  const bs = BODY_SCALE[id] || 1;
+  const fw = Math.round((iw + gut * 2) / bs), fh = Math.round((ih + gut * 2) / bs);
+  const ox = Math.round((fw - iw) / 2), oy = Math.round((fh - ih) / 2);
 
   const frames = [];
   for (const b of norm) {
     const cut = await sharp(b).extract({ left: X0, top: Y0, width: w0, height: h0 })
       .resize(iw, ih).png().toBuffer();
     frames.push(await sharp({ create: { width: fw, height: fh, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
-      .composite([{ input: cut, left: gut, top: gut }]).png().toBuffer());
+      .composite([{ input: cut, left: ox, top: oy }]).png().toBuffer());
   }
 
   // ---- AND THE EYES, ON EXACTLY THE SAME RECT --------------------------------
@@ -296,7 +313,7 @@ for (const [id, dir] of [...found].sort()) {
       if (eyeShift[i]) e = await sharp({ create: { width: cw, height: ch, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
               .composite([{ input: e, left: 0, top: eyeShift[i] }]).png().toBuffer();
       const cut = await sharp(e).extract({ left: X0, top: Y0, width: w0, height: h0 }).resize(iw, ih).png().toBuffer();
-      eyeFrames.push(await sharp(blank).composite([{ input: cut, left: gut, top: gut }]).png().toBuffer());
+      eyeFrames.push(await sharp(blank).composite([{ input: cut, left: ox, top: oy }]).png().toBuffer());
     }
   }
 

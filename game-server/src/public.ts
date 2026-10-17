@@ -3410,7 +3410,8 @@ var VOICE_FAMILY = {
   otter: "otter dog-otter",
   badger: "glutton the-old-glutton",
   boar: "wild-boar old-boar",
-  deer: "roe-deer white-roe red-hind red-stag",
+  deer: "roe-deer white-roe red-hind",
+  stag: "red-stag wood-stag",
   goat: "feral-goat old-billy",
   cat: "lynx wildcat the-tom",
   beast: "cave-lion",
@@ -3449,7 +3450,9 @@ Object.keys(VOICE_FAMILY).forEach(function (f) { VOICE_FAMILY[f].split(" ").forE
 // (MOB_SPRITE), square-rooted so a body twice the height sounds about a third
 // lower, and kept within 0.7-1.4. A few are drawn crouched or kneeling and are
 // not small at all, so they are set by hand; the women speak higher.
-var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3, "the-butter-wife": 1.3, "the-salt-widow": 1.3 };
+var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3, "the-butter-wife": 1.3, "the-salt-widow": 1.3,
+  // The deer kept the pitch they had while the stags were in their family (their middle was the hind).
+  "roe-deer": 1.06, "white-roe": 1.18, "red-hind": 1 };
 var VOICE_PITCH = null;
 // Worked out on first use: MOB_SPRITE is further down the page than this.
 function voicePitch(id) {
@@ -3887,6 +3890,19 @@ var VOICES = {
     else if (m === 1) { SND._burst(t, { freq: 1200, dur: 0.25, gain: 0.25 * SCAPE_VOL, atk: 0.01, out: o }); VOX.blip(t + 0.3, 80, 50, 0.12, 0.6, o); VOX.blip(t + 0.45, 80, 50, 0.12, 0.6, o); }
     else VOX.voc(t, { f: [[0, 620], [0.8, 300]], d: 0.85, vib: [7, 25], fm: [[900, 3], [2000, 4]], n: 0.2, g: 1, a: 0.02 }, o);
   },
+  // THE STAG IS NOT A DEER WHEN HE SPEAKS. He barked like a roe, a little
+  // lower, until rome asked where his voice was. A rutting stag roars: long,
+  // cracked and low, the rut's own far roar (FAR.stag) brought up close, and
+  // answered by a shorter one. The snort and stamp are the deer's; he dies on a
+  // low groan, not a bleat.
+  stag: function (t, m, o) {
+    if (m === 0) {
+      VOX.voc(t, { f: [[0, 140], [0.6, 175], [1.4, 120]], d: 1.5, r: [30, 0.9], fm: [[400, 2], [900, 3]], n: 0.6, g: 1.3, a: 0.1 }, o);
+      VOX.voc(t + 1.7, { f: [[0, 125], [0.5, 140], [0.9, 105]], d: 0.9, r: [30, 0.9], fm: [[400, 2], [900, 3]], n: 0.6, g: 0.9, a: 0.08 }, o);
+    }
+    else if (m === 1) { SND._burst(t, { freq: 1200, dur: 0.25, gain: 0.25 * SCAPE_VOL, atk: 0.01, out: o }); VOX.blip(t + 0.3, 80, 50, 0.12, 0.6, o); VOX.blip(t + 0.45, 80, 50, 0.12, 0.6, o); }
+    else VOX.voc(t, { f: [[0, 115], [0.5, 95], [1.2, 70]], d: 1.2, r: [25, 0.8], fm: [[350, 2], [800, 3]], n: 0.5, g: 1.1, a: 0.05 }, o);
+  },
   goat: function (t, m, o) {
     if (m === 0) VOX.voc(t, { f: [[0, 520], [0.6, 470]], d: 0.65, r: [7, 0.8], vib: [7, 30], fm: [[900, 3], [2000, 4]], n: 0.15, g: 1.1, a: 0.03 }, o);
     else if (m === 1) { SND._burst(t, { freq: 1000, dur: 0.2, gain: 0.25 * SCAPE_VOL, atk: 0.01, out: o }); VOX.clicks(t + 0.25, { f: 900, k: 2, gap: 0.03, q: 3, d: 0.05, g: 0.8 }, o); VOX.blip(t + 0.25, 300, 200, 0.2, 0.4, o); }
@@ -4101,7 +4117,7 @@ VOX.wall = function (pan, destination) {
 var MOVE_STYLE = {
   direhyena: "pad", boneknight: "mailmarch", mason: "mason", drover: "drover", eelcutter: "eelcutter", fowler: "fowler", hollowworker: "boots", hulk: "water", drownedgod: "water", stalker: "slither", gaunt: "boots",
   dog: "pad", twohound: "heavy", threehound: "heavy", badger: "pad", otter: "water", wolf: "pad", fox: "pad", hyena: "pad", cat: "pad",
-  deer: "hoof", goat: "hoof", beast: "heavy", bear: "heavy", boar: "heavy",
+  deer: "hoof", stag: "hoof", goat: "hoof", beast: "heavy", bear: "heavy", boar: "heavy",
   rat: "scurry", stoat: "scurry", hare: "scurry",
   gull: "wings", oystercatcher: "wings", chough: "wings", ptarmigan: "wings", heron: "wings", crow: "wings", eagle: "wings", vulture: "wings", owl: "wings", bittern: "boom",
   adder: "slither", eel: "water", seal: "water", drowned: "water", crab: "crab", greatcrab: "shell", greatdevilcrab: "shell",
@@ -4248,6 +4264,7 @@ var IDLE = {
   stoat: function (t, o) { for (var i = 0; i < 4; i++) VOX.blip(t + i * 0.05, 2300, 2600, 0.04, 0.8, o, "triangle"); },
   boar: function (t, o) { VOX.voc(t, { f: [[0, 80], [.04, 105], [.15, 68]], d: .18, fm: [[320, 1.4, 240], [1000, 1.1, 750]], n: .5, g: .3, a: .015 }, o); VOX.hiss(t + .17, { type: "bandpass", f: 950, d: .16, g: .15, a: .04 }, o); },
   deer: function (t, o) { SND._burst(t, { freq: 1100, dur: 0.22, gain: 0.9 * SCAPE_VOL, atk: 0.01, out: o }); },
+  stag: function (t, o) { VOX.voc(t, { f: [[0, 95], [0.25, 85]], d: 0.3, r: [28, 0.85], fm: [[350, 2]], n: 0.5, g: 0.45, a: 0.03 }, o); },
   goat: function (t, o) { VOX.voc(t, { f: [[0, 500], [0.3, 470]], d: 0.3, r: [7, 0.8], fm: [[900, 3]], n: 0.15, g: 0.45, a: 0.03 }, o); },
   cat: function (t, o) { VOX.voc(t, { f: [[0, 90], [0.8, 95]], d: 0.8, r: [24, 0.95], fm: [[300, 2]], n: 0.4, g: 1.0, a: 0.15 }, o); },
   beast: function (t, o) {
@@ -9592,7 +9609,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "54";      // /mob/      strips and their eye layers
+var MOB_V  = "60";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -12593,6 +12610,7 @@ var MOB_SPRITE = {
   "lead-wolf": 14,            // 1.10
   "old-billy": 14,            // 1.10
   "red-stag": 45,             // 1.75  a stag stands as tall as a man; the hind beside him is 18
+  "wood-stag": 45,            // the same animal, in the wood (mig 302), on his own sheet
   "snow-hare": 6,             // 0.50
   "the-blue-fox": 6,          // 0.50
   "the-bone-dropper": 14,     // 1.15
@@ -12740,7 +12758,7 @@ var MOB_SPRITE = {
   "pale-stalker": 7,      // the bigger blood of the same thing
   "three-hound": 33,       // a heavy hound - taller than a wolf, three heads up
   "two-hound": 28,         // "a head short and without the bulk to make up the difference"
-  "grave-hyena": 12,       // a hyena stands under a wolf and slopes away behind
+  "grave-hyena": 13,       // a hyena stands under a wolf and slopes away behind (13, not 12: the redrawn sheet draws him 4% smaller in his frame)
   "dire-hyena": 15,        // the mean one, and bigger with it
   "cutpurse": 13,          // "HALF THE SIZE OF A PERSON and twice as quick"
   "cutthroat": 28,         // the same build with a knife in it
@@ -12849,6 +12867,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "wood-stag":   { n: 8, aspect: 1.045, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "nomad":   { n: 22, aspect: 1.079, f: {"idle":0,"move-a":1,"move-b":2,"windup":3,"attack":4,"guard":5,"crouch":6,"rest":7,"point":8,"wave":9,"beckon":10,"nod":11,"keen":12,"death":13,"torch-idle":14,"torch-move-a":15,"torch-move-b":16,"torch-windup":17,"torch-attack":18,"torch-guard":19,"torch-crouch":20,"torch-rest":21} },
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-woodward":                { n: 8, aspect: 1.014, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
@@ -12861,7 +12880,7 @@ var MOB_ANIM = {
   "something-ahead":             { n: 8, aspect: 1.118, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "root-thing":                  { n: 8, aspect: 1.035, f: {"idle":0,"alert":1,"listen":2,"shift-the-weight":3,"feed":4,"attack":5,"sweep":6,"death":7} },
   "old-boar":                    { n: 8, aspect: 1.294, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "grey-wolf":                   { n: 8, aspect: 1.122, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "grey-wolf":                   { n: 8, aspect: 1.107, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "gibbet-crow":                 { n: 8, aspect: 1.254, f: {"idle":0,"watch":1,"up":2,"glide":3,"landing":4,"feed":5,"attack":6,"death":7,"down":3} },
   "dire-wolf":                   { n: 8, aspect: 1.102, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "charcoal-burner":             { n: 8, aspect: 1, f: {"idle":0,"lay-the-wood":1,"feel-the-turf":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -12870,7 +12889,7 @@ var MOB_ANIM = {
   "cutthroat":   { n: 8, aspect: 1.026, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "cutpurse":   { n: 8, aspect: 1.243, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "dire-hyena":   { n: 8, aspect: 1.063, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "grave-hyena":   { n: 8, aspect: 1.238, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "grave-hyena":   { n: 8, aspect: 1.128, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "forgotten-king":   { n: 8, aspect: 1.03, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "two-hound":   { n: 6, aspect: 1.287, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "three-hound":   { n: 6, aspect: 1.219, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
@@ -12895,7 +12914,7 @@ var MOB_ANIM = {
   "the-mire-walker":     { n: 8, aspect: 1.024, f: {"idle":0,"stand-in-it":1,"alert":2,"let-it-settle":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-miller":          { n: 8, aspect: 1.009, f: {"idle":0,"work-the-water":1,"alert":2,"haul-it-up":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-long-warden":     { n: 8, aspect: 1.04, f: {"idle":0,"turn-the-distance":1,"alert":2,"square-the-plates":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-drove-master":    { n: 8, aspect: 1.1, f: {"idle":0,"alert":1,"work-the-line":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-drove-master":    { n: 8, aspect: 1.133, f: {"idle":0,"alert":1,"work-the-line":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-chain-breaker":   { n: 8, aspect: 1.107, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-baited-bear":     { n: 8, aspect: 1.284, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "roe-deer":            { n: 8, aspect: 1.028, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -12903,7 +12922,7 @@ var MOB_ANIM = {
   "rat":                 { n: 8, aspect: 1.693, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "otter":               { n: 8, aspect: 1.618, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "masterless-dog":      { n: 8, aspect: 1.299, f: {"idle":0,"alert":1,"cast-about":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "lead-dog":            { n: 8, aspect: 1.103, f: {"idle":0,"alert":1,"cast-about":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "lead-dog":            { n: 8, aspect: 1.102, f: {"idle":0,"alert":1,"cast-about":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "grey-heron":          { n: 8, aspect: 1.136, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "footpad":             { n: 8, aspect: 0.929, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "fleet-rat":           { n: 8, aspect: 1.563, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -12916,7 +12935,7 @@ var MOB_ANIM = {
   "the-salt-widow":         { n: 8, aspect: 1.136, f: {"idle":0,"feed-the-flue":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-refuge-man":         { n: 8, aspect: 1.033, f: {"idle":0,"turn-from-the-wall":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-reed-walker":        { n: 8, aspect: 1.026, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"part-the-reed":5,"recover":6,"hit":7} },
-  "the-pilot":              { n: 8, aspect: 0.988, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"read-the-water":5,"alert":6,"recover":7} },
+  "the-pilot":              { n: 8, aspect: 0.991, f: {"idle":0,"read-the-water":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-great-devil-crab":   { n: 8, aspect: 1.254, f: {"idle":0,"alert":1,"attack":2,"recover":3,"death":4,"rest":5,"bite":6,"sweep":7} },
   "the-eel-cutter":         { n: 8, aspect: 1.387, f: {"idle":0,"lift-the-trap":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-drowned-ferryman":   { n: 8, aspect: 0.986, f: {"idle":0,"find-the-line":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
@@ -12954,10 +12973,10 @@ var MOB_ANIM = {
   "glutton":              { n: 8, aspect: 1.234, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "great-vulture":        { n: 8, aspect: 1.091, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"death":7} },
   "hill-eagle":           { n: 8, aspect: 1.203, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
-  "hill-fox":             { n: 8, aspect: 1.373, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "hill-fox":             { n: 8, aspect: 1.29, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "hill-wolf":            { n: 8, aspect: 1.136, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "lead-wolf":            { n: 8, aspect: 1.152, f: {"idle":0,"rest":1,"hold-ground":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "lynx":                 { n: 8, aspect: 1.186, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "lynx":                 { n: 8, aspect: 1.16, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "mountain-chough":      { n: 8, aspect: 1.258, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
   "mountain-hare":        { n: 8, aspect: 1.048, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "old-billy":            { n: 8, aspect: 1.104, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -12965,23 +12984,23 @@ var MOB_ANIM = {
   "red-hind":             { n: 8, aspect: 1.009, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "red-stag":             { n: 8, aspect: 1.074, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "scarp-raven":          { n: 8, aspect: 1.181, f: {"idle":0,"glide":1,"landing":2,"attack":3,"rest":4,"death":5,"feed":6,"up":7,"down":1} },
-  "snow-fox":             { n: 8, aspect: 1.231, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "snow-fox":             { n: 8, aspect: 1.239, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "snow-hare":            { n: 8, aspect: 1.12, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "stone-adder":          { n: 8, aspect: 1.627, f: {"idle":0,"watch":1,"rest":2,"bask":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-blue-fox":         { n: 8, aspect: 1.294, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-blue-fox":         { n: 8, aspect: 1.266, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-bone-dropper":     { n: 8, aspect: 1.172, f: {"idle":0,"glide":1,"landing":2,"feed":3,"attack":4,"death":5,"rest":6,"up":7,"down":1} },
   "the-butter-wife":      { n: 6, aspect: 1.209, f: {"idle":0,"listen":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-dancer":           { n: 8, aspect: 1.246, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"twisting-leap":5,"attack":6,"death":7} },
   "the-drake":            { n: 14, aspect: 1.483, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
   "the-gravid-adder":     { n: 8, aspect: 1.774, f: {"idle":0,"watch":1,"rest":2,"bask":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-herd":             { n: 6, aspect: 0.991, f: {"idle":0,"keep-the-line":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
+  "the-herd":             { n: 6, aspect: 1.014, f: {"idle":0,"keep-the-line":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-last-dog":         { n: 8, aspect: 1.231, f: {"idle":0,"alert":1,"call-uphill":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-milker":           { n: 6, aspect: 1.167, f: {"idle":0,"work-pull":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
-  "the-old-glutton":      { n: 8, aspect: 1.174, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-old-glutton":      { n: 8, aspect: 1.236, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-old-raven":        { n: 8, aspect: 1.165, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
   "the-one-who-stayed":   { n: 6, aspect: 1.108, f: {"idle":0,"advance":1,"move-a":2,"move-b":3,"attack":4,"death":5} },
   "the-pale-drake":       { n: 14, aspect: 1.523, f: {"idle":0,"alert":1,"bite":2,"sweep":3,"inhale":4,"breath":5,"takeoff":6,"up":7,"glide":8,"down":9,"dive":10,"landing":11,"hit":12,"death":13} },
-  "the-raiding-fox":      { n: 8, aspect: 1.27, f: {"idle":0,"rest":1,"feed":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
+  "the-raiding-fox":      { n: 8, aspect: 1.423, f: {"idle":0,"rest":1,"feed":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
   "the-tom":              { n: 8, aspect: 1.117, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "wildcat":              { n: 8, aspect: 1.223, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
 };

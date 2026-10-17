@@ -140,6 +140,7 @@ export const CREATURE_ENDURANCE: Record<string, readonly [number, number, number
   "rat": [16, 2, 20, 0],
   "red-hind": [0, 0, 0, 0],
   "red-stag": [12, 3, 28, 0],
+  "wood-stag": [12, 3, 28, 0],
   "road-carrier": [32, 2, 32, 0],
   "roe-deer": [0, 0, 0, 0],
   "root-thing": [0, 0, 0, 0],
