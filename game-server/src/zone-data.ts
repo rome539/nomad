@@ -7681,8 +7681,8 @@ export const RAIN_SETTLED_ODDS = 0.25;
 // lets go, so it can sit over the world all afternoon, all night, or a day and
 // more. A shower that does not pass can thicken and set in.
 //   shower:  half end at each step   -> most are gone in 10-30 min
-//   settled: 1.5% end at each step   -> half last 7.7h, a third pass 12h,
-//                                        one in nine is still falling at 24h
+//   settled: 2.85% end at each step  -> half last 4h, one in eight passes 12h,
+//                                        one in sixty is still falling at 24h
 export const RAIN_STEP_MS = 10 * 60_000;
 // THE REST OF THE WEATHER WORKS THE SAME WAY (rome, 2026-10-15). Fog, the cold,
 // the wind and the mountain's cloud have no set length either: every
@@ -7708,7 +7708,7 @@ export const WX_RETREAT_ODDS = 0.2;
 export const WX_WORLDWIDE_ODDS = 0.1;
 export const RAIN_SHOWER_END_ODDS = 0.5;
 export const RAIN_SETS_IN_ODDS = 0.08;          // a shower that does not pass
-export const RAIN_SETTLED_END_ODDS = 0.015;
+export const RAIN_SETTLED_END_ODDS = 0.0285; // half are over in 4h (rome, 2026-10-17: was 0.015, half lasting 7.7h)
 export const RAIN_AFTERMATH_MS = 15 * 60_000; // mud: deep tracks, quick forage
 // THE WET AFTER IS AS LONG AS THE RAIN EARNED (rome, 2026-10-15). Each ground
 // it fell on stays wet - mud underfoot, the grey cloud it left over it, day or
