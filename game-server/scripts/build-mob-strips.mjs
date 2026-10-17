@@ -84,7 +84,7 @@ const BODY_SCALE = {
   "the-old-glutton": 0.951, "snow-fox": 0.968, "lead-dog": 0.962,
   "the-raiding-fox": 0.925,
   "roe-deer": 0.898, "red-hind": 0.966, "pale-crawler": 0.981,
-  "lynx": 0.917, "pale-stalker": 0.974, "the-follower": 0.986,
+  "lynx": 0.979, "pale-stalker": 0.974, "the-follower": 0.986,
 };
 
 const NOT_A_POSE = new Set(["sheet-order", "source", "combat-source", "flight-source",

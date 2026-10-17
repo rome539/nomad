@@ -9612,7 +9612,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "66";      // /mob/      strips and their eye layers
+var MOB_V  = "67";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -13065,7 +13065,7 @@ var MOB_ANIM = {
   "hill-fox":             { n: 8, aspect: 1.29, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "hill-wolf":            { n: 8, aspect: 1.136, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "lead-wolf":            { n: 8, aspect: 1.152, f: {"idle":0,"rest":1,"hold-ground":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "lynx":                 { n: 9, aspect: 1.128, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
+  "lynx":                 { n: 9, aspect: 1.057, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
   "mountain-chough":      { n: 8, aspect: 1.258, f: {"idle":0,"glide":1,"landing":2,"rest":3,"attack":4,"death":5,"feed":6,"up":7,"down":1} },
   "mountain-hare":        { n: 8, aspect: 1.048, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "old-billy":            { n: 8, aspect: 1.104, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
