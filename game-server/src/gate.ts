@@ -32,7 +32,7 @@ import * as den from "./den";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
 import { MAP_QUARTERS } from "./detail";
-import { dropCarried, describePlayer, lookKeepingItem, selfExamine } from "./verbs";
+import { dropCarried, describePlayer, lookKeepingItem, selfExamine, cmdCensus, cmdSkies } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -2621,6 +2621,11 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     // a command. Say them.
     return gatehouseSay(z, session, text);
   }
+  // THE KEEPER'S BOOKS READ THE SAME BY THE FIRE (rome, 2026-10-17: skies did
+  // nothing in here). This handler answers its own verbs and says the rest out
+  // loud, so the census and the sky were being spoken at the room, not run.
+  if (v === "census") return cmdCensus(z, session);
+  if (v === "skies") return cmdSkies(z, session);
   if (v === "who") { // who's by the fire, not who's in the dungeon
     const folk = gatehouseFolk(z);
     return z.send(session, folk.length === 1
