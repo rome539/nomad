@@ -2430,26 +2430,53 @@ export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session): string {
 
 // One keeping's contents as text, grouped like the modal: fungibles collapse
 // to a count, gear/equipped/sealed list on their own line.
-export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, holder?: Session): string[] {
+export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, holder?: Session, kind?: "pack" | "vault"): string[] {
   const world = z.world!;
   const lines = [header];
   if (items.length === 0) { lines.push("  — empty —"); return lines; }
-  // What you have on comes first, as the pack modal lays it out (rome,
-  // 2026-10-18); the rest keeps its order.
-  for (const c of items) if (c.equipped) lines.push(itemLine(z, c, holder));
-  const counts = new Map<string, number>();
-  for (const c of items) {
-    if (z.stackable(c.itemId, c.serial, c.journalId) && !c.equipped) {
-      counts.set(c.itemId, (counts.get(c.itemId) ?? 0) + 1);
+  // One list, in the order it is shown: stacks of a kind collapse to a count,
+  // everything else is its own line.
+  const list = (group: CarriedItem[], pad: string): string[] => {
+    const out: string[] = [];
+    for (const c of group) if (c.equipped) out.push(pad + itemLine(z, c, holder));
+    const counts = new Map<string, number>();
+    for (const c of group) {
+      if (z.stackable(c.itemId, c.serial, c.journalId) && !c.equipped) counts.set(c.itemId, (counts.get(c.itemId) ?? 0) + 1);
     }
-  }
-  for (const [id, n] of counts) {
-    const t = world.itemTemplates.get(id);
-    lines.push(`  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""} [${t?.rarity ?? "?"}]${z.itemStat(t)}`);
-  }
-  for (const c of items) {
-    if (c.equipped || z.stackable(c.itemId, c.serial, c.journalId)) continue; // worn or stacked above
-    lines.push(itemLine(z, c, holder));
+    // single pieces (the gear) before the stacks, as the windows sort them (kitRank)
+    for (const c of group) {
+      if (c.equipped || z.stackable(c.itemId, c.serial, c.journalId)) continue; // worn above, stacked below
+      out.push(pad + itemLine(z, c, holder));
+    }
+    for (const [id, n] of counts) {
+      const t = world.itemTemplates.get(id);
+      out.push(`${pad}  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""} [${t?.rarity ?? "?"}]${z.itemStat(t)}`);
+    }
+    return out;
+  };
+  // THE SAME SHELVES AS THE WINDOWS (rome, 2026-10-18): the pack reads Equipped /
+  // In the pack / Food and the deep keep Gear / Supplies / Keys / Food / Trophies,
+  // exactly as fillBenchCol in public.ts lays them out - change one, change both.
+  // Headings only when more than one shelf has anything on it, the same rule,
+  // except that what you have on always gets its heading.
+  const edible = (c: CarriedItem) => !!world.itemTemplates.get(c.itemId)?.edible;
+  const shelves: [string, CarriedItem[]][] | null = kind === "pack" ? [
+    ["EQUIPPED", items.filter((c) => c.equipped)],
+    ["IN THE PACK", items.filter((c) => !c.equipped && !edible(c))],
+    ["FOOD", items.filter((c) => !c.equipped && edible(c))],
+  ] : kind === "vault" ? [
+    ["GEAR", items.filter((c) => z.isGear(c.itemId) && !z.isKey(c.itemId) && !z.isTrophy(c.itemId))],
+    ["SUPPLIES", items.filter((c) => !z.isGear(c.itemId) && !z.isTrophy(c.itemId) && !z.isKey(c.itemId) && !edible(c))],
+    ["KEYS", items.filter((c) => z.isKey(c.itemId))],
+    ["FOOD", items.filter((c) => edible(c) && !z.isKey(c.itemId))],
+    ["TROPHIES", items.filter((c) => z.isTrophy(c.itemId))],
+  ] : null;
+  const worn = kind === "pack" && shelves![0][1].length > 0;
+  if (!shelves || (!worn && shelves.filter((sh) => sh[1].length).length < 2)) return [...lines, ...list(items, "")];
+  for (const [name, group] of shelves) {
+    if (!group.length) continue;
+    lines.push(`  ${name}`);
+    lines.push(...list(group, "  "));
   }
   return lines;
 }
@@ -2496,7 +2523,7 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     : [];
   const kit = kitWarnLines(z, session);
   if (z.inCombat(session)) {
-    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session), ...kit, ...loud].join("\n"));
+    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack"), ...kit, ...loud].join("\n"));
   }
   const atGate = world.entryRooms.has(session.roomId);
   // A gate whose gatehouse is shut for works is not a gate for this purpose:
@@ -2512,7 +2539,7 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
     return z.send(session, [
       ...(boarded ? [boarded, ""] : []),
-      ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session),
+      ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack"),
       ...kit,
       ...loud,
       "('burn <item>' to destroy it, 'drop <item>' to shed it, 'equip'/'remove' to swap gear.)",
@@ -2520,12 +2547,12 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   }
   const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
   const out: string[] = [];
-  out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session));
+  out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack"));
   out.push(...kit);
   out.push(...loud);
   out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox, "lockbox")}/${LOCKBOX_CAP}):`));
   const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
-  out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, "vault")}/${VAULT_CAP} sealed):`)); // fungibles ride free in the vault
+  out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, "vault")}/${VAULT_CAP} sealed):`, undefined, "vault")); // fungibles ride free in the vault
   // The front door rule: the keeping is laid out INSIDE the gatehouse — from
   // the gate room this walks you through the door first (announced, HUD
   // flipped), never a private step-out at the arch (rome, 2026-07-17).

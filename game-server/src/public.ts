@@ -6799,7 +6799,11 @@ function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, food
             ["IN THE PACK", items.filter(function (it) { return !it.equipped && !it.food; })],
             ["FOOD", items.filter(function (it) { return !it.equipped && it.food; })]];
   } else if (place === "vault") {
-    secs = [["BANKED", items.filter(function (it) { return !it.trophy && !it.key && !it.food; })],
+    // GEAR AND SUPPLIES APART (rome, 2026-10-18): "banked" was everything that
+    // was not a key, food or a trophy, so the dressings, the iron and the maps
+    // sat in among the steel. The typed list shelves the same way (keepingLines).
+    secs = [["GEAR", items.filter(function (it) { return it.gear && !it.trophy && !it.key; })],
+            ["SUPPLIES", items.filter(function (it) { return !it.gear && !it.trophy && !it.key && !it.food; })],
             ["KEYS", items.filter(function (it) { return it.key; })],
             ["FOOD", items.filter(function (it) { return it.food && !it.key; })],
             ["TROPHIES", items.filter(function (it) { return it.trophy; })]];
