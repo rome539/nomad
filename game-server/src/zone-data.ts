@@ -8665,6 +8665,12 @@ export const TRAIT_MATERIAL: Record<string, (material: string) => boolean> = {
 // of pieces carrying any trait at all does not change, only what they can say.
 export const BAD_TRAIT_SHARE = 0.35;   // of individual draws, this many come off the flaw pool
 export const SECOND_TRAIT_ODDS = 0.2;  // ...and this often a piece draws twice instead of once
+// WHAT KIND OF GEAR IT IS, in a word (rome, 2026-10-18: the pack listed a glaive,
+// a shield and a helm without saying which was which). One word per slot, the
+// same in the pack window and the typed list. The client keeps a copy (public.ts).
+export const SLOT_WORD: Record<string, string> = {
+  weapon: "weapon", shield: "shield", helm: "helm", armor: "armor", cloak: "cloak", feet: "boots",
+};
 export const TRAIT_ADJ: Record<string, string> = {
   quiet: "muffled", slick: "oiled", padded: "quilted", wardhide: "boiled", strapped: "buckled",
   keen: "keen", balanced: "balanced", honed: "honed",

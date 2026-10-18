@@ -1497,7 +1497,11 @@ export async function cmdRepair(z: ZoneDO, session: Session, arg: string): Promi
   if (!arg) return z.send(session, "Repair what?");
   const carried = z.findCarried(session, arg);
   if (!carried) return z.send(session, "You carry nothing like that.");
-  z.send(session, await repairCore(z, session, carried));
+  // The forge's voice when the iron actually took (rome, 2026-10-18: a mend
+  // made no sound) - a refusal stays quiet.
+  const was = carried.condition;
+  const note = await repairCore(z, session, carried);
+  z.send(session, note, carried.condition > was ? "forge" : undefined);
   z.sendCtx(session);
 }
 
@@ -1654,12 +1658,17 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     // successful moves are silent — the settled counts are the confirmation.
     const carriedState = () => JSON.stringify(session.items.map(c => [c.rowId, !!c.equipped]));
     const beforeSound = carriedState();
+    const condBefore = new Map(session.items.map((c) => [c.rowId, c.condition]));
     let note: string | undefined;
     for (const row of rows) {
       const n = await one(row);
       if (n !== undefined && note === undefined) note = n;
     }
-    const cue = beforeSound !== carriedState()
+    const mended = session.items.some((c) => c.condition > (condBefore.get(c.rowId) ?? 100));
+    // A mend moves nothing worth hearing, so the item check below never gave it
+    // a voice: the forge sounds when the iron actually took (rome, 2026-10-18).
+    const cue = action === "repair" ? (mended ? "forge" : "")
+      : beforeSound !== carriedState()
       ? (["stash", "vault", "take"].includes(action) ? "box" : ["equip", "remove", "drop", "stow", "fetch"].includes(action) ? "handle" : "") : "";
     return sendBench(z, session, note, cue);
   }

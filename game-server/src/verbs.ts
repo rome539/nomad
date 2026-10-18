@@ -55,7 +55,7 @@ import {
   SMOKEHOUSE_ROOM, SMOKEHOUSE_ROOMS, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS, COOK_RECIPES,
   MILESTONES,
   groundWord, carveMedium, footfall, HEARD_EMPTY,
-  LANTERN_ITEM, LANTERN_FAT_MS,
+  LANTERN_ITEM, LANTERN_FAT_MS, SLOT_WORD,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor, worksBar } from "./gate";
 
@@ -2397,6 +2397,7 @@ export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session): string {
   const t = z.world!.itemTemplates.get(c.itemId);
   let s = `  ${z.gearName(c.itemId, z.displayName(c))} [${t?.rarity ?? "?"}]${z.itemStat(t)}`;
   const tags: string[] = [];
+  if (t?.slot && SLOT_WORD[t.slot]) tags.push(SLOT_WORD[t.slot]);   // what it IS, first - the pack window says the same
   if (c.equipped) tags.push(t?.slot === "weapon" ? "wielded" : "worn");
   // A shield keeps saying "worn" while a flame burns, because it IS still on
   // your arm — but equippedBlock is returning 0 for it, so the list has to say

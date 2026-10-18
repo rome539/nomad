@@ -1586,6 +1586,8 @@ export const PAGE = `<!doctype html>
   #log .stun   { color: var(--bone); padding-left: 12px; }
   #log .gain   { color: var(--gold); }
   #log .dim    { color: var(--dim); }
+  .bitem .kind { color: var(--dim); font-size: .85em; }
+  #log .amb    { color: var(--dim); }   /* the walls and the weather talking: there, not shouting (rome, 2026-10-18) */
   /* Gear wearing down — an amber caution so a fraying blade or thinning plate is
      a warning you SEE coming, never a silent break. Italic: an aside, not combat. */
   #log .wear   { color: var(--gold); font-style: italic; }
@@ -6183,6 +6185,7 @@ var prevChipCmds = [];
 // text — typing 'inventory' still prints the plain list. Must match BENCH_CHIP
 // / TRADE_CHIP in zone.ts.
 var BENCH_CHIP = "inventory";
+var SLOT_WORD = { weapon: "weapon", shield: "shield", helm: "helm", armor: "armor", cloak: "cloak", feet: "boots" };
 // THE SHELF CHIP OPENS THE MODAL (rome, 2026-08-04: "keep the command you write
 // text, but the chip opens a panel like the gatehouse does). Same bargain as
 // 'inventory': the chip is a door to the box, the typed 'stow <item>' still
@@ -6622,6 +6625,10 @@ function benchItemNode(it, place) {
   // every ration on the shelf, which a not-equal-empty-string test would have
   // done for undefined.
   if (it.rarity && it.slot && it.name.indexOf("loose rock") === -1) nmsp.className = rarityClass(it.rarity);
+  // WHAT KIND OF GEAR IT IS (rome, 2026-10-18), inside the name span so the
+  // compact rows carry it too (they clone that span). The typed list says the
+  // same word (zone-data SLOT_WORD - keep the two in step).
+  if (it.slot && SLOT_WORD[it.slot]) { var kd = document.createElement("span"); kd.className = "kind"; kd.textContent = " \u00b7 " + SLOT_WORD[it.slot]; nmsp.appendChild(kd); }
   nm.appendChild(nmsp);
   if (it.n > 1) { var mu = document.createElement("span"); mu.className = "mult"; mu.textContent = " \\u00d7" + it.n; nm.appendChild(mu); }
   // Stats wear the chip colours, same language as the keeper's shelves.
