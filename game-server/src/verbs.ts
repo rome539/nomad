@@ -2431,6 +2431,9 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, ho
   const world = z.world!;
   const lines = [header];
   if (items.length === 0) { lines.push("  — empty —"); return lines; }
+  // What you have on comes first, as the pack modal lays it out (rome,
+  // 2026-10-18); the rest keeps its order.
+  for (const c of items) if (c.equipped) lines.push(itemLine(z, c, holder));
   const counts = new Map<string, number>();
   for (const c of items) {
     if (z.stackable(c.itemId, c.serial, c.journalId) && !c.equipped) {
@@ -2442,7 +2445,7 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, ho
     lines.push(`  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""} [${t?.rarity ?? "?"}]${z.itemStat(t)}`);
   }
   for (const c of items) {
-    if (z.stackable(c.itemId, c.serial, c.journalId) && !c.equipped) continue; // stacked above
+    if (c.equipped || z.stackable(c.itemId, c.serial, c.journalId)) continue; // worn or stacked above
     lines.push(itemLine(z, c, holder));
   }
   return lines;

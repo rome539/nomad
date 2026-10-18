@@ -33,11 +33,11 @@ import {
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
-  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, DARK_ROOMS, THIEVES,
+  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
-  DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT,
+  DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
@@ -857,20 +857,31 @@ function huntGround(z: ZoneDO, creature: Creature, now: number): string | undefi
   // dinner running the whole search every single beat.
   if ((creature.huntAt ?? 0) > now) return creature.huntFor;
   creature.huntAt = now + HUNT_RECHECK_MS;
+  // A room it was just run out of is not a meal to it (RAT_RIVALS).
+  const barred = new Set((creature.avoids ?? []).filter((a) => a.until > now).map((a) => a.roomId));
   // Anything it eats already standing on its own ground: stay home and hunt it.
   const range = z.nearby(creature.home ?? creature.roomId, TERRITORY_RADIUS);
   for (const c of z.creatures.values()) {
-    if (prey.has(c.templateId) && range.has(c.roomId)) {
+    if (prey.has(c.templateId) && range.has(c.roomId) && !barred.has(c.roomId)) {
       creature.huntFor = undefined;
       return undefined;
     }
   }
   // Nothing at home. The nearest room that holds a meal, out to the limit of
   // what an animal can be said to know about.
+  // ...ON ITS OWN SIDE OF THE DEEP DOOR (rome, 2026-10-18: the pale crawlers
+  // were piling up in the room under the undercroft). The distance here is the
+  // bare map's, and the bare map runs straight up the stair - so with the
+  // deep's own rats eaten, the nearest meal was in the fortress overhead, and
+  // every hungry crawler walked to the foot of the hound's stair and stood
+  // there, because nothing ordinary may cross the hound's post. A deep thing
+  // hunts the deep; a thing of the upper world hunts the upper world.
+  const deepSide = DEEP_ROOMS.has(creature.home ?? creature.roomId);
   const out = z.nearby(creature.roomId, HUNT_RANGE);
   let best: string | undefined, bestD = Infinity;
   for (const c of z.creatures.values()) {
     if (!prey.has(c.templateId)) continue;
+    if (DEEP_ROOMS.has(c.roomId) !== deepSide || barred.has(c.roomId)) continue;
     const d = out.get(c.roomId);
     if (d !== undefined && d < bestD) { bestD = d; best = c.roomId; }
   }
@@ -1642,6 +1653,37 @@ function strayFor(z: ZoneDO, hunter: Creature, c: Creature): boolean {
   return !!vt && !!ht && !vt.is_boss && vt.level < ht.level;
 }
 
+// Two of a kind over one meal (RAT_RIVALS): the hungry one turns on the other
+// before the rat. Odds by strength, a real bite, never a kill; the loser runs
+// and stays off this room for RIVAL_AVOID_MS. The rat is left where it is.
+async function rivalsFight(z: ZoneDO, creature: Creature, prey: Set<string>, now: number): Promise<boolean> {
+  const here = z.creaturesInRoom(creature.roomId);
+  if (!here.some((c) => prey.has(c.templateId))) return false;
+  const rival = here.find((c) => c.id !== creature.id && c.templateId === creature.templateId && !c.target && !c.stunned);
+  if (!rival) return false;
+  const world = z.world!;
+  const tmpl = world.mobTemplates.get(creature.templateId)!;
+  const roomId = creature.roomId;
+  const won = chance(creature.hp / Math.max(1, creature.hp + rival.hp));
+  const [winner, loser] = won ? [creature, rival] : [rival, creature];
+  exhaustion.creatureAttempt(creature, now);
+  exhaustion.creatureAttempt(rival, now);
+  const bite = Math.max(1, exhaustion.creatureDamage(winner, randInt(tmpl.dmg_min, tmpl.dmg_max)) - tmpl.armor);
+  loser.hp = Math.max(1, loser.hp - bite);
+  rival.asleep = false;
+  rival.sleepUntil = undefined;
+  loser.avoids = [
+    ...(loser.avoids ?? []).filter((a) => a.until > now && a.roomId !== roomId),
+    { roomId, until: now + RIVAL_AVOID_MS },
+  ];
+  loser.huntAt = 0;
+  loser.huntFor = undefined;
+  z.roomFeed(roomId, `${cap(tmpl.name)} turns on another of its kind over the rat, and they go at each other in the wet. One drags itself off, bitten.`, undefined, false);
+  z.roomSound(roomId, "Something thrashes and hisses {dir}, two of something, and then one of it drags itself away.", undefined, undefined, false, { mob: creature.templateId, act: "fight" });
+  await creatureMoves(z, loser, now, "flee", false);
+  return true;
+}
+
 export async function predation(z: ZoneDO, creature: Creature, now: number): Promise<boolean> {
     const prey = preyHere(z, creature);
     const strays = huntsStrays(creature.templateId);
@@ -1655,6 +1697,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     const baitHere = !!floor && floor.some((id) => world.itemTemplates.get(id)?.lure);
     if (!hungry && !corpseHere && !baitHere) return false;
     if (!chance(PREDATION_ODDS)) return false;
+    if (hungry && prey && RAT_RIVALS.has(creature.templateId) && await rivalsFight(z, creature, prey, now)) return true;
     // A target in the room; prefer one not already busy with a player (the easy meal).
     let victim: Creature | null = null;
     for (const c of z.creaturesInRoom(creature.roomId)) {
@@ -4200,7 +4243,8 @@ export function hungerRate(z: ZoneDO, creature: Creature): number {
   // eats seldom and enormously, and its appetite is now the ONLY thing that puts
   // it in the air (drakePassage), so this constant is the passage's cadence.
   const big = SUMMIT_BOSSES.has(creature.templateId) ? DRAKE_HUNGER_MULT : 1;
-  return (events.coldBites(z, creature.roomId) ? HUNGER_PER_MIN * COLD_HUNGER_MULT : HUNGER_PER_MIN) * starving * big;
+  const slow = SLOW_EATERS[creature.templateId] ?? 1;
+  return (events.coldBites(z, creature.roomId) ? HUNGER_PER_MIN * COLD_HUNGER_MULT : HUNGER_PER_MIN) * starving * big * slow;
 }
 
 export function creaturesIn(z: ZoneDO, roomId: string): number {

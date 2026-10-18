@@ -422,13 +422,14 @@ export function sendCtx(z: ZoneDO, session: Session): void {
       suggest.push("fetch");
     }
     // The whetstones: only with something on you the stone could actually take
-    // — dull enough to gain, and not already past what a stone can keep.
+    // — worn, dull enough to gain, and not already past what a stone can keep
+    // (rome, 2026-10-18: only for what you have on, not what is in the pack).
     // Named, like the cure and cook chips: a bare `repair` at the stone only
     // asks "repair what?", and a chip that answers with a question is a dead
     // tap. The worst piece first — the one the stone helps most.
     if (WHETSTONE_ROOMS.has(session.roomId)) {
       const dull = session.items
-        .filter((c) => z.isGear(c.itemId) && c.condition < WHET_CAP)
+        .filter((c) => c.equipped && z.isGear(c.itemId) && c.condition < WHET_CAP)
         .sort((a, b) => a.condition - b.condition)[0];
       if (dull) suggest.push(`repair ${shortName(world.itemTemplates.get(dull.itemId)!.name)}`);
     }

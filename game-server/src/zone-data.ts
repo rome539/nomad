@@ -4649,6 +4649,13 @@ export const LURKER_HUNT_RADIUS = 6;               // twice its normal territory
 // other LURKERS: the hunting branch is meant to close on prey, so counting
 // every creature would stop a stalker ever reaching a rat.
 export const LURKER_CROWD = 2;                     // a dark room already holding this many lurkers stops drawing more
+// THEY FIGHT OVER THE RATS (rome, 2026-10-18). A hungry crawler that finds
+// another of its kind in the room with the meal goes for the rival before the
+// rat. The bigger one usually wins; the loser is bitten, drags itself off, and
+// keeps away from that room for a while, so the meal is the winner's. Nobody
+// dies of it - it is a fight over food, not food.
+export const RAT_RIVALS = new Set(["pale-crawler"]);
+export const RIVAL_AVOID_MS = 30 * 60_000;
 export const LURKER_HUNT_DRIFT_MS = 40 * 60_000;   // ~40 min between hunting moves (vs the 3h idle drift)
 export const STARVE_HUNTS_ODDS = 0.2; // chance/tick a STARVING predator with no easier prey begins its wind-up on a player sharing the room (low: the threshold + no-prey gate already make it rare)
 export const WOUNDED_PREY_ODDS = 0.15; // chance/tick an eligible predator begins its wind-up on a BADLY HURT player (< WOUNDED_FRACTION hp), independent of the predator's own hunger — slightly rarer than the starving-hunt since it can fire on ANY eligible predator, not just a genuinely starved one
@@ -5923,6 +5930,14 @@ export const DRAKE_HUNT_WAIT_MS = 30 * 60_000;
 // (its own note explains why), so a world waking from a long sleep finds it
 // hungry — which is the correct answer for an animal that has not eaten.
 export const DRAKE_HUNGER_MULT = 0.35;
+// THE PALE CRAWLER EATS SELDOM TOO (rome, 2026-10-18). On the roster's clock
+// thirteen crawlers wanted a rat every hour and forty minutes each, about eight
+// an hour, from a deep that breeds four or five; the hungry ones went looking
+// and piled up wherever the rats were. A cold-blooded thing that lies still in
+// the dark for days between meals: at a quarter it is hungry again about six
+// hours forty after a kill. Unlike the drake's this one is the animal, not the
+// weather, so catch-up charges it too.
+export const SLOW_EATERS: Record<string, number> = { "pale-crawler": 0.25 };
 // WHAT EACH GROUND SEES WHEN IT GOES OVER. Sky only — a wanderer under a roof
 // or in a cave sees nothing, which is the same test the weather already uses
 // (OUTDOOR_ROOMS), and is why a thing this size can cross the world unseen by
