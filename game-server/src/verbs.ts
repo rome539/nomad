@@ -2141,7 +2141,9 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   const nowLoud = !wasBurdened && z.burdened(session)
     ? " The pack takes it with a clank — too much loose iron now to slip a blow, and it won't ride quiet."
     : "";
-  z.send(session, `You take ${z.gearName(tmpl.id)}.` + readied + stooped + nowLoud, "sfx-handle");
+  // The piece's OWN name, roll and all (rome, 2026-10-18: "Sodden warden's plate"
+  // clattered free and "warden's plate" came up off the floor).
+  z.send(session, `You take ${z.gearName(tmpl.id, z.displayName(carried))}.` + readied + stooped + nowLoud, "sfx-handle");
   // What is on it, on the way up. Only for gear the world laid down and nobody
   // watched arrive, and never for an engraved piece — that one has a real
   // ledger, and `look` reads it. Same voice the keeper speaks in, because it is
@@ -2230,13 +2232,13 @@ export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedI
   // Shedding under the burden line is the valve working: say so, so the
   // mid-chase drop reads as the escape it is.
   const quietAgain = wasBurdened && !z.burdened(session) ? " The pack rides light and quiet again." : "";
-  z.roomFeed(session.roomId, `${session.name} drops ${z.gearName(tmpl.id)}.`, session.pubkey, false); // loot stays LOCAL (see takes)
+  z.roomFeed(session.roomId, `${session.name} drops ${z.gearName(tmpl.id, z.displayName(carried))}.`, session.pubkey, false); // loot stays LOCAL (see takes)
   z.refreshRoomCtx(session.roomId);
   // persist/alarm are the caller's — cmdDrop flushes after its "one more" line,
   // the bench-drop flushes after re-sending the modal.
   return (carried.serial !== null
     ? `You set ${tmpl.name} down. The seal cracks as it leaves your hands — the claim is no longer yours.`
-    : `You drop ${z.gearName(tmpl.id)}.`) + quietAgain;
+    : `You drop ${z.gearName(tmpl.id, z.displayName(carried))}.`) + quietAgain;
 }
 
 // Typed 'burn <item>' — the same destructive act as the bench's burn button
@@ -2352,8 +2354,8 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
       ? ` It is a wall, and you will fight around it — your blows lose ${drag}% of their weight while it's up.`
       : ` You'll fight a little around it — your blows lose ${drag}% of their weight while it's up.`;
   z.send(session, (tmpl.slot === "weapon"
-    ? `You take ${z.gearName(tmpl.id)} in hand${current ? `, setting aside ${z.gearName(current.tmpl.id)}` : ""}.`
-    : `You pull on ${tmpl.name}${current ? `, shrugging off ${current.tmpl.name}` : ""}.`)
+    ? `You take ${z.gearName(tmpl.id, z.displayName(carried))} in hand${current ? `, setting aside ${z.gearName(current.tmpl.id, z.displayName(current.carried))}` : ""}.`
+    : `You pull on ${z.displayName(carried)}${current ? `, shrugging off ${z.displayName(current.carried)}` : ""}.`)
     + wallNote
     + (fighting ? " Your eyes leave the fight for a heartbeat — an opening." : ""), "sfx-handle");
   z.sendCtx(session); // your loadout changed — refresh the chips (the equip chip was going stale)
@@ -2386,7 +2388,7 @@ export async function cmdRemove(z: ZoneDO, session: Session, arg: string): Promi
   carried.equipped = false;
   await setEquipped(z.env.DB, carried.rowId, false);
   if (fighting) session.staggered = true;
-  z.send(session, (tmpl.slot === "weapon" ? `You lower ${z.gearName(tmpl.id)}.` : `You take off ${z.gearName(tmpl.id)}.`)
+  z.send(session, (tmpl.slot === "weapon" ? `You lower ${z.gearName(tmpl.id, z.displayName(carried))}.` : `You take off ${z.gearName(tmpl.id, z.displayName(carried))}.`)
     + (fighting ? " An opening." : ""), "sfx-handle");
   z.sendCtx(session); // loadout changed — refresh the chips
 }

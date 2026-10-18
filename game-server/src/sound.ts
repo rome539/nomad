@@ -234,7 +234,9 @@ export function placeOfRow(row: { id: string; region?: string | null; is_entry?:
 
 export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
   const roomId = s.roomId;
-  const inside = z.outOfWorld(s);
+  // Behind the door, not crouched at it (rome, 2026-10-18): the pack opened at a
+  // gate keeps the gate's own sound round you, the same as its picture.
+  const inside = z.inGatehouse.has(s.pubkey);
   const rainState = z.events.get("rain");
   return soundscapeOf(
     { roomId, band: lore.mapRegionOf(z, roomId), open: !inside && OUTDOOR_ROOMS.has(roomId), inside },

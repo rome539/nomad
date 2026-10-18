@@ -342,7 +342,12 @@ for (const [id, dir] of [...found].sort()) {
       .webp({ quality: 92, alphaQuality: 100 }).toFile(path.join(OUT, id + ".eyes.webp"));
     await sharp({ create: { width: fw * frames.length, height: fh, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
       .composite(frames.map((b, i) => ({ input: b, left: i * fw, top: 0 })))
-      .webp({ quality: 92, alphaQuality: 100 })   // q92 + full alpha: ~6x smaller than png, no alpha flips
+      // NEAR-LOSSLESS, not q92 (rome, 2026-10-18: a pink cast between the
+      // skeleton's ribs). Lossy WebP keeps colour at half resolution, and on thin
+      // bone against dark gaps that bleeds a false magenta into the art - the cut
+      // frames had none, the q92 strip had 168 pixels of it. About twice the size,
+      // and nothing in it that was not drawn.
+      .webp({ nearLossless: true, quality: 80, alphaQuality: 100 })
       .toFile(path.join(OUT, id + ".webp"));
     // TWO TEMPLATES, ONE CREATURE. Not a variant — a variant is a different
     // animal and every pair in the game carries two strips on purpose. This is

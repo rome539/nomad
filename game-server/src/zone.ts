@@ -8574,7 +8574,7 @@ export class ZoneDO implements DurableObject {
           // So a gate names itself by id and the client keeps the mapping; a
           // gate with no plate cut yet falls back to its terrain like any room.
           terrain: !seesArt(session.pubkey) ? undefined
-            : this.outOfWorld(session) ? "gatehouse"
+            : this.inGatehouse.has(session.pubkey) ? "gatehouse"   // behind the door, not the pack crouch at it (artSkyFor)
             : this.world!.entryRooms.has(session.roomId) ? "gate:" + session.roomId
             : terrainOf(session.roomId, room?.description, lore.mapRegionOf(this, session.roomId)),
           // AND A ROOM THAT IS ONE OF ONE, beside its terrain rather than
