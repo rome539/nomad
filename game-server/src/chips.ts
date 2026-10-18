@@ -218,6 +218,11 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         : creature.target === session.pubkey ? "hunt"
         : creature.target ? "fight"
         : creature.asleep ? "rest"
+        // A HOUND ON THE STAIR SLEEPS BY ITS OWN CLOCK (rome, 2026-10-18: the
+        // three-hound stood wide awake in the picture with the deep shut). Its
+        // sleep is the wake clock, not `asleep`, so the picture asks the same
+        // thing the room line asks.
+        : SENTINELS.has(creature.templateId) && !z.sentinelAwake(creature) ? "rest"
         : creature.eyeing ? "eyeing"
         : creature.hp < (tmpl.max_hp * 0.35) ? "hurt"
         : creature.curious ? "watch"

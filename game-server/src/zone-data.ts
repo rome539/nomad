@@ -9439,8 +9439,12 @@ export const HEART_FRESH_SEC = 600;                   // a heart opens the door 
 export const HEART_ROT_SEC = HEART_FRESH_SEC + 120;   // ...and 2 min after it spoils the slime seeps away — a spoiled heart doesn't litter the floor (rome, 2026-07-15)
 export const SURFACE_INTERVAL_MS = 360_000;           // while sealed, the deep surfaces one dweller ~every 6 min
 export const SURFACED_STALE_MS = 15 * 60_000;         // a surfaced dweller nobody kills slinks back down after this, freeing the next
-export const SURFACERS = new Set([                    // the mobile deep-kin that can crawl up (drowned things are water-bound; the hound holds its post)
-  "twice-dead", "thrice-dead", "pale-crawler", "pale-stalker",
+// ONLY THE PALE CRAWLER COMES UP (rome, 2026-10-18). The still-cold heart was
+// being cut out of barrow-wights, which are dry bone and leather with nothing in
+// them to cut - a skeleton has no heart to give. The crawler is the thing that
+// escapes up out of the cracks, and the heart is its.
+export const SURFACERS = new Set([                    // the deep-kin that crawls up (drowned things are water-bound; the hound holds its post)
+  "pale-crawler",
 ]);
 export const SURFACE_ROOMS = ["well", "oubliette", "catacomb"]; // dark inner holes it climbs out of — never the entry gates
 // Partial on purpose: a band with no pool yet is silent rather than borrowed.

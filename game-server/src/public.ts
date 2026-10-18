@@ -2053,9 +2053,12 @@ export const PAGE = `<!doctype html>
      padding on the column, and a sticky heading stops at the padding, not the
      edge - so the list scrolled up through a 14px band above "your pack" and
      the header looked broken. The heading carries the space itself now. */
+  /* NO ARCH OVER THE KIT (rome, 2026-10-17): the arched top read badly over the
+     gear and the list's scrollbar ran out past the curve. The column takes the
+     theme's ordinary corner instead. */
   body[data-atmosphere]:where(:not([data-atmosphere=""])) #bench .bcol {
     border: 1px solid var(--design-rule);
-    border-radius: var(--design-arch);
+    border-radius: var(--design-radius);
   }
   body[data-atmosphere]:where(:not([data-atmosphere=""])) #bench .bcolh {
     padding-top: 24px;
