@@ -330,18 +330,18 @@ try{
   await page.waitForFunction(()=>document.querySelector('#mobs .mob:not(.dead)')?.dataset.id==='the-tide-warden');
   const dying=await page.evaluate(()=>{
    demo.mobBeat(null,null,['the-tide-warden']);demo.stepAnims();
-   const el=document.querySelector('#mobs .mob'),p=getComputedStyle(el,'::after');
-   return {dead:el.dataset.death,filter:p.filter,image:p.backgroundImage,pos:p.backgroundPositionX,basePos:el.style.backgroundPositionX,size:p.backgroundSize,baseSize:el.style.backgroundSize};
+   const el=document.querySelector('#mobs .mob');
+   return {dead:el.dataset.death,image:getComputedStyle(el).backgroundImage};
   });
-  assert.equal(dying.dead,'1');assert.equal(dying.filter,'brightness(0)');
-  assert(dying.image.includes('the-tide-warden.eyes.webp'));
-  assert.equal(dying.pos,dying.basePos.split(',')[0].trim());
-  assert.equal(dying.size,dying.baseSize.split(',')[0].trim());
+  // The eyes are flat black in the strip itself: the death frame shows the base
+  // alone, and on a blood moon it drops the red layer rather than overlaying it.
+  assert.equal(dying.dead,'1');
+  assert(!dying.image.includes('.eyes.webp'),'death frame must not show an eye layer');
   await page.evaluate(()=>demo.updateMobs([],null,['the-tide-warden']));
-  await page.waitForFunction(()=>document.querySelector('#mobs .mob.dead')?.dataset.death==='1');
-  assert.equal(await page.$eval('#mobs .dead',e=>getComputedStyle(e,'::after').filter),'brightness(0)');
+  await page.waitForFunction(()=>!!document.querySelector('#mobs .mob.dead'));
+  assert(!(await page.$eval('#mobs .dead',e=>getComputedStyle(e).backgroundImage)).includes('.eyes.webp'));
  }
- console.log('PASS Hollow death animation and corpse black eyes in ordinary light and blood moon, aligned with the death frame');
+ console.log('PASS Hollow death frame and corpse show the flat black eyes alone, in ordinary light and blood moon');
  // One opening kill with the horseman's pick sends died:['rat'], then a
  // context with two living rats and one body. Only one sprite may fall.
  const ratDeaths=await page.evaluate(()=>{

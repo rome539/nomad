@@ -78,6 +78,12 @@
   var hNext = mk("button", stepCss, "\u203a");
   ["day", "dawn", "dusk", "night", "moon", "blood", "eclipse", "fog", "rain", "snow", "after-rain", "wet-dawn", "wet-dusk", "wet-night"].forEach(function (h) {
     var o = document.createElement("option"); o.value = h; o.textContent = h; hour.appendChild(o); });
+  // THE HOLLOW'S EYES as the server would send them (chips.ts): the grudge and
+  // the deep's breath. The blood moon and the eclipse come from the sky above.
+  var eyeSel = mk("select", btnCss);
+  [["", "eyes: as the sky has them"], ["ember", "eyes: ember (a grudge)"], ["frost", "eyes: frost (the deep breathes)"]].forEach(function (x) {
+    var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; eyeSel.appendChild(o); });
+  eyeSel.onchange = function () { lastEyes = eyeSel.value ? [eyeSel.value, eyeSel.value, eyeSel.value, eyeSel.value] : null; };
 
   // THE SKY AT 20x. At the game's pace a screen of sky takes four minutes to go
   // by, which is right for playing and useless for checking a seam; this runs
@@ -102,7 +108,10 @@
   var wPrev = mk("button", stepCss, "\u2039");
   var who = mk("select", btnCss);
   var wNext = mk("button", stepCss, "\u203a");
-  Object.keys(MOB_ANIM).sort().forEach(function (id) { var o = document.createElement("option"); o.value = id; o.textContent = id; who.appendChild(o); });
+  // Shown and sorted without a leading "the-", so the-chainman files under c.
+  var bare = function (id) { return id.replace(/^the-/, ""); };
+  Object.keys(MOB_ANIM).sort(function (a, b) { return bare(a) < bare(b) ? -1 : bare(a) > bare(b) ? 1 : 0; })
+    .forEach(function (id) { var o = document.createElement("option"); o.value = id; o.textContent = bare(id); who.appendChild(o); });
   var addB = mk("button", btnCss, "+ add");
   var clrB = mk("button", btnCss, "clear");
   // THE BEAT THE SERVER WOULD SEND. The salute, the rise, the grip are events
@@ -155,6 +164,7 @@
       if (!spec) continue;
       var k = frameAt % spec.n;
       els[i].style.backgroundPositionX = (spec.n > 1 ? k * 100 / (spec.n - 1) : 0) + "%";
+      els[i].style.setProperty("--bpx", (spec.n > 1 ? k * 100 / (spec.n - 1) : 0) + "%");
       if (!label) for (var p in spec.f) if (spec.f[p] === k) { label = p + " (" + (k + 1) + "/" + spec.n + ")"; break; }
     }
     frameB.textContent = "frame: " + (label || frameAt);
@@ -355,6 +365,7 @@
     // every frame, and it is what lights the hollow's eyes - so choosing the
     // blood sky here has to raise it too, and every other hour has to lower it.
     var red = h === "blood" ? 1 : 0;
+    lastEcl = h === "eclipse" ? 1 : 0;   // the server's flag: true under a roof too
     if (typeof FEAST_FORCE !== "undefined") FEAST_FORCE = feast.value;
     // UNDER A ROOF, the sky the game would send: none at all ("in") for a
     // sealed room, and only the hour - never the weather - for the road's

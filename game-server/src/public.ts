@@ -1399,14 +1399,26 @@ export const PAGE = `<!doctype html>
        taking any of it stretches the picture instead of scaling it. */
     flex: 0 0 auto;
   }
-  /* Reuse the eye strip's exact alpha and frame alignment, with its colour out. */
-  #mobs .mob::after {
+  /* The hollow's eyes are flat black in the strip itself (rome, 2026-10-18). The
+     black overlay this replaced was cut from the red layer, glow and all, so the
+     dead wore a soft black halo. On a blood moon the death frame drops the red
+     layer instead, and the flat black underneath is what is left. */
+  #mobs .mob[data-red="1"][data-death="1"] { background-image: var(--mob-base) !important; }
+  /* ...AND ANY OTHER COLOUR (rome, 2026-10-18). The eye strip's alpha is a mask -
+     the eye and its light, cut from the same pixels on the same rect - filled
+     with whatever the hollow's eyes are doing. Stepped with the base by --bpx. */
+  #mobs .mob[data-eye]::after {
     content: ""; position: absolute; inset: 0; pointer-events: none;
-    background-image: var(--mob-eyes, none);
-    background-size: inherit; background-position: inherit;
-    background-repeat: no-repeat; filter: brightness(0); opacity: 0;
+    background: var(--eye);
+    -webkit-mask-image: var(--mob-eyes); mask-image: var(--mob-eyes);
+    -webkit-mask-size: var(--bsz); mask-size: var(--bsz);
+    -webkit-mask-position: var(--bpx) 50%; mask-position: var(--bpx) 50%;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   }
-  #mobs .mob[data-death="1"]::after { opacity: 1; }
+  #mobs .mob[data-death="1"]::after { display: none; }
+  #mobs .mob[data-eye="white"] { --eye: #f4f1e6; }   /* the eclipse: cold, dead white */
+  #mobs .mob[data-eye="ember"] { --eye: #c4621c; }   /* it remembers your blood */
+  #mobs .mob[data-eye="frost"] { --eye: #a6d8f2; }   /* the deep breathing out */
   #scene.sky-day   { --scrim: transparent; }
   #scene.sky-dawn  { --scrim: linear-gradient(rgba(84,104,148,.20), rgba(198,168,118,.10)); }
   #scene.sky-dusk  { --scrim: linear-gradient(rgba(58,38,28,.20), rgba(188,108,48,.14)); }
@@ -3465,7 +3477,12 @@ var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3,
   "warden-captain": 0.939,
   // ...the one who stayed his, going 28 to 34 (the folk's middle is 28), and the
   // root-thing its own when the verdigris thing went 30 to 40 and moved their middle.
-  "the-one-who-stayed": 1, "root-thing": 1.118, "verdigris-thing": 1 };
+  "the-one-who-stayed": 1, "root-thing": 1.118, "verdigris-thing": 1,
+  // ...the chainman his, going 28 to 31, and the barrow-dead theirs when
+  // twice-dead went 29 to 32 and moved the bone family's middle.
+  "the-chainman": 1, "skeleton": 1.018, "thrice-dead": 1, "rag-and-bone": 0.812,
+  // ...and the drowned theirs when the miller went 28 to 34 and moved their middle.
+  "the-miller": 1.018, "the-drowned": 0.983, "the-drowned-ferryman": 1, "the-mire-walker": 1 };
 var VOICE_PITCH = null;
 // Worked out on first use: MOB_SPRITE is further down the page than this.
 function voicePitch(id) {
@@ -5437,6 +5454,7 @@ async function connect() {
       if (f.room && f.room !== lastRoomName) chipsExpanded = false;
       lastRoomName = f.room || "";
       if (f.art) grantArt();
+      lastEcl = f.ecl ? 1 : 0;
       paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red, f.covered);
       roomEl.textContent = "";
       if (f.room) {
@@ -5463,6 +5481,7 @@ async function connect() {
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
+      lastEyes = Array.isArray(f.eyes) ? f.eyes : null;
       updateMobs(f.mobs, f.doing, f.dead, f.loose, f.chests);
       mobsCameIn(f.mobs, f.rid, f.doing);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
@@ -9634,7 +9653,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "70";      // /mob/      strips and their eye layers
+var MOB_V  = "79";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -11393,6 +11412,8 @@ var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace =
 // note beside "red" in zone.ts. Weather decides the picture; the moon decides
 // the eyes, and reading both off one value put the eyes out in any fog.
 var lastRed = 0;
+var lastEyes = null;
+var lastEcl = 0;      // the eclipse is on (the server says so, roof or no roof)   // per sprite slot, from the server (chips.ts): "ember", "frost" or ""
 // WHETHER YOU ARE CARRYING A LIGHT. Sticky like the other four: applyView calls
 // paintScene with nothing at all when the player turns pictures on, and the
 // scene has to come back the way it was rather than as an unlit night.
@@ -12761,7 +12782,7 @@ var MOB_SPRITE = {
   "nomad": 32,
   "wayman": 28,               // 1.75
   "road-carrier": 30,         // 1.85  a tall figure, as the prose has it
-  "the-miller": 28,           // 1.75
+  "the-miller": 34,           // 1.75 (28 until his redraw came out smaller)
   "the-toll-clerk": 28,       // 1.75
   "the-long-warden": 30,      // 1.85
   "the-mire-walker": 29,      // 1.80
@@ -12849,13 +12870,13 @@ var MOB_SPRITE = {
   // ---- THE FORTRESS (2026-09-23). Sized against the roster already here: a man
   // is 29-30, a wolf 13, the drake 44. Each number below is the creature's own
   // entry read as a height, not a guess at a silhouette.
-  "skeleton": 28,          // a soldier's frame with nothing on it - a man, and lighter
+  "skeleton": 30,          // a soldier's frame with nothing on it - a man, and lighter (28 until its redraw's raised sword made the frame taller)
   "bone-knight": 32,       // "a TALL skeleton", and it stands in mail
   "warden": 30,            // a man in plate, walking rounds
   "warden-surface": 30,    // the same warden, outdoors
   "warden-captain": 37,    // "BIGGER than the wardens it once led"
   "last-watchman": 44,     // a watchman, dried inside his kit
-  "twice-dead": 29,        // an old man of the barrow-dead
+  "twice-dead": 32,        // an old man of the barrow-dead (29 until his redraw came out smaller)
   "thrice-dead": 29,       // his elder, no bigger
   "marrow-cantor": 37,     // "a TALL frame of fused bone"
   "forgotten-king": 52,    // crowned, and mostly seated - up from 31, rome 2026-09-26: the kings bigger
@@ -12946,7 +12967,7 @@ var MOB_SPRITE = {
   "gibbet-crow": 6,
   "the-bellfounder": 28,
   "the-sapper": 23,
-  "the-chainman": 28,
+  "the-chainman": 31,      // 28 until his redraw came out smaller
   "the-gaunt": 34,
 };
 
@@ -12986,7 +13007,7 @@ var MOB_ANIM = {
   "the-keeper-of-the-holding":   { n: 8, aspect: 1.007, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-gaunt":                   { n: 8, aspect: 1.005, f: {"idle":0,"alert":1,"cast-about":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-follower":                { n: 9, aspect: 1.158, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
-  "the-chainman":                { n: 8, aspect: 0.964, f: {"idle":0,"count-it-out":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-chainman":                { n: 9, aspect: 0.988, f: {"idle":0,"count-it-out":1,"mark-it-down":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"coil-the-chain":7,"death":8} },
   "the-bellfounder":             { n: 8, aspect: 0.988, f: {"idle":0,"rake-the-melt":1,"watch":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "something-ahead":             { n: 9, aspect: 1.103, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
   "root-thing":                  { n: 8, aspect: 1.035, f: {"idle":0,"alert":1,"listen":2,"shift-the-weight":3,"feed":4,"attack":5,"sweep":6,"death":7} },
@@ -13013,17 +13034,17 @@ var MOB_ANIM = {
   "the-drowned":   { n: 8, aspect: 1.066, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"listen":6,"death":7} },
   "marrow-king":   { n: 8, aspect: 1.047, f: {"idle":0,"keep-the-seat":1,"rise":2,"take-hold":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "thrice-dead":   { n: 8, aspect: 1.003, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "twice-dead":   { n: 8, aspect: 1, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "last-watchman":   { n: 8, aspect: 1.284, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "twice-dead":   { n: 8, aspect: 0.938, f: {"idle":0,"rise":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "last-watchman":   { n: 9, aspect: 1.258, f: {"idle":0,"hold-the-salute":1,"look-down-the-road":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "warden-captain":   { n: 9, aspect: 1.103, f: {"idle":0,"hold-the-salute":1,"ground-the-maul":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "bone-knight":   { n: 8, aspect: 1.02, f: {"idle":0,"hold-the-salute":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "bone-knight":   { n: 9, aspect: 1, f: {"idle":0,"hold-the-salute":1,"ground-the-sword":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "marrow-cantor":   { n: 9, aspect: 0.942, f: {"idle":0,"listen":1,"hold-the-note":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "skeleton":   { n: 8, aspect: 1.132, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "skeleton":   { n: 9, aspect: 1.012, f: {"idle":0,"listen":1,"look-behind":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "white-roe":           { n: 8, aspect: 1.037, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "wayman":              { n: 8, aspect: 0.957, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-toll-clerk":      { n: 8, aspect: 0.969, f: {"idle":0,"shift-the-weight":1,"alert":2,"count-it-out":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-mire-walker":     { n: 8, aspect: 1.024, f: {"idle":0,"stand-in-it":1,"alert":2,"let-it-settle":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-miller":          { n: 8, aspect: 1.009, f: {"idle":0,"work-the-water":1,"alert":2,"haul-it-up":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-miller":          { n: 9, aspect: 1.017, f: {"idle":0,"work-the-water":1,"alert":2,"haul-it-up":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-long-warden":     { n: 8, aspect: 1.04, f: {"idle":0,"turn-the-distance":1,"alert":2,"square-the-plates":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-drove-master":    { n: 8, aspect: 1.133, f: {"idle":0,"alert":1,"work-the-line":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-chain-breaker":   { n: 8, aspect: 1.107, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -13044,14 +13065,14 @@ var MOB_ANIM = {
   "the-tide-warden":        { n: 7, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5,"recover":6} },
   "the-scaffold-hand":      { n: 8, aspect: 0.972, f: {"idle":0,"work-the-stone":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-salt-widow":         { n: 8, aspect: 1.136, f: {"idle":0,"feed-the-flue":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "the-refuge-man":         { n: 8, aspect: 1.033, f: {"idle":0,"turn-from-the-wall":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "the-reed-walker":        { n: 8, aspect: 1.026, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"part-the-reed":5,"recover":6,"hit":7} },
+  "the-refuge-man":         { n: 9, aspect: 1.075, f: {"idle":0,"turn-from-the-wall":1,"hold-the-door":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "the-reed-walker":        { n: 9, aspect: 1.034, f: {"idle":0,"part-the-reed":1,"keep-pace":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-pilot":              { n: 8, aspect: 0.991, f: {"idle":0,"read-the-water":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-great-devil-crab":   { n: 8, aspect: 1.254, f: {"idle":0,"alert":1,"attack":2,"recover":3,"death":4,"rest":5,"bite":6,"sweep":7} },
   "the-eel-cutter":         { n: 8, aspect: 1.387, f: {"idle":0,"lift-the-trap":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-drowned-ferryman":   { n: 8, aspect: 0.986, f: {"idle":0,"find-the-line":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-drover":             { n: 8, aspect: 1.278, f: {"idle":0,"drive-the-road":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "the-bridge-mason":       { n: 8, aspect: 1.025, f: {"idle":0,"dress-the-stone":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-bridge-mason":       { n: 8, aspect: 0.98, f: {"idle":0,"dress-the-stone":1,"test-the-joint":2,"alert":3,"move-a":4,"move-b":5,"sweep":6,"death":7} },
   "bull-seal":              { n: 8, aspect: 1.279, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
   "the-wrecker":    { n: 8, aspect: 1.014, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
   "the-fowler":     { n: 7, aspect: 1.478, f: {"idle":0,"rise-from-the-turf":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6} },
@@ -13262,6 +13283,13 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   "raise-the-lantern",  // the warden, holding the dead lantern up to the dark
   "ground-the-maul",    // the warden captain, at rest on a maul it cannot let go of
   "hold-the-note",      // the marrow cantor, singing toward what it heard
+  // ...and the eleven after them (2026-10-18), the same way:
+  "look-behind",        // the skeleton, the skull turned back over its shoulder
+  "ground-the-sword",   // the bone-knight, both hands on the pommel
+  "look-down-the-road", // the last watchman, down a road no one travels
+  "look-at-the-water",  // the tide warden, at a milestone, before the notch
+  "lean-on-the-stick",  // the drover, waiting on the water
+  "reach-for-the-span", // the scaffold hand, for the arch that is not there
   // AND THE TWO HYENAS ARE NOT THE SAME ANIMAL. They were given one list
   // between them, which is how the two dogs ended up the same dog. The code
   // separates them and always did: the dire hyena is the only member of
@@ -13321,8 +13349,9 @@ var UNSEEN = {};
 // WHICH CREATURES SHIP A SECOND STRIP OF EYES. Every one is HOLLOW - the game's
 // own register of things with nothing inside - and every one was drawn with its
 // eyes in a flat key colour so the cutter could split them into their own layer.
-// Alive, these eyes turn red with the blood moon. On the death frame the same
-// eye shapes are overlaid in black, whatever the weather or moon.
+// Alive, these eyes are flat black with no light in them (rome, 2026-10-18: the
+// strip builder paints the base black over the key), and they turn red with the
+// blood moon. On the death frame the same eye shapes are overlaid in black.
 var MOB_EYES = {
   "the-drowned-ferryman": 1, "the-fowler": 1, "the-eel-cutter": 1, "the-pilot": 1,
   "the-drover": 1, "the-tide-warden": 1, "the-refuge-man": 1, "the-bridge-mason": 1,
@@ -13448,10 +13477,6 @@ function paintMobs(ids, doing, dead) {
     bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + MOB_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
-    if (MOB_EYES[bid]) {
-      bel.style.setProperty("--mob-eyes", "url(/mob/" + bid + ".eyes.webp?v=" + MOB_V + ")");
-      bel.dataset.death = "1";
-    }
     // The same rule as the living, applied once: a body never animates, so this
     // is the only place it can be said. Without it a dead drake lies with its
     // hindquarters under the prose.
@@ -13548,7 +13573,7 @@ function paintMobs(ids, doing, dead) {
     el.dataset.h = vh.toFixed(2);
     el.dataset.w = (vh * spec.aspect).toFixed(2);
     // TWO LAYERS ON ONE ELEMENT, and they must be one element rather than two.
-    // A hollow thing is drawn with cold pale eyes, and on a blood moon the game
+    // A hollow thing has flat black eyes, and on a blood moon the game
     // says they come up "two coals the colour of the moon above" - so the red
     // ones ride in a second strip cut from the same pixels on the same rect, and
     // the whole of the trick is that the browser steps BOTH layers with one
@@ -13556,7 +13581,7 @@ function paintMobs(ids, doing, dead) {
     // its own scale and its own frame stepping kept in sync with this one, and
     // would drift by a subpixel the moment any of the three disagreed.
     var redEyes = lastRed && MOB_EYES[id];
-    if (MOB_EYES[id]) el.style.setProperty("--mob-eyes", "url(/mob/" + id + ".eyes.webp?v=" + MOB_V + ")");
+    if (redEyes) { el.dataset.red = "1"; el.style.setProperty("--mob-base", "url(/mob/" + id + ".webp?v=" + MOB_V + ")"); }
     el.style.backgroundImage = (redEyes ? "url(/mob/" + id + ".eyes.webp?v=" + MOB_V + "), " : "")
       + "url(/mob/" + id + ".webp?v=" + MOB_V + ")";
     el.style.backgroundSize = redEyes
@@ -13806,6 +13831,20 @@ function fitPicture() {
 // WHAT THE WORLD SAYS EACH OF THEM IS DOING. A creature holds this until the
 // world says otherwise; the one-shots (a blow, a meal, a death) play over the
 // top and drop back into it.
+// The hollow's eyes, worst first: the blood moon's red is its own layer and
+// beats everything; then the one that remembers you, the deep's breath, and the
+// eclipse. Nothing at all is the flat black drawn into the strip.
+function eyeColour(a, k) {
+  var c = lastRed ? "" : (lastEyes && lastEyes[a.slot]) || (lastEcl || lastSky === "eclipse" ? "white" : "");
+  if ((a.el.dataset.eye || "") !== c) {
+    if (c) {
+      a.el.dataset.eye = c;
+      a.el.style.setProperty("--mob-eyes", "url(/mob/" + a.id + ".eyes.webp?v=" + MOB_V + ")");
+      a.el.style.setProperty("--bsz", (a.spec.n * 100) + "% 100%");
+    } else delete a.el.dataset.eye;
+  }
+  if (c) a.el.style.setProperty("--bpx", (k * 100 / (a.spec.n - 1)) + "%");
+}
 function applyState(doing) {
   for (var i = 0; i < anims.length; i++) {
     // BY SLOT, NOT BY NAME. Keyed by creature id this read one state for every
@@ -14260,6 +14299,7 @@ function stepAnims() {
     var seat = p.k === a.spec.f["keep-the-seat"] && anims.length === 1 && mobsEl.children.length === 1
       && typeof SEAT_ON !== "undefined" && mobsEl.dataset ? SEAT_ON[mobsEl.dataset.seat || ""] || null : null;
     a.el.style.backgroundPositionX = (p.k * 100 / (a.spec.n - 1)) + "%";
+    if (MOB_EYES[a.id]) eyeColour(a, p.k);
     // the strike itself comes out of the dark whole
     a.el.style.opacity = a.state === "lurk" && a.phase !== "attack" && a.phase !== "death" ? String(LURK_FADE) : "";
     if (a.el.dataset) a.el.dataset.death = p.k === a.spec.f.death ? "1" : "";

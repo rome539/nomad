@@ -8539,7 +8539,7 @@ export class ZoneDO implements DurableObject {
           // Inside, the HUD must say INSIDE. You are not at the Weeper's Arch —
           // you are behind its door, and the bar saying otherwise was the visible
           // face of a deeper lie: the world still had you standing in the gate room.
-          room: this.outOfWorld(session) ? "The Gatehouse" : den.roomTitle(this, session, room?.name ?? session.roomId),
+          room: this.inGatehouse.has(session.pubkey) ? "The Gatehouse" : den.roomTitle(this, session, room?.name ?? session.roomId),
           // AND WHAT COUNTRY THAT ROOM IS IN (rome, 2026-08-12). The bar named
           // the room and nothing else, so "The Weeper's Arch" told you where you
           // were standing and never which of the world's bands you were standing
@@ -8612,7 +8612,7 @@ export class ZoneDO implements DurableObject {
           // What the place sounds like, for the page's own synth (sound.ts).
           amb: (() => { const a = soundscapeFor(this, session); session.ambKey = soundKey(a); return a; })(),
           // Light through a doorway can follow the hour without exposing sky.
-          covered: this.outOfWorld(session) || !OUTDOOR_ROOMS.has(session.roomId),
+          covered: this.inGatehouse.has(session.pubkey) || !OUTDOOR_ROOMS.has(session.roomId),
           // THE RED NIGHT IS NOT A SKY SLOT. `sky` above picks which photograph
           // to paint, and weather wins that contest - correctly, because a
           // blood moon behind fog is a foggy picture. But the hollow ones'
@@ -8621,6 +8621,10 @@ export class ZoneDO implements DurableObject {
           // a blood-moon night and the crossing's dead stayed cold-eyed, which
           // on a coast is most of them. Two questions, two fields.
           red: (isNight() && isBloodMoon()) ? 1 : 0,
+          // ...and the eclipse the same way, for the same reason (rome,
+          // 2026-10-18: under a roof the sky reads "in" and the hollow's eyes
+          // never went white). A fact about the sun, not a picture of it.
+          ecl: eclipsePhase() === "active" ? 1 : 0,
           // A FLAME IN YOUR HAND IS GROUND WEATHER. The whole architecture
           // rests on one split: what happens in the AIR is the sky changing
           // behind an unchanged scene, and what happens on the GROUND is a
@@ -8663,7 +8667,11 @@ export class ZoneDO implements DurableObject {
   // the moon, an eclipse, weather arriving or lifting, and walking under a roof.
   public artSkyFor(session: Session): string | undefined {
     if (!seesArt(session.pubkey)) return undefined;
-    if (this.outOfWorld(session)) return "in";
+    // BEHIND THE DOOR, not crouched at it (rome, 2026-10-18: opening the pack at
+    // a gate showed him the gatehouse). The crouch is still insulated like the
+    // gatehouse is (outOfWorld), but the picture, the bar and the chips are of
+    // where you actually are: at the gate, on your heels over your kit.
+    if (this.inGatehouse.has(session.pubkey)) return "in";
     const openSkyForArt = this.world!.entryRooms.has(session.roomId);
     // A ROOF IN OPEN COUNTRY IS NOT A FORTRESS INTERIOR (rome, 2026-09-20: the
     // Carter's Rest showing him daylight on a night the rest of the world was

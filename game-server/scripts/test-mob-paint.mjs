@@ -112,7 +112,7 @@ t("a living creature gets no eyes on the red night", w && w.style.backgroundImag
 for (const sky of ['day','blood','fog']) {
   bust();ctx.setSky(sky);ctx.paintMobs([],null,['the-tide-warden']);
   const corpse=made.find(e=>e.className==='mob dead');
-  t(sky+': Hollow corpse uses the black-eye overlay',corpse?.dataset.death==='1' && corpse.style['--mob-eyes'].includes('the-tide-warden.eyes.webp'));
+  t(sky+': Hollow corpse wears no eye overlay (its eyes are black in the strip)',!!corpse && !corpse.style['--mob-eyes']);
   t(sky+': corpse base has no blood-moon red overlay',!corpse.style.backgroundImage.includes('.eyes.webp'));
 }
 

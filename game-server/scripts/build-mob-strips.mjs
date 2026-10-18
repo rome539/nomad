@@ -41,6 +41,11 @@ const GAME = path.resolve(HERE, "..");
 const REPO = path.resolve(GAME, "..");
 const OUT  = path.join(GAME, "public/mob");
 const CLIENT = path.join(GAME, "src/public.ts");
+// The hollow, as the client lists them: the only creatures whose eyes go black.
+const HOLLOW_EYES = (() => {
+  const src = fs.readFileSync(CLIENT, "utf8"), i = src.indexOf("var MOB_EYES = {");
+  return new Set([...src.slice(i, src.indexOf("\n};", i)).replace(/\/\/.*$/gm, "").matchAll(/"([a-z0-9-]+)":\s*1/g)].map((m) => m[1]));
+})();
 
 // WHERE THE POSE ART LIVES. Each entry is a folder holding <pose>.png files.
 // The workbench is gitignored (see .gitignore) - it is generated art kept out
@@ -87,6 +92,8 @@ const BODY_SCALE = {
   "lynx": 0.979, "pale-stalker": 0.974, "the-follower": 0.986,
   "marrow-cantor": 0.998, "warden-captain": 0.994, "warden": 0.973,
   "verdigris-thing": 0.993, "the-one-who-stayed": 0.990,
+  "the-bridge-mason": 0.980, "the-reed-walker": 0.978, "the-refuge-man": 0.972,
+  "bone-knight": 0.932, "last-watchman": 0.956,
 };
 
 const NOT_A_POSE = new Set(["sheet-order", "source", "combat-source", "flight-source",
@@ -321,6 +328,13 @@ for (const [id, dir] of [...found].sort()) {
     }
   }
 
+  // THE LIVING HOLLOW HAVE FLAT BLACK EYES (rome, 2026-10-18). The cyan they are
+  // drawn with is a key, and it used to be left showing in the base strip as the
+  // "cold pale eyes" of every ordinary night. Now the base is painted black over
+  // the eye itself - the red layer's solid core, not its glow - so they read as
+  // empty sockets, and the blood moon still lays its red over the top.
+  if (anyEyes && HOLLOW_EYES.has(id)) for (let i = 0; i < frames.length; i++) frames[i] = await blackenEyes(frames[i], eyeFrames[i]);
+
   if (write) {
     fs.mkdirSync(OUT, { recursive: true });
     if (anyEyes) await sharp({ create: { width: fw * eyeFrames.length, height: fh, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
@@ -398,4 +412,16 @@ if (patch) {
     : "\nNOTHING WAS WRITTEN - this was a dry run. --write to build the strips.\n"
       + "MOB_ANIM rows these would produce:\n");
   for (const r of rows) console.log(line(r));
+}
+
+// The eye mask is the red layer's core: near-opaque and deep red (the glow only
+// reaches that alpha right at the centre, inside the core anyway). Shared with
+// nothing else - it is the one definition of "where the eye is" in the base.
+function eyeCore(r, g, b, a) { return a >= 170 && r > 200 && g < 80 && b < 70; }
+async function blackenEyes(base, eyes) {
+  const { data, info } = await sharp(base).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const e = await sharp(eyes).ensureAlpha().raw().toBuffer();
+  for (let o = 0; o < data.length; o += 4)
+    if (data[o + 3] && eyeCore(e[o], e[o + 1], e[o + 2], e[o + 3])) { data[o] = 0; data[o + 1] = 0; data[o + 2] = 0; }
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
 }

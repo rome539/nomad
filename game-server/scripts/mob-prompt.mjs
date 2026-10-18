@@ -163,16 +163,36 @@ const RULED_OUT = {
 // Every line here is written to the law above: the BODY makes the shape and the
 // thing being worked on is never named, because naming it draws it.
 const LINES = {
+// THE REDO OF 2026-10-18 (nine cells, no recover). These three had no LINES of
+// their own; the carrier's two work poses are the wording his sheet was drawn
+// with, and the strand thief's graze is the wrack-turning his description gives.
+"cutthroat": {
+  graze: "Crouched on his heels going through something on the ground with both hands, head down over it. What he is going through is NOT drawn",
+  sweep: "A fast backhand slash with the thin knife, swung flat across at throat height, the body low and turning with it",
+},
+"road-carrier": {
+  "check-the-satchel": "One hand come across to the buckles of the satchel at the hip, thumb on them, the head barely turned down to it and the stride not broken",
+  "set-down-the-load": "The strap lifted off the shoulder and the satchel swung down to knee height, both hands on it, the body straightening - the one moment it is not carrying",
+  sweep: "A hard backhand blow with the open hand, swung flat across the body at full reach, the satchel swinging out on its strap",
+},
+"strand-thief": {
+  graze: "Turning wrack over with one boot",
+  sweep: "A fast low backhand swipe across the body at full reach, crouched and turning with it",
+},
 // THE ARMED DEAD OF THE KEEP. Every one of these came back throwing a punch
 // with the weapon still frozen in its carry position, because the generic
 // attack line is written for an animal and says nothing about a hand holding
 // something. The blow names the weapon here, and so does the recovery, because
 // a man does not come back to guard from a punch he did not throw.
 "skeleton": {
+  "look-behind": "Standing guard, the skull turned slowly round over one shoulder toward something behind it, the body not following, the rusted sword still carried low",
+  sweep: "A backhand cut with the rusted sword, swung flat across the body from the far side at full reach, the light frame twisting round behind it",
   attack: "A downward cut with the rusted sword, the arm come through and the blade past the low point, the whole light frame turned into it. The sword is IN THE SWING, not held at rest",
   recover: "Bringing the sword back up and in across the body after the cut, coming back to a guard, weight settling onto the back foot",
 },
 "bone-knight": {
+  "ground-the-sword": "Standing at rest with the point of the rusted sword grounded in front of it and both bone hands stacked on the pommel, the kite-shield hanging from the forearm at the side",
+  sweep: "A shove with the kite-shield: the rim driven straight out from the body at chest height, the shoulder behind it and the front foot planted, the sword held back low ready to follow",
   attack: "A committed sword cut from the shoulder, blade driven through and out past the body, the kite-shield brought up and across the chest behind it. Sword in the blow, shield covering - it fights with both",
   recover: "Sword drawn back in and up, shield settling back onto the forearm, squaring up again behind it",
 },
@@ -184,6 +204,8 @@ const LINES = {
   sweep: "A shove with the tower shield: the worn rim driven straight out from the body at chest height, the shoulder behind it and the front foot planted, the maul held back low in the fused gauntlets",
 },
 "last-watchman": {
+  "look-down-the-road": "Standing his post with the spear grounded upright beside him in one hand, the helm turned and lifted, looking a long way down a road that is not drawn",
+  sweep: "A low swing of the spear across the body at knee height, both hands on the shaft, the body turned behind it - the shaft doing the work, not the point",
   attack: "A hard spear thrust, straight and level: both hands on the shaft, the point driven out past the front foot at chest height, the body behind it in a long lunge, the mantle thrown back off the shoulders. THE SPEAR IS LEVEL AND GOING FORWARD - it is not upright, it is not at the shoulder, and the fist is not doing the work",
   recover: "The spear hauled back in from the thrust, point coming up off the line, the front foot recovering under him and the body straightening back toward his post",
 },
@@ -199,6 +221,8 @@ const LINES = {
   recover: "The punching arm drawn back in and down, the lantern settling, the body squaring up again",
 },
 "the-tide-warden": {
+  "look-at-the-water": "Stopped at a milestone, the notched stick held still at the side, the ruined head turned away and down, looking out at water that is not drawn",
+  sweep: "A backhand swing of the notched stick, swung flat across the body from the far side at full reach, the other arm out for balance",
   idle: "Standing still in a coat sodden black to the hem, a notched stick held upright in one hand, facing along the way",
   "cut-the-stick": "Head down over the notched stick held up close to the chest, cutting a fresh notch into it with a small blade",
   alert: "The knife and the stick stopped dead mid-notch, both hands still on them, the ruined head come up off the tally and levelled straight at the viewer for the first time",
@@ -235,6 +259,8 @@ const LINES = {
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-drover": {
+  "lean-on-the-stick": "Standing at rest, leaning on the long stick planted upright in front of him, both hands folded over the top of it, waiting the way a man waits on the tide",
+  sweep: "A low backhand swing of the long stick across the body at knee height, the body turned behind it, arms staying below head height",
   idle: "Standing at ease with a long stick across the worn grooves of both shoulders and both wrists hooked over it, coat tied at the waist, looking past you up the road",
   "drive-the-road": "Stick brought down into one hand and swung out low and wide to the side, the other arm out, moving something that is not there",
   alert: "The stick come down off the worn shoulder grooves into both hands across the body, head up, the easy working stance gone out of him entirely",
@@ -288,6 +314,8 @@ const LINES = {
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-scaffold-hand": {
+  "reach-for-the-span": "Up on the balls of both feet, both bone arms stretched straight up as far as they will go, fingers spread, reaching for something higher than he can get to. Nothing above him is drawn",
+  sweep: "Both bone arms, still raised, swung across sideways together over the head like a falling beam, the body twisting under them",
   idle: "Standing with the head tipped right back and both bare-bone arms raised straight up over his head, hands working at something above him, weight settled. What he is working on is NOT drawn",
   "work-the-stone": "Standing, head back, both bone arms straight up and committed, hands picking at nothing overhead, the body leaning back into it",
   swing: "The gather before a blow: both bone arms taken up and back behind the head, elbows high, the body leaning away and loading, nothing released yet",
@@ -306,6 +334,7 @@ const LINES = {
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-salt-widow": {
+  sweep: "A low backhand sweep of the long rake across the body at knee height, both hands on it, the body turned behind it",
   idle: "Standing side on and stooped a little forward from the waist, both brown leather arms down and working at something low in front of her at knee height, hands busy, sleeves and coat crusted white to the elbow. What she is working at is NOT drawn",
   "feed-the-flue": "Crouched right down with both arms driven straight out forward and low, in to the elbow, pushing something away from her at ground level. Her hands are empty and nothing she is pushing, and nothing she is pushing it into, is drawn",
   "work-the-pan": "Standing and leaning far out forward from the hips, a long rake held in both hands with its head down and out at full arm's length, drawing it back toward her across knee height. The rake is the only object in the cell",
@@ -326,8 +355,10 @@ const LINES = {
 // THE BODY MAKES THE SHAPE AND THE THING WORKED ON IS NEVER DRAWN. The miller's
 // water is not in the cell. Neither is the clerk's toll, nor the warden's road.
 "the-miller": {
-  idle: "Standing turned away from the viewer and bent forward from the waist, both arms straight down in front of him and sunk in to the forearm, hands out of sight below, shoulders working slightly. Swollen, heavy and patient. NOTHING he is reaching into is drawn - no water, no floor, no surface, no wheel",
-  "work-the-water": "Bent lower still and further forward, both arms in past the elbow now, the whole back curved over the work and the head down between the shoulders. His hands and what they are on are below the cell's empty space and are NOT drawn",
+  "haul-it-up": "Straightening hard up out of the stoop, both arms coming up and back with the elbows bent and the fists closed on what he has hold of. What is in them is NOT drawn",
+  sweep: "A heavy backhand swing of one closed fist across the body at full reach, the other fist still shut against the chest, the whole swollen weight turned behind it",
+  idle: "Standing upright and still, turned three-quarters away from the viewer, the head bowed to look down in front of him, both arms hanging straight down at his sides with the hands open. Heavy and patient. NOTHING he is looking at is drawn - no water, no floor, no surface, no wheel",
+  "work-the-water": "Bent right over from the waist, both arms reaching down in front of him to knee height, hands open and fingers spread, working at something low that is NOT drawn - no water, no floor, no surface",
   alert: "Come round to face the viewer for the first time, still bent, and BOTH HANDS ARE UP OUT OF IT AND CLOSED - he has kept hold of whatever it was. What is in his fists is NOT drawn; only the grip and the forearms streaming",
   "move-a": "Wading contact pose A: one leg driven forward and down against a resistance that is not drawn, the body swung heavily after it, both arms out wide for balance",
   "move-b": "Wading passing pose B: the other leg through, the body swung the other way, same direction and body size",
@@ -1226,6 +1257,11 @@ THE WINGSPAN DECIDES THE SCALE OF EVERY CELL ON THIS SHEET. Find the pose with t
 DO NOT enlarge any pose to fill its cell. DO NOT let a wing, a tail, a foot or a bill touch or cross a cell edge in any cell, for any reason. If a wingspan will not fit, the bird is drawn TOO BIG - shrink the whole bird on every cell until it does. A wingtip that reaches the edge of its cell is not a tight crop, it is a severed wing: the rest of it lands in the next bird's cell and is lost.`;
 
 const CONSTANT = {
+  // HIS ARMS ARE BONE (rome, 2026-10-18). Sunk out of sight in the water that
+  // is never drawn, they came back as stumps ending at the forearm.
+  "the-miller": `
+HIS ARMS ARE BARE SKELETON ARMS. Both arms are bone and nothing else from the shoulder down - no flesh, no skin, no swelling on them at all: the upper arm bone, the two forearm bones side by side, the knuckled bones of the wrist and both hands of long finger bones. Normal length for a man, whole from shoulder to fingertip, both hands drawn in EVERY cell - never ending at the wrist or the forearm and never sunk out of sight. The water's swelling is in his face and his body; his arms are bone. Camera: eye-level three-quarter view, facing slightly toward the viewer's right.
+`,
   // THE CHAIN IS SMALL (rome, 2026-10-17: the generator kept getting the long
   // chain wrong). Drawn short and worn round his neck, it stays one thing.
   "the-chainman": `

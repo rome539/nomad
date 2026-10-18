@@ -148,8 +148,40 @@ let bad = 0;
 for (let i = 0; i < poses.length; i++) {
   const col = i % COLS, row = Math.floor(i / COLS);
   const bx = boxes[row][col];
+  // A POSE THAT REACHES UP OUT OF ITS CELL KEEPS WHAT IT REACHED WITH (rome,
+  // 2026-10-18: the skeleton's raised sword lost its point in the alert frame).
+  // Rows are cut on the grid line, so a blade held over the head went into the
+  // cell above and the sweep there threw it out as somebody else's stray. Ink
+  // crossing the line is followed in the sheet: if it runs down deep into THIS
+  // cell it is this pose's, and the cut starts above its highest pixel; if it
+  // runs up deep into the cell above, it is that pose reaching down, and the
+  // line stays where it is.
+  let up = 0;
+  if (row > 0) {
+    const line = row * ch, lo = Math.max(0, line - (ch >> 1)), hi = Math.min(SH - 1, line + (ch >> 1));
+    const BW = bx.x1 - bx.x0 + 1, BH = hi - lo + 1, seen = new Uint8Array(BW * BH), st = new Int32Array(BW * BH);
+    for (let x = bx.x0; x <= bx.x1; x++) {
+      const q0 = (line - lo) * BW + (x - bx.x0);
+      if (seen[q0] || !sInk(x, line) || !sInk(x, line - 1)) continue;
+      let sp = 0, top = line, bot = line; st[sp++] = q0; seen[q0] = 1;
+      while (sp) {
+        const c = st[--sp], cx = c % BW, cy = (c / BW) | 0, y = lo + cy;
+        if (y < top) top = y; if (y > bot) bot = y;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= BW || ny >= BH) continue;
+          const nq = ny * BW + nx;
+          if (seen[nq] || !sInk(bx.x0 + nx, lo + ny)) continue;
+          seen[nq] = 1; st[sp++] = nq;
+        }
+      }
+      if (bot - line > line - top) up = Math.max(up, line - top + 6);
+    }
+    up = Math.min(up, row * ch);
+    if (up) console.log("     " + poses[i] + ": reaches " + (up - 6) + "px up into the cell above - cut taller to keep it");
+  }
   const cell = await sharp(sheet)
-    .extract({ left: bx.x0, top: row * ch, width: bx.x1 - bx.x0 + 1, height: ch })
+    .extract({ left: bx.x0, top: row * ch - up, width: bx.x1 - bx.x0 + 1, height: ch + up })
     .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { data, info } = cell;
   let kept = 0;

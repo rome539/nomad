@@ -1,0 +1,11 @@
+-- 306: THREE WARDENS IN THE HALLS (rome, 2026-10-18).
+--
+-- Four hollow wardens walked the fortress round (barracks to gallery): two
+-- from the warden post, one from the ossuary, one from the guardroom. The
+-- post's second one goes, so the post keeps one and the halls keep three. The
+-- surface warden (ward-4, out at the muster) is not a hall warden and stays.
+-- A captain still rides any of the three now and then, as before.
+--
+-- The live world trims the extra one itself on its next load
+-- (ai.reconcilePopulation): nothing respawns for a spawn that is not there.
+DELETE FROM mob_spawns WHERE id = 'ward-3';

@@ -23,7 +23,7 @@ import {
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
-  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS, FLIERS, CACHE_ART,} from "./zone-data";
+  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS, FLIERS, CACHE_ART, HOLLOW,} from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
 // resting, banking, chatting, or reading the walls while something swings
@@ -66,7 +66,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // attack, forage, fish or flee. The room offers what the room has: the fixtures
   // on its walls, and the door back out. Everything else you might want to do in
   // here you do by talking, and talking needs no chip.
-  if (z.outOfWorld(session)) {
+  if (z.inGatehouse.has(session.pubkey)) {   // inside, not the pack crouch at a gate (see artSkyFor)
     // The room's fixtures in the order you'd walk to them — the door, the hatch,
     // the brazier — and your own kit last, because it's the one thing here that
     // isn't the room.
@@ -163,6 +163,13 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // Parallel to `seen`, same length, "" where a creature is simply going about
   // its business. The client walks the two together.
   const doing: string[] = [];
+  // WHAT THE HOLLOW'S EYES ARE DOING (rome, 2026-10-18), one per sprite like
+  // `doing`. Flat black is the default and needs no word; the blood moon's red
+  // and the eclipse's white are the sky's and the client reads those itself.
+  // These two are the ones only the server knows: the one that remembers YOUR
+  // blood, and the deep breathing out on the room.
+  const eyes: string[] = [];
+  const exhale = events.exhaling(z, session.roomId);
   // AND WHAT IS LYING ON THE GROUND. A body is not a two-second flourish: the
   // blood stays six hours and a scavenger comes to eat it, so the picture keeps
   // it until the world lets go of it. Three at most — a battlefield should read
@@ -195,7 +202,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // imagined in the dark. Still no chip, no name, no line in the room text.
     const lurking = LURKERS.has(creature.templateId) && creature.hidden && !creature.joinedOpenly;
     if (lurking && (creature.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))) {
-      if (seen.length < 4) { seen.push(creature.templateId); doing.push("lurk"); }
+      if (seen.length < 4) { seen.push(creature.templateId); doing.push("lurk"); eyes.push(""); }
       continue;
     }
     creatureHere = true;
@@ -228,6 +235,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         : creature.curious ? "watch"
         : "";
       doing.push(state);
+      eyes.push(!HOLLOW.has(creature.templateId) ? ""
+        : ai.remembers(z, creature, session.pubkey, now) ? "ember"
+        : exhale ? "frost" : "");
     }
   }
   // ...and the other wanderers standing here, after the creatures, in what is
@@ -236,12 +246,12 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (seen.length >= 4) break;
     if (o === session || o.roomId !== session.roomId || z.outOfWorld(o) || o.hp <= 0) continue;
     seen.push("nomad");
-    doing.push(folkState(z, o));
+    doing.push(folkState(z, o)); eyes.push("");
   }
   // ...and the one that walks on its own (wanderer.ts), last of all.
   if (seen.length < 4 && wanderer.isHere(z, session.roomId)) {
     seen.push("nomad");
-    doing.push(wanderer.folkState(z));
+    doing.push(wanderer.folkState(z)); eyes.push("");
   }
   // A throwable in hand and something to throw it at: offer the opener.
   if (creatureHere) {
@@ -566,7 +576,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   }
   try {
     session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, rid: session.roomId, mobs: seesArt(session.pubkey) ? seen : undefined, loose: loose || undefined, chests: chests.length ? chests : undefined,
-      dead: seesArt(session.pubkey) && dead.length ? dead : undefined, doing: seesArt(session.pubkey) && Object.keys(doing).length ? doing : undefined }));
+      dead: seesArt(session.pubkey) && dead.length ? dead : undefined, doing: seesArt(session.pubkey) && Object.keys(doing).length ? doing : undefined,
+      eyes: seesArt(session.pubkey) && eyes.some(Boolean) ? eyes : undefined }));
   } catch {}
 }
 
