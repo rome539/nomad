@@ -807,6 +807,74 @@ export const CRUDE_BAD_MIN = 0.05;    // best hand: ~5% of shown exits lie
 export const CRUDE_BAD_MAX = 0.25;    // worst hand: a quarter walk you wrong
 export const SALVAGE_YIELD: Record<string, number> = { common: 1, uncommon: 2, rare: 4, epic: 8 };
 export const REPAIR_COST: Record<string, number> = { common: 1, uncommon: 1, rare: 2, epic: 3 };
+// WHAT THE VICE GIVES BACK, AND WHAT THE MEND TAKES (rome, 2026-10-19). Every
+// piece used to break down into scrap iron and be mended with it, whatever it
+// was — a wolfskin cloak came apart into nails and a coral crown was patched
+// with them. Now the vice gives back what a thing is made of (materialOf, the
+// same call the damp makes), and a mend spends the same stuff: a hide piece is
+// patched with leather, a cloth one with linen, a bone one with horn. Stone
+// gives nothing and takes nothing, as before. The amounts are unchanged — the
+// yield and the cost still go by rarity — only the stuff is honest now.
+export const LEATHER_ID = "leather-offcuts";
+export const BONE_BITS_ID = "bone-offcuts";
+export const WOOD_ID = "split-wood";
+export const LINEN_ID = "linen-strips";
+export const MATERIAL_SALVAGE: Record<string, string | null> = {
+  steel: SCRAP_ID, hide: LEATHER_ID, cloth: LINEN_ID, bone: BONE_BITS_ID, wood: WOOD_ID, stone: null,
+};
+// ...and the pieces that are another stuff but carry real iron in them —
+// nails, rivets, strapping, a shod foot. Read off their own descriptions, not
+// guessed from their names. They give a handful of scrap on top of their own
+// stuff, and a mend wants a handful of scrap on top of its own stuff too: the
+// leather is restitched AND the hobnails are reset.
+export const IRON_FITTINGS = new Set([
+  "splintered-cudgel", "studded-maul", "the-long-crossing",
+  "battered-buckler", "iron-bound-shield", "tail-board-targe", "drake-scale-shield",
+  "hobnailed-boots", "watchmans-boots", "the-carriers-mile",
+  "wardens-watch-mantle", "strapped-baldric", "horn-plated-cap", "antler-braced-cap",
+]);
+// What breaking a piece down gives: its own stuff by rarity, plus the iron.
+export function salvageYield(itemId: string, rarity: string): { id: string; n: number }[] {
+  const own = MATERIAL_SALVAGE[materialOf(itemId)];
+  if (!own) return [];
+  const out = [{ id: own, n: SALVAGE_YIELD[rarity] ?? 1 }];
+  if (own !== SCRAP_ID && IRON_FITTINGS.has(itemId)) out.push({ id: SCRAP_ID, n: 1 });
+  return out;
+}
+// What a mend spends: its own stuff by rarity, plus the iron.
+export function repairCost(itemId: string, rarity: string): { id: string; n: number }[] {
+  // Stone gives nothing to the vice, but a gravestone shield or a throwing
+  // shard has always been mendable in scrap (only the hammerstone is refused,
+  // THROW_TOUGH) and that is left exactly as it was.
+  const own = MATERIAL_SALVAGE[materialOf(itemId)] ?? SCRAP_ID;
+  const out = [{ id: own, n: REPAIR_COST[rarity] ?? 1 }];
+  if (own !== SCRAP_ID && IRON_FITTINGS.has(itemId)) out.push({ id: SCRAP_ID, n: 1 });
+  return out;
+}
+// THE FORGE BY THE SAME RULE (rome, 2026-10-19). A recipe's iron column was
+// the whole price of every piece, so a hide cloak or a quarterstaff was beaten
+// out of forge bars. Now a piece is made of what it is made of: a steel piece
+// costs its iron as written; any other stuff costs FORGE_STUFF_PER_IRON of its
+// own stuff for every bar the recipe names (a bar is smelted from that many
+// handfuls of scrap, so the work is the same); a piece with iron fittings keeps
+// one bar of the price in iron and pays the rest in its stuff. The trophy a
+// recipe names is untouched. Derived, not stored: one rule, and a recipe added
+// later follows it without anybody remembering to.
+export const FORGE_STUFF_PER_IRON = 5;
+export function forgeCost(itemId: string, iron: number): { iron: number; stuff: { id: string; n: number } | null } {
+  const own = MATERIAL_SALVAGE[materialOf(itemId)];
+  if (!own || own === SCRAP_ID) return { iron, stuff: null };
+  if (IRON_FITTINGS.has(itemId)) return { iron: 1, stuff: { id: own, n: Math.max(1, iron - 1) * FORGE_STUFF_PER_IRON } };
+  return { iron: 0, stuff: { id: own, n: iron * FORGE_STUFF_PER_IRON } };
+}
+// The short word for a stuff where a count already says how much ("10 leather").
+export const STUFF_WORD: Record<string, string> = {
+  [SCRAP_ID]: "scrap", [LEATHER_ID]: "leather", [BONE_BITS_ID]: "bone and horn", [WOOD_ID]: "split wood", [LINEN_ID]: "linen strips",
+};
+// "a handful of scrap iron" x3 -> "3 handfuls of scrap iron".
+export function stuffCount(name: string, n: number): string {
+  return n === 1 ? name : name.replace(/^an? (\w+) of /, (_m, w: string) => `${n} ${w}s of `);
+}
 // The gate keeper deals in kind: barter value ≥ this and his manner changes.
 // What clears the bar is never written down anywhere a player can read.
 export const RICH_TENDER = 15;

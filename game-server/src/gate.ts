@@ -17,7 +17,7 @@ import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, moonPhase, eclipsePhase } from "./zone-util";
-import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
+import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
@@ -50,8 +50,7 @@ export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promis
     for (const r of [...world.forgeRecipes].sort((a, b) => a.scrap - b.scrap)) {
       const t = world.itemTemplates.get(r.itemId);
       if (!t) continue;
-      const mat = r.material ? ` + ${r.materialQty} ${shortName(world.itemTemplates.get(r.material)?.name ?? r.material)}` : "";
-      lines.push(`  ${z.gearName(t.id)}${z.itemStat(t)} [${t.rarity}] — ${r.scrap} iron${mat}`);
+      lines.push(`  ${z.gearName(t.id)}${z.itemStat(t)} [${t.rarity}] — ${recipeCostText(z, r)}`);
     }
     const pools = await z.gatePools(session);
     const iron = z.countLooseIn(pools, IRON_ID);
@@ -67,6 +66,16 @@ export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promis
   const { ok, note } = await forgeCore(z, session, recipe);
   z.send(session, note, ok ? "forge" : undefined);
   if (ok) z.sendCtx(session);
+}
+
+// "10 leather + 2 wolf pelt", "1 iron + 5 split wood", "3 iron + 2 hyena fang".
+function recipeCostText(z: ZoneDO, r: ForgeRecipe): string {
+  const cost = forgeCost(r.itemId, r.scrap);
+  const parts: string[] = [];
+  if (cost.iron) parts.push(`${cost.iron} iron`);
+  if (cost.stuff) parts.push(`${cost.stuff.n} ${STUFF_WORD[cost.stuff.id] ?? cost.stuff.id}`);
+  if (r.material) parts.push(`${r.materialQty} ${shortName(z.world!.itemTemplates.get(r.material)?.name ?? r.material)}`);
+  return parts.join(" + ");
 }
 
 // Work one recipe: check pack room, scrap, and any material; consume and mint
@@ -86,18 +95,26 @@ export async function forgeCore(
   // are cut in IRON now (recipe.scrap holds the iron cost — the column kept its
   // old name); scrap is for the smelter and the mending vice.
   const pools = await z.gatePools(session);
+  const cost = forgeCost(recipe.itemId, recipe.scrap);
   const haveIron = z.countLooseIn(pools, IRON_ID);
-  if (haveIron < recipe.scrap) {
-    return { ok: false, note: `${cap(t.name)} wants ${recipe.scrap} iron; you have ${haveIron} between pack and keeping. (Smelt scrap into iron: '${SMELT_SCRAP_PER_IRON} scrap = 1 iron'.)` };
+  if (haveIron < cost.iron) {
+    return { ok: false, note: `${cap(t.name)} wants ${cost.iron} iron; you have ${haveIron} between pack and keeping. (Smelt scrap into iron: '${SMELT_SCRAP_PER_IRON} scrap = 1 iron'.)` };
+  }
+  if (cost.stuff) {
+    const haveStuff = z.countLooseIn(pools, cost.stuff.id);
+    if (haveStuff < cost.stuff.n) {
+      return { ok: false, note: `${cap(t.name)} wants ${cost.stuff.n} ${STUFF_WORD[cost.stuff.id] ?? cost.stuff.id}; you have ${haveStuff} between pack and keeping. (The vice gives it back when you break down a piece made of it.)` };
+    }
   }
   if (recipe.material) {
     const mt = world.itemTemplates.get(recipe.material);
     const haveMat = z.countLooseIn(pools, recipe.material);
     if (haveMat < recipe.materialQty) {
-      return { ok: false, note: `${cap(t.name)} wants ${recipe.materialQty} of ${mt?.name ?? recipe.material} besides the iron; you have ${haveMat}.` };
+      return { ok: false, note: `${cap(t.name)} wants ${recipe.materialQty} of ${mt?.name ?? recipe.material} besides; you have ${haveMat}.` };
     }
   }
-  await z.takeLooseAcross(session, IRON_ID, recipe.scrap);
+  if (cost.iron) await z.takeLooseAcross(session, IRON_ID, cost.iron);
+  if (cost.stuff) await z.takeLooseAcross(session, cost.stuff.id, cost.stuff.n);
   if (recipe.material) await z.takeLooseAcross(session, recipe.material, recipe.materialQty);
   const id = uuid();
   await insertLoot(z.env.DB, id, session.pubkey, t.id, null);
@@ -105,7 +122,7 @@ export async function forgeCore(
   gatehouseFeed(z, `${session.name} works the bench, hammer ringing off the gatehouse walls.`, session.pubkey); // gatehouse work stays in the gatehouse — the world outside the door doesn't hear the hammer
   return {
     ok: true,
-    note: `Iron, the brazier's heat, and patience. ${z.gearName(t.id, cap(t.name))} comes off the bench, raw but true.${z.itemStat(t)} [${t.rarity}] (unclaimed — the gate can seal it)`,
+    note: `${cost.stuff ? cap(STUFF_WORD[cost.stuff.id] ?? "stuff") + (cost.iron ? ", iron" : "") + ", the bench" : "Iron, the brazier's heat,"} and patience. ${z.gearName(t.id, cap(t.name))} comes off the bench, raw but true.${z.itemStat(t)} [${t.rarity}] (unclaimed — the gate can seal it)`,
   };
 }
 
@@ -198,7 +215,7 @@ export async function leaveForge(z: ZoneDO, session: Session): Promise<void> {
 // no chances. Everything
 // here is derived at read time from the same tables the sim uses, so the sheet
 // cannot drift from the rules — there is no second copy of any of it.
-function benchSheet(z: ZoneDO, c: CarriedItem, where: string, scrap: number, iron: number): Record<string, unknown> | null {
+function benchSheet(z: ZoneDO, c: CarriedItem, where: string, have: (id: string) => number, iron: number): Record<string, unknown> | null {
   const t = z.world!.itemTemplates.get(c.itemId);
   if (!t || !z.isGear(c.itemId)) return null;
   // ONE FACT LINE, then at most three short ones. The first cut of this stacked
@@ -253,12 +270,12 @@ function benchSheet(z: ZoneDO, c: CarriedItem, where: string, scrap: number, iro
     // here and having the vice turn it down is a button that lies.
     // The lantern is mended in forge iron, not scrap (rome, 2026-10-16).
     mend: c.condition >= 100 || THROW_TOUGH.has(c.itemId) ? ""
-      : c.itemId === LANTERN_ITEM ? `${LANTERN_MEND_IRON} iron` : `${REPAIR_COST[t.rarity] ?? 1} scrap`,
+      : c.itemId === LANTERN_ITEM ? `${LANTERN_MEND_IRON} iron` : stuffList(z, repairCost(t.id, t.rarity)),
     // ...and whether you can pay it, so the button is honest before it is
     // pressed rather than refusing afterwards. Counted the way cmdRepair
     // spends: across pack and keeping both.
     canMend: c.condition < 100 && !THROW_TOUGH.has(c.itemId)
-      && (c.itemId === LANTERN_ITEM ? iron >= LANTERN_MEND_IRON : scrap >= (REPAIR_COST[t.rarity] ?? 1)),
+      && (c.itemId === LANTERN_ITEM ? iron >= LANTERN_MEND_IRON : repairCost(t.id, t.rarity).every((o) => have(o.id) >= o.n)),
   };
 }
 
@@ -272,6 +289,13 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
   // count; the client labels it "iron".) The raw scrap count rides alongside.
   const scrap = z.countLooseIn(pools, IRON_ID);
   const scrapRaw = z.countLooseIn(pools, SCRAP_ID);
+  // Every mend stuff counted once for the whole sheet, not once per piece.
+  const stuffHeld = new Map<string, number>();
+  const haveStuff = (id: string): number => {
+    let n = stuffHeld.get(id);
+    if (n === undefined) { n = z.countLooseIn(pools, id); stuffHeld.set(id, n); }
+    return n;
+  };
   const recipes = [...world.forgeRecipes]
     .sort((a, b) => a.scrap - b.scrap)
     .map((r) => {
@@ -282,11 +306,15 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
         const mt = world.itemTemplates.get(r.material);
         material = { id: r.material, name: shortName(mt?.name ?? r.material), qty: r.materialQty, have: z.countLooseIn(pools, r.material) };
       }
-      const can = scrap >= r.scrap && (!material || material.have >= material.qty);
+      const cost = forgeCost(r.itemId, r.scrap);
+      const stuff = cost.stuff ? { id: cost.stuff.id, name: STUFF_WORD[cost.stuff.id] ?? cost.stuff.id, qty: cost.stuff.n, have: haveStuff(cost.stuff.id) } : null;
+      const can = scrap >= cost.iron && (!stuff || stuff.have >= stuff.qty) && (!material || material.have >= material.qty);
       return {
         id: r.itemId, name: t.name, rarity: t.rarity,
         stat: z.itemStat(t).replace(/^ \(|\)$/g, ""),
-        scrap: r.scrap, material, can,
+        // `scrap` is the iron column the client has always read; it now
+        // carries the iron THIS piece wants, which is 0 for a hide cloak.
+        scrap: cost.iron, stuff, material, can,
       };
     })
     .filter((r) => r !== null);
@@ -294,9 +322,9 @@ export async function sendForge(z: ZoneDO, session: Session, note?: string, sfx?
   // piece the vice can reach is a piece the sheet can read. Ordered pack first:
   // what is on you is what you are about to have to rely on.
   const read = [
-    ...pools[0].map((c) => benchSheet(z, c, "pack", scrapRaw, scrap)),
-    ...pools[1].map((c) => benchSheet(z, c, "lockbox", scrapRaw, scrap)),
-    ...pools[2].map((c) => benchSheet(z, c, "vault", scrapRaw, scrap)),
+    ...pools[0].map((c) => benchSheet(z, c, "pack", haveStuff, scrap)),
+    ...pools[1].map((c) => benchSheet(z, c, "lockbox", haveStuff, scrap)),
+    ...pools[2].map((c) => benchSheet(z, c, "vault", haveStuff, scrap)),
   ].filter((s) => s !== null);
   const payload = { v: 0, t: "forge", open: true, note: note ?? "", sfx: sfx ?? "", scrap, scrapRaw, recipes, read };
   try { session.ws.send(JSON.stringify(payload)); } catch {}
@@ -1293,6 +1321,8 @@ export async function salvageCore(z: ZoneDO, session: Session, carried: CarriedI
   // iron faucet otherwise (take → salvage → wait → repeat). More rust than metal.
   if (NO_SALVAGE.has(tmpl.id)) return `The vice can make nothing of ${tmpl.name} — it's more rust than metal, not worth the pulling.`;
   if (tmpl.slot === "") return `There's no salvage in ${tmpl.name}.`;
+  const outs = salvageYield(tmpl.id, tmpl.rarity);
+  if (!outs.length) return `There is nothing in ${tmpl.name} for the vice to pull apart. It's stone.`;
   // The vice cracks the seal itself now (rome: sealed gear gets every option an
   // unsealed piece has). The mint is voided honestly as the steel goes in — the
   // same release as a drop or a trade, just on the way to scrap.
@@ -1311,25 +1341,36 @@ export async function salvageCore(z: ZoneDO, session: Session, carried: CarriedI
     carried.equipped = false;
     await setEquipped(z.env.DB, carried.rowId, false);
   }
-  const yieldN = SALVAGE_YIELD[tmpl.rarity] ?? 1;
   await removeItemRow(z.env.DB, carried.rowId);
-  for (let i = 0; i < yieldN; i++) {
-    const id = uuid();
-    await insertLoot(z.env.DB, id, session.pubkey, SCRAP_ID, null);
-    session.items.push({ rowId: id, itemId: SCRAP_ID, serial: null, equipped: false, condition: 100 });
+  // Linen is a dressing, and dressings ride a carried ceiling: what the pack
+  // cannot take goes on the vault shelf rather than vanishing in the vice.
+  let shelved = false;
+  for (const o of outs) {
+    for (let i = 0; i < o.n; i++) {
+      const id = uuid();
+      await insertLoot(z.env.DB, id, session.pubkey, o.id, null);
+      if (z.dressingCapped(session, o.id)) { await setContainer(z.env.DB, id, "vault"); shelved = true; }
+      else session.items.push({ rowId: id, itemId: o.id, serial: null, equipped: false, condition: 100 });
+    }
   }
-  return `You crank ${tmpl.name} into the vice and break it down.${wasSealed ? " The gate's seal cracks as it goes in." : ""} ${yieldN === 1 ? "A handful" : yieldN + " handfuls"} of scrap iron for the pile.`;
+  return `You crank ${tmpl.name} into the vice and break it down.${wasSealed ? " The gate's seal cracks as it goes in." : ""} ${cap(stuffList(z, outs))} for the pile.${shelved ? " What the pack can't carry of it goes on the vault shelf." : ""}`;
+}
+
+// "2 handfuls of leather offcuts and a handful of scrap iron".
+function stuffList(z: ZoneDO, outs: { id: string; n: number }[]): string {
+  const parts = outs.map((o) => stuffCount(z.world!.itemTemplates.get(o.id)?.name ?? o.id, o.n));
+  return parts.length === 1 ? parts[0]! : parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1];
 }
 
 export async function cmdSalvage(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const bar = z.benchGuard(session, "bench work");
   if (bar) return z.send(session, bar);
-  if (!arg) return z.send(session, "Salvage what? The vice takes gear and gives scrap iron.");
+  if (!arg) return z.send(session, "Salvage what? The vice takes gear apart and gives back what it was made of.");
   const carried = z.findCarried(session, arg);
   if (!carried) return z.send(session, "You carry nothing like that.");
   const line = await salvageCore(z, session, carried);
   z.send(session, line);
-  gatehouseFeed(z, `${session.name} works the bench vice, breaking steel.`, session.pubkey); // gatehouse work stays in the gatehouse
+  gatehouseFeed(z, `${session.name} works the bench vice, breaking something down.`, session.pubkey); // gatehouse work stays in the gatehouse
   z.sendCtx(session);
 }
 
@@ -1459,15 +1500,29 @@ export async function repairCore(z: ZoneDO, session: Session, carried: CarriedIt
     return "You beat the sprung tin back true, set a new horn pane in the door and seat the wick. Sound again"
       + ((carried.fuel ?? 0) > 0 ? "." : " — though it will want fat before it gives you any light.");
   }
-  const cost = REPAIR_COST[tmpl.rarity] ?? 1;
-  // The vice reaches the pack AND the gate's keeping (lockbox + vault), same as
-  // the forge — and scrap counts whether or not a stray seal is on it.
-  const have = z.countLooseIn(await z.gatePools(session), SCRAP_ID);
-  if (have < cost) return `The mend wants ${cost} scrap iron; you have ${have} between pack and keeping.`;
-  await z.takeLooseAcross(session, SCRAP_ID, cost);
+  // The mend is paid in what the piece is made of (repairCost), plus a handful
+  // of scrap for any iron in it. The vice reaches the pack AND the gate's
+  // keeping (lockbox + vault), same as the forge — and loose stuff counts
+  // whether or not a stray seal is on it.
+  const cost = repairCost(tmpl.id, tmpl.rarity);
+  const pools = await z.gatePools(session);
+  const short = cost.filter((o) => z.countLooseIn(pools, o.id) < o.n);
+  if (short.length) {
+    const has = cost.map((o) => z.countLooseIn(pools, o.id));
+    return `The mend wants ${stuffList(z, cost)}; you have ${cost.map((o, i) => `${has[i]} ${shortName(z.world!.itemTemplates.get(o.id)?.name ?? o.id)}`).join(" and ")} between pack and keeping.`;
+  }
+  for (const o of cost) await z.takeLooseAcross(session, o.id, o.n);
   carried.condition = 100;
   await setItemCondition(z.env.DB, carried.rowId, 100);
-  return `You hammer the wear out of ${tmpl.name} and file it true. Sound again.`;
+  const iron = cost.length > 1 ? ", then set the iron back in" : "";
+  const done: Record<string, string> = {
+    steel: `You hammer the wear out of ${tmpl.name} and file it true`,
+    hide: `You cut the rotten leather out of ${tmpl.name}, stitch new in and work it supple${iron}`,
+    cloth: `You patch ${tmpl.name} with linen and stitch it tight${iron}`,
+    wood: `You pin new wood into ${tmpl.name} and shave it true${iron}`,
+    bone: `You set new horn into ${tmpl.name} and bind it fast${iron}`,
+  };
+  return `${done[materialOf(tmpl.id)] ?? done.steel}. Sound again.`;
 }
 
 export async function cmdRepair(z: ZoneDO, session: Session, arg: string): Promise<void> {
@@ -1733,20 +1788,23 @@ async function salvageBoxed(z: ZoneDO, session: Session, carried: CarriedItem, k
   if (tmpl.id === "loose-rock" || tmpl.id === "hammerstone") return "It's a rock.";
   if (NO_SALVAGE.has(tmpl.id)) return `The vice can make nothing of ${tmpl.name} — it's more rust than metal, not worth the pulling.`;
   if (tmpl.slot === "") return `There's no salvage in ${tmpl.name}.`;
+  const outs = salvageYield(tmpl.id, tmpl.rarity);
+  if (!outs.length) return `There is nothing in ${tmpl.name} for the vice to pull apart. It's stone.`;
   // Out of the box FIRST, and only if it was still there: a double frame finds
   // the row gone the second time and pays nothing.
   const gone = await z.env.DB.prepare("DELETE FROM player_items WHERE id = ? AND pubkey = ? AND container = ?").bind(carried.rowId, session.pubkey, key).run();
   if (gone.meta.changes !== 1) return "That has already gone from the box.";
   const wasSealed = carried.serial !== null;
   if (wasSealed) await voidMint(z.env.DB, carried.serial!);
-  const yieldN = SALVAGE_YIELD[tmpl.rarity] ?? 1;
-  for (let i = 0; i < yieldN; i++) {
-    const id = uuid();
-    await insertLoot(z.env.DB, id, session.pubkey, SCRAP_ID, null);
-    await setContainer(z.env.DB, id, key);
+  for (const o of outs) {
+    for (let i = 0; i < o.n; i++) {
+      const id = uuid();
+      await insertLoot(z.env.DB, id, session.pubkey, o.id, null);
+      await setContainer(z.env.DB, id, key);
+    }
   }
   const box = key === "vault" ? "the vault" : "the lockbox";
-  return `You lift ${tmpl.name} out of ${box}, crank it into the vice and break it down.${wasSealed ? " The gate's seal cracks as it goes in." : ""} ${yieldN === 1 ? "A handful" : yieldN + " handfuls"} of scrap iron go back into ${box}.`;
+  return `You lift ${tmpl.name} out of ${box}, crank it into the vice and break it down.${wasSealed ? " The gate's seal cracks as it goes in." : ""} ${cap(stuffList(z, outs))} go back into ${box}.`;
 }
 
 export async function benchRepair(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
@@ -1975,6 +2033,9 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
         // What the bench can actually mend: the stone wears like gear but
         // nothing refills it (rome) — no repair button to bait a refusal.
         fix: gear && !THROW_TOUGH.has(c.itemId),
+        // ...and whether the vice gives anything for it: stone gives nothing
+        // (salvageYield), so no scrap button to bait that refusal either.
+        salv: gear && !!t?.slot && salvageYield(c.itemId, t.rarity).length > 0,
         equipped: !!c.equipped,
         cond: gear ? c.condition : null,
         condWord: gear ? (z.conditionWord(c.condition) || "sound") : "",

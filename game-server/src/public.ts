@@ -2276,6 +2276,7 @@ export const PAGE = `<!doctype html>
 .mud-reader button:hover{border-color:var(--gold);color:var(--gold)}.mud-reader button.arm{color:var(--blood);border-color:var(--blood)}.mud-reader button:disabled{opacity:.4;cursor:default}
 .mud-reader .cost,.mud-reader .quiet{font-size:11px;margin-top:5px}.mud-reader .takes{font-size:11px}.mud-reader .tag-atk{color:var(--blood)}.mud-reader .tag-def{color:var(--steel)}
 #twant{font-size:11px;padding:7px 9px;background:var(--bg);border-radius:3px}#fhave{font-size:11px;padding:0;border:0}
+#forge .mud-row{grid-template-columns:minmax(0,1fr) 0 auto!important}#forge .mud-state{white-space:nowrap}
 @media(max-width:680px){:is(#bench,#trade,#forge) .bbox{width:100%;height:100%;max-height:none;border-radius:0;padding:12px 12px 0}:is(#bench,#trade,#forge) .list-tools input[type=search]{font-size:16px}:is(#bench,#trade,#forge) .mud-row{gap:6px!important;grid-template-columns:minmax(0,1fr) 20px 58px;font-size:12px}.mud-state{font-size:10px}.mud-reader{max-height:44%}}
 
 :is(#bench,#trade,#forge) .mud-reader .nm{display:block;float:none;width:auto;font:12px/1.5 ui-monospace,monospace;text-align:left;white-space:normal;overflow-wrap:anywhere}
@@ -6712,7 +6713,7 @@ function benchItemNode(it, place) {
     // nothing mends stone) never baits a refusal; only slotted steel scraps.
     if (benchAtGate && it.fix) {
       if (it.cond !== null && it.cond < 100) btn("repair", "repair");
-      if (it.slot) armBtn("scrap", "salvage", "scrap");
+      if (it.slot && it.salv) armBtn("scrap", "salvage", "scrap");
     }
   } else if (place === "shelf") {
     // Off the shelf, one at a time, same reason as the vault: a stack fanning
@@ -6732,7 +6733,7 @@ function benchItemNode(it, place) {
     }
     // The vice reaches the keeping too (rome, 2026-10-16): the box's steel can be
     // broken down where it rests, the same scrap button as the pack's.
-    if (benchAtGate && it.fix && it.slot && (place === "lockbox" || place === "vault")) armBtn("scrap", "salvage", "scrap");
+    if (benchAtGate && it.fix && it.slot && it.salv && (place === "lockbox" || place === "vault")) armBtn("scrap", "salvage", "scrap");
   }
   armBtn("burn", "burn");
   // Confirm before dropping THIS one to the floor — a single row, never the "dropped both" ambiguity
@@ -7450,8 +7451,13 @@ function forgeItemNode(it) {
   wrap.appendChild(nm);
   var cost = document.createElement("div");
   cost.className = "cost " + (it.can ? "ok" : "no");
-  var txt = it.scrap + " iron";
-  if (it.material) txt += " + " + it.material.qty + " " + it.material.name + " (you have " + it.material.have + ")";
+  // Each part of the price, with what you hold of it where it isn't iron (the
+  // iron total is in the header): a hide piece costs leather, not bars.
+  var parts = [];
+  if (it.scrap) parts.push(it.scrap + " iron");
+  if (it.stuff) parts.push(it.stuff.qty + " " + it.stuff.name + " (you have " + it.stuff.have + ")");
+  if (it.material) parts.push(it.material.qty + " " + it.material.name + " (you have " + it.material.have + ")");
+  var txt = parts.join(" + ");
   cost.textContent = txt;
   wrap.appendChild(cost);
   var acts = document.createElement("div");
@@ -7603,7 +7609,7 @@ function renderForge(state) {
   fhave.appendChild(sc);
   var tail = document.createElement("span");
   var raw = (state.scrapRaw || 0);
-  tail.textContent = " across pack and keeping (and " + raw + " scrap). Salvage gear to make scrap; 'smelt' casts 5 scrap into 1 iron.";
+  tail.textContent = " across pack and keeping (and " + raw + " scrap). Salvage steel to make scrap; 'smelt' casts 5 scrap into 1 iron.";
   fhave.appendChild(tail);
   frecipes.textContent = "";
   var h = document.createElement("div");
@@ -7681,7 +7687,7 @@ function mudRow(type,it,place,source){
  var row=document.createElement('div');row.className=(type==='trade'?'trow':'bitem')+' mud-row';row.tabIndex=0;row.setAttribute('role','button');if(type==='forge')row.dataset.canForge=String(!!it.can);
  var name=document.createElement('span');name.className='nm';var realName=source.querySelector('.nm>span');name.appendChild(realName?realName.cloneNode(true):document.createTextNode(it.name));
  var qty=document.createElement('span');qty.className='mud-qty';qty.textContent=it.n>1?'×'+it.n:'';
- var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?'equipped':it.sealed?'sealed':it.condWord==='sound'?'':it.condWord||''):type==='trade'?(it.cost==null?'':String(it.cost)):place==='recipe'?it.scrap+' iron':it.cond;
+ var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?'equipped':it.sealed?'sealed':it.condWord==='sound'?'':it.condWord||''):type==='trade'?(it.cost==null?'':String(it.cost)):place==='recipe'?[it.scrap?it.scrap+' iron':'',it.stuff?it.stuff.qty+' '+it.stuff.name:'',it.material?it.material.qty+' '+it.material.name:''].filter(Boolean).join(' + '):it.cond;
  if(it.equipped)state.classList.add('equipped');
  var search=document.createElement('span');search.className='tags mud-search';search.textContent=source.querySelector('.nm').textContent+' '+(it.stat||'');
  row.append(name,qty,state,search);var record={row:row,source:source,key:place+':'+String(it.row??it.id)};mudRecords[type].push(record);
