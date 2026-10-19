@@ -3773,6 +3773,30 @@ export const DRILL_RANK_LINES = [
   "{b} passes, and {a} goes rigid against the wall — helm up, eyes on nothing, holding the salute long after there is anyone to hold it for.",
   "{a} drops to one knee as {b} comes through, and stays down until the sound of it is gone.",
 ];
+// REVEILLE AND TAPS (rome, 2026-10-18). A cracked bugle somewhere in the keep
+// sounds at every dawn and every dusk of the game's own day, so whoever is
+// playing, whenever, is never more than a couple of hours from one. It is NOT
+// the bell: the bell keeps its two real-clock rings and everything they do
+// (the waking, the rats, the door, the warrens). The bugle does nothing but
+// stand the garrison to attention — the soldiers drawn with a salute hold it,
+// in the picture and in the room's line, and then go back to what they were.
+// Not every game day: one in BUGLE_EVERY_DAYS (a game day is 4 real hours).
+// At 2 that is reveille and taps three times each a real day, and never more
+// than about six hours from the next one.
+export const BUGLE_EVERY_DAYS = 2;
+export const BUGLE_SALUTERS = new Set(["warden", "warden-surface", "warden-captain", "bone-knight", "last-watchman"]);
+export const BUGLE_REVEILLE = [
+  "Somewhere in the keep a cracked bugle sounds reveille — a few split notes climbing, and the breath giving out before the top one.",
+  "Reveille, off a bugle with a hole in it, somewhere up in the keep. Nobody living has blown it in two hundred years. It is blown every morning.",
+];
+export const BUGLE_TAPS = [
+  "A bugle sounds taps somewhere in the keep, slow and flat, every note held a little longer than the breath behind it.",
+  "Taps, off a cracked bugle, somewhere up in the keep. The last note goes on after it should have stopped.",
+];
+export const BUGLE_FAR = "Far off, from the keep, a cracked bugle — a few notes, and then nothing.";
+export const BUGLE_SALUTE_ONE = "{a} stops where it stands, comes to attention, and holds the salute until the last note is gone.";
+export const BUGLE_SALUTE_MANY = "{a} come to attention where they stand and hold the salute until the last note is gone.";
+
 // THE CROSSING'S DEAD AT WORK (mob-audit F1). The HOLLOW comment has described
 // these since mig 191 and nothing ever performed them — the dead out there are
 // still AT WORK, each one going through the last motion of the job it died at,
@@ -10305,6 +10329,7 @@ export const GATEHOUSE_NOARG = new Set([
 // room where people sit and talk — the walls should not keep interrupting them.
 export const GATEHOUSE_AMBIENT_COOLDOWN_MS = 180_000; // never sooner than 3 minutes
 export const GATEHOUSE_AMBIENT_ODDS = 0.03;           // per 2s tick, once off cooldown -> ~4 min mean
+export const GATEHOUSE_AMBIENT_CEILING_MS = 300_000; // and never later than 5 (the roll's tail cut off)
 
 // THE MAP'S STRATA, AND WHO OWNS THEM (2026-08-02). This lived only inside the
 // client script, which meant the SERVER could not reason about the map at all —

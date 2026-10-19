@@ -790,6 +790,31 @@ function packKeeperTold(told: Map<string, number>): string {
   return [...told].map(([band, n]) => `${band}:${n}`).join(",");
 }
 
+// WHO IS TALKING (rome, 2026-10-18): most tellings open straight on the quote,
+// written as if you were already looking at him, and in the log a bare quote
+// is just a voice from nowhere. So the keeper is named on the way out, not in
+// the data: after the first sentence he speaks ("Twice a day," the keeper
+// says. "It has been..."), or, for a one-sentence quote, on the "He" that
+// follows it. A line that already names him is left alone.
+export function keeperVoiced(line: string): string {
+  if (/keeper/i.test(line)) return line;
+  if (line.startsWith("He ")) return "The keeper " + line.slice(3);
+  const open = line.indexOf('"');
+  const close = open < 0 ? -1 : line.indexOf('"', open + 1);
+  if (close < 0) return line;
+  const inner = line.slice(open + 1, close);
+  const after = line.slice(close + 1);
+  if (/^ he (says|said)\b/.test(after)) return line.slice(0, close + 1) + " the keeper" + after.slice(3);
+  const lead = (s: string) => s.endsWith(".") ? s.slice(0, -1) + "," : s;
+  const m = /[.?!](?=\s+["A-Z])/.exec(inner);
+  if (m) {
+    const first = inner.slice(0, m.index + 1), rest = inner.slice(m.index + 1).trimStart();
+    return line.slice(0, open) + '"' + lead(first) + '" the keeper says. "' + rest + '"' + after;
+  }
+  if (after.startsWith(" He ")) return line.slice(0, close + 1) + " The keeper " + after.slice(4);
+  return line.slice(0, open) + '"' + lead(inner) + '" the keeper says.' + after;
+}
+
 // One line of the local story for somebody sitting behind the door. Returns true
 // if the keeper spoke, which the caller uses to hold the gatehouse's own
 // atmosphere back for that beat — a man talking and the fire settling should
@@ -843,13 +868,13 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
   });
   if (live.length && chance(ARC_TELLING_ODDS)) {
     session.keeperDueAt = 0;
-    z.send(session, pick(ARC_TELLINGS[pick(live)]!), "lore");
+    z.send(session, keeperVoiced(pick(ARC_TELLINGS[pick(live)]!)), "lore");
     return true;
   }
   const aside = DOOR_TELLINGS[band as Region];
   if (aside?.length && chance(DOOR_TELLING_ODDS)) {
     session.keeperDueAt = 0;
-    z.send(session, pick(aside), "lore");
+    z.send(session, keeperVoiced(pick(aside)), "lore");
     return true;
   }
   const heard = session.keeperTold.get(band) ?? 0;
@@ -870,7 +895,7 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
   // the one man who explains anything, read as scenery. "lore" is the same
   // never-hushed channel with a face: bone-coloured, italic, and ruled down the
   // left, which nothing else in the log wears. It keeps study's sound.
-  z.send(session, lines[heard % lines.length], "lore");
+  z.send(session, keeperVoiced(lines[heard % lines.length]!), "lore");
   // Written as it is heard: one small update per VISIT, which is as cold as a
   // write gets.
   void setKeeperTold(z.env.DB, session.pubkey, packKeeperTold(session.keeperTold))

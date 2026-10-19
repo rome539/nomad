@@ -15,7 +15,7 @@ import type { ZoneDO } from "./zone";
 import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
-import { foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand } from "./zone-util";
+import { cap, foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand } from "./zone-util";
 import { setItemAcquiredAt } from "./world";
 import {
   QUICKSAND_ROOMS, QUICKSAND_GRIP_ODDS, HOBBLE_FLEE_MS,
@@ -79,6 +79,7 @@ import {
   PACK_DOGS, PACK_WOLVES, PACK_HYENAS, PACK_HEAD_ODDS, PACK_HEADS_BAD,
   PACK_HEAD, PACK_DOG, PACK_WOLF, PACK_HYENA,
   FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS,
+  DAY_CYCLE_MS, BUGLE_EVERY_DAYS, BUGLE_SALUTERS, BUGLE_REVEILLE, BUGLE_TAPS, BUGLE_FAR, BUGLE_SALUTE_ONE, BUGLE_SALUTE_MANY,
 } from "./zone-data";
 
 // An idle arc waits here until the roll (or the bell's hours) wakes it.
@@ -296,6 +297,44 @@ export function gloamed(z: ZoneDO, roomId: string): boolean {
 // the sanctuary promise ("the dungeon can't reach you") covers the dark too.
 function gloamCan(z: ZoneDO, roomId: string): boolean {
   return keepRoom(z, roomId) && !z.world!.entryRooms.has(roomId) && !z.world!.safeRooms.has(roomId);
+}
+
+// REVEILLE AND TAPS (see BUGLE_SALUTERS). Fires on the turn of the game's
+// half-day — dawn or dusk — and keeps no saved state: the last half it sounded
+// for lives in memory only, and a fresh instance takes the current half as
+// already sounded, so a restart never blows an extra call. Nothing is caught
+// up either: a bugle nobody was in the keep to hear did nothing anyway.
+const bugleHalf = new WeakMap<ZoneDO, number>();
+function tickBugle(z: ZoneDO, now: number): void {
+  const half = Math.floor(now / (DAY_CYCLE_MS / 2));
+  const last = bugleHalf.get(z);
+  bugleHalf.set(z, half);
+  if (last === undefined || last === half) return;
+  if (Math.floor(half / 2) % BUGLE_EVERY_DAYS !== 0) return; // the garrison's off days
+  const call = pick(isNight(now) ? BUGLE_TAPS : BUGLE_REVEILLE);
+  const rooms = new Set<string>();
+  for (const s of z.sessions.values()) if (!z.outOfWorld(s)) rooms.add(s.roomId);
+  for (const roomId of rooms) {
+    const standing = [...z.creatures.values()].filter((c) => c.roomId === roomId
+      && BUGLE_SALUTERS.has(c.templateId) && !c.target && !c.asleep && !c.hidden);
+    const inKeep = keepRoom(z, roomId);
+    if (!inKeep && !standing.length) continue;
+    z.roomFeed(roomId, inKeep ? call : BUGLE_FAR, undefined, false, "evt");
+    if (!standing.length) continue;
+    // Counted by what they are called, not their template (two wardens of two
+    // kinds are still "two hollow wardens").
+    const counts = new Map<string, number>();
+    for (const c of standing) {
+      const nm = z.world!.mobTemplates.get(c.templateId)?.name ?? c.templateId;
+      counts.set(nm, (counts.get(nm) ?? 0) + 1);
+    }
+    const NUM = ["", "", "two", "three", "four", "five", "six"];
+    const parts = [...counts].map(([nm, n]) => n === 1 ? nm : `${NUM[n] ?? n} ${nm.replace(/^(a|an|the) /, "")}s`);
+    const who = parts.length === 1 ? parts[0]! : parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1];
+    const line = (standing.length === 1 ? BUGLE_SALUTE_ONE : BUGLE_SALUTE_MANY).replace("{a}", cap(who));
+    z.roomFeed(roomId, line, undefined, false, "amb");
+    for (const t of new Set(standing.map((c) => c.templateId))) z.fxPose(roomId, t, "hold-the-salute");
+  }
 }
 
 // While the bell rings the keep hears EVERYTHING (a bell outshouts felt
@@ -1405,6 +1444,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   tickSkyRoll(z, now);
   await tickRain(z, now);
   await tickBell(z, now);
+  tickBugle(z, now);
   await tickBoil(z, now);
   await tickWake(z, now);
   await tickWant(z, now);

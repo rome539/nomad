@@ -120,7 +120,7 @@ import {
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   REGION_LABELS, NIGHT_LIT,
   DEEP_ROOMS, WARRENS_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
-  GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS, KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS,
+  GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS, GATEHOUSE_AMBIENT_CEILING_MS, KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
@@ -3209,6 +3209,9 @@ export class ZoneDO implements DurableObject {
       // the instant the door shuts: he finishes what he was doing first, and a
       // duck-in-and-out gets nothing, which is correct.
       session.keeperDueAt = Date.now() + randInt(KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS);
+      // The door shutting starts the room's own clock fresh: whatever the
+      // outside was about to say stays outside.
+      session.lastAmbientAt = Date.now();
       for (const c of this.creatures.values()) {
         if (c.target === session.pubkey) c.target = null;
       }
@@ -5749,7 +5752,10 @@ export class ZoneDO implements DurableObject {
       // is the one thing in here actually saying something, and a line of the
       // region's story and the fire settling must never land on the same
       // breath. Which story is which door you came in by (lore.keeperTells).
-      if (inGatehouse && lore.keeperTells(this, session, now)) continue;
+      // And it takes the room's turn with it (rome, 2026-10-18): the story
+      // resets the same clock the fire and the shutter wait on, so nothing
+      // in here speaks within three minutes of him.
+      if (inGatehouse && lore.keeperTells(this, session, now)) { session.lastAmbientAt = now; continue; }
       // THE WANDERER'S OWN HABITS, and the treasures'. These are SIBLINGS of the
       // room's breath, never passengers on it — the two used to sit under the
       // ambient send, which meant a habit could only ever fire on a beat the
@@ -5784,7 +5790,11 @@ export class ZoneDO implements DurableObject {
       const cool = inGatehouse ? GATEHOUSE_AMBIENT_COOLDOWN_MS : AMBIENT_COOLDOWN_MS;
       const odds = inGatehouse ? GATEHOUSE_AMBIENT_ODDS : AMBIENT_ODDS;
       if (now - session.lastAmbientAt < cool) continue;
-      if (!chance(odds)) continue;
+      // A STEADY ROOM (rome, 2026-10-18): the roll alone has a long tail, and
+      // a gatehouse that goes quiet for nine minutes and then speaks twice
+      // reads as broken, not slow. Past the ceiling the line comes regardless,
+      // so the room keeps a 3-5 minute breath.
+      if (!(inGatehouse && now - session.lastAmbientAt >= GATEHOUSE_AMBIENT_CEILING_MS) && !chance(odds)) continue;
       const line = inGatehouse
         ? gate.gatehouseAmbient(this, session.lastAmbientLine, session.roomId)
         : this.ambientLine(session.roomId, session.lastAmbientLine, this.carriesLight(session));

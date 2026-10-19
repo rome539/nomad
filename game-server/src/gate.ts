@@ -2296,7 +2296,8 @@ export function keeperNods(z: ZoneDO, arrival: Session): void {
   // "amb" is right here and wrong for his STORY: a gesture is scenery and may be
   // hushed for a new player under the tutorial, where losing the opening line of
   // a region's telling would be a real loss (see lore.keeperTells).
-  for (const s of gatehouseFolk(z)) z.send(s, line, "amb");
+  // His nod is the room's turn: nobody hears the fire on top of it.
+  for (const s of gatehouseFolk(z)) { z.send(s, line, "amb"); s.lastAmbientAt = now; }
 }
 
 export function gatehouseFolk(z: ZoneDO): Session[] {
