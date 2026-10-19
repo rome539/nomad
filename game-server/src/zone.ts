@@ -989,7 +989,9 @@ export class ZoneDO implements DurableObject {
       // time and the scoop's grace/telegraph windows read the real clock, so a
       // frozen world would yield one pickup for the whole gap either way.)
       if (HOARDERS.has(c.templateId)) ai.scavengerScoops(this, c);
-      const hunted = (await ai.worryPrey(this, c, now)) || await ai.predation(this, c, now);
+      // ...and two crawlers sharing a room out here fight for it too (rome,
+      // 2026-10-18: the far world is not frozen, so neither are they).
+      const hunted = (await ai.worryPrey(this, c, now)) || await ai.predation(this, c, now) || await ai.rivalsFight(this, c, now);
       if (!hunted && c.nextWanderAt <= now && (!tmpl.is_boss || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
           && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && (!AGGRESSIVE.has(c.templateId) || ai.walksAnyway(c)) && !ROOTED.has(c.templateId)) {
         await ai.creatureMoves(this, c, now, "wander", true);

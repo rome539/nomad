@@ -4574,6 +4574,12 @@ export const FOUL_LOOT: { item: string; weight: number }[] = [
 export const CROWS_DEAD_RANGE = 6;
 export const CROWS_DEAD_FRESH_MS = 45 * 60_000;
 export const CROWS_DEAD_MIN_HP = 10;
+// ...BUT A KILL THAT WAS EATEN WHERE IT FELL is only scraps (rome, 2026-10-18:
+// a hunter tears into what it runs down, so there is little left to circle).
+// The crows come down for a short while and go. The size rule applies to these
+// too - before, a predator's kill carried no id and every one of them, a vole
+// as much as a stag, brought the crows.
+export const CROWS_EATEN_MS = 10 * 60_000;
 // THE GREAT RING (keys.ts, mig 297): which locks a keyholder's ring opens, and
 // the chance that any lock it opens took its last key.
 export const RING_KEY = "ring-of-keys";

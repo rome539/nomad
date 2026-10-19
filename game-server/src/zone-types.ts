@@ -227,6 +227,7 @@ export interface Trace {
   // (player or creature) that crossed this room with an open wound. The drip
   // is the huntable trail: scavengers drift toward it, and so can you.
   kind: "blood" | "drip" | "remains" | "scraps" | "rest" | "passage" | "carve" | "track";
+  prey?: string;    // a predator's kill: what it was (the crows read its size, and that it was eaten where it fell)
   // A track's heading: which way the thing that made it went (clues.ts).
   dir?: string;
   at: number;

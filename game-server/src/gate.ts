@@ -2318,68 +2318,15 @@ export function gatehouseSay(z: ZoneDO, session: Session, raw: string): void {
   const line = `${session.name} says: ${msg}`;
   z.send(session, `You say: ${msg}`, "say");
   gatehouseFeed(z, line, session.pubkey, "say", { name: session.name, pk: session.pubkey });
-  // Ask after the sky and the keeper tells you what it is doing (keeperWeather).
-  if (WEATHER_WORDS.test(msg)) {
-    const said = keeperWeather(z);
-    z.send(session, said);
-    gatehouseFeed(z, said, session.pubkey);
-  }
   // The room hears it over the sockets, instantly — and that's the whole of
   // it now (rome, 2026-07-21), same drop as `say` out in the dark: no "gpub"
   // frame back to the speaker's client, nothing reaches a relay in any form.
 }
 
-// ---- THE KEEPER READS THE SKY (rome, 2026-10-18) ----
-// The weather man of the world, because every wanderer who comes in out of it
-// tells him what it is doing. Say anything about the weather in here and he
-// answers: what is over which ground right now, and what kind it is - facts,
-// never odds. The gatehouse is the institution that would know, so it is the
-// one place this is said (the information toll), and the sky itself still has
-// to be walked out into.
-const WEATHER_WORDS = /\b(weather|forecast|sky|skies|rain|raining|rainy|cold|frost|freezing|fog|foggy|mist|wind|windy|storm|stormy|thunder|snow|snowing)\b/i;
-export function keeperWeather(z: ZoneDO): string {
-  const ground = (b: string) => { const l = REGION_LABELS[b] ?? b; return l.startsWith("The ") ? "the " + l.slice(4) : l; };
-  const list = (bands: string[]) => {
-    const n = bands.map(ground);
-    return n.length < 2 ? n.join("") : n.slice(0, -1).join(", ") + " and " + n[n.length - 1];
-  };
-  const on = (id: string) => { const st = z.events.get(id); return st && st.phase !== "idle" && st.bands?.length ? st : null; };
-  const bits: string[] = [];
-  const rain = on("rain");
-  if (rain) bits.push(rain.phase === "telegraph" ? `It's going grey over ${list(rain.bands!)} — rain coming.`
-    : rain.phase === "active" ? (rain.data === "settled" ? `Rain over ${list(rain.bands!)}, the long kind, the kind that sits.` : `Showers over ${list(rain.bands!)}.`)
-    : "");
-  const storm = on("storm");
-  if (storm && (storm.phase === "telegraph" || storm.phase === "active")) bits.push(`There's a storm on ${ground(storm.bands![0])}. I'd keep off the open.`);
-  const fog = on("fog");
-  if (fog && fog.phase !== "aftermath") bits.push(`Fog down on ${list(fog.bands!)}. You'll not see your own hand.`);
-  const cold = on("cold");
-  if (cold && cold.phase !== "aftermath") bits.push(cold.data === HARD_FROST
-    ? `Hard frost over ${list(cold.bands!)}, and it's set in. The deep's colder still.`
-    : `Cold over ${list(cold.bands!)}. And down in the deep — it's always down there when it's anywhere.`);
-  const wind = on("wind");
-  if (wind && wind.phase !== "aftermath") bits.push(`Wind's up over ${list(wind.bands!)}. Mind your flame.`);
-  const cloud = z.events.get("clouddown");
-  if (cloud && cloud.phase === "active") bits.push("Cloud's sat down on the mountain.");
-  if (z.snowUntil > Date.now()) bits.push("Snow lying on the mountain.");
-  const up = overhead(), when = moonWhen();
-  if (up.startsWith("a blood moon")) bits.push("And the moon's red tonight. The dead know it.");
-  else if (up.startsWith("full moon")) bits.push("Full moon up. The grounds are lit.");
-  else if (up.startsWith("the sun")) bits.push(up.startsWith("the sun coming back") ? "The sun's coming back." : "The sun's going out. Don't ask me why.");
-  if (when === "full moon tonight") bits.push("Full moon tonight.");
-  else if (when === "full moon soon") bits.push("Full moon soon.");
-  const wet = [...z.events.entries()].filter(([k, v]) => k.startsWith("after:") && v.until > Date.now()).map(([k]) => k.slice(6))
-    .filter((b) => !rain?.bands?.includes(b) || rain.phase !== "active");
-  if (wet.length) bits.push(`${cap(list(wet))} ${wet.length === 1 ? "is" : "are"} still wet from the last of it.`);
-  const said = bits.filter(Boolean);
-  return said.length
-    ? `The keeper glances at the shutter as if he could see through it. "${said.join(" ")}"`
-    : `The keeper glances at the shutter. "Clear, near as anyone's told me. Don't hold me to it."`;
-}
-
-// THE SLATE BY THE HATCH (rome, 2026-10-18): the same sky the keeper speaks,
-// chalked up ground by ground so it can be read without asking. One reading
-// (skyWords) feeds both, so the slate and the man can never disagree.
+// THE SLATE BY THE HATCH (rome, 2026-10-18): the keeper is the world's weather
+// man - his gatehouses stand at every gate - and this is how he tells it: the
+// sky chalked up ground by ground. He does not recite it; you read it (the slate
+// was chosen over a spoken report, so nothing said aloud in here sets him off).
 function skyWords(z: ZoneDO): Map<string, string[]> {
   const out = new Map<string, string[]>();
   const add = (b: string, w: string) => { const l = out.get(b) ?? []; if (!l.includes(w)) l.push(w); out.set(b, l); };
@@ -2973,6 +2920,19 @@ export function gatehouseAmbient(z: ZoneDO, avoid?: string, roomId?: string): st
   if (wx("fog") === "active") pool.push(...GATEHOUSE_FOG);
   if (wx("cold") === "active") pool.push(...GATEHOUSE_COLD);
   if (events.phaseOf(z, "crows") === "active") pool.push(...GATEHOUSE_CROWS);
+  // THE BIG SKIES HE TALKS ABOUT UNASKED (rome, 2026-10-18): a full moon, a red
+  // one, the sun going out. Only while they are true, from the same calendar the
+  // slate reads (overhead / moonWhen). Twice in the pool, so a night like that
+  // gets said more than once over the fire.
+  const up = overhead(), when = moonWhen();
+  const sky: string[] = [];
+  if (up.startsWith("a blood moon")) sky.push(`The keeper glances at the shutter. "Moon's red tonight," he says, to nobody. "The dead know it."`);
+  else if (up.startsWith("full moon")) sky.push(`The keeper looks up at the shutter as if he could see through it. "Full moon," he says. "The grounds'll be lit tonight."`);
+  else if (up.startsWith("the sun coming back")) sky.push(`"There it comes back," the keeper says, of the sun, and goes back to his work.`);
+  else if (up.startsWith("the sun")) sky.push(`The keeper stops wiping the counter and looks at the shutter. "Sun's going out," he says. "Don't ask me why."`);
+  if (when === "full moon tonight") sky.push(`"Full moon tonight," the keeper says, mostly to the fire.`);
+  else if (when === "full moon soon") sky.push(`The keeper counts something off on his fingers behind the hatch, and nods to himself. "Full moon soon."`);
+  pool.push(...sky, ...sky);
   // THE CHALK, from the side of the hatch it is chalked ON. See wantedItem: the
   // one arc whose entire subject is this room's own furniture was the one arc
   // this room could not see.

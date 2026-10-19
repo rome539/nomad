@@ -18,7 +18,7 @@ import type { ZoneDO } from "./zone";
 import type { Creature, Trace } from "./zone-types";
 import {
   FLIER_KIND, TRACK_PRINTS, TRACK_PRINT_DEFAULT, FOUL_WATERS, FOUL_ROTATE_MS, FOUL_LOOT,
-  CROWS_DEAD_RANGE, CROWS_DEAD_FRESH_MS, CROWS_DEAD_MIN_HP, OUTDOOR_ROOMS,
+  CROWS_DEAD_RANGE, CROWS_DEAD_FRESH_MS, CROWS_DEAD_MIN_HP, CROWS_EATEN_MS, OUTDOOR_ROOMS,
 } from "./zone-data";
 import * as events from "./events";
 import { isNight } from "./zone-util";
@@ -93,8 +93,12 @@ export function crowsLine(z: ZoneDO, roomId: string, now = Date.now()): string |
     const dx = r.map_x - here.map_x, dy = r.map_y - here.map_y;
     const d = Math.max(Math.abs(dx), Math.abs(dy));
     if (d > CROWS_DEAD_RANGE || (best && d >= best.d)) continue;
-    const fresh = list.some((t) => t.kind === "blood" && now - t.at < CROWS_DEAD_FRESH_MS
-      && (t.id === "nomad" || !t.id || (world.mobTemplates.get(t.id)?.max_hp ?? 0) >= CROWS_DEAD_MIN_HP));
+    const fresh = list.some((t) => {
+      if (t.kind !== "blood") return false;
+      const of = t.id ?? t.prey;
+      return now - t.at < (t.prey ? CROWS_EATEN_MS : CROWS_DEAD_FRESH_MS)
+        && (of === "nomad" || !of || (world.mobTemplates.get(of)?.max_hp ?? 0) >= CROWS_DEAD_MIN_HP);
+    });
     if (fresh) best = { d, dx, dy };
   }
   if (!best) return null;

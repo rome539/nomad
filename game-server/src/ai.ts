@@ -1833,7 +1833,7 @@ function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate): void {
       z.ground.set(victim.roomId, [...(z.ground.get(victim.roomId) ?? []), ...spoils]);
       for (const id of spoils) z.stampFresh(victim.roomId, id); // a fresh kill site stays hot a while
     }
-    z.addTrace(victim.roomId, { kind: HOLLOW.has(victim.templateId) ? "remains" : "blood", at: Date.now(), label: vt.name });
+    z.addTrace(victim.roomId, { kind: HOLLOW.has(victim.templateId) ? "remains" : "blood", at: Date.now(), label: vt.name, prey: victim.templateId });
     z.fxDied(victim.roomId, victim.templateId);
     z.creatures.delete(victim.id);
     z.noteCreaturesChanged(); // eaten between beats: nothing may still find it in the room

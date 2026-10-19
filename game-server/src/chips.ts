@@ -371,11 +371,18 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   if (!fighting && session.items.some((c) => c.itemId === FAT_ITEM)
     && session.items.some((c) => c.itemId === LANTERN_ITEM && light.wellOf(session, c) + LANTERN_FAT_MS <= LANTERN_WELL_MS)) suggest.push("fill lantern");
 
-  // A locked cache here that you hold the key to: one chip opens it.
+  // A shut cache here that you have a way into: one chip opens it.
   if (!fighting) {
     for (const cache of world.caches) {
       if (z.cacheRoomId(cache) !== session.roomId || !z.cacheLocked(cache)) continue;
-      if (keys.keyFor(session, cache.keyItem)) suggest.push(`unlock ${shortName(cache.name)}`);
+      // EVERY WAY IN, not only the key (rome, 2026-10-18: the issue chest had no
+      // chip). The same three the latch itself answers to (zone cmdUnlock): a
+      // box with no lock opens to the hand, a key turns, and a stone breaks any
+      // latch but the reliquary's.
+      const nm = shortName(cache.name);
+      if (cache.keyItem === "") suggest.push(`open ${nm}`);
+      else if (keys.keyFor(session, cache.keyItem)) suggest.push(`unlock ${nm}`);
+      else if (cache.keyItem !== "reliquary-key" && session.items.some((c) => c.itemId === "hammerstone" || c.itemId === "loose-rock")) suggest.push(`force ${nm}`);
     }
   }
 
