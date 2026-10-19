@@ -16,7 +16,7 @@ import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
-import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight } from "./zone-util";
+import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, moonPhase, eclipsePhase } from "./zone-util";
 import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
@@ -27,7 +27,7 @@ import { SCRAP_ID, IRON_ID, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOO
   GATEHOUSE_RAIN, GATEHOUSE_AFTER_RAIN, GATEHOUSE_FOG, GATEHOUSE_COLD, GATEHOUSE_CROWS, GATEHOUSE_NIGHT, GATEHOUSE_DAY,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
   POSES, COURTESIES, WAVE_ARMED, DANCE_ALONE, DANCE_ALONE_ROOM, KEEN_EMPTY_SELF, KEEN_EMPTY_ROOM, SING_SELF, SING_ROOM,
-  KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS } from "./zone-data";
+  KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS, REGION_LABELS, HARD_FROST, MOON_FULL_EVERY } from "./zone-data";
 import * as den from "./den";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
@@ -2318,9 +2318,120 @@ export function gatehouseSay(z: ZoneDO, session: Session, raw: string): void {
   const line = `${session.name} says: ${msg}`;
   z.send(session, `You say: ${msg}`, "say");
   gatehouseFeed(z, line, session.pubkey, "say", { name: session.name, pk: session.pubkey });
+  // Ask after the sky and the keeper tells you what it is doing (keeperWeather).
+  if (WEATHER_WORDS.test(msg)) {
+    const said = keeperWeather(z);
+    z.send(session, said);
+    gatehouseFeed(z, said, session.pubkey);
+  }
   // The room hears it over the sockets, instantly — and that's the whole of
   // it now (rome, 2026-07-21), same drop as `say` out in the dark: no "gpub"
   // frame back to the speaker's client, nothing reaches a relay in any form.
+}
+
+// ---- THE KEEPER READS THE SKY (rome, 2026-10-18) ----
+// The weather man of the world, because every wanderer who comes in out of it
+// tells him what it is doing. Say anything about the weather in here and he
+// answers: what is over which ground right now, and what kind it is - facts,
+// never odds. The gatehouse is the institution that would know, so it is the
+// one place this is said (the information toll), and the sky itself still has
+// to be walked out into.
+const WEATHER_WORDS = /\b(weather|forecast|sky|skies|rain|raining|rainy|cold|frost|freezing|fog|foggy|mist|wind|windy|storm|stormy|thunder|snow|snowing)\b/i;
+export function keeperWeather(z: ZoneDO): string {
+  const ground = (b: string) => { const l = REGION_LABELS[b] ?? b; return l.startsWith("The ") ? "the " + l.slice(4) : l; };
+  const list = (bands: string[]) => {
+    const n = bands.map(ground);
+    return n.length < 2 ? n.join("") : n.slice(0, -1).join(", ") + " and " + n[n.length - 1];
+  };
+  const on = (id: string) => { const st = z.events.get(id); return st && st.phase !== "idle" && st.bands?.length ? st : null; };
+  const bits: string[] = [];
+  const rain = on("rain");
+  if (rain) bits.push(rain.phase === "telegraph" ? `It's going grey over ${list(rain.bands!)} — rain coming.`
+    : rain.phase === "active" ? (rain.data === "settled" ? `Rain over ${list(rain.bands!)}, the long kind, the kind that sits.` : `Showers over ${list(rain.bands!)}.`)
+    : "");
+  const storm = on("storm");
+  if (storm && (storm.phase === "telegraph" || storm.phase === "active")) bits.push(`There's a storm on ${ground(storm.bands![0])}. I'd keep off the open.`);
+  const fog = on("fog");
+  if (fog && fog.phase !== "aftermath") bits.push(`Fog down on ${list(fog.bands!)}. You'll not see your own hand.`);
+  const cold = on("cold");
+  if (cold && cold.phase !== "aftermath") bits.push(cold.data === HARD_FROST
+    ? `Hard frost over ${list(cold.bands!)}, and it's set in. The deep's colder still.`
+    : `Cold over ${list(cold.bands!)}. And down in the deep — it's always down there when it's anywhere.`);
+  const wind = on("wind");
+  if (wind && wind.phase !== "aftermath") bits.push(`Wind's up over ${list(wind.bands!)}. Mind your flame.`);
+  const cloud = z.events.get("clouddown");
+  if (cloud && cloud.phase === "active") bits.push("Cloud's sat down on the mountain.");
+  if (z.snowUntil > Date.now()) bits.push("Snow lying on the mountain.");
+  const up = overhead(), when = moonWhen();
+  if (up.startsWith("a blood moon")) bits.push("And the moon's red tonight. The dead know it.");
+  else if (up.startsWith("full moon")) bits.push("Full moon up. The grounds are lit.");
+  else if (up.startsWith("the sun")) bits.push(up.startsWith("the sun coming back") ? "The sun's coming back." : "The sun's going out. Don't ask me why.");
+  if (when === "full moon tonight") bits.push("Full moon tonight.");
+  else if (when === "full moon soon") bits.push("Full moon soon.");
+  const wet = [...z.events.entries()].filter(([k, v]) => k.startsWith("after:") && v.until > Date.now()).map(([k]) => k.slice(6))
+    .filter((b) => !rain?.bands?.includes(b) || rain.phase !== "active");
+  if (wet.length) bits.push(`${cap(list(wet))} ${wet.length === 1 ? "is" : "are"} still wet from the last of it.`);
+  const said = bits.filter(Boolean);
+  return said.length
+    ? `The keeper glances at the shutter as if he could see through it. "${said.join(" ")}"`
+    : `The keeper glances at the shutter. "Clear, near as anyone's told me. Don't hold me to it."`;
+}
+
+// THE SLATE BY THE HATCH (rome, 2026-10-18): the same sky the keeper speaks,
+// chalked up ground by ground so it can be read without asking. One reading
+// (skyWords) feeds both, so the slate and the man can never disagree.
+function skyWords(z: ZoneDO): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  const add = (b: string, w: string) => { const l = out.get(b) ?? []; if (!l.includes(w)) l.push(w); out.set(b, l); };
+  const on = (id: string) => { const st = z.events.get(id); return st && st.phase !== "idle" && st.bands?.length ? st : null; };
+  const rain = on("rain");
+  if (rain) for (const b of rain.bands!) add(b, rain.phase === "telegraph" ? "rain coming" : rain.phase === "active" ? (rain.data === "settled" ? "rain, the long kind" : "showers") : "");
+  const storm = on("storm");
+  if (storm && (storm.phase === "telegraph" || storm.phase === "active")) add(storm.bands![0], "storm");
+  const fog = on("fog");
+  if (fog && fog.phase !== "aftermath") for (const b of fog.bands!) add(b, "fog");
+  const cold = on("cold");
+  if (cold && cold.phase !== "aftermath") {
+    for (const b of cold.bands!) add(b, cold.data === HARD_FROST ? "hard frost" : "cold");
+    add("deep", cold.data === HARD_FROST ? "colder still" : "cold");
+  }
+  const wind = on("wind");
+  if (wind && wind.phase !== "aftermath") for (const b of wind.bands!) add(b, "wind");
+  const cloud = z.events.get("clouddown");
+  if (cloud && cloud.phase === "active") add("mountain", "cloud down");
+  if (z.snowUntil > Date.now()) add("mountain", "snow lying");
+  for (const [k, v] of z.events) {
+    if (!k.startsWith("after:") || v.until <= Date.now()) continue;
+    const b = k.slice(6);
+    if (!(rain && rain.phase === "active" && rain.bands!.includes(b))) add(b, "wet");
+  }
+  for (const [b, l] of out) { const w = l.filter(Boolean); if (w.length) out.set(b, w); else out.delete(b); }
+  return out;
+}
+export // What is overhead, the keeper's calendar (rome, 2026-10-18: the full moon and
+// the blood one belong on the slate too - and as an estimate, not a count).
+// The sun's state by day, the moon's by night, then roughly how far off the
+// next full moon is. A full moon or a blood one is named when it is up.
+function fullMoonIn(now = Date.now()): number { const p = moonPhase(now); return p === 0 ? 0 : MOON_FULL_EVERY - p; }
+function moonWhen(now = Date.now()): string {
+  const n = fullMoonIn(now);
+  return n === 0 ? (isNight(now) ? "" : "full moon tonight")
+    : n <= 2 ? "full moon soon" : n <= 5 ? "full moon a few nights off" : "full moon a long way off";
+}
+function overhead(now = Date.now()): string {
+  const e = eclipsePhase(now);
+  const sky = e === "telegraph" ? "the sun failing" : e === "active" ? "the sun gone out" : e === "aftermath" ? "the sun coming back"
+    : !isNight(now) ? "day" : isBloodMoon(now) ? "a blood moon" : fullMoonIn(now) === 0 ? "full moon" : "night";
+  const when = moonWhen(now);
+  return when ? `${sky}; ${when}` : sky;
+}
+export function slateText(z: ZoneDO): string {
+  const words = skyWords(z);
+  const grounds = [...new Set([...events.weatherGrounds(z).bands, "deep"])]
+    .sort((a, b) => Object.keys(REGION_LABELS).indexOf(a) - Object.keys(REGION_LABELS).indexOf(b));
+  const rows = grounds.map((b) => `  ${REGION_LABELS[b] ?? b} — ${(words.get(b) ?? ["clear"]).join(", ")}`);
+  return ["A slate hangs by the hatch with the sky chalked on it in the keeper's square hand, wiped and written over so often the old words still show through:",
+    `  Overhead — ${overhead()}`, ...rows].join("\n");
 }
 
 // ---- THE BOARD ----
@@ -2460,6 +2571,7 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
       + (want ? ` Chalked across the boards, in a hand that presses hard: WANTED TONIGHT — ${want.name}, double in trade.` : "")
       + " ('barter' opens it)";
   }
+  if (is("slate", "weather slate", "keepers slate", "keeper's slate", "sky", "weather")) return slateText(z);
   if (is("board", "notices", "notice", "cork", "notice board", "posts")) {
     const live = boardLive(z);
     return live.length === 0
@@ -2510,6 +2622,7 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
   lines.push(marks === 0
     ? "By the door, a stretch of wall plastered smooth and scratched over with other people's chalk — none of it in a hand you can read. Your own corner is bare. ('carve' what you've walked)"
     : `By the door, the wall chart — and ${marks} halls of it are yours. ('study' it; 'carve' to add what you've walked)`);
+  lines.push("Beside the hatch hangs the keeper's slate, with the sky chalked on it. ('look slate')");
   // The board, beside the hatch. Only spoken of when it has something on it: an
   // empty board is furniture, and the room already has enough of that.
   const notices = boardLive(z).length;

@@ -154,6 +154,7 @@ export interface Creature {
   thirstAt?: number; // hyenas: when the next watering run calls
   forageFrom?: number; // when it last went looking for scraps on the floor (see FORAGE_FIND_MS)
   huntRestUntil?: number; // blown after a rush that missed (see HUNT_SUCCESS)
+  rivalRestUntil?: number; // just fought one of its own kind for the room (RIVAL_REST_MS)
   refusedWater?: string; // a water it came to, smelled, and would not drink (clues.ts) - it goes elsewhere next time
   ring?: boolean;        // carries a great ring of keys, and jingles (keys.ts)
   ringRolled?: boolean;  // ...decided once, the first time it mattered

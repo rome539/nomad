@@ -5485,6 +5485,8 @@ export class ZoneDO implements DurableObject {
         ai.lurkerDrifts(this, creature, now);
         // The cantor opens its jaw and the dead stop where they stand.
         ai.cantorSings(this, creature, now);
+        // Two crawlers in one room fight for it (RAT_RIVALS).
+        await ai.rivalsFight(this, creature, now);
         // The crossing's dead go through the last motion of the job they died at.
         ai.deadAtWork(this, creature, now);
         // The lammergeier rings the mountain's anvil for its marrow.
@@ -5618,7 +5620,7 @@ export class ZoneDO implements DurableObject {
       }
       if ((session.resting || sheltered) && !this.inCombat(session) && session.hp < session.maxHp) {
         // Resting out in a cold snap barely holds: half the ticks close
-        // nothing. (Gate shelter is warm ground — coldBites never reads there.)
+        // nothing. (The gatehouse is warm ground - see `indoors` below.)
         // Unless a rat has curled up against you: a small warm weight is REAL
         // warmth, and the cold's penalty waives while it sleeps there.
         const warmed = [...this.creatures.values()].some(
@@ -5643,7 +5645,13 @@ export class ZoneDO implements DurableObject {
         const restSkip = SHELTER_ROOMS.has(session.roomId) ? 0 : (inWind ? WIND_CHILL_REST_SKIP : COLD_REST_SKIP);
         // ...and the keeper's soup is the same warmth from the inside, for a while.
         const souped = (session.warmUntil ?? 0) > Date.now();
-        if (!byFire && !warmed && !souped && events.coldBites(this, session.roomId) && chance(restSkip * coldMult)) {
+        // ...and NOT BEHIND THE DOOR AT ALL (rome, 2026-10-18). The note above
+        // said coldBites never reads there, and it did: the gatehouse stands in
+        // the gate room, which is open ground, so anyone inside who was not
+        // dozing by the fire had the cold taking their rest through the walls.
+        // The pack crouch at a gate is still out in it.
+        const indoors = this.inGatehouse.has(session.pubkey);
+        if (!byFire && !indoors && !warmed && !souped && events.coldBites(this, session.roomId) && chance(restSkip * coldMult)) {
           // A silent tax is a lie: tell them, once in a while, why the rest is
           // closing nothing. (Throttled — not a line every skipped tick.)
           //

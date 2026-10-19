@@ -43,7 +43,7 @@ import {
   EXHALE_TELEGRAPH_MS, EXHALE_ACTIVE_MS, EXHALE_AFTERMATH_MS,
   SONG_TELEGRAPH_MS, SONG_ACTIVE_MS, SONG_AFTERMATH_MS, SONG_AFTER_WAKE_MULT,
   FOG_TELEGRAPH_MS, FOG_END_ODDS, WEATHER_STEP_MS, WEATHER_REPLAY_STEP_MS, FOG_AFTERMATH_MS, FOG_WAKE_MULT,
-  COLD_TELEGRAPH_MS, COLD_END_ODDS, COLD_AFTERMATH_MS, COLD_TORCH_MULT,
+  COLD_TELEGRAPH_MS, COLD_END_ODDS, COLD_AFTERMATH_MS, COLD_TORCH_MULT, HARD_FROST_ODDS, HARD_FROST_END_ODDS, HARD_FROST,
   WIND_TELEGRAPH_MS, WIND_END_ODDS, WIND_AFTERMATH_MS, WIND_HEED_MULT,
   WIND_TORCH_GUTTER_ODDS, WIND_SEA_CHOP_MULT, WIND_CHILL_TORCH_MULT, WIND_CHILL_REST_SKIP,
   BREACH_PAIRS, BREACH_TELEGRAPH_MS, BREACH_ACTIVE_MS, BREACH_AFTERMATH_MS,
@@ -3370,6 +3370,9 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
     case "idle": {
       st.phase = "telegraph";
       st.until = now + COLD_TELEGRAPH_MS;
+      // Which cold this is, decided as it comes (HARD_FROST_ODDS) and kept on
+      // the state, so a restart mid-frost is still a frost.
+      st.data = chance(HARD_FROST_ODDS) ? HARD_FROST : undefined;
       feedSky(z, inCold, "The air goes glass-clear and bitter, sharpening by the breath.");
       // The living feel it first and head for cover (coldDrives in ai.ts);
       // the hollow don't so much as pause.
@@ -3383,7 +3386,9 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
     case "telegraph": {
       st.phase = "active";
       st.until = now + WEATHER_STEP_MS; // no set length: weatherHolds rolls each step
-      feedSky(z, inCold, "The cold settles in hard. Flames pinch small, and everything living goes to ground.");
+      feedSky(z, inCold, st.data === HARD_FROST
+        ? "The cold sets in hard, and goes on setting. The ground rings underfoot and the breath freezes on your lip. This one is not going anywhere."
+        : "The cold settles in hard. Flames pinch small, and everything living goes to ground.");
       // THE MOUNTAIN GAINS ITS SEASON (5d): the cold stamps the snow, and the
       // snow outlasts the cold — persisted, so the hill holds its winter after
       // the weather has moved on.
@@ -3398,7 +3403,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
       break;
     }
     case "active": {
-      if (weatherHolds(z, "cold", st, now, COLD_END_ODDS)) { coldSnows(z, st); break; }
+      if (weatherHolds(z, "cold", st, now, st.data === HARD_FROST ? HARD_FROST_END_ODDS : COLD_END_ODDS)) { coldSnows(z, st); break; }
       st.phase = "aftermath";
       st.until = now + COLD_AFTERMATH_MS;
       feedSky(z, inCold, "The bitter edge goes out of the air, slowly, like something unclenching.");

@@ -33,7 +33,7 @@ import {
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
-  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, DARK_ROOMS, THIEVES,
+  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
@@ -1653,14 +1653,18 @@ function strayFor(z: ZoneDO, hunter: Creature, c: Creature): boolean {
   return !!vt && !!ht && !vt.is_boss && vt.level < ht.level;
 }
 
-// Two of a kind over one meal (RAT_RIVALS): the hungry one turns on the other
-// before the rat. Odds by strength, a real bite, never a kill; the loser runs
-// and stays off this room for RIVAL_AVOID_MS. The rat is left where it is.
-async function rivalsFight(z: ZoneDO, creature: Creature, prey: Set<string>, now: number): Promise<boolean> {
-  const here = z.creaturesInRoom(creature.roomId);
-  if (!here.some((c) => prey.has(c.templateId))) return false;
-  const rival = here.find((c) => c.id !== creature.id && c.templateId === creature.templateId && !c.target && !c.stunned);
+// Two of a kind in one room (RAT_RIVALS): they fight for it. Odds by strength, a
+// real bite, never a kill; the loser runs and stays off this room for
+// RIVAL_AVOID_MS, and both take RIVAL_REST_MS before the next. Neither one is
+// busy with a player. While a player stands in the room and either of them is
+// still hidden it waits - a fight is not allowed to give away the dark.
+export async function rivalsFight(z: ZoneDO, creature: Creature, now: number): Promise<boolean> {
+  if (!RAT_RIVALS.has(creature.templateId) || creature.target || creature.stunned) return false;
+  if ((creature.rivalRestUntil ?? 0) > now) return false;
+  const rival = z.creaturesInRoom(creature.roomId).find((c) => c.id !== creature.id && c.templateId === creature.templateId
+    && !c.target && !c.stunned && (c.rivalRestUntil ?? 0) <= now);
   if (!rival) return false;
+  if ((creature.hidden || rival.hidden) && playerPresent(z, creature.roomId)) return false;
   const world = z.world!;
   const tmpl = world.mobTemplates.get(creature.templateId)!;
   const roomId = creature.roomId;
@@ -1672,15 +1676,16 @@ async function rivalsFight(z: ZoneDO, creature: Creature, prey: Set<string>, now
   loser.hp = Math.max(1, loser.hp - bite);
   rival.asleep = false;
   rival.sleepUntil = undefined;
+  creature.rivalRestUntil = rival.rivalRestUntil = now + RIVAL_REST_MS;
   loser.avoids = [
     ...(loser.avoids ?? []).filter((a) => a.until > now && a.roomId !== roomId),
     { roomId, until: now + RIVAL_AVOID_MS },
   ];
   loser.huntAt = 0;
   loser.huntFor = undefined;
-  z.roomFeed(roomId, `${cap(tmpl.name)} turns on another of its kind over the rat, and they go at each other in the wet. One drags itself off, bitten.`, undefined, false);
+  z.roomFeed(roomId, `${cap(tmpl.name)} turns on another of its kind, and they go at each other in the wet. One drags itself off, bitten.`, undefined, false);
   z.roomSound(roomId, "Something thrashes and hisses {dir}, two of something, and then one of it drags itself away.", undefined, undefined, false, { mob: creature.templateId, act: "fight" });
-  await creatureMoves(z, loser, now, "flee", false);
+  await creatureMoves(z, loser, now, "flee", !!loser.hidden);   // the dark moving, if it was the dark
   return true;
 }
 
@@ -1697,7 +1702,6 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     const baitHere = !!floor && floor.some((id) => world.itemTemplates.get(id)?.lure);
     if (!hungry && !corpseHere && !baitHere) return false;
     if (!chance(PREDATION_ODDS)) return false;
-    if (hungry && prey && RAT_RIVALS.has(creature.templateId) && await rivalsFight(z, creature, prey, now)) return true;
     // A target in the room; prefer one not already busy with a player (the easy meal).
     let victim: Creature | null = null;
     for (const c of z.creaturesInRoom(creature.roomId)) {
@@ -2962,6 +2966,7 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
     if (creature.repositionAt > now) return;
     creature.repositionAt = now + randInt(interval, interval * 2);
     const home = creature.home ?? creature.roomId;
+    const shunned = new Set((creature.avoids ?? []).filter((a) => a.until > now).map((a) => a.roomId));   // run out of it (rivalsFight)
     let best: string | null = null;
     if (hunting) {
       // Toward the nearest food in reach: a live rat it preys on, or a carcass to
@@ -2969,7 +2974,7 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
       // out to LURKER_HUNT_RADIUS from home; steps toward the closest such room.
       let bestDist = Infinity;
       const consider = (roomId: string) => {
-        if (roomId === creature.roomId || !DARK_ROOMS.has(roomId)) return;
+        if (roomId === creature.roomId || !DARK_ROOMS.has(roomId) || shunned.has(roomId)) return;
         if (!z.withinRadius(home, roomId, LURKER_HUNT_RADIUS)) return;
         if (lurkersIn(z, roomId, creature.id) >= LURKER_CROWD) return; // that stretch of dark is taken
         const d = z.roomDist(creature.roomId, roomId);
@@ -2983,7 +2988,7 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
       // born-dark room in its own territory (your habitual corridor stops being safe).
       let bestAt = 0;
       for (const [roomId, list] of z.traces) {
-        if (roomId === creature.roomId || !DARK_ROOMS.has(roomId)) continue;
+        if (roomId === creature.roomId || !DARK_ROOMS.has(roomId) || shunned.has(roomId)) continue;
         if (!z.withinRadius(home, roomId, TERRITORY_RADIUS)) continue;
         if (lurkersIn(z, roomId, creature.id) >= LURKER_CROWD) continue; // another one already lies in wait there
         for (const tr of list) {

@@ -4649,13 +4649,17 @@ export const LURKER_HUNT_RADIUS = 6;               // twice its normal territory
 // other LURKERS: the hunting branch is meant to close on prey, so counting
 // every creature would stop a stalker ever reaching a rat.
 export const LURKER_CROWD = 2;                     // a dark room already holding this many lurkers stops drawing more
-// THEY FIGHT OVER THE RATS (rome, 2026-10-18). A hungry crawler that finds
-// another of its kind in the room with the meal goes for the rival before the
-// rat. The bigger one usually wins; the loser is bitten, drags itself off, and
-// keeps away from that room for a while, so the meal is the winner's. Nobody
-// dies of it - it is a fight over food, not food.
+// THEY FIGHT OVER THE ROOM (rome, 2026-10-18), every time two share one - fed or
+// hungry, rat or no rat (it began as a fight over a rat, and he meant the room).
+// The bigger one usually wins; the loser is bitten, drags itself off, and keeps
+// away from that room for RIVAL_AVOID_MS, so each one comes to hold its own
+// stretch of the dark. Nobody dies of it: one bite, floored at 1 hp, so the
+// population and the deep's food are untouched. RIVAL_REST_MS is the breath
+// after a fight in which neither starts or takes another - without it a beaten
+// one could flee into the next one's room and be worn down to nothing.
 export const RAT_RIVALS = new Set(["pale-crawler"]);
 export const RIVAL_AVOID_MS = 30 * 60_000;
+export const RIVAL_REST_MS = 10 * 60_000;
 export const LURKER_HUNT_DRIFT_MS = 40 * 60_000;   // ~40 min between hunting moves (vs the 3h idle drift)
 export const STARVE_HUNTS_ODDS = 0.2; // chance/tick a STARVING predator with no easier prey begins its wind-up on a player sharing the room (low: the threshold + no-prey gate already make it rare)
 export const WOUNDED_PREY_ODDS = 0.15; // chance/tick an eligible predator begins its wind-up on a BADLY HURT player (< WOUNDED_FRACTION hp), independent of the predator's own hunger — slightly rarer than the starving-hunt since it can fire on ANY eligible predator, not just a genuinely starved one
@@ -7973,7 +7977,19 @@ export const FOG_WAKE_MULT = 0.5; // the fog swallows half of what would spot yo
 // feels it. A quiet, safe-looking window that taxes your supplies; the free
 // tell is which silhouettes are still moving.
 export const COLD_TELEGRAPH_MS = 90_000;
-export const COLD_END_ODDS = 0.025;     // per WEATHER_STEP_MS: half last 4.7h, one in forty freezes a day
+// TWO KINDS OF COLD (rome, 2026-10-18: the grounds read cold most of the time,
+// and a cold that runs the whole day must still happen). At a flat 0.025 a cold
+// ran a 4.6h median and, spreading a touch faster than it pulled back, crept
+// over most of the map and held off every other weather; a flat 0.05 made it
+// short but made the day-long frost one in 1,600. So it is two weathers, the way
+// the rain is: most colds are ordinary and break at COLD_END_ODDS, and one in
+// HARD_FROST_ODDS sets in as a hard frost that breaks at HARD_FROST_END_ODDS.
+// Together: half over in ~2.7h, one in ~42 lasts a day, the average cold ~4.7h
+// (it was 6.7h) - about a third less cold in the world, and the long one kept.
+export const COLD_END_ODDS = 0.05;        // ordinary cold, per WEATHER_STEP_MS: half last ~2.3h
+export const HARD_FROST_ODDS = 0.1;       // ...one cold in ten is a hard frost
+export const HARD_FROST_END_ODDS = 0.01;  // ...which half the time outlasts 11h
+export const HARD_FROST = "hard frost";   // EventState.data on the cold; skies prints it
 export const COLD_AFTERMATH_MS = 3 * 60_000;
 export const COLD_TORCH_MULT = 0.5; // a torch lit (or caught) in the cold burns half as long
 export const COLD_REST_SKIP = 0.5; // odds a resting tick heals nothing in the cold
@@ -10842,6 +10858,10 @@ export const GATEHOUSE_BAND_AMBIENCE: Partial<Record<Region, string[]>> = {
 
 export const GATEHOUSE_AMBIENCE = [
   "The keeper turns a page behind his hatch, and says nothing.",
+  // He smokes (rome, 2026-10-18). Flavour and nothing else: never a word that he
+  // wants them, deals in them or takes them across the counter.
+  "The keeper lights a cigarette off a coal from the brazier and smokes it down to his fingers without once taking it out of his mouth.",
+  "Smoke from the keeper's cigarette hangs under the beams and does not go anywhere.",
   "The fire settles, and puts its light somewhere else on the wall.",
   "The door holds. It has held a long time.",
   "The kettle ticks as it cools.",
