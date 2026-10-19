@@ -1,5 +1,6 @@
 import { hpLabel, wholeHp } from "./util";
 import { BUILD_ID } from "./public";
+const BUILD_RESTART_EVERY_MS = 120_000;
 import * as exhaustion from "./exhaustion";
 // One Durable Object per zone: the authoritative simulation — who's where,
 // creature state, what lies on which floor.
@@ -1183,6 +1184,31 @@ export class ZoneDO implements DurableObject {
   // ---- transport: the direct door ----
 
   async fetch(req: Request): Promise<Response> {
+    // A NEWER BUILD IS KNOCKING (rome, 2026-10-19). After a deploy Cloudflare
+    // serves the new page at once but leaves this object running the old code
+    // for a while, so a refreshed page sat on the old rules until its socket
+    // happened to drop. The Worker stamps every request with its build; one
+    // that is not ours means a newer deploy is live, so the world saves what it
+    // holds and restarts onto it now — the same state-safe blip as a deploy,
+    // just on time. Once per two minutes at most, so a request from an old
+    // Worker still draining can never bounce the world back and forth.
+    const want = req.headers.get("x-build");
+    if (want && want !== BUILD_ID) {
+      const last = (await this.state.storage.get<number>("buildRestartAt")) ?? 0;
+      if (Date.now() - last > BUILD_RESTART_EVERY_MS) {
+        await this.state.storage.put("buildRestartAt", Date.now());
+        console.log("restarting onto build", want, "from", BUILD_ID);
+        await this.eventQueue.run(async () => {
+          if (this.world) {
+            await this.persist();
+            await Promise.all([...this.sessions.values()].map((s) => this.trySavePlayer(s.pubkey, s.roomId, s.hp)));
+          }
+        });
+        this.state.abort("a newer build is live");
+      }
+      if (req.headers.get("x-build-check") === "1") return new Response("ok");
+    }
+    if (req.headers.get("x-build-check") === "1") return new Response("ok");
     if (this.eventQueue.pending >= 64) return new Response("busy", { status: 503 });
     return this.eventQueue.run(() => this.handleFetch(req));
   }
@@ -1505,6 +1531,7 @@ export class ZoneDO implements DurableObject {
 
   public recoveryMode(s: Session): exhaustion.RecoveryMode {
     if (this.inCombat(s)) return "combat";
+    if (den.hearthWarm(this, s)) return "fire"; // a den's own hearth mends like the gatehouse's
     if (this.outOfWorld(s)) return s.resting ? "fire" : "shelter";
     return s.resting ? "rest" : "passive";
   }
@@ -2187,6 +2214,7 @@ export class ZoneDO implements DurableObject {
       case "settle": return den.cmdSettle(this, session, cmd.arg);
       case "abandon": return den.cmdAbandon(this, session);
       case "bar": return den.cmdBar(this, session);
+      case "build": return den.cmdBuild(this, session, cmd.arg);
       case "bunk": return den.cmdBunk(this, session, cmd.arg);
       case "unbunk": return den.cmdUnbunk(this, session, cmd.arg);
       case "den": return den.cmdDen(this, session);
@@ -5087,7 +5115,7 @@ export class ZoneDO implements DurableObject {
     // closing, the moon, an eclipse, weather arriving or lifting.
     for (const s of this.sessions.values()) {
       if (!seesArt(s.pubkey)) continue;
-      if (this.artSkyFor(s) !== s.artSky) this.sendStatus(s);
+      if (this.artSkyFor(s) !== s.artSky || (this.inDen.has(s.pubkey) && (isNight() ? 1 : 0) !== s.artNight)) this.sendStatus(s);
     }
     // ...and the soundscape the same way: the rain is heard arriving.
     for (const s of this.sessions.values()) {
@@ -5634,7 +5662,7 @@ export class ZoneDO implements DurableObject {
         // The fire's rest: dozing INSIDE the gatehouse mends at double time —
         // warm, safe, deliberate. Standing shelter and the dungeon's cold-stone
         // rest both keep the slow rate. (And the cold never reaches the fire.)
-        const byFire = session.resting && this.outOfWorld(session);
+        const byFire = session.resting && (this.outOfWorld(session) || den.hearthWarm(this, session));
         // A fleeced lining keeps the cold off your rest; a sodden one holds it
         // against you. Best worn piece decides — the traits never stack. And
         // the RAIN is the same thief for everyone (5c): real rain holds the
@@ -5655,7 +5683,7 @@ export class ZoneDO implements DurableObject {
         // the gate room, which is open ground, so anyone inside who was not
         // dozing by the fire had the cold taking their rest through the walls.
         // The pack crouch at a gate is still out in it.
-        const indoors = this.inGatehouse.has(session.pubkey);
+        const indoors = this.inGatehouse.has(session.pubkey) || den.hearthWarm(this, session); // ...nor by a den's lit hearth
         if (!byFire && !indoors && !warmed && !souped && events.coldBites(this, session.roomId) && chance(restSkip * coldMult)) {
           // A silent tax is a lie: tell them, once in a while, why the rest is
           // closing nothing. (Throttled — not a line every skipped tick.)
@@ -5804,6 +5832,7 @@ export class ZoneDO implements DurableObject {
       this.send(session, line, "amb"); // tagged so the client's tutorial can hush the weather
     }
 
+    ai.hearthDraws(this, now); // a den's fire after dark pulls on the hungry next door
     this.applyRot(now, false);
     this.rustFloors(now, false); // and the slower drain, on gear, which nothing else touches
     this.sweepSpoiledHearts(now, false);
@@ -8614,7 +8643,10 @@ export class ZoneDO implements DurableObject {
           // always happen; it went unseen because the mountain's art rooms sit
           // in a cluster and mostly hand off to each other. The Deep Mark is the
           // first one standing on a route out into rooms that have no plate.
+          // INSIDE A DEN IS ITS OWN PLACE (2026-10-19): every den is the same
+          // room drawn once, wherever on the map it stands, like the gatehouse.
           place: !seesArt(session.pubkey) ? undefined
+            : this.inDen.has(session.pubkey) ? "den"
             : ART_ROOMS.has(session.roomId) ? session.roomId : "",
           // AND HOW MUCH WATER IS OVER THIS ROOM, 0-3. The tide is the one
           // thing on the crossing that changes a room without changing the
@@ -8632,7 +8664,12 @@ export class ZoneDO implements DurableObject {
           // What the place sounds like, for the page's own synth (sound.ts).
           amb: (() => { const a = soundscapeFor(this, session); session.ambKey = soundKey(a); return a; })(),
           // Light through a doorway can follow the hour without exposing sky.
-          covered: this.inGatehouse.has(session.pubkey) || !OUTDOOR_ROOMS.has(session.roomId),
+          covered: this.inGatehouse.has(session.pubkey) || this.inDen.has(session.pubkey) || !OUTDOOR_ROOMS.has(session.roomId),
+          // WHETHER IT IS NIGHT, as a plain fact. `sky` says rain or fog or snow
+          // at any hour, and a room you cannot see out of still has to know a
+          // wet noon from a wet midnight: the den's picture is overcast for one
+          // and dark for the other (2026-10-19).
+          nt: !seesArt(session.pubkey) ? undefined : (session.artNight = isNight() ? 1 : 0),
           // THE RED NIGHT IS NOT A SKY SLOT. `sky` above picks which photograph
           // to paint, and weather wins that contest - correctly, because a
           // blood moon behind fog is a foggy picture. But the hollow ones'
@@ -8657,7 +8694,9 @@ export class ZoneDO implements DurableObject {
           // picture is of light falling from something you are holding.
           // 0 rather than absent when the key is on the art list: the client has
           // to be able to tell "not lit" from "this frame says nothing about it".
-          torch: !seesArt(session.pubkey) ? undefined : this.carriesLight(session) ? 1 : 0,
+          // ...and a den's hearth, burning while you rest by it, lights the room
+          // the way your own torch would (the den has no hearth picture of its own).
+          torch: !seesArt(session.pubkey) ? undefined : (this.carriesLight(session) || den.hearthWarm(this, session)) ? 1 : 0,
           // WHICH SKY, WHEN AN HOUR OWNS MORE THAN ONE. Not a choice made here:
           // just the day count, handed over so the client can index its own
           // table with it. The server stays out of the art the way it does with

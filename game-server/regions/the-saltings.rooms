@@ -1,0 +1,149 @@
+# THE SALTINGS (rome, 2026-10-19). Salt marsh and dunes above the crossing's
+# tidal flats, grown so a den can stand on the crossing.
+#
+# WHY IT EXISTS. Dens go up only on open ground at least 22 steps from every
+# gate (DEN_MIN_GATE_STEPS), and the crossing reached that in three rooms. The
+# top of it is the ford's tidal flats — the Cockle Beds, the Midden, the Tern
+# Scrape, the Quicksand Flat are SEA rooms the tide covers — and behind tidal
+# flats, on any real coast, is the ground above the tide line: salt marsh cut
+# up by creeks, then dunes. That is what this is, and it is dry at every hour.
+#
+# THE SHAPE. A 7 x 3 grid north of the flats, x 52 to 58, y -3 to -5: the two
+# rows nearest the water are marsh, the top row is dunes. The creeks and the
+# dune ridges are the walls — a spanning tree carved through the grid, so you
+# walk round a great deal — but the crossing is not a maze and nothing here
+# lies: every exit is drawn the way it goes. Two ways in, both off the ford:
+#   - north from THE GULL STAND, by the High-Water Mark;
+#   - north from THE COCKLE BEDS, straight up onto the Storm Ridge.
+#
+# WHY IT IS ONLY 22 ROOMS. The whole ford-and-ferry sheet hangs behind two
+# rooms, the Rope Walk and the Ferry Strand, with no gate inside it, and the
+# throat check allows two routes for at most 80 rooms behind a cut. The sheet
+# is 58, so this is 22. Growing it further means a third way in from outside
+# that cut — the nearest outside ground is the mountain's Goat Track, fourteen
+# squares east — and that is its own piece of work.
+#
+# THE NAMED PLACES are the three deepest dead ends — The Dune Slack, The Salt Workings, The Samphire Island.
+# 16 of the 21 grid rooms will take a den. No gate and no wake point in it. No
+# new creatures (rome): some of the crossing's own shore and marsh spawns move
+# up into it.
+
+!region crossing
+
+## the-gull-stand | attachment: up above the tide line
+!existing
+> north the-high-water-mark
+
+## the-cockle-beds | attachment: up onto the storm ridge
+!existing
+> north the-storm-ridge
+
+## the-high-water-mark | The High-Water Mark
+A line of wrack lies along the top of the shoal — weed, cork, feathers, a broken oar, everything the biggest tides bring up and leave — and it marks where the sea stops. Above it the ground is grey-green and firm and stays out of the water. Behind you, the gulls and the ford. Ahead, the saltings, and nobody's footprints in them.
+> south the-gull-stand
+> north the-sea-lavender
+
+## the-salt-workings | The Salt Workings
+Shallow square pans dug into the clay of the marsh and banked round, a long time ago, to let the sea in and the sun take it out again. The banks are still there, grassed over, the floors white-crusted where the water stands. Somebody worked salt here for a living. The ground between the pans is flat and firm and dry.
+> north the-grey-marsh
+
+## the-sea-purslane | The Sea Purslane
+Grey-silver bushes of purslane, knee-high, crowding the banks of a creek so that the creek itself is a dark line you only see when you are on the edge of it. The mud below is soft and very deep.
+> east the-crooked-creek
+> north the-cord-grass
+
+## the-crooked-creek | The Crooked Creek
+A creek winds through the marsh here in loops so tight that you can cross it three times in twenty paces and never get further from where you started. The banks are mud, glossy and steep, printed with birds' feet.
+> north the-saltmarsh-pools
+> west the-sea-purslane
+
+## the-sea-lavender | The Sea Lavender
+Sea lavender over the whole marsh top here, a haze of it, low and purple-grey, smelling faintly of nothing at all. Under it the ground is firm and cut with little runnels that go nowhere.
+> south the-high-water-mark
+> east the-samphire-flats
+
+## the-samphire-flats | The Samphire Flats
+Samphire, bright green and fleshy, standing in the open mud between the creeks in little upright stems like a crop somebody planted. It squeaks underfoot. Pull it and it comes up whole.
+> west the-sea-lavender
+> east the-storm-ridge
+
+## the-storm-ridge | The Storm Ridge
+A long ridge of shingle thrown up above the cockle beds by some winter that nobody remembers, steep on the seaward side and gentle on the other. Stand on the crest and the crossing is laid out below you, all its water and all its ways. Turn round and there is the marsh, and the dunes beyond it, and no way through either that you can see from here.
+> south the-cockle-beds
+> west the-samphire-flats
+> east the-wide-creek
+
+## the-wide-creek | The Wide Creek
+A creek too wide to jump, with no way across it you can see, running full of brown water at one hour and empty to a gutter of mud at the next. Going round it means following it, and it goes a long way.
+> west the-storm-ridge
+> north the-old-sea-bank
+
+## the-grey-marsh | The Grey Marsh
+Flat marsh to the edge of sight in every direction, grey-green, cut by creeks, all at exactly the same height. There is nothing to steer by. Every creek looks like the last one.
+> east the-cord-grass
+> north the-white-dunes
+> south the-salt-workings
+
+## the-cord-grass | The Cord Grass
+Cord grass, stiff and green, grown in a dense band along a creek bank, taller than your waist. It holds the mud together and the mud holds you, mostly. Walk the top of the bank, not the side of it.
+> south the-sea-purslane
+> west the-grey-marsh
+
+## the-saltmarsh-pools | The Saltmarsh Pools
+Round pools lie in the marsh top here, each one still and full of sky, edged with short turf. There are dozens of them. The way between them is a thread of firm ground that bends where the pools do.
+> north the-marram-sea
+> east the-redshank-ground
+> south the-crooked-creek
+
+## the-redshank-ground | The Redshank Ground
+A bird gets up from the marsh in front of you and goes off piping, and another, and another, all of them shouting the same alarm, and then the whole marsh knows you are here. They settle again behind you. They do not stop watching.
+> west the-saltmarsh-pools
+> east the-drained-creek
+
+## the-drained-creek | The Drained Creek
+A creek emptied by the falling tide, its bed a channel of shining mud with a trickle down the middle, its banks slumped and fissured. Things have walked along the bottom of it. Their prints go both ways.
+> west the-redshank-ground
+> east the-samphire-island
+
+## the-samphire-island | The Samphire Island
+A low island of firm ground stands up out of the creeks here, ringed all round by water at every tide but the lowest, grassed on top and dry. The creeks go past it on both sides and meet again beyond. From the middle of it the marsh is flat to the edge of sight, and anything coming across it can be seen a long way off.
+> west the-drained-creek
+
+## the-old-sea-bank | The Old Sea Bank
+A bank of earth, grassed over, runs straight across the marsh here — built by hand to keep the sea off land that the sea took anyway. It is the only straight thing for miles and it stops suddenly in both directions.
+> south the-wide-creek
+> north the-grey-dunes
+
+## the-white-dunes | The White Dunes
+Dunes, high and pale and loose, the sand moving on their crests in thin streams with every gust. They have no shape that stays. Climbing one, the sand runs out from under every step and you go up half as fast as you meant to.
+> south the-grey-marsh
+> east the-dune-slack
+
+## the-dune-slack | The Dune Slack
+A hollow between the dunes floored with short wet turf, where fresh water stands in the low places after rain and the wind goes over the top without coming down. Orchids grow in it, and creeping willow no higher than your ankle. It is the one green, sheltered, sweet-watered place in all this sand, and it is a long way from anywhere.
+> west the-white-dunes
+
+## the-marram-sea | The Marram Sea
+Marram grass over every dune in sight, tall and stiff and blue-grey, bending all one way and hissing. Walk into it and it closes behind you to the shoulder. Every dune looks the same from inside it.
+> east the-blowout
+> south the-saltmarsh-pools
+
+## the-blowout | The Blowout
+The wind has torn a dune open here, a bare bowl of sand scooped out of its side with the roots of the marram hanging in the air round the rim. The floor of it is ridged like a beach. The wind is still working on it.
+> east the-dune-ridge
+> west the-marram-sea
+
+## the-dune-ridge | The Dune Ridge
+A long ridge of dune, crested with marram, from which you can see the sea on one side and more dunes on the other, rank on rank, all the same height. The sand on the crest is warm. The sand in the hollows is cold.
+> east the-sea-buckthorn
+> west the-blowout
+
+## the-sea-buckthorn | The Sea Buckthorn
+Sea buckthorn, grey-leaved and orange-berried, grown into a thicket across a dune hollow, every branch armed with thorns as long as a finger. There is a way through, made by something low.
+> east the-grey-dunes
+> west the-dune-ridge
+
+## the-grey-dunes | The Grey Dunes
+Older dunes, further from the sea, grown over with grey lichen and moss and low heath, so the sand is held still under a crust. They roll away in every direction like a sea frozen at the moment of a swell.
+> south the-old-sea-bank
+> west the-sea-buckthorn

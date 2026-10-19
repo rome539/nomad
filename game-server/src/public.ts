@@ -5458,7 +5458,7 @@ async function connect() {
       lastRoomName = f.room || "";
       if (f.art) grantArt();
       lastEcl = f.ecl ? 1 : 0;
-      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red, f.covered);
+      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red, f.covered, f.nt);
       roomEl.textContent = "";
       if (f.room) {
         roomEl.appendChild(document.createTextNode(f.room));
@@ -5497,10 +5497,12 @@ async function connect() {
       paintWayHome();
       renderChips(f.suggest, f.combat);
       updateGuideExits();
-      // The world's own build is NOT asked here any more (rome, 2026-10-13): the
-      // world can still be on the last build for a while after a deploy, and a
-      // page that had just reloaded onto the new one read that as a mismatch,
-      // gave up on reloading, and never reweaved again. /build decides alone.
+      // The world's own build is RECORDED here, and never alone decides
+      // anything (rome, 2026-10-13: a page that had just reloaded onto the new
+      // build read an old world as a mismatch). checkBuild wants it to agree
+      // with /build before it says a word; a frame from a restarted world is
+      // also the moment to ask /build again.
+      if (f.build && f.build !== worldBuild) { worldBuild = f.build; askBuild(); }
     } else if (f.t === "beat") {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
@@ -6156,11 +6158,22 @@ var lastCombat = false;
 // quiet for good after its first line, so a page left open across two deploys
 // said nothing about the second one - the lantern landed and nobody was told.
 // It keeps asking now, and says it again only when the build is a new one.
+// NOT BEFORE THE WORLD HAS IT (rome, 2026-10-19). The Worker answers /build
+// with the new build the moment a deploy lands, but the world you are talking
+// to can run the old code for minutes after that, so "refresh" sent people to a
+// new page still served by the old rules, and the reweave was what actually
+// updated anything. The line now waits for BOTH: /build says there is a newer
+// page than this one, AND the world's own room frame says it is running that
+// build. (The world restarts onto it as soon as /build is asked - see
+// ZoneDO.fetch - so the wait is short.)
 var seenBuild = "";
-function checkBuild(world) {
-  if (!BUILD || BUILD.charAt(0) === "_" || world === BUILD) return;  // unstamped in dev
-  if (world === seenBuild) return;
-  seenBuild = world;
+var latestBuild = "";  // what the Worker serves now (/build)
+var worldBuild = "";   // what the world you are connected to runs (room frame)
+function checkBuild() {
+  if (!BUILD || BUILD.charAt(0) === "_") return;  // unstamped in dev
+  if (!latestBuild || latestBuild === BUILD || worldBuild !== latestBuild) return;
+  if (latestBuild === seenBuild) return;
+  seenBuild = latestBuild;
   print("\u2014 the world reweaves: a new build has landed. Refresh the page to see it \u2014", "sys");
 }
 // ...AND THE PAGE ASKS, once a minute and whenever it comes back into view
@@ -6172,7 +6185,7 @@ function askBuild() {
   if (!BUILD || BUILD.charAt(0) === "_") return;
   try {
     fetch("/build", { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; })
-      .then(function (b) { b = (b || "").trim(); if (/^[a-z0-9]{1,16}$/.test(b)) checkBuild(b); })
+      .then(function (b) { b = (b || "").trim(); if (/^[a-z0-9]{1,16}$/.test(b)) { latestBuild = b; checkBuild(); } })
       .catch(function () {});
   } catch (e) {}
 }
@@ -7902,6 +7915,7 @@ var MAP_REGION_LABELS = {
   enclosure: "THE OLD ENCLOSURE",
   deepwood: "THE DEEP WOOD",
   heart: "THE HEART",
+  oldgrowth: "THE OLD GROWTH",
   // THE EAST ROAD'S FOUR (mig 187), same caption-only trick. Note that 'road'
   // above says THE WEST ROAD and still does: both halves are one band for every
   // rule in the sim, and only the paper distinguishes them.
@@ -7910,6 +7924,8 @@ var MAP_REGION_LABELS = {
   beck: "THE BECK",
   rise: "THE RISE",
   holdings: "THE HOLDINGS",
+  drovelane: "THE DROVE LANE",
+  scarpfoot: "THE SCARP FOOT",
   // THE CROSSING'S SEVEN (mig 190). These are the only caption-only quarters in
   // the world that are load-bearing rather than flavour: the five middle ones
   // are the five WAYS OVER, and knowing which of them your dot is standing on
@@ -7926,6 +7942,7 @@ var MAP_REGION_LABELS = {
   ferry: "THE FERRY",
   eyots: "THE EYOTS",
   farstrand: "THE FAR STRAND",
+  saltings: "THE SALTINGS",
 };
 function buildMapGraph(f) {
   var nodes = {}, order = [];
@@ -9675,7 +9692,7 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "13";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "14";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -9986,6 +10003,11 @@ var ROOM_PLATE = {
   // SHELTERED. The smithy's wind-eye and the lodge loft's slit window are keyed,
   // so the real sky shows through them; the wheel pit's gaps in the mill floor
   // above were painted over with dim light, because there is no sky under a mill.
+  // ---- INSIDE A DEN (rome, 2026-10-19). Every den is the same room, sent as
+  // place "den" wherever it stands. Four pictures, not three: its daylight comes
+  // through gaps in the hides, so a grey day has its own (overcast) rather than
+  // borrowing the night plate. SHELTERED below; the hearth lights it as a torch.
+  "den":                   "day overcast night night-torch",
   "the-smithy":            "day night night-torch",
   "the-bare-chapel":       "day night night-torch",
   "the-mill":              "day night night-torch",
@@ -10412,7 +10434,8 @@ var SHELTERED = {
   // The wood's two roofs (2026-09-29).
   "the-bounds-house": 1,
   "the-wolf-earth": 1,
-  // ...and the dens' ten (2026-09-30).
+  // ...and the dens' ten (2026-09-30), and the inside of any den (2026-10-19).
+  "den": 1,
   "the-smithy": 1,
   "the-bare-chapel": 1,
   "the-mill": 1,
@@ -10587,6 +10610,10 @@ var SHELTERED = {
 // a slot in it is dim under any of the four. It is also the only one whose slot
 // sky was already right, so it costs nothing but the darkening.
 var WEATHER_FROM_INSIDE = { rain: 1, fog: 1, snow: 1, "after-rain": 1, "wet-night": 1, "wet-dusk": 1, "wet-dawn": 1 };
+// THE SKIES A ROOF WITH AN "overcast" PICTURE SHOWS IT FOR (the den): daytime
+// weather only. Dawn, dusk and the eclipse take the night ground here exactly as
+// they do everywhere else (SKY_BASE), and night is decided by lastNight.
+var OVERCAST_SKIES = { rain: 1, fog: 1, snow: 1, "after-rain": 1 };
 var GATE_PLATE = {
   "the-relay-house":  "day night night-torch fog rain snow",
   "the-shieling":     "day night night-torch fog rain snow",
@@ -11845,8 +11872,13 @@ function fadeScene() {
 }
 
 var lastCovered = false;
-function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered) {
+// Whether it is night, sent as a fact beside the sky: weather owns the sky string
+// at every hour, and a room with no window still has to tell a wet noon from a
+// wet midnight (the den, below).
+var lastNight = 0;
+function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered, night) {
   if (covered !== undefined) lastCovered = !!covered;
+  if (night !== undefined && night !== null) lastNight = night ? 1 : 0;
   else if (sky !== undefined && sky !== null) lastCovered = sky === "in";
   // HOW MUCH WATER IS OVER THIS ROOM, and cleared the same way place is:
   // walking off a flooded shoal onto a dry road has to put the sheet away, so
@@ -11911,6 +11943,12 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // under a bright noon sky would be the wrong half of the picture.
     var slot = lastSky;
     if (shut && WEATHER_FROM_INSIDE[lastSky]) { pbase = "night"; slot = "after-rain"; }
+    // A ROOF WITH AN OVERCAST PICTURE (the den, rome 2026-10-19). Its daylight
+    // comes in through gaps, so a wet or grey day is not the night plate - it is
+    // the same room in duller light - and night is night whatever the weather.
+    if (phave.indexOf(" overcast ") >= 0) {
+      pbase = lastNight ? "night" : OVERCAST_SKIES[lastSky] ? "overcast" : (SKY_BASE[lastSky] || "day");
+    }
     // AND WHEN THE PLATE HAS NOT GOT THAT CONDITION, THE FIRST ONE IT LISTS.
     // This was hardcoded to "day" on the assumption every plate owns one, which
     // held until the Last Shelter gave its up: a room with no day plate resolved
@@ -11963,6 +12001,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // standing in it takes an hour tint.
     var selfLit = phave.indexOf(" day ") < 0 && phave.indexOf(" night-torch ") < 0;
     if (shut || phave.indexOf(" day ") < 0) mobHour = (lit || selfLit) ? "" : pbase;
+    if (mobHour === "overcast") mobHour = "after-rain";   // grey daylight: the after-rain grade is the creatures' match for it
     line = MOB_LINE[stem] || MOB_LINE_DEFAULT;   // the standing line belongs to the PICTURE
     seatAt = typeof SEAT_ON !== "undefined" && SEAT_ON[stem] ? stem : "";   // a throne in the picture seats its king
   }

@@ -2085,7 +2085,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
       denName: shelf ? z.world!.rooms.get(shelf.den.roomId)!.name : "",
       shelf: shelf ? sortKit(group(shelf.held)) : [],
       shelfGear: shelf ? shelf.held.filter((c) => z.isGear(c.itemId)).length : 0,
-      shelfRest, denCap: DEN_CAP,
+      shelfRest, denCap: den.denCap(shelf?.den),
       pack: sortKit(group(session.items)),
       lockbox: sortKit(group(lockbox)),
       vault: sortKit(group(vault)),

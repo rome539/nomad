@@ -34,7 +34,7 @@ const PROFILE = {
 };
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
     const url = new URL(req.url);
@@ -71,6 +71,15 @@ export default {
       // only once the world has restarted and sent one; the Worker serves the new
       // build the instant a deploy lands, so the page asks here as well.
       if (m === "GET" && pathname === "/build") {
+        // ...and every open page asks once a minute, so this is also where a
+        // world still on the last build hears that a new one is live and
+        // restarts onto it (ZoneDO.fetch, x-build). Fire and forget: the page's
+        // answer never waits on the world.
+        for (const zone of ZONES) {
+          const headers = new Headers({ "x-build": BUILD_ID, "x-build-check": "1", "x-zone": zone });
+          const ping = env.ZONE.get(env.ZONE.idFromName(zone)).fetch(new Request(req.url, { headers })).catch(() => undefined);
+          ctx?.waitUntil(ping);
+        }
         return new Response(BUILD_ID, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
       }
       if (m === "GET" && (pathname === "/guide" || pathname === "/wiki")) {
@@ -293,6 +302,7 @@ export default {
         headers.set("Upgrade", "websocket"); // the guard above already proved it
         headers.set("x-pubkey", pubkey);
         headers.set("x-zone", zone);
+        headers.set("x-build", BUILD_ID); // a world on an older build restarts onto this one (ZoneDO.fetch)
         const stub = env.ZONE.get(env.ZONE.idFromName(zone));
         return await stub.fetch(new Request(req.url, { headers }));
       }

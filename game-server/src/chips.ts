@@ -507,6 +507,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         // Behind your own door: the shelf, the bar, and the way back out.
         suggest.push("out", "den");
         if (inside.holder === session.pubkey && !inside.barred) suggest.push("bar");
+        // ...and 'build', while there is still something a den could have.
+        if (inside.holder === session.pubkey && !(inside.hearth && inside.hides && inside.rattle && inside.rack && inside.larder)) suggest.push("build");
         suggest.push(DEN_CHIP);
       } else {
         // Out on the site — and that is ALL it is (rome, 2026-08-07). The street
@@ -515,7 +517,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         // nothing. The ground offers the door, and raising one; what is behind
         // the door is behind the door.
         if (doors.length) suggest.push("in");
-        if (!den.myDen(z, session.pubkey)) suggest.push("settle");
+        if (!den.myDen(z, session.pubkey) && den.canBuildHere(z, session.roomId)) suggest.push("settle");
       }
     }
     // Knowledge you carry: open a map or the journal (each pops its modal).
@@ -541,7 +543,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // ground they're a door in a house and the ground outside it, and the chip row
   // was telling a man standing in his own home to go to the tavern. A gate wins
   // the tie if a site ever sits on one.
-  const door = den.isHolding(z, session.roomId) && !world.entryRooms.has(session.roomId) ? "den" : "";
+  const door = den.densAt(z, session.roomId).length > 0 && !world.entryRooms.has(session.roomId) ? "den" : "";
   // WHICH WAY THE DOOR IS (rome, 2026-08-15). Sent always, shown by the client
   // only during the FIRST WALK — friendliness belongs in the interface and the
   // interface is where it can be taken away again. A wanderer who has finished

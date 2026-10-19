@@ -28,6 +28,8 @@ export interface Session {
   bleedTicks?: number; // open wound: armor-ignoring ticks left before it clots (claws/teeth in the deep)
   bleedDmg?: number; // damage the current wound leaks each combat round
   resting: boolean;
+  hearthLit?: string; // the den room whose hearth this rest burned wood in (den.lightHearth); mends like the gatehouse fire while it lasts
+  rattleAt?: number;  // last time the bone rattle on a den door woke this sleeper (den.rattle), so one visitor is one warning
   // THE POSTURE THE ROOM KEEPS (rome, 2026-08-30). Not a line that scrolls past
   // whoever happened to be looking — state, read off you by anyone who walks in
   // afterwards, exactly the way a creature's bearing is. Dropped by effort, the
@@ -70,6 +72,7 @@ export interface Session {
   // been SENT, so the tick can notice the hour turning under someone standing
   // still and push them a frame. Undefined until the first status frame.
   artSky?: string;
+  artNight?: number; // the last `nt` sent: a den's picture turns at nightfall even when the sky string does not
   ambKey?: string; // ...and the last soundscape (sound.ts), for the same reason
   pvpTarget?: string | null; // pubkey of the wanderer this one has steel out against (transient — a deploy ends the exchange, never the grudge)
   linkdeadUntil?: number; // ms epoch a mid-fight disconnect holds the body in the world until; unset = normally connected (or normally gone)

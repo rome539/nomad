@@ -1371,6 +1371,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
 
   const from = session.roomId;
   session.roomId = exit.to_room;
+  den.rattle(z, session.roomId, session.pubkey); // a bone rattle on a door here hears you come
   session.movedAt = Date.now();
   // Charge only a completed step, after every blocked-exit/failed-flight check.
   // The same equipped weight as combat includes balanced/cumbersome, never pack.
@@ -2753,8 +2754,14 @@ export function cmdRest(z: ZoneDO, session: Session): void {
   // world, so a wanderer lying down in a sunlit wood was told the stone was
   // cold and the dark was keeping them company. Now the band speaks its own
   // posture; a band with no pool of its own falls back to the dungeon's.
-  const flavor = REST[z.regionOf(session.roomId)] ?? REST.upper!;
-  z.send(session, pick(hurt ? flavor.hurt : flavor.whole));
+  // A den's hearth, if this is one (den.lightHearth): it burns a bundle of
+  // wood and the rest mends by fire. Said instead of the ground's own line.
+  const fire = den.lightHearth(z, session);
+  if (fire) z.send(session, fire);
+  else {
+    const flavor = REST[z.regionOf(session.roomId)] ?? REST.upper!;
+    z.send(session, pick(hurt ? flavor.hurt : flavor.whole));
+  }
   // DREAMS (2026-08-29). Rest occasionally reads YOU, not just the ground — a
   // dream keyed to where you slept, and it can teach the world's secrets
   // without ever being a tutorial. It touches nothing: no heal, no door

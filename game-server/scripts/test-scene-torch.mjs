@@ -88,7 +88,7 @@ const ctx = {};
 const code = [
   depsFor(fn("paintScene"), "paintScene"),
   'var viewMode = "image";',
-  'var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "", lastTorch = false, skyRoll = 0;',
+  'var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "", lastTorch = false, lastNight = 0, skyRoll = 0;',
   'var lastSea = 0, lastCovered = false, weatherKind = "";',
   'var scapeRaw = null;', // audio has its own lifecycle checks in test-world-sound.mjs
   'function setWeather(kind) { weatherKind = kind; }',

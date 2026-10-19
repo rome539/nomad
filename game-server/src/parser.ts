@@ -72,6 +72,7 @@ export type Verb =
   | "settle"
   | "abandon"
   | "bar"
+  | "build"
   | "bunk"
   | "unbunk"
   | "den"
@@ -216,6 +217,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   settle: "settle", homestead: "settle", inhabit: "settle",
   abandon: "abandon", forsake: "abandon", vacate: "abandon",
   bar: "bar", barricade: "bar", fortify: "bar",
+  build: "build", construct: "build",
   bunk: "bunk", invite: "bunk", house: "bunk", shelter: "bunk",
   unbunk: "unbunk", evict: "unbunk", turnout: "unbunk",
   den: "den", home: "den", holding: "den", hearth: "den",
@@ -498,15 +500,16 @@ export const HELP_TEXT = [
   "                    gatehouse ANYTHING YOU TYPE IS SPOKEN ALOUD, unless it's a",
   "                    command — it is the one room where a wanderer can be heard.",
   "  out               (outside) — back through the door, into the world.",
-  "  settle            raise a den of your own on a holding. The ROOM is ground,",
-  "                    not a seat — however many already live there, there is",
-  "                    always room for another door, and yours is yours. It costs",
-  "                    12 iron and 20 scrap carried out there — iron is smelted",
-  "                    five scrap to the bar, so that is a season's salvage and",
-  "                    the walk. You hold ONE anywhere in the world; 'abandon' gives",
-  "                    it up and moves nothing off your shelf. An unbarred frame",
-  "                    falls in if you stop coming home; bar the door and it",
-  "                    stands until you give it up.",
+  "  settle            raise a den of your own, on open ground of your choosing",
+  "                    well out from the gates — far enough that nobody passes it",
+  "                    by accident, and far enough that it is no second vault.",
+  "                    However many already live on that ground, there is always",
+  "                    room for another door, and yours is yours. It costs split",
+  "                    wood, leather, iron and scrap carried out there ('settle'",
+  "                    on the spot says how much). You hold ONE anywhere in the",
+  "                    world; 'abandon' gives it up and moves nothing off your",
+  "                    shelf. An unbarred frame falls in if you stop coming home;",
+  "                    bar the door and it stands until you give it up.",
   "  in / out          on a den site: through your own door, and back out onto",
   "                    the ground. The ground is public and always will be — the",
   "                    door is the only thing that is yours, and only once it is",
@@ -515,6 +518,10 @@ export const HELP_TEXT = [
   "                    scrap. Behind it nothing reaches you at all — no creature,",
   "                    no wanderer without a key. Unbarred it stops nothing, and",
   "                    most doors out there are unbarred.",
+  "  build [thing]     inside your own den: 'build' alone lists what else a den",
+  "                    can have (a hearth, oiled hides over the shelf, a bone",
+  "                    rattle on the door, a second rack, a larder) and what each",
+  "                    costs; 'build <thing>' puts it up out of your pack.",
   "  bunk <name>       hand somebody a key. They have to be standing in front of",
   "                    you. (unbunk takes it back — from anywhere, and you don't",
   "                    have to be alive to type it.) Draw steel on anybody under",

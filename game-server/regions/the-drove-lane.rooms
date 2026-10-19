@@ -1,0 +1,171 @@
+# THE DROVE LANE (rome, 2026-10-19). A second way into the wood from the West
+# Road: up from the middle of the road, over the tops, and down into the wood's
+# east edge, to give the road some ground a den can stand on.
+#
+# It leaves the road at the Dry Well, climbs north as a hedged drove lane onto
+# the open sheepwalk, runs west along the tops, and comes down off the brow into
+# the wood at the Cold Seep. Thirty rooms, one way through, drawn true. The road
+# end is sixteen steps from a gate and the wood end twelve, and the lane is long
+# enough that nobody's walk to a gate gets shorter by it: its middle sixteen
+# rooms are den ground. Two waters on it, the Drover's Spring and the Dewpond.
+# No creature has a home on it (rome): what lives either side uses it.
+
+!region road
+
+## the-dry-well | attachment: the way off the road
+!existing
+> north the-drove-mouth
+
+## the-cold-seep | attachment: where the way comes in
+!existing
+> east the-seep-edge
+
+## the-drove-mouth | The Drove Mouth
+A lane leaves the road here between two hedge banks, wide enough for a herd, its floor worn down below the fields on either side by hooves that went up it every spring for longer than anyone counted. A stone at the corner is polished smooth where beasts rubbed past. The road goes on without it.
+> south the-dry-well
+> north the-hollow-lane
+
+## the-hollow-lane | The Hollow Lane
+The lane has sunk so deep between its banks that the hedges meet overhead, and you walk in a green trench with roots in the walls at the height of your face. It is dim even at noon. The mud in the bottom holds every print that ever went through it.
+> south the-drove-mouth
+> north the-hedge-gap
+
+## the-hedge-gap | The Hedge Gap
+A gap in the hedge bank where a gate stood, the posts still there and the gate gone, and through it a field gone back to thorn and thistle. The lane goes on up past it. Something has been through the gap often enough to keep it open.
+> south the-hollow-lane
+> north the-holly-bank
+
+## the-holly-bank | The Holly Bank
+Holly has taken the bank on one side of the lane and grown up into a dark wall, glossy and armed, so the lane narrows here and leans away from it. Sheep's wool hangs in the lowest leaves in grey tufts. It has been there a long time.
+> south the-hedge-gap
+> north the-drovers-spring
+
+## the-drovers-spring | The Drover's Spring
+Water comes out of the bank at the side of the lane through a lip of cut stone and falls into a trough below, overgrown with cress, brimming and spilling over into the ruts. Every herd that went up this lane stopped here. Every animal that uses it still does.
+> south the-holly-bank
+> north the-steep-pitch
+
+## the-steep-pitch | The Steep Pitch
+The lane climbs sharply here, the floor turned to bare stone where the earth has washed off it, worn into steps by hooves. The banks fall away lower as you climb. Above, between the hedges, there is more sky than there was.
+> south the-drovers-spring
+> north the-blackthorn-lane
+
+## the-blackthorn-lane | The Blackthorn Lane
+Blackthorn closes in on both sides, grey and twisted and hung with sloes, the thorns long enough to go through a sleeve. The lane goes through it in a single narrow way. You cannot see far ahead and nothing ahead can see you.
+> south the-steep-pitch
+> north the-wall-end
+
+## the-wall-end | The Wall End
+The hedges give out and dry-stone walls take over, grey and lichened and leaning, built without mortar out of stones cleared off fields that are not fields any more. A wall ends here in a tumble of stones. Beyond it, open hill.
+> south the-blackthorn-lane
+> north the-high-lane
+
+## the-high-lane | The High Lane
+The lane runs on up between its walls with the land falling away on both sides, and the wind finds you for the first time. Far below, the road, small and grey. Ahead, the tops, bare and long and empty of anything but grass.
+> south the-wall-end
+> north the-cattle-stance
+
+## the-cattle-stance | The Cattle Stance
+A walled enclosure beside the lane, square and big enough to hold a herd overnight, its gateway on the lane side, its floor gone to coarse grass greener than the hill around it. Drovers slept against the wall. The wall still breaks the wind.
+> south the-high-lane
+> north the-stony-rise
+
+## the-stony-rise | The Stony Rise
+The walls fall down and stop, and the lane goes on as a green track over stony ground, the stones breaking through the turf in grey backs. Sheep tracks run off it in every direction. Most of them go nowhere.
+> south the-cattle-stance
+> north the-cairn-shoulder
+
+## the-cairn-shoulder | The Cairn Shoulder
+A cairn stands on the shoulder of the hill here, a heap of stones higher than a man, each one put there by somebody passing. Some of the stones are new. From beside it you can see the whole length of the road below, and the wood beyond, a dark line along the west.
+> south the-stony-rise
+> north the-bent-thorn
+
+## the-bent-thorn | The Bent Thorn
+One hawthorn stands alone on the open hill, bent over by the wind so far that its crown points down the slope like a hand. Its trunk is polished where things have rubbed against it. It is the only shelter for a mile, and it is not much.
+> south the-cairn-shoulder
+> north the-sheep-scrape
+
+## the-sheep-scrape | The Sheep Scrape
+A hollow under a bank where sheep have lain out of the wind for so long that the ground is bare and dusty and stinks of them, the bank above worn back into a shallow cave. The sheep are gone. Something else lies in it now, by the hair.
+> south the-bent-thorn
+> north the-tops
+
+## the-tops | The Tops
+The top of the hill: wide, flat, all grass, the wind going over it without stopping. There is nothing up here at all but the sky, and the grass, and the track going on across it. Every way you look is down.
+> south the-sheep-scrape
+> west the-sheepwalk
+
+## the-sheepwalk | The Sheepwalk
+Open grazing over the top of the hill, short grass and moss and the ring-marks of old folds, cropped close by something that is still up here. The track bends west along the brow. The wood is a long dark line below, and getting closer.
+> east the-tops
+> west the-dewpond
+
+## the-dewpond | The Dewpond
+A round pond lies on the open top where no stream could ever reach, its floor puddled clay that somebody laid and tamped by hand to hold whatever rain and mist would give it. It has held. The water is clear and cold, and the turf all round it is trodden to mud.
+> east the-sheepwalk
+> west the-shepherds-ruin
+
+## the-shepherds-ruin | The Shepherd's Ruin
+The walls of a hut stand to knee height on the open hill, a doorway in one end, a fireplace in the other with the stones still blackened. No roof, and no shelter in it from anything. Somebody spent a lot of nights up here, a long time ago.
+> east the-dewpond
+> west the-boundary-dyke
+
+## the-boundary-dyke | The Boundary Dyke
+A bank and ditch run across the top of the hill dead straight, older than the walls and older than the lane, dug to say where one people's ground ended and another's began. Both peoples are long gone. The dyke goes on saying it.
+> east the-shepherds-ruin
+> west the-west-brow
+
+## the-west-brow | The West Brow
+The tops end at a brow, and below it the hill falls away steeply to the wood, so close now that you can see the shape of the crowns. The track goes over the edge. There is no other way down from here that you can see.
+> east the-boundary-dyke
+> south the-brow-path
+
+## the-brow-path | The Brow Path
+The track goes down off the brow in tight turns across the face of the slope, cut into it by feet and hooves, the drop always on the same side. Loose stones go rattling down ahead of you. The wood's edge comes up to meet you.
+> north the-west-brow
+> south the-scree-turn
+
+## the-scree-turn | The Scree Turn
+A spill of loose stone lies across the path where the hill has let go, and the path picks its way over it on whatever is steadiest. It all moves a little. Below it the slope turns to grass again, then bracken, then trees.
+> north the-brow-path
+> south the-bracken-hillside
+
+## the-bracken-hillside | The Bracken Hillside
+Bracken covers the lower hill in a sheet, head-high and brown-green, with the path a narrow trough through it. You cannot see over it. Things move in it beside you, and it is hard to say how close.
+> north the-scree-turn
+> south the-first-oaks
+
+## the-first-oaks | The First Oaks
+The first trees of the wood stand out on the hillside ahead of the rest, low and broad and bent by the wind off the tops, their roots gripping the slope. Under them the bracken gives way to leaf litter. The light changes.
+> north the-bracken-hillside
+> south the-wood-bank
+
+## the-wood-bank | The Wood Bank
+A great bank runs along the top edge of the wood, built to keep the beasts on the hill out of the trees, with a ditch on the hill side. It has fallen in here, a long time ago, and the path goes over the low place. Everything else has used it too.
+> north the-first-oaks
+> south the-hanger
+
+## the-hanger | The Hanger
+The wood clings to the steep lower slope, the trees growing out of it at angles and leaning out over the drop, their roots bare where the soil has slipped. The path goes down between them in steps of root. It is quiet under the trees after the wind.
+> north the-wood-bank
+> south the-holly-scarp
+
+## the-holly-scarp | The Holly Scarp
+A short rock step in the slope, grown over with holly so dense that the path has to go down through it in a single cut. The leaves catch at everything. At the bottom, the ground levels out and goes soft.
+> north the-hanger
+> south the-spring-line-oaks
+
+## the-spring-line-oaks | The Spring-Line Oaks
+Where the hill meets the flat, water comes out of the ground in a line of seeps among the oaks, and the floor is wet and green and sucks at your boots. The water runs off downhill into the wood in threads. The trees here are tall.
+> north the-holly-scarp
+> south the-wet-margin
+
+## the-wet-margin | The Wet Margin
+The ground at the foot of the hill is a margin of mud and moss and standing water, alders and willow growing up out of it. The path goes across it on what is firmest. It is not very firm.
+> north the-spring-line-oaks
+> west the-seep-edge
+
+## the-seep-edge | The Seep Edge
+The last of the slope, where it runs down into the wood's floor, wet and dark and shaded. Ahead, under the trees, the cold seep. Behind, if you look up through the canopy, the hill you came down, a long way up.
+> east the-wet-margin
+> west the-cold-seep

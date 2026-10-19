@@ -463,7 +463,10 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       // who sleeps where. But the SITE is not a secret: it is a standing ruin
       // with room for a door, and the whole point of the holdings is choosing
       // between them, which you cannot do from a map that draws them as verge.
-      hold: den.isHolding(z, id) ? 1 : 0,
+      // Since dens went up anywhere far enough out (rome, 2026-10-19) this is
+      // the ground that would take one, never where one stands: a room with a
+      // stranger's den in it is marked exactly like the empty ground beside it.
+      hold: den.canBuildHere(z, id) ? 1 : 0,
       band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
       // Which quarter of the wood this square belongs to, so the client can hold
       // a quarter's caption back until you have walked some of it — same law the

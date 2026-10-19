@@ -1,0 +1,290 @@
+# THE GATE RINGS (rome, 2026-10-19). Ground round the wood's three gates, so a
+# haul out of the wood is a walk and not a step.
+#
+# WHY. Every gate is a bank. The wood had three standing in it (the Timber Stack,
+# the Withy Hut, the Gate Arch), each a dead end or a corner straight off the
+# rides, and the nearest bank from anywhere in the wood was five steps on
+# average, twelve at the most. Whatever you found in there was banked a minute
+# later. Each gate now stands inside a small maze of its own ground and is
+# reached only through it: seven to eleven rooms from the wood to the gate,
+# by the shortest way.
+#
+#   - THE TIMBER STACK stands in the old felling, south of the far north
+#     turning and the empty ride. The thin soil no longer opens onto it.
+#   - THE WITHY HUT stands in the withy holt it was built to work, entered from
+#     the south ride (where its door was) and from the osier beds.
+#   - THE GATE ARCH stands in what is left of its own outer works, entered
+#     from the west ride (where its road ran) and from the kitchen range. The
+#     road in runs through the Stable Range, which stays where it stood and no
+#     longer hangs off the arch. The well court no longer opens onto it.
+#
+# The gates move on the map to the middle of their rings; their old doors to the
+# rides are taken out by hand in the migration, ahead of this file's SQL,
+# because the builder only adds. No gate and no wake point in the new ground.
+# The wood's maze is the wood's: these rings are drawn true.
+
+!region wood
+
+## the-empty-ride | attachment: into the felling
+!existing
+> south the-felling-edge
+
+## the-far-north-turning | attachment: into the felling
+!existing
+> south the-stump-field
+
+## the-timber-stack | attachment: the gate, in the middle of its ground
+!existing
+> west the-coppice-stools
+
+## the-felling-edge | The Felling Edge
+The trees stop here as if a line had been drawn, and past it the ground is open, stumped and bright. Somebody cut this wood for a living, a long time ago, in rows. The rows are still there if you look along them.
+> north the-empty-ride
+> east the-hauling-ride
+> west the-brash-heaps
+
+## the-stump-field | The Stump Field
+Stumps to the edge of sight, each one cut level at the height of a man's knee, each one grey and checked and soft at the heart. Saplings have come up between them, but not many. The ground has not forgiven the cutting yet.
+> north the-far-north-turning
+> south the-saw-pit
+> west the-hauling-ride
+> east the-sawdust-floor
+
+## the-hauling-ride | The Hauling Ride
+A broad ride cut straight through the stumps for dragging timber out, its floor still rutted deep where the trunks went down it on chains. The ruts hold water. They all run the same way.
+> west the-felling-edge
+> east the-stump-field
+
+## the-brash-heaps | The Brash Heaps
+Heaps of lopped branches, the brash the fellers cut off and threw aside, piled higher than your head and grown through with bramble. Things live in them. The heaps tick and settle as you go by.
+> east the-felling-edge
+
+## the-saw-pit | The Saw Pit
+A long pit dug into the ground and lined with boards, gone green, where two men once sawed a trunk lengthways, one above and one below in the dust. The bottom of it is full of black water. A rusted dog-iron still bites the edge.
+> north the-stump-field
+> south the-skid-road
+
+## the-sawdust-floor | The Sawdust Floor
+The ground here is not ground but sawdust, years of it, packed and rotted to a dark soft floor that gives under your boot and smells sweet. Nothing walks on it without leaving a print. The prints are not all old.
+> west the-stump-field
+> south the-axe-stumps
+
+## the-skid-road | The Skid Road
+Logs laid crossways in the mud, side by side, to make a road the timber could be skidded over. Most have sunk. The ones that have not roll under your weight and throw you.
+> north the-saw-pit
+> west the-bark-strip
+
+## the-axe-stumps | The Axe Stumps
+Older stumps, cut by axe and not by saw, each one finished in a wedge-shaped point where the tree went over. They stand in a ring as if the fellers had worked round something in the middle. There is nothing in the middle.
+> north the-sawdust-floor
+> south the-cord-stacks
+
+## the-bark-strip | The Bark Strip
+Bark lies in long curled sheets across the ground where it was peeled off the felled trunks for the tanners and never collected. It has dried to the shape of the trees it came off. It cracks like bone.
+> east the-skid-road
+> west the-sawyers-bench
+
+## the-cord-stacks | The Cord Stacks
+Firewood cut to length and stacked in cords between stakes, row after row, the stakes gone over and the stacks slumped into long rotten mounds. Fungus has taken them. In the dark they would glow.
+> north the-axe-stumps
+
+## the-sawyers-bench | The Sawyer's Bench
+A trestle of split oak stands in a clearing of chips, its top worn hollow in the middle by a long working life. A whetstone lies under it in the leaves. Whoever sat here could see every way into the felling.
+> east the-bark-strip
+> west the-wedge-ground
+
+## the-wedge-ground | The Wedge Ground
+Iron wedges lie about in the grass here, rusted to the colour of the soil, dropped where they were driven out of the split logs. There are dozens of them. Nobody came back for a single one.
+> east the-sawyers-bench
+> north the-split-oak
+
+## the-split-oak | The Split Oak
+A great oak trunk lies along the ground split clean down its length into two halves, the wedges still in it, the halves sprung apart and gone silver. It was the last tree they cut. It was never moved.
+> south the-wedge-ground
+> east the-coppice-stools
+
+## the-coppice-stools | The Coppice Stools
+Hazel cut back to the stool and left, and every stool has thrown up a dozen straight poles since, so the ground is a crowded grey thicket of stems all the same height. You go through it sideways. It closes up behind.
+> west the-split-oak
+> east the-timber-stack
+
+## the-south-ride | attachment: into the withy holt
+!existing
+> south the-withy-holt
+
+## the-osier-beds | attachment: into the withy holt
+!existing
+> south the-cut-osiers
+
+## the-withy-hut | attachment: the gate, in the middle of its ground
+!existing
+> west the-peeling-bank
+
+## the-withy-holt | The Withy Holt
+Willow grown for cutting, row on row of stools sending up straight red-brown rods taller than a man, the ground between them wet and black. The rows were planted. They have gone their own way since.
+> north the-south-ride
+> south the-soaking-pit
+
+## the-cut-osiers | The Cut Osiers
+The rods were cut here the last winter anybody worked the holt, and the stools have thrown up a ring of young shoots each, green and whippy and thick as fingers. The cut ends are all at one height. It is a long time since that height was new.
+> north the-osier-beds
+> south the-willow-stools
+> east the-soaking-pit
+
+## the-soaking-pit | The Soaking Pit
+A square pit full of brown water where the cut rods were stood to soak before they were peeled and bent. A bundle is still in it, upright, rotted to a black stump bound with rotten twine. The water does not move.
+> north the-withy-holt
+> west the-cut-osiers
+> south the-bundle-ground
+
+## the-willow-stools | The Willow Stools
+Old willow stools, each a fat knuckled stump as wide as a cart wheel, grown together at the edges so the ground is a floor of root and bark with water under it. Step from stool to stool. Between them is deeper than it looks.
+> north the-cut-osiers
+> west the-wet-ride
+
+## the-bundle-ground | The Bundle Ground
+A patch of firm ground where the cut withies were tied in bundles and stacked for carrying. The stakes are still in the ground in a row. The grass grows short and pale where the bundles lay, as if they were lifted yesterday.
+> north the-soaking-pit
+
+## the-wet-ride | The Wet Ride
+A ride runs through the holt, a straight cut between the rows, and the water has taken it so that walking it means wading. The willows lean in over it from both sides. Down at the end the light is green.
+> east the-willow-stools
+> north the-pollard-line
+
+## the-pollard-line | The Pollard Line
+A line of old pollard willows along a drain, each one cut back to a fat head at shoulder height and grown out into a wild crown of rods. Their trunks are hollow. One of them, someone has slept in.
+> south the-wet-ride
+> west the-holt-drain
+
+## the-holt-drain | The Holt Drain
+A straight drain dug to carry the water off the holt, its sides cut square and still mostly square, choked with weed and running slow. It goes as far as you can see in both directions. There is a plank across it, half sunk.
+> east the-pollard-line
+> west the-osier-carr
+
+## the-osier-carr | The Osier Carr
+The holt has gone back to carr here, willow and alder and sedge grown wild over the old rows, the water standing among them at every hour. It is darker than the rest. Something moves in it before you do.
+> east the-holt-drain
+> south the-peeling-bank
+> west the-basket-ground
+
+## the-peeling-bank | The Peeling Bank
+A bank above the water where the soaked rods were peeled, the bark stripped and thrown down in heaps that have rotted to a soft brown mould. The bank is firm and dry. It is the one place in the holt you could sit.
+> north the-osier-carr
+> east the-withy-hut
+
+## the-basket-ground | The Basket Ground
+Half-made baskets lie in the grass here, the bases woven and the sides begun and never finished, gone grey and brittle. There are a dozen of them. Whoever made them stopped all at once.
+> east the-osier-carr
+> south the-withy-drain
+
+## the-withy-drain | The Withy Drain
+Where the drain meets the holt's edge, a sluice of rotten boards held the water back once and holds a little of it still, a black pool on one side and wet mud on the other. The boards weep.
+> north the-basket-ground
+
+## the-west-ride | attachment: into the old works
+!existing
+> west the-paved-road
+
+## the-kitchen-range | attachment: into the old works
+!existing
+> north the-road-ruts
+
+## the-gate-arch | attachment: the gate, in the middle of its ground
+!existing
+> west the-horse-pond
+
+## the-paved-road | The Paved Road
+The stone road that ran under the arch runs on here, flags laid edge to edge and worn smooth in two grooves by wheels, the grass coming up through every joint. It goes the way the arch faced. Nobody comes along it any more.
+> east the-west-ride
+> north the-stable-range
+
+## the-road-ruts | The Road Ruts
+The paving gives out and the road goes on as two deep ruts in the turf, cut by iron tyres over years, so deep a boot goes in to the ankle. Water lies in them after rain. Prints lie in them after everything else.
+> south the-kitchen-range
+> east the-outer-ditch
+
+## the-stable-range | attachment: the road in runs through the stables now
+!existing
+> south the-paved-road
+> north the-counterscarp
+
+## the-outer-ditch | The Outer Ditch
+A broad ditch, the outer line of the gatehouse's works, dry now and grassed, deep enough that you go down into it and cannot see out. Its sides were cut steep to stop a charge. They still slow a walk.
+> west the-road-ruts
+> east the-barbican-footings
+
+## the-counterscarp | The Counterscarp
+The far bank of the outer ditch, built up with the spoil and faced with stone that has mostly fallen in. From the top you can see down into the ditch along its whole length. Somebody once stood here to do exactly that.
+> south the-stable-range
+> north the-barbican-footings
+
+## the-barbican-footings | The Barbican Footings
+The footings of an outwork that stood in front of the arch, two lines of squared stone in the grass with a gap between for the road. The walls above them are gone. The gap is still the only easy way through.
+> west the-outer-ditch
+> north the-killing-ground
+> south the-counterscarp
+
+## the-killing-ground | The Killing Ground
+Open ground between the outer ditch and where the walls stood, kept clear on purpose once so that nothing could cross it unseen, and still clear now, the grass short and the trees held back. You are seen here. You can feel it.
+> south the-barbican-footings
+> west the-guard-footings
+> east the-pay-stone
+
+## the-guard-footings | The Guard Footings
+A square of stone footings no bigger than a cart, with a hearthstone in one corner black with old fire. A guard post stood here and watched the road. The hearth is cold. The view down the road is the same.
+> east the-killing-ground
+> west the-mounting-block
+
+## the-pay-stone | The Pay Stone
+A squat stone by the road with a hollow cut in its top, worn smooth, where the coin was left and taken. The edge of the hollow is polished by hands. Nobody has paid anything here in a long time.
+> west the-killing-ground
+> east the-outer-bailey
+
+## the-mounting-block | The Mounting Block
+Three stone steps up to nothing, standing alone in the grass by the road, built for climbing into a saddle. The top step is hollowed by boots. The horses are a long time gone.
+> east the-guard-footings
+> north the-bailey-wall
+
+## the-outer-bailey | The Outer Bailey
+A wide enclosure of rough grass, banked all round, where the gatehouse kept its horses and its carts and its people when the gate was shut. The banks still hold the wind off. Inside them it is quieter than it should be.
+> west the-pay-stone
+> north the-rampart-walk
+
+## the-bailey-wall | The Bailey Wall
+A stretch of the bailey's wall still stands to shoulder height, rough stone laid without mortar, with a walk along the inside where a man could stand and see over. Ivy has taken the top. The walk is still sound.
+> south the-mounting-block
+> north the-old-palisade
+
+## the-rampart-walk | The Rampart Walk
+The top of the old bank, flat and narrow and grassed, with the ditch on one side and the bailey on the other. It goes round in a long curve. Walk it far enough and you come back to where you started.
+> south the-outer-bailey
+> north the-ward-ditch
+
+## the-old-palisade | The Old Palisade
+A line of oak stakes, sharpened once, set close in the top of a bank. Most have rotted off at the ground. The ones still standing are black and hard as iron and lean outward, still pointed at whoever was coming.
+> south the-bailey-wall
+> east the-turning-bay
+
+## the-ward-ditch | The Ward Ditch
+An inner ditch, narrower and deeper than the outer, cut close under where the gatehouse wall stood. It holds water at the bottom, green and still. The sides are slick. You would not climb out of it in a hurry.
+> south the-rampart-walk
+> west the-tilt-yard
+
+## the-turning-bay | The Turning Bay
+A wide paved place where the road broadened so a cart could turn before the arch, the flags laid in a fan and worn in an arc by wheels going round. Weeds have taken the joints. The arc is still plain.
+> west the-old-palisade
+> south the-horse-pond
+
+## the-tilt-yard | The Tilt Yard
+A long level strip of ground, straight as a rule, banked at both ends, where riders once ran at each other for practice or for show. The grass on it is different from the grass around. The ground remembers being flat.
+> east the-ward-ditch
+> south the-boundary-cross
+
+## the-horse-pond | The Horse Pond
+A shallow pond with a cobbled ramp going down into it on one side, built for walking horses in to drink and cool their legs. The water is low and clear over the cobbles. Hoofprints at the edge, and not old.
+> north the-turning-bay
+> east the-gate-arch
+
+## the-boundary-cross | The Boundary Cross
+A stone cross stands by the road, the arms broken off and the shaft cut with the mark of whoever held this ground. It marked where their writ ran. The arch and this are all that is left of them.
+> north the-tilt-yard

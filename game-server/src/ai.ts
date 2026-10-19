@@ -5,7 +5,7 @@ import * as exhaustion from "./exhaustion";
 // boss's rage, and the migration that refills the world. Free functions over a
 // ZoneDO (its tick and combat live in zone.ts and call in here).
 import type { ZoneDO } from "./zone";
-import { shelteredInDen } from "./den";
+import { shelteredInDen, rattle, hearthWarm } from "./den";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
 import { hasTrait, BEAST_PATH_KEY } from "./world";
@@ -40,6 +40,7 @@ import {
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
+  HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
@@ -1230,6 +1231,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     const fledFrom = mode === "flee" ? creature.target : null;
     creature.roomId = exit.to_room;
     z.noteCreaturesChanged(); // the room index must not remember where it stood
+    if (!creature.hidden) rattle(z, creature.roomId); // a bone rattle on a den door here hears it come
     clues.leaveTracks(z, creature, from, exit.dir, now); // under snow, it leaves prints going this way
     // A wounded thing on the move drips where it walks — a fled survivor bleeds
     // a line straight to wherever it holes up, and anyone (or anything) can
@@ -4250,6 +4252,41 @@ export function hungerRate(z: ZoneDO, creature: Creature): number {
   const big = SUMMIT_BOSSES.has(creature.templateId) ? DRAKE_HUNGER_MULT : 1;
   const slow = SLOW_EATERS[creature.templateId] ?? 1;
   return (events.coldBites(z, creature.roomId) ? HUNGER_PER_MIN * COLD_HUNGER_MULT : HUNGER_PER_MIN) * starving * big * slow;
+}
+
+// THE HEARTH'S LIGHT (HEARTH_DRAW_ODDS). Once every HEARTH_DRAW_EVERY_MS, at
+// night, every den with a fire burning in it pulls on the hungry next door —
+// through an exit they could actually walk, never past a shut door, and never
+// into a room already crowded (the noise law's own guard). It draws; it never
+// aims. What comes is curious, and what it finds is up to the bar and the
+// rattle and whoever is resting there.
+const hearthDrawAt = new WeakMap<object, number>();
+export function hearthDraws(z: ZoneDO, now: number): void {
+  if (!isNight(now)) return;
+  if (now - (hearthDrawAt.get(z) ?? 0) < HEARTH_DRAW_EVERY_MS) return;
+  hearthDrawAt.set(z, now);
+  const lit = new Set<string>();
+  for (const s of z.sessions.values()) if (hearthWarm(z, s)) lit.add(s.roomId);
+  if (!lit.size) return;
+  const world = z.world!;
+  for (const roomId of lit) {
+    if (creaturesIn(z, roomId) >= CROWD_CAP) continue;
+    for (const c of z.creatures.values()) {
+      if (c.target || c.asleep || c.roomId === roomId || c.aloft !== undefined) continue;
+      if ((c.hunger ?? 0) < HUNGRY_AT) continue;
+      const tmpl = world.mobTemplates.get(c.templateId);
+      if (!tmpl || tmpl.is_boss) continue;
+      if (FEARS_FIRE.has(c.templateId) || HOLLOW.has(c.templateId)) continue;
+      if (DROWNERS.has(c.templateId) || SENTINELS.has(c.templateId) || AGGRESSIVE.has(c.templateId)
+        || ROOTED.has(c.templateId) || RUNNERS.has(c.templateId) || HOARDERS.has(c.templateId)) continue;
+      const toward = (world.exits.get(c.roomId) ?? []).find(
+        (e) => e.to_room === roomId && (!e.key_item || z.openDoors.has(`${c.roomId}:${e.dir}`)),
+      );
+      if (!toward || !chance(HEARTH_DRAW_ODDS)) continue;
+      c.curious = roomId;
+      c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(3000, 10_000));
+    }
+  }
 }
 
 export function creaturesIn(z: ZoneDO, roomId: string): number {

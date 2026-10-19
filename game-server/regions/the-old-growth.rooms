@@ -1,0 +1,507 @@
+# THE OLD GROWTH: THE WOOD'S WEST FRINGE (rome, 2026-10-19). Wood that was
+# never felled, grown out along the whole west side of the wood so a den can
+# stand in the trees, and laid so that the woodward's heart is still the end of
+# the maze.
+#
+# WHY IT EXISTS. Dens go up only on open ground at least 22 steps from every
+# gate (DEN_MIN_GATE_STEPS), one number for the whole world. The wood never
+# reached it: three gates stood in it and nothing was more than twelve steps
+# from one. The gate rings (regions/the-gate-rings.rooms) put the gates deeper
+# in; this grows the sides. Rome turned down a separate block glued on at one
+# corner. This follows the wood's own edge instead: five rooms deep along the
+# west side, one maze, carved the way the wood's cores are cut.
+#
+# THREE WAYS IN, from the wood (the throat check wants three for this much ground):
+#   - west from THE LICHEN WOOD, over the Boundary Bank;
+#   - west from THE SODDEN GROUND, up out of the wet by the Dry Rise;
+#   - west from THE FLINT FLOOR, in the middle of the west side.
+# Not from the holding: a way in off the Broken Ground would have walked
+# everyone past the keeper's hall.
+#
+# THE WOODWARD STAYS AT THE HEART OF IT (rome). His seven rooms used to open off
+# the Grey Scrub. Their one way in is now from the far end of this ground, past
+# the Ward Oak into the Same Tree, so you cross the den ground to reach him and
+# his round is the deepest place in the wood. The Grey Scrub's old door into the
+# Close Dark is taken out by hand in the migration. His rooms take no den.
+#
+# WHAT LIVES HERE. Five waters, so nothing homed out here is more than nine rooms
+# from a drink (the Hidden Spring, the Ferny Bank, the Dark Pool, the Spring
+# Mire, the Wet Oaks), and three mouths a refill can come out of unseen (the Badger Banks, the
+# Bramble Tunnel, the Root Hollow) - see WATER_ROOMS and MOUTHS. No new
+# creatures (rome): the wood's own move out from the rooms nearest its gates.
+# No gate and no wake point in it.
+
+!region wood
+
+## the-lichen-wood | attachment: over the boundary bank
+!existing
+> west the-boundary-bank
+
+## the-sodden-ground | attachment: up out of the wet
+!existing
+> west the-dry-rise
+
+## the-same-tree | attachment: the heart's one way in, past the Ward Oak
+!existing
+> west the-ward-oak
+
+## the-flint-floor | attachment: the third way in
+!existing
+> west the-mossed-wall
+
+## the-boundary-bank | The Boundary Bank
+A bank runs along the edge of the wood here, chest-high and grown over, the boundary somebody once walked to say where the wood they cut ended. Past it nobody cut anything. The coppice stops at the bank as if it had been told to, and on the far side the trunks are too wide to reach round, standing in their own dead leaves.
+> east the-lichen-wood
+> north the-leaning-limes
+
+## the-dry-rise | The Dry Rise
+The ground lifts out of the wet by a man's height over a few dozen paces, and the alders give up and the oaks begin. The soil here is dry and dark and soft with a thousand years of leaf. The water is behind you. What is in front of you was never felled.
+> east the-sodden-ground
+> north the-drowned-hollow
+> south the-last-oak
+> west the-sloe-thicket
+
+## the-leaning-limes | The Leaning Limes
+Limes, broad and old, leaning in over the way from both sides until their crowns meet and lock. In summer the air here hums with something. Now it is only still.
+> south the-boundary-bank
+> west the-black-oaks
+> north the-owl-oak
+
+## the-drowned-hollow | The Drowned Hollow
+A hollow in the floor where water stands a few inches deep over dead leaves, the trees around its rim leaning in. The water is brown and smells of the leaves in it. Prints go in at one side and do not come out the other.
+> south the-dry-rise
+> north the-long-fall
+> west the-grey-stools
+
+## the-last-oak | The Last Oak
+An oak so big that the trees around it keep their distance, leaving it a ring of open floor. Its lower limbs are as thick as other trees' trunks and run out level for thirty feet before they turn up. Something sleeps along one of them, by the wear.
+> north the-dry-rise
+> east the-oak-fall-gap
+
+## the-sloe-thicket | The Sloe Thicket
+Blackthorn grown up in a thicket under the edge of the canopy, the thorns long and the fruit blue-black and bitter. There is one way through, low, along the ground. It is the way something takes to get from one side to the other.
+> east the-dry-rise
+> west the-deep-roots
+
+## the-black-oaks | The Black Oaks
+The bark of the oaks here is black with age and wet, and the moss on their north sides is black too. The light is grey. You could walk past this place three times and not know it was the same place.
+> east the-leaning-limes
+> west the-thorn-thicket
+> south the-bent-hazels
+
+## the-owl-oak | The Owl Oak
+An oak so old it has gone hollow from the ground up, its trunk open on one side like a door, the inside floored with pellets and feathers. Something sleeps in it by day. It is not asleep now.
+> south the-leaning-limes
+> east the-mossed-wall
+> north the-woodpecker-stand
+
+## the-long-fall | The Long Fall
+A tree came down here across the slope and lies the whole length of it, a hundred feet of trunk gone soft and green, with the way running beside it. Halfway along there is a gap where it broke. Something has used the gap.
+> south the-drowned-hollow
+> north the-hornets-oak
+> west the-elder-brake
+
+## the-grey-stools | The Grey Stools
+Coppice stools of enormous age, each one a ring of grey trunks round an empty centre where the first tree died out, so the floor is dotted with these circles of wood like the bases of towers. You walk between them. You could walk round inside any one.
+> east the-drowned-hollow
+> west the-wild-cherry
+
+## the-oak-fall-gap | The Oak-Fall Gap
+Where a great oak fell, it opened a hole in the canopy that has never closed, and the light comes down into it in a single shaft. In the shaft, grass, and foxgloves, and a buzz of insects. Outside it, the dark.
+> west the-last-oak
+> east the-old-boundary-stone
+
+## the-deep-roots | The Deep Roots
+The ground has fallen away from under a row of great trees here and left their roots in the air, a wall of them taller than you, tangled and furred and dripping. Behind them there is a dark you cannot see into.
+> east the-sloe-thicket
+
+## the-thorn-thicket | The Thorn Thicket
+Blackthorn, old and grey, grown up in a thicket under the canopy edge, the thorns as long as a finger. There is a way through. It is narrow, and the thorns know where it is.
+> east the-black-oaks
+> north the-hidden-spring
+> west the-old-pollards
+> south the-great-root
+
+## the-bent-hazels | The Bent Hazels
+Old hazel under the oaks, overgrown, its stems leaning and crossing in every direction, so the understorey is a lattice you have to thread. The nuts on the floor have all been opened.
+> north the-black-oaks
+> south the-grey-mist
+
+## the-mossed-wall | The Mossed Wall
+A bank runs through the trees here, straight, waist-high, so overgrown with moss that it looks like a living thing. It was a boundary once. There is nothing on either side of it to say between what.
+> east the-flint-floor
+> west the-owl-oak
+
+## the-woodpecker-stand | The Woodpecker Stand
+Dead limbs here are drilled through and through, and the drumming of whatever drills them comes and goes from tree to tree, always somewhere else, never the tree you are looking at.
+> south the-owl-oak
+
+## the-hornets-oak | The Hornets' Oak
+A hollow oak with a hum in it, low and steady, coming from somewhere high in the trunk where a split opens into the dark. The ground round its foot is littered with papery grey scraps. You go by it quietly.
+> south the-long-fall
+> east the-wet-oaks
+
+## the-elder-brake | The Elder Brake
+Elder, grown up wild under a break in the canopy, its stems pale and corky, its smell rank. It is easy to push through and it closes up behind you without a mark. The ground under it is trodden flat.
+> east the-long-fall
+
+## the-wild-cherry | The Wild Cherry
+A cherry stands among the oaks, its bark peeling in red-brown bands, its leaves already turned while the oaks are green. Under it the ground is scattered with stones from fruit something ate and spat. Birds go in and out of it all day.
+> east the-grey-stools
+> west the-fungus-fall
+> north the-holly-tree
+
+## the-old-boundary-stone | The Old Boundary Stone
+A stone stands at the foot of an oak, cut square once and carved with letters that the moss has filled. The oak has grown round it on one side. Whatever line it marked, the wood stopped paying attention to it a very long time ago.
+> west the-oak-fall-gap
+> east the-black-alder-stand
+
+## the-hidden-spring | The Hidden Spring
+Water comes up out of the ground here under the roots of a beech, clear and cold and without a sound, and fills a stone basin somebody cut for it once and then forgot. It runs off a dozen paces and goes back into the earth. The ground around it is firm, and flat, and the only open sky for a long way.
+> south the-thorn-thicket
+> east the-leaf-drifts
+> west the-moss-boulders
+
+## the-old-pollards | The Old Pollards
+Trees cut once at head height, long ago, and left to grow again from the cut, so each one is a squat trunk with a crown of great limbs sprouting from the top like fingers from a fist. Nobody has cut them in centuries.
+> east the-thorn-thicket
+> west the-sunless-floor
+> south the-dappled-way
+
+## the-great-root | The Great Root
+A single root, as thick as a man, runs over the surface of the ground here for twenty paces from a tree you cannot see the top of. It is worn smooth along its back where things have walked it.
+> north the-thorn-thicket
+> south the-ancient-ash
+
+## the-grey-mist | The Grey Mist
+Mist lies between the trees here at every hour, low and white, so you wade through it to the knee and cannot see your own feet. The trunks rise out of it like posts. Sound carries strangely in it.
+> north the-bent-hazels
+> east the-cracked-oak
+
+## the-wet-oaks | The Wet Oaks
+The ground goes soft between the oaks here and holds water in every hollow, black and leaf-filled. The oaks do not mind it. Their roots stand up out of the wet like the legs of something wading.
+> west the-hornets-oak
+> east the-moss-tunnel
+
+## the-fungus-fall | The Fungus Fall
+A fallen trunk lies here furred end to end with fungus, brackets and shelves and soft white fingers, some of it glowing faintly where the light is worst. The smell is sweet and wrong. The wood under it is no longer wood.
+> east the-wild-cherry
+> south the-crows-oak
+> north the-stone-oak
+
+## the-holly-tree | The Holly Tree
+A holly that has grown into a tree, forty feet of it, its lower limbs bare and its crown dark and dense. Beneath it the ground is carpeted in dead leaves that cut like glass through anything thinner than leather.
+> south the-wild-cherry
+
+## the-black-alder-stand | The Black Alder Stand
+Alders where the ground is wet, their trunks black and their roots red where the bark is broken, standing in water that never quite drains. It is colder here than it has any right to be. Breath shows.
+> west the-old-boundary-stone
+> east the-hazel-ride
+
+## the-leaf-drifts | The Leaf Drifts
+The wind has piled the fallen leaves against the trunks here in drifts, knee-deep and higher, and between the drifts the ground is swept bare. You go round, and round, and round.
+> west the-hidden-spring
+> north the-yew-shade
+
+## the-moss-boulders | The Moss Boulders
+Boulders, big as carts, rounded and furred over with moss until they look soft, lying under the trees as if they had been rolled here and left. Ferns grow from the cracks in them.
+> east the-hidden-spring
+
+## the-sunless-floor | The Sunless Floor
+Under the trees here no light has reached the ground in living memory, and the floor is bare dark earth with nothing on it but the trunks and the dark between them. It is very cold, and very quiet.
+> east the-old-pollards
+
+## the-dappled-way | The Dappled Way
+The canopy opens here and there in coin-sized holes, and the light comes down in spots that move when the crowns move, so the whole floor shifts and dapples and nothing is ever where it was.
+> north the-old-pollards
+> west the-deer-browse
+
+## the-ancient-ash | The Ancient Ash
+An ash older than the oaks around it, its trunk a mass of burrs and hollows, its limbs dying back from the ends. It stands alone in a space of its own making, and the wood keeps its distance.
+> north the-great-root
+> south the-rot-wood
+> west the-ground-ivy
+
+## the-cracked-oak | The Cracked Oak
+Lightning took an oak here, long ago, and split it from crown to root without killing it. It grows on in two halves, the blackened wound between them wide enough to step into. Nothing grows in the wound.
+> west the-grey-mist
+> south the-clean-floor
+
+## the-moss-tunnel | The Moss Tunnel
+The way runs between two banks grown so close with moss and fern overhead that it is a tunnel, green and dim and damp, with the drip of water somewhere along it. It bends. You cannot see either end.
+> west the-wet-oaks
+> east the-twisted-yews
+
+## the-crows-oak | The Crows' Oak
+An oak taller than the rest, standing alone in a gap, its top limbs dead and white and lined with crows that watch you come and say so to each other. The ground under it is white with their droppings. They do not leave.
+> north the-fungus-fall
+> west the-soft-floor
+
+## the-stone-oak | The Stone Oak
+An oak has grown up through a heap of stones and taken them into itself, so the base of the trunk is half wood and half rock, the bark swelling over the edges of the stones. Whoever piled the stones, the oak has had them since.
+> south the-fungus-fall
+
+## the-hazel-ride | The Hazel Ride
+A ride was cut through here once and the hazel has come back along both its edges and met in the middle overhead, so it is a long green passage with a floor of nuts and husks. Squirrels have been at it. So has something heavier.
+> west the-black-alder-stand
+> east the-spring-mire
+
+## the-yew-shade | The Yew Shade
+Yews, very old, their red trunks fluted and hollowed, their shade so dense that nothing at all grows beneath them. The floor is bare and soft with their needles. It is darker here than it should be.
+> south the-leaf-drifts
+> west the-badger-banks
+
+## the-deer-browse | The Deer Browse
+Every leaf below the height of a deer's reach has been eaten, so the trees here have bare trunks to a level line and green above it. The floor is trodden and scattered with droppings. They come through here often.
+> east the-dappled-way
+> south the-snapped-limbs
+
+## the-rot-wood | The Rot Wood
+Everything fallen here is rotting at once, logs and limbs and whole trees soft to a kick, crawling with beetles and grubs. The smell is thick and sweet. The ground gives underfoot in places it should not.
+> north the-ancient-ash
+> south the-thin-light
+> west the-sunk-way
+
+## the-ground-ivy | The Ground Ivy
+Ivy has covered everything here at ground level — stumps, stones, the roots and the floor between — in one dark glossy sheet, so the shape of the ground underneath it is a guess. The guess is wrong in places.
+> east the-ancient-ash
+
+## the-clean-floor | The Clean Floor
+The floor here is swept clean to the earth, every leaf gone, as if something lay here or worked here or kept it this way on purpose. The trees around stand back from it. Nothing says what.
+> north the-cracked-oak
+> west the-wolf-run
+
+## the-twisted-yews | The Twisted Yews
+Yews, black-green and ancient, their trunks wound round themselves like rope, growing in a tight group so close that their crowns are one crown. Under them is dark and dry and smells of resin. Nothing grows under a yew.
+> west the-moss-tunnel
+> east the-sapling-crowd
+
+## the-soft-floor | The Soft Floor
+Moss over leaf over moss, years of it, a floor so soft and deep that every footstep goes in to the ankle without a sound and comes up slowly. It would hold a print for a week. It is holding several.
+> east the-crows-oak
+> north the-bramble-tunnel
+
+## the-spring-mire | The Spring Mire
+A spring rises here into a soft green mire, the water welling up cold through moss that quakes when you step on it, running off between the roots in a dozen threads too small to name. The ground is wet for twenty paces round. Everything that lives out here comes to it.
+> west the-hazel-ride
+
+## the-badger-banks | The Badger Banks
+The ground is heaved up into banks and mounds, honeycombed with holes, the spoil heaps scattered with bones and bedding. The setts are older than anything else here but the trees.
+> east the-yew-shade
+> west the-tangle
+
+## the-snapped-limbs | The Snapped Limbs
+Big limbs lie on the floor here, fresh-broken, the wood pale where they split, as if something heavy came down through the crowns not long ago. Looking up, you cannot see what.
+> north the-deer-browse
+
+## the-thin-light | The Thin Light
+The canopy thins here and a grey light comes down through it, enough to see by and no more. Everything is the same colour in it: trunks, floor, your hands. It is like walking in the moment before dawn, at any hour.
+> north the-rot-wood
+> east the-fallen-crowns
+> south the-buckled-ground
+
+## the-sunk-way | The Sunk Way
+A sunk way runs through the trees here, worn down below the floor by feet and carts a very long time ago, its banks overhung with roots. It goes in a straight line, which is more than anything else here does, and then it stops.
+> east the-rot-wood
+> south the-holly-wall
+
+## the-wolf-run | The Wolf Run
+A narrow trodden way runs along the floor here between the trunks, too low and too narrow for anything that walks upright, worn bare by a great many feet over a long time. It goes on in both directions.
+> east the-clean-floor
+
+## the-sapling-crowd | The Sapling Crowd
+Where an old tree fell, a hundred young ones have come up in the gap, thin and straight and close together, all reaching for the same light. You push through them and they spring back. The old tree lies under them, gone to earth.
+> west the-twisted-yews
+> north the-holly-wall
+
+## the-bramble-tunnel | The Bramble Tunnel
+Bramble arched over a way that something wide has kept open, so you walk in a green tunnel with thorns on every side and above. It turns twice. You come out of it not quite sure which way you went in.
+> south the-soft-floor
+> north the-ferny-bank
+
+## the-tangle | The Tangle
+Windblown limbs, fallen branches and live growth come together here in a mass you climb over and under and through, and by the time you are out of it you could not have said how long it took.
+> east the-badger-banks
+> west the-silent-beeches
+> north the-dead-air
+
+## the-fallen-crowns | The Fallen Crowns
+The tops of two great trees came down together here and lie across each other in a mass of dead limbs and live growth, a thicket made in one night. The way goes under, through a gap something low has kept open.
+> west the-thin-light
+> east the-oak-aisle
+
+## the-buckled-ground | The Buckled Ground
+The floor rises and falls in short steep waves, the roots of the trees heaved up through it, so you go up and down and up again and never get anywhere level. It is tiring in a way that does not seem fair.
+> north the-thin-light
+> east the-beech-mast
+
+## the-holly-wall | The Holly Wall
+Holly grown up between the trunks into a wall, glossy and dark and armed, with only one gap in it you can see. The floor on either side is bare. Whatever made the gap is bigger than you and came through more than once.
+> north the-sunk-way
+> south the-sapling-crowd
+
+## the-ferny-bank | The Ferny Bank
+A long bank, steep on one side, furred with fern and moss and the roots of the trees along its top. Water runs somewhere under it — you can hear it — but nowhere you can find.
+> south the-bramble-tunnel
+
+## the-silent-beeches | The Silent Beeches
+Beeches again, tall and pale, and nothing else at all — no undergrowth, no birds, no sound. The floor is copper leaves. It could be any part of the wood. It could be the part you walked through already.
+> east the-tangle
+> north the-wych-elms
+
+## the-dead-air | The Dead Air
+No wind reaches here. Not a leaf moves. The air is warm and close and smells of rot and green, and sound goes nowhere: a stick snapping underfoot is gone before it has finished.
+> south the-tangle
+> north the-hornbeam-gloom
+
+## the-oak-aisle | The Oak Aisle
+Two rows of oaks, so straight they might have been planted, running away from you with a clear floor between them like the aisle of some great dark building. The rows go further than you can see. They do not go anywhere.
+> west the-fallen-crowns
+> east the-last-of-the-light
+
+## the-beech-mast | The Beech Mast
+The floor here is all beech mast, the husks split and empty, piled in drifts that crunch underfoot and give off a dry brown smell. Something has been rooting through it. The drifts are turned over in long furrows.
+> west the-buckled-ground
+> east the-rotten-gate
+
+## the-wych-elms | The Wych Elms
+Elms, tall and rough-barked, the last of their kind out here, with the floor beneath them carpeted in their own pale winged seed. They creak in a wind you cannot feel at ground level.
+> south the-silent-beeches
+> north the-moss-steps
+> west the-high-crowns
+
+## the-hornbeam-gloom | The Hornbeam Gloom
+Old hornbeam, twisted and fluted like poured metal, with the light gone green under it. The trunks are cold to the hand. Everything here looks as if it has been here forever and means to stay.
+> south the-dead-air
+> north the-ivy-wall
+
+## the-last-of-the-light | The Last of the Light
+A place where the light gives out — not dark, not yet, but going, as if the trees here had agreed among themselves to let in no more than they must. Your eyes ache with it. Further in is darker.
+> west the-oak-aisle
+> south the-lime-stand
+> north the-murk
+
+## the-rotten-gate | The Rotten Gate
+Two posts stand in the wood with nothing between them, and nothing either side, and nothing for a mile in any direction that a gate could have been keeping in or out. The posts are black and soft. One of them still has a hinge.
+> west the-beech-mast
+
+## the-moss-steps | The Moss Steps
+The floor goes up in shallow steps of moss over buried stone, as if someone laid a stair here and the wood took it back. At the top, more of the same. At the bottom, the same.
+> south the-wych-elms
+> north the-holly-dark
+
+## the-high-crowns | The High Crowns
+The trees here are taller than anywhere else in the wood, the crowns so high and so close that the light down here is a dusk. The trunks are bare to a great height. Your neck aches from looking up.
+> east the-wych-elms
+> west the-toadstool-ring
+
+## the-ivy-wall | The Ivy Wall
+Ivy has climbed a row of trees and hung itself between them in sheets, so the wood here has walls. Some of the walls have gaps in them. Some of the gaps go somewhere.
+> south the-hornbeam-gloom
+
+## the-lime-stand | The Lime Stand
+Limes, very old, each one a cluster of trunks grown up from a single stool, so the stand is a crowd of grey pillars with the light coming down between them in bars. Bees are in the crowns in summer. Now it is silent.
+> north the-last-of-the-light
+
+## the-murk | The Murk
+The trees crowd close and the canopy is three layers deep, and under it the air is brown and thick and smells of earth. You can see perhaps ten paces in any direction. Every direction looks like this.
+> south the-last-of-the-light
+
+## the-holly-dark | The Holly Dark
+Holly under the oaks, thick and dark and evergreen, so the floor beneath it is bare and dry and nearly black. You go through bent double. The leaves rattle when you touch them, and they do not stop rattling at once.
+> south the-moss-steps
+> west the-lichen-stones
+
+## the-toadstool-ring | The Toadstool Ring
+A ring of pale toadstools on the leaf floor, wide enough to stand in, and others beyond it, and others beyond those, rings inside rings going off under the trees. The smell is sweet and wrong.
+> east the-high-crowns
+> west the-cold-hollow-oaks
+
+## the-lichen-stones | The Lichen Stones
+Stones lie about the floor here, grey and half sunk, each one furred with lichen in the same pale green. They might once have been a wall. They might once have been nothing.
+> east the-holly-dark
+> west the-dead-stand
+> south the-grass-island
+
+## the-cold-hollow-oaks | The Cold Hollow
+A dip in the floor where the air pools cold even at midday, and the trees around it grow with a lean away from it. Mist sits in it until noon. The floor is damp and pale with mould.
+> east the-toadstool-ring
+
+## the-dead-stand | The Dead Stand
+A stand of trees that died standing, silver and bare, with fungus stepped up their sides in brackets. They have been dead long enough to be part of the wood now, and the living ones have grown up around them.
+> east the-lichen-stones
+> west the-fern-floor
+> south the-crooked-oaks
+
+## the-grass-island | The Grass Island
+Grass, in the middle of all this — a single lawn the size of a barn floor, ringed by holly so dense it might be a wall, cropped short by something that comes and goes. In the old growth that is a strange thing to find. It is open to the sky and closed to everything else, and you can see the whole of it from wherever you stand.
+> north the-lichen-stones
+
+## the-fern-floor | The Fern Floor
+Bracken, head-high, filling the space under the canopy edge to edge, so that once you are in it you can see nothing but fronds and the sky straight up. It closes behind you.
+> east the-dead-stand
+> north the-oak-knees
+
+## the-crooked-oaks | The Crooked Oaks
+Oaks bent by something — wind, or weight, or time — into shapes that lean and turn and reach, so no two of them grow the same way and none of them grow straight. Walking through them, you lose your line at once.
+> north the-dead-stand
+> west the-windthrow
+
+## the-oak-knees | The Oak Knees
+The roots of the oaks come up out of the ground here in knuckles and knees, and the way between them is a matter of stepping from one to the next. Moss on everything. The trunks go up out of sight.
+> south the-fern-floor
+> west the-green-ridge
+> north the-burners-flat
+
+## the-windthrow | The Windthrow
+One storm, a long time ago, laid a whole stand down flat in the same direction, and the root plates stand on end around the edge like a palisade nobody built. The sky is open over it. Bramble and birch have come up through the fallen trunks, and inside the ring of roots the ground is sheltered from every wind but the one that did it.
+> east the-crooked-oaks
+
+## the-green-ridge | The Green Ridge
+A trunk lies across the way, fallen so long ago that it is now a ridge of soft green earth with a row of young trees growing out of its back. Going round it takes longer than you would think.
+> east the-oak-knees
+> west the-deep-litter
+
+## the-burners-flat | The Burners' Flat
+A circle of black ground forty paces across, where burners stacked their clamps for generations, so long ago that the trees have closed over it again from every side but not yet stepped onto it. Nothing grows on charcoal for a long time. It is level, it is dry, and it is the one place out here where a fire would look like it belonged.
+> south the-oak-knees
+
+## the-deep-litter | The Deep Litter
+Old leaves, layer under layer, so deep that every step sinks to the ankle and comes up with the smell of a cellar. Under the trees it is dim at noon. The sound of your own feet is the only sound.
+> east the-green-ridge
+> north the-grey-trunks
+> west the-split-ash
+
+## the-grey-trunks | The Grey Trunks
+Beech, grey and smooth, standing in rows no hand planted, so far apart that you can see between them for a long way and so alike that seeing does you no good. The leaf litter is a foot deep and silent.
+> south the-deep-litter
+> east the-root-hollow
+> west the-dark-pool
+
+## the-split-ash | The Split Ash
+An ash that split down its length long ago and kept growing as two trees from one root, leaning apart. The way goes between them. On the far side the wood looks exactly as it did on this side.
+> east the-deep-litter
+> west the-standing-oaks
+
+## the-root-hollow | The Root Hollow
+The ground drops into a hollow walled with roots, where the soil has washed out from under a row of trees and left them standing on their own legs. Under the roots it is dry. Above them it is the wood again.
+> west the-grey-trunks
+> north the-ward-oak
+
+## the-dark-pool | The Dark Pool
+A pool lies in a hollow among the roots, round and black and so still that the trunks stand in it upside down. Leaves float on it and do not move. At its edge the mud is printed deep with hooves and pads, all coming to the same place to drink, all going away again.
+> east the-grey-trunks
+> west the-moss-hall
+
+## the-standing-oaks | The Standing Oaks
+A ring of oaks, nine of them, each older than anything built by hand that still stands, grown so close at the crowns that the ring is a room with a green ceiling. The ground inside is bare and level and dry. Whoever planted them in a ring has been dead a thousand years, and the oaks have kept the floor swept ever since.
+> east the-split-ash
+
+## the-ward-oak | The Ward Oak
+An oak stands across the way so broad that the path has to go round it, and on its bark, at the height of a man's eye, a mark has been cut and cut again over years: the same mark, healed and recut, the newest cuts still pale. Past the oak the trees close in and the light goes. Nothing about the ground says to go on. Nothing says not to.
+> east the-same-tree
+> south the-root-hollow
+
+## the-moss-hall | The Moss Hall
+A clearing roofed by the crowns of the trees around it and floored in moss so deep and even that it gives under you like a bed. A fallen oak lies along one side, gone soft and green from end to end, and the light that gets down here comes down slow. It is the quietest room in the world. Something could live here a long time and nothing would know.
+> east the-dark-pool

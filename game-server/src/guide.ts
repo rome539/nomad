@@ -406,11 +406,17 @@ export const GUIDE_PAGE = `<!doctype html>
 
 <section id="home">
   <h2>11 &nbsp;Living somewhere</h2>
-  <p>Out past the road there is ground where people used to live, and you can
-  live there too.</p>
+  <p>Far enough out from the gates, open ground will take a house, and the
+  ground is yours to choose.</p>
   <ul>
     <li><b>Raise a door</b> and you have a house: a shelf that holds unlimited
-    gear, and bunks you can hand to other wanderers face to face.</li>
+    gear, and bunks you can hand to other wanderers face to face. It goes up
+    well out from every gate, so nothing you keep there is a short walk from
+    a vault.</li>
+    <li><b>Build into it.</b> A house can have more than walls: a fire to rest
+    by, a cover against the damp, something on the door to wake you, more room
+    on the shelf, a place for food to keep. Each is made of what you break
+    down at the bench and carry out yourself.</li>
     <li><b>It opens exposed.</b> A new den shelters you from nothing — things
     walk straight in. Only a <strong>bar</strong>, made of iron you carried out
     there yourself, changes that.</li>

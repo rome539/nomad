@@ -45,10 +45,13 @@ import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { type CarriedItem, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow } from "./world";
 import { SCRAP_ID, IRON_ID, PACK_CAP, DEN_BUNKS, DEN_CAP, DEN_LAPSE_MS, DEN_BAR_IRON, DEN_BAR_SCRAP,
-  DEN_RAISE_IRON, DEN_RAISE_SCRAP,
+  DEN_RAISE_IRON, DEN_RAISE_SCRAP, DEN_RAISE_WOOD, DEN_RAISE_LEATHER, DEN_MIN_GATE_STEPS,
+  DEN_BUILDS, DEN_RACK_CAP, DEN_HIDES_RUST_MULT, DEN_LARDER_AGE_MULT, DEN_RATTLE_EVERY_MS,
+  LEATHER_ID, WOOD_ID, OUTDOOR_ROOMS, SEA_ROOMS, STUFF_WORD,
   COLD_STORE_ROOMS, COLD_CONTAINER, OSSUARY_ROOM, OSSUARY_CONTAINER,
   DEN_RUST_PER_HOUR, DEN_RUST_FLOOR, DEN_WAKE_CHANCE, SEALED_WEAR_MULT, GEAR_FAILING_AT, GEAR_WORN_AT } from "./zone-data";
-import { nameMatches, shortName } from "./zone-util";
+import { nameMatches, shortName, isNight } from "./zone-util";
+import { MOUNTAIN_QUARTER_ROOMS, WOOD_QUARTERS } from "./detail";
 
 export interface Den {
   roomId: string;
@@ -56,6 +59,13 @@ export interface Den {
   claimedAt: number;
   tendedAt: number;    // last time the HOLDER stood in it — the lapse clock
   barred: boolean;
+  // What else has been built in it (mig 308, DEN_BUILDS): each a thing put up
+  // once, read where it bites.
+  hearth: boolean;
+  hides: boolean;
+  rattle: boolean;
+  rack: boolean;
+  larder: boolean;
   holderName: string;  // cached off the players row so an offline holder is still a NAME on the door, not a hex stub
   keys: Map<string, number>; // pubkey -> granted_at (the bunks; the holder is not in here)
 }
@@ -71,12 +81,14 @@ export interface Den {
 export async function loadDens(z: ZoneDO): Promise<Map<string, Den>> {
   const dens = new Map<string, Den>();
   const rows = (await z.env.DB.prepare(
-    "SELECT d.room_id, d.holder, d.claimed_at, d.tended_at, d.barred, COALESCE(p.name, '') AS holder_name FROM dens d LEFT JOIN players p ON p.pubkey = d.holder")
-    .all<{ room_id: string; holder: string; claimed_at: number; tended_at: number; barred: number; holder_name: string }>()).results ?? [];
+    "SELECT d.room_id, d.holder, d.claimed_at, d.tended_at, d.barred, d.hearth, d.hides, d.rattle, d.rack, d.larder, COALESCE(p.name, '') AS holder_name FROM dens d LEFT JOIN players p ON p.pubkey = d.holder")
+    .all<{ room_id: string; holder: string; claimed_at: number; tended_at: number; barred: number; hearth: number; hides: number; rattle: number; rack: number; larder: number; holder_name: string }>()).results ?? [];
   for (const r of rows) {
     dens.set(r.holder, {
       roomId: r.room_id, holder: r.holder, claimedAt: r.claimed_at,
-      tendedAt: r.tended_at, barred: r.barred === 1, holderName: r.holder_name, keys: new Map(),
+      tendedAt: r.tended_at, barred: r.barred === 1,
+      hearth: r.hearth === 1, hides: r.hides === 1, rattle: r.rattle === 1, rack: r.rack === 1, larder: r.larder === 1,
+      holderName: r.holder_name, keys: new Map(),
     });
   }
   const keys = (await z.env.DB.prepare("SELECT room_id, holder, pubkey, granted_at FROM den_keys")
@@ -287,8 +299,72 @@ export function homeMark(z: ZoneDO, roomId: string, pubkey: string): number {
   return densAt(z, roomId).some((d) => d.keys.has(pubkey)) ? 1 : 0;
 }
 
+// A DEN SITE: anywhere a den stands, anywhere one could go up, and the old
+// holdings (which take no new dens, but still have dens and shelves on them).
+// Kept under its old name because every caller asks the same question it
+// always did — is this ground a place people live?
 export function isHolding(z: ZoneDO, roomId: string): boolean {
-  return z.world!.rooms.get(roomId)?.is_holding === 1;
+  return z.world!.rooms.get(roomId)?.is_holding === 1 || densAt(z, roomId).length > 0 || canBuildHere(z, roomId);
+}
+
+// WALKING STEPS FROM THE NEAREST GATE, over the live exit graph, worked out
+// once per world and kept with it. Every gate is a vault, so this is the
+// distance a nomad has to carry what a den holds to bank it.
+const gateSteps = new WeakMap<object, Map<string, number>>();
+export function stepsFromGate(z: ZoneDO, roomId: string): number {
+  const w = z.world!;
+  let m = gateSteps.get(w);
+  if (!m) {
+    m = new Map();
+    const q = [...w.entryRooms];
+    for (const g of q) m.set(g, 0);
+    for (let i = 0; i < q.length; i++) {
+      for (const e of w.exits.get(q[i]!) ?? []) {
+        if (m.has(e.to_room)) continue;
+        m.set(e.to_room, m.get(q[i]!)! + 1);
+        q.push(e.to_room);
+      }
+    }
+    gateSteps.set(w, m);
+  }
+  return m.get(roomId) ?? Infinity;
+}
+
+// WHERE A DEN CAN GO UP (rome, 2026-10-19), and if not, why not. Open ground
+// under the sky, out of the gates' reach (DEN_MIN_GATE_STEPS). Not a gate, not
+// a hideaway no creature will enter (a den has to be exposed to mean anything),
+// not the sea, and not under somebody else's roof.
+// THE DRAKE'S GROUND (rome, 2026-10-19). The summit and the whole of its
+// territory (mig 234's tier five: the warm rock, the terraces, the eyrie, the
+// nine swept rooms under the summit) are the far end of the mountain and so
+// the farthest ground from any gate there is, which put them all on the den
+// map. Nothing on the mountain will stand on that ground, and nobody builds a
+// house in the drake's own country either.
+const DRAKE_GROUND = new Set([...(MOUNTAIN_QUARTER_ROOMS.summit ?? []), ...(MOUNTAIN_QUARTER_ROOMS.territory ?? [])]);
+
+// THE WOODWARD'S GROUND (rome, 2026-10-19). With the west fringe in, his seven
+// rooms are the deepest in the wood, past every den on the way, and so they
+// came up as den ground themselves. He keeps that ground; nobody builds in it.
+const isWoodwardGround = (roomId: string) => WOOD_QUARTERS[roomId] === "heart";
+
+export function groundBar(z: ZoneDO, roomId: string): "" | "gate" | "safe" | "sea" | "roofed" | "near" | "drake" | "woodward" {
+  const w = z.world!;
+  if (w.entryRooms.has(roomId)) return "gate";
+  if (DRAKE_GROUND.has(roomId)) return "drake";
+  if (isWoodwardGround(roomId)) return "woodward";
+  if (w.safeRooms.has(roomId)) return "safe";
+  if (SEA_ROOMS.has(roomId)) return "sea";
+  if (!OUTDOOR_ROOMS.has(roomId)) return "roofed";
+  if (stepsFromGate(z, roomId) < DEN_MIN_GATE_STEPS) return "near";
+  return "";
+}
+export function canBuildHere(z: ZoneDO, roomId: string): boolean {
+  return groundBar(z, roomId) === "";
+}
+
+// What the shelf holds of everything that is not gear: more with a second rack.
+export function denCap(den: Den | undefined): number {
+  return den?.rack ? DEN_RACK_CAP : DEN_CAP;
 }
 
 // A BARRED DOOR STOPS PEOPLE TOO (rome, 2026-08-03: "what about gankers?"), and
@@ -313,6 +389,11 @@ export function mayEnterKeeping(den: Den, pubkey: string): boolean {
 function countOf(session: Session, itemId: string): number {
   return session.items.filter((c) => c.itemId === itemId && c.serial === null).length;
 }
+// "20 split wood, 10 leather, 4 iron and 10 scrap".
+function priceText(price: { id: string; n: number }[]): string {
+  const parts = price.map((p) => `${p.n} ${STUFF_WORD[p.id] ?? (p.id === IRON_ID ? "iron" : p.id)}`);
+  return parts.length === 1 ? parts[0]! : parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1];
+}
 async function spend(z: ZoneDO, session: Session, itemId: string, n: number): Promise<void> {
   for (const c of session.items.filter((c) => c.itemId === itemId && c.serial === null).slice(0, n)) {
     session.items.splice(session.items.indexOf(c), 1);
@@ -323,8 +404,17 @@ async function spend(z: ZoneDO, session: Session, itemId: string, n: number): Pr
 export async function cmdSettle(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const roomId = session.roomId;
   if (arg === "down") arg = ""; // "settle down" is the same instinct
-  if (!isHolding(z, roomId)) {
-    return z.send(session, "You could sleep here. You could not LIVE here — there is no door to shut and nothing to shut it against. A holding wants a roof, a way to close it, and somewhere to lie down.");
+  const bar = groundBar(z, roomId);
+  if (bar) {
+    return z.send(session, ({
+      gate: "Not at the gates. Everybody in the world comes through here, and the keeper's roof is the only one this ground needs.",
+      safe: "You could hide here. You could not LIVE here — nothing comes in, so nothing you built would ever be tested, and a den has to stand in the world to be one.",
+      sea: "There is no ground here to build on. There is barely ground here to stand on.",
+      roofed: "This is under somebody else's roof, old as it is. A den goes up on open ground, under the sky, where you can raise a frame of your own.",
+      drake: "Not here. Every animal on this mountain has decided not to stand on this ground, and they know something you would be a fool to argue with. Build lower.",
+      woodward: "Not here. The floor is cleared and the deadfall moved, and none of it by you. This ground is kept, and not for anyone to build on.",
+      near: "Too near the gates. This ground is walked by everybody coming and going, and whatever you kept here would be one short carry from a vault. Build further out, where nobody passes by accident.",
+    } as Record<string, string>)[bar]!);
   }
   if (z.inCombat(session)) return z.send(session, "Not with something in the room that wants you dead.");
   // AND YOU CANNOT WAIT OUT A KILLING BY RAISING YOUR OWN DOOR ON THE SPOT.
@@ -358,28 +448,34 @@ export async function cmdSettle(z: ZoneDO, session: Session, arg: string): Promi
   // here stops you. The room is GROUND; what you are about to do is put a
   // building on it. It costs what a building costs, and that cost — not my six
   // hand-placed doors — is the only thing rationing homes from now on.
-  const iron = countOf(session, IRON_ID), scrap = countOf(session, SCRAP_ID);
-  if (iron < DEN_RAISE_IRON || scrap < DEN_RAISE_SCRAP) {
+  const price = [
+    { id: WOOD_ID, n: DEN_RAISE_WOOD }, { id: LEATHER_ID, n: DEN_RAISE_LEATHER },
+    { id: IRON_ID, n: DEN_RAISE_IRON }, { id: SCRAP_ID, n: DEN_RAISE_SCRAP },
+  ];
+  if (price.some((p) => countOf(session, p.id) < p.n)) {
     return z.send(session, [
-      "There is room on this ground for another door, and nothing standing in your way. What you have not got is the building.",
-      `A den wants ${DEN_RAISE_IRON} iron and ${DEN_RAISE_SCRAP} scrap carried out here — a frame, hinges, nails, and the tools to hang them. You have ${iron} iron and ${scrap} scrap.`,
+      "The ground here will take a den, and nothing is standing in your way. What you have not got is the building.",
+      `A den wants ${priceText(price)} carried out here — split wood for the frame, leather for the roof, iron and nails to hang a door. You have ${price.map((p) => `${countOf(session, p.id)} ${STUFF_WORD[p.id] ?? p.id}`).join(", ")}.`,
     ].join("\n"));
   }
-  await spend(z, session, IRON_ID, DEN_RAISE_IRON);
-  await spend(z, session, SCRAP_ID, DEN_RAISE_SCRAP);
+  for (const p of price) await spend(z, session, p.id, p.n);
   const now = Date.now();
-  const den: Den = { roomId, holder: session.pubkey, claimedAt: now, tendedAt: now, barred: false, holderName: session.name, keys: new Map() };
+  const den: Den = {
+    roomId, holder: session.pubkey, claimedAt: now, tendedAt: now, barred: false,
+    hearth: false, hides: false, rattle: false, rack: false, larder: false,
+    holderName: session.name, keys: new Map(),
+  };
   z.dens.set(session.pubkey, den);
   await z.env.DB.prepare("INSERT OR REPLACE INTO dens (room_id, holder, claimed_at, tended_at, barred) VALUES (?, ?, ?, ?, 0)")
     .bind(roomId, session.pubkey, now, now).run();
   const neighbours = densAt(z, roomId).length - 1;
   z.send(session, [
-    `You raise a den at ${room.name}. A frame, a floor you did not have to dig, and a door that is yours.`,
+    `You raise a den at ${room.name}. A frame of split wood, a hide roof lashed down over it, and a door on iron hinges that is yours.`,
     neighbours > 0
       ? `You are not the only one living on this ground — ${neighbours} other door${neighbours === 1 ? "" : "s"} here, and none of them are your business.`
       : "Nobody witnesses it and nothing marks it. What makes it yours is that you came back, and that you keep coming back — leave an unbarred frame standing empty long enough and it falls in. A bar on the door ends that, and it stands until you give it up.",
     `The door does not shut yet. Fit a bar to it (${DEN_BAR_IRON} iron and ${DEN_BAR_SCRAP} scrap, then 'bar') and nothing walks in after you.`,
-    `Step through it with 'in', and back out to the ground with 'out'. You can put ${DEN_BUNKS} other nomads under this roof — hand them a key face to face ('bunk <name>').`,
+    `Step through it with 'in', and back out to the ground with 'out'. You can put ${DEN_BUNKS} other nomads under this roof — hand them a key face to face ('bunk <name>'). Inside, 'build' lists what else a den can have.`,
   ].join("\n"));
   z.roomFeed(roomId, `${session.name} raises a den here — a frame going up, and a door hung on it.`, session.pubkey, false);
   z.sendCtx(session);
@@ -432,10 +528,15 @@ export function cmdLeaveDen(z: ZoneDO, session: Session): boolean {
 export async function cmdAbandon(z: ZoneDO, session: Session): Promise<void> {
   const den = myDenAt(z, session.roomId, session.pubkey);
   if (!den) return z.send(session, "You have nothing here to give up.");
+  // MOVING HOUSE (rome, 2026-10-19). This used to refuse while the shelf held
+  // anything, which made moving a den one impossible carry: the old door had to
+  // come down before the new one could go up, and nothing could come down while
+  // the shelf was full. The shelf outlives the door (it always has: the rows are
+  // keyed to you and the room), so giving the door up leaves everything where
+  // it is, still yours, fetched back from the ground in as many trips as it takes.
   const kept = await loadContainer(z.env.DB, session.pubkey, container(den.roomId));
-  if (kept.length > 0) return z.send(session, `There are still ${kept.length} of your things on the shelf here. Clear them out first — walking away does not carry them for you.`);
   await drop(z, den);
-  z.send(session, `You let ${z.world!.rooms.get(den.roomId)!.name} go. The door stands open behind you.`);
+  z.send(session, `You let ${z.world!.rooms.get(den.roomId)!.name} go. The door stands open behind you.${kept.length ? ` Your ${kept.length} thing${kept.length === 1 ? "" : "s"} on the shelf stay${kept.length === 1 ? "s" : ""} where ${kept.length === 1 ? "it is" : "they are"}, still yours — 'fetch' from this ground takes ${kept.length === 1 ? "it" : "them"} back.` : ""}`);
   z.roomFeed(den.roomId, `${session.name} gives up the hold here.`, session.pubkey, false);
   z.sendCtx(session);
 }
@@ -474,7 +575,11 @@ async function drop(z: ZoneDO, den: Den): Promise<void> {
  * gone is as bad as gear that is gone.
  */
 export async function shelfCall(z: ZoneDO, session: Session): Promise<void> {
-  if (!isHolding(z, session.roomId)) return;         // den ground only
+  // Den ground only — and only ground a den stands on or the old holdings: the
+  // open ground that COULD take one is a hundred-odd rooms, and asking D1 on
+  // every step across it to find nothing is not worth it. ('den' still lists
+  // every shelf you have anywhere.)
+  if (!(z.world!.rooms.get(session.roomId)?.is_holding === 1 || densAt(z, session.roomId).length)) return;
   if (myDenAt(z, session.roomId, session.pubkey)) return;  // your own door: the room says it
   if (insideOf(z, session.pubkey)) return;           // you are indoors; this is the street's line
   const held = await loadContainer(z.env.DB, session.pubkey, container(session.roomId));
@@ -513,6 +618,86 @@ export async function cmdBar(z: ZoneDO, session: Session): Promise<void> {
   z.send(session, "You cut the sockets, hang the bar, and drop it once to hear it seat.\nNothing walks in here now. That is not the same as nothing knowing you are in here.\nAnd the hold stops counting: a barred door stands however long you are gone.");
   z.roomFeed(den.roomId, `${session.name} hangs a bar on the door.`, session.pubkey, false);
   z.sendCtx(session);
+}
+
+// ---------------------------------------------------------------------------
+// EVERYTHING ELSE A DEN CAN HAVE (rome, 2026-10-19). The bar's own shape: an
+// object, built once, from your own door, paid out of the pack on the spot.
+// 'build' alone is the list — what stands, and what the rest would cost.
+
+export async function cmdBuild(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const den = insideOf(z, session.pubkey);
+  if (!den || den.roomId !== session.roomId) {
+    return z.send(session, myDenAt(z, session.roomId, session.pubkey)
+      ? "That is work for inside. ('in' opens your door.)"
+      : "There is nothing of yours here to build on. A den comes first ('settle').");
+  }
+  if (den.holder !== session.pubkey) return z.send(session, `This is ${holderName(z, den)}'s den. What goes up in it is theirs to decide.`);
+  const want = arg.trim().toLowerCase();
+  if (want === "bar" || want === "a bar") return cmdBar(z, session);
+  if (!want) {
+    const lines = ["What a den can have:"];
+    lines.push(`  a bar on the door — ${den.barred ? "fitted" : `${DEN_BAR_IRON} iron and ${DEN_BAR_SCRAP} scrap ('bar')`}`);
+    for (const [key, b] of Object.entries(DEN_BUILDS)) {
+      lines.push(`  ${b.name} — ${den[key as keyof Den] === true ? "built" : `${priceText(b.cost)} ('build ${key}')`}: ${b.does}.`);
+    }
+    return z.send(session, lines.join("\n"));
+  }
+  const key = Object.keys(DEN_BUILDS).find((k) => k === want || want.startsWith(k.slice(0, 4)) || nameMatches(DEN_BUILDS[k]!.name, want));
+  if (!key) return z.send(session, "You do not know how to build that here. ('build' alone lists what a den can have.)");
+  const b = DEN_BUILDS[key]!;
+  if (den[key as keyof Den] === true) return z.send(session, `There is already ${b.name} here.`);
+  if (z.inCombat(session)) return z.send(session, "Not with something in the room that wants you dead.");
+  if (b.cost.some((p) => countOf(session, p.id) < p.n)) {
+    return z.send(session, `${b.name.charAt(0).toUpperCase() + b.name.slice(1)} wants ${priceText(b.cost)} out of your pack. You have ${b.cost.map((p) => `${countOf(session, p.id)} ${STUFF_WORD[p.id] ?? (p.id === IRON_ID ? "iron" : p.id)}`).join(", ")}.`);
+  }
+  for (const p of b.cost) await spend(z, session, p.id, p.n);
+  (den as unknown as Record<string, boolean>)[key] = true;
+  // The column name is the key itself, from a fixed table, never the player's words.
+  await z.env.DB.prepare(`UPDATE dens SET ${key} = 1 WHERE room_id = ? AND holder = ?`).bind(den.roomId, den.holder).run();
+  z.send(session, b.built, "gain");
+  z.roomFeed(den.roomId, `Somebody is working behind one of the doors here — the sound of it carries.`, session.pubkey, false);
+  z.sendCtx(session);
+}
+
+// THE HEARTH. Lying down by it burns a bundle of split wood out of the pack
+// (cmdRest calls this); while that rest lasts it mends like the gatehouse fire
+// and the cold has no hold on it. No wood, no fire: an ordinary rest.
+export function lightHearth(z: ZoneDO, session: Session): string {
+  session.hearthLit = undefined;
+  const den = insideOf(z, session.pubkey);
+  if (!den || den.roomId !== session.roomId || !den.hearth) return "";
+  const wood = session.items.find((c) => c.itemId === WOOD_ID && c.serial === null);
+  if (!wood) return "The hearth is cold, and you have no wood on you to put in it.";
+  session.items.splice(session.items.indexOf(wood), 1);
+  void removeItemRow(z.env.DB, wood.rowId).catch(() => { /* the fire is lit either way; a lost delete is one stray bundle */ });
+  session.hearthLit = den.roomId;
+  return "You feed a bundle of split wood to the hearth and lie down beside it. The warmth comes up off the stones.";
+}
+export function hearthWarm(z: ZoneDO, session: Session): boolean {
+  if (!session.resting || !session.hearthLit) return false;
+  const den = insideOf(z, session.pubkey);
+  return !!den && den.hearth && den.roomId === session.hearthLit && den.roomId === session.roomId;
+}
+
+// THE RATTLE. Something has come onto the ground outside a door with bone
+// strung across it: whoever is behind that door hears it, and a sleeper wakes.
+// Cheap on the hot path — most rooms have no den at all.
+export function rattle(z: ZoneDO, roomId: string, exceptPubkey?: string): void {
+  if (!z.inDen.size) return;
+  const now = Date.now();
+  for (const s of z.sessions.values()) {
+    if (s.roomId !== roomId || s.pubkey === exceptPubkey) continue;
+    const den = insideOf(z, s.pubkey);
+    if (!den || !den.rattle || den.roomId !== roomId) continue;
+    if (now - (s.rattleAt ?? 0) < DEN_RATTLE_EVERY_MS) continue;
+    s.rattleAt = now;
+    const woke = s.resting;
+    if (woke) { s.resting = false; z.sendStatus(s); }
+    z.send(s, woke
+      ? "The bone on the door clatters and you are awake before you know why. Something has come onto the ground outside."
+      : "The bone on the door clatters. Something has come onto the ground outside.", "evt");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -595,14 +780,30 @@ export function container(roomId: string): string { return `den:${roomId}`; }
 // piece at zero — it does the arithmetic itself and stops at DEN_RUST_FLOOR.
 // What you put down is what you pick up: in worse condition, never in fewer
 // pieces, and always still mendable at a bench.
-export async function rustShelf(z: ZoneDO, held: CarriedItem[]): Promise<CarriedItem[]> {
+export async function rustShelf(z: ZoneDO, held: CarriedItem[], den?: Den): Promise<CarriedItem[]> {
   const now = Date.now();
   for (const c of held) {
+    // THE LARDER (DEN_BUILDS): food keeps its own clock, at half speed in a
+    // larder. Same lazy arithmetic as the rust: half the time it sat here is
+    // handed back to it by moving its cut-time forward, and the shelf stamp
+    // moves with it so the same hours are never given twice.
+    if (den?.larder && z.world!.itemTemplates.get(c.itemId)?.edible && c.acquiredAt !== undefined) {
+      const since = c.containerAt ?? now;
+      const back = Math.floor((now - since) / 1000 * (1 - DEN_LARDER_AGE_MULT));
+      if (back > 0) {
+        c.acquiredAt += back;
+        c.containerAt = now;
+        await z.env.DB.prepare("UPDATE player_items SET acquired_at = ?, container_at = ? WHERE id = ?")
+          .bind(c.acquiredAt, now, c.rowId).run();
+      }
+      continue;
+    }
     if (!z.isGear(c.itemId)) continue;          // cloth, food, rock and trophies keep their own clocks
     const since = c.containerAt ?? now;
     const hours = (now - since) / 3_600_000;
     if (hours <= 0) continue;
     let amount = hours * DEN_RUST_PER_HOUR;
+    if (den?.hides) amount *= DEN_HIDES_RUST_MULT; // oiled hides over the shelf: the damp finds its way under, slowly
     if (c.serial !== null) amount *= SEALED_WEAR_MULT; // the gate's mark slows the damp; it does not stop it
     const before = c.condition;
     const after = Math.max(DEN_RUST_FLOOR, Math.round((before - amount) * 10) / 10);
@@ -684,7 +885,7 @@ export async function cmdStow(z: ZoneDO, session: Session, arg: string): Promise
         ? await noDoorNote(z, session)
         : "There is no shelf here, and nothing here to keep anything."));
   }
-  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)));
+  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)), den);
   if (!arg) return z.send(session, shelfList(z, den, held));
   const carried = z.findCarried(session, arg);
   if (!carried) return z.send(session, "You carry nothing like that.");
@@ -700,8 +901,8 @@ export async function cmdStow(z: ZoneDO, session: Session, arg: string): Promise
   //
   // The cap stays on everything that ISN'T gear, because an endless larder is a
   // different feature (and a food/rock faucet); a wall of armour is the point.
-  if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= DEN_CAP) {
-    return z.send(session, `Your shelf here holds ${DEN_CAP} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.`);
+  if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= denCap(den)) {
+    return z.send(session, `Your shelf here holds ${denCap(den)} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.${den.rack ? "" : " (A second rack would take more: 'build'.)"}`);
   }
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
   // Guarded splice (2026-08-20): the condition write above awaited D1, so a
@@ -796,7 +997,7 @@ export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promis
     if (note) return z.send(session, note);
   }
   const roomId = session.roomId;
-  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(roomId)));
+  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(roomId)), keepingDen(z, session));
   if (held.length === 0) return z.send(session, "You have nothing of yours here.");
   if (!arg) return z.send(session, shelfList(z, keepingDen(z, session), held));
   const entry = held.find((c) => { const t = z.world!.itemTemplates.get(c.itemId); return t ? nameMatches(t.name, arg) : false; });
@@ -833,7 +1034,7 @@ export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promis
 export async function shelfHere(z: ZoneDO, session: Session): Promise<{ den: Den; held: CarriedItem[] } | null> {
   const den = keepingDen(z, session);
   if (!den) return null;
-  return { den, held: await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId))) };
+  return { den, held: await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)), den) };
 }
 
 // Pack -> shelf, one row, from the modal. Same law as cmdStow: gear is
@@ -844,9 +1045,9 @@ export async function benchStow(z: ZoneDO, session: Session, row: string): Promi
   if (!den) return "There is no shelf of yours here.";
   const carried = session.items.find((c) => c.rowId === row);
   if (!carried) return "You aren't carrying that.";
-  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)));
-  if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= DEN_CAP) {
-    return `Your shelf here holds ${DEN_CAP} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.`;
+  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)), den);
+  if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= denCap(den)) {
+    return `Your shelf here holds ${denCap(den)} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.`;
   }
   // Guarded splice (2026-08-20): the shelf read and the condition write above
   // awaited D1, so a racing double frame could both resolve the same row and
@@ -865,7 +1066,7 @@ export async function benchStow(z: ZoneDO, session: Session, row: string): Promi
 export async function benchFetch(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
   const den = keepingDen(z, session);
   if (!den) return "There is no shelf of yours here.";
-  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)));
+  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)), den);
   const entry = held.find((c) => c.rowId === row);
   if (!entry) return "Nothing of yours here by that name.";
   if (z.foodCapped(session, entry.itemId)) return z.foodFullNote();
@@ -881,7 +1082,7 @@ function shelfList(z: ZoneDO, den: Den | undefined, held: CarriedItem[]): string
   if (held.length === 0) return "Your corner of this place is bare.";
   const gear = held.filter((c) => z.isGear(c.itemId)).length;
   const rest = z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox");
-  const lines = [`In your corner of this place (${gear} piece${gear === 1 ? "" : "s"} of gear, no limit; ${rest}/${DEN_CAP} of everything else):`];
+  const lines = [`In your corner of this place (${gear} piece${gear === 1 ? "" : "s"} of gear, no limit; ${rest}/${denCap(den)} of everything else):`];
   const counts = new Map<string, number>();
   for (const c of held) if (z.stackable(c.itemId, c.serial, c.journalId)) counts.set(c.itemId, (counts.get(c.itemId) ?? 0) + 1);
   for (const [id, n] of counts) {
@@ -919,6 +1120,8 @@ export async function cmdDen(z: ZoneDO, session: Session): Promise<void> {
     lines.push(`${room.name} — ${mine ? "yours" : `${holderName(z, here)}'s`}.`);
     lines.push(here.barred ? "The bar is on the door." : "The door does not shut. Anything out there can walk in.");
     if (mine) {
+      const built = Object.entries(DEN_BUILDS).filter(([k]) => here[k as keyof Den] === true).map(([, b]) => b.name);
+      lines.push(built.length ? `Built in it: ${built.join(", ")}.${built.length < Object.keys(DEN_BUILDS).length ? " ('build' for the rest)" : ""}` : "Nothing built in it yet but the walls. ('build' lists what it could have.)");
       lines.push(bunkList(z, here));
       if (here.barred) {
         lines.push("The bar holds the hold. It stands empty as long as it has to — you will find it here.");
@@ -929,7 +1132,7 @@ export async function cmdDen(z: ZoneDO, session: Session): Promise<void> {
     } else if (here.keys.has(session.pubkey)) {
       lines.push("You have a bunk here.");
     }
-    const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(here.roomId)));
+    const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(here.roomId)), here);
     if (held.length) lines.push(shelfList(z, here, held));
   } else if (doorHere(z, session)) {
     // A door of yours on this ground, and you outside it. The street is told
@@ -938,8 +1141,8 @@ export async function cmdDen(z: ZoneDO, session: Session): Promise<void> {
     lines.push(d.holder === session.pubkey
       ? `${z.world!.rooms.get(session.roomId)!.name} — your door is here, shut. ('in' opens it.)`
       : `${holderName(z, d)}'s door is here, and you have a bunk behind it. ('in' opens it.)`);
-  } else if (isHolding(z, session.roomId)) {
-    lines.push(`${z.world!.rooms.get(session.roomId)!.name} — a roof, a door, and nobody under it. ('settle' takes it.)`);
+  } else if (canBuildHere(z, session.roomId) && !myDen(z, session.pubkey)) {
+    lines.push(`${z.world!.rooms.get(session.roomId)!.name} — open ground, far enough out to live on. ('settle' raises a den here.)`);
   }
   const own = [...z.dens.values()].filter((d) => d.holder === session.pubkey && d.roomId !== session.roomId);
   for (const d of own) {
@@ -972,7 +1175,7 @@ export async function cmdDen(z: ZoneDO, session: Session): Promise<void> {
     lines.push(`${n} thing${n === 1 ? "" : "s"} of yours ${mine ? "on your shelf in" : "still in"} ${where}${how}.`);
   }
   if (lines.length === 0) {
-    lines.push("You live nowhere. Six roofs on the den ground will take a holder, and every one of them is a room you have to walk to and stand in.");
+    lines.push("You live nowhere. A den goes up on open ground well out from the gates — far enough that nobody passes it by accident. Pick your ground, stand on it, and 'settle'.");
   }
   z.send(session, lines.join("\n"));
 }
@@ -1011,23 +1214,12 @@ export function denRoomLine(z: ZoneDO, roomId: string, session: Session): string
   // it told you nothing, so unless you happened to step through the right doorway
   // you never learned the sites existed. A hamlet is not a maze — you stand in
   // the yard and you can see which buildings have ground worth building on.
-  if (!isHolding(z, roomId)) {
-    // ...ON WHATEVER GROUND IT IS (2026-08-15). This was gated to the den band,
-    // which was right while every holding in the game stood in it. Migration 221
-    // put four out where the paving ends, and a site nobody can see is a site
-    // nobody settles — the argument the comment above makes for a hamlet is the
-    // same one the road makes. The check is now simply: is there buildable
-    // ground next door, wherever you happen to be standing.
-    if (!(z.world!.exits.get(roomId) ?? []).some((e) => isHolding(z, e.to_room))) return "";
-    const near: string[] = [];
-    for (const e of z.world!.exits.get(roomId) ?? []) {
-      if (!isHolding(z, e.to_room)) continue;
-      const name = z.world!.rooms.get(e.to_room)?.name ?? "a house";
-      const n = densAt(z, e.to_room).length;
-      near.push(`${name} (${e.dir})${n ? `, ${n} living in it` : ", nobody in it"}`);
-    }
-    return near.length ? `Ground worth building on stands off this one: ${near.join("; ")}.` : "";
-  }
+  // NO SIGNPOST NEXT DOOR ANY MORE (rome, 2026-10-19). This used to point at
+  // the holdings from the rooms beside them, which was the only way to learn
+  // where the ten sites were. Now a den stands wherever somebody chose to put
+  // it, and a line naming the house next door would be a map of where people
+  // sleep for anybody who wanted to wait outside one.
+  if (!isHolding(z, roomId)) return "";
   // A STREET OF DOORS (mig 172). The room is a site: it says how many people have
   // raised something here, whether YOU have, and that there is always room for
   // another — because there is. It never names a stranger. Putting the holders'
@@ -1052,16 +1244,20 @@ export function denRoomLine(z: ZoneDO, roomId: string, session: Session): string
   const bunk = all.find((d) => d.keys.has(session.pubkey));
   const others = all.length - (mine ? 1 : 0);
   const bits: string[] = [];
-  if (!all.length) {
-    bits.push("Nobody has built anything here. The ground is good and the walls are somebody else's problem from a long time ago.");
-  } else {
-    bits.push(others > 0
-      ? `${others} den${others === 1 ? "" : "s"} stand${others === 1 ? "s" : ""} here that ${others === 1 ? "is" : "are"} not yours — doors shut, and none of them your business.`
-      : "Nothing else standing here but yours.");
-  }
+  // Open ground with nothing on it is just open ground: the room says nothing,
+  // and the 'settle' chip is what tells you it would take a den.
+  if (!all.length) return "";
+  bits.push(others > 0
+    ? `${others} den${others === 1 ? "" : "s"} stand${others === 1 ? "s" : ""} here that ${others === 1 ? "is" : "are"} not yours — doors shut, and none of them your business.`
+    : "Nothing else standing here but yours.");
   if (mine) bits.push(mine.barred ? "Yours is the one with the bar across it. ('in')" : "Yours is the one whose door still does not shut. ('in', and 'bar' when you have the iron)");
   else if (bunk) bits.push(`You have a bunk under ${holderName(z, bunk)}'s roof here. ('in')`);
-  else bits.push(`There is room for another. ('settle' — it wants ${DEN_RAISE_IRON} iron and ${DEN_RAISE_SCRAP} scrap)`);
+  else if (canBuildHere(z, roomId)) bits.push("There is room for another. ('settle')");
+  // A LIT HEARTH SHOWS (DEN_BUILDS): somebody resting by their fire after dark
+  // puts light round the edge of a door, and the ground outside can see it.
+  if (isNight() && [...z.sessions.values()].some((s) => s.roomId === roomId && s.hearthLit === roomId && hearthWarm(z, s))) {
+    bits.push("Firelight shows round the edge of a door here.");
+  }
   return bits.join(" ");
 }
 

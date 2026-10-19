@@ -675,8 +675,31 @@ export const DEN_CHIP = "stow";
 // IRON CARRIES MOST OF IT ON PURPOSE. Iron only exists by melting five scrap, so
 // it is the one material you cannot pick up off a floor: 12 bars is sixty scrap
 // that went through a gate's fire, which is a walk, a bench and a decision.
-export const DEN_RAISE_IRON = 12;
-export const DEN_RAISE_SCRAP = 20;
+// ON OPEN GROUND, OUT FROM THE GATES (rome, 2026-10-19). Dens used to go up
+// only on ten hand-placed holdings. Now a nomad picks the room: any open ground
+// under the sky (OUTDOOR_ROOMS, not a gate, not safe ground, not the sea) at
+// least DEN_MIN_GATE_STEPS walking steps from EVERY gate. The distance is the
+// muling brake rome asked for: the vault is a gate, so a den close to one is a
+// second vault with no cap, and 22 steps is a long, dangerous carry each way.
+// ONE NUMBER FOR THE WHOLE WORLD (rome, 2026-10-19): on today's map that is 183
+// rooms on the mountain (105 once the drake's territory is taken out — see
+// den.groundBar), 3 on the crossing and 2 on the road. The wood never
+// reaches it — it is small and holds two gates, so nowhere in it is more than
+// 12 steps from one — and the answer to that is to grow the wood, never to give
+// it a shorter number. The old holdings are all nearer, so they take no dens
+// (migration 308 took down the ones standing on them).
+//
+// A den on open ground is BUILT, not moved into, so it is priced mostly in what
+// a building is made of — split wood for the frame, leather for the roof — and
+// a little iron for the hinges and nails. Counted in the vice's own handfuls
+// (a bar is five scrap, and the vice gives every other stuff at the scrap's
+// rate) it is 20 + 10 + 4x5 + 10 = 60, against the old 12 iron + 20 scrap = 80.
+// The walk out to 22 steps is the rest of the price.
+export const DEN_MIN_GATE_STEPS = 22;
+export const DEN_RAISE_WOOD = 20;
+export const DEN_RAISE_LEATHER = 10;
+export const DEN_RAISE_IRON = 4;
+export const DEN_RAISE_SCRAP = 10;
 // Same trick for the keeper's hatch: the client opens the trade modal instead
 // of sending it as text. (Typed 'barter'/'buy'/'offer' still work bare.)
 export const TRADE_CHIP = "barter with the keeper";
@@ -1873,6 +1896,10 @@ export const MOUTHS = [
   "the-holly-brake", "the-fox-earths", "the-badger-ground", "the-alder-carr", // the wood, honest band
   "the-hollow-beeches", "the-grey-thicket", "the-rush-bed",      // the cores
   "the-earth-fall", "the-under-roots",                           // the sunken wood, and below it
+  // THE OLD GROWTH (mig 309): three, spread so no home in it is far from one,
+  // and each a place a thing comes out of unseen — a sett, a bramble tunnel, a
+  // hollow under roots. The Saltings (mig 310) breathe through the buckthorn.
+  "the-badger-banks", "the-bramble-tunnel", "the-root-hollow", "the-sea-buckthorn",
   // THE MOUNTAIN'S FOOT (mig 227). A refill surfaces at the mouth NEAREST its
   // den and walks in, so a band with no mouth of its own has every one of its
   // animals born somewhere else and marched across the world to get home — mig
@@ -3125,7 +3152,16 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
   // The crossing's third fresh water: a stream runs in the bottom of the creek
   // at low water, and the marsh hounds were fifteen rooms and more from the
   // other two.
-  "the-creek-mouth"]);
+  "the-creek-mouth",
+  // THE NEW GROUND OF 2026-10-19 (migs 309-312), watered as it was written, so
+  // nothing given a home out there is out of reach of a drink. The Old Growth:
+  "the-hidden-spring", "the-ferny-bank", "the-dark-pool", "the-spring-mire", "the-wet-oaks",
+  // the gate rings: the arch's horse pond and the holt's sluice pool;
+  "the-horse-pond", "the-withy-drain",
+  // the Saltings' one sweet water, in the slack between the dunes;
+  "the-dune-slack",
+  // and the two lanes: the drovers' spring and dewpond, and the beck ford under the scarp.
+  "the-drovers-spring", "the-dewpond", "the-beck-ford"]);
 // WHO DRINKS. Was the scavengers alone, which left the wood's waters — the
 // Black Pool, the Brown Water, the Drinking Pool, eleven wet rooms of fen —
 // as ambush ground with nothing to ambush. Prey drinks too, and now the two
@@ -6737,6 +6773,48 @@ export const DEN_RUST_PER_HOUR = 0.45;
 export const DEN_RUST_FLOOR = 8;
 export const DEN_BAR_IRON = 2;
 export const DEN_BAR_SCRAP = 3;
+// WHAT ELSE A DEN CAN HAVE (rome, 2026-10-19: more than the bar). Each is an
+// OBJECT you build once, the bar's own shape, never a level. Costs are paid out
+// of the pack, on the spot. What each does is read where it bites (den.ts).
+export const DEN_BUILDS: Record<string, { name: string; cost: { id: string; n: number }[]; does: string; built: string }> = {
+  hearth: {
+    name: "a hearth", cost: [{ id: "split-wood", n: 10 }, { id: "iron", n: 1 }],
+    does: "rest by it mends like the gatehouse fire, and the cold cannot reach it; it burns a bundle of split wood each time you lie down",
+    built: "You lay a ring of stones, set an iron grate in it, and cut a smoke-hole in the roof. A den with a fire in it is a different place to come home to. (It burns split wood: a bundle each time you rest by it.)",
+  },
+  hides: {
+    name: "oiled hides over the shelf", cost: [{ id: "leather-offcuts", n: 8 }],
+    does: "gear on the shelf rusts at half the rate",
+    built: "You stitch the offcuts into a cover, work oil into it, and hang it over the shelf. The damp will find its way under, but slowly.",
+  },
+  rattle: {
+    name: "a bone rattle on the door", cost: [{ id: "bone-offcuts", n: 6 }],
+    does: "anything coming onto the ground outside wakes you before it is on you",
+    built: "You string the bone and horn on a cord across the inside of the door. Anything that comes onto the ground outside sets it going.",
+  },
+  rack: {
+    name: "a second rack", cost: [{ id: "split-wood", n: 10 }],
+    does: "the shelf holds 20 of everything that is not gear, not 12",
+    built: "You pin a second rack of split wood up beside the first. More room for the things that are not gear.",
+  },
+  larder: {
+    name: "a larder", cost: [{ id: "split-wood", n: 6 }, { id: "leather-offcuts", n: 4 }],
+    does: "food on the shelf goes off at half the rate",
+    built: "You box in a corner with split wood, line it with leather, and set it where the draught is coolest. Food kept in it will keep longer.",
+  },
+};
+export const DEN_RACK_CAP = 20;
+export const DEN_HIDES_RUST_MULT = 0.5;
+export const DEN_LARDER_AGE_MULT = 0.5;
+export const DEN_RATTLE_EVERY_MS = 30_000; // one warning per sleeper per half-minute, not one per step
+// A LIT HEARTH IS SEEN (rome, 2026-10-19). After dark, a den with somebody
+// resting by its fire is the only light on its ground, and the hungry things
+// next door that do not fear fire come to look — the same pull as a noise,
+// read every HEARTH_DRAW_EVERY_MS, each one rolling HEARTH_DRAW_ODDS. What
+// fears fire (most of the wood) is never drawn by it. Warmth and a fast mend,
+// bought with being found: that is the trade the hearth is.
+export const HEARTH_DRAW_EVERY_MS = 20_000;
+export const HEARTH_DRAW_ODDS = 0.2;
 
 // ---- WHAT IS STILL ALIGHT OUT THERE AFTER DARK (rome, 2026-08-12) ----------
 //

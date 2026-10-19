@@ -253,6 +253,50 @@ export const REGION_FEATURES: Record<string, FeatureTable> = {
 // The specific. Room-keyed, checked first, and every entry here is a noun that
 // the room's OWN description already put in front of the player.
 export const ROOM_FEATURES: Record<string, FeatureTable> = {
+  // ======================= THE NEW GROUND (2026-10-19) ===================
+  // The Old Growth (mig 309).
+  "the-ward-oak": {
+    "mark|marks|cuts|cut|bark|oak|sign":
+      "The same mark, a short upright and two strokes across it, cut into the bark at eye height. The oldest cuts have healed into raised grey scars; the newest are pale and still weeping a little sap. Somebody has kept this mark fresh for longer than the oak has been this wide, and the bark has never once been allowed to close over it.",
+  },
+  "the-hidden-spring": {
+    "spring|basin|water|stone|beech|roots":
+      "A basin cut square in a single stone and set under the roots so the spring rises straight into it. The cutting is old and careful. The water is cold enough to ache in your teeth, and clear to the bottom, and on the bottom lie a few small things somebody dropped in on purpose: a nail, a button, a ring of green copper.",
+  },
+  "the-burners-flat": {
+    "ground|black|charcoal|clamps|circle|hearth":
+      "Dig a heel in and it comes up black a hand deep: charcoal dust, years of it, packed hard. The burners built their clamps on the same ground for generations because the ground already knew how to burn. Nothing grows well on it still. The trees have closed over it, but they have not come down into it.",
+  },
+  "the-windthrow": {
+    "roots|root plates|plates|trees|stand|trunks":
+      "Every root plate stands on its edge facing the same way, each one taller than you, the soil still caught in them, stones locked in the roots. Whatever wind did this came from one direction, once, and laid the whole stand down in a single night. The trunks have gone soft. The plates have not.",
+  },
+  "the-moss-hall": {
+    "moss|floor|oak|fallen oak|trunk|crowns":
+      "The moss is a hand deep and so even that it might have been laid. Push a finger into it and it is wet underneath, and warm. Along the fallen oak the moss grows thicker, and in one place it is pressed flat in a long hollow, the shape of something that lies there, and lay there not long ago.",
+  },
+  // The Saltings (mig 310).
+  "the-salt-workings": {
+    "pans|pan|banks|salt|crust|floors":
+      "Each pan is a square of clay floor banked with turf, a door's width of bank between one and the next. The sea came in at the top of the tide through a cut in the outer bank, and the sun did the rest. The white crust in the bottoms is salt still. It tastes of it.",
+  },
+  "the-dune-slack": {
+    "water|pool|slack|turf|orchids|willow":
+      "Rain falls on the dunes and sinks through the sand and comes up again here, in the low ground, sweet. It is the only water for a long way that does not taste of the sea. The turf round it is cropped short and printed with every kind of foot.",
+  },
+  // The lanes (mig 312).
+  "the-dewpond": {
+    "pond|water|clay|floor|dewpond":
+      "There is no stream for miles. Somebody dug this bowl on the top of the hill, puddled clay into the floor of it and tamped it down with the hooves of the beasts that would drink from it, and let the mist and the rain fill it. It has held water ever since. Nobody remembers who.",
+  },
+  "the-cairn-shoulder": {
+    "cairn|stones|stone|heap":
+      "A heap of stones, each one carried up and put there by somebody passing, which is what you do at a cairn. Some are worn round by weather and furred with lichen. A few on the top are clean and sharp-edged, put there this year.",
+  },
+  "the-beck-ford": {
+    "ford|beck|stones|water|mud|prints":
+      "Flat stones, laid, not lying: somebody paved the bed of the beck here so the carts would not founder. The water runs over them clear and fast and cold. The mud at both edges is printed deep with hooves and pads and claws, all of it fresh.",
+  },
   // ======================= THE WOOD ======================================
   "the-flint-scatter": {
     "flint|flints|nodules|flakes|cores|tools|edge":
@@ -1416,6 +1460,11 @@ const QUARTER_ROOMS: Record<string, string[]> = {
     "the-boar-ground", "the-yew-walk", "the-orchard-gone-wild", "the-hall-floor", "the-icehouse",
     "the-holly-hedge", "the-broken-avenue", "the-sunken-lawn", "the-solar", "the-ash-heap",
     "the-hollow-yew", "the-stew-pond", "the-standing-water", "the-still-pool", "the-far-mire",
+    // The Gate Arch's outer works (mig 311): the arch stands inside them now.
+    "the-paved-road", "the-road-ruts", "the-outer-ditch", "the-counterscarp",
+    "the-barbican-footings", "the-killing-ground", "the-guard-footings", "the-pay-stone", "the-mounting-block",
+    "the-outer-bailey", "the-bailey-wall", "the-rampart-walk", "the-old-palisade", "the-ward-ditch",
+    "the-turning-bay", "the-tilt-yard", "the-horse-pond", "the-boundary-cross",
   ],
   sunken: [
     // The Wolf Earth (mig 180) — a hole under a root plate, west off the
@@ -1435,6 +1484,10 @@ const QUARTER_ROOMS: Record<string, string[]> = {
     "the-heronry", "the-old-pond", "the-low-mist", "the-still-air", "the-moss-floor",
     "the-drowned-roots", "the-sodden-ground", "the-reed-break", "the-black-alders", "the-alder-carr",
     "the-mire-edge", "the-blind-corner",
+    // The withy holt round the Withy Hut (mig 311).
+    "the-withy-holt", "the-cut-osiers", "the-soaking-pit", "the-willow-stools", "the-bundle-ground",
+    "the-wet-ride", "the-pollard-line", "the-holt-drain", "the-osier-carr", "the-peeling-bank",
+    "the-basket-ground", "the-withy-drain",
   ],
   worked: [
     "the-holly-maze", "the-dry-gully", "the-open-canopy", "the-deer-lawn", "the-lichen-wood",
@@ -1442,6 +1495,10 @@ const QUARTER_ROOMS: Record<string, string[]> = {
     "the-charcoal-ring", "the-fallen-wall", "the-pine-dark", "the-windfall", "the-empty-ride",
     "the-bracken-sea", "the-far-north-turning", "the-last-oaks", "the-thin-soil", "the-north-ride",
     "the-bracken-edge", "the-outer-scrub",
+    // The old felling round the Timber Stack (mig 311).
+    "the-felling-edge", "the-stump-field", "the-hauling-ride", "the-brash-heaps", "the-saw-pit",
+    "the-sawdust-floor", "the-skid-road", "the-axe-stumps", "the-bark-strip", "the-cord-stacks",
+    "the-sawyers-bench", "the-wedge-ground", "the-split-oak", "the-coppice-stools",
   ],
   enclosure: [
     "the-mast-fall", "the-turning-leaves", "the-far-hollow", "the-south-turning", "the-burnt-stand",
@@ -1475,6 +1532,31 @@ const QUARTER_ROOMS: Record<string, string[]> = {
   heart: [
     "the-close-dark", "the-same-tree", "the-turned-ground", "the-listening-stand",
     "the-heart-of-it", "the-hollow-beeches", "the-bounds-house",
+  ],  // THE OLD GROWTH (mig 309, rome 2026-10-19): the wood's west fringe, grown out
+  // along the whole west side so a den can stand in the trees. Wood that was
+  // never felled, under a closed canopy, so it is cover like the deep wood.
+  oldgrowth: [
+    "the-boundary-bank", "the-dry-rise", "the-ward-oak", "the-moss-hall", "the-standing-oaks",
+    "the-burners-flat", "the-windthrow", "the-grass-island", "the-hidden-spring",
+    "the-ferny-bank", "the-dark-pool", "the-spring-mire", "the-wet-oaks", "the-badger-banks",
+    "the-bramble-tunnel", "the-root-hollow", "the-grey-trunks", "the-oak-knees",
+    "the-green-ridge", "the-deep-litter", "the-split-ash", "the-ivy-wall", "the-holly-dark",
+    "the-lichen-stones", "the-dead-stand", "the-fern-floor", "the-hornbeam-gloom",
+    "the-moss-steps", "the-crooked-oaks", "the-dead-air", "the-wych-elms", "the-high-crowns",
+    "the-toadstool-ring", "the-cold-hollow-oaks", "the-woodpecker-stand", "the-yew-shade",
+    "the-tangle", "the-silent-beeches", "the-mossed-wall", "the-owl-oak", "the-leaf-drifts",
+    "the-moss-boulders", "the-leaning-limes", "the-black-oaks", "the-thorn-thicket",
+    "the-old-pollards", "the-sunless-floor", "the-bent-hazels", "the-great-root",
+    "the-dappled-way", "the-deer-browse", "the-cracked-oak", "the-grey-mist", "the-ancient-ash",
+    "the-ground-ivy", "the-snapped-limbs", "the-murk", "the-clean-floor", "the-wolf-run",
+    "the-rot-wood", "the-sunk-way", "the-last-of-the-light", "the-oak-aisle",
+    "the-fallen-crowns", "the-thin-light", "the-holly-wall", "the-lime-stand",
+    "the-rotten-gate", "the-beech-mast", "the-buckled-ground", "the-sapling-crowd",
+    "the-twisted-yews", "the-moss-tunnel", "the-hornets-oak", "the-long-fall",
+    "the-elder-brake", "the-holly-tree", "the-stone-oak", "the-drowned-hollow",
+    "the-grey-stools", "the-wild-cherry", "the-fungus-fall", "the-sloe-thicket",
+    "the-deep-roots", "the-crows-oak", "the-soft-floor", "the-hazel-ride",
+    "the-black-alder-stand", "the-old-boundary-stone", "the-oak-fall-gap", "the-last-oak",
   ],
 };
 for (const quarter in QUARTER_ROOMS) for (const id of QUARTER_ROOMS[quarter]) WOOD_QUARTERS[id] = quarter;
@@ -1536,6 +1618,27 @@ const EAST_QUARTER_ROOMS: Record<string, string[]> = {
     "the-deep-lane", "the-well-house", "the-moss-path",
     "the-sledge-track", "the-winding-house", "the-beck-lane",
     "the-spring-bank", "the-hill-gate", "the-top-wall",
+  ],
+  // THE TWO LANES (rome, 2026-10-19). Caption-only, like the rest of this table:
+  // both are band 'road' for every rule in the sim. The Drove Lane leaves the
+  // West Road at the Dry Well for the wood (regions/the-drove-lane.rooms); the
+  // Scarp Foot track leaves the hill road at the Moss Path for the crossing
+  // (regions/the-scarp-foot-track.rooms).
+  drovelane: [
+    "the-drove-mouth", "the-hollow-lane", "the-hedge-gap", "the-holly-bank",
+    "the-drovers-spring", "the-steep-pitch", "the-blackthorn-lane", "the-wall-end",
+    "the-high-lane", "the-cattle-stance", "the-stony-rise", "the-cairn-shoulder",
+    "the-bent-thorn", "the-sheep-scrape", "the-tops", "the-sheepwalk", "the-dewpond",
+    "the-shepherds-ruin", "the-boundary-dyke", "the-west-brow", "the-brow-path",
+    "the-scree-turn", "the-bracken-hillside", "the-first-oaks", "the-wood-bank", "the-hanger",
+    "the-holly-scarp", "the-spring-line-oaks", "the-wet-margin", "the-seep-edge",
+  ],
+  scarpfoot: [
+    "the-peat-track", "the-under-scarp", "the-fallen-crag", "the-heather-bench",
+    "the-turf-stack-ruin", "the-raven-rock", "the-moor-gate", "the-beck-gully",
+    "the-gully-steps", "the-beck-ford", "the-alder-gill", "the-gully-mouth", "the-rush-levels",
+    "the-old-drain", "the-lapwing-ground", "the-cattle-causey", "the-willow-holt-edge",
+    "the-reed-edge", "the-reed-path", "the-bittern-pool", "the-marsh-sill", "the-causey-foot",
   ],
 };
 export const EAST_QUARTERS: Record<string, string> = {};
@@ -1614,6 +1717,16 @@ export const CROSSING_QUARTER_ROOMS: Record<string, string[]> = {
     "the-hard-standing", "the-wrack-bank", "the-shingle-spit", "the-bridge-strand",
     "the-ferry-strand", "the-ferry-lane", "the-passengers-rest", "the-toll-board",
     "the-capstan-round", "the-tar-shed", "the-boat-graves",
+  ],
+  // THE SALTINGS (mig 310, rome 2026-10-19): salt marsh and dunes above the
+  // ford's tidal flats, dry at every hour.
+  saltings: [
+    "the-high-water-mark", "the-salt-workings", "the-sea-purslane", "the-crooked-creek",
+    "the-sea-lavender", "the-samphire-flats", "the-storm-ridge", "the-wide-creek",
+    "the-grey-marsh", "the-cord-grass", "the-saltmarsh-pools", "the-redshank-ground",
+    "the-drained-creek", "the-samphire-island", "the-old-sea-bank", "the-white-dunes",
+    "the-dune-slack", "the-marram-sea", "the-blowout", "the-dune-ridge", "the-sea-buckthorn",
+    "the-grey-dunes",
   ],
 };
 export const CROSSING_QUARTERS: Record<string, string> = {};
@@ -1822,7 +1935,8 @@ export const MAP_QUARTERS: Record<string, string> = { ...WOOD_QUARTERS, ...EAST_
 // cover lines were written about in the first place (mig 184 moved them out into
 // their own quarter, and cover has to move with them or the rain starts falling
 // through the thickest wood in the world).
-const COVER_QUARTERS = new Set(["deepwood", "sunken", "heart"]);
+// The Old Growth (mig 309) is cover too: never felled, the canopy closed overhead.
+const COVER_QUARTERS = new Set(["deepwood", "sunken", "heart", "oldgrowth"]);
 
 /** Does this room have canopy enough to keep the rain off what stands under it? */
 export function underCover(roomId: string): boolean {
@@ -1833,6 +1947,36 @@ export function underCover(roomId: string): boolean {
 // after this file is most of them — so this is what the wood mostly sounds like,
 // and it is written to be somewhere rather than to be atmospheric.
 export const QUARTER_AMBIENCE: Record<string, string[]> = {
+  // ---- THE NEW GROUND OF 2026-10-19 (migs 309-312).
+  oldgrowth: [
+    "Somewhere a long way off a branch lets go, and the fall of it comes to you through the trunks a long time after.",
+    "Nothing has been cut here. You can tell by the dead: every tree that ever fell is still lying where it fell.",
+    "The canopy moves overhead in a wind you cannot feel down here, and the light on the floor moves with it.",
+    "A woodpecker drums somewhere, stops, and drums again further off, as if it were leading you or leaving you.",
+    "The leaf-mould gives under your boot with a soft sound, and a smell comes up out of it that is older than the trees.",
+    "A deer barks once, out of sight, and the whole wood goes still to listen to what it saw.",
+  ],
+  saltings: [
+    "A curlew calls somewhere out on the marsh, long and rising, and another answers it from further off.",
+    "The tide is working in the creeks. You can hear it filling them, a whisper everywhere at once.",
+    "Wind off the sea combs the grass flat in long silver waves, and then lets it up again.",
+    "Sand hisses across the top of a dune and comes down the lee side in a thin bright stream.",
+    "Gulls go over high, heading inland, all of them crying, which means weather.",
+  ],
+  drovelane: [
+    "A sheep bell, somewhere, once. There are no sheep up here any more.",
+    "The wind comes over the hill in long gusts, and between them it is so quiet you can hear the grass.",
+    "Larks go up off the turf ahead of you and hang, singing, over the place they left.",
+    "The hedge banks are full of small sounds that stop as you come level with them and start again behind.",
+    "Hoofprints in the mud of the lane, cloven, a lot of them, all going the same way, all old but the last few.",
+  ],
+  scarpfoot: [
+    "A stone comes down the scarp somewhere above you, knocking from ledge to ledge, and stops.",
+    "Ravens talk on the face of the scarp in a language that is almost words.",
+    "The smell of the sea comes up off the levels on the wind, salt and weed and mud.",
+    "Plovers cry out over the wet ground, tumbling, and settle again when nothing follows.",
+    "The beck is louder for a moment as the wind turns, and then falls back to a murmur.",
+  ],
   // ---- THE OPEN GROUND'S FOUR (mig 193).
   siegelines: [
     "The earthworks run away in long grassed lines, and from down in them you cannot see out, which was the point.",
@@ -2099,6 +2243,7 @@ export const QUARTER_AMBIENCE: Record<string, string[]> = {
 // quarter answers by touch and sound and smell — never sight, since you
 // genuinely cannot see. Read after DARK_TOUCH's own per-room entries.
 export const QUARTER_DARK: Record<string, string> = {
+  oldgrowth: "Your hand finds a trunk, and then cannot find the other side of it however far you reach. The floor is deep and soft and full of fallen wood that nobody has ever cleared, and the air is still and cool and smells of moss.",
   heath: "Open ground, and you can tell by the wind: it comes at you from one side without interruption, and there is nothing at arm's reach in any direction. Sand and heather underfoot, dry, and it gives back a little with each step.",
   holding: "Your hand finds worked stone at about hip height — a wall, or the stub of one, squared on the face and rounded at the edge. Grass over flags underfoot, and the flags are laid in courses you can follow with a boot.",
   sunken: "The air is close and unmoving and smells of clay. There is a ceiling here — you can feel it in how sound comes back — and when you reach up, what you find is roots, woven tight, and cold water beading on them.",

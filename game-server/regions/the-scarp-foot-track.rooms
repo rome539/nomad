@@ -1,0 +1,131 @@
+# THE SCARP FOOT TRACK (rome, 2026-10-19). The crossing's second way in.
+#
+# Until now the crossing, and the whole mountain behind it, hung off one door:
+# the Far Shore Stone at the end of the east road, down into the Shore Descent.
+# This is another, from the east road's hill country: east from the Moss Path
+# along the foot of the scarp on the old peat track, down a gully by the beck,
+# and across the wet levels into the reed, joining the crossing's causeys at
+# the Causey End in the south marsh. Twenty-two rooms, drawn true. The hill end
+# is twenty-two steps from a gate and the marsh end thirteen, and it is long
+# enough to bring nothing closer to a gate; fourteen of its rooms are den
+# ground. One water on it, the Beck Ford. No creature has a home on it (rome).
+
+!region road
+
+## the-moss-path | attachment: the way off the road
+!existing
+> east the-peat-track
+
+## the-causey-end | attachment: where the way comes in
+!existing
+> west the-causey-foot
+
+## the-peat-track | The Peat Track
+A track leaves the hill road here, two wheel ruts in the turf with a strip of grass between, made by carts that came up for peat and went down loaded. It runs east along the foot of the scarp. Nobody has cut peat here in a lifetime.
+> west the-moss-path
+> east the-under-scarp
+
+## the-under-scarp | The Under-Scarp
+The scarp stands up on your left like a wall, grey rock and heather and hanging birch, and the track runs along the foot of it on the line where the rock meets the moor. Stones lie in the heather, fallen from above. Some of them are recent.
+> west the-peat-track
+> east the-fallen-crag
+
+## the-fallen-crag | The Fallen Crag
+A piece of the scarp the size of a barn has come down across the track at some time and lies broken in the heather, and the track goes round it. In its shadow the ground is damp and the grass is long. Something has made a bed against the rock.
+> west the-under-scarp
+> east the-heather-bench
+
+## the-heather-bench | The Heather Bench
+A broad shelf of heather under the scarp, purple-brown and springy, with the track a pale line through it. The wind comes along the face of the scarp and the heather bends to it all one way. Grouse go up from under your feet.
+> west the-fallen-crag
+> east the-turf-stack-ruin
+
+## the-turf-stack-ruin | The Turf-Stack Ruin
+A long low mound beside the track where cut peats were stacked to dry and never collected, gone back to the moor, heathered over and soft. It is the shape of a stack still. Holes go into it at the bottom.
+> west the-heather-bench
+> east the-raven-rock
+
+## the-raven-rock | The Raven Rock
+A buttress of the scarp juts out over the track here, black and dripping, and ravens nest on a ledge high up its face. They watch you pass. One of them says something about it, and the scarp says it back.
+> west the-turf-stack-ruin
+> east the-moor-gate
+
+## the-moor-gate | The Moor Gate
+Two stone posts stand on the moor where a wall once crossed the track, the wall long gone back into the heather, the posts still upright with the iron of a gate hinge rusted into one of them. The track goes between them out of habit.
+> west the-raven-rock
+> east the-beck-gully
+
+## the-beck-gully | The Beck Gully
+The track turns off the moor and goes down into the head of a gully cut into the scarp's foot, where a beck has worn a way down through the rock. The sides close in. The sound of water starts somewhere below.
+> west the-moor-gate
+> south the-gully-steps
+
+## the-gully-steps | The Gully Steps
+The way goes down the gully in a stair of wet rock and roots, the beck beside it falling in short white drops from pool to pool. Ferns grow out of every crack. It is cold in here and the light is green.
+> north the-beck-gully
+> south the-beck-ford
+
+## the-beck-ford | The Beck Ford
+The beck runs across the way in a broad shallow ford over flat stones, clear and quick and ice-cold, and everything that uses this gully stops here to drink. The mud at both edges is printed all over. The water does not care whose prints they are.
+> north the-gully-steps
+> south the-alder-gill
+
+## the-alder-gill | The Alder Gill
+Alders crowd the bottom of the gully along the beck, their roots in the water, their trunks green with moss. The way goes along under them on a bank of stones. The gully opens out ahead, and the light grows.
+> north the-beck-ford
+> south the-gully-mouth
+
+## the-gully-mouth | The Gully Mouth
+The gully opens out onto the levels here, the beck spreading into a fan of stones and then losing itself in rushes. Behind, the scarp. Ahead, flat land to the edge of sight, green and wet and empty, and the smell of salt.
+> north the-alder-gill
+> east the-rush-levels
+
+## the-rush-levels | The Rush Levels
+Flat wet grazing, gone to rush, the ground soft and tussocky underfoot, cut by drains you only see when you are at the edge of them. The way is a line of firmer ground that bends where the drains do. The sea is somewhere ahead.
+> west the-gully-mouth
+> east the-old-drain
+
+## the-old-drain | The Old Drain
+A drain dug straight across the levels long ago to carry the water off to the sea, choked now with weed and reed and running slow and brown. A plank bridge crosses it, the planks gone soft. On the far bank the ground is wetter.
+> west the-rush-levels
+> east the-lapwing-ground
+
+## the-lapwing-ground | The Lapwing Ground
+Open wet grass where plovers nest, and they go up all round you crying, tumbling in the air, diving at your head. They will follow you to the edge of their ground and leave you there. Beyond it, the reed begins.
+> west the-old-drain
+> east the-cattle-causey
+
+## the-cattle-causey | The Cattle Causey
+A causeway of packed stone and turf runs across the softest part of the levels, raised a foot above the wet, built for driving beasts across to the marsh grazing. It is narrow. Water stands on both sides of it.
+> west the-lapwing-ground
+> east the-willow-holt-edge
+
+## the-willow-holt-edge | The Willow Edge
+Low willows grow in a ragged line across the levels where the fresh water meets the salt, grey-leaved and bent over by the wind off the sea. The causey goes through a gap in them. On the far side everything is reed.
+> west the-cattle-causey
+> east the-reed-edge
+
+## the-reed-edge | The Reed Edge
+The reed starts here, a wall of it, taller than you, rustling, the causey going into it like a road into a wood. Inside, you can see nothing but reed and sky. The sound of the sea is louder, and so is the sound of birds.
+> west the-willow-holt-edge
+> east the-reed-path
+
+## the-reed-path | The Reed Path
+A path through the reed, cut and kept by somebody once, now narrowing as the reed comes back in from both sides. The ground under it is wet. Things move in the reed beside you, and go still when you stop.
+> west the-reed-edge
+> east the-bittern-pool
+
+## the-bittern-pool | The Bittern Pool
+The reed opens round a pool of brown water, still and deep-looking, with a fringe of floating weed. Something booms from the far side, low and hollow, like breath across the top of a jar. You cannot see it. It goes on.
+> west the-reed-path
+> east the-marsh-sill
+
+## the-marsh-sill | The Marsh Sill
+A low sill of firm ground runs out into the marsh between the reed and the open water, the last solid ground before the causeys. The crossing's channels are close now: the smell, the gulls, the sound of the tide working in the creeks.
+> west the-bittern-pool
+> east the-causey-foot
+
+## the-causey-foot | The Causey Foot
+The sill ends at the foot of the crossing's causeys, the old wooden ways laid across the marsh, and the path you came by joins them here. Behind you the reed, and the levels, and the scarp, a long way back. Ahead, the crossing.
+> west the-marsh-sill
+> east the-causey-end
