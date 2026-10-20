@@ -1136,6 +1136,9 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #sky[data-sky="wet-dawn"]  { filter: brightness(.44) saturate(.60) contrast(1.04); }
   #sky-drift > i { position: absolute; display: block; background-size: 100% 100%; background-repeat: no-repeat; }
   #sky-stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
+  /* THE SKY'S LIFE (skyLife): far birds over the sky, inside #sky so the scene hides them behind its skyline */
+  /* z-index 1: over the drifting sky and its stars whichever of them was built first */
+  #sky-life { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: none; pointer-events: none; z-index: 1; }
   /* AGREEING THE GROUND WITH THE SKY. A borrowed scene is the right place under
      the wrong light: the day stone under a dusk sky is still lit for noon, and
      the eye reads the mismatch instantly. These bring it into line — dim and
@@ -3492,7 +3495,10 @@ var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3,
   // ...and the armour family's when the warden's redraw took him from 30 to 31.
   "the-long-warden": 1, "last-watchman": 0.826,
   // ...and the three living men when they went to 32 to stand as tall as the nomad.
-  "cutthroat": 1, "strand-thief": 1, "road-carrier": 0.966 };
+  "cutthroat": 1, "strand-thief": 1, "road-carrier": 0.966,
+  // ...and the voices that would have moved when the wrecker went to 30 and the
+  // bellfounder to 31 to hold their redraws at their live height.
+  "footpad": 1, "wayman": 1, "the-herd": 1, "the-bellfounder": 1, "the-sapper": 1.103 };
 var VOICE_PITCH = null;
 // Worked out on first use: MOB_SPRITE is further down the page than this.
 function voicePitch(id) {
@@ -5465,6 +5471,7 @@ async function connect() {
       lastRoomName = f.room || "";
       if (f.art) grantArt();
       lastEcl = f.ecl ? 1 : 0;
+      lastBow = f.bow ? 1 : 0;
       paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red, f.covered, f.nt);
       roomEl.textContent = "";
       if (f.room) {
@@ -9695,7 +9702,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "100";      // /mob/      strips and their eye layers
+var MOB_V  = "104";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -11455,11 +11462,298 @@ var skyDrift = (function () {
   }
   if (document.addEventListener) document.addEventListener("visibilitychange", run);
   if (still.addEventListener) still.addEventListener("change", run);
-  return { show: show, refit: function () { geo = null; run(); } };
+  return { show: show, refit: function () { geo = null; run(); }, dir: function () { return dir; } };
+})();
+// THE SKY HAS LIFE IN IT (rome, 2026-10-20). Birds far off, a drake now and
+// then, and a rainbow when a sky clears off the rain. AMBIENCE FIRST: for now what flies
+// is drawn from the region and the hour, not from the creatures actually aloft;
+// tying it to the real ones is the second step and this is built to take it.
+//
+// The birds are rome's own sheets - every flier's wings-up and glide frames,
+// shrunk to a few pixels and filled flat as a silhouette against the sky. They
+// live on a canvas inside #sky, so the scene in front hides them behind every
+// hill, roof and tree for free; they only ever show through the open sky.
+// Daylight and the low hours only: at night, in fog, rain or snow they are down.
+//
+// THE RAINBOW (rome, 2026-10-20) is the server's: a ground whose sky clears off
+// the rain sometimes carries one for a while (events.rainbowOver, sent as bow).
+// It is drawn on the same canvas, under the birds, so its feet go down behind
+// the hills like a real one. It fades in and out rather than popping. (A cloud
+// shadow on the ground was tried here first and taken out: rome did not like it.)
+// keyed by the WEATHER, not the picture: rain, fog and the wet hours all wear
+// the after-rain picture, and nothing is flying in those
+var SKY_LIFE_HOURS = { day: "28,32,40", dawn: "34,26,28", dusk: "26,20,20", "after-rain": "34,38,44" };
+var RAINBOW_HOURS = { day: 1, dawn: 1, dusk: 1 };
+// Per region: who flies, how, how big (wingspan as a share of the picture's
+// height, far off) and how often. kind is a flock crossing, a lone bird crossing,
+// or a bird circling high and drifting off.
+var SKY_LIFE = {
+  crossing: [
+    { id: "great-gull", kind: "lone", size: [0.03, 0.055], w: 3, glide: .7 },
+    { id: "black-backed-gull", kind: "flock", n: [2, 5], size: [0.0275, 0.05], w: 3, glide: .65 },
+    { id: "oystercatcher", kind: "flock", n: [4, 9], size: [0.0175, 0.03], w: 2, glide: .15 },
+    { id: "bittern", kind: "lone", size: [0.03, 0.045], w: .5, glide: .3 },
+  ],
+  mountain: [
+    { id: "mountain-chough", kind: "flock", n: [3, 8], size: [0.02, 0.035], w: 3, glide: .35 },
+    { id: "scarp-raven", kind: "lone", size: [0.0275, 0.045], w: 2, glide: .4 },
+    { id: "hill-eagle", kind: "circle", size: [0.03, 0.036], w: 2, glide: .95 },
+    { id: "bone-breaker", kind: "circle", size: [0.034, 0.04], w: .7, glide: .97 },
+    { id: "the-drake", kind: "lone", size: [0.045, 0.052], w: .25, glide: .5, slow: 1, steady: 1 },
+  ],
+  road: [
+    { id: "gibbet-crow", kind: "flock", n: [3, 7], size: [0.02, 0.0375], w: 3, glide: .25 },
+    { id: "scarp-raven", kind: "lone", size: [0.0275, 0.0425], w: 1.5, glide: .4 },
+    { id: "carrion-vulture", kind: "circle", size: [0.032, 0.038], w: 1.5, glide: .97 },
+    { id: "the-drake", kind: "lone", size: [0.045, 0.052], w: .1, glide: .5, slow: 1, steady: 1 },
+  ],
+  wood: [
+    { id: "gibbet-crow", kind: "flock", n: [3, 8], size: [0.02, 0.035], w: 3, glide: .25 },
+    { id: "hill-eagle", kind: "circle", size: [0.03, 0.036], w: .8, glide: .95 },
+  ],
+  den: [
+    { id: "gibbet-crow", kind: "flock", n: [3, 7], size: [0.02, 0.0375], w: 3, glide: .25 },
+    { id: "carrion-vulture", kind: "circle", size: [0.032, 0.038], w: 1.2, glide: .97 },
+    { id: "the-drake", kind: "lone", size: [0.045, 0.052], w: .1, glide: .5, slow: 1, steady: 1 },
+  ],
+};
+var skyLife = (function () {
+  var cv = null, cx = null;
+  var hour = "", band = "", ink = "", frame = null, stamp = 0, t = 0, dir = 1;
+  var w = 0, h = 0, dpr = 1, flyers = [], next = 0;
+  var bow = 0, bowA = 0, bowX = .5, bowCv = null, dt = 0;   // the rainbow: wanted, how far faded in, where
+  var art = {};   // id -> { img, up, glide } once the strip is in and trimmed
+  var still = typeof window !== "undefined" && window.matchMedia
+    ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function build() {
+    if (cv) return true;
+    if (!skyEl || !document.createElement) return false;
+    cv = document.createElement("canvas"); cv.id = "sky-life"; cx = cv.getContext && cv.getContext("2d");
+    skyEl.appendChild(cv);
+    return !!cx;
+  }
+  function birds() { return !!SKY_LIFE_HOURS[hour] && !!SKY_LIFE[band]; }
+  function bowing() { return !!RAINBOW_HOURS[hour] && (bow || bowA > 0); }
+  function active() { return (birds() || bowing()) && viewMode === "image" && !document.hidden && !still.matches; }
+  function stop() {
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null; stamp = 0;
+    if (cv) cv.style.display = "none";
+  }
+  function refit() {
+    if (!cv) return;
+    var r = skyEl.getBoundingClientRect();
+    w = r.width; h = r.height;
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.max(1, Math.round(w * dpr)); cv.height = Math.max(1, Math.round(h * dpr));
+    bowCv = null;
+  }
+  // A strip's wings-up and glide frames, trimmed to the bird and kept as flat
+  // silhouettes in the current sky's ink.
+  function load(id) {
+    if (art[id]) return art[id].ready ? art[id] : null;
+    var spec = MOB_ANIM[id]; if (!spec || spec.f.up === undefined || spec.f.glide === undefined) { art[id] = { ready: false, bad: 1 }; return null; }
+    var a = art[id] = { ready: false, spec: spec, img: new Image(), ink: "" };
+    a.img.onload = function () { a.ready = true; };
+    a.img.src = "/mob/" + id + ".webp?v=" + MOB_V;
+    return null;
+  }
+  // box: crop to this [x0, x1, y0, y1] instead of the frame's own outline
+  function frameBox(a, k) {
+    var n = a.spec.n, fw = a.img.width / n, fh = a.img.height;
+    var c = document.createElement("canvas"); c.width = Math.round(fw); c.height = fh;
+    var g = c.getContext("2d"); g.drawImage(a.img, -Math.round(k * fw), 0);
+    var d = g.getImageData(0, 0, c.width, c.height).data, x0 = c.width, x1 = 0, y0 = fh, y1 = 0;
+    for (var y = 0; y < fh; y += 2) for (var x = 0; x < c.width; x += 2) if (d[(y * c.width + x) * 4 + 3] > 100) {
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    return { c: c, b: [x0, x1, y0, y1] };
+  }
+  function cut(a, k, box) {
+    var fb = frameBox(a, k), c = fb.c, bb = box || fb.b, x0 = bb[0], x1 = bb[1], y0 = bb[2], y1 = bb[3];
+    if (x1 <= x0) return null;
+    // a master 96 px across: big enough to stay clean when drawn at a few
+    // pixels, small enough to cost nothing
+    var bw = x1 - x0 + 2, bh = y1 - y0 + 2, s = 96 / bw;
+    var m = document.createElement("canvas"); m.width = 96; m.height = Math.max(1, Math.round(bh * s));
+    var mg = m.getContext("2d"); mg.drawImage(c, x0, y0, bw, bh, 0, 0, m.width, m.height);
+    mg.globalCompositeOperation = "source-in"; mg.fillStyle = "rgb(" + ink + ")"; mg.fillRect(0, 0, m.width, m.height);
+    return m;
+  }
+  // THE DRAKE'S BODY HOLDS STILL (rome, 2026-10-20). Each frame used to be cut
+  // to its own outline and stretched to the same width, so the narrower
+  // wings-up frame drew the body about a sixth bigger and off to one side, and
+  // the whole animal jumped on every beat. In the strip the two frames hold the
+  // body in the same place at the same scale, so a bird marked steady has both
+  // frames cut to ONE box - the two outlines together - and keeps that.
+  function masters(a, steady) {
+    if (a.ink !== ink) {
+      var box = null;
+      if (steady) {
+        var u = frameBox(a, a.spec.f.up).b, g = frameBox(a, a.spec.f.glide).b;
+        box = [Math.min(u[0], g[0]), Math.max(u[1], g[1]), Math.min(u[2], g[2]), Math.max(u[3], g[3])];
+      }
+      a.up = cut(a, a.spec.f.up, box); a.glide = cut(a, a.spec.f.glide, box); a.ink = ink;
+    }
+    return a.up && a.glide;
+  }
+  // ?skybird=<id> on the address flies only that one (to look at the rare ones,
+  // the drake above all, without waiting on the dice); nobody else sets it
+  var only = typeof location !== "undefined" ? ((location.search || "").match(/[?&]skybird=([a-z-]+)/) || [])[1] || "" : "";
+  // ONE OF EACH, AND ONE BIG BIRD (rome, 2026-10-20: two drakes at once). Two
+  // flights can be up together, and each picked its bird blind, so the sky
+  // could hold two drakes or two eagles circling side by side. A bird already
+  // up is not picked again, and while a raptor or the drake is up no second
+  // one of those comes - the flocks and the small lone birds are free.
+  function big(e) { return e.kind === "circle" || !!e.slow; }
+  function pick() {
+    var pool = SKY_LIFE[band], ok = [], tot = 0, i, j;
+    var bigUp = flyers.some(function (f) { return big(f.e); });
+    for (i = 0; i < pool.length; i++) {
+      var e = pool[i], up = false;
+      for (j = 0; j < flyers.length; j++) if (flyers[j].e.id === e.id) up = true;
+      if (up || (bigUp && big(e)) || (only && e.id !== only)) continue;
+      ok.push(e); tot += e.w;
+    }
+    if (!ok.length) return null;
+    var r = Math.random() * tot;
+    for (i = 0; i < ok.length; i++) { r -= ok[i].w; if (r <= 0) return ok[i]; }
+    return ok[ok.length - 1];
+  }
+  function spawn(early) {
+    var e = pick(); if (!e) return;
+    load(e.id);
+    var size = h * rnd(e.size[0], e.size[1]), d = Math.random() < .5 ? -1 : 1;
+    var near = (size / h - e.size[0]) / Math.max(.001, e.size[1] - e.size[0]);
+    var f = { e: e, size: size, d: d, t0: t, alpha: e.kind === "circle" || e.slow ? .62 : .5 + .35 * near, birds: [] };
+    var count = e.kind === "flock" ? Math.round(rnd(e.n[0], e.n[1] + .99)) : 1, spread = size * (2.2 + count * .5);
+    for (var i = 0; i < count; i++) f.birds.push({
+      dx: i ? rnd(-1, 1) * spread : 0, dy: i ? rnd(-.45, .45) * spread : 0,
+      ph: Math.random() * 6.3, hz: (e.slow ? 1.1 : 3.2) * rnd(.85, 1.15), gl: Math.random() * 9,
+    });
+    if (e.kind === "circle") {
+      f.dur = rnd(28, 48); f.cx = w * rnd(.18, .82); f.cy = h * rnd(.13, .21);
+      f.rx = w * rnd(.035, .07); f.ry = f.rx * rnd(.28, .4); f.spin = 6.283 / rnd(11, 17) * d; f.drift = w * rnd(.08, .18) * d / f.dur;
+    } else {
+      // smaller reads as farther, and farther crosses slower
+      f.dur = rnd(26, 48) * (1.35 - .5 * near) * (e.slow ? 1.4 : 1);
+      f.y = h * rnd(.12, .25); f.rise = h * rnd(-.03, .03);
+    }
+    if (early) f.t0 -= f.dur * rnd(.15, .55);
+    flyers.push(f);
+  }
+  function place(f, b, u) {
+    if (f.e.kind === "circle") {
+      var a = (t - f.t0) * f.spin + b.ph;
+      return [f.cx + f.drift * (t - f.t0) + Math.cos(a) * f.rx + b.dx, f.cy + Math.sin(a) * f.ry + b.dy, -Math.sin(a) * f.spin >= 0 ? 1 : -1];
+    }
+    var m = w * .08 + f.size * 6, x = f.d > 0 ? -m + (w + 2 * m) * u : w + m - (w + 2 * m) * u;
+    return [x + b.dx, f.y + f.rise * u + Math.sin(t * .7 + b.ph) * f.size * .25 + b.dy, f.d];
+  }
+  // One glide silhouette in three pieces: the body still, each wing turned on its
+  // shoulder by ang (radians, up positive). The wing pieces reach a little into
+  // the body so no gap opens at the joint as they swing.
+  function drawBirds() {
+    var c = cx;
+    if (!birds()) return;
+    if (t >= next) { if (flyers.length < 2) spawn(false); next = t + rnd(9, 34); }
+    for (var i = flyers.length - 1; i >= 0; i--) {
+      var f = flyers[i], u = (t - f.t0) / f.dur;
+      if (u >= 1) { flyers.splice(i, 1); continue; }
+      var a = load(f.e.id); if (!a || !masters(a, f.e.steady)) continue;
+      // a circling bird comes and goes in the open sky, so it fades rather than pops
+      var fade = f.e.kind === "circle" ? Math.min(1, (t - f.t0) / 2.5, (f.t0 + f.dur - t) / 2.5) : 1;
+      c.globalAlpha = Math.max(0, f.alpha * fade);
+      for (var j = 0; j < f.birds.length; j++) {
+        var b = f.birds[j], p = place(f, b, u);
+        // flapping and gliding in turns: a glider holds its wings far longer
+        var gliding = Math.sin(t * .45 + b.gl) < f.e.glide * 2 - 1;
+        var m = gliding || Math.sin(t * b.hz * 6.283 + b.ph) < 0 ? a.glide : a.up;
+        var bw = f.size, bh = bw * m.height / m.width;
+        c.save(); c.translate(p[0], p[1]); if (p[2] < 0) c.scale(-1, 1);
+        c.drawImage(m, -bw / 2, -bh / 2, bw, bh); c.restore();
+      }
+    }
+    c.globalAlpha = 1;
+  }
+  // The bow itself, drawn once per size into its own canvas: seven soft bands,
+  // red outside, on an arc whose centre sits under the horizon so only the top
+  // of it stands in the sky and its feet go behind the land.
+  function bowArt() {
+    if (bowCv) return bowCv;
+    var k = document.createElement("canvas"); k.width = cv.width; k.height = cv.height;
+    var g = k.getContext("2d"); if (!g) return null;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var R = h * .9, X = bowX * w, Y = h * 1.05, band = R * .075;
+    var cols = ["255,70,60", "255,150,50", "255,230,90", "90,210,110", "70,150,255", "90,90,220", "160,90,210"];
+    if (g.filter !== undefined) g.filter = "blur(" + Math.max(1, Math.round(band / 9)) + "px)";
+    g.lineWidth = band / cols.length * 1.5;
+    for (var i = 0; i < cols.length; i++) {
+      g.strokeStyle = "rgba(" + cols[i] + ",.17)";
+      g.beginPath(); g.arc(X, Y, R - band * (i + .5) / cols.length, Math.PI, 2 * Math.PI); g.stroke();
+    }
+    return (bowCv = k);
+  }
+  function drawBow() {
+    if (!RAINBOW_HOURS[hour]) { bowA = 0; return; }
+    // it comes and goes over half a minute, like the light that makes it
+    bowA = Math.max(0, Math.min(1, bowA + (bow ? 1 : -1) * dt / 30));
+    if (bowA <= 0) return;
+    var k = bowArt(); if (!k) return;
+    cx.setTransform(1, 0, 0, 1, 0, 0);
+    cx.globalAlpha = bowA * (hour === "day" ? 1 : .7);
+    cx.drawImage(k, 0, 0);
+    cx.globalAlpha = 1;
+  }
+  function tick(now) {
+    frame = null;
+    if (!active()) { stop(); return; }
+    if (stamp && now - stamp < 33) { frame = requestAnimationFrame(tick); return; }
+    dt = stamp ? Math.min(.2, (now - stamp) / 1000) : 0;
+    t += dt;
+    stamp = now;
+    if (!w) refit();
+    if (w && h) {
+      cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, w, h);
+      drawBow(); cx.setTransform(dpr, 0, 0, dpr, 0, 0); drawBirds();
+    }
+    frame = requestAnimationFrame(tick);
+  }
+  function run() {
+    if (!active() || !build()) { stop(); return; }
+    cv.style.display = birds() || bowing() ? "block" : "none";
+    // A ROOM MAY TURN ITS SKY ROUND (mirrored, flipped, both) and the birds live
+    // inside it - flipped upside down they flew under the ground. Every turn is
+    // its own inverse, so the same transform on this layer puts them right way up.
+    cv.style.transform = skyEl.style.transform || "";
+    if (frame === null) { stamp = 0; tick(performance.now()); }
+  }
+  // The sky picture the room put up (as its url, "" for none: indoors, or a
+  // roof), the weather it stands for, the region, and whether a rainbow stands.
+  function show(url, cond, region, rainbow) {
+    var nh = url ? cond || "" : "", nb = region || "";
+    bow = url && rainbow ? 1 : 0;
+    if (nh !== hour || nb !== band) {
+      // (the top bar lies over the top of the picture, so nothing flies higher than
+  // about an eighth of the way down - it would be up under the bar)
+  // a new sky or new ground is a new afternoon: clear what was flying and
+      // let something be already up there about half the time
+      // walking into a room under a rainbow finds it already up
+      hour = nh; band = nb; flyers = []; t = 0; next = rnd(6, 20); bowA = bow; bowX = rnd(.3, .7); bowCv = null;
+      ink = SKY_LIFE_HOURS[hour] || ""; dir = skyDrift.dir();
+      if (build()) { refit(); if (birds() && Math.random() < .55) spawn(true); }
+    }
+    run();
+  }
+  if (document.addEventListener) document.addEventListener("visibilitychange", run);
+  if (still.addEventListener) still.addEventListener("change", run);
+  return { show: show, refit: function () { if (cv) { refit(); run(); } } };
 })();
 var viewBtn = null;   // built only for a granted key, see buildViewRow
 var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
 var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "";
+var lastBow = 0;   // a rainbow over this sky, from the server (events.rainbowOver)
 // Whether the moon is red, kept apart from which sky is painted - see the
 // note beside "red" in zone.ts. Weather decides the picture; the moon decides
 // the eyes, and reading both off one value put the eyes out in any fog.
@@ -12155,6 +12449,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       skyEl.style.transform = turn;
       fitSky();
       if (typeof skyDrift !== "undefined") skyDrift.show(sky);
+      if (typeof skyLife !== "undefined") skyLife.show(sky, lastSky, lastBand, typeof lastBow !== "undefined" ? lastBow : 0);
     }
     // No overlay on a layered room — the sky is real. The only thing that
     // changes is how the ground is lit, and that is a filter that respects the cut.
@@ -12963,7 +13258,7 @@ var MOB_SPRITE = {
   "the-bridge-mason": 29,
   "the-fowler": 27,        // drawn broad in the reed cloak, so the number comes down
   "the-scaffold-hand": 35, // hangs in a harness: a tall cell with a man across the middle of it
-  "the-wrecker": 28,       // the densest sheet of the twelve, and the largest figure of them
+  "the-wrecker": 30,       // the densest sheet of the twelve, and the largest figure of them
   // ---- the beasts, each against its own kind --------------------------------
   "bull-seal": 12,         // forty stone, against the grey seal at 23
   "a-lymer": 11,           // stands with a hill wolf, which is what the prose claims
@@ -13029,7 +13324,7 @@ var MOB_SPRITE = {
   "the-woodward": 40,
   "the-keeper-of-the-holding": 32,
   "gibbet-crow": 6,
-  "the-bellfounder": 28,
+  "the-bellfounder": 31,
   "the-sapper": 23,
   "the-chainman": 31,      // 28 until his redraw came out smaller
   "the-gaunt": 34,
@@ -13068,11 +13363,11 @@ var MOB_ANIM = {
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-woodward":                { n: 8, aspect: 1.014, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-sapper":                  { n: 8, aspect: 1.014, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-keeper-of-the-holding":   { n: 8, aspect: 1.007, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-keeper-of-the-holding":   { n: 8, aspect: 0.986, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-gaunt":                   { n: 8, aspect: 1.005, f: {"idle":0,"alert":1,"cast-about":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-follower":                { n: 9, aspect: 1.158, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
   "the-chainman":                { n: 9, aspect: 0.988, f: {"idle":0,"count-it-out":1,"mark-it-down":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"coil-the-chain":7,"death":8} },
-  "the-bellfounder":             { n: 8, aspect: 0.988, f: {"idle":0,"rake-the-melt":1,"watch":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-bellfounder":             { n: 8, aspect: 0.929, f: {"idle":0,"rake-the-melt":1,"watch":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "something-ahead":             { n: 9, aspect: 1.103, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
   "root-thing":                  { n: 8, aspect: 1.035, f: {"idle":0,"alert":1,"listen":2,"shift-the-weight":3,"feed":4,"attack":5,"sweep":6,"death":7} },
   "old-boar":                    { n: 8, aspect: 1.294, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -13094,8 +13389,8 @@ var MOB_ANIM = {
   "verdigris-thing":   { n: 9, aspect: 1.036, f: {"idle":0,"lay-on-the-hand":1,"seek-the-metal":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "rag-and-bone":   { n: 8, aspect: 0.978, f: {"idle":0,"take-it-up":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "drowned-god":   { n: 8, aspect: 0.991, f: {"idle":0,"keep-the-seat":1,"take-hold":2,"lift-you-clear":3,"alert":4,"attack":5,"recover":6,"death":7} },
-  "drowned-hulk":   { n: 8, aspect: 1.059, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
-  "the-drowned":   { n: 8, aspect: 1.066, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"listen":6,"death":7} },
+  "drowned-hulk":   { n: 8, aspect: 0.951, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-drowned":   { n: 8, aspect: 0.932, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"listen":6,"death":7} },
   "marrow-king":   { n: 8, aspect: 1.047, f: {"idle":0,"keep-the-seat":1,"rise":2,"take-hold":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "thrice-dead":   { n: 8, aspect: 1.053, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "twice-dead":   { n: 9, aspect: 0.97, f: {"idle":0,"rise":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
@@ -13138,7 +13433,7 @@ var MOB_ANIM = {
   "the-drover":             { n: 9, aspect: 1.157, f: {"idle":0,"drive-the-road":1,"lean-on-the-stick":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-bridge-mason":       { n: 8, aspect: 0.98, f: {"idle":0,"dress-the-stone":1,"test-the-joint":2,"alert":3,"move-a":4,"move-b":5,"sweep":6,"death":7} },
   "bull-seal":              { n: 8, aspect: 1.279, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
-  "the-wrecker":    { n: 8, aspect: 1.014, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
+  "the-wrecker":    { n: 8, aspect: 0.944, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
   "the-fowler":     { n: 8, aspect: 1.603, f: {"idle":0,"rise-from-the-turf":1,"watch-the-sky":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "strand-thief":   { n: 9, aspect: 1, f: {"idle":0,"watch":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"alert":6,"attack":7,"death":8} },
   "the-great-crab":   { n: 8, aspect: 1.503, f: {"idle":0,"alert":1,"attack":2,"death":3,"recover":4,"rest":5,"bite":6,"sweep":7} },
@@ -13891,6 +14186,7 @@ function fitPicture() {
   document.body.style.setProperty("--botth", bott + "px");
   fitSky();
   if (typeof skyDrift !== "undefined") skyDrift.refit();
+  if (typeof skyLife !== "undefined") skyLife.refit();
   fitMobRow();                     // the row is measured against the box, so it follows
 }
 // WHAT THE WORLD SAYS EACH OF THEM IS DOING. A creature holds this until the

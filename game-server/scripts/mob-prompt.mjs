@@ -180,6 +180,31 @@ const LINES = {
   "set-down-the-load": "The strap lifted off the shoulder and the satchel swung down to knee height, both hands on it, the body straightening - the one moment it is not carrying",
   attack: "A hard blow with the open hand, swung flat across the body at full reach, the satchel swinging out on its strap",
 },
+// THE REDO OF 2026-10-20, second batch. The generic lines are an animal's - the
+// wrecker was asked to crop grass - so each of these gets its own.
+"the-keeper-of-the-holding": {
+  "check-the-keys": "Head bowed, one long hand lifting and turning the ring of iron keys at its belt",
+  attack: "Lunging forward with both long spidery hands out to seize at full reach, the long body pitched after them",
+},
+"the-bellfounder": {
+  alert: "Has seen you and squared up to you: weight forward on both feet, the head up and the eyes on you, ready to move, the long iron rake held across the body in both hands",
+  "rake-the-melt": "Crouched low on his heels with the long iron rake in both hands, drawing it slowly back through the melt below him. The melt is NOT drawn",
+  attack: "A hard overhead swing of the long iron rake, brought down with both hands",
+},
+"the-drowned": {
+  "take-hold": "Both swollen hands closed on something at chest height and hauling it in, the weight thrown back. What it holds is NOT drawn",
+  listen: "Standing still, the head lifted and turned a little to one side, listening",
+  attack: "Lunging forward with both swollen hands out to seize at full reach, the heavy body pitched after them",
+},
+"drowned-hulk": {
+  "take-hold": "Both huge swollen hands closed on something at chest height and hauling it in, the vast weight thrown back. What it holds is NOT drawn",
+  attack: "Lunging forward with both huge swollen hands out to seize at full reach, the vast body pitched after them",
+},
+"the-wrecker": {
+  alert: "Has seen you and squared up to you: weight forward on both feet, the head up and the eyes on you, ready to move, the fists low",
+  graze: "Crouched on his heels going through something on the ground with both hands, head down over it. What he is going through is NOT drawn",
+  attack: "A hard punch thrown straight from the shoulder, the whole heavy body behind it",
+},
 "strand-thief": {
   alert: "Has seen you and squared up to you: weight forward on both feet, the head up and the eyes on you, ready to move, the knife held low and out in front",
   graze: "Turning wrack over with one boot",
@@ -955,6 +980,11 @@ const REDRAW = {
   "the-raiding-fox": ["idle","rest","feed","move-a","move-b","snatch-escape","attack","death"],
   "the-tom": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "the-wrecker": ["idle","alert","graze","move-a","move-b","snatch-escape","attack","death"],
+  // the sheet orders of the 2026-10-20 redo, read off the strips they replace
+  "the-keeper-of-the-holding": ["idle","hold-ground","alert","check-the-keys","move-a","move-b","attack","death"],
+  "the-bellfounder": ["idle","rake-the-melt","watch","alert","move-a","move-b","attack","death"],
+  "the-drowned": ["idle","take-hold","alert","move-a","move-b","attack","listen","death"],
+  "drowned-hulk": ["idle","take-hold","alert","move-a","move-b","attack","sweep","death"],
   "wildcat": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
 };
 
@@ -1369,6 +1399,11 @@ const MANSHAPED = {
   // men came back with gaunt faces and their eyes shut. They are people.
   "rag-and-bone": "IT IS MAN-SHAPED AND HALF AGAIN A MAN'S SIZE. Two arms, two legs, a head, standing upright - a big hunched human frame under its load, not a beast. Nothing of the body underneath is visible at all: every inch is hung with what it has found, buckles, snapped blades, mail skirts, a boot, a tin cup, lashed on with wire and gut, and all of it swings when it swings.",
   "verdigris-thing": "IT IS MAN-SHAPED. Two arms, two legs, a head, standing and moving upright like a man, under a century of green crust that has thickened its outline and blurred the features. A man under corrosion - not an animal, not a lump, not a blob. The shape is still a person's.",
+  // THE KEEPER OF THE HOLDING (rome, 2026-09-27): a monster, not a human - "his"
+  // stays in the world text, since a thing need not be human to be his. This is
+  // the look its sheet was drawn from; it lived only in that one handed-over
+  // prompt until the redo of 2026-10-20 came back without it.
+  "the-keeper-of-the-holding": "IT IS A MONSTER, NOT A HUMAN. A very tall, very thin grey thing, far taller than a doorway is meant for: its limbs are too long and bend at one joint too many, its skin is dry, pale grey and pulled tight over the bones, and its hands are long and spidery with black nails. Its head is long and narrow and bald, hanging forward on a long neck, with a wide lipless mouth and two small, black, sunken eyes. It wears the old household coat with faded facings, too short in the sleeves for its arms, old boots, and the ring of iron keys at its belt. It stands upright on two legs, stooped under a ceiling that is not there.",
   "the-drowned": "IT IS A DROWNED MAN AND KEEPS A MAN'S SHAPE. Two arms, two legs, a head on a neck, standing upright. Bloated - swollen thick at the limbs and the belly, the skin tight and waterlogged - but still plainly the body of a person, not a beast and not a shapeless mass.",
   "drowned-hulk": "IT IS A DROWNED MAN AND KEEPS A MAN'S SHAPE, swollen vast. Two arms, two legs, a head on a neck, standing upright, enormously bloated and pale - far bigger than a man but built like one, not a beast and not a shapeless mass.",
 };
@@ -1442,31 +1477,55 @@ ${HELD}`;
 // HOLLOW means undead, THIEVES means it robs you, and a stoat is in THIEVES.
 const PEOPLE = new Set([
   "strand-thief", "the-wrecker",                       // the shore, living
+  "the-bellfounder",                                   // the bell pit, living (rome, 2026-10-20)
   "cutthroat", "road-carrier",                         // the road, living
   "the-herd", "the-milker", "the-butter-wife", "the-one-who-stayed",   // the mountain's shepherds
 ]);
 const worked = () => inSet("HOLLOW") || PEOPLE.has(id);
 // Every person in PEOPLE who is not one of the dead.
 const LIVING_MEN = { has: (x) => PEOPLE.has(x) && !(x === id && inSet("HOLLOW")) };
-// THE LIVING LOOK (rome, 2026-10-20). The strand thief's sheet came out the way
-// rome wants every living person to look, and the cutthroat and the carrier
-// redrawn to it came out better too. So every living person's sheet from here on
-// is written to it: the hood with the face in its shadow, the strip-rags, the
-// cord, the wraps, the sandals, and the etched olive-and-bone colour. What the
-// description says a person wears or how they are built still comes first - the
-// herd keeps his frock coat - and the look fills in everything it leaves out.
-// Their own kit (a knife, a satchel) is LIVING_KIT; the low ready carriage is
-// for the ones who come at you, not the shepherds. A NEW living person gets this
-// look by going into PEOPLE (and WOMEN if she is one); nothing else to write.
+// THE LIVING LOOK (rome, 2026-10-20). The strand thief's sheet is the THEME of
+// the living: ragged strip-cloth in olive-grey and bone, cord and thongs hung
+// with found things, wrapped forearms and shins, worn sandals, etched in dry
+// olive, bone and earth-brown. Every living person wears that theme.
+// Two ways to get it wrong, both done the same day and both ruled out:
+//   - ONE COSTUME FOR ALL: the strand thief's exact clothes on everyone made the
+//     cutthroat and the wrecker the same man.
+//   - A NEW COSTUME EACH: an officer's coat, a felt hat, an apron and clogs threw
+//     the theme away entirely.
+// So LIVING_LOOK varies a person INSIDE the theme only - how the head is
+// covered, the build, how the rags hang, and what that person carries and has
+// hung on them - never a different kind of clothing. A NEW living person goes
+// into PEOPLE (and WOMEN if she is one) with a LIVING_LOOK of their own; the tool
+// will not write one without it.
 const WOMEN = new Set(["the-milker", "the-butter-wife"]);
+// whose description puts them in their own clothes, so the strand rags are left off
+const OWN_CLOTHES = new Set(["the-wrecker"]);
 const COMES_AT_YOU = new Set(["cutthroat", "strand-thief", "road-carrier", "the-wrecker"]);
-const LIVING_KIT = {
-  "cutthroat": "A thin knife in one hand.",
-  "road-carrier": "A heavy leather satchel on a long strap across the chest, riding at the hip - the one thing on him that is not rag.",
+const LIVING_LOOK = {
+  "strand-thief": "A short ragged cape. A length of old fishing net slung over one shoulder and a bundle on his back; shells and beach-finds hung on the cords.",
+  "cutthroat": "A strip of dark cloth wound over the mouth and nose under the hood. The rags bound in tight to a lean, narrow body, nothing loose to catch; a cord belt hung with small pouches and a knife sheath. A thin knife in one hand.",
+  "road-carrier": "A long ragged cape to the calf, the strips hanging longest of any of them. A heavy leather satchel on a long strap across the chest, riding at the hip, the one well-kept thing on him.",
+  // HIS DESCRIPTION DRESSES HIM BETTER than the strand provides (rome, 2026-10-20:
+  // follow it), so he is the one living man NOT in the strand rags - the same
+  // weathered finish, his own clothes, and nothing invented on top.
+  "the-wrecker": "Heavier than the strand folk, and dressed in better clothes than theirs, taken off wrecks: good cloth gone worn and salt-stained.",
+  "the-bellfounder": "A grey beard singed short at the front, showing under the hood. The rags scorched and burn-marked down the front, the wraps on his forearms thick and blackened. A long iron rake in both hands.",
+  "the-herd": "The rags hanging long and heavy like a coat gone the colour of the ground. A long shepherd's stick held across him in both hands.",
+  "the-one-who-stayed": "A long grey beard showing under the hood, the rags worn through at the elbows and knotted together again. A long stick held down along his leg.",
+  "the-milker": "A long ragged skirt of strip-cloth hitched up and tucked in, the forearms bare and wrapped at the wrist. A wooden pail.",
+  "the-butter-wife": "The strip-cloth hanging long to the ankle, a ragged shawl crossed over the chest and tied behind.",
 };
+// EVERY LIVING FACE IS IN A HOOD'S SHADOW (rome, 2026-10-20). The eyes on a
+// living face never once came out right - shut, half-lidded, buried in ink -
+// through every wording tried. The strand thief's hood, face set back in its
+// shadow, is the one thing that worked, so every living person wears one,
+// whatever else they wear.
+const HOOD = "A deep hood pulled well forward, the face set back in its shadow with only the nose, the cheek and the jaw catching the light.";
 const livingLook = () => {
-  const she = WOMEN.has(id), HE = she ? "SHE" : "HE", him = she ? "her" : "him", his = she ? "her" : "his";
-  return HE + " IS A LIVING " + (she ? "WOMAN" : "MAN") + ", lean and sinewy, drawn in heavy etched detail, all dry olive, bone and earth-brown. Where the description above says what " + (she ? "she" : "he") + " wears or how " + (she ? "she" : "he") + " is built, draw that; everything it leaves out is this. A deep ragged hood pulled well forward, the face set back in its shadow with only the nose, the cheek and the jaw catching the light. Layer on layer of torn olive-grey and bone-coloured rags hanging off " + him + " in long tattered strips to the knee, a short ragged cape over the shoulders, all of it wound round with cord, thongs and narrow leather straps hung with small found things. Bare, wiry forearms bound with cloth wraps at the wrist; bare sinewy shins bound with rag wrappings; worn sandals." + (COMES_AT_YOU.has(id) ? " Carried low, the knees bent and the head pushed forward, ready to move." : "") + " Not a corpse, not a ghoul: a hard living " + (she ? "woman" : "man") + " under the hood." + (LIVING_KIT[id] ? " " + LIVING_KIT[id] : "");
+  const she = WOMEN.has(id), her = she ? "her" : "him", they = she ? "she" : "he";
+  if (!LIVING_LOOK[id]) throw new Error(id + " is a living person with no LIVING_LOOK - write one inside the theme, different from every other person's");
+  return (she ? "SHE IS A LIVING WOMAN" : "HE IS A LIVING MAN") + ", hard-lived and weathered, drawn in heavy etched detail, all dry olive, bone and earth-brown. " + (OWN_CLOTHES.has(id) ? "" : (she ? "She" : "He") + " is dressed in layer on layer of torn olive-grey and bone-coloured rags hanging off " + her + " in long tattered strips, all of it wound round with cord, thongs and narrow leather straps hung with small found things; bare wiry forearms bound with cloth wraps at the wrist, bare sinewy shins bound with rag wrappings, worn sandals. ") + "Where the description above says what " + they + " wears or how " + they + " is built, draw that first. " + HOOD + " " + LIVING_LOOK[id] + (COMES_AT_YOU.has(id) ? " Carried low, the knees bent and the head pushed forward, ready to move." : "") + " Not a corpse, not a ghoul: a hard living " + (she ? "woman" : "man") + ".";
 };
 // AN ANIMAL HAS NO RECOVER FRAME (rome, 2026-10-17). The settle after a blow
 // is a fighter's frame - the dead and the people with something in their hands.
@@ -1504,7 +1563,7 @@ Every pose is the BODY making the shape of what it is doing, alone in empty mage
 // A two-legged walk: the contact frame has the legs apart, and
 // the passing frame has them together. The old "opposite leg phase" line came
 // back as two near-identical spread strides.
-const TWO_LEGS = worked() || ["cutthroat", "cutpurse", "footpad", "wayman", "road-carrier"].includes(id);
+const TWO_LEGS = worked() || ["cutthroat", "cutpurse", "footpad", "wayman", "road-carrier", "the-keeper-of-the-holding", "the-drowned", "drowned-hulk"].includes(id);
 // what each pose is, said the way the sheet needs it said
 const SAY = {
   idle: "Natural resting alert stance",

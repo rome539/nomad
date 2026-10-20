@@ -82,7 +82,7 @@ import * as wanderer from "./wanderer";
 import * as styles from "./styles";
 import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
-import {
+import { FORGE_STOCK,
   TURNING_BOARS,
   TICK_MS, TICK_SIM_FLUSH_MS, TICK_SLOW_LOG_MS, IDLE_TICK_MS, HOT_WINDOW_MS, IDLE_TIMEOUT_MS, COMBAT_ROUND_MS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE, 
   GROUND_ROOTED,
@@ -3487,7 +3487,7 @@ export class ZoneDO implements DurableObject {
       this.trophyIds = new Set<string>();
       for (const m of this.world!.mobTemplates.values()) {
         const t = m.loot_item ? this.world!.itemTemplates.get(m.loot_item) : undefined;
-        if (t && !t.edible && !this.isGear(t.id)) this.trophyIds.add(t.id);
+        if (t && !t.edible && !this.isGear(t.id) && !FORGE_STOCK.has(t.id)) this.trophyIds.add(t.id);
       }
     }
     return this.trophyIds.has(itemId) && !this.isKey(itemId);
@@ -5120,7 +5120,7 @@ export class ZoneDO implements DurableObject {
     // closing, the moon, an eclipse, weather arriving or lifting.
     for (const s of this.sessions.values()) {
       if (!seesArt(s.pubkey)) continue;
-      if (this.artSkyFor(s) !== s.artSky || (this.inDen.has(s.pubkey) && (isNight() ? 1 : 0) !== s.artNight)) this.sendStatus(s);
+      if (this.artSkyFor(s) !== s.artSky || this.artBowFor(s) !== (s.artBow ?? 0) || (this.inDen.has(s.pubkey) && (isNight() ? 1 : 0) !== s.artNight)) this.sendStatus(s);
     }
     // ...and the soundscape the same way: the rain is heard arriving.
     for (const s of this.sessions.values()) {
@@ -8666,6 +8666,9 @@ export class ZoneDO implements DurableObject {
             : undefined,
           // Lighting and visible sky are separate: a roof can admit daylight.
           sky: (session.artSky = this.artSkyFor(session)),
+          // A RAINBOW over a sky that cleared off the rain (events.rainbowOver); the
+          // page draws it only where the sky is open and lit.
+          bow: (session.artBow = this.artBowFor(session)) || undefined,
           // What the place sounds like, for the page's own synth (sound.ts).
           amb: (() => { const a = soundscapeFor(this, session); session.ambKey = soundKey(a); return a; })(),
           // Light through a doorway can follow the hour without exposing sky.
@@ -8729,6 +8732,10 @@ export class ZoneDO implements DurableObject {
   // sent and pushes a frame when it differs, which covers every reason the sky
   // can change at once: the hour turning, dusk and dawn opening and closing,
   // the moon, an eclipse, weather arriving or lifting, and walking under a roof.
+  public artBowFor(session: Session): number {
+    const sky = this.artSkyFor(session);
+    return (sky === "day" || sky === "dawn" || sky === "dusk") && events.rainbowOver(this, session.roomId) ? 1 : 0;
+  }
   public artSkyFor(session: Session): string | undefined {
     if (!seesArt(session.pubkey)) return undefined;
     // BEHIND THE DOOR, not crouched at it (rome, 2026-10-18: opening the pack at
@@ -8767,7 +8774,10 @@ export class ZoneDO implements DurableObject {
     // painted, and then this is one word.
     const roofed = !OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt
       && this.world!.rooms.get(session.roomId)?.region === "road";
-    const wet = events.wxPhase(this, "rain", session.roomId) === "aftermath" || !!events.rainNearby(this, session.roomId);
+    // grey while the ground is wet, unless its sky cleared off the rain (AFTER_RAIN_CLEARS);
+    // rain next door is grey whatever, its cloud is overhead
+    const wet = (events.wxPhase(this, "rain", session.roomId) === "aftermath" && !events.afterRainCleared(this, session.roomId))
+      || !!events.rainNearby(this, session.roomId);
     return (!OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt && !roofed) ? "in"
     : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId))) ? "snow"
     : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId))) ? "fog"

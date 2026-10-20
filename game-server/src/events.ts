@@ -27,7 +27,7 @@ import {
   STORM_SHOWER_ODDS, STORM_SETTLED_ODDS, STORM_BUILD_MIN_MS, STORM_BUILD_MAX_MS, STORM_PEAK_MIN_MS, STORM_PEAK_MAX_MS,
   LIGHTNING_SPOOK_MS, ROOTED, GUARDIANS,
   STORM_FADE_MIN_MS, STORM_FADE_MAX_MS, STORM_RAINLESS_FADE_MS, STORM_MOVE_ODDS, STORM_RUMBLE_MIN_MS, STORM_RUMBLE_MAX_MS,
-  LIGHTNING_BURN, LIGHTNING_STEEL_BURN_PER_KG, RAIN_SETTLED_ODDS, RAIN_SETTLED_AFTERMATH_MULT, RAIN_AFTER_SHARE, RAIN_AFTER_MAX_MS, REGION_LABELS,
+  LIGHTNING_BURN, LIGHTNING_STEEL_BURN_PER_KG, RAIN_SETTLED_ODDS, RAIN_SETTLED_AFTERMATH_MULT, RAIN_AFTER_SHARE, RAIN_AFTER_MAX_MS, AFTER_RAIN_CLEARS, RAINBOW_ODDS, RAINBOW_MS, REGION_LABELS,
   WX_GROW_ODDS, WX_SPREAD_ODDS, WX_RETREAT_ODDS, WX_WORLDWIDE_ODDS,
   RAIN_STEP_MS, RAIN_SHOWER_END_ODDS, RAIN_SETS_IN_ODDS, RAIN_SETTLED_END_ODDS,
   BELL_HOURS_UTC, BELL_JITTER_MS, BELL_GRACE_MS,
@@ -188,18 +188,35 @@ export function wxPhase(z: ZoneDO, id: string, roomId: string): EventState["phas
   return wxCovers(z, id, roomId) ? phaseOf(z, id) : "idle";
 }
 const AFTER_PREFIX = "after:";
+// Has this ground's sky cleared while it is still wet underfoot?
+export function afterRainCleared(z: ZoneDO, roomId: string): boolean {
+  const e = z.events.get(AFTER_PREFIX + z.bandOf(roomId));
+  return !!e && e.until > Date.now() && !!e.data && e.data.startsWith("clear");
+}
+// ...and is a rainbow standing over it?
+export function rainbowOver(z: ZoneDO, roomId: string): boolean {
+  const e = z.events.get(AFTER_PREFIX + z.bandOf(roomId)), now = Date.now();
+  if (!e || e.until <= now || !e.data || !e.data.startsWith("clear:")) return false;
+  return now < Number(e.data.slice(6));
+}
 // Is this ground still wet from a rain that has moved off or stopped?
 export function afterRain(z: ZoneDO, roomId: string): boolean {
   const e = z.events.get(AFTER_PREFIX + z.bandOf(roomId));
   return !!e && e.until > Date.now();
 }
 // The rain leaves a ground: it stays wet for a share of the time it was rained on.
-function rainLeaves(z: ZoneDO, st: EventState, band: string, now: number): void {
+function rainLeaves(z: ZoneDO, st: EventState, band: string, now: number): string | undefined {
   const sat = now - (st.since?.[band] ?? now);
   const floor = Math.round(RAIN_AFTERMATH_MS * (st.data === "settled" ? RAIN_SETTLED_AFTERMATH_MULT : 1));
   const keep = Math.min(RAIN_AFTER_MAX_MS, Math.max(floor, Math.round(sat * RAIN_AFTER_SHARE)));
   const had = z.events.get(AFTER_PREFIX + band);
-  z.events.set(AFTER_PREFIX + band, { phase: "aftermath", until: Math.max(had?.until ?? 0, now + keep) });
+  // A wet spell still running keeps its sky; a new one rolls whether it clears
+  // (and whether it clears with a rainbow) - see AFTER_RAIN_CLEARS.
+  const going = !!had && had.until > now;
+  // (no rainbow is rolled in the dark - there is no sun behind you to make one)
+  const sky = going ? had!.data
+    : chance(AFTER_RAIN_CLEARS) ? (!isNight() && chance(RAINBOW_ODDS) ? "clear:" + (now + RAINBOW_MS) : "clear") : undefined;
+  z.events.set(AFTER_PREFIX + band, { phase: "aftermath", until: Math.max(had?.until ?? 0, now + keep), data: sky });
   if (st.since) delete st.since[band];
   // A settled rain loads the die (BIAS, not trigger - the law at the top of
   // this file) on the ground it fell on: it banks water, so the road's next roll
@@ -209,6 +226,28 @@ function rainLeaves(z: ZoneDO, st: EventState, band: string, now: number): void 
   // that sat all day on the road and then drifted off left the beck dry.
   if (st.data === "settled" && band === "road") chargeBand(z, "road", "spate");
   if (st.data === "settled" && band === "den") chargeBand(z, "den", "fever");
+  return going ? undefined : sky;
+}
+// THE SKY CLEARING, IN WORDS (rome, 2026-10-20: text players get the same world
+// as the picture). Said to the ground the rain just left, once, as it clears;
+// a sky that stays grey says nothing more than the rain's own leaving did.
+const SKY_CLEARS = "The cloud breaks up behind the rain, and clean sky comes through it. The ground stays wet.";
+const SKY_CLEARS_BOW = "The cloud breaks up behind the rain, and a rainbow stands up out of the wet ground, end to end across the sky.";
+const RAINBOW_FADES = "The rainbow thins, and fades, and the sky is only sky again.";
+function skyClears(z: ZoneDO, band: string, sky: string | undefined): void {
+  if (!sky || !sky.startsWith("clear")) return;
+  feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === band, sky.startsWith("clear:") ? SKY_CLEARS_BOW : SKY_CLEARS);
+}
+// ...and the rainbow's going, which the picture shows as a fade: once its time
+// is up the wet spell keeps its clear sky without it, and the ground hears so.
+function tickRainbows(z: ZoneDO, now: number): void {
+  for (const [key, e] of z.events) {
+    if (!key.startsWith(AFTER_PREFIX) || !e.data || !e.data.startsWith("clear:") || e.until <= now) continue;
+    if (now < Number(e.data.slice(6))) continue;
+    e.data = "clear";
+    const band = key.slice(AFTER_PREFIX.length);
+    if (!isNight()) feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === band, RAINBOW_FADES);
+  }
 }
 // RAIN NEXT DOOR: the ground beside one it is raining on, and dry itself. The
 // cloud over the rain is the sky here too - grey, and the rain under it in
@@ -1072,7 +1111,11 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   switch (wxPhase(z, "rain", roomId)) {
     case "telegraph": return "The sky has gone iron-grey, and the air smells of coming rain.";
     case "active": return "Rain hammers down out of a sky the colour of iron, and the open ground is already giving way under it.";
-    case "aftermath": return "The rain has stopped, but the sky is still low and grey, and the ground under it is churned to mud.";
+    case "aftermath": return rainbowOver(z, roomId) && !isNight()
+      ? "The rain has passed, and a rainbow stands across the cleared sky, its feet down in the wet ground."
+      : afterRainCleared(z, roomId)
+        ? "The rain has passed and the sky has cleared behind it, but the ground under it is churned to mud."
+        : "The rain has stopped, but the sky is still low and grey, and the ground under it is churned to mud.";
   }
   switch (wxPhase(z, "fog", roomId)) {
     case "telegraph": return "A milky haze is creeping up from the low ground, and the sky is going soft at its edges.";
@@ -1118,6 +1161,45 @@ const RAIN_AMBIENT = [
   "The rain comes harder for a breath, then settles back to its work.",
   "A squall moves across the ground like a curtain, and is gone.",
 ];
+const RAINBOW_AMBIENT = [
+  "The rainbow holds over the wet ground, faint where its feet go down.",
+  "Light runs along the rainbow's arc as the cloud thins behind it.",
+  "Under the rainbow, water still drips from every edge.",
+];
+// What the picture flies over each ground (SKY_LIFE in public.ts), in words.
+const SKY_BIRDS_ODDS = 0.25;
+const SKY_BIRDS: Record<string, string[]> = {
+  crossing: [
+    "Gulls go over high, crying, and are gone down the coast.",
+    "A string of oystercatchers flicks low across the far water, piping.",
+    "A single gull hangs on the wind out over the sand, its wings not moving at all.",
+  ],
+  mountain: [
+    "Choughs tumble along the ridge above, calling to each other.",
+    "Far up, something broad-winged turns slow circles over the high ground.",
+    "A raven goes over, croaking once, about its own business.",
+  ],
+  road: [
+    "Crows go over in a loose straggle, arguing.",
+    "High over the road a vulture turns, and turns, and does not come down.",
+    "A raven crosses the sky over the road, croaking.",
+  ],
+  wood: [
+    "Crows lift out of the far trees and settle again, complaining.",
+    "Something broad-winged circles high over the canopy.",
+  ],
+  den: [
+    "Crows cross over the dens in a ragged line.",
+    "A vulture hangs in the high air over the dens, turning.",
+  ],
+};
+// ...and the one the picture flies rarely over the high ground and the roads.
+const SKY_FAR_SHAPE_ODDS = 0.04;
+const SKY_FAR_SHAPE: Record<string, string> = {
+  mountain: "Something very large crosses the sky a long way off, slow-winged, and is gone behind the tops.",
+  road: "Something very large crosses the sky a long way off, slow-winged, and is gone.",
+  den: "Something very large crosses the sky a long way off over the dens, slow-winged, and is gone.",
+};
 const MUD_AMBIENT = [
   "The mud pulls at every step.",
   "Water still drips from the thorn and the leaf.",
@@ -1246,12 +1328,25 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
   if (region === "crossing" && eelRunOn(z, roomId)) return pick(EEL_RUN_AMBIENT);
   const p = wxPhase(z, "rain", roomId);
   if (p === "active") return pick(RAIN_AMBIENT);
-  if (p === "aftermath") return pick(MUD_AMBIENT);
+  if (p === "aftermath") {
+    if (rainbowOver(z, roomId) && !isNight() && chance(0.6)) return pick(RAINBOW_AMBIENT);
+    // the picture's birds fly after the rain too, so the words do
+    const birds = !isNight() && region ? SKY_BIRDS[region] : undefined;
+    if (birds && chance(SKY_BIRDS_ODDS)) return pick(birds);
+    return pick(MUD_AMBIENT);
+  }
   if (wxPhase(z, "fog", roomId) === "active") return pick(FOG_AMBIENT);
   if (wxPhase(z, "cold", roomId) === "active") return pick(COLD_AMBIENT);
   if (wxPhase(z, "wind", roomId) === "active") return pick(WIND_AMBIENT);
   if (LIGHTS_ROOMS.has(roomId) && phaseOf(z, "lights") === "active") return pick(LIGHTS_AMBIENT);
   if (phaseOf(z, "crows") === "active") return pick(CROWS_AMBIENT);
+  // THE FAR BIRDS (rome, 2026-10-20). The picture flies distant birds over every
+  // open sky by day (skyLife in public.ts); a player reading text gets the same
+  // sky, now and then, in words - the same birds for the same ground, and none
+  // at night or in weather, which every line above has already taken.
+  if (!isNight() && region && SKY_BIRDS[region] && chance(SKY_BIRDS_ODDS)) {
+    return chance(SKY_FAR_SHAPE_ODDS) && SKY_FAR_SHAPE[region] ? SKY_FAR_SHAPE[region] : pick(SKY_BIRDS[region]);
+  }
   return null;
 }
 
@@ -1412,7 +1507,7 @@ export function wxMove(z: ZoneDO, id: string, st: EventState, now: number): void
   if (st.bands.length > 1 && can.length && chance(WX_RETREAT_ODDS)) {
     const b = can[Math.floor(Math.random() * can.length)];
     feedSky(z, (roomId) => OUTDOOR_ROOMS.has(roomId) && z.bandOf(roomId) === b, WX_LEAVE[id]);
-    if (id === "rain") rainLeaves(z, st, b, now);
+    if (id === "rain") skyClears(z, b, rainLeaves(z, st, b, now));
     st.bands = st.bands.filter((x) => x !== b);
   }
 }
@@ -1443,6 +1538,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   tickRoll(z, now);
   tickSkyRoll(z, now);
   await tickRain(z, now);
+  tickRainbows(z, now);
   await tickBell(z, now);
   tickBugle(z, now);
   await tickBoil(z, now);
@@ -2701,12 +2797,13 @@ async function tickRain(z: ZoneDO, now: number): Promise<void> {
       // ground it was over keeps its own wet spell (rainLeaves), and the storm's
       // own aftermath runs until the longest of them is dry.
       const wet = st.bands ?? weatherGrounds(z).bands;
-      for (const b of wet) rainLeaves(z, st, b, now);
+      const cleared: [string, string | undefined][] = wet.map((b) => [b, rainLeaves(z, st, b, now)]);
       st.until = Math.max(now + RAIN_AFTERMATH_MS, ...wet.map((b) => z.events.get(AFTER_PREFIX + b)?.until ?? 0));
       st.data = undefined; // the kind belonged to that storm; the next one rolls its own
       feedWeather(z, "rain", settled
         ? "The rain thins at last, and stops, and the quiet after it is enormous. Everything underfoot has turned to mud, and it will be mud for a long while."
         : "The rain slackens, and stops. What blood and tracks the ground held have run off into the mud.");
+      for (const [b, sky] of cleared) skyClears(z, b, sky);
       // The wash: the open ground forgets — blood, remains, camps, passage —
       // all but what was cut into stone. (The murderer's weather, one day.)
       for (const roomId of OUTDOOR_ROOMS) {

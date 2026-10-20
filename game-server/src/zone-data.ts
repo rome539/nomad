@@ -845,6 +845,12 @@ export const LINEN_ID = "linen-strips";
 export const MATERIAL_SALVAGE: Record<string, string | null> = {
   steel: SCRAP_ID, hide: LEATHER_ID, cloth: LINEN_ID, bone: BONE_BITS_ID, wood: WOOD_ID, stone: null,
 };
+// THE FORGE'S STOCK IS NEVER A TROPHY (rome, 2026-10-20). A trophy is "what a
+// creature drops", and two creatures drop iron - the charcoal burner a handful of
+// scrap, the scaffold hand a forge bar - so both irons sat on the trophy shelf
+// and counted toward the trophy board. They are the bench's makings and shelve
+// with the supplies.
+export const FORGE_STOCK = new Set([SCRAP_ID, IRON_ID, LEATHER_ID, BONE_BITS_ID, WOOD_ID, LINEN_ID]);
 // ...and the pieces that are another stuff but carry real iron in them —
 // nails, rivets, strapping, a shod foot. Read off their own descriptions, not
 // guessed from their names. They give a handful of scrap on top of their own
@@ -7921,6 +7927,17 @@ export const RAIN_AFTERMATH_MS = 15 * 60_000; // mud: deep tracks, quick forage
 // quarter of an hour; a day of rain leaves the evening grey.
 export const RAIN_AFTER_SHARE = 0.25;
 export const RAIN_AFTER_MAX_MS = 3 * 3_600_000;
+// THE SKY AFTER THE RAIN (rome, 2026-10-20). The grey after-rain sky came after
+// every rain, every time. Now each ground the rain leaves rolls once: it clears
+// to the ordinary sky this often, and the rest stay grey for the wet spell. The
+// ground is wet either way - mud, tracks and forage are the wet spell's, not
+// the sky's - only the picture changes.
+export const AFTER_RAIN_CLEARS = 0.45;
+// ...and a sky that clears straight off the rain is when a rainbow stands, so
+// this share of the clearings carry one, for the first RAINBOW_MS of it (never
+// past the wet spell's own end). Only where the sky is daylight or the low hours.
+export const RAINBOW_ODDS = 0.5;
+export const RAINBOW_MS = 15 * 60_000;
 export const RAIN_SETTLED_AFTERMATH_MULT = 1.6; // a long soaking leaves the ground wrong for longer
 // LIGHTNING (rome, 2026-10-13). The storm throws a bolt every so often while
 // the rain is on, and the WORLD times it - every player whose picture is the

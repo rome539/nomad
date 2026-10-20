@@ -365,6 +365,8 @@
     // every frame, and it is what lights the hollow's eyes - so choosing the
     // blood sky here has to raise it too, and every other hour has to lower it.
     var red = h === "blood" ? 1 : 0;
+    // A RAINBOW is the server's to send; ?bow=1 on the address stands one up
+    if (typeof lastBow !== "undefined") lastBow = /[?&]bow=1/.test(location.search) ? 1 : 0;
     lastEcl = h === "eclipse" ? 1 : 0;   // the server's flag: true under a roof too
     if (typeof FEAST_FORCE !== "undefined") FEAST_FORCE = feast.value;
     // UNDER A ROOF, the sky the game would send: none at all ("in") for a
@@ -379,7 +381,9 @@
     } else if (v.indexOf("gate:") === 0) {
       paintScene("mountain", roofSky, v, "preview-gate", torch, skyRollN, "", 0, red, covered);
     } else {
-      paintScene("mountain", h, v.slice(7), "preview-ground", torch, skyRollN, "", 0, red);
+      // THE GROUND'S OWN REGION, as the game sends it - this said "mountain" for
+      // every ground, so the beach got the mountain's birds (2026-10-20)
+      paintScene(BAND_OF[groundAt[v.slice(7)]] || "mountain", h, v.slice(7), "preview-ground", torch, skyRollN, "", 0, red);
     }
     fitPicture();
     var dead = nomadSel.value === "dead" && ids.indexOf("nomad") >= 0;

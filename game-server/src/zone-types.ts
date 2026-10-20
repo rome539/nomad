@@ -72,6 +72,7 @@ export interface Session {
   // been SENT, so the tick can notice the hour turning under someone standing
   // still and push them a frame. Undefined until the first status frame.
   artSky?: string;
+  artBow?: number; // the rainbow last sent, so its coming and going re-sends the status
   artNight?: number; // the last `nt` sent: a den's picture turns at nightfall even when the sky string does not
   ambKey?: string; // ...and the last soundscape (sound.ts), for the same reason
   pvpTarget?: string | null; // pubkey of the wanderer this one has steel out against (transient — a deploy ends the exchange, never the grudge)

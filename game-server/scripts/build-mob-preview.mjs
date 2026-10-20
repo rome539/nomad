@@ -284,10 +284,12 @@ const SCENE_DRIVER = fn("paintScene");
 // THE MOVING SKY, lifted whole. paintScene only calls skyDrift when it exists
 // ("typeof skyDrift !== 'undefined'"), so a page without it shows a still sky
 // and says nothing - which is how the published page went on missing it. The
-// block runs from SKY_DRIFT to the end of the skyDrift module, tables and all.
+// block runs from SKY_DRIFT to the end of the skyDrift module, tables and all -
+// and on through the sky's life (skyLife: far birds, cloud shadow), which sits
+// right after it and calls it.
 const SKY_DRIFT_JS = (() => {
   const a = src.indexOf("var SKY_DRIFT = ");
-  const m = src.indexOf("var skyDrift = (function", a);
+  const m = src.indexOf("var skyLife = (function", a);
   const b = src.indexOf("})();", m);
   if (a < 0 || m < 0 || b < 0) throw new Error("no skyDrift block");
   // ...and unescaped the way the served page is: public.ts is one template
@@ -484,7 +486,10 @@ if (document.addEventListener) document.addEventListener("visibilitychange", run
 if (weatherMotion.addEventListener) weatherMotion.addEventListener("change", runWeather);
 ${SCENE_DRIVER}
 ${SKY_DRIFT_JS}
-if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("resize", function(){ skyDrift.refit(); });
+// THE RAINBOW comes from the server, which this page has none of: ?bow=1 on the
+// address stands one over any open daylight or low-hour sky.
+var lastBow = typeof location !== "undefined" && /[?&]bow=1/.test(location.search) ? 1 : 0;
+if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("resize", function(){ skyDrift.refit(); skyLife.refit(); });
 /* ---- end lifted ---- */
 var SPRITE=MOB_SPRITE, ANIM=MOB_ANIM;   // the page's own shorthand
 // EXACTLY WHAT THE CLIENT DOES: two stacked backgrounds on ONE element, so a

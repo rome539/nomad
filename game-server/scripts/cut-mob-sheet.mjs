@@ -31,7 +31,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "../..");
 // --defringe: see the edge pass below. Off unless asked for.
 const DEFRINGE = process.argv.includes("--defringe");
-const [sheetArg, id, ...poses] = process.argv.slice(2).filter((a) => a !== "--defringe");
+// --soft: see the key below. Off unless asked for.
+const SOFT = process.argv.includes("--soft");
+const [sheetArg, id, ...poses] = process.argv.slice(2).filter((a) => a !== "--defringe" && a !== "--soft");
 
 if (!sheetArg || !id || !poses.length) {
   console.error("usage: node scripts/cut-mob-sheet.mjs <sheet.png> <creature-id> <pose> <pose> …");
@@ -190,6 +192,22 @@ for (let i = 0; i < poses.length; i++) {
   for (let p = 0; p < data.length; p += 4) {
     const r = data[p], g = data[p + 1], b = data[p + 2];
     const spill = Math.min(r - g, b - g);
+    // THIN THINGS SURVIVE THE KEY (--soft, 2026-10-20). Anything past 30 of
+    // spill went, and on the keeper of the holding that was his fingers: two or
+    // three pixels wide, pale, and every one of them half the magenta behind it,
+    // so the hands came out as nails floating in air. Soft reads such a pixel as
+    // a MIX - the figure over pure magenta - takes the magenta's share as the
+    // pixel's transparency, and puts back the colour that was under it. Only what
+    // is nearly all magenta still goes.
+    if (SOFT && spill > 30) {
+      const a = 1 - spill / 255;
+      if (a < 0.2) { data[p] = data[p+1] = data[p+2] = data[p+3] = 0; continue; }
+      data[p] = Math.max(0, Math.min(255, Math.round((r - 255 * (1 - a)) / a)));
+      data[p+1] = Math.max(0, Math.min(255, Math.round(g / a)));
+      data[p+2] = Math.max(0, Math.min(255, Math.round((b - 255 * (1 - a)) / a)));
+      data[p+3] = Math.round(255 * a);
+      kept++; continue;
+    }
     if (spill > 30) { data[p] = data[p+1] = data[p+2] = data[p+3] = 0; continue; }
     if (spill > 0) { data[p] = Math.max(0, r - spill); data[p+2] = Math.max(0, b - spill); }
     kept++;
