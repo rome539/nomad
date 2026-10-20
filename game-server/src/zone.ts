@@ -150,6 +150,33 @@ function heardFrame(room: string, text: string, cls: string | undefined,
   return JSON.stringify(f);
 }
 
+// FOOTPRINTS READ THE GROUND THEY ARE IN (Luna, 2026-10-20: "footprints disturb
+// the dust here" just after a rain). The line was written when the keep's halls
+// were all there was: dust indoors, "the ground" outside, and no weather. It went
+// by region, so an open courtyard of the keep had dust under the rain. It goes by
+// the ROOM now - dust only under a roof - and an open room reads its own sky:
+// prints filling with rain while it falls, pressed into mud while the ground is
+// wet (the same spell that makes them last: mudDeepens), broken into snow on a
+// snowed mountain.
+function passageLine(z: ZoneDO, roomId: string, region: string, age: number): string {
+  const fresh = age < 10 * 60_000;
+  const open = OUTDOOR_ROOMS.has(roomId);
+  if (open && events.snowed(z, roomId)) return fresh
+    ? "The snow is freshly broken — someone passed this way minutes ago."
+    : "Footprints break the snow here, softening at their edges.";
+  if (events.raining(z, roomId)) return fresh
+    ? "Fresh prints in the wet ground are filling with rain — someone passed this way minutes ago."
+    : "Rain-blurred footprints mark the ground here.";
+  if (events.muddy(z, roomId)) return fresh
+    ? "The mud is freshly churned — someone passed this way minutes ago."
+    : "Footprints are pressed deep into the mud here.";
+  // cap(track), not "The " + track: the phrase carries its own article, so the
+  // literal produced "The the ground is freshly disturbed" in every outdoor
+  // band. Caught on the mountain, live, an hour after it shipped.
+  const track = !open && (region === "upper" || region === "deep" || region === "gate") ? "the dust" : "the ground";
+  return fresh ? `${cap(track)} is freshly disturbed — someone passed this way minutes ago.` : `Footprints disturb ${track} here.`;
+}
+
 export class ZoneDO implements DurableObject {
   private readonly eventQueue = new EventQueue();
   private readonly privateMessages = new PrivateMessages();
@@ -6107,14 +6134,7 @@ export class ZoneDO implements DurableObject {
       } else if (t.kind === "track") {
         lines.push(clues.trackLine(t, age));
       } else if (t.kind === "passage") {
-        // Dust holds a print in the dungeon; out under the sky the ground does.
-        const track = region === "upper" || region === "deep" || region === "gate" ? "the dust" : "the ground";
-        // cap(track), not "The " + track: the phrase carries its own article
-        // (every entry in this family does), so the literal produced "The the
-        // ground is freshly disturbed" in every outdoor band. Caught on the
-        // mountain, live, an hour after it shipped.
-        if (age < 10 * 60_000) lines.push(`${cap(track)} is freshly disturbed — someone passed this way minutes ago.`);
-        else lines.push(`Footprints disturb ${track} here.`);
+        lines.push(passageLine(this, roomId, region, age));
       }
     }
     for (const t of carvings.sort((a, b) => a.at - b.at)) {

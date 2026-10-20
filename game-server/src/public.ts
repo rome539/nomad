@@ -2642,7 +2642,8 @@ function classify(s) {
   // classed as dim).
   if (/ sits here, locked\\./.test(s)) return "loot";
   if (/ sits here, sprung and empty\\./.test(s)) return "dim";
-  if (/bloodstain darkens|dust is freshly disturbed|swept clear, sat in|Fresh blood pools|Gnawed scraps|scratched into the stone/.test(s)) return "dim";
+  // ...and every footprint line, whatever the ground and the weather make of it (zone.ts passageLine)
+  if (/bloodstain darkens|is freshly (disturbed|broken|churned)|^Footprints |^Rain-blurred footprints|^Fresh prints in the wet|swept clear, sat in|Fresh blood pools|Gnawed scraps|scratched into the stone/.test(s)) return "dim";
   return "";
 }
 
