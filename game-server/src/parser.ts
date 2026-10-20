@@ -650,6 +650,8 @@ export const HELP_TEXT = [
   "  unstash <item>    take something back out of the lockbox",
   "  vault <item>      at any gate — the vault (50 slots); gear is sealed going in.",
   "                    'vault' alone looks inside; 'unvault' draws it back out.",
+  "                    A count moves that many of a stack: 'unvault 6 leather',",
+  "                    'vault all scrap' (stash, unstash, stow and fetch too).",
   "  sheet             (score, stats) — your ledger: kills, deaths, kings,",
   "                    wanderers, and your age under this name.",
   "  leaderboard       (boards, top) — the dungeon's reckoning: the mighty who",

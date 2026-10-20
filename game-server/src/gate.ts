@@ -2299,6 +2299,53 @@ export async function deathStash(z: ZoneDO, victim: Session): Promise<string[]> 
   return saved;
 }
 
+// A COUNT ON THE KEEPING VERBS (rome, 2026-10-20: "we need a way to move
+// quantity"; the window's stack count, typed). 'unvault 6 leather', 'vault all
+// scrap', 'fetch 3 wood' - the same verb run that many times, stopping the
+// moment it says something other than what the first move said (the pack is
+// full, the stack ran out). Every confirmation it gives - to you, and the line
+// the room or the gatehouse sees about you - folds into one, with the count.
+export const KEEP_COUNT_MAX = 50;
+export async function counted(z: ZoneDO, session: Session, arg: string, run: (arg: string) => Promise<void>): Promise<void> {
+  const m = /^(\d+|all)\s+(.+)$/i.exec(arg.trim());
+  const n = m ? (m[1].toLowerCase() === "all" ? KEEP_COUNT_MAX : Math.min(KEEP_COUNT_MAX, parseInt(m[1], 10))) : 1;
+  if (!m || n <= 1) return run(m ? m[2] : arg);
+  const rest = m[2], mine = session.name + " ";
+  type Held = { kind: "send"; s: Session; text: string; cls?: string; speaker?: { name: string; pk: string } }
+    | { kind: "feed"; args: Parameters<ZoneDO["roomFeed"]> };
+  const held: Held[] = [];
+  const send = z.send, feed = z.roomFeed;
+  z.send = function (s, text, cls, speaker, sounds) {
+    if (s === session || text.startsWith(mine)) held.push({ kind: "send", s, text, cls, speaker });
+    else send.call(z, s, text, cls, speaker, sounds);
+  };
+  z.roomFeed = function (...args: Parameters<ZoneDO["roomFeed"]>) {
+    if (args[1].startsWith(mine)) held.push({ kind: "feed", args });
+    else feed.apply(z, args);
+  };
+  let first: string | undefined;
+  try {
+    for (let i = 0; i < n; i++) {
+      const at = held.length;
+      await run(rest);
+      const said = held.slice(at).find((h) => h.kind === "send" && h.s === session) as { text: string } | undefined;
+      if (!said) break;
+      if (first === undefined) first = said.text;
+      else if (said.text !== first) break;
+    }
+  } finally {
+    z.send = send; z.roomFeed = feed;
+  }
+  // fold each run of the same line into one, marked with how many times it was said
+  const key = (h: Held) => h.kind === "send" ? "s|" + h.s.pubkey + "|" + h.text + "|" + (h.cls ?? "") : "f|" + h.args[0] + "|" + h.args[1];
+  const seen = new Map<string, number>(), order: Held[] = [];
+  for (const h of held) { const k = key(h); if (!seen.has(k)) order.push(h); seen.set(k, (seen.get(k) ?? 0) + 1); }
+  for (const h of order) {
+    const times = seen.get(key(h))!, tail = times > 1 ? ` (\u00d7${times})` : "";
+    if (h.kind === "send") send.call(z, h.s, h.text + tail, h.cls, h.speaker);
+    else { const a = [...h.args] as Parameters<ZoneDO["roomFeed"]>; a[1] = a[1] + tail; feed.apply(z, a); }
+  }
+}
 export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key: "lockbox" | "vault"): Promise<void> {
     const world = z.world!;
     const cfg = storeCfg(z, key);

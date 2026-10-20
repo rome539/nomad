@@ -2215,10 +2215,10 @@ export class ZoneDO implements DurableObject {
           ? "The board is inside, by the keeper's hatch. ('in' through the door.)"
           : "Nothing to pin anything to out here. The board hangs in the gatehouse, at any gate.");
       case "claim": return gate.cmdClaim(this, session, cmd.arg);
-      case "stash": return gate.cmdStore(this, session, cmd.arg, "lockbox");
-      case "unstash": return gate.cmdRetrieve(this, session, cmd.arg, "lockbox");
-      case "vault": return gate.cmdStore(this, session, cmd.arg, "vault");
-      case "unvault": return gate.cmdRetrieve(this, session, cmd.arg, "vault");
+      case "stash": return gate.counted(this, session, cmd.arg, (a) => gate.cmdStore(this, session, a, "lockbox"));
+      case "unstash": return gate.counted(this, session, cmd.arg, (a) => gate.cmdRetrieve(this, session, a, "lockbox"));
+      case "vault": return gate.counted(this, session, cmd.arg, (a) => gate.cmdStore(this, session, a, "vault"));
+      case "unvault": return gate.counted(this, session, cmd.arg, (a) => gate.cmdRetrieve(this, session, a, "vault"));
       case "publish": return this.cmdPublish(session, cmd.arg);
       case "map": return lore.cmdMap(this, session, cmd.arg);
       case "study": return lore.cmdStudy(this, session, cmd.arg);
@@ -2247,8 +2247,8 @@ export class ZoneDO implements DurableObject {
       case "bunk": return den.cmdBunk(this, session, cmd.arg);
       case "unbunk": return den.cmdUnbunk(this, session, cmd.arg);
       case "den": return den.cmdDen(this, session);
-      case "stow": return den.cmdStow(this, session, cmd.arg);
-      case "fetch": return den.cmdFetch(this, session, cmd.arg);
+      case "stow": return gate.counted(this, session, cmd.arg, (a) => den.cmdStow(this, session, a));
+      case "fetch": return gate.counted(this, session, cmd.arg, (a) => den.cmdFetch(this, session, a));
       case "smoke": return verbs.cmdSmoke(this, session, cmd.arg);
       case "cure": return verbs.cmdCure(this, session, cmd.arg);
       case "cook": return verbs.cmdCook(this, session, cmd.arg);

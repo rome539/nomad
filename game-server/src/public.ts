@@ -511,6 +511,12 @@ export const PAGE = `<!doctype html>
     color: var(--bone); font: inherit; font-size: 11px; padding: 2px 8px; cursor: pointer;
   }
   #bench .bitem button:hover { color: var(--gold); border-color: var(--gold); }
+  /* How many of a stack to move: sits in front of the move buttons it counts for. */
+  #bench .bitem input.qty {
+    width: 4.2em; background: transparent; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--bone); font: inherit; font-size: 11px; padding: 2px 4px; text-align: center;
+  }
+  #bench .bitem input.qty:focus { outline: none; border-color: var(--gold); color: var(--gold); }
   /* Destructive actions retain their warning and armed states. */
   #bench .bitem button.burn { color: var(--dim); }
   #bench .bitem button.burn:hover { color: var(--blood); border-color: var(--blood); }
@@ -6690,6 +6696,33 @@ function benchItemNode(it, place) {
   // trophies at once); a single item is just a one-element fan.
   var rows = it.rows && it.rows.length ? it.rows : [it.row];
   function fire(action) { benchSend(action, rows); } // one frame, the whole stack — the server moves it atomically
+  // HOW MANY OF A STACK (rome, 2026-10-20: "we need a way to move quantity").
+  // Out of a keeping (vault, lockbox, shelf) it was one at a time, so a stack
+  // could not fan into pack slots you did not mean to spend; into one it was the
+  // whole pile. Both stay the starting count - one out, all in - and a stack
+  // now carries a number to move exactly as many as you want either way. The
+  // typed verbs take the same count ('unvault 6 leather', gate.ts).
+  var qtyIn = null;
+  if (rows.length > 1) {
+    qtyIn = document.createElement("input");
+    qtyIn.type = "number"; qtyIn.className = "qty"; qtyIn.min = "1";
+    qtyIn.max = String(Math.min(rows.length, 20)); qtyIn.inputMode = "numeric";
+    qtyIn.value = String(place === "pack" ? Math.min(rows.length, 20) : 1);
+    qtyIn.setAttribute("aria-label", "How many to move");
+    qtyIn.addEventListener("click", function (e) { e.stopPropagation(); });
+  }
+  function some() {
+    var n = qtyIn ? parseInt(qtyIn.value, 10) : 1;
+    if (!(n >= 1)) n = 1;
+    return rows.slice(0, Math.min(n, rows.length, 20));
+  }
+  // a move that takes the count: the stack's number, or the one item
+  function btnQ(label, action) {
+    if (qtyIn && !qtyIn.parentNode) acts.appendChild(qtyIn);
+    var b = document.createElement("button"); b.type = "button"; b.textContent = label;
+    b.addEventListener("click", function () { benchSend(action, some()); });
+    acts.appendChild(b);
+  }
   function btn(label, action) {
     var b = document.createElement("button"); b.type = "button"; b.textContent = label;
     b.addEventListener("click", function () { fire(action); });
@@ -6726,15 +6759,15 @@ function benchItemNode(it, place) {
       if (it.equipped) btn("remove", "remove");
       else btn(it.slot === "weapon" ? "wield" : "wear", "equip");
     }
-    btn("\\u2192 box", "stash");
+    btnQ("\\u2192 box", "stash");
     // The shelf, when you're standing under your own roof. Sits next to the box
     // because it is the same act — putting a thing down somewhere it keeps.
-    if (benchAtDen) btn("\\u2192 shelf", "stow");
+    if (benchAtDen) btnQ("\\u2192 shelf", "stow");
     // The vault and the seal are the gate's business — only offered at a gate.
     // Everything can go to the vault now: unsealed gear is sealed on the way in
     // (rome, 2026-10-14). The seal stays on its own for sealing what you keep
     // carrying (trophies and the like carry no title to seal).
-    if (benchAtGate) { btn("\\u2192 vault", "vault"); if (!it.sealed && !it.stack) btn("seal", "seal"); }
+    if (benchAtGate) { btnQ("\\u2192 vault", "vault"); if (!it.sealed && !it.stack) btn("seal", "seal"); }
     // So are the vice and the hammer: mend the wear, or break gear to scrap —
     // sealed or not (the vice cracks the seal itself now, so sealed steel has
     // the same options as bare). The repair gate is 'fix' not 'slot' so the
@@ -6747,17 +6780,17 @@ function benchItemNode(it, place) {
   } else if (place === "shelf") {
     // Off the shelf, one at a time, same reason as the vault: a stack fanning
     // into the pack spends slots you didn't mean to spend.
-    btn1("\\u2192 pack", "fetch");
+    btnQ("\\u2192 pack", "fetch");
   } else {
     // Take ONE of a stack back to the pack, not the pile — banking in bulk is
     // fine (the vault is bottomless for fungibles), but withdrawing fans out a
     // whole stack into pack slots you didn't mean to spend (rome, 2026-07-16).
-    btn1("\\u2192 pack", "take");
+    btnQ("\\u2192 pack", "take");
     // From the lockbox at a gate you can also seal a piece in place or send it
     // straight to the vault, no round-trip through the pack. (Same rule as the
     // pack: anything vaults, and unsealed gear is sealed on the way in.)
     if (place === "lockbox" && benchAtGate) {
-      btn("\\u2192 vault", "vault");
+      btnQ("\\u2192 vault", "vault");
       if (!it.sealed && !it.stack) btn("seal", "seal");
     }
     // The vice reaches the keeping too (rome, 2026-10-16): the box's steel can be
