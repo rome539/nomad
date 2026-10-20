@@ -6236,6 +6236,7 @@ function chipLabel(s) {
   if (s === "out") return doorIsDen ? "out onto the ground" : "out into the dark";
   m = /^(attack|get) (.+)$/.exec(s);
   if (m) return m[2];
+  if (s === "look slate") return "slate";
   return s;
 }
 // A chip's colour tells you what tapping it DOES: red bites, green mends, gold
