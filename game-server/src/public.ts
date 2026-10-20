@@ -511,12 +511,11 @@ export const PAGE = `<!doctype html>
     color: var(--bone); font: inherit; font-size: 11px; padding: 2px 8px; cursor: pointer;
   }
   #bench .bitem button:hover { color: var(--gold); border-color: var(--gold); }
-  /* How many of a stack to move: sits in front of the move buttons it counts for. */
-  #bench .bitem input.qty {
-    width: 4.2em; background: transparent; border: 1px solid var(--border); border-radius: 4px;
-    color: var(--bone); font: inherit; font-size: 11px; padding: 2px 4px; text-align: center;
-  }
-  #bench .bitem input.qty:focus { outline: none; border-color: var(--gold); color: var(--gold); }
+  /* How many of a stack to move: a minus, the count, a plus, in front of the move buttons. */
+  #bench .bitem .qty { display: inline-flex; align-items: center; gap: 2px; }
+  #bench .bitem .qty .qtyn { min-width: 2.2em; text-align: center; color: var(--gold); font-size: 12px; font-variant-numeric: tabular-nums; }
+  #bench .bitem .qty button { padding: 2px 7px; }
+  #bench .bitem .qty button:disabled { opacity: .35; cursor: default; color: var(--dim); border-color: var(--border); }
   /* Destructive actions retain their warning and armed states. */
   #bench .bitem button.burn { color: var(--dim); }
   #bench .bitem button.burn:hover { color: var(--blood); border-color: var(--blood); }
@@ -6702,20 +6701,21 @@ function benchItemNode(it, place) {
   // whole pile. Both stay the starting count - one out, all in - and a stack
   // now carries a number to move exactly as many as you want either way. The
   // typed verbs take the same count ('unvault 6 leather', gate.ts).
-  var qtyIn = null;
+  // A STEPPER, NOT A BOX (rome, 2026-10-20: a typed number box was hated): a
+  // tap on the minus or plus picks the count, and the move takes that many.
+  var qtyIn = null, qtyMax = Math.min(rows.length, 20), qtyN = place === "pack" ? qtyMax : 1;
   if (rows.length > 1) {
-    qtyIn = document.createElement("input");
-    qtyIn.type = "number"; qtyIn.className = "qty"; qtyIn.min = "1";
-    qtyIn.max = String(Math.min(rows.length, 20)); qtyIn.inputMode = "numeric";
-    qtyIn.value = String(place === "pack" ? Math.min(rows.length, 20) : 1);
-    qtyIn.setAttribute("aria-label", "How many to move");
-    qtyIn.addEventListener("click", function (e) { e.stopPropagation(); });
+    qtyIn = document.createElement("span"); qtyIn.className = "qty";
+    var minus = document.createElement("button"), plus = document.createElement("button"), shown = document.createElement("span");
+    minus.type = plus.type = "button"; minus.textContent = "\u2212"; plus.textContent = "+";
+    minus.setAttribute("aria-label", "One fewer"); plus.setAttribute("aria-label", "One more");
+    shown.className = "qtyn"; shown.setAttribute("aria-live", "polite");
+    var paint = function () { shown.textContent = String(qtyN); minus.disabled = qtyN <= 1; plus.disabled = qtyN >= qtyMax; };
+    minus.addEventListener("click", function (e) { e.stopPropagation(); if (qtyN > 1) { qtyN--; paint(); } });
+    plus.addEventListener("click", function (e) { e.stopPropagation(); if (qtyN < qtyMax) { qtyN++; paint(); } });
+    qtyIn.append(minus, shown, plus); paint();
   }
-  function some() {
-    var n = qtyIn ? parseInt(qtyIn.value, 10) : 1;
-    if (!(n >= 1)) n = 1;
-    return rows.slice(0, Math.min(n, rows.length, 20));
-  }
+  function some() { return rows.slice(0, Math.max(1, Math.min(qtyN, qtyMax))); }
   // a move that takes the count: the stack's number, or the one item
   function btnQ(label, action) {
     if (qtyIn && !qtyIn.parentNode) acts.appendChild(qtyIn);
