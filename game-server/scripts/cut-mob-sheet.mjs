@@ -29,7 +29,9 @@ sharp.cache(false);
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "../..");
-const [sheetArg, id, ...poses] = process.argv.slice(2);
+// --defringe: see the edge pass below. Off unless asked for.
+const DEFRINGE = process.argv.includes("--defringe");
+const [sheetArg, id, ...poses] = process.argv.slice(2).filter((a) => a !== "--defringe");
 
 if (!sheetArg || !id || !poses.length) {
   console.error("usage: node scripts/cut-mob-sheet.mjs <sheet.png> <creature-id> <pose> <pose> …");
@@ -318,6 +320,66 @@ for (let i = 0; i < poses.length; i++) {
       buf[o + 3] = Math.round(255 * Math.min(1, k * 1.6));
     }
     if (eyeN) eyes = buf;
+  }
+
+  // THE ROSE RIM ON A YELLOW EDGE (--defringe). The despill above only acts when
+  // red AND blue both stand over green, which is what magenta bleed looks like on
+  // a grey or brown edge. On an olive or straw edge the drawn blue is already
+  // under green, so a pixel with some magenta in it fails that test and keeps a
+  // rosy cast: the fowler's reed strands shipped with a red rim. So an edge pixel
+  // (within 2px of the cut-out) that is redder than the solid paint just inside
+  // it takes that paint's colour, at its own brightness - the ink outline stays.
+  if (DEFRINGE) {
+    const w = info.width, h = info.height, a = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : data[(y * w + x) * 4 + 3];
+    const edge = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (a(x, y) < 15) continue;
+      out: for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (a(x + dx, y + dy) < 15) { edge[y * w + x] = 1; break out; }
+    }
+    const lum = (r, g, b) => 0.3 * r + 0.59 * g + 0.11 * b;
+    let fixed = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!edge[y * w + x]) continue;
+      const o = (y * w + x) * 4, r = data[o], g = data[o + 1], b = data[o + 2];
+      let sr = 0, sg = 0, sb = 0, n = 0;
+      for (let R = 3; R <= 6 && !n; R += 3)
+        for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+          const X = x + dx, Y = y + dy;
+          if (X < 0 || Y < 0 || X >= w || Y >= h || edge[Y * w + X] || a(X, Y) < 200) continue;
+          const q = (Y * w + X) * 4; sr += data[q]; sg += data[q + 1]; sb += data[q + 2]; n++;
+        }
+      if (!n) continue;
+      sr /= n; sg /= n; sb /= n;
+      const warm = (rr, gg, bb) => rr - (gg + bb) / 2;
+      if (warm(r, g, b) <= warm(sr, sg, sb) + 10) continue;   // no redder than what is inside it
+      const k = lum(r, g, b) / Math.max(1, lum(sr, sg, sb));
+      data[o] = Math.min(255, Math.round(sr * k)); data[o + 1] = Math.min(255, Math.round(sg * k)); data[o + 2] = Math.min(255, Math.round(sb * k));
+      fixed++;
+    }
+    // ...and the strands too thin to have any solid paint inside them, and the
+    // gaps between strands where the background showed through: anything left
+    // with a strong rose cast (red well over green, blue not far under it - which
+    // brown never is) takes the colour of the nearest paint that is not rose.
+    const rose = (q) => data[q + 3] >= 15 && data[q] - data[q + 1] > 30 && data[q + 2] - data[q + 1] > -8;
+    const was = Uint8Array.from({ length: w * h }, (_, k) => rose(k * 4) ? 1 : 0);
+    let rosed = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!was[y * w + x]) continue;
+      const o = (y * w + x) * 4;
+      let sr = 0, sg = 0, sb = 0, n = 0;
+      for (let R = 2; R <= 8 && !n; R += 2)
+        for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+          const X = x + dx, Y = y + dy;
+          if (X < 0 || Y < 0 || X >= w || Y >= h || was[Y * w + X] || a(X, Y) < 15) continue;
+          const q = (Y * w + X) * 4; sr += data[q]; sg += data[q + 1]; sb += data[q + 2]; n++;
+        }
+      if (!n) { data[o] = Math.round((data[o + 1] + data[o + 2]) / 2 + 10); continue; }
+      sr /= n; sg /= n; sb /= n;
+      const k = lum(data[o], data[o + 1], data[o + 2]) / Math.max(1, lum(sr, sg, sb));
+      data[o] = Math.min(255, Math.round(sr * k)); data[o + 1] = Math.min(255, Math.round(sg * k)); data[o + 2] = Math.min(255, Math.round(sb * k));
+      rosed++;
+    }
+    if (i === 0 || fixed || rosed) console.log("     " + poses[i] + ": defringed " + fixed + " edge pixels, " + rosed + " rose");
   }
 
   const pct = kept / (info.width * info.height) * 100;

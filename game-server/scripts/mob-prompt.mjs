@@ -162,22 +162,28 @@ const RULED_OUT = {
 //
 // Every line here is written to the law above: the BODY makes the shape and the
 // thing being worked on is never named, because naming it draws it.
+const WALK_A = "Contact pose A: One leg reaches forward with the heel making contact, while the opposite leg trails behind. The body is transferring weight forward.";
+const WALK_B = "Passing pose B: The rear leg has swung forward, with its knee bent and foot lifted, passing beside the planted supporting leg. The legs are close together, not spread apart.";
 const LINES = {
 // THE REDO OF 2026-10-18 (nine cells, no recover). These three had no LINES of
 // their own; the carrier's two work poses are the wording his sheet was drawn
 // with, and the strand thief's graze is the wrack-turning his description gives.
 "cutthroat": {
+  alert: "Has seen you and squared up to you: weight forward on both feet, the head up and the eyes on you, ready to move, the thin knife held low and out in front",
+  rest: "Asleep, lying up low on the ground",
   graze: "Crouched on his heels going through something on the ground with both hands, head down over it. What he is going through is NOT drawn",
-  sweep: "A fast backhand slash with the thin knife, swung flat across at throat height, the body low and turning with it",
+  attack: "A fast slash with the thin knife, swung flat across at throat height, the body low",
 },
 "road-carrier": {
+  alert: "Has seen you and squared up to you: weight forward on both feet, the head up and the eyes on you, ready to move, the satchel pushed back behind the hip",
   "check-the-satchel": "One hand come across to the buckles of the satchel at the hip, thumb on them, the head barely turned down to it and the stride not broken",
   "set-down-the-load": "The strap lifted off the shoulder and the satchel swung down to knee height, both hands on it, the body straightening - the one moment it is not carrying",
-  sweep: "A hard backhand blow with the open hand, swung flat across the body at full reach, the satchel swinging out on its strap",
+  attack: "A hard blow with the open hand, swung flat across the body at full reach, the satchel swinging out on its strap",
 },
 "strand-thief": {
+  alert: "Has seen you and squared up to you: weight forward on both feet, the head up and the eyes on you, ready to move, the knife held low and out in front",
   graze: "Turning wrack over with one boot",
-  sweep: "A fast low backhand swipe across the body at full reach, crouched and turning with it",
+  attack: "A fast low swipe across the body at full reach, crouched low",
 },
 // THE ARMED DEAD OF THE KEEP. Every one of these came back throwing a punch
 // with the weapon still frozen in its carry position, because the generic
@@ -186,8 +192,8 @@ const LINES = {
 // a man does not come back to guard from a punch he did not throw.
 "skeleton": {
   "look-behind": "Standing guard, the skull turned slowly round over one shoulder toward something behind it, the body not following, the rusted sword still carried low",
-  sweep: "A backhand cut with the rusted sword, swung flat across the body from the far side at full reach, the light frame twisting round behind it",
-  attack: "A downward cut with the rusted sword, the arm come through and the blade past the low point, the whole light frame turned into it. The sword is IN THE SWING, not held at rest",
+  sweep: "A flat cut with the rusted sword, swung across the body at full reach",
+  attack: "A downward cut with the rusted sword, the arm come through and the blade past the low point, the whole light frame leaning into it. The sword is IN THE SWING, not held at rest",
   recover: "Bringing the sword back up and in across the body after the cut, coming back to a guard, weight settling onto the back foot",
 },
 "bone-knight": {
@@ -205,7 +211,7 @@ const LINES = {
 },
 "last-watchman": {
   "look-down-the-road": "Standing his post with the spear grounded upright beside him in one hand, the helm turned and lifted, looking a long way down a road that is not drawn",
-  sweep: "A low swing of the spear across the body at knee height, both hands on the shaft, the body turned behind it - the shaft doing the work, not the point",
+  sweep: "A low swing of the spear across the body at knee height, both hands on the shaft - the shaft doing the work, not the point",
   attack: "A hard spear thrust, straight and level: both hands on the shaft, the point driven out past the front foot at chest height, the body behind it in a long lunge, the mantle thrown back off the shoulders. THE SPEAR IS LEVEL AND GOING FORWARD - it is not upright, it is not at the shoulder, and the fist is not doing the work",
   recover: "The spear hauled back in from the thrust, point coming up off the line, the front foot recovering under him and the body straightening back toward his post",
 },
@@ -222,12 +228,12 @@ const LINES = {
 },
 "the-tide-warden": {
   "look-at-the-water": "Stopped at a milestone, the notched stick held still at the side, the ruined head turned away and down, looking out at water that is not drawn",
-  sweep: "A backhand swing of the notched stick, swung flat across the body from the far side at full reach, the other arm out for balance",
+  sweep: "A flat swing of the notched stick across the body at full reach, the other arm out for balance",
   idle: "Standing still in a coat sodden black to the hem, a notched stick held upright in one hand, facing along the way",
   "cut-the-stick": "Head down over the notched stick held up close to the chest, cutting a fresh notch into it with a small blade",
   alert: "The knife and the stick stopped dead mid-notch, both hands still on them, the ruined head come up off the tally and levelled straight at the viewer for the first time",
-  "move-a": "Locomotion contact pose A, natural walking gait on the bare shin bones",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": WALK_A + " The legs are bare shin bones.",
+  "move-b": WALK_B,
   attack: "A hard level swing of the notched stick from the shoulder, both hands on it",
   recover: "Coming down off the swing, the stick dropping back toward one hand, the body squaring up again",
   death: "Dead, collapsed limp on its side, no gore and no effects",
@@ -252,20 +258,20 @@ const LINES = {
   idle: "Standing very straight and still, a small brass plate held flat on the open palm at chest height, the ruined head down over it. The plate is the only object in the cell",
   "read-the-water": "One arm out straight and level, sighting along it at something far past the viewer's shoulder, the brass plate still held in the other hand",
   alert: "The brass plate lowered out of the sighting line and held forgotten at the hip, the bare-socketed head come round off the sighting line and levelled at the viewer",
-  "move-a": "Locomotion contact pose A, natural species-specific gait",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": WALK_A,
+  "move-b": WALK_B,
   attack: "A short hard downward strike with the edge of the brass plate, the other arm out for balance",
   recover: "Drawing the brass plate back in to the chest after the strike, the other arm coming down",
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-drover": {
   "lean-on-the-stick": "Standing at rest, leaning on the long stick planted upright in front of him, both hands folded over the top of it, waiting the way a man waits on the tide",
-  sweep: "A low backhand swing of the long stick across the body at knee height, the body turned behind it, arms staying below head height",
+  sweep: "A low swing of the long stick across the body at knee height, arms staying below head height",
   idle: "Standing at ease with a long stick across the worn grooves of both shoulders and both wrists hooked over it, coat tied at the waist, looking past you up the road",
   "drive-the-road": "Stick brought down into one hand and swung out low and wide to the side, the other arm out, moving something that is not there",
   alert: "The stick come down off the worn shoulder grooves into both hands across the body, head up, the easy working stance gone out of him entirely",
-  "move-a": "Locomotion contact pose A, natural species-specific gait",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": WALK_A,
+  "move-b": WALK_B,
   attack: "A hard level swing of the long stick from the shoulder, arms staying below head height",
   recover: "The stick swinging back down to rest after the blow, the body coming back square",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -274,8 +280,8 @@ const LINES = {
   idle: "Standing stooped with a long punt pole held level across the body in both hands, a wicker eel trap hanging at his belt, back half turned, not looking up",
   "lift-the-trap": "Bent right down with both arms out and low in front of him, hauling a dripping wicker eel trap up on its line, the trap and the line hanging clear in his hands. No water and no boat is drawn",
   alert: "The head finally come up. The punt pole still held level and the body still turned away, and only the ruined face come round over the shoulder and fixed on the viewer",
-  "move-a": "Locomotion contact pose A, natural species-specific gait",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": WALK_A,
+  "move-b": WALK_B,
   attack: "A hard two-handed forward jab with the punt pole, arms staying below head height",
   recover: "Drawing the punt pole back in after the jab, the body settling back into its stoop",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -285,8 +291,8 @@ const LINES = {
   idle: "Seen from behind: standing upright with both arms raised and both hands flat and open at shoulder height, palms forward, bracing against nothing - no wall is drawn. The entire back of him stripped: bare skull, shoulder blades and the whole line of the spine through a coat torn open down the back",
   "turn-from-the-wall": "Body rotating, one arm still up and back behind him with the hand flat and open, the other coming round with it, the whole and undamaged face beginning to come round toward the viewer",
   alert: "Turned fully round now, both arms down at his sides, squared up and facing, the intact face on the viewer and the stripped back hidden behind him",
-  "move-a": "Locomotion contact pose A, natural species-specific gait",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": WALK_A,
+  "move-b": WALK_B,
   attack: "A close two-handed shove driving forward from the chest, shoulders behind it",
   recover: "Drawing both hands back in to the chest after the shove, the shoulders coming down",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -296,8 +302,8 @@ const LINES = {
   idle: "Standing three-quarters turned away, a heavy mallet hanging down in one bare-bone fist, the ruined head down and angled at something low in front of him. No stone and no stonework is drawn",
   "dress-the-stone": "Crouched low on one knee, the mallet raised in the bone fist and a chisel held out steady in the whole hand, both hands working together at about knee height in front of him. The mallet and the chisel are the only objects in the cell",
   alert: "Turned round from the work at last, the mallet coming UP in the bare-bone fist rather than down, the head levelled at the viewer",
-  "move-a": "Locomotion contact pose A, natural species-specific gait",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": WALK_A,
+  "move-b": WALK_B,
   attack: "A hard mallet blow driven forward from the shoulder, both hands on the shaft",
   recover: "The mallet coming back down off the blow, the body returning to its working guard",
   death: "Dead, lying limp on its side, no gore and no effects",
@@ -307,15 +313,15 @@ const LINES = {
   idle: "Standing still, reed stems rooted through the ribs and shoulders and rising well above the head so the outline reads as much reed as man, one bare shoulder clear, the face indistinct behind his own stems. No reed bed and no loose reed is drawn",
   "part-the-reed": "One arm out and sweeping across in front of him at chest height, body turning with it, the reed growing out of his own ribs bending with the movement",
   alert: "Stopped dead and square-on to the viewer, the reed growing out of his ribs no longer moving, the face still not quite clear behind it",
-  "move-a": "Locomotion contact pose A, natural species-specific gait",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": WALK_A,
+  "move-b": WALK_B,
   attack: "Coming out at full stretch with both arms forward and low, body committed",
   recover: "Drawing back after the lunge, arms coming in, his own reed settling back around him and the outline closing up again",
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-scaffold-hand": {
   "reach-for-the-span": "Up on the balls of both feet, both bone arms stretched straight up as far as they will go, fingers spread, reaching for something higher than he can get to. Nothing above him is drawn",
-  sweep: "Both bone arms, still raised, swung across sideways together over the head like a falling beam, the body twisting under them",
+  sweep: "Both bone arms, still raised, swung across sideways together over the head like a falling beam, the body braced under them",
   idle: "Standing with the head tipped right back and both bare-bone arms raised straight up over his head, hands working at something above him, weight settled. What he is working on is NOT drawn",
   "work-the-stone": "Standing, head back, both bone arms straight up and committed, hands picking at nothing overhead, the body leaning back into it",
   swing: "The gather before a blow: both bone arms taken up and back behind the head, elbows high, the body leaning away and loading, nothing released yet",
@@ -328,13 +334,16 @@ const LINES = {
 "the-fowler": {
   idle: "Lying flat on his front in a hood of sacking and cut reed, face down, absolutely still, the exposed back of him bone-white, the long fowling pole under one hand and part-covered by cut sedge caught on his own sacking. No ground is drawn",
   "rise-from-the-turf": "Coming up onto one knee, the sacking hood falling back, the brown bog-tanned underside and its crust of root now showing, both hands closing on the long fowling pole",
-  "move-a": "Locomotion contact pose A, natural species-specific gait",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "watch-the-sky": "Still flat on his front in the sacking hood, the long fowling pole lying under one hand, but the head and shoulders lifted a little off the turf and the face turned up, watching the sky for birds that are not drawn. Absolutely still. No ground is drawn",
+  "move-a": WALK_A,
+  "move-b": WALK_B,
   attack: "A hard forward thrust with the long fowling pole held in both hands, body low and driving",
+  alert: "Up on his feet out of the turf and crouched low, both hands on the long fowling pole levelled across him, the head pushed forward at you - furious at being found",
+  sweep: "A low swing of the long fowling pole across the body at knee height, both hands on the shaft - the shaft doing the work, not the point",
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-salt-widow": {
-  sweep: "A low backhand sweep of the long rake across the body at knee height, both hands on it, the body turned behind it",
+  sweep: "A low sweep of the long rake across the body at knee height, both hands on it",
   idle: "Standing side on and stooped a little forward from the waist, both brown leather arms down and working at something low in front of her at knee height, hands busy, sleeves and coat crusted white to the elbow. What she is working at is NOT drawn",
   "feed-the-flue": "Crouched right down with both arms driven straight out forward and low, in to the elbow, pushing something away from her at ground level. Her hands are empty and nothing she is pushing, and nothing she is pushing it into, is drawn",
   "work-the-pan": "Standing and leaning far out forward from the hips, a long rake held in both hands with its head down and out at full arm's length, drawing it back toward her across knee height. The rake is the only object in the cell",
@@ -356,12 +365,12 @@ const LINES = {
 // water is not in the cell. Neither is the clerk's toll, nor the warden's road.
 "the-miller": {
   "haul-it-up": "Straightening hard up out of the stoop, both arms coming up and back with the elbows bent and the fists closed on what he has hold of. What is in them is NOT drawn",
-  sweep: "A heavy backhand swing of one closed fist across the body at full reach, the other fist still shut against the chest, the whole swollen weight turned behind it",
+  sweep: "A heavy swing of one closed fist across the body at full reach, the other fist still shut against the chest, the whole swollen weight behind it",
   idle: "Standing upright and still, turned three-quarters away from the viewer, the head bowed to look down in front of him, both arms hanging straight down at his sides with the hands open. Heavy and patient. NOTHING he is looking at is drawn - no water, no floor, no surface, no wheel",
   "work-the-water": "Bent right over from the waist, both arms reaching down in front of him to knee height, hands open and fingers spread, working at something low that is NOT drawn - no water, no floor, no surface",
   alert: "Come round to face the viewer for the first time, still bent, and BOTH HANDS ARE UP OUT OF IT AND CLOSED - he has kept hold of whatever it was. What is in his fists is NOT drawn; only the grip and the forearms streaming",
-  "move-a": "Wading contact pose A: one leg driven forward and down against a resistance that is not drawn, the body swung heavily after it, both arms out wide for balance",
-  "move-b": "Wading passing pose B: the other leg through, the body swung the other way, same direction and body size",
+  "move-a": "Wading contact pose A: One leg reaches forward with the heel making contact, while the opposite leg trails behind. It is driven down against a resistance that is not drawn, both arms out wide for balance. The body is transferring weight forward.",
+  "move-b": "Wading passing pose B: The rear leg has swung forward, with its knee bent and foot lifted, passing beside the planted supporting leg. The legs are close together, not spread apart.",
   attack: "Both closed fists driven down and forward together in one heavy swing from above the shoulder, the whole swollen weight behind it",
   recover: "The fists coming back in to the chest after the blow, the body settling back into its stoop",
   death: "Dead, collapsed face down and spread, both hands finally open and empty",
@@ -370,8 +379,8 @@ const LINES = {
   idle: "Standing very straight and still, a satchel hanging at the hip on a broad strap that crosses the chest, ONE HAND HELD OUT AT CHEST HEIGHT, PALM UP AND OPEN, held long enough that it has stopped being a gesture. The other arm hangs. Nothing is in the open palm",
   "shift-the-weight": "The free hand come across to take the weight of the satchel from underneath and lift it an inch, the head down toward it, the strap slack for a moment - and THE OUT-HELD HAND HAS NOT MOVED. It stays exactly where it was, palm up",
   alert: "The head come up off the satchel and levelled straight at the viewer, the satchel dropped back onto the strap, and the open palm still out, still waiting, now unmistakably meant for you",
-  "move-a": "Locomotion contact pose A, a slow even walk, the satchel swinging - and the open palm STILL HELD OUT in front, carried along unchanged",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size, the palm still out",
+  "move-a": WALK_A + " A slow even walk, the satchel swinging - and the open palm STILL HELD OUT in front, carried along unchanged.",
+  "move-b": WALK_B + " The palm still out.",
   attack: "The out-held hand finally closes and is driven straight forward in a grab at full reach, the other arm back",
   recover: "The hand opening again on the way back in and returning to exactly where it was, palm up at chest height",
   death: "Dead, lying limp on its side, the strap still across the chest, the hand open and empty at last",
@@ -380,8 +389,8 @@ const LINES = {
   idle: "Standing at rest in a long coat of overlapping plates worn the colour of dust, facing along the way it is going, weight even, entirely unhurried. It is not guarding this spot and does not look like it is",
   "turn-the-distance": "Stopped and turning on the spot, the body coming round through three-quarters to face back the way it came, one boot pivoting, the head already level and looking down the new direction. The end of a beat, done ten thousand times",
   alert: "Stopped square to the viewer and settled, the head come round and levelled, weight dropping back onto the rear foot - the first time it has been interested in a thing rather than a distance",
-  "move-a": "Locomotion contact pose A, a long even marching stride, the coat of plates swinging heavily with it",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": WALK_A + " A long even marching stride, the coat of plates swinging heavily with it.",
+  "move-b": WALK_B,
   attack: "A hard straight-armed drive forward from the shoulder with the leading arm, the body stepping into it, the other arm braced back",
   recover: "The arm drawn back in and the shoulders squaring, the body settling back into its marching stance",
   death: "Dead, collapsed sideways, the plated coat splayed open, one arm folded under",
@@ -475,6 +484,14 @@ const LINES = {
 "twice-dead": {
   listen: "Standing still with the skull lifted and turned a little to one side, listening, the hard brown hands hanging at its sides - waiting, unhurried, for whatever it heard",
   rise: "Getting back up after being put down: one knee and one hand on the ground, the body hauling itself upright without hurry, the head still hanging - it does not stay down",
+  // It has no weapon in its hands: it fights with them.
+  attack: "Lunging forward at full reach with both hard brown hands out and hooked to seize, the dry body pitched after them without hurry",
+  sweep: "A swipe of one hard brown hand across the body at full reach, the other arm back",
+},
+"thrice-dead": {
+  rise: "Gathering itself up off the ground once more: on both hands and one knee, the cured, yellow-boned body pushing itself upright, the skull lifting last - it does not stay down",
+  attack: "Lunging forward with one cured hand driven out to seize at full reach, the yellow finger bones hooked, the dry body behind it",
+  sweep: "A rake of one cured hand across the body at full reach, the finger bones hooked",
 },
 "verdigris-thing": {
   "seek-the-metal": "Head lifted and turning slowly, one green-crusted hand half raised and open in front of it, the body leaning toward something it can feel rather than see - the metal you are wearing",
@@ -929,7 +946,8 @@ const REDRAW = {
   "snow-fox": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "snow-hare": ["idle","alert","rest","graze","move-a","move-b","attack","death"],
   "stone-adder": ["idle","watch","rest","bask","move-a","move-b","attack","death"],
-  "strand-thief": ["idle","alert","graze","move-a","move-b","snatch-escape","attack","death"],
+  // redrawn 2026-10-20 to the cutthroat's and the carrier's layout: own poses, then alert, walk, one attack
+  "strand-thief": ["idle","graze","snatch-escape","alert","move-a","move-b","attack","death"],
   "the-blue-fox": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "the-dancer": ["idle","alert","feed","move-a","move-b","twisting-leap","attack","death"],
   "the-gravid-adder": ["idle","watch","rest","bask","move-a","move-b","attack","death"],
@@ -1193,6 +1211,14 @@ const LAND_DEAD = {
     skin: "\nTHE SKIN IS DRY, BROWN AND LEATHER-HARD, NOT ROTTEN AND NOT WET: an old body dried out in the barrow, not one decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.",
     mood: "Unhurried and patient, not raging: it has been put down before and got back up, and it will come on again.",
   },
+  // Older than the barrow-dead and further gone: less leather, more bone.
+  "thrice-dead": {
+    decay: "- THE BONE SHOWS YELLOW THROUGH IT. What is left on the frame is cured meat, dark and hard, worn right off in places so long yellowed bone stands bare: the forearms and hands, both shins, a run of ribs, half the jaw. More of it is bone than the barrow-wight's.\n"
+      + "- IT IS DRY ALL THE WAY THROUGH, as dry as the stones it slept under: dusty, cracked, nothing wet anywhere in it.",
+    cloth: "- What it was laid in is rotted to dark olive-brown grave-rags hanging off it in strips.",
+    skin: "\nWHAT IS LEFT ON IT IS CURED, NOT ROTTEN AND NOT WET: dark hard meat over yellow bone, an old body dried out under a cairn, not one decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.",
+    mood: "Unhurried and patient, not raging: it has been put down twice and got back up both times, and it will come on again.",
+  },
 };
 
 // The shared half, which the widow does not get: she is the one the sea missed.
@@ -1338,7 +1364,9 @@ THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of 
 // That is a degraded PERSON, and the picture has to start from a person.
 const MANSHAPED = {
   "cutpurse": "Half the size of a man and twice as quick, but a MAN'S SHAPE: two arms, two legs, a head on a neck, upright or crouched on its heels the way a man crouches - never on all fours, never a muzzle, never a beak, never an animal's hind leg. Whatever it used to be, it has a man's hands and they are the whole point of it: long, knuckly, grabbing fingers. Ragged and filthy and starved down, not furred and not clawed.",
-  "cutthroat": "Half the size of a man and twice as quick, but a MAN'S SHAPE: two arms, two legs, a head on a neck, upright or crouched on its heels the way a man crouches - never on all fours, never a muzzle, never a beak, never an animal's hind leg. A man's hands, long and knuckly - and this one has a blade in one of them. Ragged and filthy and starved down, not furred and not clawed.",
+  // THE LIVING MEN (rome, 2026-10-20). The cutthroat was handed the cutpurse's
+  // degraded half-man - "ragged and filthy and starved down" - and three living
+  // men came back with gaunt faces and their eyes shut. They are people.
   "rag-and-bone": "IT IS MAN-SHAPED AND HALF AGAIN A MAN'S SIZE. Two arms, two legs, a head, standing upright - a big hunched human frame under its load, not a beast. Nothing of the body underneath is visible at all: every inch is hung with what it has found, buckles, snapped blades, mail skirts, a boot, a tin cup, lashed on with wire and gut, and all of it swings when it swings.",
   "verdigris-thing": "IT IS MAN-SHAPED. Two arms, two legs, a head, standing and moving upright like a man, under a century of green crust that has thickened its outline and blurred the features. A man under corrosion - not an animal, not a lump, not a blob. The shape is still a person's.",
   "the-drowned": "IT IS A DROWNED MAN AND KEEPS A MAN'S SHAPE. Two arms, two legs, a head on a neck, standing upright. Bloated - swollen thick at the limbs and the belly, the skin tight and waterlogged - but still plainly the body of a person, not a beast and not a shapeless mass.",
@@ -1414,9 +1442,32 @@ ${HELD}`;
 // HOLLOW means undead, THIEVES means it robs you, and a stoat is in THIEVES.
 const PEOPLE = new Set([
   "strand-thief", "the-wrecker",                       // the shore, living
+  "cutthroat", "road-carrier",                         // the road, living
   "the-herd", "the-milker", "the-butter-wife", "the-one-who-stayed",   // the mountain's shepherds
 ]);
 const worked = () => inSet("HOLLOW") || PEOPLE.has(id);
+// Every person in PEOPLE who is not one of the dead.
+const LIVING_MEN = { has: (x) => PEOPLE.has(x) && !(x === id && inSet("HOLLOW")) };
+// THE LIVING LOOK (rome, 2026-10-20). The strand thief's sheet came out the way
+// rome wants every living person to look, and the cutthroat and the carrier
+// redrawn to it came out better too. So every living person's sheet from here on
+// is written to it: the hood with the face in its shadow, the strip-rags, the
+// cord, the wraps, the sandals, and the etched olive-and-bone colour. What the
+// description says a person wears or how they are built still comes first - the
+// herd keeps his frock coat - and the look fills in everything it leaves out.
+// Their own kit (a knife, a satchel) is LIVING_KIT; the low ready carriage is
+// for the ones who come at you, not the shepherds. A NEW living person gets this
+// look by going into PEOPLE (and WOMEN if she is one); nothing else to write.
+const WOMEN = new Set(["the-milker", "the-butter-wife"]);
+const COMES_AT_YOU = new Set(["cutthroat", "strand-thief", "road-carrier", "the-wrecker"]);
+const LIVING_KIT = {
+  "cutthroat": "A thin knife in one hand.",
+  "road-carrier": "A heavy leather satchel on a long strap across the chest, riding at the hip - the one thing on him that is not rag.",
+};
+const livingLook = () => {
+  const she = WOMEN.has(id), HE = she ? "SHE" : "HE", him = she ? "her" : "him", his = she ? "her" : "his";
+  return HE + " IS A LIVING " + (she ? "WOMAN" : "MAN") + ", lean and sinewy, drawn in heavy etched detail, all dry olive, bone and earth-brown. Where the description above says what " + (she ? "she" : "he") + " wears or how " + (she ? "she" : "he") + " is built, draw that; everything it leaves out is this. A deep ragged hood pulled well forward, the face set back in its shadow with only the nose, the cheek and the jaw catching the light. Layer on layer of torn olive-grey and bone-coloured rags hanging off " + him + " in long tattered strips to the knee, a short ragged cape over the shoulders, all of it wound round with cord, thongs and narrow leather straps hung with small found things. Bare, wiry forearms bound with cloth wraps at the wrist; bare sinewy shins bound with rag wrappings; worn sandals." + (COMES_AT_YOU.has(id) ? " Carried low, the knees bent and the head pushed forward, ready to move." : "") + " Not a corpse, not a ghoul: a hard living " + (she ? "woman" : "man") + " under the hood." + (LIVING_KIT[id] ? " " + LIVING_KIT[id] : "");
+};
 // AN ANIMAL HAS NO RECOVER FRAME (rome, 2026-10-17). The settle after a blow
 // is a fighter's frame - the dead and the people with something in their hands.
 // The pale crawler's sheet carried one anyway, out of its recorded order, and so
@@ -1450,11 +1501,15 @@ Every pose is the BODY making the shape of what it is doing, alone in empty mage
 `;
 
 
+// A two-legged walk: the contact frame has the legs apart, and
+// the passing frame has them together. The old "opposite leg phase" line came
+// back as two near-identical spread strides.
+const TWO_LEGS = worked() || ["cutthroat", "cutpurse", "footpad", "wayman", "road-carrier"].includes(id);
 // what each pose is, said the way the sheet needs it said
 const SAY = {
   idle: "Natural resting alert stance",
-  "move-a": "Locomotion contact pose A, natural species-specific gait",
-  "move-b": "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": TWO_LEGS ? WALK_A : "Locomotion contact pose A, natural species-specific gait",
+  "move-b": TWO_LEGS ? WALK_B : "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "Natural physical attack for the species, full body in frame",
   // AN ARMED THING ATTACKS WITH WHAT IT IS HOLDING. The line above is written
   // for an animal, and for a soldier it says nothing at all - so the sheets came
@@ -1509,16 +1564,16 @@ console.log(`# ${id} — ${poses.length} poses, ${COLS}x${ROWS} sheet at ${W}x${
 ${"-".repeat(72)}
 Use case: stylized-concept. Asset: NOMAD ${region || "world"} mob animation sprite sheet.
 
-The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. ${LIVING_MEN.has(id) ? "Human anatomy must remain authentic: this is a living " + (WOMEN.has(id) ? "woman." : "man.") : "Species anatomy must remain authentic."}
 
 Subject: ${name}. Exact game description: ${desc || "[PASTE THE IN-GAME DESCRIPTION HERE]"}
 
-ONE ${MANSHAPED[id] ? "FIGURE" : "ANIMAL"} PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
-${MAN}
+ONE ${MANSHAPED[id] || LIVING_MEN.has(id) ? "FIGURE" : "ANIMAL"} PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+${MAN || (LIVING_MEN.has(id) ? "\n" + livingLook() + "\n" : "")}
 ${CONSTANT[id] || ""}
-${WHAT_IT_IS}${worked() ? ALONE_WORKED : ALONE_ANIMAL}Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. ${CONTAIN} ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}.${flyer ? WINGSPAN : ""} Stable body proportions and markings. Feet aligned near the lower edge in ground poses${flyer ? "; body centred in the flight poses" : ""}.
+${WHAT_IT_IS}${worked() ? ALONE_WORKED : ALONE_ANIMAL}Create ${poses.length} full-body poses of this SAME individual in a strict ${COLS} COLUMNS by ${ROWS} ROWS sheet, ${COLS === ROWS ? "square" : "landscape"} ${W}x${H}. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. ${LIVING_MEN.has(id) ? CONTAIN.replace(/the animal/g, "the figure").replace(/THE ANIMAL/g, "THE FIGURE").replace(/Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot,/, "Not a hand, not a foot, not a blade,").replace(/, a wing fully open/, "") : CONTAIN} ${CONSTANT[id] ? "Use the camera named above for this animal, the same in every cell." : "Consistent eye-level three-quarter camera, facing slightly toward the viewer's right."} Consistent physical body scale across poses; size ALL poses to fit ${flyer ? "the widest wingspan" : "the widest pose on the sheet"}.${flyer ? WINGSPAN : ""} Stable body proportions and markings. Feet aligned near the lower edge in ground poses${flyer ? "; body centred in the flight poses" : ""}.
 
 Reading order left to right, top row then bottom row:
 ${poses.map((p, i) => `${i + 1}. ${WORDING[p] || (LINES[id] && LINES[id][p]) || SAY[p] || p.replace(/-/g, " ")}`).join("\n")}
 
-No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human.${MANSHAPED[id] ? "" : " Do not make the animal a dragon hybrid."}`);
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human.${MANSHAPED[id] || LIVING_MEN.has(id) ? "" : " Do not make the animal a dragon hybrid."}`);

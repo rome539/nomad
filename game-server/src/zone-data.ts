@@ -1397,12 +1397,21 @@ export const HAMMERSTONE_HAUNTS = [
 // cadence and odds are untouched: the world still rolls one about twice a day.
 export const STONE_GROUND_CAP = 4;
 // A rock against a latch (rome, 2026-07-11): strongbox latches give to stone,
-// sometimes. The plain rock is spent by the trying, opened or not; the
-// hammerstone survives and near-always wins. Either way the hammering is a
+// sometimes. The plain rock wears out in two swings (ROCK_LATCH_WEAR); the
+// hammerstone lasts five, and wins half the time on a fresh latch (rome, 2026-10-20: it was 80). Either way the hammering is a
 // dinner bell — every listener in earshot hears iron being beaten. The
 // reliquary is exempt: a king's lock takes a king's key, not geology.
 export const ROCK_SMASH_ODDS = 0.10;
-export const HAMMERSTONE_SMASH_ODDS = 0.80;
+export const HAMMERSTONE_SMASH_ODDS = 0.50;
+// EVERY BLOW BENDS THE LATCH (rome, 2026-10-20). A latch that held still took
+// the blow: each failed one adds this much to the next stone's odds, for anyone
+// who swings at that box, until it opens and the box moves on. The first rock
+// keeps its plain one-shot chance; four rocks now open about seven boxes in ten.
+export const LATCH_GIVE_STEP = 0.10;
+export const LATCH_GIVE_MAX = 0.95;
+// A plain rock wears on a latch too (rome, 2026-10-20), faster than a hammerstone:
+// two swings and it comes apart. It used to go on the first.
+export const ROCK_LATCH_WEAR = 50;
 export const STONE_WEAR = 20; // condition per smash attempt: ~5 latches in a stone, then it cracks through — and NO mend refills it (rome: "no repairs for this rock")
 // THE GATEHOUSE CLOSES FOR WORKS (works.ts). The cadence dials, and ONLY the
 // cadence dials — which door shuts is measured off the live map every load, not

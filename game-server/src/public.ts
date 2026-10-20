@@ -3485,7 +3485,14 @@ var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3,
   // twice-dead went 29 to 32 and moved the bone family's middle.
   "the-chainman": 1, "skeleton": 1.018, "thrice-dead": 1, "rag-and-bone": 0.812,
   // ...and the drowned theirs when the miller went 28 to 34 and moved their middle.
-  "the-miller": 1.018, "the-drowned": 0.983, "the-drowned-ferryman": 1, "the-mire-walker": 1 };
+  "the-miller": 1.018, "the-drowned": 0.983, "the-drowned-ferryman": 1, "the-mire-walker": 1,
+  // ...and these five theirs when the salt widow and the cairn-wight's redraws
+  // took them both to 30 and moved their middle (2026-10-19).
+  "the-tide-warden": 1, "the-scaffold-hand": 0.91, "the-refuge-man": 0.983, "the-pilot": 1, "the-toll-clerk": 1.018,
+  // ...and the armour family's when the warden's redraw took him from 30 to 31.
+  "the-long-warden": 1, "last-watchman": 0.826,
+  // ...and the three living men when they went to 32 to stand as tall as the nomad.
+  "cutthroat": 1, "strand-thief": 1, "road-carrier": 0.966 };
 var VOICE_PITCH = null;
 // Worked out on first use: MOB_SPRITE is further down the page than this.
 function voicePitch(id) {
@@ -9688,7 +9695,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "80";      // /mob/      strips and their eye layers
+var MOB_V  = "100";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -12838,7 +12845,7 @@ var MOB_SPRITE = {
   // against his 0.97; measured, rome 2026-10-05).
   "nomad": 32,
   "wayman": 28,               // 1.75
-  "road-carrier": 30,         // 1.85  a tall figure, as the prose has it
+  "road-carrier": 32,         // 1.85  a tall figure, as the prose has it
   "the-miller": 34,           // 1.75 (28 until his redraw came out smaller)
   "the-toll-clerk": 28,       // 1.75
   "the-long-warden": 30,      // 1.85
@@ -12914,7 +12921,7 @@ var MOB_SPRITE = {
   // are sized against the hill's living people on purpose: when one of them is
   // in a room with the tide warden, the difference in height is the difference
   // between a man who can be reasoned with and a man who cannot.
-  "the-salt-widow": 28,    // matched to the butter wife, who is drawn chunkier than the herdsman
+  "the-salt-widow": 30,    // matched to the butter wife, who is drawn chunkier than the herdsman (28 until her redraw came out smaller)
   "the-reed-walker": 37,   // half behind the stems, so a lot of his cell is reed and air
   "the-drowned-ferryman": 29, // A MAN, and sized as one. No pose of his shows all of him -
                            // the idle is head and hands on the rope with the rest under water -
@@ -12922,15 +12929,15 @@ var MOB_SPRITE = {
                            // and the water takes the difference, which is the whole idea of him.
   "the-pilot": 29,
   "the-drover": 30,
-  "strand-thief": 28,
+  "strand-thief": 32,
   "the-eel-cutter": 29,
   // ---- THE FORTRESS (2026-09-23). Sized against the roster already here: a man
   // is 29-30, a wolf 13, the drake 44. Each number below is the creature's own
   // entry read as a height, not a guess at a silhouette.
   "skeleton": 30,          // a soldier's frame with nothing on it - a man, and lighter (28 until its redraw's raised sword made the frame taller)
   "bone-knight": 32,       // "a TALL skeleton", and it stands in mail
-  "warden": 30,            // a man in plate, walking rounds
-  "warden-surface": 30,    // the same warden, outdoors
+  "warden": 31,            // a man in plate, walking rounds (30 until his redraw came out smaller)
+  "warden-surface": 31,    // the same warden, outdoors
   "warden-captain": 37,    // "BIGGER than the wardens it once led"
   "last-watchman": 44,     // a watchman, dried inside his kit
   "twice-dead": 32,        // an old man of the barrow-dead (29 until his redraw came out smaller)
@@ -12950,11 +12957,11 @@ var MOB_SPRITE = {
   "grave-hyena": 13,       // a hyena stands under a wolf and slopes away behind (13, not 12: the redrawn sheet draws him 4% smaller in his frame)
   "dire-hyena": 15,        // the mean one, and bigger with it
   "cutpurse": 13,          // "HALF THE SIZE OF A PERSON and twice as quick"
-  "cutthroat": 28,         // the same build with a knife in it
+  "cutthroat": 32,         // the same build with a knife in it
   "the-refuge-man": 30,
   "the-tide-warden": 29,
   "the-bridge-mason": 29,
-  "the-fowler": 29,        // drawn broad in the reed cloak, so the number comes down
+  "the-fowler": 27,        // drawn broad in the reed cloak, so the number comes down
   "the-scaffold-hand": 35, // hangs in a harness: a tall cell with a man across the middle of it
   "the-wrecker": 28,       // the densest sheet of the twelve, and the largest figure of them
   // ---- the beasts, each against its own kind --------------------------------
@@ -13057,7 +13064,7 @@ var MOB_SPRITE = {
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
   "wood-stag":   { n: 8, aspect: 1.045, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "nomad":   { n: 22, aspect: 1.079, f: {"idle":0,"move-a":1,"move-b":2,"windup":3,"attack":4,"guard":5,"crouch":6,"rest":7,"point":8,"wave":9,"beckon":10,"nod":11,"keen":12,"death":13,"torch-idle":14,"torch-move-a":15,"torch-move-b":16,"torch-windup":17,"torch-attack":18,"torch-guard":19,"torch-crouch":20,"torch-rest":21} },
+  "nomad":   { n: 14, aspect: 1.079, f: {"idle":0,"move-a":1,"move-b":2,"windup":3,"attack":4,"guard":5,"crouch":6,"rest":7,"point":8,"wave":9,"beckon":10,"nod":11,"keen":12,"death":13} },
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-woodward":                { n: 8, aspect: 1.014, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-sapper":                  { n: 8, aspect: 1.014, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -13073,9 +13080,9 @@ var MOB_ANIM = {
   "gibbet-crow":                 { n: 8, aspect: 1.254, f: {"idle":0,"watch":1,"up":2,"glide":3,"landing":4,"feed":5,"attack":6,"death":7,"down":3} },
   "dire-wolf":                   { n: 8, aspect: 1.102, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "charcoal-burner":             { n: 8, aspect: 1, f: {"idle":0,"lay-the-wood":1,"feel-the-turf":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "warden-surface":   { n: 9, aspect: 1.017, f: {"idle":0,"hold-the-salute":1,"raise-the-lantern":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "warden":           { n: 9, aspect: 1.017, f: {"idle":0,"hold-the-salute":1,"raise-the-lantern":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "cutthroat":   { n: 8, aspect: 1.026, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "warden-surface":   { n: 8, aspect: 0.941, f: {"idle":0,"hold-the-salute":1,"raise-the-lantern":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "warden":           { n: 8, aspect: 0.941, f: {"idle":0,"hold-the-salute":1,"raise-the-lantern":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "cutthroat":   { n: 9, aspect: 0.946, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"alert":4,"move-a":5,"move-b":6,"attack":7,"death":8} },
   "cutpurse":   { n: 8, aspect: 1.243, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "dire-hyena":   { n: 8, aspect: 1.063, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "grave-hyena":   { n: 8, aspect: 1.128, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
@@ -13090,13 +13097,13 @@ var MOB_ANIM = {
   "drowned-hulk":   { n: 8, aspect: 1.059, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-drowned":   { n: 8, aspect: 1.066, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"listen":6,"death":7} },
   "marrow-king":   { n: 8, aspect: 1.047, f: {"idle":0,"keep-the-seat":1,"rise":2,"take-hold":3,"alert":4,"attack":5,"sweep":6,"death":7} },
-  "thrice-dead":   { n: 8, aspect: 1.003, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "twice-dead":   { n: 8, aspect: 0.938, f: {"idle":0,"rise":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "thrice-dead":   { n: 8, aspect: 1.053, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "twice-dead":   { n: 9, aspect: 0.97, f: {"idle":0,"rise":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "last-watchman":   { n: 9, aspect: 1.258, f: {"idle":0,"hold-the-salute":1,"look-down-the-road":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "warden-captain":   { n: 9, aspect: 1.103, f: {"idle":0,"hold-the-salute":1,"ground-the-maul":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "bone-knight":   { n: 9, aspect: 1, f: {"idle":0,"hold-the-salute":1,"ground-the-sword":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "marrow-cantor":   { n: 9, aspect: 0.942, f: {"idle":0,"listen":1,"hold-the-note":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "skeleton":   { n: 9, aspect: 1.012, f: {"idle":0,"listen":1,"look-behind":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "skeleton":   { n: 8, aspect: 1.095, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "white-roe":           { n: 8, aspect: 1.037, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "wayman":              { n: 8, aspect: 0.957, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-toll-clerk":      { n: 8, aspect: 0.969, f: {"idle":0,"shift-the-weight":1,"alert":2,"count-it-out":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -13107,7 +13114,7 @@ var MOB_ANIM = {
   "the-chain-breaker":   { n: 8, aspect: 1.107, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-baited-bear":     { n: 8, aspect: 1.284, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "roe-deer":            { n: 8, aspect: 1.113, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "road-carrier":        { n: 8, aspect: 0.939, f: {"idle":0,"check-the-satchel":1,"alert":2,"set-down-the-load":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "road-carrier":        { n: 8, aspect: 0.991, f: {"idle":0,"check-the-satchel":1,"set-down-the-load":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat":                 { n: 8, aspect: 1.693, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "otter":               { n: 8, aspect: 1.618, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "masterless-dog":      { n: 8, aspect: 1.299, f: {"idle":0,"alert":1,"cast-about":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -13119,21 +13126,21 @@ var MOB_ANIM = {
   "dog-otter":           { n: 8, aspect: 1.448, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "brood-rat":           { n: 8, aspect: 1.475, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "albino-rat":          { n: 8, aspect: 1.454, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-tide-warden":        { n: 7, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"death":4,"cut-the-stick":5,"recover":6} },
+  "the-tide-warden":        { n: 8, aspect: 0.992, f: {"idle":0,"cut-the-stick":1,"look-at-the-water":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-scaffold-hand":      { n: 8, aspect: 0.972, f: {"idle":0,"work-the-stone":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "the-salt-widow":         { n: 8, aspect: 1.136, f: {"idle":0,"feed-the-flue":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-salt-widow":         { n: 9, aspect: 0.951, f: {"idle":0,"feed-the-flue":1,"work-the-pan":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-refuge-man":         { n: 9, aspect: 1.075, f: {"idle":0,"turn-from-the-wall":1,"hold-the-door":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-reed-walker":        { n: 9, aspect: 1.034, f: {"idle":0,"part-the-reed":1,"keep-pace":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-pilot":              { n: 8, aspect: 0.991, f: {"idle":0,"read-the-water":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-great-devil-crab":   { n: 8, aspect: 1.254, f: {"idle":0,"alert":1,"attack":2,"recover":3,"death":4,"rest":5,"bite":6,"sweep":7} },
   "the-eel-cutter":         { n: 8, aspect: 1.387, f: {"idle":0,"lift-the-trap":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-drowned-ferryman":   { n: 8, aspect: 0.986, f: {"idle":0,"find-the-line":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "the-drover":             { n: 8, aspect: 1.278, f: {"idle":0,"drive-the-road":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-drover":             { n: 9, aspect: 1.157, f: {"idle":0,"drive-the-road":1,"lean-on-the-stick":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-bridge-mason":       { n: 8, aspect: 0.98, f: {"idle":0,"dress-the-stone":1,"test-the-joint":2,"alert":3,"move-a":4,"move-b":5,"sweep":6,"death":7} },
   "bull-seal":              { n: 8, aspect: 1.279, f: {"idle":0,"alert":1,"attack":2,"death":3,"rest":4,"feed":5,"move-a":6,"move-b":7} },
   "the-wrecker":    { n: 8, aspect: 1.014, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
-  "the-fowler":     { n: 7, aspect: 1.478, f: {"idle":0,"rise-from-the-turf":1,"move-a":2,"move-b":3,"attack":4,"death":5,"recover":6} },
-  "strand-thief":   { n: 8, aspect: 0.958, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"attack":6,"death":7} },
+  "the-fowler":     { n: 8, aspect: 1.603, f: {"idle":0,"rise-from-the-turf":1,"watch-the-sky":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "strand-thief":   { n: 9, aspect: 1, f: {"idle":0,"watch":1,"graze":2,"move-a":3,"move-b":4,"snatch-escape":5,"alert":6,"attack":7,"death":8} },
   "the-great-crab":   { n: 8, aspect: 1.503, f: {"idle":0,"alert":1,"attack":2,"death":3,"recover":4,"rest":5,"bite":6,"sweep":7} },
   "marsh-hound":      { n: 8, aspect: 1.06, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "a-lymer":          { n: 8, aspect: 1.243, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"death":5,"rest":6,"feed":7} },
@@ -13347,6 +13354,7 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   "look-at-the-water",  // the tide warden, at a milestone, before the notch
   "lean-on-the-stick",  // the drover, waiting on the water
   "reach-for-the-span", // the scaffold hand, for the arch that is not there
+  "watch-the-sky",      // the fowler, still down in the hide, face up to the birds
   // AND THE TWO HYENAS ARE NOT THE SAME ANIMAL. They were given one list
   // between them, which is how the two dogs ended up the same dog. The code
   // separates them and always did: the dire hyena is the only member of
@@ -13986,7 +13994,9 @@ function poseAt(a, now) {
     } else if (ns === "fight") {
       var ph = a.t % 4; nn = ph < 0.7 ? "windup" : ph < 1.2 ? "attack" : "guard";
     } else if (ns && f[ns] !== undefined) nn = ns;
-    // the torch version of the frame where the strip has one; a gesture has none
+    // the torch version of the frame where the strip has one; a gesture has none.
+    // The torch frames are off the strip until they are redrawn, so for now this
+    // finds nothing and a torch-bearer shows the plain frame.
     if (torch && f["torch-" + nn] !== undefined) nn = "torch-" + nn;
     return { k: f[nn], x: 0, air: nair, s: 1 + Math.sin(a.t * 1.6) * BREATH };
   }

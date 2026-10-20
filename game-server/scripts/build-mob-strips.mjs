@@ -90,10 +90,16 @@ const BODY_SCALE = {
   "the-raiding-fox": 0.925,
   "roe-deer": 0.898, "red-hind": 0.966, "pale-crawler": 0.981,
   "lynx": 0.979, "pale-stalker": 0.974, "the-follower": 0.986,
-  "marrow-cantor": 0.998, "warden-captain": 0.994, "warden": 0.973,
+  "marrow-cantor": 0.998, "warden-captain": 0.994, "warden": 0.968,
   "verdigris-thing": 0.993, "the-one-who-stayed": 0.990,
   "the-bridge-mason": 0.980, "the-reed-walker": 0.978, "the-refuge-man": 0.972,
   "bone-knight": 0.932, "last-watchman": 0.956,
+  "the-drover": 0.988, "the-tide-warden": 0.996,
+  "twice-dead": 0.949, "skeleton": 0.904,
+  // smaller than they shipped, so the size number went up and this trims the rest
+  "the-salt-widow": 0.971, "thrice-dead": 0.975,
+  "the-fowler": 0.982,
+  "cutthroat": 0.9635, "road-carrier": 0.9498, "strand-thief": 0.9525,
 };
 
 const NOT_A_POSE = new Set(["sheet-order", "source", "combat-source", "flight-source",

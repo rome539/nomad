@@ -1018,10 +1018,13 @@ try {
   // rather than written into the page, so the shipped file carries no test hook.
   // ...and a window that prefers reduced motion: the scene's dissolve (fadeScene)
   // copies computed styles, which a stub has none of, and steps aside for it.
-  new Function("document", "Image", "setInterval", "requestAnimationFrame", "probe", "window",
+  // setTimeout is stubbed with the rest: the weather's own tick reschedules itself
+  // every minute or so, and a real one kept this builder alive forever, which
+  // hung the preview server waiting on it.
+  new Function("document", "Image", "setInterval", "setTimeout", "requestAnimationFrame", "probe", "window",
     script + "\nprobe.driven=function(){return anims.indexOf(stageAnim)>=0};"
            + "\nprobe.scale=function(v){ sc.value=v; sc.onchange(); };")(
-    doc, FakeImage, () => 0, () => 0, probe, { matchMedia: () => ({ matches: true }), addEventListener() {} });
+    doc, FakeImage, () => 0, () => 0, () => 0, probe, { matchMedia: () => ({ matches: true }), addEventListener() {} });
 } catch (e) { ran = false; why = e.message; }
 // CHANGING THE SCALE MUST NOT ORPHAN THE STAGE ANIMAL. It did: build() resets
 // anims and the creature stayed on screen answering none of the action buttons.

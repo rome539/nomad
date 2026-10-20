@@ -94,7 +94,7 @@ import {
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
   VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
   SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, CORRODERS, CORRODE_WEAR,
-  CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS,
+  CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS, LATCH_GIVE_STEP, LATCH_GIVE_MAX, ROCK_LATCH_WEAR,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
   GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, DICE_REGROW, STRAY_DECAY,
@@ -190,6 +190,8 @@ export class ZoneDO implements DurableObject {
   // Timestamps rather than a bare set so a frame killed mid-flight by a
   // thrown error can never leave the latch blocked forever.
   private cacheOpening = new Map<string, number>();
+  // How many failed blows a box's latch has taken since it last opened (LATCH_GIVE_STEP).
+  private cacheBent = new Map<string, number>();
   private leftAt = new Map<string, number>(); // pubkey -> ms it last disconnected (a quick return is a reconnect, not an arrival)
   // The alarm's own memory (ensureAlarm, 2026-08-22): what this DO last armed,
   // so a per-message getAlarm read is skipped while it is still pending. Both
@@ -2910,8 +2912,8 @@ export class ZoneDO implements DurableObject {
       // No key — then the old way: a rock against the latch (rome, 2026-07-11).
       // Any strongbox latch gives to stone — notched-key shallow or warden-key
       // deep (086 split the keys, not the latches); only the reliquary's iron
-      // takes a king's key, not geology. The plain rock is spent by the trying,
-      // opened or not; the hammerstone survives every landing, latches included.
+      // takes a king's key, not geology. Both stones wear on a latch, the plain
+      // rock fast (two swings) and the hammerstone slow (five).
       // The rock you SWING is the rock in your hand: prefer the equipped stone
       // within each tier, so the one that shatters is the one you were wielding —
       // not some spare deeper in the pack while your weapon sails through untouched
@@ -2926,45 +2928,48 @@ export class ZoneDO implements DurableObject {
       }
       const hammer = stone.itemId === "hammerstone";
       // Claim the latch synchronously, before any await — the double-frame
-      // guard above keys on this marker. A failed smash below does not keep
-      // it: the box stays locked and honestly retryable, so the marker just
-      // ages out.
+      // guard above keys on this marker. A failed smash lets go of it the
+      // moment the swing is done: the box stays locked and honestly retryable.
       this.cacheOpening.set(cache.id, Date.now());
-      if (!hammer) {
-        session.items.splice(session.items.indexOf(stone), 1);
-        await removeItemRow(this.env.DB, stone.rowId);
-      }
       // Hammering iron is a dinner bell: everything in earshot hears it.
       this.roomSound(session.roomId, "Stone rings on iron {dir}, again and again.");
       this.creatureNoise(session.roomId);
-      const opened = chance(hammer ? HAMMERSTONE_SMASH_ODDS : ROCK_SMASH_ODDS);
+      const bent = this.cacheBent.get(cache.id) ?? 0;
+      const opened = chance(Math.min(LATCH_GIVE_MAX, (hammer ? HAMMERSTONE_SMASH_ODDS : ROCK_SMASH_ODDS) + bent * LATCH_GIVE_STEP));
       // Every latch takes its toll on the stone (rome: like the lantern, and
       // nothing mends it) — win or lose, the blow costs. Spent, it cracks
       // through and is gone.
+      // A plain rock wears the same way, only faster (ROCK_LATCH_WEAR).
       let stoneSpent = false;
-      if (hammer) {
-        stone.condition -= STONE_WEAR;
-        if (stone.condition <= 0) {
-          stoneSpent = true;
-          session.items.splice(session.items.indexOf(stone), 1);
-          await removeItemRow(this.env.DB, stone.rowId);
-        } else {
-          await setItemCondition(this.env.DB, stone.rowId, stone.condition);
-        }
+      stone.condition -= hammer ? STONE_WEAR : ROCK_LATCH_WEAR;
+      if (stone.condition <= 0) {
+        stoneSpent = true;
+        session.items.splice(session.items.indexOf(stone), 1);
+        await removeItemRow(this.env.DB, stone.rowId);
+      } else {
+        await setItemCondition(this.env.DB, stone.rowId, stone.condition);
       }
       if (!opened) {
+        this.cacheBent.set(cache.id, bent + 1);
         this.send(session, hammer
           ? "You bring the hammerstone down on the latch. It RINGS — the whole floor hears it — but the latch holds."
-          : "You bring the rock down on the latch. The rock comes apart in your hands; the latch holds.", "dmgin");
-        if (stoneSpent) this.send(session, "And the hammerstone cracks through, dead down its middle. It falls away in halves — spent.", "dmgin");
+          : `You bring the rock down on the latch. ${stoneSpent ? "The rock comes apart in your hands; the latch holds" : "A piece of the rock flies off; the latch holds"}${bent > 0 ? ", but it sits crooked now." : "."}`, "dmgin");
+        if (stoneSpent && hammer) this.send(session, "And the hammerstone cracks through, dead down its middle. It falls away in halves — spent.", "dmgin");
+        // The swing is over and the latch held: let go of it now, so the next
+        // stone can be tried at once. Left to age out, it turned every retry
+        // away for thirty seconds with a full pack of rocks.
+        this.cacheOpening.delete(cache.id);
         this.sendCtx(session);
         return;
       }
       this.send(session, hammer
         ? `You bring the hammerstone down on the latch, twice, and the second blow tears it off whole. ${cap(cache.name)} swings open.`
-        : `You bring the rock down and both give at once — the rock in pieces, the latch in half. ${cap(cache.name)} swings open.`, "unlock");
-      if (stoneSpent) this.send(session, "The hammerstone gave its last argument to that latch — it cracks through and falls away in halves.", "dmgin");
+        : stoneSpent
+          ? `You bring the rock down and both give at once — the rock in pieces, the latch in half. ${cap(cache.name)} swings open.`
+          : `You bring the rock down and the latch snaps in half. ${cap(cache.name)} swings open.`, "unlock");
+      if (stoneSpent && hammer) this.send(session, "The hammerstone gave its last argument to that latch — it cracks through and falls away in halves.", "dmgin");
       this.roomFeed(session.roomId, `${session.name} smashes ${cache.name} open.`, session.pubkey, false);
+      this.cacheBent.delete(cache.id); // a new latch where it turns up next
       this.cacheSpent.set(cache.id, Date.now() + cache.refillSecs * 1000);
       this.placeCache(cache); // looted: it will refill somewhere new in its tier (hidden here until then)
     } else {

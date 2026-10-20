@@ -37,8 +37,9 @@ import {
 const EMOTE_MS = 3000;
 const EMOTE_FRAME: Record<string, string> = { wave: "wave", nod: "nod", brow: "nod", beckon: "beckon", keen: "keen", dance: "dance" };
 export function folkState(z: ZoneDO, s: Session): string {
-  // ...and "+torch" on the end while a lit torch is in the hand: the strip has
-  // a torch version of every everyday frame (torch-idle, torch-guard...).
+  // ...and "+torch" on the end while a lit torch is in the hand. The torch
+  // frames are off the strip until they are redrawn (2026-10-20), so the page
+  // reads the mark and shows the plain frame; put them back and it plays them.
   return folkBase(z, s) + (z.carriesLight(s) ? "+torch" : "");
 }
 function folkBase(z: ZoneDO, s: Session): string {
