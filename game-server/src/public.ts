@@ -7180,7 +7180,8 @@ function tradeItemNode(it, place) {
 // stays apart from trophies/oddments instead of interleaved by pack order.
 // Older servers send no kind; everything falls to one unlabelled shelf and
 // the modal still works.
-var TRADE_SHELVES = [["steel", "STEEL"], ["kit", "KIT"], ["physic", "PHYSIC"], ["sundries", "SUNDRIES"]];
+// The same five shelves as the pack and the vault, sent by the server (gate.ts SHELVES/shelfOf).
+var TRADE_SHELVES = [["gear", "GEAR"], ["supplies", "SUPPLIES"], ["keys", "KEYS"], ["food", "FOOD"], ["trophies", "TROPHIES"]];
 function renderItemList(el, items, place) {
   if (!items.length) {
     var e = document.createElement("div");
@@ -7191,7 +7192,7 @@ function renderItemList(el, items, place) {
   }
   if (items.some(function (it) { return it.kind; })) {
     TRADE_SHELVES.forEach(function (shelf) {
-      var group = items.filter(function (it) { return (it.kind || "sundries") === shelf[0]; });
+      var group = items.filter(function (it) { return (it.kind || "supplies") === shelf[0]; });
       if (!group.length) return;
       var sh = document.createElement("div");
       sh.className = "tsech";
@@ -12462,6 +12463,15 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // or window the plate was cut with - that opening is why it is in SHELTERED.
   if (lastCovered && !SHELTERED[place]) { sky = ""; turn = ""; }
   var precipitation = !singleLayer && scene && !lastCovered && !SHELTERED[place] ? mobHour : "";
+  // RAIN AFTER DARK (rome, 2026-10-20). The server sends "rain" as the sky at
+  // any hour - rain is the news - and there is no rain-at-night photograph, so
+  // a night downpour drew the daylight rain plate. The night flag rides beside
+  // the sky, so the rain plate takes the night grade, the rain's grey sky takes
+  // the wet night's, and what stands in it is lit for night. The rain itself
+  // still falls (precipitation above reads the weather, not the hour), and a
+  // torch plate keeps its own light, as it does at every hour.
+  var rainNight = lastSky === "rain" && !!lastNight;
+  if (rainNight && !lit && !singleLayer && scene) tint = "night";
   var put = function () {
     if (mine !== sceneSeq || viewMode !== "image") return;
     var fade = scene !== scenePainted ? fadeScene() : null;
@@ -12476,7 +12486,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     sceneEl.style.setProperty("--sceneimg", url);
     if (skyEl) {
       skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + SKY_V + ")" : "";
-      skyEl.setAttribute("data-sky", lastSky || ""); // the wet hours grade the same grey picture
+      skyEl.setAttribute("data-sky", rainNight ? "wet-night" : (lastSky || "")); // the wet hours grade the same grey picture
       skyEl.style.backgroundPosition = "center 55%";
       // Set every time, cleared when there is no turn: a transform left behind
       // from the last room would mirror a sky that was never asked to be.
@@ -12506,7 +12516,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // on ground the plate has lit to orange. It follows the PLATE, so an unpainted
     // ground keeps its dark and nothing is lit by a torch the picture cannot see.
     if (mobsEl) {
-      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + mobHour : "";
+      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + (rainNight && mobHour === "rain" ? "night" : mobHour) : "";
       // ...and standing where this plate's ground actually is. Set every time,
       // never only when it differs: a line left over from the room behind you
       // would put the next room's animals wherever the last one's stood.

@@ -698,13 +698,25 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
   if (walkedIn) z.send(session, "You push in out of the cold and step up to the keeper's hatch.");
   const lines = ["The keeper unshutters the hatch and lays out what he'll part with:"];
   const absent: string[] = [];
+  // On the same shelves as the window (SHELVES), cheapest first on each; the
+  // headings only when more than one shelf has anything, as the vault list does.
+  const onShelf = new Map<string, string[]>();
   for (const s of [...world.fenceStock].sort((a, b) => a.cost - b.cost)) {
     const t = world.itemTemplates.get(s.itemId);
     if (!t) continue;
     // What he isn't carrying is still named, without a price — you can't buy it,
     // but you can know it exists and come back for it.
     if (!inStock(z, s.itemId)) { absent.push(t.name); continue; }
-    lines.push(`  ${z.gearName(t.id)}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade`);
+    const k = shelfOf(z, t.id);
+    if (!onShelf.has(k)) onShelf.set(k, []);
+    onShelf.get(k)!.push(`  ${z.gearName(t.id)}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade`);
+  }
+  const many = onShelf.size > 1;
+  for (const [k, label] of SHELVES) {
+    const rows = onShelf.get(k);
+    if (!rows) continue;
+    if (many) lines.push(`  — ${label.toLowerCase()} —`);
+    lines.push(...rows);
   }
   if (absent.length) {
     lines.push(`Not carrying today: ${absent.join(", ")}. "They come and go," he says. "Check back."`);
@@ -1233,15 +1245,23 @@ export async function leaveTrade(z: ZoneDO, session: Session): Promise<void> {
   z.refreshRoomCtx(session.roomId);
 }
 
+// THE KEEPER'S COUNTER SHELVES LIKE EVERYTHING ELSE (rome, 2026-10-20). It had
+// its own four shelves - steel, kit, physic, sundries - and nothing else in the
+// game sorts that way. Now it is the vault's five, read by the same test the
+// vault window and the typed vault list use: gear, supplies, keys, food,
+// trophies, in that order. The window and the typed 'barter' both read this.
+export const SHELVES: [string, string][] = [["gear", "GEAR"], ["supplies", "SUPPLIES"], ["keys", "KEYS"], ["food", "FOOD"], ["trophies", "TROPHIES"]];
+export function shelfOf(z: ZoneDO, itemId: string): string {
+  const t = z.world!.itemTemplates.get(itemId);
+  if (z.isKey(itemId)) return "keys";
+  if (z.isTrophy(itemId)) return "trophies";
+  if (z.isGear(itemId)) return "gear";
+  if (t?.edible) return "food";
+  return "supplies";
+}
 export async function sendTrade(z: ZoneDO, session: Session, note?: string): Promise<void> {
   const world = z.world!;
-  // Shelf sections so the stock reads like a shop, not a ledger: steel (it
-  // hurts), kit (you wear it), physic (it mends), sundries (keys and papers).
-  const kindOf = (t: { dmg: number; slot: string; edible: number; heal: number; staunch: number }): string =>
-    t.dmg > 0 ? "steel"
-      : t.slot !== "" ? "kit"
-      : t.edible === 1 || t.heal > 0 || t.staunch > 0 ? "physic"
-      : "sundries";
+  const kindOf = (t: { id: string }): string => shelfOf(z, t.id);
   const stock = [...world.fenceStock]
     .filter((s) => inStock(z, s.itemId)) // bare shelves don't show a buy button
     .sort((a, b) => a.cost - b.cost)

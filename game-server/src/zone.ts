@@ -5147,7 +5147,9 @@ export class ZoneDO implements DurableObject {
     // closing, the moon, an eclipse, weather arriving or lifting.
     for (const s of this.sessions.values()) {
       if (!seesArt(s.pubkey)) continue;
-      if (this.artSkyFor(s) !== s.artSky || this.artBowFor(s) !== (s.artBow ?? 0) || (this.inDen.has(s.pubkey) && (isNight() ? 1 : 0) !== s.artNight)) this.sendStatus(s);
+      // ...and night falling or lifting re-sends for everyone, not only the dens:
+      // a rain that runs on into the dark has to turn its picture to night too.
+      if (this.artSkyFor(s) !== s.artSky || this.artBowFor(s) !== (s.artBow ?? 0) || (isNight() ? 1 : 0) !== s.artNight) this.sendStatus(s);
     }
     // ...and the soundscape the same way: the rain is heard arriving.
     for (const s of this.sessions.values()) {

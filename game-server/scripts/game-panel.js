@@ -383,7 +383,10 @@
     } else {
       // THE GROUND'S OWN REGION, as the game sends it - this said "mountain" for
       // every ground, so the beach got the mountain's birds (2026-10-20)
-      paintScene(BAND_OF[groundAt[v.slice(7)]] || "mountain", h, v.slice(7), "preview-ground", torch, skyRollN, "", 0, red);
+      // ...and the night flag the server sends beside the sky: the night hours
+      // carry it, and ?night=1 raises it under any weather (rain after dark)
+      var nightFlag = /[?&]night=1/.test(location.search) || h === "night" || h === "moon" || h === "blood" || h === "wet-night" ? 1 : 0;
+      paintScene(BAND_OF[groundAt[v.slice(7)]] || "mountain", h, v.slice(7), "preview-ground", torch, skyRollN, "", 0, red, undefined, nightFlag);
     }
     fitPicture();
     var dead = nomadSel.value === "dead" && ids.indexOf("nomad") >= 0;
