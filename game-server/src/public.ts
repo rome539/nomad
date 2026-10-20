@@ -6763,11 +6763,11 @@ function benchItemNode(it, place) {
     // The shelf, when you're standing under your own roof. Sits next to the box
     // because it is the same act — putting a thing down somewhere it keeps.
     if (benchAtDen) btnQ("\\u2192 shelf", "stow");
-    // The vault and the seal are the gate's business — only offered at a gate.
-    // Everything can go to the vault now: unsealed gear is sealed on the way in
-    // (rome, 2026-10-14). The seal stays on its own for sealing what you keep
-    // carrying (trophies and the like carry no title to seal).
-    if (benchAtGate) { btnQ("\\u2192 vault", "vault"); if (!it.sealed && !it.stack) btn("seal", "seal"); }
+    // The vault is the gate's business — only offered at a gate. Everything can
+    // go to it, and unsealed gear is sealed on the way in (rome, 2026-10-14), so
+    // the window has no seal button of its own (rome, 2026-10-20): vaulting
+    // already does it. Typed 'seal' still works for what you keep carrying.
+    if (benchAtGate) btnQ("\\u2192 vault", "vault");
     // So are the vice and the hammer: mend the wear, or break gear to scrap —
     // sealed or not (the vice cracks the seal itself now, so sealed steel has
     // the same options as bare). The repair gate is 'fix' not 'slot' so the
@@ -6786,13 +6786,10 @@ function benchItemNode(it, place) {
     // fine (the vault is bottomless for fungibles), but withdrawing fans out a
     // whole stack into pack slots you didn't mean to spend (rome, 2026-07-16).
     btnQ("\\u2192 pack", "take");
-    // From the lockbox at a gate you can also seal a piece in place or send it
-    // straight to the vault, no round-trip through the pack. (Same rule as the
-    // pack: anything vaults, and unsealed gear is sealed on the way in.)
-    if (place === "lockbox" && benchAtGate) {
-      btnQ("\\u2192 vault", "vault");
-      if (!it.sealed && !it.stack) btn("seal", "seal");
-    }
+    // From the lockbox at a gate you can also send a piece straight to the
+    // vault, no round-trip through the pack. (Same rule as the pack: anything
+    // vaults, unsealed gear is sealed on the way in, so no seal button.)
+    if (place === "lockbox" && benchAtGate) btnQ("\\u2192 vault", "vault");
     // The vice reaches the keeping too (rome, 2026-10-16): the box's steel can be
     // broken down where it rests, the same scrap button as the pack's.
     if (benchAtGate && it.fix && it.slot && it.salv && (place === "lockbox" || place === "vault")) armBtn("scrap", "salvage", "scrap");
