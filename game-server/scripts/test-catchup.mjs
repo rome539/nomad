@@ -38,7 +38,7 @@ try {
   const z = new ZoneDO(state, env);
   await z.init('door');
   assert.ok(z.world.rooms.size > 1200);
-  assert.ok(z.creatures.size > 700);
+  assert.ok(z.creatures.size > 600); // a full world, not a broken load (659 after the 2026-10-20 thinning, migs 315-318)
   console.log(`World fixture: ${z.world.rooms.size} rooms, ${z.creatures.size} creatures.`);
   const realNow = Date.now;
   const now = realNow();

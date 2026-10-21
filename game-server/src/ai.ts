@@ -39,7 +39,7 @@ import {
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
-  SCAVENGER_HEAL, CORPSE_TRACES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
+  SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
@@ -95,6 +95,23 @@ export function bloodlineHome(z: ZoneDO, tmpl: MobTemplate, den: string): string
 // A king rolled before the kings had rooms of their own is still sitting on the
 // old throne in the saved state. On load, send each one home. They are bosses
 // and would never walk there on their own. Returns how many moved.
+// A moved den takes its standing creature with it (zone-data DEN_MOVES), on
+// load, never one in a fight. Returns how many went.
+export function moveDens(z: ZoneDO): number {
+  let moved = 0;
+  for (const s of z.world!.mobSpawns) {
+    const was = DEN_MOVES.get(s.id);
+    if (!was || !z.world!.rooms.has(s.room_id)) continue;
+    const c = z.creatures.get(s.id)
+      ?? [...z.creatures.values()].find((k) => k.templateId === s.template_id && k.home === was);
+    if (!c || c.home === s.room_id || c.target) continue;
+    c.home = s.room_id;
+    c.roomId = s.room_id;
+    moved++;
+  }
+  return moved;
+}
+
 export function rehomeVariants(z: ZoneDO): number {
   let moved = 0;
   for (const c of z.creatures.values()) {

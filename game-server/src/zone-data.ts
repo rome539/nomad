@@ -5042,6 +5042,22 @@ export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", 
   // through. Both now wait unseen like the rest. The walker still shadows you
   // (SHADOWS) from a room away; this only hides it in the room it holds.
   "the-fowler", "the-reed-walker"]);
+// DENS THAT MOVED (mig 316). A spawn row moved to a new room only re-homes the
+// creature born there after this one dies; the one already standing keeps its
+// old home. These move with their row on load, once (then home matches): the
+// spawn id, and the room it stood in before, for a creature whose id is not
+// its den's. Six barrow-wights out of the deep and back to the barrows, and
+// eight scarp ravens down off the mountain into the wood.
+export const DEN_MOVES = new Map<string, string>([
+  ["wight-5", "drowned-barracks"], ["wight-4", "deep-ossuary"], ["wight-10", "bone-reliquary"],
+  ["deep2-twice-drain-run", "the-drain-run"], ["deep2-twice-long-pews", "the-long-pews"],
+  ["deep2-twice-feeling-wall", "the-feeling-wall"],
+  // mig 317: eight scarp ravens off the mountain and down into the wood
+  ["spawn-scarp-raven@the-boulder-nose#516", "the-boulder-nose"], ["spawn-scarp-raven@the-grease-flat#527", "the-grease-flat"],
+  ["spawn-scarp-raven@the-ridge-walk#535", "the-ridge-walk"], ["spawn-scarp-raven@the-black-tower#515", "the-black-tower"],
+  ["spawn-scarp-raven@the-brocken#518", "the-brocken"], ["spawn-scarp-raven@the-cornice#519", "the-cornice"],
+  ["spawn-scarp-raven@the-crest-walk#521", "the-crest-walk"], ["spawn-scarp-raven@the-ramp-head#533", "the-ramp-head"],
+]);
 // ROOTED things never move. Not a sentinel — a sentinel guards a door, sleeps
 // until the deep is opened, and carries a pile of deep-specific machinery a
 // wood creature has no business inheriting. This is the plainer fact: it is

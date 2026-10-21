@@ -746,7 +746,7 @@ export class ZoneDO implements DurableObject {
       // brood pups from an evicted nest) back to what the spawn table allows.
       const culled = ai.reconcilePopulation(this, world);
       // ...and a king rolled before the kings had rooms of their own goes to his.
-      const rehomed = ai.rehomeVariants(this);
+      const rehomed = ai.rehomeVariants(this) + ai.moveDens(this);
       // Content added since this world's first light (e.g. new gear in a
       // migration) gets laid down once: any ground spawn we've never placed and
       // that isn't already on its floor. Keeps a live world from needing a reset.
