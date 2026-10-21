@@ -11885,8 +11885,16 @@ function buildViewRow() {
 //
 // So storage is now written in exactly one place — a deliberate click — and
 // nothing the page does on its own can touch it.
+// A NEW WANDERER STARTS IN PICTURES (rome, 2026-10-21). New means no key on
+// this device yet; a wanderer who has played keeps whatever they had, saved
+// or not. The default is written down for the new one, so it is still the
+// pictures after the key exists - and a click can always change it.
 var viewWant = "text";
-try { if (localStorage.getItem("nomad_view") === "image") viewWant = "image"; } catch (e) {}
+try {
+  var savedView = localStorage.getItem("nomad_view");
+  if (savedView === "image") viewWant = "image";
+  else if (savedView === null && !stored) { viewWant = "image"; localStorage.setItem("nomad_view", "image"); }
+} catch (e) {}
 function grantArt() {
   if (artAllowed) return;
   artAllowed = true;
@@ -15157,7 +15165,9 @@ function crossThreshold() {
   if (crossed) return;
   crossed = true;
   thrMusicStop();
-  if (localStorage.getItem("nomad_sound") === null) setSound(1); // a first crossing starts at half, as sound always started
+  // A first crossing starts at FULL sound (rome, 2026-10-21; it was half). A
+  // saved choice, any level, is never touched.
+  if (localStorage.getItem("nomad_sound") === null) setSound(2);
   threshold.classList.add("gone");
   setTimeout(function () { threshold.remove(); }, 1000);
   if (guideFresh) guideStart();
